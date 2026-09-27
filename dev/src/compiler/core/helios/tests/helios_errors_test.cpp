@@ -41,6 +41,7 @@ public:
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testClassErrors);
+		TESTER_ADD_TEST(testExternCErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -1451,6 +1452,48 @@ private:
 				1
 			);
 		}
+	}
+
+	/**
+	 * @brief Errors reported for an `extern("C")` class whose fields have no
+	 * representation in the C ABI.
+	 *
+	 * Only classes are checked here: a class symbol is mangled during the duplicate
+	 * check of `QueryModuleHOUT`, and mangling asks for the symbol's ABI, so the
+	 * diagnostics land while the module HOUT is built. Function declarations are mangled
+	 * later, so the equivalent cases for them live in `lir_test`'s `cAbiSignatureTest`.
+	 */
+	void testExternCErrors() {
+		// C has no zero-sized structs. The class is never used, so this also covers the
+		// check not depending on anything asking for the class layout.
+		checkForErrorOnCompileModule(
+			R"( extern("C") class Empty {}
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{ "Class `Empty` is marked `extern(\"C\")` but has no fields" },
+			1,
+			false
+		);
+
+		// Every offending field is reported, in declaration order, and the fields that do
+		// have a C representation are left alone.
+		checkForErrorOnCompileModule(
+			R"( extern("C") class Bad {
+					fine: i32 = 0i32;
+					tup: (i32, i32);
+					sli: slice u8;
+				}
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{ "Field `tup`",
+		      "tuples are not C-compatible",
+		      "Field `sli`",
+		      "`slice` is not C-compatible" },
+			2,
+			false
+		);
 	}
 
 	void testMainReturnErrors() {

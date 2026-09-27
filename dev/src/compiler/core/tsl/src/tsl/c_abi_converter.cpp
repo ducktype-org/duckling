@@ -6,7 +6,6 @@
 #include <tsl/c_abi_target.hpp>
 
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
@@ -68,36 +67,27 @@ namespace compiler::tsl {
 				ats::arrayType(base::CRef<ats::AbiType>(&element_conv.value()), array.getSize())
 			);
 		}
-
+		
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
-			const helios::SymbolABI abi = class_type.getABI(ctx);
-			variant_match(abi) {
-				variant_case_novalue(helios::DefaultAbi) {
-					return fail("nested non-extern(\"C\") class");
-				}
-				variant_case_novalue(helios::CAbi) {
-					// Convert the fields to their C-ABI types and return them as a
-					// struct, borrowing each field's cached conversion (no clone).
-					std::vector<ats::AbiTypePtr> fields;
-					for (const auto& element: class_type.getInterface(ctx)->getElements()) {
-						if (!element.isField()) continue;
-						const auto& conversion
-							= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
-						if (!conversion.has_value())
-							return fail(base::strConcat(
-								"field `",
-								helios::name(element.getSymbol()),
-								"` rejected: ",
-								conversion.error()
-							));
-						fields.emplace_back(base::CRef<ats::AbiType>(&conversion.value()));
-					}
-					if (fields.empty()) return fail("class with no fields has zero size in C ABI");
-
-					return ok(ats::structType(std::move(fields)));
-				}
+			// Convert the fields to their C-ABI types and return them as a struct,
+			// borrowing each field's cached conversion (no clone).
+			std::vector<ats::AbiTypePtr> fields;
+			for (const auto& element: class_type.getInterface(ctx)->getElements()) {
+				if (!element.isField()) continue;
+				const auto& conversion
+					= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
+				if (!conversion.has_value())
+					return fail(base::strConcat(
+						"field `",
+						helios::name(element.getSymbol()),
+						"` rejected: ",
+						conversion.error()
+					));
+				fields.emplace_back(base::CRef<ats::AbiType>(&conversion.value()));
 			}
-			CORE_PANIC("unknown symbol ABI kind");
+			if (fields.empty()) return fail("class with no fields has zero size in C ABI");
+
+			return ok(ats::structType(std::move(fields)));
 		}
 	}
 
