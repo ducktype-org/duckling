@@ -273,12 +273,6 @@ private:
 			temp_default.getType() == fs::FileType::Temporary, "Default temp dir should be temporary"
 		);
 
-		fs::File virtual_default = fs::FilePath::getDefaultVirtualDirectoryPath();
-		assertTrue(
-			virtual_default.getType() == fs::FileType::Virtual,
-			"Default virtual dir should be virtual"
-		);
-
 		// Test createFileIn with random name generation
 		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
 		auto random_file = virtual_dir.createSubFile("random content");  // no custom_name

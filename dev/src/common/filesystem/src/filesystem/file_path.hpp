@@ -179,10 +179,11 @@ namespace fs {
 		/**
 		 * @brief Converts this path to a virtual path.
 		 * @note Only physical paths can be converted to virtual paths.
+		 * @param target The virtual filesystem the resulting path resolves against.
 		 * @return FilePath representing the virtual path.
 		 * @throws CORE_PANIC if the path is already virtual or conversion fails.
 		 */
-		[[nodiscard]] FilePath toVirtualPath(base::Optional<base::Ref<VFS>> target = {}) const;
+		[[nodiscard]] FilePath toVirtualPath(base::Ref<VFS> target = VFS::getInstance()) const;
 
 		/**
 		 * @brief Converts this virtual path to a physical path.
@@ -274,11 +275,6 @@ namespace fs {
 		 * Returns the default temporary directory as a FilePath.
 		 */
 		[[nodiscard]] static FilePath getDefaultTempDirectoryPath();
-
-		/**
-		 * Returns the default virtual directory as a FilePath.
-		 */
-		[[nodiscard]] static FilePath getDefaultVirtualDirectoryPath();
 
 		// Comparison operators
 		auto operator<=>(const FilePath& other) const {

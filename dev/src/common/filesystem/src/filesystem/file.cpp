@@ -209,20 +209,20 @@ namespace fs {
 		return rand_path;
 	}
 
-	File FileManager::createRandomVirtualDirectory() {
-		FilePath root      = VFS::getInstance()->getRootPath();
+	File FileManager::createRandomVirtualDirectory(base::Ref<VFS> vfs) {
+		FilePath root(vfs->getRootPath(), vfs);
 		auto     rand_path = randomName(root);
-		VFS::getInstance()->createDirectory(rand_path.getPath());
+		vfs->createDirectory(rand_path.getPath());
 		return rand_path;
 	}
 
 	File FileManager::createRandomVirtualFile(
-		std::string_view content, base::Optional<std::string_view> suffix
+		std::string_view content, base::Optional<std::string_view> suffix, base::Ref<VFS> vfs
 	) {
-		FilePath root      = VFS::getInstance()->getRootPath();
+		FilePath root(vfs->getRootPath(), vfs);
 		auto     rand_path = randomName(root);
 		if (suffix.has_value())
-			rand_path = FilePath(base::strConcat(rand_path.string(), suffix.value()));
+			rand_path = FilePath(base::strConcat(rand_path.string(), suffix.value()), vfs);
 		return createVirtualFile(rand_path, content);
 	}
 
@@ -376,6 +376,4 @@ namespace fs {
 
 		return result;
 	}
-
-	File FileManager::getVirtualRootDirectory() { return { VFS::getInstance()->getRootPath() }; }
 }

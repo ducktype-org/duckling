@@ -36,7 +36,6 @@ namespace compiler::frontend {
 	 */
 	constexpr std::string_view LANG_SCRIPT_FILE = ".dks";
 
-	// Regexes to reject files/directories starting with '.' or '$'
 	/**
 	 * @brief Turns a file found while walking the disk into the file the compiler should read.
 	 *
@@ -50,6 +49,7 @@ namespace compiler::frontend {
 	 */
 	const FileResolver& identityFileResolver();
 
+	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
 

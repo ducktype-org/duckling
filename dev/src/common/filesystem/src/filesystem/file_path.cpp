@@ -74,7 +74,7 @@ namespace fs {
 
 	FilePath FilePath::operator/(const FilePath& other) const { return join(other); }
 
-	FilePath FilePath::toVirtualPath(base::Optional<base::Ref<VFS>> target) const {
+	FilePath FilePath::toVirtualPath(base::Ref<VFS> target) const {
 		if (type == PathType::Virtual) CORE_PANIC("Path is already virtual: " + path.string());
 		if (type == PathType::Relative)
 			CORE_PANIC(
@@ -84,11 +84,10 @@ namespace fs {
 		if (type != PathType::Physical)
 			CORE_PANIC("Can only convert physical paths to virtual: " + path.string());
 
-		auto target_vfs = target.has_value() ? target.value() : VFS::getInstance();
-		auto root       = target_vfs->getRootPath();
-		auto abs_path   = std::filesystem::absolute(path);
+		auto root     = target->getRootPath();
+		auto abs_path = std::filesystem::absolute(path);
 		// Manually concatenate strings since operator/ ignores left side for absolute paths
-		return { root.generic_string() + abs_path.generic_string(), PathType::Virtual, target_vfs };
+		return { root.generic_string() + abs_path.generic_string(), PathType::Virtual, target };
 	}
 
 	FilePath FilePath::toPhysicalPath() const {
@@ -148,11 +147,6 @@ namespace fs {
 			return f;
 		}();
 		return temp_directory;
-	}
-
-	FilePath FilePath::getDefaultVirtualDirectoryPath() {
-		static FilePath virtual_directory_path(VFS::getInstance()->getRootPath());
-		return virtual_directory_path;
 	}
 }
 
