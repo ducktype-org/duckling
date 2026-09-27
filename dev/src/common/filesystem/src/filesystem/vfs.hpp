@@ -22,6 +22,11 @@ namespace fs {
 	 */
 	class VFS {
 	public:
+		/**
+		 * @brief Builds an empty VFS, holding nothing but its root.
+		 */
+		VFS();
+
 		VFS(const VFS&)            = delete;
 		VFS& operator=(const VFS&) = delete;
 
@@ -125,8 +130,6 @@ namespace fs {
 		bool deleteDirectory(const std::filesystem::path& path, bool force = false);
 
 	private:
-		VFS();
-
 		class VFSNode;
 
 		/**
