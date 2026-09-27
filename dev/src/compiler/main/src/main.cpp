@@ -46,6 +46,7 @@
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
+#include <query_framework/external/api.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <nlohmann/json.hpp>
@@ -53,6 +54,8 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -393,6 +396,283 @@ namespace debug_options {
 
 		return debug_options;
 	}
+}
+
+/**
+ * @brief Write the query graph before and after the graph optimization as JSON files into
+ * @p output_dir (`query_graph_pre_opt.json` and `query_graph_post_opt.json`).
+ * @return false if a file could not be written.
+ */
+bool dumpQueryGraphs(const fs::FilePath& output_dir) {
+	const std::filesystem::path dir(output_dir.strView());
+	std::error_code             error;
+	std::filesystem::create_directories(dir, error);
+	if (error) {
+		CORE_USER_LOG(
+			"Error: cannot create directory '", dir.string(), "': ", error.message(), "\n"
+		);
+		return false;
+	}
+
+	const std::array<std::pair<const char*, query::external::QueryGraphDumpStage>, 2> dumps{ {
+		{ "query_graph_pre_opt.json", query::external::QueryGraphDumpStage::PreOptimization },
+		{ "query_graph_post_opt.json", query::external::QueryGraphDumpStage::PostOptimization },
+	} };
+	for (const auto& [file_name, stage]: dumps) {
+		const auto    path = dir / file_name;
+		std::ofstream out(path);
+		query::external::dumpQueryGraphAsJson(stage, out);
+		out.close();
+		if (!out) {
+			CORE_USER_LOG("Error: cannot write query graph to '", path.string(), "'\n");
+			return false;
+		}
+		CORE_USER_LOG("Query graph written to '", path.string(), "'\n");
+	}
+	return true;
+}
+
+/**
+ * @brief Generate the `compile_package` subcommand.
+ * @param dump_query_graph If true, the command additionally takes a required `--graph-output`
+ * directory and writes the query graph before and after optimization into it.
+ */
+clah::Clah getClahForCompilePackage(
+	std::string name, std::string description, bool dump_query_graph
+) {
+	auto command
+		= clah::Clah(std::move(name), std::move(description))
+	          .addPositional(
+				  clah::FileParser::make("path", true),
+				  "Path to the root module of the package or the root module file."
+			  )
+	          .add(getLlvmOptLevelParam())
+	          .add(debug_options::getClahDebugParameters())
+	          .add(getClahStdLibOptions())
+	          .addCustomVerification(verifyStdLibOptions)
+	          .add(getClahLinkingOptions())
+	          .add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
+	                   .addShortName('n')
+	                   .addLongName("name")
+	                   .addShortDesc("Name of the package the module belongs to.")
+	                   .required()
+	                   .build())
+	          .add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                   .addShortName('a')
+	                   .addLongName("artifact-location")
+	                   .addShortDesc("Path to the top-level folder with build artifacts")
+	                   .optional()
+	                   .build())
+	          .add(clah::ParamBuilder::ofFlag()
+	                   .addLongName("dvm-backend")
+	                   .addShortDesc("Compile to DVM bytecode instead of exe.")
+	                   .build())
+	          .add(clah::ParamBuilder::ofFlag()
+	                   .addLongName("print-statistics")
+	                   .addShortDesc("Print execution time statistics.")
+	                   .build())
+	          .add(clah::ParamBuilder::ofFlag()
+	                   .addLongName("print-graph")
+	                   .addShortDesc("Print the query graph after the compilation.")
+	                   .build())
+	          .addCustomVerification(
+				  [](const clah::ParsingResult& options) -> clah::VerificationResult {
+					  if (options.isFlag("print-graph") && options.isFlag("no-incremental")) {
+						  return std::unexpected<std::string>(
+							  "--print-graph requires the query graph, which is disabled by "
+							  "--no-incremental. These flags cannot be used together."
+						  );
+					  }
+					  return clah::VerificationPassed{};
+				  }
+			  )
+	          .add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
+	                   .addLongName("archiver")
+	                   .addShortDesc("Path to the archiver executable.")
+	                   .optional()
+	                   .build())
+	          .add(clah::ParamBuilder::ofFlag()
+	                   .addLongName("no-incremental")
+	                   .addShortDesc(
+						   "Disable incremental compilation (do not load previous query graph)."
+					   )
+	                   .build())
+	          .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                   .addShortName('w')
+	                   .addLongName("workers")
+	                   .addShortDesc("Worker count.")
+	                   .optional()
+	                   .build())
+	          .add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
+	                   .addShortName('o')
+	                   .addLongName("output-file-name")
+	                   .addShortDesc("Output artifact file name (without extension).")
+	                   .optional()
+	                   .build())
+	          .add(clah::ParamBuilder::ofFlag()
+	                   .addLongName("emit-static-lib")
+	                   .addShortDesc("Emit a static library (.a) instead of an executable.")
+	                   .build());
+
+	if (dump_query_graph) {
+		command
+			.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("directory"))
+		             .addLongName("graph-output")
+		             .addShortDesc(
+						 "Directory to write the pre- and post-optimization query graphs to."
+					 )
+		             .required()
+		             .build())
+			.addCustomVerification(
+				[](const clah::ParsingResult& options) -> clah::VerificationResult {
+					if (options.isFlag("no-incremental")) {
+						return std::unexpected<std::string>(
+							"The query graph is not recorded with --no-incremental, so there is "
+							"nothing to dump."
+						);
+					}
+					return clah::VerificationPassed{};
+				}
+			);
+	}
+
+	auto handler = [dump_query_graph](const clah::ParsingResult& options) -> int {
+		if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
+			CORE_USER_LOG(
+				"Error: --print-graph requires the query graph, which is "
+				"disabled by --no-incremental. These flags cannot be used "
+				"together.\n"
+			);
+			return 1;
+		}
+
+		auto path_to_compile = options.getPositional<fs::File>(0);
+		auto package_name    = options.getValue<std::string>("name").copyValueOr("");
+		CORE_ASSERT(package_name != "", "Package name must be specified");
+
+		auto worker_count   = options.getValue<i64>("workers").copyValueOr(1);
+		auto stdlib_options = getStdLibOptionsFromClah(options);
+		auto artifacts_path
+			= options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/");
+		auto init_result = compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info = {
+								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
+									.package_name = base::StrID(package_name),
+									.version      = base::StrID("not_supported"),
+									.package_path = path_to_compile.getFilePath(),
+									.features     = {},
+									.dependencies = {},
+								},
+							},
+							.compilation_artifacts = {
+								.artifacts_path =
+									artifacts_path,
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
+							.stdlib_options = stdlib_options
+						}
+					);
+		if (init_result.status().isBad()) {
+			compiler::driver::exit();
+			return 1;
+		}
+
+		// For now we always compile the standard library on demand,
+		// note that it will be always cached.
+		auto std_compilation_result = compiler::driver::compilePackages(
+			compiler::driver::getRequiredStdLibCompilationTasks()
+		);
+		if (std_compilation_result.isBad()) {
+			compiler::driver::exit();
+			return 1;
+		}
+
+
+		compiler::driver::BuildTarget build_target;
+		if (options.isFlag("dvm-backend")) {
+			auto output_file_name
+				= options.getValue<std::string>("output-file-name").copyValueOr("package_dvm.dbc");
+			auto is_lib              = options.isFlag("emit-static-lib");
+			auto dvm_linking_options = compiler::driver::constructDVMLinkingOptions(
+				getLinkingOptionsFromClah(options), stdlib_options, is_lib
+			);
+			if (is_lib) {
+				build_target = compiler::driver::BuildTargetDVMLibrary{
+					.output_file_name    = base::StrID(output_file_name),
+					.dvm_linking_options = std::move(dvm_linking_options)
+				};
+			} else {
+				build_target = compiler::driver::BuildTargetDVMExecutable{
+					.output_file_name    = base::StrID(output_file_name),
+					.dvm_linking_options = std::move(dvm_linking_options)
+				};
+			}
+
+		} else {
+			auto output_file_name
+				= options.getValue<std::string>("output-file-name").copyValueOr("package_llvm.exe");
+			if (options.isFlag("emit-static-lib")) {
+				auto archiving_options = getArchivingOptionsFromClah(options);
+				build_target           = compiler::driver::BuildTargetLLVMStaticLibrary{
+							  .output_file_name  = base::StrID(output_file_name),
+							  .archiving_options = archiving_options,
+				};
+			} else {
+				auto native_linking_options = compiler::driver::constructNativeLinkerOptions(
+					getLinkingOptionsFromClah(options), stdlib_options
+				);
+				build_target = compiler::driver::BuildTargetLLVMExecutable{
+					.output_file_name = base::StrID(output_file_name),
+					.linking_options  = native_linking_options,
+				};
+			}
+		}
+
+		time_stats::TrackCategoryTime total_compilation_time(
+			time_stats::TimeCategories::TotalCompilationTime
+		);
+
+		CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+		base::OkBad result = compiler::driver::compilePackages({
+			compiler::driver::PackageCompilationTask{
+				.root_module
+				= global_state::getPackages().front().getRootModule().illegalAccess().getID(),
+				.build_target = build_target,
+			},
+		});
+
+		total_compilation_time.end();
+
+		compiler::driver::exit();
+
+		if (options.isFlag("print-statistics")) {
+			if (not query::USE_STATS) {
+				std::cerr << "Warning: Query statistics are disabled at compile time. "
+							 "No query statistics will be printed.\n";
+			}
+			query::printStats();
+			time_stats::prettyPrintTimeStatistics();
+		}
+
+		if (options.isFlag("print-graph"))
+			query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
+
+		if (dump_query_graph
+		    && !dumpQueryGraphs(options.getValue<fs::FilePath>("graph-output").value()))
+			return 1;
+
+
+		return result.isOk() ? 0 : 1;
+	};
+
+	return std::move(command).setHandler(std::move(handler));
 }
 
 /**
@@ -787,211 +1067,15 @@ clah::Clah getClahForMain() {
 					return result.isOk() ? 0 : 1;
 				})
 		)
-	    .addSubcommand(
-			clah::Clah("compile_package", "Compile given package into a binary.")
-				.addPositional(
-					clah::FileParser::make("path", true),
-					"Path to the root module of the package or the root module file."
-				)
-				.add(getLlvmOptLevelParam())
-				.add(debug_options::getClahDebugParameters())
-				.add(getClahStdLibOptions())
-				.addCustomVerification(verifyStdLibOptions)
-				.add(getClahLinkingOptions())
-				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
-	                     .addShortName('n')
-	                     .addLongName("name")
-	                     .addShortDesc("Name of the package the module belongs to.")
-	                     .required()
-	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-	                     .addShortName('a')
-	                     .addLongName("artifact-location")
-	                     .addShortDesc("Path to the top-level folder with build artifacts")
-	                     .optional()
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("dvm-backend")
-	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-statistics")
-	                     .addShortDesc("Print execution time statistics.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-graph")
-	                     .addShortDesc("Print the query graph after the compilation.")
-	                     .build())
-				.addCustomVerification(
-					[](const clah::ParsingResult& options) -> clah::VerificationResult {
-						if (options.isFlag("print-graph") && options.isFlag("no-incremental")) {
-							return std::unexpected<std::string>(
-								"--print-graph requires the query graph, which is disabled by "
-								"--no-incremental. These flags cannot be used together."
-							);
-						}
-						return clah::VerificationPassed{};
-					}
-				)
-				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
-	                     .addLongName("archiver")
-	                     .addShortDesc("Path to the archiver executable.")
-	                     .optional()
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
-	                     .addShortName('w')
-	                     .addLongName("workers")
-	                     .addShortDesc("Worker count.")
-	                     .optional()
-	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
-	                     .addShortName('o')
-	                     .addLongName("output-file-name")
-	                     .addShortDesc("Output artifact file name (without extension).")
-	                     .optional()
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("emit-static-lib")
-	                     .addShortDesc("Emit a static library (.a) instead of an executable.")
-	                     .build())
-				.setHandler([](const clah::ParsingResult& options) -> int {
-					if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
-						CORE_USER_LOG(
-							"Error: --print-graph requires the query graph, which is "
-							"disabled by --no-incremental. These flags cannot be used "
-							"together.\n"
-						);
-						return 1;
-					}
-
-					auto path_to_compile = options.getPositional<fs::File>(0);
-					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
-					CORE_ASSERT(package_name != "", "Package name must be specified");
-
-					auto worker_count   = options.getValue<i64>("workers").copyValueOr(1);
-					auto stdlib_options = getStdLibOptionsFromClah(options);
-					auto init_result = compiler::driver::initializeTheCompiler(
-						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.packages_info = {
-								compiler::frontend::packages::RawPackageInfo{
-									.package_id   = base::StrID(package_name),
-									.package_name = base::StrID(package_name),
-									.version      = base::StrID("not_supported"),
-									.package_path = path_to_compile.getFilePath(),
-									.features     = {},
-									.dependencies = {},
-								},
-							},
-							.compilation_artifacts = {
-								.artifacts_path =
-									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
-							},
-							.backend_options   = getBackendOptionsFromClah(options),
-							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
-							.execution_options = {
-								.worker_count = base::safeIntConv<u64>(worker_count),
-							},
-							.stdlib_options = stdlib_options
-						}
-					);
-					if (init_result.status().isBad()) {
-						compiler::driver::exit();
-						return 1;
-					}
-
-					// For now we always compile the standard library on demand,
-		            // note that it will be always cached.
-					auto std_compilation_result = compiler::driver::compilePackages(
-						compiler::driver::getRequiredStdLibCompilationTasks()
-					);
-					if (std_compilation_result.isBad()) {
-						compiler::driver::exit();
-						return 1;
-					}
-
-
-					compiler::driver::BuildTarget build_target;
-					if (options.isFlag("dvm-backend")) {
-						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_dvm.dbc");
-						auto is_lib              = options.isFlag("emit-static-lib");
-						auto dvm_linking_options = compiler::driver::constructDVMLinkingOptions(
-							getLinkingOptionsFromClah(options), stdlib_options, is_lib
-						);
-						if (is_lib) {
-							build_target = compiler::driver::BuildTargetDVMLibrary{
-								.output_file_name    = base::StrID(output_file_name),
-								.dvm_linking_options = std::move(dvm_linking_options)
-							};
-						} else {
-							build_target = compiler::driver::BuildTargetDVMExecutable{
-								.output_file_name    = base::StrID(output_file_name),
-								.dvm_linking_options = std::move(dvm_linking_options)
-							};
-						}
-
-					} else {
-						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_llvm.exe");
-						if (options.isFlag("emit-static-lib")) {
-							auto archiving_options = getArchivingOptionsFromClah(options);
-							build_target           = compiler::driver::BuildTargetLLVMStaticLibrary{
-										  .output_file_name  = base::StrID(output_file_name),
-										  .archiving_options = archiving_options,
-							};
-						} else {
-							auto native_linking_options
-								= compiler::driver::constructNativeLinkerOptions(
-									getLinkingOptionsFromClah(options), stdlib_options
-								);
-							build_target = compiler::driver::BuildTargetLLVMExecutable{
-								.output_file_name = base::StrID(output_file_name),
-								.linking_options  = native_linking_options,
-							};
-						}
-					}
-
-					time_stats::TrackCategoryTime total_compilation_time(
-						time_stats::TimeCategories::TotalCompilationTime
-					);
-
-					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
-					base::OkBad result = compiler::driver::compilePackages({
-						compiler::driver::PackageCompilationTask{
-							.root_module
-							= global_state::getPackages().front().getRootModule().illegalAccess().getID(
-							),
-							.build_target = build_target,
-						},
-					});
-
-					total_compilation_time.end();
-
-					compiler::driver::exit();
-
-					if (options.isFlag("print-statistics")) {
-						if (not query::USE_STATS) {
-							std::cerr << "Warning: Query statistics are disabled at compile time. "
-										 "No query statistics will be printed.\n";
-						}
-						query::printStats();
-						time_stats::prettyPrintTimeStatistics();
-					}
-
-					if (options.isFlag("print-graph"))
-						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
-
-
-					return result.isOk() ? 0 : 1;
-				})
-		)
+	    .addSubcommand(getClahForCompilePackage(
+			"compile_package", "Compile given package into a binary.", false
+		))
+	    .addSubcommand(getClahForCompilePackage(
+			"experimental_compile_package_dump_graph",
+			"[Experimental] Like compile_package, and also write the query graph before and after "
+			"its optimization as JSON.",
+			true
+		))
 	    .addSubcommand(
 			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
 				.addPositional(clah::FileParser::make("manifest"))

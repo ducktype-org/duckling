@@ -253,6 +253,12 @@ namespace query::internal {
 		[[nodiscard]] std::vector<byte> serialize() const;
 
 		/**
+		 * @brief Builds the index-based representation of the whole graph, without any
+		 * optimization. Same shape as the output of QueryState::reduceOptimizeGraph.
+		 */
+		[[nodiscard]] ReducedGraphData toReducedGraphData() const;
+
+		/**
 		 * @brief Serializes an already reduced graph description.
 		 * @details The provided mapping must mirror the exact structure we intend to persist, i.e.
 		 * each adjacency index references the precomputed NodeID at the same position. This helper

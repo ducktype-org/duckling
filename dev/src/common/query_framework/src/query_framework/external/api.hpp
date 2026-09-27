@@ -11,6 +11,7 @@
 #include <query_framework/utils/query_hash.hpp>
 
 #include <cstddef>
+#include <ostream>
 #include <span>
 #include <vector>
 
@@ -98,6 +99,22 @@ namespace query::external {
 	 * @brief Optimize and serialize the current query graph for persistence on disk.
 	 */
 	[[nodiscard]] std::vector<byte> optAndSerializeQueryGraph();
+
+	/**
+	 * @brief Which state of the query graph dumpQueryGraphAsJson() writes.
+	 */
+	enum class QueryGraphDumpStage {
+		PreOptimization,   ///< The whole current graph, as recorded during compilation.
+		PostOptimization,  ///< The graph after reduceOptimizeGraph, i.e. what gets persisted.
+	};
+
+	/**
+	 * @brief Write the current query graph as a self-contained JSON document, for inspection by
+	 * external tools (see `dev/scripts/query_graph/`).
+	 * @note Experimental and meant for debugging; the format is not persisted anywhere.
+	 * @warning Must not be called while queries are executing.
+	 */
+	void dumpQueryGraphAsJson(QueryGraphDumpStage stage, std::ostream& out);
 
 	/**
 	 * @brief Delete on-disk caches of previous-graph nodes that were not merged into the current

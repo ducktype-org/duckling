@@ -56,6 +56,28 @@ Tests:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
 
+  query-graph-dump:
+    # The experimental subcommand writes the query graph before and after optimization as JSON,
+    # and the Graphviz helper script can read both dumps.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 3
+    graph_dir: "$DIT_TMP_DIR/graph"
+    dump_cmd: "@{duckc_path} experimental_compile_package_dump_graph
+      ./duck_modules/query_graph_dump/query_graph_dump.dk -n query_graph_dump -O 0
+      -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
+    to_dot: "python3 @{dev_dir}/scripts/query_graph/query_graph_to_dot.py"
+    Cases:
+      dump-and-convert:
+        Run: "@{dump_cmd} --graph-output @{graph_dir}
+          && @{to_dot} @{graph_dir}/query_graph_pre_opt.json
+          && @{to_dot} @{graph_dir}/query_graph_post_opt.json --no-inputs
+          && grep -q 'CompileModule' @{graph_dir}/query_graph_post_opt.dot"
+        ExitCode: 0
+      no-incremental-is-rejected:
+        # Without incremental compilation there is no query graph to dump.
+        Run: "@{dump_cmd} --graph-output @{graph_dir} --no-incremental"
+        ExitCode: 1
+
   comp-time-output:
     # Test compile time output to stderr
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"

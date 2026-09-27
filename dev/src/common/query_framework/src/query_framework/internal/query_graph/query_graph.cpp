@@ -172,7 +172,7 @@ namespace query::internal {
 		return true;
 	}
 
-	std::vector<byte> QueryGraph::serialize() const {
+	QueryGraph::ReducedGraphData QueryGraph::toReducedGraphData() const {
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_deps->size());
 		base::HashMap<NodeID, usize> node_to_index;
@@ -202,8 +202,11 @@ namespace query::internal {
 			}
 		}
 
-		return serializeReducedGraph(ReducedGraphData{ .nodes     = std::move(nodes),
-		                                               .adjacency = std::move(adjacency) });
+		return ReducedGraphData{ .nodes = std::move(nodes), .adjacency = std::move(adjacency) };
+	}
+
+	std::vector<byte> QueryGraph::serialize() const {
+		return serializeReducedGraph(toReducedGraphData());
 	}
 
 	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {

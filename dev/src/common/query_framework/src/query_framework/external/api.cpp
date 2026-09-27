@@ -6,6 +6,7 @@
 
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
+#include <query_framework/internal/query_graph/graph_json.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>
 #include <query_framework/internal/query_graph/node_marking.hpp>
@@ -45,6 +46,23 @@ namespace query::external {
 		auto state         = ::query::internal::ContextAccess::getState();
 		auto reduced_graph = state->reduceOptimizeGraph(state->getGraph());
 		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
+	}
+
+	void dumpQueryGraphAsJson(QueryGraphDumpStage stage, std::ostream& out) {
+		auto        state = ::query::internal::ContextAccess::getState();
+		const auto& graph = state->getGraph();
+		switch (stage) {
+		case QueryGraphDumpStage::PreOptimization:
+			::query::internal::writeReducedGraphAsJson(
+				graph.toReducedGraphData(), "pre_optimization", out
+			);
+			return;
+		case QueryGraphDumpStage::PostOptimization:
+			::query::internal::writeReducedGraphAsJson(
+				state->reduceOptimizeGraph(graph), "post_optimization", out
+			);
+			return;
+		}
 	}
 
 	u64 deleteOrphanedDiskCaches() {
