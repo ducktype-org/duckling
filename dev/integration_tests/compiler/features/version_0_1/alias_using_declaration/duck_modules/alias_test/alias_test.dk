@@ -1,5 +1,5 @@
-# Test alias declaration - creates an alternative name for a symbol
-# Per docs: alias can be used on any symbol including functions, variables, class members
+# Test `using ... as` - creates an alternative name for a symbol
+# It can be used on any symbol including functions, variables, class members
 
 namespace outer {
     namespace inner {
@@ -24,16 +24,16 @@ class Example {
 
 class Example_wrapper {
     var wrapped_example: Example;
-    alias class_print = wrapped_example.class_member_b;
+    using wrapped_example.class_member_b as class_print;
 }
 
 # Alias to a function in nested namespace
-alias f = outer.inner.core.veryLongFunctionName;
-alias add = outer.inner.core.addNumbers;
-alias cnt = outer.inner.core.counter;
+using outer.inner.core.veryLongFunctionName as f;
+using outer.inner.core.addNumbers as add;
+using outer.inner.core.counter as cnt;
 
 var e = Example();
-alias mema = e.class_member_a;
+using e.class_member_a as mema;
 
 fun main() -> i64 = {
     # Call function via alias

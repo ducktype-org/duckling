@@ -79,6 +79,8 @@ jobs:
       # per-PR tests matrix uses, so the linter cannot break on a configuration that no
       # other workflow exercises. compile_commands.json is exported by dev/CMakeLists.txt
       # itself, so no extra flag is needed here.
+      # --jit Yes enables C&P too, so the C&P stencil sources (only compiled with C&P)
+      # appear in compile_commands.json.
       - name: Create compile_commands
         working-directory: ${{ env.WORKSPACE }}
         run: |
@@ -88,7 +90,7 @@ jobs:
             -c ${{ env.CC_COMPILER }} \
             -x ${{ env.CXX_COMPILER }} \
             -t Dev \
-            --no-enable-jit \
+            --jit Yes \
             --no-coverage \
             --no-docs \
             --ccache

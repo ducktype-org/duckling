@@ -104,6 +104,8 @@ LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<llvm::orc::ThreadSafeConte
 		/*isPacked=*/false
 	);
 
+	auto i64_ty = Ref(llvm::Type::getInt64Ty(*g_context->getContext()));
+
 	auto frame_ty = Ref(llvm::StructType::create(*g_context->getContext(), "struct.vm::Frame"));
 	frame_ty->setBody(
 		{ flag_data_ty.get() },
@@ -114,9 +116,9 @@ LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<llvm::orc::ThreadSafeConte
 		*g_context->getContext(),
 		{
 			// Layout of microinstructions struct in switch case version.
-			llvm::Type::getInt64Ty(*g_context->getContext()),  // opcode
-			llvm::Type::getInt64Ty(*g_context->getContext()),  // arg0
-			llvm::Type::getInt64Ty(*g_context->getContext())   // arg1
+			i64_ty.get(),  // opcode
+			i64_ty.get(),  // arg0
+			i64_ty.get()   // arg1
 		},
 		"vm::MicroInstruction"
 	));
@@ -134,19 +136,29 @@ LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<llvm::orc::ThreadSafeConte
 
 	auto frame_ptr_ptr_ty
 		= Ref(llvm::PointerType::getUnqual(Ref(llvm::PointerType::getUnqual(frame_ty.get())).get()));
+
 	auto vm_thread_ptr_ty = Ref(llvm::PointerType::getUnqual(vm_thread_ty.get()));
 
-	auto opfun_ty = Ref(llvm::FunctionType::get(
-		Ref(llvm::Type::getVoidTy(*g_context->getContext())).get(),
+	// This is strongly dependent on the type of LLVM-compiled function. (jit_compiler.hpp)
+	auto compiled_ty = Ref(llvm::FunctionType::get(
+		i64_ty.get(),
 		{ mi_ptr_ptr_ty.get(), byte_ptr_ptr_ty.get(), frame_ptr_ptr_ty.get(), vm_thread_ptr_ty.get() },
-		false
+		/*IsVarArgs=*/false
+	));
+
+	// This is strongly dependent on the type of instruction definitions. (instruction.hpp)
+	auto opfun_ty = Ref(llvm::FunctionType::get(
+		llvm::Type::getVoidTy(*g_context->getContext()),
+		{ mi_ptr_ptr_ty.get(), byte_ptr_ptr_ty.get(), frame_ptr_ptr_ty.get(), vm_thread_ptr_ty.get() },
+		/*IsVarArgs=*/false
 	));
 
 	return LlvmData::LlvmTypes{ .frame            = frame_ty,
 		                        .flag_data        = flag_data_ty,
 		                        .microinstruction = microinstruction_ty,
 		                        .vm_thread        = vm_thread_ty,
-		                        .opfun            = opfun_ty };
+		                        .opfun            = opfun_ty,
+		                        .compiled         = compiled_ty };
 }
 
 LlvmData initLlvmJit() {

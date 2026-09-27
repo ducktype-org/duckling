@@ -1,9 +1,9 @@
 //! [`Command`]-based backend communicating with the compiler.
 
 use std::convert::Infallible;
-use std::fmt;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
+use std::{fmt, io};
 
 use tracing::{debug, info, trace, warn};
 
@@ -11,7 +11,7 @@ use super::Duckc;
 use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::profiles::OptLevel;
 use crate::util::command_ext::CommandExt;
-use crate::{QuackResult, QuackResultContext, qp_bail_internal};
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -154,18 +154,34 @@ impl DuckcProcessBuilder {
     /// Execute the built command.
     pub fn execute(&mut self) -> QuackResult<ExitStatus> {
         info!(duckc = ?self, "executing duckc");
-        self.inner.status().context("failed to spawn duckc")
+        self.inner
+            .status()
+            .context("failed to spawn duckc")
+            .map_err(add_path_hint_to_missing_duckc)
     }
 
     /// Execute the built command by replacing current process.
     pub fn execute_and_replace(&mut self) -> QuackResult<Infallible> {
         info!(duckc = ?self, "replacing with duckc");
-        self.inner.exec_replace().context("failed to spawn duckc")
+        self.inner
+            .exec_replace()
+            .context("failed to spawn duckc")
+            .map_err(add_path_hint_to_missing_duckc)
     }
 }
 
 impl fmt::Display for DuckcProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.display().fmt(f)
+    }
+}
+
+fn add_path_hint_to_missing_duckc(error: QuackError) -> QuackError {
+    if let Some(io_err) = error.downcast_ref_in_chain::<io::Error>()
+        && io_err.kind() == io::ErrorKind::NotFound
+    {
+        error.add_hint("try adding duckc to the $PATH")
+    } else {
+        error
     }
 }

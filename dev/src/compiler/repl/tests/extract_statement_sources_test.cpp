@@ -117,7 +117,7 @@ private:
 			ASSERT_EQUAL(6UL, result.size());
 			ASSERT_EQUAL(std::string("import X as x;"), result[0]);
 			ASSERT_EQUAL(std::string("using X;"), result[1]);
-			ASSERT_EQUAL(std::string("alias X = X;"), result[2]);
+			ASSERT_EQUAL(std::string("using X as Y;"), result[2]);
 			ASSERT_EQUAL(std::string("class Foo {}"), result[3]);
 			ASSERT_EQUAL(std::string("namespace Math {}"), result[4]);
 			assertTrue(

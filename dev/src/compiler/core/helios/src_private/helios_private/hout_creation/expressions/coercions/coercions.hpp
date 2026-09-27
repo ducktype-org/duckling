@@ -17,6 +17,17 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
+	namespace code {
+		// Forward declaration for temporary friend declaration.
+		// @TODO: #3631 Remove the friend and this forward declaration.
+		Box<Expr> castAs(
+			query::Context&                        ctx,
+			Box<Expr>                              value,
+			tsh::SymbolType<>                      as_type,
+			pst::Access<pst::expr::BinaryOperator> stmt
+		);
+	}
+
 	/**
 	 * @brief This struct represents a function that performs a coercion from one expression to
 	 * another. It was added to make sure that the coercion is always valid (by calling
@@ -123,6 +134,14 @@ namespace compiler::helios {
 
 		friend query::QResult<Coercion> canCoerce(
 			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		);
+
+		// @TODO: #3631 Remove the friend
+		friend Box<code::Expr> code::castAs(
+			query::Context&                        ctx,
+			Box<code::Expr>                        value,
+			tsh::SymbolType<>                      as_type,
+			pst::Access<pst::expr::BinaryOperator> stmt
 		);
 	};
 

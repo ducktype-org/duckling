@@ -232,7 +232,7 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = Box::new(self.root_pcx.package().manifest().clone());
-        let root_features = root_manifest
+        let root_features: HashSet<FeatureName> = root_manifest
             .features()
             .all_features()
             .keys()
@@ -245,9 +245,12 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         prev_freeze_manifests.insert(self.root_pkg, root_manifest.clone());
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
-            .find_maximal_correct_dep_solution(&prev_freeze_manifests, fetcher)
+            .find_maximal_correct_dep_solution(
+                root_features.clone(),
+                &prev_freeze_manifests,
+                fetcher,
+            )
             .await?;
-
         if is_root_satisfied {
             debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
