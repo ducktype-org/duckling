@@ -1,5 +1,4 @@
 import sys
-import time
 from dap_client import DAPTestClient
 
 client = DAPTestClient()
@@ -13,10 +12,6 @@ try:
     client.send_next()
     client.wait_for_text("Failed", "Failed output - next while running")
 
-    # Give the VM a moment to leave the synthetic `vm_start_function` and enter `main`'s loop,
-    # so pausing stops inside `main` rather than in the start function.
-    time.sleep(0.02)
-
     # Request Pause and wait for all interleaved facts
     pause_seq = client.send_pause()
     client.wait_for(
@@ -26,6 +21,12 @@ try:
     )
     sys.stderr.write("--> SUCCESS: VM successfully paused (interleaving handled)!\n")
     sys.stderr.flush()
+
+    # Step enough times to leave the synthetic `vm_start_function` and reach `main`'s loop, so
+    # the frame inspected below belongs to `main` rather than the start function.
+    for _ in range(20):
+        step_seq = client.send_next()
+        client.wait_for(responses=[step_seq])
 
     frames = client.get_frames()
     f0 = frames[0]
