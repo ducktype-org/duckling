@@ -319,8 +319,7 @@ namespace vm::test {
 		}
 
 		FlowSimulator& awaitExprResultValues(
-			const std::vector<ExpectedValue>& expected_result,
-			u64                               timeout = DEFAULT_EXPR_TIMEOUT
+			const std::vector<ExpectedValue>& expected_result, u64 timeout = DEFAULT_EXPR_TIMEOUT
 		) {
 			auto pending = popPendingExpr();
 			assertTrue(
@@ -387,9 +386,9 @@ namespace vm::test {
 			return awaitExprResult(expected_result);
 		}
 
-		/// Asserts the already-loaded expression is still running past the caller-side budget. The VM
-		/// no longer owns a timeout, so the caller decides when to give up; the future stays pending
-		/// and is later consumed by `awaitExprResult`.
+		/// Asserts the already-loaded expression is still running past the caller-side budget. The
+		/// VM no longer owns a timeout, so the caller decides when to give up; the future stays
+		/// pending and is later consumed by `awaitExprResult`.
 		FlowSimulator& evalExprExpectTimeout(u64 timeout_ms = DEFAULT_EXPR_TIMEOUT) {
 			assertTrue(
 				pending_expr_results.back().future.wait_for(std::chrono::milliseconds(timeout_ms))

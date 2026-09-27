@@ -365,9 +365,8 @@ namespace vm::loader::parser {
 		auto parseArg(F8ParserState& state) -> vm::opargs::VMValueImm {
 			auto pos            = state.getPosition();
 			auto parsed_literal = parseNumericLiteral<u64>(state);
-			auto value          = vm::opargs::VMValueImm{
-                std::bit_cast<const vm::IVMValue*>(parsed_literal.first)
-            };
+			auto value
+				= vm::opargs::VMValueImm{ std::bit_cast<const vm::IVMValue*>(parsed_literal.first) };
 			auto length = std::max<usize>(parsed_literal.second, 1);
 			value.bytecode_pos
 				= dia::SourcePosition(pos.getLocation(), pos.getStart(), pos.getStart() + length);

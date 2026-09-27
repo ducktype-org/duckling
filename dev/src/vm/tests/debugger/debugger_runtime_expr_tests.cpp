@@ -145,9 +145,7 @@ private:
 			.awaitExprResult({ 42 });
 
 		// The value must survive many unrelated evaluations.
-		for (u64 i = 0; i < 1'000; i++)
-			simulator.loadRuntimeExpr(ret_five)
-				.awaitExprResult({ 5 });
+		for (u64 i = 0; i < 10'000; i++) simulator.loadRuntimeExpr(ret_five).awaitExprResult({ 5 });
 
 		simulator.loadRuntimeExpr(read_value)
 			.awaitExprResult({ 42 })
@@ -518,6 +516,12 @@ private:
 			.evalExprExpectLoadError(expr("exit.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG)
 			.evalExprExpectLoadError(
 				expr("init_vmval_imm_in_expr.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG
+			)
+			.evalExprExpectLoadError(
+				expr("init_vmval_frame_in_expr.dbc"), vm::code::InitWithFrameError::ERR_MSG
+			)
+			.evalExprExpectLoadError(
+				expr("init_type_frame_in_expr.dbc"), vm::code::InitWithFrameError::ERR_MSG
 			)
 			.evalExprExpectLoadError(
 				expr("sig_param.dbc"), vm::code::InvalidRuntimeExprSignature::ERR_MSG

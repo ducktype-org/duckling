@@ -279,7 +279,7 @@ namespace vm::debugger {
 				if (!breakpoint) return std::unexpected(breakpoint.error());
 
 				// Only inline-print a result that arrives within the budget; a slower (paused)
-				// expression is dropped silently on the next evaluation.
+			    // expression is dropped silently on the next evaluation.
 				if (expr_future.wait_for(EXPR_RESULT_TIMEOUT) == std::future_status::ready)
 					printExprResult(expr_future.get());
 				else
@@ -291,12 +291,11 @@ namespace vm::debugger {
 	void Debugger::dropEvaluatedPendingExprs() {
 		// @TODO: #3655 Printing these results races with the status emitter; for now the
 		// completed ones are discarded when the next expression is evaluated.
-		for (auto it = pending_expr_results.begin(); it != pending_expr_results.end();) {
+		for (auto it = pending_expr_results.begin(); it != pending_expr_results.end();)
 			if (it->wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 				it = pending_expr_results.erase(it);
 			else
 				++it;
-		}
 	}
 
 	const Mapper& Debugger::getMapper() { return mapper; }

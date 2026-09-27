@@ -31,7 +31,7 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
 			const FromType&                                                            opcode_arg,   \
-			[[maybe_unused]] code::StackStateID stack_state_id                                                        \
+			[[maybe_unused]] code::StackStateID stack_state_id                                       \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \

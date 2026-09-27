@@ -509,6 +509,7 @@ namespace vm::code {
 		CannotCastPreviousFrameVariableError,
 		"Cannot in-place cast a variable from a previous frame: "
 	);
+	DEFINE_ARGUMENT_ERROR(InitWithFrameError, "Cannot initialize a variable with frame specifier: ");
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
 	DEFINE_ARGUMENT_ERROR(UnknownTypeOfVMValueError, "Unknown type for VM value: ");
 	DEFINE_ARGUMENT_ERROR(InvalidVMValueIDError, "Given id for vm value isn't valid: ");

@@ -1,0 +1,5 @@
+# `init_pany_type` must not use a frame specifier either.
+function init_type_frame { } -> { } {
+	init_pany_type frame 1 value, i64;
+	ret;
+}

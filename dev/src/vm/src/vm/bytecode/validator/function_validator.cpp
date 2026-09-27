@@ -36,8 +36,7 @@ namespace {
 	constexpr std::array VALID_LAST_OPCODES
 		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
 
-	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR
-		= { OpCode::Op_ret, OpCode::Op_jmp_label };
+	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR = { OpCode::Op_ret, OpCode::Op_jmp_label };
 
 	// The synthetic start functions never return normally - they end the program with `exit`.
 	constexpr std::array VALID_LAST_OPCODES_FOR_START = { OpCode::Op_exit, OpCode::Op_jmp_label };
@@ -568,6 +567,7 @@ class FunctionValidator {
 							Op_initFromVMValue_pany_idvmval,
 							Op_initFromVMValue_pany_immvmval
 						) {
+							if (from_prev_frame) throw InitWithFrameError(*place);
 							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
@@ -1775,10 +1775,7 @@ class FunctionValidator {
 					throw DynamicTableTypeMismatchError(instr);
 			}
 			instr_case_novalue(
-				Op_nop,
-				Op_exit,
-				Op_initFromVMValue_pany_idvmval,
-				Op_initFromVMValue_pany_immvmval
+				Op_nop, Op_exit, Op_initFromVMValue_pany_idvmval, Op_initFromVMValue_pany_immvmval
 			) {}
 		}
 		POP_DIAGNOSTIC

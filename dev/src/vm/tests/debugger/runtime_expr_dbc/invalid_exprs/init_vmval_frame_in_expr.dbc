@@ -1,0 +1,7 @@
+# `initFromVMValue_pany_idvmval` must not use a frame specifier: `init` only creates a variable
+# in the current frame.
+function init_vmval_frame { } -> { i64 } {
+	initFromVMValue_pany_idvmval frame 1 value, 0;
+	mov_p64_p64 ret0, value;
+	ret;
+}
