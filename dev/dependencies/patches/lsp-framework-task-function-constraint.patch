@@ -1,48 +1,14 @@
 diff --git a/lsp/task_function.h b/lsp/task_function.h
-index 4cf8a50..d5d2094 100644
+index 4cf8a50..1e45b1a 100644
 --- a/lsp/task_function.h
 +++ b/lsp/task_function.h
-@@ -11,6 +11,31 @@
- 
- namespace lsp{
- 
-+namespace detail{
-+
-+/*
-+ * Checks whether TaskFunction<R> can wrap F bound to Args.
-+ *
-+ * Self is TaskFunction<R> itself. The check for it has to short circuit through if constexpr
-+ * instead of a && chain in the requires clause: asking whether TaskFunction is nothrow move
-+ * constructible performs overload resolution over its constructors, which evaluates this very
-+ * constraint again. A conjunction of atomic constraints does not stop that recursion because
-+ * every atom is still substituted into, so clang rejects it outright while gcc accepts it.
-+ */
-+template<typename Self, typename R, typename F, typename... Args>
-+constexpr bool isTaskCallable()
-+{
-+	if constexpr(std::same_as<std::decay_t<F>, Self>)
-+		return false;
-+	else
-+		return std::is_invocable_r_v<R, std::decay_t<F>, std::decay_t<Args>...> &&
-+		       std::is_nothrow_move_constructible_v<std::decay_t<F>> &&
-+		       (std::is_nothrow_move_constructible_v<std::decay_t<Args>> && ...) &&
-+		       (std::constructible_from<std::decay_t<Args>, Args&&> && ...);
-+}
-+
-+} // namespace detail
-+
- /*
-  * Wraps a callable with bound arguments.
-  * Avoids allocation if callable is small enough.
-@@ -25,10 +50,7 @@ public:
+@@ -25,7 +25,8 @@ public:
  	TaskFunction(std::nullptr_t){}
  
  	template<typename F, typename... Args>
 -	requires std::is_invocable_r_v<R, std::decay_t<F>, std::decay_t<Args>...> &&
--					 std::is_nothrow_move_constructible_v<std::decay_t<F>> &&
--					 (std::is_nothrow_move_constructible_v<std::decay_t<Args>> && ...) &&
--					 (std::constructible_from<std::decay_t<Args>, Args&&> && ...)
-+	requires (detail::isTaskCallable<TaskFunction, R, F, Args...>())
- 	TaskFunction(F&& f, Args&&... args)
- 	{
- 		using ImplType = Impl<std::decay_t<F>, std::decay_t<Args>...>;
++	requires (!std::same_as<std::decay_t<F>, TaskFunction>) &&
++					 std::is_invocable_r_v<R, std::decay_t<F>, std::decay_t<Args>...> &&
+ 					 std::is_nothrow_move_constructible_v<std::decay_t<F>> &&
+ 					 (std::is_nothrow_move_constructible_v<std::decay_t<Args>> && ...) &&
+ 					 (std::constructible_from<std::decay_t<Args>, Args&&> && ...)

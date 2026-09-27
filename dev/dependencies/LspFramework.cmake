@@ -10,6 +10,9 @@ FetchContent_Declare(lsp-framework
     GIT_REPOSITORY https://github.com/leon-bckl/lsp-framework.git
     GIT_TAG        ${LSP_FRAMEWORK_TAG}
 	GIT_SUBMODULES ""
+	# lsp::TaskFunction's converting constructor asks whether F is nothrow move constructible
+	# without first excluding F being TaskFunction itself, so clang rejects the constraint as
+	# self referential. The patch adds that exclusion as the leading conjunct.
 	PATCH_COMMAND "${GIT_EXECUTABLE}" reset --hard HEAD
 	      COMMAND "${GIT_EXECUTABLE}" apply "${CMAKE_CURRENT_LIST_DIR}/patches/lsp-framework-task-function-constraint.patch"
 	# Its headers come in as -isystem, so our -Werror flags do not fire on code we do not own.
