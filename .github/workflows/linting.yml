@@ -9,9 +9,9 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 env:
-  CXX_COMPILER: g++-14
-  CC_COMPILER: gcc-14
-  CLANG_COMPILER: clang-19
+  CXX_COMPILER: clang++-19
+  CC_COMPILER: clang-19
+  CLANG_PACKAGE: clang-19
   TIDY_VERSION: 19
   # Kept in sync with tests.yml so the linter configures the very same build the
   # per-PR tests matrix does.
@@ -66,7 +66,7 @@ jobs:
         run: sudo apt update
 
       - name: Install gvc, LLVM and nlohmann_json
-        run: sudo apt -y install libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_COMPILER }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build ${{ env.CXX_COMPILER }} ${{ env.CC_COMPILER }}
+        run: sudo apt -y install libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
 
       - name: Install click and PyYAML
         run: sudo pip install click pyyaml --break-system-packages --no-input
@@ -75,10 +75,11 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py init
 
-      # The build is configured through the toolbox with the same compiler and flags the
-      # per-PR tests matrix uses, so the linter cannot break on a configuration that no
-      # other workflow exercises. compile_commands.json is exported by dev/CMakeLists.txt
-      # itself, so no extra flag is needed here.
+      # The build is configured through the toolbox with the same flags the per-PR tests
+      # matrix uses, so the linter cannot break on a configuration that no other workflow
+      # exercises. clang is used because dev/CMakeLists.txt rejects JIT with any other
+      # compiler. compile_commands.json is exported by dev/CMakeLists.txt itself, so no
+      # extra flag is needed here.
       # --jit Yes enables C&P too, so the C&P stencil sources (only compiled with C&P)
       # appear in compile_commands.json.
       - name: Create compile_commands
@@ -111,8 +112,6 @@ jobs:
           lines-changed-only: true
           database: "dev/build"
           ignore: "**/*.c"
-          # compile_commands.json is produced by GCC, which knows warning flags clang-tidy
-          # does not; without this every translation unit reports unknown-warning-option.
           extra-args: "-Wno-unknown-warning-option"
 
           # Note that tidy-checks: '', means it uses .clang-tidy file

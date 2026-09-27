@@ -4,10 +4,14 @@ set(LSP_FRAMEWORK_TAG "87c2f29d351048296ec6782fe29efbffde8aea8b")  # master, com
 
 set(LSP_INSTALL OFF CACHE BOOL "" FORCE)
 
+find_package(Git)
+
 FetchContent_Declare(lsp-framework
     GIT_REPOSITORY https://github.com/leon-bckl/lsp-framework.git
     GIT_TAG        ${LSP_FRAMEWORK_TAG}
 	GIT_SUBMODULES ""
+	PATCH_COMMAND "${GIT_EXECUTABLE}" reset --hard HEAD
+	      COMMAND "${GIT_EXECUTABLE}" apply "${CMAKE_CURRENT_LIST_DIR}/patches/lsp-framework-task-function-constraint.patch"
 	# Its headers come in as -isystem, so our -Werror flags do not fire on code we do not own.
 	SYSTEM
 )
