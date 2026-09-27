@@ -67,7 +67,7 @@ namespace compiler::tsl {
 				ats::arrayType(base::CRef<ats::AbiType>(&element_conv.value()), array.getSize())
 			);
 		}
-		
+
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
 			// Convert the fields to their C-ABI types and return them as a struct,
 			// borrowing each field's cached conversion (no clone).

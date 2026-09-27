@@ -10,9 +10,9 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/hout/elements/stmt.hpp>
 #include <helios/errors/extern_c_class_empty.hpp>
 #include <helios/errors/field_not_c_compatible.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
@@ -204,8 +204,7 @@ namespace compiler::helios {
 					any_field = true;
 
 					UNPACK_QRESULT_CREF(
-						auto& field_result =,
-						ctx.query<tsl::QueryCAbiTypeOf>(element.getType(ctx))
+						auto& field_result =, ctx.query<tsl::QueryCAbiTypeOf>(element.getType(ctx))
 					);
 					if (field_result.has_value()) continue;
 

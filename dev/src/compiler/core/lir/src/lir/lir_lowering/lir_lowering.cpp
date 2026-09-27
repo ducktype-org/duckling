@@ -98,8 +98,8 @@ namespace compiler::lir {
 
 		abi::calling_conv::FunctionType abi_fun_type{
 			.return_type = return_abi_or_empty(return_type),
-			.param_types = parameter_types | std::views::transform(abiTypeOf)
-			             | std::ranges::to<std::vector>(),
+			.param_types
+			= parameter_types | std::views::transform(abiTypeOf) | std::ranges::to<std::vector>(),
 			.num_fixed_params = c_abi_info.fixed_params,
 		};
 		return { LIRAbi::CAbi{
