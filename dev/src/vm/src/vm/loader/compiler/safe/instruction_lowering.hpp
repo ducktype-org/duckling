@@ -664,7 +664,7 @@ namespace vm::loader::compiler::safe::detail {
 					addDeinitOfVariable(live - 1);
 
 				// An expression return hands its values back through a dedicated micro opcode.
-				if (std::holds_alternative<vm::code::detail::Expr>(ctx.mode))
+				if (std::holds_alternative<vm::code::Expression>(ctx.mode))
 					addLow<Op_ret_from_expr>();
 				else
 					addLow<Op_ret>();

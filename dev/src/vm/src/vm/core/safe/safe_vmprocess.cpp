@@ -713,7 +713,7 @@ namespace vm {
 			return std::unexpected(api::ApiError{ api::LoadProgramError{
 				std::string(code::EvaluatingExprOnRunningThreadError::ERR_MSG) } });
 
-		auto comp_details = code::detail::Expr{
+		auto comp_details = code::Expression{
 			.vm_values       = &owned_vm_values,
 			.call_stack_base = thread_ref->getRuntimeData().frame_stack_base,
 			.call_stack_size = thread_ref->getNumberOfCurrentStackFrames(),
@@ -742,13 +742,13 @@ namespace vm {
 	}
 
 	low::LowFuncData SafeVMProcess::compileToLow(
-		const code::valid_function::ValidFunction& expr, const vm::code::detail::ValidationMode& mode
+		const code::valid_function::ValidFunction& expr, const vm::code::CompilationMode& mode
 	) const {
 		return compiler.lowerExpr(expr, mode);
 	}
 
 	std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> SafeVMProcess::validateFunction(
-		const code::Function& function, code::detail::ValidationMode mode
+		const code::Function& function, code::CompilationMode mode
 	) const {
 		return loader.validateFunction(function, mode);
 	}

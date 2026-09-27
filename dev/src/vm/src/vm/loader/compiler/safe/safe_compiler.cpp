@@ -56,7 +56,7 @@ namespace vm::loader::compiler::safe {
 			low::opargs::PlaceDataArgumentType,
 
 			if_opt_some (opcode_arg.frame, frame_idx) {
-				auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
+				auto& expr_mode = std::get<vm::code::Expression>(stack_ctx.mode);
 				auto& frame = expr_mode.call_stack_base[frame_idx];
 
 				auto relative_offset = getIntTypeSize(*expr_mode.getUpcomingHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
@@ -81,7 +81,7 @@ namespace vm::loader::compiler::safe {
 			low::opargs::PlaceBlockArgumentType,
 
 			if_opt_some (opcode_arg.frame, frame_idx) {
-				auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
+				auto& expr_mode = std::get<vm::code::Expression>(stack_ctx.mode);
 				auto& frame = expr_mode.call_stack_base[frame_idx];
 
 				auto relative_offset = *expr_mode.getUpcomingHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
@@ -169,7 +169,7 @@ namespace vm::loader::compiler::safe {
 			std::same_as<low::opargs::VMValPtr>,
 
 			if constexpr (std::same_as<FromType, opargs::VMValueIdentifier>) {
-				auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
+				auto& expr_mode = std::get<vm::code::Expression>(stack_ctx.mode);
 				return std::bit_cast<u64>(expr_mode.vm_values->at(opcode_arg.id).get());
 			} else {
 				return std::bit_cast<u64>(opcode_arg.ptr);
@@ -430,8 +430,7 @@ namespace vm::loader::compiler::safe {
 	}
 
 	vm::low::LowFuncData SafeCompiler::lowerExpr(
-		const code::valid_function::ValidFunction& function,
-		const vm::code::detail::ValidationMode&    mode
+		const code::valid_function::ValidFunction& function, const vm::code::CompilationMode& mode
 	) const {
 		vm::loader::compiler::detail::FunctionStackContext ctx = calculateStackContext(function);
 		ctx.mode                                               = mode;

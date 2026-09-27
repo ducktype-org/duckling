@@ -271,19 +271,18 @@ namespace vm {
 
 		low::LowFuncData compileToLow(
 			const code::valid_function::ValidFunction& func,
-			const vm::code::detail::ValidationMode&    mode = vm::code::detail::Normal{}
+			const vm::code::CompilationMode&           mode = vm::code::NormalFunction{}
 		) const;
 
 		/**
-		 * @brief Validates a function in the given mode (defaults to `Normal`) and returns it, or
-		 * the loader diagnostics on failure.
+		 * @brief Validates a function in the given mode (defaults to `NormalFunction`) and returns
+		 * it, or the loader diagnostics on failure.
 		 * @note The caller must keep the returned `ValidFunction` alive (at a stable address) for
 		 * as long as any `LowFuncData` lowered from it is used - `LowFuncData` stores a pointer to
 		 * it in `high_func`.
 		 */
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateFunction(
-			const code::Function&        function,
-			code::detail::ValidationMode mode = code::detail::Normal{}
+			const code::Function& function, code::CompilationMode mode = code::NormalFunction{}
 		) const;
 	};
 

@@ -32,8 +32,8 @@ namespace vm {
 		class FunctionHandlers;
 	}
 
-	namespace code::detail {
-		struct Expr;
+	namespace code {
+		struct Expression;
 	}
 
 	class SafeVMProcess;
@@ -290,7 +290,7 @@ namespace vm {
 
 		[[nodiscard]]
 		std::expected<std::future<std::vector<Ref<IVMValue>>>, std::string> loadAndExecRuntimeExpr(
-			code::valid_function::ValidFunction&& expr, const vm::code::detail::Expr& exp_mode
+			code::valid_function::ValidFunction&& expr, const vm::code::Expression& exp_mode
 		);
 
 		[[nodiscard]]

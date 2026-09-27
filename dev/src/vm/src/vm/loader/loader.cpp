@@ -277,7 +277,7 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 }
 
 std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateExpr(
-	vm::code::detail::Expr compile_runtime_data, fs::File file
+	vm::code::Expression compile_runtime_data, fs::File file
 ) const {
 	auto opt_code_collection = parseFiles({ std::move(file) });
 	if (!opt_code_collection.has_value())
@@ -320,7 +320,7 @@ std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::val
 }
 
 std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateFunction(
-	const code::Function& function, code::detail::ValidationMode mode
+	const code::Function& function, code::CompilationMode mode
 ) const {
 	LoaderLogger log;
 	try {

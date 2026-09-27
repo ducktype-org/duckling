@@ -59,7 +59,7 @@ namespace vm::loader::compiler::safe {
 
 		[[nodiscard]] vm::low::LowFuncData lowerExpr(
 			const code::valid_function::ValidFunction& expr,
-			const vm::code::detail::ValidationMode&    mode = vm::code::detail::Normal{}
+			const vm::code::CompilationMode&           mode = vm::code::NormalFunction{}
 		) const;
 
 

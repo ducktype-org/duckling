@@ -43,7 +43,7 @@ vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
 }
 
 vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateFunction(
-	const code::Function& function, detail::ValidationMode mode
+	const code::Function& function, CompilationMode mode
 ) const {
 	return detail::validateAndExtractReachableCode(
 		type_context.getCurrentTypes(),

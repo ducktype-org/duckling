@@ -64,10 +64,10 @@ namespace vm::code {
 
 		/**
 		 * @brief Validates a function in the given mode and extracts its reachable code. The mode
-		 * defaults to `Normal`, i.e. a regular program function.
+		 * defaults to `NormalFunction`, i.e. a regular program function.
 		 */
 		valid_function::ValidFunction validateFunction(
-			const code::Function& function, detail::ValidationMode mode = detail::Normal{}
+			const code::Function& function, CompilationMode mode = NormalFunction{}
 		) const;
 
 		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;

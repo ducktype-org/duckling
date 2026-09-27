@@ -24,7 +24,7 @@ namespace vm::loader::compiler {
 			code::valid_type::TypeSize local_stack_size{};
 			usize                      local_slot_count = 0;
 
-			code::detail::ValidationMode mode = code::detail::Normal{};
+			code::CompilationMode mode = code::NormalFunction{};
 		};
 	}
 

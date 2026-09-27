@@ -196,11 +196,11 @@ namespace vm {
 	}
 
 	void SafeVMThread::compileAndLoadStartFunction(const code::Function& start_function) {
-		auto valid = safe_process.validateFunction(start_function, code::detail::StartFunction{});
+		auto valid = safe_process.validateFunction(start_function, code::StartFunction{});
 		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
 		start_function_high.emplace(std::move(*valid));
 		start_function_low.emplace(
-			safe_process.compileToLow(*start_function_high, vm::code::detail::StartFunction{})
+			safe_process.compileToLow(*start_function_high, vm::code::StartFunction{})
 		);
 	}
 
@@ -655,7 +655,7 @@ namespace vm {
 	}
 
 	std::expected<std::future<std::vector<Ref<IVMValue>>>, std::string> SafeVMThread::loadAndExecRuntimeExpr(
-		code::valid_function::ValidFunction&& high_expr, const vm::code::detail::Expr& exp_mode
+		code::valid_function::ValidFunction&& high_expr, const vm::code::Expression& exp_mode
 	) {
 		CORE_ASSERT(
 			v_matches(getThreadState(), thread_state::Paused),

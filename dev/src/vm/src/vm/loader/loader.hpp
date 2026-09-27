@@ -77,18 +77,17 @@ namespace vm::loader {
 		) const;
 
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateExpr(
-			vm::code::detail::Expr metadata, fs::File file
+			vm::code::Expression metadata, fs::File file
 		) const;
 
 		/**
 		 * @brief Validates a function in the given mode - used for runtime expressions (which
 		 * need the live thread) and the synthetic `vm_start_function` (generated at run time
-		 * rather than loaded from bytecode). The mode defaults to `Normal`, i.e. a regular program
-		 * function.
+		 * rather than loaded from bytecode). The mode defaults to `NormalFunction`, i.e. a regular
+		 * program function.
 		 */
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateFunction(
-			const code::Function&        function,
-			code::detail::ValidationMode mode = code::detail::Normal{}
+			const code::Function& function, code::CompilationMode mode = code::NormalFunction{}
 		) const;
 	};
 }

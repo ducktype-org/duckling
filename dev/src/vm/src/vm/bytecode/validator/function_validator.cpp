@@ -115,7 +115,7 @@ struct LocalStackEntry final {
 	}
 };
 
-Bytes getCurrentStackBytesSize(detail::Expr comp_metadata) {
+Bytes getCurrentStackBytesSize(Expression comp_metadata) {
 	const Frame* callstack_base = comp_metadata.call_stack_base;
 	auto         size           = comp_metadata.call_stack_size;
 	const Frame* frame          = &callstack_base[size - 1];
@@ -129,7 +129,7 @@ Bytes getCurrentStackBytesSize(detail::Expr comp_metadata) {
 	return Bytes{ u64(top - bottom) };
 }
 
-u64 getCurrentStackBlockSize(detail::Expr comp_metadata) {
+u64 getCurrentStackBlockSize(Expression comp_metadata) {
 	const Frame* callstack_base = comp_metadata.call_stack_base;
 	auto         size           = comp_metadata.call_stack_size;
 	const Frame* frame          = &callstack_base[size - 1];
@@ -144,7 +144,7 @@ u64 getCurrentStackBlockSize(detail::Expr comp_metadata) {
 class LocalStack {
 	// the following are CRefs instead of const& to allow copy/move.
 
-	detail::ValidationMode                                     mode = detail::Normal{};
+	CompilationMode                                            mode = NormalFunction{};
 	CRef<valid_type::ValidTypeMap>                             types_ctx;
 	std::variant<CRef<LocalStackDb>, Ref<LocalStackDbBuilder>> source;
 	StackStateID                                               stack_state_id;
@@ -161,7 +161,7 @@ public:
 		Ref<LocalStackDbBuilder>        src,
 		StackStateID                    state,
 		usize                           number_of_rets,
-		detail::ValidationMode          mode = detail::Normal{}
+		CompilationMode                 mode = NormalFunction{}
 	):
 		  mode(mode),
 		  types_ctx(&types_ctx),
@@ -264,10 +264,10 @@ public:
 	bool contains(const PlaceT& place) const {
 		if_opt_some(place.frame, frame_idx) {
 			CORE_ASSERT(
-				v_matches(mode, detail::Expr),
+				v_matches(mode, Expression),
 				"we should be checking that there is a thread beforehand"
 			);
-			auto& exp_mode = std::get<detail::Expr>(mode);
+			auto& exp_mode = std::get<Expression>(mode);
 			auto  pos      = exp_mode.getUpcomingHighPosition(frame_idx);
 			if_opt_none(pos) return false;
 
@@ -285,10 +285,10 @@ public:
 		match_optional(place.frame) {
 			opt_some(frame_idx) {
 				CORE_ASSERT(
-					v_matches(mode, detail::Expr),
+					v_matches(mode, Expression),
 					"we should be checking that there is a thread beforehand"
 				);
-				auto& exp_mode = std::get<detail::Expr>(mode);
+				auto& exp_mode = std::get<Expression>(mode);
 				name_of_type   = *exp_mode.getUpcomingHighPosition(frame_idx)->getTypeName(name);
 			}
 
@@ -326,22 +326,22 @@ class FunctionValidator {
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures;
 	const Function&                                  function;
-	detail::ValidationMode                           mode;
+	CompilationMode                                  mode;
 
 	std::vector<base::Optional<StackStateID>>            stack_before_instr;
 	base::HashMap<base::StrID, usize>                    index_of_label;
 	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
 
 	CRef<IVMValue> vmValueOf(CRef<opargs::VMValueIdentifier> vm_val) const {
-		CORE_ASSERT(v_matches(mode, detail::Expr), "indexed VM values only in expressions");
-		auto& exp_mode = std::get<detail::Expr>(mode);
+		CORE_ASSERT(v_matches(mode, Expression), "indexed VM values only in expressions");
+		auto& exp_mode = std::get<Expression>(mode);
 		if (vm_val->id >= exp_mode.vm_values->size()) throw InvalidVMValueIDError(*vm_val);
 		return exp_mode.vm_values->at(vm_val->id).ref();
 	}
 
 	CRef<IVMValue> vmValueOf(CRef<opargs::VMValueImm> vm_val) const {
 		CORE_ASSERT(
-			v_matches(mode, detail::StartFunction), "immediate VM values only in the start function"
+			v_matches(mode, StartFunction), "immediate VM values only in the start function"
 		);
 		return vm_val->ptr;
 	}
@@ -518,7 +518,7 @@ class FunctionValidator {
 	 * @param instruction Instruction that is validated.
 	 */
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
-		bool is_expr = v_matches(mode, detail::Expr);
+		bool is_expr = v_matches(mode, Expression);
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
 #define PLACE_CASE(PLACE_T)                                   \
@@ -678,7 +678,7 @@ class FunctionValidator {
 				}
 
 				variant_case(CRef<opargs::VMValueIdentifier>, vm_val) {
-					CORE_ASSERT(v_matches(mode, detail::Expr), "indexed VM values are expr-only");
+					CORE_ASSERT(v_matches(mode, Expression), "indexed VM values are expr-only");
 					CRef<valid_type::ValidType> type = vmValueOf(vm_val)->getType();
 					if (!types_ctx.contains(type->getName()))
 						throw UnknownTypeOfVMValueError(*vm_val);
@@ -686,8 +686,7 @@ class FunctionValidator {
 
 				variant_case(CRef<opargs::VMValueImm>, vm_val) {
 					CORE_ASSERT(
-						v_matches(mode, detail::StartFunction),
-						"immediate VM values are start-function-only"
+						v_matches(mode, StartFunction), "immediate VM values are start-function-only"
 					);
 					CRef<valid_type::ValidType> type = vmValueOf(vm_val)->getType();
 					if (!types_ctx.contains(type->getName()))
@@ -1845,15 +1844,15 @@ class FunctionValidator {
 		auto last_opcode = function.body.back().opcode();
 
 		variant_match(mode) {
-			variant_case_novalue(detail::Expr) {
+			variant_case_novalue(Expression) {
 				if (!std::ranges::contains(VALID_LAST_OPCODES_FOR_EXPR, last_opcode))
 					throw PathWithoutEndError(function.name);
 			}
-			variant_case_novalue(detail::StartFunction) {
+			variant_case_novalue(StartFunction) {
 				if (!std::ranges::contains(VALID_LAST_OPCODES_FOR_START, last_opcode))
 					throw PathWithoutEndError(function.name);
 			}
-			variant_case_novalue(detail::Normal) {
+			variant_case_novalue(NormalFunction) {
 				if (!std::ranges::contains(VALID_LAST_OPCODES, last_opcode))
 					throw PathWithoutEndError(function.name);
 			}
@@ -1886,7 +1885,6 @@ class FunctionValidator {
 	}
 
 	LocalStackDb traverseControlFlowGraph() {
-		using detail::Expr, detail::Normal;
 		LocalStackDbBuilder builder(types_ctx);
 
 		auto start_state = LocalStackDbBuilder::EMPTY;
@@ -2034,11 +2032,11 @@ class FunctionValidator {
 		u64   block_offset{};
 
 		variant_match(mode) {
-			variant_case(detail::Expr, expr) {
+			variant_case(Expression, expr) {
 				bytes_offset = getCurrentStackBytesSize(expr);
 				block_offset = getCurrentStackBlockSize(expr);
 			}
-			variant_case_novalue(detail::Normal, detail::StartFunction) {
+			variant_case_novalue(NormalFunction, StartFunction) {
 				bytes_offset = Bytes{ 0 };
 				block_offset = 0;
 			}
@@ -2058,11 +2056,11 @@ class FunctionValidator {
 
 	void validateSignature() {
 		variant_match(mode) {
-			variant_case_novalue(detail::Expr, detail::StartFunction) {
+			variant_case_novalue(Expression, StartFunction) {
 				if (function.signature.parameters.size())
 					throw InvalidRuntimeExprSignature(function.signature);
 			}
-			variant_case_novalue(detail::Normal) {
+			variant_case_novalue(NormalFunction) {
 				if (function.name.str == base::StrID("main")) {
 					if (function.signature.result_types.size() != 1)
 						throw InvalidMainReturnType(function.signature, false);
@@ -2094,17 +2092,17 @@ class FunctionValidator {
 
 	void validateIllegalInstructions(const Instruction& instr) {
 		variant_match(mode) {
-			variant_case_novalue(detail::Expr) {
+			variant_case_novalue(Expression) {
 				// Expressions identify VM values by id only; the immediate form is start-only.
 				throwOnForbiddenOpcode<
 					OpCode::Op_ret_tailcall_func,
 					OpCode::Op_exit,
 					OpCode::Op_initFromVMValue_pany_immvmval>(instr);
 			}
-			variant_case_novalue(detail::StartFunction) {
+			variant_case_novalue(StartFunction) {
 				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
 			}
-			variant_case_novalue(detail::Normal) {
+			variant_case_novalue(NormalFunction) {
 				throwOnForbiddenOpcode<
 					OpCode::Op_initFromVMValue_pany_idvmval,
 					OpCode::Op_initFromVMValue_pany_immvmval,
@@ -2122,7 +2120,7 @@ public:
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 		const Function&                                  function,
-		detail::ValidationMode                           mode
+		CompilationMode                                  mode
 	):
 		  types_ctx(types_ctx),
 		  globals(globals),
@@ -2152,7 +2150,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const FlagContext&                               flag_context,
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 	const Function&                                  function,
-	ValidationMode                                   mode
+	CompilationMode                                  mode
 ) {
 	FunctionValidator validator(
 		types, globals_map, signatures, ext_c_signatures, ffi_signatures, function, mode
@@ -2167,7 +2165,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	new_function.signature    = function.signature;
 
 	// @TODO: #3633 Make the flags more robust
-	new_function.flags = (v_matches(mode, Expr, StartFunction))
+	new_function.flags = (v_matches(mode, Expression, StartFunction))
 	                       ? InstructionFlag{}
 	                       : flag_context.getFlagsForFunction(function.name.str);
 
