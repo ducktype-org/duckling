@@ -113,17 +113,26 @@ private:
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
-		// note: it might change where those branch operations are placed:
-		// if this happens, just see lir-output of tested module for lir block numbers
+		bool  saw_true     = false;
+		bool  saw_false    = false;
+		usize branch_count = 0;
+		for (const auto& block: foo_lir->block_order) {
+			const auto& terminator = block->terminator;
+			if (terminator.operation != lir::Operation::Branch) continue;
 
-		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
-		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
-
-		auto true_lir_constant  = true_lir_value.get<compiler::lir::LIRConstant>().value;
-		auto false_lir_constant = false_lir_value.get<compiler::lir::LIRConstant>().value;
-
-		ASSERT_EQUAL(true_lir_constant.get<bool>(), true);
-		ASSERT_EQUAL(false_lir_constant.get<bool>(), false);
+			const auto& condition = terminator.arguments.at(0);
+			ASSERT_TRUE(condition.is<lir::LIRConstant>());
+			auto value = condition.get<lir::LIRConstant>().value.get<bool>();
+			ASSERT_TRUE(value.has_value());
+			if (value.value())
+				saw_true = true;
+			else
+				saw_false = true;
+			branch_count++;
+		}
+		ASSERT_EQUAL(2u, branch_count);
+		ASSERT_TRUE(saw_true);
+		ASSERT_TRUE(saw_false);
 	}
 
 	void functionParametersTest() {

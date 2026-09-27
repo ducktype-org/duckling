@@ -1,12 +1,11 @@
 
 
 fun main() -> i64 = {
-    # @TODO: #2465 make this test better 
-    if NamedIf (2 <= 1) { }
-    while NamedWhile (2 <= 1) { }
+    if NamedIf (2 <= 1) { break if; }
+    while NamedWhile (2 <= 1) { break NamedWhile; }
 
     var arr: i32[2];
-    for NamedFor (x in arr) { }
+    for NamedFor (x in arr) { if (x == 0) continue; }
 
     return 0;
 }
