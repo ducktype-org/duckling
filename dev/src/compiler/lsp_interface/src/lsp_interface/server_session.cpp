@@ -133,7 +133,7 @@ namespace duck_ls {
 				});
 			})
 			// @TODO: #3607 watched-file notifications are best-effort: clients are not required
-			// to support file watching, so creations and deletions on disk can go unnoticed.
+		    // to support file watching, so creations and deletions on disk can go unnoticed.
 			.onWorkspaceDidChangeWatchedFiles(
 				[this, &compiler](lsp::DidChangeWatchedFilesParams&& params) {
 					orAbort(*endpoint, "workspace/didChangeWatchedFiles", [&] {
