@@ -171,8 +171,7 @@ namespace vm::low {
 		}
 
 		[[nodiscard]] std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException>
-			mapLowVMProgramPositionToCodeCollectionPosition(usize index
-		    ) const {
+			mapLowVMProgramPositionToCodeCollectionPosition(usize index) const {
 			using namespace loader;
 
 			// We need to find the first instruction range that starts after the given instruction

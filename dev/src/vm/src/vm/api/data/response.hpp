@@ -73,5 +73,6 @@ namespace vm::api {
 		response::NumberOfCurrentStackFrames,
 		response::StackFrameData,
 		response::ThreadIDs,
-		ExitValue>;
+		ExitValue,
+		ExprResult>;
 }

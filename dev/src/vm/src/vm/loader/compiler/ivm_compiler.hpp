@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/bytecode/validator/local_stack_database.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>

@@ -1,19 +1,9 @@
 #pragma once
 
-#include <events/emitter.hpp>
-
-#include <base/pointers/ref.hpp>
-#include <base/pointers/shared_box.hpp>
-
 #include <json/json.hpp>
 
 #include <string>
 #include <variant>
-#include <vector>
-
-namespace vm {
-	class SafeVMValue;
-}
 
 namespace vm::api {
 	struct ResumeError final {
@@ -76,14 +66,6 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(UnsupportedOperation, why);
 	};
 
-	struct IncompleteExprEval final {
-		SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>> val;
-		std::string                                               why;
-
-		// emitter is not serializable
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IncompleteExprEval, why);
-	};
-
 	/**
 	 * @brief Represents an error indicating that a feature is not yet implemented.
 	 */
@@ -106,7 +88,6 @@ namespace vm::api {
 		StateError,
 		Panicked,
 		NotImplementedError,
-		IncompleteExprEval,
 		UnsupportedOperation>;
 
 	/**
@@ -137,4 +118,3 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::StateError, "StateError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Panicked, "Panicked");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotImplementedError, "NotImplementedError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::UnsupportedOperation, "UnsupportedOperation");
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::IncompleteExprEval, "IncompleteExprEval");

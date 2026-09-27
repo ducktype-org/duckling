@@ -742,16 +742,11 @@ namespace vm {
 			return std::unexpected(api::LoadProgramError{ ss.str() });
 		}
 
-		auto returned_value
-			= thread_ref->loadAndExecRuntimeExpr(*std::move(valid_expr), comp_details);
-		if (!returned_value.has_value()) {
-			auto [ref, msg] = returned_value.error();
-			return std::unexpected(api::ApiError{
-				api::IncompleteExprEval{ .val = ref, .why = msg } });
-		}
-		std::vector<Ref<IVMValue>> transformed;
-		for (auto safe_ref: *returned_value) transformed.emplace_back(safe_ref.get());
-		return api::Response(vm::api::ExitValue(transformed));
+		auto started = thread_ref->loadAndExecRuntimeExpr(*std::move(valid_expr), comp_details);
+		if (!started.has_value())
+			return std::unexpected(api::ApiError{ api::OtherError{ started.error() } });
+
+		return api::Response(std::move(*started));
 	}
 
 	low::LowFuncData SafeVMProcess::compileToLow(

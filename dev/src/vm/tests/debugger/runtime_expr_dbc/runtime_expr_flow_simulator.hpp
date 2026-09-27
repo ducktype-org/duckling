@@ -1,7 +1,5 @@
 #pragma once
 
-#include <events/emitter.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -13,14 +11,12 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
-#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
 #include <chrono>
-#include <condition_variable>
 #include <deque>
 #include <functional>
+#include <future>
 #include <memory>
-#include <mutex>
 #include <string_view>
 #include <thread>
 #include <utility>
@@ -107,35 +103,25 @@ namespace vm::test {
 	};
 
 	class FlowSimulator {
-		using ResT = std::vector<Ref<SafeVMValue>>;
+		/// Upper bound for waiting on an expression result, in milliseconds.
+		static constexpr u64 DEFAULT_EXPR_TIMEOUT = 500;
 
-		struct LateEvaluation {
-			events::Listener<ResT> listener;
-
-			LateEvaluation(FlowSimulator& simulator, Ref<events::Emitter<ResT>> emitter):
-				  listener([&simulator, self = this](ResT res) {
-					  {
-						  std::lock_guard lock(simulator.mt);
-						  simulator.late_result.emplace_back(std::move(res), self);
-					  }
-					  simulator.cv.notify_all();
-				  }) {
-				emitter->attachListener(this->listener);
-			}
+		/// A pending expression together with the position it was called from. `ret_from_expr`
+		/// returns the thread to that exact position, so the result can enforce it on completion.
+		struct PendingExpr {
+			api::ExprResult future;
+			base::StrID     caller_function;
+			u64             caller_instr;
 		};
 
-		std::deque<LateEvaluation> late_evals;
+		/// Expressions awaiting their result. LIFO: the most recent expression completes first.
+		std::deque<PendingExpr> pending_expr_results;
 
-		std::deque<LateEvaluation*> pending_late_evals;
-
-		std::deque<std::pair<ResT, LateEvaluation*>> late_result;
-
-		std::condition_variable cv;
-		std::mutex              mt;
-
-		void registerLateEvaluation(Ref<events::Emitter<ResT>> emitter) {
-			late_evals.emplace_back(*this, emitter);
-			pending_late_evals.push_back(&late_evals.back());
+		PendingExpr popPendingExpr() {
+			CORE_ASSERT(!pending_expr_results.empty(), "There is no pending expression to await");
+			auto pending = std::move(pending_expr_results.back());
+			pending_expr_results.pop_back();
+			return pending;
 		}
 
 	public:
@@ -169,8 +155,10 @@ namespace vm::test {
 			return *this;
 		}
 
+		/// Waits for the next pause and asserts it happened at the expected position. Prefer this
+		/// overload; use the position-less one only when the location is genuinely unknown.
 		FlowSimulator& awaitBreakpoint(base::StrID expected_func, u64 expected_instr) {
-			auto bp_res = vm::api::waitForBreakpoint(pid);
+			auto bp_res = vm::api::waitForBreakpoint(pid, thread_id);
 			if (!bp_res)
 				assertTrue(
 					false,
@@ -184,14 +172,15 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& awaitExprPause() {
+		/// Waits for the next pause without checking where it happened. Use only when the expected
+		/// position cannot be known (e.g. stepping into an infinite loop).
+		FlowSimulator& awaitBreakpoint() {
 			auto response = vm::api::waitForBreakpoint(pid, thread_id);
 			if (!response)
 				assertTrue(
 					false,
 					base::strConcat(
-						"Wait for expression pause failed: ",
-						vm::api::errorToString(response.error())
+						"Wait for pause failed: ", vm::api::errorToString(response.error())
 					)
 				);
 			return *this;
@@ -303,34 +292,55 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& evalExprNormal(const fs::File& file, const std::vector<u64>& expected_result) {
+		/// Starts evaluating @p file and keeps its pending result (LIFO) for `awaitExprResult`.
+		FlowSimulator& loadRuntimeExpr(const fs::File& file) {
+			// Capture the caller position while still paused; `ret_from_expr` returns here.
+			auto position = vm::api::getCurrentPosition(pid);
+			if (!position) assertTrue(false, vm::api::errorToString(position.error()));
+
 			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
-			assertExitValue(response.value(), expected_result);
-			awaitExprPause();
+			pending_expr_results.push_back(PendingExpr{
+				.future          = std::move(response.value()),
+				.caller_function = position->function_name,
+				.caller_instr    = position->instr_number,
+			});
 			return *this;
 		}
 
-		FlowSimulator& evalExprExpectValues(
-			const fs::File& file, const std::vector<ExpectedValue>& expected_result
+		FlowSimulator& awaitExprResult(
+			const std::vector<u64>& expected_result, u64 timeout = DEFAULT_EXPR_TIMEOUT
 		) {
-			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
-			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
+			std::vector<ExpectedValue> expected;
+			expected.reserve(expected_result.size());
+			for (auto value: expected_result) expected.emplace_back(value);
+			return awaitExprResultValues(expected, timeout);
+		}
 
-			assertExitValues(response.value(), expected_result);
-			awaitExprPause();
+		FlowSimulator& awaitExprResultValues(
+			const std::vector<ExpectedValue>& expected_result,
+			u64                               timeout = DEFAULT_EXPR_TIMEOUT
+		) {
+			auto pending = popPendingExpr();
+			assertTrue(
+				pending.future.wait_for(std::chrono::milliseconds(timeout))
+					== std::future_status::ready,
+				"Expression result did not arrive within the timeout"
+			);
+			assertExitValues(api::ExitValue{ pending.future.get() }, expected_result);
+			awaitBreakpoint(pending.caller_function, pending.caller_instr);
 			return *this;
 		}
 
 		FlowSimulator& evalExprExpectBreakpoint(const fs::File& file) {
-			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
+			loadRuntimeExpr(file);
+			awaitBreakpoint();
 			assertTrue(
-				!response.has_value(),
+				pending_expr_results.back().future.wait_for(std::chrono::seconds(0))
+					!= std::future_status::ready,
 				"Expected expression evaluation to pause on breakpoint, but it completed"
 			);
-
-			registerIncompleteEval(response.error());
 			return *this;
 		}
 
@@ -372,45 +382,21 @@ namespace vm::test {
 				provideInput(input);
 			});
 
-			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
+			loadRuntimeExpr(file);
 			poster.join();
-
-			if (!response)
-				assertTrue(
-					false,
-					base::strConcat(
-						"Expected the expression to complete after the input was posted, but it "
-						"failed: ",
-						vm::api::errorToString(response.error())
-					)
-				);
-			assertExitValue(response.value(), expected_result);
-			awaitExprPause();
-			return *this;
+			return awaitExprResult(expected_result);
 		}
 
-		FlowSimulator& evalExprExpectTimeout(const fs::File& file) {
-			const auto start    = std::chrono::steady_clock::now();
-			auto       response = vm::api::executeRuntimeExpr(pid, thread_id, file);
-			const auto elapsed  = std::chrono::steady_clock::now() - start;
-
+		/// Asserts the already-loaded expression is still running past the caller-side budget. The VM
+		/// no longer owns a timeout, so the caller decides when to give up; the future stays pending
+		/// and is later consumed by `awaitExprResult`.
+		FlowSimulator& evalExprExpectTimeout(u64 timeout_ms = DEFAULT_EXPR_TIMEOUT) {
 			assertTrue(
-				!response.has_value(), "Expected the expression to time out, but it completed"
+				pending_expr_results.back().future.wait_for(std::chrono::milliseconds(timeout_ms))
+					!= std::future_status::ready,
+				"Expected the expression to still be running, but it completed"
 			);
 
-			const auto reason = registerIncompleteEval(response.error());
-			assertTrue(
-				reason.find("timeout") != std::string::npos,
-				base::strConcat("Expected a timeout error, got: ", reason)
-			);
-			assertTrue(
-				elapsed >= std::chrono::milliseconds(450),
-				"Evaluation terminated before the 0,5 s budget elapsed"
-			);
-			assertTrue(
-				elapsed <= std::chrono::milliseconds(700),
-				"Evaluation took much longer than the 0,5 s budget"
-			);
 			return *this;
 		}
 
@@ -429,44 +415,38 @@ namespace vm::test {
 		/// the process in the `Panicked` state, which is where the message is read from.
 		FlowSimulator& evalExprExpectPanic(const fs::File& file, std::string_view expected_piece) {
 			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
-			assertTrue(!response.has_value(), "Expected the expression to panic, but it completed");
+			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
-			auto status = vm::api::getExecutionStatus(pid);
-			if (!status)
-				assertTrue(
-					false,
-					base::strConcat(
-						"Failed to read the execution status: ",
-						vm::api::errorToString(status.error())
-					)
-				);
+			// The expression panics before `ret_from_expr`, so its future never completes; wait for
+			// the process to report the panic instead.
+			base::Optional<vm::api::ExecutionPanicked> panicked_status;
+			for (usize attempt = 0; attempt < 200 && !panicked_status.has_value(); attempt++) {
+				auto status = vm::api::getExecutionStatus(pid);
+				if (!status)
+					assertTrue(
+						false,
+						base::strConcat(
+							"Failed to read the execution status: ",
+							vm::api::errorToString(status.error())
+						)
+					);
+				if (auto* panicked = std::get_if<vm::api::ExecutionPanicked>(&status.value()))
+					panicked_status = *panicked;
+				else
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}
 
-			auto* panicked = std::get_if<vm::api::ExecutionPanicked>(&status.value());
-			assertTrue(panicked != nullptr, "Expected the process to have panicked");
+			assertTrue(panicked_status.has_value(), "Expected the process to have panicked");
 			assertTrue(
-				panicked->error_message.find(expected_piece) != std::string::npos,
+				panicked_status->error_message.find(expected_piece) != std::string::npos,
 				base::strConcat(
 					"Panic message '",
-					panicked->error_message,
+					panicked_status->error_message,
 					"' does not mention '",
 					expected_piece,
 					"'"
 				)
 			);
-			return *this;
-		}
-
-		/// Pauses the thread (blocking until it is actually `Paused`) and asserts the pause
-		/// happened at the expected position.
-		FlowSimulator& pause(base::StrID expected_func, u64 expected_instr) {
-			auto pause_res = vm::api::pause(pid, thread_id);
-			if (!pause_res)
-				assertTrue(
-					false,
-					base::strConcat("Pause failed: ", vm::api::errorToString(pause_res.error()))
-				);
-			assertEqual(expected_func, pause_res->function_name, "Pause function mismatch");
-			assertEqual(expected_instr, pause_res->instr_number, "Pause instruction mismatch");
 			return *this;
 		}
 
@@ -491,32 +471,6 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& awaitExprCompletion(const std::vector<u64>& expected) {
-			using ApiResT = std::vector<Ref<IVMValue>>;
-
-			ResT res;
-			{
-				std::unique_lock lock(mt);
-				cv.wait(lock, [&] { return bool(late_result.size()); });
-
-				auto& [result, evaluation] = late_result.front();
-				res                        = std::move(result);
-
-				CORE_ASSERT(
-					!pending_late_evals.empty() && pending_late_evals.back() == evaluation,
-					"Evaluations must complete in LIFO order"
-				);
-				late_result.pop_front();
-				pending_late_evals.pop_back();
-			}
-
-			api::ExitValue api_res = ApiResT{};
-			for (auto safe_ref: res) v_get(api_res, ApiResT).emplace_back(safe_ref.get());
-
-			assertExitValue(api_res, expected);
-			return *this;
-		}
-
 		FlowSimulator& resume() {
 			auto resume_res = vm::api::resume(pid, thread_id);
 			if (!resume_res)
@@ -536,11 +490,6 @@ namespace vm::test {
 						base::strConcat("Step failed: ", vm::api::errorToString(step_res.error()))
 					);
 			}
-			return *this;
-		}
-
-		FlowSimulator& sleep(u64 milliseconds) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 			return *this;
 		}
 
@@ -582,15 +531,6 @@ namespace vm::test {
 		}
 
 	private:
-		/// Registers the pending emitter of an incomplete evaluation for a later
-		/// `awaitExprCompletion` and returns the reported reason.
-		std::string registerIncompleteEval(const vm::api::ApiError& error) {
-			auto [ref, reason] = v_get(error, vm::api::IncompleteExprEval);
-			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
-			registerLateEvaluation(ref.get());
-			return reason;
-		}
-
 		void assertExitValue(
 			const vm::api::ExitValue& exit_value, const std::vector<u64>& expected_result
 		) const {

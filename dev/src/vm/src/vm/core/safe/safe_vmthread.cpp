@@ -206,7 +206,9 @@ namespace vm {
 		auto valid = safe_process.validateFunction(start_function, code::detail::StartFunction{});
 		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
 		start_function_high.emplace(std::move(*valid));
-		start_function_low.emplace(safe_process.compileToLow(*start_function_high, vm::code::detail::StartFunction{}));
+		start_function_low.emplace(
+			safe_process.compileToLow(*start_function_high, vm::code::detail::StartFunction{})
+		);
 	}
 
 	/**
@@ -659,21 +661,17 @@ namespace vm {
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 
-	std::expected<
-		std::vector<Ref<SafeVMValue>>,
-		std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
-		SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr, vm::code::detail::Expr const& exp_mode) {
+	std::expected<std::future<std::vector<Ref<IVMValue>>>, std::string> SafeVMThread::loadAndExecRuntimeExpr(
+		code::valid_function::ValidFunction&& high_expr, const vm::code::detail::Expr& exp_mode
+	) {
 		CORE_ASSERT(
 			v_matches(getThreadState(), thread_state::Paused),
 			"To load and evaluate expr we need the thread to be paused"
 		);
 		runtime_expr_high.emplace_back(std::move(high_expr));
-		runtime_expr_low.emplace_back(
-			safe_process.compileToLow(runtime_expr_high.back(), exp_mode)
-		);
-		runtime_expr_res_handler.emplace_back(
-			makeSharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>()
-		);
+		runtime_expr_low.emplace_back(safe_process.compileToLow(runtime_expr_high.back(), exp_mode));
+		runtime_expr_completion.emplace_back();
+		auto expr_future = runtime_expr_completion.back().get_future();
 
 		auto  frame       = runtime_data.frame_stack_current;
 		auto  prev_frame  = frame;
@@ -711,67 +709,14 @@ namespace vm {
 		// will not be returned to the caller
 		prev_frame->local_slot_stack_end -= called_expr.getResultTypes().size();
 
-		std::condition_variable                       cv;
-		std::mutex                                    result_mutex;
-		std::atomic<bool>                             result_ready = false;
-		base::Optional<std::vector<Ref<SafeVMValue>>> ret_val      = std::nullopt;
-		base::Optional<ThreadState>                   thread_state = std::nullopt;
-
-		auto res_handler = runtime_expr_res_handler.back();
-
-		events::Listener<std::vector<Ref<SafeVMValue>>> receiver([&](auto&& res) {
-			// Payload and flag must be published under the same mutex the waiter checks with,
-			// otherwise it can observe the flag before the value is visible.
-			{
-				std::lock_guard lock(result_mutex);
-				if (result_ready.load()) return;
-				ret_val = std::move(res);
-				result_ready.store(true);
-			}
-			cv.notify_all();
-		});
-
-		events::Listener<ThreadState> interrupter([&](auto&& new_state) {
-			if (!v_matches(new_state, thread_state::Paused) && !thread_state::isTerminal(new_state))
-				return;
-			{
-				std::lock_guard lock(result_mutex);
-				if (result_ready.load()) return;
-				thread_state = new_state;
-				result_ready.store(true);
-			}
-			cv.notify_all();
-		});
-
-		res_handler->attachListener(receiver);
-		getProcessStateManager().attachThreadStatusListener(getThreadID(), interrupter);
-
 		auto resumed = resume();
-		if (!resumed.has_value())
-			return std::unexpected{
-				std::make_pair(res_handler, "resume failure: " + resumed.error())
-			};
-
-		{
-			std::unique_lock lock(result_mutex);
-			cv.wait_for(lock, std::chrono::milliseconds(EXPR_EXECUTION_TIMEOUT_MS), [&] {
-				return result_ready.load();
-			});
-			result_ready.store(true);
+		if (!resumed.has_value()) {
+			runtime_expr_completion.pop_back();
+			runtime_expr_low.pop_back();
+			runtime_expr_high.pop_back();
+			return std::unexpected{ "resume failure: " + resumed.error() };
 		}
 
-		if (ret_val.has_value()) return *ret_val;
-
-		std::string err_msg = "";
-		if (thread_state.has_value()) {
-			err_msg += "status failure: ";
-			err_msg += thread_state::threadStateName(*thread_state);
-			err_msg += " during evaluation";
-		} else {
-			err_msg = "timeout: evaluation of expr took more than "
-			        + std::to_string(EXPR_EXECUTION_TIMEOUT_MS) + " ms";
-		}
-
-		return std::unexpected{ std::make_pair(res_handler, err_msg) };
+		return expr_future;
 	}
 }

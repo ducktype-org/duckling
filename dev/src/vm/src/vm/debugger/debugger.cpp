@@ -6,7 +6,12 @@
 
 #include <vm/api/vm.hpp>
 
+#include <chrono>
+
 namespace {
+	/// How long `evaluate` waits for an expression result before deferring it to the printer.
+	constexpr std::chrono::milliseconds EXPR_RESULT_TIMEOUT{ 500 };
+
 	inline std::string statusToString(const vm::api::ProcStatus& status) {
 		return std::visit(
 			[](auto&& arg) {
@@ -255,6 +260,8 @@ namespace vm::debugger {
 	std::expected<void, api::ApiError> Debugger::evaluate(
 		const fs::File& file, api::ThreadID thread_id
 	) {
+		dropEvaluatedPendingExprs();
+
 		return api::getExecutionStatus(pid)
 		    .and_then([&](const api::ProcStatus& status) -> std::expected<void, api::ApiError> {
 				variant_match(status) {
@@ -267,28 +274,29 @@ namespace vm::debugger {
 				}
 			})
 		    .and_then([&] { return api::executeRuntimeExpr(pid, thread_id, file); })
-		    .and_then([&](auto&& expr_completed_vnt) -> std::expected<void, api::ApiError> {
-				CORE_ASSERT(
-					v_matches(expr_completed_vnt, std::vector<Ref<IVMValue>>),
-					"we receive vector values not single int"
-				);
+		    .and_then([&](api::ExprResult&& expr_future) -> std::expected<void, api::ApiError> {
 				auto breakpoint = api::waitForBreakpoint(pid, thread_id);
 				if (!breakpoint) return std::unexpected(breakpoint.error());
-				printExprResult(v_get(expr_completed_vnt, std::vector<Ref<IVMValue>>));
-				return {};
-			})
-		    .or_else([&](api::ApiError error) -> std::expected<void, api::ApiError> {
-				auto* incomplete = std::get_if<api::IncompleteExprEval>(&error);
-				if (incomplete == nullptr) return std::unexpected(std::move(error));
 
-				std::cout << "expression evaluation incomplete: " << incomplete->why
-						  << "; its result will be printed when it completes.\n";
-				pending_expr_result_listeners.emplace_back(
-					[](const std::vector<Ref<SafeVMValue>>& res) { printExprResult(res); }
-				);
-				incomplete->val->attachListener(pending_expr_result_listeners.back());
+				// Only inline-print a result that arrives within the budget; a slower (paused)
+				// expression is dropped silently on the next evaluation.
+				if (expr_future.wait_for(EXPR_RESULT_TIMEOUT) == std::future_status::ready)
+					printExprResult(expr_future.get());
+				else
+					pending_expr_results.emplace_back(std::move(expr_future));
 				return {};
 			});
+	}
+
+	void Debugger::dropEvaluatedPendingExprs() {
+		// @TODO: #3655 Printing these results races with the status emitter; for now the
+		// completed ones are discarded when the next expression is evaluated.
+		for (auto it = pending_expr_results.begin(); it != pending_expr_results.end();) {
+			if (it->wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+				it = pending_expr_results.erase(it);
+			else
+				++it;
+		}
 	}
 
 	const Mapper& Debugger::getMapper() { return mapper; }

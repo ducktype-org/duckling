@@ -304,7 +304,7 @@ namespace vm::api {
 	 * @return A complete value or the reference to emitter which should eventually deliver it
 	 * @note the thread pauses again shortly after; call waitForBreakpoint before resuming
 	 */
-	std::expected<ExitValue, ApiError> executeRuntimeExpr(
+	std::expected<ExprResult, ApiError> executeRuntimeExpr(
 		PID pid, ThreadID thread_id, std::variant<fs::File, code::Function> source
 	);
 }

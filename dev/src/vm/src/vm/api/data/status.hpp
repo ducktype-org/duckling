@@ -6,6 +6,7 @@
 
 #include <json/json.hpp>
 
+#include <future>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -21,6 +22,8 @@ namespace vm::api {
 
 	// @TODO: #2720 Change it back to std::vector
 	using ExitValue = std::variant<i64, std::vector<Ref<IVMValue>>>;
+
+	using ExprResult = std::future<std::vector<Ref<IVMValue>>>;
 
 	struct ExecutionCompleted final {
 		ExitValue exit_value;

@@ -1,11 +1,8 @@
 #pragma once
 
-#include <events/emitter.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
@@ -20,7 +17,7 @@
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
-#include <utility>
+#include <future>
 
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
@@ -99,10 +96,9 @@ namespace vm {
 	 */
 	class SafeVMThread final: public IVMThread {
 	private:
-		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
-		std::deque<low::LowFuncData>                    runtime_expr_low;
-		std::deque<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>>
-			runtime_expr_res_handler;
+		std::deque<code::valid_function::ValidFunction>      runtime_expr_high;
+		std::deque<low::LowFuncData>                         runtime_expr_low;
+		std::deque<std::promise<std::vector<Ref<IVMValue>>>> runtime_expr_completion;
 
 		/**
 		 * @brief High-level representation of the synthetic `vm_start_function`, when this thread
@@ -297,10 +293,10 @@ namespace vm {
 		[[nodiscard]]
 		const Frame& getStackFrame(u64 frame_index) const;
 
-		std::expected<
-			std::vector<Ref<SafeVMValue>>,
-			std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
-			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr, vm::code::detail::Expr const& exp_mode);
+		[[nodiscard]]
+		std::expected<std::future<std::vector<Ref<IVMValue>>>, std::string> loadAndExecRuntimeExpr(
+			code::valid_function::ValidFunction&& expr, const vm::code::detail::Expr& exp_mode
+		);
 
 		[[nodiscard]]
 		const RuntimeData& getRuntimeData() const {

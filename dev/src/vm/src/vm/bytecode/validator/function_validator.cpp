@@ -290,7 +290,7 @@ public:
 					"we should be checking that there is a thread beforehand"
 				);
 				auto& exp_mode = std::get<detail::Expr>(mode);
-				name_of_type = *exp_mode.getUpcomingHighPosition(frame_idx)->getTypeName(name);
+				name_of_type   = *exp_mode.getUpcomingHighPosition(frame_idx)->getTypeName(name);
 			}
 
 			opt_none { VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, name)); }

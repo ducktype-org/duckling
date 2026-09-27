@@ -37,8 +37,6 @@ namespace vm::api {
 
 			int operator()(const NotImplementedError&) const noexcept { return ENOSYS; }
 
-			int operator()(const IncompleteExprEval&) const noexcept { return EBUSY; }
-
 			int operator()(const UnsupportedOperation&) const noexcept { return ENOTSUP; }
 		};
 

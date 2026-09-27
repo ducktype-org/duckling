@@ -3,10 +3,10 @@
 #include <events/emitter.hpp>
 
 #include <vm/api/vm.hpp>
-#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/debugger/mapper.hpp>
 
 #include <deque>
+#include <future>
 #include <optional>
 
 namespace vm::debugger {
@@ -52,11 +52,14 @@ namespace vm::debugger {
 		events::Emitter<std::string> on_output;
 
 		/**
-		 * @brief Listeners for expressions that paused on a breakpoint and did not finish yet.
-		 * They stay attached to their result emitter and print the values once the expression
-		 * completes. Kept alive here, because an emitter only holds raw pointers to its listeners.
+		 * @brief Results of expressions that paused on a breakpoint before completing. They are
+		 * discarded (without printing) when the next expression is evaluated.
+		 * @TODO: #3655 Print these once we have a race-free way to emit background output.
 		 */
-		std::deque<events::Listener<std::vector<Ref<SafeVMValue>>>> pending_expr_result_listeners;
+		std::deque<api::ExprResult> pending_expr_results;
+
+		/// Discards the pending expressions whose evaluation has already completed.
+		void dropEvaluatedPendingExprs();
 
 		CodePosition mapCodePosition(const api::response::CodePosition& pos);
 

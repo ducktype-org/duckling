@@ -64,11 +64,11 @@ namespace vm::api {
 		return REQUEST(LoadCode{ code }).transform(ignoreResponse);
 	}
 
-	std::expected<ExitValue, ApiError> executeRuntimeExpr(
+	std::expected<ExprResult, ApiError> executeRuntimeExpr(
 		PID pid, ThreadID thread_id, std::variant<fs::File, code::Function> source
 	) {
 		return REQUEST(ExecRuntimeExpr{ .thread_id = thread_id COMMA.source = std::move(source) })
-		    .and_then(mapOrWrongResponse<ExitValue>);
+		    .and_then(mapOrWrongResponseMove<ExprResult>);
 	}
 
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {

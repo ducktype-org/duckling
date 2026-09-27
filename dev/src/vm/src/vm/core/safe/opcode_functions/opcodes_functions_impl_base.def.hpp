@@ -781,7 +781,7 @@ namespace vm {
 			u64   ret_slot_index
 				= u64(caller_block_ref_stack_end - thread.runtime_data.slot_stack_base);
 
-			std::vector<Ref<SafeVMValue>> exit_value = {};
+			std::vector<Ref<IVMValue>> exit_value = {};
 
 			while (callee_frame->local_slot_stack_end > caller_block_ref_stack_end + ret_count)
 				performDeinit(callee_frame, thread);
@@ -811,9 +811,9 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 
-			thread.runtime_expr_res_handler.back()->emitEvent(exit_value);
+			thread.runtime_expr_completion.back().set_value(std::move(exit_value));
 
-			thread.runtime_expr_res_handler.pop_back();
+			thread.runtime_expr_completion.pop_back();
 			thread.runtime_expr_low.pop_back();
 			thread.runtime_expr_high.pop_back();
 		}
