@@ -19,8 +19,8 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 }
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
-	return { .functions = function_map | std::views::transform([](const auto& valid_function) {
-							  return valid_function.toNormal();
+	return { .functions = function_map | std::views::transform([](const auto& valid_function_box) {
+							  return valid_function_box->toNormal();
 						  })
 		                | std::ranges::to<std::vector>(),
 		     .types                = std::ranges::to<std::vector>(type_context.getTodTypes()),
@@ -49,9 +49,24 @@ const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() 
 	return globals_map;
 }
 
-const vm::ObjIdNameMap<vm::code::valid_function::ValidFunction>& vm::code::ValidProgram::functions(
-) const {
+const vm::ObjIdNameMap<SharedBox<vm::code::valid_function::ValidFunction>>& vm::code::
+	ValidProgram::functions() const {
 	return function_map;
+}
+
+vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateFunction(
+	const code::Function& function, CompilationMode mode
+) const {
+	return detail::validateAndExtractReachableCode(
+		type_context.getCurrentTypes(),
+		globals_map,
+		function_signatures,
+		ext_c_function_map,
+		flag_context,
+		ffi_function_map,
+		function,
+		mode
+	);
 }
 
 void vm::code::ValidProgram::insertCode(
@@ -130,18 +145,13 @@ void vm::code::ValidProgram::insertFunctions(
 	flag_context.insertAndValidate(new_functions, globals_map, ext_c_function_map, config);
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
-			throw DuplicatedFunctionError(func, function_map.at(func.name)->toNormal());
+			throw DuplicatedFunctionError(func, (*function_map.at(func.name))->toNormal());
 
-		auto validated_function = detail::validateAndExtractReachableCode(
-			type_context.getCurrentTypes(),
-			globals_map,
-			function_signatures,
-			ext_c_function_map,
-			flag_context,
-			ffi_function_map,
-			func
+		auto validated_function = validateFunction(func);
+		function_map.insert(
+			makeSharedBox<vm::code::valid_function::ValidFunction>(validated_function),
+			validated_function.name
 		);
-		function_map.insert(validated_function, validated_function.name);
 	}
 }
 
