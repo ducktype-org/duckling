@@ -855,8 +855,7 @@ namespace compiler::mir {
 			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
 
 			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
-			const bool        subject_is_direct
-				= subject_type.getRefKind() == tsh::ReferenceKind::Direct;
+			const bool subject_is_direct = subject_type.getRefKind() == tsh::ReferenceKind::Direct;
 
 			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
 			base::Optional<MIRLocalRef>                   ref_subject_local;
@@ -881,7 +880,8 @@ namespace compiler::mir {
 					const auto        num_alternatives = variant_type.getUnderlyingTypes().size();
 					std::vector<bool> consumed(num_alternatives, false);
 					for (const auto& match_case: expr.cases) {
-						if_opt_some(match_case.alternative_index, index) {
+						if (match_case.alternative_index) {
+							auto index      = match_case.alternative_index.value();
 							consumed[index] = match_case.binding.has_value()
 						                   || match_case.shouldBindToTemporary(ctx);
 						}
