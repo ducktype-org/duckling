@@ -53,6 +53,7 @@ SubDirs:
   - build
   - run
   - remove
+  - translate-c
 
 # NOTE: This needs to be quoted like this, so `echo` receives `'<string>'` as an argument.
 # (It must be in single quotes!)

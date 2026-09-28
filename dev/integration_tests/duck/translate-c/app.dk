@@ -1,0 +1,82 @@
+import core.builtins.*;
+import sl.*;
+import sl.generated.layout_check.*;
+
+fun main() -> i64 = {
+    let mismatch = c_layout_mismatch();
+    if (mismatch != 0i64) { return 100i64 + mismatch; }
+
+    if (SL_Init(SL_INIT_VIDEO) == false) { return 1i64; }
+    let title = ptr_from_slice:{char}("t\0") as cptr char;
+    let win = SL_CreateWindow(title, 640i32, 480i32, SL_WINDOW_RESIZABLE);
+    var w: i32 = 0i32;
+    var h: i32 = 0i32;
+    if (SL_GetWindowSize(win, &w as cptr i32, &h as cptr i32) == false) { return 2i64; }
+    if (w != 640i32) { return 3i64; }
+    if (h != 480i32) { return 4i64; }
+
+    var ev: SL_Event;
+    let evp = &ev as cptr SL_Event;
+    let key = SL_Event_as_key(evp);
+    key[0].type_ = SL_EVENT_KEY_DOWN;
+    key[0].key = -7i32;
+    key[0].down = true;
+    let pushed_key = SL_PushEvent(evp);
+    let quit = SL_Event_as_quit(evp);
+    quit[0].type_ = SL_EVENT_QUIT;
+    let pushed_quit = SL_PushEvent(evp);
+    if (pushed_key == false) { return 5i64; }
+
+    var seen_key = false;
+    var seen_quit = false;
+    var out: SL_Event;
+    let outp = &out as cptr SL_Event;
+    while (SL_PollEvent(outp)) {
+        let t = SL_Event_as_type(outp)[0];
+        if (t == SL_EVENT_KEY_DOWN) {
+            if (SL_Event_as_key(outp)[0].key == -7i32) { seen_key = true; }
+        }
+        if (t == SL_EVENT_QUIT) { seen_quit = true; }
+    }
+    if (seen_key == false) { return 6i64; }
+    if (seen_quit == false) { return 7i64; }
+
+    let r = SL_MakeRect(1i32, 2i32, 3i32, 4i32);
+    if (r.h != 4i32) { return 8i64; }
+    var fr: SL_FRect;
+    fr.w = 2.0f32;
+    fr.h = 3.0f32;
+    if (SL_RectArea(fr) != 6.0f32) { return 9i64; }
+
+    var tg: SL_Tagged;
+    let tgp = &tg as cptr SL_Tagged;
+    tg.kind = 1i32;
+    tg.lo = 100i16;
+    tg.hi = 1000i16;
+    SL_Tagged_set_i(tgp, 10i32);
+    if (SL_Tagged_get_i(tgp) != 10i32) { return 10i64; }
+    if (SL_TaggedSum(tgp) != 1111i32) { return 11i64; }
+
+    var fl: SL_Flags;
+    let flp = &fl as cptr SL_Flags;
+    SL_Flags_set_visible(flp, 1u32);
+    SL_Flags_set_mode(flp, 5u32);
+    SL_Flags_set_delta(flp, -3i32);
+    SL_Flags_set_wide(flp, 1000u32);
+    if (SL_Flags_get_mode(flp) != 5u32) { return 12i64; }
+    if (SL_Flags_get_delta(flp) != -3i32) { return 13i64; }
+    if (SL_Flags_get_wide(flp) != 1000u32) { return 14i64; }
+    if (SL_FlagsWide(fl) != 1003u32) { return 15i64; }
+
+    var pk: SL_Packed;
+    let pkp = &pk as cptr SL_Packed;
+    SL_Packed_set_tag(pkp, 2u8);
+    SL_Packed_set_value(pkp, 40u32);
+    if (SL_Packed_get_value(pkp) != 40u32) { return 16i64; }
+    if (SL_PackedValue(pkp) != 42u32) { return 17i64; }
+
+    SL_DestroyWindow(win);
+    SL_Quit();
+    if (pushed_quit == false) { return 18i64; }
+    return 0i64;
+}
