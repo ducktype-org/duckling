@@ -1,10 +1,10 @@
 #include "api.hpp"
 
-#include <base/misc/int_conv.hpp>
-
 #include <concurrent/base/locks/assert_lock.hpp>
 #include <concurrent/base/locks/with_lock.hpp>
 #include <concurrent/worker/worker_manager.hpp>
+
+#include <base/misc/int_conv.hpp>
 
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
@@ -95,13 +95,18 @@ namespace query::external {
 		const auto& graph = state->getGraph();
 
 		struct StageDump {
-			const char*                                 name;
-			std::string_view                            stage_label;
+			const char*                                     name;
+			std::string_view                                stage_label;
 			::query::internal::QueryGraph::ReducedGraphData data;
 		};
+
 		const std::array<StageDump, 2> stages{ {
-			{ "query_graph_pre_opt", "pre_optimization", graph.toReducedGraphData() },
-			{ "query_graph_post_opt", "post_optimization", state->reduceOptimizeGraph(graph) },
+			{ .name        = "query_graph_pre_opt",
+			  .stage_label = "pre_optimization",
+			  .data        = graph.toReducedGraphData() },
+			{ .name        = "query_graph_post_opt",
+			  .stage_label = "post_optimization",
+			  .data        = state->reduceOptimizeGraph(graph) },
 		} };
 
 		const auto edge_count = [](const ::query::internal::QueryGraph::ReducedGraphData& data) {
