@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use self::graph::UnitGraph;
 use self::unit_visitor::{TryUnitVisitor, UnitVisitor};
+use super::BuildContext;
 use super::compiler_package::CompilerPackage;
 use super::duckc::multipackage_schema;
 use crate::quackpack::core::identity::Identity;
@@ -45,28 +46,30 @@ impl fmt::Debug for Unit {
             .field("name", &inner.package.name())
             .field("version", &inner.package.version())
             .field("identity", &inner.identity)
-            .field("package_type", &inner.package_type)
+            .field("package_type", &inner.unit_type)
             .finish()
     }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-/// What type of artifacts a given [`Unit`] produces.
-pub enum ArtifactsType {
-    /// Compile to a binary
-    /// Maps to the `Native` strategy
+/// What this [`Unit`] represents.
+///
+/// Note: Mapping to the [`Strategy`] is done by [`UnitTaskGenerator`].
+///
+/// [`Strategy`]: super::duckc::multipackage_schema::PackageCompilationStrategy
+/// [`UnitTaskGenerator`]: super::unit_task_generator::UnitTaskGenerator
+pub enum UnitType {
+    /// Compile to a binary.
+    /// Maps to the `Native` or `DvmExe` strategy.
     Binary,
-    /// Compile to a library (`.dll`, `.so`, `.a`, etc)
-    /// Maps to the `Native` strategy
+    /// Compile to a library (`.dll`, `.so`, `.a`, etc).
+    /// This type is (still) unsupported.
     Library,
-    /// Compile to a DVM file
-    /// Maps to the `Dvm` strategy
-    Dvm,
-    /// This [`Unit`] is a dependency and can produce only minimal artifacts
-    /// Maps to the `Lib` compilation strategy, and we'll produce only minimal archives:
+    /// This [`Unit`] is a dependency and can produce only minimal artifacts.
+    /// Maps to the `Lib` or `DvmLib` compilation strategy, and will produce only minimal archives:
     /// they might be incomplete, but linker will take care of this (when compiling the root package
     /// with [`Binary`](Self::Binary) or [`Library`](Self::Library) types).
-    IsADependencyArtifact,
+    Dependency,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -86,7 +89,7 @@ struct UnitInner {
     /// How have we got this package.
     identity: Identity,
     /// What artifacts should this unit produce.
-    package_type: ArtifactsType,
+    unit_type: UnitType,
     /// [`BuildKind`] of this [`Unit`].
     build_kind: BuildKind,
 }
@@ -97,7 +100,7 @@ impl Unit {
         unit_id: UnitId,
         package: CompilerPackage,
         identity: Identity,
-        package_type: ArtifactsType,
+        unit_type: UnitType,
         build_kind: BuildKind,
     ) -> Self {
         let (package, enabled_features, _) = package.decompose();
@@ -107,7 +110,7 @@ impl Unit {
                 package,
                 enabled_features,
                 identity,
-                package_type,
+                unit_type,
                 build_kind,
             }),
         }
@@ -128,9 +131,9 @@ impl Unit {
         &self.inner.enabled_features
     }
 
-    /// Get the type of produced artifacts by this [`Unit`].
-    pub fn artifacts_type(&self) -> ArtifactsType {
-        self.inner.package_type
+    /// Get the type this [`Unit`].
+    pub fn unit_type(&self) -> UnitType {
+        self.inner.unit_type
     }
 
     /// Get the [`Identity`] of this [`Unit`].
@@ -163,15 +166,15 @@ impl Unit {
     }
 
     /// Get the filename of the output of this [`Unit`].
-    pub fn output_file_name(&self) -> String {
+    pub fn output_file_name(&self, bcx: &BuildContext<'_, '_>) -> String {
         let name = self.package().name();
-        match self.artifacts_type() {
-            ArtifactsType::Binary => format!("{}{}", name, EXE_SUFFIX),
-            ArtifactsType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
-            ArtifactsType::Dvm => format!("{}{}", name, DVM_SUFFIX),
-            ArtifactsType::IsADependencyArtifact => {
-                format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX)
-            }
+        if bcx.targets_dvm() {
+            return format!("{}{}", name, DVM_SUFFIX);
+        }
+        match self.unit_type() {
+            UnitType::Binary => format!("{}{}", name, EXE_SUFFIX),
+            UnitType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
+            UnitType::Dependency => format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX),
         }
     }
 
