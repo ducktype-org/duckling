@@ -190,7 +190,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
 impl BuildContext<'_, '_> {
     /// Get an appropriate [`UnitTaskGenerator`].
     pub fn task_generator(&self) -> Box<dyn UnitTaskGenerator> {
-        if self.profile.dvm_bytecode {
+        if self.targets_dvm() {
             debug!("returning DvmTaskGenerator");
             return Box::new(DvmTaskGenerator);
         }
