@@ -200,14 +200,6 @@ namespace compiler::helios {
 				));
 				return;
 			}
-
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-				base::strConcat(
-					"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
-				),
-				assignment->getStablePosition()
-			));
-			query::throwFailed();
 		}
 
 		void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {

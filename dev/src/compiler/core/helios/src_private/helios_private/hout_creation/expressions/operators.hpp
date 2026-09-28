@@ -8,6 +8,7 @@
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax it.
+#include <helios/hout/hout.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
@@ -34,6 +35,57 @@ namespace compiler::helios::code {
 	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 	);
+
+	/**
+	 * @brief Finds the appropriate binary operator to call and constructs the corresponding
+	 * HOUT expression. Consumes the provided expressions of the arguments.
+	 * Currently used for all operators other than `As` (type cast) and `Pipe` (variant type
+	 * construction). Perhaps they will be moved here later.
+	 * @param ctx The context of the query
+	 * @param op The operator
+	 * @param op_origin The origin of the operator in the PST
+	 * @param lhs The precomputed left-hand side argument
+	 * @param rhs The precomputed right-hand side argument
+	 * @param scope The scope in which the operator call happens
+	 */
+	[[nodiscard]]
+	Box<Expr> resolveBinaryOperator(
+		query::Context& ctx,
+		lexer::Operator op,
+		ElementOrigin   op_origin,
+		Box<Expr>       lhs,
+		Box<Expr>       rhs,
+		ScopeID         scope
+	);
+
+	/**
+	 * @brief Finds the appropriate unary operator to call and constructs the corresponding
+	 * HOUT expression. Consumes the provided argument expression.
+	 * Some cases, such as the ampersand and asterisk for references are not handled here.
+	 * Perhaps they will be moved here later.
+	 * @param ctx The context of the query
+	 * @param op The operator
+	 * @param op_origin The origin of the operator in the PST
+	 * @param inner The precomputed argument
+	 * @param scope The scope in which the operator call happens
+	 * @param operatoriness Whether the operator is prefix or suffix
+	 */
+	[[nodiscard]]
+	Box<Expr> resolveUnaryOperator(
+		query::Context&                              ctx,
+		lexer::Operator                              op,
+		ElementOrigin                                op_origin,
+		Box<Expr>                                    inner,
+		const ScopeID                                scope,
+		const HOUTFunctionDeclaration::Operatoriness operatoriness
+	);
+
+	/**
+	 * @brief Check if an operator allows their arguments to undergo numeric promotion.
+	 * @param op The operator to check.
+	 * @return Whether the operator is numeric.
+	 */
+	bool isNumericOperator(const lexer::Operator op);
 
 	/**
 	 * @brief Represents a builtin operator which is not a numeric operator, and how it

@@ -1,5 +1,8 @@
-#include "builtin_operators.hpp"
+#include "operators.hpp"
 
+#include "function_calls/call_processing.hpp"
+
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/abstract_type.hpp>
@@ -7,6 +10,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/lookup/interface.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -241,9 +245,27 @@ namespace {
 		}
 		CORE_UNREACHABLE();
 	}
+
+	void filterFunctionsByOperatoriness(
+		query::Context&                              ctx,
+		std::vector<SymID>&                          function_syms,
+		const HOUTFunctionDeclaration::Operatoriness opiness
+	) {
+		base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
+			return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
+		});
+	}
 }
 
 namespace compiler::helios::code {
+	bool isNumericOperator(const lexer::Operator op) {
+		// Only operators which allow their arguments to undergo numeric promotion.
+		static const std::set<std::string> numeric_ops
+			= { "+",  "-",  "*",  "/", "%", "**", "<", "<=", ">",
+			    ">=", "==", "!=", "&", "|", "^",  "~", "<<", ">>" };
+		return numeric_ops.contains(op.str());
+	}
+
 	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
 		query::Context& ctx, lexer::Operator op, const CRef<Expr> expr
 	) {
@@ -370,6 +392,139 @@ namespace compiler::helios::code {
 			}
 		}
 		return {};
+	}
+
+	Box<Expr> resolveBinaryOperator(
+		query::Context& ctx,
+		lexer::Operator op,
+		ElementOrigin   op_origin,
+		Box<Expr>       lhs,
+		Box<Expr>       rhs,
+		ScopeID         scope
+	) {
+		const auto lhs_type = lhs->expression_type.getSymbolType();
+		const auto rhs_type = rhs->expression_type.getSymbolType();
+
+		// Binary operator resolution now happens in two steps:
+		// 1. If the arguments are both numeric (integral or float) and the operator is a
+		// built-in arithmetic operator, we look for promotions from left to right and from
+		// right to left, and then use the built-in operator on the promoted-to type.
+		// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+		//    a. The calling scope (a user can define a standalone function named `+`).
+		//    b. The type of the left-hand side argument (for an operator method).
+		// Next, we perform typical overload resolution.
+
+		// Step 1. — special path for numeric promotions
+		if (lhs_type.getType().isNumeric() && rhs_type.getType().isNumeric()
+		    && isNumericOperator(op)) {
+			auto numeric_builtin_opt
+				= resolveNumericBinaryBuiltin(ctx, op, lhs->clone(), rhs->clone());
+
+			if_opt_some(numeric_builtin_opt, numeric_builtin) { return std::move(numeric_builtin); }
+		}
+
+		// Step 2. — Regular lookup and overload resolution
+		const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
+		// @TODO: #1412 fix dealias
+		auto               all_candidates = lookup_result->valueOrThrow().leaves;
+		std::vector<SymID> method_candidates;
+		for (const auto [builtin_operator_sym, _]:
+		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
+			if (name(builtin_operator_sym) == op.value)
+				all_candidates.push_back(builtin_operator_sym);
+		}
+		filterFunctionsByOperatoriness(
+			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+		);
+
+		// Step 2b. — Look for operator methods declared on the left-hand side's type
+		// (classes only)
+		const auto lhs_abstract_type = lhs_type.getType();
+		if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
+			const auto method_lookup_result
+				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
+			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			filterFunctionsByOperatoriness(
+				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+			);
+
+			for (const auto method_candidate: method_candidates)
+				if (not std::ranges::contains(all_candidates, method_candidate))
+					all_candidates.push_back(method_candidate);
+		}
+
+		return processBinaryOperatorCall(
+				   ctx, all_candidates, method_candidates, std::move(lhs), std::move(rhs), op_origin
+		)
+		    .valueOrThrow();
+	}
+
+	Box<Expr> resolveUnaryOperator(
+		query::Context&                              ctx,
+		lexer::Operator                              op,
+		ElementOrigin                                op_origin,
+		Box<Expr>                                    inner,
+		const ScopeID                                scope,
+		const HOUTFunctionDeclaration::Operatoriness operatoriness
+	) {
+		CORE_ASSERT(
+			operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+				|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
+			"resolveUnaryOperator should only filter for prefix or suffix operators"
+		);
+		// Unary operator resolution happens in two steps:
+		// 1. If the argument is numeric (integral or float) and the operator is a built-in
+		//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
+		// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+		//    a. The calling scope (a user can define a standalone function named `+`).
+		//    b. The type of the only argument (for an operator method).
+		// Next, we perform typical overload resolution.
+
+		// Step 1. — special path for numeric promotions
+		if (inner->expression_type.getType().isNumeric() && isNumericOperator(op)) {
+			auto numeric_builtin_opt = findNumericUnaryBuiltin(ctx, op, inner.ref());
+			auto new_origin = operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+			                    ? elementOriginOrdered(op_origin, inner->origin)
+			                    : elementOriginOrdered(inner->origin, op_origin);
+
+			if_opt_some(numeric_builtin_opt, numeric_builtin) {
+				auto [operation, coercion] = numeric_builtin;
+				auto coerced_inner         = coercion.coerce(ctx, std::move(inner));
+				return makeBox<UnaryOperatorExpr>(
+					ctx, new_origin, operation, std::move(coerced_inner)
+				);
+			}
+		}
+
+		// Step 2. — Regular lookup and overload resolution
+		const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
+		// @TODO: #1412 fix dealias
+		auto               all_candidates = lookup_result->valueOrThrow().leaves;
+		std::vector<SymID> method_candidates;
+		for (const auto [builtin_operator_sym, _]:
+		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
+			if (name(builtin_operator_sym) == op.value)
+				all_candidates.push_back(builtin_operator_sym);
+		}
+		filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
+
+		// Step 2b. — Look for operator methods declared on the operand's own type (classes only)
+		const auto inner_type = inner->expression_type.getType();
+		if (inner_type.getKind() == tsh::Kind::Class) {
+			const auto method_lookup_result
+				= HInterface::ofTypeInstance(inner_type).lookup(ctx, op.value);
+			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
+
+			for (const auto method_candidate: method_candidates)
+				if (not std::ranges::contains(all_candidates, method_candidate))
+					all_candidates.push_back(method_candidate);
+		}
+
+		return processUnaryOperatorCall(
+				   ctx, all_candidates, method_candidates, std::move(inner), op_origin, operatoriness
+		)
+		    .valueOrThrow();
 	}
 
 	struct IMPLEMENT_QUERY(QueryRegularBuiltinOperatorSymbols, RegularBuiltinOperatorSymbolMap) {

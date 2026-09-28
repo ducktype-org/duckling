@@ -222,7 +222,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>      operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
 	Example<pst::FunDecl, true>  operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
 	Example<pst::Class, true>    operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
-	Example<pst::Fun, true>      assignment_operator_function1{ "fun +*=(a: i64) = {}" };
+	Example<pst::Fun, false>     assignment_operator_function1{ "fun +*=(a: i64) = {}" };
 	Example<pst::Fun, false>     bare_assign_operator_function{ "fun =(a: i64) = {}" };
 	Example<pst::Fun, false>     comparison_operator_function1{ "fun <(a: i64) = {}" };
 	Example<pst::Fun, false>     special_operator_function1{ "fun ->(a: i64) = {}" };
