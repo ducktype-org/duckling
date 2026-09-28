@@ -154,33 +154,35 @@ private:
 		class CounterInterface {
 		public:
 			/// Increments the counter and returns its previous value.
-			virtual usize increment()   = 0;
-			virtual ~CounterInterface() = default;
+			/// The extra argument is used only in the bad counter to introduce stutters.
+			virtual usize increment(u32 = 0) = 0;
+			virtual ~CounterInterface()      = default;
 		};
 
 		/// A correct concurrent counter using atomic operations.
 		class GoodConcurrentCounter: public CounterInterface {
 			std::atomic<usize> counter{};
 
-			usize increment() override { return counter.fetch_add(1); }
+			usize increment(u32) override { return counter.fetch_add(1); }
 		};
 
-		/// An incorrect concurrent counter which assumes increment is atomic.
+		/// An incorrect concurrent counter which assumes increment is atomic. Also includes stutters.
 		class BadConcurrentCounter: public CounterInterface {
 			std::atomic<usize> counter{};
 
-			usize increment() override {
+			usize increment(u32 stutterer) override {
 				auto i = counter.load(std::memory_order_relaxed);
+				if (stutterer % 15 == 0) std::this_thread::sleep_for(std::chrono::milliseconds(10));
 				counter.store(i + 1, std::memory_order_relaxed);
 				return i;
 			}
 		};
 
-		/// A correct sequential counter, coincidentally identical to BadConcurrentCounter.
+		/// A correct sequential counter.
 		class SequentialCounter: public CounterInterface {
 			usize counter{};
 
-			usize increment() override { return counter++; }
+			usize increment(u32) override { return counter++; }
 		};
 
 		// Run for the good counter.
@@ -225,15 +227,15 @@ private:
 				usize>;
 
 			const std::function<void(u32, RaceTesterBad::Executor_)> worker
-				= [](u32, RaceTesterBad::Executor_ executor) {
+				= [](u32 worker_id, RaceTesterBad::Executor_ executor) {
 					  for (usize i = 0; i < 20; ++i)
-						  executor.execute("inc", [](const Ref<CounterInterface> counter) {
-							  return counter->increment();
+						  executor.execute("inc", [=](const Ref<CounterInterface> counter) {
+							  return counter->increment(worker_id + u32(i) * 4);
 						  });
 				  };
 
 			// Run the tests
-			const usize reps         = 100;
+			const usize reps         = 3;
 			const usize worker_count = 4;
 
 			bool failed = false;
