@@ -668,8 +668,15 @@ clah::Clah getClahForCompilePackage(
 				CORE_USER_LOG("Error: ", dumped.error(), "\n");
 				return 1;
 			}
-			for (const auto& path: *dumped)
+			for (const auto& path: dumped->written_files)
 				CORE_USER_LOG("Query graph written to '", path.string(), "'\n");
+			CORE_USER_LOG(
+				"Query graph edges before optimization: ",
+				dumped->pre_optimization_edge_count,
+				", after optimization: ",
+				dumped->post_optimization_edge_count,
+				"\n"
+			);
 		}
 
 
@@ -1077,7 +1084,8 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(getClahForCompilePackage(
 			"experimental_compile_package_dump_graph",
 			"[Experimental] Like compile_package, and also write the query graph before and after "
-			"its optimization as JSON.",
+			"its optimization as JSON and in the binary format of the persisted query graph, and "
+			"report the edge counts of both graphs.",
 			true
 		))
 	    .addSubcommand(

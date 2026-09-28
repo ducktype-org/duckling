@@ -1,5 +1,7 @@
 #include "api.hpp"
 
+#include <base/misc/int_conv.hpp>
+
 #include <concurrent/base/locks/assert_lock.hpp>
 #include <concurrent/base/locks/with_lock.hpp>
 #include <concurrent/worker/worker_manager.hpp>
@@ -16,6 +18,7 @@
 
 #include <array>
 #include <fstream>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -77,7 +80,7 @@ namespace query::external {
 		}
 	}
 
-	std::expected<std::vector<std::filesystem::path>, std::string> dumpQueryGraphsToDirectory(
+	QueryGraphDumpResult dumpQueryGraphsToDirectory(
 		const std::filesystem::path& output_dir, QueryGraphDumpPasses passes
 	) {
 		std::error_code error;
@@ -88,20 +91,70 @@ namespace query::external {
 			);
 		}
 
-		const std::array<std::pair<const char*, QueryGraphDumpStage>, 2> dumps{ {
-			{ "query_graph_pre_opt.json", QueryGraphDumpStage::PreOptimization },
-			{ "query_graph_post_opt.json", QueryGraphDumpStage::PostOptimization },
+		auto        state = ::query::internal::ContextAccess::getState();
+		const auto& graph = state->getGraph();
+
+		struct StageDump {
+			const char*                                 name;
+			std::string_view                            stage_label;
+			::query::internal::QueryGraph::ReducedGraphData data;
+		};
+		const std::array<StageDump, 2> stages{ {
+			{ "query_graph_pre_opt", "pre_optimization", graph.toReducedGraphData() },
+			{ "query_graph_post_opt", "post_optimization", state->reduceOptimizeGraph(graph) },
 		} };
-		std::vector<std::filesystem::path>                               written;
-		for (const auto& [file_name, stage]: dumps) {
-			auto          path = output_dir / file_name;
-			std::ofstream out(path);
-			dumpQueryGraphAsJson(stage, out, passes);
-			out.close();
-			if (!out) return std::unexpected("cannot write query graph to '" + path.string() + "'");
-			written.push_back(std::move(path));
+
+		const auto edge_count = [](const ::query::internal::QueryGraph::ReducedGraphData& data) {
+			u64 edges = 0;
+			for (const auto& deps: data.adjacency) edges += deps.size();
+			return edges;
+		};
+
+		const ::query::internal::DumpPasses internal_passes{
+			.no_other_input    = passes.no_other_input,
+			.rename            = passes.rename,
+			.simplify          = passes.simplify,
+			.remove_dead_nodes = passes.remove_dead_nodes,
+		};
+
+		QueryGraphDump dump{
+			.written_files                = {},
+			.pre_optimization_edge_count  = edge_count(stages[0].data),
+			.post_optimization_edge_count = edge_count(stages[1].data),
+		};
+		for (const auto& [name, stage_label, data]: stages) {
+			auto json_path = output_dir / (std::string(name) + ".json");
+			{
+				std::ofstream out(json_path);
+				::query::internal::writeReducedGraphAsJson(data, stage_label, out, internal_passes);
+				out.close();
+				if (!out) {
+					return std::unexpected(
+						"cannot write query graph to '" + json_path.string() + "'"
+					);
+				}
+			}
+			dump.written_files.push_back(std::move(json_path));
+
+			// Same bytes as the persisted query graph blob (see optAndSerializeQueryGraph()).
+			auto bin_path = output_dir / (std::string(name) + ".bin");
+			{
+				const auto    bytes = ::query::internal::QueryGraph::serializeReducedGraph(data);
+				std::ofstream out(bin_path, std::ios::binary);
+				out.write(
+					reinterpret_cast<const char*>(bytes.data()),
+					base::safeIntConv<std::streamsize>(bytes.size())
+				);
+				out.close();
+				if (!out) {
+					return std::unexpected(
+						"cannot write query graph to '" + bin_path.string() + "'"
+					);
+				}
+			}
+			dump.written_files.push_back(std::move(bin_path));
 		}
-		return written;
+		return dump;
 	}
 
 	u64 deleteOrphanedDiskCaches() {

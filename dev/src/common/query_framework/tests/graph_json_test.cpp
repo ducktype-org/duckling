@@ -111,10 +111,14 @@ private:
 	}
 
 	static std::string readFile(const std::filesystem::path& path) {
-		std::ifstream      in(path);
+		std::ifstream      in(path, std::ios::binary);
 		std::ostringstream content;
 		content << in.rdbuf();
 		return content.str();
+	}
+
+	static std::string asString(const std::vector<byte>& bytes) {
+		return { reinterpret_cast<const char*>(bytes.data()), bytes.size() };
 	}
 
 	/**
@@ -273,16 +277,31 @@ private:
 		const auto dir    = uniqueTempPath() / "nested";
 		const auto result = query::external::dumpQueryGraphsToDirectory(dir);
 		ASSERT_TRUE(result.has_value());
-		ASSERT_EQUAL(usize{ 2 }, result->size());
-		ASSERT_EQUAL(dir / "query_graph_pre_opt.json", result->at(0));
-		ASSERT_EQUAL(dir / "query_graph_post_opt.json", result->at(1));
+		const auto& files = result->written_files;
+		ASSERT_EQUAL(usize{ 4 }, files.size());
+		ASSERT_EQUAL(dir / "query_graph_pre_opt.json", files.at(0));
+		ASSERT_EQUAL(dir / "query_graph_pre_opt.bin", files.at(1));
+		ASSERT_EQUAL(dir / "query_graph_post_opt.json", files.at(2));
+		ASSERT_EQUAL(dir / "query_graph_post_opt.bin", files.at(3));
 
-		const auto pre  = readFile(result->at(0));
-		const auto post = readFile(result->at(1));
+		const auto pre  = readFile(files.at(0));
+		const auto post = readFile(files.at(2));
 		ASSERT_EQUAL(dump(query::external::QueryGraphDumpStage::PreOptimization), pre);
 		ASSERT_EQUAL(dump(query::external::QueryGraphDumpStage::PostOptimization), post);
 		ASSERT_TRUE(pre.contains("\"name\": \"JsonUnstableQuery\""));
 		ASSERT_TRUE(not post.contains("\"name\": \"JsonUnstableQuery\""));
+
+		// The binary files hold the whole graph and the persisted query graph blob.
+		const auto& graph = query::internal::ContextAccess::getState()->getGraph();
+		ASSERT_EQUAL(asString(graph.serialize()), readFile(files.at(1)));
+		ASSERT_EQUAL(asString(query::external::optAndSerializeQueryGraph()), readFile(files.at(3)));
+
+		// Edges are counted on the graphs themselves: the stable query depends on the side input
+		// and on the unstable leaf, which the optimization removes.
+		u64 pre_edges = 0;
+		for (const auto& deps: graph.toReducedGraphData().adjacency) pre_edges += deps.size();
+		ASSERT_EQUAL(pre_edges, result->pre_optimization_edge_count);
+		ASSERT_TRUE(result->post_optimization_edge_count < result->pre_optimization_edge_count);
 
 		std::filesystem::remove_all(dir.parent_path());
 	}
@@ -478,8 +497,8 @@ private:
 		const auto dir    = uniqueTempPath();
 		const auto result = query::external::dumpQueryGraphsToDirectory(dir, { .rename = true });
 		ASSERT_TRUE(result.has_value());
-		ASSERT_EQUAL(renamed, readFile(result->at(0)));
-		ASSERT_TRUE(not readFile(result->at(1)).contains("JsonUnstableQuery"));
+		ASSERT_EQUAL(renamed, readFile(result->written_files.at(0)));
+		ASSERT_TRUE(not readFile(result->written_files.at(2)).contains("JsonUnstableQuery"));
 		std::filesystem::remove_all(dir);
 	}
 

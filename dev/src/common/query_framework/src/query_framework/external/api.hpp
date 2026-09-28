@@ -142,15 +142,32 @@ namespace query::external {
 	);
 
 	/**
-	 * @brief Paths of the files dumpQueryGraphsToDirectory() wrote, or why it could not write them.
+	 * @brief What dumpQueryGraphsToDirectory() wrote.
 	 */
-	using QueryGraphDumpResult = std::expected<std::vector<std::filesystem::path>, std::string>;
+	struct QueryGraphDump {
+		std::vector<std::filesystem::path> written_files;
+		/// Edges of the whole graph, as recorded during compilation (the ones `--print-graph`
+		/// prints). Counted before any QueryGraphDumpPasses.
+		u64 pre_optimization_edge_count = 0;
+		/// Edges of the graph after reduceOptimizeGraph, i.e. of the persisted graph. Counted
+		/// before any QueryGraphDumpPasses.
+		u64 post_optimization_edge_count = 0;
+	};
+
+	/**
+	 * @brief What dumpQueryGraphsToDirectory() wrote, or why it could not write it.
+	 */
+	using QueryGraphDumpResult = std::expected<QueryGraphDump, std::string>;
 
 	/**
 	 * @brief Write both dumpQueryGraphAsJson() stages into @p output_dir, as
-	 * `query_graph_pre_opt.json` and `query_graph_post_opt.json`, creating the directory if needed.
-	 * @param passes Passes to run on both graphs just before they are written.
-	 * @return The paths of the written files, or a message saying what could not be written.
+	 * `query_graph_pre_opt.json` and `query_graph_post_opt.json`, and both graphs in the binary
+	 * format of the persisted query graph blob, as `query_graph_pre_opt.bin` and
+	 * `query_graph_post_opt.bin`, creating the directory if needed.
+	 * @param passes Passes to run on both JSON graphs just before they are written. They never
+	 * change the binary files or the edge counts.
+	 * @return The paths of the written files and the edge counts of both graphs, or a message
+	 * saying what could not be written.
 	 * @warning Must not be called while queries are executing.
 	 */
 	[[nodiscard]] QueryGraphDumpResult dumpQueryGraphsToDirectory(

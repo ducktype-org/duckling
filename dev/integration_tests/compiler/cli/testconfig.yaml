@@ -73,6 +73,14 @@ Tests:
           && @{to_dot} @{graph_dir}/query_graph_post_opt.json --no-inputs
           && grep -q 'CompileModule' @{graph_dir}/query_graph_post_opt.dot"
         ExitCode: 0
+      binary-dump-and-edge-count:
+        # The binary graphs are written next to the JSON ones, and the edge counts of both
+        # graphs are reported. Neither depends on the dump passes.
+        Run: "@{dump_cmd} --graph-output @{graph_dir} --simplify-pass > @{graph_dir}.log 2>&1
+          && test -s @{graph_dir}/query_graph_pre_opt.bin
+          && test -s @{graph_dir}/query_graph_post_opt.bin
+          && grep -Eq 'Query graph edges before optimization: [1-9][0-9]*, after optimization: [0-9]+' @{graph_dir}.log"
+        ExitCode: 0
       rename-pass:
         # Inputs get readable names and unstable query names are hidden.
         Run: "@{dump_cmd} --graph-output @{graph_dir} --rename-pass
