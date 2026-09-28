@@ -18,6 +18,7 @@
 // clang-format off
 MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	init,
+	initFromVMValue,
 	deinit,
 	mov,
 	cmov,

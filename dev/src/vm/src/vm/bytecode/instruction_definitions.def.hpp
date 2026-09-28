@@ -764,12 +764,12 @@ DEF_INSTR(nop)
 DEF_INSTR(exit)
 
 /**
- * @brief This is a very internal instruction, that should not be used in regular bytecode.
- * It is a helper for start functions.
- * @arg0 - pointer to a VMValue.
- * @arg1 - n/a.
+ * @brief A very internal instruction, not to be used in regular bytecode. It initializes a local
+ * from an immediate VM value pointer, and is only emitted for the synthetic start function.
  */
-DEF_INSTR(initFromVMValue)
+DEF_INSTR(
+	initFromVMValue_pany_immvmval, (vm::opargs::PlaceAny, var), (vm::opargs::VMValueImm, vm_val)
+)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR
