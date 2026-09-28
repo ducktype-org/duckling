@@ -24,15 +24,15 @@ Tests:
   dvm-shared-libs:
     Description: a dependency calling into a C library runs on both backends
     Cases:
+      # `links` is passed to the native linker
       native:
-        CaseName: "`links` is passed to the native linker"
         before-cmd: 'export PATH="@{duckc_dir}:$PATH" && echo "  links: $DIT_TMP_DIR/build_c/answer.o" >> answer/quackconfig.yaml'
         test-cmd: duck -C app run
+      # A relative `dvm-shared-libs` entry resolves against the declaring package
       dvm-relative:
-        CaseName: "A relative `dvm-shared-libs` entry resolves against the declaring package"
         before-cmd: 'export PATH="@{duckc_dir}:$PATH" && printf "  links: %s\n  dvm-shared-libs:\n    - ../build_c/libanswer.so\n" "$DIT_TMP_DIR/build_c/answer.o" >> answer/quackconfig.yaml'
         test-cmd: duck -C app run --profile=dvm
+      # An absolute `dvm-shared-libs` entry is kept as is
       dvm-absolute:
-        CaseName: "An absolute `dvm-shared-libs` entry is kept as is"
         before-cmd: 'export PATH="@{duckc_dir}:$PATH" && printf "  dvm-shared-libs:\n    - %s\n" "$DIT_TMP_DIR/build_c/libanswer.so" >> answer/quackconfig.yaml'
         test-cmd: duck -C app run --profile=dvm
