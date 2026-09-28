@@ -48,9 +48,10 @@ void fast::FastCompiler::compileNewGlobals(const std::vector<GlobalData>& new_gl
 }
 
 void fast::FastCompiler::compileNewFunctions(
-	const std::vector<code::valid_function::ValidFunction>& new_functions
+	const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 ) {
-	for (const code::valid_function::ValidFunction& function: new_functions) {
+	for (const auto& func_ref: new_functions) {
+		const auto& function = *func_ref;
 		// Reusable transforms: map a type name to its byte size / its fast-mode TypeID.
 		auto get_sizes    = std::views::transform([this](const auto& type_name) {
             return program.types.at(type_name)->getSize();
