@@ -301,8 +301,10 @@ namespace vm::api {
 	/**
 	 * @brief Loads and executes a runtime expression on the specified thread, either parsed
 	 * already or read from a file.
-	 * @return A complete value or the reference to emitter which should eventually deliver it
-	 * @note the thread pauses again shortly after; call waitForBreakpoint before resuming
+	 * @return A future for the expression's return values. It is only fulfilled when the
+	 * expression reaches `ret`, so blocking on it (e.g. `get()`) waits forever for an expression
+	 * that loops or stops on a breakpoint.
+	 * @note a finished expression re-pauses the thread; call waitForBreakpoint before resuming
 	 */
 	std::expected<ExprResult, ApiError> executeRuntimeExpr(
 		PID pid, ThreadID thread_id, std::variant<fs::File, code::Function> source

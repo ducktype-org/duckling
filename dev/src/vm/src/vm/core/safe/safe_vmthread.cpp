@@ -703,6 +703,12 @@ namespace vm {
 
 		auto resumed = resume();
 		if (!resumed.has_value()) {
+			for (usize i = 0; i < called_expr.result_types.size(); i++)
+				OpFuns::performDeinit(frame, *this);
+
+			frame->resetFrameData();
+			runtime_data.frame_stack_current = prev_frame;
+
 			runtime_expr_completion.pop_back();
 			runtime_expr_low.pop_back();
 			runtime_expr_high.pop_back();

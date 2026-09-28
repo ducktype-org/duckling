@@ -135,8 +135,8 @@ namespace vm::debugger {
 
 		/**
 		 * @brief Evaluates a runtime expression read from `file` on the given thread and prints
-		 * the returned values. If the expression stops on a breakpoint, its result is printed once
-		 * it completes instead.
+		 * the returned values. If the expression stops on a breakpoint or takes too long, its
+		 * result is dropped instead (see #3655).
 		 */
 		std::expected<void, api::ApiError> evaluate(
 			const fs::File& file, api::ThreadID thread_id = vm::api::ThreadID(0)

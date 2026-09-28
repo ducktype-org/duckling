@@ -36,7 +36,6 @@ RUN apt-get update -y && \
     # Build tools
     cmake \
     ninja-build \
-    ccache \
     # LLVM
     llvm-19 \
     llvm-19-dev \
