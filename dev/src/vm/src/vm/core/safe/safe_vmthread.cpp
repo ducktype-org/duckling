@@ -16,6 +16,10 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/builders/instruction_builder.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
@@ -23,6 +27,7 @@
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
@@ -31,9 +36,24 @@
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <expected>
 #include <ranges>
 #include <string>
+#include <utility>
 #include <vector>
+
+// helpers for building fat-bytecode
+namespace {
+	// helper high-order function for creating a vm::code::Function
+	auto getBuilder(vm::code::Function& start_function) {
+		return [&start_function](vm::code::builders::OpKind kind, auto&&... op_args) {
+			auto instr = vm::code::builders::InstructionBuilder{
+				kind, std::forward<decltype(op_args)>(op_args)...
+			};
+			start_function.body.push_back(instr.build());
+		};
+	}
+}
 
 namespace vm {
 	namespace ts = thread_state;
@@ -136,79 +156,48 @@ namespace vm {
 	 *
 	 * @note For more detailed explanation go to `createProgramStartFunction`.
 	 */
-	low::LowFuncData SafeVMThread::createStartFunctionFor(
+	code::Function SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(argumentCountMismatchMessage(func, func_args.size())
-			);
+		using namespace opargs;
+		using namespace std::views;
+		using enum code::builders::OpKind;
+		using base::StrID, base::strConcat;
+
+		auto high_func            = func.high_func;
+		auto called_function_name = FunctionName{ func.name };
+
+		code::Function start_function;
+
+		start_function.name      = code::Identifier{ StrID("vm_start_function") };
+		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
+
+		auto add_instr = getBuilder(start_function);
+		auto any       = [](auto&& arg) { return PlaceAny{ StrID(arg) }; };
+
+		for (auto [idx, result_type]: enumerate(high_func->signature.result_types)) {
+			auto slot_type = opargs::Type{ StrID(result_type.str) };
+			auto slot_name = any(strConcat("ret", idx).c_str());
+			add_instr(init, slot_name, slot_type);
 		}
 
-		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
-			                             .id   = START_FUNCTION_ID,
-#ifdef ENABLE_JIT
-			                             // This is okay because we never JIT the start function.
-			                             .jit_func_entrypoint_offset = 0,
-#endif
-			                             .bc               = {},
-			                             .orig_bc          = {},
-			                             .local_stack_size = 0,
-			                             .local_slot_count
-			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size            = 0,
-			                             .ret_size            = func.ret_size,
-			                             .parameters          = {},
-			                             .result_types        = func.result_types,
-			                             .instruction_mapping = {} };
-
-		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
-
-		// Byte offset of the next variable initialized on the start function's local stack.
-		u64 stack_offset = 0;
-
-		for (const auto& res: func.result_types) {
-			// Initialize an exit code/return value spot. In case of non-void functions the
-			// exit_code is the return value of the function. Void functions always return with the
-			// exit_code = 0.
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				init_off_type, stack_offset, safeReadObjectBytes<u64>(res)
-			));
-			stack_offset += res->getSize().asInt();
+		for (auto [idx, arg_value]: enumerate(func_args)) {
+			VMValueImm val_imm{ arg_value.get() };
+			auto       arg_name = any(strConcat("arg", idx).c_str());
+			add_instr(initFromVMValue, arg_name, val_imm);
 		}
 
-		start_function.local_stack_size += func.ret_size;
-
-		// Argument validity was already checked when validating the API call.
-		for (const auto& [i, arg_value]: std::views::enumerate(func_args)) {
-			const auto& arg_type = func.parameters[i];
-
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVMValue,
-				std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)),
-				stack_offset
-			));
-			stack_offset += arg_type->getSize().asInt();
-			start_function.local_stack_size += arg_type->getSize().asInt();
-			start_function.parameters.push_back(arg_type);
-			start_function.arg_size += arg_type->getSize().asInt();
-		}
-
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				// The start function's whole local stack is the space shared with the callee,
-		        // so the callee's local stack starts at the very same address.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-				// @note: Only one block is left on the stack in this place, so there is no need
-		        // for any deinits. It's being deinitialized by the thread after obtaining the
-		        // return value/exit_code.
-				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
-			}
-		);
-		start_function.orig_bc = start_function.bc;
+		add_instr(call, called_function_name);
+		add_instr(exit);
 
 		return start_function;
+	}
+
+	void SafeVMThread::compileAndLoadStartFunction(const code::Function& start_function) {
+		auto valid = safe_process.validateFunction(start_function, code::StartFunction{});
+		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
+		start_function_high.emplace(std::move(*valid));
+		start_function_low.emplace(safe_process.compileToLow(*start_function_high));
 	}
 
 	/**
@@ -224,202 +213,113 @@ namespace vm {
 	 * loading phase is not possible. This also results in the need to create the function in the
 	 * micro-bytecode right away.
 	 */
-	low::LowFuncData SafeVMThread::createProgramStartFunction(
+	code::Function SafeVMThread::createProgramStartFunction(
 		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
-		// Types
-		// @note: All the following are guaranteed to exist or their existence was checked
-		// during code loading.
+		using namespace code::builders;
+		using namespace opargs;
+		using enum code::builders::OpKind;
+		using base::StrID;
 
-		auto        main_return_type = func.result_types;
-		const auto& types            = process_program->getTypes();
-		auto        argv_type        = types.at(base::StrID("argv"));
-		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
-		auto        i64_type         = types.at(base::StrID("i64"));
-		auto        str_type         = types.at(base::StrID("string"));
-		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
-		auto        byte_type        = types.at(base::StrID("byte"));
+		code::Function start_function;
+		start_function.name      = code::Identifier{ StrID("vm_start_function") };
+		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
 
-		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
-			                             .id   = START_FUNCTION_ID,
-#ifdef ENABLE_JIT
-			                             // This is okay because we never JIT the start function.
-			                             .jit_func_entrypoint_offset = 0,
-#endif
-			                             .bc                  = {},
-			                             .orig_bc             = {},
-			                             .local_stack_size    = 72,
-			                             .local_slot_count    = 7,
-			                             .arg_size            = 0,
-			                             .ret_size            = func.ret_size,
-			                             .parameters          = {},
-			                             .result_types        = func.result_types,
-			                             .instruction_mapping = {} };
+		auto add_instr = getBuilder(start_function);
 
-		// TypeIDs to pass to opcodes.
-		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
-		u64 argv_ptr_type_arg = safeReadObjectBytes<u64>(argv_ptr_type);
-		u64 i64_type_arg      = safeReadObjectBytes<u64>(i64_type);
-		u64 str_type_arg      = safeReadObjectBytes<u64>(str_type);
-		u64 str_ptr_type_arg  = safeReadObjectBytes<u64>(str_ptr_type);
-		u64 byte_type_arg     = safeReadObjectBytes<u64>(byte_type);
+		const auto main = FunctionName{ func.name };
 
-		const u64  called_function_id = process_program->getFunctions().idOf(func.name).value();
-		const bool main_has_args      = !func.parameters.empty();
+		const auto ret_value      = Place64{ StrID("ret_value") };
+		const auto argv_internal  = PlacePtr{ StrID("argv_internal") };
+		const auto argc_internal  = Place64{ StrID("argc_internal") };
+		const auto ix             = Place64{ StrID("ix") };
+		const auto ptr_tmp_store  = PlacePtr{ StrID("ptr_tmp_store") };
+		const auto char_tmp_store = Place8{ StrID("char_tmp_store") };
+		const auto main_ret_val   = Place64{ StrID("main_ret_val") };
 
-		// Initialize the needed data first - argc and argv dynamic table.
-		// Note that `argv` and `argc` are always initialized even if `main` takes no arguments.
-		// This is for the offsets to not get changed when generating the start function.
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				// Program return value is fixes to return `i64`.
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 0, i64_type_arg
-				),  // stack [0, 8), block idx 0 program ret_val
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 8, argv_ptr_type_arg
-				),  // stack [8, 24) block idx 1 *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 24, i64_type_arg
-				),  // stack  [24, 32) block idx 2 argc_internal
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 32, i64_type_arg
-				),  // stack [32, 40) block idx 3 ix
-				MAKE_BYTECODE_INSTRUCTION(
-					mov_p64_imm, 24, args.size()
-				),  // argc_internal := args.size()
-				MAKE_BYTECODE_INSTRUCTION(
-					dynTableReAlloc_pptr_type, 8, argv_type_arg
-				),  // alloc *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(ext_p64, 24, 0),
-			}
-		);
+		const auto type_i64        = opargs::Type{ StrID("i64") };
+		const auto type_ptr_argv   = opargs::Type{ StrID("ptr_argv") };
+		const auto type_argv       = opargs::Type{ StrID("argv") };
+		const auto type_ptr_string = opargs::Type{ StrID("ptr_string") };
+		const auto type_byte       = opargs::Type{ StrID("byte") };
+		const auto type_string     = opargs::Type{ StrID("string") };
+
+		const bool main_has_args = !func.parameters.empty();
+
+		auto to_any = [](const auto& place) { return PlaceAny(place.var_name); };
+		auto imm    = [](auto&& arg) {
+            return Immediate{ static_cast<u64>(std::forward<decltype(arg)>(arg)) };
+		};
+
+		// Initialize the argc/argv bookkeeping. It is always materialized, so that the offsets
+		// do not depend on whether `main` takes arguments.
+		add_instr(init, to_any(ret_value), type_i64);
+		add_instr(init, to_any(argv_internal), type_ptr_argv);
+		add_instr(init, to_any(argc_internal), type_i64);
+		add_instr(init, to_any(ix), type_i64);
+		add_instr(mov, argc_internal, imm(args.size()));
+		add_instr(dynTableReAlloc, argv_internal, type_argv, argc_internal);
 
 		// Now fill in the argv table.
 		if (main_has_args) {
-			for (const auto& [argv_index, arg]:
-			     std::views::zip(std::ranges::views::iota(0u), args)) {
-				start_function.bc.insert(
-					start_function.bc.end(),
-					{
-						MAKE_BYTECODE_INSTRUCTION(
-							init_off_type, 40, str_ptr_type_arg
-						),  // stack [40, 56) block idx 4 ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(
-							init_off_type, 56, byte_type_arg
-						),  // stack [56, 57) block idx 5 char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(
-							mov_p64_imm, 24, arg.size() + 1
-						),  // argc_internal := arg.size() + 1 (for the \0 character)
-						MAKE_BYTECODE_INSTRUCTION(
-							dynTableReAlloc_pptr_type, 40, str_type_arg
-						),                                              // alloc ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 24, 0),
-						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
-					}
-				);
+			using namespace std::views;
+			for (const auto& [argv_index, arg]: zip(iota(0u), args)) {
+				add_instr(init, to_any(ptr_tmp_store), type_ptr_string);
+				add_instr(init, to_any(char_tmp_store), type_byte);
+
+				// `arg.size() + 1` accounts for the terminating `\0`.
+				add_instr(mov, argc_internal, imm(arg.size() + 1));
+				add_instr(dynTableReAlloc, ptr_tmp_store, type_string, argc_internal);
+				add_instr(mov, ix, imm(0));
+
 				for (auto c: arg) {
-					start_function.bc.insert(
-						start_function.bc.end(),
-						{ MAKE_BYTECODE_INSTRUCTION(
-							  mov_p8_imm, 56, static_cast<u64>(c)
-						  ),  // char_tmp_store := c
-					      MAKE_BYTECODE_INSTRUCTION(
-							  anyArrayStore_pptr_bany, 40, 5
-						  ),  // ptr_tmp_store[ix] := char_tmp_store
-					      MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
-					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
-					);
+					add_instr(mov, char_tmp_store, imm(c));
+					add_instr(dynTableStore, ptr_tmp_store, to_any(char_tmp_store), ix);
+					add_instr(add, ix, imm(1));
 				}
-				start_function.bc.insert(
-					start_function.bc.end(),
-					{
-						// At this point ix == arg.size().
-						MAKE_BYTECODE_INSTRUCTION(mov_p8_imm, 56, 0),  // char_tmp_store := \0
-						MAKE_BYTECODE_INSTRUCTION(
-							anyArrayStore_pptr_bany, 40, 5
-						),  // ptr_tmp_store[ix] := char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
-						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, argv_index),  // ix := argv_index
-						MAKE_BYTECODE_INSTRUCTION(
-							anyArrayStore_pptr_bany, 8, 4
-						),  // argv_internal[ix] := ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
-					}
-				);
+
+				// At this point `ix == arg.size()` - store the terminating `\0`.
+				add_instr(mov, char_tmp_store, imm(0));
+				add_instr(dynTableStore, ptr_tmp_store, to_any(char_tmp_store), ix);
+				add_instr(mov, ix, imm(argv_index));
+				add_instr(dynTableStore, argv_internal, to_any(ptr_tmp_store), ix);
+				add_instr(deinit);  // char_tmp_store
+				add_instr(deinit);  // ptr_tmp_store
 			}
 		}
 
-
-		// Now actually prepare to call 'main'.
-		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_off_type, 40, i64_type_arg)  // [40, 48) main ret_val
-		);
-
-		// Pass the command line arguments only if main signature specifies it.
+		// Now actually prepare to call 'main'. Its return value is the first shared slot.
+		add_instr(init, to_any(main_ret_val), type_i64);
 		if (main_has_args) {
-			start_function.bc.insert(
-				start_function.bc.end(),
-				{
-					MAKE_BYTECODE_INSTRUCTION(init_off_type, 48, i64_type_arg),  // [48, 56) argc
-					MAKE_BYTECODE_INSTRUCTION(
-						init_off_type, 56, argv_ptr_type_arg
-					),                                                        // [56, 72) *argv
-					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
-					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
-				}
-			);
+			const auto argc = Place64{ StrID("argc") };
+			const auto argv = PlacePtr{ StrID("argv") };
+			add_instr(init, to_any(argc), type_i64);
+			add_instr(init, to_any(argv), type_ptr_argv);
+			add_instr(mov, argc, imm(args.size()));
+			add_instr(mov, argv, argv_internal);
 		}
 
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				// `main`'s frame begins at its return value, which the layout above puts at 40.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40),  // call main
-				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 48, str_ptr_type_arg
-				),  // [48, 64) ptr_tmp_store
-			}
-		);
+		add_instr(call, main);
+		add_instr(mov, ret_value, main_ret_val);
+		add_instr(mov, ix, imm(0));
+		add_instr(init, to_any(ptr_tmp_store), type_ptr_string);
 
 		// After 'main' returned, free all the allocated strings in the argv table.
 		for ([[maybe_unused]] const auto& arg: args) {
-			start_function.bc.insert(
-				start_function.bc.end(),
-				{
-					MAKE_BYTECODE_INSTRUCTION(
-						anyArrayLoad_bany_pptr, 5, 8
-					),  // ptr_tmp_store := argv_internal[ix]
-					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
-				}
-			);
+			add_instr(dynTableLoad, to_any(ptr_tmp_store), argv_internal, ix);
+			add_instr(free, ptr_tmp_store);
+			add_instr(add, ix, imm(1));
 		}
 
-		// Lastly, free all the data allocated by the start function.
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),   // free *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit ix
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit argc_internal
-				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit *argv_internal
-				// At this point only the start function return value (which is the program exit
-		        // code) remains on the stack.
-				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
-			}
-		);
-
-		start_function.orig_bc = start_function.bc;
+		// Lastly, free all the data allocated by the start function and pop the remaining
+		// locals, leaving only the program's return value on the stack.
+		add_instr(free, argv_internal);
+		add_instr(deinit);  // ptr_tmp_store
+		add_instr(deinit);  // main_ret_val
+		add_instr(deinit);  // ix
+		add_instr(deinit);  // argc_internal
+		add_instr(deinit);  // argv_internal
+		add_instr(exit);
 
 		return start_function;
 	}
@@ -493,10 +393,15 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<SafeVMValue>> SafeVMThread::executeFunction(
-		const low::LowFuncData& start_function, const low::LowFuncData& func
-	) {
+	std::vector<Ref<SafeVMValue>> SafeVMThread::executeLoadedFunction(const low::LowFuncData& func) {
 		ScopedGilGuard gil_guard(*this);
+
+		CORE_ASSERT(start_function_low.has_value(), "No start function is loaded");
+		CORE_ASSERT(start_function_high.has_value(), "No start function is loaded");
+		CORE_ASSERT(
+			start_function_low->high_func.get() == &*start_function_high,
+			"High function is not a source for low function"
+		);
 
 		// Frame of the called function.
 		Frame* frame          = runtime_data.frame_stack_current;
@@ -507,11 +412,11 @@ namespace vm {
 		auto orig_slot_stack_size
 			= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 
-		frame->current_function      = &start_function;
+		frame->current_function      = &*start_function_low;
 		frame->local_slot_stack_base = runtime_data.slot_stack_base;
 		frame->local_slot_stack_end  = runtime_data.slot_stack_base;
 
-		const auto* instr = start_function.bc.data();
+		const auto* instr = start_function_low->bc.data();
 
 		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
 		// `KillProcessException` so the state stays valid.
@@ -573,7 +478,7 @@ namespace vm {
 		return exit_value_storage.value();
 	}
 
-	// executeFunction end
+	// executeLoadedFunction end
 
 	/**
 	 * @brief Starts the execution of a function with a given name and arguments.
@@ -589,8 +494,8 @@ namespace vm {
 							const auto& func = *process_program->getFunctions()
 							                        .atMaybe(ctor_dtor.ctor_name.value())
 							                        .value();
-							low::LowFuncData start_function = createStartFunctionFor(func, {});
-							executeFunction(start_function, func);
+							compileAndLoadStartFunction(createStartFunctionFor(func, {}));
+							executeLoadedFunction(func);
 						}
 					}
 					variant_case(low::GlobalInitialValue, value_init) {
@@ -611,19 +516,16 @@ namespace vm {
 		}
 		const auto& func = *maybe_func.value();
 
-		low::LowFuncData start_function = [&]() {
-			variant_match(run_arguments) {
-				variant_case(ProgramRunArguments, program_run_arguments) {
-					return createProgramStartFunction(func, program_run_arguments);
-				}
-				variant_case(FunctionRunArguments, function_run_data) {
-					return createStartFunctionFor(func, function_run_data);
-				}
+		variant_match(run_arguments) {
+			variant_case(ProgramRunArguments, program_run_arguments) {
+				compileAndLoadStartFunction(createProgramStartFunction(func, program_run_arguments));
 			}
-			CORE_UNREACHABLE();
-		}();
+			variant_case(FunctionRunArguments, function_run_data) {
+				compileAndLoadStartFunction(createStartFunctionFor(func, function_run_data));
+			}
+		}
 
-		const auto exit_value = executeFunction(start_function, func);
+		const auto exit_value = executeLoadedFunction(func);
 		applyEvent(te::Finish{ std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 	}
 
@@ -648,8 +550,8 @@ namespace vm {
 			           .expect(
 						   "Called function does not exist: " + ctor_dtor->dtor_name.value().str()
 					   );
-			low::LowFuncData start_function = createStartFunctionFor(func, {});
-			executeFunction(start_function, func);
+			compileAndLoadStartFunction(createStartFunctionFor(func, {}));
+			executeLoadedFunction(func);
 		}
 	}
 
@@ -729,7 +631,7 @@ namespace vm {
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
 
 	bool SafeVMThread::isCallableFunctionID(usize id) {
-		return id != SafeVMThread::START_FUNCTION_ID;
+		return id != low::LowFuncData::NO_FUNCTION_ID;
 	}
 
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
