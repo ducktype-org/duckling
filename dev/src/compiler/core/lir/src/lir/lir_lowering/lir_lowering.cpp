@@ -81,25 +81,20 @@ namespace compiler::lir {
 		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
 		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
 
-		// `QuerySymbolABI` converts every parameter and the return type before it answers
-		// with `CAbi`, so a type that got this far is known to have a C-ABI representation.
-		auto abiTypeOf = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
-			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
-			                   ->valueOrPanicMsg("Query failure.");
-			CORE_ASSERT(result.has_value(), "A CABI function type has no C-ABI representation.");
-			return &result.value();
+		auto abi_type_of = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
+			return &ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())->valueOrPanic().value();
 		};
 
 		auto return_abi_or_empty
 			= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
 			if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
-			return abiTypeOf(type);
+			return abi_type_of(type);
 		};
 
 		abi::calling_conv::FunctionType abi_fun_type{
 			.return_type = return_abi_or_empty(return_type),
 			.param_types
-			= parameter_types | std::views::transform(abiTypeOf) | std::ranges::to<std::vector>(),
+			= parameter_types | std::views::transform(abi_type_of) | std::ranges::to<std::vector>(),
 			.num_fixed_params = c_abi_info.fixed_params,
 		};
 		return { LIRAbi::CAbi{
