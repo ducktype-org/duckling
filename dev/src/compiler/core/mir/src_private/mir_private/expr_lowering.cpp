@@ -714,6 +714,7 @@ namespace compiler::mir {
 		}
 
 		void visitMatchExpr(const hc::MatchExpr& expr) override {
+			auto&      ctx          = function.getContext();
 			const auto variant_type = expr.subject->expression_type.getSymbolType()
 			                              .getType()
 			                              .as<tsh::VariantAbstractType>();
@@ -759,20 +760,22 @@ namespace compiler::mir {
 				);
 				auto case_entry = lowered_result.begin;
 
-				// A match covers its subject exhaustively, so the last case is bound to match and
-				// needs no test.
-				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
-
-				bool projects_payload = tests_alternative || match_case.binding.has_value();
-
-				auto test_block = function.newBlock("match.case.test");
-
 				base::Optional<MIRLocalMutRef>    payload_ptr;
 				base::Optional<tsh::SymbolType<>> alternative_type;
 
 				if_opt_some(match_case.alternative_index, index) {
 					alternative_type = variant_type.getMember(index);
 				}
+
+				// A match covers its subject exhaustively, so the last case is bound to match and
+				// needs no test.
+				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
+				bool binds_to_variable
+					= match_case.binding.has_value() || match_case.shouldBindToTemporary(ctx);
+				bool projects_payload = tests_alternative || binds_to_variable;
+
+				auto test_block = function.newBlock("match.case.test");
+
 
 				if (projects_payload) {
 					const auto pointer_type = tsh::SymbolType<>::withDefaults(
@@ -788,24 +791,29 @@ namespace compiler::mir {
 					});
 				}
 
-				if (match_case.binding.has_value()) {
-					auto binding_local = function.findLocal(match_case.binding.value()).value();
-					binding_local->setLifetimeScope(case_scope);
+				if (binds_to_variable) {
+					auto binding_local = [&] -> MIRLocalRef {
+						if_opt_some(match_case.binding, binding) {
+							auto local = function.findLocal(binding).value();
+							local->setLifetimeScope(case_scope);
+							return local;
+						}
+						return function.addTmp(match_case.constraint_type.value(), case_scope);
+					}();
 
 					MIRValue bound_value = [&](tsh::ReferenceKind binding_ref,
 					                           tsh::ReferenceKind alternative_ref) -> MIRValue {
 						using tsh::ReferenceKind::Direct;
 						using tsh::ReferenceKind::Ref;
-						using tsh::ReferenceKind::Box;
 						if (binding_ref == Direct && alternative_ref == Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref() };
 						if (binding_ref == Direct && alternative_ref != Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref().withDeref() };
-						if (binding_ref == Ref && alternative_ref == Direct)
+						if (binding_ref != Direct && alternative_ref == Direct)
 							return MIRValue{ payload_ptr.value() };
-						if (binding_ref == Ref && alternative_ref != Direct)
+						if (binding_ref != Direct && alternative_ref != Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref() };
-						CORE_PANIC("Binding match case to box unsupported.");
+						CORE_UNREACHABLE();
 					}(binding_local->type.getRefKind(), alternative_type.value().getRefKind());
 
 					case_entry->addInstruction(Instruction(
@@ -846,29 +854,81 @@ namespace compiler::mir {
 
 			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
 
-			// With nothing to project the subject is never read, so it is not evaluated either.
-			if (pending_projections.empty()) {
-				valueOutput(first_entry.value(), MIRValue{ MIRPlace(target_location) });
-				return;
+			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
+			const bool subject_is_direct = subject_type.getRefKind() == tsh::ReferenceKind::Direct;
+
+			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
+			base::Optional<MIRLocalRef>                   ref_subject_local;
+
+			if (subject_is_direct) {
+				assign_ref_subject = first_entry.value()->addHole();
+				ref_subject_local  = function.addTmp(
+                    subject_type.withReferenceKind(tsh::ReferenceKind::Ref), expr_scope
+                );
 			}
 
-			// The subject goes into the block the chain starts at, which dominates every
-			// projection. Its instructions are added after the holes were reserved, so they end
-			// up ahead of them. It is a reference to the variant, which is what the projections
-			// take, so it is passed on without dereferencing.
+			auto       assign_subject = first_entry.value()->addHole();
+			const auto subject_local  = function.addTmp(subject_type, expr_scope);
+
+			// The subject temporary never runs a destructor. That is only sound when the payload
+			// is owned elsewhere (a reference subject), or when every alternative that has one is
+			// handed over to a case.
+			CORE_ASSERT(
+				[&] {
+					if (subject_type.getRefKind() != tsh::ReferenceKind::Direct) return true;
+
+					const auto        num_alternatives = variant_type.getUnderlyingTypes().size();
+					std::vector<bool> consumed(num_alternatives, false);
+					for (const auto& match_case: expr.cases) {
+						if (match_case.alternative_index) {
+							auto index      = match_case.alternative_index.value();
+							consumed[index] = match_case.binding.has_value()
+						                   || match_case.shouldBindToTemporary(ctx);
+						}
+					}
+					for (usize i = 0; i < num_alternatives; i++)
+						if (not consumed[i]
+					        and not variant_type.getMember(i).isTriviallyDestructible(ctx))
+							return false;
+					return true;
+				}(),
+				"An owning `match` has to hand every alternative that has a destructor over to a "
+				"case, otherwise its payload would leak."
+			);
+			subject_local->lifetime_flags |= LifetimeFlag::NoDestructor;
+
+			// The subject goes into the block the chain starts at.
+			// Its instructions are added after the holes were reserved, so they end
+			// up ahead of them.
 			auto lowered_subject
 				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope);
-			auto subject_val = lowered_subject.getResult(function);
-			CORE_ASSERT(
-				std::holds_alternative<MIRPlace>(subject_val.getVariant())
-					&& subject_val.get<MIRPlace>().type.getRefKind() != tsh::ReferenceKind::Direct,
-				"A match subject must lower to a place holding a reference to the variant."
+
+
+			lowered_subject.storeResultInGivenPlace(
+				MIRPlace{ subject_local },
+				assign_subject,
+				{ flagConstruct(subject_local) },
+				expr_scope,
+				{}
 			);
+
+			MIRValue subject_val = MIRPlace{ subject_local };
+
+			if (subject_is_direct) {
+				assign_ref_subject->fill({
+					Operation::AddressOf,
+					*ref_subject_local,
+					{ subject_val },
+					{ flagConstruct(*ref_subject_local) },
+					expr_scope,
+				});
+				subject_val = MIRPlace{ *ref_subject_local };
+			}
 
 			for (auto& projection: pending_projections) {
 				const auto  alternative_type = variant_type.getMember(projection.alternative_index);
 				Instruction project_instr{ Operation::VariantTryProject,
-					                       {},
+					                       { projection.payload_ptr },
 					                       { subject_val },
 					                       { flagConstruct(projection.payload_ptr) },
 					                       expr_scope,
@@ -876,7 +936,6 @@ namespace compiler::mir {
 											   .alternative_index = projection.alternative_index,
 											   .alternative_type  = alternative_type },
 					                       { expr.getPosition() } };
-				project_instr.output.emplace(projection.payload_ptr);
 				projection.hole.fill(std::move(project_instr));
 			}
 

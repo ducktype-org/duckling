@@ -11,12 +11,13 @@ NVM is an easy way to manage node versions that also allows to install vsce in u
 .
 ├── client // Language Client
 │   ├── src
-│   │   └── extension.ts // Language Client entry point
+│   │   └── extension.ts // Language Client entry point, starts duck_ls
 ├── package.json // The extension manifest.
-└── server // Language Server
-    └── src
-        └── server.ts // Language Server entry point
+└── syntaxes // The TextMate grammar, used with or without a server
 ```
+
+The language server is `duck_ls`, built from `dev/src/compiler/lsp_interface`. The extension
+only launches it, so there is no TypeScript server to build here.
 
 ## Running the Language Server
 
@@ -37,7 +38,7 @@ directory to this directory, which is a root folder of the extension.
 
 - Copy contents of `.vscode.template` to `.vscode` in the root folder (of the whole project).
 - Run `./comp-copy.py <build-dir>` to install `duck_ls` to `~/.local/bin/`, or copy it manually and set `DucklingLanguageSupport.executablePath` in your VS Code settings.
-- Go to `/dev/DucklingLS` folder and run `npm install`. This installs all necessary npm modules in both the client and server folder.
+- Go to `/dev/src/DucklingLS` folder and run `npm install`. This installs the npm modules of the client.
 - Press Ctrl+Shift+B to start building the project. The project should automatically compile in watch mode (new terminal named `npm: watch` should appear - you can check in the bottom right). If a window pops up asking you to select a task to run, select `npm: watch` - this will start the compiler in watch mode. Alternatively you can try to skip compiling it yourself and just run the launch config `Launch Client` (see below) - it should start the compiler in watch mode as a part of the launch config.
 - Check if section `npm scripts` is visible in the bottom left corner of VSC (if you can't see it check the VSC explorer options - three dots in the top right corner of the explorer and select `npm scripts` if it's not checked). Not having this section is not a blocker but it's useful to have.
 - Switch to the Run and Debug View in the Sidebar (Ctrl+Shift+D).
@@ -47,9 +48,9 @@ directory to this directory, which is a root folder of the extension.
 
 ## Logging
 
-To log from the Language Server you can simply use `console.log`. 
-
-To see the output from the Language Server you have to Run the configuration `Launch Client` and then `Attach`. The output will appear in the `Debug Console` after switching the tab to `Attach`.
+`duck_ls` writes its own diagnostics to stderr. Both that and the LSP traffic show up in the
+`Duckling Language Server` output channel; set `DucklingLanguageSupport.trace.server` to
+`verbose` to see every message.
 
 ## Packaging The Extension
 

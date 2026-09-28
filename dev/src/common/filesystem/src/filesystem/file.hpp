@@ -219,18 +219,22 @@ namespace fs {
 		/**
 		 * Creates a virtual directory inside the root folder of virtual file system. The directory
 		 * has a random name.
+		 * @param vfs The virtual filesystem to create the directory in.
 		 * @return A File with the new virtual directory.
 		 */
-		static File createRandomVirtualDirectory();
+		static File createRandomVirtualDirectory(base::Ref<VFS> vfs = VFS::getInstance());
 
 		/**
 		 * Creates a random-named virtual file in the virtual filesystem's root directory.
 		 * @param content The content to write to the file.
 		 * @param suffix Optional suffix to append to the filename (e.g., ".dk").
+		 * @param vfs The virtual filesystem to create the file in.
 		 * @return The created File object.
 		 */
 		static File createRandomVirtualFile(
-			std::string_view content = "", base::Optional<std::string_view> suffix = {}
+			std::string_view                 content = "",
+			base::Optional<std::string_view> suffix  = {},
+			base::Ref<VFS>                   vfs     = VFS::getInstance()
 		);
 
 		/**
@@ -239,14 +243,6 @@ namespace fs {
 		 * @return The created File object.
 		 */
 		static File createRandomTempFile(std::string_view content = "");
-
-
-		/**
-		 * @brief Gets the virtual filesystem root directory as a File object.
-		 *
-		 * @return Root directory of the virtual filesystem.
-		 */
-		static File getVirtualRootDirectory();
 
 		/**
 		 * @brief Creates a physical file in the physical filesystem's root directory or at the

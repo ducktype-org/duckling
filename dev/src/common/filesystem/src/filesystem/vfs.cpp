@@ -1,4 +1,4 @@
-#include "vfs.hpp"
+#include <filesystem/vfs.hpp>
 
 namespace fs {
 	// VFSNode implementation
