@@ -75,11 +75,11 @@ namespace vm::code {
 
 	private:
 		ObjIdNameMap<SharedBox<valid_function::ValidFunction>> function_map;
-		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
-		ObjIdNameMap<FFIFunction>                   ffi_function_map;
-		ObjIdNameMap<GlobalData>                    globals_map;
-		TypeContext                                 type_context;
-		FlagContext                                 flag_context;
+		ObjIdNameMap<ExternalCFunction>                        ext_c_function_map;
+		ObjIdNameMap<FFIFunction>                              ffi_function_map;
+		ObjIdNameMap<GlobalData>                               globals_map;
+		TypeContext                                            type_context;
+		FlagContext                                            flag_context;
 
 		/**
 		 * @brief Shared objects declared with `ffi object`, loaded into the process and keyed by

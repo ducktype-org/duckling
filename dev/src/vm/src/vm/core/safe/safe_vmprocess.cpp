@@ -590,9 +590,9 @@ namespace vm {
 					auto func_opt
 						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
 					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
-					auto  func_ref    = *func_opt;
-					auto  stack_state = func_ref->get()->stack_states.at(high_pos.instruction_index);
-					auto& ls_db       = func_ref->get()->local_stack;
+					auto func_ref    = *func_opt;
+					auto stack_state = func_ref->get()->stack_states.at(high_pos.instruction_index);
+					auto& ls_db      = func_ref->get()->local_stack;
 
 					using namespace std::views;
 					for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
@@ -739,8 +739,9 @@ namespace vm {
 		return compiler.lowerFunction(func);
 	}
 
-	std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> SafeVMProcess::
-		validateFunction(const code::Function& function, code::CompilationMode mode) const {
+	std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> SafeVMProcess::validateFunction(
+		const code::Function& function, code::CompilationMode mode
+	) const {
 		return loader.validateFunction(function, mode);
 	}
 

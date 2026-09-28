@@ -49,8 +49,8 @@ const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() 
 	return globals_map;
 }
 
-const vm::ObjIdNameMap<SharedBox<vm::code::valid_function::ValidFunction>>& vm::code::
-	ValidProgram::functions() const {
+const vm::ObjIdNameMap<SharedBox<vm::code::valid_function::ValidFunction>>& vm::code::ValidProgram::functions(
+) const {
 	return function_map;
 }
 

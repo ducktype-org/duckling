@@ -80,8 +80,7 @@ namespace vm::loader::compiler {
 			= []<typename T>(const SharedBox<T>& shared_box) -> CRef<T> { return &(*shared_box); };
 
 		auto new_functions = high_program.functions() | std::views::drop(sizes.function_count)
-		                   | std::views::transform(to_cref)
-		                   | std::ranges::to<std::vector>();
+		                   | std::views::transform(to_cref) | std::ranges::to<std::vector>();
 		compileNewFunctions(new_functions);
 	}
 }

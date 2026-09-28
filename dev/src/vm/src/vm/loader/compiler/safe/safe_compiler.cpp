@@ -231,8 +231,7 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	low::LowFuncData SafeCompiler::lowerFunction(
-		const code::valid_function::ValidFunction& function
+	low::LowFuncData SafeCompiler::lowerFunction(const code::valid_function::ValidFunction& function
 	) {
 		return lowerFunction(function, calculateStackContext(function));
 	}
