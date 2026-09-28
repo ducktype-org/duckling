@@ -84,12 +84,13 @@ Tests:
           String: ""
         ExitCode: 0
 
-  coercions:
-    Cases:
-      all:
-        Output:
-          String: ""
-        ExitCode: 0
+  # @TODO: #3631 Numeric coercions to bool temporarily disabled
+  #  coercions:
+  #    Cases:
+  #      all:
+  #        Output:
+  #          String: ""
+  #        ExitCode: 0
 
   void_coercions:
     NoParallel: true

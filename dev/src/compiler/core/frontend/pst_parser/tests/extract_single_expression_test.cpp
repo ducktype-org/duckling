@@ -44,7 +44,7 @@ private:
 		ASSERT_NO_VALUE(extract("namespace Foo {}"), "Expected empty for namespace declaration");
 		ASSERT_NO_VALUE(extract("import X as x;"), "Expected empty for import statement");
 		ASSERT_NO_VALUE(extract("using X;"), "Expected empty for using statement");
-		ASSERT_NO_VALUE(extract("alias X = X;"), "Expected empty for alias declaration");
+		ASSERT_NO_VALUE(extract("using X as Y;"), "Expected empty for `using ... as` declaration");
 		ASSERT_NO_VALUE(extract("while (a) {}"), "Expected empty for while statement");
 		ASSERT_NO_VALUE(extract("throw 123;"), "Expected empty for throw statement");
 	}

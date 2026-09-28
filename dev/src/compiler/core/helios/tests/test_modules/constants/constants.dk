@@ -3,10 +3,10 @@ const D: i64 = A + (B + C);
 const C: i32 = X;
 
 namespace N {
-	alias X = A; # X = 1
+	using A as X; # X = 1
 }
 
-alias H = NN.NNN.A;
+using NN.NNN.A as H;
 const H2: i64 = H;
 
 const A: i32 = 1;
@@ -25,7 +25,7 @@ namespace NN {
 	namespace NNN {
 		const A: i64 = D + 4;
 	}
-	alias A = NNN.A;
+	using NNN.A as A;
 	# const Amb: i64 = A; # this is ambiguity error
 }
 

@@ -233,10 +233,9 @@ namespace compiler::helios::desugaring {
 		ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 		auto get_generated_local = [&](base::StrID role, tsh::SymbolType<> type) {
-			// Compose the name with the current scope hash, so we don't have naming collisions
-			// with nested loops.
-			auto unique = for_scope.queryUnstablePerfectHash();
-			auto name   = base::StrID(base::strConcat(role, unique));
+			// No discriminator in the name: it is part of the query key, so anything derived from
+			// the loop (scope id, position, hash) would differ per compilation or move on edits.
+			auto name = role;
 
 			// @TODO: #2799 Reconsider the generated symbols scope.
 			return ctx.query<defgen::QueryGeneratedSymbol>({
@@ -250,7 +249,6 @@ namespace compiler::helios::desugaring {
 			});
 		};
 
-		// @TODO: #3290 generated variables names
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),

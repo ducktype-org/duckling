@@ -133,8 +133,6 @@ namespace compiler::helios {
 			}
 		}
 
-		void visitAlias(pst::Access<pst::Alias>) override {}
-
 		void visitUsing(pst::Access<pst::Using>) override {}
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
