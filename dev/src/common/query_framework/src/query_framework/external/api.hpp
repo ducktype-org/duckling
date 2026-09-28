@@ -116,12 +116,15 @@ namespace query::external {
 	 * change the dump, never the graph itself.
 	 */
 	struct QueryGraphDumpPasses {
-		/// Give input nodes readable names (`Source Code Input`, `Module Structure Input`) and
-		/// call every unstable node `Unstable Node`.
+		/// Give input nodes readable names (`Source Code Input`, `Module Structure Input`,
+		/// `File Structure Input`) and call every unstable node `Unstable Node`.
 		bool rename = false;
 		/// Remove duplicated edges and module tree bookkeeping nodes, and merge source code inputs
 		/// that only one node depends on. Implies #rename.
 		bool simplify = false;
+		/// Remove every non-input node without dependencies, recursively. Runs after the other
+		/// passes.
+		bool remove_dead_nodes = false;
 	};
 
 	/**

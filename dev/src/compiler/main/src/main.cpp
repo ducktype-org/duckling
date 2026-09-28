@@ -400,7 +400,8 @@ namespace debug_options {
  * @brief Generate the `compile_package` subcommand.
  * @param dump_query_graph If true, the command additionally takes a required `--graph-output`
  * directory and writes the query graph before and after optimization into it. The optional
- * `--rename-pass` / `--simplify-pass` flags make those graphs smaller before they are written.
+ * `--rename-pass` / `--simplify-pass` / `--remove-dead-nodes` flags make those graphs smaller
+ * before they are written.
  */
 clah::Clah getClahForCompilePackage(
 	std::string name, std::string description, bool dump_query_graph
@@ -499,6 +500,13 @@ clah::Clah getClahForCompilePackage(
 						 "Remove duplicated edges and module tree bookkeeping nodes, and merge "
 						 "source code inputs used by only one node, in the written graphs. "
 						 "Implies --rename-pass."
+					 )
+		             .build())
+			.add(clah::ParamBuilder::ofFlag()
+		             .addLongName("remove-dead-nodes")
+		             .addShortDesc(
+						 "Remove every non-input node without dependencies, recursively, from the "
+						 "written graphs. Runs after the other passes."
 					 )
 		             .build())
 			.addCustomVerification(
@@ -645,8 +653,9 @@ clah::Clah getClahForCompilePackage(
 		if (dump_query_graph) {
 			auto dumped = query::external::dumpQueryGraphsToDirectory(
 				options.getValue<fs::FilePath>("graph-output").value().strView(),
-				{ .rename   = options.isFlag("rename-pass"),
-			      .simplify = options.isFlag("simplify-pass") }
+				{ .rename            = options.isFlag("rename-pass"),
+			      .simplify          = options.isFlag("simplify-pass"),
+			      .remove_dead_nodes = options.isFlag("remove-dead-nodes") }
 			);
 			if (!dumped) {
 				CORE_USER_LOG("Error: ", dumped.error(), "\n");

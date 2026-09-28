@@ -53,15 +53,17 @@ namespace query::internal {
 	 * @brief Which passes run on a DumpGraph before it is written.
 	 */
 	struct DumpPasses {
-		bool rename   = false;  ///< Run renameDumpGraphNodes().
-		bool simplify = false;  ///< Run renameDumpGraphNodes(), then simplifyDumpGraph().
+		bool rename            = false;  ///< Run renameDumpGraphNodes().
+		bool simplify          = false;  ///< Run renameDumpGraphNodes(), then simplifyDumpGraph().
+		bool remove_dead_nodes = false;  ///< Run removeDeadDumpNodes(), after the passes above.
 	};
 
 	/**
 	 * @brief Rename pass: gives input nodes readable names and hides unstable query names.
 	 * @details `PSTAccessSideInput` becomes `Source Code Input`; the module structure side inputs
 	 * (`QueryModuleSideInput`, `QueryModuleChildSideInput`, `QuerySubmoduleCountSideInput`) become
-	 * `Module Structure Input`; every node of the `unstable` category becomes `Unstable Node`.
+	 * `Module Structure Input`; `QueryFileSideInput` becomes `File Structure Input`; every node of
+	 * the `unstable` category becomes `Unstable Node`.
 	 */
 	void renameDumpGraphNodes(DumpGraph& graph);
 
@@ -70,10 +72,19 @@ namespace query::internal {
 	 * @details In this order: removes duplicated edges; removes `QuerySubmoduleCountSideInput`
 	 * and `QuerySubmodules` nodes together with their edges; then, for every node that depends
 	 * on two or more `PSTAccessSideInput` nodes that no other node depends on, replaces those
-	 * inputs with a single `<name> times N` node. Nodes are matched by their query name, so the
-	 * pass works the same with and without the rename pass.
+	 * inputs with a single `<name> (repeated N times)` node. Nodes are matched by their query name,
+	 * so the pass works the same with and without the rename pass.
 	 */
 	void simplifyDumpGraph(DumpGraph& graph);
+
+	/**
+	 * @brief Dead node pass: removes every non-input node without dependencies, recursively, so
+	 * a node whose dependencies all got removed goes too.
+	 * @details Such a node never depends on an input, so it can never be invalidated. Input nodes
+	 * are always kept: they are where the graph starts, and removing them too would remove every
+	 * node of the graph.
+	 */
+	void removeDeadDumpNodes(DumpGraph& graph);
 
 	/**
 	 * @brief Writes @p graph to @p out as a self-contained JSON document.

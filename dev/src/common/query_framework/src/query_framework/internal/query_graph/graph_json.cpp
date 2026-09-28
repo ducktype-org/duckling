@@ -111,6 +111,8 @@ namespace query::internal {
 				node.name = "Source Code Input";
 			else if (std::ranges::contains(MODULE_STRUCTURE_INPUTS, node.query_name))
 				node.name = "Module Structure Input";
+			else if (node.query_name == "QueryFileSideInput")
+				node.name = "File Structure Input";
 			else if (node.category == "unstable")
 				node.name = "Unstable Node";
 	}
@@ -154,7 +156,36 @@ namespace query::internal {
 			std::ranges::sort(merged.deps);
 			const auto duplicates = std::ranges::unique(merged.deps);
 			merged.deps.erase(duplicates.begin(), duplicates.end());
-			merged.name += " times " + std::to_string(own_inputs.size());
+			merged.name += " (repeated " + std::to_string(own_inputs.size()) + " times)";
+		}
+		removeDumpNodes(graph, removed);
+	}
+
+	void removeDeadDumpNodes(DumpGraph& graph) {
+		// Every edge is counted, duplicated ones too, so the counts match the deps lists.
+		std::vector<std::vector<usize>> dependents(graph.nodes.size());
+		std::vector<usize>              remaining_deps(graph.nodes.size(), 0);
+		std::vector<usize>              queue;
+		for (usize i = 0; i < graph.nodes.size(); ++i) {
+			for (usize dep: graph.nodes[i].deps) dependents[dep].push_back(i);
+			remaining_deps[i] = graph.nodes[i].deps.size();
+		}
+
+		std::vector<bool> removed(graph.nodes.size(), false);
+		auto              is_dead = [&](usize i) {
+            return not removed[i] && remaining_deps[i] == 0 && graph.nodes[i].category != "input";
+		};
+		for (usize i = 0; i < graph.nodes.size(); ++i)
+			if (is_dead(i)) queue.push_back(i);
+
+		while (not queue.empty()) {
+			const usize node = queue.back();
+			queue.pop_back();
+			if (removed[node]) continue;
+			removed[node] = true;
+			for (usize dependent: dependents[node])
+				if (--remaining_deps[dependent] == 0 && is_dead(dependent))
+					queue.push_back(dependent);
 		}
 		removeDumpNodes(graph, removed);
 	}
@@ -191,6 +222,7 @@ namespace query::internal {
 		auto dump = makeDumpGraph(graph);
 		if (passes.rename || passes.simplify) renameDumpGraphNodes(dump);
 		if (passes.simplify) simplifyDumpGraph(dump);
+		if (passes.remove_dead_nodes) removeDeadDumpNodes(dump);
 		writeDumpGraphAsJson(dump, stage, out);
 	}
 }

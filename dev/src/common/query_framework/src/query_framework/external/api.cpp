@@ -57,8 +57,11 @@ namespace query::external {
 	) {
 		auto                                state = ::query::internal::ContextAccess::getState();
 		const auto&                         graph = state->getGraph();
-		const ::query::internal::DumpPasses internal_passes{ .rename   = passes.rename,
-			                                                 .simplify = passes.simplify };
+		const ::query::internal::DumpPasses internal_passes{
+			.rename            = passes.rename,
+			.simplify          = passes.simplify,
+			.remove_dead_nodes = passes.remove_dead_nodes,
+		};
 		switch (stage) {
 		case QueryGraphDumpStage::PreOptimization:
 			::query::internal::writeReducedGraphAsJson(

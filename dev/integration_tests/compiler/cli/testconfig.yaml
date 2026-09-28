@@ -78,6 +78,7 @@ Tests:
         Run: "@{dump_cmd} --graph-output @{graph_dir} --rename-pass
           && grep -q '\"Source Code Input\"' @{graph_dir}/query_graph_pre_opt.json
           && grep -q '\"Module Structure Input\"' @{graph_dir}/query_graph_pre_opt.json
+          && grep -q '\"File Structure Input\"' @{graph_dir}/query_graph_pre_opt.json
           && grep -q '\"Unstable Node\"' @{graph_dir}/query_graph_pre_opt.json
           && ! grep -q 'PSTAccessSideInput' @{graph_dir}/query_graph_pre_opt.json
           && ! grep -q 'QueryModuleSideInput' @{graph_dir}/query_graph_post_opt.json"
@@ -87,9 +88,21 @@ Tests:
         # rename pass runs too. The helper script still reads the result.
         Run: "@{dump_cmd} --graph-output @{graph_dir} --simplify-pass
           && ! grep -q 'QuerySubmodule' @{graph_dir}/query_graph_pre_opt.json
-          && grep -q 'Source Code Input times ' @{graph_dir}/query_graph_post_opt.json
+          && grep -q 'Source Code Input (repeated ' @{graph_dir}/query_graph_post_opt.json
           && grep -q '\"Unstable Node\"' @{graph_dir}/query_graph_pre_opt.json
           && @{to_dot} @{graph_dir}/query_graph_post_opt.json"
+        ExitCode: 0
+      remove-dead-nodes:
+        # Unstable nodes without dependencies are gone, the graph still has inputs, and the
+        # helper script can leave the `#<index>` numbers and the stage label out of the labels.
+        Run: "@{dump_cmd} --graph-output @{graph_dir} --rename-pass --remove-dead-nodes
+          && grep -q '\"Source Code Input\"' @{graph_dir}/query_graph_pre_opt.json
+          && python3 -c 'import json, sys; nodes = json.load(open(sys.argv[1]))[\"nodes\"];
+            sys.exit(any(n[\"category\"] != \"input\" and not n[\"deps\"] for n in nodes))'
+            @{graph_dir}/query_graph_pre_opt.json
+          && @{to_dot} @{graph_dir}/query_graph_pre_opt.json --no-hashes
+          && ! grep -q 'label=\"[^\"]*#' @{graph_dir}/query_graph_pre_opt.dot
+          && ! grep -q 'optimization' @{graph_dir}/query_graph_pre_opt.dot"
         ExitCode: 0
       no-incremental-is-rejected:
         # Without incremental compilation there is no query graph to dump.

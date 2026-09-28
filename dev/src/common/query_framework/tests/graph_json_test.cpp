@@ -97,6 +97,8 @@ public:
 		TESTER_ADD_TEST(testSimplifyPass);
 		TESTER_ADD_TEST(testSimplifyKeepsSharedAndSingleInputs);
 		TESTER_ADD_TEST(testDumpWithPasses);
+		TESTER_ADD_TEST(testRemoveDeadNodes);
+		TESTER_ADD_TEST(testDumpWithRemoveDeadNodes);
 	}
 
 private:
@@ -387,7 +389,7 @@ private:
 		                               "Module Structure Input",
 		                               "Module Structure Input",
 		                               "Module Structure Input",
-		                               "QueryFileSideInput",
+		                               "File Structure Input",
 		                               "Unstable Node",
 		                               "SomeStableQuery" }),
 			namesOf(graph)
@@ -417,7 +419,7 @@ private:
 
 		ASSERT_EQUAL(
 			(std::vector<std::string>{
-				"Parse", "PSTAccessSideInput times 2", "PSTAccessSideInput", "Other" }),
+				"Parse", "PSTAccessSideInput (repeated 2 times)", "PSTAccessSideInput", "Other" }),
 			namesOf(graph)
 		);
 		ASSERT_EQUAL((std::vector<usize>{ 1 }), graph.nodes[0].deps);
@@ -477,6 +479,46 @@ private:
 		ASSERT_EQUAL(renamed, readFile(result->at(0)));
 		ASSERT_TRUE(not readFile(result->at(1)).contains("JsonUnstableQuery"));
 		std::filesystem::remove_all(dir);
+	}
+
+	/**
+	 * @brief The dead node pass removes non-input nodes without dependencies, then the nodes
+	 * that only depended on them, and keeps inputs and everything that reaches an input.
+	 */
+	void testRemoveDeadNodes() {
+		query::internal::DumpGraph graph{ .nodes = {
+											  dumpNode("Input", "input"),
+											  dumpNode("DeadLeaf", "unstable"),
+											  dumpNode("DeadStable", "stable"),
+											  dumpNode("DeadParent", "stable", { 1, 1, 2 }),
+											  dumpNode("DeadRoot", "unstable", { 3 }),
+											  dumpNode("Alive", "stable", { 0, 3 }),
+											  dumpNode("AliveRoot", "unstable", { 5, 4 }),
+										  } };
+
+		query::internal::removeDeadDumpNodes(graph);
+
+		ASSERT_EQUAL((std::vector<std::string>{ "Input", "Alive", "AliveRoot" }), namesOf(graph));
+		ASSERT_EQUAL((std::vector<usize>{ 0 }), graph.nodes[1].deps);
+		ASSERT_EQUAL((std::vector<usize>{ 1 }), graph.nodes[2].deps);
+	}
+
+	/**
+	 * @brief The dead node pass is wired through the external API and runs after the others.
+	 */
+	void testDumpWithRemoveDeadNodes() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		std::ostringstream out;
+		query::external::dumpQueryGraphAsJson(
+			query::external::QueryGraphDumpStage::PreOptimization,
+			out,
+			{ .rename = true, .remove_dead_nodes = true }
+		);
+		// The unstable leaf has no dependencies, the stable query still reaches the side input.
+		ASSERT_TRUE(not out.str().contains("Unstable Node"));
+		ASSERT_TRUE(out.str().contains("\"name\": \"JsonStableQuery\""));
+		ASSERT_TRUE(out.str().contains("\"name\": \"JsonSideInput\""));
 	}
 };
 
