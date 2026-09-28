@@ -13,6 +13,7 @@ use self::unit_visitor::{TryUnitVisitor, UnitVisitor};
 use super::BuildContext;
 use super::compiler_package::CompilerPackage;
 use super::duckc::multipackage_schema;
+use crate::quackpack::core::compile::unit_runner::CompilationTarget;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::{AnyPackage, FeatureName};
 use crate::util::hash::sha256_string;
@@ -168,13 +169,23 @@ impl Unit {
     /// Get the filename of the output of this [`Unit`].
     pub fn output_file_name(&self, bcx: &BuildContext<'_, '_>) -> String {
         let name = self.package().name();
-        if bcx.targets_dvm() {
-            return format!("{}{}", name, DVM_SUFFIX);
-        }
-        match self.unit_type() {
-            UnitType::Binary => format!("{}{}", name, EXE_SUFFIX),
-            UnitType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
-            UnitType::Dependency => format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX),
+        match (self.unit_type(), bcx.compilation_target()) {
+            // LLVM
+            (UnitType::Binary, CompilationTarget::LLVM) => format!("{}{}", name, EXE_SUFFIX),
+            (UnitType::Library, CompilationTarget::LLVM) => {
+                format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX)
+            }
+            (UnitType::Dependency, CompilationTarget::LLVM) => {
+                format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX)
+            }
+
+            // DVM
+            (UnitType::Binary | UnitType::Library, CompilationTarget::DVM) => {
+                format!("{}{}", name, DVM_SUFFIX)
+            }
+            (UnitType::Dependency, CompilationTarget::DVM) => {
+                format!("{}{}", self.unique_name(), DVM_SUFFIX)
+            }
         }
     }
 
