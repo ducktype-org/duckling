@@ -278,6 +278,7 @@ namespace compiler::helios::defgen {
 
 				cases.emplace_back(Shorthand::matchCase(
 					i,
+					payload_type,
 					payload_sym,
 					s.call(s.ident(payload_to_string), s.prepToPassSelf(s.ident(payload_sym)))
 				));
