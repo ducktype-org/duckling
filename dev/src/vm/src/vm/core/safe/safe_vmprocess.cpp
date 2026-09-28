@@ -706,6 +706,8 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::evalRuntimeExpr(
 		api::ThreadID thread_id, const std::variant<fs::File, code::Function>& source
 	) {
+		std::unique_lock lock(api_lock);
+
 		auto opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread)
 			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
@@ -721,7 +723,6 @@ namespace vm {
 			.call_stack_size = thread_ref->getNumberOfCurrentStackFrames(),
 		};
 
-		std::unique_lock                                                         lock(api_lock);
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
 			variant_match(source) {
 				variant_case(fs::File, files) { return loader.validateExpr(comp_details, files); }
