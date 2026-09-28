@@ -66,8 +66,7 @@ private:
 		auto main_function_id               = program->getFunctions().idOf(base::StrID("main"));
 		ASSERT_HAS_VALUE(main_function_id);
 
-		const vm::low::MicroBytecode& bc
-			= program->getFunctions().at(main_function_id.value())->bc;
+		const vm::low::MicroBytecode& bc = program->getFunctions().at(main_function_id.value())->bc;
 
 		usize step_gil_count = 0;
 		for (const auto& [index, instruction]: std::views::enumerate(bc)) {

@@ -119,8 +119,8 @@ namespace vm {
 		case low::MicroOpcode::jitLoopEntrypoint:
 #endif
 		{
-			auto&      micro_func    = *frame->current_function;
-			const auto low_instr_idx = static_cast<usize>(frame->instr - micro_func.bc.data());
+			auto&      micro_func     = *frame->current_function;
+			const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
 			const auto original_instr = micro_func.orig_bc[low_instr_idx];
 
 			return getInstructionOpcode(original_instr);
@@ -582,10 +582,9 @@ namespace vm {
 				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
-					.function          = &func,
-					.instruction_index = static_cast<u64>(
-						frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)
-					),
+					.function = &func,
+					.instruction_index
+					= static_cast<u64>(frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)),
 				};
 			}
 			variant_default {
