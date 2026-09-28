@@ -53,10 +53,20 @@ namespace query::internal {
 	 * @brief Which passes run on a DumpGraph before it is written.
 	 */
 	struct DumpPasses {
+		bool no_other_input    = false;  ///< Run removeOtherInputDumpNodes(), before every pass.
 		bool rename            = false;  ///< Run renameDumpGraphNodes().
 		bool simplify          = false;  ///< Run renameDumpGraphNodes(), then simplifyDumpGraph().
 		bool remove_dead_nodes = false;  ///< Run removeDeadDumpNodes(), after the passes above.
 	};
+
+	/**
+	 * @brief Other input pass: removes every input node that is not a `PSTAccessSideInput`,
+	 * together with the edges to it, so only the source code inputs are left.
+	 * @details Runs before the other passes, because the nodes it removes change what they do:
+	 * a node that only depended on the removed inputs has no dependencies left, so
+	 * removeDeadDumpNodes() removes it too.
+	 */
+	void removeOtherInputDumpNodes(DumpGraph& graph);
 
 	/**
 	 * @brief Rename pass: gives input nodes readable names and hides unstable query names.

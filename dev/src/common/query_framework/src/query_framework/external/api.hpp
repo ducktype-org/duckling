@@ -116,6 +116,9 @@ namespace query::external {
 	 * change the dump, never the graph itself.
 	 */
 	struct QueryGraphDumpPasses {
+		/// Remove every input node that is not a source code input (`PSTAccessSideInput`). Runs
+		/// before the other passes.
+		bool no_other_input = false;
 		/// Give input nodes readable names (`Source Code Input`, `Module Structure Input`,
 		/// `File Structure Input`) and call every unstable node `Unstable Node`.
 		bool rename = false;

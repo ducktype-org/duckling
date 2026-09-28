@@ -99,6 +99,8 @@ public:
 		TESTER_ADD_TEST(testDumpWithPasses);
 		TESTER_ADD_TEST(testRemoveDeadNodes);
 		TESTER_ADD_TEST(testDumpWithRemoveDeadNodes);
+		TESTER_ADD_TEST(testRemoveOtherInputs);
+		TESTER_ADD_TEST(testDumpWithNoOtherInput);
 	}
 
 private:
@@ -519,6 +521,51 @@ private:
 		ASSERT_TRUE(not out.str().contains("Unstable Node"));
 		ASSERT_TRUE(out.str().contains("\"name\": \"JsonStableQuery\""));
 		ASSERT_TRUE(out.str().contains("\"name\": \"JsonSideInput\""));
+	}
+
+	/**
+	 * @brief The other input pass removes every input except the source code inputs, with the
+	 * edges to them, and keeps every non-input node.
+	 */
+	void testRemoveOtherInputs() {
+		query::internal::DumpGraph graph{ .nodes = {
+											  dumpNode("PSTAccessSideInput", "input"),
+											  dumpNode("QueryModuleSideInput", "input"),
+											  dumpNode("QueryFileSideInput", "input"),
+											  dumpNode("A", "stable", { 0, 1, 2 }),
+											  dumpNode("B", "unstable", { 1, 3 }),
+										  } };
+
+		query::internal::removeOtherInputDumpNodes(graph);
+
+		ASSERT_EQUAL((std::vector<std::string>{ "PSTAccessSideInput", "A", "B" }), namesOf(graph));
+		ASSERT_EQUAL((std::vector<usize>{ 0 }), graph.nodes[1].deps);
+		ASSERT_EQUAL((std::vector<usize>{ 1 }), graph.nodes[2].deps);
+	}
+
+	/**
+	 * @brief The other input pass is wired through the external API and runs before the dead
+	 * node pass, which then also removes the nodes that only used the removed inputs.
+	 */
+	void testDumpWithNoOtherInput() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		auto dump_with = [](query::external::QueryGraphDumpPasses passes) {
+			std::ostringstream out;
+			query::external::dumpQueryGraphAsJson(
+				query::external::QueryGraphDumpStage::PreOptimization, out, passes
+			);
+			return out.str();
+		};
+
+		const auto no_inputs = dump_with({ .no_other_input = true });
+		ASSERT_TRUE(not no_inputs.contains("JsonSideInput"));
+		ASSERT_TRUE(no_inputs.contains("\"name\": \"JsonStableQuery\""));
+
+		// The stable query only depended on the removed side input, so now it is dead too.
+		const auto no_dead = dump_with({ .no_other_input = true, .remove_dead_nodes = true });
+		ASSERT_TRUE(not no_dead.contains("JsonSideInput"));
+		ASSERT_TRUE(not no_dead.contains("JsonStableQuery"));
 	}
 };
 

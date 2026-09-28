@@ -3,7 +3,8 @@
 
 The JSON comes from `duckc experimental_compile_package_dump_graph ... --graph-output <dir>`,
 which writes `query_graph_pre_opt.json` and `query_graph_post_opt.json` into `<dir>`.
-Add `--rename-pass` (readable input names, unstable nodes shown as `Unstable Node`),
+Add `--no-other-input` (drops every input node except the source code inputs, before the other
+passes), `--rename-pass` (readable input names, unstable nodes shown as `Unstable Node`),
 `--simplify-pass` (also drops duplicated edges and submodule nodes, and merges source code inputs
 used by only one node) and/or `--remove-dead-nodes` (drops non-input nodes without dependencies,
 recursively) to that command to get a much smaller graph.

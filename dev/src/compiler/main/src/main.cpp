@@ -400,8 +400,8 @@ namespace debug_options {
  * @brief Generate the `compile_package` subcommand.
  * @param dump_query_graph If true, the command additionally takes a required `--graph-output`
  * directory and writes the query graph before and after optimization into it. The optional
- * `--rename-pass` / `--simplify-pass` / `--remove-dead-nodes` flags make those graphs smaller
- * before they are written.
+ * `--no-other-input` / `--rename-pass` / `--simplify-pass` / `--remove-dead-nodes` flags make
+ * those graphs smaller before they are written.
  */
 clah::Clah getClahForCompilePackage(
 	std::string name, std::string description, bool dump_query_graph
@@ -488,6 +488,12 @@ clah::Clah getClahForCompilePackage(
 						 "Directory to write the pre- and post-optimization query graphs to."
 					 )
 		             .required()
+		             .build())
+			.add(clah::ParamBuilder::ofFlag()
+		             .addLongName("no-other-input")
+		             .addShortDesc("Remove every input node that is not a source code input "
+		                           "(PSTAccessSideInput) from the written graphs. Runs before the "
+		                           "other passes.")
 		             .build())
 			.add(clah::ParamBuilder::ofFlag()
 		             .addLongName("rename-pass")
@@ -653,7 +659,8 @@ clah::Clah getClahForCompilePackage(
 		if (dump_query_graph) {
 			auto dumped = query::external::dumpQueryGraphsToDirectory(
 				options.getValue<fs::FilePath>("graph-output").value().strView(),
-				{ .rename            = options.isFlag("rename-pass"),
+				{ .no_other_input    = options.isFlag("no-other-input"),
+			      .rename            = options.isFlag("rename-pass"),
 			      .simplify          = options.isFlag("simplify-pass"),
 			      .remove_dead_nodes = options.isFlag("remove-dead-nodes") }
 			);

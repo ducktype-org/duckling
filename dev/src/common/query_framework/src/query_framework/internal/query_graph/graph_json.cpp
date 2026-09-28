@@ -105,6 +105,15 @@ namespace query::internal {
 		return dump;
 	}
 
+	void removeOtherInputDumpNodes(DumpGraph& graph) {
+		std::vector<bool> removed(graph.nodes.size(), false);
+		for (usize i = 0; i < graph.nodes.size(); ++i) {
+			const auto& node = graph.nodes[i];
+			removed[i]       = node.category == "input" && node.query_name != PST_ACCESS_SIDE_INPUT;
+		}
+		removeDumpNodes(graph, removed);
+	}
+
 	void renameDumpGraphNodes(DumpGraph& graph) {
 		for (auto& node: graph.nodes)
 			if (node.query_name == PST_ACCESS_SIDE_INPUT)
@@ -220,6 +229,7 @@ namespace query::internal {
 		DumpPasses                          passes
 	) {
 		auto dump = makeDumpGraph(graph);
+		if (passes.no_other_input) removeOtherInputDumpNodes(dump);
 		if (passes.rename || passes.simplify) renameDumpGraphNodes(dump);
 		if (passes.simplify) simplifyDumpGraph(dump);
 		if (passes.remove_dead_nodes) removeDeadDumpNodes(dump);

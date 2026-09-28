@@ -58,6 +58,7 @@ namespace query::external {
 		auto                                state = ::query::internal::ContextAccess::getState();
 		const auto&                         graph = state->getGraph();
 		const ::query::internal::DumpPasses internal_passes{
+			.no_other_input    = passes.no_other_input,
 			.rename            = passes.rename,
 			.simplify          = passes.simplify,
 			.remove_dead_nodes = passes.remove_dead_nodes,

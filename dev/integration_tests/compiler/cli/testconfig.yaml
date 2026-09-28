@@ -104,6 +104,18 @@ Tests:
           && ! grep -q 'label=\"[^\"]*#' @{graph_dir}/query_graph_pre_opt.dot
           && ! grep -q 'optimization' @{graph_dir}/query_graph_pre_opt.dot"
         ExitCode: 0
+      no-other-input:
+        # Only the source code inputs are left, and nodes that only used the removed inputs
+        # get removed by the dead node pass that runs after it.
+        Run: "@{dump_cmd} --graph-output @{graph_dir} --no-other-input --rename-pass
+          --remove-dead-nodes
+          && grep -q '\"Source Code Input\"' @{graph_dir}/query_graph_pre_opt.json
+          && python3 -c 'import json, sys; nodes = json.load(open(sys.argv[1]))[\"nodes\"];
+            sys.exit(any(n[\"category\"] == \"input\" and n[\"name\"] != \"Source Code Input\"
+            for n in nodes))'
+            @{graph_dir}/query_graph_pre_opt.json
+          && @{to_dot} @{graph_dir}/query_graph_pre_opt.json"
+        ExitCode: 0
       no-incremental-is-rejected:
         # Without incremental compilation there is no query graph to dump.
         Run: "@{dump_cmd} --graph-output @{graph_dir} --no-incremental"
