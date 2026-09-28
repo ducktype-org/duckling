@@ -180,16 +180,25 @@ duck translate-c (Rust, src/duck/src/lib/quackpack/subcommands/translate_c)
    includes every requested header. It returns a `CModel` (`c_model.hpp`) with clang's exact sizes,
    alignments and field offsets, and evaluates the macros. A declaration counts as coming from the
    requested headers when it is in the directory of a header given by path, or in the directory
-   named in `SDL3/SDL.h`. A bare name like `zlib.h` only claims its own file, since its directory is
-   usually the system include directory.
+   named in `SDL3/SDL.h`. A bare name like `math.h` claims its own file and the files it includes
+   from below its directory, directly or not (glibc declares most of `math.h` in `bits/`), rather
+   than the whole system include directory.
 2. `lower` decides what each declaration becomes, as a `DkModule` (`dk_model.hpp`). It keeps the
    requested declarations and every record they need, checks whether Duckling's natural layout
    reproduces each record, and falls back to blobs or skips with a reason.
 3. `emit` writes the module text and the layout check.
 
 `lower` and `emit` never touch clang, so `tests/c_import_lower_test.cpp` tests them on hand-built
-models. `tests/c_import_reader_test.cpp` reads `tests/headers/sdl_like.h`, a fixture shaped like
-SDL3's API. The end-to-end tests are in `integration_tests/duck/translate-c/`, and
+models. Everything that depends on the machine (libclang, system headers and libraries) is tested
+in `integration_tests/duck/translate-c/`:
+
+- the bindings generated from `tests/headers/sdl_like.h`, a fixture shaped like SDL3's API, are
+  compared against `expected_bindings.txt`;
+- that package is verified and run on both backends;
+- `math.h` and `-lm` are found by bare names;
+- regeneration is checked, and so is bad input;
+- SDL3 itself, when pkg-config finds it.
+
 `examples/sdl3_demo.sh` builds and runs an SDL3 program on both backends (`--window` for a real
 window).
 

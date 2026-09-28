@@ -174,20 +174,36 @@ namespace c_import {
 
 			/**
 			 * @brief A header given by path claims its whole directory, and one named with a
-			 * directory (`SDL3/SDL.h`) claims that directory; a bare name (`zlib.h`) claims only
-			 * its own file, since its directory is usually the system include directory.
+			 * directory (`SDL3/SDL.h`) claims that directory. A bare name (`math.h`) claims its own
+			 * file and the files it includes, directly or not, from below its directory: its
+			 * directory is usually the system include directory, and glibc declares much of a
+			 * header's API in `bits/`.
 			 */
 			void collectRequestedScope(const std::vector<std::string>& headers) {
-				std::vector<std::string> included;
+				struct Inclusion final {
+					std::string              file;
+					std::vector<std::string> includers;
+				};
+
+				std::vector<Inclusion> inclusions;
 				clang_getInclusions(
 					tu,
-					[](CXFile file, CXSourceLocation*, unsigned depth, CXClientData data) {
-						// Depth 1 is a file included straight from the synthesized one.
-						if (depth == 1)
-							static_cast<std::vector<std::string>*>(data)->push_back(fileName(file));
+					[](CXFile file, CXSourceLocation* stack, unsigned depth, CXClientData data) {
+						Inclusion inclusion{ .file = fileName(file), .includers = {} };
+						for (unsigned i = 0; i < depth; ++i) {
+							CXFile includer = nullptr;
+							clang_getExpansionLocation(
+								stack[i], &includer, nullptr, nullptr, nullptr
+							);
+							inclusion.includers.push_back(fileName(includer));
+						}
+						static_cast<std::vector<Inclusion>*>(data)->push_back(std::move(inclusion));
 					},
-					&included
+					&inclusions
 				);
+				auto is_direct
+					= [](const Inclusion& inclusion) { return inclusion.includers.size() == 1; };
+
 				for (const auto& header: headers) {
 					std::error_code ec;
 					if (std::filesystem::is_regular_file(header, ec)) {
@@ -195,16 +211,23 @@ namespace c_import {
 						requested_directories.push_back(path.parent_path().string());
 						continue;
 					}
-					auto match = std::ranges::find_if(included, [&](const std::string& file) {
-						return file.ends_with("/" + header);
+					auto match = std::ranges::find_if(inclusions, [&](const Inclusion& inclusion) {
+						return is_direct(inclusion) && inclusion.file.ends_with("/" + header);
 					});
-					if (match == included.end()) continue;
-					if (header.contains('/'))
+					if (match == inclusions.end()) continue;
+					const std::string& requested = match->file;
+					if (header.contains('/')) {
 						requested_directories.push_back(
-							match->substr(0, match->size() - header.size() + header.find('/'))
+							requested.substr(0, requested.size() - header.size() + header.find('/'))
 						);
-					else
-						requested_files.insert(*match);
+						continue;
+					}
+					requested_files.insert(requested);
+					auto directory = std::filesystem::path(requested).parent_path().string() + "/";
+					for (const auto& inclusion: inclusions)
+						if (inclusion.file.starts_with(directory)
+						    && std::ranges::contains(inclusion.includers, requested))
+							requested_files.insert(inclusion.file);
 				}
 			}
 

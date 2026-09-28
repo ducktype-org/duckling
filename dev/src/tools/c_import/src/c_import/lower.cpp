@@ -86,7 +86,7 @@ namespace c_import {
 				emitEnums();
 				emitConstants();
 				for (const auto& unreadable: model.unreadable)
-					if (unreadable.location.in_requested_headers)
+					if (wanted(unreadable.location, unreadable.name))
 						skip(unreadable.name, unreadable.reason);
 				return std::move(out);
 			}

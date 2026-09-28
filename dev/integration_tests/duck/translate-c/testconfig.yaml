@@ -45,6 +45,32 @@ Tests:
         before-cmd: "@{tool-path} && @{translate} --no-verify && @{make-app}"
         test-cmd: duck -C app run --profile=dvm
 
+  output:
+    Description: the generated bindings are exactly the expected ones
+    Cases:
+      # Covers reading (layouts, anonymous members, bitfields, macros, enums, scoping), lowering
+      # and emitting at once; review a diff here like any other generated-code change.
+      fixture-bindings:
+        test-cmd: >-
+          @{translate} --no-verify
+          && diff @{ConfigDir}/expected_bindings.txt sl/src/generated/sl.dk
+
+  system-library:
+    Description: a system header and library, found by bare names, work on both backends
+    # glibc declares most of math.h in bits/, and libm.so is a linker script naming libm.so.6.
+    Enabled: '[ -x "@{duckc_dir}/duck_c_import" ] && [ "$(uname)" = Linux ]'
+    Cases:
+      libm:
+        before-cmd: >-
+          @{tool-path}
+          && duck translate-c new m --header math.h --include sqrt --include cbrt --library -lm
+          && grep -q '^  - libm.so.6$' m/quackconfig.yaml
+          && duck init app > /dev/null
+          && duck -C app add --local ../m m > /dev/null
+          && printf 'profiles:\n  dvm:\n    dvm-bytecode: true\n' >> app/quackconfig.yaml
+          && cp @{ConfigDir}/libm.dk app/src/src.dk
+        test-cmd: duck -C app run && duck -C app run --profile=dvm
+
   regen:
     Description: a package is regenerated from its recipe alone
     Cases:

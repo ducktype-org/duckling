@@ -242,15 +242,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_os = "linux")]
-    fn system_library_is_named_by_its_soname() {
-        let (shared, _) = dvm_shared_libraries(&["-lm".into()]);
-        if let Some(found) = shared.first() {
-            assert!(found.starts_with("libm.so"), "{found}");
-        }
-    }
-
-    #[test]
     fn relative_libraries_resolve_against_the_base() {
         let recipe = CBindingsRecipe {
             headers: vec!["foo.h".into()],

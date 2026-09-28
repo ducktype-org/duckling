@@ -113,19 +113,4 @@ mod tests {
     fn rejects_non_elf() {
         assert_eq!(soname_of(b"not an elf file at all, just some bytes"), None);
     }
-
-    #[test]
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-    fn reads_libc_soname() {
-        let candidates = [
-            "/lib/x86_64-linux-gnu/libc.so.6",
-            "/usr/lib/x86_64-linux-gnu/libc.so.6",
-            "/usr/lib/libc.so.6",
-            "/usr/lib64/libc.so.6",
-        ];
-        let Some(path) = candidates.iter().map(Path::new).find(|p| p.exists()) else {
-            return;
-        };
-        assert_eq!(soname_of_file(path).as_deref(), Some("libc.so.6"));
-    }
 }
