@@ -77,16 +77,22 @@ namespace compiler::frontend {
 		return module->m_hash.value();
 	}
 
+	const FileResolver& identityFileResolver() {
+		static const FileResolver resolver = [](const fs::File& disk_file) { return disk_file; };
+		return resolver;
+	}
+
 	Ref<ModuleTree> ModuleTreeBuilder::create(
-		const fs::File&   root,
-		base::StrID       package_id,
-		const std::regex& file_reject,
-		const std::regex& dir_reject
+		const fs::File&     root,
+		base::StrID         package_id,
+		const FileResolver& file_resolver,
+		const std::regex&   file_reject,
+		const std::regex&   dir_reject
 	) {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 
 		if (root.isDirectory())
-			builder->buildFromDirectory(root, package_id, file_reject, dir_reject);
+			builder->buildFromDirectory(root, package_id, file_resolver, file_reject, dir_reject);
 		else
 			builder->buildFromSingleFile(root, package_id);
 
@@ -96,7 +102,13 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, base::StrID(base::generateRandomString(32)), file_reject, dir_reject);
+		return create(
+			root,
+			base::StrID(base::generateRandomString(32)),
+			identityFileResolver(),
+			file_reject,
+			dir_reject
+		);
 	}
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
@@ -301,10 +313,11 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(
-		const fs::File&   directory,
-		base::StrID       package_id,
-		const std::regex& file_reject,
-		const std::regex& dir_reject
+		const fs::File&     directory,
+		base::StrID         package_id,
+		const FileResolver& file_resolver,
+		const std::regex&   file_reject,
+		const std::regex&   dir_reject
 	) {
 		CORE_ASSERT(
 			directory.isDirectory(),
@@ -327,7 +340,9 @@ namespace compiler::frontend {
 
 				// build sub-module from directory
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
-				submodule_builder->buildFromDirectory(file, package_id, file_reject, dir_reject);
+				submodule_builder->buildFromDirectory(
+					file, package_id, file_resolver, file_reject, dir_reject
+				);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(
 					submodule->getName() == base::StrID(file.name()), "Submodule name does not match"
@@ -337,6 +352,12 @@ namespace compiler::frontend {
 				// @TODO: decide if this behavior is desirable
 				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
 			} else {
+				file = file_resolver(file);
+				CORE_ASSERT(
+					file.isFile(),
+					base::strConcat("File resolver substituted a directory for: ", path.string())
+				);
+
 				// Handle regular file
 				if (!isFileNameValid(base::StrID(file.name()), file_reject)) continue;
 				handleNewFile(file);
@@ -770,7 +791,8 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
+		std::vector<Ref<SourceFile>> source_files
+			= SourceFile::getSourceFilesFromPath(file.getFilePath());
 		for (auto& source_file: source_files) source_file->update();
 	}
 
