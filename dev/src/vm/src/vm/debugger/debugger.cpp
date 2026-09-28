@@ -96,8 +96,14 @@ namespace vm::debugger {
 		    .value();
 	}
 
+	const std::set<fs::File>& Debugger::getLoadedFiles() { return loadedFiles; }
+
 	std::expected<void, api::ApiError> Debugger::loadFiles(const std::vector<fs::File>& files) {
-		return api::loadFiles(pid, files);
+		auto response = api::loadFiles(pid, files);
+
+		if (response) loadedFiles.insert(files.begin(), files.end());
+
+		return response;
 	}
 
 	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault(

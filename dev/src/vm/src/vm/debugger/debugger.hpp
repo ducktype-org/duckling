@@ -29,6 +29,8 @@ namespace vm::debugger {
 		ProgramRunArguments main_args;
 		Mapper              mapper;
 
+		std::set<fs::File> loadedFiles;
+
 		events::Listener<api::ProcStatus> updater;
 		events::Listener<std::string>     vm_output;
 
@@ -88,6 +90,8 @@ namespace vm::debugger {
 		 * @return The current status of the VM.
 		 */
 		[[nodiscard]] api::ProcStatus getStatus();
+
+		const std::set<fs::File>& getLoadedFiles();
 
 		/**
 		 * @brief Loads files into debugger

@@ -168,6 +168,23 @@ namespace vm::debugger::cli {
 										 return 0;
 									 }))
 		          .addSubcommand(
+					  clah::Clah("select", "selects file for operations such as `break`")
+						  .addPositional(clah::FileParser::make("file"), "File to select")
+						  .setHandler([&](const clah::ParsingResult& options) -> int {
+							  auto file = options.getPositional<fs::File>(0);
+
+							  if (!debugger.getLoadedFiles().contains(file)
+			                      && !debugger.getMapper().containsFile(file.getFilePath())) {
+								  printError("No such file in compiled or loaded code");
+								  return 0;
+							  }
+
+							  selected_file = file;
+							  printNL("Selected ", selected_file->name());
+							  return 0;
+						  })
+				  )
+		          .addSubcommand(
 					  clah::Clah("break", "sets or unsets the breakpoint")
 						  .addPositional(
 							  clah::CategoryParser::make(
