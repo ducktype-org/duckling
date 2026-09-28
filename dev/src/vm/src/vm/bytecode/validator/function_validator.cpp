@@ -19,6 +19,7 @@
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/builtin_functions.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <ranges>
@@ -33,6 +34,9 @@ namespace {
 
 	constexpr std::array VALID_LAST_OPCODES
 		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
+
+	// The synthetic start functions never return normally - they end the program with `exit`.
+	constexpr std::array VALID_LAST_OPCODES_FOR_START = { OpCode::Op_exit, OpCode::Op_jmp_label };
 
 	using DeinitializingInstructions = std::tuple<
 		Op_deinit,
@@ -266,10 +270,18 @@ class FunctionValidator {
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures;
 	const Function&                                  function;
+	CompilationMode                                  mode;
 
 	std::vector<base::Optional<StackStateID>>            stack_before_instr;
 	base::HashMap<base::StrID, usize>                    index_of_label;
 	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
+
+	CRef<IVMValue> vmValueOf(CRef<opargs::VMValueImm> vm_val) const {
+		CORE_ASSERT(
+			v_matches(mode, StartFunction), "immediate VM values only in the start function"
+		);
+		return vm_val->ptr;
+	}
 
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
@@ -473,7 +485,7 @@ class FunctionValidator {
 					bool is_global = globals.contains(place->var_name);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
-						instr_case_novalue(Op_init_pany_type) {
+						instr_case_novalue(Op_init_pany_type, Op_initFromVMValue_pany_immvmval) {
 							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
@@ -494,6 +506,14 @@ class FunctionValidator {
 						throw InvalidArgumentTypeError(*place);
 				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
+				variant_case(CRef<opargs::VMValueImm>, vm_val) {
+					CORE_ASSERT(
+						v_matches(mode, StartFunction), "immediate VM values are start-function-only"
+					);
+					CRef<valid_type::ValidType> type = vmValueOf(vm_val)->getType();
+					if (!types_ctx.contains(type->getName()))
+						throw UnknownTypeOfVMValueError(*vm_val);
+				}
 				variant_case(CRef<opargs::Type>, type_value) {
 					if (!types_ctx.contains(type_value->type_name))
 						throw UnknownTypeError(*type_value);
@@ -1663,7 +1683,7 @@ class FunctionValidator {
 				if (src_table->inner != dst_table->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_initFromVMValue) {}
+			instr_case_novalue(Op_nop, Op_exit, Op_initFromVMValue_pany_immvmval) {}
 		}
 		POP_DIAGNOSTIC
 	}
@@ -1723,10 +1743,23 @@ class FunctionValidator {
 	}
 
 	void validateFunctionEnd() const {
-		if (function.body.empty()
-		    || (stack_before_instr.back().has_value()
-		        && !std::ranges::contains(VALID_LAST_OPCODES, function.body.back().opcode()))) {
-			throw PathWithoutEndError(function.name);
+		if (function.body.empty()) throw PathWithoutEndError(function.name);
+
+		bool reached_end = stack_before_instr.back().has_value();
+		if (!reached_end) return;
+
+		auto last_opcode = function.body.back().opcode();
+
+		variant_match(mode) {
+			variant_case_novalue(StartFunction) {
+				if (!std::ranges::contains(VALID_LAST_OPCODES_FOR_START, last_opcode))
+					throw PathWithoutEndError(function.name);
+			}
+			variant_case_novalue(NormalFunction) {
+				if (!std::ranges::contains(VALID_LAST_OPCODES, last_opcode))
+					throw PathWithoutEndError(function.name);
+			}
+			variant_default { CORE_UNREACHABLE(); }
 		}
 	}
 
@@ -1786,6 +1819,8 @@ class FunctionValidator {
 		auto& instructions = function.body;
 
 		while (index != function.body.size()) {
+			validateIllegalInstructions(instructions[index]);
+
 			validateArgTypes(instructions[index], local_stack);
 
 			validateArgTypesNonTrivially(instructions[index], local_stack);
@@ -1795,6 +1830,12 @@ class FunctionValidator {
 					// this is the only exception from the rule "save stack state before instruction"
 					// it is needed to properly lower the name of the variable for the compilation
 					local_stack.push(instr.var, instr.type);
+					stack_before_instr[index] = local_stack.getStateID();
+					index++;
+				}
+				instr_case(Op_initFromVMValue_pany_immvmval, instr) {
+					auto name = vmValueOf(&instr.vm_val)->getType()->getName();
+					local_stack.push(instr.var, opargs::Type(name));
 					stack_before_instr[index] = local_stack.getStateID();
 					index++;
 				}
@@ -1889,13 +1930,46 @@ class FunctionValidator {
 		return builder.finalize();
 	}
 
-	void validateSignature() {
-		if (function.name.str == base::StrID("main")) {
-			if (function.signature.result_types.size() != 1)
-				throw InvalidMainReturnType(function.signature, false);
-			if (function.signature.result_types[0].str != base::StrID("i64"))
-				throw InvalidMainReturnType(function.signature, true);
+	template<OpCode... ops>
+	void throwOnForbiddenOpcode(const Instruction& instr) {
+		constexpr std::array FORBIDDEN = { ops... };
+
+		if (std::ranges::contains(FORBIDDEN, instr.opcode())) throw ForbiddenOpcodePresent(instr);
+	}
+
+	void validateIllegalInstructions(const Instruction& instr) {
+		variant_match(mode) {
+			variant_case_novalue(StartFunction) {
+				// The start function ends the program with `exit`, so it must not return.
+				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
+			}
+			variant_case_novalue(NormalFunction) {
+				// Initializing from a VM value and `exit` are reserved for the start function.
+				throwOnForbiddenOpcode<OpCode::Op_initFromVMValue_pany_immvmval, OpCode::Op_exit>(
+					instr
+				);
+			}
+			variant_default { CORE_UNREACHABLE(); }
 		}
+	}
+
+	void validateSignature() {
+		variant_match(mode) {
+			variant_case_novalue(StartFunction) {
+				if (function.signature.parameters.size())
+					throw InvalidStartFunctionSignature(function.signature);
+			}
+			variant_case_novalue(NormalFunction) {
+				if (function.name.str == base::StrID("main")) {
+					if (function.signature.result_types.size() != 1)
+						throw InvalidMainReturnType(function.signature, false);
+					if (function.signature.result_types[0].str != base::StrID("i64"))
+						throw InvalidMainReturnType(function.signature, true);
+				}
+			}
+			variant_default { CORE_UNREACHABLE(); }
+		}
+
 		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 
@@ -1910,14 +1984,16 @@ public:
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
-		const Function&                                  function
+		const Function&                                  function,
+		CompilationMode                                  mode
 	):
 		  types_ctx(types_ctx),
 		  globals(globals),
 		  signatures(signatures),
 		  ext_c_signatures(ext_c_signatures),
 		  ffi_signatures(ffi_signatures),
-		  function(function) {}
+		  function(function),
+		  mode(mode) {}
 
 	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
 	) {
@@ -1946,13 +2022,11 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 	const FlagContext&                               flag_context,
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
-	const Function&                                  function
+	const Function&                                  function,
+	CompilationMode                                  mode
 ) {
-	FuncSignature signature = signatures.at(function.name);
-
-
 	FunctionValidator validator(
-		types, globals_map, signatures, ext_c_signatures, ffi_signatures, function
+		types, globals_map, signatures, ext_c_signatures, ffi_signatures, function, mode
 	);
 
 	valid_function::ValidFunction new_function;
@@ -1960,8 +2034,13 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	std::tie(new_function.body, new_function.stack_states, new_function.local_stack)
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
-	new_function.signature    = signature;
-	new_function.flags        = flag_context.getFlagsForFunction(function.name.str);
+	new_function.signature    = function.signature;
+	new_function.mode         = mode;
+
+	// The synthetic start function is not part of the program, so it has no flags of its own.
+	new_function.flags = v_matches(mode, StartFunction)
+	                       ? InstructionFlag{}
+	                       : flag_context.getFlagsForFunction(function.name.str);
 
 	return new_function;
 }
