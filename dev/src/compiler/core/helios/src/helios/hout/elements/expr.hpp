@@ -545,8 +545,8 @@ namespace compiler::helios::code {
 		struct Case final {
 			/** Alternative index in the subject's variant type; empty for wildcards. */
 			base::Optional<usize> alternative_index;
-			/** If binding is non-empty, then this is a type of the binding, otherwise
-			   it's the type that the binding would have. */
+			/** Type of the constraint, if provided. The constraint is not provided when wildcard
+			 * pattern (matches everything). */
 			base::Optional<tsh::SymbolType<>> constraint_type;
 			/** This is a variable that is used by the expression,
 			  where the alternative value of the same type as constraint should land.*/

@@ -855,13 +855,13 @@ namespace compiler::mir {
 			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
 
 			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
-			const bool        needs_reference_to_subject
+			const bool        subject_is_direct
 				= subject_type.getRefKind() == tsh::ReferenceKind::Direct;
 
 			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
 			base::Optional<MIRLocalRef>                   ref_subject_local;
 
-			if (needs_reference_to_subject) {
+			if (subject_is_direct) {
 				assign_ref_subject = first_entry.value()->addHole();
 				ref_subject_local  = function.addTmp(
                     subject_type.withReferenceKind(tsh::ReferenceKind::Ref), expr_scope
@@ -914,7 +914,7 @@ namespace compiler::mir {
 
 			MIRValue subject_val = MIRPlace{ subject_local };
 
-			if (needs_reference_to_subject) {
+			if (subject_is_direct) {
 				assign_ref_subject->fill({
 					Operation::AddressOf,
 					*ref_subject_local,

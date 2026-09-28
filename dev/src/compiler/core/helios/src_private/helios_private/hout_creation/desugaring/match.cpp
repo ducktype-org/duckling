@@ -139,7 +139,7 @@ namespace compiler::helios::desugaring {
 						),
 						pos
 					);
-					if (match_subject.expr->expression_type.getValueCategory().addressable())
+					if (match_subject.expr->expression_type.getValueCategory().mustMove())
 						error_msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 							"You can also pass the expression by reference by adding `&` prefix.",
 							match_subject.expr->origin.getStablePosition()
