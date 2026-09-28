@@ -90,13 +90,24 @@ namespace vm {
 	low::MicroOpcode SafeVMThread::getCurrentOpcode() const {
 		const Frame*           frame  = runtime_data.frame_stack_current;
 		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
-		if (opcode != low::MicroOpcode::breakpoint) return opcode;
+		switch (opcode) {
+		case low::MicroOpcode::breakpoint:
+#ifdef ENABLE_JIT
+			[[fallthrough]];
+		case low::MicroOpcode::jitFuncEntrypoint:
+			[[fallthrough]];
+		case low::MicroOpcode::jitLoopEntrypoint:
+#endif
+		{
+			auto&      micro_func     = *frame->current_function;
+			const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
+			const auto original_instr = micro_func.orig_bc[low_instr_idx];
 
-		auto&      micro_func     = *frame->current_function;
-		const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
-		const auto original_instr = micro_func.orig_bc[low_instr_idx];
-
-		return getInstructionOpcode(original_instr);
+			return getInstructionOpcode(original_instr);
+		}
+		default:
+			return opcode;
+		}
 	}
 
 	bool SafeVMThread::isAtExecutionEnd() const {
@@ -116,9 +127,7 @@ namespace vm {
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
-		runtime_data.frame_stack_current = frame;
-		frame->local_stack               = local_stack;
-		frame->instr                     = instr;
+		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 	}
 
 	/**
@@ -130,23 +139,27 @@ namespace vm {
 	low::LowFuncData SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+		if (func_args.size() != func.parameters.size()) {
+			throw exceptions::VMRuntimeException(argumentCountMismatchMessage(func, func_args.size())
+			);
+		}
+
+		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
+			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			                             // This is okay because we never JIT the start function.
+			                             .jit_func_entrypoint_offset = 0,
 #endif
-			.bc                  = {},
-			.orig_bc             = {},
-			.local_stack_size    = 0,
-			.local_slot_count    = func.result_types.size() + func.parameters.size(),
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+			                             .bc               = {},
+			                             .orig_bc          = {},
+			                             .local_stack_size = 0,
+			                             .local_slot_count
+			                             = func.result_types.size() + func.parameters.size(),
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -166,7 +179,7 @@ namespace vm {
 		start_function.local_stack_size += func.ret_size;
 
 		// Argument validity was already checked when validating the API call.
-		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
+		for (const auto& [i, arg_value]: std::views::enumerate(func_args)) {
 			const auto& arg_type = func.parameters[i];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
@@ -180,7 +193,6 @@ namespace vm {
 			start_function.arg_size += arg_type->getSize().asInt();
 		}
 
-
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
@@ -188,9 +200,9 @@ namespace vm {
 				// The start function's whole local stack is the space shared with the callee,
 		        // so the callee's local stack starts at the very same address.
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-				// @note: Only one block is left on the stack in this place, so there is no need for
-		        // any deinits. It's being deinitialized by the thread after obtaining the return
-		        // value/exit_code.
+				// @note: Only one block is left on the stack in this place, so there is no need
+		        // for any deinits. It's being deinitialized by the thread after obtaining the
+		        // return value/exit_code.
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
@@ -228,23 +240,21 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
+			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			                             // This is okay because we never JIT the start function.
+			                             .jit_func_entrypoint_offset = 0,
 #endif
-			.bc                  = {},
-			.orig_bc             = {},
-			.local_stack_size    = 72,
-			.local_slot_count    = 7,
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+			                             .bc                  = {},
+			                             .orig_bc             = {},
+			                             .local_stack_size    = 72,
+			                             .local_slot_count    = 7,
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);

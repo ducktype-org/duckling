@@ -31,7 +31,6 @@ public:
 
 	PSTVISITOR_METHOD(Import)
 	PSTVISITOR_METHOD(Using)
-	PSTVISITOR_METHOD(Alias)
 	PSTVISITOR_METHOD(ExprStmt)
 	PSTVISITOR_METHOD(Return)
 	PSTVISITOR_METHOD(Redo)
@@ -122,7 +121,7 @@ private:
 		}
 	}
 
-	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
+	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 17); }
 
 	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 

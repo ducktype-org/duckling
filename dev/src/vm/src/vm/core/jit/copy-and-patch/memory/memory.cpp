@@ -5,8 +5,15 @@
 #include <os_utils/memory.hpp>
 
 #include <expected>
+#include <fstream>
+#include <utility>
 
 namespace vm::jit::cnp {
+	void JitFuncMemory::dump(const char* filename) {
+		std::ofstream file{ filename, std::ios::binary };
+
+		for (byte b: span()) file << std::to_underlying(b);
+	}
 
 	std::expected<JitFuncMemory, std::string> JitFuncMemory::allocate(usize size) {
 		return os_utils::getPageSize().and_then(
@@ -27,24 +34,6 @@ namespace vm::jit::cnp {
 
 	std::expected<void, std::string> JitFuncMemory::markExecutable() {
 		return os_utils::markExecutable(addr, size);
-	}
-
-	JitFuncMemory::JitFuncMemory(JitFuncMemory&& other) noexcept:
-		  addr{ other.addr },
-		  size{ other.size } {
-		other.addr = nullptr;
-		other.size = 0;
-	}
-
-	JitFuncMemory& JitFuncMemory::operator=(JitFuncMemory&& other) noexcept {
-		if (this != &other) {
-			if (addr != nullptr) os_utils::freePages(addr, size);
-			addr       = other.addr;
-			size       = other.size;
-			other.addr = nullptr;
-			other.size = 0;
-		}
-		return *this;
 	}
 
 	JitFuncMemory::~JitFuncMemory() noexcept {

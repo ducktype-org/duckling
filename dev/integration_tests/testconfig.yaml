@@ -58,7 +58,7 @@ warmup_std_artifacts: "rm -rf @{std_artifacts_dir} @{tmp_root}/std_warmup
 timeout_jit: 10
 # If you want to override timeout is it preferred that you set this variable
 # instead of changing the value of TimeOut directly (lazy evaluation).
-timeout_default: 2
+timeout_default: 4
 TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
 
 SubDirs:

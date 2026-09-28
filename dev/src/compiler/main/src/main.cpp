@@ -1293,6 +1293,10 @@ clah::Clah getClahForMain() {
 	                     .addLongName("silent")
 	                     .addShortDesc("Replay history without output (internal).")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("plain-output")
+	                     .addShortDesc("Print REPL results without interactive decorations.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto stdlib_opts = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
@@ -1312,13 +1316,20 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("no-completions")) completions = false;
 
 					bool bracketed = compiler::repl::FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED;
-					if (options.isFlag("disable-bracketed-paste")) bracketed = false;
+					bool decorative_output = !options.isFlag("plain-output");
+
+					// Bracketed paste emits terminal-control sequences, which would violate plain
+		            // output.
+					if (options.isFlag("disable-bracketed-paste") || !decorative_output)
+						bracketed = false;
 
 					base::Optional<usize>      reset_replay_count;
 					bool                       reset_replay_silent = false;
 					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
 					{
-						compiler::repl::ReplSession session(completions, bracketed);
+						compiler::repl::ReplSession session(
+							completions, bracketed, decorative_output
+						);
 						if (stdlib_opts.stdActive()) session.preloadStandardLibrary();
 
 						auto replay_count_opt = options.getValue<i64>("history-entries");
@@ -1359,6 +1370,8 @@ clah::Clah getClahForMain() {
 					}
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
+						// We need to flush stdout before execSelf to avoid losing any buffered output.
+						std::cout.flush();
 						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
 						auto exec_result = os_utils::execSelf(g_argv);
 						if (exec_result.status == os_utils::ExecSelfStatus::Error) return 1;

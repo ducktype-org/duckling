@@ -42,7 +42,8 @@ fun expressionAsValue() -> i64 = {
 
 fun conditionCoercions() -> i64 = {
     var a: i64 = 1;
-    let sub1: i64 = if a then 1i64 + 1i64 else 4i64;  # sub1 = 2
+    # @TODO: #3631 Numeric coercions temporarily disabled
+    let sub1: i64 = if a as bool then 1i64 + 1i64 else 4i64;  # sub1 = 2
     return sub1; # 2
 }
 

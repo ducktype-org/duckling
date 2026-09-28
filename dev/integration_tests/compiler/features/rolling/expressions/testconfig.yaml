@@ -84,12 +84,33 @@ Tests:
           String: ""
         ExitCode: 0
 
-  coercions:
+  # @TODO: #3631 Numeric coercions to bool temporarily disabled
+  #  coercions:
+  #    Cases:
+  #      all:
+  #        Output:
+  #          String: ""
+  #        ExitCode: 0
+
+  void_coercions:
+    NoParallel: true
     Cases:
-      all:
+      llvm:
+        ExitCode: 134
+      dvm:
+        stderr_regex: "VMThread has panicked: Program panicked"
         Output:
-          String: ""
-        ExitCode: 0
+          String: "-4\nProgram panicked!\n"
+
+  void_diverging_match:
+    NoParallel: true
+    Cases:
+      llvm:
+        ExitCode: 134
+      dvm:
+        stderr_regex: "VMThread has panicked: Program panicked"
+        Output:
+          String: "1\nProgram panicked!\n"
 
   no_output:
     Cases:
