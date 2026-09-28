@@ -32,6 +32,10 @@ namespace vm::loader::compiler::safe {
 			 * @brief Total size of the globals compiled up to this point, in bytes.
 			 */
 			Bytes global_buffer_size = Bytes(0);
+			/**
+			 * @brief Total shadow size of the globals compiled up to this point, in shadow entries.
+			 */
+			usize global_shadow_buffer_size = 0;
 		};
 	}
 

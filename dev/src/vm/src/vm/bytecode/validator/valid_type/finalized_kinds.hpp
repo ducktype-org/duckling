@@ -58,9 +58,10 @@ namespace vm::code::valid_type {
 		 * @brief A field inside a Structure type.
 		 */
 		struct Field final {
-			TypeSize    offset;
-			base::StrID name;
-			ValidTypeID type;
+			TypeSize     offset;
+			ShadowOffset shadow_offset = 0;
+			base::StrID  name;
+			ValidTypeID  type;
 		};
 
 		/**

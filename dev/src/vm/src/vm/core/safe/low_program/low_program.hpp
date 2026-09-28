@@ -56,7 +56,12 @@ namespace vm::low {
 
 		usize arg_size;
 		// The total summed size of all return values.
-		usize                 ret_size;
+		usize ret_size;
+
+		/// `arg_size` and `ret_size` counted in shadow entries, for the Fast Track shadow stack.
+		usize arg_shadow_size;
+		usize ret_shadow_size;
+
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 
@@ -157,6 +162,9 @@ namespace vm::low {
 
 		/// The index of the global block ref in the global block array.
 		usize global_block_idx;
+
+		/// The offset of the global variable's shadow entries in the global shadow buffer.
+		usize global_shadow_data_offset = 0;
 	};
 
 	/**
@@ -230,6 +238,7 @@ namespace vm::low {
 		struct GlobalBufferConfig final {
 			Bytes buffer_size;   /// The sum of sizes of all the global variables in the program.
 			usize global_count;  /// The count of global variables in the program
+			usize shadow_buffer_size;  /// The sum of shadow sizes of all the global variables.
 		};
 
 		/**
@@ -281,7 +290,9 @@ namespace vm::low {
 		}
 
 		GlobalBufferConfig getGlobalBufferConfig() const override {
-			return { .buffer_size = global_buffer_size, .global_count = global_count };
+			return { .buffer_size        = global_buffer_size,
+				     .global_count       = global_count,
+				     .shadow_buffer_size = global_shadow_buffer_size };
 		}
 
 	private:
@@ -291,8 +302,9 @@ namespace vm::low {
 		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		StableObjIdNameMap<LowFFIFunction>        ffi_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
-		Bytes                                     global_buffer_size = Bytes(0);
-		usize                                     global_count       = 0;
+		Bytes                                     global_buffer_size        = Bytes(0);
+		usize                                     global_count              = 0;
+		usize                                     global_shadow_buffer_size = 0;
 
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.

@@ -720,7 +720,7 @@ namespace vm {
 				.global_data_offsets    = std::move(global_offsets),
 				.global_blocks_idxs     = std::move(global_indices),
 				.global_types           = std::move(global_types),
-				.total_global_data_size = global_buffer_config.buffer_size,
+				.total_global_data_size = global_buffer_config.buffer_size.asInt(),
 				.global_count           = global_buffer_config.global_count,
 			});
 

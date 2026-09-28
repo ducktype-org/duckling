@@ -137,6 +137,21 @@ namespace vm::code::valid_type {
 		 */
 		[[nodiscard]] TypeSize getAlignment() const;
 
+		/**
+		 * @brief Number of shadow entries (Fast Track's per-location race-detection state) an
+		 * object of this type occupies. Scalars take one entry, aggregates the sum of their
+		 * members, variants one for the tag plus the largest alternative. A dynamic table, like
+		 * its byte size, has no shadow size of its own - its elements are shadowed per allocation.
+		 */
+		[[nodiscard]] ShadowSize getShadowSize() const;
+
+		/**
+		 * @brief Shadow entry offset of a field of a structure type, `none` for other kinds or an
+		 * unknown field.
+		 */
+		[[nodiscard]] base::Optional<ShadowOffset> getFieldShadowOffsetByName(base::StrID field_name
+		) const;
+
 		bool operator==(const ValidType& other) const;
 
 		bool operator==(const ValidTypeID& other_id) const;
@@ -208,6 +223,8 @@ namespace vm::code::valid_type {
 		bool holds_pointer_references = false;
 
 		TypeSize size = TypeSize(Bytes(0), 0);
+
+		ShadowSize shadow_size = 0;
 
 		TypeSize alignment = TypeSize(Bytes(1), Bytes(1));
 

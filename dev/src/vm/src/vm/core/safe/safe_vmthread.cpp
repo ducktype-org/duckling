@@ -157,6 +157,8 @@ namespace vm {
 			                             = func.result_types.size() + func.parameters.size(),
 			                             .arg_size            = 0,
 			                             .ret_size            = func.ret_size,
+			                             .arg_shadow_size     = 0,
+			                             .ret_shadow_size     = func.ret_shadow_size,
 			                             .parameters          = {},
 			                             .result_types        = func.result_types,
 			                             .instruction_mapping = {} };
@@ -252,6 +254,8 @@ namespace vm {
 			                             .local_slot_count    = 7,
 			                             .arg_size            = 0,
 			                             .ret_size            = func.ret_size,
+			                             .arg_shadow_size     = 0,
+			                             .ret_shadow_size     = func.ret_shadow_size,
 			                             .parameters          = {},
 			                             .result_types        = func.result_types,
 			                             .instruction_mapping = {} };
