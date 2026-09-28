@@ -275,15 +275,15 @@ namespace vm::debugger {
 			})
 		    .and_then([&] { return api::executeRuntimeExpr(pid, thread_id, file); })
 		    .and_then([&](api::ExprResult&& expr_future) -> std::expected<void, api::ApiError> {
+				if (expr_future.wait_for(EXPR_RESULT_TIMEOUT) != std::future_status::ready) {
+					std::cout << "(expression is still running)\n";
+					pending_expr_results.emplace_back(std::move(expr_future));
+					return {};
+				}
+
 				auto breakpoint = api::waitForBreakpoint(pid, thread_id);
 				if (!breakpoint) return std::unexpected(breakpoint.error());
-
-				// Only inline-print a result that arrives within the budget; a slower (paused)
-			    // expression is dropped silently on the next evaluation.
-				if (expr_future.wait_for(EXPR_RESULT_TIMEOUT) == std::future_status::ready)
-					printExprResult(expr_future.get());
-				else
-					pending_expr_results.emplace_back(std::move(expr_future));
+				printExprResult(expr_future.get());
 				return {};
 			});
 	}
