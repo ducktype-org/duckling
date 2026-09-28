@@ -325,7 +325,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @return The offset of the actual data held by this variant, in bytes, up to 8.
+		 * @return The offset of the actual data held by this variant, in bytes.
 		 */
 		[[nodiscard]]
 		Bytes getDataOffset() const {

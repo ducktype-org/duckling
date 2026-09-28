@@ -23,6 +23,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_errors.hpp>
 
+#include <bit>
 #include <sstream>
 
 using base::bytes2bits;
@@ -389,15 +390,24 @@ namespace compiler::tsl {
 
 	struct VariantTypeLayoutConstructionHelper {
 		tsh::VariantAbstractType variant_type;
+		Bits                     tag_size;
 		Bits                     max_component_size;
 		std::vector<Bytes>       offsets;
+
+		static Bits requiredTagSize(usize number_of_alternatives) {
+			// Zero denotes no active alternative, so the largest tag equals the count.
+			const usize needed_bits  = std::bit_width(number_of_alternatives);
+			const usize needed_bytes = (needed_bits + 7) / 8;
+			return Bits(8 * std::bit_ceil(needed_bytes));
+		}
 
 		VariantTypeLayoutConstructionHelper(
 			const tsh::VariantAbstractType variant_type, query::Context& ctx
 		):
 			  variant_type(variant_type),
+			  tag_size(requiredTagSize(variant_type.getUnderlyingTypes().size())),
 			  max_component_size(maxTypeSizeInVector(variant_type.getUnderlyingTypes(), ctx)),
-			  offsets(alignOffsetsForSizeVector({ Bits(8), max_component_size })) {}
+			  offsets(alignOffsetsForSizeVector({ tag_size, max_component_size })) {}
 	};
 
 	VariantTypeLayout::VariantTypeLayout(
@@ -413,9 +423,9 @@ namespace compiler::tsl {
 			  tsh::SymbolType<>::withDefaults(helper.variant_type),
 			  ctx
 		  ),
-		  tag_offset{ 0 },                   // 0 bytes
-		  tag_size{ 8 },                     // 8 bits
-		  data_offset{ helper.offsets[1] },  // up to 8 bytes
+		  tag_offset{ 0 },  // 0 bytes
+		  tag_size{ helper.tag_size },
+		  data_offset{ helper.offsets[1] },
 		  data_size{ helper.max_component_size } {
 		u32 i = 0;
 		for (auto type: helper.variant_type.getUnderlyingTypes()) {
