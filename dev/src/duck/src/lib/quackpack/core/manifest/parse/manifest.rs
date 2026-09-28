@@ -1,6 +1,6 @@
 //! Parsing of the manifest from its schema.
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use tracing::debug;
 
@@ -250,5 +250,14 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
 /// Parse a [`BuildOptions`] from the schema.
 fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
     let links = input.links.as_ref().map(StrId::from);
-    BuildOptions { links }
+    let dvm_shared_libs = input
+        .dvm_shared_libs
+        .iter()
+        .flatten()
+        .map(PathBuf::from)
+        .collect();
+    BuildOptions {
+        links,
+        dvm_shared_libs,
+    }
 }

@@ -1,0 +1,7 @@
+import core.builtins.*;
+import answer.*;
+
+fun main() -> i64 = {
+    if (answer_add(40i32, 2i32) != 42i32) { return 1i64; }
+    return 0i64;
+}

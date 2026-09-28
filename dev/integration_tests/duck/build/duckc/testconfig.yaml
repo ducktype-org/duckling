@@ -12,6 +12,7 @@ SubDirs:
   - basic-deps-but-with-normalisation
   - diamond
   - dvm-deps
+  - dvm-shared-libs
   - errors
   - features
   - local-cycle

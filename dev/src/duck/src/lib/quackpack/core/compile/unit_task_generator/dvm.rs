@@ -10,7 +10,7 @@ use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::quackpack::core::compile::unit_runner::external_libs::{
-    ExternalLibrariesFound, has_external_libraries,
+    ExternalLibrariesFound, find_links_without_dvm_shared_libs,
 };
 use crate::quackpack::core::compile::unit_runner::outputs;
 use crate::{QuackResult, qp_bail};
@@ -29,9 +29,12 @@ impl UnitTaskGenerator for DvmTaskGenerator {
             "dvm executor should only compile DVM packages; got {:?}",
             root.artifacts_type()
         );
-        if let Some(ExternalLibrariesFound { unit, links }) = has_external_libraries(root, graph) {
+        if let Some(ExternalLibrariesFound { unit, links }) =
+            find_links_without_dvm_shared_libs(root, graph)
+        {
             qp_bail!(
-                "package {} links against `{links}`, which is not supported on the DVM",
+                "package {} links against `{links}`, which the DVM cannot load; list the shared \
+                 objects to load instead in `metadata.dvm-shared-libs`",
                 unit.descriptive_name()
             )
         }

@@ -1,0 +1,38 @@
+# A dependency wrapping a C library: `links` feeds the native linker, `dvm-shared-libs` is what the
+# DVM `dlopen`s in its place. The C artifacts live outside the packages, so no artifact cache clean
+# can remove them.
+
+c-compiler: "$(command -v clang-19 || command -v clang || command -v cc)"
+
+PostCase: "@{cleanup_tmp_env}"
+
+PreCase: |+
+  @{cd-tmp-dir}
+  mkdir -p build_c
+  @{c-compiler} -O2 -c -o build_c/answer.o @{ConfigDir}/answer.c
+  @{c-compiler} -O2 -shared -fPIC -o build_c/libanswer.so @{ConfigDir}/answer.c
+  @{duck-exe} init answer
+  @{duck-exe} init app
+  cp @{ConfigDir}/answer.dk answer/src/src.dk
+  cp @{ConfigDir}/app.dk app/src/src.dk
+  @{duck-exe} -C app add --local ../answer answer
+  echo "profiles:
+    dvm:
+      dvm-bytecode: true" >> app/quackconfig.yaml
+
+Tests:
+  dvm-shared-libs:
+    Description: a dependency calling into a C library runs on both backends
+    Cases:
+      native:
+        CaseName: "`links` is passed to the native linker"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && echo "  links: $DIT_TMP_DIR/build_c/answer.o" >> answer/quackconfig.yaml'
+        test-cmd: duck -C app run
+      dvm-relative:
+        CaseName: "A relative `dvm-shared-libs` entry resolves against the declaring package"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && printf "  links: %s\n  dvm-shared-libs:\n    - ../build_c/libanswer.so\n" "$DIT_TMP_DIR/build_c/answer.o" >> answer/quackconfig.yaml'
+        test-cmd: duck -C app run --profile=dvm
+      dvm-absolute:
+        CaseName: "An absolute `dvm-shared-libs` entry is kept as is"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && printf "  dvm-shared-libs:\n    - %s\n" "$DIT_TMP_DIR/build_c/libanswer.so" >> answer/quackconfig.yaml'
+        test-cmd: duck -C app run --profile=dvm

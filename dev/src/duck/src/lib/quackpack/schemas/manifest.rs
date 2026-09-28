@@ -80,6 +80,9 @@ pub struct Metadata {
     pub description: Option<String>,
     /// External library to link against.
     pub links: Option<String>,
+    /// Shared objects the DVM `dlopen`s in place of `links`: a bare name goes through the system
+    /// search path, a relative path is resolved against the package root.
+    pub dvm_shared_libs: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

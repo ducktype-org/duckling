@@ -7,7 +7,7 @@ PreCase: |+
       dvm-bytecode: true" >> foo/quackconfig.yaml
 Tests:
   external-libs-dvm:
-    Description: errors when a package has an external library specified on the DVM
+    Description: errors when a package has an external library but no DVM shared objects on the DVM
     Cases:
       external-libs-dvm:
         test-cmd: duck -C foo build --profile dvm
@@ -23,4 +23,4 @@ Tests:
             info: successfully synchronized venv \`foo\`"
         Err:
           String: |+
-            error: package foo version 1.0.0 links against \`sqlite\`, which is not supported on the DVM
+            error: package foo version 1.0.0 links against \`sqlite\`, which the DVM cannot load; list the shared objects to load instead in \`metadata.dvm-shared-libs\`
