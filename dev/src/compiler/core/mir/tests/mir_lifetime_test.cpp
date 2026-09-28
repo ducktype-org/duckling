@@ -354,16 +354,16 @@ private:
 		ASSERT_EQUAL_PRINT(1, count_destructions(move_into));
 
 		// The match takes the variant over - `v` is `Moved` into the subject temporary, which
-		// carries `NoDestructor` - and the case binding is what takes the payload and destroys
-		// it, at the end of its own case scope.
+		// carries `NoDestructor` - and the case binding is what takes the payload, destroyed
+		// conditionally once the match scope ends, since only one case constructs it.
 		auto match_out = getMIRFunctionByName(module, "matchOutOfVariant");
 		LifetimeChecker{}
 			.expectMove("payload")
 			.expectConstruct("v")
+			.expectScopeStart("r")
 			.expectMove("v")
 			.expectConstruct("r")
-			.expectScopeStart("r")
-			.expectInstruction(Operation::Destruct)
+			.expectInstruction(Operation::DestructIf)
 			.expectDestruct("r")
 			.expectScopeEnd("r")
 			.validate(match_out);
@@ -386,7 +386,7 @@ private:
 			.expectMove("payload")
 			.expectConstruct("v")
 			.expectMove("v")
-			.expectInstruction(Operation::Destruct)
+			.expectInstruction(Operation::DestructIf)
 			.validate(drop_in_match);
 		for (std::string_view moved_from: { "payload", "v" })
 			ASSERT_EQUAL_PRINT(
