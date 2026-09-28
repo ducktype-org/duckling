@@ -8,6 +8,7 @@
 #include <helios/tsh/types.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 
+#include "base/extend_cpp/variant_match.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -59,12 +60,12 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
-		// Hash includes the return type, the wrapped PST element and the kind of the input, next to
-		// the counter. The mangled name (used for linker symbols) is based only on the counter.
 		base::Bit256 ReplInputWrapper::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(
-				return_type, counter, pst_element_hash, static_cast<u64>(type)
-			);
+			variant_match(element) {
+				variant_case(Instruction, instr) { return instr.stmt; }
+				variant_case(Expression, expr) { return expr.expr->getID().asInt(); }
+			}
+			CORE_UNREACHABLE();
 		}
 
 		base::Bit256 ReplEmptyVariable::queryUnstablePerfectHash() const {

@@ -52,14 +52,14 @@ namespace compiler::repl {
 	 * @brief Get the symbol standing for the wrapper function of the expression.
 	 */
 	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt, u64 counter
+		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt
 	);
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the variable initializer expression.
 	 */
 	helios::SymID queryReplGlobalInitializerWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt, u64 counter
+		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt
 	);
 
 	/**
@@ -67,5 +67,10 @@ namespace compiler::repl {
 	 * empty (zero) value instead of the declared initial one.
 	 */
 	helios::SymID queryReplEmptyVariableSymbol(query::Context& ctx, helios::SymID variable_symbol);
+
+	// @TODO docs
+	helios::SymID queryHoutExpressionWrapperSymbol(
+		query::Context& ctx, base::StrID sym_name, Box<helios::code::Expr> expr
+	);
 
 }  // namespace compiler::repl

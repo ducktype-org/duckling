@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "helios/repl_utils/repl_queries.hpp"
+
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -77,9 +79,9 @@ namespace compiler::helios {
 		/**
 		 * @brief A HOUT visitor for compile-time expression evaluation.
 		 */
-		struct TreeEvalVisitor final: public code::HoutExprVisitor {
+		struct TreeEvalVisitor final: public code::HoutExprVisitorEmpty {
 			query::Context& ctx;
-			TreeEvalResult  result;
+			TreeEvalResult  result = CouldNotShortPath{};
 
 			TreeEvalVisitor(query::Context& ctx): ctx(ctx) {}
 
@@ -110,11 +112,6 @@ namespace compiler::helios {
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
 				result = CompileTimeValue{ expr.value_type };
-			}
-
-			void visitBlockExpr(const code::BlockExpr&) final {
-				// @TODO: #3291 Blocks are not evaluated at compile time by this visitor.
-				result = CouldNotShortPath{};
 			}
 
 			/**
@@ -158,14 +155,6 @@ namespace compiler::helios {
 				}
 
 				result = CouldNotShortPath{};
-			}
-
-			void visitAccessExpr(const code::AccessExpr& expr) final {
-				// @TODO: #1922 Implement that.
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating access expressions at compile time.", expr.origin.getStablePosition()
-				));
-				result = query::Failed();
 			}
 
 			/**
@@ -261,15 +250,6 @@ namespace compiler::helios {
 					result            = indexing_res.valueOrThrow();
 					return;
 				}
-
-				// @TODO: #1922 If base is not meta and not a type template, this is a normal index
-				// expression. Implement that.
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating index expressions with non-meta and non-type-template base at "
-					"compile time.",
-					expr.origin.getStablePosition()
-				));
-				result = query::Failed();
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
@@ -282,28 +262,6 @@ namespace compiler::helios {
 					result = tsh::SymbolType<>::withDefaults(
 						ctx.query<tsh::QueryClassType>({ expr.symbol })
 					);
-				} else {
-					match_optional(expr.origin.getStablePosition()) {
-						opt_some(pos) {
-							ctx.logInt(makeBox<dia::PlaceholderError>(
-								"Expression cannot be evaluated at compile-time.", pos
-							));
-						}
-						opt_none {
-							ctx.logInt(makeBox<dia::PlaceholderError>(
-								"Expression cannot be evaluated at compile-time.",
-								base::strConcat(
-									"The code is unavailable because the expression is at "
-									"least partially compiler generated.",
-									"The failure happened for the symbol `",
-									name(expr.symbol),
-									"`."
-								)
-							));
-						}
-					}
-					result = query::Failed();
-					return;
 				}
 			}
 
@@ -722,14 +680,6 @@ namespace compiler::helios {
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
 			}
 
-			void visitCreateAggregateExpr(const code::CreateAggregateExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Comp time aggregate lowering is not implemented.",
-					expr.origin.getStablePosition()
-				));
-				result = query::Failed();
-			}
-
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
@@ -779,19 +729,6 @@ namespace compiler::helios {
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };
-			}
-
-			void visitMatchExpr(const code::MatchExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating a `match` at compile time.", expr.origin.getStablePosition()
-				));
-			}
-
-			void visitVariantConstructExpr(const code::VariantConstructExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating variant construction at compile time.",
-					expr.origin.getStablePosition()
-				));
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
@@ -849,12 +786,6 @@ namespace compiler::helios {
 				}
 				result = sub_result.valueOrThrow();
 			}
-
-			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
-
-			void visitPtrOfExpr(const code::PtrOfExpr&) final { result = CouldNotShortPath{}; }
-
-			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDefaultValueExpr(const code::DefaultValueExpr& expr) final {
 				switch (expr.type.getKind()) {
@@ -930,7 +861,7 @@ namespace compiler::helios {
 			}
 
 			void visitReusableExpr(const code::ReusableExpr& reusable) override {
-				evaluateSubExpr(reusable.inner.ref());
+				result = evaluateSubExpr(reusable.inner.ref());
 			}
 		};
 
@@ -1033,41 +964,6 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Checks that the signature of the function we are about to evaluate is supported
-		 * by comp-time evaluation.
-		 *
-		 * A parameter that is not trivially copyable owns memory, and a mutable one may have that
-		 * memory rewritten by the callee. The comp-time DVM cannot transfer such memory back to
-		 * the compiler, so these signatures are rejected.
-		 *
-		 * @TODO: #2990 Support memory owning parameters in comp-time evaluation.
-		 *
-		 * @throws A query failure (after logging an error) on the first unsupported parameter.
-		 */
-		static void validateSignatureSupported(query::Context& ctx, SymID function_sym_id) {
-			auto& declaration = ctx.query<QueryDeclOfFun>(function_sym_id)->valueOrThrow();
-
-			for (const auto& parameter: declaration.parameters) {
-				if (parameter.type.getMutability() == tsh::Mutability::Immutable) continue;
-				if (parameter.type.isTriviallyCopyable(ctx)) continue;
-
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					base::strConcat(
-						"Call to `",
-						declaration.original_name,
-						"` cannot be evaluated at compile time, because its parameter `",
-						parameter.name,
-						"` of type `",
-						parameter.type.toString(),
-						"` is mutable and not trivially copyable."
-					),
-					parameter.origin.getStablePosition()
-				));
-				query::throwFailed();
-			}
-		}
-
-		/**
 		 * @brief Evaluates a HOUT call expression using DVM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
@@ -1080,8 +976,6 @@ namespace compiler::helios {
 
 			const SymID function_sym_id = callee_ident->symbol;
 
-			validateSignatureSupported(ctx, function_sym_id);
-
 			auto args_result = evaluateArguments(ctx, call_expr->arguments);
 			if (args_result.hasFailed()) return query::Failed();
 			auto ctv_arguments = std::move(args_result.valueOrThrow());
@@ -1089,7 +983,6 @@ namespace compiler::helios {
 			auto lir_build_result = prepareLIRForDVM(ctx, function_sym_id);
 			if (lir_build_result.hasFailed()) return query::Failed();
 			const auto& [func_to_call_name, lir_unit] = lir_build_result.valueOrThrow();
-
 
 			// Retrieve the functions return type.
 			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
@@ -1108,6 +1001,26 @@ namespace compiler::helios {
 					"Compile time evaluation of this function call failed or "
 					"returned unsupported result.",
 					call_expr->origin.getStablePosition(),
+					base::strConcat("Detailed reason: ", vm_eval_result.error().message, "\n")
+				));
+				return query::Failed();
+			}
+			return vm_eval_result.value();
+		}
+
+		static CompTimeEvalResult evaluateExprWithVm(query::Context& ctx, CRef<code::Expr> expr) {
+			const SymID function_sym_id = repl::queryHoutExpressionWrapperSymbol(
+				ctx, base::StrID("__comp_time_expr_wrapper"), expr->clone()
+			);
+			UNPACK_QRESULT(auto lir_build =, prepareLIRForDVM(ctx, function_sym_id));
+			const auto& [func_to_call_name, lir_unit] = std::move(lir_build);
+			auto return_type                          = expr->expression_type.getSymbolType();
+			auto vm_eval_result = executeInVm(ctx, func_to_call_name, lir_unit, {}, return_type);
+
+			if (!vm_eval_result) {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Compile time evaluation of this expression failed.",
+					expr->origin.getStablePosition(),
 					base::strConcat("Detailed reason: ", vm_eval_result.error().message, "\n")
 				));
 				return query::Failed();
@@ -1139,23 +1052,9 @@ namespace compiler::helios {
 			variant_match(tree_eval) {
 				variant_case(CompileTimeValue, ctv) { return ctv; }
 				variant_case(CouldNotShortPath, _) {
-					// If TreeEval failed, try to evaluate with VM.
-					if (const auto* reusable_expr
-					    = dynamic_cast<const code::ReusableExpr*>(expr.get())) {
-						// If it's a reusable expression, propagate evaluation inwards.
-						return evalHoutExpr(ctx, reusable_expr->inner.ref());
-					}
-					if (const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get())) {
-						// If it's a call, evaluate it via the VM.
+					if (const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get()))
 						return evaluateFunctionWithVm(ctx, call_expr);
-					}
-
-					// Otherwise, log an error.
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-						"Evaluation of this expression in DVM at compile time",
-						expr->origin.getStablePosition()
-					));
-					return query::Failed();
+					return evaluateExprWithVm(ctx, expr);
 				}
 				variant_default { CORE_PANIC("Unexpected TreeEvalResult variant."); }
 			}

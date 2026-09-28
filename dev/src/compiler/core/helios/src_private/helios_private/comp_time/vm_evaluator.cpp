@@ -16,6 +16,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 
+#include "vm/core/vmvalue/ivmvalueref.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -147,7 +148,7 @@ namespace {
 	 * returning the VMValue with the ctv. The DVM backend may generate new globals in the
 	 * process.
 	 */
-	std::expected<Box<vm::IVMValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
+	std::expected<Ref<vm::IVMValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
 		query::Context&                    ctx,
 		CompTimeDVM&                       comptime_dvm,
 		const CompileTimeValue&            ctv,
@@ -220,32 +221,14 @@ namespace {
 			CORE_UNREACHABLE();
 		}();
 
-		auto owned_response = vm::api::getVMValue(pid, returned->getType()->getName().str());
-		if (!owned_response.has_value())
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ArgConversionFailed,
-				base::strConcat(
-					"Failed to allocate an owned VM value for '",
-					returned->getType()->getName(),
-					"'."
-				)
-			));
-		auto owned = std::move(owned_response->vm_value);
-
-		CORE_ASSERT(
-			owned->getDataSize() == returned->getDataSize(),
-			"Mismatched sizes when copying a materialized CTV value."
-		);
-		owned->importDataFrom(*returned);
-
-		return owned;
+		return returned;
 	}
 
 	/**
 	 * @brief Converts a given `ctv` to VMValue.
 	 * @return The converted VMValue or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<Box<vm::IVMValue>, VmEvaluationError> ctvToVMValue(
+	std::expected<std::variant<Box<vm::IVMValue>, Ref<vm::IVMValue>>, VmEvaluationError> ctvToVMValue(
 		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
@@ -324,6 +307,7 @@ namespace {
 					compiler::tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
 				);
 			}
+			variant_case(CRef<vm::IVMValue>, vm_value) { return Ref<vm::IVMValue>(vm_value); }
 			variant_default {
 				throw base::NotYetImplemented(
 					"Conversion from ctv to VMValue for this type is not implemented yet: "
@@ -358,17 +342,7 @@ namespace {
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
 		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::IVMValue> vm_value
 	) {
-		const auto kind        = type.getType().getKind();
-		auto       error_value = [&] {
-            return std::unexpected(VmEvaluationError(
-                VmEvaluationError::Kind::ReturnConversionFailed,
-                base::strConcat(
-                    "VMValue to CTV conversion for type: ",
-                    base::enumToStr(kind),
-                    " is not implemented yet."
-                )
-            ));
-		};
+		const auto kind = type.getType().getKind();
 		switch (kind) {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());
@@ -440,7 +414,7 @@ namespace {
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
 				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
 					base::StrID(charBackedVMValueToCtv(vm_value)) } };
-			return error_value();
+			return CompileTimeValue{ CRef<vm::IVMValue>(vm_value) };
 		}
 		case compiler::tsh::Kind::Class: {
 			if (tsh::isStringTypePresent(ctx)) {
@@ -450,27 +424,29 @@ namespace {
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{
 						base::StrID(charBackedVMValueToCtv(vm_value)) } };
 			}
-			return error_value();
+			return CompileTimeValue{ CRef<vm::IVMValue>(vm_value) };
 		}
 		default: {
-			return error_value();
+			return CompileTimeValue{ CRef<vm::IVMValue>(vm_value) };
 		}
 		}
 	}
 
-	std::expected<std::vector<Box<vm::IVMValue>>, VmEvaluationError> prepareArguments(
+	using VmArguments = std::vector<std::variant<Box<vm::IVMValue>, Ref<vm::IVMValue>>>;
+
+	std::expected<VmArguments, VmEvaluationError> prepareArguments(
 		query::Context&                                     ctx,
 		CompTimeDVM&                                        comptime_dvm,
 		const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
-		std::vector<Box<vm::IVMValue>> owned_arguments;
-		owned_arguments.reserve(args.size());
+		VmArguments result;
+		result.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVMValue(ctx, comptime_dvm, ctv_arg);
-			if (!res) return std::unexpected(res.error());
-			owned_arguments.push_back(std::move(*res));
+			auto vm_val = ctvToVMValue(ctx, comptime_dvm, ctv_arg);
+			if (!vm_val) return std::unexpected(vm_val.error());
+			result.push_back(std::move(vm_val.value()));
 		}
-		return owned_arguments;
+		return result;
 	}
 
 	std::expected<void, VmEvaluationError> setQueryContext(
@@ -498,17 +474,24 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
-		query::Context&                       ctx,
-		CompTimeDVM&                          comptime_dvm,
-		const std::string&                    func_name,
-		const std::vector<Box<vm::IVMValue>>& owned_args,
-		const compiler::tsh::SymbolType<>     return_type
+		query::Context&                   ctx,
+		CompTimeDVM&                      comptime_dvm,
+		const std::string&                func_name,
+		const VmArguments&                vm_value_args,
+		const compiler::tsh::SymbolType<> return_type
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
 
-		vm::FunctionRunArguments args
-			= owned_args | std::views::transform([](auto& value) { return value.refMut(); })
-		    | std::ranges::to<vm::FunctionRunArguments>();
+		auto to_ref = [&](auto& value) {
+			variant_match(value) {
+				variant_case(Box<vm::IVMValue>, val) { return val.refMut(); }
+				variant_case(Ref<vm::IVMValue>, val) { return val; }
+			}
+			CORE_UNREACHABLE();
+		};
+
+		vm::FunctionRunArguments args = vm_value_args | std::views::transform(to_ref)
+		                              | std::ranges::to<vm::FunctionRunArguments>();
 
 		auto maybe_exit_value = vm::api::runFunctionAwait(pid, func_name, args);
 
@@ -525,7 +508,9 @@ namespace {
 			));
 
 		// Free the owned arguments.
-		for (const auto& arg: owned_args) arg->freeData();
+		for (auto& arg: vm_value_args) {
+			v_if_matches(arg, Box<vm::IVMValue>, val) { (*val)->freeData(); }
+		}
 
 		variant_match(maybe_exit_value.value()) {
 			variant_case(std::vector<Ref<vm::IVMValue>>, values) {
@@ -572,9 +557,9 @@ namespace compiler::helios {
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)
 			return std::unexpected(res.error());
 
-		auto owned_args = prepareArguments(ctx, comptime_dvm, args);
-		if (!owned_args) return std::unexpected(owned_args.error());
+		auto vm_value_args = prepareArguments(ctx, comptime_dvm, args);
+		if (!vm_value_args) return std::unexpected(vm_value_args.error());
 
-		return runAndGetResult(ctx, comptime_dvm, func_name, *owned_args, return_type);
+		return runAndGetResult(ctx, comptime_dvm, func_name, *vm_value_args, return_type);
 	}
 }

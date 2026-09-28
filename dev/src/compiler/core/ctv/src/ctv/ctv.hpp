@@ -8,6 +8,8 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/core/vmvalue/ivmvalue_fd.hpp>
+
 #include <string>
 
 namespace compiler::ctv {
@@ -59,7 +61,8 @@ namespace compiler::ctv {
 			StringClassValue,
 			UnitCTV,
 			TupleCTV,
-			tsh::SymbolType<>>;
+			tsh::SymbolType<>,
+			base::CRef<vm::IVMValue>>;
 		Storage value;
 
 	public:

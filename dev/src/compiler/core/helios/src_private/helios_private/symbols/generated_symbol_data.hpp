@@ -206,43 +206,25 @@ namespace compiler::helios::defgen {
 	/**
 	 * Represents a compiler-generated function wrapper for REPL expressions,
 	 * instructions and global initializers. It's a synthetic function wrapper around them.
-	 *
-	 * @warning counter must never be reused with a different return_type and type.
-	 * The mangled name is based only on counter, so reusing counter with different return_type
-	 * will produce linker symbol collisions. The REPL code path (ReplSession::executeInput)
-	 * enforces this by incrementing m_line_counter per statement, but any manual wrapper
-	 * construction must preserve this rule.
 	 */
 	struct ReplInputWrapper final {
 		/**
 		 * @brief Which kind of REPL input the wrapper was generated for.
 		 */
-		enum class Type { Instruction, Expression, GlobalInitializer };
-		Type type;
+		struct Instruction {
+			pst::HashType stmt;
+		};
 
-		/**
-		 * @brief A unique counter to distinguish different REPL expression wrappers.
-		 */
-		u64 counter;
+		struct Expression {
+			SharedBox<code::Expr> expr;
+		};
 
-		/**
-		 * @brief Return type of the wrapper function.
-		 */
-		tsh::SymbolType<> return_type;
+		using ElementVariant = std::variant<Instruction, Expression>;
+		ElementVariant element;
 
-		/**
-		 * @brief Hash of the PST element (expression statement or instruction statement) that the
-		 * wrapper executes.
-		 */
-		pst::HashType pst_element_hash;
+		ReplInputWrapper(ElementVariant element):
 
-		ReplInputWrapper(
-			Type type, u64 counter, tsh::SymbolType<> return_type, pst::HashType pst_element_hash
-		):
-			  type(type),
-			  counter(counter),
-			  return_type(return_type),
-			  pst_element_hash(pst_element_hash) {}
+			  element(std::move(element)) {}
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
