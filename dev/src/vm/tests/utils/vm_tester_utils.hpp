@@ -211,8 +211,10 @@ protected:
 		return result.has_value() ? "<no error>" : vm::api::errorToString(result.error());
 	}
 
+	vm::PID initProcess() { return initProcess(process_config, {}); }
+
 	vm::PID initProcess(
-		const vm::api::ProcessConfig& config = {}, vm::api::ExecutionConfig execution_config = {}
+		const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config = {}
 	);
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 
@@ -338,4 +340,11 @@ protected:
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
+
+	/**
+	 * @brief ProcessConfig used by the no-arg `initProcess()` (and therefore by `spawnAndLoad`).
+	 * Suites may override it in their constructor; `VmApiTest` disables the JIT this way
+	 * (see #3612).
+	 */
+	vm::api::ProcessConfig process_config{};
 };

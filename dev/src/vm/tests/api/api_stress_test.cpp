@@ -39,6 +39,11 @@ class VmApiStressTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		// @TODO: #3612 JIT-compiled code does not observe stop/pause requests. Like `api_test`,
+		// this suite tests the API, not the JIT, so it spawns its processes with the JIT off
+		// (ignored in non-JIT builds).
+		process_config.enable_jit = false;
+
 		TESTER_ADD_TEST(stressTerminatingProgram);
 		TESTER_ADD_TEST(stressInfiniteProgram);
 		TESTER_ADD_TEST(stressConcurrentClients);

@@ -44,7 +44,83 @@
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
+#include <set>
+
 namespace compiler::helios {
+	namespace {
+		/**
+		 * @brief Whether every path through @p stmts ends in a `return`.
+		 * See EveryPathReturnsVisitor for what this does and does not recognise.
+		 */
+		template<class Stmts>
+		bool everyPathReturns(query::Context& ctx, const Stmts& stmts);
+
+		/**
+		 * @brief Whether every path through one statement ends in a `return`.
+		 *
+		 * This is conservative and purely structural. If there isn't an obvious return on every
+		 * path, it answers `false`. Proper reachability and dead code analysis live in MIR.
+		 */
+		class EveryPathReturnsVisitor final: public pst::PstVisitorEmpty {
+		public:
+			query::Context& ctx;
+
+			/**
+			 * @brief The answer for the visited statement. False until something proves otherwise.
+			 */
+			bool every_path_returns = false;
+
+			explicit EveryPathReturnsVisitor(query::Context& ctx): ctx(ctx) {}
+
+			void visitReturn(pst::Access<pst::Return>) final { every_path_returns = true; }
+
+			void visitIf(pst::Access<pst::If> stmt) final {
+				if (stmt->isConst()) {
+					// Only the taken branch is ever compiled, so only it has a say.
+					auto condition_holder = stmt->getCondition();
+					if (!condition_holder.has_value()) query::throwFailed();
+
+					const auto taken
+						= getBoolCTVFromPST(ctx, condition_holder.value().unlock(ctx)->getExpr())
+					          .valueOrThrow();
+
+					if (taken)
+						every_path_returns = everyPathReturns(ctx, stmt->getThenBody());
+					else if (stmt->getElseBody().has_value())
+						every_path_returns = everyPathReturns(ctx, stmt->getElseBody().value());
+
+					return;
+				}
+
+				// Without an `else` the condition may be false and the body skipped entirely, so
+				// there is always a path around this statement.
+				if (!stmt->getElseBody().has_value()) return;
+
+				every_path_returns = everyPathReturns(ctx, stmt->getThenBody())
+				                  && everyPathReturns(ctx, stmt->getElseBody().value());
+			}
+		};
+
+		template<class StmtsAggregate>
+		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+			// A statement that always returns ends the block, so whatever follows is ignored.
+			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts)) {
+				EveryPathReturnsVisitor visitor(ctx);
+				stmt.unlock(ctx)->acceptVisitor(visitor);
+				if (visitor.every_path_returns) return true;
+			}
+			return false;
+		}
+
+		/**
+		 * @brief Whether a deduction candidate is the uninhabited `void` type.
+		 */
+		bool isVoid(const tsh::SymbolType<>& type) {
+			return type.getType().getKind() == tsh::Kind::Void;
+		}
+	}
+
 	/**
 	 * @brief Query function return type, deduced based on return statements in its body.
 	 */
@@ -62,6 +138,12 @@ namespace compiler::helios {
 			bool initial_invocation;
 
 			std::set<tsh::SymbolType<>> out;
+
+			/**
+			 * @brief Whether every path through the function body ends in a `return`, i.e.
+			 * whether the body cannot fall off its end and return implicitly.
+			 */
+			bool body_always_returns = false;
 
 			ReturnTypeCollector(query::Context& ctx, SymID symbol, bool initial_invocation = false):
 				  ctx(ctx),
@@ -107,6 +189,9 @@ namespace compiler::helios {
 						                ->valueOrThrow()
 						                .ref();
 						output(expr->expression_type.getSymbolType());
+
+						// The body expression is the returned value, so there is no way around it.
+						body_always_returns = true;
 					} else {
 						CORE_PANIC(
 							"Function body in single-statement function must be an expression stmt"
@@ -117,6 +202,8 @@ namespace compiler::helios {
 						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
+
+					body_always_returns = everyPathReturns(ctx, fun_body);
 
 					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
 						stmt.unlock(ctx)->acceptVisitor(*this);
@@ -176,6 +263,20 @@ namespace compiler::helios {
 			ReturnTypeCollector return_collector(ctx, key, true);
 			auto                fun = stmt(ctx, key).value();
 			fun->acceptVisitor(return_collector);
+
+			// First, we check if the function never returns, i.e. it always returns `void`
+			// and there is no path to the end of the function's body.
+			// Note: returning `void` does not *actually* ever happen, because creating
+			// a `void` value is not possible. However, the typesystem handles it well.
+			const bool never_returns = !return_collector.out.empty()
+			                        && return_collector.body_always_returns
+			                        && std::ranges::all_of(return_collector.out, isVoid);
+
+			// If there exists a non-void return possibility, we ignore all void return types for
+			// return type deduction. In other words, `void` submits to all other types.
+			// Otherwise, only `void` return types exist, and we keep them for the deduction.
+			if (!never_returns) std::erase_if(return_collector.out, isVoid);
+
 			switch (return_collector.out.size()) {
 			case 0:
 				// there are no returns to deduce the type
@@ -186,7 +287,8 @@ namespace compiler::helios {
 					tsh::Mutability::Mutable,
 				};
 			case 1:
-				// deduced type is conclusive
+				// deduced type is conclusive (albeit there might still be a fallthrough to the
+				// end of the function, but it then does not contribute to return type deduction).
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive

@@ -288,8 +288,8 @@ private:
 		// Create two SourceFiles for the same fs::File but different modules
 		auto source_file1 = SourceFile::create(temp_file, dummy_module1->getModuleID());
 		auto source_file2 = SourceFile::create(temp_file, dummy_module2->getModuleID());
-		// Should both be returned by getSourceFilesFromFile
-		auto files_vec = SourceFile::getSourceFilesFromFile(temp_file);
+		// Should both be returned by getSourceFilesFromPath
+		auto files_vec = SourceFile::getSourceFilesFromPath(temp_file.getFilePath());
 		assertTrue(
 			std::ranges::find(files_vec, source_file1) != files_vec.end(),
 			"source_file1 should be found"
@@ -311,11 +311,11 @@ private:
 		module_builder->setMainSourceFile(main_file);
 		auto module = module_builder->finalize();
 
-		auto before = SourceFile::getSourceFilesFromFile(main_file);
+		auto before = SourceFile::getSourceFilesFromPath(main_file.getFilePath());
 		ASSERT_EQUAL(1, before.size());
 
 		ModuleTreeModifier::removeModuleRecursive(module);
-		auto after = SourceFile::getSourceFilesFromFile(main_file);
+		auto after = SourceFile::getSourceFilesFromPath(main_file.getFilePath());
 		ASSERT_TRUE(after.empty());
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);

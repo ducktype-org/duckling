@@ -1,27 +1,29 @@
 #pragma once
 
+#include "../lists/selector_list.hpp"
 #include "../meta.hpp"
-
-#include <frontend/pst_parser/elements/hierarchy/not_statements/dotted_name.hpp>
 
 namespace pst {
 	/**
-	 * @brief Using statement
+	 * @brief Using statement: `using` followed by a `SelectorList`, e.g. `using a.b.{c, d as e};`.
 	 */
 	class Using final: public Stmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Using, Stmt);
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD(names, DottedName);
+		NAMED_CHILD(selectors, SelectorList);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Using, ElementKind::Using);
 		static MBox<Using> parse(LangParserState& state);
 
+		/**
+		 * @brief The selectors after the `using` keyword.
+		 */
 		[[nodiscard]]
-		auto getPointed() const {
-			return names.give();
+		AccessLocked<SelectorList> getSelectors() const {
+			return selectors.give();
 		}
 
 		~Using() final = default;
@@ -35,6 +37,10 @@ namespace pst {
 			return "Using";
 		}
 
+		/**
+		 * @brief `Symbol` when the whole list binds exactly one name (`using a.b;`,
+		 * `using a.b as c;`), `Transparent` otherwise.
+		 */
 		[[nodiscard]]
 		DeclKind isDeclaration() const final;
 

@@ -1,10 +1,10 @@
 #include "file.hpp"
 
-#include <filesystem_private/vfs.hpp>
-
 #include <base/except/exceptions.hpp>
 #include <base/misc/shared_view.hpp>
 #include <base/pointers/ref.hpp>
+
+#include <filesystem/vfs.hpp>
 
 #include <algorithm>
 #include <filesystem>
@@ -12,7 +12,10 @@
 #include <random>
 
 namespace {
-	Ref<fs::VFS> vfs = fs::VFS::getInstance();
+	/**
+	 * @brief Returns the VFS a virtual path resolves against.
+	 */
+	Ref<fs::VFS> vfsOf(const fs::FilePath& path) { return path.getVfs().value(); }
 
 	// Validation functions
 	void requireDirectory(const fs::File& directory) {
@@ -74,7 +77,7 @@ namespace {
 		} else {
 			auto candidate = dir_path / custom_name;
 
-			if ((type == fs::FileType::Virtual && vfs->exists(candidate.getPath()))
+			if ((type == fs::FileType::Virtual && vfsOf(candidate)->exists(candidate.getPath()))
 			    || (type != fs::FileType::Virtual && exists(candidate.getPath())))
 				CORE_PANIC(base::strConcat(
 					"Cannot create a file/dir with name \"",
@@ -98,8 +101,9 @@ namespace fs {
 			);
 
 		if (path.isVirtual()) {
-			this->type     = FileType::Virtual;
-			this->category = vfs->isDirectory(path) ? FileCategory::Directory : FileCategory::File;
+			this->type = FileType::Virtual;
+			this->category
+				= vfsOf(path)->isDirectory(path) ? FileCategory::Directory : FileCategory::File;
 		} else {
 			this->path     = path.canonical();
 			this->type     = path.isTemporary() ? FileType::Temporary : FileType::Physical;
@@ -144,6 +148,8 @@ namespace fs {
 	) {
 		requireVirtualPath(path);
 
+		auto vfs = vfsOf(path);
+
 		if (vfs->exists(path.getPath())) {
 			if (!allow_overwrite) CORE_PANIC("Virtual file already exists: " + path.string());
 			if (!vfs->isFile(path.getPath()))
@@ -157,6 +163,8 @@ namespace fs {
 
 	File FileManager::createVirtualFolder(const FilePath& path, bool allow_overwrite) {
 		requireVirtualPath(path);
+
+		auto vfs = vfsOf(path);
 
 		if (vfs->exists(path.getPath())) {
 			if (!allow_overwrite) CORE_PANIC("Virtual folder already exists: " + path.string());
@@ -201,20 +209,20 @@ namespace fs {
 		return rand_path;
 	}
 
-	File FileManager::createRandomVirtualDirectory() {
-		FilePath root      = vfs->getRootPath();
+	File FileManager::createRandomVirtualDirectory(base::Ref<VFS> vfs) {
+		FilePath root(vfs->getRootPath(), vfs);
 		auto     rand_path = randomName(root);
 		vfs->createDirectory(rand_path.getPath());
 		return rand_path;
 	}
 
 	File FileManager::createRandomVirtualFile(
-		std::string_view content, base::Optional<std::string_view> suffix
+		std::string_view content, base::Optional<std::string_view> suffix, base::Ref<VFS> vfs
 	) {
-		FilePath root      = vfs->getRootPath();
+		FilePath root(vfs->getRootPath(), vfs);
 		auto     rand_path = randomName(root);
 		if (suffix.has_value())
-			rand_path = FilePath(base::strConcat(rand_path.string(), suffix.value()));
+			rand_path = FilePath(base::strConcat(rand_path.string(), suffix.value()), vfs);
 		return createVirtualFile(rand_path, content);
 	}
 
@@ -225,12 +233,13 @@ namespace fs {
 	}
 
 	bool FileManager::deleteFile(const File& file) {
-		if (file.type == FileType::Virtual) return vfs->deleteFile(file.path);
+		if (file.type == FileType::Virtual) return vfsOf(file.path)->deleteFile(file.path);
 		return std::filesystem::remove(file.path);
 	}
 
 	bool FileManager::deleteFolder(const File& folder, bool force) {
-		if (folder.type == FileType::Virtual) return vfs->deleteDirectory(folder.path, force);
+		if (folder.type == FileType::Virtual)
+			return vfsOf(folder.path)->deleteDirectory(folder.path, force);
 		if (force) {
 			std::error_code ec;
 			std::filesystem::remove_all(folder.path, ec);
@@ -244,7 +253,7 @@ namespace fs {
 
 	base::SharedView File::getContent() const {
 		if (type == FileType::Virtual) {
-			auto content = vfs->readFile(path);
+			auto content = vfsOf(path)->readFile(path);
 
 			auto r_array = new byte[content.size()];
 			std::ranges::copy(content, reinterpret_cast<char*>(r_array));
@@ -296,8 +305,9 @@ namespace fs {
 		requireFile(*this);
 
 		if (type == FileType::Virtual) {
-			if (!vfs->exists(path)) CORE_PANIC("Virtual file does not exist: " + path.string());
-			vfs->writeFile(path, new_content, append);
+			if (!vfsOf(path)->exists(path))
+				CORE_PANIC("Virtual file does not exist: " + path.string());
+			vfsOf(path)->writeFile(path, new_content, append);
 		} else {
 			// Physical or Temporary file
 			std::ios::openmode mode = append ? (std::ios::out | std::ios::app) : std::ios::out;
@@ -356,7 +366,7 @@ namespace fs {
 
 		if (type == FileType::Virtual) {
 			// Virtual filesystem
-			auto entries = vfs->listDirectory(path);
+			auto entries = vfsOf(path)->listDirectory(path);
 			for (const auto& entry: entries) result.emplace_back(path / entry);
 		} else {
 			// Physical or Temporary filesystem
@@ -366,6 +376,4 @@ namespace fs {
 
 		return result;
 	}
-
-	File FileManager::getVirtualRootDirectory() { return { vfs->getRootPath() }; }
 }

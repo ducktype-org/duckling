@@ -131,6 +131,7 @@ namespace vm {
 
 			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> allData() const {
 				std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> data;
+				data.reserve(size());
 				for (usize id = 0; id < size(); id++) {
 					ObjID tid = ObjID(id);
 					data.emplace_back(at(tid), tid, *nameOf(tid));

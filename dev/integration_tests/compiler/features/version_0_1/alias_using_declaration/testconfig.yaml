@@ -1,9 +1,9 @@
 # Test configuration for alias-using-declaration
-# Tests alias (symbol aliases) and using (namespace imports)
+# Tests `using ... as` (symbol aliases) and using (namespace imports)
 
 Tests:
   alias_test:
-    Description: Tests for alias declarations on functions and variables.
+    Description: Tests for `using ... as` aliases on functions and variables.
     Cases:
       all:
         Output:
