@@ -587,12 +587,9 @@ namespace vm {
 				if_opt_some(
 					compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_pos), high_pos
 				) {
-					auto func_opt
-						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
-					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
-					auto func_ref    = *func_opt;
-					auto stack_state = func_ref->get()->stack_states.at(high_pos.instruction_index);
-					auto& ls_db      = func_ref->get()->local_stack;
+					auto& func_ref    = low_pos.function->high_func;
+					auto  stack_state = func_ref->stack_states.at(high_pos.instruction_index);
+					auto& ls_db       = func_ref->local_stack;
 
 					using namespace std::views;
 					for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
