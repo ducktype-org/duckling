@@ -24,8 +24,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testValueExpressionWrapsIntoReturnStmt);
 		TESTER_ADD_TEST(testWrapperMetadataMatchesGeneratedSymbolData);
-		TESTER_ADD_TEST(testCounterControlsExpressionWrapperMangling);
-		TESTER_ADD_TEST(testSameCounterDifferentTypeCausesManglingCollision);
 	}
 
 private:
@@ -50,9 +48,9 @@ private:
 	}
 
 	static CRef<query::QResult<helios::HOUTFunction>> expressionWrapper(
-		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt, u64 counter
+		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt
 	) {
-		auto symbol = repl::queryReplExpressionWrapperSymbol(ctx, expr_stmt, counter);
+		auto symbol = repl::queryReplExpressionWrapperSymbol(ctx, expr_stmt);
 		CORE_ASSERT(!symbol.hasFailed(), "Expected the expression wrapper symbol to be created");
 		return ctx.query<helios::QueryCodeOfFun>(symbol.valueOrPanic());
 	}
@@ -61,7 +59,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto expr_stmt = extractSingleExpression(ctx, "1 + 2;");
 
-			auto wrapper_result = expressionWrapper(ctx, expr_stmt, 7);
+			auto wrapper_result = expressionWrapper(ctx, expr_stmt);
 			ASSERT_HAS_VALUE(*wrapper_result);
 			auto& wrapper = wrapper_result->valueOrPanic();
 
@@ -80,7 +78,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto expr_stmt = extractSingleExpression(ctx, "40 + 2;");
 
-			auto wrapper_result = expressionWrapper(ctx, expr_stmt, 13);
+			auto wrapper_result = expressionWrapper(ctx, expr_stmt);
 			ASSERT_HAS_VALUE(*wrapper_result);
 			auto& wrapper = wrapper_result->valueOrPanic();
 
@@ -88,87 +86,14 @@ private:
 
 			auto repl_data = std::get_if<helios::defgen::ReplInputWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
-			ASSERT_EQUAL(repl_data->counter, 13u);
-			ASSERT_EQUAL(repl_data->return_type, wrapper.declaration->return_type);
 			assertTrue(
-				repl_data->type == helios::defgen::ReplInputWrapper::Type::Expression,
+				std::holds_alternative<helios::defgen::ReplInputWrapper::Expression>(
+					repl_data->element
+				),
 				"Expected an expression wrapper"
 			);
 			ASSERT_EQUAL(
 				helios::kind(wrapper.declaration->original_symbol), helios::SymbolKind::Function
-			);
-		});
-	}
-
-	void testCounterControlsExpressionWrapperMangling() {
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto expr_stmt = extractSingleExpression(ctx, "1 + 2;");
-
-			auto wrapper_result_a = expressionWrapper(ctx, expr_stmt, 101);
-			auto wrapper_result_b = expressionWrapper(ctx, expr_stmt, 102);
-			ASSERT_HAS_VALUE(*wrapper_result_a);
-			ASSERT_HAS_VALUE(*wrapper_result_b);
-			auto& wrapper_a = wrapper_result_a->valueOrPanic();
-			auto& wrapper_b = wrapper_result_b->valueOrPanic();
-
-			auto mangled_a
-				= helios::mangler::getSimpleMangledName(ctx, wrapper_a.declaration->original_symbol)
-			          .strView();
-			auto mangled_b
-				= helios::mangler::getSimpleMangledName(ctx, wrapper_b.declaration->original_symbol)
-			          .strView();
-
-			assertTrue(mangled_a != mangled_b, "Different counters should produce different names");
-			assertTrue(
-				std::string(mangled_a).find("__repl_input_wrapper_101") != std::string::npos,
-				"First mangled name should include its counter"
-			);
-			assertTrue(
-				std::string(mangled_b).find("__repl_input_wrapper_102") != std::string::npos,
-				"Second mangled name should include its counter"
-			);
-		});
-	}
-
-	void testSameCounterDifferentTypeCausesManglingCollision() {
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto expr_i32 = extractSingleExpression(ctx, "42;");
-			auto expr_f64 = extractSingleExpression(ctx, "3.14;");
-
-			auto wrapper_result_i32 = expressionWrapper(ctx, expr_i32, 999);
-			auto wrapper_result_f64 = expressionWrapper(ctx, expr_f64, 999);
-			ASSERT_HAS_VALUE(*wrapper_result_i32);
-			ASSERT_HAS_VALUE(*wrapper_result_f64);
-			auto& wrapper_i32 = wrapper_result_i32->valueOrPanic();
-			auto& wrapper_f64 = wrapper_result_f64->valueOrPanic();
-
-			auto sym_i32 = helios::getSymRef(wrapper_i32.declaration->original_symbol);
-			auto sym_f64 = helios::getSymRef(wrapper_f64.declaration->original_symbol);
-
-			auto repl_i32 = std::get_if<helios::defgen::ReplInputWrapper>(&sym_i32->other);
-			auto repl_f64 = std::get_if<helios::defgen::ReplInputWrapper>(&sym_f64->other);
-
-			assertTrue(repl_i32 != nullptr && repl_f64 != nullptr, "Expected ReplInputWrapper");
-
-			// They have different hashes (good)
-			assertTrue(
-				repl_i32->queryUnstablePerfectHash() != repl_f64->queryUnstablePerfectHash(),
-				"Different return types should produce different hashes"
-			);
-			// BUT: Their mangled names collide
-			auto mangled_i32 = helios::mangler::getSimpleMangledName(
-								   ctx, wrapper_i32.declaration->original_symbol
-			)
-			                       .strView();
-			auto mangled_f64 = helios::mangler::getSimpleMangledName(
-								   ctx, wrapper_f64.declaration->original_symbol
-			)
-			                       .strView();
-
-			assertEqual(
-				std::string(mangled_i32),
-				std::string(mangled_f64),
-				"COLLISION: Same counter produces same mangled name despite different return types"
 			);
 		});
 	}

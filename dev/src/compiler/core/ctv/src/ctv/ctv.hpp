@@ -30,6 +30,15 @@ namespace compiler::ctv {
 			base::StrID value;
 		};
 
+		/**
+		 * @brief A value living in the compile-time DVM process, together with its compiler type.
+		 * @note Valid only as long as the compile-time DVM process that owns the value lives.
+		 */
+		struct VMValue {
+			base::CRef<vm::IVMValue> val;
+			tsh::SymbolType<>        type;
+		};
+
 		struct TupleCTV {
 			explicit TupleCTV(std::vector<CompileTimeValue> elements):
 				  elements(std::move(elements)) {
@@ -62,7 +71,7 @@ namespace compiler::ctv {
 			UnitCTV,
 			TupleCTV,
 			tsh::SymbolType<>,
-			base::CRef<vm::IVMValue>>;
+			VMValue>;
 		Storage value;
 
 	public:
@@ -120,8 +129,9 @@ namespace compiler::ctv {
 		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
 
 		/**
-		 * @note: This might be a subject of change in the future, especially, when VMValue CTVs
-		 * will be introduced.
+		 * @brief Computes a hash identifying the stored value within a single compilation.
+		 * @note VMValue CTVs are hashed by their type and raw bytes, pointers inside are hashed as
+		 * they are, without following them.
 		 */
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

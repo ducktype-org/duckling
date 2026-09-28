@@ -1,6 +1,6 @@
 #pragma once
 
 namespace vm {
-    class IVMValueRef;
-    class IVMValue;
+	class IVMValueRef;
+	class IVMValue;
 }

@@ -16,7 +16,6 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 
-#include "vm/core/vmvalue/ivmvalueref.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -307,7 +306,9 @@ namespace {
 					compiler::tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
 				);
 			}
-			variant_case(CRef<vm::IVMValue>, vm_value) { return Ref<vm::IVMValue>(vm_value); }
+			variant_case(CompileTimeValue::VMValue, vm_value) {
+				return Ref<vm::IVMValue>(const_cast<vm::IVMValue*>(vm_value.val.get()));
+			}
 			variant_default {
 				throw base::NotYetImplemented(
 					"Conversion from ctv to VMValue for this type is not implemented yet: "
@@ -414,7 +415,7 @@ namespace {
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
 				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
 					base::StrID(charBackedVMValueToCtv(vm_value)) } };
-			return CompileTimeValue{ CRef<vm::IVMValue>(vm_value) };
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
 		}
 		case compiler::tsh::Kind::Class: {
 			if (tsh::isStringTypePresent(ctx)) {
@@ -424,10 +425,10 @@ namespace {
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{
 						base::StrID(charBackedVMValueToCtv(vm_value)) } };
 			}
-			return CompileTimeValue{ CRef<vm::IVMValue>(vm_value) };
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
 		}
 		default: {
-			return CompileTimeValue{ CRef<vm::IVMValue>(vm_value) };
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
 		}
 		}
 	}

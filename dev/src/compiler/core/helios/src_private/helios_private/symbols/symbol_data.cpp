@@ -62,8 +62,14 @@ namespace compiler::helios {
 
 		base::Bit256 ReplInputWrapper::queryUnstablePerfectHash() const {
 			variant_match(element) {
-				variant_case(Instruction, instr) { return instr.stmt; }
-				variant_case(Expression, expr) { return expr.expr->getID().asInt(); }
+				variant_case(Instruction, instr) {
+					return hashing::justHash<hashing::SHA256>(element.index(), instr.stmt);
+				}
+				variant_case(Expression, expr) {
+					return hashing::justHash<hashing::SHA256>(
+						element.index(), expr.expr->getID().asInt()
+					);
+				}
 			}
 			CORE_UNREACHABLE();
 		}

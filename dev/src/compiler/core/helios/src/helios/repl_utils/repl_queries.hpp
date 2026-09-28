@@ -16,21 +16,20 @@ namespace compiler::helios::defgen {
 
 namespace compiler::repl {
 	/**
-	 * @brief Build the HOUT function wrapping a single REPL/script input statement.
+	 * @brief Build the HOUT function wrapping a single REPL/script input or a HOUT expression.
 	 *
-	 * The wrapped PST element is recovered from `input.pst_element_hash`, and `input.type` decides
-	 * how it is turned into the function body:
-	 * - `Expression`: a single return statement of the expression (an expression statement, if the
-	 *   expression is of type void),
-	 * - `Instruction`: the statement compiled into a unit-returning body.
-	 * - `GlobalInitializer`: the constructor expression of the declared global variable, in a
+	 * `input.element` decides how the function body is built:
+	 * - `Expression`: a single return statement of the stored HOUT expression, moved from if its
+	 *   value category allows it,
+	 * - `Instruction`: the PST statement recovered from its stable hash, compiled into a
 	 *   unit-returning body.
 	 *
+	 * @param sym The symbol of the wrapper function, whose declaration is used for the result.
 	 * @note This is the implementation of QueryCodeOfFun for `ReplInputWrapper` symbols, it is not
 	 * meant to be called directly.
 	 */
 	helios::HOUTFunction getReplInputFunction(
-		query::Context& ctx, const helios::defgen::ReplInputWrapper& input
+		query::Context& ctx, helios::SymID sym, const helios::defgen::ReplInputWrapper& input
 	);
 
 
@@ -45,7 +44,7 @@ namespace compiler::repl {
 	 * @brief Get the symbol standing for the wrapper function of the instruction.
 	 */
 	helios::SymID queryReplInstructionWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt
 	);
 
 	/**
@@ -68,7 +67,12 @@ namespace compiler::repl {
 	 */
 	helios::SymID queryReplEmptyVariableSymbol(query::Context& ctx, helios::SymID variable_symbol);
 
-	// @TODO docs
+	/**
+	 * @brief Get the symbol standing for a function wrapper that returns the given HOUT
+	 * expression.
+	 * @param sym_name Name of the generated symbol.
+	 * @param expr The expression to be returned by the wrapper, the wrapper takes its ownership.
+	 */
 	helios::SymID queryHoutExpressionWrapperSymbol(
 		query::Context& ctx, base::StrID sym_name, Box<helios::code::Expr> expr
 	);

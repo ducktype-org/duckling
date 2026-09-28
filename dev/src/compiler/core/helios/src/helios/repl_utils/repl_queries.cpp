@@ -59,7 +59,7 @@ namespace compiler::repl {
 					hout_expr = makeBox<helios::code::MoveExpr>(hout_expr->clone());
 
 				code_block->statements.emplace_back(base::makeBox<helios::code::ReturnStmt>(
-					helios::code::generatedOrigin(), std::move(expr)
+					helios::code::generatedOrigin(), std::move(hout_expr)
 				));
 			}
 		}
@@ -117,7 +117,7 @@ namespace compiler::repl {
 		);
 
 		auto expr = helios::getGlobalConstructorExpr(ctx, &global_data);
-		
+
 		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
 			.name                  = base::StrID("__repl_input_wrapper__"),
 			.generated_symbol_data = helios::defgen::ReplInputWrapper(

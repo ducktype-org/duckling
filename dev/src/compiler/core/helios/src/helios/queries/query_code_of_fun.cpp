@@ -303,7 +303,7 @@ namespace compiler::helios {
 					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
 				}
 				variant_case(defgen::ReplInputWrapper, input) {
-					return repl::getReplInputFunction(ctx, input);
+					return repl::getReplInputFunction(ctx, key, input);
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

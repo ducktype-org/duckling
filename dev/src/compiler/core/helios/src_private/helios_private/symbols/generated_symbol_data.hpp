@@ -209,12 +209,15 @@ namespace compiler::helios::defgen {
 	 */
 	struct ReplInputWrapper final {
 		/**
-		 * @brief Which kind of REPL input the wrapper was generated for.
+		 * @brief A PST statement, compiled into a unit-returning body.
 		 */
 		struct Instruction {
 			pst::HashType stmt;
 		};
 
+		/**
+		 * @brief A HOUT expression, returned from the wrapper.
+		 */
 		struct Expression {
 			SharedBox<code::Expr> expr;
 		};
@@ -222,9 +225,7 @@ namespace compiler::helios::defgen {
 		using ElementVariant = std::variant<Instruction, Expression>;
 		ElementVariant element;
 
-		ReplInputWrapper(ElementVariant element):
-
-			  element(std::move(element)) {}
+		ReplInputWrapper(ElementVariant element): element(std::move(element)) {}
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

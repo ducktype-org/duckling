@@ -206,7 +206,9 @@ namespace base {
 
 		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete,clang-analyzer-cplusplus.NewDeleteLeaks)
 		/**
-		 * @brief Takes over the ownership of a non-null `Box`, together with its deleter.
+		 * @brief Takes over the ownership of a non-null `Box` with the default deleter.
+		 * @note A `Box` with a custom deleter is accepted only through its conversion to
+		 * `Box<T>`, so the custom deleter is not preserved.
 		 * @note Do not try multiple inheritance with this SharedBox, it doesn't work there.
 		 */
 		SharedBox(Box<T>&& other) noexcept:

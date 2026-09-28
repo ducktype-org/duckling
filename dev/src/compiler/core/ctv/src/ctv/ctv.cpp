@@ -3,13 +3,69 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/tsh/queries/types.hpp>
 
+#include <base/str/str_utils.hpp>
+
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <query_framework/context/context.hpp>
 #include <string_id/string_id.hpp>
 
+#include <vm/core/vmvalue/ivmvalue.hpp>
+
+#include <span>
 #include <sstream>
 #include <string>
+
+namespace {
+	namespace idv = vm::interpreted_data_variant;
+
+	/**
+	 * @brief Builds a short, human-readable representation of the VM value.
+	 */
+	std::string vmValueToString(const vm::IVMValue& value, const std::string& type_name) {
+		auto data = value.readData();
+		if (data.empty()) return base::strConcat("<", type_name, ">");
+
+		variant_match(data.value()) {
+			variant_case(idv::Primitive, primitive) { return std::to_string(primitive.value); }
+			variant_case(idv::Data, data_value) {
+				std::vector<std::string_view> names(data_value.fields.size());
+				for (const auto& [name, index]: data_value.field_name_map)
+					names.at(index) = name.strView();
+
+				std::stringstream ss;
+				ss << type_name << "{";
+				for (usize i = 0; i < data_value.fields.size(); i++) {
+					if (i > 0) ss << ", ";
+					ss << names.at(i) << ": " << data_value.fields.at(i).value->str();
+				}
+				ss << "}";
+				return ss.str();
+			}
+			variant_case(idv::Variant, variant) {
+				return base::strConcat(
+					type_name, "#", variant.type_tag, "(", variant.referenced->str(), ")"
+				);
+			}
+			variant_case(idv::Table, table) {
+				std::stringstream ss;
+				ss << "[";
+				for (usize i = 0; i < table.size; i++) {
+					if (i > 0) ss << ", ";
+					ss << table.get(i)->str();
+				}
+				ss << "]";
+				return ss.str();
+			}
+			variant_case(idv::Pointer, pointer) {
+				return pointer.referenced.has_value() ? "<pointer>" : "null";
+			}
+			variant_case_novalue(idv::Function) { return "<function>"; }
+			variant_case_novalue(idv::Opaque) { return base::strConcat("<", type_name, ">"); }
+		}
+		CORE_UNREACHABLE();
+	}
+}
 
 namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
@@ -38,6 +94,16 @@ namespace compiler::ctv {
 			variant_case(tsh::SymbolType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
+			variant_case(VMValue, vm_value) {
+				hashing::addToHash(hasher, vm_value.type.queryUnstablePerfectHash());
+				hashing::addToHash(
+					hasher,
+					std::span<const byte>(
+						vm_value.val->getBytes(),
+						static_cast<usize>(vm_value.val->getDataSize().asInt())
+					)
+				);
+			}
 			variant_default { CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash"); }
 		}
 
@@ -65,6 +131,9 @@ namespace compiler::ctv {
 				return ss.str();
 			}
 			variant_case(tsh::SymbolType<>, val) { return val.toString(); }
+			variant_case(VMValue, vm_value) {
+				return vmValueToString(*vm_value.val, vm_value.type.toString());
+			}
 			variant_default {
 				throw base::NotYetImplemented("Converting other CTV types to string");
 			}
@@ -134,6 +203,7 @@ namespace compiler::ctv {
 					tsh::Mutability::Mutable,
 				};
 			}
+			variant_case(VMValue, vm_value) { return vm_value.type; }
 		}
 		CORE_UNREACHABLE();
 	}

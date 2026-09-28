@@ -24,7 +24,6 @@ class HeliosReplInstructionWrapperTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testWrapperShapeForWhileInstruction);
-		TESTER_ADD_TEST(testCounterAffectsMangledName);
 		TESTER_ADD_TEST(testWrapperReturnTypeAndSymbolMetadata);
 		TESTER_ADD_TEST(testWrapperAppendsVoidReturnForIfInstruction);
 		TESTER_ADD_TEST(testSameKeyProducesStableWrapper);
@@ -57,10 +56,10 @@ private:
 	}
 
 	static CRef<query::QResult<helios::HOUTFunction>> instructionWrapper(
-		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt
 	) {
 		return ctx.query<helios::QueryCodeOfFun>(
-			repl::queryReplInstructionWrapperSymbol(ctx, stmt, counter)
+			repl::queryReplInstructionWrapperSymbol(ctx, stmt)
 		);
 	}
 
@@ -68,7 +67,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "while (1 == 1) {}");
 
-			auto wrapper_result = instructionWrapper(ctx, stmt, 17);
+			auto wrapper_result = instructionWrapper(ctx, stmt);
 			ASSERT_HAS_VALUE(*wrapper_result);
 			auto& wrapper = wrapper_result->valueOrPanic();
 
@@ -88,40 +87,8 @@ private:
 				= helios::mangler::getSimpleMangledName(ctx, wrapper.declaration->original_symbol);
 			auto mangled_str = std::string(mangled.strView());
 			assertTrue(
-				mangled_str.find("__repl_input_wrapper_17") != std::string::npos,
-				"Mangled name should include instruction-wrapper counter"
-			);
-		});
-	}
-
-	void testCounterAffectsMangledName() {
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
-
-			auto wrapper_result_a = instructionWrapper(ctx, stmt, 21);
-			auto wrapper_result_b = instructionWrapper(ctx, stmt, 22);
-			ASSERT_HAS_VALUE(*wrapper_result_a);
-			ASSERT_HAS_VALUE(*wrapper_result_b);
-			auto& wrapper_a = wrapper_result_a->valueOrPanic();
-			auto& wrapper_b = wrapper_result_b->valueOrPanic();
-
-			auto mangled_a
-				= helios::mangler::getSimpleMangledName(ctx, wrapper_a.declaration->original_symbol)
-			          .strView();
-			auto mangled_b
-				= helios::mangler::getSimpleMangledName(ctx, wrapper_b.declaration->original_symbol)
-			          .strView();
-
-			assertTrue(
-				mangled_a != mangled_b, "Different counters should produce different symbols"
-			);
-			assertTrue(
-				std::string(mangled_a).find("__repl_input_wrapper_21") != std::string::npos,
-				"First wrapper mangled name should include its counter"
-			);
-			assertTrue(
-				std::string(mangled_b).find("__repl_input_wrapper_22") != std::string::npos,
-				"Second wrapper mangled name should include its counter"
+				mangled_str.find("__repl_input_wrapper_") != std::string::npos,
+				"Mangled name should include the instruction-wrapper prefix"
 			);
 		});
 	}
@@ -130,7 +97,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "while (1 == 1) {}");
 
-			auto wrapper_result = instructionWrapper(ctx, stmt, 31);
+			auto wrapper_result = instructionWrapper(ctx, stmt);
 			ASSERT_HAS_VALUE(*wrapper_result);
 			auto& wrapper = wrapper_result->valueOrPanic();
 
@@ -147,9 +114,10 @@ private:
 
 			auto repl_data = std::get_if<helios::defgen::ReplInputWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
-			ASSERT_EQUAL(repl_data->counter, 31u);
 			assertTrue(
-				repl_data->type == helios::defgen::ReplInputWrapper::Type::Instruction,
+				std::holds_alternative<helios::defgen::ReplInputWrapper::Instruction>(
+					repl_data->element
+				),
 				"Expected an instruction wrapper"
 			);
 		});
@@ -159,7 +127,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper_result = instructionWrapper(ctx, stmt, 41);
+			auto wrapper_result = instructionWrapper(ctx, stmt);
 			ASSERT_HAS_VALUE(*wrapper_result);
 			auto& wrapper = wrapper_result->valueOrPanic();
 
@@ -177,8 +145,8 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper_result_a = instructionWrapper(ctx, stmt, 55);
-			auto wrapper_result_b = instructionWrapper(ctx, stmt, 55);
+			auto wrapper_result_a = instructionWrapper(ctx, stmt);
+			auto wrapper_result_b = instructionWrapper(ctx, stmt);
 			ASSERT_HAS_VALUE(*wrapper_result_a);
 			ASSERT_HAS_VALUE(*wrapper_result_b);
 			auto& wrapper_a = wrapper_result_a->valueOrPanic();

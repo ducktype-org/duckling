@@ -658,7 +658,8 @@ namespace compiler::helios::mangler {
 					}
 					variant_case(defgen::ReplInputWrapper, repl_wrapper) {
 						return base::strConcat(
-							"__repl_input_wrapper_",
+							compiler::helios::name(symbol_id),
+							"_",
 							repl_wrapper.queryUnstablePerfectHash().toStringHex()
 						);
 					}
