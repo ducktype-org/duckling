@@ -12,58 +12,22 @@
 
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
+#include <iomanip>
 #include <span>
 #include <sstream>
 #include <string>
 
 namespace {
-	namespace idv = vm::interpreted_data_variant;
-
 	/**
-	 * @brief Builds a short, human-readable representation of the VM value.
+	 * @brief Builds a representation of the VM value as its type name and raw bytes in hex.
 	 */
 	std::string vmValueToString(const vm::IVMValue& value, const std::string& type_name) {
-		auto data = value.readData();
-		if (data.empty()) return base::strConcat("<", type_name, ">");
-
-		variant_match(data.value()) {
-			variant_case(idv::Primitive, primitive) { return std::to_string(primitive.value); }
-			variant_case(idv::Data, data_value) {
-				std::vector<std::string_view> names(data_value.fields.size());
-				for (const auto& [name, index]: data_value.field_name_map)
-					names.at(index) = name.strView();
-
-				std::stringstream ss;
-				ss << type_name << "{";
-				for (usize i = 0; i < data_value.fields.size(); i++) {
-					if (i > 0) ss << ", ";
-					ss << names.at(i) << ": " << data_value.fields.at(i).value->str();
-				}
-				ss << "}";
-				return ss.str();
-			}
-			variant_case(idv::Variant, variant) {
-				return base::strConcat(
-					type_name, "#", variant.type_tag, "(", variant.referenced->str(), ")"
-				);
-			}
-			variant_case(idv::Table, table) {
-				std::stringstream ss;
-				ss << "[";
-				for (usize i = 0; i < table.size; i++) {
-					if (i > 0) ss << ", ";
-					ss << table.get(i)->str();
-				}
-				ss << "]";
-				return ss.str();
-			}
-			variant_case(idv::Pointer, pointer) {
-				return pointer.referenced.has_value() ? "<pointer>" : "null";
-			}
-			variant_case_novalue(idv::Function) { return "<function>"; }
-			variant_case_novalue(idv::Opaque) { return base::strConcat("<", type_name, ">"); }
-		}
-		CORE_UNREACHABLE();
+		std::stringstream ss;
+		ss << type_name << "{0x" << std::hex << std::setfill('0');
+		for (usize i = 0; i < static_cast<usize>(value.getDataSize().asInt()); i++)
+			ss << std::setw(2) << static_cast<int>(value.getBytes()[i]);
+		ss << "}";
+		return ss.str();
 	}
 }
 
