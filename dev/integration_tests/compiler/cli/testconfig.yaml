@@ -73,6 +73,24 @@ Tests:
           && @{to_dot} @{graph_dir}/query_graph_post_opt.json --no-inputs
           && grep -q 'CompileModule' @{graph_dir}/query_graph_post_opt.dot"
         ExitCode: 0
+      rename-pass:
+        # Inputs get readable names and unstable query names are hidden.
+        Run: "@{dump_cmd} --graph-output @{graph_dir} --rename-pass
+          && grep -q '\"Source Code Input\"' @{graph_dir}/query_graph_pre_opt.json
+          && grep -q '\"Module Structure Input\"' @{graph_dir}/query_graph_pre_opt.json
+          && grep -q '\"Unstable Node\"' @{graph_dir}/query_graph_pre_opt.json
+          && ! grep -q 'PSTAccessSideInput' @{graph_dir}/query_graph_pre_opt.json
+          && ! grep -q 'QueryModuleSideInput' @{graph_dir}/query_graph_post_opt.json"
+        ExitCode: 0
+      simplify-pass:
+        # Submodule nodes are gone, source code inputs used by one node are merged, and the
+        # rename pass runs too. The helper script still reads the result.
+        Run: "@{dump_cmd} --graph-output @{graph_dir} --simplify-pass
+          && ! grep -q 'QuerySubmodule' @{graph_dir}/query_graph_pre_opt.json
+          && grep -q 'Source Code Input times ' @{graph_dir}/query_graph_post_opt.json
+          && grep -q '\"Unstable Node\"' @{graph_dir}/query_graph_pre_opt.json
+          && @{to_dot} @{graph_dir}/query_graph_post_opt.json"
+        ExitCode: 0
       no-incremental-is-rejected:
         # Without incremental compilation there is no query graph to dump.
         Run: "@{dump_cmd} --graph-output @{graph_dir} --no-incremental"

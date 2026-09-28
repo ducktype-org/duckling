@@ -112,12 +112,28 @@ namespace query::external {
 	};
 
 	/**
+	 * @brief Optional passes that make a dumped query graph smaller and easier to read. They only
+	 * change the dump, never the graph itself.
+	 */
+	struct QueryGraphDumpPasses {
+		/// Give input nodes readable names (`Source Code Input`, `Module Structure Input`) and
+		/// call every unstable node `Unstable Node`.
+		bool rename = false;
+		/// Remove duplicated edges and module tree bookkeeping nodes, and merge source code inputs
+		/// that only one node depends on. Implies #rename.
+		bool simplify = false;
+	};
+
+	/**
 	 * @brief Write the current query graph as a self-contained JSON document, for inspection by
 	 * external tools (see `dev/scripts/query_graph/`).
+	 * @param passes Passes to run on the graph just before it is written.
 	 * @note Experimental and meant for debugging; the format is not persisted anywhere.
 	 * @warning Must not be called while queries are executing.
 	 */
-	void dumpQueryGraphAsJson(QueryGraphDumpStage stage, std::ostream& out);
+	void dumpQueryGraphAsJson(
+		QueryGraphDumpStage stage, std::ostream& out, QueryGraphDumpPasses passes = {}
+	);
 
 	/**
 	 * @brief Paths of the files dumpQueryGraphsToDirectory() wrote, or why it could not write them.
@@ -127,11 +143,12 @@ namespace query::external {
 	/**
 	 * @brief Write both dumpQueryGraphAsJson() stages into @p output_dir, as
 	 * `query_graph_pre_opt.json` and `query_graph_post_opt.json`, creating the directory if needed.
+	 * @param passes Passes to run on both graphs just before they are written.
 	 * @return The paths of the written files, or a message saying what could not be written.
 	 * @warning Must not be called while queries are executing.
 	 */
 	[[nodiscard]] QueryGraphDumpResult dumpQueryGraphsToDirectory(
-		const std::filesystem::path& output_dir
+		const std::filesystem::path& output_dir, QueryGraphDumpPasses passes = {}
 	);
 
 	/**

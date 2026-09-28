@@ -8,7 +8,9 @@
 #include "query_graph.hpp"
 
 #include <ostream>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace query::internal {
 
@@ -20,13 +22,76 @@ namespace query::internal {
 	[[nodiscard]] std::string_view nodeCategoryName(const NodeID& node);
 
 	/**
+	 * @brief One node of a DumpGraph, i.e. exactly what gets written for it in the JSON document.
+	 */
+	struct DumpNode {
+		std::string        query_name;  ///< Name of the query, never changed by the passes.
+		std::string        name;        ///< Displayed name, the passes may rename it.
+		u64                query_id = 0;
+		std::string_view   kind;
+		std::string_view   category;
+		bool               preserved = false;
+		std::string        hash;
+		std::vector<usize> deps;  ///< Indices into DumpGraph::nodes.
+	};
+
+	/**
+	 * @brief Index-based copy of a query graph that the dump passes can rewrite before it is
+	 * written as JSON.
+	 */
+	struct DumpGraph {
+		std::vector<DumpNode> nodes;
+	};
+
+	/**
+	 * @brief Builds a DumpGraph from @p graph, with nodes sorted by NodeID so that the output is
+	 * deterministic, and dependency indices following that order.
+	 */
+	[[nodiscard]] DumpGraph makeDumpGraph(const QueryGraph::ReducedGraphData& graph);
+
+	/**
+	 * @brief Which passes run on a DumpGraph before it is written.
+	 */
+	struct DumpPasses {
+		bool rename   = false;  ///< Run renameDumpGraphNodes().
+		bool simplify = false;  ///< Run renameDumpGraphNodes(), then simplifyDumpGraph().
+	};
+
+	/**
+	 * @brief Rename pass: gives input nodes readable names and hides unstable query names.
+	 * @details `PSTAccessSideInput` becomes `Source Code Input`; the module structure side inputs
+	 * (`QueryModuleSideInput`, `QueryModuleChildSideInput`, `QuerySubmoduleCountSideInput`) become
+	 * `Module Structure Input`; every node of the `unstable` category becomes `Unstable Node`.
+	 */
+	void renameDumpGraphNodes(DumpGraph& graph);
+
+	/**
+	 * @brief Simplify pass: makes the graph smaller while keeping its overall shape.
+	 * @details In this order: removes duplicated edges; removes `QuerySubmoduleCountSideInput`
+	 * and `QuerySubmodules` nodes together with their edges; then, for every node that depends
+	 * on two or more `PSTAccessSideInput` nodes that no other node depends on, replaces those
+	 * inputs with a single `<name> times N` node. Nodes are matched by their query name, so the
+	 * pass works the same with and without the rename pass.
+	 */
+	void simplifyDumpGraph(DumpGraph& graph);
+
+	/**
 	 * @brief Writes @p graph to @p out as a self-contained JSON document.
-	 * @details Nodes are sorted by NodeID so the output is deterministic. Every node has an
-	 * `index`, its query `name`, `kind`, `category`, `preserved` flag, key `hash` and the list of
-	 * its dependencies (`deps`) as indices into the `nodes` array.
+	 * @details Every node has an `index`, its `name`, `query_id`, `kind`, `category`, `preserved`
+	 * flag, key `hash` and the list of its dependencies (`deps`) as indices into `nodes`.
+	 * @param stage Free-form label stored in the document (e.g. "pre_optimization").
+	 */
+	void writeDumpGraphAsJson(const DumpGraph& graph, std::string_view stage, std::ostream& out);
+
+	/**
+	 * @brief Writes @p graph to @p out as a self-contained JSON document, after running the
+	 * requested @p passes on it. See makeDumpGraph() and writeDumpGraphAsJson().
 	 * @param stage Free-form label stored in the document (e.g. "pre_optimization").
 	 */
 	void writeReducedGraphAsJson(
-		const QueryGraph::ReducedGraphData& graph, std::string_view stage, std::ostream& out
+		const QueryGraph::ReducedGraphData& graph,
+		std::string_view                    stage,
+		std::ostream&                       out,
+		DumpPasses                          passes = {}
 	);
 }

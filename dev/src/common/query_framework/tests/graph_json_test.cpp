@@ -18,6 +18,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 struct KeyOf_JsonSideInput {
 	u64 v;
@@ -91,6 +93,10 @@ public:
 		TESTER_ADD_TEST(testDumpToDirectoryErrors);
 		TESTER_ADD_TEST(testReducedGraphRoundTrip);
 		TESTER_ADD_TEST(testDeserializeRejectsBrokenData);
+		TESTER_ADD_TEST(testRenamePass);
+		TESTER_ADD_TEST(testSimplifyPass);
+		TESTER_ADD_TEST(testSimplifyKeepsSharedAndSingleInputs);
+		TESTER_ADD_TEST(testDumpWithPasses);
 	}
 
 private:
@@ -113,6 +119,29 @@ private:
 	static std::filesystem::path uniqueTempPath() {
 		return std::filesystem::temp_directory_path()
 		     / ("graph_json_test_" + std::to_string(std::random_device{}()));
+	}
+
+	/**
+	 * @brief A hand-made dump node, named after the query @p name.
+	 */
+	static query::internal::DumpNode dumpNode(
+		const std::string& name, std::string_view category, std::vector<usize> deps = {}
+	) {
+		return { .query_name = name,
+			     .name       = name,
+			     .query_id   = 0,
+			     .kind       = category == "input" ? "SideInput" : "Normal",
+			     .category   = category,
+			     .preserved  = false,
+			     .hash       = "0",
+			     .deps       = std::move(deps) };
+	}
+
+	static std::vector<std::string> namesOf(const query::internal::DumpGraph& graph) {
+		std::vector<std::string> names;
+		names.reserve(graph.nodes.size());
+		for (const auto& node: graph.nodes) names.push_back(node.name);
+		return names;
 	}
 
 	/**
@@ -334,6 +363,120 @@ private:
 		const usize too_high  = 7;
 		std::memcpy(bad_index.data() + bad_index.size() - sizeof(usize), &too_high, sizeof(usize));
 		ASSERT_TRUE(throws_out_of_range(bad_index));
+	}
+
+	/**
+	 * @brief The rename pass gives inputs readable names and hides unstable query names, and
+	 * leaves everything else alone.
+	 */
+	void testRenamePass() {
+		query::internal::DumpGraph graph{ .nodes = {
+											  dumpNode("PSTAccessSideInput", "input"),
+											  dumpNode("QueryModuleSideInput", "input"),
+											  dumpNode("QueryModuleChildSideInput", "input"),
+											  dumpNode("QuerySubmoduleCountSideInput", "input"),
+											  dumpNode("QueryFileSideInput", "input"),
+											  dumpNode("SomeUnstableQuery", "unstable", { 0 }),
+											  dumpNode("SomeStableQuery", "stable", { 1, 5 }),
+										  } };
+
+		query::internal::renameDumpGraphNodes(graph);
+
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "Source Code Input",
+		                               "Module Structure Input",
+		                               "Module Structure Input",
+		                               "Module Structure Input",
+		                               "QueryFileSideInput",
+		                               "Unstable Node",
+		                               "SomeStableQuery" }),
+			namesOf(graph)
+		);
+		// Only the names change: the query name is kept for the other passes, edges stay.
+		ASSERT_EQUAL(std::string("PSTAccessSideInput"), graph.nodes[0].query_name);
+		ASSERT_EQUAL((std::vector<usize>{ 1, 5 }), graph.nodes[6].deps);
+	}
+
+	/**
+	 * @brief The simplify pass removes duplicated edges and the submodule nodes, then merges the
+	 * source code inputs used only by one node. A duplicated edge does not count as a second
+	 * user of an input.
+	 */
+	void testSimplifyPass() {
+		query::internal::DumpGraph graph{ .nodes = {
+											  dumpNode("Parse", "stable", { 1, 1, 2, 3, 4 }),
+											  dumpNode("PSTAccessSideInput", "input"),
+											  dumpNode("PSTAccessSideInput", "input"),
+											  dumpNode("QuerySubmodules", "stable", { 4 }),
+											  dumpNode("QuerySubmoduleCountSideInput", "input"),
+											  dumpNode("PSTAccessSideInput", "input"),
+											  dumpNode("Other", "stable", { 0, 0, 5 }),
+										  } };
+
+		query::internal::simplifyDumpGraph(graph);
+
+		ASSERT_EQUAL(
+			(std::vector<std::string>{
+				"Parse", "PSTAccessSideInput times 2", "PSTAccessSideInput", "Other" }),
+			namesOf(graph)
+		);
+		ASSERT_EQUAL((std::vector<usize>{ 1 }), graph.nodes[0].deps);
+		ASSERT_TRUE(graph.nodes[1].deps.empty());
+		ASSERT_EQUAL((std::vector<usize>{ 0, 2 }), graph.nodes[3].deps);
+	}
+
+	/**
+	 * @brief An input shared by two nodes, or the only input of a node, is not merged.
+	 */
+	void testSimplifyKeepsSharedAndSingleInputs() {
+		query::internal::DumpGraph graph{ .nodes = {
+											  dumpNode("PSTAccessSideInput", "input"),
+											  dumpNode("PSTAccessSideInput", "input"),
+											  dumpNode("A", "stable", { 0, 1 }),
+											  dumpNode("B", "stable", { 0 }),
+										  } };
+
+		query::internal::renameDumpGraphNodes(graph);
+		query::internal::simplifyDumpGraph(graph);
+
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "Source Code Input", "Source Code Input", "A", "B" }),
+			namesOf(graph)
+		);
+		ASSERT_EQUAL((std::vector<usize>{ 0, 1 }), graph.nodes[2].deps);
+		ASSERT_EQUAL((std::vector<usize>{ 0 }), graph.nodes[3].deps);
+	}
+
+	/**
+	 * @brief The passes run on both dumps of the real graph, and simplify implies rename.
+	 */
+	void testDumpWithPasses() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		auto dump_with = [](query::external::QueryGraphDumpPasses passes) {
+			std::ostringstream out;
+			query::external::dumpQueryGraphAsJson(
+				query::external::QueryGraphDumpStage::PreOptimization, out, passes
+			);
+			return out.str();
+		};
+
+		const auto plain    = dump(query::external::QueryGraphDumpStage::PreOptimization);
+		const auto renamed  = dump_with({ .rename = true });
+		const auto simplify = dump_with({ .simplify = true });
+
+		ASSERT_TRUE(plain.contains("\"name\": \"JsonUnstableQuery\""));
+		ASSERT_TRUE(not renamed.contains("\"name\": \"JsonUnstableQuery\""));
+		ASSERT_TRUE(renamed.contains("\"name\": \"Unstable Node\""));
+		ASSERT_TRUE(renamed.contains("\"name\": \"JsonStableQuery\""));
+		ASSERT_EQUAL(renamed, simplify);
+
+		const auto dir    = uniqueTempPath();
+		const auto result = query::external::dumpQueryGraphsToDirectory(dir, { .rename = true });
+		ASSERT_TRUE(result.has_value());
+		ASSERT_EQUAL(renamed, readFile(result->at(0)));
+		ASSERT_TRUE(not readFile(result->at(1)).contains("JsonUnstableQuery"));
+		std::filesystem::remove_all(dir);
 	}
 };
 

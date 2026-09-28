@@ -3,6 +3,9 @@
 
 The JSON comes from `duckc experimental_compile_package_dump_graph ... --graph-output <dir>`,
 which writes `query_graph_pre_opt.json` and `query_graph_post_opt.json` into `<dir>`.
+Add `--rename-pass` (readable input names, unstable nodes shown as `Unstable Node`) or
+`--simplify-pass` (also drops duplicated edges and submodule nodes, and merges source code inputs
+used by only one node) to that command to get a much smaller graph.
 
 Node shape shows what kind of node it is:
   - box      input node (Input / SideInput query)

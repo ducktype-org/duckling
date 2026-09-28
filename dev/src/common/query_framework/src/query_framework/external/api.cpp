@@ -52,25 +52,29 @@ namespace query::external {
 		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
 	}
 
-	void dumpQueryGraphAsJson(QueryGraphDumpStage stage, std::ostream& out) {
-		auto        state = ::query::internal::ContextAccess::getState();
-		const auto& graph = state->getGraph();
+	void dumpQueryGraphAsJson(
+		QueryGraphDumpStage stage, std::ostream& out, QueryGraphDumpPasses passes
+	) {
+		auto                                state = ::query::internal::ContextAccess::getState();
+		const auto&                         graph = state->getGraph();
+		const ::query::internal::DumpPasses internal_passes{ .rename   = passes.rename,
+			                                                 .simplify = passes.simplify };
 		switch (stage) {
 		case QueryGraphDumpStage::PreOptimization:
 			::query::internal::writeReducedGraphAsJson(
-				graph.toReducedGraphData(), "pre_optimization", out
+				graph.toReducedGraphData(), "pre_optimization", out, internal_passes
 			);
 			return;
 		case QueryGraphDumpStage::PostOptimization:
 			::query::internal::writeReducedGraphAsJson(
-				state->reduceOptimizeGraph(graph), "post_optimization", out
+				state->reduceOptimizeGraph(graph), "post_optimization", out, internal_passes
 			);
 			return;
 		}
 	}
 
 	std::expected<std::vector<std::filesystem::path>, std::string> dumpQueryGraphsToDirectory(
-		const std::filesystem::path& output_dir
+		const std::filesystem::path& output_dir, QueryGraphDumpPasses passes
 	) {
 		std::error_code error;
 		std::filesystem::create_directories(output_dir, error);
@@ -88,7 +92,7 @@ namespace query::external {
 		for (const auto& [file_name, stage]: dumps) {
 			auto          path = output_dir / file_name;
 			std::ofstream out(path);
-			dumpQueryGraphAsJson(stage, out);
+			dumpQueryGraphAsJson(stage, out, passes);
 			out.close();
 			if (!out) return std::unexpected("cannot write query graph to '" + path.string() + "'");
 			written.push_back(std::move(path));
