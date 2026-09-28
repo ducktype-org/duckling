@@ -16,6 +16,6 @@ Tests:
     Cases:
       build:
         test-cmd: duck -C foo build --profile=dvm
+      # A function and a constant from a dependency resolve at DVM load time
       run:
-        CaseName: "A function and a constant from a dependency resolve at DVM load time"
         test-cmd: duck -C foo run --profile=dvm
