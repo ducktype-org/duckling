@@ -27,6 +27,12 @@ class MultithreadedDebuggerTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		// @TODO: #3612 JIT-compiled code does not observe stop/pause requests, and the JIT patches
+		// the same bytecode as breakpoints. The JIT-build rule that disables `vm_*_debugger_*`
+		// tests does not match this name, so the suite spawns its processes with the JIT off
+		// instead (ignored in non-JIT builds).
+		process_config.enable_jit = false;
+
 		TESTER_ADD_TEST(pauseOneThreadWhileOthersRun);
 		TESTER_ADD_TEST(pauseAllParksEveryThread);
 		TESTER_ADD_TEST(pauseAllWaitsForASleepingThread);
