@@ -59,6 +59,12 @@ namespace vm {
 
 	public:
 		GenericBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
+
+		[[nodiscard]] BlockID getID() const { return id; }
+
+		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
+
+		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
 	};
 
 	using Block = GenericBlock<byte>;

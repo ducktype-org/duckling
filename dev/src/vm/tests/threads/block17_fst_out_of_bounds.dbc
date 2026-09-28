@@ -1,0 +1,16 @@
+# A store past the end of a stack fixed-size table under Fast Track. The shadow check runs
+# after the data op, which is where the index is bounds-checked, so this has to end in the
+# usual out-of-bounds panic rather than in a write past the end of the shadow stack.
+
+type fixed_size_table: IntArray4 i64 4
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type arr, IntArray4;
+    init_pany_type val, i64;
+    init_pany_type idx, i64;
+
+    mov_p64_imm val, 1;
+    mov_p64_imm idx, 1000000;
+    fixedSizeTableStore_pfst_pany_p64 arr, val, idx;
+    ret;
+}

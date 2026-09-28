@@ -1,0 +1,108 @@
+# CV happens-before no-race test.
+#
+# Pitfall being tested: FastTrack must establish happens-before through
+# the mutex lock/unlock sequence surrounding CV notify/wait.
+#
+# The write to shared_val happens outside the lock (in main) but BEFORE
+# the lock+notify+unlock sequence. The consumer reads shared_val outside
+# the lock AFTER re-acquiring it via wait_cv. FastTrack must see no race
+# because the unlock carries the write epoch into lock_vc, and the
+# re-acquire after wait_cv merges lock_vc into the consumer's VC.
+
+global_data shared_val i64 {}
+global_data ready i64 {}
+global_data lock mutex {}
+global_data cv condition_variable {}
+
+function consumer {} -> {} {
+    init_pany_type lock_enter, mutex;
+    mov_popq_popq lock_enter, lock;
+    call_builtinfunc builtin_lock_mutex;
+
+    label WaitLoopInit;
+        init_pany_type r, i64;
+        init_pany_type cv_var, condition_variable;
+        init_pany_type lk, mutex;
+
+    label WaitLoop;
+        mov_p64_p64 r, ready;
+        cmpEq_p64_imm r, 1;
+        jmpIf_label WaitDone;
+
+        mov_popq_popq cv_var, cv;
+        mov_popq_popq lk, lock;
+        call_builtinfunc builtin_wait_cv;
+        deinit;
+        jmp_label WaitLoopInit;
+
+    label WaitDone;
+    deinit;  # lk (top)
+    deinit;  # cv_var
+    deinit;  # r
+
+    init_pany_type lock_exit, mutex;
+    mov_popq_popq lock_exit, lock;
+    call_builtinfunc builtin_unlock_mutex;
+
+    # Read shared_val OUTSIDE the lock.
+    # consumer.vc was updated by onAcquire(lock_vc) after wait_cv,
+    # and lock_vc holds main's VC from the unlock (which covers the write to
+    # shared_val). No race expected.
+    init_pany_type val, i64;
+    mov_p64_p64 val, shared_val;
+
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type m, mutex;
+    call_builtinfunc builtin_create_mutex;
+    mov_popq_popq lock, m;
+
+    init_pany_type c, condition_variable;
+    call_builtinfunc builtin_create_cv;
+    mov_popq_popq cv, c;
+
+    mov_p64_imm shared_val, 0;
+    mov_p64_imm ready, 0;
+
+    init_pany_type tid, i64;
+    set_threadctx consumer;
+    call_builtinfunc builtin_start_thread;
+
+    # Write shared_val OUTSIDE the lock. This races with nothing because
+    # the consumer is blocked in wait_cv until main signals, and main
+    # signals only after writing.
+    mov_p64_imm shared_val, 42;
+
+    # Lock, mark ready, notify, unlock.
+    # The unlock writes main's VC (covering the shared_val write) into lock_vc.
+    init_pany_type lock1, mutex;
+    mov_popq_popq lock1, lock;
+    call_builtinfunc builtin_lock_mutex;
+
+    mov_p64_imm ready, 1;
+
+    init_pany_type cv1, condition_variable;
+    mov_popq_popq cv1, cv;
+    call_builtinfunc builtin_notify_cv;
+
+    init_pany_type lock2, mutex;
+    mov_popq_popq lock2, lock;
+    call_builtinfunc builtin_unlock_mutex;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, tid;
+    call_builtinfunc builtin_join_thread;
+
+    init_pany_type destroy_c, condition_variable;
+    mov_popq_popq destroy_c, cv;
+    call_builtinfunc builtin_destroy_cv;
+
+    init_pany_type destroy_m, mutex;
+    mov_popq_popq destroy_m, lock;
+    call_builtinfunc builtin_destroy_mutex;
+
+    ret;
+}

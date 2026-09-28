@@ -11,6 +11,7 @@
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
+#include <vm/api/data/process_options.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/debugger/UI/CLI/cli.hpp>
@@ -155,6 +156,10 @@ clah::Clah getVmClah() {
 	                     .addShortName('l')
 	                     .addLongName("ffi-lib")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("fast-track")
+	                     .addShortDesc("Enable FastTrack data-race detection.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					vm::Supervisor::get();
 
@@ -176,6 +181,7 @@ clah::Clah getVmClah() {
 					process_options.enable_jit
 						= options.getValue<std::string>("jit").copyValueOr("on") == "on";
 #endif
+					process_options.enable_fast_track = options.isFlag("fast-track");
 
 					if (options.isFlag("debug")) {
 						auto debugger = vm::debugger::cli::CLIDebugger();

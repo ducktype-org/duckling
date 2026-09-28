@@ -35,9 +35,7 @@ namespace vm {
 		Box<IVMProcess> process = [&] {
 			switch (options.mode) {
 			case api::ProcessMode::Safe:
-				return Box<IVMProcess>::fromPointer(
-					new SafeVMProcess(pid, options.enable_deadlock_detection, options.enable_jit)
-				);
+				return Box<IVMProcess>::fromPointer(new SafeVMProcess(pid, options));
 			case api::ProcessMode::Fast:
 				return Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid));
 			}

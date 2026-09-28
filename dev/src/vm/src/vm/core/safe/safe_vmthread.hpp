@@ -6,6 +6,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/concurrency/fast_track/fast_track_thread_data.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/memory/memory.hpp>
@@ -15,6 +16,7 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <limits>
+#include <memory>
 
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
@@ -87,6 +89,25 @@ namespace vm {
 	class SafeVMThread final: public IVMThread {
 	private:
 		RuntimeData runtime_data;
+
+		/**
+		 * @brief Fast Track state of this thread: its shadow stacks and its vector clock. Present
+		 * only when the process runs with `ProcessConfig::enable_fast_track`.
+		 */
+		std::unique_ptr<FastTrackThreadStack> ft_stack;
+		base::Optional<FastTrackThreadData>   ft_data;
+
+		/**
+		 * @brief Points the current shadow frame at the start of the shadow data stack, the shadow
+		 * counterpart of what `executeFunction` does with the data frame.
+		 */
+		void initShadowFrame();
+
+		/**
+		 * @brief Frees and unregisters the shadow of a data block this thread is about to free
+		 * outside of the opcodes (a local left live by a start function).
+		 */
+		void releaseShadowOf(Block* block);
 
 		/**
 		 * @brief Link to parent process.
@@ -269,6 +290,12 @@ namespace vm {
 		 * reallocated and the pointers change.
 		 */
 		void updateGlobalDataBufferPointers(GlobalBufferPointersByte global_buffer_pointers);
+
+		/**
+		 * @brief The shadow counterpart of `updateGlobalDataBufferPointers`, only for a thread of
+		 * a process with Fast Track enabled.
+		 */
+		void updateFastTrackGlobalPointers(ShadowGlobalBufferPointers global_shadow_pointers);
 	};
 
 	/**

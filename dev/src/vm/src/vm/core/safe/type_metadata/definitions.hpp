@@ -11,6 +11,12 @@ namespace vm {
 
 	using Offset = Bytes;
 
+	/// Size of a type's shadow layout, in shadow entries (see `ShadowEntry`)
+	using ShadowSize = u32;
+
+	/// Offset inside a type's shadow layout, in shadow entries
+	using ShadowOffset = u32;
+
 	class Type;
 
 	using TypeRef  = Ref<Type>;

@@ -118,6 +118,11 @@ namespace vm {
 		[[nodiscard]] bool hasActiveThread() const;
 
 		/**
+		 * @brief OS id of the execution thread, a default id when there is none.
+		 */
+		[[nodiscard]] std::thread::id getNativeThreadId() const;
+
+		/**
 		 * @brief Decides whether an API control request can be performed in current thread state.
 		 *
 		 * @return Nothing if the request may be performed or the reason why it can't.

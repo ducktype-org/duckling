@@ -68,6 +68,11 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
+	std::thread::id IVMThread::getNativeThreadId() const {
+		std::lock_guard lock(exec_thread_mutex);
+		return exec_thread ? exec_thread->get_id() : std::thread::id{};
+	}
+
 	void IVMThread::joinExecutionThread() {
 		std::lock_guard lock(exec_thread_mutex);
 		if (exec_thread && exec_thread->joinable()) exec_thread->join();

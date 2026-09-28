@@ -2,11 +2,18 @@
 
 #include "../../config.hpp"
 
+#include <base/misc/int_conv.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/core/musttail.hpp>
+#include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
+#include <vm/core/safe/exceptions.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
+#include <vm/core/safe/memory/frame.hpp>
+#include <vm/core/safe/safe_vmprocess.hpp>
+#include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/utils/interpret.hpp>
 
 namespace vm {
@@ -72,6 +79,63 @@ inline static void writeToPlace(
 #define READ_FROM_DIRECT_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
 
 /**
+ * @brief Convenience macros for accessing the Fast Track state from `ft_*` opcode functions.
+ * The `ft_*` opcodes are only emitted for a process with `enable_fast_track`, so the state is
+ * always present when they execute.
+ */
+#define FT_DATA          (*thread.ft_data)
+#define FT_RT            (FT_DATA.ft_runtime)
+#define FT_GLOBALS       (thread.safe_process.getFastTrackGlobals())
+#define FT_SHADOW_MEMORY (FT_GLOBALS.getShadowDataMemory())
+// Expands to the three args every processRead/processWrite call needs.
+#define FT_EPOCH_ARGS FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC()
+
+/**
+ * @brief The highest bit of a shadow place argument marks a global; the rest is the offset in
+ * the global or the frame's local shadow data.
+ */
+[[nodiscard]] [[gnu::always_inline]]
+inline static bool isGlobalPlace(u64 place_arg) {
+	return (place_arg >> 63) != 0;
+}
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static vm::ShadowEntry* getShadowEntryPtr(
+	const vm::FastTrackThreadData& ft_data, u64 place_arg
+) {
+	const u64 offset = place_arg & ~(1ULL << 63);
+	if (isGlobalPlace(place_arg)) return ft_data.getGlobalShadowDataBase() + offset;
+	return ft_data.getShadowFrame()->local_shadow_data_stack + offset;
+}
+
+#define GET_SHADOW_ENTRY_PTR(ARG) getShadowEntryPtr(FT_DATA, ARG)
+
+/**
+ * @brief Pushes the shadow frame of a call to `called_func`, the shadow counterpart of
+ * `performFunctionCall`. The callee's shadow data starts at the caller's return and argument
+ * entries: the caller lends it both, and `ft_ret` hands the return entries back, so a call
+ * leaves the caller's shadow head exactly where the data side leaves its slot stack.
+ */
+[[gnu::always_inline]]
+inline static void pushShadowFrame(
+	vm::FastTrackRuntimeData& ft_runtime, const vm::low::LowFuncData& called_func
+) {
+	const u64 shared_shadow_data_size = called_func.arg_shadow_size + called_func.ret_shadow_size;
+
+	auto* prev_sf = ft_runtime.shadow_frame_stack_current;
+	auto* sf      = prev_sf + 1;
+	if (sf + 1 >= ft_runtime.shadow_frame_stack_end)
+		throw vm::exceptions::VMStackOverflowException();
+
+	sf->local_shadow_data_stack = prev_sf->local_shadow_data_stack
+	                            + (prev_sf->local_shadow_data_head - shared_shadow_data_size);
+	sf->local_shadow_data_head = base::safeIntConv<u32>(shared_shadow_data_size);
+	prev_sf->local_shadow_data_head -= base::safeIntConv<u32>(shared_shadow_data_size);
+
+	ft_runtime.shadow_frame_stack_current = sf;
+}
+
+/**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
  */
 template<typename T>
@@ -86,7 +150,7 @@ inline static T readFromView(base::ModRawView view) {
 template<typename T>
 [[gnu::always_inline]]
 inline static void writeToView(base::ModRawView view, const T& value) {
-	return vm::safeWriteBytes<T>(view.getBegin(), value);
+	vm::safeWriteBytes<T>(view.getBegin(), value);
 }
 
 /**

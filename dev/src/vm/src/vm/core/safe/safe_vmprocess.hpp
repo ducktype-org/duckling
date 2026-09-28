@@ -5,8 +5,10 @@
 #include <base/pointers/box.hpp>
 
 #include <vm/api/data/api_error.hpp>
+#include <vm/api/data/process_options.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/concurrency/fast_track/fast_track_globals.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/concurrency/deadlock_detection.hpp>
@@ -44,6 +46,12 @@ namespace vm {
 		 * representation of the currently executed program. `loaded_program` references the low
 		 * representation which exists in this class.
 		 */
+		/**
+		 * @brief Fixed for the process lifetime: the compiler lowers the program for it, so it
+		 * cannot change after construction.
+		 */
+		const api::ProcessConfig config;
+
 		loader::Loader                       loader{};
 		loader::compiler::safe::SafeCompiler compiler;
 
@@ -54,6 +62,12 @@ namespace vm {
 		CRef<low::ILowVMProgram> loaded_program;
 
 		Memory memory;
+
+		/**
+		 * @brief Fast Track's process-wide state, present only with `config.enable_fast_track`.
+		 * Constructed before the threads, which point into its global shadow buffer.
+		 */
+		base::Optional<FastTrackGlobals> ft_globals;
 
 		base::Optional<DeadlockDetector> deadlock_detector;
 		GIL                              gil;
@@ -196,8 +210,15 @@ namespace vm {
 		 */
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
+		/**
+		 * @brief Fast Track fork: the child starts from the clock of the thread spawning it, or of
+		 * the main thread for a spawn driven by the API.
+		 * @note Call with `threads_pool_mutex`.
+		 */
+		void forkFastTrackClockLocked(SafeVMThread& child);
+
 	public:
-		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false, bool enable_jit = true);
+		SafeVMProcess(PID my_pid, const api::ProcessConfig& config = {});
 
 		/**
 		 * @brief Frees what the blocks still hold.
@@ -213,6 +234,20 @@ namespace vm {
 		}
 
 		Memory& getMemory();
+
+		[[nodiscard]] const api::ProcessConfig& getConfig() const { return config; }
+
+		/**
+		 * @brief Fast Track join: `joiner` learns everything the finished thread `joined` did.
+		 */
+		void joinFastTrackClock(SafeVMThread& joiner, api::ThreadID joined);
+
+		/**
+		 * @brief The Fast Track state, only for a process with `config.enable_fast_track`.
+		 */
+		[[nodiscard]] FastTrackGlobals& getFastTrackGlobals() {
+			return ft_globals.expect("Fast Track is not enabled for this process");
+		}
 
 		/**
 		 * @brief Spawns a thread running @p func_name, for `builtin_start_thread` only.

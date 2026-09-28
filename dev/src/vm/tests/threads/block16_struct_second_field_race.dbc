@@ -1,0 +1,56 @@
+# The racy twin of block16_struct_disjoint_fields_no_race.dbc: both threads write the second
+# field of the heap struct through pointers, with no synchronization. Only the second field's
+# shadow entry can tell this apart from the race-free program.
+
+type data: Pair {
+    f1: i64,
+    f2: i64
+}
+
+type pointer: ptr_Pair Pair
+
+global_data g_pair_ptr ptr_Pair {}
+
+function child_thread {} -> {} {
+    init_pany_type local_ptr, ptr_Pair;
+    mov_pptr_pptr local_ptr, g_pair_ptr;
+
+    init_pany_type val, i64;
+    mov_p64_imm val, 42;
+    structStore_pptr_pany_field local_ptr, val, Pair.f2;
+
+    deinit; # val
+    deinit; # local_ptr
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type pair_ptr, ptr_Pair;
+    alloc_pptr_type pair_ptr, Pair;
+    mov_pptr_pptr g_pair_ptr, pair_ptr;
+
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # CONCURRENT UNSYNCHRONIZED WRITE (RACE) on the same field!
+    init_pany_type val, i64;
+    mov_p64_imm val, 100;
+    structStore_pptr_pany_field pair_ptr, val, Pair.f2;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    free_pptr pair_ptr;
+    ret;
+
+    label PanicLabel;
+    div_p64_imm thread_id, 0;
+    free_pptr pair_ptr;
+    ret;
+}

@@ -1,5 +1,7 @@
 #include "memory.hpp"
 
+#include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
+
 #include <iostream>
 
 namespace vm {
@@ -49,6 +51,8 @@ namespace vm {
 		}
 	}
 
-	// Explicit instantiation for the real memory module
+	// Explicit instantiations of the memory flavours: the data memory and the Fast Track shadow
+	// memory. Both headers declare the matching `extern template`.
 	template class GenericMemory<byte>;
+	template class GenericMemory<ShadowEntry>;
 }

@@ -29,6 +29,7 @@
 #include <ranges>
 #include <shared_mutex>
 #include <sstream>
+#include <thread>
 #include <variant>
 
 namespace vm {
@@ -165,6 +166,7 @@ namespace vm {
 
 		SafeVMThread& thread = getEmptyThreadLocked();
 		thread.setThreadCtx(func_name);
+		if (ft_globals) forkFastTrackClockLocked(thread);
 
 		if (!thread.spawnThreadAndRun(func_name, run_arguments)) {
 			thread.setThreadCtx("");
@@ -280,13 +282,13 @@ namespace vm {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(
-		const PID my_pid, bool enable_deadlock_detection, [[maybe_unused]] bool enable_jit
-	):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, const api::ProcessConfig& config):
 		  IVMProcess(my_pid),
-		  compiler(*loader.getHighProgram(), enable_jit),
+		  config(config),
+		  compiler(*loader.getHighProgram(), config),
 		  loaded_program(compiler.getLowProgram()) {
-		if (enable_deadlock_detection) deadlock_detector.emplace();
+		if (config.enable_fast_track) ft_globals.emplace();
+		if (config.enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
 
@@ -312,6 +314,23 @@ namespace vm {
 	base::Optional<Ref<SafeVMThread>> SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
 		std::lock_guard lock(threads_pool_mutex);
 		return vm_threads.maybeGet(thread_id);
+	}
+
+	void SafeVMProcess::forkFastTrackClockLocked(SafeVMThread& child) {
+		const auto          spawner = std::this_thread::get_id();
+		const SafeVMThread* parent  = nullptr;
+		for (const auto& thread: vm_threads)
+			if (thread.getNativeThreadId() == spawner) {
+				parent = &thread;
+				break;
+			}
+		if (parent == nullptr) parent = vm_threads.get(api::MAIN_THREAD_ID).get();
+		child.ft_data->forkVC(parent->ft_data->getVC(), child.getThreadID());
+	}
+
+	void SafeVMProcess::joinFastTrackClock(SafeVMThread& joiner, api::ThreadID joined) {
+		if_opt_some(getVMThreadByID(joined), thread)
+			joiner.ft_data->joinVC(thread->ft_data->getVC());
 	}
 
 	SafeVMThread& SafeVMProcess::getEmptyThreadLocked() {
@@ -348,6 +367,7 @@ namespace vm {
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
 			memory.deinitGlobals();
+			if (ft_globals) ft_globals->deinitGlobals();
 		} catch (const exceptions::VMFoundMemoryLeakException&) {
 			return false;
 		} catch (const KillProcessException& e) {
@@ -720,13 +740,19 @@ namespace vm {
 				.global_data_offsets    = std::move(global_offsets),
 				.global_blocks_idxs     = std::move(global_indices),
 				.global_types           = std::move(global_types),
-				.total_global_data_size = global_buffer_config.buffer_size,
+				.total_global_data_size = global_buffer_config.buffer_size.asInt(),
 				.global_count           = global_buffer_config.global_count,
 			});
 
 		std::lock_guard lock(threads_pool_mutex);
 		for (auto& thread: vm_threads)
 			thread.updateGlobalDataBufferPointers(new_global_buffer_pointers);
+
+		if (ft_globals) {
+			const auto new_shadow_pointers = ft_globals->initializeNewGlobalBlocks(program);
+			for (auto& thread: vm_threads)
+				thread.updateFastTrackGlobalPointers(new_shadow_pointers);
+		}
 	}
 
 	GIL& SafeVMProcess::getGIL() { return gil; }
