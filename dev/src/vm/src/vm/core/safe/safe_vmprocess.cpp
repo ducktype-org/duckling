@@ -555,6 +555,8 @@ namespace vm {
 				if (!opt_thread)
 					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 				auto thread = opt_thread.value();
+				if (!v_matches(thread->getThreadState(), ts::Paused))
+					return std::unexpected(api::OtherError{ "Thread is not paused" });
 				if (frame_index >= thread->getNumberOfCurrentStackFrames())
 					return std::unexpected(api::OtherError{ "Frame not found" });
 
