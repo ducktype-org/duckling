@@ -12,6 +12,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -20,6 +21,7 @@
 	#include <vm/core/jit/jit_compiler.hpp>
 #endif
 
+#include <limits>
 #include <variant>
 
 namespace vm::loader::compiler::safe {
@@ -35,6 +37,9 @@ namespace vm::low {
 	struct LowFuncData final {
 		base::StrID name;
 		usize       id;
+		// each LowFuncData needs to have the valid counterpart in fat-bytecode
+		// the counterpart remains valid for entire existence of the micro version
+		CRef<vm::code::valid_function::ValidFunction> high_func;
 #ifdef ENABLE_JIT
 		/// Offset of the JIT function entrypoint in the bytecode (guarded by a `nop` in `bc`).
 		usize jit_func_entrypoint_offset;
@@ -77,6 +82,12 @@ namespace vm::low {
 		 * @note Vector indexes correspond to FatBytecode instruction indexes
 		 */
 		std::vector<InstructionRange> instruction_mapping;
+
+		/**
+		 * @brief Id assigned to a function that is not part of the loaded program, i.e. the
+		 * synthetic `vm_start_function`. Never assigned to a real function.
+		 */
+		static constexpr usize NO_FUNCTION_ID = std::numeric_limits<usize>::max();
 
 		/**
 		 * @brief method for setting the breakpoint in microbytecode
