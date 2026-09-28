@@ -9,8 +9,9 @@ use super::elf::soname_of_file;
 use super::recipe::CBindingsRecipe;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
-/// Directories the dynamic loader searches by default, so a library found there can be named by
-/// its soname alone.
+/// Directories searched for `-l<name>` after the `-L` ones. On Linux the dynamic loader searches
+/// them by default, so a library found there can be named by its soname alone.
+#[cfg(not(target_os = "macos"))]
 const SYSTEM_LIBRARY_DIRS: &[&str] = &[
     "/lib",
     "/lib64",
@@ -23,6 +24,15 @@ const SYSTEM_LIBRARY_DIRS: &[&str] = &[
     "/usr/local/lib",
     "/usr/local/lib64",
 ];
+/// `dlopen` does not search Homebrew's prefix, and a Mach-O library has no soname, so on macOS a
+/// library is always named by its full path.
+#[cfg(target_os = "macos")]
+const SYSTEM_LIBRARY_DIRS: &[&str] = &["/opt/homebrew/lib", "/usr/local/lib", "/usr/lib"];
+
+#[cfg(not(target_os = "macos"))]
+const SHARED_SUFFIX: &str = ".so";
+#[cfg(target_os = "macos")]
+const SHARED_SUFFIX: &str = ".dylib";
 
 #[derive(Debug, Default, PartialEq, Eq)]
 /// A recipe resolved on this machine.
@@ -74,6 +84,7 @@ pub fn resolve(recipe: &CBindingsRecipe, base: &Path) -> QuackResult<Resolved> {
         }
     }
     resolved.cflags.extend(recipe.cflags.iter().cloned());
+    add_platform_cflags(&mut resolved.cflags);
     libraries.extend(recipe.libraries.iter().map(|library| {
         if library.starts_with('-') {
             library.clone()
@@ -92,6 +103,28 @@ pub fn resolve(recipe: &CBindingsRecipe, base: &Path) -> QuackResult<Resolved> {
     Ok(resolved)
 }
 
+/// libclang does not know where the macOS SDK is, so its libc headers are not found without an
+/// explicit sysroot.
+#[cfg(target_os = "macos")]
+fn add_platform_cflags(cflags: &mut Vec<String>) {
+    if cflags.iter().any(|flag| flag.starts_with("-isysroot")) {
+        return;
+    }
+    let sdk = Command::new("xcrun")
+        .arg("--show-sdk-path")
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned());
+    if let Some(sdk) = sdk.filter(|sdk| !sdk.is_empty()) {
+        cflags.push("-isysroot".to_owned());
+        cflags.push(sdk);
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn add_platform_cflags(_cflags: &mut Vec<String>) {}
+
 fn absolute(base: &Path, path: &str) -> PathBuf {
     let path = Path::new(path);
     if path.is_absolute() {
@@ -104,7 +137,9 @@ fn absolute(base: &Path, path: &str) -> PathBuf {
 fn is_shared_object(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
-        .is_some_and(|name| name.ends_with(".so") || name.contains(".so."))
+        .is_some_and(|name| {
+            name.ends_with(".so") || name.contains(".so.") || name.ends_with(".dylib")
+        })
 }
 
 /// The shared objects the DVM loads in place of the linker arguments `libraries`.
@@ -154,7 +189,7 @@ fn dvm_shared_libraries(libraries: &[String]) -> (Vec<String>, Vec<String>) {
 fn find_library(name: &str, search_dirs: &[PathBuf]) -> Option<String> {
     let file_name = match name.strip_prefix(':') {
         Some(exact) => exact.to_owned(),
-        None => format!("lib{name}.so"),
+        None => format!("lib{name}{SHARED_SUFFIX}"),
     };
     let system = SYSTEM_LIBRARY_DIRS.iter().map(PathBuf::from);
     for (dir, is_system) in search_dirs
@@ -189,6 +224,13 @@ mod tests {
             dvm_shared_libraries(&["/tmp/foo.o".into(), "/tmp/libbar.so.1".into()]);
         assert_eq!(shared, vec!["/tmp/libbar.so.1".to_owned()]);
         assert_eq!(warnings.len(), 1);
+    }
+
+    #[test]
+    fn dylibs_are_shared_objects() {
+        let (shared, warnings) = dvm_shared_libraries(&["/opt/lib/libfoo.1.dylib".into()]);
+        assert_eq!(shared, vec!["/opt/lib/libfoo.1.dylib".to_owned()]);
+        assert!(warnings.is_empty());
     }
 
     #[test]

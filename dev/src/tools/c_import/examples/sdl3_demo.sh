@@ -2,16 +2,17 @@
 # Generates SDL3 bindings with `duck translate-c`, then builds and runs a small SDL3 program with
 # them on the native backend and on the DVM.
 #
-# Usage: sdl3_demo.sh <duckling-bin-dir> [--window] [--backend native|dvm|both] [--work <dir>]
+# Usage: sdl3_demo.sh <duckling-build-dir> [--window] [--backend native|dvm|both] [--work <dir>]
 #
-#   <duckling-bin-dir>  build directory's `bin`, holding duckc, VM and duck_c_import
-#   --window            open a real window (bouncing square; Escape or closing it quits) instead
-#                       of the headless check
-#   --backend           which backend to run on (default: both)
-#   --work              where to put the generated package and the program (default: a new
-#                       temporary directory)
+#   <duckling-build-dir>  build directory (or its `bin`), holding duckc, VM and duck_c_import
+#   --window              open a real window (bouncing square; Escape or closing it quits)
+#                         instead of the headless check
+#   --backend             which backend to run on (default: both)
+#   --work                where to put the generated package and the program (default: a new
+#                         temporary directory)
 #
-# `duck` is taken from $DUCK, then <duckling-bin-dir>, then PATH. Needs SDL3 visible to pkg-config.
+# `duck` is taken from $DUCK, then the repository this script is in (src/duck/target), then the
+# build directory, then PATH; it has to know `translate-c`. Needs SDL3 visible to pkg-config.
 set -euo pipefail
 
 usage() {
@@ -20,7 +21,10 @@ usage() {
 }
 
 [ $# -ge 1 ] || usage
+case "$1" in -h|--help) usage ;; esac
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="$(cd "$1" && pwd)"
+if [ -x "$BIN_DIR/bin/duckc" ]; then BIN_DIR="$BIN_DIR/bin"; fi
 shift
 WINDOW=0
 BACKEND=both
@@ -43,17 +47,30 @@ for tool in duckc VM duck_c_import; do
 		exit 1
 	fi
 done
-DUCK="${DUCK:-$(command -v duck || true)}"
-if [ -z "$DUCK" ]; then
-	echo "error: \`duck\` not found; set DUCK or build it with \`cargo build --release\` in src/duck" >&2
+supports_translate_c() { [ -x "$1" ] && "$1" translate-c --help >/dev/null 2>&1; }
+if [ -z "${DUCK:-}" ]; then
+	for candidate in \
+		"$SCRIPT_DIR/../../../duck/target/release/duck" \
+		"$SCRIPT_DIR/../../../duck/target/debug/duck" \
+		"$BIN_DIR/duck" \
+		"$(command -v duck || true)"; do
+		if supports_translate_c "$candidate"; then
+			DUCK="$candidate"
+			break
+		fi
+	done
+fi
+if [ -z "${DUCK:-}" ] || ! supports_translate_c "$DUCK"; then
+	echo "error: no \`duck\` with \`translate-c\` found; build it with \`cargo build --release\` in src/duck, or set DUCK" >&2
 	exit 1
 fi
+echo "using $DUCK"
 if ! pkg-config --exists sdl3; then
 	echo "error: pkg-config cannot find sdl3" >&2
 	exit 1
 fi
 
-if [ -z "$WORK" ]; then WORK="$(mktemp -d -t duck-sdl3-XXXXXX)"; fi
+if [ -z "$WORK" ]; then WORK="$(mktemp -d "${TMPDIR:-/tmp}/duck-sdl3-XXXXXX")"; fi
 mkdir -p "$WORK"
 WORK="$(cd "$WORK" && pwd)"
 cd "$WORK"

@@ -158,9 +158,12 @@ entries in the DVM bytecode, which the VM `dlopen`s:
 
 - a library found in a system directory is named by its soname (`libSDL3.so.0`);
 - one found only through `-L` is named by its full path;
+- on macOS a library is always named by its full path, since a Mach-O library has no soname and
+  `dlopen` does not search Homebrew's prefix;
 - `.o` and `.a` libraries cannot be loaded by the DVM, and a warning says so.
 
-A package that has only static artifacts builds on the native backend only.
+A package that has only static artifacts builds on the native backend only. On macOS,
+`translate-c` also passes the SDK (`xcrun --show-sdk-path`) to libclang as `-isysroot`.
 
 ## How it works
 
