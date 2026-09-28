@@ -51,7 +51,7 @@ text is preserved, but one comment token becomes several.
 ## Layout
 
 ```
-src/formatter/
+src/tools/formatter/
 ├── CMakeLists.txt              # Formatter library + test + add_subdirectory(format_main)
 ├── README.md                   # this file
 ├── src/formatter/
@@ -73,8 +73,8 @@ src/formatter/
 ```
 
 The module depends only on the lexer (`make_module(Formatter USES Lexer ...)`),
-not on the compiler frontend, MIR/LIR, or backends, so it lives as its own
-top-level module beside `src/base`, `src/common`, and `src/compiler`.
+not on the compiler frontend, MIR/LIR, or backends, so it lives outside the
+compiler, under `src/tools/` — the home for standalone developer tools.
 
 ## Public API
 
@@ -181,11 +181,11 @@ formats.
 # build the duckfmt binary
 cmake --build build --target duckfmt -j"$(nproc)"
 
-# run the formatter unit tests (pack: formatter)
+# run the formatter unit tests (pack: tools)
 python3 toolbox.py test -b build -R formatter_test -j"$(nproc)" --output-on-failure
 
 # run the duckfmt CLI integration tests
-python3 toolbox.py itest -b build -t "integration_tests/formatter"
+python3 toolbox.py itest -b build -t "integration_tests/tools/formatter"
 ```
 
 The unit tests are golden tests: each feeds an input string (or a

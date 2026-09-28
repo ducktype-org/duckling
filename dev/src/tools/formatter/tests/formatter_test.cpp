@@ -1077,4 +1077,4 @@ public:
 	~FormatterTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/src/formatter/tests/");
+TESTER_COMMON_MAIN("/src/tools/formatter/tests/");
