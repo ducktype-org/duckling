@@ -555,5 +555,4 @@ namespace pst {
 		PstID id = PstID::next();
 	};
 
-	using ImportType = CRef<pst::Import>;
 }

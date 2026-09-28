@@ -1,6 +1,4 @@
 # Tests for declaration of variables in REPL
-# @TODO: #2245 add option to not print "=>" or the beginning or duckling,
-# add eventual error ignore.
 ans: => 42\n
 ans2: => 30\n
 ans2small: => 30\n

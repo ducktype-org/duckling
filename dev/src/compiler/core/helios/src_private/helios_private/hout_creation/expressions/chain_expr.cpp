@@ -117,15 +117,15 @@ namespace compiler::helios::code {
 			auto arg_expr_result = subExprFromPST(query_ctx, arg_unlocked->getExpr());
 
 			if (arg_expr_result.hasFailed()) return query::Failed();
-			auto arg_expr                = std::move(arg_expr_result).valueOrPanic();
-			auto coerced_arg_expr_result = coerceFromBox(
-				query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition()
+			auto arg_expr = std::move(arg_expr_result).valueOrPanic();
+			UNPACK_QRESULT_MOVE(
+				auto coerced_arg_expr =,
+				coerceFromBox(
+					query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition()
+				)
 			);
-			if (coerced_arg_expr_result.empty()) return query::Failed();
 
-			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>(
-				{ coerced_arg_expr_result.value().ref() }
-			);
+			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_arg_expr.ref() });
 
 			if (ctv.hasFailed()) return query::Failed();
 			auto ctv_value = std::move(ctv).valueOrPanic();

@@ -19,8 +19,6 @@
     "files": [
         "client/out/",
         "client/node_modules/",
-        "server/out/",
-        "server/node_modules/",
         "images/",
         "syntaxes/",
         "language-configuration.json",
@@ -61,11 +59,11 @@
             "type": "object",
             "title": "Duckling Language Configuration",
             "properties": {
-                "DucklingLanguageSupport.maxNumberOfProblems": {
-                    "scope": "resource",
-                    "type": "number",
-                    "default": 100,
-                    "description": "Controls the maximum number of problems produced by the server."
+                "DucklingLanguageSupport.enable": {
+                    "scope": "window",
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Run the `duck_ls` language server. Turn this off to keep syntax highlighting, bracket matching and the other editor features the extension contributes on its own, without starting a server."
                 },
                 "DucklingLanguageSupport.executablePath": {
                     "scope": "machine",
@@ -96,18 +94,14 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
-        "lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
-        "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-        "test": "sh ./scripts/e2e.sh"
+        "lint": "eslint ./client/src --ext .ts,.tsx",
+        "postinstall": "cd client && npm install && cd .."
     },
     "devDependencies": {
-        "@types/mocha": "^9.1.0",
         "@types/node": "^16.18.34",
-        "@types/webpack-env": "^1.18.4",
         "@typescript-eslint/eslint-plugin": "^6.7.0",
         "@typescript-eslint/parser": "^6.7.0",
         "eslint": "^8.35.0",
-        "mocha": "^11.7.2",
         "typescript": "^5.2.2"
     },
     "keywords": [

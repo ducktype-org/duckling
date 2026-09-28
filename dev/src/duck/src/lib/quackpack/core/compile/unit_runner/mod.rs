@@ -1,6 +1,8 @@
 //! [`UnitRunner`] takes a [`UnitGraph`] and a [`UnitTaskGenerator`] and drives the compilation
 //! process using them.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 use std::path::PathBuf;
@@ -15,8 +17,8 @@ use super::artifacts_layout::{ArtifactsLayout, DependencyLayout, ProfileLayout};
 use super::duckc::process_builder::{self, DuckcSubcommand};
 use super::duckc::{Duckc, multipackage_schema};
 use super::profiles::Profile;
-use super::unit::Unit;
 use super::unit::graph::UnitGraph;
+use super::unit::{Unit, UnitId};
 use super::unit_task_generator::UnitTaskGenerator;
 use super::unit_task_generator::default::DefaultTaskGenerator;
 use super::unit_task_generator::dvm::DvmTaskGenerator;
@@ -35,6 +37,7 @@ mod tests;
 pub struct UnitRunner<'duck, 'ctx> {
     graph: UnitGraph,
     task_generator: Box<dyn UnitTaskGenerator>,
+    unit_statuses: RefCell<HashMap<UnitId, UnitStatus>>,
     bcx: &'ctx BuildContext<'duck, 'ctx>,
 }
 
@@ -42,9 +45,11 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// Create a new [`UnitRunner`].
     pub fn new(graph: UnitGraph, bcx: &'ctx BuildContext<'duck, 'ctx>) -> Self {
         let task_generator = bcx.task_generator();
+        let unit_statuses = RefCell::new(build_initial_unit_statuses(&graph));
         Self {
             graph,
             task_generator,
+            unit_statuses,
             bcx,
         }
     }
@@ -64,6 +69,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     ///
     /// [`should_run`]: UnitTaskGenerator::should_run
     fn run_all_needed_units(&self, layout: &dyn ProfileLayout) -> QuackResult<()> {
+        // @TODO: #3636 We should have a dedicated struct for determining compilation order.
         for unit in self.graph.compilation_order() {
             if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
                 continue;
@@ -82,10 +88,13 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// [`should_run`]: UnitTaskGenerator::should_run
     fn compile_unit(&self, unit: &Unit, layout: &dyn ProfileLayout) -> QuackResult<()> {
         info!("starting compilation of a unit");
+        self.set_unit_status(unit, UnitStatus::InProgress);
         let tasks = self
             .task_generator
             .create_tasks(unit, &self.graph, layout, self.bcx)?;
-        self.compile_unit_with_tasks(unit, layout, tasks)
+        self.compile_unit_with_tasks(unit, layout, tasks)?;
+        self.set_unit_status(unit, UnitStatus::Finished);
+        Ok(())
     }
 
     /// Compile a single [`Unit`] with its finished tasks.
@@ -166,6 +175,16 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
             .info_verbose(format!("Running `{}`", builder))?;
         builder.execute()
     }
+
+    /// Set a [`UnitStatus`] for the given [`Unit`].
+    fn set_unit_status(&self, unit: &Unit, status: UnitStatus) {
+        let id = unit.unit_id();
+        debug_assert!(
+            self.unit_statuses.borrow().contains_key(&id),
+            "missing status for unit {unit:?}, but we set an initial status for every unit"
+        );
+        self.unit_statuses.borrow_mut().insert(id, status);
+    }
 }
 
 impl BuildContext<'_, '_> {
@@ -190,6 +209,19 @@ impl BuildContext<'_, '_> {
             Box::new(StandardArtifactsLayout::new(root_package_artifacts))
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Status of [`Unit`] during [`run`] pass.
+///
+/// [`run`]: UnitRunner::run
+enum UnitStatus {
+    /// This [`Unit`] hasn't been started.
+    NotStarted,
+    /// We're in progress of running this [`Unit`].
+    InProgress,
+    /// This [`Unit`] has finished compiling.
+    Finished,
 }
 
 #[derive(Debug)]
@@ -226,4 +258,17 @@ fn write_schema(
             )
         })?;
     Ok(())
+}
+
+/// Create an initial map with statuses of all known [`Unit`]s.
+///
+/// By default all are [`NotStarted`]
+///
+/// [`NotStarted`]: UnitStatus::NotStarted
+fn build_initial_unit_statuses(graph: &UnitGraph) -> HashMap<UnitId, UnitStatus> {
+    graph
+        .units_sorted_by_id()
+        .iter()
+        .map(|unit| (unit.unit_id(), UnitStatus::NotStarted))
+        .collect()
 }

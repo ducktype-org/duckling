@@ -507,8 +507,8 @@ namespace compiler::helios::code {
 						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
 					);
 
-					if (value.has_value())
-						node = makeBoxAllocCall(ctx, origin, std::move(value.value()));
+					if (value.hasValue())
+						node = makeBoxAllocCall(ctx, origin, std::move(value.valueOrPanic()));
 					return;
 				}
 
@@ -1088,7 +1088,7 @@ namespace compiler::helios {
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
-		auto maybe_coerced = coerceFromBox(
+		return coerceFromBox(
 			ctx,
 			std::move(expr_hout),
 			expected_type,
@@ -1096,7 +1096,5 @@ namespace compiler::helios {
 			coercion_expects_pos,
 			std::move(error_overrides)
 		);
-		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
-		return query::Failed();
 	}
 }

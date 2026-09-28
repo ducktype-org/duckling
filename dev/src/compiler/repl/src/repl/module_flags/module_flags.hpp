@@ -18,4 +18,9 @@ namespace compiler::repl {
 	 * https://en.wikipedia.org/wiki/Bracketed-paste
 	 */
 	constexpr bool FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED = true;
+
+	/**
+	 * @brief Default decorative output toggle for the REPL frontend.
+	 */
+	constexpr bool FRONTEND_DEFAULT_DECORATIVE_OUTPUT = true;
 }
