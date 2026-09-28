@@ -13,6 +13,11 @@
 #include <vm/loader/compiler/safe/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 
+#ifdef ENABLE_JIT
+	#include <vm/core/safe/low_program/cfg/cf_analysis.hpp>
+	#include <vm/core/safe/low_program/instruction.hpp>
+#endif
+
 namespace vm::loader::compiler::safe {
 
 	namespace detail {
@@ -221,11 +226,18 @@ namespace vm::loader::compiler::safe {
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
+#ifdef ENABLE_JIT
+			// Done before LowFuncData construction so both bc and orig_bc carry the guard:
+			// the function-level entrypoint is never jumped to, so it must be a nop until the
+			// JIT patches it (the patching below rewrites only bc, keeping orig_bc pristine).
+			usize function_jit_entrypoint     = low::cf::functionEntrypointOffset(bytecode);
+			bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
+#endif
 			usize new_func_id = low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
 			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
-			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
+			                      .jit_func_entrypoint_offset = function_jit_entrypoint,
 #endif
 			                      // we need two copies of the bytecode
 			                      .bc                  = bytecode,
@@ -244,6 +256,23 @@ namespace vm::loader::compiler::safe {
 			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
 			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
 			low_program.functions[new_func_id].id = new_func_id;
+
+#ifdef ENABLE_JIT
+			if (jit_enabled) {
+				auto& func    = low_program.functions[new_func_id];
+				func.jit_data = jit::JitFuncData(func.bc, func.jit_func_entrypoint_offset);
+				// Patch entrypoint opcodes into bc; orig_bc stays pristine.
+				for (usize i = 0; i < func.jit_data.cfgs.size(); i++) {
+					if (func.jit_data.cfgs[i].empty()) continue;  // Not an entrypoint
+					auto maybe_old_opcode = func.replaceOpcode(
+						i,
+						i == func.jit_func_entrypoint_offset ? low::MicroOpcode::jitFuncEntrypoint
+															 : low::MicroOpcode::jitLoopEntrypoint
+					);
+					CORE_ASSERT(maybe_old_opcode.has_value(), "JIT entrypoint offset out of bounds");
+				}
+			}
+#endif
 		}
 	}
 

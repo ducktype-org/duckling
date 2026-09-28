@@ -1,75 +1,74 @@
 #pragma once
 
-#include <base/collections/optional.hpp>
-#include <base/pointers/box.hpp>
+#include <lsp/types.h>
+#include <lsp/uri.h>
 
 #include <diagnostic/core/diagnostic_arguments_forward.hpp>
 
+#include <functional>
 #include <string>
 
 namespace dia::lsp {
 	/**
-	 * @brief The diagnostic class is 1-1 mapping of the typescript
-	 * Language Server Protocol `Diagnostic` structure.
-	 */
-	class Diagnostic;
-}
-
-DEFAULT_BOX_PTR_DELETER_DECLARATION(dia::lsp::Diagnostic);
-
-namespace dia::lsp {
-	/**
-	 * @brief The result of the evaluation of a diagnostic to a language server protocol diagnostic.
+	 * @brief The result of evaluating a diagnostic into its Language Server Protocol form.
 	 *
-	 * There was an issue with the protocol, that the content of the message doesn't have the file
-	 * URI. In our setup we want to output diagnostics from different files and we should group them
-	 * by file URI, so that is why this `file_uri` field is here separately.
+	 * The protocol puts the file outside the diagnostic itself, because a
+	 * `textDocument/publishDiagnostics` notification carries one URI and the diagnostics
+	 * belonging to it. Ours come from a whole package at once, so each result says which file
+	 * it belongs to and the caller groups them.
 	 */
-	class LSPDiagnosticResult {
-	public:
-		/**
-		 * @brief Language Server Protocol diagnostic.
-		 */
-		Box<Diagnostic> diagnostic;
+	struct LSPDiagnosticResult final {
+		/// The diagnostic, ready to send.
+		::lsp::Diagnostic diagnostic{};
 
-		/**
-		 * @brief File URI of the file the diagnostic belongs to.
-		 */
-		std::string file_uri;
-
-		LSPDiagnosticResult(Box<Diagnostic> diag, std::string file_uri = {}):
-			  diagnostic(std::move(diag)),
-			  file_uri(std::move(file_uri)) {}
-
-		static void jsonSerializeDiagnostic(CRef<Diagnostic> diagnostic, std::ostream& out);
+		/// The file the diagnostic belongs to.
+		::lsp::Uri uri{};
 	};
 
 	/**
-	 * This is the context needed to evaluate diagnostics to language server messages.
+	 * @brief Everything needed to evaluate a diagnostic into a language server message.
 	 *
-	 * For example there are error messages without code location and we need to have
-	 * a default file to attach to such diagnostics, because that is a requirement of the LSP
-	 * protocol.
+	 * Diagnostics carry a file as a bare path, and some carry no location at all, so evaluation
+	 * needs both a fallback file and a way to turn a path into the URI to answer the client
+	 * with. Building that URI needs percent encoding and, for a file the editor holds open, the
+	 * spelling the client itself used, so the language server supplies it.
 	 */
 	class EvaluationContext {
 	public:
-		/**
-		 * @brief The default file location to use for diagnostics without location.
-		 */
-		std::string default_error_location_uri;
+		/// Turns the path a diagnostic carries into the URI to name it by.
+		using UriResolver = std::function<::lsp::Uri(const std::string& path)>;
 
 		/**
-		 * @brief The location of the file we are querying diagnostics for.
+		 * @param default_error_location Path to attach diagnostics that carry no location to.
+		 * @param query_file Path of the file diagnostics were requested for.
+		 * @param to_uri Turns a path into the URI to answer the client with.
 		 */
-		std::string queried_file_uri;
+		EvaluationContext(
+			std::string default_error_location, std::string query_file, UriResolver to_uri
+		):
+			  default_error_location(std::move(default_error_location)),
+			  queried_file(std::move(query_file)),
+			  to_uri(std::move(to_uri)) {}
 
-		EvaluationContext(std::string default_error_location, std::string query_file):
-			  default_error_location_uri(std::move(default_error_location)),
-			  queried_file_uri(std::move(query_file)) {}
+		/**
+		 * @brief Resolves a path to its URI, falling back to the default location when empty.
+		 */
+		[[nodiscard]] ::lsp::Uri resolve(const std::string& path) const {
+			return to_uri(path.empty() ? default_error_location : path);
+		}
+
+		/// The default file path to use for diagnostics without location.
+		std::string default_error_location{};
+
+		/// The path of the file we are querying diagnostics for.
+		std::string queried_file{};
+
+		/// Turns a path into the URI to answer the client with.
+		UriResolver to_uri{};
 	};
 
 	/**
-	 * @brief Evaluate diagnostic arguments to language server message.
+	 * @brief Evaluate diagnostic arguments to a language server message.
 	 */
 	LSPDiagnosticResult evaluateToLanguageServerMessage(
 		CRef<dia_args::Diagnostic> diagnostic_args, const EvaluationContext& evaluation_ctx

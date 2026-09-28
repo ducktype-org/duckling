@@ -32,7 +32,7 @@ def setup_build_impl(
     clang_for_builtins,
     sanitizer,
     use_replxx,
-    enable_jit,
+    jit,
     llvm_tools_list,
     embed_assets,
     build_static_icu,
@@ -82,12 +82,8 @@ def setup_build_impl(
         f"-D STRIP_SYMBOL_INFORMATION={'ON' if strip_symbol_information else 'OFF'}",
         f"-D DISABLE_UNITY_COMPILATION={'ON' if disable_unity_compilation else 'OFF'}",
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
-        f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
+        f"-D JIT_ENABLED={'ON' if jit.is_jit_enabled() else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
-        *[
-            f"-D {tool.macro()}={llvm_tools_list[tool.param()]}"
-            for tool in LLVM_TOOLS
-        ],
         f"-D EMBED_ASSETS={'ON' if embed_assets else 'OFF'}",
         f"-D BUILD_STATIC_ICU={'ON' if build_static_icu else 'OFF'}",
         f"-D USE_FIXED_STD_PATH={'ON' if fixed_std_path else 'OFF'}",
@@ -105,10 +101,18 @@ def setup_build_impl(
         else:
             cmd_parts.append(f'-D CMAKE_EXE_LINKER_FLAGS="-fuse-ld={linker.lower()}"')
 
+    if jit.is_jit_enabled():
+        cmd_parts.append(f"-D CNP_ENABLED={'ON' if jit.is_cnp_enabled() else 'OFF'}")
+        cmd_parts.extend([
+            f"-D {tool.macro()}={llvm_tools_list[tool.param()]}"
+            for tool in LLVM_TOOLS
+        ])
+
+
     cmd = " ".join(cmd_parts)
 
     log_info("Setting up a build folder...")
-    if docs or coverage or enable_jit:
+    if docs or coverage or jit.is_jit_enabled():
         with_venv(cmd)
     else:
         bash_command(cmd)

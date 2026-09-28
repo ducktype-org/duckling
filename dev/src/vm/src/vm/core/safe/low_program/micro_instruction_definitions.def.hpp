@@ -453,21 +453,33 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
  */
 DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID, vm::low::opargs::Offset)
 #ifdef ENABLE_JIT
-// function prologue, potentially compiles the current function and executes the native version
-// mentioned in dev/scripts/jit/jitable_interface.py
+
 /**
  * @brief Function prologue, potentially compiles the function in which it is situated and executes
  * the native version.
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py. */
-DEF_MICRO_INSTR(jitEntrypoint)
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
+ */
+DEF_MICRO_INSTR(jitFuncEntrypoint)
+
+/**
+ * @brief Loop prologue, potentially compiles the loop in which it is situated and executes the
+ * native version.
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
+ */
+DEF_MICRO_INSTR(jitLoopEntrypoint)
+
 #endif
 
 /**
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
  */
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
 
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
+
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
+ */
 DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
 DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
@@ -527,8 +539,11 @@ DEF_MICRO_INSTR(setVTable_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs:
 DEF_MICRO_INSTR(resetVTable_pptr, vm::low::opargs::PlacePtr)
 // tries to cast pointed object to its subclass, requires that ext_type is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
-// calls a method of specified name on an a pointer. Performs the dynamic dispatch.
-// Requires `ext_imm` holding the local stack distance, see `call_func`
+/**
+ * @brief Calls a method of specified name on an a pointer. Performs the dynamic dispatch.
+ * Requires `ext_imm` holding the local stack distance, see `call_func`.
+ * @note Unoptimizable by JIT, listed in non_jittable.def.hpp.
+ */
 DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::PlacePtr, vm::low::opargs::MethodName)
 
 // ========= GENERAL POINTER OPERATIONS ========
@@ -784,6 +799,9 @@ DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 
 // ========= MISC ========
 
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
+ */
 DEF_MICRO_INSTR(check_strategy)
 DEF_MICRO_INSTR(nop)
 
@@ -791,10 +809,13 @@ DEF_MICRO_INSTR(nop)
 DEF_MICRO_INSTR(exit)
 
 /**
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
  */
 DEF_MICRO_INSTR(breakpoint)
 
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
+ */
 DEF_MICRO_INSTR(stepGil)
 
 /**

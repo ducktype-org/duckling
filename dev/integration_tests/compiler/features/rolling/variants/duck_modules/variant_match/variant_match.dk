@@ -120,8 +120,9 @@ fun boxAltWrite(v: ref (box i32 | f32), value: i32) -> i64 = {
 
 # ===== A `String` alternative: a non-trivially-copyable, non-trivially-destructible payload =====
 #
-# It can only be bound by reference, and the binding is the payload itself, so appending through
-# it grows the string the variant holds.
+# A match over a borrowed variant can only bind it by reference, and the binding is the payload
+# itself, so appending through it grows the string the variant holds. A match that owns its
+# subject moves the payload out instead - see the owning match section below.
 
 fun stringAltLength(v: ref (String | i32)) -> i64 = {
 	return match (v) {
@@ -240,9 +241,9 @@ namespace maybe {
 
 	template(T: type)
 	fun value(m: Maybe(T)) -> T = {
-		return match(m) {
-			case _: () = panicking.panic() as T;
-			case v: ref T = builtins.move_out:{T}(ptrof(*v));
+		return match(move m) {
+			case _: () = panicking.panic();
+			case v: T = move v;
 		}
 	}
 }
@@ -305,6 +306,84 @@ fun owningCopy() -> () = {
 	check(boxAltRead(&trivial_copy), -1i64, 106i64);
 }
 
+# ===== A match that owns its subject =====
+#
+# A variant that is not trivially destructible and is passed to the match by value hands its
+# ownership over: every case names one alternative exactly and moves that payload out of the
+# variant, so nothing is left behind to destroy. A constrained wildcard owns the payload it
+# covers too, and destroys it.
+
+fun makeBoxVariant(value: i32) -> box i32 | f32 = new value;
+fun makeF32Variant() -> box i32 | f32 = (2.5 as f32);
+
+# The box is moved out of the variant and into the binding, which destroys it.
+fun takeBox(v: box i32 | f32) -> i64 = {
+	return match (move v) {
+		case b : box i32 = *b as i64;
+		case f : f32 = -1i64;
+	};
+}
+
+# The wildcard binds nothing, so the match itself has to destroy the box it covers.
+fun dropBox(v: box i32 | f32) -> i64 = {
+	return match (move v) {
+		case _ : box i32 = -2i64;
+		case f : f32 = -1i64;
+	};
+}
+
+# The box outlives the match, moved on out of the binding.
+fun stealBox(v: box i32 | f32) -> box i32 = {
+	return match (move v) {
+		case b : box i32 = move b;
+		case f : f32 = new 0i32;
+	};
+}
+
+fun makeStringVariant(text: slice char) -> String | i32 = text.toString();
+
+fun takeString(v: String | i32) -> i64 = {
+	return match (move v) {
+		case s : String = s.length();
+		case n : i32 = n as i64;
+	};
+}
+
+fun dropString(v: String | i32) -> i64 = {
+	return match (move v) {
+		case _ : String = -2i64;
+		case n : i32 = n as i64;
+	};
+}
+
+fun stealString(v: String | i32) -> String = {
+	return match (move v) {
+		case s : String = move s;
+		case n : i32 = "".toString();
+	};
+}
+
+fun owningMatch() -> () = {
+	# A box payload: bound and destroyed by the case, dropped by the wildcard, or moved out.
+	check(takeBox(makeBoxVariant(5i32)), 5i64, 120i64);
+	check(takeBox(makeF32Variant()), -1i64, 121i64);
+	check(dropBox(makeBoxVariant(7i32)), -2i64, 122i64);
+	check(dropBox(makeF32Variant()), -1i64, 123i64);
+
+	var stolen_box: box i32 = stealBox(makeBoxVariant(9i32));
+	check(*stolen_box as i64, 9i64, 124i64);
+
+	# The same for a payload whose destructor frees a buffer.
+	check(takeString(makeStringVariant("hello")), 5i64, 140i64);
+	check(takeString(makeStringVariant("")), 0i64, 141i64);
+	check(dropString(makeStringVariant("hello")), -2i64, 142i64);
+
+	var stolen_string: String = stealString(makeStringVariant("abc"));
+	check(stolen_string.length(), 3i64, 143i64);
+
+	# Both moved-out payloads are still owned here, so leaving this function frees them.
+}
+
 fun main() -> i64 = {
 	matchPositions();
 	refAlternative();
@@ -313,6 +392,7 @@ fun main() -> i64 = {
 	maybeExample();
 	owningReassignment();
 	owningCopy();
+	owningMatch();
 
 	return 0i64;
 }
