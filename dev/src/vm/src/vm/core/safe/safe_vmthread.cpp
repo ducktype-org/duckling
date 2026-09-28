@@ -120,8 +120,8 @@ namespace vm {
 #endif
 		{
 			auto&      micro_func    = *frame->current_function;
-			const auto low_instr_idx = static_cast<usize>(frame->instr - micro_func.getBc().data());
-			const auto original_instr = micro_func.getOrigBc()[low_instr_idx];
+			const auto low_instr_idx = static_cast<usize>(frame->instr - micro_func.bc.data());
+			const auto original_instr = micro_func.orig_bc[low_instr_idx];
 
 			return getInstructionOpcode(original_instr);
 		}
@@ -166,8 +166,8 @@ namespace vm {
 		using enum code::builders::OpKind;
 		using base::StrID, base::strConcat;
 
-		auto high_func            = func.getHighFunc();
-		auto called_function_name = FunctionName{ func.getName() };
+		auto high_func            = func.high_func;
+		auto called_function_name = FunctionName{ func.name };
 
 		code::Function start_function;
 
@@ -229,7 +229,7 @@ namespace vm {
 
 		auto add_instr = getBuilder(start_function);
 
-		const auto main = FunctionName{ func.getName() };
+		const auto main = FunctionName{ func.name };
 
 		const auto ret_value      = Place64{ StrID("ret_value") };
 		const auto argv_internal  = PlacePtr{ StrID("argv_internal") };
@@ -246,7 +246,7 @@ namespace vm {
 		const auto type_byte       = opargs::Type{ StrID("byte") };
 		const auto type_string     = opargs::Type{ StrID("string") };
 
-		const bool main_has_args = !func.getParameters().empty();
+		const bool main_has_args = !func.parameters.empty();
 
 		auto to_any = [](const auto& place) { return PlaceAny(place.var_name); };
 		auto imm    = [](auto&& arg) {
@@ -401,7 +401,7 @@ namespace vm {
 		CORE_ASSERT(start_function_low.has_value(), "No start function is loaded");
 		CORE_ASSERT(start_function_high.has_value(), "No start function is loaded");
 		CORE_ASSERT(
-			start_function_low->getHighFunc().get() == &*start_function_high,
+			start_function_low->high_func.get() == &*start_function_high,
 			"High function is not a source for low function"
 		);
 
@@ -418,7 +418,7 @@ namespace vm {
 		frame->local_slot_stack_base = runtime_data.slot_stack_base;
 		frame->local_slot_stack_end  = runtime_data.slot_stack_base;
 
-		const auto* instr = start_function_low->getBc().data();
+		const auto* instr = start_function_low->bc.data();
 
 		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
 		// `KillProcessException` so the state stays valid.
@@ -436,14 +436,14 @@ namespace vm {
 		// @note: The return value is the only slot left on the slot stack.
 		CORE_ASSERT(
 			frame->local_slot_stack_end - frame->local_slot_stack_base
-				>= orig_slot_stack_size + func.getResultTypes().size(),
+				>= orig_slot_stack_size + func.result_types.size(),
 			"After function execution, there should be enough slots on the stack to retrieve "
 			"result."
 		);
 
 		// Copy the exit values
 		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
-		for (u64 idx = 0; idx < func.getResultTypes().size(); idx++) {
+		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
 			const usize slot_index = orig_slot_stack_size + idx;
 			// A result the callee never took a block for still has to be handed out as a
 			// pointer, so it gets one here. This is the common case, not a rare one -
@@ -453,7 +453,7 @@ namespace vm {
 				block = createLocalSlotBlock(*frame, process_memory, slot_index).get();
 
 			exit_value_storage.value().emplace_back(
-				safe_process.createVMValue(func.getResultTypes()[idx], Pointer(block, 0))
+				safe_process.createVMValue(func.result_types[idx], Pointer(block, 0))
 			);
 		}
 
@@ -584,7 +584,7 @@ namespace vm {
 				return low::LowCodePosition{
 					.function          = &func,
 					.instruction_index = static_cast<u64>(
-						frame->instr - func.getBc().data() - (call_adjustment ? 1 : 0)
+						frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)
 					),
 				};
 			}
@@ -682,7 +682,7 @@ namespace vm {
 
 		u64 prev_summed = 0;
 
-		for (auto type: called_expr.getResultTypes()) {
+		for (auto type: called_expr.result_types) {
 			auto size = type->getSize().asInt();
 			OpFuns::pushLocalSlot(
 				frame, type, local_stack + callee_stack_distance + prev_summed, size, nullptr
@@ -700,7 +700,7 @@ namespace vm {
 
 		// updating the previous frame, because result variables
 		// will not be returned to the caller
-		prev_frame->local_slot_stack_end -= called_expr.getResultTypes().size();
+		prev_frame->local_slot_stack_end -= called_expr.result_types.size();
 
 		auto resumed = resume();
 		if (!resumed.has_value()) {

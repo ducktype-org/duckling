@@ -3,8 +3,8 @@
 #include "flag_context.hpp"
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/compilation_mode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/core/native/dynamic_library.hpp>

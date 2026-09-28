@@ -19,8 +19,8 @@
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/builtin_functions.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
-#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <ranges>

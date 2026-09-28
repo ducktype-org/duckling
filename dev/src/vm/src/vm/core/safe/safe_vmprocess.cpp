@@ -41,9 +41,9 @@ namespace vm {
 	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided) {
 		return base::strConcat(
 			"Function '",
-			func.getName().str(),
+			func.name.str(),
 			"' expects ",
-			func.getParameters().size(),
+			func.parameters.size(),
 			" arguments, but ",
 			provided,
 			" were provided."
@@ -103,7 +103,7 @@ namespace vm {
 		const auto& func      = *maybe_func.value();
 		const auto& func_args = v_get(run_arguments, FunctionRunArguments);
 
-		if (func_args.size() != func.getParameters().size())
+		if (func_args.size() != func.parameters.size())
 			return refuse(argumentCountMismatchMessage(func, func_args.size()));
 
 		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
@@ -121,13 +121,13 @@ namespace vm {
 
 			// Safe TypeIDs are asserted (in the type builder) to be numerically equal to
 			// ValidTypeIDs, so the interface-level type ID can be compared with the safe one.
-			const auto& arg_type = func.getParameters()[i];
+			const auto& arg_type = func.parameters[i];
 			if (arg_value->getTypeID() != code::valid_type::ValidTypeID(arg_type->getID().asInt()))
 				return refuse(base::strConcat(
 					"Type mismatch for argument ",
 					i,
 					" of function '",
-					func.getName().str(),
+					func.name.str(),
 					"': expected ",
 					arg_type->getName().str(),
 					", got ",
@@ -420,7 +420,7 @@ namespace vm {
 		auto low_position = maybe_lp.value();
 
 		auto [function, low_instr_index] = low_position;
-		auto mapping                     = function->getInstructionMapping();
+		auto mapping                     = function->instruction_mapping;
 
 		// Default instruction range to step over is the whole function, in case we fail to obtain
 		// high position
@@ -475,7 +475,7 @@ namespace vm {
 		auto [low_func, low_instr_idx] = maybe_lp.value();
 
 		api::response::CodePosition code_position = {
-			.function_name   = low_func->getName(),
+			.function_name   = low_func->name,
 			.instr_number    = 0,
 			.source_position = std::nullopt,
 		};
@@ -561,12 +561,12 @@ namespace vm {
 				const Frame& frame = thread->getStackFrame(frame_index);
 
 				auto& func          = *frame.current_function;
-				auto  low_instr_idx = static_cast<u64>(frame.instr - func.getBc().data());
+				auto  low_instr_idx = static_cast<u64>(frame.instr - func.bc.data());
 				auto  fat_pos = func.mapLowVMProgramPositionToCodeCollectionPosition(low_instr_idx);
 				if (!fat_pos) return std::unexpected(api::OtherError{ "Frame not found" });
 
 				auto valid_pos
-					= vm::loader::ValidFuncPosition(fat_pos->instruction_index, func.getHighFunc());
+					= vm::loader::ValidFuncPosition(fat_pos->instruction_index, func.high_func);
 
 				const u64 slot_count = base::safeIntConv<u64>(
 					frame.local_slot_stack_end - frame.local_slot_stack_base
@@ -602,7 +602,7 @@ namespace vm {
 				}
 
 				return api::Response(api::response::StackFrameData{
-					.function_name = frame.current_function->getName(), .frame_vars = frame_vars });
+					.function_name = frame.current_function->name, .frame_vars = frame_vars });
 			}
 		}
 		CORE_UNREACHABLE();

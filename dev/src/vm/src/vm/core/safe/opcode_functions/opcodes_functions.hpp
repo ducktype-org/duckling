@@ -192,14 +192,14 @@ namespace vm {
 				CORE_DEV_LOG(
 					DVMDetails,
 					"function, ",
-					called_func.getName().str(),
+					called_func.name.str(),
 					", ",
 					thread.getThreadID().asInt(),
 					";\n"
 				);
 
-			auto arg_count           = called_func.getParameters().size();
-			auto ret_count           = called_func.getResultTypes().size();
+			auto arg_count           = called_func.parameters.size();
+			auto ret_count           = called_func.result_types.size();
 			auto shared_blocks_count = arg_count + ret_count;
 			u64  prev_frame_slot_count
 				= u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
@@ -219,7 +219,7 @@ namespace vm {
 			frame->current_function = &called_func;
 
 			// Update values passed as arguments.
-			instr = called_func.getBc().data();
+			instr = called_func.bc.data();
 			// The callee's local stack starts where the space shared with the caller (its return
 			// values followed by its arguments) begins.
 			local_stack += callee_stack_distance;
@@ -234,9 +234,9 @@ namespace vm {
 			);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func.getLocalStackSize() >= runtime_data.local_stack_end)
+			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
-			if (frame->local_slot_stack_base + called_func.getLocalSlotCount()
+			if (frame->local_slot_stack_base + called_func.local_slot_count
 			    >= runtime_data.slot_stack_end)
 				throw exceptions::VMStackOverflowException();
 

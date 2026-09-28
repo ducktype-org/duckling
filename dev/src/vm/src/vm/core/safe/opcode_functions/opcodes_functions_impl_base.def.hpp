@@ -340,17 +340,17 @@ namespace vm {
 		{
 			// This function operates on the assumption that the operation "underneath" it is a nop.
 			const auto& current_func_obj = *frame->current_function;
-			auto        cfg_offset       = current_func_obj.getJitFuncEntrypointOffset();
+			auto        cfg_offset       = current_func_obj.jit_func_entrypoint_offset;
 			CORE_ASSERT(cfg_offset == 0, "Function entrypoint should be first");
 			// The pristine bytecode copy (used for compilation) lives on the function itself.
-			const auto& original_bc = current_func_obj.getOrigBc();
+			const auto& original_bc = current_func_obj.orig_bc;
 
 			// Entrypoint opcodes are only patched in by the compiler when JIT data was built,
 			// so it is guaranteed to be initialized here.
 			CORE_ASSERT(
-				!current_func_obj.getJitData().cfgs.empty(), "JIT data missing for compiled function"
+				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled function"
 			);
-			jit::JitFuncData& my_data = current_func_obj.getJitData();
+			jit::JitFuncData& my_data = current_func_obj.jit_data;
 			if (my_data.llvm_compiled_code_ptrs[cfg_offset]) {
 				// is LLVM-compiled
 				(*my_data.llvm_compiled_code_ptrs[cfg_offset])(
@@ -365,7 +365,7 @@ namespace vm {
 				if (my_data.until_compilation[cfg_offset] == 0) {
 					// should be LLVM-compiled and executed now
 					MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
-						my_data.cfgs[cfg_offset], original_bc, current_func_obj.getName()
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
 					);
 					if (compiled) {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
@@ -380,7 +380,7 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.getName().str(),
+							current_func_obj.name.str(),
 							"LLVM compilation failed"
 						);
 						auto cp_compiled = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
@@ -424,7 +424,7 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.getName().str(),
+							current_func_obj.name.str(),
 							expected_compiled.error()
 						);
 						// The entrypoint replaced a nop; skip it and continue interpreting.
@@ -432,7 +432,7 @@ namespace vm {
 					}
 	#else
 					auto compiled = jit::compileLLVM(
-						my_data.cfgs[cfg_offset], original_bc, current_func_obj.getName()
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
 					);
 					if (compiled) {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
@@ -447,7 +447,7 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.getName().str(),
+							current_func_obj.name.str(),
 							"LLVM compilation failed"
 						);
 						// The entrypoint replaced a nop; skip it and continue interpreting.
@@ -465,14 +465,14 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopEntrypoint)(FUNCTION_ARGS) {
 		{
 			const auto& current_func_obj = *frame->current_function;
-			auto        cfg_offset       = instr - current_func_obj.getBc().data();
+			auto        cfg_offset       = instr - current_func_obj.bc.data();
 			CORE_ASSERT(cfg_offset, "loop cfg offset should never be null");
 			// Loop entrypoint opcodes are only patched in by the compiler when JIT data was
 			// built, so it is guaranteed to be initialized here.
 			CORE_ASSERT(
-				!current_func_obj.getJitData().cfgs.empty(), "JIT data missing for compiled loop"
+				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled loop"
 			);
-			jit::JitFuncData& my_data = current_func_obj.getJitData();
+			jit::JitFuncData& my_data = current_func_obj.jit_data;
 
 			auto& llvm_compiled_code_ptr = my_data.llvm_compiled_code_ptrs[cfg_offset];
 			auto& until_compilation      = my_data.until_compilation[cfg_offset];
@@ -488,9 +488,9 @@ namespace vm {
 				if (until_compilation == 0) {
 					// should be LLVM-compiled and executed now
 					// The pristine bytecode copy (used for compilation) lives on the function.
-					const auto&            original_bc = current_func_obj.getOrigBc();
+					const auto&            original_bc = current_func_obj.orig_bc;
 					MRef<jit::JitLLVMFunc> compiled    = jit::compileLLVM(
-                        my_data.cfgs[cfg_offset], original_bc, current_func_obj.getName()
+                        my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
                     );
 					if (compiled) {
 						llvm_compiled_code_ptr              = compiled;
@@ -509,7 +509,7 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.getName().str(),
+							current_func_obj.name.str(),
 							"LLVM compilation failed"
 						);
 						save_execution_state(instr, local_stack, frame, thread);
@@ -673,7 +673,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
 		{
 			auto& called_func = thread.process_program->getFunctions()[instr->arg0];
-			thread.setThreadCtx(called_func.getName().str());
+			thread.setThreadCtx(called_func.name.str());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -717,10 +717,10 @@ namespace vm {
 				"Start function should not be called in the runtime!"
 			);
 			auto& function          = thread.process_program->getFunctions()[function_id];
-			instr                   = function.getBc().data();
+			instr                   = function.bc.data();
 			frame->current_function = &function;
 
-			if (local_stack + function.getLocalStackSize() > thread.runtime_data.local_stack_end)
+			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 		}
 		FUNCTION_CONT(0);
@@ -735,7 +735,7 @@ namespace vm {
 			// stack are its return values, which the caller took care of and keeps using.
 			CORE_ASSERT(
 				usize(callee_frame->local_slot_stack_end - callee_frame->local_slot_stack_base)
-					== callee_frame->current_function->getResultTypes().size(),
+					== callee_frame->current_function->result_types.size(),
 				"On return only the function's return values may be left on the slot stack"
 			);
 
@@ -765,7 +765,7 @@ namespace vm {
 			auto& expr = thread.runtime_expr_low.back();
 
 			CORE_ASSERT(
-				instr >= expr.getBc().data() && instr < expr.getBc().data() + expr.getBc().size(),
+				instr >= expr.bc.data() && instr < expr.bc.data() + expr.bc.size(),
 				"We must be evaluating the latest expression when executing `ret_from_expr`"
 			);
 
@@ -775,7 +775,7 @@ namespace vm {
 			);
 
 			auto* callee_frame = frame;
-			u64   ret_count    = frame->current_function->getResultTypes().size();
+			u64   ret_count    = frame->current_function->result_types.size();
 			frame--;
 			auto* caller_block_ref_stack_end = frame->local_slot_stack_end;
 			u64   ret_slot_index
@@ -800,7 +800,7 @@ namespace vm {
 					            .get();
 
 				exit_value.emplace_back(
-					thread.safe_process.createVMValue(expr.getResultTypes()[idx], Pointer(block, 0))
+					thread.safe_process.createVMValue(expr.result_types[idx], Pointer(block, 0))
 				);
 			}
 

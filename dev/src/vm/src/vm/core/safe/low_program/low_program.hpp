@@ -31,49 +31,40 @@ namespace vm::loader::compiler::safe {
 namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 
-	struct LowCodePosition final {
-		CRef<LowFuncData> function;
-		usize             instruction_index;
-	};
-
 	/**
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData final {
-		friend class vm::loader::compiler::safe::SafeCompiler;
-
-	private:
-		base::StrID name{};
-		usize       id{};
+		base::StrID name;
+		usize       id;
 		// each LowFuncData needs to have the valid counterpart in fat-bytecode
 		// the counterpart remains valid for entire existance of the micro version
 		CRef<vm::code::valid_function::ValidFunction> high_func;
 #ifdef ENABLE_JIT
 		/// Offset of the JIT function entrypoint in the bytecode (guarded by a `nop` in `bc`).
-		usize jit_func_entrypoint_offset{};
+		usize jit_func_entrypoint_offset;
 		/// Per-function JIT state (CFGs, compilation thresholds, compiled code).
 		/// Default-constructed empty; filled in by the compiler only when the JIT is enabled.
 		/// Mutable because opcode functions only hold a const reference to the function
 		/// (same precedent as LowFFIFunction::cif).
 		mutable jit::JitFuncData jit_data{};
 #endif
-		MicroBytecode bc{};
+		MicroBytecode bc;
 		// the copy of original bytecode. Always has the same length as bc
 		// kept for debugging & JIT purposes
-		MicroBytecode orig_bc{};
+		MicroBytecode orig_bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
-		usize local_stack_size{};
+		usize local_stack_size;
 		/// The maximum count of local variable slots required by the function frame.
-		usize local_slot_count{};
+		usize local_slot_count;
 
-		usize arg_size{};
+		usize arg_size;
 		// The total summed size of all return values.
-		usize                 ret_size{};
-		std::vector<TypeCRef> parameters{};
-		std::vector<TypeCRef> result_types{};
+		usize                 ret_size;
+		std::vector<TypeCRef> parameters;
+		std::vector<TypeCRef> result_types;
 
-	public:
 		/**
 		 * @brief Range of instructions
 		 * @note Represents inclusive-exclusive range [`begin`, `end`)
@@ -85,7 +76,6 @@ namespace vm::low {
 			[[nodiscard]] bool contains(usize index) const { return begin <= index && index < end; }
 		};
 
-	private:
 		/**
 		 * @brief Mapping of fatbytecode instruction indexes to microbytecode instruction indexes
 		 * ranges.
@@ -95,80 +85,7 @@ namespace vm::low {
 
 		LowFuncData(CRef<vm::code::valid_function::ValidFunction> ref): high_func(ref) {}
 
-	public:
-		[[nodiscard]]
-		base::StrID getName() const {
-			return name;
-		}
-
 		static constexpr usize NO_FUNCTION_ID = std::numeric_limits<usize>::max();
-
-		[[nodiscard]]
-		usize getId() const {
-			return id;
-		}
-
-		[[nodiscard]]
-		CRef<vm::code::valid_function::ValidFunction> getHighFunc() const {
-			return high_func;
-		}
-
-#ifdef ENABLE_JIT
-		[[nodiscard]]
-		usize getJitFuncEntrypointOffset() const {
-			return jit_func_entrypoint_offset;
-		}
-
-		[[nodiscard]]
-		jit::JitFuncData& getJitData() const {
-			return jit_data;
-		}
-#endif
-
-		[[nodiscard]]
-		const MicroBytecode& getBc() const {
-			return bc;
-		}
-
-		[[nodiscard]]
-		const MicroBytecode& getOrigBc() const {
-			return orig_bc;
-		}
-
-		[[nodiscard]]
-		usize getLocalStackSize() const {
-			return local_stack_size;
-		}
-
-		[[nodiscard]]
-		usize getLocalSlotCount() const {
-			return local_slot_count;
-		}
-
-		[[nodiscard]]
-		usize getArgSize() const {
-			return arg_size;
-		}
-
-		[[nodiscard]]
-		usize getRetSize() const {
-			return ret_size;
-		}
-
-		[[nodiscard]]
-		const std::vector<TypeCRef>& getParameters() const {
-			return parameters;
-		}
-
-		[[nodiscard]]
-		const std::vector<TypeCRef>& getResultTypes() const {
-			return result_types;
-		}
-
-		[[nodiscard]]
-		const std::vector<InstructionRange>& getInstructionMapping() const {
-			return instruction_mapping;
-		}
 
 		[[nodiscard]] std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(usize index) const {
@@ -239,6 +156,11 @@ namespace vm::low {
 			return original_opcode;
 		}
 #endif
+	};
+
+	struct LowCodePosition final {
+		CRef<LowFuncData> function;
+		usize             instruction_index;
 	};
 
 	/**
@@ -428,11 +350,11 @@ namespace vm::code {
 		const Frame& frame = expr.call_stack_base[frame_idx];
 
 		auto& func          = *frame.current_function;
-		auto  low_instr_idx = static_cast<u64>(frame.instr - func.getBc().data());
+		auto  low_instr_idx = static_cast<u64>(frame.instr - func.bc.data());
 
 		auto fat_pos = func.mapLowVMProgramPositionToCodeCollectionPosition(low_instr_idx);
 		if (!fat_pos) return std::nullopt;
 
-		return loader::ValidFuncPosition(fat_pos->instruction_index, func.getHighFunc());
+		return loader::ValidFuncPosition(fat_pos->instruction_index, func.high_func);
 	}
 }

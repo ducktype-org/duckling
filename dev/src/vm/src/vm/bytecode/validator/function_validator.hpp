@@ -6,7 +6,6 @@
 #include <vm/bytecode/compilation_mode.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
-#include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 
 namespace vm::code::detail {
