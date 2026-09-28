@@ -81,6 +81,18 @@ Tests:
           && test -s @{graph_dir}/query_graph_post_opt.bin
           && grep -Eq 'Query graph edges before optimization: [1-9][0-9]*, after optimization: [0-9]+' @{graph_dir}.log"
         ExitCode: 0
+      compact-layout:
+        # By default the dependencies are spread over several columns and the layout is packed,
+        # `--stagger 1 --no-concentrate` gives the plain Graphviz layout back.
+        Run: "@{dump_cmd} --graph-output @{graph_dir}
+          && @{to_dot} @{graph_dir}/query_graph_post_opt.json -o @{graph_dir}/compact.dot
+          && grep -q 'minlen=' @{graph_dir}/compact.dot
+          && grep -q 'concentrate=true' @{graph_dir}/compact.dot
+          && @{to_dot} @{graph_dir}/query_graph_post_opt.json -o @{graph_dir}/plain.dot
+            --stagger 1 --no-concentrate --nodesep 0.25
+          && ! grep -q 'minlen=' @{graph_dir}/plain.dot
+          && grep -q 'nodesep=0.25; concentrate=false' @{graph_dir}/plain.dot"
+        ExitCode: 0
       rename-pass:
         # Inputs get readable names and unstable query names are hidden.
         Run: "@{dump_cmd} --graph-output @{graph_dir} --rename-pass
