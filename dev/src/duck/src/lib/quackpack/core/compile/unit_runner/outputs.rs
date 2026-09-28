@@ -127,6 +127,25 @@ pub fn get_linker_options(
     )))
 }
 
+/// Get DVM linking options for the given root `unit`: the `.dbc` outputs of all its
+/// dependencies (direct and transitive).
+#[instrument(skip_all)]
+pub fn get_dvm_linking_options(
+    unit: &Unit,
+    graph: &UnitGraph,
+    layout: &dyn ProfileLayout,
+) -> QuackResult<multipackage_schema::DvmLinkingOptions> {
+    let link_libraries = get_deps_outputs(unit, graph, layout)?
+        .into_iter()
+        .filter(|(unit, _)| unit.artifacts_type() == ArtifactsType::DvmDependency)
+        .map(|(_, output)| output)
+        .collect();
+    Ok(multipackage_schema::DvmLinkingOptions {
+        shared_libraries: vec![],
+        link_libraries,
+    })
+}
+
 /// Collect _all_ (including `.a`!) outputs of dependencies (direct and transitive) of this `unit`.
 #[instrument(skip_all)]
 fn get_deps_outputs(

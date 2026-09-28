@@ -67,6 +67,10 @@ pub enum ArtifactsType {
     /// they might be incomplete, but linker will take care of this (when compiling the root package
     /// with [`Binary`](Self::Binary) or [`Library`](Self::Library) types).
     IsADependencyArtifact,
+    /// This [`Unit`] is a dependency of a DVM root package.
+    /// Maps to the `DvmLib` compilation strategy; the root links it through
+    /// `dvm_linking_options.link_libraries`.
+    DvmDependency,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -172,6 +176,7 @@ impl Unit {
             ArtifactsType::IsADependencyArtifact => {
                 format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX)
             }
+            ArtifactsType::DvmDependency => format!("{}{}", self.unique_name(), DVM_SUFFIX),
         }
     }
 

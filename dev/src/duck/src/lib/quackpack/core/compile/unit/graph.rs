@@ -317,12 +317,10 @@ fn infer_artifacts_type(
 ) -> ArtifactsType {
     let is_dvm = bcx.profile.dvm_bytecode;
     let is_root = unit_identity == root_identity;
-    if is_dvm && is_root {
-        return ArtifactsType::Dvm;
+    match (is_dvm, is_root) {
+        (true, true) => ArtifactsType::Dvm,
+        (true, false) => ArtifactsType::DvmDependency,
+        (false, true) => ArtifactsType::Binary,
+        (false, false) => ArtifactsType::IsADependencyArtifact,
     }
-    if is_root {
-        return ArtifactsType::Binary;
-    }
-    // NOTE: Dependencies don't get their own tasks when compiling into DVM.
-    ArtifactsType::IsADependencyArtifact
 }

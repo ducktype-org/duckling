@@ -72,7 +72,9 @@ fn create_task(
                 archive_options: None,
             }
         }
-        ArtifactsType::Dvm => unreachable!("DVM tasks should be handled by the `DvmExecutor`"),
+        ArtifactsType::Dvm | ArtifactsType::DvmDependency => {
+            unreachable!("DVM tasks should be handled by the `DvmExecutor`")
+        }
         ArtifactsType::Library => unreachable!("library tasks are unsupported"),
     };
     Ok(multipackage_schema::Task {

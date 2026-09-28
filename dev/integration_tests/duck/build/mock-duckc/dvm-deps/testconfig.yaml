@@ -24,4 +24,5 @@ Tests:
             info: starting loading 2 packages
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
+            info: compiling \`bar\`...
             info: compiling \`foo\`..."
