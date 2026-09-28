@@ -468,23 +468,23 @@ namespace vm::loader::compiler::safe {
 		bytecode[function_jit_entrypoint]   = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
 #endif
 
-		low::LowFuncData func(&function);
-		func.name = function.name;
-		func.id   = low::LowFuncData::NO_FUNCTION_ID;
+		return low::LowFuncData{
+			.name      = function.name,
+			.id        = low::LowFuncData::NO_FUNCTION_ID,
+			.high_func = &function,
 #ifdef ENABLE_JIT
-		func.jit_func_entrypoint_offset = function_jit_entrypoint;
+			.jit_func_entrypoint_offset = function_jit_entrypoint,
 #endif
-		// we need two copies of the bytecode
-		func.bc                  = bytecode;
-		func.orig_bc             = std::move(bytecode);
-		func.local_stack_size    = getIntTypeSize(ctx.local_stack_size);
-		func.local_slot_count    = ctx.local_slot_count;
-		func.arg_size            = getIntTypeSize(parameters_size);
-		func.ret_size            = getIntTypeSize(ret_type_sum);
-		func.parameters          = std::move(parameters);
-		func.result_types        = std::move(result_types);
-		func.instruction_mapping = std::move(instruction_mapping);
-
-		return func;
+			// we need two copies of the bytecode
+			.bc                  = bytecode,
+			.orig_bc             = std::move(bytecode),
+			.local_stack_size    = getIntTypeSize(ctx.local_stack_size),
+			.local_slot_count    = ctx.local_slot_count,
+			.arg_size            = getIntTypeSize(parameters_size),
+			.ret_size            = getIntTypeSize(ret_type_sum),
+			.parameters          = std::move(parameters),
+			.result_types        = std::move(result_types),
+			.instruction_mapping = std::move(instruction_mapping),
+		};
 	}
 }

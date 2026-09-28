@@ -83,8 +83,6 @@ namespace vm::low {
 		 */
 		std::vector<InstructionRange> instruction_mapping;
 
-		LowFuncData(CRef<vm::code::valid_function::ValidFunction> ref): high_func(ref) {}
-
 		static constexpr usize NO_FUNCTION_ID = std::numeric_limits<usize>::max();
 
 		[[nodiscard]] std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException>

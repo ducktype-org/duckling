@@ -1,8 +1,6 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
-#include <base/pointers/box.hpp>
-#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>

@@ -6,7 +6,6 @@
 #pragma once
 
 #include <base/pointers/box.hpp>
-#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <deque>

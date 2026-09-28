@@ -6,7 +6,6 @@
 #include <vm/debugger/mapper.hpp>
 
 #include <deque>
-#include <future>
 #include <optional>
 
 namespace vm::debugger {
