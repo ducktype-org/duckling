@@ -56,7 +56,12 @@ namespace compiler::repl {
 				// automatically. And we don't want to run destructor of a result temporary,
 				// if it's non-trivially destructible. return <expr>.
 				if (expr.expr->expression_type.getValueCategory().isMovableFrom())
-					hout_expr = makeBox<helios::code::MoveExpr>(hout_expr->clone());
+					hout_expr = makeBox<helios::code::MoveExpr>(
+						ctx,
+						expr.expr->origin.generatedFrom(),
+						expr.expr->clone(),
+						helios::code::MoveExpr::MoveKind::Implicit
+					);
 
 				code_block->statements.emplace_back(base::makeBox<helios::code::ReturnStmt>(
 					helios::code::generatedOrigin(), std::move(hout_expr)

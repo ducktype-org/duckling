@@ -58,9 +58,7 @@ private:
 	static CRef<query::QResult<helios::HOUTFunction>> instructionWrapper(
 		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt
 	) {
-		return ctx.query<helios::QueryCodeOfFun>(
-			repl::queryReplInstructionWrapperSymbol(ctx, stmt)
-		);
+		return ctx.query<helios::QueryCodeOfFun>(repl::queryReplInstructionWrapperSymbol(ctx, stmt));
 	}
 
 	void testWrapperShapeForWhileInstruction() {

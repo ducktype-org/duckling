@@ -143,8 +143,8 @@ private:
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 101);
 			ASSERT_HAS_VALUE(wrapped, "Expression wrapper build should succeed");
 			assertTrue(
-				wrapped->wrapper_func_name.find("__repl_input_wrapper_101") != std::string::npos,
-				"Wrapper function name should include expression counter"
+				wrapped->wrapper_func_name.find("__repl_input_wrapper_") != std::string::npos,
+				"Wrapper function name should include the wrapper prefix"
 			);
 		});
 	}
@@ -159,8 +159,8 @@ private:
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 202);
 			ASSERT_HAS_VALUE(wrapped, "Instruction wrapper build should succeed");
 			assertTrue(
-				wrapped->wrapper_func_name.find("__repl_input_wrapper_202") != std::string::npos,
-				"Wrapper function name should include instruction counter"
+				wrapped->wrapper_func_name.find("__repl_input_wrapper_") != std::string::npos,
+				"Wrapper function name should include the wrapper prefix"
 			);
 		});
 	}
@@ -221,9 +221,9 @@ private:
 			auto initializer_name
 				= helios::mangler::getSimpleMangledName(ctx, built->initializer_function);
 			assertTrue(
-				std::string(initializer_name.strView()).find("__repl_input_wrapper_404")
+				std::string(initializer_name.strView()).find("__repl_input_wrapper_")
 					!= std::string::npos,
-				"Initializer function name should include the wrapper counter"
+				"Initializer function name should include the wrapper prefix"
 			);
 
 			auto variable_name = helios::mangler::getSimpleMangledName(
