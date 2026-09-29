@@ -39,6 +39,7 @@ RUN apt-get update -y && \
     # LLVM
     llvm-19 \
     llvm-19-dev \
+    libclang-19-dev \
     llvm-19-runtime \
     # Docs deps
     doxygen \

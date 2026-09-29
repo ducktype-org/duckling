@@ -218,5 +218,5 @@ in `integration_tests/duck/translate-c/`:
 `examples/sdl3_demo.sh` builds and runs an SDL3 program on both backends (`--window` for a real
 window).
 
-libclang is found next to the LLVM the build uses (`dependencies/Clang.cmake`). Without it, the
-tool is not built and the integration tests are disabled.
+libclang is a required build dependency, found next to the LLVM the build uses
+(`dependencies/Clang.cmake`).

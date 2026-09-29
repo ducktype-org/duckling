@@ -13,7 +13,7 @@
 - **lcov** is used for generating coverage reports.
 - **LLVM** with version 19 is required for building the project.
 - **pkg-config** and **libffi** (development headers) are required for the dynamic foreign function interface.
-- [optional] **libclang** (development headers, same version as LLVM) builds `duck_c_import`, the translator behind `duck translate-c`. Without it the tool and its tests are skipped. It ships with LLVM from `toolbox.py download-llvm`/`install-llvm` and with Arch's `clang`; on Debian/Ubuntu install `libclang-dev`.
+- **libclang** (development headers, same version as LLVM) is required for `duck_c_import`, the translator behind `duck translate-c`. It ships with LLVM from `toolbox.py download-llvm`/`install-llvm`, with Homebrew's `llvm@19` and with Arch's `clang`; on Debian/Ubuntu install `libclang-dev`.
 
 
 #### Debian/Ubuntu

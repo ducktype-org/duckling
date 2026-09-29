@@ -5,9 +5,6 @@
 # binding has to get right: a union event, anonymous members, bitfields, a packed record, opaque
 # handles and numeric macros. Its C implementation is built per case, outside the packages.
 
-# `duck_c_import` is only built when libclang was found at configure time.
-Enabled: '[ -x "@{duckc_dir}/duck_c_import" ]'
-
 TimeOut: 90
 timeout_default: 90
 
@@ -58,7 +55,7 @@ Tests:
   system-library:
     Description: a system header and library, found by bare names, work on both backends
     # glibc declares most of math.h in bits/, and libm.so is a linker script naming libm.so.6.
-    Enabled: '[ -x "@{duckc_dir}/duck_c_import" ] && [ "$(uname)" = Linux ]'
+    Enabled: '[ "$(uname)" = Linux ]'
     Cases:
       libm:
         before-cmd: >-
@@ -73,7 +70,7 @@ Tests:
 
   zlib:
     Description: zlib, a bare-name header with a pkg-config package, compresses and decompresses on both backends
-    Enabled: '[ -x "@{duckc_dir}/duck_c_import" ] && pkg-config --exists zlib'
+    Enabled: pkg-config --exists zlib
     Cases:
       round-trip:
         before-cmd: >-
@@ -121,7 +118,7 @@ Tests:
 
   sdl3:
     Description: SDL3 bindings drive a window, an event loop and drawing on both backends
-    Enabled: '[ -x "@{duckc_dir}/duck_c_import" ] && pkg-config --exists sdl3'
+    Enabled: pkg-config --exists sdl3
     TimeOut: 300
     NeededThreads: 2
     Cases:
