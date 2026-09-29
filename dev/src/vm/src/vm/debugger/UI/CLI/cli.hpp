@@ -6,10 +6,11 @@
 	#include <vm/debugger/UI/CLI/minimal/cli.hpp>
 #endif
 
+#include <clah/clah.hpp>
 #include <diagnostic/highlight_positions.hpp>
+
 #include <vm/debugger/debugger.hpp>
 
-#include <mutex>
 #include <sstream>
 
 namespace vm::debugger::cli {
@@ -37,20 +38,22 @@ namespace vm::debugger::cli {
 		int  run();
 
 	private:
-		events::Listener<api::ProcStatus> status_change_listener;
-		events::Listener<std::string>     error_listener;
-		events::Listener<std::string>     output_listener;
-		Debugger                          debugger;
+		Debugger debugger;
 
 		base::Optional<fs::File>           selected_file;
 		std::expected<void, api::ApiError> load_result = {};
 
+		// --- Implementation specific data ---
+
 		vm::debugger::cli::impl::ImplementationSpecific spec;
 
-		// base::Box<ImplementationSpecific>&& makeSpec();
-		void implInit();
-		bool getline(std::string& line);
-		void implExit();
+		// --- Implementation specific functions ---
+
+		void mainLoop(clah::Clah& clah);
+		void exitMainLoop();
+		void print(const printer::PrinterContentsSeq& content);
+
+		// --- Implementation independent print generalisation ---
 
 		void printCodePosition(const CodePosition& position);
 
@@ -65,8 +68,7 @@ namespace vm::debugger::cli {
 		void printNL(const Args&... content) {
 			std::stringstream sstr;
 			((sstr << content), ...);
-			sstr << '\n';
-			print({ sstr.str() });
+			printNL({ sstr.str() });
 		}
 
 		template<typename... Args>
@@ -76,7 +78,6 @@ namespace vm::debugger::cli {
 			printError({ sstr.str() });
 		}
 
-		void print(const printer::PrinterContentsSeq& content);
 		void printNL(const printer::PrinterContentsSeq& content);
 		void printError(const printer::PrinterContentsSeq& content);
 	};
