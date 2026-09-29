@@ -119,7 +119,10 @@ namespace compiler::frontend {
 
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
-	ModuleKind ModuleTree::getKind() const { return kind; }
+	ModuleKind ModuleTree::getKind() const {
+		CORE_ASSERT(kind != ModuleKind::Invalid, "Module kind should never be invalid at this point!");
+		return kind;
+	}
 
 	base::Optional<ModuleAccessLocked> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return ModuleAccessLocked(m_parent.value()->getModuleID());
@@ -424,7 +427,12 @@ namespace compiler::frontend {
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
 			}
-		} else {
+		} else if (extension == LANG_SCRIPT_FILE) {
+			// @TODO: #2762 handle script files
+			// mock for now:
+			addOtherFile(file);
+		} 
+		else {
 			// Other file
 			addOtherFile(file);
 		}

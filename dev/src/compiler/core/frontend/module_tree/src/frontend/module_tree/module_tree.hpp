@@ -98,7 +98,6 @@ namespace compiler::frontend {
 	public:
 		virtual ~ModuleTree();
 
-
 		ModuleID getModuleID() const;
 
 		/**
@@ -241,6 +240,9 @@ namespace compiler::frontend {
 	protected:
 		ModuleTree();
 
+		/**
+		 * Dummy function to make this class abstract.
+		 */
 		virtual void makeAbstract() = 0;
 
 		/**
@@ -252,46 +254,36 @@ namespace compiler::frontend {
 		 * @return nullptr for module types that have no main source file (scripts).
 		 */
 		[[nodiscard]]
-		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() {
-			return nullptr;
-		}
+		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() = 0;
 
 		[[nodiscard]]
-		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const {
-			return nullptr;
-		}
+		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const = 0;
 
 		/**
 		 * @brief Access the submodules of this module.
 		 * @return nullptr for module types that cannot have submodules.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() {
-			return nullptr;
-		}
+		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() = 0;
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const {
-			return nullptr;
-		}
+		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const = 0;
 
 		/**
 		 * @brief Access the other files of this module.
 		 * @return nullptr for module types that cannot have other files.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() {
-			return nullptr;
-		}
+		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() = 0;
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const {
-			return nullptr;
-		}
+		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const = 0;
 
 		/**
 		 * @brief Collects every SourceFile owned by this module, regardless of its type.
 		 * @note For scripts this returns the source files of the whole synthetic module chain.
+		 *
+		 * PR: should this be virtual?
 		 */
 		[[nodiscard]]
 		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const;
