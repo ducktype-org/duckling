@@ -6,7 +6,6 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "helios/tsh/value_category.hpp"
 #include "stmt.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
