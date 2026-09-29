@@ -1,11 +1,18 @@
 #pragma once
 
+#ifdef USE_REPLXX
+	#include <vm/debugger/UI/CLI/replxx/cli.hpp>
+#else
+	#include <vm/debugger/UI/CLI/minimal/cli.hpp>
+#endif
+
 #include <vm/debugger/debugger.hpp>
 
 #include <mutex>
 #include <sstream>
 
 namespace vm::debugger::cli {
+
 	/**
 	 * @class CLIDebugger
 	 * @brief Simple Command Line Interface Debugger
@@ -37,6 +44,13 @@ namespace vm::debugger::cli {
 
 		base::Optional<fs::File>           selected_file;
 		std::expected<void, api::ApiError> load_result = {};
+
+		vm::debugger::cli::impl::ImplementationSpecific spec;
+
+		// base::Box<ImplementationSpecific>&& makeSpec();
+		void specInit();
+		bool getline(std::string& line);
+		void specExit();
 
 		void printCodePosition(const CodePosition& position);
 

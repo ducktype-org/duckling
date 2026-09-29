@@ -206,15 +206,16 @@ namespace vm::debugger::cli {
 						  })
 				  );
 
+		specInit();
 		printNL(
 			"++++++++++++++++++++++++++++\n"
 			"+   Debugger has started   +\n"
 			"++++++++++++++++++++++++++++"
 		);
-
-		for (std::string line; running && std::getline(std::cin, line); cmds.execute(strip(line)));
-
+		for (std::string line; running && getline(line); cmds.execute(strip(line)));
 		printNL("Exiting debugger.");
+		specExit();
+
 		return 0;
 	}
 
@@ -232,25 +233,5 @@ namespace vm::debugger::cli {
 			dia::printHighlightedPositions(out, { sp }, 1);
 			print(out.getContents());
 		}
-	}
-
-	void CLIDebugger::print(const printer::PrinterContentsSeq& content) {
-		std::lock_guard lk(output_mutex);
-		printer::StreamPrinter::print(content, std::cout);
-	}
-
-	void CLIDebugger::printNL(const printer::PrinterContentsSeq& content) {
-		std::lock_guard lk(output_mutex);
-		printer::StreamPrinter::print(content, std::cout);
-		printer::StreamPrinter::newline(1, std::cout);
-	}
-
-	void CLIDebugger::printError(const printer::PrinterContentsSeq& content) {
-		std::lock_guard lk(output_mutex);
-		printer::StreamPrinter::print(
-			{ { "[Debug error]: ", printer::Color::BrightRed } }, std::cout
-		);
-		printer::StreamPrinter::print(content, std::cout);
-		printer::StreamPrinter::newline(1, std::cout);
 	}
 }
