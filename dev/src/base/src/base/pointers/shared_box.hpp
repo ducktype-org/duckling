@@ -205,15 +205,10 @@ namespace base {
 		}
 
 		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete,clang-analyzer-cplusplus.NewDeleteLeaks)
-		/**
-		 * @brief Takes over the ownership of a non-null `Box` with the default deleter.
-		 * @note A `Box` with a custom deleter is accepted only through its conversion to
-		 * `Box<T>`, so the custom deleter is not preserved.
-		 * @note Do not try multiple inheritance with this SharedBox, it doesn't work there.
-		 */
-		SharedBox(Box<T>&& other) noexcept:
+		template<class Deleter>
+		SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
-			  ctrl_ptr{ new internal::ControlBlock<T>(std::move(other).deleter) } {
+			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) } {
 			other.ptr = nullptr;
 			assertNotNull();
 		}

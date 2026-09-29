@@ -15,6 +15,7 @@
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
@@ -28,6 +29,7 @@
 
 #include <base/str/str_utils.hpp>
 #include <base/types/bits_and_bytes.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
@@ -1008,7 +1010,36 @@ namespace compiler::helios {
 			return vm_eval_result.value();
 		}
 
+		/**
+		 * @brief Logs an error for every variable or parameter used inside the `expr` tree.
+		 * @return Bad if any such usage was found, Ok otherwise.
+		 */
+		static base::OkBad reportVariablesInConstExpr(query::Context& ctx, const code::Expr& expr) {
+			base::OkBad result = base::OK;
+			code::walkExprTree(expr, [&](const auto& node) {
+				using Node = std::remove_cvref_t<decltype(node)>;
+				if constexpr (std::same_as<Node, code::IdentifierExpr>) {
+					const auto symbol_kind = kind(node.symbol);
+					if (symbol_kind != SymbolKind::Variable and symbol_kind != SymbolKind::Parameter)
+						return;
+					ctx.logInt(makeBox<dia::PlaceholderError>(
+						"Expression cannot be evaluated at compile-time.",
+						node.origin.getStablePosition(),
+						base::strConcat(
+							"Using the variable `",
+							name(node.symbol),
+							"` in a constant expression is invalid."
+						)
+					));
+					result = base::BAD;
+				}
+			});
+			return result;
+		}
+
 		static CompTimeEvalResult evaluateExprWithVm(query::Context& ctx, CRef<code::Expr> expr) {
+			if (reportVariablesInConstExpr(ctx, *expr).isBad()) return query::Failed();
+
 			const SymID function_sym_id = repl::queryHoutExpressionWrapperSymbol(
 				ctx, base::StrID("__comp_time_expr_wrapper"), expr->clone()
 			);
