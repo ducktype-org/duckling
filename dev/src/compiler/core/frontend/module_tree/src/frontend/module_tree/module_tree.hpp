@@ -18,7 +18,6 @@
 #include <regex>
 #include <string>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 namespace compiler::frontend::packages {
@@ -59,10 +58,16 @@ namespace compiler::frontend {
 	class ModuleTreeModifier;
 	struct GetModuleID_Functor;
 
+	enum class ModuleKind { Invalid, Module, Script, ReplChain };
+
 	/**
-	 * @brief Represents a single module in the Duckling project tree.
+	 * @brief Represents a single module tree node in the Duckling project tree.
 	 *
 	 * @note Each module is either a standard module or script module (created from a script file).
+	 *
+	 * @note This is an abstract class, the instances include:
+	 * - ModuleModuleTree: Represents a standard module.
+	 * - script related nodes
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
 	 * including its main source file, submodules, and other files.
@@ -84,62 +89,13 @@ namespace compiler::frontend {
 	 * component hash. Lazy writes can race
 	 * under concurrency.
 	 */
-	class ModuleTree final {
+	class ModuleTree {
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;
 		friend struct GetModuleID_Functor;
 		friend struct ModuleID;
 
 	public:
-		/**
-		 * @brief Standard module specific data.
-		 */
-		struct ModuleModuleData final {
-			base::Optional<base::Ref<SourceFile>> m_main_source_file;
-		};
-
-		/**
-		 * @brief REPL-specific data structure.
-		 *
-		 * Only used for repl modules.
-		 */
-		struct SyntheticReplChainModuleData final {
-			/**
-			 * Parent REPL module in chronological order.
-			 * Optional - only empty for first REPL module.
-			 */
-			base::Optional<ModuleID> m_repl_module_parent;
-
-			/**
-			 * The synthetic source file this chain link was created from.
-			 * It plays the role of the main source file of a standard module.
-			 */
-			base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
-		};
-
-		/**
-		 * Script specific data.
-		 *
-		 * @note Scripts dont have a main source file like standard modules.
-		 * Instead, a synthetic module chain is created to represent the script module.
-		 */
-		struct ModuleScriptData final {
-			base::Optional<fs::File> m_script_file;
-
-			/**
-			 * @note: For REPL like execution this can be edited or extended via ModuleTreeModifier.
-			 */
-			std::vector<SyntheticReplChainModuleData> m_synthetic_repl_module_chain;
-		};
-
-		/**
-		 * @brief Module type specific data of a module.
-		 *
-		 * @note The alternative held decides the kind of the module.
-		 */
-		using ModuleTypeData
-			= std::variant<ModuleModuleData, ModuleScriptData, SyntheticReplChainModuleData>;
-
 		ModuleID getModuleID() const;
 
 		/**
@@ -208,16 +164,16 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] packages::PackageAccessLocked getPackage() const;
 
+		ModuleKind getKind() const;
+
 		/**
 		 * Check if this module is a REPL-generated module.
 		 * REPL modules have special cross-module lookup behavior.
 		 * @return true if this is a REPL module, false otherwise
-		 *
-		 * @TODO: #2762 change to more ADT like approach
 		 */
 		[[nodiscard]]
 		bool isReplModule() const {
-			return std::holds_alternative<SyntheticReplChainModuleData>(m_module_type_data);
+			return getKind() == ModuleKind::ReplChain;
 		}
 
 		/**
@@ -226,9 +182,8 @@ namespace compiler::frontend {
 		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
 		 */
 		[[nodiscard]]
-		base::Optional<ModuleID> getReplModuleParent() const {
-			CORE_ASSERT(isReplModule(), "repl data of a node with parent should have value!");
-			return getModuleTypeData<SyntheticReplChainModuleData>().m_repl_module_parent;
+		virtual base::Optional<ModuleID> getReplModuleParent() const {
+			CORE_PANIC("getReplModuleParent called on non-REPL module!");
 		}
 
 		/**
@@ -279,7 +234,7 @@ namespace compiler::frontend {
 		ModuleTree& operator=(const ModuleTree&) = delete;
 		ModuleTree(ModuleTree&&) noexcept        = default;
 
-	private:
+	protected:
 		ModuleTree();
 
 		/**
@@ -344,6 +299,8 @@ namespace compiler::frontend {
 		|  Universal data members:   *|
 		\* * * * * * * * * * * * * * */
 
+		ModuleKind kind;
+
 		/**
 		 * this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		 */
@@ -355,18 +312,16 @@ namespace compiler::frontend {
 		 */
 		base::StrID m_package_id;
 
+		/**
+		 * Name of the module.
+		 */
 		base::StrID m_name;
 
-		base::Optional<base::Ref<ModuleTree>> m_parent;
-
-		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-
 		/**
-		 * Other files in the module (not SourceFiles) currently nothing is
-		 * happening with them. Do not use this in query unless AccessLocked is
-		 * implemented for this
+		 * Parent module, if any.
+		 * @note empty if this is a root module.
 		 */
-		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
+		base::Optional<base::Ref<ModuleTree>> m_parent;
 
 
 		/**
@@ -392,25 +347,6 @@ namespace compiler::frontend {
 		 * recomputation flow (updateModuleHashFromRootToThis/updateModuleHash).
 		 */
 		mutable base::Box<std::mutex> m_hash_recompute_mutex;
-
-		/* * * * * * * * * * * * * * * * * * * *\
-		|  Module type specific data members:   |
-		\* * * * * * * * * * * * * * * * * * * */
-
-
-		ModuleTypeData m_module_type_data;
-
-		template<class T>
-		T& getModuleTypeData() {
-			CORE_ASSERT(std::holds_alternative<T>(m_module_type_data), "Module type mismatch");
-			return std::get<T>(m_module_type_data);
-		}
-
-		template<class T>
-		const T& getModuleTypeData() const {
-			CORE_ASSERT(std::holds_alternative<T>(m_module_type_data), "Module type mismatch");
-			return std::get<T>(m_module_type_data);
-		}
 	};
 
 	/**
