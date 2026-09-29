@@ -28,6 +28,7 @@ namespace compiler::repl {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
+		builder->setKind(frontend::ModuleKind::ReplChain);
 
 		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
 		builder->setName(base::StrID(module_name));

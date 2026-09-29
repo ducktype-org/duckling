@@ -28,6 +28,7 @@ private:
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID(base::generateRandomString(32)));
+		builder->setKind(frontend::ModuleKind::ReplChain);
 
 		auto virtual_file = fs::FileManager::createRandomVirtualFile(source_code);
 		builder->setMainSourceFile(virtual_file);

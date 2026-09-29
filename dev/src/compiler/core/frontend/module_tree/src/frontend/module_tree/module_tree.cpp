@@ -231,7 +231,7 @@ namespace compiler::frontend {
 		hashing::addToHash(partial, hasMainSourceFile());
 
 		// Module kind affects module semantics and therefore must affect module hash.
-		hashing::addToHash(partial, static_cast<usize>(getKind()));
+		hashing::addToHash(partial, std::to_underlying(getKind()));
 
 		if (isReplModule()) {
 			auto repl_module_parent = getReplModuleParent();

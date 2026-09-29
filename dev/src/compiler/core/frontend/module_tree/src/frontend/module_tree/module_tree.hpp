@@ -58,6 +58,9 @@ namespace compiler::frontend {
 	class ModuleTreeModifier;
 	struct GetModuleID_Functor;
 
+	/**
+	 * @brief Enumerates the different kinds of module tree nodes.
+	 */
 	enum class ModuleKind { Invalid, Module, Script, ReplChain };
 
 	/**
@@ -172,6 +175,7 @@ namespace compiler::frontend {
 		/**
 		 * Check if this module is a REPL-generated module.
 		 * REPL modules have special cross-module lookup behavior.
+		 * @TODO: #2762 remove this if possible
 		 * @return true if this is a REPL module, false otherwise
 		 */
 		[[nodiscard]]
@@ -182,6 +186,7 @@ namespace compiler::frontend {
 		/**
 		 * Get the parent REPL module.
 		 * Only valid for REPL modules.
+		 * @TODO: #2762 remove this if possible, its barely used
 		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
 		 */
 		[[nodiscard]]
@@ -289,7 +294,7 @@ namespace compiler::frontend {
 		 * @brief Collects every SourceFile owned by this module, regardless of its type.
 		 * @note For scripts this returns the source files of the whole synthetic module chain.
 		 *
-		 * PR: should this be virtual?
+		 * PR: should this be virtual? maybe just make collectOwnedSourceFiles virtual
 		 */
 		[[nodiscard]]
 		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const;
