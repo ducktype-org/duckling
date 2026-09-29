@@ -52,12 +52,12 @@ extern("C") {
 
     class SL_Tagged__view_i {
         _pad: u8[4];
-        v: i32;
+        __dk_v: i32;
     }
 
     class SL_Tagged__view_f {
         _pad: u8[4];
-        v: f32;
+        __dk_v: f32;
     }
 
     # Layout blob of union `SL_Tagged__anon0`: reach its members through the generated `SL_Tagged__anon0_*` functions.
@@ -76,7 +76,7 @@ extern("C") {
     }
 
     class SL_Packed__view_tag {
-        v: u8;
+        __dk_v: u8;
     }
 
     fundecl SL_Init(flags: u32) -> bool;
@@ -102,157 +102,157 @@ const SL_WINDOW_RESIZABLE: u64 = 32u64;
 const SL_SCALE: f64 = 1.5;
 const SL_NEGATIVE: i32 = -3i32;
 
-fun SL_Event_as_type(p: cptr SL_Event) -> cptr u32 = {
-    return p as cptr u32;
+fun SL_Event_as_type(__dk_p: cptr SL_Event) -> cptr u32 = {
+    return __dk_p as cptr u32;
 }
 
-fun SL_Event_as_key(p: cptr SL_Event) -> cptr SL_KeyboardEvent = {
-    return p as cptr SL_KeyboardEvent;
+fun SL_Event_as_key(__dk_p: cptr SL_Event) -> cptr SL_KeyboardEvent = {
+    return __dk_p as cptr SL_KeyboardEvent;
 }
 
-fun SL_Event_as_quit(p: cptr SL_Event) -> cptr SL_QuitEvent = {
-    return p as cptr SL_QuitEvent;
+fun SL_Event_as_quit(__dk_p: cptr SL_Event) -> cptr SL_QuitEvent = {
+    return __dk_p as cptr SL_QuitEvent;
 }
 
-fun SL_Event_as_padding(p: cptr SL_Event) -> cptr u8 = {
-    return p as cptr u8;
+fun SL_Event_as_padding(__dk_p: cptr SL_Event) -> cptr u8 = {
+    return __dk_p as cptr u8;
 }
 
-fun SL_Tagged_get_i(p: cptr SL_Tagged) -> i32 = {
-    let view = p as cptr SL_Tagged__view_i;
-    return view[0].v;
+fun SL_Tagged_get_i(__dk_p: cptr SL_Tagged) -> i32 = {
+    let __dk_view = __dk_p as cptr SL_Tagged__view_i;
+    return __dk_view[0].__dk_v;
 }
 
-fun SL_Tagged_set_i(p: cptr SL_Tagged, value: i32) -> () = {
-    let view = p as cptr SL_Tagged__view_i;
-    view[0].v = value;
+fun SL_Tagged_set_i(__dk_p: cptr SL_Tagged, __dk_value: i32) -> () = {
+    let __dk_view = __dk_p as cptr SL_Tagged__view_i;
+    __dk_view[0].__dk_v = __dk_value;
 }
 
-fun SL_Tagged_get_f(p: cptr SL_Tagged) -> f32 = {
-    let view = p as cptr SL_Tagged__view_f;
-    return view[0].v;
+fun SL_Tagged_get_f(__dk_p: cptr SL_Tagged) -> f32 = {
+    let __dk_view = __dk_p as cptr SL_Tagged__view_f;
+    return __dk_view[0].__dk_v;
 }
 
-fun SL_Tagged_set_f(p: cptr SL_Tagged, value: f32) -> () = {
-    let view = p as cptr SL_Tagged__view_f;
-    view[0].v = value;
+fun SL_Tagged_set_f(__dk_p: cptr SL_Tagged, __dk_value: f32) -> () = {
+    let __dk_view = __dk_p as cptr SL_Tagged__view_f;
+    __dk_view[0].__dk_v = __dk_value;
 }
 
-fun SL_Tagged__anon0_as_i(p: cptr SL_Tagged__anon0) -> cptr i32 = {
-    return p as cptr i32;
+fun SL_Tagged__anon0_as_i(__dk_p: cptr SL_Tagged__anon0) -> cptr i32 = {
+    return __dk_p as cptr i32;
 }
 
-fun SL_Tagged__anon0_as_f(p: cptr SL_Tagged__anon0) -> cptr f32 = {
-    return p as cptr f32;
+fun SL_Tagged__anon0_as_f(__dk_p: cptr SL_Tagged__anon0) -> cptr f32 = {
+    return __dk_p as cptr f32;
 }
 
-fun SL_Flags_get_visible(p: cptr SL_Flags) -> u32 = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[0] as u64) << 0u64);
-    var bits: u64 = (raw >> 0u64) & 1u64;
-    return bits as u32;
+fun SL_Flags_get_visible(__dk_p: cptr SL_Flags) -> u32 = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[0] as u64) << 0u64);
+    var __dk_bits: u64 = (__dk_raw >> 0u64) & 1u64;
+    return __dk_bits as u32;
 }
 
-fun SL_Flags_set_visible(p: cptr SL_Flags, value: u32) -> () = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[0] as u64) << 0u64);
-    let bits: u64 = (value as u64) & 1u64;
-    raw = (raw & 254u64) | (bits << 0u64);
-    b[0] = ((raw >> 0u64) & 255u64) as u8;
+fun SL_Flags_set_visible(__dk_p: cptr SL_Flags, __dk_value: u32) -> () = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[0] as u64) << 0u64);
+    let __dk_bits: u64 = (__dk_value as u64) & 1u64;
+    __dk_raw = (__dk_raw & 254u64) | (__dk_bits << 0u64);
+    __dk_b[0] = ((__dk_raw >> 0u64) & 255u64) as u8;
 }
 
-fun SL_Flags_get_mode(p: cptr SL_Flags) -> u32 = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[0] as u64) << 0u64);
-    var bits: u64 = (raw >> 1u64) & 7u64;
-    return bits as u32;
+fun SL_Flags_get_mode(__dk_p: cptr SL_Flags) -> u32 = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[0] as u64) << 0u64);
+    var __dk_bits: u64 = (__dk_raw >> 1u64) & 7u64;
+    return __dk_bits as u32;
 }
 
-fun SL_Flags_set_mode(p: cptr SL_Flags, value: u32) -> () = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[0] as u64) << 0u64);
-    let bits: u64 = (value as u64) & 7u64;
-    raw = (raw & 241u64) | (bits << 1u64);
-    b[0] = ((raw >> 0u64) & 255u64) as u8;
+fun SL_Flags_set_mode(__dk_p: cptr SL_Flags, __dk_value: u32) -> () = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[0] as u64) << 0u64);
+    let __dk_bits: u64 = (__dk_value as u64) & 7u64;
+    __dk_raw = (__dk_raw & 241u64) | (__dk_bits << 1u64);
+    __dk_b[0] = ((__dk_raw >> 0u64) & 255u64) as u8;
 }
 
-fun SL_Flags_get_delta(p: cptr SL_Flags) -> i32 = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[0] as u64) << 0u64);
-    var bits: u64 = (raw >> 4u64) & 15u64;
-    if ((bits & 8u64) != 0u64) { bits = bits | 18446744073709551600u64; }
-    return (bits as i64) as i32;
+fun SL_Flags_get_delta(__dk_p: cptr SL_Flags) -> i32 = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[0] as u64) << 0u64);
+    var __dk_bits: u64 = (__dk_raw >> 4u64) & 15u64;
+    if ((__dk_bits & 8u64) != 0u64) { __dk_bits = __dk_bits | 18446744073709551600u64; }
+    return (__dk_bits as i64) as i32;
 }
 
-fun SL_Flags_set_delta(p: cptr SL_Flags, value: i32) -> () = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[0] as u64) << 0u64);
-    let bits: u64 = ((value as i64) as u64) & 15u64;
-    raw = (raw & 15u64) | (bits << 4u64);
-    b[0] = ((raw >> 0u64) & 255u64) as u8;
+fun SL_Flags_set_delta(__dk_p: cptr SL_Flags, __dk_value: i32) -> () = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[0] as u64) << 0u64);
+    let __dk_bits: u64 = ((__dk_value as i64) as u64) & 15u64;
+    __dk_raw = (__dk_raw & 15u64) | (__dk_bits << 4u64);
+    __dk_b[0] = ((__dk_raw >> 0u64) & 255u64) as u8;
 }
 
-fun SL_Flags_get_wide(p: cptr SL_Flags) -> u32 = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[1] as u64) << 0u64);
-    raw = raw | ((b[2] as u64) << 8u64);
-    raw = raw | ((b[3] as u64) << 16u64);
-    var bits: u64 = (raw >> 0u64) & 1048575u64;
-    return bits as u32;
+fun SL_Flags_get_wide(__dk_p: cptr SL_Flags) -> u32 = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[1] as u64) << 0u64);
+    __dk_raw = __dk_raw | ((__dk_b[2] as u64) << 8u64);
+    __dk_raw = __dk_raw | ((__dk_b[3] as u64) << 16u64);
+    var __dk_bits: u64 = (__dk_raw >> 0u64) & 1048575u64;
+    return __dk_bits as u32;
 }
 
-fun SL_Flags_set_wide(p: cptr SL_Flags, value: u32) -> () = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[1] as u64) << 0u64);
-    raw = raw | ((b[2] as u64) << 8u64);
-    raw = raw | ((b[3] as u64) << 16u64);
-    let bits: u64 = (value as u64) & 1048575u64;
-    raw = (raw & 15728640u64) | (bits << 0u64);
-    b[1] = ((raw >> 0u64) & 255u64) as u8;
-    b[2] = ((raw >> 8u64) & 255u64) as u8;
-    b[3] = ((raw >> 16u64) & 255u64) as u8;
+fun SL_Flags_set_wide(__dk_p: cptr SL_Flags, __dk_value: u32) -> () = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[1] as u64) << 0u64);
+    __dk_raw = __dk_raw | ((__dk_b[2] as u64) << 8u64);
+    __dk_raw = __dk_raw | ((__dk_b[3] as u64) << 16u64);
+    let __dk_bits: u64 = (__dk_value as u64) & 1048575u64;
+    __dk_raw = (__dk_raw & 15728640u64) | (__dk_bits << 0u64);
+    __dk_b[1] = ((__dk_raw >> 0u64) & 255u64) as u8;
+    __dk_b[2] = ((__dk_raw >> 8u64) & 255u64) as u8;
+    __dk_b[3] = ((__dk_raw >> 16u64) & 255u64) as u8;
 }
 
-fun SL_Packed_get_tag(p: cptr SL_Packed) -> u8 = {
-    let view = p as cptr SL_Packed__view_tag;
-    return view[0].v;
+fun SL_Packed_get_tag(__dk_p: cptr SL_Packed) -> u8 = {
+    let __dk_view = __dk_p as cptr SL_Packed__view_tag;
+    return __dk_view[0].__dk_v;
 }
 
-fun SL_Packed_set_tag(p: cptr SL_Packed, value: u8) -> () = {
-    let view = p as cptr SL_Packed__view_tag;
-    view[0].v = value;
+fun SL_Packed_set_tag(__dk_p: cptr SL_Packed, __dk_value: u8) -> () = {
+    let __dk_view = __dk_p as cptr SL_Packed__view_tag;
+    __dk_view[0].__dk_v = __dk_value;
 }
 
-fun SL_Packed_get_value(p: cptr SL_Packed) -> u32 = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[1] as u64) << 0u64);
-    raw = raw | ((b[2] as u64) << 8u64);
-    raw = raw | ((b[3] as u64) << 16u64);
-    raw = raw | ((b[4] as u64) << 24u64);
-    var bits: u64 = (raw >> 0u64) & 4294967295u64;
-    return bits as u32;
+fun SL_Packed_get_value(__dk_p: cptr SL_Packed) -> u32 = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[1] as u64) << 0u64);
+    __dk_raw = __dk_raw | ((__dk_b[2] as u64) << 8u64);
+    __dk_raw = __dk_raw | ((__dk_b[3] as u64) << 16u64);
+    __dk_raw = __dk_raw | ((__dk_b[4] as u64) << 24u64);
+    var __dk_bits: u64 = (__dk_raw >> 0u64) & 4294967295u64;
+    return __dk_bits as u32;
 }
 
-fun SL_Packed_set_value(p: cptr SL_Packed, value: u32) -> () = {
-    let b = p as cptr u8;
-    var raw: u64 = 0u64;
-    raw = raw | ((b[1] as u64) << 0u64);
-    raw = raw | ((b[2] as u64) << 8u64);
-    raw = raw | ((b[3] as u64) << 16u64);
-    raw = raw | ((b[4] as u64) << 24u64);
-    let bits: u64 = (value as u64) & 4294967295u64;
-    raw = (raw & 0u64) | (bits << 0u64);
-    b[1] = ((raw >> 0u64) & 255u64) as u8;
-    b[2] = ((raw >> 8u64) & 255u64) as u8;
-    b[3] = ((raw >> 16u64) & 255u64) as u8;
-    b[4] = ((raw >> 24u64) & 255u64) as u8;
+fun SL_Packed_set_value(__dk_p: cptr SL_Packed, __dk_value: u32) -> () = {
+    let __dk_b = __dk_p as cptr u8;
+    var __dk_raw: u64 = 0u64;
+    __dk_raw = __dk_raw | ((__dk_b[1] as u64) << 0u64);
+    __dk_raw = __dk_raw | ((__dk_b[2] as u64) << 8u64);
+    __dk_raw = __dk_raw | ((__dk_b[3] as u64) << 16u64);
+    __dk_raw = __dk_raw | ((__dk_b[4] as u64) << 24u64);
+    let __dk_bits: u64 = (__dk_value as u64) & 4294967295u64;
+    __dk_raw = (__dk_raw & 0u64) | (__dk_bits << 0u64);
+    __dk_b[1] = ((__dk_raw >> 0u64) & 255u64) as u8;
+    __dk_b[2] = ((__dk_raw >> 8u64) & 255u64) as u8;
+    __dk_b[3] = ((__dk_raw >> 16u64) & 255u64) as u8;
+    __dk_b[4] = ((__dk_raw >> 24u64) & 255u64) as u8;
 }

@@ -73,10 +73,12 @@ class CImportLowerTests final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(naturalStructBecomesClass);
+		TESTER_ADD_TEST(arrayOfPointersIsParenthesized);
 		TESTER_ADD_TEST(packedStructBecomesBlobWithByteAccessors);
 		TESTER_ADD_TEST(unionBecomesBlobWithPointerViews);
 		TESTER_ADD_TEST(anonymousUnionMemberGetsAccessorsOnOuter);
-		TESTER_ADD_TEST(pointerOnlyRecordIsOpaque);
+		TESTER_ADD_TEST(incompleteRecordIsOpaque);
+		TESTER_ADD_TEST(completeRecordBehindPointerKeepsLayout);
 		TESTER_ADD_TEST(blobWithFloatByValueIsSkipped);
 		TESTER_ADD_TEST(unlinkableFunctionsAreSkipped);
 		TESTER_ADD_TEST(recordNameClashingWithFunctionIsRenamed);
@@ -98,6 +100,24 @@ private:
 		assertEqual(std::size_t{ 2 }, cls->fields.size(), "Rect fields");
 		assertEqual(std::string{ "type_" }, cls->fields[1].name, "a keyword field is renamed");
 		assertEqual(std::size_t{ 1 }, module.layouts.size(), "Rect's layout is checked");
+	}
+
+	void arrayOfPointersIsParenthesized() {
+		CModel model;
+		auto   names = makeType(CArray{ .element = ptr(cI32()), .count = 13 });
+		CField field{ .name        = "names",
+			          .type        = names,
+			          .offset_bits = 0,
+			          .bit_width   = std::nullopt,
+			          .size        = 104,
+			          .align       = 8 };
+		model.records.push_back(record("Locale", { field }, 104, 8));
+		auto module = lower(model, {});
+		assertEqual(
+			std::string{ "(cptr i32)[13]" },
+			named(module.classes, "Locale")->fields.at(0).type,
+			"an array of pointers, not a pointer to an array"
+		);
 	}
 
 	void packedStructBecomesBlobWithByteAccessors() {
@@ -169,7 +189,7 @@ private:
 		assertTrue(named(module.classes, "Tagged__view_f") != nullptr, "offset view class");
 	}
 
-	void pointerOnlyRecordIsOpaque() {
+	void incompleteRecordIsOpaque() {
 		CModel  model;
 		CRecord window;
 		window.name     = "Window";
@@ -191,6 +211,23 @@ private:
 		);
 		assertTrue(!module.fundecls.at(0).return_type.has_value(), "void return has no type");
 		assertTrue(module.layouts.empty(), "an opaque handle has no layout to check");
+	}
+
+	void completeRecordBehindPointerKeepsLayout() {
+		CModel  model;
+		CRecord mpz
+			= record("mpz", { field("alloc", cI32(), 0, 4), field("size", cI32(), 4, 4) }, 8, 4);
+		mpz.location.in_requested_headers = false;
+		model.records.push_back(mpz);
+		model.functions.push_back(
+			function("mpz_init", makeType(CVoid{}), { { .name = "z", .type = ptr(rec(0)) } })
+		);
+		auto        module = lower(model, { .include = { "mpz_init" }, .exclude = {} });
+		const auto* cls    = named(module.classes, "mpz");
+		assertTrue(
+			cls != nullptr && cls->fields.size() == 2,
+			"a complete record keeps its fields, so it can be allocated"
+		);
 	}
 
 	void blobWithFloatByValueIsSkipped() {

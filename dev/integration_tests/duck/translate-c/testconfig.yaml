@@ -71,6 +71,20 @@ Tests:
           && cp @{ConfigDir}/libm.dk app/src/src.dk
         test-cmd: duck -C app run && duck -C app run --profile=dvm
 
+  zlib:
+    Description: zlib, a bare-name header with a pkg-config package, compresses and decompresses on both backends
+    Enabled: '[ -x "@{duckc_dir}/duck_c_import" ] && pkg-config --exists zlib'
+    Cases:
+      round-trip:
+        before-cmd: >-
+          @{tool-path}
+          && duck translate-c new zlib --pkg-config zlib --header zlib.h
+          && duck init app > /dev/null
+          && duck -C app add --local ../zlib zlib > /dev/null
+          && printf 'profiles:\n  dvm:\n    dvm-bytecode: true\n' >> app/quackconfig.yaml
+          && cp @{ConfigDir}/zlib.dk app/src/src.dk
+        test-cmd: duck -C app run && duck -C app run --profile=dvm
+
   regen:
     Description: a package is regenerated from its recipe alone
     Cases:

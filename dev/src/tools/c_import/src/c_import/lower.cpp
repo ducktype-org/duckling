@@ -28,8 +28,10 @@ namespace c_import {
 		constexpr std::string_view VARIADIC_ISSUE      = "#3271";
 		constexpr std::string_view CALLBACK_ISSUE      = "#3650";
 		constexpr std::string_view POINTER_CYCLE_ISSUE = "#2616";
-		constexpr std::uint64_t    MAX_BLOB_ALIGN      = 16;
-		constexpr std::uint64_t    MAX_BYTE_ASSEMBLY   = 8;
+		// @TODO: #1498 `extern("C")` classes reject 128-bit integers, so no storage type is aligned
+		// to 16.
+		constexpr std::uint64_t MAX_BLOB_ALIGN    = 8;
+		constexpr std::uint64_t MAX_BYTE_ASSEMBLY = 8;
 
 		std::uint64_t alignUp(std::uint64_t value, std::uint64_t align) {
 			return align == 0 ? value : (value + align - 1) / align * align;
@@ -72,7 +74,8 @@ namespace c_import {
 				  options(options),
 				  plans(model.records.size()),
 				  demands(model.records.size(), Demand::None),
-				  names(model.records.size()) {}
+				  names(model.records.size()),
+				  by_value(model.records.size(), false) {}
 
 			DkModule run() {
 				nameRecords();
@@ -98,7 +101,12 @@ namespace c_import {
 			std::vector<Demand>      demands;
 			std::vector<std::string> names;
 			std::set<std::string>    taken;
-			DkModule                 out;
+			/// Every C name that becomes a module-level Duckling name; a field or parameter named
+			/// like one of them is ambiguous in Duckling, so it is renamed.
+			std::set<std::string> top_level;
+			/// Records something needs by value (a field or a signature), not only through a pointer.
+			std::vector<bool> by_value;
+			DkModule          out;
 			/// Strongly connected component of each record over the references of its fields.
 			std::vector<std::size_t> components;
 			/// The record whose fields are being written, whose pointers may close a cycle.
@@ -144,6 +152,8 @@ namespace c_import {
 					used.insert(unique);
 					names[i] = std::move(unique);
 				}
+				top_level = std::move(ordinary);
+				top_level.insert(used.begin(), used.end());
 			}
 
 			std::string recordBaseName(
@@ -163,6 +173,15 @@ namespace c_import {
 
 			bool claim(const std::string& name) { return taken.insert(name).second; }
 
+			// @TODO: #2135 A field or parameter named like a module-level name is ambiguous, so it
+			// is renamed.
+			/// A field or parameter name: usable, and distinct from every module-level name.
+			[[nodiscard]] std::string localName(std::string_view name) const {
+				std::string result = usableName(name);
+				while (top_level.contains(result)) result += '_';
+				return result;
+			}
+
 			void skip(std::string name, std::string reason) {
 				out.skipped.push_back({ std::move(name), std::move(reason) });
 			}
@@ -175,6 +194,7 @@ namespace c_import {
 						[&](const CPointer& p) { demandType(p.pointee, true); },
 						[&](const CArray& a) { demandType(a.element, through_pointer); },
 						[&](const CRecordRef& r) {
+							if (!through_pointer) by_value[r.index] = true;
 							demandRecord(r.index, through_pointer ? Demand::Pointer : Demand::Value);
 						},
 						[](const auto&) {},
@@ -184,6 +204,8 @@ namespace c_import {
 			}
 
 			void demandRecord(std::size_t i, Demand demand) {
+				// A complete record keeps its layout even when only pointed to, so it can be allocated.
+				if (model.records[i].complete) demand = Demand::Value;
 				if (demands[i] >= demand) return;
 				const bool first_value = demand == Demand::Value;
 				demands[i]             = demand;
@@ -211,7 +233,7 @@ namespace c_import {
 				if (p.kind != PlanKind::Pending) return;
 				const auto& record = model.records[i];
 
-				if (demands[i] == Demand::Pointer || !record.complete) {
+				if (!record.complete) {
 					p.kind = PlanKind::Opaque;
 					return;
 				}
@@ -230,6 +252,10 @@ namespace c_import {
 				if (auto storage = blobStorageType(record); storage.has_value()) {
 					p.kind = PlanKind::Blob;
 					p.reason.clear();
+				} else if (!by_value[i]) {
+					// Nothing needs its layout, so a handle keeps its pointers typed.
+					p.kind   = PlanKind::Opaque;
+					p.reason = storage.error();
 				} else {
 					p.reason = storage.error();
 				}
@@ -314,7 +340,7 @@ namespace c_import {
 				if (record.size == 0) return std::unexpected("record has no size");
 				if (record.align > MAX_BLOB_ALIGN || !std::has_single_bit(record.align))
 					return std::unexpected(
-						std::format("alignment {} has no storage type", record.align)
+						std::format("alignment {} needs 128-bit storage (#1498)", record.align)
 					);
 				if (record.size % record.align != 0)
 					return std::unexpected("size is not a multiple of the alignment");
@@ -390,7 +416,7 @@ namespace c_import {
 
 					std::string name = field.name.empty()
 					                     ? std::format("__anon{}", anonymous_index++)
-					                     : usableName(field.name);
+					                     : localName(field.name);
 					if (!seen.insert(name).second)
 						return std::unexpected(std::format(
 							"field `{}` is declared twice once anonymous members are flattened", name
@@ -492,6 +518,10 @@ namespace c_import {
 							}
 							auto text = fieldTypeText(element);
 							if (!text) return text;
+							// `cptr T[N]` is a pointer to an array, so an array of pointers needs
+					        // parentheses.
+							if (text->starts_with("cptr "))
+								return std::format("({})[{}]", *text, count);
 							return std::format("{}[{}]", *text, count);
 						},
 						[&](const CRecordRef& r) -> TextOrReason {
@@ -596,7 +626,14 @@ namespace c_import {
 						out.classes.push_back({
 							name,
 							{ { .name = "_opaque", .type = "u8" } },
-							"Opaque handle: only use it through a `cptr`.",
+							p.reason.empty()
+								? std::string{ "Opaque handle: only use it through a `cptr`." }
+								: std::format(
+									  "Opaque handle, since its layout cannot be expressed ({}): "
+									  "only use it "
+									  "through a `cptr`.",
+									  p.reason
+								  ),
 						});
 						break;
 					case PlanKind::Natural: {
@@ -703,6 +740,8 @@ namespace c_import {
 						emitAccessors(i, member);
 			}
 
+			// @TODO: #2135 Generated parameters and locals are prefixed with `__dk_`, since one
+			// named like a C function (ncurses has `raw`) is ambiguous.
 			/// `R_as_m(p: cptr R) -> cptr M`, which works on every backend since it is only a cast.
 			void emitPointerView(std::size_t i, const FlatField& member) {
 				const auto& record    = names[i];
@@ -718,9 +757,9 @@ namespace c_import {
 				}
 				out.functions.push_back({
 					view_name,
-					{ { .name = "p", .type = "cptr " + record } },
+					{ { .name = "__dk_p", .type = "cptr " + record } },
 					target,
-					{ std::format("return p as {};", target) },
+					{ std::format("return __dk_p as {};", target) },
 				});
 			}
 
@@ -776,21 +815,24 @@ namespace c_import {
 				std::vector<DkNameType> fields;
 				if (auto pad = member.offset_bits / 8; pad > 0)
 					fields.push_back({ "_pad", std::format("u8[{}]", pad) });
-				fields.push_back({ "v", type });
+				fields.push_back({ "__dk_v", type });
 				claim(view);
 				out.classes.push_back({ view, std::move(fields), {} });
 
 				out.functions.push_back({
 					getter,
-					{ { .name = "p", .type = "cptr " + record } },
+					{ { .name = "__dk_p", .type = "cptr " + record } },
 					type,
-					{ std::format("let view = p as cptr {};", view), "return view[0].v;" },
+					{ std::format("let __dk_view = __dk_p as cptr {};", view),
+				      "return __dk_view[0].__dk_v;" },
 				});
 				out.functions.push_back({
 					setter,
-					{ { .name = "p", .type = "cptr " + record }, { .name = "value", .type = type } },
+					{ { .name = "__dk_p", .type = "cptr " + record },
+				      { .name = "__dk_value", .type = type } },
 					"()",
-					{ std::format("let view = p as cptr {};", view), "view[0].v = value;" },
+					{ std::format("let __dk_view = __dk_p as cptr {};", view),
+				      "__dk_view[0].__dk_v = __dk_value;" },
 				});
 			}
 
@@ -817,50 +859,60 @@ namespace c_import {
 				                              ? 0
 				                              : ~(mask << shift) & bytesMask(count);
 
-				std::vector<std::string> read{ "let b = p as cptr u8;", "var raw: u64 = 0u64;" };
+				std::vector<std::string> read{ "let __dk_b = __dk_p as cptr u8;",
+					                           "var __dk_raw: u64 = 0u64;" };
 				for (std::uint64_t k = 0; k < count; ++k)
-					read.push_back(
-						std::format("raw = raw | ((b[{}] as u64) << {}u64);", first + k, k * 8)
-					);
+					read.push_back(std::format(
+						"__dk_raw = __dk_raw | ((__dk_b[{}] as u64) << {}u64);", first + k, k * 8
+					));
 
 				std::vector<std::string> get = read;
-				get.push_back(std::format("var bits: u64 = (raw >> {}u64) & {}u64;", shift, mask));
+				get.push_back(
+					std::format("var __dk_bits: u64 = (__dk_raw >> {}u64) & {}u64;", shift, mask)
+				);
 				const bool is_signed = scalar.kind == ScalarKind::SignedInt
 				                    || (scalar.kind == ScalarKind::Char && model.char_is_signed);
 				if (scalar.kind == ScalarKind::Bool) {
-					get.emplace_back("return bits != 0u64;");
+					get.emplace_back("return __dk_bits != 0u64;");
 				} else if (is_signed) {
 					const std::uint64_t sign = std::uint64_t{ 1 } << (width - 1);
 					get.push_back(std::format(
-						"if ((bits & {}u64) != 0u64) {{ bits = bits | {}u64; }}", sign, ~mask
+						"if ((__dk_bits & {}u64) != 0u64) {{ __dk_bits = __dk_bits | {}u64; }}",
+						sign,
+						~mask
 					));
-					get.push_back(std::format("return (bits as i64) as {};", type));
+					get.push_back(std::format("return (__dk_bits as i64) as {};", type));
 				} else {
-					get.push_back(std::format("return bits as {};", type));
+					get.push_back(std::format("return __dk_bits as {};", type));
 				}
-				out.functions.push_back(
-					{ getter, { { .name = "p", .type = "cptr " + record } }, type, std::move(get) }
-				);
+				out.functions.push_back({ getter,
+				                          { { .name = "__dk_p", .type = "cptr " + record } },
+				                          type,
+				                          std::move(get) });
 
 				std::vector<std::string> set = read;
 				if (scalar.kind == ScalarKind::Bool) {
-					set.emplace_back("var bits: u64 = 0u64;");
-					set.emplace_back("if (value) { bits = 1u64; }");
+					set.emplace_back("var __dk_bits: u64 = 0u64;");
+					set.emplace_back("if (__dk_value) { __dk_bits = 1u64; }");
 				} else if (is_signed) {
-					set.push_back(
-						std::format("let bits: u64 = ((value as i64) as u64) & {}u64;", mask)
-					);
+					set.push_back(std::format(
+						"let __dk_bits: u64 = ((__dk_value as i64) as u64) & {}u64;", mask
+					));
 				} else {
-					set.push_back(std::format("let bits: u64 = (value as u64) & {}u64;", mask));
-				}
-				set.push_back(std::format("raw = (raw & {}u64) | (bits << {}u64);", clear, shift));
-				for (std::uint64_t k = 0; k < count; ++k)
 					set.push_back(
-						std::format("b[{}] = ((raw >> {}u64) & 255u64) as u8;", first + k, k * 8)
+						std::format("let __dk_bits: u64 = (__dk_value as u64) & {}u64;", mask)
 					);
+				}
+				set.push_back(std::format(
+					"__dk_raw = (__dk_raw & {}u64) | (__dk_bits << {}u64);", clear, shift
+				));
+				for (std::uint64_t k = 0; k < count; ++k)
+					set.push_back(std::format(
+						"__dk_b[{}] = ((__dk_raw >> {}u64) & 255u64) as u8;", first + k, k * 8
+					));
 				out.functions.push_back({ setter,
-				                          { { .name = "p", .type = "cptr " + record },
-				                            { .name = "value", .type = type } },
+				                          { { .name = "__dk_p", .type = "cptr " + record },
+				                            { .name = "__dk_value", .type = type } },
 				                          "()",
 				                          std::move(set) });
 				return true;
@@ -901,7 +953,7 @@ namespace c_import {
 							break;
 						}
 						std::string name
-							= param.name.empty() ? std::format("arg{}", k) : usableName(param.name);
+							= param.name.empty() ? std::format("arg{}", k) : localName(param.name);
 						while (!param_names.insert(name).second) name += '_';
 						decl.params.push_back({ std::move(name), std::move(*type) });
 					}

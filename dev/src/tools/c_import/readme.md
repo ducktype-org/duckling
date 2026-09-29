@@ -41,6 +41,15 @@ duck translate-c regen [<path>] [--no-verify]
 ```
 
 - `--header` takes a path, or a name found on the include path (`SDL3/SDL.h`).
+  Repeat it for a library with several headers (`--header lua.h --header lauxlib.h --header
+  lualib.h`). They are read as one translation unit into one module, and what each header
+  includes is translated too, within its scope:
+  - a path claims its whole directory;
+  - a name with a directory (`SDL3/SDL.h`) claims that directory, so an umbrella header brings
+    all of it;
+  - a bare name (`zlib.h`) claims its own file plus what it includes from below its directory.
+
+  Records those declarations need are pulled in from wherever they are defined.
 - `--library` takes a path to a `.o`, `.a` or `.so`, or `-l`/`-L` flags. pkg-config's `--libs` are
   added to them.
 - `--include` and `--exclude` are name globs. Without `--include`, every declaration of the
@@ -90,7 +99,9 @@ byte-identical files.
 | `enum E { A = 1 }` | `const A: <underlying> = 1<suffix>;`, and `E` itself is its underlying integer |
 | `#define X 0x20u`, `#define Y (1 << 3)` | a `const`, typed and valued by clang (see below) |
 | struct with its natural layout | `extern("C") class` with the same fields |
-| forward-declared or incomplete struct, or one only ever used through a pointer | an opaque handle, `extern("C") class X { _opaque: u8; }`, used as `cptr X` |
+| forward-declared or incomplete struct | an opaque handle, `extern("C") class X { _opaque: u8; }`, used as `cptr X` |
+| complete struct only reached through pointers (`mpz_t`'s `__mpz_struct`) | still gets its layout, so it can be allocated |
+| record with no possible layout (16-byte alignment) that nothing needs by value | an opaque handle, with the reason in its comment |
 | union, packed, bitfield or over-aligned record | a **layout blob** plus generated accessors (see below) |
 | anonymous struct member | its fields are spliced into the outer class |
 | anonymous union member | a blob-typed field `__anonN`, plus accessors on the outer record |
@@ -150,6 +161,11 @@ Other gaps have workarounds rather than being skipped:
 - **Anonymous members** are spliced in or reached through accessors, not addressed as C writes
   them (#3648).
 - **A `void` return** is left out of the declaration, since an explicit `-> void` miscompiles (#3646).
+- **Names that would be ambiguous in Duckling.** A field or parameter named like a module-level name
+  (`addrinfo: cptr addrinfo`) gets a `_` suffix, and generated functions use `__dk_`-prefixed
+  locals (#2135).
+- **16-byte-aligned records** have no storage type, since `extern("C")` classes reject `u128`
+  (#1498). One that nothing needs by value becomes an opaque handle; otherwise it is skipped.
 
 ## Backends
 
