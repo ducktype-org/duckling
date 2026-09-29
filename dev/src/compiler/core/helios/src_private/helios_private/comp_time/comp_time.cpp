@@ -1,7 +1,5 @@
 #include "comp_time.hpp"
 
-#include "helios/repl_utils/repl_queries.hpp"
-
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -12,6 +10,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/repl_utils/repl_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
