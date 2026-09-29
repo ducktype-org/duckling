@@ -526,8 +526,7 @@ namespace vm {
 		 * @note Assumes that type is a dynamic table type.
 		 */
 		auto dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<BlockT> {
-			auto inner_type = type->getInnerType().value();
-			auto block      = createBlock(heap_allocator.dynTableAllocateN(type, inner_type, n));
+			auto block      = createBlock(heap_allocator.dynTableAllocateN(type, n));
 			block->freeable = true;
 			return block;
 		}
@@ -555,18 +554,42 @@ namespace vm {
 		 * @throws VMDynTableReAllocTypeMismatch if the block does not hold a dynamic table,
 		 * VMUseAfterFreeException if its data is already gone.
 		 */
-		auto dynTableReallocateBlockDataN(Ref<BlockT> block, u64 n) -> void {
-			if (getBlockType(block)->getKind() != Type::Kind::DynamicTable)
-				throw exceptions::VMDynTableReAllocTypeMismatch();
-			if (block->deallocated) throw exceptions::VMUseAfterFreeException();
+		auto dynTableReallocateBlockDataN(Pointer ptr, TypeCRef type, u64 n) -> Pointer {
+			if (ptr.isNull()) {
+				if (n == 0) return ptr;
+				auto new_block = dynTableAllocateHeapN(type, n);
+				return updatePointerAssignment(ptr, { new_block, 0 });
+			} else {
+				auto block = ptr.getBlock();
+				if (getBlockType(block)->getKind() != Type::Kind::DynamicTable)
+					throw exceptions::VMDynTableReAllocTypeMismatch();
 
-			TypeCRef tbl_type   = block->data.element_type;
-			TypeCRef inner_type = tbl_type->getInnerType().value();
+				if (n == 0) {
+					// When reallocating dynamic data to 0 elements, we free the data and set
+					// pointer to null. This is one of two possible approaches:
+					// 1. Current approach: treat 0-sized arrays as non-existent, and set the
+					// pointer to null-pointer (what we do here)
+					// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
+					// C-nullptr as their data, but on DVM level we would still allow pointer
+					// [0-sized-block, nullptr] to exist. Any access to such block would simply
+					// be out-of-bound access.
+					//
+					// It might be desired to switch to second approach in the future, depending on
+					// the semantics of Duckling arrays.
+					guardedFreeBlockData(ptr);
+					return updatePointerAssignment(ptr, Pointer::null());
+				} else {
+					if (block->deallocated) throw exceptions::VMUseAfterFreeException();
 
-			BlockData<EntryT> new_block_data
-				= heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
+					TypeCRef tbl_type = block->data.element_type;
 
-			changeBlockData(block, new_block_data);
+					BlockData<EntryT> new_block_data
+						= heap_allocator.dynTableAllocateN(tbl_type, n);
+
+					changeBlockData(block, new_block_data);
+					return ptr;  // no change
+				}
+			}
 		}
 
 		/**

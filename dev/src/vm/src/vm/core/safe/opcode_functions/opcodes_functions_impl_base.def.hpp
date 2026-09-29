@@ -1371,39 +1371,13 @@ namespace vm {
 			auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 
-			if (new_elem_count == 0) {
-				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
-				// null. This is one of two possible approaches:
-				// 1. Current approach: treat 0-sized arrays as non-existent, and set the pointer to
-				// null-pointer (what we do here)
-				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
-				// C-nullptr as their data, but on DVM level we would still allow pointer
-				// [0-sized-block, nullptr] to exist. Any access to such block would simply
-				// be out-of-bound access.
-				//
-				// It might be desired to switch to second approach in the future, depending on the
-				// semantics of Duckling arrays.
-				if (!tbl_pointer.isNull()) {
-					if (Memory::getBlockType(tbl_pointer.getBlock())->getKind()
-					    != Type::Kind::DynamicTable)
-						throw exceptions::VMDynTableReAllocTypeMismatch();
-					thread.process_memory.guardedFreeBlockData(tbl_pointer);
-					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-						tbl_pointer, Pointer::null()
-					);
-					WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-				}
-			} else if (tbl_pointer.isNull()) {
-				auto new_block
-					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
-				const Pointer new_dst
-					= thread.process_memory.updatePointerAssignment(tbl_pointer, { new_block, 0 });
-				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-			} else {
+			WRITE_TO_PLACE_ARG(
+				Pointer,
+				instr->arg0,
 				thread.process_memory.dynTableReallocateBlockDataN(
-					tbl_pointer.getBlock(), new_elem_count
-				);
-			}
+					tbl_pointer, pointed_type, new_elem_count
+				)
+			);
 		}
 		FUNCTION_CONT(2);
 	}

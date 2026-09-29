@@ -48,9 +48,9 @@ namespace vm {
 		 *  to assign the correct type to the new `BlockData` object.
 		 * @note Same byte-count/element-count aliasing as `allocate()` above, see its note.
 		 */
-		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
+		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, u64 n) {
 			static_assert(sizeof(EntryT) == 1);
-			usize   size = inner_type->getSize().asInt() * n;
+			usize   size = table_type->getInnerType().value()->getSize().asInt() * n;
 			EntryT* ptr  = heapAllocOrThrow<EntryT>(size);
 			return BlockData<EntryT>{ table_type,
 				                      base::TypedModRawView<EntryT>{ ptr, size },
