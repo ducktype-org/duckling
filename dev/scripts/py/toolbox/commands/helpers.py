@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from click import Option, UsageError, option, Choice
 
@@ -103,9 +104,40 @@ def cc_compiler(*args, **kwargs):
     )(*args, **kwargs)
 
 
+def _cgroup_cpu_limit() -> int:
+    """Threads allowed by this process's CPU cgroup, or 0 when it is unrestricted.
+
+    Mirrors the `Set number of threads` step in .github/workflows/tests.yml, including
+    its `+ 1`.
+    """
+    # cgroup v2: "<quota> <period>", or "max <period>" when there is no quota.
+    try:
+        quota, period = Path("/sys/fs/cgroup/cpu.max").read_text().split()
+        if quota != "max" and int(period) > 0:
+            return int(quota) // int(period) + 1
+        return 0
+    except (OSError, ValueError):
+        pass
+    # cgroup v1, where an unrestricted quota is -1.
+    try:
+        quota = int(Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us").read_text())
+        period = int(Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us").read_text())
+        if quota > 0 and period > 0:
+            return quota // period + 1
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
 def get_cpu_count() -> int:
-    # cpu_count might return None
-    return os.cpu_count() or 1
+    """Threads this process may actually use.
+    """
+    limit = _cgroup_cpu_limit()
+    try:
+        available = len(os.sched_getaffinity(0))  # Linux only
+    except AttributeError:  # macOS, Windows
+        available = os.cpu_count() or 1
+    return min(limit, available) if limit else available
 
 
 def llvm_version(*args, **kwargs):

@@ -45,7 +45,7 @@ namespace vm {
 		 * representation which exists in this class.
 		 */
 		loader::Loader                       loader{};
-		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
+		loader::compiler::safe::SafeCompiler compiler;
 
 		/**
 		 * @brief The program being executed by this process.
@@ -197,7 +197,16 @@ namespace vm {
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:
-		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
+		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false, bool enable_jit = true);
+
+		/**
+		 * @brief Frees what the blocks still hold.
+		 *
+		 * @note A destructor body runs before any member is destroyed, so `vm_threads` is still
+		 * alive here. The process is killed or deinitialized before it gets destroyed, so no exec
+		 * thread is left running on the memory this frees - keep the members in this order.
+		 */
+		~SafeVMProcess() override;
 
 		DeadlockDetector* getDeadlockDetector() {
 			return deadlock_detector ? &*deadlock_detector : nullptr;
@@ -256,4 +265,10 @@ namespace vm {
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 	};
+
+	/**
+	 * @brief Shared wording for the function-argument-count mismatch error, used both when
+	 * validating a Run request and as a hard check when building the start function.
+	 */
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided);
 }

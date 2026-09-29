@@ -28,6 +28,11 @@ class VmApiTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		// @TODO: #3612 JIT-compiled code does not observe stop/pause requests. This suite
+		// tests the API, not the JIT, so it spawns all of its processes with the JIT off
+		// (ignored in non-JIT builds) instead of being disabled wholesale in JIT builds.
+		process_config.enable_jit = false;
+
 		TESTER_ADD_TEST(spawnAndKillEndpoints);
 		TESTER_ADD_TEST(loadEndpoints);
 		TESTER_ADD_TEST(setExecutionConfigEndpoint);

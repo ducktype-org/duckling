@@ -11,7 +11,7 @@ use tracing::info;
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
 use self::profiles::Profile;
 use self::unit::graph::lower_early_graph;
-use self::unit_compiler::CompilationOutput;
+use self::unit_runner::{CompilationOutput, UnitRunner};
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::storage::paths::Storage;
@@ -24,7 +24,8 @@ pub mod duckc;
 pub mod early_graph;
 pub mod profiles;
 pub mod unit;
-pub mod unit_compiler;
+pub mod unit_runner;
+pub mod unit_task_generator;
 
 /// A common message for panicking when a manifest is missing a dependency.
 pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {
@@ -68,6 +69,6 @@ pub fn compile(
     }
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
     let unit_graph = lower_early_graph(graph, &bcx);
-    let compiler = bcx.unit_compiler();
-    unit_compiler::compile(&*compiler, unit_graph, &bcx)
+    let runner = UnitRunner::new(unit_graph, &bcx);
+    runner.run()
 }

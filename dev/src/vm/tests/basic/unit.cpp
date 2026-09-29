@@ -25,10 +25,14 @@ public:
 		TESTER_ADD_TEST(checkMultipleRetVals);
 		TESTER_ADD_TEST(checkVoidTypeValid);
 		TESTER_ADD_TEST(pointerTest);
+		TESTER_ADD_TEST(referenceOnColdBranchTest);
+		TESTER_ADD_TEST(localSlotAddressingTest);
+		TESTER_ADD_TEST(localSlotAddressingInCalleeTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
+		TESTER_ADD_TEST(invalidGlobalConstructorSignatureTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(literalsTest);
@@ -72,6 +76,18 @@ private:
 		runTestOnVm("pointer_to_global.dbc", {}, "429913371337", {}, 1'337);
 	}
 
+	/**
+	 * @brief A variable whose address is only taken on a path that is not executed never gets a
+	 * block, and the process must still validate its memory cleanly.
+	 */
+	void referenceOnColdBranchTest() { runTestOnVm("reference_on_cold_branch.dbc", "", "42"); }
+
+	void localSlotAddressingTest() { runTestOnVm("local_slot_addressing.dbc", "", "7724"); }
+
+	void localSlotAddressingInCalleeTest() {
+		runTestOnVm("local_slot_addressing_in_callee.dbc", "", "42422");
+	}
+
 	void commandLineArguments() {
 		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);
 	}
@@ -99,6 +115,13 @@ private:
 			{
 				vm::code::MissingGlobalCtorDtorError::ERR_MSG,
 			}
+		);
+	}
+
+	void invalidGlobalConstructorSignatureTest() {
+		loadInvalidDbc(
+			"global_invalid_constructor_signature.dbc",
+			{ vm::code::InvalidConstructorDestructorSignature::ERR_MSG }
 		);
 	}
 

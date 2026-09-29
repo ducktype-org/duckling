@@ -41,8 +41,13 @@ namespace vm::loader::compiler::safe {
 		friend struct detail::LowerArgumentImpl;
 
 	public:
-		SafeCompiler(const code::ValidProgram& high_program):
-			  vm::loader::compiler::IVMCompiler(high_program) {
+		SafeCompiler(const code::ValidProgram& high_program, [[maybe_unused]] bool enable_jit = true):
+			  vm::loader::compiler::IVMCompiler(high_program)
+#ifdef ENABLE_JIT
+			  ,
+			  jit_enabled(enable_jit)
+#endif
+		{
 			recompile();
 		}
 
@@ -83,6 +88,14 @@ namespace vm::loader::compiler::safe {
 		 */
 		vm::low::LowVMProgram low_program;
 
+#ifdef ENABLE_JIT
+		/**
+		 * @brief Whether to build JIT data (CFGs, loop detection) and patch in JIT entrypoint
+		 * opcodes for newly compiled functions. Disabled by `--jit off`.
+		 */
+		bool jit_enabled = true;
+#endif
+
 		detail::SafeProgramCompilationContext program_ctx;
 
 		/**
@@ -98,13 +111,20 @@ namespace vm::loader::compiler::safe {
 		);
 
 		/**
+		 * @brief Everything `lowerInstructions` produces for a single function.
+		 */
+		struct LoweredFunction {
+			low::MicroBytecode                                  bytecode;
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
+		};
+
+		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
 		 * translates them into a sequence of `MicroInstruction`s.
-		 * @return The converted list of instructions as well as the mapping from instruction
-		 * indices to instruction ranges in micro-bytecode.
+		 * @return The converted list of instructions and the mapping from instruction indices to
+		 * instruction ranges in micro-bytecode.
 		 */
-
-		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
+		LoweredFunction lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		);
 

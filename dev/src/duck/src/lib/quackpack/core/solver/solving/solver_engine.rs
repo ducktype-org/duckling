@@ -5,11 +5,12 @@ use std::iter::once;
 
 use russcip::ProblemCreated;
 
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::input::{PackageData, SolverInput};
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
-use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId};
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Selector};
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
@@ -45,10 +46,12 @@ impl<'a> SolverEngine<'a> {
     fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
-            for dependency in data.manifest().dependencies().all_dependencies() {
-                if dependency.is_enabled_for(data.features().iter().cloned()) {
-                    self.construct_for_single_dependency(*package, data, dependency)?;
-                }
+            for dependency in data
+                .manifest()
+                .dependencies()
+                .select(&Selector::EnabledBy(data.features()))
+            {
+                self.construct_for_single_dependency(*package, data, dependency)?;
             }
         }
 
@@ -59,6 +62,7 @@ impl<'a> SolverEngine<'a> {
                 .require_package_with_feature(main_pkg.0, *feature)?;
         }
         self.force_features_expansion()?;
+        self.force_singular_versions()?;
         self.model.solve()
     }
 
@@ -109,15 +113,19 @@ impl<'a> SolverEngine<'a> {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
                 continue;
             }
-            let forced = manifest_dependency.enabled_features(vec![parent_feature]);
+            let forced = manifest_dependency.enabled_features(&[parent_feature].into());
             if forced
                 .iter()
                 .any(|feature| !realization_features.contains(feature))
             {
-                // (*) Previously chosen realization of the dependency does not support some of the forced flags,
-                // so we have to treat the dependency normally and add all the constraints normally.
-                // This can happen only in the merciful mode.
-                return self.add_constraints_for_edge(edge, manifest_dependency);
+                // (*) Previously chosen realization of the dependency does not support some of the forced flags.
+                // This means that we should choose another realization,
+                // but doing so would result in the realization being in 2 or more versions.
+                // Thus we explicitly forbid parent with the feature.
+                // Note that this edge case can happen only in the merciful mode.
+                return self
+                    .model
+                    .forbid_package_with_feature(parent, parent_feature);
             } else {
                 forcing.push((parent_feature, forced));
             }
@@ -167,7 +175,7 @@ impl<'a> SolverEngine<'a> {
                 .add_dependency_version_realization_var(edge, realization.version());
         }
 
-        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
             self.model.require_satisfying_dep_version(edge, None)?;
         } else {
@@ -187,7 +195,7 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         let parent_features = parent_features_to_consider(self.input, edge);
 
-        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(vec![]));
+        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(&[].into()));
         let mut tmp_hash_set;
         for parent_feature in parent_features {
             // Features forced by the parent feature but not forced by default,
@@ -197,7 +205,7 @@ impl<'a> SolverEngine<'a> {
                 Some(feature) => {
                     // We use this trick so that forced is a reference and we do not need to clone `enabled_always`.
                     tmp_hash_set =
-                        HashSet::from_iter(manifest_dependency.enabled_features(vec![feature]))
+                        HashSet::from_iter(manifest_dependency.enabled_features(&[feature].into()))
                             .difference(&enabled_always)
                             .copied()
                             .collect();
@@ -223,7 +231,7 @@ impl<'a> SolverEngine<'a> {
         parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
             // The dependency is enabled by default, so `parent` can never be chosen.
             self.model.forbid_package(parent)?;
@@ -266,6 +274,75 @@ impl<'a> SolverEngine<'a> {
         }
         Ok(())
     }
+
+    /// Make sure that every package is present in at most one version.
+    /// Important:
+    /// ----------
+    /// This assures that not only two packages with the same [`FullIdentity`](crate::quackpack::core::full_identity::FullIdentity),
+    /// but even two packages with the same [`Identity`] are not chosen.
+    /// Thus we have to create a mapping from (not full) identities to packages.
+    fn force_singular_versions(&mut self) -> QuackResult<()> {
+        let mut packages_for_identity: HashMap<Identity, Vec<PackageId>> = HashMap::new();
+        for (full_identity, versions) in self.input.versions_for_identity.iter() {
+            packages_for_identity
+                .entry(full_identity.as_identity())
+                .or_default()
+                .extend(
+                    versions
+                        .iter()
+                        .copied()
+                        .map(|version| PackageId::new(*full_identity, version)),
+                );
+        }
+        for package_versions in packages_for_identity.into_values() {
+            self.force_singular_version(package_versions)?;
+        }
+        Ok(())
+    }
+
+    /// Make sure that the package described by `identity` is present in at most one version.
+    /// Note:
+    /// -----
+    /// This has a different workflow, depending on whether any version is preexisting.
+    /// This is necessary, since for preexisting packages we do not care whether their variables will evaluate to 0 or 1,
+    /// so we can't just always add a constraint that many versions are prohibited.
+    fn force_singular_version(&mut self, package_versions: Vec<PackageId>) -> QuackResult<()> {
+        let mut preexistent_version = None;
+        for pkg in package_versions.iter() {
+            if self.input.preexists(*pkg) {
+                preexistent_version = Some(*pkg);
+                break;
+            }
+        }
+        if let Some(preexistent_version) = preexistent_version {
+            self.forbid_versions_not_preexisting(package_versions, preexistent_version)
+        } else {
+            self.forbid_more_than_one_version(package_versions)
+        }
+    }
+
+    /// Forbid a package being chosen in more than one version.
+    fn forbid_more_than_one_version(
+        &mut self,
+        package_versions: Vec<PackageId>,
+    ) -> QuackResult<()> {
+        self.model.forbid_more_that_one_version(package_versions)
+    }
+
+    /// Forbid a package in all versions except a single preexisting one.
+    fn forbid_versions_not_preexisting(
+        &mut self,
+        package_versions: Vec<PackageId>,
+        preexistent_version: PackageId,
+    ) -> QuackResult<()> {
+        for pkg in package_versions {
+            if pkg == preexistent_version {
+                continue;
+            }
+            self.model.forbid_package(pkg)?;
+        }
+        Ok(())
+    }
 }
 
 /// Creates an iterator of all possible parent features and None.
@@ -295,7 +372,7 @@ mod test {
     use super::*;
     use crate::DuckContext;
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-    use crate::quackpack::core::solver::solving::input::{PackageData, PreexistanceData};
+    use crate::quackpack::core::solver::solving::input::{PackageData, PreexistenceData};
     use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops_ext::PathOpsExt;
@@ -496,7 +573,7 @@ features:
         let data_b = PackageData::new(
             manifest_b,
             ["xd".into(), "xdd".into()].into(),
-            Some(PreexistanceData::new(["xdd".into()].into(), [].into())),
+            Some(PreexistenceData::new(["xdd".into()].into(), [].into())),
         );
         let packages_data = [(pkg_a, PackageData::new_empty(manifest_a)), (pkg_b, data_b)].into();
         let versions_for_identity = HashMap::from([
@@ -559,7 +636,7 @@ features:
         let data_b = PackageData::new(
             manifest_b,
             ["xd".into(), "xdd".into()].into(),
-            Some(PreexistanceData::default()),
+            Some(PreexistenceData::default()),
         );
         let packages_data = [(pkg_a, PackageData::new_empty(manifest_a)), (pkg_b, data_b)].into();
         let versions_for_identity = HashMap::from([
@@ -642,7 +719,7 @@ features:
         let data_b = PackageData::new(
             manifest_b,
             ["xd".into()].into(),
-            Some(PreexistanceData::new(
+            Some(PreexistenceData::new(
                 [].into(),
                 [("c".into(), pkg_c)].into(),
             )),
@@ -650,7 +727,7 @@ features:
         let data_c = PackageData::new(
             manifest_c,
             ["xdd".into()].into(),
-            Some(PreexistanceData::default()),
+            Some(PreexistenceData::default()),
         );
         let packages_data = [
             (pkg_a, PackageData::new_empty(manifest_a)),
@@ -751,5 +828,152 @@ features:
                 Version::new(2, 0, 0)
             )])
         );
+    }
+
+    #[test]
+    /// Assures that there cannot be two versions of same package chosen.
+    /// * `a` depends on `b` and `c` in version 1,
+    /// * `b` depends on `c` version 2.
+    /// This should end in an error, since `c` is required in both versions.
+    fn conflicting_versions_error() {
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '1'
+  c:
+    version: '1'
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '1'
+
+dependencies:
+  c:
+    version: '2'
+"#,
+        );
+        let (_dir_c1, path_c1) = prepare_manifest(
+            r#"
+metadata:
+  name: c
+  version: '1'
+"#,
+        );
+        let (_dir_c2, path_c2) = prepare_manifest(
+            r#"
+metadata:
+  name: c
+  version: '2'
+"#,
+        );
+        let ctx = DuckContext::default();
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let manifest_c1 = parse_manifest(&path_c1, &ctx).unwrap().0.into_manifest();
+        let manifest_c2 = parse_manifest(&path_c2, &ctx).unwrap().0.into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let identity_c = FullIdentity::new("c".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(1, 0, 0));
+        let pkg_c1 = PackageId::new(identity_c, Version::new(1, 0, 0));
+        let pkg_c2 = PackageId::new(identity_c, Version::new(2, 0, 0));
+
+        let packages_data = [
+            (pkg_a, PackageData::new_empty(manifest_a)),
+            (pkg_b, PackageData::new_empty(manifest_b)),
+            (pkg_c1, PackageData::new_empty(manifest_c1)),
+            (pkg_c2, PackageData::new_empty(manifest_c2)),
+        ]
+        .into();
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_c, HashSet::from([1.into(), 2.into()])),
+        ]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let input = SolverInput {
+            packages_data,
+            versions_for_identity,
+            source_to_origin_resolver,
+        };
+
+        let main_pkg = (pkg_a, HashSet::new());
+        let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
+        assert_eq!(err.to_string(), "no dependency resolution found");
+    }
+
+    #[test]
+    /// Both `a` and `b` preexisted, but with no features.
+    /// Now `a` has feature `new` which forces `b` with `xd`, which is not supported by `b`.
+    /// Thus it should result in an error.
+    fn new_feature_of_preexisting_forces_nonexistent_error() {
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+    features:
+    - xd:
+        package-features: [new]
+
+features:
+  new: []
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '2'
+"#,
+        );
+        let ctx = DuckContext::default();
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let data_a = PackageData::new(
+            manifest_a,
+            ["new".into()].into(),
+            Some(PreexistenceData::default()),
+        );
+        let data_b = PackageData::new(manifest_b, [].into(), Some(PreexistenceData::default()));
+        let packages_data = [(pkg_a, data_a), (pkg_b, data_b)].into();
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
+        ]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
+
+        let input = SolverInput {
+            packages_data,
+            versions_for_identity,
+            source_to_origin_resolver,
+        };
+
+        let main_pkg = (pkg_a, ["new".into()].into());
+        let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
+        assert_eq!(err.to_string(), "no dependency resolution found");
     }
 }

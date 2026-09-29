@@ -40,6 +40,7 @@ namespace pst::internal {
 
 		static bool isComma(const TokenStream& state, i64 fwd);
 		static bool isSemicolon(const TokenStream& state, i64 fwd);
+		static bool isSemicolonOrSentinel(const TokenStream& state, i64 fwd);
 		static bool isSentinel(const TokenStream& state, i64 fwd);
 		static bool isCurlyGroup(const TokenStream& state, i64 fwd);
 		static bool isAssignOrSemicolon(const TokenStream& st, i64 fwd);
@@ -76,7 +77,9 @@ namespace pst::internal {
 
 		static std::string parameterList() { return "function parameter"; }
 
-		static std::string nestedImportList() { return "nested import"; }
+		static std::string selectorList() { return "selector"; }
+
+		static std::string nestedSelectorList() { return "nested selector"; }
 
 		static std::string flowPatternList() { return "flow pattern"; }
 

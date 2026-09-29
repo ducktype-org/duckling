@@ -13,6 +13,7 @@
 #include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
 
+#include <functional>
 #include <mutex>
 #include <regex>
 #include <string>
@@ -36,6 +37,19 @@ namespace compiler::frontend {
 	 * it is a script file.
 	 */
 	constexpr std::string_view LANG_SCRIPT_FILE = ".dks";
+
+	/**
+	 * @brief Turns a file found while walking the disk into the file the compiler should read.
+	 *
+	 * The default hands back the file itself; the language server substitutes an editor buffer
+	 * for the files it holds open.
+	 */
+	using FileResolver = std::function<fs::File(const fs::File& disk_file)>;
+
+	/**
+	 * @brief The resolver that simply reads what is on disk.
+	 */
+	const FileResolver& identityFileResolver();
 
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
@@ -423,15 +437,18 @@ namespace compiler::frontend {
 		/**
 		 * Factory method to create ModuleTree from filesystem tree.
 		 * @param root Pre-constructed fs::File with a module structure.
+		 * @param file_resolver Lambda, given a regular file on disk, may open a different file
+		 * (useful in the LS). Never called for directories.
 		 * @param file_reject Regex for rejecting files.
 		 * @param dir_reject Regex for rejecting directories.
 		 * @return A valid pointer with the root.
 		 */
 		static Ref<ModuleTree> create(
-			const fs::File&   root,
-			base::StrID       package_id,
-			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+			const fs::File&     root,
+			base::StrID         package_id,
+			const FileResolver& file_resolver = identityFileResolver(),
+			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
 		/**
@@ -522,14 +539,17 @@ namespace compiler::frontend {
 		 * Builds the module tree from a directory structure.
 		 * This will recursively traverse the directory and build the module tree.
 		 * @param directory The root directory to build the module tree from.
+		 * @param file_resolver Lambda, given a regular file on disk, may open a different file
+		 * instead.
 		 * @param file_reject Regex for rejecting files.
 		 * @param dir_reject Regex for rejecting directories.
 		 */
 		void buildFromDirectory(
-			const fs::File&   directory,
-			base::StrID       package_id,
-			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+			const fs::File&     directory,
+			base::StrID         package_id,
+			const FileResolver& file_resolver = identityFileResolver(),
+			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
 		/**

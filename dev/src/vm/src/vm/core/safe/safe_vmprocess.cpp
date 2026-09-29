@@ -14,6 +14,7 @@
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalueref.hpp>
@@ -23,6 +24,7 @@
 #include <vm/loader/logger.hpp>
 
 #include <expected>
+#include <iostream>
 #include <mutex>
 #include <ranges>
 #include <shared_mutex>
@@ -34,6 +36,18 @@ namespace vm {
 	namespace ts = thread_state;
 
 	Memory& SafeVMProcess::getMemory() { return memory; }
+
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided) {
+		return base::strConcat(
+			"Function '",
+			func.name.str(),
+			"' expects ",
+			func.parameters.size(),
+			" arguments, but ",
+			provided,
+			" were provided."
+		);
+	}
 
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
@@ -52,6 +66,12 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			// Exec threads never take api_lock; the GIL is what excludes them. recompile()
+			// grows LowVMProgram::functions (a std::vector-backed map), which moves every
+			// LowFuncData — and with it every CRef<LowFuncData> held by running frames
+			// (frame->current_function) and every jit_data reference in the entrypoint
+			// opfuns — so it must run under the GIL.
+			GIL::ScopedLock gil_lock(gil);
 			compiler.recompile();
 			updateGlobalDataMemory(loaded_program);
 			return api::Response(api::response::Empty());
@@ -83,15 +103,7 @@ namespace vm {
 		const auto& func_args = v_get(run_arguments, FunctionRunArguments);
 
 		if (func_args.size() != func.parameters.size())
-			return refuse(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			return refuse(argumentCountMismatchMessage(func, func_args.size()));
 
 		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
 			if (arg_value->getPID() != getPID())
@@ -268,11 +280,28 @@ namespace vm {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
+	SafeVMProcess::SafeVMProcess(
+		const PID my_pid, bool enable_deadlock_detection, [[maybe_unused]] bool enable_jit
+	):
 		  IVMProcess(my_pid),
+		  compiler(*loader.getHighProgram(), enable_jit),
 		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
+	}
+
+	SafeVMProcess::~SafeVMProcess() {
+		// A destructor is `noexcept`, and `freeAllocatedBlockData` runs a virtual `deallocate` per
+		// block, so anything escaping it would terminate the process.
+		try {
+			memory.freeAllocatedBlockData();
+		} catch (const std::exception& e) {
+			std::cerr << "Failed to free the block data of process " << my_pid << ": " << e.what()
+					  << "\n";
+		} catch (...) {
+			std::cerr << "Failed to free the block data of process " << my_pid
+					  << ": unknown error\n";
+		}
 	}
 
 	SafeVMThread& SafeVMProcess::getMainVMThread() {
@@ -515,7 +544,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getStackFrameData(
 		api::ThreadID thread_id, u64 frame_index
 	) {
-		std::shared_lock lock(api_lock);
+		// Inspecting a variable that was initialized without a block creates one, so this must be
+		// guarded against every other memory-touching endpoint.
+		std::unique_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_err(error) return std::unexpected(error);
 			opt_some() {
@@ -529,17 +560,22 @@ namespace vm {
 
 				Frame& frame = thread->getStackFrame(frame_index);
 
-				auto block_span
-					= std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end);
+				const u64 slot_count = base::safeIntConv<u64>(
+					frame.local_slot_stack_end - frame.local_slot_stack_base
+				);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (Block* const& block_ptr: block_span) {
-					Ref<Block> block  = Ref(block_ptr);
-					u64        offset = base::safeIntConv<u64>(
-                        memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
-                    );
+				for (u64 slot_index = 0; slot_index < slot_count; slot_index++) {
+					const LocalSlot& slot = frame.local_slot_stack_base[slot_index];
+
+					// Variables are initialized without a block, and a value can only be read
+					// through one, so it is created here exactly as the executor does.
+					Ref<Block> block = slot.block != nullptr
+					                     ? Ref(slot.block)
+					                     : createLocalSlotBlock(frame, memory, slot_index);
+
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
-						.offset = offset,
+						.offset = base::safeIntConv<u64>(slot.data - frame.local_stack),
 						.name   = std::nullopt,
 						.type   = std::nullopt,
 						.value  = SafeVMValueRef::makeShared(
@@ -637,6 +673,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpoint(
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
+		// @TODO: #3585 In JIT builds this can clobber or incorrectly restore the
+		// jitFuncEntrypoint/jitLoopEntrypoint opcodes patched in by the compiler: disabling a
+		// breakpoint restores the opcode from the original program, losing the JIT entrypoint.
 		std::unique_lock lock(api_lock);
 		auto response = compiler.setBreakpoint(function_name, instruction_index, enable);
 		if (!response) return std::unexpected(api::OtherError{ response.error() });
@@ -695,4 +734,5 @@ namespace vm {
 	SynchronizationPrimitives& SafeVMProcess::getSynchronizationPrimitives() {
 		return synchronization_primitives;
 	}
+
 }

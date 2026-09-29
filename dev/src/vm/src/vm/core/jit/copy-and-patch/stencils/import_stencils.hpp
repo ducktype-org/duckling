@@ -1,14 +1,14 @@
 #pragma once
 
+#include "../../../native/dynamic_library.hpp"
 #include "relocations.hpp"
-
-#include <vm/core/native/dynamic_library.hpp>
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstring>
 #include <expected>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -22,11 +22,16 @@ namespace vm::jit::cnp {
 	 */
 	struct StencilData final {
 		const char*              name;
-		const char*              type;
 		usize                    place;
 		usize                    size;
-		std::vector<StencilHole> to_patch   = {};
-		std::vector<StencilHole> relocation = {};
+		std::vector<StencilHole> to_patch = {};
+
+		/**
+		 * @brief Patch a stencil into a given address.
+		 */
+		void patch(byte* new_address, auto patch_values) const {
+			for (auto hole: to_patch) hole.patch(new_address, patch_values(hole.value));
+		}
 	};
 
 	/**
@@ -73,7 +78,7 @@ namespace vm::jit::cnp {
 		/**
 		 * @brief Get the span of a stencil.
 		 */
-		[[nodiscard]] std::span<const byte> stencilBinary(const StencilData& stencil_data) const {
+		[[nodiscard]] std::span<const byte> stencilsBinary(const StencilData& stencil_data) const {
 			auto begin = dynlib.findSymbol(stencil_data.name);
 			return std::span(begin, begin + stencil_data.size);
 		}
@@ -81,14 +86,11 @@ namespace vm::jit::cnp {
 		[[nodiscard]] auto& stencilsData() const { return stencils.stencils_data; }
 
 		/**
-		 * @brief Copy and patch a stencil into a given address.
+		 * @brief Copy a stencil into a given address.
 		 */
 		byte* relocate(const StencilData& stencil_data, byte* new_address) {
-			auto binary = stencilBinary(stencil_data);
+			auto binary = stencilsBinary(stencil_data);
 			std::ranges::copy(binary, new_address);
-
-			for (const StencilHole& hole: stencil_data.relocation)
-				hole.relocate(binary.data(), new_address);
 			return new_address + binary.size_bytes();
 		}
 

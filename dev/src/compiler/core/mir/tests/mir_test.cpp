@@ -9,6 +9,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <mir/mir_lowering/mir_lifetimes.hpp>
 #include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
@@ -52,6 +53,7 @@ public:
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
 		TESTER_ADD_TEST(moveStateMapTest);
+		TESTER_ADD_TEST(conditionalTemporaryMoveStateTest);
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(lazyBooleanShortCircuitTest);
 		TESTER_ADD_TEST(lazyBooleanChainsTest);
@@ -99,13 +101,16 @@ private:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
 					preds.put(succ).first->second.push_back(block_id);
 
-			auto move_states = compiler::mir::calculateGlobalInMoveStateMap(pre_mir, preds);
+			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
+			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
+                pre_mir, preds, locals_by_scope
+            );
 
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
 			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
 			ASSERT_HAS_VALUE(entry_map);
-			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
+			auto a_at_entry = entry_map.value()->stateOf(a_id.value());
 			ASSERT_HAS_VALUE(a_at_entry);
 			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
@@ -113,12 +118,65 @@ private:
 			// observe `a` as `Moved` with exactly one reaching move site.
 			bool found_moved = false;
 			for (const auto& [block_id, map]: move_states.block_in_move_state) {
-				auto state = map.atMaybe(a_id.value());
+				auto state = map.stateOf(a_id.value());
 				if (state.has_value() && state.value()->status == compiler::mir::MoveStatus::Moved
 				    && state.value()->move_sites.size() == 1)
 					found_moved = true;
 			}
 			ASSERT_TRUE(found_moved);
+		});
+	}
+
+	/**
+	 * @brief A temporary built on only one control-flow path is `MaybeMoved` where the paths merge.
+	 *
+	 * `condTemporary(c)` lowers `c or makeR(1).a == 0` lazily, so the `R` temporary of the
+	 * right-hand side is constructed on one path and never touched on the other. It lives in the
+	 * scope of the whole expression, so the join has to report it as `MaybeMoved` (which is what
+	 * gives it a conditional destructor) instead of treating it as uninitialized.
+	 */
+	void conditionalTemporaryMoveStateTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "condTemporary") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto pre_mir = compiler::mir::lowerToPreMIRFunction(ctx, target.value());
+
+			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			for (auto block_id: pre_mir.block_order)
+				for (auto succ:
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
+					preds.put(succ).first->second.push_back(block_id);
+
+			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
+			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
+                pre_mir, preds, locals_by_scope
+            );
+
+			// The `R` temporary holding the result of `makeR(1)`.
+			base::Optional<compiler::mir::LocalID> tmp_id;
+			for (const auto& local: pre_mir.local_list)
+				if (local.type.getType().getKind() == compiler::tsh::Kind::Class) {
+					ASSERT_TRUE(tmp_id.empty());
+					tmp_id = local.id;
+				}
+			ASSERT_HAS_VALUE(tmp_id);
+
+			// Both paths reach the merge block, and there the temporary is only maybe-initialized.
+			bool found_maybe_moved = false;
+			for (const auto& [block_id, map]: move_states.block_in_move_state) {
+				auto state = map.stateOf(tmp_id.value());
+				if (state.has_value()
+				    && state.value()->status == compiler::mir::MoveStatus::MaybeMoved)
+					found_maybe_moved = true;
+			}
+			ASSERT_TRUE(found_maybe_moved);
 		});
 	}
 
@@ -188,7 +246,7 @@ private:
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
-			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
 
 			auto i64_type = getIntegralType(ctx, 64, Signed);
 
@@ -284,8 +342,8 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
 			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
-			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 5);
+			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 11);
+			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 3);
 
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };
@@ -302,8 +360,16 @@ private:
 			// Here, the order does not matter.
 			// If it breaks because the order changes,
 			// the check has to be changed to an order-free assertion.
-			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
-			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 6 } COMMA BlockID{ 4 } });
+			//
+			// Both branches enter a scope of their own, so the destructor pass splits every one
+			// of their edges into an intermediate block that jumps on to the original target.
+			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 11 } COMMA BlockID{ 12 } });
+			ASSERT_EQUAL(get_block_successors(11), BlockList{ BlockID{ 3 } });
+			ASSERT_EQUAL(get_block_successors(12), BlockList{ BlockID{ 2 } });
+
+			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 9 } COMMA BlockID{ 10 } });
+			ASSERT_EQUAL(get_block_successors(9), BlockList{ BlockID{ 6 } });
+			ASSERT_EQUAL(get_block_successors(10), BlockList{ BlockID{ 4 } });
 
 			ASSERT_EQUAL(get_block_successors(6), BlockList{ BlockID{ 5 } });
 			ASSERT_EQUAL(get_block_successors(7), BlockList{ BlockID{ 5 } });
@@ -600,7 +666,9 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
 			unreachable_end_fun.debugPrint(foo_str);
-			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 7);
+			// A `while` and an `if`, each of whose four edges enters a scope of its own and so
+			// gets an intermediate block from the destructor pass.
+			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 11);
 
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();

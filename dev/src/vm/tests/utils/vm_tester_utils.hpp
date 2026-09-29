@@ -41,6 +41,15 @@ protected:
 	/// Highest instruction index `releaseUntilTerminal` clears breakpoints up to.
 	static constexpr u64 MAX_BREAKPOINT_INDEX = 12;
 
+	/// How long a call that is expected to block is given to prove it is still blocked.
+	static constexpr auto BLOCKED_CALL_PROBE = std::chrono::milliseconds(300);
+
+	/// How long a call that is expected to return is given to do so.
+	static constexpr auto UNBLOCKED_CALL_BUDGET = std::chrono::seconds(15);
+
+	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
+	static constexpr usize SPIN_THREAD_COUNT = 4;
+
 	/**
 	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.
 	 */
@@ -202,8 +211,10 @@ protected:
 		return result.has_value() ? "<no error>" : vm::api::errorToString(result.error());
 	}
 
+	vm::PID initProcess() { return initProcess(process_config, {}); }
+
 	vm::PID initProcess(
-		const vm::api::ProcessConfig& config = {}, vm::api::ExecutionConfig execution_config = {}
+		const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config = {}
 	);
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 
@@ -329,4 +340,11 @@ protected:
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
+
+	/**
+	 * @brief ProcessConfig used by the no-arg `initProcess()` (and therefore by `spawnAndLoad`).
+	 * Suites may override it in their constructor; `VmApiTest` disables the JIT this way
+	 * (see #3612).
+	 */
+	vm::api::ProcessConfig process_config{};
 };

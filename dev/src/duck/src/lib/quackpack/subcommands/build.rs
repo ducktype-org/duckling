@@ -1,6 +1,6 @@
 //! `build` subcommand execution logic.
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit_compiler::CompilationOutput;
+use crate::quackpack::core::compile::unit_runner::CompilationOutput;
 use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::storage::{StorageSyncOptions, SyncOutput, sync};
 use crate::quackpack::core::{FeatureName, PackageContext};

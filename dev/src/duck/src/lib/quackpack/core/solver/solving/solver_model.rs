@@ -13,7 +13,19 @@ use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
 use crate::quackpack::core::{FeatureName, PackageId, Version};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail};
+
+// @TODO: #3544 store information about minimal unsolvable subprogram and display it here.
+#[derive(Debug)]
+pub struct NoSolutionError();
+
+impl std::fmt::Display for NoSolutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "no dependency resolution found")
+    }
+}
+
+impl std::error::Error for NoSolutionError {}
 
 type PresentFeature = Option<FeatureName>;
 
@@ -346,6 +358,20 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .one_implies_all(forcing_feature_var, expanded_features_vars);
         Ok(())
     }
+
+    /// Forbid more that one version of the package to be chosen.
+    pub fn forbid_more_that_one_version(
+        &mut self,
+        package_versions: Vec<PackageId>,
+    ) -> QuackResult<()> {
+        let version_vars: QuackResult<Vec<Rc<Variable>>> = package_versions
+            .into_iter()
+            .map(|pkg| self.get_package_variable(pkg, None))
+            .collect();
+        let version_vars = version_vars?;
+        self.model.at_most_one(version_vars);
+        Ok(())
+    }
 }
 
 /// Output of the solver model, contains new packages to be put into the freeze, with their features.
@@ -362,7 +388,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
         let solve = self.model.minimize().solve();
-        let solution = solve.best_sol().context("Failed to find a solution")?;
+        let Some(solution) = solve.best_sol() else {
+            qp_bail!(NoSolutionError())
+        };
         debug!(?solution);
         let preexisting_packages = self.input.all_preexisting_pkgs();
         let new_packages = new_packages(self.package_vars, &preexisting_packages, &solution);
