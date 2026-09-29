@@ -131,11 +131,6 @@ fun sumPoint(p: const ref Point) -> i64 = p.x + p.y;
 
 fun sumPointByValue(p: Point) -> i64 = p.x + p.y;
 
-fun matchValue(v: i32 | f32) -> i64 = match (v) {
-    case x : i32 = x as i64;
-    case _ = 0 as i64;
-};
-
 const POINT = Point(3, 4);
 
 const REF_POINT_SUM = sumPoint(&POINT); # 7
@@ -146,7 +141,7 @@ const POINT_FIELDS_SUM = POINT.x + POINT.y; # 7
 const TUPLE_ELEM: i64 = (1, 5)._2; # 5
 
 const INT_VARIANT: i32 | f32 = 17 as i32;
-const MATCHED_THROUGH_CALL = matchValue(INT_VARIANT); # 17
+const MATCHED_VARIANT = match (INT_VARIANT) { case x : i32 = x as i64; case _ = 0 as i64; }; # 17
 
 fun makeArray() -> i64[3] = {
     var arr: i64[3];

@@ -539,7 +539,7 @@ private:
 		ASSERT_EQUAL(3, getConstValueAs<i64>("POINT_X", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("POINT_FIELDS_SUM", root_scope));
 		ASSERT_EQUAL(5, getConstValueAs<i64>("TUPLE_ELEM", root_scope));
-		ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_THROUGH_CALL", root_scope));
+		ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_VARIANT", root_scope));
 
 		ASSERT_EQUAL(60, getConstValueAs<i64>("REF_ARRAY_SUM", root_scope));
 		ASSERT_EQUAL(20, getConstValueAs<i64>("ARRAY_ELEM", root_scope));

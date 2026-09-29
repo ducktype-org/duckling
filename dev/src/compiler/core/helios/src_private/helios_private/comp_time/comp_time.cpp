@@ -1010,17 +1010,25 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Logs an error for every variable or parameter used inside the `expr` tree.
+		 * @brief Logs an error for every variable or parameter used inside the `expr` tree, except
+		 * the ones declared inside it (match bindings and block-local variables).
 		 * @return Bad if any such usage was found, Ok otherwise.
 		 */
 		static base::OkBad reportVariablesInConstExpr(query::Context& ctx, const code::Expr& expr) {
-			base::OkBad result = base::OK;
+			base::OkBad               result = base::OK;
+			std::unordered_set<SymID> declared_inside;
 			code::walkExprTree(expr, [&](const auto& node) {
 				using Node = std::remove_cvref_t<decltype(node)>;
-				if constexpr (std::same_as<Node, code::IdentifierExpr>) {
+				if constexpr (std::same_as<Node, code::MatchExpr>) {
+					for (const auto& match_case: node.cases)
+						if_opt_some(match_case.binding, binding) declared_inside.insert(binding);
+				} else if constexpr (std::same_as<Node, code::VariableStmt>) {
+					declared_inside.insert(node.helios_symbol);
+				} else if constexpr (std::same_as<Node, code::IdentifierExpr>) {
 					const auto symbol_kind = kind(node.symbol);
 					if (symbol_kind != SymbolKind::Variable and symbol_kind != SymbolKind::Parameter)
 						return;
+					if (declared_inside.contains(node.symbol)) return;
 					ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Expression cannot be evaluated at compile-time.",
 						node.origin.getStablePosition(),
