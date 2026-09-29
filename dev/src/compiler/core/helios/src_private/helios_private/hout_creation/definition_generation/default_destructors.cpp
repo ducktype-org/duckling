@@ -188,7 +188,10 @@ namespace compiler::helios::defgen {
 					= destructSymForSymbolType(ctx, alternatives[i]).value();
 
 				cases.emplace_back(Shorthand::matchCase(
-					i, payload_sym, s.call(s.ident(alternative_dtor), s.ident(payload_sym))
+					i,
+					payload_type,
+					payload_sym,
+					s.call(s.ident(alternative_dtor), s.ident(payload_sym))
 				));
 			}
 
@@ -199,7 +202,7 @@ namespace compiler::helios::defgen {
 			// Only the alternatives that own something are listed, so the match needs a wildcard
 			// to stay exhaustive. Without it the lowering would enter the last case
 			// unconditionally and destroy a payload that is not there.
-			cases.emplace_back(Shorthand::matchCase({}, {}, s.litUnit()));
+			cases.emplace_back(Shorthand::matchCase({}, {}, {}, s.litUnit()));
 
 			// `self` is already a reference to the variant, which is what the match wants. The
 			// destructor calls are unit-valued, so the match is used as a plain statement.
