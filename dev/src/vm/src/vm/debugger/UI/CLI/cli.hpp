@@ -48,9 +48,9 @@ namespace vm::debugger::cli {
 		vm::debugger::cli::impl::ImplementationSpecific spec;
 
 		// base::Box<ImplementationSpecific>&& makeSpec();
-		void specInit();
+		void implInit();
 		bool getline(std::string& line);
-		void specExit();
+		void implExit();
 
 		void printCodePosition(const CodePosition& position);
 

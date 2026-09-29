@@ -10,7 +10,7 @@ namespace {
 }
 
 namespace vm::debugger::cli {
-	void CLIDebugger::specInit() {
+	void CLIDebugger::implInit() {
 		spec.replxx.install_window_change_handler();
 
 		/* scope for ifstream object for auto-close */ {
@@ -36,7 +36,7 @@ namespace vm::debugger::cli {
 		spec.replxx.bind_key_internal(Replxx::KEY::END, "move_cursor_to_end_of_line");
 	}
 
-	void CLIDebugger::specExit() {
+	void CLIDebugger::implExit() {
 		// spec.replxx.history_sync(history_file_path);
 		spec.replxx.disable_bracketed_paste();
 	}

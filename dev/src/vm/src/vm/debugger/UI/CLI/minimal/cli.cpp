@@ -4,8 +4,8 @@
 
 
 namespace vm::debugger::cli {
-	void CLIDebugger::specInit() {}
-	void CLIDebugger::specExit() {}
+	void CLIDebugger::implInit() {}
+	void CLIDebugger::implExit() {}
 
 	bool CLIDebugger::getline(std::string& line) {
 		return !!std::getline(std::cin, line);

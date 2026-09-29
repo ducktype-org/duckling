@@ -206,7 +206,7 @@ namespace vm::debugger::cli {
 						  })
 				  );
 
-		specInit();
+		implInit();
 		printNL(
 			"++++++++++++++++++++++++++++\n"
 			"+   Debugger has started   +\n"
@@ -214,7 +214,7 @@ namespace vm::debugger::cli {
 		);
 		for (std::string line; running && getline(line); cmds.execute(strip(line)));
 		printNL("Exiting debugger.");
-		specExit();
+		implExit();
 
 		return 0;
 	}
