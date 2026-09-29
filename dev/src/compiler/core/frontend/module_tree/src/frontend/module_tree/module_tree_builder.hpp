@@ -35,6 +35,8 @@ namespace compiler::frontend {
 		 */
 		static base::Box<ModuleTreeBuilder> createWithRandomPackageID();
 
+		void setKind(ModuleKind kind);
+
 		/**
 		 * Factory method to create ModuleTree from filesystem tree.
 		 * @param root Pre-constructed fs::File with a module structure.
@@ -104,11 +106,9 @@ namespace compiler::frontend {
 		void setParent(base::Ref<ModuleTree> parent);
 
 		/**
-		 * Marks the module being built as a synthetic REPL chain module.
-		 * The file passed to setMainSourceFile() becomes the synthetic source file of the module.
 		 * @param repl_module_parent Previous module in the REPL chain, empty for the first one.
 		 */
-		void setReplModule(base::Optional<ModuleID> repl_module_parent);
+		void setReplModuleParent(base::Optional<ModuleID> repl_module_parent);
 
 		/**
 		 * Builds the module tree from a single file (single-file module).
@@ -160,6 +160,7 @@ namespace compiler::frontend {
 		 */
 		void handleNewFile(const fs::File& file);
 
+		base::Optional<ModuleKind> kind;
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
 		base::StrID                                       m_package_id;
@@ -169,11 +170,6 @@ namespace compiler::frontend {
 		base::StrID m_name;
 		bool        m_finalized;
 
-		/**
-		 * Set only for synthetic REPL chain modules, holds the parent of the built module in the
-		 * REPL chain (which itself is optional - the first module of a chain has no parent).
-		 */
-		bool                     m_is_repl_module;
 		base::Optional<ModuleID> m_repl_module_parent;
 	};
 }

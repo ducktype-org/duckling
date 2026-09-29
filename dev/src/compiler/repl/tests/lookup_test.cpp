@@ -33,7 +33,7 @@ private:
 		builder->setMainSourceFile(virtual_file);
 		builder->setName(base::StrID("test_repl_module"));
 
-		builder->setReplModule(parent);
+		builder->setReplModuleParent(parent);
 
 		return builder->finalize()->getModuleID();
 	}

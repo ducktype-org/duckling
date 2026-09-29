@@ -32,7 +32,7 @@ namespace compiler::repl {
 		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
 		builder->setName(base::StrID(module_name));
 
-		builder->setReplModule(parent_module_id);
+		builder->setReplModuleParent(parent_module_id);
 
 		return builder->finalize();
 	}
