@@ -120,9 +120,12 @@ namespace {
 			defer(code_builder.invalidateContext());
 
 			auto new_code = code_builder.insertLIRUnitAndCollectNewlyLoweredCode(lir_code);
-			if (!vm::api::loadCode(*pid, new_code)) {
+			if (auto load_result = vm::api::loadCode(*pid, new_code); !load_result) {
 				return std::unexpected(VmEvaluationError(
-					VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
+					VmEvaluationError::Kind::CodeLoadFailed,
+					base::strConcat(
+						"Failed to load code into VM: ", vm::api::errorToString(load_result.error())
+					)
 				));
 			}
 			return {};
