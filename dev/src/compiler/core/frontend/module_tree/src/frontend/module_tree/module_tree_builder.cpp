@@ -106,7 +106,7 @@ namespace compiler::frontend {
 				);
 
 				// Discards directories without main module file:
-				// @TODO: decide if this behavior is desirable
+				// Note: it is not decided yet if this behavior is desirable
 				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
 			} else {
 				file = file_resolver(file);

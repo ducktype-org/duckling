@@ -313,6 +313,7 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Add ModuleTree to static storage.
+		 * @note In principle it should only be used in ModuleTreeBuilder::finalize.
 		 * @return Reference to the stored ModuleTree, with its storage handle set.
 		 */
 		static base::Ref<ModuleTree> addModuleToStorage(base::Box<ModuleTree> module);
