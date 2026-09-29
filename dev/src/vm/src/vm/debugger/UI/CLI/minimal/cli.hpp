@@ -1,7 +1,9 @@
 #pragma once
 
 namespace vm::debugger::cli::impl {
-	class ImplementationSpecific { };
+	struct ImplementationSpecific {
+		std::mutex output_mutex;
+	};
 }
 
 #include <vm/debugger/UI/CLI/cli.hpp>

@@ -1,6 +1,5 @@
 #include "cli.hpp"
 
-#include <diagnostic/highlight_positions.hpp>
 #include <fstream>
 
 
@@ -37,7 +36,7 @@ namespace vm::debugger::cli {
 	}
 
 	void CLIDebugger::implExit() {
-		// spec.replxx.history_sync(history_file_path);
+		spec.replxx.history_sync(history_file_path);
 		spec.replxx.disable_bracketed_paste();
 	}
 
@@ -58,23 +57,6 @@ namespace vm::debugger::cli {
 	void CLIDebugger::print(const printer::PrinterContentsSeq& content) {
 		std::stringstream stream;
 		printer::StreamPrinter::print(content, stream);
-		spec.replxx.print(stream.str().c_str());
-	}
-
-	void CLIDebugger::printNL(const printer::PrinterContentsSeq& content) {
-		std::stringstream stream;
-		printer::StreamPrinter::print(content, stream);
-		printer::StreamPrinter::newline(1, stream);
-		spec.replxx.print(stream.str().c_str());
-	}
-
-	void CLIDebugger::printError(const printer::PrinterContentsSeq& content) {
-		std::stringstream stream;
-		printer::StreamPrinter::print(
-			{ { "[Debug error]: ", printer::Color::BrightRed } }, stream
-		);
-		printer::StreamPrinter::print(content, stream);
-		printer::StreamPrinter::newline(1, stream);
 		spec.replxx.print(stream.str().c_str());
 	}
 }

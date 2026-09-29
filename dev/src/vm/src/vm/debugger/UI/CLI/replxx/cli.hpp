@@ -4,8 +4,7 @@
 using Replxx = replxx::Replxx;
 
 namespace vm::debugger::cli::impl {
-	class ImplementationSpecific {
-	public:
+	struct ImplementationSpecific {
 		Replxx replxx;
 	};
 }

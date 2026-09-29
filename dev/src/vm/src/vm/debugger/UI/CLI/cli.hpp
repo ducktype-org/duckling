@@ -6,6 +6,7 @@
 	#include <vm/debugger/UI/CLI/minimal/cli.hpp>
 #endif
 
+#include <diagnostic/highlight_positions.hpp>
 #include <vm/debugger/debugger.hpp>
 
 #include <mutex>
@@ -40,7 +41,6 @@ namespace vm::debugger::cli {
 		events::Listener<std::string>     error_listener;
 		events::Listener<std::string>     output_listener;
 		Debugger                          debugger;
-		std::mutex                        output_mutex;
 
 		base::Optional<fs::File>           selected_file;
 		std::expected<void, api::ApiError> load_result = {};
@@ -56,15 +56,17 @@ namespace vm::debugger::cli {
 
 		template<typename... Args>
 		void print(const Args&... content) {
-			std::lock_guard lk(output_mutex);
-			((std::cout << content), ...);
+			std::stringstream sstr;
+			((sstr << content), ...);
+			print({ sstr.str() });
 		}
 
 		template<typename... Args>
 		void printNL(const Args&... content) {
-			std::lock_guard lk(output_mutex);
-			((std::cout << content), ...);
-			std::cout << "\n";
+			std::stringstream sstr;
+			((sstr << content), ...);
+			sstr << '\n';
+			print({ sstr.str() });
 		}
 
 		template<typename... Args>

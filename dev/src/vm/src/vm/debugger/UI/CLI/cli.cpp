@@ -234,4 +234,21 @@ namespace vm::debugger::cli {
 			print(out.getContents());
 		}
 	}
+
+	void CLIDebugger::printNL(const printer::PrinterContentsSeq& content) {
+		std::stringstream stream;
+		printer::StreamPrinter::print(content, stream);
+		printer::StreamPrinter::newline(1, stream);
+		print(stream.str());
+	}
+
+	void CLIDebugger::printError(const printer::PrinterContentsSeq& content) {
+		std::stringstream stream;
+		printer::StreamPrinter::print(
+			{ { "[Debug error]: ", printer::Color::BrightRed } }, stream
+		);
+		printer::StreamPrinter::print(content, stream);
+		printer::StreamPrinter::newline(1, stream);
+		print(stream.str());
+	}
 }
