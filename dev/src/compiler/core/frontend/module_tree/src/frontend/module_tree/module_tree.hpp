@@ -254,30 +254,36 @@ namespace compiler::frontend {
 		 * @return nullptr for module types that have no main source file (scripts).
 		 */
 		[[nodiscard]]
-		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() = 0;
+		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot()
+			= 0;
 
 		[[nodiscard]]
-		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const = 0;
+		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const
+			= 0;
 
 		/**
 		 * @brief Access the submodules of this module.
 		 * @return nullptr for module types that cannot have submodules.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() = 0;
+		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot()
+			= 0;
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const = 0;
+		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const
+			= 0;
 
 		/**
 		 * @brief Access the other files of this module.
 		 * @return nullptr for module types that cannot have other files.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() = 0;
+		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot()
+			= 0;
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const = 0;
+		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const
+			= 0;
 
 		/**
 		 * @brief Collects every SourceFile owned by this module, regardless of its type.

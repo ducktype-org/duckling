@@ -33,7 +33,7 @@ namespace {
 	 * StableHashMap that stores all ModuleTree instances.
 	 */
 	base::StableHashMap<usize, Box<compiler::frontend::ModuleTree>> modules;
-	usize                                                      next_module_storage_key = 0;
+	usize                                                           next_module_storage_key = 0;
 }
 
 namespace compiler::frontend {
@@ -68,7 +68,9 @@ namespace compiler::frontend {
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
 	ModuleKind ModuleTree::getKind() const {
-		CORE_ASSERT(kind != ModuleKind::Invalid, "Module kind should never be invalid at this point!");
+		CORE_ASSERT(
+			kind != ModuleKind::Invalid, "Module kind should never be invalid at this point!"
+		);
 		return kind;
 	}
 
@@ -119,7 +121,7 @@ namespace compiler::frontend {
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
 		static const base::HashMap<base::StrID, std::vector<fs::File>> no_other_files;
-		auto                                                           other_files = otherFilesSlot();
+		auto other_files = otherFilesSlot();
 		return other_files != nullptr ? *other_files : no_other_files;
 	}
 

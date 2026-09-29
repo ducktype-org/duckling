@@ -159,8 +159,7 @@ namespace compiler::frontend {
 			// @TODO: #2762 handle script files
 			// mock for now:
 			addOtherFile(file);
-		} 
-		else {
+		} else {
 			// Other file
 			addOtherFile(file);
 		}

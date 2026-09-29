@@ -22,10 +22,9 @@ namespace compiler::frontend {
 		 */
 		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
 
-
-        void makeAbstract() final {
-            CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
-        }
+		void makeAbstract() final {
+			CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
+		}
 
 	protected:
 		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override {
@@ -67,10 +66,7 @@ namespace compiler::frontend {
 		 */
 		std::vector<Box<SyntheticReplChainModuleTreeNode>> m_synthetic_repl_module_chain;
 
-
-        void makeAbstract() final {
-            CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!");
-        }
+		void makeAbstract() final { CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!"); }
 
 	protected:
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override {
