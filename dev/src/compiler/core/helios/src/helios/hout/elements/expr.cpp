@@ -6,6 +6,7 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "helios/tsh/value_category.hpp"
 #include "stmt.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -1030,33 +1031,42 @@ namespace compiler::helios::code {
 
 	IndexExpr::IndexExpr(query::Context&, ElementOrigin origin, Box<Expr> base, Box<Expr> index):
 		  Expr(
-			  tsh::ExpressionType(
-				  [&]() -> tsh::SymbolType<> {
-					  auto base_type = base->expression_type.getType();
-					  switch (base_type.getKind()) {
-					  case tsh::Kind::Meta: {  // Array type creation. The result of the index
-			                                   // expression on meta is meta as well.
-						  return base->expression_type.getSymbolType();
-					  }
-					  case tsh::Kind::StaticArray:
-						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
-					  case tsh::Kind::ManyPointer:
-						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
-					  case tsh::Kind::CPointer:
-						  return base_type.as<tsh::CPointerAbstractType>().getPointee();
-					  case tsh::Kind::Slice:
-						  return base_type.as<tsh::SliceAbstractType>().getElementType();
-					  default:
-						  CORE_PANIC("Cannot index a non-array like type");
-					  }
-				  }(),
-				  tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
-					  tsh::ValueSemanticsOptions::MOVE
-				  ))
-			  ),
+			  [&]() -> tsh::ExpressionType<> {
+				  auto base_type = base->expression_type.getType();
+				  auto derived_vc
+					  = tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
+						  tsh::ValueSemanticsOptions::MOVE
+					  ));
+				  auto dereferenced_vc = tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+				  auto cptr_dereferenced_vc = dereferenced_vc.withCPointerProvenance();
+
+				  switch (base_type.getKind()) {
+				  case tsh::Kind::Meta: {  // Array type creation. The result of the index
+			                               // expression on meta is meta as well.
+					  auto type = base->expression_type.getSymbolType();
+					  return { type, derived_vc };
+				  }
+				  case tsh::Kind::StaticArray: {
+					  auto type = base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+					  return { type, derived_vc };
+				  }
+				  case tsh::Kind::ManyPointer: {
+					  auto type = base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+					  return { type, dereferenced_vc };
+				  }
+				  case tsh::Kind::CPointer: {
+					  auto type = base_type.as<tsh::CPointerAbstractType>().getPointee();
+					  return { type, cptr_dereferenced_vc };
+				  }
+				  case tsh::Kind::Slice: {
+					  auto type = base_type.as<tsh::SliceAbstractType>().getElementType();
+					  return { type, dereferenced_vc };
+				  }
+				  default:
+					  CORE_PANIC("Cannot index a non-array like type");
+				  }
+			  }(),
 			  origin
-
-
 		  ),
 		  base(std::move(base)),
 		  index(std::move(index)) {}
@@ -1189,23 +1199,30 @@ namespace compiler::helios::code {
 		return makeBox<CastExpr>(expression_type, origin, source_expr->clone(), target_type);
 	}
 
-	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+	RefOfExpr::RefOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner):
 		  Expr(
-			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  [](const tsh::ExpressionType<>& inner_type) -> tsh::ValueCategory {
-					  switch (inner_type.getSymbolType().getRefKind()) {
-					  case tsh::ReferenceKind::Direct:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
-					  case tsh::ReferenceKind::Ref:
-						  return inner_type.getValueCategory();
-					  case tsh::ReferenceKind::Box:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+			  [&]() -> tsh::ExpressionType<> {
+				  const auto& inner_type = inner->expression_type;
+				  const auto  ref_type
+					  = inner_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref);
+				  switch (inner_type.getSymbolType().getRefKind()) {
+				  case tsh::ReferenceKind::Direct: {
+					  auto vc = tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+					  if (inner_type.getValueCategory().hasCPointerProvenance()) {
+						  auto type = tsh::SymbolType<>::withDefaults(
+							  ctx.query<tsh::QueryCPointerType>({ inner_type.getSymbolType() })
+						  );
+						  return { type, vc };
 					  }
-					  CORE_UNREACHABLE();
-				  }(inner->expression_type)
-
-			  ),
+					  return { ref_type, vc };
+				  }
+				  case tsh::ReferenceKind::Ref:
+					  return { ref_type, inner_type.getValueCategory() };
+				  case tsh::ReferenceKind::Box:
+					  return { ref_type, tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
+				  }
+				  CORE_UNREACHABLE();
+			  }(),
 			  origin
 		  ),
 		  inner(std::move(inner)) {}
@@ -1294,7 +1311,11 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().getPointeeSymbolType(),
 				  // Dereferencing creates a non-owned lvalue.
-				  tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
+				  inner->expression_type.getSymbolType().getRefKind() == tsh::ReferenceKind::Direct
+						  and inner->expression_type.getType().getKind() == tsh::Kind::CPointer
+					  ? tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
+							.withCPointerProvenance()
+					  : tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
 			  ),
 			  origin
 		  ),

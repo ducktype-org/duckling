@@ -93,6 +93,11 @@ namespace compiler::tsh {
 		 * is used, others may be redundant.
 		 */
 		ValueSemantics force_semantic{};
+		/**
+		 * Whether the value is a location reached through a `cptr`. Only relevant for
+		 * `Dereferenced` values.
+		 */
+		bool cptr_provenance{ false };
 
 	public:
 		// It is not obvious what the default value category should be,
@@ -112,16 +117,27 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		ValueCategory withForceSemantics(const ValueSemantics new_force_semantic) const {
-			return { category, is_pure, allows_semantic, new_force_semantic };
+			ValueCategory result  = *this;
+			result.force_semantic = new_force_semantic;
+			return result;
 		}
 
 		[[nodiscard]]
 		ValueCategory withDisabled(ValueSemantics disabled) const {
-			auto allows_semantic_copy = allows_semantic;
-			allows_semantic_copy -= disabled;
-			auto force_semantic_copy = force_semantic;
-			force_semantic_copy -= disabled;
-			return { category, is_pure, allows_semantic_copy, force_semantic_copy };
+			ValueCategory result = *this;
+			result.allows_semantic -= disabled;
+			result.force_semantic -= disabled;
+			return result;
+		}
+
+		/**
+		 * @brief Returns a copy of the value category marked as reached through a `cptr`.
+		 */
+		[[nodiscard]]
+		ValueCategory withCPointerProvenance() const {
+			ValueCategory result   = *this;
+			result.cptr_provenance = true;
+			return result;
 		}
 
 		/**
@@ -138,6 +154,15 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		bool isPure() const {
 			return is_pure;
+		}
+
+		/**
+		 * @brief Whether the value is a `Dereferenced` location reached through a `cptr`, so its
+		 * address is a native one.
+		 */
+		[[nodiscard]]
+		bool hasCPointerProvenance() const {
+			return category == PrimaryCategory::Dereferenced && cptr_provenance;
 		}
 
 		/**
@@ -211,7 +236,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
-				category, is_pure, allows_semantic, force_semantic
+				category, is_pure, allows_semantic, force_semantic, cptr_provenance
 			);
 		}
 
