@@ -23,6 +23,31 @@ namespace compiler::frontend {
             CORE_PANIC("makeAbstract called on ModuleModuleTreeNode!");
         }
 
+	protected:
+		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override {
+			return &m_main_source_file;
+		}
+
+		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override {
+			return &m_main_source_file;
+		}
+
+		MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() override {
+			return &m_submodules;
+		}
+
+		MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const override {
+			return &m_submodules;
+		}
+
+		MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() override {
+			return &m_other_files;
+		}
+
+		MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const override {
+			return &m_other_files;
+		}
+
 	public:
 		ModuleModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }
 

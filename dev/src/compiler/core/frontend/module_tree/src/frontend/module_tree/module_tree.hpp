@@ -167,6 +167,7 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] packages::PackageAccessLocked getPackage() const;
 
+		[[nodiscard]]
 		ModuleKind getKind() const;
 
 		/**
@@ -246,22 +247,54 @@ namespace compiler::frontend {
 		 * @brief Access the slot holding the source file that acts as the main source file of this
 		 * module.
 		 *
-		 * For a standard module this is ModuleModuleData::m_main_source_file, for a synthetic REPL
-		 * chain module it is SyntheticReplChainModuleData::m_synthetic_source_file.
+		 * For a standard module this is ModuleModuleTreeNode::m_main_source_file, for a synthetic
+		 * REPL chain module it is SyntheticReplChainModuleTreeNode::m_synthetic_source_file.
 		 * @return nullptr for module types that have no main source file (scripts).
 		 */
 		[[nodiscard]]
-		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot();
+		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() {
+			return nullptr;
+		}
 
 		[[nodiscard]]
-		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const;
+		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const {
+			return nullptr;
+		}
+
+		/**
+		 * @brief Access the submodules of this module.
+		 * @return nullptr for module types that cannot have submodules.
+		 */
+		[[nodiscard]]
+		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() {
+			return nullptr;
+		}
+
+		[[nodiscard]]
+		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const {
+			return nullptr;
+		}
+
+		/**
+		 * @brief Access the other files of this module.
+		 * @return nullptr for module types that cannot have other files.
+		 */
+		[[nodiscard]]
+		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() {
+			return nullptr;
+		}
+
+		[[nodiscard]]
+		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const {
+			return nullptr;
+		}
 
 		/**
 		 * @brief Collects every SourceFile owned by this module, regardless of its type.
 		 * @note For scripts this returns the source files of the whole synthetic module chain.
 		 */
 		[[nodiscard]]
-		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const;
+		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const;
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
@@ -304,7 +337,7 @@ namespace compiler::frontend {
 		|  Universal data members:   *|
 		\* * * * * * * * * * * * * * */
 
-		ModuleKind kind;
+		ModuleKind kind = ModuleKind::Invalid;
 
 		/**
 		 * this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree

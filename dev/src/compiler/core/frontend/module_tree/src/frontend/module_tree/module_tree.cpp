@@ -3,7 +3,9 @@
 #include "access.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
+#include "module_module_tree.hpp"
 #include "queries.hpp"
+#include "script_module_tree.hpp"
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -13,7 +15,6 @@
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -114,50 +115,21 @@ namespace compiler::frontend {
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
 
+	ModuleTree::~ModuleTree() = default;
+
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
+
+	ModuleKind ModuleTree::getKind() const { return kind; }
 
 	base::Optional<ModuleAccessLocked> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return ModuleAccessLocked(m_parent.value()->getModuleID());
 		return {};
 	}
 
-	MRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() {
-		v_if_matches(
-			m_module_type_data, ModuleModuleData, module_data
-		) return &module_data->m_main_source_file;
-		v_if_matches(
-			m_module_type_data, SyntheticReplChainModuleData, repl_data
-		) return &repl_data->m_synthetic_source_file;
-		// Scripts have no main source file, their content lives in the synthetic module chain.
-		return nullptr;
-	}
-
-	MCRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() const {
-		v_if_matches(
-			m_module_type_data, ModuleModuleData, module_data
-		) return &module_data->m_main_source_file;
-		v_if_matches(
-			m_module_type_data, SyntheticReplChainModuleData, repl_data
-		) return &repl_data->m_synthetic_source_file;
-		// Scripts have no main source file, their content lives in the synthetic module chain.
-		return nullptr;
-	}
-
 	std::vector<base::Ref<SourceFile>> ModuleTree::collectOwnedSourceFiles() const {
 		std::vector<base::Ref<SourceFile>> source_files;
-
-		auto collect = [&](const base::Optional<base::Ref<SourceFile>>& source_file) {
-			if (source_file.has_value()) source_files.push_back(source_file.value());
-		};
-
-		v_if_matches(m_module_type_data, ModuleScriptData, script_data) {
-			for (const auto& chain_link: script_data->m_synthetic_repl_module_chain)
-				collect(chain_link.m_synthetic_source_file);
-			return source_files;
-		}
-
-		auto slot = mainSourceFileSlot();
-		if (slot != nullptr) collect(*slot);
+		auto                               slot = mainSourceFileSlot();
+		if (slot != nullptr && slot->has_value()) source_files.push_back(slot->value());
 		return source_files;
 	}
 
@@ -174,9 +146,11 @@ namespace compiler::frontend {
 
 	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
 		std::vector<ModuleAccessLocked> submodules;
-		submodules.reserve(m_submodules.size());
-		for (const auto& [name, submodule]: m_submodules)
-			submodules.emplace_back(submodule->getModuleID());
+		if (auto submodules_map = submodulesSlot(); submodules_map != nullptr) {
+			submodules.reserve(submodules_map->size());
+			for (const auto& [name, submodule]: *submodules_map)
+				submodules.emplace_back(submodule->getModuleID());
+		}
 		return { getModuleID(), std::move(submodules) };
 	}
 
@@ -186,13 +160,16 @@ namespace compiler::frontend {
 
 	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID name) const {
 		base::Optional<ModuleID> child;
-		if (auto maybe = m_submodules.atMaybe(name); maybe.has_value())
-			child = (*maybe.value())->getModuleID();
+		if (auto submodules_map = submodulesSlot(); submodules_map != nullptr)
+			if (auto maybe = submodules_map->atMaybe(name); maybe.has_value())
+				child = (*maybe.value())->getModuleID();
 		return ModuleChildAccessLocked(getModuleID(), name, child);
 	}
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
-		return m_other_files;
+		static const base::HashMap<base::StrID, std::vector<fs::File>> no_other_files;
+		auto                                                           other_files = otherFilesSlot();
+		return other_files != nullptr ? *other_files : no_other_files;
 	}
 
 	base::StrID ModuleTree::getName() const { return m_name; }
@@ -251,17 +228,20 @@ namespace compiler::frontend {
 				CORE_ASSERT(
 					!source_file->component_hash.has_value(), "Child component hash have value!"
 				);
-			for (auto& [_, submodule]: m_submodules)
-				CORE_ASSERT(
-					!submodule->m_path_component_hash.has_value(), "Child component hash have value!"
-				);
+			if (auto submodules = submodulesSlot(); submodules != nullptr)
+				for (auto& [_, submodule]: *submodules)
+					CORE_ASSERT(
+						!submodule->m_path_component_hash.has_value(),
+						"Child component hash have value!"
+					);
 			return;
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
 		for (const auto& source_file: collectOwnedSourceFiles())
 			source_file->invalidateComponentHash();
-		for (auto& [_, submodule]: m_submodules) submodule->invalidateHash();
+		if (auto submodules = submodulesSlot(); submodules != nullptr)
+			for (auto& [_, submodule]: *submodules) submodule->invalidateHash();
 	}
 
 	void ModuleTree::updateModuleHash() {
@@ -298,12 +278,13 @@ namespace compiler::frontend {
 		hashing::addToHash(partial, hasMainSourceFile());
 
 		// Module kind affects module semantics and therefore must affect module hash.
-		hashing::addToHash(partial, m_module_type_data.index());
+		hashing::addToHash(partial, static_cast<usize>(getKind()));
 
-		v_if_matches(m_module_type_data, SyntheticReplChainModuleData, repl_data) {
-			hashing::addToHash(partial, repl_data->m_repl_module_parent.has_value());
-			if (repl_data->m_repl_module_parent.has_value()) {
-				auto repl_parent = repl_data->m_repl_module_parent.value();
+		if (isReplModule()) {
+			auto repl_module_parent = getReplModuleParent();
+			hashing::addToHash(partial, repl_module_parent.has_value());
+			if (repl_module_parent.has_value()) {
+				auto repl_parent = repl_module_parent.value();
 
 				hashing::addToHash(partial, ModuleTree::getModuleHash(repl_parent));
 			}
@@ -348,7 +329,7 @@ namespace compiler::frontend {
 			const auto* candidate_ptr = candidate.get();
 			bool        is_tracked    = false;
 			for (const auto& entry: modules) {
-				if (&entry.value == candidate_ptr) {
+				if (entry.value.get() == candidate_ptr) {
 					is_tracked = true;
 					break;
 				}
@@ -521,31 +502,32 @@ namespace compiler::frontend {
 
 		m_finalized = true;
 
-		// Create new ModuleTree instance
+		// Create new ModuleTree instance of the proper kind. The source file of the module is
+		// created below.
+		auto create_node = [&]() -> Box<ModuleTree> {
+			if (m_is_repl_module)
+				return makeBox<SyntheticReplChainModuleTreeNode>(m_repl_module_parent);
+			return makeBox<ModuleModuleTreeNode>();
+		};
+
 		const auto      storage_key  = next_module_storage_key++;
-		auto            inserted     = modules.put(storage_key, ModuleTree());
-		Ref<ModuleTree> module_ref   = &inserted->value;
+		auto            inserted     = modules.put(storage_key, create_node());
+		Ref<ModuleTree> module_ref   = inserted->value.get();
 		module_ref->m_storage_handle = storage_key;
 		ModuleID mod_id(module_ref);
 
 		module_ref->m_id = mod_id;
 
 		// Set ID and name
-		module_ref->m_name        = m_name;
-		module_ref->m_other_files = std::move(m_other_files);
+		module_ref->m_name = m_name;
+
+		if (auto other_files = module_ref->otherFilesSlot(); other_files != nullptr)
+			*other_files = std::move(m_other_files);
+		else
+			CORE_ASSERT(m_other_files.empty(), "This module type cannot have other files!");
 
 		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
 		module_ref->m_package_id = m_package_id;
-
-		// Set module type specific data. The source file of the module is created below, once the
-		// proper alternative is selected.
-		if (m_is_repl_module)
-			module_ref->m_module_type_data = ModuleTree::SyntheticReplChainModuleData{
-				.m_repl_module_parent    = m_repl_module_parent,
-				.m_synthetic_source_file = {},
-			};
-		else
-			module_ref->m_module_type_data = ModuleTree::ModuleModuleData{};
 
 		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
@@ -587,9 +569,14 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::addSubmodule(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
-		base::StrID name = submodule->getName();
+		base::StrID name       = submodule->getName();
+		auto        submodules = module->submodulesSlot();
 		CORE_ASSERT(
-			!module->m_submodules.contains(name),
+			submodules != nullptr,
+			base::strConcat("Module ", module->getName().strView(), " cannot have submodules")
+		);
+		CORE_ASSERT(
+			!submodules->contains(name),
 			base::strConcat(
 				"Submodule with name '",
 				name.strView(),
@@ -600,7 +587,7 @@ namespace compiler::frontend {
 		);
 
 
-		module->m_submodules.put(name, submodule);
+		submodules->put(name, submodule);
 
 		CORE_ASSERT(
 			!submodule->m_parent.has_value(),
@@ -641,12 +628,17 @@ namespace compiler::frontend {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
-		if (!module->m_other_files.contains(ext_id))
-			module->m_other_files.put(ext_id, std::vector<fs::File>());
+		auto other_files = module->otherFilesSlot();
+		CORE_ASSERT(
+			other_files != nullptr,
+			base::strConcat("Module ", module->getName().strView(), " cannot have other files")
+		);
+
+		if (!other_files->contains(ext_id)) other_files->put(ext_id, std::vector<fs::File>());
 
 		CORE_ASSERT(
 			!std::ranges::any_of(
-				module->m_other_files.at(ext_id),
+				other_files->at(ext_id),
 				[&file](const fs::File& f) { return f.getFilePath() == file.getFilePath(); }
 			),
 			base::strConcat(
@@ -657,7 +649,7 @@ namespace compiler::frontend {
 			)
 		);
 
-		module->m_other_files.at(ext_id).push_back(file);
+		other_files->at(ext_id).push_back(file);
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
@@ -666,7 +658,7 @@ namespace compiler::frontend {
 		);
 		auto main_source_file_slot = module->mainSourceFileSlot();
 		CORE_ASSERT(
-			main_source_file_slot->has_value(),
+			main_source_file_slot != nullptr && main_source_file_slot->has_value(),
 			base::strConcat(
 				"Module ", module->getName().strView(), " does not have a main source file"
 			)
@@ -681,8 +673,9 @@ namespace compiler::frontend {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
+		auto other_files = module->otherFilesSlot();
 		CORE_ASSERT(
-			module->m_other_files.contains(ext_id),
+			other_files != nullptr && other_files->contains(ext_id),
 			base::strConcat(
 				"Other file with extension '",
 				ext_id.strView(),
@@ -691,7 +684,7 @@ namespace compiler::frontend {
 			)
 		);
 
-		auto& files = module->m_other_files.at(ext_id);
+		auto& files = other_files->at(ext_id);
 		auto  it    = std::ranges::find_if(files, [&file](const fs::File& f) {
             return f.getFilePath() == file.getFilePath();
         });
@@ -724,7 +717,7 @@ namespace compiler::frontend {
 
 		// remove this module from its parent's submodules
 		auto  parent     = module->m_parent.value();
-		auto& submodules = parent->m_submodules;
+		auto& submodules = *parent->submodulesSlot();
 		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
             return pair.second == module;
         });
@@ -762,8 +755,9 @@ namespace compiler::frontend {
 				  internal->m_package_id = internal_new_package_id;
 
 				  // Change the package ID for all submodules recursively
-				  for (auto& [_, submodule]: internal->m_submodules)
-					  change_package_id(submodule, internal_new_package_id);
+				  if (auto submodules = internal->submodulesSlot(); submodules != nullptr)
+					  for (auto& [_, submodule]: *submodules)
+						  change_package_id(submodule, internal_new_package_id);
 
 				  // Invalidate component hash for the module and its children as the package ID changed
 				  internal->invalidateHash();
@@ -781,7 +775,7 @@ namespace compiler::frontend {
 		// Update parent module if it exists
 		if (parent.has_value()) {
 			// Remove the submodule from the parent's submodules
-			auto& submodules = parent.value()->m_submodules;
+			auto& submodules = *parent.value()->submodulesSlot();
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
                 return pair.second == module;
             });
@@ -800,14 +794,16 @@ namespace compiler::frontend {
 		}
 
 		// Change the parent of all submodules to the parent of the removed module
-		for (auto& [_, submodule]: module->m_submodules) {
-			if (parent.has_value()) {
-				parent.value()->m_submodules.put(submodule->getName(), submodule);
-				submodule->m_parent = parent.value();
-			} else {
-				submodule->m_parent = {};
+		if (auto submodules = module->submodulesSlot(); submodules != nullptr) {
+			for (auto& [_, submodule]: *submodules) {
+				if (parent.has_value()) {
+					parent.value()->submodulesSlot()->put(submodule->getName(), submodule);
+					submodule->m_parent = parent.value();
+				} else {
+					submodule->m_parent = {};
+				}
+				submodule->invalidateHash();  // invalidate hash as parent changed
 			}
-			submodule->invalidateHash();  // invalidate hash as parent changed
 		}
 
 		// Remove the source files of the module. This will invalidate the SourceFile instances!
@@ -825,7 +821,7 @@ namespace compiler::frontend {
 		auto parent = module->m_parent;
 
 		if (parent.has_value()) {
-			auto& submodules = parent.value()->m_submodules;
+			auto& submodules = *parent.value()->submodulesSlot();
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
                 return pair.second == module;
             });
@@ -844,7 +840,8 @@ namespace compiler::frontend {
 		}
 
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
-			for (auto& [_, child]: current->m_submodules) self(self, child);
+			if (auto submodules = current->submodulesSlot(); submodules != nullptr)
+				for (auto& [_, child]: *submodules) self(self, child);
 
 			for (const auto& source_file: current->collectOwnedSourceFiles())
 				SourceFile::removeSourceFileFromStorage(source_file);
