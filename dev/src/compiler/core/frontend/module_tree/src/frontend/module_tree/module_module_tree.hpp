@@ -19,8 +19,14 @@ namespace compiler::frontend {
 		 */
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
+        void makeAbstract() final {
+            CORE_PANIC("makeAbstract called on ModuleModuleTreeNode!");
+        }
+
 	public:
 		ModuleModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }
+
+
 	};
 
 

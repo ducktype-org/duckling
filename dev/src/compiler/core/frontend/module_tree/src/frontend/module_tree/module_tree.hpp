@@ -96,6 +96,9 @@ namespace compiler::frontend {
 		friend struct ModuleID;
 
 	public:
+		virtual ~ModuleTree();
+
+
 		ModuleID getModuleID() const;
 
 		/**
@@ -236,6 +239,8 @@ namespace compiler::frontend {
 
 	protected:
 		ModuleTree();
+
+		virtual void makeAbstract() = 0;
 
 		/**
 		 * @brief Access the slot holding the source file that acts as the main source file of this

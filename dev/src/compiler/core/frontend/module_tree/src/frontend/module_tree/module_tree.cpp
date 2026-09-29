@@ -32,7 +32,7 @@ namespace {
 	/**
 	 * StableHashMap that stores all ModuleTree instances.
 	 */
-	base::StableHashMap<usize, compiler::frontend::ModuleTree> modules;
+	base::StableHashMap<usize, Box<compiler::frontend::ModuleTree>> modules;
 	usize                                                      next_module_storage_key = 0;
 
 	/**

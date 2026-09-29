@@ -12,6 +12,11 @@ namespace compiler::frontend {
 	class SyntheticReplChainModuleTreeNode: public ModuleTree {
 		base::Optional<ModuleID> m_repl_module_parent;
 
+
+        void makeAbstract() final {
+            CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
+        }
+
 	public:
 		SyntheticReplChainModuleTreeNode(): ModuleTree() { kind = ModuleKind::ReplChain; }
 
@@ -33,6 +38,11 @@ namespace compiler::frontend {
 		 * @note: For REPL like execution this can be edited or extended via ModuleTreeModifier.
 		 */
 		std::vector<Box<SyntheticReplChainModuleTreeNode>> m_synthetic_repl_module_chain;
+
+
+        void makeAbstract() final {
+            CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!");
+        }
 
 	public:
 		ScriptModuleTreeNode(): ModuleTree() { kind = ModuleKind::Script; }
