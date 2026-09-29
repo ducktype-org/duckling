@@ -7,7 +7,7 @@ For REPL session overview, see: [REPL Module](../../../../../repl/readme.md)
 The primary components in this flow are:
 
 1. **[`repl_split_helpers`](./repl_split_helpers.hpp):** Splits raw input into top-level statement source slices in source order.
-2. **[`repl_statement_helpers`](./repl_statement_helpers.hpp):** Creates ephemeral chained modules, classifies single statements, and builds executable wrappers for expression/instruction statements and for global variable declarations.
+2. **[`repl_statement_helpers`](./repl_statement_helpers.hpp):** Creates synthetic chained modules, classifies single statements, and builds executable wrappers for expression/instruction statements and for global variable declarations.
 3. **[`repl_dvm_helpers`](./repl_dvm_helpers.hpp):** Compiles HOUT to DVM code, loads code into a running VM process, and captures expression return values for supported types.
 4. **[`script_helpers`](./script_helpers.hpp):** Script-specific helpers for stable synthetic script module IDs and merging per-statement LIR chunks.
 
@@ -31,7 +31,7 @@ Script execution reuses the REPL-style statement chain, but treats the full file
 
 1. Driver initialization stores the active script in `ScriptContext`.
 2. The script source is split into top-level statements using the same statement splitter as REPL input.
-3. Each statement is compiled in source order into an ephemeral chained module.
+3. Each statement is compiled in source order into an synthetic chained module.
 4. Definitions are lowered directly from module HOUT.
 5. Executable statements are wrapped, lowered, and sequenced under a synthetic script `main`.
 6. Variable declarations contribute their storage and an initializer wrapper, which `main` calls at the source position of the declaration, instead of before it runs together with every other global.
