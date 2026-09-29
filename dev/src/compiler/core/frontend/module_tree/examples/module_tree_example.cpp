@@ -1,5 +1,6 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 
 #include <init/init.hpp>
 #include <query_framework/entry/with_context_do.hpp>
