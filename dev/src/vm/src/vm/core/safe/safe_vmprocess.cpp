@@ -741,5 +741,4 @@ namespace vm {
 	) const {
 		return loader.validateFunction(function, mode);
 	}
-
 }
