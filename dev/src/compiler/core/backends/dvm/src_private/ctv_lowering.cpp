@@ -113,6 +113,15 @@ namespace compiler::backend_vm::internal {
 				global_data.ctor_name = ctor.ctor.name;
 				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 			}
+			variant_case(ctv::CompileTimeValue::VMValue, vm_value) {
+				if (pctx.isCompTimeLowering()) {
+					auto ctor = lowerVMValue(pctx, global_name, inserted_global_place, vm_value);
+					global_data.ctor_name = ctor.ctor.name;
+					pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
+				} else {
+					CORE_PANIC("Lowering of the comp time value is not yet supported.");
+				}
+			}
 		}
 
 		pctx.defineGlobal(std::move(global_data));
@@ -202,6 +211,30 @@ namespace compiler::backend_vm::internal {
 		}
 
 		ctor_ctx.cleanUpRegisteredTemps();
+		ctor_ctx.pushInstruction(vm::code::builders::InstructionBuilder(OpKind::ret).build());
+
+		return CtorLoweringResult{ .ctor = std::move(ctor_ctx).finish() };
+	}
+
+	CTVLowering::CtorLoweringResult CTVLowering::lowerVMValue(
+		ProgramLoweringContext&               pctx,
+		base::StrID                           global_name,
+		const DVMPlace&                       inserted_global_place,
+		const ctv::CompileTimeValue::VMValue& vm_value
+	) {
+		auto ctor_name = base::StrID(base::strConcat(global_name.strView(), "_ctor"));
+		FunctionLoweringContext ctor_ctx
+			= FunctionLoweringContext::getVoidParameterLessFunctionContext(pctx, ctor_name);
+
+		const auto& type = inserted_global_place.getType();
+		DVMPlace    local(base::StrID("vm_value"), type, DVMPlace::AccessKind::Direct);
+		ctor_ctx.pushInstruction({ OpKind::initFromVMValue,
+		                           local.asAnyArgument(),
+		                           vm::opargs::Type(typeName(type)),
+		                           vm::opargs::Immediate{ std::bit_cast<u64>(vm_value.val.get()) } }
+		);
+		ctor_ctx.maybeStoreResult(inserted_global_place, DVMValue{ local });
+		ctor_ctx.pushInstruction({ OpKind::deinit });
 		ctor_ctx.pushInstruction(vm::code::builders::InstructionBuilder(OpKind::ret).build());
 
 		return CtorLoweringResult{ .ctor = std::move(ctor_ctx).finish() };

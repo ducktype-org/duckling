@@ -10,6 +10,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
 #include <tuple>
 #include <type_traits>
@@ -864,7 +865,15 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fpext_p64_p32, i) { addLow<Op_fpext_p64_p32>(i.dst, i.src); }
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
-			instr_case(high::Op_initFromVMValue, i) { addLow<Op_initFromVMValue>(); }
+			instr_case(high::Op_initFromVMValue_pany_type_imm, i) {
+				const auto* safe_vm_value = dynamic_cast<const SafeVMValue*>(
+					std::bit_cast<const IVMValue*>(i.vm_value.value)
+				);
+				CORE_ASSERT(safe_vm_value != nullptr, "Expected a VMValue of the safe VM.");
+				addLow<Op_initFromVMValue>(
+					vm::opargs::Immediate{ std::bit_cast<u64>(safe_vm_value) }, byteOffsetOf(i.var)
+				);
+			}
 			instr_case(high::Comment, i) {
 				// Do nothing
 			}

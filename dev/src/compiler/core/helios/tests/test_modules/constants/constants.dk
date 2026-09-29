@@ -121,3 +121,45 @@ fun sizeAndAlign(t: type) -> i64 = {
 }
 # Exercises the meta builtins through a VM comp-time call: size_of(i64) + alignment_of(i64).
 const SIZE_AND_ALIGN_I64: i64 = sizeAndAlign(i64); # 8 + 8 = 16
+
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+fun sumPoint(p: const ref Point) -> i64 = p.x + p.y;
+
+fun sumPointByValue(p: Point) -> i64 = p.x + p.y;
+
+fun matchValue(v: i32 | f32) -> i64 = match (v) {
+    case x : i32 = x as i64;
+    case _ = 0 as i64;
+};
+
+const POINT = Point(3, 4);
+
+const REF_POINT_SUM = sumPoint(&POINT); # 7
+const VALUE_POINT_SUM = sumPointByValue(POINT); # 7
+
+const POINT_X = POINT.x; # 3
+const POINT_FIELDS_SUM = POINT.x + POINT.y; # 7
+const TUPLE_ELEM: i64 = (1, 5)._2; # 5
+
+const INT_VARIANT: i32 | f32 = 17 as i32;
+const MATCHED_THROUGH_CALL = matchValue(INT_VARIANT); # 17
+
+fun makeArray() -> i64[3] = {
+    var arr: i64[3];
+    arr[0] = 10;
+    arr[1] = 20;
+    arr[2] = 30;
+    return arr;
+}
+
+fun sumArray(a: const ref i64[3]) -> i64 = a[0] + a[1] + a[2];
+
+const ARRAY = makeArray();
+
+const REF_ARRAY_SUM = sumArray(&ARRAY); # 60
+const ARRAY_ELEM = ARRAY[1]; # 20
+const ARRAY_ELEM_OF_CALL = makeArray()[2]; # 30

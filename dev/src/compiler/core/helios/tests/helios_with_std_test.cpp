@@ -65,6 +65,7 @@ public:
 		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCompTimeStrings);
+		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testCompTimeOutput);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testPointers);
@@ -84,6 +85,7 @@ protected:
 			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
 			{ fs::FilePath(path("test_modules/strings")), "strings" },
 			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" },
+			{ fs::FilePath(path("test_modules/constants")), "constants" },
 			{ fs::FilePath(path("test_modules/comp_time_output")), "comp_time_output" }
 		};
 		auto init_result
@@ -489,6 +491,59 @@ private:
 		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
 		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());
 		ASSERT_TRUE(!getChain("expanded.fromSlice", root_scope).empty());
+	}
+
+	void testConstants() {
+		auto module     = compiler::driver::test_utils::getModuleIdFromPath("constants");
+		auto root_scope = getModuleScope(module);
+
+		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("N.X", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("A", root_scope));
+		ASSERT_EQUAL(-3, getConstValueAs<i32>("B", root_scope));
+		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
+		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
+		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
+
+		// Floating point.
+		ASSERT_EQUAL(1.0f, getConstValueAs<f64>("F1", root_scope));
+		ASSERT_EQUAL(1.0l, getConstValueAs<f32>("F2", root_scope));
+		ASSERT_EQUAL(5.0l, getConstValueAs<f64>("F3", root_scope));
+
+		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
+
+		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
+		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
+		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
+		ASSERT_EQUAL(55, getConstValueAs<i32>("FIB_ON_I32_10", root_scope));
+		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
+		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
+
+		// Meta builtins (size_of / alignment_of) called through a VM comp-time function call.
+		ASSERT_EQUAL(16, getConstValueAs<i64>("SIZE_AND_ALIGN_I64", root_scope));
+
+		ASSERT_EQUAL(7, getConstValueAs<i64>("REF_POINT_SUM", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i64>("VALUE_POINT_SUM", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("POINT_X", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i64>("POINT_FIELDS_SUM", root_scope));
+		ASSERT_EQUAL(5, getConstValueAs<i64>("TUPLE_ELEM", root_scope));
+		ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_THROUGH_CALL", root_scope));
+
+		ASSERT_EQUAL(60, getConstValueAs<i64>("REF_ARRAY_SUM", root_scope));
+		ASSERT_EQUAL(20, getConstValueAs<i64>("ARRAY_ELEM", root_scope));
+		ASSERT_EQUAL(30, getConstValueAs<i64>("ARRAY_ELEM_OF_CALL", root_scope));
 	}
 
 	/**

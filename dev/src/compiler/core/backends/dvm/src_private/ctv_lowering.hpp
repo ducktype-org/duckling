@@ -76,6 +76,18 @@ namespace compiler::backend_vm::internal {
 		);
 
 		/**
+		 * @brief Returns the constructor that initializes the global with a copy of the data held
+		 * by `vm_value`. Only valid during the comp-time lowering, as the constructor embeds the
+		 * address of `vm_value`, which has to live in the same VM process as the lowered code.
+		 */
+		static CtorLoweringResult lowerVMValue(
+			ProgramLoweringContext&               pctx,
+			base::StrID                           global_name,
+			const DVMPlace&                       inserted_global_place,
+			const ctv::CompileTimeValue::VMValue& vm_value
+		);
+
+		/**
 		 * @brief Helper setting the fields of a structure one by one from a list of values.
 		 *
 		 * @param destination The place of the structure to construct.
