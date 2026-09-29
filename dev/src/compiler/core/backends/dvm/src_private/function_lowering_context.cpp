@@ -246,6 +246,94 @@ namespace {
 	DVMPlace::AccessKind accessKindForPointer(const tsl::PointerTypeLayout& pointer_type) {
 		return accessKindForPointer(pointer_type.getPointerKind());
 	}
+
+	bool isCPointerType(const vm::code::TypeOfData& type) {
+		return std::holds_alternative<vm::code::CPointerType>(type);
+	}
+
+	/**
+	 * @brief Access kind of a direct place storing a pointer once it is dereferenced. The DVM type
+	 * takes precedence, as a local holding a native address may be a `ref` in LIR.
+	 */
+	DVMPlace::AccessKind accessKindForDeref(
+		const DVMPlace& direct_place, const tsl::PointerTypeLayout& pointer_type
+	) {
+		if (isCPointerType(direct_place.getType())) return DVMPlace::AccessKind::CPointer;
+		return accessKindForPointer(pointer_type);
+	}
+
+	/**
+	 * @brief Whether @p place is resolved to an address behind a `cptr`, mirroring the access
+	 * kinds computed by `resolveLirPlace`.
+	 */
+	bool isReachedThroughCPointer(
+		const lir::LIRPlace& place, const base::Map<lir::LIRLocalRef, DVMPlace>& lir_local_to_dvm
+	) {
+		using enum tsl::PointerTypeLayout::PointerKind;
+
+		bool                  through_cpointer = false;
+		CRef<tsl::TypeLayout> layout           = place.getBaseLayout();
+		for (usize i{ 0 }; i < place.projection_chain.size(); i++) {
+			variant_match(place.projection_chain.at(i).storage) {
+				variant_case_novalue(lir::LIRPlace::DerefProjection) {
+					const auto& pointer_layout = layout->as<tsl::PointerTypeLayout>();
+					if (i == 0 and place.isLocal()) {
+						const auto& base_local
+							= lir_local_to_dvm.at(place.getBase<lir::LIRLocalRef>());
+						through_cpointer = accessKindForDeref(base_local, pointer_layout)
+						                == DVMPlace::AccessKind::CPointer;
+					} else
+						through_cpointer = pointer_layout.getPointerKind() == CPointer;
+					layout = pointer_layout.getPointee();
+				}
+				variant_case(lir::LIRPlace::FieldProjection, field) {
+					const auto& class_layout = layout->as<tsl::ClassTypeLayout>();
+					const usize field_index
+						= class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
+					layout = class_layout.getFieldLayoutOfLayoutIndex(field_index);
+				}
+				variant_case_novalue(lir::LIRPlace::IndexProjection) {
+					if (layout->is<tsl::StaticArrayTypeLayout>())
+						layout = layout->as<tsl::StaticArrayTypeLayout>().getElementLayout();
+					else {
+						const auto& pointer_layout = layout->as<tsl::PointerTypeLayout>();
+						through_cpointer           = pointer_layout.getPointerKind() == CPointer;
+						layout                     = pointer_layout.getPointee();
+					}
+				}
+			}
+		}
+		return through_cpointer;
+	}
+}
+
+void FunctionLoweringContext::registerCPointerAddressLocals(const lir::Function& lir_function) {
+	for (const auto& block_ref: lir_function.block_order) {
+		for (const auto& instruction: block_ref->instructions) {
+			if (instruction.operation != lir::Operation::AddressOf) continue;
+			if_opt_none(instruction.output) continue;
+			const auto& output = *instruction.output;
+			if (not output.isLocal() or output.hasProjections()) continue;
+
+			const auto output_local = output.getBase<lir::LIRLocalRef>();
+			// Parameters and the return value have their types fixed by the function signature.
+			if (output_local->parameter_index.has_value()
+			    or output_local->special_kind == lir::LIRLocalSpecialKind::ReturnValue)
+				continue;
+
+			const auto& source = instruction.arguments.at(0).get<lir::LIRPlace>();
+			if (not isReachedThroughCPointer(source, lir_local_to_dvm)) continue;
+
+			const vm::code::TypeOfData& pointee_type
+				= **program_context.lowerAndKeepTslType(source.layout);
+			const vm::code::TypeOfData& cpointer_type = program_context.getOrInsertPointerType(
+				pointee_type, tsl::PointerTypeLayout::PointerKind::CPointer
+			);
+			lir_local_to_dvm.insertOrAssign(
+				output_local, getLirLocal(output_local).withType(cpointer_type)
+			);
+		}
+	}
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
@@ -281,8 +369,9 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				if (current_place.isDirect()) {
 					// In this case we have a direct stack variable which stores a pointer.
 					// Dereferencing means we now treat the local as a pointer.
-					current_place
-						= current_place.withAccessKind(accessKindForPointer(current_pointer_layout));
+					current_place = current_place.withAccessKind(
+						accessKindForDeref(current_place, current_pointer_layout)
+					);
 					current_layout = pointee_layout;
 				} else {
 					vm::code::TypeOfData vm_loaded_type

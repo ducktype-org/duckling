@@ -73,6 +73,13 @@ namespace compiler::backend_vm::internal {
 		 */
 		void registerFunctionLocal(lir::LIRLocalRef lir_local);
 
+		/**
+		 * @brief Retypes the locals that take the address of a place reached through a `cptr` to
+		 * a `cptr` of the same pointee, as the DVM cannot hold a native address in a VM pointer.
+		 * Must be called after all the locals of @p lir_function have been registered.
+		 */
+		void registerCPointerAddressLocals(const lir::Function& lir_function);
+
 		DVMPlace getFunctionReturnValueLocal();
 
 		vm::code::Function finish() &&;

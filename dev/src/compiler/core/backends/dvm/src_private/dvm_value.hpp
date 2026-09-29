@@ -132,6 +132,10 @@ namespace compiler::backend_vm::internal {
 
 		DVMPlace withAccessKind(AccessKind kind) { return { name, type, kind }; }
 
+		[[nodiscard]] DVMPlace withType(vm::code::TypeOfData new_type) const {
+			return { name, std::move(new_type), access_kind, special_kind };
+		}
+
 		DVMPlace withSpecialKind(SpecialKind special) {
 			return { name, type, access_kind, special };
 		}

@@ -129,6 +129,32 @@ fun cPointerRepointingTest() = {
     dvm_free_arr:{i32}(table);
 }
 
+# `&` of a place reached through a `cptr` is a native address, so it stays a `cptr`.
+fun cPointerInteriorAddressTest() = {
+    var v: Vec;
+    v.nums[1] = 12;
+    v.nums[2] = 13;
+    v.inner.b = 14;
+    let p = &v as cptr Vec;
+
+    # Byte 12 is `nums[1]`, after the i64 `tag` and `nums[0]`.
+    let bytes = p as cptr u8;
+    let offset_p = &bytes[12] as cptr i32;
+    builtin_output_i64(*offset_p as i64);               # 12
+
+    let field_p = &p[0].inner.b as cptr i32;
+    builtin_output_i64(*field_p as i64);                # 14
+
+    var i: i64 = 2;
+    let elem_p = &(*p).nums[i] as cptr i32;
+    *elem_p = 23;
+    builtin_output_i64(v.nums[2] as i64);               # 23
+
+    # Read back through the `ref` itself, without the cast.
+    let r = &(*p).nums[1];
+    builtin_output_i64(*r as i64);                      # 12
+}
+
 # libm, and a `cptr` used as an out parameter.
 fun mathTest() = {
     builtin_output_i64(sqrt(16.0) as i64);              # 4
@@ -144,6 +170,7 @@ fun main() -> i64 = {
     cPointerProjectionsTest();
     cPointerToCTest();
     cPointerRepointingTest();
+    cPointerInteriorAddressTest();
     mathTest();
     return 0;
 }

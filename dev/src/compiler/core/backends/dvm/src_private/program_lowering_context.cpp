@@ -390,6 +390,7 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 			opt_none { func_ctx.registerFunctionLocal(&param); }
 		}
 	}
+	func_ctx.registerCPointerAddressLocals(*lir_function);
 
 	for (const auto& block_ref: lir_function->block_order) {
 		func_ctx.beginBlock(block_ref);
