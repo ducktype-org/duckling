@@ -141,6 +141,23 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Fails when a symbol that is not `extern("C")` carries `@c_symbol_name`: only a C
+		 * symbol links under a plain name, every other one is mangled.
+		 */
+		query::QResult<std::monostate> rejectCSymbolName(query::Context& ctx, SymID sym) {
+			if (not hasAttribute<attributes::CSymbolName>(sym)) return {};
+
+			base::Optional<dia::StablePosition> position;
+			if_opt_some(stmt(ctx, sym), statement) position = statement->getStablePosition();
+
+			ctx.logInt(makeBox<dia::PlaceholderError>(
+				"Attribute 'c_symbol_name' can only be used on an extern(\"C\") declaration.",
+				position
+			));
+			return query::Failed();
+		}
+
+		/**
 		 * @brief Validate if the parameters
 		 */
 		query::QResult<std::monostate> checkCABIParamTypes(
@@ -206,6 +223,10 @@ namespace compiler::helios {
 				}
 			}
 
+			if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
+				result.symbol_name = link_name->name;
+			}
+
 			if (args.size() == 2) {  // `extern("C" "mylib")` case
 				UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
 				result.library = lib_str_lit;
@@ -213,8 +234,10 @@ namespace compiler::helios {
 
 			return result;
 		} else if (first_arg == base::StrID("DVM")) {
-			if (args.size() == 1)  // `extern("DVM")` case
+			if (args.size() == 1) {  // `extern("DVM")` case
+				UNPACK_QRESULT(auto _ =, rejectCSymbolName(ctx, sym));
 				return DVMAbi{};
+			}
 			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"Too many arguments for DVM ABI in extern()",
 				extern_args.unlock(ctx)->getStablePosition()
@@ -252,6 +275,7 @@ namespace compiler::helios {
 					}
 				}
 			}
+			UNPACK_QRESULT(auto _ =, rejectCSymbolName(ctx, key));
 			return DefaultAbi{};
 		}
 

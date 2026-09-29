@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(testGroup8);
 		TESTER_ADD_TEST(testGroup9);
 		TESTER_ADD_TEST(testSourcePosition);
+		TESTER_ADD_TEST(testLiteralTextIsNotKeyword);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -132,6 +133,27 @@ private:
 
 	void testGroup9() {
 		testTokenGroup<9, lexer::Token::Type::FormatString, &lexer::Token::isFormatString>();
+	}
+
+	/**
+	 * @brief A string whose text is a keyword or a special (`"match"`, `";"`) must not be
+	 * recognised as one, or the parser reads `return "match";` as a `match` expression.
+	 */
+	void testLiteralTextIsNotKeyword() {
+		const auto& strings = td->getTokenData().tokens[7].getRecursive();
+		for (const auto& token: strings) {
+			assertTrue(
+				not token.is(lang_def::Keyword::Match) and not token.is(lang_def::Keyword::If)
+					and not token.is(lang_def::Special::Semicolon),
+				base::strConcat("String `", token.getStrValue(), "` is read as a keyword/special")
+			);
+		}
+
+		const auto& keywords = td->getTokenData().tokens[1].getRecursive();
+		ASSERT_TRUE(keywords.at(3).is(lang_def::Keyword::If));
+		ASSERT_TRUE(
+			td->getTokenData().tokens[4].getRecursive().at(0).is(lang_def::Special::Semicolon)
+		);
 	}
 
 	void testSourcePosition() {

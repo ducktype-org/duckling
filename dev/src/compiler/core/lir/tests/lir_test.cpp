@@ -53,6 +53,7 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
+		TESTER_ADD_TEST(cSymbolNameTest);
 		TESTER_ADD_TEST(debugPrintStandaloneElements);
 		TESTER_ADD_TEST(debugPrintElementsWithFunctionIDs);
 		TESTER_ADD_TEST(debugPrintFunctionWithAndWithoutContext);
@@ -715,6 +716,46 @@ private:
 		                  "variadicNoVarArgs",
 		                  "variadicUnpromotedFloat",
 		                  "variadicUnpromotedInt" })
+			invalid_declarations.emplace_back(name, getChain(name, module.scope).back());
+
+		withContextDo([&](query::Context& ctx) {
+			for (const auto& [name, symbol]: invalid_declarations)
+				assertTrue(
+					ctx.query<helios::QuerySymbolABI>(symbol)->hasFailed(),
+					base::strConcat("Expected the ABI query to fail for `", name, "`")
+				);
+		});
+	}
+
+	/**
+	 * @brief Tests `@c_symbol_name("<name>")` on `extern("C")` declarations.
+	 */
+	void cSymbolNameTest() {
+		auto module     = getLIROfModule(path("modules/c_symbol_name"));
+		auto caller_lir = module.lirFunc("caller");
+
+		using namespace compiler::lir;
+
+		std::vector<base::StrID> called;
+		for (const auto& block: caller_lir->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+
+				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
+				assertTrue(
+					std::holds_alternative<lir::LIRAbi::CAbi>(literal.abi.value),
+					"Expected the call to use the C ABI"
+				);
+				called.push_back(literal.mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(called.size(), 3);
+		ASSERT_EQUAL_PRINT(called.at(0), base::StrID("match"));
+		ASSERT_EQUAL_PRINT(called.at(1), base::StrID("in"));
+		ASSERT_EQUAL_PRINT(called.at(2), base::StrID("plain_c"));
+
+		std::vector<std::pair<std::string_view, helios::SymID>> invalid_declarations;
+		for (auto name: { "notExternC", "dvmDecl" })
 			invalid_declarations.emplace_back(name, getChain(name, module.scope).back());
 
 		withContextDo([&](query::Context& ctx) {
