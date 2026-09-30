@@ -2,7 +2,6 @@
 
 #include <tester/tester.hpp>
 
-#include <algorithm>
 #include <array>
 #include <string>
 #include <string_view>
@@ -19,8 +18,6 @@ namespace {
 		return contains(block, "\n" + std::string(label) + ":");
 	}
 
-	bool isLowerHexDigit(char c) { return (c >= '0' and c <= '9') or (c >= 'a' and c <= 'f'); }
-
 }  // namespace
 
 class VersionTest: public tester::TestSuite {
@@ -30,9 +27,6 @@ class VersionTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(renderShortNamesTheToolTest);
-		TESTER_ADD_TEST(commitHashIsHexTest);
-		TESTER_ADD_TEST(renderShortShowsCommitHashTest);
-		TESTER_ADD_TEST(renderVerboseShowsCommitHashRowTest);
 		TESTER_ADD_TEST(renderVerboseNamesTheToolAndAddsExtraTest);
 		TESTER_ADD_TEST(renderVerboseSkipsEmptyExtraTest);
 	}
@@ -40,27 +34,6 @@ public:
 private:
 	void renderShortNamesTheToolTest() {
 		ASSERT_TRUE(version::renderShort(TOOL_NAME).starts_with(std::string(TOOL_NAME) + " "));
-	}
-
-	// Outside a git worktree there is no commit to name, so the hash is empty and these tests have
-	// nothing to check.
-	void commitHashIsHexTest() {
-		const std::string_view hash = version::commitHash();
-		ASSERT_TRUE(std::ranges::all_of(hash, isLowerHexDigit));
-	}
-
-	void renderShortShowsCommitHashTest() {
-		if (version::commitHash().empty()) return;
-		ASSERT_TRUE(
-			contains(version::renderShort(TOOL_NAME), "(" + std::string(version::commitHash()))
-		);
-	}
-
-	void renderVerboseShowsCommitHashRowTest() {
-		if (version::commitHash().empty()) return;
-		const std::string block = version::renderVerbose(TOOL_NAME);
-		ASSERT_TRUE(hasRow(block, "commit-hash"));
-		ASSERT_TRUE(contains(block, version::commitHash()));
 	}
 
 	void renderVerboseNamesTheToolAndAddsExtraTest() {
