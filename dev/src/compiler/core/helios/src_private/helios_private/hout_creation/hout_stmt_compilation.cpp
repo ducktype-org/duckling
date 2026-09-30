@@ -219,22 +219,23 @@ namespace compiler::helios {
 			BoxOrCRef<code::Expr> op_rhs
 				= ctx.query<QueryHoutOfExpr>({ val })->valueOrThrow().ref();
 			auto location_deref = s.deref(std::move(location));
-			auto value = code::resolveBinaryOperator(
-				ctx,
-				stripped_op,
-				code::pstOrigin(op_wrapped),
-				std::move(op_lhs),
-				op_rhs->clone(),
-				ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
-			);
+			auto value          = code::resolveBinaryOperator(
+                ctx,
+                stripped_op,
+                code::pstOrigin(op_wrapped),
+                std::move(op_lhs),
+                op_rhs->clone(),
+                ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
+            );
 			// TODO: Improve dia
 			auto coerced_value = coerceFromBox(
-				ctx,
-				std::move(value),
-				location_deref->expression_type.getSymbolType(),
-				assignment->getStablePosition(),
-				var.unlock(ctx)->getStablePosition()
-			).valueOrThrow();
+									 ctx,
+									 std::move(value),
+									 location_deref->expression_type.getSymbolType(),
+									 assignment->getStablePosition(),
+									 var.unlock(ctx)->getStablePosition()
+			)
+			                         .valueOrThrow();
 
 			output(code::AssignmentStmt(
 				code::pstOrigin(assignment), std::move(location_deref), std::move(coerced_value)

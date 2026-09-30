@@ -121,9 +121,10 @@ namespace {
 					return {};
 			}();
 			if_opt_none(lang_primitive) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
-					"Float exponentiation on unhandled type. Only `f32` and `f64` are handled for now."
-				)));
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					base::strConcat("Float exponentiation on unhandled type. Only `f32` and `f64` "
+				                    "are handled for now.")
+				));
 				return query::Failed();
 			}
 			if (!isLanguagePrimitivePresent(ctx, lang_primitive.value())) {
