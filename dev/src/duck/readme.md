@@ -8,6 +8,7 @@ More detailed descriptions of various parts of duck and/or quackpack can be foun
 
 - `libgfortran5`,
 - `libgit2`,
+- `libssh2`,
 - `libssl2`,
 - `libsqlite3`,
 - `pkg-config` on Linux, for finding OpenSSL installation.
