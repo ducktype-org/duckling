@@ -8,19 +8,17 @@ namespace compiler::frontend {
 	 * @brief REPL-specific module tree node.
 	 * Represents a single node in the synthetic REPL chain.
 	 * Only used for repl modules.
+	 *
+	 * @note: Parent of this module is either the REPL module higher in the chain or the script module itself.
 	 */
-	class SyntheticReplChainModuleTreeNode: public ModuleTree {
-		/**
-		 * Parent REPL module in chronological order.
-		 * Optional - only empty for first REPL module.
-		 */
-		base::Optional<ModuleID> m_repl_module_parent;
-
+	class SyntheticReplChainModuleTreeNode final: public ModuleTree {
 		/**
 		 * The synthetic source file this chain link was created from.
 		 * It plays the role of the main source file of a standard module.
 		 */
 		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
+
+		base::Optional<Box<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
 		void makeAbstract() final {
 			CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
@@ -35,15 +33,11 @@ namespace compiler::frontend {
 			return &m_synthetic_source_file;
 		}
 
-	public:
-		explicit SyntheticReplChainModuleTreeNode(base::Optional<ModuleID> repl_module_parent):
-			  ModuleTree(),
-			  m_repl_module_parent(repl_module_parent) {
-			kind = ModuleKind::ReplChain;
-		}
 
-		base::Optional<ModuleID> getReplModuleParent() const override {
-			return m_repl_module_parent;
+	public:
+		explicit SyntheticReplChainModuleTreeNode():
+			  ModuleTree() {
+			kind = ModuleKind::ReplChain;
 		}
 
 		[[nodiscard]]
@@ -61,15 +55,14 @@ namespace compiler::frontend {
 	class ScriptModuleTreeNode final: public ModuleTree {
 		base::Optional<fs::File> m_script_file;
 
-		/**
-		 * @note: For REPL like execution this can be edited or extended via ModuleTreeModifier.
-		 */
-		std::vector<Box<SyntheticReplChainModuleTreeNode>> m_synthetic_repl_module_chain;
+		base::Optional<Box<SyntheticReplChainModuleTreeNode>> m_synthetic_repl_module_chain;
 
 		void makeAbstract() final { CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!"); }
 
 	protected:
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override {
+			// PR adjust..
+
 			std::vector<base::Ref<SourceFile>> source_files;
 			for (const auto& chain_link: m_synthetic_repl_module_chain) {
 				const auto& source_file = chain_link->getSyntheticSourceFile();

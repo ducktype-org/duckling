@@ -184,17 +184,6 @@ namespace compiler::frontend {
 		}
 
 		/**
-		 * Get the parent REPL module.
-		 * Only valid for REPL modules.
-		 * @TODO: #2762 remove this if possible, its barely used
-		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
-		 */
-		[[nodiscard]]
-		virtual base::Optional<ModuleID> getReplModuleParent() const {
-			CORE_PANIC("getReplModuleParent called on non-REPL module!");
-		}
-
-		/**
 		 * Returns the ComponentHash of the module.
 		 * It is calculated from the module logical path.
 		 * For example, for a module tree like:
@@ -259,36 +248,30 @@ namespace compiler::frontend {
 		 * @return nullptr for module types that have no main source file (scripts).
 		 */
 		[[nodiscard]]
-		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot()
-			= 0;
+		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() { return nullptr; }
 
 		[[nodiscard]]
-		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const
-			= 0;
+		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const { return nullptr; }
 
 		/**
 		 * @brief Access the submodules of this module.
 		 * @return nullptr for module types that cannot have submodules.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot()
-			= 0;
+		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() { return nullptr; }
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const
-			= 0;
+		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const { return nullptr; }
 
 		/**
 		 * @brief Access the other files of this module.
 		 * @return nullptr for module types that cannot have other files.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot()
-			= 0;
+		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() { return nullptr; }
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const
-			= 0;
+		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const { return nullptr; }
 
 		/**
 		 * @brief Collects every SourceFile owned by this module, regardless of its type.
