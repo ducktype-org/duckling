@@ -196,8 +196,10 @@ namespace compiler::frontend {
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
+		
 		for (const auto& source_file: collectOwnedSourceFiles())
 			source_file->invalidateComponentHash();
+
 		for (auto& child: collectChildrenModules()) child->invalidateHash();
 	}
 
@@ -327,6 +329,9 @@ namespace compiler::frontend {
             auto module_tree = GetModuleID_Functor::get(mid);
             if (module_tree->hasMainSourceFile())
                 files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
+
+				// PR: this should use child modules insted of getSubmodules
+				// but collectChildrenModules is private, figure this out
             for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
                 self(submodule.illegalAccess().getID());
 		};

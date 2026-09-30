@@ -284,6 +284,15 @@ namespace compiler::frontend {
 		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const = 0;
 
 		/**
+		 * @brief Collects all owned source files modules of this module.
+		 * @return A vector containing references to all child modules.
+		 *
+		 * @note as of now, its always 0 or 1 owned source file per module,
+		 * but the interface returns a vector for ease of use and future extensibility.
+		 */
+		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const = 0;
+
+		/**
 		 * @brief Access the other files of this module.
 		 * @note Panics for module types that cannot have other files. Check the module kind before
 		 * calling this.
