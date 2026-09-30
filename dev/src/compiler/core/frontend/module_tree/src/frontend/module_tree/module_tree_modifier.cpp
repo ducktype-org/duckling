@@ -42,6 +42,11 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::addSubmodule(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
+		CORE_ASSERT(
+			module->getKind() == ModuleKind::Module,
+			"Module must be of kind 'Module'"
+		);
+
 		base::StrID name       = submodule->getName();
 		auto        submodules = module->submodulesSlot();
 		CORE_ASSERT(
@@ -329,8 +334,7 @@ namespace compiler::frontend {
 		}
 
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
-			if (auto submodules = current->submodulesSlot(); submodules != nullptr)
-				for (auto& [_, child]: *submodules) self(self, child);
+			for (auto& child: current->collectChildrenModules()) self(self, child);
 
 			if (auto source_file = current->mainSourceFileSlot();
 			    source_file != nullptr and source_file->has_value())
