@@ -1,20 +1,9 @@
 #include "cli.hpp"
 
+#include "common.hpp"
+
 #include <diagnostic/highlight_positions.hpp>
 #include <token_source/source.hpp>
-
-namespace {
-	template<typename T>
-	std::string typeToString(const T& status) {
-		return std::visit(
-			[&](auto&& arg) {
-				using TT = std::decay_t<decltype(arg)>;
-				return TypeParseTraits<TT>::NAME.data();
-			},
-			status
-		);
-	}
-}
 
 namespace vm::debugger::cli {
 	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
@@ -89,7 +78,7 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("status", "writes current VM status")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto status = debugger.getStatus();
-										 printNL("Current status: ", typeToString(status));
+										 printNL("Current status: ", common::typeToString(status));
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("position", "writes current position")
@@ -161,7 +150,20 @@ namespace vm::debugger::cli {
 						  })
 				  );
 
+
+		events::Listener<std::string> error_listener([&](const std::string& err) {
+			printError(err);
+		});
+
+		events::Listener<std::string> output_listener([&](const std::string& str) {
+			print({ { str, printer::Color::BrightCyan } });
+		});
+
+		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnOutputListener(output_listener);
+
 		mainLoop(cmds);
+
 		return 0;
 	}
 

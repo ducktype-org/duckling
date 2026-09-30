@@ -1,11 +1,5 @@
 #pragma once
 
-#ifdef USE_REPLXX
-	#include <vm/debugger/UI/CLI/replxx/cli.hpp>
-#else
-	#include <vm/debugger/UI/CLI/minimal/cli.hpp>
-#endif
-
 #include <clah/clah.hpp>
 #include <diagnostic/highlight_positions.hpp>
 
@@ -14,6 +8,9 @@
 #include <sstream>
 
 namespace vm::debugger::cli {
+	namespace impl {
+		struct ImplementationSpecific;
+	}
 
 	/**
 	 * @class CLIDebugger
@@ -24,12 +21,13 @@ namespace vm::debugger::cli {
 	 */
 	class CLIDebugger {
 	public:
-		CLIDebugger()                              = default;
 		CLIDebugger(const CLIDebugger&)            = delete;
 		CLIDebugger& operator=(const CLIDebugger&) = delete;
 		CLIDebugger(CLIDebugger&&)                 = delete;
 		CLIDebugger& operator=(CLIDebugger&&)      = delete;
-		~CLIDebugger()                             = default;
+
+		CLIDebugger();
+		~CLIDebugger();
 
 		// @TODO: #3020 Add support for multi-file debugging
 		std::expected<void, api::ApiError>                            load(const fs::File& file);
@@ -45,7 +43,7 @@ namespace vm::debugger::cli {
 
 		// --- Implementation specific data ---
 
-		vm::debugger::cli::impl::ImplementationSpecific spec;
+		std::unique_ptr<impl::ImplementationSpecific> spec;
 
 		// --- Implementation specific functions ---
 
