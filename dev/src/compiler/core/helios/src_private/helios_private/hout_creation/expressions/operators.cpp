@@ -95,19 +95,16 @@ namespace {
 		);
 		auto op = std::get<PreDesugarOperator>(operation);
 
-		auto log_if_lang_primitive_not_present = [&](LanguagePrimitive lang_primitive) -> void {
-			if (!isLanguagePrimitivePresent(ctx, lang_primitive)) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
-					"Calling an operator that requires '",
-					base::enumToStr(lang_primitive),
-					"' language primitive, but no such primitive was found."
-				)));
-			}
-		};
-
 		switch (op) {
 		case IntegerPow: {
-			log_if_lang_primitive_not_present(LanguagePrimitive::PowInt);
+			if (!isLanguagePrimitivePresent(ctx, LanguagePrimitive::PowInt)) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+					"Calling an operator that requires '",
+					base::enumToStr(LanguagePrimitive::PowInt),
+					"' language primitive, but no such primitive was found."
+				)));
+				return query::Failed();
+			}
 			auto callee = bakeLanguagePrimitiveWithTypes(
 				ctx, LanguagePrimitive::PowInt, { lhs->expression_type.getSymbolType() }
 			);
@@ -123,8 +120,20 @@ namespace {
 				else
 					return {};
 			}();
-			if_opt_none(lang_primitive) return query::Failed();
-			log_if_lang_primitive_not_present(lang_primitive.value());
+			if_opt_none(lang_primitive) {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
+					"Float exponentiation on unhandled type. Only `f32` and `f64` are handled for now."
+				)));
+				return query::Failed();
+			}
+			if (!isLanguagePrimitivePresent(ctx, lang_primitive.value())) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+					"Calling an operator that requires '",
+					base::enumToStr(lang_primitive.value()),
+					"' language primitive, but no such primitive was found."
+				)));
+				return query::Failed();
+			}
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
 			                  ->valueOrThrow();
 			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
