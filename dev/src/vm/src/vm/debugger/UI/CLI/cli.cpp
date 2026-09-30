@@ -49,7 +49,6 @@ namespace vm::debugger::cli {
 		}
 
 		// @TODO: #3179 Add vm run -d flag and/or debugger command for explicite mapping loading
-		// @TODO: #3180 Add possibility for switching selected file in debugger CLI
 		clah::Clah cmds
 			= clah::Clah("debug", "Debugger CLI Command Parser")
 		          .addSubcommand(clah::Clah("exit", "exits the debugger")
@@ -109,6 +108,20 @@ namespace vm::debugger::cli {
 											 opt_none { printNL("Program has finished."); }
 										 }
 
+										 return 0;
+									 }))
+		          .addSubcommand(clah::Clah("select", "file targeted by operations such as `break`")
+		                             .addPositional(clah::FileParser::make("file"), "File to select")
+		                             .setHandler([&](const clah::ParsingResult& options) -> int {
+										 auto file = options.getPositional<fs::File>(0);
+
+										 if (!debugger.isFileAvailable(file)) {
+											 printError("No such file in compiled or loaded code");
+											 return 0;
+										 }
+
+										 selected_file = file;
+										 printNL("Selected ", selected_file->name());
 										 return 0;
 									 }))
 		          .addSubcommand(
