@@ -207,8 +207,14 @@ namespace compiler::helios::desugaring {
 			auto user_body = process_body(ctx.stmt->getBody());
 			for (auto& s: user_body.statements) body.statements.emplace_back(std::move(s));
 
-			// @TODO: #2465 When adding `continue` etc. remember to not jump over the increment line.
-			// __idx = __idx + 1;
+			return body;
+		}
+
+		// __idx = __idx + 1; this runs after the body and on continue.
+		Box<code::Stmt> buildForStep(const ForDesugarCtx& ctx, SymID idx_sym) {
+			const auto gen = code::generatedOrigin();
+			auto idx_ref   = [&] { return makeBox<code::IdentifierExpr>(ctx.ctx, gen, idx_sym); };
+
 			auto one = makeBox<code::LiteralNumericExpr>(
 				ctx.ctx,
 				gen,
@@ -217,15 +223,13 @@ namespace compiler::helios::desugaring {
 				)
 					.value()
 			);
-			body.statements.emplace_back(makeBox<code::AssignmentStmt>(
+			return makeBox<code::AssignmentStmt>(
 				gen,
 				idx_ref(),
 				makeBox<code::BinaryOperatorExpr>(
 					ctx.ctx, gen, code::BuiltinBinary::IntegerAdd, idx_ref(), std::move(one)
 				)
-			));
-
-			return body;
+			);
 		}
 	}
 
@@ -258,7 +262,10 @@ namespace compiler::helios::desugaring {
 	}
 
 	base::Optional<code::BlockStmt> desugarFor(
-		query::Context& ctx, pst::Access<pst::For> stmt, const BodyProcessor& process_body
+		query::Context&       ctx,
+		pst::Access<pst::For> stmt,
+		base::Optional<SymID> control_flow_id,
+		const BodyProcessor&  process_body
 	) {
 		auto gen     = code::generatedOrigin();
 		auto ctx_opt = buildForDesugarCtx(ctx, stmt);
@@ -310,7 +317,10 @@ namespace compiler::helios::desugaring {
 		outer.statements.emplace_back(makeBox<code::WhileStmt>(
 			for_ctx.loop_origin,
 			buildCondition(for_ctx, symbols.index, symbols.length),
-			std::move(while_body.value())
+			std::move(while_body.value()),
+			control_flow_id,
+			code::ControlFlowKind::For,
+			buildForStep(for_ctx, symbols.index)
 		));
 
 		// Emit it in a block so variable names don't collide if two fors are in the same

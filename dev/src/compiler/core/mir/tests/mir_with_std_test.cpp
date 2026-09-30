@@ -6,10 +6,12 @@
 
 #include <ctv/ctv.hpp>
 #include <driver/test_utils.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
@@ -21,6 +23,8 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <type_traits>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -36,6 +40,7 @@ public:
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(listsTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(forContinueTargetTest);
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(testErrorLogging);
@@ -49,6 +54,7 @@ protected:
 			{ fs::FilePath(path("modules/slices")), "slices" },
 			{ fs::FilePath(path("modules/lists")), "lists" },
 			{ fs::FilePath(path("modules/static_arrays")), "static_arrays" },
+			{ fs::FilePath(path("modules/for_continue")), "for_continue" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -140,6 +146,72 @@ private:
 			ASSERT_TRUE(found_zero_init_pts);
 			ASSERT_TRUE(found_index_projection);
 			ASSERT_TRUE(found_complex_pts_projection);
+		});
+	}
+
+	void forContinueTargetTest() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("for_continue");
+		withContextDo([&](query::Context& ctx) {
+			auto& unit
+				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
+			ASSERT_EQUAL(1u, unit.functions.size());
+			namespace hc = compiler::helios::code;
+			// The generated increment is an explicit step, not the last body statement.
+			const auto& hout_body = *unit.functions.at(0)->body;
+			const auto* for_block
+				= dynamic_cast<const hc::BlockStmt*>(hout_body.statements.at(2).get());
+			ASSERT_TRUE(for_block != nullptr);
+			const auto* loop
+				= dynamic_cast<const hc::WhileStmt*>(for_block->body.statements.back().get());
+			ASSERT_TRUE(loop != nullptr);
+			ASSERT_EQUAL(hc::ControlFlowKind::For, loop->control_flow_kind);
+			ASSERT_HAS_VALUE(loop->step);
+			ASSERT_TRUE(
+				dynamic_cast<const hc::AssignmentStmt*>(loop->step.value().get()) != nullptr
+			);
+			ASSERT_TRUE(
+				dynamic_cast<const hc::ContinueStmt*>(loop->body.statements.back().get()) != nullptr
+			);
+			auto        cloned_stmt = loop->clone();
+			const auto* cloned_loop = dynamic_cast<const hc::WhileStmt*>(cloned_stmt.get());
+			ASSERT_TRUE(cloned_loop != nullptr);
+			ASSERT_HAS_VALUE(cloned_loop->step);
+
+			usize assignment_count  = 0;
+			auto  count_assignments = [&](const auto& node) {
+                if constexpr (std::is_same_v<std::remove_cvref_t<decltype(node)>, hc::AssignmentStmt>)
+                    assignment_count++;
+			};
+			hc::HoutTreeWalker<decltype(count_assignments)> walker(count_assignments);
+			walker.walk(*loop);
+			ASSERT_EQUAL(2u, assignment_count);
+			auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(0));
+			base::Optional<BlockID> continue_target;
+			usize                   continue_count = 0;
+			for (auto id: function.block_order) {
+				const auto& block = function.blocks[id];
+				if (!block.debug_name.has_value()) continue;
+				if (block.debug_name.value() != base::StrID("continue")) continue;
+				auto target = block.terminator.arguments.at(0).get<BlockID>();
+				if (continue_target.has_value()) ASSERT_EQUAL(continue_target.value(), target);
+				continue_target = target;
+				continue_count++;
+			}
+			ASSERT_EQUAL(2u, continue_count);
+			ASSERT_HAS_VALUE(continue_target);
+			const auto& target_block     = function.blocks[continue_target.value()];
+			bool        increments_index = false;
+			bool        writes_sum       = false;
+			for (const auto& instr: target_block.instructions) {
+				if (!instr.output.has_value() || !instr.output->isLocal()) continue;
+				auto local = instr.output->getBase<compiler::mir::MIRLocalRef>();
+				if (local->getName() == base::StrID("sum")) writes_sum = true;
+				if (instr.operation == compiler::mir::Operation::IntegerAdd
+				    && local->getName().strView().starts_with("__index"))
+					increments_index = true;
+			}
+			ASSERT_TRUE(increments_index);
+			ASSERT_TRUE(!writes_sum);
 		});
 	}
 

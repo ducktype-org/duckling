@@ -1,4 +1,5 @@
-﻿#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+﻿#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -10,6 +11,7 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
+#include <array>
 #include <iostream>
 #include <sstream>
 
@@ -61,6 +63,7 @@ public:
 		TESTER_ADD_TEST(testFun2);
 		TESTER_ADD_TEST(testBlock);
 		TESTER_ADD_TEST(testActions);
+		TESTER_ADD_TEST(testControlFlowKeywordTargets);
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testUsing);
 		TESTER_ADD_TEST(testNamespace);
@@ -182,6 +185,46 @@ private:
 	void testBlock() { testJsonRelativePath("block.duck", "block.json"); }
 
 	void testActions() { testJsonRelativePath("actions.duck", "actions.json"); }
+
+	void testControlFlowKeywordTargets() {
+		struct Case {
+			std::string_view  code;
+			lang_def::Keyword target;
+			bool              is_break;
+		};
+
+		constexpr std::array CASES = {
+			Case{ .code = "break while;", .target = lang_def::Keyword::While, .is_break = true },
+			Case{ .code = "break for;", .target = lang_def::Keyword::For, .is_break = true },
+			Case{ .code = "continue if;", .target = lang_def::Keyword::If, .is_break = false },
+			Case{ .code = "continue block;", .target = lang_def::Keyword::Block, .is_break = false },
+		};
+
+		for (const auto& test_case: CASES) {
+			auto parsed = pst::PST<>::fromContents(test_case.code, pst::PSTType::Program);
+			assertTrue(
+				parsed.getLogger()->good(), base::strConcat("Failed to parse ", test_case.code)
+			);
+
+			auto statements = parsed.getRootElement().illegalAccess().value()->getStatements();
+			ASSERT_EQUAL(usize{ 1 }, statements.size());
+			auto stmt   = statements[0].illegalAccess().value();
+			auto action = stmt.dynamicCast<pst::Action>();
+			ASSERT_HAS_VALUE(action, test_case.code);
+			auto target = action.value()->getTargetKeyword();
+			ASSERT_HAS_VALUE(target, test_case.code);
+			ASSERT_EQUAL(test_case.target, target.value());
+			ASSERT_NO_VALUE(action.value()->getValue(), test_case.code);
+			if (test_case.is_break)
+				ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Break>(), test_case.code);
+			else
+				ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Continue>(), test_case.code);
+			ASSERT_TRUE(
+				pst::testElementCloning(CRef{ &*parsed.getRootElement().illegalAccess().value() })
+					.isOk()
+			);
+		}
+	}
 
 	void testImport() { testJsonRelativePath("import.duck", "import.json"); }
 

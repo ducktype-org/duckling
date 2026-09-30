@@ -34,8 +34,10 @@ namespace compiler::backend_vm::internal {
 			// Branch instr has the deinits pushed between the condition evaluation and the jump.
 			ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
+			// Use an unconditional second jump: the validator cannot infer that two
+			// complementary conditional jumps have no fallthrough path.
 			ctx->pushInstruction({ OpKind::jmpIf, op.true_target.asArgument() });
-			ctx->pushInstruction({ OpKind::jmpIfNot, op.false_target.asArgument() });
+			ctx->pushInstruction({ OpKind::jmp, op.false_target.asArgument() });
 		}
 	}
 
@@ -47,7 +49,7 @@ namespace compiler::backend_vm::internal {
 		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
 		ctx->pushInstruction({ OpKind::jmpIf, op.null_target.asArgument() });
-		ctx->pushInstruction({ OpKind::jmpIfNot, op.not_null_target.asArgument() });
+		ctx->pushInstruction({ OpKind::jmp, op.not_null_target.asArgument() });
 	}
 
 	void InstructionLowerer::lower(const ReturnOperation& op) {

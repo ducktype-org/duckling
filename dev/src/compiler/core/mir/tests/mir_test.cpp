@@ -5,6 +5,7 @@
 #include "utils/test_utils.hpp"
 
 #include <ctv/ctv.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -26,6 +27,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <vector>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -41,6 +43,8 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
+		TESTER_ADD_TEST(controlFlowTargetsTest);
+		TESTER_ADD_TEST(controlFlowContinueTargetsTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(blockDebugNamesTest);
 		TESTER_ADD_TEST(simpleFunctionCalls);
@@ -64,6 +68,192 @@ protected:
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
+
+	/**
+	 * Named actions retain their enclosing targets through nested statements. A kind-selected
+	 * break can cross a named if to exit the nearest while.
+	 */
+	void controlFlowTargetsTest() {
+		auto module = compiler::frontend::createModuleTreeFromContents(
+			R"(
+				fun nested(c: bool) -> i64 = {
+					while outer(c) {
+						while inner(c) {
+							if (c) break outer;
+						}
+					}
+					return 1;
+				}
+				fun nestedElse(c: bool) -> i64 = {
+					while outer(c) {
+						while inner(c) {
+							if (not c) {
+								break outer;
+							} else {
+								continue outer;
+							}
+						}
+					}
+					return 1;
+				}
+				fun namedIf(c: bool) -> i64 = {
+					if region(c) { break region; }
+					return 2;
+				}
+				fun namedBlock() -> i64 = {
+					block region { break region; }
+					return 3;
+				}
+				fun kindInIf(c: bool) -> i64 = {
+					while target(c) {
+						if region(c) { break while; }
+					}
+					return 4;
+				}
+				fun unnamedInBlock(c: bool) -> i64 = {
+					while (c) {
+						block { if (c) break; }
+					}
+					return 5;
+				}
+			)",
+			"test_package"
+		);
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			ASSERT_EQUAL(6u, unit.functions.size());
+
+			auto get_jump_target
+				= [this](const compiler::mir::Function& function, std::string_view block_name) {
+					  base::Optional<BlockID> result;
+					  for (auto id: function.block_order) {
+						  const auto& block = function.blocks[id];
+						  if (not block.debug_name.has_value()
+					          || block.debug_name.value().strView() != block_name)
+							  continue;
+						  ASSERT_NO_VALUE(result);
+						  ASSERT_EQUAL(compiler::mir::Operation::Jump, block.terminator.operation);
+						  result = block.terminator.arguments.at(0).get<BlockID>();
+					  }
+					  ASSERT_HAS_VALUE(result);
+					  return result.value();
+				  };
+
+			for (usize i = 0; i < unit.functions.size(); i++) {
+				auto function     = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
+				auto break_target = get_jump_target(function, "break");
+				ASSERT_HAS_VALUE(function.blocks[break_target].debug_name);
+				ASSERT_EQUAL(
+					base::StrID("return"), function.blocks[break_target].debug_name.value()
+				);
+
+				if (i != 1) continue;
+				auto        continue_target = get_jump_target(function, "continue");
+				const auto& latch           = function.blocks[continue_target];
+				ASSERT_HAS_VALUE(latch.debug_name);
+				ASSERT_EQUAL(base::StrID("while.body.end"), latch.debug_name.value());
+				auto        condition_id = latch.terminator.arguments.at(0).get<BlockID>();
+				const auto& condition    = function.blocks[condition_id];
+				ASSERT_HAS_VALUE(condition.debug_name);
+				ASSERT_EQUAL(base::StrID("while.cond"), condition.debug_name.value());
+				auto exit_id = condition.terminator.arguments.at(2).get<BlockID>();
+				ASSERT_HAS_VALUE(function.blocks[exit_id].debug_name);
+				ASSERT_EQUAL(base::StrID("return"), function.blocks[exit_id].debug_name.value());
+			}
+		});
+	}
+
+	void controlFlowContinueTargetsTest() {
+		auto module = compiler::frontend::createModuleTreeFromContents(
+			R"(
+				fun implicit(c: bool) -> i64 = {
+					while (c) {
+						block { if (c) continue; }
+					}
+					return 1;
+				}
+				fun ifTargets(c: bool) -> i64 = {
+					if region(c) { continue if; }
+					else { continue region; }
+					return 2;
+				}
+				fun breakFromElse(c: bool) -> i64 = {
+					if (c) {} else { break if; }
+					return 3;
+				}
+				fun blockTargets(c: bool) -> i64 = {
+					block region {
+						if (c) continue block;
+						continue region;
+					}
+					return 4;
+				}
+				fun constIfTarget() -> i64 = {
+					if const (true) { continue if; }
+					return 5;
+				}
+			)",
+			"test_package"
+		);
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			ASSERT_EQUAL(5u, unit.functions.size());
+
+			auto jump_targets
+				= [this](const compiler::mir::Function& function, std::string_view block_name) {
+					  std::vector<BlockID> result;
+					  for (auto id: function.block_order) {
+						  const auto& block = function.blocks[id];
+						  if (!block.debug_name.has_value()
+					          || block.debug_name.value().strView() != block_name)
+							  continue;
+						  ASSERT_EQUAL(compiler::mir::Operation::Jump, block.terminator.operation);
+						  result.push_back(block.terminator.arguments.at(0).get<BlockID>());
+					  }
+					  return result;
+				  };
+
+			for (usize i = 0; i < unit.functions.size(); i++) {
+				auto  function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
+				usize if_entry_count = 0;
+				for (auto block_id: function.block_order) {
+					const auto& block = function.blocks[block_id];
+					if (block.debug_name.has_value()
+					    && block.debug_name.value() == base::StrID("if.entry"))
+						if_entry_count++;
+				}
+				ASSERT_EQUAL(i == 1 ? 1u : 0u, if_entry_count);
+				auto targets = jump_targets(function, i == 2 ? "break" : "continue");
+				ASSERT_EQUAL(i == 1 || i == 3 ? 2u : 1u, targets.size());
+				base::StrID expected_name = [&] {
+					switch (i) {
+					case 0:
+						return base::StrID("while.body.end");
+					case 1:
+						return base::StrID("if.cond");
+					case 2:
+						return base::StrID("return");
+					case 3:
+						return base::StrID("block.entry");
+					default:
+						return base::StrID("const.if.entry");
+					}
+				}();
+				for (auto target: targets) {
+					ASSERT_HAS_VALUE(function.blocks[target].debug_name);
+					ASSERT_EQUAL(expected_name, function.blocks[target].debug_name.value());
+				}
+				if (targets.size() == 2) ASSERT_EQUAL(targets[0], targets[1]);
+
+				auto& lowered
+					= ctx.query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(i) })
+				          ->valueOrThrow();
+				ASSERT_TRUE(lowered.validateBlockIDs().isOk());
+			}
+		});
+	}
 
 	/**
 	 * @brief Unit test for the global in-move-state map produced by `calculateGlobalInMoveStateMap`.
@@ -205,7 +395,14 @@ private:
 
 			ASSERT_EQUAL(foo1_mir.block_order.size(), 1);
 			ASSERT_EQUAL(foo2_mir.block_order.size(), 2);
-			ASSERT_EQUAL(foo3_mir.block_order.size(), 6);
+			bool has_if_entry = false;
+			for (auto block_id: foo3_mir.block_order) {
+				const auto& block = foo3_mir.blocks[block_id];
+				if (block.debug_name.has_value()
+				    && block.debug_name.value() == base::StrID("if.entry"))
+					has_if_entry = true;
+			}
+			ASSERT_TRUE(!has_if_entry);
 			ASSERT_EQUAL(foo4_mir.block_order.size(), 2);
 
 			// This doesn't test much other then that the code doesn't crash/throw exceptions.
@@ -267,35 +464,56 @@ private:
 			}
 			// Test code generation:
 
-			ASSERT_EQUAL(foo_mir.block_order.size(), 8);
-
-			// @note: instruction count does not include terminator instruction:
+			auto find_block = [&](std::string_view name) {
+				base::Optional<BlockID> id;
+				for (auto block_id: foo_mir.block_order) {
+					const auto& block = foo_mir.blocks[block_id];
+					if (!block.debug_name.has_value() || block.debug_name.value().strView() != name)
+						continue;
+					ASSERT_NO_VALUE(id);
+					id = block_id;
+				}
+				ASSERT_HAS_VALUE(id);
+				return id.value();
+			};
 
 			using enum compiler::mir::Operation;
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
+			const auto entry_id        = find_block("while.entry");
+			const auto condition_id    = find_block("while.cond");
+			const auto fallthrough_id  = find_block("while.body.fallthrough");
+			const auto latch_id        = find_block("while.body.end");
+			const auto if_condition_id = find_block("if.cond");
+			const auto if_then_id      = find_block("if.then");
+			ASSERT_EQUAL(entry_id, foo_mir.block_order.front());
 
-			// those assertions might change when we improve mir generation:
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 3);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
-			// Check that the first instruction assigns to a global
-			{
-				const auto& instr = foo_mir.blocks[BlockID(7)].instructions.at(0);
-				ASSERT_TRUE(instr.output.value().isGlobal());
-			}
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(1).operation, Cast);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].terminator.operation, Jump);
+			// Instruction counts exclude terminators. The loop body's variable is now
+			// constructed on the normal fallthrough path, not in the continue target.
+			const auto& entry = foo_mir.blocks[entry_id];
+			ASSERT_EQUAL(entry.instructions.size(), 3);
+			ASSERT_EQUAL(entry.instructions.at(0).operation, Assign);
+			ASSERT_TRUE(entry.instructions.at(0).output.value().isGlobal());
+			ASSERT_EQUAL(entry.instructions.at(1).operation, Cast);
+			ASSERT_EQUAL(entry.terminator.operation, Jump);
+			ASSERT_EQUAL(entry.terminator.arguments.at(0).get<BlockID>(), condition_id);
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.size(), 2);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.at(0).operation, Cast);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].terminator.operation, Jump);
+			const auto& fallthrough = foo_mir.blocks[fallthrough_id];
+			ASSERT_EQUAL(fallthrough.instructions.size(), 2);
+			ASSERT_EQUAL(fallthrough.instructions.at(0).operation, Cast);
+			ASSERT_EQUAL(fallthrough.terminator.operation, Jump);
+			ASSERT_EQUAL(fallthrough.terminator.arguments.at(0).get<BlockID>(), latch_id);
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(5)].terminator.operation, Branch);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
+			const auto& latch = foo_mir.blocks[latch_id];
+			ASSERT_EQUAL(latch.terminator.operation, Jump);
+			ASSERT_EQUAL(latch.terminator.arguments.at(0).get<BlockID>(), condition_id);
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 2);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.at(0).operation, Cast);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].terminator.operation, Jump);
+			ASSERT_EQUAL(foo_mir.blocks[condition_id].terminator.operation, Branch);
+			ASSERT_EQUAL(foo_mir.blocks[if_condition_id].terminator.operation, Branch);
+
+			const auto& if_then = foo_mir.blocks[if_then_id];
+			ASSERT_EQUAL(if_then.instructions.size(), 2);
+			ASSERT_EQUAL(if_then.instructions.at(0).operation, Cast);
+			ASSERT_EQUAL(if_then.terminator.operation, Jump);
 
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
@@ -342,37 +560,43 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
 			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 11);
 			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 3);
+			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
-			auto get_block_terminator
-				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };
-			auto get_block_successors = [&](u64 block_id) {
-				return getTerminatorSuccessors(get_block_terminator(block_id));
-			};
-
-			using BlockList = std::vector<BlockID>;
-			ASSERT_EQUAL(get_block_successors(1), BlockList{});
-			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
-
-			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
-
-			// Here, the order does not matter.
-			// If it breaks because the order changes,
-			// the check has to be changed to an order-free assertion.
-			//
-			// Both branches enter a scope of their own, so the destructor pass splits every one
-			// of their edges into an intermediate block that jumps on to the original target.
-			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 11 } COMMA BlockID{ 12 } });
-			ASSERT_EQUAL(get_block_successors(11), BlockList{ BlockID{ 3 } });
-			ASSERT_EQUAL(get_block_successors(12), BlockList{ BlockID{ 2 } });
-
-			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 9 } COMMA BlockID{ 10 } });
-			ASSERT_EQUAL(get_block_successors(9), BlockList{ BlockID{ 6 } });
-			ASSERT_EQUAL(get_block_successors(10), BlockList{ BlockID{ 4 } });
-
-			ASSERT_EQUAL(get_block_successors(6), BlockList{ BlockID{ 5 } });
-			ASSERT_EQUAL(get_block_successors(7), BlockList{ BlockID{ 5 } });
+			using enum compiler::mir::Operation;
+			usize branch_count     = 0;
+			usize jump_count       = 0;
+			usize return_count     = 0;
+			usize split_edge_count = 0;
+			for (auto block_id: foo_mir.block_order) {
+				const auto&          block      = foo_mir.blocks[block_id];
+				const auto&          terminator = block.terminator;
+				std::vector<BlockID> expected_successors;
+				if (terminator.operation == Jump) {
+					expected_successors.push_back(terminator.arguments.at(0).get<BlockID>());
+					jump_count++;
+				} else if (terminator.operation == Branch) {
+					expected_successors.push_back(terminator.arguments.at(1).get<BlockID>());
+					expected_successors.push_back(terminator.arguments.at(2).get<BlockID>());
+					branch_count++;
+				} else {
+					ASSERT_TRUE(
+						terminator.operation == ReturnValue || terminator.operation == ReturnVoid
+					);
+					return_count++;
+				}
+				ASSERT_EQUAL(getTerminatorSuccessors(terminator), expected_successors);
+				// PR #3629: no scope transition may remain on an edge after destructor insertion.
+				for (auto successor: expected_successors)
+					ASSERT_TRUE(terminator.scope == foo_mir.blocks[successor].beginScope());
+				if (block.debug_name.has_value()
+				    && block.debug_name.value() == base::StrID("scope_end.destructors"))
+					split_edge_count++;
+			}
+			ASSERT_EQUAL(branch_count, 2u);
+			ASSERT_TRUE(jump_count > 0);
+			ASSERT_EQUAL(return_count, 1u);
+			ASSERT_TRUE(split_edge_count > 0);
 		});
 	}
 
@@ -388,16 +612,23 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
-			// note: it might change where those branch operations are placed:
-			// if this happens, just see mir-output of tested module for mir block numbers
-			auto true_mir_value  = foo_mir.blocks[BlockID(6)].terminator.arguments.at(0);
-			auto false_mir_value = foo_mir.blocks[BlockID(3)].terminator.arguments.at(0);
-
-			const auto& true_mir_const  = true_mir_value.get<compiler::mir::MIRConstant>();
-			const auto& false_mir_const = false_mir_value.get<compiler::mir::MIRConstant>();
-
-			ASSERT_EQUAL(true_mir_const.value.get<bool>().value(), true);
-			ASSERT_EQUAL(false_mir_const.value.get<bool>().value(), false);
+			bool  saw_true     = false;
+			bool  saw_false    = false;
+			usize branch_count = 0;
+			for (auto id: foo_mir.block_order) {
+				const auto& terminator = foo_mir.blocks[id].terminator;
+				if (terminator.operation != compiler::mir::Operation::Branch) continue;
+				auto condition
+					= terminator.arguments.at(0).get<compiler::mir::MIRConstant>().value.get<bool>();
+				if (condition.value())
+					saw_true = true;
+				else
+					saw_false = true;
+				branch_count++;
+			}
+			ASSERT_EQUAL(2u, branch_count);
+			ASSERT_TRUE(saw_true);
+			ASSERT_TRUE(saw_false);
 
 			// Don't go into details of the second function. Just validate block IDs.
 			auto& goo_mir
@@ -666,9 +897,17 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
 			unreachable_end_fun.debugPrint(foo_str);
-			// A `while` and an `if`, each of whose four edges enters a scope of its own and so
-			// gets an intermediate block from the destructor pass.
-			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 11);
+			// The explicit return makes the synthetic FunctionEnd block unreachable. The while
+			// and if still require intermediate blocks for their scope-changing edges.
+			ASSERT_TRUE(!unreachable_end_fun.blocks.contains(BlockID(0)));
+			usize split_edge_count = 0;
+			for (auto block_id: unreachable_end_fun.block_order) {
+				const auto& block = unreachable_end_fun.blocks[block_id];
+				if (block.debug_name.has_value()
+				    && block.debug_name.value() == base::StrID("scope_end.destructors"))
+					split_edge_count++;
+			}
+			ASSERT_TRUE(split_edge_count >= 4);
 
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();

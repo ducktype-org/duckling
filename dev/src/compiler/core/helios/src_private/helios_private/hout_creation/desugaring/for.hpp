@@ -59,6 +59,9 @@ namespace compiler::helios::desugaring {
 	 * optional on failure.
 	 */
 	base::Optional<code::BlockStmt> desugarFor(
-		query::Context& ctx, pst::Access<pst::For> stmt, const BodyProcessor& process_body
+		query::Context&       ctx,
+		pst::Access<pst::For> stmt,
+		base::Optional<SymID> control_flow_id,
+		const BodyProcessor&  process_body
 	);
 }

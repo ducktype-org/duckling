@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -45,7 +46,7 @@ namespace compiler::mir::test_utils {
 	 *          .validate(mir_func);
 	 * @endcode
 	 *
-	 * It iterates through the blocks in the block order,
+	 * It visits reachable blocks in control-flow order (depth-first, true branch before false),
 	 * and for each instruction (including terminators) it checks if it matches the expected event.
 	 * There can be multiple events in one instruction (like 2 "constructs" in one MIR instruction).
 	 * Flag events are matched in order within the flags vector of each instruction.
@@ -88,10 +89,21 @@ namespace compiler::mir::test_utils {
 		}
 
 		void validate(CRef<Function> mir_func) {
-			usize event_idx = 0;
+			usize                       event_idx = 0;
+			std::vector<BlockID>        cfg_order;
+			std::unordered_set<BlockID> visited;
 
-			// Walk through all blocks in order
-			for (const auto& block_id: mir_func->block_order) {
+			auto visit = [&](auto&& self, BlockID block_id) -> void {
+				if (not visited.insert(block_id).second) return;
+				cfg_order.push_back(block_id);
+				for (BlockID successor:
+				     getTerminatorSuccessors(mir_func->blocks.at(block_id)->terminator))
+					self(self, successor);
+			};
+			visit(visit, mir_func->block_order.front());
+
+			// Storage order is not a CFG traversal and can put uses before definitions.
+			for (const auto& block_id: cfg_order) {
 				const auto& block = mir_func->blocks.at(block_id);
 
 				// Check instructions

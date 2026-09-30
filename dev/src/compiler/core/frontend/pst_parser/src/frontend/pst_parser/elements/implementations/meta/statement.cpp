@@ -13,15 +13,18 @@ namespace pst {
 	bool Stmt::trailingSemicolon() { return true; }
 
 	namespace internal {
+		static bool isStatementStartOrSpecifier(const TokenStream& state, i64 fwd) {
+			if (!state[fwd].isKeyword()) return false;
+			auto flags = keywordFlags(state[fwd].asKeyword());
+			return flags.contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+			    || flags.contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+		}
+
 		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
 
 		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
 			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-			    || state[fwd - 1].is(Special::Semicolon)
-			    || keywordFlags(state[fwd].asKeyword())
-			           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-			    || keywordFlags(state[fwd].asKeyword())
-			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+			    || state[fwd - 1].is(Special::Semicolon) || isStatementStartOrSpecifier(state, fwd);
 		}
 
 		template<class T>
@@ -42,10 +45,7 @@ namespace pst {
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+				    || isStatementStartOrSpecifier(state, fwd)
 				    || (Conditions::isBlockGroup(state, fwd - 1)
 				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
@@ -67,13 +67,7 @@ namespace pst {
 
 				if (state[fwd - 1].is(Special::Semicolon)) return true;
 
-				if (keywordFlags(state[fwd].asKeyword())
-				        .contains(lang_def::KeywordFlagsOptions::IsStmtStart))
-					return true;
-
-				if (keywordFlags(state[fwd].asKeyword())
-				        .contains(lang_def::KeywordFlagsOptions::IsSpecifier))
-					return true;
+				if (isStatementStartOrSpecifier(state, fwd)) return true;
 
 				// When we have two curly bracket blocks as consecutive tokens, it probably means
 				// that the user intended to write two statements
@@ -100,10 +94,7 @@ namespace pst {
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+				    || isStatementStartOrSpecifier(state, fwd);
 			}
 		};
 
@@ -115,6 +106,18 @@ namespace pst {
 			 */
 			static u64 findStatementLength(LangParserState& state) {
 				return 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			}
+		};
+
+		template<>
+		struct StmtFinder<Action> {
+			static u64 findStatementLength(LangParserState& state) {
+				if ((state[0].is(Keyword::Break) || state[0].is(Keyword::Continue))
+				    && state.ctokens().size() >= 3 && state[1].isKeyword()
+				    && state[2].is(Special::Semicolon)
+				    && isControlFlowTargetKeyword(state[1].asKeyword()))
+					return 3;
+				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(1);
 			}
 		};
 

@@ -13,6 +13,8 @@ namespace compiler::helios::code {
 	STMT_VISITOR(ExprStmt)
 	STMT_VISITOR(IfStmt)
 	STMT_VISITOR(WhileStmt)
+	STMT_VISITOR(BreakStmt)
+	STMT_VISITOR(ContinueStmt)
 	STMT_VISITOR(VariableStmt)
 	STMT_VISITOR(AssignmentStmt)
 	STMT_VISITOR(BlockStmt)
@@ -22,6 +24,29 @@ namespace compiler::helios::code {
 
 		void addIndent(std::ostream& out, usize indent) {
 			out << std::string().append(indent * INDENT_SIZE, ' ');
+		}
+
+		const char* controlFlowKindName(ControlFlowKind kind) {
+			switch (kind) {
+			case ControlFlowKind::If:
+				return "if";
+			case ControlFlowKind::While:
+				return "while";
+			case ControlFlowKind::For:
+				return "for";
+			case ControlFlowKind::Block:
+				return "block";
+			}
+			return "unknown";
+		}
+
+		void printControlFlowTargetSelector(
+			std::ostream& out, const ControlFlowTargetSelector& selector
+		) {
+			if (const auto* named = std::get_if<NamedTarget>(&selector))
+				out << " " << name(named->id).strView();
+			else if (const auto* kind = std::get_if<KindTarget>(&selector))
+				out << " " << controlFlowKindName(kind->kind);
 		}
 	}
 
@@ -82,7 +107,11 @@ namespace compiler::helios::code {
 
 	Box<Stmt> IfStmt::clone() const {
 		return makeBox<IfStmt>(
-			origin, condition->clone(), std::move(*then_body.clone()), std::move(*else_body.clone())
+			origin,
+			condition->clone(),
+			std::move(*then_body.clone()),
+			std::move(*else_body.clone()),
+			control_flow_id
 		);
 	}
 
@@ -92,13 +121,39 @@ namespace compiler::helios::code {
 		condition->debugPrint(out);
 		out << ") {\n";
 		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);
+		if (step.has_value()) step.value()->debugPrint(out, indent + 1);
 		addIndent(out, indent);
 		out << "}\n";
 	}
 
 	Box<Stmt> WhileStmt::clone() const {
-		return makeBox<WhileStmt>(origin, condition->clone(), std::move(*body.clone()));
+		return makeBox<WhileStmt>(
+			origin,
+			condition->clone(),
+			std::move(*body.clone()),
+			control_flow_id,
+			control_flow_kind,
+			step.map([](const auto& value) { return value->clone(); })
+		);
 	}
+
+	void BreakStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "break";
+		printControlFlowTargetSelector(out, target_selector);
+		out << ";\n";
+	}
+
+	Box<Stmt> BreakStmt::clone() const { return makeBox<BreakStmt>(origin, target_selector); }
+
+	void ContinueStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "continue";
+		printControlFlowTargetSelector(out, target_selector);
+		out << ";\n";
+	}
+
+	Box<Stmt> ContinueStmt::clone() const { return makeBox<ContinueStmt>(origin, target_selector); }
 
 	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
@@ -140,7 +195,9 @@ namespace compiler::helios::code {
 	}
 
 	Box<Stmt> BlockStmt::clone() const {
-		return makeBox<BlockStmt>(origin, std::move(*body.clone()));
+		return makeBox<BlockStmt>(
+			origin, std::move(*body.clone()), control_flow_id, control_flow_kind
+		);
 	}
 
 }
