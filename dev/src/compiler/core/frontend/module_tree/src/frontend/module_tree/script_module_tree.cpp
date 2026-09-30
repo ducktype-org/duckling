@@ -32,4 +32,10 @@ namespace compiler::frontend {
 	}
 
 	ScriptModuleTreeNode::ScriptModuleTreeNode(): ModuleTree() { kind = ModuleKind::Script; }
+
+	std::vector<base::Ref<ModuleTree>> ScriptModuleTreeNode::collectChildrenModules() const {
+		std::vector<base::Ref<ModuleTree>> children;
+		if (m_repl_module_child.has_value()) children.emplace_back(m_repl_module_child.value());
+		return children;
+	}
 }

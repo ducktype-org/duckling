@@ -281,7 +281,7 @@ namespace compiler::frontend {
 		 * structure (i.e. whose parent is this module).
 		 */
 		[[nodiscard]]
-		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const;
+		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const = 0;
 
 		/**
 		 * @brief Access the other files of this module.

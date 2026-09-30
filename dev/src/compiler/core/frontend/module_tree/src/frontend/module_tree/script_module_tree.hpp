@@ -50,10 +50,14 @@ namespace compiler::frontend {
 		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
 		void makeAbstract() final;
-
+	
+	protected:
+		[[nodiscard]]
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
 	public:
 		ScriptModuleTreeNode();
+
 	};
 
 
