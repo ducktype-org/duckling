@@ -19,57 +19,30 @@ namespace compiler::frontend {
 		 */
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
-		void makeAbstract() final { CORE_PANIC("makeAbstract called on ModuleModuleTreeNode!"); }
+		void makeAbstract() final;
 
 		friend class ModuleTreeModifier;
 
 	protected:
-		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override {
-			return &m_main_source_file;
-		}
+		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override;
 
-		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override {
-			return &m_main_source_file;
-		}
+		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override;
 
-		MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() override {
-			return &m_submodules;
-		}
+		MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() override;
 
-		MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const override {
-			return &m_submodules;
-		}
+		MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const override;
 
-		MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() override {
-			return &m_other_files;
-		}
+		MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() override;
 
-		MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const override {
-			return &m_other_files;
-		}
+		MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const override;
 
-		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override {
-			std::vector<base::Ref<ModuleTree>> children;
-			for (auto& [_, submodule]: m_submodules) children.push_back(submodule);
-			return children;
-		}
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
 	public:
-		ModuleModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }
+		ModuleModuleTreeNode();
 
-		SubmodulesAccessLocked getSubmodules() const override {
-			std::vector<ModuleAccessLocked> submodules;
-			submodules.reserve(m_submodules.size());
-			for (const auto& [name, submodule]: m_submodules)
-				submodules.emplace_back(submodule->getModuleID());
-			return { getModuleID(), std::move(submodules) };
-		}
+		SubmodulesAccessLocked getSubmodules() const override;
 
-		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
-			base::Optional<ModuleID> child;
-			if (auto it = m_submodules.find(name); it != m_submodules.end())
-				child = it->second->getModuleID();
-			return ModuleChildAccessLocked(getModuleID(), name, child);
-		}
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override;
 	};
 }

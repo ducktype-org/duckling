@@ -21,33 +21,21 @@ namespace compiler::frontend {
 
 		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
-		void makeAbstract() final {
-			CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
-		}
+		void makeAbstract() final;
 
 	protected:
-		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override {
-			return &m_synthetic_source_file;
-		}
+		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override;
 
-		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override {
-			return &m_synthetic_source_file;
-		}
+		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override;
 
-		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override {
-			std::vector<base::Ref<ModuleTree>> children;
-			if (m_repl_module_child.has_value()) children.emplace_back(m_repl_module_child.value());
-			return children;
-		}
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
 
 	public:
-		explicit SyntheticReplChainModuleTreeNode(): ModuleTree() { kind = ModuleKind::ReplChain; }
+		explicit SyntheticReplChainModuleTreeNode();
 
 		[[nodiscard]]
-		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const {
-			return m_synthetic_source_file;
-		}
+		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const;
 	};
 
 	/**
@@ -61,11 +49,11 @@ namespace compiler::frontend {
 
 		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
-		void makeAbstract() final { CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!"); }
+		void makeAbstract() final;
 
 
 	public:
-		ScriptModuleTreeNode(): ModuleTree() { kind = ModuleKind::Script; }
+		ScriptModuleTreeNode();
 	};
 
 
