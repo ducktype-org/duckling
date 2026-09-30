@@ -11,6 +11,7 @@ Available Commands:
  status                    writes current VM status
  position                  writes current position
  step                      executes one step
+ select                    file targeted by operations such as `break`
  break                     sets or unsets the breakpoint
 
 Global options:
