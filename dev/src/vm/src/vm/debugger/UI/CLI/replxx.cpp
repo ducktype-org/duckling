@@ -9,7 +9,7 @@
 #define PROMPT_TEMPLATE   "\x1b[1;32mBeRD\x1b[0m {} \x1b[1m>>>\x1b[0m "
 #define HISTORY_FILE_NAME ".duckling_debugger_history"
 
-// it's not a thieft, it's a piracy ;)
+// it's not a theft, it's a piracy ;)
 namespace replxx::tty {
 	extern bool in;
 	extern bool out;
@@ -25,13 +25,13 @@ namespace {
 		return HISTORY_FILE_NAME;
 	}
 
-	inline bool isIntercative() { return replxx::tty::in && replxx::tty::out; }
+	inline bool isInteractive() { return replxx::tty::in && replxx::tty::out; }
 
 	/**
 	 * @brief mc - maybe colors
 	 */
 	inline std::string mc(const std::string& original) {
-		if (isIntercative()) return original;
+		if (isInteractive()) return original;
 		return vm::debugger::cli::common::withoutControlSequences(original);
 	}
 }
@@ -57,14 +57,14 @@ namespace vm::debugger::cli {
 	void CLIDebugger::mainLoop(clah::Clah& clah) {
 		spec->replxx.install_window_change_handler();
 
-		/* scope for ifstream object for auto-close */ {
+		if (isInteractive()) {
 			std::ifstream history_file(getHistoryFilePath());
 			spec->replxx.history_load(history_file);
 		}
 
 		spec->replxx.set_max_history_size(128);
 		spec->replxx.set_max_hint_rows(3);
-		spec->replxx.enable_bracketed_paste();
+		if (isInteractive()) spec->replxx.enable_bracketed_paste();
 
 		printNL(mc(
 			"\x1b[1mWelcome to \x1b[32mBeRD\x1b[0;1m - an interactive in-DVM debugger!\x1b[0m (now "
@@ -73,22 +73,16 @@ namespace vm::debugger::cli {
 
 		spec->running = true;
 		spec->current_prompt
-			= mc(std::format(PROMPT_TEMPLATE, common::typeToString(debugger.getStatus())));
+			= mc(std::format(PROMPT_TEMPLATE, vm::api::statusName(debugger.getStatus())));
 
 		events::Listener<api::ProcStatus> status_change_listener([&](const api::ProcStatus& status) {
 			std::stringstream sstr;
 
-			sstr << common::typeToString(status);
+			sstr << vm::api::statusName(status);
 			for (std::string& value: common::extractPrimitiveValues(status))
 				sstr << "(" << value << ")";
 
-			if (!isIntercative()) {
-				printer::PrinterOStream out;
-				out << "New status: " << common::typeToString(status);
-				for (std::string& value: common::extractPrimitiveValues(status))
-					out << " (return value = " << value << ")";
-				printNL(out.getContents());
-			}
+			if (!isInteractive()) printNL(common::statusLine(status));
 
 			std::lock_guard _(spec->current_line_mutex);
 			spec->current_prompt = mc(std::format(PROMPT_TEMPLATE, sstr.str()));
@@ -118,21 +112,20 @@ namespace vm::debugger::cli {
 
 			line = cinput;
 
-			spec->replxx.history_add(line);
+			if (isInteractive()) spec->replxx.history_add(line);
 			return true;
 		};
 
 		for (std::string line; spec->running && getline(line); clah.execute(common::strip(line)));
 
-		if (spec->running && isIntercative()) printNL("exit");
+		if (spec->running && isInteractive()) printNL("exit");
 		spec->running = false;
 
 		status_change_listener.detach();
 
 		printNL("Exiting debugger.");
-		spec->replxx.invoke(Replxx::ACTION::CLEAR_SELF, 0);
 
-		spec->replxx.history_sync(getHistoryFilePath());
+		if (isInteractive()) spec->replxx.history_sync(getHistoryFilePath());
 		spec->replxx.disable_bracketed_paste();
 	}
 
@@ -153,7 +146,7 @@ namespace vm::debugger::cli {
 		if (std::size_t pos = spec->current_line.find_last_of('\n'); pos != std::string::npos)
 			spec->current_line = spec->current_line.substr(pos + 1);
 
-		if (spec->is_prompt_active && isIntercative()) {
+		if (spec->is_prompt_active && isInteractive()) {
 			spec->replxx.write(before_content.c_str(), static_cast<int>(before_content.length()));
 			spec->replxx.write(content_string.c_str(), static_cast<int>(content_string.length()));
 			spec->replxx.set_prompt(spec->current_line + spec->current_prompt);

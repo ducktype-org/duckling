@@ -16,14 +16,9 @@ namespace vm::debugger::cli {
 	CLIDebugger::~CLIDebugger() = default;
 
 	void CLIDebugger::mainLoop(clah::Clah& clah) {
-		events::Listener<api::ProcStatus> status_change_listener([&](const api::ProcStatus& status) {
-			printer::PrinterOStream out;
-			out << "New status: " << common::typeToString(status);
-			for (std::string& value: common::extractPrimitiveValues(status))
-				out << " (return value = " << value << ")";
-
-			printNL(out.getContents());
-		});
+		events::Listener<api::ProcStatus> status_change_listener(
+			[&](const api::ProcStatus& status) { printNL(common::statusLine(status)); }
+		);
 
 		debugger.attachOnStatusChangedListener(status_change_listener);
 

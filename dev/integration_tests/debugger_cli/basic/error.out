@@ -1,4 +1,4 @@
-[?2004hWelcome to BeRD - an interactive in-DVM debugger! (now with replxx support!)
+Welcome to BeRD - an interactive in-DVM debugger! (now with replxx support!)
 New status: Running
 [91m[Debug error]: [0mRun failed!
 [91m[Debug error]: [0mContinue failed!
@@ -6,4 +6,3 @@ New status: Running
 New status: Paused
 [91m[Debug error]: [0mPause failed!
 Exiting debugger.
-[1G[J[?2004l

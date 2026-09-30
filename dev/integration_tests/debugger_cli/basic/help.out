@@ -1,4 +1,4 @@
-[?2004hWelcome to BeRD - an interactive in-DVM debugger! (now with replxx support!)
+Welcome to BeRD - an interactive in-DVM debugger! (now with replxx support!)
 Usage:  [GLOBAL OPTIONS] <COMMAND> [OPTIONS]
 
 Available Commands:
@@ -17,4 +17,3 @@ Global options:
 
 Run ' <COMMAND> --help for more information on a command.
 Exiting debugger.
-[1G[J[?2004l

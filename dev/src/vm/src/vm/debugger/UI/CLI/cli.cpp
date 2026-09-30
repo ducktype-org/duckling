@@ -77,7 +77,7 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("status", "writes current VM status")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto status = debugger.getStatus();
-										 printNL("Current status: ", common::typeToString(status));
+										 printNL("Current status: ", vm::api::statusName(status));
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("position", "writes current position")
