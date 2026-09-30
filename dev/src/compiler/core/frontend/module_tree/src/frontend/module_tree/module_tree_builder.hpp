@@ -166,7 +166,5 @@ namespace compiler::frontend {
 
 		base::StrID m_name;
 		bool        m_finalized;
-
-		base::Optional<ModuleID> m_repl_module_parent;
 	};
 }
