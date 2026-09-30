@@ -15,7 +15,7 @@ namespace compiler::helios {
 
 #define ATTRIBUTES_LIST                                                                \
 	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl, \
-		attributes::Builtin, attributes::CFFIVariadicFunction
+		attributes::Builtin, attributes::CFFIVariadicFunction, attributes::CSymbolName
 
 	namespace attributes {
 		struct BackendDependent {
@@ -44,6 +44,18 @@ namespace compiler::helios {
 			 */
 			u64  fixed_params;
 			bool operator==(const CFFIVariadicFunction&) const = default;
+		};
+
+		/**
+		 * @brief Sets the linked symbol name of an `extern("C")` `fundecl`, e.g.
+		 * `@c_symbol_name("match") fundecl c_match(a: i32) -> i32;` calls the C symbol `match`.
+		 */
+		struct CSymbolName {
+			/**
+			 * @brief The C symbol the declaration links to, a valid C identifier.
+			 */
+			base::StrID name;
+			bool        operator==(const CSymbolName&) const = default;
 		};
 	}
 
