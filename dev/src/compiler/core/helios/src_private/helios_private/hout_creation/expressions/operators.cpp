@@ -75,13 +75,25 @@ namespace {
 	 * @return Corresponding desugared expression
 	 */
 	query::QResult<Box<code::Expr>> desugarOperatorToExpr(
-		query::Context& ctx, PreDesugarOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs
+		query::Context& ctx, BuiltinOperation operation, Box<code::Expr> lhs, Box<code::Expr> rhs
 	) {
 		using enum PreDesugarOperator;
 		using namespace compiler::helios::code::shorthands;
 		Shorthand s{ ctx };
 
 		auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
+
+		if (std::holds_alternative<BuiltinBinary>(operation))
+			return withOrigin(
+				new_origin,
+				s.binOp(std::move(lhs), std::get<BuiltinBinary>(operation), std::move(rhs))
+			);
+
+		CORE_ASSERT(
+			std::holds_alternative<PreDesugarOperator>(operation),
+			"Operation should be `PreDesugarOperator` at this point"
+		);
+		auto op = std::get<PreDesugarOperator>(operation);
 
 		auto log_if_lang_primitive_not_present = [&](LanguagePrimitive lang_primitive) -> void {
 			if (!isLanguagePrimitivePresent(ctx, lang_primitive)) {
@@ -252,31 +264,20 @@ namespace compiler::helios::code {
 		if (lhs_type.getType().isNumeric() && rhs_type.getType().isNumeric()
 		    && isNumericOperator(op)) {
 			// TODO: remove clones
-			auto numeric_builtin_opt
-				= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+			auto numeric_builtin_opt = findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
 
 			if_opt_some(numeric_builtin_opt, numeric_builtin) {
 				using namespace compiler::helios::code::shorthands;
 				Shorthand s{ ctx };
 
-				auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
-
 				auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
 				auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
 				auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
 
-				variant_match(operation) {
-					variant_case(BuiltinBinary, op) {
-						return withOrigin(
-							new_origin, s.binOp(std::move(coerced_lhs), op, std::move(coerced_rhs))
-						);
-					}
-					variant_case(PreDesugarOperator, op) {
-						return desugarOperatorToExpr(
-								ctx, op, std::move(coerced_lhs), std::move(coerced_rhs)
-						).valueOrThrow();
-					}
-				}
+				return desugarOperatorToExpr(
+						   ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
+				)
+				    .valueOrThrow();
 			}
 		}
 

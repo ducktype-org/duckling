@@ -214,8 +214,8 @@ namespace compiler::helios {
 			auto stripped_op
 				= lexer::Operator(base::StrID(op.value.str().substr(0, op.value.size() - 1)));
 
-			auto                  location   = s.reusable(s.refOf(location_expr->clone()));
-			auto                  op_lhs = location->nextUse();
+			auto                  location = s.reusable(s.refOf(location_expr->clone()));
+			auto                  op_lhs   = location->nextUse();
 			BoxOrCRef<code::Expr> op_rhs
 				= ctx.query<QueryHoutOfExpr>({ val })->valueOrThrow().ref();
 			auto value = code::resolveBinaryOperator(
