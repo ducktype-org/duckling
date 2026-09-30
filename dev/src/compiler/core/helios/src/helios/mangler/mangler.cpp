@@ -361,6 +361,34 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
+		 * @brief Adds the identifier of the name for the ancestor unless it was already added
+		 * before which can happen for template identifiers
+		 */
+		template<typename ElemT>
+		auto checkAndAddElem(
+			const auto& it, const auto& ancestors, const auto& ancestor, auto& ret, auto& ctx
+		) {
+			if (std::ranges::any_of(
+					std::ranges::subrange(ancestors.rbegin(), it),
+					[&](const auto& elem) { return elem.second == ancestor->getID(); }
+				))
+				return;
+
+			const auto val = ancestor.template dynamicCast<ElemT>().value();
+
+			if constexpr (std::same_as<ElemT, pst::Fun>) {
+				auto sym = ctx.template query<QuerySymbolOfSTMT>({ val }).valueOrPanic();
+				ret += unscopedName(ctx, sym);
+
+				std::string func(query::Context&, SymID);
+				ret += func(ctx, sym);
+				return;
+			}
+
+			ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
+		}
+
+		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
 		 * within a single module.
 		 * @note It does not mangle module/package names, pathPrefix and path functions are
@@ -412,6 +440,7 @@ namespace compiler::helios::mangler {
 					using enum pst::ElementKind;
 				case Namespace:
 				case Class:
+				case Fun:
 					is_nested = true;
 					ancestors.emplace_back(ancestor, std::nullopt);
 					break;
@@ -439,21 +468,15 @@ namespace compiler::helios::mangler {
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) break;
-
-					const auto val = ancestor.dynamicCast<pst::Namespace>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-
+					checkAndAddElem<pst::Namespace>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case Class: {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) break;
-
-					const auto val = ancestor.dynamicCast<pst::Class>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-
+					checkAndAddElem<pst::Class>(it, ancestors, ancestor, ret, ctx);
+					break;
+				}
+				case Fun: {
+					checkAndAddElem<pst::Fun>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case TemplateStmt: {

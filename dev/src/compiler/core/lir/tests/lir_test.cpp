@@ -203,7 +203,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
 
-			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 			// The ctor writes the initial value through a pointer to the global, so it holds that
 			// pointer in a local.
 			ASSERT_EQUAL(g_ctor->local_list.size(), 1);

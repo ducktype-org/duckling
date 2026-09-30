@@ -409,11 +409,17 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		static MatchExpr::Case matchCase(
-			base::Optional<usize> alternative_index, base::Optional<SymID> binding, Box<Expr> result
+			base::Optional<usize>             alternative_index,
+			base::Optional<tsh::SymbolType<>> constraint_type,
+			base::Optional<SymID>             binding,
+			Box<Expr>                         result
 		) {
-			return MatchExpr::Case{ .alternative_index = alternative_index,
-				                    .binding           = binding,
-				                    .result            = std::move(result) };
+			return MatchExpr::Case{
+				.alternative_index = alternative_index,
+				.constraint_type   = constraint_type,
+				.binding           = binding,
+				.result            = std::move(result),
+			};
 		}
 
 		/** @brief A `match (subject) { cases }`. Cases are tried in order. */

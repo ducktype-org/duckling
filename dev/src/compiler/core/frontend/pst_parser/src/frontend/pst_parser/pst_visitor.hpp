@@ -12,7 +12,6 @@ namespace pst {
 		Import,
 		SpecifierBlock,
 		Using,
-		Alias,
 		ExprStmt,
 		Return,
 		Defer,

@@ -1,7 +1,6 @@
-#include "utils.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <lsp_interface/utils.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>

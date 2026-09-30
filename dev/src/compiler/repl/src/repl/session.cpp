@@ -432,11 +432,14 @@ namespace compiler::repl {
 		std::cout << "\n";
 	}
 
-	ReplSession::ReplSession(bool completions_enabled, bool bracketed_paste_enabled):
+	ReplSession::ReplSession(
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output
+	):
 		  m_should_exit(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend(completions_enabled, bracketed_paste_enabled),
+		  m_frontend(completions_enabled, bracketed_paste_enabled, decorative_output),
+		  m_decorative_output(decorative_output),
 		  m_lowering_context() {
 		initDVM();
 	}
@@ -485,7 +488,7 @@ namespace compiler::repl {
 		if (silent) m_suppress_repl = true;
 		defer(m_suppress_repl = false);
 		for (usize i = 0; i < replay_count; ++i) {
-			if (!silent) {
+			if (!silent && m_decorative_output) {
 				std::istringstream lines(entries[i]);
 				std::string        line;
 				bool               first_line = true;
@@ -758,10 +761,12 @@ namespace compiler::repl {
 					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
 					if (!m_suppress_repl) {
-						if (return_type.toString() == "()")
-							std::cout << "Function executed.\n";
-						else
-							std::cout << "=> " << run_result.value() << "\n";
+						if (return_type.toString() == "()") {
+							if (m_decorative_output) std::cout << "Function executed.\n";
+						} else {
+							if (m_decorative_output) std::cout << "=> ";
+							std::cout << run_result.value() << "\n";
+						}
 					}
 				} else {
 					error_message = "Runtime error: " + run_result.error();
@@ -946,7 +951,7 @@ namespace compiler::repl {
 						CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
 					}
 
-					auto module_ref = createEphemeralChainedStatementModule(
+					auto module_ref = createSyntheticChainedStatementModule(
 						stmt_source, parent_module_id, m_line_counter, "repl_"
 					);
 					auto module_id = module_ref->getModuleID();
@@ -983,7 +988,7 @@ namespace compiler::repl {
 			std::string line = m_frontend.readLine();
 
 			if (line.empty() && std::cin.eof()) {
-				std::cout << "\nGoodbye!\n";
+				if (m_decorative_output) std::cout << "\nGoodbye!\n";
 				return ReplResult::exit();
 			}
 
@@ -997,12 +1002,14 @@ namespace compiler::repl {
 				std::cout << result.message << "\n";
 
 			if (result.status == ReplResult::Status::Reset) {
-				if (!result.message.empty()) std::cout << result.message << "\n";
+				if (m_decorative_output && !result.message.empty())
+					std::cout << result.message << "\n";
 				return result;
 			}
 
 			if (result.status == ReplResult::Status::Exit) {
-				std::cout << result.message << "\n";
+				if (m_decorative_output && !result.message.empty())
+					std::cout << result.message << "\n";
 				return result;
 			}
 		}

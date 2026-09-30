@@ -5,12 +5,12 @@ use std::iter::once;
 
 use russcip::ProblemCreated;
 
-use crate::quackpack::core::full_identity::FullIdentity;
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::input::{PackageData, SolverInput};
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
-use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Version};
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Selector};
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
@@ -46,10 +46,12 @@ impl<'a> SolverEngine<'a> {
     fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
-            for dependency in data.manifest().dependencies().all_dependencies() {
-                if dependency.is_enabled_for(data.features().iter().cloned()) {
-                    self.construct_for_single_dependency(*package, data, dependency)?;
-                }
+            for dependency in data
+                .manifest()
+                .dependencies()
+                .select(&Selector::EnabledBy(data.features()))
+            {
+                self.construct_for_single_dependency(*package, data, dependency)?;
             }
         }
 
@@ -111,7 +113,7 @@ impl<'a> SolverEngine<'a> {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
                 continue;
             }
-            let forced = manifest_dependency.enabled_features(vec![parent_feature]);
+            let forced = manifest_dependency.enabled_features(&[parent_feature].into());
             if forced
                 .iter()
                 .any(|feature| !realization_features.contains(feature))
@@ -173,7 +175,7 @@ impl<'a> SolverEngine<'a> {
                 .add_dependency_version_realization_var(edge, realization.version());
         }
 
-        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
             self.model.require_satisfying_dep_version(edge, None)?;
         } else {
@@ -193,7 +195,7 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         let parent_features = parent_features_to_consider(self.input, edge);
 
-        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(vec![]));
+        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(&[].into()));
         let mut tmp_hash_set;
         for parent_feature in parent_features {
             // Features forced by the parent feature but not forced by default,
@@ -203,7 +205,7 @@ impl<'a> SolverEngine<'a> {
                 Some(feature) => {
                     // We use this trick so that forced is a reference and we do not need to clone `enabled_always`.
                     tmp_hash_set =
-                        HashSet::from_iter(manifest_dependency.enabled_features(vec![feature]))
+                        HashSet::from_iter(manifest_dependency.enabled_features(&[feature].into()))
                             .difference(&enabled_always)
                             .copied()
                             .collect();
@@ -229,7 +231,7 @@ impl<'a> SolverEngine<'a> {
         parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
             // The dependency is enabled by default, so `parent` can never be chosen.
             self.model.forbid_package(parent)?;
@@ -274,9 +276,26 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Make sure that every package is present in at most one version.
+    /// Important:
+    /// ----------
+    /// This assures that not only two packages with the same [`FullIdentity`](crate::quackpack::core::full_identity::FullIdentity),
+    /// but even two packages with the same [`Identity`] are not chosen.
+    /// Thus we have to create a mapping from (not full) identities to packages.
     fn force_singular_versions(&mut self) -> QuackResult<()> {
-        for (identity, versions) in self.input.versions_for_identity.iter() {
-            self.force_singular_version(*identity, versions)?;
+        let mut packages_for_identity: HashMap<Identity, Vec<PackageId>> = HashMap::new();
+        for (full_identity, versions) in self.input.versions_for_identity.iter() {
+            packages_for_identity
+                .entry(full_identity.as_identity())
+                .or_default()
+                .extend(
+                    versions
+                        .iter()
+                        .copied()
+                        .map(|version| PackageId::new(*full_identity, version)),
+                );
+        }
+        for package_versions in packages_for_identity.into_values() {
+            self.force_singular_version(package_versions)?;
         }
         Ok(())
     }
@@ -287,47 +306,39 @@ impl<'a> SolverEngine<'a> {
     /// This has a different workflow, depending on whether any version is preexisting.
     /// This is necessary, since for preexisting packages we do not care whether their variables will evaluate to 0 or 1,
     /// so we can't just always add a constraint that many versions are prohibited.
-    fn force_singular_version(
-        &mut self,
-        identity: FullIdentity,
-        versions: &HashSet<Version>,
-    ) -> QuackResult<()> {
+    fn force_singular_version(&mut self, package_versions: Vec<PackageId>) -> QuackResult<()> {
         let mut preexistent_version = None;
-        for version in versions {
-            let pkg = PackageId::new(identity, *version);
-            if self.input.preexists(pkg) {
-                preexistent_version = Some(*version);
+        for pkg in package_versions.iter() {
+            if self.input.preexists(*pkg) {
+                preexistent_version = Some(*pkg);
                 break;
             }
         }
         if let Some(preexistent_version) = preexistent_version {
-            self.forbid_versions_not_preexisting(identity, versions, preexistent_version)
+            self.forbid_versions_not_preexisting(package_versions, preexistent_version)
         } else {
-            self.forbid_more_than_one_version(identity, versions)
+            self.forbid_more_than_one_version(package_versions)
         }
     }
 
     /// Forbid a package being chosen in more than one version.
     fn forbid_more_than_one_version(
         &mut self,
-        identity: FullIdentity,
-        versions: &HashSet<Version>,
+        package_versions: Vec<PackageId>,
     ) -> QuackResult<()> {
-        self.model.forbid_more_that_one_version(identity, versions)
+        self.model.forbid_more_that_one_version(package_versions)
     }
 
     /// Forbid a package in all versions except a single preexisting one.
     fn forbid_versions_not_preexisting(
         &mut self,
-        identity: FullIdentity,
-        versions: &HashSet<Version>,
-        preexistent_version: Version,
+        package_versions: Vec<PackageId>,
+        preexistent_version: PackageId,
     ) -> QuackResult<()> {
-        for version in versions {
-            if *version == preexistent_version {
+        for pkg in package_versions {
+            if pkg == preexistent_version {
                 continue;
             }
-            let pkg = PackageId::new(identity, *version);
             self.model.forbid_package(pkg)?;
         }
         Ok(())
@@ -900,7 +911,7 @@ metadata:
 
         let main_pkg = (pkg_a, HashSet::new());
         let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
-        assert_eq!(err.to_string(), "failed to find a solution");
+        assert_eq!(err.to_string(), "no dependency resolution found");
     }
 
     #[test]
@@ -963,6 +974,6 @@ metadata:
 
         let main_pkg = (pkg_a, ["new".into()].into());
         let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
-        assert_eq!(err.to_string(), "failed to find a solution");
+        assert_eq!(err.to_string(), "no dependency resolution found");
     }
 }
