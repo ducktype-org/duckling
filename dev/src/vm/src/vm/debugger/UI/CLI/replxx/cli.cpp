@@ -25,10 +25,12 @@ namespace {
 
 	/**
 	 * @brief Path to the history file
-	 *
-	 * It make sense to keep it in cwd so it's created per project.
 	 */
-	static const std::string HISTORY_FILE_PATH{ "./duckling_debugger_history" };
+	std::string getHistoryFilePath() {
+		const char* home = std::getenv("HOME");  // NOLINT(concurrency-mt-unsafe)
+		if (home != nullptr) return std::string(home) + "/.duckling_debugger_history";
+		return ".duckling_debugger_history";
+	}
 }
 
 namespace vm::debugger::cli {
@@ -38,7 +40,7 @@ namespace vm::debugger::cli {
 		spec.replxx.install_window_change_handler();
 
 		/* scope for ifstream object for auto-close */ {
-			std::ifstream history_file(HISTORY_FILE_PATH);
+			std::ifstream history_file(getHistoryFilePath());
 			spec.replxx.history_load(history_file);
 		}
 
@@ -83,6 +85,8 @@ namespace vm::debugger::cli {
 					}
 				}
 			}
+
+			std::lock_guard _(spec.current_line_mutex);
 			spec.current_prompt = std::format(PROMPT_TEMPLATE, sstr.str());
 			spec.replxx.set_prompt(spec.current_line + spec.current_prompt);
 		});
@@ -104,8 +108,16 @@ namespace vm::debugger::cli {
 
 			spec.is_prompt_active = true;
 
-			do cinput = spec.replxx.input(spec.current_line + spec.current_prompt);
-			while ((cinput == nullptr) && (errno == EAGAIN));
+			do {
+				std::string prompt;
+				{
+					std::lock_guard _(spec.current_line_mutex);
+					prompt = spec.current_line + spec.current_prompt;
+				}
+				cinput = spec.replxx.input(prompt);
+				std::lock_guard _(spec.current_line_mutex);
+				spec.current_line = "";
+			} while ((cinput == nullptr) && (errno == EAGAIN));
 
 			spec.is_prompt_active = false;
 			if (cinput == nullptr) return false;
@@ -126,7 +138,7 @@ namespace vm::debugger::cli {
 		printNL("Exiting debugger.");
 		spec.replxx.invoke(Replxx::ACTION::CLEAR_SELF, 0);
 
-		spec.replxx.history_sync(HISTORY_FILE_PATH);
+		spec.replxx.history_sync(getHistoryFilePath());
 		spec.replxx.disable_bracketed_paste();
 	}
 
@@ -147,17 +159,12 @@ namespace vm::debugger::cli {
 		if (std::size_t pos = spec.current_line.find_last_of('\n'); pos != std::string::npos)
 			spec.current_line = spec.current_line.substr(pos + 1);
 
-		// we call Replxx::print which is apparently c-style
-		// NOLINTBEGIN(cppcoreguidelines-pro-type-vararg)
 		if (spec.is_prompt_active) {
-			spec.replxx.invoke(Replxx::ACTION::CLEAR_SELF, 0);
-			spec.replxx.print(before_content.c_str());
-			spec.replxx.print(content_string.c_str());
+			spec.replxx.write(before_content.c_str(), static_cast<int>(before_content.length()));
+			spec.replxx.write(content_string.c_str(), static_cast<int>(content_string.length()));
 			spec.replxx.set_prompt(spec.current_line + spec.current_prompt);
-			spec.replxx.invoke(Replxx::ACTION::REPAINT, 0);
 		} else {
-			spec.replxx.print(content_string.c_str());
+			spec.replxx.write(content_string.c_str(), static_cast<int>(content_string.length()));
 		}
-		// NOLINTEND(cppcoreguidelines-pro-type-vararg)
 	}
 }

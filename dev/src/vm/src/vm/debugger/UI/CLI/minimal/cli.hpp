@@ -10,5 +10,8 @@ namespace vm::debugger::cli::impl {
 }
 
 // override so linter knows whats going on
-#undef USE_REPLXX
+#ifdef USE_REPLXX
+	#undef USE_REPLXX
+#endif
+
 #include <vm/debugger/UI/CLI/cli.hpp>
