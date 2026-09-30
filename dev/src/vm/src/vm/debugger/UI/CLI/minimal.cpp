@@ -19,7 +19,6 @@ namespace vm::debugger::cli {
 		events::Listener<api::ProcStatus> status_change_listener([&](const api::ProcStatus& status) {
 			printer::PrinterOStream out;
 			out << "New status: " << common::typeToString(status);
-			// printProcStatus(out, status);
 			for (std::string& value: common::extractPrimitiveValues(status))
 				out << " (return value = " << value << ")";
 
