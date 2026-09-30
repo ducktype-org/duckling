@@ -2,6 +2,8 @@
 
 #include "module_flags/module_flags.hpp"
 #include "module_tree.hpp"
+#include "module_module_tree.hpp"
+#include "script_module_tree.hpp"
 #include "source_file.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -246,6 +248,8 @@ namespace compiler::frontend {
 			"Only modules of kind Module or Script can be removed via this function"
 		);
 
+		// note: removing Script module removes all synthetic submodules from its chain as well
+
 		auto parent = module->m_parent;
 
 		// Update parent module if it exists
@@ -269,9 +273,11 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// Change the parent of all submodules to the parent of the removed module
-		if (auto submodules = module->submodulesSlot(); submodules != nullptr) {
-			for (auto& [_, submodule]: *submodules) {
+		if (module->getKind() == ModuleKind::Module) {
+			Ref as_module_module = dynamic_cast<ModuleModuleTreeNode*>(module.get());
+
+			// Change the parent of all submodules to the parent of the removed module
+			for (auto& [_, submodule]: as_module_module->m_submodules) {
 				if (parent.has_value()) {
 					parent.value()->submodulesSlot()->put(submodule->getName(), submodule);
 					submodule->m_parent = parent.value();
@@ -280,8 +286,16 @@ namespace compiler::frontend {
 				}
 				submodule->invalidateHash();  // invalidate hash as parent changed
 			}
+
+		} else if (module->getKind() == ModuleKind::Script) {
+			CORE_PANIC("NOT YET IMPLEMENTED FOR SCRIPT MODULES");
+		}
+		else {
+			CORE_UNREACHABLE();
 		}
 
+
+		
 		// Remove the source files of the module. This will invalidate the SourceFile instances!
 		if (auto source_file = module->mainSourceFileSlot(); source_file != nullptr and source_file->has_value())
 			SourceFile::removeSourceFileFromStorage(source_file->value());
@@ -319,8 +333,8 @@ namespace compiler::frontend {
 			if (auto submodules = current->submodulesSlot(); submodules != nullptr)
 				for (auto& [_, child]: *submodules) self(self, child);
 
-			for (const auto& source_file: current->collectOwnedSourceFiles())
-				SourceFile::removeSourceFileFromStorage(source_file);
+			if (auto source_file = current->mainSourceFileSlot(); source_file != nullptr and source_file->has_value())
+				SourceFile::removeSourceFileFromStorage(source_file->value());
 
 			ModuleTree::removeModuleFromStorage(current);
 		};

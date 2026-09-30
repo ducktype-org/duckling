@@ -21,6 +21,8 @@ namespace compiler::frontend {
 
 		void makeAbstract() final { CORE_PANIC("makeAbstract called on ModuleModuleTreeNode!"); }
 
+		friend class ModuleTreeModifier;
+
 	protected:
 		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override {
 			return &m_main_source_file;
