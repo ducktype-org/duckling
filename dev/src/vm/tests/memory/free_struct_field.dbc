@@ -12,7 +12,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type case, i64;
     input_p64 case; # 0 for a, 1 for b
-    cmp_pany_imm case, 0;
+    cmpEq_p64_imm case, 0;
     jmpIf_label a;
     jmp_label b;
 
