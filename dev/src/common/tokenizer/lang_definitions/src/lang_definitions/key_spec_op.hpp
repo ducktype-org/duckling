@@ -154,7 +154,7 @@ namespace lang_def {
 		Public,
 		Private,
 		Protected,
-		Static,
+		Global,
 		Self,
 		Extends,
 		Implements,
