@@ -17,6 +17,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
@@ -857,27 +858,127 @@ private:
 				1
 			);
 
-			checkForErrorOnCompileModule(
-				R"(
-				class Holder {
-					p: box i32;
-				}
+			// ============================ Match errors ============================
+			//
+			// `Holder` owns a box, which makes it - and every variant listing it - non-trivially
+			// copyable and non-trivially destructible. Matching such a variant by value takes
+			// its ownership, which is what the cases then have to account for.
+			constexpr std::string_view HOLDER = "class Holder { p: box i32; }\n";
 
-				fun main() -> i64 = {
-					var v: Holder | f32 = Holder(new 1i32);
-					var r: i64 = match (v) {
-						case x : Holder = 1i64;
-						case _ = -1i64;
-					};
-					return 0i64;
-				}
-			)",
-				{ "Alternative `Class Holder` cannot be bound by value because it is not "
-			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
-			      "Holder`." },
+			// A match over a borrowed variant: the payloads stay owned by the subject.
+			const auto check_ref_match_error
+				= [&](std::string_view body, const std::vector<std::string_view>& phrases) {
+					  checkForErrorOnCompileModule(
+						  base::strConcat(
+							  HOLDER,
+							  "fun main(v: ref (Holder | f32)) -> i64 = { var r: i64 = ",
+							  body,
+							  " return r; }"
+						  ),
+						  phrases,
+						  1
+					  );
+				  };
+
+			// A match that owns its subject: every payload has to be moved out of the variant.
+			const auto check_owning_match_error
+				= [&](std::string_view body, const std::vector<std::string_view>& phrases) {
+					  checkForErrorOnCompileModule(
+						  base::strConcat(
+							  HOLDER,
+							  "fun main(v: Holder | f32) -> i64 = { var r: i64 = ",
+							  body,
+							  " return r; }"
+						  ),
+						  phrases,
+						  1
+					  );
+				  };
+
+			// Only variants can be matched, and never through a box.
+			checkForErrorOnCompileModule(
+				"fun main(v: i64) -> i64 = { var r: i64 = match (v) { case _ = 0i64; }; return r; "
+				"}",
+				{ "`match` on a non-variant type. Got `i64`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				base::strConcat(
+					HOLDER,
+					"fun main(v: box (Holder | f32)) -> i64 = "
+					"{ var r: i64 = match (v) { case _ = 0i64; }; return r; }"
+				),
+				{ "`match` cannot look through a box. Got `box Variant (Class Holder, f32)`." },
 				1
 			);
 
+			// A borrowing case cannot bind a box payload.
+			check_ref_match_error(
+				"match (v) { case b : box Holder = 1i64; case _ = 0i64; };",
+				{ "This `match` only borrows its subject, so a case cannot take a `box` payload "
+			      "out of it." }
+			);
+
+			// The constraint has to name one of the alternatives.
+			check_ref_match_error(
+				"match (v) { case x : i64 = 1i64; case _ = 0i64; };",
+				{ "Failed to find the alternative of the variant for `i64" }
+			);
+
+			// Alternatives are told apart by their underlying type, so `f32` and `ref f32` name
+			// the same one.
+			check_ref_match_error(
+				"match (v) { case x : f32 = 1i64; case y : ref f32 = 2i64; case _ = 0i64; };",
+				{ "Alternative `ref f32` is matched by more than one case." }
+			);
+
+			// The subject is only borrowed, so an owning payload cannot be bound by value.
+			check_ref_match_error(
+				"match (v) { case x : Holder = 1i64; case _ = 0i64; };",
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class Holder` "
+			      "out of `ref Class Holder`" }
+			);
+
+			// Matching by value takes the variant's ownership, so it has to be given up
+			// explicitly.
+			check_owning_match_error(
+				"match (v) { case x : Holder = 1i64; case y : f32 = 0i64; };",
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Variant (Class "
+			      "Holder, f32)`" }
+			);
+
+			// The payload is moved out of the variant and into the case, so a case of an owning
+			// match cannot borrow it.
+			check_owning_match_error(
+				"match (move v) { case x : ref Holder = 1i64; case y : f32 = 0i64; };",
+				{ "Failed to find the alternative of the variant for `ref Class Holder`",
+			      "The type has to match exactly the variant alternative." }
+			);
+
+			// A wildcard binds nothing, so the payloads it covers would never be destroyed.
+			check_owning_match_error(
+				"match (move v) { case _ = 0i64; };",
+				{ "A bare `case _` binds nothing, so the payload it covers would never be "
+			      "destroyed, "
+			      "and the alternative `Class Holder` it covers has a destructor." }
+			);
+
+			// Every case yields the match's value, so they all have to agree on its type, and
+			// the cases together have to cover the variant.
+			check_ref_match_error(
+				"match (v) { case x : ref Holder = 1i64; case y : f32 = 1i32; };",
+				{ "All `match` cases have to be of the same type" }
+			);
+			check_ref_match_error(
+				"match (v) { case x : f32 = 1i64; };",
+				{ "`match` is not exhaustive: it covers 1 of 2 alternatives" }
+			);
+
+			// A binding needs a type constraint to know which alternative it names.
+			check_ref_match_error(
+				"match (v) { case x = 0i64; };",
+				{ "Match pattern bindings without a type constraint" }
+			);
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
