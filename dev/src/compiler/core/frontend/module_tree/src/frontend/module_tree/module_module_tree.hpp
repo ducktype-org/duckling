@@ -72,6 +72,4 @@ namespace compiler::frontend {
 			return ModuleChildAccessLocked(getModuleID(), name, child);
 		}
 	};
-
-
 }

@@ -42,10 +42,7 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::addSubmodule(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
-		CORE_ASSERT(
-			module->getKind() == ModuleKind::Module,
-			"Module must be of kind 'Module'"
-		);
+		CORE_ASSERT(module->getKind() == ModuleKind::Module, "Module must be of kind 'Module'");
 
 		base::StrID name       = submodule->getName();
 		auto        submodules = module->submodulesSlot();
@@ -280,7 +277,7 @@ namespace compiler::frontend {
 
 		if (module->getKind() == ModuleKind::Module) {
 			// Change the parent of all child modules to the parent of the removed module
-			for (auto&  submodule: module->collectChildrenModules()) {
+			for (auto& submodule: module->collectChildrenModules()) {
 				if (parent.has_value()) {
 					parent.value()->submodulesSlot()->put(submodule->getName(), submodule);
 					submodule->m_parent = parent.value();

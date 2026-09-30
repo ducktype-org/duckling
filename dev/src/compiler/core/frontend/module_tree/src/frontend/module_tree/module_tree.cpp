@@ -3,10 +3,10 @@
 #include "access.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
-#include "module_tree_builder.hpp"
-#include "script_module_tree.hpp"
 #include "module_module_tree.hpp"
+#include "module_tree_builder.hpp"
 #include "queries.hpp"
+#include "script_module_tree.hpp"
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>

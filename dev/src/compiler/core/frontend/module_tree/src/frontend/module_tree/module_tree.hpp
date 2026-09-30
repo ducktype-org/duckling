@@ -66,7 +66,8 @@ namespace compiler::frontend {
 	/**
 	 * @brief Represents a single module tree node in the Duckling project tree.
 	 *
-	 * @note Each module is either a standard module or script module (created from a script file).
+	 * @note Each module is a standard module, a script module (created from a script file), or a
+	 * synthetic REPL chain module (one statement of a REPL session or script).
 	 *
 	 * @note This is an abstract class, the instances include:
 	 * - ModuleModuleTree: Represents a standard module.

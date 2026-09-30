@@ -103,7 +103,7 @@ namespace compiler::frontend {
 		 * Sets the parent module.
 		 * @param parent The parent module.
 		 *
-		 * 
+		 *
 		 */
 		void setParent(base::Ref<ModuleTree> parent);
 
