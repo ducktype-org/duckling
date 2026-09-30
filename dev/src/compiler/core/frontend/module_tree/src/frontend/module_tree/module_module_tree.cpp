@@ -5,28 +5,32 @@ namespace compiler::frontend {
 		CORE_PANIC("makeAbstract called on ModuleModuleTreeNode!");
 	}
 
-	MRef<base::Optional<base::Ref<SourceFile>>> ModuleModuleTreeNode::mainSourceFileSlot() {
+	Ref<base::Optional<base::Ref<SourceFile>>> ModuleModuleTreeNode::mainSourceFileSlot() {
 		return &m_main_source_file;
 	}
 
-	MCRef<base::Optional<base::Ref<SourceFile>>> ModuleModuleTreeNode::mainSourceFileSlot() const {
+	CRef<base::Optional<base::Ref<SourceFile>>> ModuleModuleTreeNode::mainSourceFileSlot() const {
 		return &m_main_source_file;
 	}
 
-	MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot() {
+	Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot() {
 		return &m_submodules;
 	}
 
-	MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot() const {
+	CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot() const {
 		return &m_submodules;
 	}
 
-	MRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot() {
+	Ref<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot() {
 		return &m_other_files;
 	}
 
-	MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot() const {
+	CRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot() const {
 		return &m_other_files;
+	}
+
+	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleModuleTreeNode::getOtherFiles() const {
+		return m_other_files;
 	}
 
 	std::vector<base::Ref<ModuleTree>> ModuleModuleTreeNode::collectChildrenModules() const {

@@ -270,8 +270,8 @@ namespace compiler::frontend {
 		module_ref->m_name       = m_name;
 		module_ref->m_package_id = m_package_id;
 
-		if (auto other_files = module_ref->otherFilesSlot(); other_files != nullptr)
-			*other_files = std::move(m_other_files);
+		if (module_ref->getKind() == ModuleKind::Module)
+			*module_ref->otherFilesSlot() = std::move(m_other_files);
 		else
 			CORE_ASSERT(m_other_files.empty(), "This module type cannot have other files!");
 
@@ -279,13 +279,9 @@ namespace compiler::frontend {
 		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
 		// Create SourceFiles from stored paths
-		if (m_main_source_file_path.has_value()) {
-			auto main_source_file_slot = module_ref->mainSourceFileSlot();
-			CORE_ASSERT(
-				main_source_file_slot != nullptr, "This module type cannot have a main source file!"
-			);
-			*main_source_file_slot = SourceFile::create(m_main_source_file_path.value(), mod_id);
-		}
+		if (m_main_source_file_path.has_value())
+			*module_ref->mainSourceFileSlot()
+				= SourceFile::create(m_main_source_file_path.value(), mod_id);
 
 		for (const auto& [name, submodule]: m_submodules)
 			ModuleTreeModifier::addSubmodule(module_ref, submodule);

@@ -158,7 +158,7 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
+		virtual const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
@@ -251,31 +251,25 @@ namespace compiler::frontend {
 		 *
 		 * For a standard module this is ModuleModuleTreeNode::m_main_source_file, for a synthetic
 		 * REPL chain module it is SyntheticReplChainModuleTreeNode::m_synthetic_source_file.
-		 * @return nullptr for module types that have no main source file (scripts).
+		 * @note Panics for module types that have no main source file (scripts). Check the module
+		 * kind before calling this.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() {
-			return nullptr;
-		}
+		virtual Ref<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot();
 
 		[[nodiscard]]
-		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const {
-			return nullptr;
-		}
+		virtual CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const;
 
 		/**
 		 * @brief Access the submodules of this module.
-		 * @return nullptr for module types that cannot have submodules.
+		 * @note Panics for module types that cannot have submodules. Check the module kind before
+		 * calling this.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() {
-			return nullptr;
-		}
+		virtual Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot();
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const {
-			return nullptr;
-		}
+		virtual CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const;
 
 		/**
 		 * @brief Collects all child modules of this module.
@@ -291,17 +285,14 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Access the other files of this module.
-		 * @return nullptr for module types that cannot have other files.
+		 * @note Panics for module types that cannot have other files. Check the module kind before
+		 * calling this.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() {
-			return nullptr;
-		}
+		virtual Ref<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot();
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const {
-			return nullptr;
-		}
+		virtual CRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const;
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes

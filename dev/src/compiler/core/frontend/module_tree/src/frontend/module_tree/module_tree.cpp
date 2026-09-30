@@ -82,14 +82,14 @@ namespace compiler::frontend {
 	}
 
 	bool ModuleTree::hasMainSourceFile() const {
-		auto slot = mainSourceFileSlot();
-		return slot != nullptr && slot->has_value();
+		// Scripts have no main source file slot at all.
+		if (getKind() == ModuleKind::Script) return false;
+		return mainSourceFileSlot()->has_value();
 	}
 
 	FileAccessLocked ModuleTree::getMainSourceFile() const {
-		auto slot = mainSourceFileSlot();
-		CORE_ASSERT(slot != nullptr && slot->has_value(), "Main source file does not exist!");
-		return FileAccessLocked(slot->value()->getFileID());
+		CORE_ASSERT(hasMainSourceFile(), "Main source file does not exist!");
+		return FileAccessLocked(mainSourceFileSlot()->value()->getFileID());
 	}
 
 	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
@@ -105,9 +105,31 @@ namespace compiler::frontend {
 	}
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
-		static const base::HashMap<base::StrID, std::vector<fs::File>> no_other_files;
-		auto other_files = otherFilesSlot();
-		return other_files != nullptr ? *other_files : no_other_files;
+		CORE_PANIC("getOtherFiles called on a module that does not support other files!");
+	}
+
+	Ref<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() {
+		CORE_PANIC("mainSourceFileSlot called on a module that does not have a main source file!");
+	}
+
+	CRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() const {
+		CORE_PANIC("mainSourceFileSlot called on a module that does not have a main source file!");
+	}
+
+	Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleTree::submodulesSlot() {
+		CORE_PANIC("submodulesSlot called on a module that does not support submodules!");
+	}
+
+	CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleTree::submodulesSlot() const {
+		CORE_PANIC("submodulesSlot called on a module that does not support submodules!");
+	}
+
+	Ref<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleTree::otherFilesSlot() {
+		CORE_PANIC("otherFilesSlot called on a module that does not support other files!");
+	}
+
+	CRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleTree::otherFilesSlot() const {
+		CORE_PANIC("otherFilesSlot called on a module that does not support other files!");
 	}
 
 	base::StrID ModuleTree::getName() const { return m_name; }
@@ -143,12 +165,12 @@ namespace compiler::frontend {
 			output << indent << "├> Missing main module file!\n";
 
 
-		for (const auto& [ext, files]: getOtherFiles())
-			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
+		if (getKind() == ModuleKind::Module)
+			for (const auto& [ext, files]: getOtherFiles())
+				for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
 
-		for (const auto& submodule_ref: getSubmodules().illegalAccess())
-			output << getModuleRef(submodule_ref.illegalAccess().getID())
-						  ->prettyPrint(indentation + 3);
+		for (const auto& child: collectChildrenModules())
+			output << child->prettyPrint(indentation + 3);
 
 		return output.str();
 	}
@@ -166,20 +188,17 @@ namespace compiler::frontend {
 				CORE_ASSERT(
 					!source_file->component_hash.has_value(), "Child component hash have value!"
 				);
-			if (auto submodules = submodulesSlot(); submodules != nullptr)
-				for (auto& [_, submodule]: *submodules)
-					CORE_ASSERT(
-						!submodule->m_path_component_hash.has_value(),
-						"Child component hash have value!"
-					);
+			for (const auto& child: collectChildrenModules())
+				CORE_ASSERT(
+					!child->m_path_component_hash.has_value(), "Child component hash have value!"
+				);
 			return;
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
 		for (const auto& source_file: collectOwnedSourceFiles())
 			source_file->invalidateComponentHash();
-		if (auto submodules = submodulesSlot(); submodules != nullptr)
-			for (auto& [_, submodule]: *submodules) submodule->invalidateHash();
+		for (auto& child: collectChildrenModules()) child->invalidateHash();
 	}
 
 	void ModuleTree::updateModuleHash() {

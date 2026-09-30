@@ -24,9 +24,9 @@ namespace compiler::frontend {
 		void makeAbstract() final;
 
 	protected:
-		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override;
+		Ref<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override;
 
-		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override;
+		CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override;
 
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 

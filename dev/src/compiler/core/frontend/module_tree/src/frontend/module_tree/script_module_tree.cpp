@@ -5,11 +5,11 @@ namespace compiler::frontend {
 		CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
 	}
 
-	MRef<base::Optional<base::Ref<SourceFile>>> SyntheticReplChainModuleTreeNode::mainSourceFileSlot() {
+	Ref<base::Optional<base::Ref<SourceFile>>> SyntheticReplChainModuleTreeNode::mainSourceFileSlot() {
 		return &m_synthetic_source_file;
 	}
 
-	MCRef<base::Optional<base::Ref<SourceFile>>> SyntheticReplChainModuleTreeNode::mainSourceFileSlot() const {
+	CRef<base::Optional<base::Ref<SourceFile>>> SyntheticReplChainModuleTreeNode::mainSourceFileSlot() const {
 		return &m_synthetic_source_file;
 	}
 

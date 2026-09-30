@@ -27,12 +27,6 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		auto main_source_file_slot = module->mainSourceFileSlot();
 		CORE_ASSERT(
-			main_source_file_slot != nullptr,
-			base::strConcat(
-				"Module ", module->getName().strView(), " cannot have a main source file"
-			)
-		);
-		CORE_ASSERT(
 			!main_source_file_slot->has_value(), "Main source file is already set, remove it first"
 		);
 		*main_source_file_slot = SourceFile::create(file, ModuleID(module));
@@ -46,10 +40,6 @@ namespace compiler::frontend {
 
 		base::StrID name       = submodule->getName();
 		auto        submodules = module->submodulesSlot();
-		CORE_ASSERT(
-			submodules != nullptr,
-			base::strConcat("Module ", module->getName().strView(), " cannot have submodules")
-		);
 		CORE_ASSERT(
 			!submodules->contains(name),
 			base::strConcat(
@@ -100,15 +90,15 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
+		CORE_ASSERT(
+			module->getKind() == ModuleKind::Module,
+			"only modules of kind 'Module' can have other files"
+		);
+
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
 		auto other_files = module->otherFilesSlot();
-		CORE_ASSERT(
-			other_files != nullptr,
-			base::strConcat("Module ", module->getName().strView(), " cannot have other files")
-		);
-
 		if (!other_files->contains(ext_id)) other_files->put(ext_id, std::vector<fs::File>());
 
 		CORE_ASSERT(
@@ -131,13 +121,13 @@ namespace compiler::frontend {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
-		auto main_source_file_slot = module->mainSourceFileSlot();
 		CORE_ASSERT(
-			main_source_file_slot != nullptr && main_source_file_slot->has_value(),
+			module->hasMainSourceFile(),
 			base::strConcat(
 				"Module ", module->getName().strView(), " does not have a main source file"
 			)
 		);
+		auto main_source_file_slot = module->mainSourceFileSlot();
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(main_source_file_slot->value());
 		*main_source_file_slot = {};
@@ -150,7 +140,7 @@ namespace compiler::frontend {
 
 		auto other_files = module->otherFilesSlot();
 		CORE_ASSERT(
-			other_files != nullptr && other_files->contains(ext_id),
+			other_files->contains(ext_id),
 			base::strConcat(
 				"Other file with extension '",
 				ext_id.strView(),
@@ -229,10 +219,9 @@ namespace compiler::frontend {
 				  );
 				  internal->m_package_id = internal_new_package_id;
 
-				  // Change the package ID for all submodules recursively
-				  if (auto submodules = internal->submodulesSlot(); submodules != nullptr)
-					  for (auto& [_, submodule]: *submodules)
-						  change_package_id(submodule, internal_new_package_id);
+				  // Change the package ID for all child modules recursively
+				  for (auto& child: internal->collectChildrenModules())
+					  change_package_id(child, internal_new_package_id);
 
 				  // Invalidate component hash for the module and its children as the package ID changed
 				  internal->invalidateHash();
@@ -295,9 +284,8 @@ namespace compiler::frontend {
 
 
 		// Remove the source files of the module. This will invalidate the SourceFile instances!
-		if (auto source_file = module->mainSourceFileSlot();
-		    source_file != nullptr and source_file->has_value())
-			SourceFile::removeSourceFileFromStorage(source_file->value());
+		if (module->hasMainSourceFile())
+			SourceFile::removeSourceFileFromStorage(module->mainSourceFileSlot()->value());
 
 		// Remove the module from storage. This will invalidate the ModuleTree instance!
 		ModuleTree::removeModuleFromStorage(module);
@@ -331,9 +319,8 @@ namespace compiler::frontend {
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
 			for (auto& child: current->collectChildrenModules()) self(self, child);
 
-			if (auto source_file = current->mainSourceFileSlot();
-			    source_file != nullptr and source_file->has_value())
-				SourceFile::removeSourceFileFromStorage(source_file->value());
+			if (current->hasMainSourceFile())
+				SourceFile::removeSourceFileFromStorage(current->mainSourceFileSlot()->value());
 
 			ModuleTree::removeModuleFromStorage(current);
 		};
