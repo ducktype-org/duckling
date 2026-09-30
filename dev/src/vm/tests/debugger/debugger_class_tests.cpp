@@ -5,6 +5,7 @@
 #include <vm/debugger/debugger.hpp>
 
 #include <condition_variable>
+#include <fstream>
 #include <mutex>
 #include <variant>
 
@@ -26,9 +27,60 @@ public:
 		TESTER_ADD_TEST(outputTest);
 		TESTER_ADD_TEST(memoryTest);
 		TESTER_ADD_TEST(inputTest);
+		TESTER_ADD_TEST(loadedFilesTest);
+		TESTER_ADD_TEST(loadDefaultTest);
 	}
 
 private:
+	void loadedFilesTest() {
+		vm::debugger::Debugger debugger;
+		auto                   loaded = fs::File(path("debugger_test.dbc"));
+		auto                   other  = fs::File(path("while_true.dbc"));
+
+		ASSERT_TRUE(debugger.getLoadedFiles().empty());
+		ASSERT_TRUE(!debugger.isFileAvailable(loaded));
+
+		ASSERT_HAS_VALUE(debugger.loadFiles({ loaded }));
+
+		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
+		ASSERT_TRUE(debugger.getLoadedFiles().contains(loaded));
+		ASSERT_TRUE(debugger.isFileAvailable(loaded));
+		ASSERT_TRUE(!debugger.isFileAvailable(other));
+	}
+
+	void loadDefaultTest() {
+		fs::FilePath package = fs::FileManager::createRandomTempDirectory().getFilePath();
+		fs::FilePath build   = package / "duck_build";
+
+		vm::debugger::Debugger debugger;
+		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
+
+		std::filesystem::create_directories(build.getPath());
+		std::filesystem::copy_file(path("debugger_test.dbc"), (build / "package_dvm.dbc").getPath());
+		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
+		ASSERT_TRUE(debugger.getLoadedFiles().empty());
+
+		// Real mappings contain absolute paths, the fixture has relative ones
+		auto             source = fs::File(path("simple.dk"));
+		std::ifstream    fixture(path("package_dvm.di.json"));
+		std::string      mapping((std::istreambuf_iterator<char>(fixture)), {});
+		std::string_view relative    = "\"simple.dk\"";
+		std::string      replacement = "\"" + source.getFilePath().string() + "\"";
+		for (usize pos = 0; (pos = mapping.find(relative, pos)) != std::string::npos;) {
+			mapping.replace(pos, relative.size(), replacement);
+			pos += replacement.size();
+		}
+		std::ofstream(build.getPath() / "package_dvm.di.json") << mapping;
+
+		ASSERT_HAS_VALUE(debugger.loadDefault(package));
+
+		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
+		ASSERT_TRUE(debugger.isFileAvailable(source));
+		ASSERT_TRUE(!debugger.isFileAvailable(fs::File(path("while_true.dbc"))));
+
+		fs::FileManager::deleteFolder(package, true);
+	}
+
 	void noRunTest() {
 		vm::debugger::Debugger debugger;
 		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
