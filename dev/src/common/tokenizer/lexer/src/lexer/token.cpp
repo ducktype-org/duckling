@@ -335,13 +335,24 @@ namespace lexer {
 
 	bool Token::isStr(base::StrID str) const { return getValue() == str; }
 
+	bool Token::isLiteralText() const {
+		return type == Type::String || type == Type::Char || type == Type::FormatStringSubString
+		    || type == Type::Comment;
+	}
+
 	bool Token::is(Type qtype) const { return type == qtype; }
 
-	bool Token::is(Operator op) const { return op == getValue(); }
+	// These compare the token's text, so without the `isLiteralText()` guard the string literal
+	// `"match"` would read as the keyword `match` and `";"` as a semicolon.
+	bool Token::is(Operator op) const { return not isLiteralText() && op == getValue(); }
 
-	bool Token::is(Special spc) const { return lang_def::strAsSpecial(str_id) == spc; }
+	bool Token::is(Special spc) const {
+		return not isLiteralText() && lang_def::strAsSpecial(str_id) == spc;
+	}
 
-	bool Token::is(Keyword key) const { return lang_def::strAsKeyword(str_id) == key; }
+	bool Token::is(Keyword key) const {
+		return not isLiteralText() && lang_def::strAsKeyword(str_id) == key;
+	}
 
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 
