@@ -398,7 +398,7 @@ namespace vm {
 					),  // ptr_tmp_store := argv_internal[ix]
 					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
 					MAKE_BYTECODE_INSTRUCTION(
-						free_pptr_type, 48, i64_type_arg
+						free_pptr_type, 48, str_type_arg
 					),                                              // free ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
 				}
@@ -409,9 +409,7 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(
-					free_pptr_type, 8, argv_ptr_type_arg
-				),                                            // free *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(free_pptr_type, 8, argv_type_arg),  // free *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit ix
