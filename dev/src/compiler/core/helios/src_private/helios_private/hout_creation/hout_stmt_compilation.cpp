@@ -149,8 +149,8 @@ namespace compiler::helios {
 			auto var = assignment->getVariables();
 			auto val = assignment->getValue();
 
-			Box<code::Expr> location_expr
-				= ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
+			BoxOrCRef<code::Expr> location_expr
+				= ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow().ref();
 
 
 			// If left side of the assignment is a ref/box, we have to dereference it and store
@@ -214,24 +214,23 @@ namespace compiler::helios {
 			auto stripped_op
 				= lexer::Operator(base::StrID(op.value.str().substr(0, op.value.size() - 1)));
 
-			auto location = s.reusable(s.refOf(std::move(location_expr)));
-			auto op_lhs   = location->nextUse();
-			auto op_rhs   = ctx.query<QueryHoutOfExpr>(val.unlock(ctx))->valueOrThrow()->clone();
-			auto value    = code::resolveBinaryOperator(
-                ctx,
-                stripped_op,
-                code::pstOrigin(op_wrapped),
-                s.deref(std::move(op_lhs)),
-                std::move(op_rhs),
-                ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
-            );
+			auto                  op_lhs   = s.reusable(s.refOf(location_expr->clone()));
+			auto                  location = op_lhs->nextUse();
+			BoxOrCRef<code::Expr> op_rhs
+				= ctx.query<QueryHoutOfExpr>({ val })->valueOrThrow().ref();
+			auto value = code::resolveBinaryOperator(
+				ctx,
+				stripped_op,
+				code::pstOrigin(op_wrapped),
+				s.deref(std::move(op_lhs)),
+				op_rhs->clone(),
+				ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
+			);
 			// TODO: add coercion
 
 			output(code::AssignmentStmt(
-					code::pstOrigin(assignment),
-					std::move(location),
-					std::move(value)
-				));
+				code::pstOrigin(assignment), s.deref(std::move(location)), std::move(value)
+			));
 			return;
 		}
 

@@ -18,6 +18,36 @@
 
 namespace compiler::helios::code {
 	/**
+	 * @brief This enum represents builtin binary numeric operators that are not directly handed to
+	 * lowering via BinaryOperatorExpr, but instead require handling in HELIOS, such as generating a
+	 * call to language primitive.
+	 */
+	enum class PreDesugarOperator {
+		IntegerPlusEq,
+		IntegerMinusEq,
+		IntegerMultiplyEq,
+		IntegerDivideEq,
+		IntegerRemainderEq,
+		IntegerExponentiateEq,
+
+		FloatPlusEq,
+		FloatMinusEq,
+		FloatMultiplyEq,
+		FloatDivideEq,
+		FloatExponentiateEq,
+
+		IntegerPow,
+		FloatPow,
+
+		BitwiseAndEq,
+		BitwiseOrEq,
+		BitwiseXorEq,
+		BitwiseLeftShiftEq,
+		BitwiseRightShiftEq,
+	};
+	using BuiltinOperation = std::variant<BuiltinBinary, PreDesugarOperator>;
+
+	/**
 	 * @brief Finds a numeric builtin unary operator for an expression and a given name.
 	 * If necessary, returns the required coercion for the argument type to match the operator.
 	 * @return Returns the operation along with coercions to apply to operands in format
@@ -32,7 +62,7 @@ namespace compiler::helios::code {
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
 	 * @return Returns the operation with proper coercions applied to operands
 	 */
-	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
+	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 	);
 

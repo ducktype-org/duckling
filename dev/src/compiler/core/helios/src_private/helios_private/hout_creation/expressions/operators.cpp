@@ -65,45 +65,16 @@ namespace {
 	}
 
 	/**
-	 * @brief This enum represents builtin binary numeric operators that are not directly handed to
-	 * lowering via BinaryOperatorExpr, but instead require handling in HELIOS, such as generating a
-	 * call to language primitive.
-	 */
-	enum class PreDesugarOperator {
-		IntegerPlusEq,
-		IntegerMinusEq,
-		IntegerMultiplyEq,
-		IntegerDivideEq,
-		IntegerRemainderEq,
-		IntegerExponentiateEq,
-
-		FloatPlusEq,
-		FloatMinusEq,
-		FloatMultiplyEq,
-		FloatDivideEq,
-		FloatExponentiateEq,
-
-		IntegerPow,
-		FloatPow,
-
-		BitwiseAndEq,
-		BitwiseOrEq,
-		BitwiseXorEq,
-		BitwiseLeftShiftEq,
-		BitwiseRightShiftEq,
-	};
-
-	/**
 	 * @brief Resolves a builtin binary numeric operator into HELIOS expression. If it cannot be
 	 * resolved correctly (for example, because there is no language primitive that matches the @p
-	 * lhs and @p rhs types) an empty box is returned.
+	 * lhs and @p rhs types) .
 	 * @param ctx Query context
 	 * @param op Operator to be resolved
 	 * @param lhs Left hand side argument of the operator
 	 * @param rhs Right hand side argument of the operator
 	 * @return Corresponding desugared expression
 	 */
-	MBox<code::Expr> desugarOperatorToExpr(
+	query::QResult<Box<code::Expr>> desugarOperatorToExpr(
 		query::Context& ctx, PreDesugarOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs
 	) {
 		using enum PreDesugarOperator;
@@ -189,7 +160,7 @@ namespace {
 				else
 					return {};
 			}();
-			if_opt_none(lang_primitive) return {};
+			if_opt_none(lang_primitive) return query::Failed();
 			log_if_lang_primitive_not_present(lang_primitive.value());
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
 			                  ->valueOrThrow();
@@ -221,7 +192,7 @@ namespace {
 				else
 					return {};
 			}();
-			if_opt_none(lang_primitive) return {};
+			if_opt_none(lang_primitive) return query::Failed();
 			log_if_lang_primitive_not_present(lang_primitive.value());
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
 			                  ->valueOrThrow();
@@ -291,14 +262,10 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
+	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	) {
-		using BuiltinOperation = std::variant<BuiltinBinary, PreDesugarOperator>;
-		using namespace compiler::helios::code::shorthands;
-		Shorthand s{ ctx };
-
-		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs.ref(), rhs.ref());
+		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
 		if (!common_type_res.has_value()) return {};
 
 		auto& [common_type, lhs_coercion, rhs_coercion] = common_type_res.value();
@@ -369,28 +336,13 @@ namespace compiler::helios::code {
 				{ { base::StrID("!="), tsh::Kind::Float }, BuiltinBinary::FloatNeq },
 			};
 
-		if (numeric_operators.contains({ op, operation_kind })) {
-			auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
-			auto operation  = numeric_operators.at({ op, operation_kind });
+		if (numeric_operators.contains({ op, operation_kind }))
+			return std::make_tuple(
+				numeric_operators.at({ op, operation_kind }),
+				std::move(lhs_coercion),
+				std::move(rhs_coercion)
+			);
 
-			auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-			auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-
-			variant_match(operation) {
-				variant_case(BuiltinBinary, op) {
-					return withOrigin(
-						new_origin, s.binOp(std::move(coerced_lhs), op, std::move(coerced_rhs))
-					);
-				}
-				variant_case(PreDesugarOperator, op) {
-					// @TODO: #3621 Assignement operators like `+=` should not allow coetions on the lhs
-					return desugarOperatorToExpr(
-							   ctx, op, std::move(coerced_lhs), std::move(coerced_rhs)
-					)
-					    .toOptBox();
-				}
-			}
-		}
 		return {};
 	}
 
@@ -417,10 +369,33 @@ namespace compiler::helios::code {
 		// Step 1. — special path for numeric promotions
 		if (lhs_type.getType().isNumeric() && rhs_type.getType().isNumeric()
 		    && isNumericOperator(op)) {
-			auto numeric_builtin_opt
-				= resolveNumericBinaryBuiltin(ctx, op, lhs->clone(), rhs->clone());
+			// TODO: remove clones
+			auto numeric_builtin_opt = findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
 
-			if_opt_some(numeric_builtin_opt, numeric_builtin) { return std::move(numeric_builtin); }
+			if_opt_some(numeric_builtin_opt, numeric_builtin) {
+				using namespace compiler::helios::code::shorthands;
+				Shorthand s{ ctx };
+
+				auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
+
+				auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
+				auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+				auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+
+				variant_match(operation) {
+					variant_case(BuiltinBinary, op) {
+						return withOrigin(
+							new_origin, s.binOp(std::move(coerced_lhs), op, std::move(coerced_rhs))
+						);
+					}
+					variant_case(PreDesugarOperator, op) {
+						return desugarOperatorToExpr(
+								   ctx, op, std::move(coerced_lhs), std::move(coerced_rhs)
+						)
+						    .valueOrThrow();
+					}
+				}
+			}
 		}
 
 		// Step 2. — Regular lookup and overload resolution
