@@ -37,13 +37,6 @@ namespace vm {
 		bool deallocated = false;
 
 		/**
-		 * @brief Whether manual freeing of a block is allowed.
-		 * A block is freeable if it is the owning block of heap-allocated
-		 * memory, other blocks are not freeable.
-		 */
-		bool freeable = false;
-
-		/**
 		 * @brief The reference count of the block.
 		 * If anybody is looking at a block (function stack, pointer, parent block, etc.), then
 		 * refcount should stay positive. If refcount is dropped to 0, then nobody needs the

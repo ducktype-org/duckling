@@ -516,8 +516,7 @@ namespace vm {
 		}
 
 		auto allocateHeap(TypeCRef type) -> Ref<BlockT> {
-			auto block      = createBlock(heap_allocator.allocate(type));
-			block->freeable = true;
+			auto block = createBlock(heap_allocator.allocate(type));
 			return block;
 		}
 
@@ -526,9 +525,12 @@ namespace vm {
 		 * @note Assumes that type is a dynamic table type.
 		 */
 		auto dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<BlockT> {
-			auto block      = createBlock(heap_allocator.dynTableAllocateN(type, n));
-			block->freeable = true;
+			auto block = createBlock(heap_allocator.dynTableAllocateN(type, n));
 			return block;
+		}
+
+		bool isHeapAllocated(Ref<BlockT> block) {
+			return block->parent == nullptr && block->data.allocator.get() == &heap_allocator;
 		}
 
 		/**
@@ -551,8 +553,8 @@ namespace vm {
 		/**
 		 * @brief Dynamically reallocates block data to a table of size n with elements of type
 		 * equal to the block type's inner type.
-		 * @throws VMDynTableReAllocTypeMismatch if the block does not hold a dynamic table,
-		 * VMUseAfterFreeException if its data is already gone.
+		 * @throws VMDynTableReAllocTypeMismatch if the block does not hold a dynamic table
+		 * @throws VMUseAfterFreeException if its data is already gone.
 		 */
 		auto dynTableReallocateBlockDataN(Pointer ptr, TypeCRef type, u64 n) -> Pointer {
 			if (ptr.isNull()) {
@@ -599,7 +601,7 @@ namespace vm {
 		void guardedFreeBlockData(Pointer pointer) requires std::is_same_v<EntryT, byte> {
 			Ref<BlockT> block = pointer.getBlock();
 			// Only the whole allocation can be freed, not a field or an element of it.
-			if (!block->freeable || pointer.getOffset() != 0)
+			if (!isHeapAllocated(block) || pointer.getOffset() != 0)
 				throw exceptions::VMInvalidFreeException();
 			if (block->deallocated) throw exceptions::VMDoubleFreeException();
 			freeBlockData(block);

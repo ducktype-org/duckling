@@ -1367,9 +1367,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			const auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 
 			WRITE_TO_PLACE_ARG(
 				Pointer,
