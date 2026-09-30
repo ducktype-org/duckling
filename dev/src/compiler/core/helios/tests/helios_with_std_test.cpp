@@ -1213,6 +1213,13 @@ private:
 				const auto& alternatives = variant_type.getUnderlyingTypes();
 				ASSERT_EQUAL_PRINT(alternatives.size(), match->cases.size());
 
+				// The cases survive a clone, which the lowering relies on to know how a payload
+				// is bound.
+				auto cloned_expr = match->clone();
+				auto cloned      = dynamic_cast<const MatchExpr*>(cloned_expr.get());
+				ASSERT_TRUE(cloned != nullptr);
+				ASSERT_EQUAL_PRINT(match->cases.size(), cloned->cases.size());
+
 				// Every case tests its own alternative, binds the payload, and rebuilds the
 				// variant with that same alternative index - no wildcard is needed.
 				for (usize i = 0; i < match->cases.size(); i++) {
@@ -1220,6 +1227,21 @@ private:
 					ASSERT_HAS_VALUE(match_case.alternative_index);
 					ASSERT_EQUAL_PRINT(i, match_case.alternative_index.value());
 					ASSERT_HAS_VALUE(match_case.binding);
+
+					// The subject is borrowed, so the constraint is the type the payload is
+					// bound with: a mutable reference to the alternative.
+					ASSERT_TRUE(match_case.constraint_type.has_value());
+					ASSERT_EQUAL(
+						alternatives.at(i)
+							.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
+							.withMutability(compiler::tsh::Mutability::Mutable),
+						match_case.constraint_type.value()
+					);
+					ASSERT_TRUE(cloned->cases.at(i).constraint_type.has_value());
+					ASSERT_EQUAL(
+						match_case.constraint_type.value(),
+						cloned->cases.at(i).constraint_type.value()
+					);
 
 					auto construct = dynamic_cast<const VariantConstructExpr*>(
 						stripImplicitMove(match_case.result.get())
@@ -1260,15 +1282,19 @@ private:
 			auto get_class_type
 				= [&](SymID sym_id) { return ctx.query<compiler::tsh::QueryClassType>(sym_id); };
 
-			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
-				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
-				if (expr_stmt == nullptr) return false;
-				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			auto is_method_call_expr = [&](const Expr* expr, Method::Kind kind) -> bool {
+				auto call = dynamic_cast<const CallExpr*>(expr);
 				if (call == nullptr) return false;
 				auto callee = getIdentifierExprSymID(call->callee.ref());
 				if (!callee.has_value()) return false;
 				const auto* method = std::get_if<Method>(&getSymRef(callee.value())->other);
 				return method != nullptr && method->kind == kind;
+			};
+
+			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return false;
+				return is_method_call_expr(expr_stmt->expr.get(), kind);
 			};
 
 			// Returns the callee symbol of a statement of the form `f(...);`, if any.
@@ -1377,6 +1403,54 @@ private:
 				ASSERT_TRUE(is_box_free_call(stmts.at(1).get()));
 				// [2] `first` (HasBox) destroyed
 				ASSERT_TRUE(is_method_call(stmts.at(2).get(), Method::Kind::DefaultDestructor));
+			}
+
+			// A variant destroys only the alternatives that own something, by matching the
+			// active one. The alternatives are ordered by name, so `HasBox` comes first.
+			{
+				auto i32_type = compiler::tsh::getIntegralType(
+					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				const auto variant_type = ctx.query<compiler::tsh::QueryVariantType>({
+					{ st(i32_type), st(get_class_type(has_box_sym)) },
+				});
+				ASSERT_TRUE(!variant_type.isTriviallyDestructible(ctx));
+
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(variant_type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmts.at(0).get());
+				ASSERT_TRUE(expr_stmt != nullptr);
+				auto match = dynamic_cast<const MatchExpr*>(expr_stmt->expr.get());
+				ASSERT_TRUE(match != nullptr);
+
+				// One case for the owning alternative, plus the wildcard that keeps the match
+				// exhaustive over the trivially destructible one.
+				ASSERT_EQUAL_PRINT(2, match->cases.size());
+
+				const auto& owning_case = match->cases.at(0);
+				ASSERT_TRUE(owning_case.alternative_index.has_value());
+				ASSERT_EQUAL_PRINT(0, owning_case.alternative_index.value());
+				ASSERT_TRUE(owning_case.binding.has_value());
+				// The payload is destroyed in place, so it is bound as a mutable reference.
+				ASSERT_TRUE(owning_case.constraint_type.has_value());
+				ASSERT_EQUAL(
+					variant_type.getUnderlyingTypes()
+						.at(0)
+						.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
+						.withMutability(compiler::tsh::Mutability::Mutable),
+					owning_case.constraint_type.value()
+				);
+				ASSERT_TRUE(
+					is_method_call_expr(owning_case.result.get(), Method::Kind::DefaultDestructor)
+				);
+
+				// The wildcard names no alternative, so it binds nothing and constrains nothing.
+				const auto& wildcard_case = match->cases.at(1);
+				ASSERT_TRUE(wildcard_case.alternative_index.empty());
+				ASSERT_TRUE(wildcard_case.binding.empty());
+				ASSERT_TRUE(wildcard_case.constraint_type.empty());
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {

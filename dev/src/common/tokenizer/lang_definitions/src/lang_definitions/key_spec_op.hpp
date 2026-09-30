@@ -37,7 +37,6 @@ namespace lang_def {
 		Import,
 		Hides,
 		Using,
-		Alias,
 		In,
 		Lambda,
 
@@ -162,6 +161,7 @@ namespace lang_def {
 
 		// Stmt specifiers:
 		Extern,
+		Export,
 
 		// Misc:
 

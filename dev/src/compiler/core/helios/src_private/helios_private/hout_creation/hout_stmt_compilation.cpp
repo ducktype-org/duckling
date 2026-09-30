@@ -107,7 +107,7 @@ namespace compiler::helios {
 				auto expr_coerced = coerceFromBox(
 					ctx, std::move(returned), return_type, pst_expr.unlock(ctx)->getStablePosition()
 				);
-				if (expr_coerced.empty()) query::throwFailed();
+				if (expr_coerced.hasFailed()) query::throwFailed();
 
 				// Report only if the compilation of the return statement actually succeeded.
 				if (expr_hout->expression_type.getValueCategory().mustMove()) {
@@ -118,7 +118,9 @@ namespace compiler::helios {
 					));
 				}
 
-				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.value())));
+				output(
+					code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.valueOrPanic()))
+				);
 			} else {
 				const bool returns_unit = return_type.getType() == tsh::getUnitType()
 				                       && return_type.getRefKind() == tsh::ReferenceKind::Direct;
@@ -134,8 +136,6 @@ namespace compiler::helios {
 				output(code::VoidReturnStmt(code::pstOrigin(stmt)));
 			}
 		}
-
-		void visitAlias(pst::Access<pst::Alias>) override {}
 
 		void visitUsing(pst::Access<pst::Using>) override {}
 

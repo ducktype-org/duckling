@@ -53,6 +53,9 @@ pub enum MalformedFreezeError<'a> {
         package: &'a FreezePackage,
         dep: Identity,
     },
+    RepeatedIdentity {
+        id: Identity,
+    },
 }
 
 impl SolverFreeze {
@@ -62,6 +65,7 @@ impl SolverFreeze {
         value: &'a VenvFreeze,
     ) -> Result<Self, MalformedFreezeError<'a>> {
         debug!(?root, freeze = ?value);
+        check_different_dependencies_identities(value)?;
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = PackageId::new(pkg_freeze.identity(), pkg_freeze.version());
@@ -115,6 +119,20 @@ impl SolverFreeze {
             package_freezes: pkg_freezes,
         })
     }
+}
+
+fn check_different_dependencies_identities(
+    venv_freeze: &VenvFreeze,
+) -> Result<(), MalformedFreezeError<'_>> {
+    let identities: HashSet<Identity> = HashSet::new();
+    for dep in venv_freeze.dependencies() {
+        if identities.contains(&dep.as_identity()) {
+            return Err(MalformedFreezeError::RepeatedIdentity {
+                id: dep.as_identity(),
+            });
+        }
+    }
+    Ok(())
 }
 
 impl SolverFreeze {

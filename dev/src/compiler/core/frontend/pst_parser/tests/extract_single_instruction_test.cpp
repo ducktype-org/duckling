@@ -94,7 +94,7 @@ private:
 		ASSERT_NO_VALUE(extract("namespace Foo {}"), "Expected empty for namespace declaration");
 		ASSERT_NO_VALUE(extract("import X as x;"), "Expected empty for import statement");
 		ASSERT_NO_VALUE(extract("using X;"), "Expected empty for using statement");
-		ASSERT_NO_VALUE(extract("alias X = X;"), "Expected empty for alias declaration");
+		ASSERT_NO_VALUE(extract("using X as Y;"), "Expected empty for `using ... as` declaration");
 
 		// Actions (return, break, continue, throw, etc.) are not instructions
 		ASSERT_NO_VALUE(extract("return 2;"), "Expected empty for return action");

@@ -5,8 +5,10 @@
 #include <string>
 
 namespace compiler::repl {
-	ReplFrontend::ReplFrontend(bool completions_enabled, bool bracketed_paste_enabled):
-		  m_impl(completions_enabled, bracketed_paste_enabled) {}
+	ReplFrontend::ReplFrontend(
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output
+	):
+		  m_impl(completions_enabled, bracketed_paste_enabled, decorative_output) {}
 
 	void ReplFrontend::printWelcome() const { m_impl.printWelcome(); }
 
