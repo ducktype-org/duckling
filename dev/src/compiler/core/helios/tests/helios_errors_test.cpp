@@ -164,6 +164,26 @@ private:
 			{ "`continue` has no enclosing matching target." },
 			1
 		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break 42; } })",
+			{ "`break` target must be a block kind or a name." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { continue true; } })",
+			{ "`continue` target must be a block kind or a name." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while target (true) { break target:{1}; } })",
+			{ "`break` target cannot have a template specifier." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) { continue true:{1}; } })",
+			{ "`continue` target cannot have a template specifier." },
+			1
+		);
 	}
 
 	/**

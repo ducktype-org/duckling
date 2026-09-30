@@ -25,6 +25,7 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
 #include <variant>
 
 using namespace compiler;
@@ -235,6 +236,23 @@ private:
 				ASSERT_TRUE(
 					std::holds_alternative<code::NearestLoop>(implicit_continue->target_selector)
 				);
+				auto  cloned = block.clone();
+				auto* cloned_while
+					= dynamic_cast<const code::WhileStmt*>(cloned->statements.at(0).get());
+				ASSERT_TRUE(cloned_while != nullptr);
+				ASSERT_HAS_VALUE(cloned_while->control_flow_id);
+				ASSERT_EQUAL(
+					while_stmt->control_flow_id.value(), cloned_while->control_flow_id.value()
+				);
+				std::stringstream original_print, clone_print;
+				block.statements.at(0)->debugPrint(original_print);
+				cloned->statements.at(0)->debugPrint(clone_print);
+				ASSERT_EQUAL(original_print.str(), clone_print.str());
+				auto printed = clone_print.str();
+				ASSERT_TRUE(printed.find("break target;") != std::string::npos);
+				ASSERT_TRUE(printed.find("continue target;") != std::string::npos);
+				ASSERT_TRUE(printed.find("break;") != std::string::npos);
+				ASSERT_TRUE(printed.find("continue;") != std::string::npos);
 			});
 		}
 
@@ -313,6 +331,23 @@ private:
 				ASSERT_EQUAL(code::ControlFlowKind::While, break_loop_target->kind);
 				ASSERT_EQUAL(code::ControlFlowKind::While, continue_loop_target->kind);
 				ASSERT_EQUAL(code::ControlFlowKind::If, break_if_target->kind);
+				auto  cloned = block.clone();
+				auto* cloned_loop
+					= dynamic_cast<const code::WhileStmt*>(cloned->statements.at(0).get());
+				ASSERT_TRUE(cloned_loop != nullptr);
+				auto* cloned_branch
+					= dynamic_cast<const code::IfStmt*>(cloned_loop->body.statements.at(0).get());
+				ASSERT_TRUE(cloned_branch != nullptr);
+				ASSERT_HAS_VALUE(branch->control_flow_id);
+				ASSERT_HAS_VALUE(cloned_branch->control_flow_id);
+				ASSERT_EQUAL(
+					branch->control_flow_id.value(), cloned_branch->control_flow_id.value()
+				);
+				std::stringstream printed;
+				cloned->statements.at(0)->debugPrint(printed);
+				ASSERT_TRUE(printed.str().find("break while;") != std::string::npos);
+				ASSERT_TRUE(printed.str().find("continue while;") != std::string::npos);
+				ASSERT_TRUE(printed.str().find("break if;") != std::string::npos);
 			});
 		}
 		{
@@ -329,6 +364,14 @@ private:
 				auto* break_target = std::get_if<code::KindTarget>(&break_stmt->target_selector);
 				ASSERT_TRUE(break_target != nullptr);
 				ASSERT_EQUAL(code::ControlFlowKind::Block, break_target->kind);
+				auto  cloned = block.clone();
+				auto* cloned_region
+					= dynamic_cast<const code::BlockStmt*>(cloned->statements.at(0).get());
+				ASSERT_TRUE(cloned_region != nullptr);
+				ASSERT_EQUAL(region->control_flow_kind, cloned_region->control_flow_kind);
+				std::stringstream printed;
+				cloned->statements.at(0)->debugPrint(printed);
+				ASSERT_TRUE(printed.str().find("break block;") != std::string::npos);
 			});
 		}
 	}

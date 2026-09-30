@@ -219,6 +219,10 @@ private:
 				ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Break>(), test_case.code);
 			else
 				ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Continue>(), test_case.code);
+			ASSERT_TRUE(
+				pst::testElementCloning(CRef{ &*parsed.getRootElement().illegalAccess().value() })
+					.isOk()
+			);
 		}
 	}
 
