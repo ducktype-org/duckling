@@ -39,7 +39,7 @@ private:
 	void simpleVariant1() {
 		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("simple_variant.dbc", "1", "13"),
-			vm::exceptions::VMNullPointerCopyException::ERR_MSG
+			vm::exceptions::VMNullPointerAccessException::ERR_MSG
 		);
 	}
 

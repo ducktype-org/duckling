@@ -55,6 +55,7 @@ public:
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
 		TESTER_ADD_TEST(testManglingErrors);
@@ -2572,6 +2573,50 @@ private:
             )",
 			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
 			2
+		);
+	}
+
+	/**
+	 * @brief Tests the argument checks of `@c_symbol_name("<name>")`: it takes exactly one string
+	 * literal, which must be a valid C identifier, and only goes on a `fundecl`.
+	 */
+	void testCSymbolNameAttributeErrors() {
+		constexpr std::string_view EXPECTS_ONE_STRING
+			= "Attribute 'c_symbol_name' expects exactly one string literal argument.";
+
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name fundecl f(a: i64) -> i64; })", { EXPECTS_ONE_STRING }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name() fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name("a", "b") fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name(1) fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+
+		for (std::string_view bad_name: { "", "1abc", "a-b", "a b" }) {
+			auto module = base::strConcat(
+				R"(extern("C") { @c_symbol_name(")", bad_name, R"(") fundecl f(a: i64) -> i64; })"
+			);
+			auto message = base::strConcat(
+				"Attribute 'c_symbol_name' expects a valid C identifier, got '", bad_name, "'."
+			);
+			checkForErrorOnCompileModule(module, { message }, 1);
+		}
+
+		checkForErrorOnCompileModule(
+			R"(@c_symbol_name("f") fun f() -> i64 = 0;)",
+			{ "Attribute is not supported on this type of statement" },
+			1
 		);
 	}
 
