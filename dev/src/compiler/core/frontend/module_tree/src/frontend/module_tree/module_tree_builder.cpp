@@ -237,18 +237,6 @@ namespace compiler::frontend {
 		m_parent = parent;
 	}
 
-	void ModuleTreeBuilder::setReplModuleParent(base::Optional<ModuleID> repl_module_parent) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-		CORE_ASSERT(!m_repl_module_parent.has_value(), "REPL module already set for this builder");
-
-		CORE_ASSERT(
-			kind.has_value() and kind.value() == ModuleKind::ReplChain,
-			"Module kind must be set before marking as REPL module"
-		);
-
-		m_repl_module_parent = repl_module_parent;
-	}
-
 	base::Ref<ModuleTree> ModuleTreeBuilder::finalize() {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 

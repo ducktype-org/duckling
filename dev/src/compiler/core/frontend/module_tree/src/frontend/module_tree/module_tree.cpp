@@ -4,6 +4,8 @@
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
 #include "module_tree_builder.hpp"
+#include "script_module_tree.hpp"
+#include "module_module_tree.hpp"
 #include "queries.hpp"
 #include "source_file.hpp"
 
@@ -19,12 +21,12 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
-#include <algorithm>
+// #include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include <ranges>
-#include <regex>
+// #include <ranges>
+// #include <regex>
 #include <sstream>
 #include <string_view>
 

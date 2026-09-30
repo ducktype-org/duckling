@@ -49,7 +49,7 @@ namespace compiler::repl {
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 		builder->setName(base::StrID("repl_probe"));
-		builder->setReplModuleParent(std::nullopt);
+		// PR: builder->setParent(std::nullopt);
 		return builder->finalize();
 	}
 

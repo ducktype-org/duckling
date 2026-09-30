@@ -102,13 +102,10 @@ namespace compiler::frontend {
 		/**
 		 * Sets the parent module.
 		 * @param parent The parent module.
+		 *
+		 * 
 		 */
 		void setParent(base::Ref<ModuleTree> parent);
-
-		/**
-		 * @param repl_module_parent Previous module in the REPL chain, empty for the first one.
-		 */
-		void setReplModuleParent(base::Optional<ModuleID> repl_module_parent);
 
 		/**
 		 * Builds the module tree from a single file (single-file module).
