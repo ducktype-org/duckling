@@ -81,9 +81,9 @@ namespace compiler::helios {
 		query::Context& ctx, pst::Access<T> stmt, std::string_view action_name
 	) {
 		ParsedControlFlowTarget requested_target = code::NearestLoop{};
-		auto target_position = stmt->getStablePosition();
-		auto target_holder   = stmt->getValue();
-		auto target_keyword  = stmt->getTargetKeyword();
+		auto                    target_position  = stmt->getStablePosition();
+		auto                    target_holder    = stmt->getValue();
+		auto                    target_keyword   = stmt->getTargetKeyword();
 		CORE_ASSERT(
 			!target_holder.has_value() || !target_keyword.has_value(),
 			"Control-flow target cannot be both a keyword and an expression."

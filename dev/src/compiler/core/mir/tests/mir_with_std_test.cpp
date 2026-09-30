@@ -166,8 +166,8 @@ private:
 			ASSERT_EQUAL(2u, continue_count);
 			ASSERT_HAS_VALUE(continue_target);
 			const auto& target_block     = function.blocks[continue_target.value()];
-			bool increments_index = false;
-			bool writes_sum       = false;
+			bool        increments_index = false;
+			bool        writes_sum       = false;
 			for (const auto& instr: target_block.instructions) {
 				if (!instr.output.has_value() || !instr.output->isLocal()) continue;
 				auto local = instr.output->getBase<compiler::mir::MIRLocalRef>();

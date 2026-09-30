@@ -40,7 +40,9 @@ namespace compiler::helios::code {
 			return "unknown";
 		}
 
-		void printControlFlowTargetSelector(std::ostream& out, const ControlFlowTargetSelector& selector) {
+		void printControlFlowTargetSelector(
+			std::ostream& out, const ControlFlowTargetSelector& selector
+		) {
 			if (const auto* named = std::get_if<NamedTarget>(&selector))
 				out << " " << name(named->id).strView();
 			else if (const auto* kind = std::get_if<KindTarget>(&selector))
@@ -145,9 +147,7 @@ namespace compiler::helios::code {
 		out << ";\n";
 	}
 
-	Box<Stmt> ContinueStmt::clone() const {
-		return makeBox<ContinueStmt>(origin, target_selector);
-	}
+	Box<Stmt> ContinueStmt::clone() const { return makeBox<ContinueStmt>(origin, target_selector); }
 
 	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);

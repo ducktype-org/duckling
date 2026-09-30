@@ -89,8 +89,8 @@ namespace compiler::mir::test_utils {
 		}
 
 		void validate(CRef<Function> mir_func) {
-			usize event_idx = 0;
-			std::vector<BlockID>         cfg_order;
+			usize                       event_idx = 0;
+			std::vector<BlockID>        cfg_order;
 			std::unordered_set<BlockID> visited;
 
 			auto visit = [&](auto&& self, BlockID block_id) -> void {

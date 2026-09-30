@@ -80,7 +80,7 @@ namespace compiler::mir {
 		[[nodiscard]] const ControlFlowTarget* findTarget(
 			const hc::ControlFlowTargetSelector& selector
 		) const {
-			const auto* named = std::get_if<hc::NamedTarget>(&selector);
+			const auto* named   = std::get_if<hc::NamedTarget>(&selector);
 			const auto* by_kind = std::get_if<hc::KindTarget>(&selector);
 			for (const auto& target: targets | std::views::reverse) {
 				if (named != nullptr) {
