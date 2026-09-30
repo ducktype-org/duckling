@@ -1219,6 +1219,19 @@ namespace compiler::mir {
 			    && expr.target_type.getRefKind() == tsh::ReferenceKind::Box;
 		}
 
+		/**
+		 * @brief Whether the cast is from a `ref T` into a `cptr U`.
+		 *
+		 * If the source lowers to an `AddressOf`, it is retyped to `cptr U`, which eliminates the
+		 * intermediate duckling pointer temporary: `tmp1: cptr U = addressof val`, instead of
+		 * `tmp1: ref T = addressof val; tmp2: cptr U = cast tmp1`.
+		 */
+		bool isRefToCptrCast(const hc::CastExpr& expr) {
+			return expr.source_expr->expression_type.getSymbolType().getRefKind()
+			        == tsh::ReferenceKind::Ref
+			    && expr.target_type.getType().getKind() == tsh::Kind::CPointer;
+		}
+
 		void visitCastExpr(const hc::CastExpr& expr) override {
 			// Maybe in the future the cast expr can be converted into more specific instructions.
 			if (isEmptyCast(expr)) {
@@ -1227,13 +1240,14 @@ namespace compiler::mir {
 				return;
 			}
 
+			auto hole    = continuation->addHole();
+			auto lowered = lowerSubExpr(*expr.source_expr, continuation);
+
 			if (isBoxFromPointerCast(expr)) {
-				auto       assign   = continuation->addHole();
-				auto       lowered  = lowerSubExpr(*expr.source_expr, continuation);
 				const auto res_move = lowered.getResult(function);
 				return noValueOutput(
 					lowered.begin,
-					assign,
+					hole,
 					Instruction{ Operation::Assign,
 				                 {},
 				                 { res_move },
@@ -1245,12 +1259,20 @@ namespace compiler::mir {
 				);
 			}
 
-			auto       cast        = continuation->addHole();
-			auto       lowered     = lowerSubExpr(*expr.source_expr, continuation);
+			if (isRefToCptrCast(expr)) {
+				if (auto* val = std::get_if<ExprLowerRes::Finalizer>(&lowered.value);
+				    val && val->instr.operation == Operation::AddressOf) {
+					hole.fillNop(expr_scope);
+					val->type = expr.target_type;
+					output(std::move(lowered));
+					return;
+				}
+			}
+
 			const auto res_lowered = lowered.getResult(function);
 			return noValueOutput(
 				lowered.begin,
-				cast,
+				hole,
 				Instruction{ Operation::Cast,
 			                 {},
 			                 { res_lowered },

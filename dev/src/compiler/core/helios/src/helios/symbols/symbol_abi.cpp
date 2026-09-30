@@ -206,6 +206,12 @@ namespace compiler::helios {
 				}
 			}
 
+			// Like `@cffi_variadic_fixed_params`, `@c_symbol_name` only means something for the C
+			// ABI: on a default-ABI or `extern("DVM")` symbol it is ignored.
+			if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
+				result.symbol_name = link_name->name;
+			}
+
 			if (args.size() == 2) {  // `extern("C" "mylib")` case
 				UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
 				result.library = lib_str_lit;

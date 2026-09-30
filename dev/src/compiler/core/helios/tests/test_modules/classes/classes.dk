@@ -9,9 +9,9 @@ class Base {
     private priv_field: i64 = 3;
     private unspecified: f32 = 4.0;
 
-    public static counter: i64 = 5;
+    public global counter: i64 = 5;
 
-    public static fun make() -> i64 = {
+    public global fun make() -> i64 = {
         return counter;
     }
 
