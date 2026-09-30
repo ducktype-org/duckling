@@ -23,14 +23,18 @@
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/passing.hpp>
+#include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/placeholder.hpp>
+#include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
@@ -136,21 +140,17 @@ namespace compiler::helios {
 		void visitUsing(pst::Access<pst::Using>) override {}
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
+			using namespace compiler::helios::code::shorthands;
+			Shorthand s{ ctx };
+
 			auto op_wrapped = assignment->getAssignmentType().unlock(ctx);
 			auto op         = op_wrapped->unwrap();
-			if (op != base::StrID("=")) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					base::strConcat("This assignment type: '", op.str(), "'."),
-					assignment->getStablePosition()
-				));
-				query::throwFailed();
-			}
 
 			auto var = assignment->getVariables();
 			auto val = assignment->getValue();
 
-			BoxOrCRef<code::Expr> location_expr
-				= ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow().ref();
+			Box<code::Expr> location_expr
+				= ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
 
 
 			// If left side of the assignment is a ref/box, we have to dereference it and store
@@ -181,6 +181,7 @@ namespace compiler::helios {
 				return;
 			}
 
+			// 1. Handle regular assignement
 			if (op == base::StrID("=")) {
 				// The new `SymbolType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now
@@ -200,6 +201,38 @@ namespace compiler::helios {
 				));
 				return;
 			}
+
+			// 2. Handle operation assignement `location X= value`
+			// It desugars to `location = location X value`
+			CORE_ASSERT(
+				op.isAssignment(), "Assignement operator should be present in assignement statement."
+			);
+			CORE_ASSERT(
+				op.value.strView().back() == '=', "Assignement operatos should end with `=`."
+			);
+
+			auto stripped_op
+				= lexer::Operator(base::StrID(op.value.str().substr(0, op.value.size() - 1)));
+
+			auto location = s.reusable(s.refOf(std::move(location_expr)));
+			auto op_lhs   = location->nextUse();
+			auto op_rhs   = ctx.query<QueryHoutOfExpr>(val.unlock(ctx))->valueOrThrow()->clone();
+			auto value    = code::resolveBinaryOperator(
+                ctx,
+                stripped_op,
+                code::pstOrigin(op_wrapped),
+                s.deref(std::move(op_lhs)),
+                std::move(op_rhs),
+                ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
+            );
+			// TODO: add coercion
+
+			output(code::AssignmentStmt(
+					code::pstOrigin(assignment),
+					std::move(location),
+					std::move(value)
+				));
+			return;
 		}
 
 		void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
