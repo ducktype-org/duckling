@@ -26,6 +26,12 @@ namespace vm::code {
 	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
 
+	std::string toString(opargs::VMValueImm arg) {
+		std::stringstream ss;
+		ss << "0x" << std::hex << reinterpret_cast<uintptr_t>(arg.ptr);
+		return ss.str();
+	}
+
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
 	std::string toString(opargs::Field arg) {

@@ -86,6 +86,19 @@ namespace vm {
 	 */
 	class SafeVMThread final: public IVMThread {
 	private:
+		/**
+		 * @brief High-level representation of the synthetic `vm_start_function`, when this thread
+		 * has loaded one. Kept here so `LowFuncData::high_func` stays valid for the lowered
+		 * function's whole lifetime.
+		 */
+		base::Optional<code::valid_function::ValidFunction> start_function_high;
+
+		/**
+		 * @brief Lowered bytecode of the synthetic `vm_start_function`, when this thread has loaded
+		 * one. The optionals mark whether a start function is currently loaded.
+		 */
+		base::Optional<low::LowFuncData> start_function_low;
+
 		RuntimeData runtime_data;
 
 		/**
@@ -106,14 +119,6 @@ namespace vm {
 		 * @brief True if a thread currently occupies GIL.
 		 */
 		bool has_gil = false;
-
-		/**
-		 * @brief Mock ID of the VM program start function.
-		 * This has to be declared explicitly because the start function object is never
-		 * inserted into the `functions` collection, so it doesn't have a real ID; this ID should
-		 * never be assigned to a real function.
-		 */
-		static constexpr usize START_FUNCTION_ID = std::numeric_limits<usize>::max();
 
 		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
@@ -158,30 +163,35 @@ namespace vm {
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
-		[[nodiscard]] low::LowFuncData createProgramStartFunction(
+		[[nodiscard]] code::Function createProgramStartFunction(
 			const low::LowFuncData& func, const ProgramRunArguments& args
 		) const;
 
 		/**
-		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
-		 * stack and perform a call to `func`.
+		 * @brief Creates a high-level function, which pushes the passed `func_args` onto the local
+		 * stack and performs a call to `func`. It is validated and lowered like any other
+		 * function before it can be executed.
 		 */
-		[[nodiscard]] low::LowFuncData createStartFunctionFor(
+		[[nodiscard]] code::Function createStartFunctionFor(
 			const low::LowFuncData& func, const FunctionRunArguments& func_args
 		) const;
 
 		/**
-		 * @brief This is the primary function to call to start execution on the VM.
-		 * It calls both the main function when running the program and single functions called by
-		 * the `runFunction` endpoint. It starts the execution beginning with the first instruction
-		 * in the start_function bytecode vector.
-		 * @param start_function - the code of the start function.
-		 * @param func - the function to execute.
-		 * @return Mutable references to the SafeVMValues returned by the program
+		 * @brief Validates the high-level `vm_start_function` and lowers it to low bytecode,
+		 * loading both into `start_function_high` / `start_function_low`.
+		 * @note The high representation is kept in `start_function_high`, so the address kept in
+		 * `LowFuncData::high_func` stays valid for the lowered function's whole lifetime.
 		 */
-		std::vector<Ref<SafeVMValue>> executeFunction(
-			const low::LowFuncData& start_function, const low::LowFuncData& func
-		);
+		void compileAndLoadStartFunction(const code::Function& start_function);
+
+		/**
+		 * @brief This is the primary function to call to start execution on the VM. It runs the
+		 * loaded `start_function_low`, which calls @p func.
+		 * @param func - the function the loaded start function was built for; its result signature
+		 * is what the exit values are extracted by.
+		 * @return Mutable references to the SafeVMValues returned by the program.
+		 */
+		std::vector<Ref<SafeVMValue>> executeLoadedFunction(const low::LowFuncData& func);
 
 		void execGlobalDestructors() override;
 

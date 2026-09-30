@@ -254,8 +254,9 @@ namespace vm {
 		 * @brief Initializes a local variable together with its block.
 		 *
 		 * Unlike `init_off_type`, which leaves the slot blockless until something asks for a
-		 * block, this creates one up front. Nothing the lowering emits takes this path any more;
-		 * the only caller left is `initFromVMValue`, i.e. the hand-built start functions.
+		 * block, this creates one up front. Nothing the lowering emits for ordinary programs
+		 * takes this path any more; the only caller left is `init_vmvalptr_off`, emitted for the
+		 * synthetic start function.
 		 */
 		static VM_OPFUN_INLINE void performInit(
 			byte*& local_stack, Frame*& frame, SafeVMThread& thread, u64 byte_offset, TypeCRef type

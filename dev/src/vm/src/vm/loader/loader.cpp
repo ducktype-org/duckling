@@ -223,7 +223,7 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException>
 	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
 	if (maybe_high_function.empty()) return std::unexpected(MappingException::NoFunction);
 
-	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+	return (*maybe_high_function.value())->body.at(position.instruction_index).visit([](auto&& instr) {
 		return instr.bytecode_pos;
 	});
 }
@@ -231,7 +231,8 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException>
 base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollectionPosition(
 	const fs::File& file, usize line
 ) const {
-	for (const auto& function: getHighProgram()->functions()) {
+	for (const auto& function_box: getHighProgram()->functions()) {
+		const auto& function = *function_box;
 		// ensure function has position data and is in requested file
 		if (!function.bytecode_pos) continue;
 		if (function.bytecode_pos->getSource()->getFile() != file) continue;
@@ -273,4 +274,34 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 	}
 
 	return std::nullopt;
+}
+
+std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateFunction(
+	const code::Function& function, code::CompilationMode mode
+) const {
+	LoaderLogger log;
+	try {
+		return validated_high_program.validateFunction(function, mode);
+	} catch (code::StackStructureMismatchError& e) {
+		log.logMap(
+			e.label,
+			[&](Box<dia::PlaceholderError>& err) {
+				for (const auto& instruction: e.jumps)
+					instruction.visit([&](auto&& i) {
+						log.addNote(
+							err,
+							static_cast<const code::ElementBase&>(i),
+							code::StackStructureMismatchError::NOTE_MSG
+						);
+					});
+			},
+			e.what()
+		);
+	} catch (code::ValidationError& e) {
+		match_optional(e.maybeElement()) {
+			opt_some(elem) log.log(*elem, e.what());
+			opt_none log.logSimple(e.what());
+		}
+	}
+	return std::unexpected(std::move(log));
 }

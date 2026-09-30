@@ -69,6 +69,31 @@ namespace vm::code {
 			  func_name(func_name) {}
 	};
 
+	class ForbiddenOpcodePresent: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Fat-bytecode contains forbidden opcode: ";
+		Instruction                       instr;
+
+		ForbiddenOpcodePresent(Instruction i):
+			  ValidationError(base::strConcat(ERR_MSG, i.name())),
+			  instr(i) {}
+	};
+
+	class InvalidStartFunctionSignature: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "The synthetic start function must not take any parameters";
+		const code::FuncSignature signature;
+
+		InvalidStartFunctionSignature(code::FuncSignature start_signature):
+			  ValidationError(ERR_MSG.data()),
+			  signature(std::move(start_signature)) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return static_cast<CRef<ElementBase>>(&signature.parameters.at(0));
+		}
+	};
+
 	/**
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.
@@ -490,6 +515,7 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.");
 	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.");
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
+	DEFINE_ARGUMENT_ERROR(UnknownTypeOfVMValueError, "Unknown type for VM value: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");
 	DEFINE_ARGUMENT_ERROR(DuplicatedLocalNameError, "Duplicated local name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLabelError, "Unknown label: ");

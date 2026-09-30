@@ -22,6 +22,12 @@ try:
     sys.stderr.write("--> SUCCESS: VM successfully paused (interleaving handled)!\n")
     sys.stderr.flush()
 
+    # Step enough times to leave the synthetic `vm_start_function` and reach `main`'s loop, so
+    # the frame inspected below belongs to `main` rather than the start function.
+    for _ in range(20):
+        step_seq = client.send_next()
+        client.wait_for(responses=[step_seq])
+
     frames = client.get_frames()
     f0 = frames[0]
     line = f0.get("line")

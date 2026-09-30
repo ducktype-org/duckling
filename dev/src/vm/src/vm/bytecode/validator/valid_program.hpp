@@ -2,7 +2,10 @@
 
 #include "flag_context.hpp"
 
+#include <base/pointers/shared_box.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/compilation_mode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
@@ -53,9 +56,17 @@ namespace vm::code {
 
 		const ObjIdNameMap<GlobalData>& globals() const;
 
-		const ObjIdNameMap<valid_function::ValidFunction>& functions() const;
+		const ObjIdNameMap<SharedBox<valid_function::ValidFunction>>& functions() const;
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
+
+		/**
+		 * @brief Validates a function in the given mode and extracts its reachable code. The mode
+		 * defaults to `NormalFunction`, i.e. a regular program function.
+		 */
+		valid_function::ValidFunction validateFunction(
+			const code::Function& function, CompilationMode mode = NormalFunction{}
+		) const;
 
 		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;
 
@@ -63,12 +74,12 @@ namespace vm::code {
 		) const;
 
 	private:
-		ObjIdNameMap<valid_function::ValidFunction> function_map;
-		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
-		ObjIdNameMap<FFIFunction>                   ffi_function_map;
-		ObjIdNameMap<GlobalData>                    globals_map;
-		TypeContext                                 type_context;
-		FlagContext                                 flag_context;
+		ObjIdNameMap<SharedBox<valid_function::ValidFunction>> function_map;
+		ObjIdNameMap<ExternalCFunction>                        ext_c_function_map;
+		ObjIdNameMap<FFIFunction>                              ffi_function_map;
+		ObjIdNameMap<GlobalData>                               globals_map;
+		TypeContext                                            type_context;
+		FlagContext                                            flag_context;
 
 		/**
 		 * @brief Shared objects declared with `ffi object`, loaded into the process and keyed by

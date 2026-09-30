@@ -824,7 +824,7 @@ DEF_MICRO_INSTR(stepGil)
  * @arg0 - pointer to a VMValue.
  * @arg1 - byte offset of the initialized variable in the frame's local stack.
  */
-DEF_MICRO_INSTR(initFromVMValue)
+DEF_MICRO_INSTR(init_vmvalptr_off, vm::low::opargs::VMValPtr, vm::low::opargs::Offset)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
 #undef DEFAULT_HANDLE_MICRO_INSTR

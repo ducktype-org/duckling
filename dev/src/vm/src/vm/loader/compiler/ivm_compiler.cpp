@@ -26,7 +26,7 @@ namespace vm::loader::compiler {
 
 	detail::FunctionStackContext IVMCompiler::calculateStackContext(
 		const code::valid_function::ValidFunction& function
-	) {
+	) const {
 		detail::FunctionStackContext ctx(function);
 
 		code::valid_type::TypeSize max_stack_size{ Bytes{ 0 }, Bytes{ 0 } };
@@ -41,6 +41,7 @@ namespace vm::loader::compiler {
 
 		ctx.local_stack_size = max_stack_size;
 		ctx.local_slot_count = max_slot_count;
+		ctx.mode             = function.mode;
 
 		return ctx;
 	}
@@ -75,8 +76,11 @@ namespace vm::loader::compiler {
 
 		compileNewGlobals(new_globals);
 
+		auto to_cref
+			= []<typename T>(const SharedBox<T>& shared_box) -> CRef<T> { return &(*shared_box); };
+
 		auto new_functions = high_program.functions() | std::views::drop(sizes.function_count)
-		                   | std::ranges::to<std::vector<code::valid_function::ValidFunction>>();
+		                   | std::views::transform(to_cref) | std::ranges::to<std::vector>();
 		compileNewFunctions(new_functions);
 	}
 }

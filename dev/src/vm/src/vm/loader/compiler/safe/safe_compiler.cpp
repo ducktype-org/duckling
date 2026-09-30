@@ -13,6 +13,9 @@
 #include <vm/loader/compiler/safe/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <bit>
+#include <concepts>
+
 #ifdef ENABLE_JIT
 	#include <vm/core/safe/low_program/cfg/cf_analysis.hpp>
 	#include <vm/core/safe/low_program/instruction.hpp>
@@ -31,7 +34,7 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
 			const FromType&                                                            opcode_arg,   \
-			code::StackStateID stack_state_id                                                        \
+			[[maybe_unused]] code::StackStateID stack_state_id                                       \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \
@@ -66,6 +69,12 @@ namespace vm::loader::compiler::safe {
 				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			std::same_as<low::opargs::VMValPtr>,
+			// The immediate form carries the raw VM value pointer; store it as a u64 operand.
+			return std::bit_cast<u64>(opcode_arg.ptr);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -192,59 +201,13 @@ namespace vm::loader::compiler::safe {
 	}
 
 	void SafeCompiler::compileNewFunctions(
-		const std::vector<code::valid_function::ValidFunction>& new_functions
+		const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 	) {
-		for (const auto& function: new_functions) {
-			vm::loader::compiler::detail::FunctionStackContext ctx
-				= calculateStackContext(function);
+		for (const auto& func_ref: new_functions) {
+			const auto& function = *func_ref;
 
-			auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
-
-			// Calculate the functions metadata.
-			code::FuncSignature        signature       = function.signature;
-			code::valid_type::TypeSize parameters_size = {};
-			std::vector<TypeCRef>      parameters;
-			parameters.reserve(signature.parameters.size());
-
-			for (const auto& param: signature.parameters) {
-				CRef<code::valid_type::ValidType> type
-					= high_program.getTypeContext().getCurrentTypes().at(param.str);
-				parameters.emplace_back(low_program.getTypes().at(type->getName()));
-				parameters_size += type->getSize();
-			}
-
-			code::valid_type::TypeSize ret_type_sum = {};
-			std::vector<TypeCRef>      result_types = {};
-			for (auto& ret: signature.result_types) {
-				ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
-				result_types.emplace_back(low_program.types->at(ret));
-			}
-
-#ifdef ENABLE_JIT
-			// Done before LowFuncData construction so both bc and orig_bc carry the guard:
-			// the function-level entrypoint is never jumped to, so it must be a nop until the
-			// JIT patches it (the patching below rewrites only bc, keeping orig_bc pristine).
-			usize function_jit_entrypoint     = low::cf::functionEntrypointOffset(bytecode);
-			bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
-#endif
-			usize new_func_id = low_program.functions.insert(
-				low::LowFuncData{ .name = function.name,
-			                      .id   = 0,  // placeholder, replaced immediately
-#ifdef ENABLE_JIT
-			                      .jit_func_entrypoint_offset = function_jit_entrypoint,
-#endif
-			                      // we need two copies of the bytecode
-			                      .bc                  = bytecode,
-			                      .orig_bc             = std::move(bytecode),
-			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
-			                      .local_slot_count    = ctx.local_slot_count,
-			                      .arg_size            = getIntTypeSize(parameters_size),
-			                      .ret_size            = getIntTypeSize(ret_type_sum),
-			                      .parameters          = std::move(parameters),
-			                      .result_types        = std::move(result_types),
-			                      .instruction_mapping = std::move(instruction_mapping) },
-				function.name
-			);
+			usize new_func_id
+				= low_program.functions.insert(lowerFunction(function), function.name);
 			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
 			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
 			low_program.functions[new_func_id].id = new_func_id;
@@ -266,6 +229,64 @@ namespace vm::loader::compiler::safe {
 			}
 #endif
 		}
+	}
+
+	low::LowFuncData SafeCompiler::lowerFunction(const code::valid_function::ValidFunction& function
+	) {
+		return lowerFunction(function, calculateStackContext(function));
+	}
+
+	low::LowFuncData SafeCompiler::lowerFunction(
+		const code::valid_function::ValidFunction&                function,
+		const vm::loader::compiler::detail::FunctionStackContext& ctx
+	) {
+		auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
+
+		// Calculate the functions metadata.
+		code::FuncSignature        signature       = function.signature;
+		code::valid_type::TypeSize parameters_size = {};
+		std::vector<TypeCRef>      parameters;
+		parameters.reserve(signature.parameters.size());
+
+		for (const auto& param: signature.parameters) {
+			CRef<code::valid_type::ValidType> type
+				= high_program.getTypeContext().getCurrentTypes().at(param.str);
+			parameters.emplace_back(low_program.getTypes().at(type->getName()));
+			parameters_size += type->getSize();
+		}
+
+		code::valid_type::TypeSize ret_type_sum = {};
+		std::vector<TypeCRef>      result_types = {};
+		for (auto& ret: signature.result_types) {
+			ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
+			result_types.emplace_back(low_program.types->at(ret));
+		}
+
+#ifdef ENABLE_JIT
+		// Done before LowFuncData construction so both bc and orig_bc carry the guard:
+		// the function-level entrypoint is never jumped to, so it must be a nop until the
+		// JIT patches it (the patching below rewrites only bc, keeping orig_bc pristine).
+		usize function_jit_entrypoint     = low::cf::functionEntrypointOffset(bytecode);
+		bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
+#endif
+		return low::LowFuncData{
+			.name      = function.name,
+			.id        = low::LowFuncData::NO_FUNCTION_ID,
+			.high_func = &function,
+#ifdef ENABLE_JIT
+			.jit_func_entrypoint_offset = function_jit_entrypoint,
+#endif
+			// we need two copies of the bytecode
+			.bc                  = bytecode,
+			.orig_bc             = std::move(bytecode),
+			.local_stack_size    = getIntTypeSize(ctx.local_stack_size),
+			.local_slot_count    = ctx.local_slot_count,
+			.arg_size            = getIntTypeSize(parameters_size),
+			.ret_size            = getIntTypeSize(ret_type_sum),
+			.parameters          = std::move(parameters),
+			.result_types        = std::move(result_types),
+			.instruction_mapping = std::move(instruction_mapping),
+		};
 	}
 
 	void SafeCompiler::compileNewGlobals(const std::vector<code::GlobalData>& new_globals) {

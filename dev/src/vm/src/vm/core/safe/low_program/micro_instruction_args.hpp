@@ -121,12 +121,19 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(Offset, "off", u64);
 
 	/**
+	 * @brief Identifies the VM value an `initFromVMValue_*` reads from. Only the immediate form
+	 * (a direct `IVMValue*`) is used outside of runtime expressions.
+	 */
+	DEFINE_MICRO_ARG_TYPE(VMValPtr, "vmvalptr", vm::opargs::VMValueImm);
+
+	/**
 	 * @brief Storage class for any kind of micro instruction argument.
 	 */
 	using InstructionArg = std::variant<
 		VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES,
 		VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES,
 		Immediate,
+		VMValPtr,
 		Type,
 		Field,
 		FunctionID,

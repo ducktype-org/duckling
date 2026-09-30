@@ -22,6 +22,8 @@ namespace vm::loader::compiler {
 			/// Total required size for the local stack frame, in bytes.
 			code::valid_type::TypeSize local_stack_size{};
 			usize                      local_slot_count = 0;
+
+			code::CompilationMode mode = code::NormalFunction{};
 		};
 	}
 
@@ -96,7 +98,7 @@ namespace vm::loader::compiler {
 		 * functions.
 		 */
 		virtual void compileNewFunctions(
-			const std::vector<code::valid_function::ValidFunction>& new_functions
+			const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 		) = 0;
 
 		/**
@@ -129,8 +131,8 @@ namespace vm::loader::compiler {
 		 * This function creates an stack context which is used during lowering instructions to
 		 * translate the variable name to numeric offsets.
 		 */
-		detail::FunctionStackContext calculateStackContext(
+		[[nodiscard]] detail::FunctionStackContext calculateStackContext(
 			const code::valid_function::ValidFunction& function
-		);
+		) const;
 	};
 }

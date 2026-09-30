@@ -61,6 +61,15 @@ namespace vm::loader::compiler::safe {
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 
 		/**
+		 * @brief Lowers a single validated function to micro-bytecode, without inserting it into
+		 * the program. Used for the synthetic `vm_start_function`, which lives on the thread
+		 * rather than in the program.
+		 */
+		[[nodiscard]] low::LowFuncData lowerFunction(
+			const code::valid_function::ValidFunction& function
+		);
+
+		/**
 		 * @brief Sets breakpoint at given FatBytecode instruction
 		 * @note this has to be in compiler. Otherwise we couldn't modify the low program
 		 * @note microbytecode of the function doesn't have to be inside the compiler
@@ -76,13 +85,22 @@ namespace vm::loader::compiler::safe {
 
 		void compileNewTypes(const std::vector<code::valid_type::ValidType>& new_types) override;
 		void compileNewGlobals(const std::vector<code::GlobalData>& new_globals) override;
-		void compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions
+		void compileNewFunctions(
+			const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 		) override;
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) override;
 		void compileNewFFIFunctions(const std::vector<code::FFIFunction>& new_functions) override;
 
 	private:
+		/**
+		 * @brief Lowers a validated function using an already computed stack context.
+		 */
+		[[nodiscard]] low::LowFuncData lowerFunction(
+			const code::valid_function::ValidFunction&                function,
+			const vm::loader::compiler::detail::FunctionStackContext& ctx
+		);
+
 		/**
 		 * @brief The microbytecode program representation being built and managed by the compiler.
 		 */

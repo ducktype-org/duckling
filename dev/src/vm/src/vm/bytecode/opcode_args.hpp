@@ -6,6 +6,7 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/element_base.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <string_view>
 #include <variant>
@@ -44,6 +45,24 @@ namespace vm::opargs {
 
 		constexpr bool operator==(const Immediate& other) const noexcept {
 			return value == other.value;
+		}
+	};
+
+	/**
+	 * @brief A raw `IVMValue*` operand. Used by the start-function-only
+	 * `initFromVMValue_pany_immvmval`.
+	 */
+	struct VMValueImm final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "immvmval";
+
+		VMValueImm() = default;
+
+		VMValueImm(const IVMValue* ptr): ptr(ptr) {}
+
+		const IVMValue* ptr = nullptr;
+
+		constexpr bool operator==(const VMValueImm& other) const noexcept {
+			return ptr == other.ptr;
 		}
 	};
 
@@ -210,6 +229,7 @@ namespace vm::opargs {
 	using OpCodeArg = std::variant<
 		VM_OPARG_PLACE_TYPES,
 		Immediate,
+		VMValueImm,
 		Type,
 		Field,
 		FunctionName,

@@ -84,5 +84,14 @@ namespace vm::loader {
 		base::Optional<FatBytecodePosition> mapFileLineToCodeCollectionPosition(
 			const fs::File& file, usize line
 		) const;
+
+		/**
+		 * @brief Validates a function in the given mode - used for the synthetic
+		 * `vm_start_function` (generated at run time rather than loaded from bytecode). The mode
+		 * defaults to `NormalFunction`, i.e. a regular program function.
+		 */
+		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateFunction(
+			const code::Function& function, code::CompilationMode mode = code::NormalFunction{}
+		) const;
 	};
 }
