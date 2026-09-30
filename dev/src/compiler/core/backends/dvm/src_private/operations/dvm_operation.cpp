@@ -229,11 +229,10 @@ namespace compiler::backend_vm::internal {
 			// address is the pointer returned by `resolveLirPlace`.
 			const auto& src_place = instr.arguments[0].get<lir::LIRPlace>();
 			return AddressOfOperation{
-				.src        = ctx.resolveLirPlace(src_place),
-				.src_layout = src_place.layout,
-				.dest       = lower_opt_dest(),
-				.dest_layout
-				= instr.output.map([](const lir::LIRPlace& place) { return place.layout; }),
+				.src         = ctx.resolveLirPlace(src_place),
+				.src_layout  = src_place.layout,
+				.dest        = lower_opt_dest(),
+				.dest_layout = instr.output.map(&lir::LIRPlace::layout),
 			};
 		}
 		case Assign: {
