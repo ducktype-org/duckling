@@ -11,6 +11,7 @@ public:
 		TESTER_ADD_TEST(simpleOperatorPrecedenceTest);
 		TESTER_ADD_TEST(simpleOperatorAssociativityTest);
 		TESTER_ADD_TEST(exportsForLSPTest);
+		TESTER_ADD_TEST(globalSpecifierKeywordTest);
 	}
 
 private:
@@ -94,6 +95,19 @@ private:
 		ASSERT_EQUAL_PRINT(lang_def::getSpecials().size(), 7);
 		ASSERT_EQUAL_PRINT(lang_def::getOperators().size(), 32);
 		ASSERT_EQUAL_PRINT(lang_def::getNumericTypeSpecifiers().size(), 15);
+	}
+
+	void globalSpecifierKeywordTest() {
+		using namespace lang_def;
+
+		ASSERT_EQUAL(Keyword::Global, strAsKeyword(base::StrID("global")));
+		ASSERT_EQUAL(base::StrID("global"), keywordToStr(Keyword::Global));
+		assertTrue(
+			keywordFlags(Keyword::Global).contains(KeywordFlagsOptions::IsSpecifier),
+			"`global` should be a specifier keyword"
+		);
+		// `global` replaced `static`, which is now a plain identifier.
+		ASSERT_EQUAL(Keyword::NotAKeyword, strAsKeyword(base::StrID("static")));
 	}
 };
 

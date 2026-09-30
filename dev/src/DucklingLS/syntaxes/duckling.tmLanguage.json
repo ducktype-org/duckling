@@ -55,7 +55,7 @@
       "patterns": [
         {
           "name": "keyword.control.duckling",
-          "match": "\\b(if|else|then|while|for|match|case|pattern|in|break|continue|result|defer|import|export|from|as|return|static|lambda|this|extends|implements|override|create|destroy|public|private|protected|pure|virtual|async|threadsafe|unique|leaking|debug|move|expand)\\b"
+          "match": "\\b(if|else|then|while|for|match|case|pattern|in|break|continue|result|defer|import|export|from|as|return|global|lambda|this|extends|implements|override|create|destroy|public|private|protected|pure|virtual|async|threadsafe|unique|leaking|debug|move|expand)\\b"
         }
       ]
     },
