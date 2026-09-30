@@ -1,6 +1,10 @@
 #include <filesystem/file.hpp>
+#include <lexer/token.hpp>
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
+
+#include <string>
+#include <string_view>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -23,6 +27,8 @@ public:
 		TESTER_ADD_TEST(testGroup9);
 		TESTER_ADD_TEST(testSourcePosition);
 		TESTER_ADD_TEST(testLiteralTextIsNotKeyword);
+		TESTER_ADD_TEST(testDescribeSentinelsDoNotLeakInternalNames);
+		TESTER_ADD_TEST(testDescribeWording);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -157,6 +163,88 @@ private:
 		ASSERT_TRUE(
 			td->getTokenData().tokens[4].getRecursive().at(0).is(lang_def::Special::Semicolon)
 		);
+	}
+
+	/**
+	 * @brief `Token::describe()` is what parser diagnostics print after `but got: `.
+	 * A sentinel should not be printed as such, but as a boundary description,
+	 * and the ordinary tokens should keep their `Kind 'text'` rendering.
+	 */
+	void testDescribeSentinelsDoNotLeakInternalNames() {
+		const auto pos = dia::SourcePosition::fakePosition();
+
+		const auto check = [&](std::string_view what, const lexer::Token& token) {
+			const std::string described = token.describe();
+
+			assertTrue(
+				described.find("Sentinel") == std::string::npos,
+				base::strConcat(what, ": `", described, "` leaks the internal token kind")
+			);
+			assertTrue(
+				described.find("''") == std::string::npos,
+				base::strConcat(what, ": `", described, "` contains an empty quoted payload")
+			);
+			assertTrue(
+				not described.empty(), base::strConcat(what, ": rendered an empty description")
+			);
+		};
+
+		check("end of the fallback window", lexer::Token::makeIdentifier("x", pos).asSentinel());
+		check("end of file", lexer::Token::makeSentinelEof(pos));
+		check("beginning of file", lexer::Token::makeSentinelBof(pos));
+
+		for (const char* bracket: { "(", ")", "[", "]", "{", "}" })
+			check(
+				base::strConcat("bracket `", bracket, "`"),
+				lexer::Token::makeSentinel(base::RawView(bracket), pos)
+			);
+	}
+
+	/**
+	 * @brief Pins the exact text of every `Token::describe()` result.
+	 */
+	void testDescribeWording() {
+		const auto pos = dia::SourcePosition::fakePosition();
+
+		const auto check
+			= [&](std::string_view what, const lexer::Token& token, std::string_view expected) {
+				  const std::string described = token.describe();
+				  assertTrue(
+					  std::string_view(described) == expected,
+					  base::strConcat(what, ": expected `", expected, "`, got `", described, "`")
+				  );
+			  };
+
+		check("identifier", lexer::Token::makeIdentifier("foo", pos), "Identifier 'foo'");
+		check("keyword", lexer::Token::makeKeyword("if", pos), "Keyword 'if'");
+		check("operator", lexer::Token::makeOperator("=", pos), "Operator '='");
+		check("special", lexer::Token::makeSpecial(";", pos), "Special ';'");
+		check("string", lexer::Token::makeString("s", pos), "String 's'");
+		check("char", lexer::Token::makeChar("c", pos), "Char 'c'");
+		check("number literal", lexer::Token::makeNumLiteral("1", pos), "NumLiteral '1'");
+		check("type specifier", lexer::Token::makeTypeSpecifier("i32", pos), "TypeSpecifier 'i32'");
+		check("comment", lexer::Token::makeComment("//c", pos), "Comment '//c'");
+		check(
+			"format string part",
+			lexer::Token::makeFormatStringSubString("fs", pos),
+			"FormatStringSubString 'fs'"
+		);
+
+		check(
+			"end of the fallback window",
+			lexer::Token::makeIdentifier("x", pos).asSentinel(),
+			"an unexpected end of the statement"
+		);
+		check("end of file", lexer::Token::makeSentinelEof(pos), "EOF");
+		check("beginning of file", lexer::Token::makeSentinelBof(pos), "BOF");
+
+		// Only the closing bracket reaches a message, so we test only closing brackets.
+		for (const char* bracket: { ")", "]", "}" })
+			check(
+				base::strConcat("closing bracket `", bracket, "`"),
+				lexer::Token::makeSentinel(base::RawView(bracket), pos),
+				base::strConcat("the end of the '", bracket, "' group")
+			);
 	}
 
 	void testSourcePosition() {

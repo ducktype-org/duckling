@@ -357,7 +357,15 @@ namespace lexer {
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 
 	std::string Token::describe() const {
-		return base::strConcat(typeToStr(type), " '", getStrValue(), "'");
+		if (type != Type::Sentinel)
+			return base::strConcat(typeToStr(type), " '", getStrValue(), "'");
+
+		// A sentinel names a boundary in the token stream, not source text.
+		const std::string_view value = getStrValue();
+		if (value.empty()) return "an unexpected end of the statement";
+		if (value == "EOF") return "EOF";
+		if (value == "BOF") return "BOF";
+		return base::strConcat("the end of the '", value, "' group");
 	}
 
 	TokenData::TokenData(Tokens&& tokens, Token&& bof_sentinel, Token&& eof_sentinel):
