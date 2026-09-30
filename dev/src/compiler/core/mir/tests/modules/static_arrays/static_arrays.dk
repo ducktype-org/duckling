@@ -11,11 +11,3 @@ fun static_array_test() -> i64 = {
 
     return pts[0].x;
 }
-
-fun for_continue_test() -> i64 = {
-    var arr: i64[2];
-    for (x in arr) {
-        if (x == 0) continue;
-    }
-    return 0;
-}

@@ -78,15 +78,19 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]] const ControlFlowTarget* findTarget(
-			base::Optional<helios::SymID> id, base::Optional<helios::code::ControlFlowKind> kind
+			const hc::ControlFlowTargetSelector& selector
 		) const {
+			const auto* named = std::get_if<hc::NamedTarget>(&selector);
+			const auto* by_kind = std::get_if<hc::KindTarget>(&selector);
 			for (const auto& target: targets | std::views::reverse) {
-				if (!id.has_value() && !kind.has_value()
-				    && target.kind != helios::code::ControlFlowKind::While
-				    && target.kind != helios::code::ControlFlowKind::For)
+				if (named != nullptr) {
+					if (!target.id.has_value() || target.id.value() != named->id) continue;
+				} else if (by_kind != nullptr) {
+					if (target.kind != by_kind->kind) continue;
+				} else if (target.kind != hc::ControlFlowKind::While
+				           && target.kind != hc::ControlFlowKind::For) {
 					continue;
-				if (id.has_value() && target.id != id) continue;
-				if (kind.has_value() && target.kind != kind.value()) continue;
+				}
 				return &target;
 			}
 			return nullptr;
@@ -228,7 +232,13 @@ namespace compiler::mir {
 				{ stmt.getPosition() },
 			});
 
-			output({ lowered_condition.begin });
+			// Earlier statements may be inserted into this statement's entry block during
+			// reverse lowering. Keep it separate from the condition used by continue if.
+			auto entry_block = function.newBlock("if.entry");
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { lowered_condition.begin->getID() }, {}, parent_scope }
+			);
+			output({ entry_block });
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
@@ -273,7 +283,14 @@ namespace compiler::mir {
 				.break_target    = continuation,
 				.continue_target = continue_target,
 			});
-			StmtLowerRes loop_body{ continue_target };
+			// Statements are lowered backwards and may be inserted into their continuation
+			// block. Keep the continue target separate from that mutable continuation, or
+			// a continue would also execute statements following it in the loop body.
+			auto body_fallthrough = function.newBlock("while.body.fallthrough");
+			body_fallthrough->setTerminator(
+				{ Operation::Jump, {}, { continue_target->getID() }, {}, loop_scope }
+			);
+			StmtLowerRes loop_body{ body_fallthrough };
 			for (usize i = body_statement_count; i > 0; --i) {
 				loop_body = lowerStmtWithControlFlowTargets(
 					*stmt.body.statements[i - 1], loop_body.begin, function, loop_scope, body_targets
@@ -321,7 +338,7 @@ namespace compiler::mir {
 		}
 
 		void visitBreakStmt(const hc::BreakStmt& stmt) override {
-			auto target = findTarget(stmt.target, stmt.target_kind);
+			auto target = findTarget(stmt.target_selector);
 			CORE_ASSERT(target != nullptr, "Break statement has no enclosing target.");
 
 			auto break_block = function.newBlock("break");
@@ -338,7 +355,7 @@ namespace compiler::mir {
 		}
 
 		void visitContinueStmt(const hc::ContinueStmt& stmt) override {
-			auto target = findTarget(stmt.target, stmt.target_kind);
+			auto target = findTarget(stmt.target_selector);
 			CORE_ASSERT(target != nullptr, "Continue statement has no enclosing target.");
 
 			auto continue_block = function.newBlock("continue");
@@ -467,10 +484,17 @@ namespace compiler::mir {
 			auto                            block_scope  = function.newScope(parent_scope);
 			auto                            body_targets = targets;
 			base::Optional<BlockBuilderRef> entry;
+			auto                            body_continuation = continuation;
 			if (stmt.control_flow_kind.has_value()) {
 				entry = function.newBlock(
 					stmt.control_flow_kind.value() == hc::ControlFlowKind::If ? "const.if.entry"
 																			  : "block.entry"
+				);
+				// Body statements are lowered into their continuation. Do not allow them to
+				// modify the destination of break from this block.
+				body_continuation = function.newBlock("block.body.fallthrough");
+				body_continuation->setTerminator(
+					{ Operation::Jump, {}, { continuation->getID() }, {}, block_scope }
 				);
 				body_targets.push_back(ControlFlowTarget{
 					.kind            = stmt.control_flow_kind.value(),
@@ -481,13 +505,19 @@ namespace compiler::mir {
 			}
 
 			auto block_body = lowerCodeBlockWithControlFlowTargets(
-				stmt.body, continuation, function, block_scope, std::move(body_targets)
+				stmt.body, body_continuation, function, block_scope, std::move(body_targets)
 			);
 			if (entry.has_value()) {
 				entry.value()->setTerminator(
 					{ Operation::Jump, {}, { block_body.begin->getID() }, {}, parent_scope }
 				);
-				output({ entry.value() });
+				// Keep the entry used by continue block free of instructions from the
+				// preceding statement, which will be lowered into our returned block.
+				auto outer_entry = function.newBlock("block.outer.entry");
+				outer_entry->setTerminator(
+					{ Operation::Jump, {}, { entry.value()->getID() }, {}, parent_scope }
+				);
+				output({ outer_entry });
 			} else {
 				output({ block_body.begin });
 			}

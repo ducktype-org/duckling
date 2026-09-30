@@ -25,6 +25,8 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <variant>
+
 using namespace compiler;
 using namespace compiler::helios;
 
@@ -189,6 +191,8 @@ private:
 					while target (true) {
 						break target;
 						continue target;
+						break;
+						continue;
 					}
 				}
 			)",
@@ -202,7 +206,7 @@ private:
 					= dynamic_cast<const code::WhileStmt*>(block.statements.at(0).get());
 				ASSERT_TRUE(while_stmt != nullptr);
 				ASSERT_HAS_VALUE(while_stmt->control_flow_id);
-				ASSERT_EQUAL(while_stmt->body.statements.size(), 2u);
+				ASSERT_EQUAL(while_stmt->body.statements.size(), 4u);
 
 				auto* break_stmt
 					= dynamic_cast<const code::BreakStmt*>(while_stmt->body.statements.at(0).get());
@@ -211,10 +215,22 @@ private:
 				);
 				ASSERT_TRUE(break_stmt != nullptr);
 				ASSERT_TRUE(continue_stmt != nullptr);
-				ASSERT_HAS_VALUE(break_stmt->target);
-				ASSERT_HAS_VALUE(continue_stmt->target);
-				ASSERT_TRUE(break_stmt->target.value() == while_stmt->control_flow_id.value());
-				ASSERT_TRUE(continue_stmt->target.value() == while_stmt->control_flow_id.value());
+				auto* break_target
+					= std::get_if<code::NamedTarget>(&break_stmt->target_selector);
+				auto* continue_target
+					= std::get_if<code::NamedTarget>(&continue_stmt->target_selector);
+				ASSERT_TRUE(break_target != nullptr);
+				ASSERT_TRUE(continue_target != nullptr);
+				ASSERT_TRUE(break_target->id == while_stmt->control_flow_id.value());
+				ASSERT_TRUE(continue_target->id == while_stmt->control_flow_id.value());
+				auto* implicit_break
+					= dynamic_cast<const code::BreakStmt*>(while_stmt->body.statements.at(2).get());
+				auto* implicit_continue
+					= dynamic_cast<const code::ContinueStmt*>(while_stmt->body.statements.at(3).get());
+				ASSERT_TRUE(implicit_break != nullptr);
+				ASSERT_TRUE(implicit_continue != nullptr);
+				ASSERT_TRUE(std::holds_alternative<code::NearestLoop>(implicit_break->target_selector));
+				ASSERT_TRUE(std::holds_alternative<code::NearestLoop>(implicit_continue->target_selector));
 			});
 		}
 
@@ -246,8 +262,10 @@ private:
 				auto* break_stmt
 					= dynamic_cast<const code::BreakStmt*>(inner->body.statements.at(0).get());
 				ASSERT_TRUE(break_stmt != nullptr);
-				ASSERT_HAS_VALUE(break_stmt->target);
-				ASSERT_TRUE(break_stmt->target.value() == inner->control_flow_id.value());
+				auto* break_target
+					= std::get_if<code::NamedTarget>(&break_stmt->target_selector);
+				ASSERT_TRUE(break_target != nullptr);
+				ASSERT_TRUE(break_target->id == inner->control_flow_id.value());
 			});
 		}
 		{
@@ -281,14 +299,17 @@ private:
 				ASSERT_TRUE(break_loop != nullptr);
 				ASSERT_TRUE(continue_loop != nullptr);
 				ASSERT_TRUE(break_if != nullptr);
-				ASSERT_NO_VALUE(break_loop->target);
-				ASSERT_NO_VALUE(continue_loop->target);
-				ASSERT_HAS_VALUE(break_loop->target_kind);
-				ASSERT_HAS_VALUE(continue_loop->target_kind);
-				ASSERT_HAS_VALUE(break_if->target_kind);
-				ASSERT_EQUAL(code::ControlFlowKind::While, break_loop->target_kind.value());
-				ASSERT_EQUAL(code::ControlFlowKind::While, continue_loop->target_kind.value());
-				ASSERT_EQUAL(code::ControlFlowKind::If, break_if->target_kind.value());
+				auto* break_loop_target
+					= std::get_if<code::KindTarget>(&break_loop->target_selector);
+				auto* continue_loop_target
+					= std::get_if<code::KindTarget>(&continue_loop->target_selector);
+				auto* break_if_target = std::get_if<code::KindTarget>(&break_if->target_selector);
+				ASSERT_TRUE(break_loop_target != nullptr);
+				ASSERT_TRUE(continue_loop_target != nullptr);
+				ASSERT_TRUE(break_if_target != nullptr);
+				ASSERT_EQUAL(code::ControlFlowKind::While, break_loop_target->kind);
+				ASSERT_EQUAL(code::ControlFlowKind::While, continue_loop_target->kind);
+				ASSERT_EQUAL(code::ControlFlowKind::If, break_if_target->kind);
 			});
 		}
 		{
@@ -302,8 +323,10 @@ private:
 				auto* break_stmt
 					= dynamic_cast<const code::BreakStmt*>(region->body.statements.at(0).get());
 				ASSERT_TRUE(break_stmt != nullptr);
-				ASSERT_HAS_VALUE(break_stmt->target_kind);
-				ASSERT_EQUAL(code::ControlFlowKind::Block, break_stmt->target_kind.value());
+				auto* break_target
+					= std::get_if<code::KindTarget>(&break_stmt->target_selector);
+				ASSERT_TRUE(break_target != nullptr);
+				ASSERT_EQUAL(code::ControlFlowKind::Block, break_target->kind);
 			});
 		}
 	}

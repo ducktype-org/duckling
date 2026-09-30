@@ -10,6 +10,7 @@
 #include <base/pointers/box_or_ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <variant>
 #include <vector>
 
 namespace compiler::helios::defgen {
@@ -20,6 +21,18 @@ namespace compiler::helios::code {
 	class HoutStmtVisitor;
 
 	enum class ControlFlowKind { If, While, For, Block };
+
+	struct NearestLoop {};
+
+	struct NamedTarget {
+		SymID id;
+	};
+
+	struct KindTarget {
+		ControlFlowKind kind;
+	};
+
+	using ControlFlowTargetSelector = std::variant<NearestLoop, NamedTarget, KindTarget>;
 
 	/**
 	 * @brief Base class for all HOUT statements
@@ -223,17 +236,11 @@ namespace compiler::helios::code {
 	 * @brief Represents break statement in HOUT
 	 */
 	struct BreakStmt final: public Stmt {
-		base::Optional<SymID>           target;
-		base::Optional<ControlFlowKind> target_kind;
+		ControlFlowTargetSelector target_selector;
 
-		BreakStmt(
-			ElementOrigin                   origin,
-			base::Optional<SymID>           target      = {},
-			base::Optional<ControlFlowKind> target_kind = {}
-		):
+		BreakStmt(ElementOrigin origin, ControlFlowTargetSelector target_selector = NearestLoop{}):
 			  Stmt(origin),
-			  target(target),
-			  target_kind(target_kind) {}
+			  target_selector(target_selector) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
@@ -244,17 +251,11 @@ namespace compiler::helios::code {
 	 * @brief Represents continue statement in HOUT
 	 */
 	struct ContinueStmt final: public Stmt {
-		base::Optional<SymID>           target;
-		base::Optional<ControlFlowKind> target_kind;
+		ControlFlowTargetSelector target_selector;
 
-		ContinueStmt(
-			ElementOrigin                   origin,
-			base::Optional<SymID>           target      = {},
-			base::Optional<ControlFlowKind> target_kind = {}
-		):
+		ContinueStmt(ElementOrigin origin, ControlFlowTargetSelector target_selector = NearestLoop{}):
 			  Stmt(origin),
-			  target(target),
-			  target_kind(target_kind) {}
+			  target_selector(target_selector) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;

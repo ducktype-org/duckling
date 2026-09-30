@@ -50,6 +50,7 @@ protected:
 			{ fs::FilePath(path("modules/slices")), "slices" },
 			{ fs::FilePath(path("modules/lists")), "lists" },
 			{ fs::FilePath(path("modules/static_arrays")), "static_arrays" },
+			{ fs::FilePath(path("modules/for_continue")), "for_continue" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -145,30 +146,38 @@ private:
 	}
 
 	void forContinueTargetTest() {
-		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("static_arrays");
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("for_continue");
 		withContextDo([&](query::Context& ctx) {
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
-			ASSERT_EQUAL(2u, unit.functions.size());
-			auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(1));
+			ASSERT_EQUAL(1u, unit.functions.size());
+			auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(0));
 			base::Optional<BlockID> continue_target;
+			usize                   continue_count = 0;
 			for (auto id: function.block_order) {
 				const auto& block = function.blocks[id];
 				if (!block.debug_name.has_value()) continue;
-				if (block.debug_name.value() == base::StrID("continue"))
-					continue_target = block.terminator.arguments.at(0).get<BlockID>();
+				if (block.debug_name.value() != base::StrID("continue")) continue;
+				auto target = block.terminator.arguments.at(0).get<BlockID>();
+				if (continue_target.has_value()) ASSERT_EQUAL(continue_target.value(), target);
+				continue_target = target;
+				continue_count++;
 			}
+			ASSERT_EQUAL(2u, continue_count);
 			ASSERT_HAS_VALUE(continue_target);
 			const auto& target_block     = function.blocks[continue_target.value()];
-			bool        increments_index = false;
+			bool increments_index = false;
+			bool writes_sum       = false;
 			for (const auto& instr: target_block.instructions) {
-				if (instr.operation != compiler::mir::Operation::IntegerAdd
-				    || !instr.output.has_value())
-					continue;
+				if (!instr.output.has_value() || !instr.output->isLocal()) continue;
 				auto local = instr.output->getBase<compiler::mir::MIRLocalRef>();
-				if (local->getName().strView().starts_with("__index")) increments_index = true;
+				if (local->getName() == base::StrID("sum")) writes_sum = true;
+				if (instr.operation == compiler::mir::Operation::IntegerAdd
+				    && local->getName().strView().starts_with("__index"))
+					increments_index = true;
 			}
 			ASSERT_TRUE(increments_index);
+			ASSERT_TRUE(!writes_sum);
 		});
 	}
 

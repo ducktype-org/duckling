@@ -31,7 +31,7 @@ namespace pst {
 		base::Optional<lang_def::Keyword> target_keyword;
 
 	public:
-		ELEMENT_CLONE_DECL(Action);
+		ELEMENT_CLONE_DECL(Action, target_keyword);
 
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
 		static MBox<Action> parse(LangParserState& state);

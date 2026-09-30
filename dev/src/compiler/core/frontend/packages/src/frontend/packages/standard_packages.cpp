@@ -1,7 +1,6 @@
 #include "standard_packages.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-
 #include <os_utils/system_libraries.hpp>
 
 #include <algorithm>

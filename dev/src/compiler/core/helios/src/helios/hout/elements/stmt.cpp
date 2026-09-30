@@ -39,6 +39,13 @@ namespace compiler::helios::code {
 			}
 			return "unknown";
 		}
+
+		void printControlFlowTargetSelector(std::ostream& out, const ControlFlowTargetSelector& selector) {
+			if (const auto* named = std::get_if<NamedTarget>(&selector))
+				out << " " << name(named->id).strView();
+			else if (const auto* kind = std::get_if<KindTarget>(&selector))
+				out << " " << controlFlowKindName(kind->kind);
+		}
 	}
 
 	Box<CodeBlock> CodeBlock::clone() const {
@@ -125,23 +132,21 @@ namespace compiler::helios::code {
 	void BreakStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
 		out << "break";
-		if (target.has_value()) out << " " << name(target.value()).strView();
-		if (target_kind.has_value()) out << " " << controlFlowKindName(target_kind.value());
+		printControlFlowTargetSelector(out, target_selector);
 		out << ";\n";
 	}
 
-	Box<Stmt> BreakStmt::clone() const { return makeBox<BreakStmt>(origin, target, target_kind); }
+	Box<Stmt> BreakStmt::clone() const { return makeBox<BreakStmt>(origin, target_selector); }
 
 	void ContinueStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
 		out << "continue";
-		if (target.has_value()) out << " " << name(target.value()).strView();
-		if (target_kind.has_value()) out << " " << controlFlowKindName(target_kind.value());
+		printControlFlowTargetSelector(out, target_selector);
 		out << ";\n";
 	}
 
 	Box<Stmt> ContinueStmt::clone() const {
-		return makeBox<ContinueStmt>(origin, target, target_kind);
+		return makeBox<ContinueStmt>(origin, target_selector);
 	}
 
 	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {

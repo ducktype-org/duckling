@@ -37,6 +37,7 @@
 #include <query_framework/query_errors.hpp>
 
 #include <string_view>
+#include <variant>
 
 namespace compiler::helios {
 
@@ -55,10 +56,8 @@ namespace compiler::helios {
 		return ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 	}
 
-	struct ControlFlowTargetSelection {
-		base::Optional<SymID>                 id;
-		base::Optional<code::ControlFlowKind> kind;
-	};
+	using ParsedControlFlowTarget
+		= std::variant<code::NearestLoop, base::StrID, code::ControlFlowKind>;
 
 	template<class Kind>
 	requires(std::same_as<Kind, pst::ElementKind> || std::same_as<Kind, lang_def::Keyword>)
@@ -78,16 +77,21 @@ namespace compiler::helios {
 	}
 
 	template<std::derived_from<pst::Action> T>
-	static ControlFlowTargetSelection getControlFlowTarget(
+	static code::ControlFlowTargetSelector getControlFlowTarget(
 		query::Context& ctx, pst::Access<T> stmt, std::string_view action_name
 	) {
-		ControlFlowTargetSelection  selection;
-		base::Optional<base::StrID> target_name;
-		auto                        target_position = stmt->getStablePosition();
-		auto                        target_holder   = stmt->getValue();
-		if (auto keyword = stmt->getTargetKeyword()) {
-			selection.kind = controlFlowKind(keyword.value());
-			CORE_ASSERT(selection.kind.has_value(), "Invalid parsed control-flow target keyword.");
+		ParsedControlFlowTarget requested_target = code::NearestLoop{};
+		auto target_position = stmt->getStablePosition();
+		auto target_holder   = stmt->getValue();
+		auto target_keyword  = stmt->getTargetKeyword();
+		CORE_ASSERT(
+			!target_holder.has_value() || !target_keyword.has_value(),
+			"Control-flow target cannot be both a keyword and an expression."
+		);
+		if (target_keyword.has_value()) {
+			auto kind = controlFlowKind(target_keyword.value());
+			CORE_ASSERT(kind.has_value(), "Invalid parsed control-flow target keyword.");
+			requested_target = kind.value();
 		}
 
 		if (target_holder.has_value()) {
@@ -104,7 +108,7 @@ namespace compiler::helios {
 					));
 					query::throwFailed();
 				}
-				target_name = identifier.value()->getName().unlock(ctx)->unwrap();
+				requested_target = identifier.value()->getName().unlock(ctx)->unwrap();
 			} else if (auto keyword
 			           = target_expr.template dynamicCast<pst::expr::KeywordLiteral>()) {
 				if (keyword.value()->getTemplateSpecifier().has_value()) {
@@ -116,15 +120,15 @@ namespace compiler::helios {
 					));
 					query::throwFailed();
 				}
-				selection.kind
-					= controlFlowKind(keyword.value()->getKeyword().unlock(ctx)->unwrap());
-				if (!selection.kind.has_value()) {
+				auto kind = controlFlowKind(keyword.value()->getKeyword().unlock(ctx)->unwrap());
+				if (!kind.has_value()) {
 					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat("`", action_name, "` target must be a block kind or a name."),
 						target_position
 					));
 					query::throwFailed();
 				}
+				requested_target = kind.value();
 			} else {
 				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat("`", action_name, "` target must be a block kind or a name."),
@@ -134,7 +138,9 @@ namespace compiler::helios {
 			}
 		}
 
-		auto ancestor = getPSTElementParent(ctx, stmt);
+		const auto* target_name = std::get_if<base::StrID>(&requested_target);
+		const auto* target_kind = std::get_if<code::ControlFlowKind>(&requested_target);
+		auto        ancestor    = getPSTElementParent(ctx, stmt);
 		while (ancestor.isLangElement()) {
 			auto element                   = ancestor.getAsLangElement().unlock(ctx);
 			bool crossed_callable_boundary = false;
@@ -154,33 +160,35 @@ namespace compiler::helios {
 			auto candidate_kind = controlFlowKind(element->getElementKind());
 			if (candidate_kind.has_value()) {
 				auto ancestor_stmt = element.template dynamicCast<pst::Stmt>().value();
-				if (target_name.has_value()) {
+				if (target_name != nullptr) {
 					auto identifier = ancestor_stmt->getDeclSymbolIdentifier();
 					if (!identifier.has_value()
-					    || identifier.value().unlock(ctx)->unwrap() != target_name.value()) {
+					    || identifier.value().unlock(ctx)->unwrap() != *target_name) {
 						ancestor = getPSTElementParent(ctx, element);
 						continue;
 					}
-				} else if (selection.kind.has_value() && candidate_kind != selection.kind) {
+				} else if (target_kind != nullptr && candidate_kind.value() != *target_kind) {
 					ancestor = getPSTElementParent(ctx, element);
 					continue;
 				}
 
 				// Without an explicit name or kind, break and continue target the nearest loop.
-				if (!target_name.has_value() && !selection.kind.has_value()
+				if (target_name == nullptr && target_kind == nullptr
 				    && candidate_kind != code::ControlFlowKind::While
 				    && candidate_kind != code::ControlFlowKind::For) {
 					ancestor = getPSTElementParent(ctx, element);
 					continue;
 				}
-				if (target_name.has_value()) {
-					selection.id = ctx.query<QuerySymbolOfSTMT>(ancestor_stmt).valueOrThrow();
+				if (target_name != nullptr) {
+					auto id = ctx.query<QuerySymbolOfSTMT>(ancestor_stmt).valueOrThrow();
 					CORE_ASSERT(
-						kind(selection.id.value()) == SymbolKind::NamedCodeElement,
+						kind(id) == SymbolKind::NamedCodeElement,
 						"Named control-flow PST element must create a NamedCodeElement symbol."
 					);
+					return code::NamedTarget{ id };
 				}
-				return selection;
+				if (target_kind != nullptr) return code::KindTarget{ *target_kind };
+				return code::NearestLoop{};
 			}
 			ancestor = getPSTElementParent(ctx, element);
 		}
@@ -577,12 +585,12 @@ namespace compiler::helios {
 
 		void visitContinue(pst::Access<pst::Continue> stmt) override {
 			auto target = getControlFlowTarget(ctx, stmt, "continue");
-			output(code::ContinueStmt(code::pstOrigin(stmt), target.id, target.kind));
+			output(code::ContinueStmt(code::pstOrigin(stmt), target));
 		}
 
 		void visitBreak(pst::Access<pst::Break> stmt) override {
 			auto target = getControlFlowTarget(ctx, stmt, "break");
-			output(code::BreakStmt(code::pstOrigin(stmt), target.id, target.kind));
+			output(code::BreakStmt(code::pstOrigin(stmt), target));
 		}
 
 		void visitRedo(pst::Access<pst::Redo> stmt) override {

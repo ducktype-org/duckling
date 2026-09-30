@@ -113,26 +113,24 @@ private:
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
-		bool  saw_true     = false;
-		bool  saw_false    = false;
-		usize branch_count = 0;
-		for (const auto& block: foo_lir->block_order) {
-			const auto& terminator = block->terminator;
-			if (terminator.operation != lir::Operation::Branch) continue;
+		// The two `if`s are the only branches of the function. They are looked up by their
+		// terminator rather than by block index, because the number of blocks between them
+		// depends on how many edges the destructor pass had to split.
+		std::vector<CRef<compiler::lir::Instruction>> branches;
+		for (const auto& block: foo_lir->block_order)
+			if (block->terminator.operation == compiler::lir::Operation::Branch)
+				branches.emplace_back(&block->terminator);
 
-			const auto& condition = terminator.arguments.at(0);
-			ASSERT_TRUE(condition.is<lir::LIRConstant>());
-			auto value = condition.get<lir::LIRConstant>().value.get<bool>();
-			ASSERT_TRUE(value.has_value());
-			if (value.value())
-				saw_true = true;
-			else
-				saw_false = true;
-			branch_count++;
-		}
-		ASSERT_EQUAL(2u, branch_count);
-		ASSERT_TRUE(saw_true);
-		ASSERT_TRUE(saw_false);
+		ASSERT_EQUAL_PRINT(2, branches.size());
+
+		auto true_lir_value  = branches.at(0)->arguments.at(0);
+		auto false_lir_value = branches.at(1)->arguments.at(0);
+
+		auto true_lir_constant  = true_lir_value.get<compiler::lir::LIRConstant>().value;
+		auto false_lir_constant = false_lir_value.get<compiler::lir::LIRConstant>().value;
+
+		ASSERT_EQUAL(true_lir_constant.get<bool>(), true);
+		ASSERT_EQUAL(false_lir_constant.get<bool>(), false);
 	}
 
 	void functionParametersTest() {
