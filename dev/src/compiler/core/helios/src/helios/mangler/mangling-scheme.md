@@ -8,6 +8,9 @@ either in the scheme or it's implementation, they should be reflected here.
 <mangled-symbol-name> ::= <language-prefix> <scheme-version> <encoding> <opt-metadata>
                         | <no-mangling>                     // C linkage (builtins, extern C, special e.g. main)
 
+// <no-mangling> is the plain declared name, except for an extern("C") symbol carrying
+// `@c_symbol_name("<name>")`, which links under <name> instead.
+
 // note: global identifiers starting with underscore and a capital letter are reserved in C
 // Q seems to be free and stands for both query and quack
 <language-prefix> ::= "_Q"
