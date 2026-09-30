@@ -2,7 +2,8 @@
 
 #include <fstream>
 
-#define PROMPT_TEMPLATE "\x1b[1;32mBeRD\x1b[0m {} \x1b[1m>>>\x1b[0m "
+#define PROMPT_TEMPLATE     "\x1b[1;32mBeRD\x1b[0m {} \x1b[1m>>>\x1b[0m "
+#define END_PROMPT_TEMPLATE "\x1b[1;32mBeRD\x1b[0m {}"
 
 namespace {
 	std::string strip(std::string& string) {
@@ -27,15 +28,17 @@ namespace {
 	 *
 	 * It make sense to keep it in cwd so it's created per project.
 	 */
-	static const std::string history_file_path{ "./duckling_debugger_history" };
+	static const std::string HISTORY_FILE_PATH{ "./duckling_debugger_history" };
 }
 
 namespace vm::debugger::cli {
+	using Replxx = replxx::Replxx;
+
 	void CLIDebugger::mainLoop(clah::Clah& clah) {
 		spec.replxx.install_window_change_handler();
 
 		/* scope for ifstream object for auto-close */ {
-			std::ifstream history_file(history_file_path);
+			std::ifstream history_file(HISTORY_FILE_PATH);
 			spec.replxx.history_load(history_file);
 		}
 
@@ -53,22 +56,6 @@ namespace vm::debugger::cli {
 		spec.replxx.bind_key_internal(Replxx::KEY::PAGE_DOWN, "history_last");
 		spec.replxx.bind_key_internal(Replxx::KEY::HOME, "move_cursor_to_begining_of_line");
 		spec.replxx.bind_key_internal(Replxx::KEY::END, "move_cursor_to_end_of_line");
-
-		auto getline = [&](std::string& line) {
-			const char* cinput{ nullptr };
-
-			spec.is_prompt_active = true;
-			do {
-				cinput = spec.replxx.input(spec.current_line + spec.current_prompt);
-			} while ((cinput == nullptr) && (errno == EAGAIN));
-			spec.is_prompt_active = false;
-			if (cinput == nullptr) return false;
-
-			line = cinput;
-
-			spec.replxx.history_add(line);
-			return true;
-		};
 
 		printNL(
 			"\x1b[1mWelcome to \x1b[32mBeRD\x1b[0;1m - an interactive in-DVM debugger!\x1b[0m (now "
@@ -112,14 +99,34 @@ namespace vm::debugger::cli {
 		debugger.attachOnErrorListener(error_listener);
 		debugger.attachOnOutputListener(output_listener);
 
+		auto getline = [&](std::string& line) {
+			const char* cinput{ nullptr };
+
+			spec.is_prompt_active = true;
+
+			do cinput = spec.replxx.input(spec.current_line + spec.current_prompt);
+			while ((cinput == nullptr) && (errno == EAGAIN));
+
+			spec.is_prompt_active = false;
+			if (cinput == nullptr) return false;
+
+			line = cinput;
+
+			spec.replxx.history_add(line);
+			return true;
+		};
+
 		for (std::string line; spec.running && getline(line); clah.execute(strip(line)));
+
+		if (spec.running) printNL("exit");
+		spec.running = false;
 
 		status_change_listener.detach();
 
 		printNL("Exiting debugger.");
 		spec.replxx.invoke(Replxx::ACTION::CLEAR_SELF, 0);
 
-		spec.replxx.history_sync(history_file_path);
+		spec.replxx.history_sync(HISTORY_FILE_PATH);
 		spec.replxx.disable_bracketed_paste();
 	}
 
@@ -140,6 +147,8 @@ namespace vm::debugger::cli {
 		if (std::size_t pos = spec.current_line.find_last_of('\n'); pos != std::string::npos)
 			spec.current_line = spec.current_line.substr(pos + 1);
 
+		// we call Replxx::print which is apparently c-style
+		// NOLINTBEGIN(cppcoreguidelines-pro-type-vararg)
 		if (spec.is_prompt_active) {
 			spec.replxx.invoke(Replxx::ACTION::CLEAR_SELF, 0);
 			spec.replxx.print(before_content.c_str());
@@ -149,5 +158,6 @@ namespace vm::debugger::cli {
 		} else {
 			spec.replxx.print(content_string.c_str());
 		}
+		// NOLINTEND(cppcoreguidelines-pro-type-vararg)
 	}
 }

@@ -24,7 +24,7 @@ namespace vm::debugger::cli {
 	 */
 	class CLIDebugger {
 	public:
-		CLIDebugger();
+		CLIDebugger()                              = default;
 		CLIDebugger(const CLIDebugger&)            = delete;
 		CLIDebugger& operator=(const CLIDebugger&) = delete;
 		CLIDebugger(CLIDebugger&&)                 = delete;

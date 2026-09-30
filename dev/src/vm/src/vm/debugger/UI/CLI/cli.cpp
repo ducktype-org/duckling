@@ -17,10 +17,6 @@ namespace {
 }
 
 namespace vm::debugger::cli {
-	namespace idv = interpreted_data_variant;
-
-	CLIDebugger::CLIDebugger() {}
-
 	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
 		auto response = debugger.loadFiles({ file });
 		if (!response) return std::unexpected(response.error());
