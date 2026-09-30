@@ -180,7 +180,7 @@ namespace vm {
 
 		// Argument validity was already checked when validating the API call.
 		for (const auto& [i, arg_value]: std::views::enumerate(func_args)) {
-			const auto& arg_type = func.parameters[i];
+			const auto& arg_type = func.parameters[static_cast<u64>(i)];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
 				initFromVMValue,
