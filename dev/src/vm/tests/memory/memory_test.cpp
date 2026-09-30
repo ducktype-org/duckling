@@ -96,7 +96,11 @@ private:
 	/// Freeing an interior pointer would free the whole allocation behind it.
 	void freeingAStructFieldIsRefused() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("free_struct_field.dbc"),
+			runTestOnVmGetResult("free_struct_field.dbc", "0"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_struct_field.dbc", "1"),
 			vm::exceptions::VMInvalidFreeException::ERR_MSG
 		);
 	}

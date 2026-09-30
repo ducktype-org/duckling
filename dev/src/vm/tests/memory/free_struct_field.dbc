@@ -9,7 +9,21 @@ function main { i64, ptr_argv } -> { i64 } {
     alloc_pptr_type p, Foo;
 
     init_pany_type field_ptr, ptr_i64;
+
+    init_pany_type case, i64;
+    input_p64 case; # 0 for a, 1 for b
+    cmp_pany_imm case, 0;
+    jmpIf_label a;
+    jmp_label b;
+
+    ### SCENARIOS
+    label a;
+    structLea_pptr_pptr_field field_ptr, p, Foo.a;
+    jmp_label end;
+    label b;
     structLea_pptr_pptr_field field_ptr, p, Foo.b;
+    label end;
+    ### END SCENARIOS
 
     # Freeing an interior pointer would free the whole allocation.
     free_pptr field_ptr;

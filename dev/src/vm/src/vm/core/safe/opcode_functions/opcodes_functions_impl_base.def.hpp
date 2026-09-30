@@ -895,10 +895,14 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr_type)(FUNCTION_ARGS) {
 		{
-			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0))
+			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
+				const auto expected_type = READ_FROM_PLACE_ARG(TypeCRef, instr->arg1);
+				if (thread.process_memory.getBlockType(ptr.getBlock()) != expected_type)
+					throw exceptions::VMInvalidFreeException();
 				thread.process_memory.guardedFreeBlockData(ptr);
+			}
 		}
 		FUNCTION_CONT(1);
 	}
