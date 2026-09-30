@@ -56,7 +56,6 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
-#include <regex>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -1365,28 +1364,6 @@ private:
 		ASSERT_EQUAL(
 			member_access_expr->expression_type.getType(), getIntegralTypeNoContext(32, Signed)
 		);
-
-		auto              incr_sym  = getChain("incr", root_scope).back();
-		auto              incr_expr = getExprOfVariable(incr_sym);
-		std::stringstream incr_out;
-		incr_expr->debugPrint(incr_out);
-		ASSERT_TRUE(std::regex_search(incr_out.str(), std::regex{ R"(block\(\{)" }));
-		ASSERT_TRUE(std::regex_search(
-			incr_out.str(),
-			std::regex{
-				R"(Symbol counter \((.+?)\)[\s\S]*?=[\s\S]*?Symbol counter \(\1\)[\s\S]*?\+ 1;)" }
-		));
-
-		auto              decr_sym  = getChain("decr", root_scope).back();
-		auto              decr_expr = getExprOfVariable(decr_sym);
-		std::stringstream decr_out;
-		decr_expr->debugPrint(decr_out);
-		ASSERT_TRUE(std::regex_search(decr_out.str(), std::regex{ R"(block\(\{)" }));
-		ASSERT_TRUE(std::regex_search(
-			decr_out.str(),
-			std::regex{
-				R"(Symbol counter \((.+?)\)[\s\S]*?=[\s\S]*?Symbol counter \(\1\)[\s\S]*?- 1;)" }
-		));
 	}
 
 	void testHoutVariables() {

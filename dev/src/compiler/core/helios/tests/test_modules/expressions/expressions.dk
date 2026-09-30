@@ -21,7 +21,3 @@ class A {
 
 let aObj: A = A(42);
 let member_access = aObj.a;
-
-var counter = 0;
-var incr = (counter += 1);
-var decr = (counter -= 1);

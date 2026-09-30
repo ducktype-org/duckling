@@ -273,7 +273,6 @@ namespace compiler::helios::code {
 		// Step 1. — special path for numeric promotions
 		if (lhs_type.getType().isNumeric() && rhs_type.getType().isNumeric()
 		    && isNumericOperator(op)) {
-			// TODO: remove clones
 			auto numeric_builtin_opt = findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
 
 			if_opt_some(numeric_builtin_opt, numeric_builtin) {
@@ -423,11 +422,11 @@ namespace compiler::helios::code {
 						.name = name,
 						.generated_symbol_data
 						= defgen::BuiltinOperator{
-							ctx.query<tsh::QueryFunctionType>({
+							.operator_type=ctx.query<tsh::QueryFunctionType>({
 								.parameter_types = std::move(param_types),
 								.result_type     = return_type,
 							}),
-							operatoriness,
+							.operatoriness=operatoriness,
 						},
 					}),
 					.op     = [&]() -> RegularBuiltinOperator::HOUTRepresentation {

@@ -227,7 +227,7 @@ namespace compiler::helios {
                 op_rhs->clone(),
                 ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
             );
-			// TODO: Improve dia
+			// @TODO: #3697 Improve dia
 			auto coerced_value = coerceFromBox(
 									 ctx,
 									 std::move(value),
