@@ -9,31 +9,22 @@ namespace vm::debugger::cli::common {
 	}
 
 	std::vector<std::string> extractPrimitiveValues(const vm::api::ProcStatus& status) {
-		std::vector<std::string> values;
-
-		if (v_matches(status, vm::api::ExecutionCompleted)) {
-			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
-
-			// TODO: use variant match case
-			if (v_matches(exit_value, std::vector<Ref<vm::IVMValue>>)) {
-				for (auto val: std::get<std::vector<Ref<vm::IVMValue>>>(exit_value)) {
-					if_opt_some(val->readData(), data) {
-						variant_match(data) {
-							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-								values.push_back(std::to_string(primitive.value));
-							}
-						}
-					}
+		v_if_matches(status, vm::api::ExecutionCompleted, execution_completed) {
+			variant_match(execution_completed->exit_value) {
+				variant_case(i64, val) return { std::to_string(val) };
+				variant_case(std::vector<Ref<vm::IVMValue>>, vmvals) {
+					std::vector<std::string> values;
+					for (auto vmval: vmvals)
+						if_opt_some(vmval->readData(), data)
+							v_if_matches(data, vm::interpreted_data_variant::Primitive, primitive)
+								values.push_back(std::to_string(primitive->value));
+					return values;
 				}
-			}
-
-			if (v_matches(exit_value, i64)) {
-				auto val = std::get<i64>(exit_value);
-				values.push_back(std::to_string(val));
+				variant_default std::unreachable();
 			}
 		}
 
-		return values;
+		return {};
 	}
 
 	std::string statusLine(const vm::api::ProcStatus& status) {

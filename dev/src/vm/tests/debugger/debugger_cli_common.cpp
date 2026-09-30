@@ -2,7 +2,6 @@
 
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
-// #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/debugger/UI/CLI/common.hpp>
 
 class VmDebuggerCliCommonTest: public tester::TestSuite {
