@@ -9,7 +9,7 @@ extern("C") {
         @c_symbol_name("in") fundecl c_in(a: i64) -> i64;
     }
 
-    # Two Duckling names may link to the same C symbol.
+    # Two Duckling names may link to the same C symbol, as long as both have the same signature.
     @c_symbol_name("match") fundecl match_again(a: i64) -> i64;
 }
 

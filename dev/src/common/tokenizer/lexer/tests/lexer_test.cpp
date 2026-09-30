@@ -136,17 +136,20 @@ private:
 	}
 
 	/**
-	 * @brief A string whose text is a keyword or a special (`"match"`, `";"`) must not be
+	 * @brief A string or char whose text is a keyword or a special (`"match"`, `';'`) must not be
 	 * recognised as one, or the parser reads `return "match";` as a `match` expression.
 	 */
 	void testLiteralTextIsNotKeyword() {
-		const auto& strings = td->getTokenData().tokens[7].getRecursive();
-		for (const auto& token: strings) {
-			assertTrue(
-				not token.is(lang_def::Keyword::Match) and not token.is(lang_def::Keyword::If)
-					and not token.is(lang_def::Special::Semicolon),
-				base::strConcat("String `", token.getStrValue(), "` is read as a keyword/special")
-			);
+		for (usize group: { 7UZ, 8UZ }) {
+			for (const auto& token: td->getTokenData().tokens[group].getRecursive()) {
+				assertTrue(
+					not token.is(lang_def::Keyword::Match) and not token.is(lang_def::Keyword::If)
+						and not token.is(lang_def::Special::Semicolon),
+					base::strConcat(
+						"Literal `", token.getStrValue(), "` is read as a keyword/special"
+					)
+				);
+			}
 		}
 
 		const auto& keywords = td->getTokenData().tokens[1].getRecursive();

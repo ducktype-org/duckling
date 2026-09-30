@@ -754,17 +754,22 @@ private:
 		ASSERT_EQUAL_PRINT(called.at(1), base::StrID("in"));
 		ASSERT_EQUAL_PRINT(called.at(2), base::StrID("plain_c"));
 
-		std::vector<std::pair<std::string_view, helios::SymID>> invalid_declarations;
-		for (auto name: { "notExternC", "dvmDecl" })
-			invalid_declarations.emplace_back(name, getChain(name, module.scope).back());
-
-		withContextDo([&](query::Context& ctx) {
-			for (const auto& [name, symbol]: invalid_declarations)
-				assertTrue(
-					ctx.query<helios::QuerySymbolABI>(symbol)->hasFailed(),
-					base::strConcat("Expected the ABI query to fail for `", name, "`")
-				);
-		});
+		// On a declaration that is not `extern("C")` the attribute is ignored.
+		std::vector<base::StrID> ignored_called;
+		for (const auto& block: module.lirFunc("ignored_caller")->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+				ignored_called.push_back(instr.arguments.at(0).get<FunctionLiteral>().mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(ignored_called.size(), 2);
+		assertTrue(
+			ignored_called.at(0).strView().starts_with("_Q"),
+			base::strConcat(
+				"Expected `notExternC` to be mangled, got `", ignored_called.at(0).str(), "`"
+			)
+		);
+		ASSERT_EQUAL_PRINT(ignored_called.at(1), base::StrID("dvmDecl"));
 	}
 
 	void debugPrintStandaloneElements() {

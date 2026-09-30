@@ -132,8 +132,9 @@ namespace compiler::helios {
 				query::throwFailed();
 			}
 
-			// The name is written to the object file and to the `.dbc` as-is, so it has to be
-			// something both a C compiler and the `.dbc` lexer accept.
+			// The name is written to the object file and to the `.dbc` as-is, so it must be a C
+			// identifier. Only that syntax is checked: a C name that is a `.dbc` keyword (e.g.
+			// `variant`) still links with LLVM but is rejected by the DVM backend.
 			auto name = str_lit.value()->getValue().value;
 			if (not isCIdentifier(name.strView())) {
 				ctx.logInt(makeBox<dia::PlaceholderError>(

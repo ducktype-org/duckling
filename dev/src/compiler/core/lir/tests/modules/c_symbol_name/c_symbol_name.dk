@@ -14,9 +14,13 @@ fun caller() -> i64 = {
     return c_match(1i64) + inner::c_in(2i64) + plain_c(3i64);
 }
 
-# Invalid declarations: only an extern("C") symbol links under a plain name.
+# The attribute only applies to extern("C"): here it is ignored and the usual name is linked.
 @c_symbol_name("not_extern") fundecl notExternC(a: i64) -> i64;
 
 extern("DVM") {
     @c_symbol_name("dvm_decl") fundecl dvmDecl(a: i64) -> i64;
+}
+
+fun ignored_caller() -> i64 = {
+    return notExternC(1i64) + dvmDecl(2i64);
 }
