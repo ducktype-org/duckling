@@ -7,13 +7,13 @@ namespace vm::debugger::cli {
 	namespace impl {
 		struct ImplementationSpecific {
 			std::mutex output_mutex;
-			bool       running;
+			bool       running = false;
 		};
 	}
 
 	CLIDebugger::CLIDebugger(): spec(new impl::ImplementationSpecific()) {}
 
-	CLIDebugger::~CLIDebugger() {}
+	CLIDebugger::~CLIDebugger() = default;
 
 	void CLIDebugger::mainLoop(clah::Clah& clah) {
 		events::Listener<api::ProcStatus> status_change_listener([&](const api::ProcStatus& status) {
