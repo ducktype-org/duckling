@@ -35,11 +35,11 @@ namespace compiler::mir {
 		);
 
 		StmtLowerRes lowerCodeBlockWithControlFlowTargets(
-			const hc::CodeBlock& code_block,
-			BlockBuilderRef      continuation,
-			FunctionBuilder&     function,
-			ScopeRef             parent_scope,
-			ControlFlowTargets   targets
+			const hc::CodeBlock&      code_block,
+			BlockBuilderRef           continuation,
+			FunctionBuilder&          function,
+			ScopeRef                  parent_scope,
+			const ControlFlowTargets& targets
 		);
 	}
 
@@ -505,7 +505,7 @@ namespace compiler::mir {
 			}
 
 			auto block_body = lowerCodeBlockWithControlFlowTargets(
-				stmt.body, body_continuation, function, block_scope, std::move(body_targets)
+				stmt.body, body_continuation, function, block_scope, body_targets
 			);
 			if (entry.has_value()) {
 				entry.value()->setTerminator(
@@ -538,11 +538,11 @@ namespace compiler::mir {
 		}
 
 		StmtLowerRes lowerCodeBlockWithControlFlowTargets(
-			const hc::CodeBlock& code_block,
-			BlockBuilderRef      continuation,
-			FunctionBuilder&     function,
-			ScopeRef             parent_scope,
-			ControlFlowTargets   targets
+			const hc::CodeBlock&      code_block,
+			BlockBuilderRef           continuation,
+			FunctionBuilder&          function,
+			ScopeRef                  parent_scope,
+			const ControlFlowTargets& targets
 		) {
 			StmtLowerRes last_result{ continuation };
 

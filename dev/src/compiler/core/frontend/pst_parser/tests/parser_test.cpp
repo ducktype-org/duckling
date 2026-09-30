@@ -193,14 +193,14 @@ private:
 			bool              is_break;
 		};
 
-		constexpr std::array cases = {
-			Case{ "break while;", lang_def::Keyword::While, true },
-			Case{ "break for;", lang_def::Keyword::For, true },
-			Case{ "continue if;", lang_def::Keyword::If, false },
-			Case{ "continue block;", lang_def::Keyword::Block, false },
+		constexpr std::array CASES = {
+			Case{ .code = "break while;", .target = lang_def::Keyword::While, .is_break = true },
+			Case{ .code = "break for;", .target = lang_def::Keyword::For, .is_break = true },
+			Case{ .code = "continue if;", .target = lang_def::Keyword::If, .is_break = false },
+			Case{ .code = "continue block;", .target = lang_def::Keyword::Block, .is_break = false },
 		};
 
-		for (const auto& test_case: cases) {
+		for (const auto& test_case: CASES) {
 			auto parsed = pst::PST<>::fromContents(test_case.code, pst::PSTType::Program);
 			assertTrue(
 				parsed.getLogger()->good(), base::strConcat("Failed to parse ", test_case.code)

@@ -124,7 +124,7 @@ private:
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			ASSERT_EQUAL(6u, unit.functions.size());
 
-			auto getJumpTarget
+			auto get_jump_target
 				= [this](const compiler::mir::Function& function, std::string_view block_name) {
 					  base::Optional<BlockID> result;
 					  for (auto id: function.block_order) {
@@ -142,14 +142,14 @@ private:
 
 			for (usize i = 0; i < unit.functions.size(); i++) {
 				auto function     = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
-				auto break_target = getJumpTarget(function, "break");
+				auto break_target = get_jump_target(function, "break");
 				ASSERT_HAS_VALUE(function.blocks[break_target].debug_name);
 				ASSERT_EQUAL(
 					base::StrID("return"), function.blocks[break_target].debug_name.value()
 				);
 
 				if (i != 1) continue;
-				auto        continue_target = getJumpTarget(function, "continue");
+				auto        continue_target = get_jump_target(function, "continue");
 				const auto& latch           = function.blocks[continue_target];
 				ASSERT_HAS_VALUE(latch.debug_name);
 				ASSERT_EQUAL(base::StrID("while.body.end"), latch.debug_name.value());
@@ -201,7 +201,7 @@ private:
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			ASSERT_EQUAL(5u, unit.functions.size());
 
-			auto jumpTargets
+			auto jump_targets
 				= [this](const compiler::mir::Function& function, std::string_view block_name) {
 					  std::vector<BlockID> result;
 					  for (auto id: function.block_order) {
@@ -217,7 +217,7 @@ private:
 
 			for (usize i = 0; i < unit.functions.size(); i++) {
 				auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
-				auto targets  = jumpTargets(function, i == 2 ? "break" : "continue");
+				auto targets  = jump_targets(function, i == 2 ? "break" : "continue");
 				ASSERT_EQUAL(i == 1 || i == 3 ? 2u : 1u, targets.size());
 				base::StrID expected_name = [&] {
 					switch (i) {
