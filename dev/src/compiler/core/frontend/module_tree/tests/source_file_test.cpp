@@ -1,6 +1,8 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
+#include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/source_file.hpp>
 
 #include <base/config/build_type.hpp>

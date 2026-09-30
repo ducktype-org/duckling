@@ -421,12 +421,12 @@ namespace compiler::driver {
 				// Empty input should still produce a valid synthetic script main wrapper with
 				// no statement calls.
 				auto empty_script_module
-					= repl::createEphemeralChainedStatementModule("", {}, 0, "script_");
+					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_");
 				parent_module_id = empty_script_module->getModuleID();
 			}
 
 			for (const auto& statement_source: *split_result) {
-				auto module_ref = repl::createEphemeralChainedStatementModule(
+				auto module_ref = repl::createSyntheticChainedStatementModule(
 					statement_source, parent_module_id, statement_counter, "script_"
 				);
 				auto module_id   = module_ref->getModuleID();
