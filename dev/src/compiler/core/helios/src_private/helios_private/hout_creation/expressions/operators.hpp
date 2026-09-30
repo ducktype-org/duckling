@@ -23,27 +23,8 @@ namespace compiler::helios::code {
 	 * call to language primitive.
 	 */
 	enum class PreDesugarOperator {
-		IntegerPlusEq,
-		IntegerMinusEq,
-		IntegerMultiplyEq,
-		IntegerDivideEq,
-		IntegerRemainderEq,
-		IntegerExponentiateEq,
-
-		FloatPlusEq,
-		FloatMinusEq,
-		FloatMultiplyEq,
-		FloatDivideEq,
-		FloatExponentiateEq,
-
 		IntegerPow,
 		FloatPow,
-
-		BitwiseAndEq,
-		BitwiseOrEq,
-		BitwiseXorEq,
-		BitwiseLeftShiftEq,
-		BitwiseRightShiftEq,
 	};
 	using BuiltinOperation = std::variant<BuiltinBinary, PreDesugarOperator>;
 
