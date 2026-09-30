@@ -9,7 +9,8 @@ namespace compiler::frontend {
 	 * Represents a single node in the synthetic REPL chain.
 	 * Only used for repl modules.
 	 *
-	 * @note: Parent of this module is either the REPL module higher in the chain or the script module itself.
+	 * @note: Parent of this module is either the REPL module higher in the chain or the script
+	 * module itself.
 	 */
 	class SyntheticReplChainModuleTreeNode final: public ModuleTree {
 		/**
@@ -35,18 +36,13 @@ namespace compiler::frontend {
 
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override {
 			std::vector<base::Ref<ModuleTree>> children;
-			if (m_repl_module_child.has_value()) {
-				children.emplace_back(m_repl_module_child.value());
-			}
+			if (m_repl_module_child.has_value()) children.emplace_back(m_repl_module_child.value());
 			return children;
 		}
 
 
 	public:
-		explicit SyntheticReplChainModuleTreeNode():
-			  ModuleTree() {
-			kind = ModuleKind::ReplChain;
-		}
+		explicit SyntheticReplChainModuleTreeNode(): ModuleTree() { kind = ModuleKind::ReplChain; }
 
 		[[nodiscard]]
 		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const {

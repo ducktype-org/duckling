@@ -128,7 +128,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Accesses the submodules located in this module.
-		 * 
+		 *
 		 * @note Only valid for modules that can have submodules (i.e., not REPL or script modules).
 		 * @note Use this only if you need all submodules. For single submodule access, use
 		 * getSubmoduleByName().
@@ -253,20 +253,28 @@ namespace compiler::frontend {
 		 * @return nullptr for module types that have no main source file (scripts).
 		 */
 		[[nodiscard]]
-		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() { return nullptr; }
+		virtual MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() {
+			return nullptr;
+		}
 
 		[[nodiscard]]
-		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const { return nullptr; }
+		virtual MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const {
+			return nullptr;
+		}
 
 		/**
 		 * @brief Access the submodules of this module.
 		 * @return nullptr for module types that cannot have submodules.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() { return nullptr; }
+		virtual MRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() {
+			return nullptr;
+		}
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const { return nullptr; }
+		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const {
+			return nullptr;
+		}
 
 		/**
 		 * @brief Collects all child modules of this module.
@@ -274,8 +282,8 @@ namespace compiler::frontend {
 		 *
 		 * @important Submodules and child modules are not the same thing.
 		 * Submodules reflect the high-level Duckling module structure,
-		 * whereas child modules include all modules that are direct children in the module tree structure
-		 * (i.e. whose parent is this module).
+		 * whereas child modules include all modules that are direct children in the module tree
+		 * structure (i.e. whose parent is this module).
 		 */
 		[[nodiscard]]
 		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const;
@@ -285,10 +293,14 @@ namespace compiler::frontend {
 		 * @return nullptr for module types that cannot have other files.
 		 */
 		[[nodiscard]]
-		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() { return nullptr; }
+		virtual MRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() {
+			return nullptr;
+		}
 
 		[[nodiscard]]
-		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const { return nullptr; }
+		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const {
+			return nullptr;
+		}
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes

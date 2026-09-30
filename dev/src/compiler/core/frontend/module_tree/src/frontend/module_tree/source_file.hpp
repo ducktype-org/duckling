@@ -45,7 +45,7 @@ namespace compiler::frontend {
 		 * Key to support removal from static storage.
 		 */
 		base::Optional<usize> storage_handle;
-		
+
 		/**
 		 * this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		 */
@@ -53,11 +53,10 @@ namespace compiler::frontend {
 
 		/**
 		 * Logical path hash for this file (module path + file name)
-		 * @important Any functions that actually modifies it like invalidateComponentHash should not be
-		 * marked const
+		 * @important Any functions that actually modifies it like invalidateComponentHash should
+		 * not be marked const
 		 */
-		mutable base::Optional<hashing::ComponentHash>
-			component_hash;  
+		mutable base::Optional<hashing::ComponentHash> component_hash;
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
 		 * @param file The file system file.

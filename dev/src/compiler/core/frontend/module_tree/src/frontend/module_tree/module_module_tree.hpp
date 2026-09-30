@@ -50,15 +50,12 @@ namespace compiler::frontend {
 
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override {
 			std::vector<base::Ref<ModuleTree>> children;
-			for (auto& [_, submodule] : m_submodules) {
-				children.push_back(submodule);
-			}
+			for (auto& [_, submodule]: m_submodules) children.push_back(submodule);
 			return children;
 		}
 
 	public:
 		ModuleModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }
-
 
 		SubmodulesAccessLocked getSubmodules() const override {
 			std::vector<ModuleAccessLocked> submodules;

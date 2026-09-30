@@ -183,7 +183,6 @@ namespace compiler::frontend {
 		return builder;
 	}
 
-
 	bool ModuleTreeBuilder::isFinalized() const { return m_finalized; }
 
 	void ModuleTreeBuilder::setKind(ModuleKind kind) {
@@ -216,7 +215,10 @@ namespace compiler::frontend {
 			!m_submodules.contains(submodule->getName()),
 			"Submodule with the same name already added"
 		);
-		CORE_ASSERT(kind.has_value() and kind.value() == ModuleKind::Module, "Submodules can only be added to standard modules");
+		CORE_ASSERT(
+			kind.has_value() and kind.value() == ModuleKind::Module,
+			"Submodules can only be added to standard modules"
+		);
 		m_submodules.put(submodule->getName(), submodule);
 	}
 
@@ -239,7 +241,10 @@ namespace compiler::frontend {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(!m_repl_module_parent.has_value(), "REPL module already set for this builder");
 
-		CORE_ASSERT(kind.has_value() and kind.value() == ModuleKind::ReplChain, "Module kind must be set before marking as REPL module");
+		CORE_ASSERT(
+			kind.has_value() and kind.value() == ModuleKind::ReplChain,
+			"Module kind must be set before marking as REPL module"
+		);
 
 		m_repl_module_parent = repl_module_parent;
 	}
@@ -253,14 +258,14 @@ namespace compiler::frontend {
 		// The contents and source file of the module is created below.
 		auto create_node = [&]() -> Box<ModuleTree> {
 			switch (kind.value()) {
-				case ModuleKind::Module:
-					return makeBox<ModuleModuleTreeNode>();
-				case ModuleKind::Script:
-					return makeBox<ScriptModuleTreeNode>();
-				case ModuleKind::ReplChain:
-					return makeBox<SyntheticReplChainModuleTreeNode>();
-				default:
-					CORE_ASSERT(false, "Unknown module kind");
+			case ModuleKind::Module:
+				return makeBox<ModuleModuleTreeNode>();
+			case ModuleKind::Script:
+				return makeBox<ScriptModuleTreeNode>();
+			case ModuleKind::ReplChain:
+				return makeBox<SyntheticReplChainModuleTreeNode>();
+			default:
+				CORE_ASSERT(false, "Unknown module kind");
 			}
 		};
 
@@ -268,11 +273,13 @@ namespace compiler::frontend {
 		ModuleID        mod_id(module_ref);
 
 		CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
-		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set before finalizing the module tree");
+		CORE_ASSERT(
+			m_package_id.isGood(), "Package ID must be set before finalizing the module tree"
+		);
 		CORE_ASSERT(module_ref->getKind() == kind.value(), "Module kind mismatch");
 
-		module_ref->m_id   = mod_id;
-		module_ref->m_name = m_name;
+		module_ref->m_id         = mod_id;
+		module_ref->m_name       = m_name;
 		module_ref->m_package_id = m_package_id;
 
 		if (auto other_files = module_ref->otherFilesSlot(); other_files != nullptr)

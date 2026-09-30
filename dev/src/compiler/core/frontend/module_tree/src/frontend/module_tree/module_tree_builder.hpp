@@ -160,7 +160,7 @@ namespace compiler::frontend {
 		 */
 		void handleNewFile(const fs::File& file);
 
-		base::Optional<ModuleKind> kind;
+		base::Optional<ModuleKind>                        kind;
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
 		base::StrID                                       m_package_id;

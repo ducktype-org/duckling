@@ -79,7 +79,6 @@ namespace compiler::frontend {
 		return {};
 	}
 
-
 	bool ModuleTree::hasMainSourceFile() const {
 		auto slot = mainSourceFileSlot();
 		return slot != nullptr && slot->has_value();
@@ -403,7 +402,7 @@ namespace compiler::frontend {
 	struct IMPLEMENT_QUERY(QueryReplModuleParent, base::Optional<ModuleID>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: #1389 verify Functor correctness.
-			
+
 			auto module_tree = GetModuleID_Functor::get(key);
 			if (!module_tree->isReplModule()) return {};
 			auto repl_parent = module_tree->getReplModuleParent();

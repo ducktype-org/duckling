@@ -1,8 +1,8 @@
 #include "module_tree_modifier.hpp"
 
 #include "module_flags/module_flags.hpp"
-#include "module_tree.hpp"
 #include "module_module_tree.hpp"
+#include "module_tree.hpp"
 #include "script_module_tree.hpp"
 #include "source_file.hpp"
 
@@ -289,15 +289,14 @@ namespace compiler::frontend {
 
 		} else if (module->getKind() == ModuleKind::Script) {
 			CORE_PANIC("NOT YET IMPLEMENTED FOR SCRIPT MODULES");
-		}
-		else {
+		} else {
 			CORE_UNREACHABLE();
 		}
 
 
-		
 		// Remove the source files of the module. This will invalidate the SourceFile instances!
-		if (auto source_file = module->mainSourceFileSlot(); source_file != nullptr and source_file->has_value())
+		if (auto source_file = module->mainSourceFileSlot();
+		    source_file != nullptr and source_file->has_value())
 			SourceFile::removeSourceFileFromStorage(source_file->value());
 
 		// Remove the module from storage. This will invalidate the ModuleTree instance!
@@ -333,7 +332,8 @@ namespace compiler::frontend {
 			if (auto submodules = current->submodulesSlot(); submodules != nullptr)
 				for (auto& [_, child]: *submodules) self(self, child);
 
-			if (auto source_file = current->mainSourceFileSlot(); source_file != nullptr and source_file->has_value())
+			if (auto source_file = current->mainSourceFileSlot();
+			    source_file != nullptr and source_file->has_value())
 				SourceFile::removeSourceFileFromStorage(source_file->value());
 
 			ModuleTree::removeModuleFromStorage(current);
