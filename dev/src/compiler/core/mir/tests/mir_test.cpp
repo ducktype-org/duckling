@@ -216,8 +216,16 @@ private:
 				  };
 
 			for (usize i = 0; i < unit.functions.size(); i++) {
-				auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
-				auto targets  = jump_targets(function, i == 2 ? "break" : "continue");
+				auto  function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
+				usize if_entry_count = 0;
+				for (auto block_id: function.block_order) {
+					const auto& block = function.blocks[block_id];
+					if (block.debug_name.has_value()
+					    && block.debug_name.value() == base::StrID("if.entry"))
+						if_entry_count++;
+				}
+				ASSERT_EQUAL(i == 1 ? 1u : 0u, if_entry_count);
+				auto targets = jump_targets(function, i == 2 ? "break" : "continue");
 				ASSERT_EQUAL(i == 1 || i == 3 ? 2u : 1u, targets.size());
 				base::StrID expected_name = [&] {
 					switch (i) {
@@ -394,7 +402,7 @@ private:
 				    && block.debug_name.value() == base::StrID("if.entry"))
 					has_if_entry = true;
 			}
-			ASSERT_TRUE(has_if_entry);
+			ASSERT_TRUE(!has_if_entry);
 			ASSERT_EQUAL(foo4_mir.block_order.size(), 2);
 
 			// This doesn't test much other then that the code doesn't crash/throw exceptions.

@@ -121,13 +121,19 @@ namespace compiler::helios::code {
 		condition->debugPrint(out);
 		out << ") {\n";
 		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);
+		if (step.has_value()) step.value()->debugPrint(out, indent + 1);
 		addIndent(out, indent);
 		out << "}\n";
 	}
 
 	Box<Stmt> WhileStmt::clone() const {
 		return makeBox<WhileStmt>(
-			origin, condition->clone(), std::move(*body.clone()), control_flow_id, control_flow_kind
+			origin,
+			condition->clone(),
+			std::move(*body.clone()),
+			control_flow_id,
+			control_flow_kind,
+			step.map([](const auto& value) { return value->clone(); })
 		);
 	}
 

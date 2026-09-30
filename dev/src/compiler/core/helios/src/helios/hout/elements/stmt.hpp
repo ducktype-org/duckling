@@ -213,19 +213,23 @@ namespace compiler::helios::code {
 		CodeBlock             body;
 		base::Optional<SymID> control_flow_id;
 		ControlFlowKind       control_flow_kind;
+		// Runs after the body on both normal fallthrough and continue (desugared for loops).
+		base::Optional<Box<Stmt>> step;
 
 		WhileStmt(
-			ElementOrigin         origin,
-			BoxOrCRef<Expr>       condition,
-			CodeBlock             body,
-			base::Optional<SymID> control_flow_id   = {},
-			ControlFlowKind       control_flow_kind = ControlFlowKind::While
+			ElementOrigin             origin,
+			BoxOrCRef<Expr>           condition,
+			CodeBlock                 body,
+			base::Optional<SymID>     control_flow_id   = {},
+			ControlFlowKind           control_flow_kind = ControlFlowKind::While,
+			base::Optional<Box<Stmt>> step              = {}
 		):
 			  Stmt(origin),
 			  condition(std::move(condition)),
 			  body(std::move(body)),
 			  control_flow_id(control_flow_id),
-			  control_flow_kind(control_flow_kind) {}
+			  control_flow_kind(control_flow_kind),
+			  step(std::move(step)) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;

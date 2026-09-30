@@ -22,6 +22,7 @@ namespace compiler::mir {
 
 			BlockBuilderRef break_target;
 			BlockBuilderRef continue_target;
+			bool*           continue_target_used = nullptr;
 		};
 
 		using ControlFlowTargets = std::vector<ControlFlowTarget>;
@@ -165,12 +166,15 @@ namespace compiler::mir {
 			auto lowered_condition
 				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			auto branch_targets = targets;
+			// The target stack is copied during recursive lowering, so share this local flag.
+			bool continue_target_used = false;
+			auto branch_targets       = targets;
 			branch_targets.push_back(ControlFlowTarget{
-				.kind            = helios::code::ControlFlowKind::If,
-				.id              = stmt.control_flow_id,
-				.break_target    = continuation,
-				.continue_target = lowered_condition.begin,
+				.kind                 = helios::code::ControlFlowKind::If,
+				.id                   = stmt.control_flow_id,
+				.break_target         = continuation,
+				.continue_target      = lowered_condition.begin,
+				.continue_target_used = &continue_target_used,
 			});
 
 			// I'm not sure if we need these scopes,
@@ -232,13 +236,17 @@ namespace compiler::mir {
 				{ stmt.getPosition() },
 			});
 
-			// Earlier statements may be inserted into this statement's entry block during
-			// reverse lowering. Keep it separate from the condition used by continue if.
-			auto entry_block = function.newBlock("if.entry");
-			entry_block->setTerminator(
-				{ Operation::Jump, {}, { lowered_condition.begin->getID() }, {}, parent_scope }
-			);
-			output({ entry_block });
+			if (continue_target_used) {
+				// Earlier statements may be inserted into this entry during reverse lowering.
+				// Keep it separate from the condition used by continue if.
+				auto entry_block = function.newBlock("if.entry");
+				entry_block->setTerminator(
+					{ Operation::Jump, {}, { lowered_condition.begin->getID() }, {}, parent_scope }
+				);
+				output({ entry_block });
+			} else {
+				output({ lowered_condition.begin });
+			}
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
@@ -260,20 +268,14 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
 			);
 
-			auto continue_target      = loop_continuation_block;
-			auto body_statement_count = stmt.body.statements.size();
+			auto continue_target = loop_continuation_block;
 			if (stmt.control_flow_kind == hc::ControlFlowKind::For) {
-				// The last desugared statement increments the index. A continue must run it.
-				CORE_ASSERT(body_statement_count > 0, "Desugared for loop has no increment.");
-				continue_target = lowerStmtWithControlFlowTargets(
-									  *stmt.body.statements.back(),
-									  loop_continuation_block,
-									  function,
-									  loop_scope,
-									  targets
-				)
-				                      .begin;
-				body_statement_count--;
+				// The generated for step runs after the body, including on continue.
+				continue_target
+					= lowerStmtWithControlFlowTargets(
+						  *stmt.step.value(), loop_continuation_block, function, loop_scope, targets
+					)
+				          .begin;
 			}
 
 			auto body_targets = targets;
@@ -291,7 +293,7 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { continue_target->getID() }, {}, loop_scope }
 			);
 			StmtLowerRes loop_body{ body_fallthrough };
-			for (usize i = body_statement_count; i > 0; --i) {
+			for (usize i = stmt.body.statements.size(); i > 0; --i) {
 				loop_body = lowerStmtWithControlFlowTargets(
 					*stmt.body.statements[i - 1], loop_body.begin, function, loop_scope, body_targets
 				);
@@ -357,6 +359,7 @@ namespace compiler::mir {
 		void visitContinueStmt(const hc::ContinueStmt& stmt) override {
 			auto target = findTarget(stmt.target_selector);
 			CORE_ASSERT(target != nullptr, "Continue statement has no enclosing target.");
+			if (target->continue_target_used != nullptr) *target->continue_target_used = true;
 
 			auto continue_block = function.newBlock("continue");
 			continue_block->setTerminator({

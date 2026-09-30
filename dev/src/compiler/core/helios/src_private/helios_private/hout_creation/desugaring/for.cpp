@@ -207,8 +207,14 @@ namespace compiler::helios::desugaring {
 			auto user_body = process_body(ctx.stmt->getBody());
 			for (auto& s: user_body.statements) body.statements.emplace_back(std::move(s));
 
-			// MIR lowers this final statement as the continue target of the desugared for loop.
-			// __idx = __idx + 1;
+			return body;
+		}
+
+		// __idx = __idx + 1; this runs after the body and on continue.
+		Box<code::Stmt> buildForStep(const ForDesugarCtx& ctx, SymID idx_sym) {
+			const auto gen = code::generatedOrigin();
+			auto idx_ref   = [&] { return makeBox<code::IdentifierExpr>(ctx.ctx, gen, idx_sym); };
+
 			auto one = makeBox<code::LiteralNumericExpr>(
 				ctx.ctx,
 				gen,
@@ -217,15 +223,13 @@ namespace compiler::helios::desugaring {
 				)
 					.value()
 			);
-			body.statements.emplace_back(makeBox<code::AssignmentStmt>(
+			return makeBox<code::AssignmentStmt>(
 				gen,
 				idx_ref(),
 				makeBox<code::BinaryOperatorExpr>(
 					ctx.ctx, gen, code::BuiltinBinary::IntegerAdd, idx_ref(), std::move(one)
 				)
-			));
-
-			return body;
+			);
 		}
 	}
 
@@ -315,7 +319,8 @@ namespace compiler::helios::desugaring {
 			buildCondition(for_ctx, symbols.index, symbols.length),
 			std::move(while_body.value()),
 			control_flow_id,
-			code::ControlFlowKind::For
+			code::ControlFlowKind::For,
+			buildForStep(for_ctx, symbols.index)
 		));
 
 		// Emit it in a block so variable names don't collide if two fors are in the same

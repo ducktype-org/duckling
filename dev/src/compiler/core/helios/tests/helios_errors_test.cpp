@@ -170,6 +170,11 @@ private:
 			1
 		);
 		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break "while"; } })",
+			{ "`break` target must be a block kind or a name." },
+			1
+		);
+		checkForErrorOnCompileModule(
 			R"(fun foo() = { while (true) { continue true; } })",
 			{ "`continue` target must be a block kind or a name." },
 			1

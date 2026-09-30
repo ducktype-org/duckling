@@ -6,10 +6,12 @@
 
 #include <ctv/ctv.hpp>
 #include <driver/test_utils.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
@@ -21,6 +23,8 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <type_traits>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -151,6 +155,36 @@ private:
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
 			ASSERT_EQUAL(1u, unit.functions.size());
+			namespace hc = compiler::helios::code;
+			// The generated increment is an explicit step, not the last body statement.
+			const auto& hout_body = *unit.functions.at(0)->body;
+			const auto* for_block
+				= dynamic_cast<const hc::BlockStmt*>(hout_body.statements.at(2).get());
+			ASSERT_TRUE(for_block != nullptr);
+			const auto* loop
+				= dynamic_cast<const hc::WhileStmt*>(for_block->body.statements.back().get());
+			ASSERT_TRUE(loop != nullptr);
+			ASSERT_EQUAL(hc::ControlFlowKind::For, loop->control_flow_kind);
+			ASSERT_HAS_VALUE(loop->step);
+			ASSERT_TRUE(
+				dynamic_cast<const hc::AssignmentStmt*>(loop->step.value().get()) != nullptr
+			);
+			ASSERT_TRUE(
+				dynamic_cast<const hc::ContinueStmt*>(loop->body.statements.back().get()) != nullptr
+			);
+			auto        cloned_stmt = loop->clone();
+			const auto* cloned_loop = dynamic_cast<const hc::WhileStmt*>(cloned_stmt.get());
+			ASSERT_TRUE(cloned_loop != nullptr);
+			ASSERT_HAS_VALUE(cloned_loop->step);
+
+			usize assignment_count  = 0;
+			auto  count_assignments = [&](const auto& node) {
+                if constexpr (std::is_same_v<std::remove_cvref_t<decltype(node)>, hc::AssignmentStmt>)
+                    assignment_count++;
+			};
+			hc::HoutTreeWalker<decltype(count_assignments)> walker(count_assignments);
+			walker.walk(*loop);
+			ASSERT_EQUAL(2u, assignment_count);
 			auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(0));
 			base::Optional<BlockID> continue_target;
 			usize                   continue_count = 0;

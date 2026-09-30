@@ -89,6 +89,7 @@ namespace compiler::helios::code {
 			handler(s);
 			walk(*s.condition);
 			walkBlock(s.body);
+			if (s.step.has_value()) walk(*s.step.value());
 		}
 
 		void visitBreakStmt(const BreakStmt& s) override { handler(s); }

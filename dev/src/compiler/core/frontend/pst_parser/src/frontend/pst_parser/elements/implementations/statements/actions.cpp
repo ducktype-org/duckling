@@ -40,7 +40,8 @@ namespace pst {
 		state.parse(out.toOpt().value()).eatOne();
 
 		if ((keyword == Keyword::Break || keyword == Keyword::Continue)
-		    && state.ctokens().size() >= 2 && state[1].is(Special::Semicolon)) {
+		    && state.ctokens().size() >= 2 && state[0].isKeyword()
+		    && state[1].is(Special::Semicolon)) {
 			auto candidate = state[0].asKeyword();
 			if (isControlFlowTargetKeyword(candidate)) {
 				out->target_keyword = candidate;
