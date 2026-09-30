@@ -227,9 +227,13 @@ namespace compiler::backend_vm::internal {
 			// creates a copy of the value we try to reference on the stack. We have to lower it to
 			// a place and if it's direct, take a pointer to it, but if it's not, the resulting
 			// address is the pointer returned by `resolveLirPlace`.
+			const auto& src_place = instr.arguments[0].get<lir::LIRPlace>();
 			return AddressOfOperation{
-				.src  = ctx.resolveLirPlace(instr.arguments[0].get<lir::LIRPlace>()),
-				.dest = lower_opt_dest(),
+				.src        = ctx.resolveLirPlace(src_place),
+				.src_layout = src_place.layout,
+				.dest       = lower_opt_dest(),
+				.dest_layout
+				= instr.output.map([](const lir::LIRPlace& place) { return place.layout; }),
 			};
 		}
 		case Assign: {

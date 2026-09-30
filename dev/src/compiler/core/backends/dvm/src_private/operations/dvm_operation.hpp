@@ -109,10 +109,15 @@ namespace compiler::backend_vm::internal {
 
 	/**
 	 * @brief Represents an AddressOf DVM operation.
+	 *
+	 * When `dest_layout` is a `cptr`, the address is converted into it, whatever pointer the
+	 * place is reached through.
 	 */
 	struct AddressOfOperation {
-		DVMPlace                 src;
-		base::Optional<DVMPlace> dest;
+		DVMPlace                              src;
+		CRef<tsl::TypeLayout>                 src_layout;
+		base::Optional<DVMPlace>              dest;
+		base::Optional<CRef<tsl::TypeLayout>> dest_layout;
 	};
 
 	/**

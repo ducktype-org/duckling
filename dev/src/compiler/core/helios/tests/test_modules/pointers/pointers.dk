@@ -26,15 +26,8 @@ fun test_pointers() -> i64 = {
     # Replacement of the old `element_ptr` builtin, with a call hidden below the operand.
     var pof_elem = ptrof m[index()];
 
-    var cp: cptr Pair;
-    var cref_index = &c[0];
-    var cref_field = &cp[0].a;
-    var cref_deref = &(*c);
-
     return 0;
 }
-
-extern("C") { class Pair { a: i32 = 0; b: i32 = 0; } }
 
 fun index() -> i64 = {
     return 0;

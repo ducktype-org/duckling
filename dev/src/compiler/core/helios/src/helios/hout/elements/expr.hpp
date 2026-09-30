@@ -770,9 +770,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a reference creation expression (refof).
-	 * It takes an expression of type T and produces a value of type ref T. When the operand is a
-	 * location reached through a `cptr`, it produces a `cptr T` instead, since such an address is
-	 * a native one.
+	 * It takes an expression of type T and produces a value of type ref T.
 	 */
 	struct RefOfExpr final: public Expr {
 		Box<Expr> inner;

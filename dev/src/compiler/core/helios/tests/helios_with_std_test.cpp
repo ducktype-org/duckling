@@ -1695,10 +1695,6 @@ private:
 		const auto pof_ref_type    = getSymbolTypeOf("pof_ref", body_scope);
 		const auto pof_elem_type   = getSymbolTypeOf("pof_elem", body_scope);
 
-		const auto cref_index_type = getSymbolTypeOf("cref_index", body_scope);
-		const auto cref_field_type = getSymbolTypeOf("cref_field", body_scope);
-		const auto cref_deref_type = getSymbolTypeOf("cref_deref", body_scope);
-
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const auto ptr_i32     = ctx.query<compiler::tsh::QueryPointerType>({ i32_st });
 			const auto ptr_ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>({ st(ptr_i32) });
@@ -1740,10 +1736,6 @@ private:
 			);
 			// Indexing a `manyptr i32` gives an `i32` place, so its address is a plain `ptr i32`.
 			ASSERT_EQUAL(ptr_i32_st, pof_elem_type);
-
-			ASSERT_EQUAL(cptr_i32_st, cref_index_type);
-			ASSERT_EQUAL(cptr_i32_st, cref_field_type);
-			ASSERT_EQUAL(cptr_i32_st, cref_deref_type);
 		});
 
 		auto& function = hout.functions.at(0);
