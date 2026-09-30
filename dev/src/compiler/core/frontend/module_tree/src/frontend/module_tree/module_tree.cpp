@@ -79,12 +79,6 @@ namespace compiler::frontend {
 		return {};
 	}
 
-	std::vector<base::Ref<SourceFile>> ModuleTree::collectOwnedSourceFiles() const {
-		std::vector<base::Ref<SourceFile>> source_files;
-		auto                               slot = mainSourceFileSlot();
-		if (slot != nullptr && slot->has_value()) source_files.push_back(slot->value());
-		return source_files;
-	}
 
 	bool ModuleTree::hasMainSourceFile() const {
 		auto slot = mainSourceFileSlot();
@@ -98,25 +92,15 @@ namespace compiler::frontend {
 	}
 
 	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
-		std::vector<ModuleAccessLocked> submodules;
-		if (auto submodules_map = submodulesSlot(); submodules_map != nullptr) {
-			submodules.reserve(submodules_map->size());
-			for (const auto& [name, submodule]: *submodules_map)
-				submodules.emplace_back(submodule->getModuleID());
-		}
-		return { getModuleID(), std::move(submodules) };
+		CORE_PANIC("getSubmodules called on a module that does not support submodules!");
 	}
 
 	packages::PackageAccessLocked ModuleTree::getPackage() const {
 		return packages::PackageAccessLocked(m_package_id);
 	}
 
-	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID name) const {
-		base::Optional<ModuleID> child;
-		if (auto submodules_map = submodulesSlot(); submodules_map != nullptr)
-			if (auto maybe = submodules_map->atMaybe(name); maybe.has_value())
-				child = (*maybe.value())->getModuleID();
-		return ModuleChildAccessLocked(getModuleID(), name, child);
+	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID) const {
+		CORE_PANIC("getSubmoduleByName called on a module that does not support submodules!");
 	}
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {

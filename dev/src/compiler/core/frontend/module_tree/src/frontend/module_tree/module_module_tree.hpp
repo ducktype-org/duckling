@@ -46,8 +46,32 @@ namespace compiler::frontend {
 			return &m_other_files;
 		}
 
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override {
+			std::vector<base::Ref<ModuleTree>> children;
+			for (auto& [_, submodule] : m_submodules) {
+				children.push_back(submodule);
+			}
+			return children;
+		}
+
 	public:
 		ModuleModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }
+
+
+		SubmodulesAccessLocked getSubmodules() const override {
+			std::vector<ModuleAccessLocked> submodules;
+			submodules.reserve(m_submodules.size());
+			for (const auto& [name, submodule]: m_submodules)
+				submodules.emplace_back(submodule->getModuleID());
+			return { getModuleID(), std::move(submodules) };
+		}
+
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
+			base::Optional<ModuleID> child;
+			if (auto it = m_submodules.find(name); it != m_submodules.end())
+				child = it->second->getModuleID();
+			return ModuleChildAccessLocked(getModuleID(), name, child);
+		}
 	};
 
 

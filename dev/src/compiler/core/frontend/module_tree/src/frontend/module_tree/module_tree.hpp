@@ -128,23 +128,28 @@ namespace compiler::frontend {
 
 		/**
 		 * Accesses the submodules located in this module.
+		 * 
+		 * @note Only valid for modules that can have submodules (i.e., not REPL or script modules).
 		 * @note Use this only if you need all submodules. For single submodule access, use
 		 * getSubmoduleByName().
 		 * @return A lazy view that can be unlocked within a query context or accessed illegally
 		 * (outside queries).
 		 */
 		[[nodiscard]]
-		SubmodulesAccessLocked getSubmodules() const;
+		virtual SubmodulesAccessLocked getSubmodules() const;
 
 		/**
 		 * Access a single submodule edge by name.
+		 *
+		 * @note Only valid for modules that can have submodules (i.e., not REPL or script modules).
+		 *
 		 * Registers dependency via QueryModuleChildSideInput when unlocked.
 		 * Use this function in lookups when you need only a submodule with some name.
 		 * @param name Name of the submodule to access.
 		 * @return AccessLocked wrapper that may contain the submodule if it exists.
 		 */
 		[[nodiscard]]
-		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
+		virtual ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -264,6 +269,18 @@ namespace compiler::frontend {
 		virtual MCRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const { return nullptr; }
 
 		/**
+		 * @brief Collects all child modules of this module.
+		 * @return A vector containing references to all child modules.
+		 *
+		 * @important Submodules and child modules are not the same thing.
+		 * Submodules reflect the high-level Duckling module structure,
+		 * whereas child modules include all modules that are direct children in the module tree structure
+		 * (i.e. whose parent is this module).
+		 */
+		[[nodiscard]]
+		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const;
+
+		/**
 		 * @brief Access the other files of this module.
 		 * @return nullptr for module types that cannot have other files.
 		 */
@@ -272,15 +289,6 @@ namespace compiler::frontend {
 
 		[[nodiscard]]
 		virtual MCRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const { return nullptr; }
-
-		/**
-		 * @brief Collects every SourceFile owned by this module, regardless of its type.
-		 * @note For scripts this returns the source files of the whole synthetic module chain.
-		 *
-		 * PR: should this be virtual? maybe just make collectOwnedSourceFiles virtual
-		 */
-		[[nodiscard]]
-		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const;
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes

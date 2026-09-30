@@ -18,7 +18,7 @@ namespace compiler::frontend {
 		 */
 		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
 
-		base::Optional<Box<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
+		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
 		void makeAbstract() final {
 			CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
@@ -31,6 +31,14 @@ namespace compiler::frontend {
 
 		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override {
 			return &m_synthetic_source_file;
+		}
+
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override {
+			std::vector<base::Ref<ModuleTree>> children;
+			if (m_repl_module_child.has_value()) {
+				children.emplace_back(m_repl_module_child.value());
+			}
+			return children;
 		}
 
 
@@ -55,21 +63,10 @@ namespace compiler::frontend {
 	class ScriptModuleTreeNode final: public ModuleTree {
 		base::Optional<fs::File> m_script_file;
 
-		base::Optional<Box<SyntheticReplChainModuleTreeNode>> m_synthetic_repl_module_chain;
+		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
 		void makeAbstract() final { CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!"); }
 
-	protected:
-		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override {
-			// PR adjust..
-
-			std::vector<base::Ref<SourceFile>> source_files;
-			for (const auto& chain_link: m_synthetic_repl_module_chain) {
-				const auto& source_file = chain_link->getSyntheticSourceFile();
-				if (source_file.has_value()) source_files.push_back(source_file.value());
-			}
-			return source_files;
-		}
 
 	public:
 		ScriptModuleTreeNode(): ModuleTree() { kind = ModuleKind::Script; }

@@ -241,6 +241,11 @@ namespace compiler::frontend {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
+		CORE_ASSERT(
+			module->getKind() == ModuleKind::Module or module->getKind() == ModuleKind::Script,
+			"Only modules of kind Module or Script can be removed via this function"
+		);
+
 		auto parent = module->m_parent;
 
 		// Update parent module if it exists
@@ -278,8 +283,8 @@ namespace compiler::frontend {
 		}
 
 		// Remove the source files of the module. This will invalidate the SourceFile instances!
-		for (const auto& source_file: module->collectOwnedSourceFiles())
-			SourceFile::removeSourceFileFromStorage(source_file);
+		if (auto source_file = module->mainSourceFileSlot(); source_file != nullptr and source_file->has_value())
+			SourceFile::removeSourceFileFromStorage(source_file->value());
 
 		// Remove the module from storage. This will invalidate the ModuleTree instance!
 		ModuleTree::removeModuleFromStorage(module);
