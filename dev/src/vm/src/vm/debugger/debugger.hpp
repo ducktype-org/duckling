@@ -29,7 +29,7 @@ namespace vm::debugger {
 		ProgramRunArguments main_args;
 		Mapper              mapper;
 
-		std::set<fs::File> loadedFiles;
+		std::set<fs::File> loaded_files;
 
 		events::Listener<api::ProcStatus> updater;
 		events::Listener<std::string>     vm_output;
@@ -91,7 +91,15 @@ namespace vm::debugger {
 		 */
 		[[nodiscard]] api::ProcStatus getStatus();
 
-		const std::set<fs::File>& getLoadedFiles();
+		/**
+		 * @brief Returns the files successfully loaded through `loadFiles`
+		 */
+		[[nodiscard]] const std::set<fs::File>& getLoadedFiles() const;
+
+		/**
+		 * @brief Checks if the file was loaded or is a source file of the loaded mapping
+		 */
+		[[nodiscard]] bool isFileAvailable(const fs::File& file) const;
 
 		/**
 		 * @brief Loads files into debugger

@@ -96,12 +96,16 @@ namespace vm::debugger {
 		    .value();
 	}
 
-	const std::set<fs::File>& Debugger::getLoadedFiles() { return loadedFiles; }
+	const std::set<fs::File>& Debugger::getLoadedFiles() const { return loaded_files; }
+
+	bool Debugger::isFileAvailable(const fs::File& file) const {
+		return loaded_files.contains(file) || mapper.containsFile(file.getFilePath());
+	}
 
 	std::expected<void, api::ApiError> Debugger::loadFiles(const std::vector<fs::File>& files) {
 		auto response = api::loadFiles(pid, files);
 
-		if (response) loadedFiles.insert(files.begin(), files.end());
+		if (response) loaded_files.insert(files.begin(), files.end());
 
 		return response;
 	}
