@@ -7,6 +7,7 @@
 #include <mutex>
 
 #define PROMPT_TEMPLATE "\x1b[1;32mBeRD\x1b[0m {} \x1b[1m>>>\x1b[0m "
+#define HISTORY_FILE_NAME ".duckling_debugger_history"
 
 // it's not a thieft, it's a piracy ;)
 namespace replxx::tty {
@@ -18,17 +19,21 @@ namespace {
 	/**
 	 * @brief Path to the history file
 	 */
-	std::string getHistoryFilePath() {
+	inline std::filesystem::path getHistoryFilePath() {
 		const char* home = std::getenv("HOME");  // NOLINT(concurrency-mt-unsafe)
-		if (home != nullptr) return std::string(home) + "/.duckling_debugger_history";
-		return ".duckling_debugger_history";
+		if (home != nullptr) return std::filesystem::path(home) / HISTORY_FILE_NAME;
+		return HISTORY_FILE_NAME;
+	}
+
+	inline bool is_intercative() {
+		return replxx::tty::in && replxx::tty::out;
 	}
 
 	/**
 	 * @brief mc - maybe colors
 	 */
-	std::string mc(const std::string& original) {
-		if (replxx::tty::in && replxx::tty::out) return original;
+	inline std::string mc(const std::string& original) {
+		if (is_intercative()) return original;
 		return vm::debugger::cli::common::withoutControlSequences(original);
 	}
 }
@@ -79,7 +84,7 @@ namespace vm::debugger::cli {
 			for (std::string& value: common::extractPrimitiveValues(status))
 				sstr << "(" << value << ")";
 
-			if (!replxx::tty::in || !replxx::tty::out) {
+			if (!is_intercative()) {
 				printer::PrinterOStream out;
 				out << "New status: " << common::typeToString(status);
 				for (std::string& value: common::extractPrimitiveValues(status))
@@ -121,7 +126,7 @@ namespace vm::debugger::cli {
 
 		for (std::string line; spec->running && getline(line); clah.execute(common::strip(line)));
 
-		if (spec->running && replxx::tty::in && replxx::tty::out) printNL("exit");
+		if (spec->running && is_intercative()) printNL("exit");
 		spec->running = false;
 
 		status_change_listener.detach();
@@ -150,7 +155,7 @@ namespace vm::debugger::cli {
 		if (std::size_t pos = spec->current_line.find_last_of('\n'); pos != std::string::npos)
 			spec->current_line = spec->current_line.substr(pos + 1);
 
-		if (spec->is_prompt_active) {
+		if (spec->is_prompt_active && is_intercative()) {
 			spec->replxx.write(before_content.c_str(), static_cast<int>(before_content.length()));
 			spec->replxx.write(content_string.c_str(), static_cast<int>(content_string.length()));
 			spec->replxx.set_prompt(spec->current_line + spec->current_prompt);
