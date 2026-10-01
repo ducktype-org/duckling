@@ -35,7 +35,7 @@ namespace lexer {
 		return comparisons.contains(asNamed());
 	}
 
-	// @TODO #3702 Handle custom operators ending with `=`
+	// @TODO: #3702 Handle custom operators ending with `=`
 	bool Operator::isAssignment() const { return !isComparison() && value.strView().back() == '='; }
 
 	bool Operator::isSpecialOp() const {
