@@ -530,6 +530,29 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				fun main() -> i64 = {
+					let x: i64 = 0;
+					x += 1;
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x: i32 = 0;
+					var y: i64 = 1;
+					x += y;
+				}
+			)",
+				{ "Type `i64` cannot be converted to type `i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
 				fun main() = {
 					var arr: i32[5];
 					arr["index"] = 1;
@@ -831,6 +854,15 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
+
+			// @TODO: #2104 Uncomment when operation assignment operators properly handle
+			// mutability. checkForErrorOnCompileModule( 	R"( 	fun main() -> i64 = { 		let
+			// x: i64 = 1; 		x += 123;
+			// 	}
+			// )",
+			// 	{ "Left side of assignment can't be immutable." },
+			// 	1
+			// );
 		}
 
 		// ============================ Variant errors ============================
@@ -1122,18 +1154,6 @@ private:
 				}
 			)",
 				{ "Feature not implemented", "Nested", "function" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					var a: i64 = 0;
-					a += 1;
-					return a;
-				}
-			)",
-				{ "Feature not implemented" },
 				1
 			);
 

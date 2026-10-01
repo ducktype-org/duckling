@@ -10,7 +10,6 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
-#include <os_utils/system_libraries.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
@@ -18,6 +17,7 @@
 
 #include <diagnostic/logger.hpp>
 #include <filesystem/file_path.hpp>
+#include <os_utils/system_libraries.hpp>
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
