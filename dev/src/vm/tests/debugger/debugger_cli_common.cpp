@@ -52,15 +52,21 @@ private:
 			type.definePrimitive(Bytes(8));
 			type.finalize();
 
-			auto process = vm::SafeVMProcess((vm::PID) 0);
-			auto seven   = process.createOwnedVMValue(&type);
+			auto process   = vm::SafeVMProcess((vm::PID) 0);
+			auto seven     = process.createOwnedVMValue(&type);
+			auto forty_two = process.createOwnedVMValue(&type);
+			seven->writeBytes<i64>(7);
+			forty_two->writeBytes<i64>(42);
 
 			vm::api::ProcStatus status = vm::api::ExecutionCompleted{
-				.exit_value = std::vector<Ref<vm::IVMValue>>{ &*seven, &*seven },
+				.exit_value = std::vector<Ref<vm::IVMValue>>{ &*seven, &*seven, &*forty_two },
 			};
 
 			auto values = extractPrimitiveValues(status);
-			ASSERT_EQUAL_PRINT(2, values.size());
+			ASSERT_EQUAL_PRINT(3, values.size());
+			ASSERT_EQUAL_PRINT("7", values[0]);
+			ASSERT_EQUAL_PRINT("7", values[1]);
+			ASSERT_EQUAL_PRINT("42", values[2]);
 		}
 	}
 

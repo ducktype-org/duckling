@@ -20,7 +20,7 @@ namespace vm::debugger::cli::common {
 								values.push_back(std::to_string(primitive->value));
 					return values;
 				}
-				variant_default std::unreachable();
+				variant_default CORE_UNREACHABLE();
 			}
 		}
 
