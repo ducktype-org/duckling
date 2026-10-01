@@ -1419,15 +1419,15 @@ private:
 				false
 			);
 
-			// A member is either static or not, so `static` cannot be repeated either.
+			// A member is either global or not, so `global` cannot be repeated either.
 			checkForErrorOnCompileModule(
 				R"( class C {
-						public static static y: i64 = 0;
+						public global global y: i64 = 0;
 					}
 					fun main() -> i64 = {
 						return 0;
 					} )",
-				{ "Class static specifier is duplicated with another one." },
+				{ "Class global specifier is duplicated with another one." },
 				1,
 				false
 			);
@@ -1439,7 +1439,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"( class C {
 						public v: i64 = 1;
-						private static hidden: i64 = 2;
+						private global hidden: i64 = 2;
 					}
 					fun main() -> i64 = {
 						var x: i64 = C.hidden;
@@ -1508,7 +1508,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"( class C {
 						public v: i64 = 1;
-						public static s: i64 = 2;
+						public global s: i64 = 2;
 					}
 					fun main() -> i64 = {
 						var x: i64 = C.nope;
@@ -1523,7 +1523,7 @@ private:
 				R"( class C {
 						public v: i64 = 1;
 
-						public static fun sm() -> i64 = {
+						public global fun sm() -> i64 = {
 							return 2;
 						}
 					}
