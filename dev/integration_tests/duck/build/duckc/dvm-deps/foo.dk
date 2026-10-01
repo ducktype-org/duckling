@@ -1,0 +1,7 @@
+import core.builtins.*;
+import bar.*;
+
+fun main() -> i64 = {
+    if (bar_value() + BAR_MAX != 128i64) { return 1i64; }
+    return 0i64;
+}

@@ -1,5 +1,5 @@
-//! An implementation of [`UnitTaskGenerator`], which invokes duckc only once, for a root package with
-//! `dvm` task.
+//! An implementation of [`UnitTaskGenerator`] for DVM builds: every dependency is compiled into a
+//! `dvm_lib`, and the root package into a `dvm_exe` that links them.
 
 use tracing::instrument;
 
@@ -50,8 +50,8 @@ impl UnitTaskGenerator for DvmTaskGenerator {
         Ok(vec![task])
     }
 
-    fn should_run(&self, unit: &Unit, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> bool {
-        graph.is_root(unit)
+    fn should_run(&self, _unit: &Unit, _graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> bool {
+        true
     }
 }
 
@@ -63,19 +63,15 @@ fn create_task(
     layout: &dyn ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<multipackage_schema::Task> {
-    assert!(
-        graph.is_root(unit),
-        "`DvmExecutor` should create task only for the root `Unit`"
-    );
     let strategy = match unit.unit_type() {
-        // QuackPack only emits DVM executables; `DvmLib` is produced solely by the
-        // C++ std library path, so it is intentionally unreachable here.
         UnitType::Binary => multipackage_schema::PackageCompilationStrategy::DvmExe {
             output_file: outputs::unit_output(unit, graph, layout, bcx)?,
+            dvm_linking_options: outputs::get_dvm_linking_options(unit, graph, layout, bcx)?,
         },
-        task => unreachable!(
-            "should create only DVM task for the root (attempted to create for `{task:?}`)"
-        ),
+        UnitType::Dependency => multipackage_schema::PackageCompilationStrategy::DvmLib {
+            output_file: outputs::unit_output(unit, graph, layout, bcx)?,
+        },
+        UnitType::Library => unreachable!("library tasks are unsupported"),
     };
     Ok(multipackage_schema::Task {
         package_id: unit.unique_name().into(),
