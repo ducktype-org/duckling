@@ -1,6 +1,4 @@
-++++++++++++++++++++++++++++
-+   Debugger has started   +
-++++++++++++++++++++++++++++
+Welcome to BeRD - an interactive in-DVM debugger! (now with replxx support!)
 New status: Running
 [91m[Debug error]: [0mRun failed!
 [91m[Debug error]: [0mContinue failed!
