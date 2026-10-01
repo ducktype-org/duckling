@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::ops::ControlFlow;
+use std::path::PathBuf;
 
 use tracing::instrument;
 
@@ -31,25 +32,29 @@ pub struct ExternalLibrariesFound {
 }
 
 #[instrument(skip_all)]
-/// Check whether subtree rooted at `unit` links against external libraries.
-///
-/// This function returns _any_ [`Unit`] with external library, if there is one.
+/// Find a [`Unit`] in the subtree rooted at `unit` that links against an external library but
+/// declares no `dvm-shared-libs`, so the DVM has nothing to load in its place.
 ///
 /// In case there are multiple such [`Unit`]s, it's not guaranteed which one is returned.
-pub fn has_external_libraries(unit: &Unit, graph: &UnitGraph) -> Option<ExternalLibrariesFound> {
+pub fn find_links_without_dvm_shared_libs(
+    unit: &Unit,
+    graph: &UnitGraph,
+) -> Option<ExternalLibrariesFound> {
     struct ExternalLibsVisitor;
 
     impl UnitVisitor for ExternalLibsVisitor {
         type Break = ExternalLibrariesFound;
 
         fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
-            let links = &unit.package().manifest().build_options().links;
-            match links {
-                Some(links) => ControlFlow::Break(ExternalLibrariesFound {
-                    unit: unit.clone(),
-                    links: *links,
-                }),
-                None => ControlFlow::Continue(()),
+            let build_options = unit.package().manifest().build_options();
+            match build_options.links {
+                Some(links) if build_options.dvm_shared_libs.is_empty() => {
+                    ControlFlow::Break(ExternalLibrariesFound {
+                        unit: unit.clone(),
+                        links,
+                    })
+                }
+                _ => ControlFlow::Continue(()),
             }
         }
     }
@@ -123,6 +128,36 @@ pub fn gather_external_libraries(unit: &Unit, graph: &UnitGraph) -> Vec<StrId> {
         }
     }
     let mut visitor = ExternalLibsCollector::default();
+    unit.accept(&mut visitor, graph);
+    visitor.0
+}
+
+#[instrument(skip_all)]
+/// Gather the `dvm-shared-libs` of the subgraph rooted at `unit`.
+///
+/// A bare file name is kept as is, so the DVM looks it up on the system search path; any other
+/// relative path is resolved against the root directory of the package declaring it.
+pub fn gather_dvm_shared_libraries(unit: &Unit, graph: &UnitGraph) -> Vec<PathBuf> {
+    #[derive(Default)]
+    struct DvmSharedLibsCollector(Vec<PathBuf>);
+
+    impl UnitVisitor for DvmSharedLibsCollector {
+        type Break = Infallible;
+
+        fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
+            let package_root = unit.package().root();
+            for lib in &unit.package().manifest().build_options().dvm_shared_libs {
+                let is_bare_name = lib.parent().is_none_or(|p| p.as_os_str().is_empty());
+                self.0.push(if is_bare_name {
+                    lib.clone()
+                } else {
+                    package_root.join(lib)
+                });
+            }
+            ControlFlow::Continue(())
+        }
+    }
+    let mut visitor = DvmSharedLibsCollector::default();
     unit.accept(&mut visitor, graph);
     visitor.0
 }

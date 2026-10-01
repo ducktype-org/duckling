@@ -172,7 +172,10 @@ pub struct ComplexLinkerOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub linker: Option<PathBuf>,
     /// Pass additional linker arguments.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "additional_link_options",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub additional_linking_options: Option<String>,
     #[serde(
         rename = "link_c_standard_library",
@@ -288,7 +291,7 @@ mod tests {
       "strategy": "native",
       "output_file": "out.exe",
       "linking_options": {
-        "additional_linking_options": "-lfoo",
+        "additional_link_options": "-lfoo",
         "link_c_standard_library": true
       }
     },
@@ -608,7 +611,15 @@ mod tests {
     {
       "package": "app2",
       "strategy": "dvm_exe",
-      "output_file": "app2_dvm"
+      "output_file": "app2_dvm",
+      "dvm_linking_options": {
+        "shared_libraries": [
+          "build_c/libc_helper.so"
+        ],
+        "link_libraries": [
+          "build/lib_a_dvm.dbc"
+        ]
+      }
     },
     {
       "package": "app3",
@@ -631,7 +642,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app2",
       "linking_options": {
-        "additional_linking_options": "build/lib_a.a",
+        "additional_link_options": "build/lib_a.a",
         "link_c_standard_library": true
       }
     },
@@ -640,7 +651,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3",
       "linking_options": {
-        "additional_linking_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+        "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
         "link_c_standard_library": true
       }
     },
@@ -649,7 +660,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3_alias",
       "linking_options": {
-        "additional_linking_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+        "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
         "link_c_standard_library": true
       }
     }
@@ -815,7 +826,10 @@ mod tests {
                 package_id: "app2".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app2_dvm"),
-                    dvm_linking_options: DvmLinkingOptions::default(),
+                    dvm_linking_options: DvmLinkingOptions {
+                        shared_libraries: vec![PathBuf::from("build_c/libc_helper.so")],
+                        link_libraries: vec![PathBuf::from("build/lib_a_dvm.dbc")],
+                    },
                 },
             },
             PackageCompilationTask {

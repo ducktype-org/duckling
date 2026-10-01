@@ -165,6 +165,7 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             VenvConfig::default_for_package(ctx),
             BuildOptions {
                 links: links.map(Into::into),
+                ..Default::default()
             },
         ))
     }

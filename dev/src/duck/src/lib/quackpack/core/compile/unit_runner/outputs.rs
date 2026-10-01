@@ -6,7 +6,7 @@ use itertools::Itertools;
 use tracing::{debug, instrument, trace};
 
 use super::CompilationOutput;
-use super::external_libs::gather_external_libraries;
+use super::external_libs::{gather_dvm_shared_libraries, gather_external_libraries};
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
@@ -133,7 +133,7 @@ pub fn get_linker_options(
 }
 
 /// Get DVM linking options for the given root `unit`: the `.dbc` outputs of all its
-/// dependencies (direct and transitive).
+/// dependencies (direct and transitive), and the shared objects any of them declares.
 #[instrument(skip_all)]
 pub fn get_dvm_linking_options(
     unit: &Unit,
@@ -147,7 +147,7 @@ pub fn get_dvm_linking_options(
         .map(|(_, output)| output)
         .collect();
     Ok(multipackage_schema::DvmLinkingOptions {
-        shared_libraries: vec![],
+        shared_libraries: gather_dvm_shared_libraries(unit, graph),
         link_libraries,
     })
 }
