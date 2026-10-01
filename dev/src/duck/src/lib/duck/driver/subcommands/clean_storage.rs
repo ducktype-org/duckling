@@ -12,7 +12,7 @@ use crate::{DuckContext, QuackResult, QuackResultContext};
 /// Creates parser for the `clean-storage` subcommand.
 pub fn get_parser() -> Command {
     subcommand("clean-storage")
-        .about("Clean the from expired ephemeral venvs and unused packages")
+        .about("Clean the expired ephemeral venvs and unused packages")
         .arg(optional(
             "venv",
             "Remove only the venv with such name (regardless of whether it is ephemeral or not), do not clean packages",

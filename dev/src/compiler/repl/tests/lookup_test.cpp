@@ -1,5 +1,6 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <helios/hout/hout.hpp>
