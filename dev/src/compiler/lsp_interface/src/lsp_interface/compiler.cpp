@@ -1,6 +1,8 @@
 #include <driver/incremental_utils/collect_input.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
+#include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/source_file.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/source_position_locked.hpp>
