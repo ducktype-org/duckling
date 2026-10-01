@@ -92,6 +92,20 @@ namespace compiler::helios::code {
 	);
 
 	/**
+	 * @brief Desugars `location X= value` into `location = location X value`.
+	 * @warning This function does not check reference kinds, value cathegories, or mutability. It
+	 * is assumed that the caller has already performed these checks and will handle any errors
+	 * appropriately.
+	 * @param ctx The context of the query
+	 * @param assignment The assignment expression to desugar
+	 * @return The desugared assignment statement
+	 */
+	[[nodiscard]]
+	AssignmentStmt desugarAssignmentOperator(
+		query::Context& ctx, pst::Access<pst::expr::Assignment> assignment
+	);
+
+	/**
 	 * @brief Check if an operator allows their arguments to undergo numeric promotion.
 	 * @param op The operator to check.
 	 * @return Whether the operator is numeric.

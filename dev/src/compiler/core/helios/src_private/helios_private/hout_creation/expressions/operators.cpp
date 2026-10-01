@@ -2,6 +2,7 @@
 
 #include "function_calls/call_processing.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_kind.hpp>
@@ -9,8 +10,10 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -406,6 +409,56 @@ namespace compiler::helios::code {
 				   ctx, all_candidates, method_candidates, std::move(inner), op_origin, operatoriness
 		)
 		    .valueOrThrow();
+	}
+
+	AssignmentStmt desugarAssignmentOperator(
+		query::Context& ctx, pst::Access<pst::expr::Assignment> assignment
+	) {
+		using namespace compiler::helios::code::shorthands;
+		Shorthand s{ ctx };
+
+		auto op_wrapped = assignment->getAssignmentType().unlock(ctx);
+		auto op         = op_wrapped->unwrap();
+
+		auto var = assignment->getVariables();
+		auto val = assignment->getValue();
+
+		CORE_ASSERT(
+			op.isAssignment(), "Assignement operator should be present in assignement statement."
+		);
+		CORE_ASSERT(op.value.strView().back() == '=', "Assignement operatos should end with `=`.");
+
+		auto stripped_op
+			= lexer::Operator(base::StrID(op.value.str().substr(0, op.value.size() - 1)));
+
+		Box<code::Expr> location = ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
+
+		auto location_wrapped = s.reusable(s.refOf(std::move(location)));
+		auto op_lhs           = s.deref(location_wrapped->nextUse());
+		auto location_deref   = s.deref(std::move(location_wrapped));
+		auto op_rhs           = ctx.query<QueryHoutOfExpr>({ val })->valueOrThrow()->clone();
+
+		// @TODO: #3697 Improve dia, resolveBinaryOperator throws without knowledge of the
+		// original assignment operator, it only knows about the stripped version.
+		auto value = code::resolveBinaryOperator(
+			ctx,
+			stripped_op,
+			pstOrigin(op_wrapped),
+			std::move(op_lhs),
+			std::move(op_rhs),
+			ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
+		);
+		// @TODO: #3697 Improve dia. Coercions happen in places that are not very clear in compact
+		// `location X= value` form, for dia purposes add message with extended form as needed.
+		auto coerced_value = coerceFromBox(
+								 ctx,
+								 std::move(value),
+								 location_deref->expression_type.getSymbolType(),
+								 assignment->getStablePosition()
+		)
+		                         .valueOrThrow();
+
+		return { pstOrigin(assignment), std::move(location_deref), std::move(coerced_value) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryRegularBuiltinOperatorSymbols, RegularBuiltinOperatorSymbolMap) {

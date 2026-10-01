@@ -206,47 +206,7 @@ namespace compiler::helios {
 			// @TODO: #3702 implement this
 
 			// 3. Fallback to desugaring
-			// `location X= value` desugars to `location = location X value`
-			CORE_ASSERT(
-				op.isAssignment(), "Assignement operator should be present in assignement statement."
-			);
-			CORE_ASSERT(
-				op.value.strView().back() == '=', "Assignement operatos should end with `=`."
-			);
-
-			auto stripped_op
-				= lexer::Operator(base::StrID(op.value.str().substr(0, op.value.size() - 1)));
-
-			auto                  location = s.reusable(s.refOf(location_expr->clone()));
-			auto                  op_lhs   = s.deref(location->nextUse());
-			BoxOrCRef<code::Expr> op_rhs
-				= ctx.query<QueryHoutOfExpr>({ val })->valueOrThrow().ref();
-			auto location_deref = s.deref(std::move(location));
-
-			// @TODO: #3697 Improve dia, resolveBinaryOperator throws without knowledge of the
-			// original assignment operator, it only knows about the stripped version.
-			auto value = code::resolveBinaryOperator(
-				ctx,
-				stripped_op,
-				code::pstOrigin(op_wrapped),
-				std::move(op_lhs),
-				op_rhs->clone(),
-				ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
-			);
-			// @TODO: #3697 Improve dia. Coercions happen in places that are not very clear in compact
-			// `location X= value` form, for dia purposes add message with extended form as needed.
-			auto coerced_value = coerceFromBox(
-									 ctx,
-									 std::move(value),
-									 location_deref->expression_type.getSymbolType(),
-									 assignment->getStablePosition(),
-									 var.unlock(ctx)->getStablePosition()
-			)
-			                         .valueOrThrow();
-
-			output(code::AssignmentStmt(
-				code::pstOrigin(assignment), std::move(location_deref), std::move(coerced_value)
-			));
+			output(code::desugarAssignmentOperator(ctx, assignment));
 			return;
 		}
 
