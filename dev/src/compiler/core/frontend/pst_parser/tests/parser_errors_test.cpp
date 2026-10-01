@@ -363,7 +363,7 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
 	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
 	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public static x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public global x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
 	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
