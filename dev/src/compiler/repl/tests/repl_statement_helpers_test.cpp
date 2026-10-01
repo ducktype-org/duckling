@@ -60,6 +60,8 @@ private:
 		};
 
 		assignment_test("x = 10;");
+		assignment_test("x += 10;");
+		assignment_test("x -= 10;");
 	}
 
 	void testClassifySingleInstruction() {

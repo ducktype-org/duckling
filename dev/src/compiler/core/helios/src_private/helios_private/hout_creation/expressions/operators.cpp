@@ -67,17 +67,20 @@ namespace {
 	/**
 	 * @brief Resolves a builtin binary numeric operator into HELIOS expression. If it cannot be
 	 * resolved correctly (for example, because there is no language primitive that matches the @p
-	 * lhs and @p rhs types) .
+	 * lhs and @p rhs types) an error is logged and a query failure is returned.
 	 * @param ctx Query context
 	 * @param op Operator to be resolved
 	 * @param lhs Left hand side argument of the operator
 	 * @param rhs Right hand side argument of the operator
 	 * @return Corresponding desugared expression
 	 */
-	query::QResult<Box<code::Expr>> desugarOperatorToExpr(
-		query::Context& ctx, BuiltinOperation operation, Box<code::Expr> lhs, Box<code::Expr> rhs
+	query::QResult<Box<code::Expr>> desugarBuiltinBinaryOperation(
+		query::Context&        ctx,
+		BuiltinBinaryOperation operation,
+		Box<code::Expr>        lhs,
+		Box<code::Expr>        rhs
 	) {
-		using enum PreDesugarOperator;
+		using enum PreDesugarBinaryOperator;
 		using namespace compiler::helios::code::shorthands;
 		Shorthand s{ ctx };
 
@@ -90,10 +93,10 @@ namespace {
 			);
 
 		CORE_ASSERT(
-			std::holds_alternative<PreDesugarOperator>(operation),
-			"Operation should be `PreDesugarOperator` at this point"
+			std::holds_alternative<PreDesugarBinaryOperator>(operation),
+			"Operation should be `PreDesugarBinaryOperator` at this point"
 		);
-		auto op = std::get<PreDesugarOperator>(operation);
+		auto op = std::get<PreDesugarBinaryOperator>(operation);
 
 		switch (op) {
 		case IntegerPow: {
@@ -121,6 +124,7 @@ namespace {
 					return {};
 			}();
 			if_opt_none(lang_primitive) {
+				// @TODO: #1498 handle other float types
 				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat("Float exponentiation on unhandled type. Only `f32` and `f64` "
 				                    "are handled for now.")
@@ -143,6 +147,13 @@ namespace {
 		CORE_UNREACHABLE();
 	}
 
+	/**
+	 * @brief Filters a list of function symbols based on their operatoriness.
+	 * @note This throws when a given symbol cannot be associated with a function declaration.
+	 * @param ctx The context of the query
+	 * @param function_syms The list of function symbols to filter
+	 * @param opiness The operatoriness to filter by
+	 */
 	void filterFunctionsByOperatoriness(
 		query::Context&                              ctx,
 		std::vector<SymID>&                          function_syms,
@@ -156,7 +167,6 @@ namespace {
 
 namespace compiler::helios::code {
 	bool isNumericOperator(const lexer::Operator op) {
-		// Only operators which allow their arguments to undergo numeric promotion.
 		static const std::set<std::string> numeric_ops
 			= { "+",  "-",  "*",  "/", "%", "**", "<", "<=", ">",
 			    ">=", "==", "!=", "&", "|", "^",  "~", "<<", ">>" };
@@ -188,7 +198,7 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
+	base::Optional<std::tuple<BuiltinBinaryOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	) {
 		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
@@ -198,7 +208,7 @@ namespace compiler::helios::code {
 
 		auto operation_kind = common_type.getType().getKind();
 
-		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinOperation>
+		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinBinaryOperation>
 			numeric_operators = {
 				/// Integer arithmetic ///
 				{ { base::StrID("+"), tsh::Kind::Integral }, BuiltinBinary::IntegerAdd },
@@ -206,7 +216,7 @@ namespace compiler::helios::code {
 				{ { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
 				{ { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				{ { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
-				{ { base::StrID("**"), tsh::Kind::Integral }, PreDesugarOperator::IntegerPow },
+				{ { base::StrID("**"), tsh::Kind::Integral }, PreDesugarBinaryOperator::IntegerPow },
 
 				/// Bitwise operations ///
 				{ { base::StrID("&"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitAnd },
@@ -229,7 +239,7 @@ namespace compiler::helios::code {
 				{ { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
 				{ { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
 				{ { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
-				{ { base::StrID("**"), tsh::Kind::Float }, PreDesugarOperator::FloatPow },
+				{ { base::StrID("**"), tsh::Kind::Float }, PreDesugarBinaryOperator::FloatPow },
 
 				/// Floating point comparisons ///
 				{ { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },
@@ -258,6 +268,9 @@ namespace compiler::helios::code {
 		Box<Expr>       rhs,
 		ScopeID         scope
 	) {
+		//@TODO: #3702 handle custom, or otherwise fancy operators ending with `=`
+		CORE_ASSERT(!op.isAssignment(), "Assignement operator should be desugared by now.");
+
 		const auto lhs_type = lhs->expression_type.getSymbolType();
 		const auto rhs_type = rhs->expression_type.getSymbolType();
 
@@ -271,6 +284,7 @@ namespace compiler::helios::code {
 		// Next, we perform typical overload resolution.
 
 		// Step 1. — special path for numeric promotions
+		// @TODO: #3700 It always prefers builtin numeric to user-defined operator
 		if (lhs_type.getType().isNumeric() && rhs_type.getType().isNumeric()
 		    && isNumericOperator(op)) {
 			auto numeric_builtin_opt = findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
@@ -283,7 +297,7 @@ namespace compiler::helios::code {
 				auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
 				auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
 
-				return desugarOperatorToExpr(
+				return desugarBuiltinBinaryOperation(
 						   ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
 				)
 				    .valueOrThrow();

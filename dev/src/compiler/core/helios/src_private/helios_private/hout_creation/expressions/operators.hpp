@@ -22,11 +22,11 @@ namespace compiler::helios::code {
 	 * lowering via BinaryOperatorExpr, but instead require handling in HELIOS, such as generating a
 	 * call to language primitive.
 	 */
-	enum class PreDesugarOperator {
+	enum class PreDesugarBinaryOperator {
 		IntegerPow,
 		FloatPow,
 	};
-	using BuiltinOperation = std::variant<BuiltinBinary, PreDesugarOperator>;
+	using BuiltinBinaryOperation = std::variant<BuiltinBinary, PreDesugarBinaryOperator>;
 
 	/**
 	 * @brief Finds a numeric builtin unary operator for an expression and a given name.
@@ -43,15 +43,15 @@ namespace compiler::helios::code {
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
 	 * @return Returns the operation with proper coercions applied to operands
 	 */
-	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
+	base::Optional<std::tuple<BuiltinBinaryOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	);
 
 	/**
 	 * @brief Finds the appropriate binary operator to call and constructs the corresponding
 	 * HOUT expression. Consumes the provided expressions of the arguments.
-	 * Currently used for all operators other than `As` (type cast) and `Pipe` (variant type
-	 * construction). Perhaps they will be moved here later.
+	 * Currently used for all operators other than `As` (type cast), `Pipe` (variant type
+	 * construction), and assignement operators (`X=`). Perhaps they will be moved here later.
 	 * @param ctx The context of the query
 	 * @param op The operator
 	 * @param op_origin The origin of the operator in the PST

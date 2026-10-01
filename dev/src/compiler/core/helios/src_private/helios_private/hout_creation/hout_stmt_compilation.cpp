@@ -202,8 +202,11 @@ namespace compiler::helios {
 				return;
 			}
 
-			// 2. Handle operation assignement `location X= value`
-			// It desugars to `location = location X value`
+			// 2. Handle custom assignement operator
+			// @TODO: #3702 implement this
+
+			// 3. Fallback to desugaring
+			// `location X= value` desugars to `location = location X value`
 			CORE_ASSERT(
 				op.isAssignment(), "Assignement operator should be present in assignement statement."
 			);
@@ -219,15 +222,19 @@ namespace compiler::helios {
 			BoxOrCRef<code::Expr> op_rhs
 				= ctx.query<QueryHoutOfExpr>({ val })->valueOrThrow().ref();
 			auto location_deref = s.deref(std::move(location));
-			auto value          = code::resolveBinaryOperator(
-                ctx,
-                stripped_op,
-                code::pstOrigin(op_wrapped),
-                std::move(op_lhs),
-                op_rhs->clone(),
-                ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
-            );
-			// @TODO: #3697 Improve dia
+
+			// @TODO: #3697 Improve dia, resolveBinaryOperator throws without knowledge of the
+			// original assignment operator, it only knows about the stripped version.
+			auto value = code::resolveBinaryOperator(
+				ctx,
+				stripped_op,
+				code::pstOrigin(op_wrapped),
+				std::move(op_lhs),
+				op_rhs->clone(),
+				ctx.query<QueryPrimaryCodeScopeFor>({ assignment })
+			);
+			// @TODO: #3697 Improve dia. Coercions happen in places that are not very clear in compact
+			// `location X= value` form, for dia purposes add message with extended form as needed.
 			auto coerced_value = coerceFromBox(
 									 ctx,
 									 std::move(value),
