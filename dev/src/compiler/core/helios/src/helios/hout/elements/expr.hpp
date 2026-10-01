@@ -284,7 +284,6 @@ namespace compiler::helios::code {
 		IntegerMul,
 		IntegerDiv,
 		IntegerMod,
-		IntegerPow,
 		IntegerBitAnd,
 		IntegerBitOr,
 		IntegerBitXor,
@@ -296,7 +295,6 @@ namespace compiler::helios::code {
 		FloatMul,
 		FloatDiv,
 		FloatMod,
-		FloatPow,
 
 		// Comparison operators
 		IntegerLt,    // Less than
