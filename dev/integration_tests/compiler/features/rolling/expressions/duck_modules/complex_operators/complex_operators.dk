@@ -1,4 +1,5 @@
-import core.builtins.*;
+import core.prints.*;
+import core.containers.*;
 
 var calls: i64 = 0;
 fun next_idx() -> i64 = {
@@ -7,35 +8,42 @@ fun next_idx() -> i64 = {
     return c;
 }
 
+fun +-(x: i64, y: i64) -> i64 = {
+    return x + y - 1;
+}
+
 fun main() = {
     var x: i64 = 0;
     x += 5;
     x *= 2;
     x -= 1;
-    builtin_output_i64(x);
-    builtin_output_i64(x**3);
+    print(x);
+    print(x**3);
 
     var y: f64 = 1.3;
     y += 1.;
     y *= 0.4;
     y /= 6.7;
-    builtin_output_f64(y);
-    builtin_output_f64(y**0.9);
+    print(y);
+    print(y**0.9);
 
     var z: u32 = 5u32;
     z += 1u32;
     z *= 3u32;
     z -= 11u32;
-    builtin_output_i64(z);
-    builtin_output_i64(z**3u32);
+    print(z);
+    print(z**3u32);
 
     var arr: i64[2];
     arr[0] = 10;
     arr[1] = 20;
     arr[next_idx()] += 5;
+    print(arr[0]);
+    print(arr[1]);
 
-    builtin_output_i64(arr[0]);
-    builtin_output_i64(arr[1]);
+    var a: i64 = 7;
+    a +-= 3;
+    print(a);
 
     return 0;
 }
