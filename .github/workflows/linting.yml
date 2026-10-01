@@ -66,7 +66,7 @@ jobs:
         run: sudo apt update
 
       - name: Install gvc, LLVM and nlohmann_json
-        run: sudo apt -y install libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
+        run: sudo apt -y install libgraphviz-dev llvm-19 llvm-19-dev libclang-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
 
       - name: Install click and PyYAML
         run: sudo pip install click pyyaml --break-system-packages --no-input
@@ -111,7 +111,7 @@ jobs:
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
           database: "dev/build"
-          ignore: "**/*.c"
+          ignore: "**/*.c|dev/src/tools/c_import/tests/headers"
           extra-args: "-Wno-unknown-warning-option"
 
           # Note that tidy-checks: '', means it uses .clang-tidy file

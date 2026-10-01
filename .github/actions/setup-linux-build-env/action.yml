@@ -51,7 +51,7 @@ runs:
 
     - name: Install LLVM
       shell: bash
-      run: sudo apt -y install llvm-19 llvm-19-dev
+      run: sudo apt -y install llvm-19 llvm-19-dev libclang-19-dev
 
     - name: Install clang
       # Note that it is also necessary to compile Duckling builtins to LLVM bitcode

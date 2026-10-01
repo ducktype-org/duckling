@@ -66,6 +66,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureModules.cmake)
 add_custom_test_pack(base)
 add_custom_test_pack(common)
 add_custom_test_pack(compiler)
+add_custom_test_pack(tools)
 
 
 insertDependencies()
@@ -75,6 +76,7 @@ add_subdirectory(src/common)
 add_subdirectory(src/compiler)
 add_subdirectory(src/vm)
 add_subdirectory(src/playground)
+add_subdirectory(src/tools)
 
 # Scripts:
 add_subdirectory(scripts/cmake)

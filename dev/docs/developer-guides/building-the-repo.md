@@ -13,6 +13,7 @@
 - **lcov** is used for generating coverage reports.
 - **LLVM** with version 19 is required for building the project.
 - **pkg-config** and **libffi** (development headers) are required for the dynamic foreign function interface.
+- **libclang** (development headers, same version as LLVM) is required for `duck_c_import`, the translator behind `duck translate-c`. It ships with LLVM from `toolbox.py download-llvm`/`install-llvm`, with Homebrew's `llvm@19` and with Arch's `clang`; on Debian/Ubuntu install `libclang-dev`.
 
 
 #### Debian/Ubuntu
@@ -22,7 +23,7 @@ Note that the dependencies listed below are listed without versions. Update the 
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev pkg-config libffi-dev -y
+sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev pkg-config libffi-dev libclang-dev -y
 ```
 
 

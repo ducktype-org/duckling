@@ -1,0 +1,20 @@
+import core.builtins.*;
+import zlib.*;
+
+fun main() -> i64 = {
+    let text = ptr_from_slice:{char}("hello\0") as cptr u8;
+    if (crc32(0u64, text, 5u32) != 907060870u64) { return 1i64; }
+    var src: u8[256];
+    var i: i64 = 0i64;
+    while (i < 256i64) { src[i] = (i % 7i64) as u8; i = i + 1i64; }
+    var packed: u8[512];
+    var packed_len: u64 = 512u64;
+    if (compress(&packed as cptr u8, &packed_len as cptr u64, &src as cptr u8, 256u64) != Z_OK) { return 2i64; }
+    if (packed_len >= 256u64) { return 3i64; }
+    var back: u8[256];
+    var back_len: u64 = 256u64;
+    if (uncompress(&back as cptr u8, &back_len as cptr u64, &packed as cptr u8, packed_len) != Z_OK) { return 4i64; }
+    if (back_len != 256u64) { return 5i64; }
+    if (back[200] != src[200]) { return 6i64; }
+    return 0i64;
+}
