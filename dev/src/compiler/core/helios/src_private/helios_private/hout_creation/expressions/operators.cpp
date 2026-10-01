@@ -71,6 +71,8 @@ namespace {
 	 * @brief Resolves a builtin binary numeric operator into HELIOS expression. If it cannot be
 	 * resolved correctly (for example, because there is no language primitive that matches the @p
 	 * lhs and @p rhs types) an error is logged and a query failure is returned.
+	 * @note This in not responsible for desugaring assignment operators, for those see @ref
+	 * desugarAssignmentOperator instead.
 	 * @param ctx Query context
 	 * @param op Operator to be resolved
 	 * @param lhs Left hand side argument of the operator
