@@ -53,8 +53,9 @@ fun main() -> i64 = {
     tg.kind = 1i32;
     tg.lo = 100i16;
     tg.hi = 1000i16;
-    SL_Tagged_set_i(tgp, 10i32);
-    if (SL_Tagged_get_i(tgp) != 10i32) { return 10i64; }
+    let tip = SL_Tagged_as_i(tgp);
+    tip[0] = 10i32;
+    if (SL_Tagged_as_i(tgp)[0] != 10i32) { return 10i64; }
     if (SL_TaggedSum(tgp) != 1111i32) { return 11i64; }
 
     var fl: SL_Flags;
@@ -70,10 +71,13 @@ fun main() -> i64 = {
 
     var pk: SL_Packed;
     let pkp = &pk as cptr SL_Packed;
-    SL_Packed_set_tag(pkp, 2u8);
+    let tagp = SL_Packed_as_tag(pkp);
+    tagp[0] = 2u8;
     SL_Packed_set_value(pkp, 40u32);
     if (SL_Packed_get_value(pkp) != 40u32) { return 16i64; }
     if (SL_PackedValue(pkp) != 42u32) { return 17i64; }
+
+    if (match_(19i32) != 19i32) { return 19i64; }
 
     SL_DestroyWindow(win);
     SL_Quit();

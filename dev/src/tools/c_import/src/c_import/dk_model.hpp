@@ -28,6 +28,8 @@ namespace c_import {
 		std::string                name;
 		std::vector<DkNameType>    params;
 		std::optional<std::string> return_type;
+		/// The linked C name, when it differs from `name`.
+		std::optional<std::string> symbol_name;
 	};
 
 	struct DkConst final {

@@ -24,7 +24,6 @@ namespace c_import {
 		using TextOrReason = std::expected<std::string, std::string>;
 
 		constexpr std::string_view BITFIELD_ISSUE      = "#3647";
-		constexpr std::string_view KEYWORD_ISSUE       = "#3649";
 		constexpr std::string_view VARIADIC_ISSUE      = "#3271";
 		constexpr std::string_view CALLBACK_ISSUE      = "#3650";
 		constexpr std::string_view POINTER_CYCLE_ISSUE = "#2616";
@@ -725,24 +724,30 @@ namespace c_import {
 					}
 					std::vector<FlatField> members;
 					flattenAll(inner, base_bits + field.offset_bits, members);
-					for (const auto& member: members) emitAccessors(owner, member);
+					for (const auto& member: members) emitMemberAccess(owner, member);
 				}
 			}
 
 			void emitBlobAccessors(std::size_t i) {
-				const auto&            record = model.records[i];
 				std::vector<FlatField> members;
 				flattenAll(i, 0, members);
-				for (const auto& member: members)
-					if (record.is_union && member.offset_bits == 0 && !member.bit_width)
-						emitPointerView(i, member);
-					else
-						emitAccessors(i, member);
+				for (const auto& member: members) emitMemberAccess(i, member);
+			}
+
+			/// A pointer view for a member at an aligned offset, otherwise a getter and setter.
+			void emitMemberAccess(std::size_t i, const FlatField& member) {
+				const bool is_aligned
+					= !member.bit_width && member.offset_bits % 8 == 0
+				   && (member.offset_bits / 8) % std::max<std::uint64_t>(member.align, 1) == 0;
+				if (is_aligned)
+					emitPointerView(i, member);
+				else
+					emitAccessors(i, member);
 			}
 
 			// @TODO: #2135 Generated parameters and locals are prefixed with `__dk_`, since one
 			// named like a C function (ncurses has `raw`) is ambiguous.
-			/// `R_as_m(p: cptr R) -> cptr M`, which works on every backend since it is only a cast.
+			/// `R_as_m(p: cptr R) -> cptr M`, pointing at member `m` of `*p`.
 			void emitPointerView(std::size_t i, const FlatField& member) {
 				const auto& record    = names[i];
 				auto        view_name = std::format("{}_as_{}", record, member.name);
@@ -755,16 +760,22 @@ namespace c_import {
 					skip(view_name, "name is already taken");
 					return;
 				}
+				std::vector<std::string> body;
+				if (auto offset = member.offset_bits / 8; offset == 0) {
+					body.push_back(std::format("return __dk_p as {};", target));
+				} else {
+					body.emplace_back("let __dk_b = __dk_p as cptr u8;");
+					body.push_back(std::format("return &__dk_b[{}] as {};", offset, target));
+				}
 				out.functions.push_back({
 					view_name,
 					{ { .name = "__dk_p", .type = "cptr " + record } },
 					target,
-					{ std::format("return __dk_p as {};", target) },
+					std::move(body),
 				});
 			}
 
-			// @TODO: #3662 A member away from offset 0 gets a getter and setter instead of a
-			// pointer, until the DVM backend can lower `&` of a place reached through a `cptr`.
+			/// A getter and setter assembling a bitfield or misaligned member from single bytes.
 			void emitAccessors(std::size_t i, const FlatField& member) {
 				const auto& record    = names[i];
 				auto        getter    = std::format("{}_get_{}", record, member.name);
@@ -784,13 +795,7 @@ namespace c_import {
 				}
 
 				const auto* scalar = std::get_if<CScalar>(&member.type->kind);
-				const bool  is_aligned
-					= !member.bit_width && member.offset_bits % 8 == 0
-				   && (member.offset_bits / 8) % std::max<std::uint64_t>(member.align, 1) == 0;
-
-				if (is_aligned) {
-					emitViewAccessors(record, getter, setter, member, *type);
-				} else if (scalar && scalar->kind != ScalarKind::Float) {
+				if (scalar && scalar->kind != ScalarKind::Float) {
 					if (!emitByteAccessors(record, getter, setter, member, *scalar, *type)) {
 						skip_both(std::format("spans more than {} bytes", MAX_BYTE_ASSEMBLY));
 						return;
@@ -801,39 +806,6 @@ namespace c_import {
 				}
 				claim(getter);
 				claim(setter);
-			}
-
-			/// Accessors through a class that places the member at its offset.
-			void emitViewAccessors(
-				const std::string& record,
-				const std::string& getter,
-				const std::string& setter,
-				const FlatField&   member,
-				const std::string& type
-			) {
-				auto                    view = std::format("{}__view_{}", record, member.name);
-				std::vector<DkNameType> fields;
-				if (auto pad = member.offset_bits / 8; pad > 0)
-					fields.push_back({ "_pad", std::format("u8[{}]", pad) });
-				fields.push_back({ "__dk_v", type });
-				claim(view);
-				out.classes.push_back({ view, std::move(fields), {} });
-
-				out.functions.push_back({
-					getter,
-					{ { .name = "__dk_p", .type = "cptr " + record } },
-					type,
-					{ std::format("let __dk_view = __dk_p as cptr {};", view),
-				      "return __dk_view[0].__dk_v;" },
-				});
-				out.functions.push_back({
-					setter,
-					{ { .name = "__dk_p", .type = "cptr " + record },
-				      { .name = "__dk_value", .type = type } },
-					"()",
-					{ std::format("let __dk_view = __dk_p as cptr {};", view),
-				      "__dk_view[0].__dk_v = __dk_value;" },
-				});
 			}
 
 			/// Accessors assembling the member from single bytes, for bitfields and misaligned integers.
@@ -932,9 +904,11 @@ namespace c_import {
 						skip(function.name, reason);
 						continue;
 					}
-					DkFundecl   decl{ .name        = function.name,
-						              .params      = {},
-						              .return_type = std::nullopt };
+					DkFundecl decl{ .name        = usableName(function.name),
+						            .params      = {},
+						            .return_type = std::nullopt,
+						            .symbol_name = std::nullopt };
+					if (decl.name != function.name) decl.symbol_name = function.name;
 					std::string failure;
 					// @TODO: #3646 A `void` return is left out, since `-> void` miscompiles.
 					if (!std::holds_alternative<CVoid>(function.return_type->kind)) {
@@ -961,7 +935,7 @@ namespace c_import {
 						skip(function.name, failure);
 						continue;
 					}
-					if (!claim(function.name)) {
+					if (!claim(decl.name)) {
 						skip(function.name, "name is already taken");
 						continue;
 					}
@@ -974,9 +948,6 @@ namespace c_import {
 					return "`static` function: there is no symbol to link against";
 				// @TODO: #3271 Variadic functions need a declaration per call signature.
 				if (function.variadic) return std::format("variadic function ({})", VARIADIC_ISSUE);
-				// @TODO: #3649 A symbol-name attribute would let these be declared under another name.
-				if (isReservedName(function.name))
-					return std::format("the linked name is a Duckling keyword ({})", KEYWORD_ISSUE);
 				return {};
 			}
 

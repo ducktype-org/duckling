@@ -54,7 +54,10 @@ namespace c_import {
 				out += std::format("{}}}\n\n", INDENT);
 			}
 			for (const auto& decl: module.fundecls) {
-				out += std::format("{}fundecl {}({})", INDENT, decl.name, joinParams(decl.params));
+				out += INDENT;
+				if (decl.symbol_name)
+					out += std::format("@c_symbol_name(\"{}\") ", *decl.symbol_name);
+				out += std::format("fundecl {}({})", decl.name, joinParams(decl.params));
 				if (decl.return_type) out += std::format(" -> {}", *decl.return_type);
 				out += ";\n";
 			}

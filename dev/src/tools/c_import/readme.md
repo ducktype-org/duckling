@@ -108,6 +108,7 @@ byte-identical files.
 | `T a[N]`, `T a[N][M]` | `T[N]`, `T[N*M]` (flattened: same layout, no index order to guess) |
 | `void *`, function pointers | `cptr u8` |
 | field or parameter named like a keyword (`type`, `in`) | renamed `type_`, `in_` (only positions are linked) |
+| function named like a keyword (`match`) | `@c_symbol_name("match") fundecl match_(...)` |
 | record named like a function (`struct stat` and `stat()`) | the record is renamed `stat_struct` |
 
 ### Layout blobs and their accessors
@@ -116,15 +117,12 @@ A record Duckling cannot lay out itself becomes storage of exactly the right siz
 `_storage: uK[N]`, where `K` is the alignment and `N` is size / alignment. Its members are reached
 through generated functions:
 
-- **A union member at offset 0** gets a pointer view, which is just a cast:
-  `fun SDL_Event_as_key(p: cptr SDL_Event) -> cptr SDL_KeyboardEvent`.
-- **Any other member** gets a getter and setter, `R_get_f(p)` and `R_set_f(p, value)`. An aligned
-  member goes through a view class `R__view_f` that places it at its offset. A misaligned member
-  (packed) or a bitfield is assembled from single bytes, with sign extension for signed
+- **An aligned member** gets a pointer view, `R_as_f(p) -> cptr F`, such as
+  `fun SDL_Event_as_key(p: cptr SDL_Event) -> cptr SDL_KeyboardEvent`. At offset 0 it is just a
+  cast; elsewhere it is `&bytes[offset] as cptr F`.
+- **A misaligned member (packed) or a bitfield** gets a getter and setter, `R_get_f(p)` and
+  `R_set_f(p, value)`, which assemble it from single bytes, with sign extension for signed
   bitfields.
-
-Getters and setters are used instead of pointers because the DVM cannot yet take the address of a
-place reached through a `cptr` (#3662).
 
 A blob is classified as integers when it is passed by value. That matches C unless the record is
 16 bytes or smaller and holds a floating-point member, so functions taking or returning such a
@@ -145,7 +143,6 @@ Skipped declarations are listed, with the reason, at the top of the generated mo
 |---|---|
 | variadic functions (`SDL_Log`) | one declaration per call signature would be needed (#3271) |
 | `static` / `static inline` functions | there is no symbol to link against |
-| functions named like a Duckling keyword (`match`, `in`) | the name is the linked symbol (#3649) |
 | a small blob with a float member, passed by value | see [Layout blobs](#layout-blobs-and-their-accessors) (#3647) |
 | `long double`, `__int128` | no Duckling mapping (#1498) |
 | a flexible array member (`int rest[];`) | the record becomes a blob and that member gets no accessor, since zero-length arrays are rejected (#3647) |

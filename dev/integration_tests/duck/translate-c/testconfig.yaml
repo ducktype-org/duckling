@@ -20,7 +20,7 @@ PreCase: |+
   @{c-compiler} -O2 -shared -fPIC -o build_c/libsl.so @{fixture-dir}/sdl_like.c
 
 translate: >-
-  duck translate-c new sl --header @{fixture-dir}/sdl_like.h --include 'SL_*'
+  duck translate-c new sl --header @{fixture-dir}/sdl_like.h --include 'SL_*' --include match
   --library build_c/sl.o --library build_c/libsl.so
 make-app: >-
   duck init app > /dev/null

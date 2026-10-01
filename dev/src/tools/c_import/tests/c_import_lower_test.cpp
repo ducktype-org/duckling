@@ -137,7 +137,7 @@ private:
 		assertTrue(
 			named(module.functions, "Packed_set_value") != nullptr, "misaligned field setter"
 		);
-		assertTrue(named(module.functions, "Packed_get_tag") != nullptr, "aligned field getter");
+		assertTrue(named(module.functions, "Packed_as_tag") != nullptr, "aligned field view");
 	}
 
 	void unionBecomesBlobWithPointerViews() {
@@ -182,11 +182,13 @@ private:
 			cls->fields[1].type,
 			"anonymous union is a named blob field"
 		);
-		assertTrue(
-			named(module.functions, "Tagged_get_f") != nullptr,
-			"alternative getter on the outer record"
+		const auto* view = named(module.functions, "Tagged_as_f");
+		assertTrue(view != nullptr, "alternative view on the outer record");
+		assertEqual(
+			std::string{ "return &__dk_b[4] as cptr f32;" },
+			view->body.back(),
+			"view points at the member's offset"
 		);
-		assertTrue(named(module.classes, "Tagged__view_f") != nullptr, "offset view class");
 	}
 
 	void incompleteRecordIsOpaque() {
@@ -261,7 +263,11 @@ private:
 		auto module               = lower(model, {});
 		assertTrue(isSkipped(module, "log"), "variadic");
 		assertTrue(isSkipped(module, "helper"), "static");
-		assertTrue(isSkipped(module, "match"), "keyword-named function");
+		const auto* match = named(module.fundecls, "match_");
+		assertTrue(match != nullptr, "keyword-named function is renamed");
+		assertEqual(
+			std::optional<std::string>{ "match" }, match->symbol_name, "and linked by its C name"
+		);
 		assertEqual(
 			std::string{ "in_" },
 			named(module.fundecls, "ok")->params.at(0).name,

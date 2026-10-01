@@ -50,16 +50,6 @@ extern("C") {
         hi: i16;
     }
 
-    class SL_Tagged__view_i {
-        _pad: u8[4];
-        __dk_v: i32;
-    }
-
-    class SL_Tagged__view_f {
-        _pad: u8[4];
-        __dk_v: f32;
-    }
-
     # Layout blob of union `SL_Tagged__anon0`: reach its members through the generated `SL_Tagged__anon0_*` functions.
     class SL_Tagged__anon0 {
         _storage: u32[1];
@@ -75,10 +65,6 @@ extern("C") {
         _storage: u8[5];
     }
 
-    class SL_Packed__view_tag {
-        __dk_v: u8;
-    }
-
     fundecl SL_Init(flags: u32) -> bool;
     fundecl SL_Quit();
     fundecl SL_CreateWindow(title: cptr char, w: i32, h: i32, flags: u64) -> cptr SL_Window;
@@ -92,6 +78,7 @@ extern("C") {
     fundecl SL_TaggedSum(tagged: cptr SL_Tagged) -> i32;
     fundecl SL_FlagsWide(flags: SL_Flags) -> u32;
     fundecl SL_PackedValue(packed: cptr SL_Packed) -> u32;
+    @c_symbol_name("match") fundecl match_(in_: i32) -> i32;
 }
 
 const SL_EVENT_FIRST: u32 = 0u32;
@@ -118,24 +105,14 @@ fun SL_Event_as_padding(__dk_p: cptr SL_Event) -> cptr u8 = {
     return __dk_p as cptr u8;
 }
 
-fun SL_Tagged_get_i(__dk_p: cptr SL_Tagged) -> i32 = {
-    let __dk_view = __dk_p as cptr SL_Tagged__view_i;
-    return __dk_view[0].__dk_v;
+fun SL_Tagged_as_i(__dk_p: cptr SL_Tagged) -> cptr i32 = {
+    let __dk_b = __dk_p as cptr u8;
+    return &__dk_b[4] as cptr i32;
 }
 
-fun SL_Tagged_set_i(__dk_p: cptr SL_Tagged, __dk_value: i32) -> () = {
-    let __dk_view = __dk_p as cptr SL_Tagged__view_i;
-    __dk_view[0].__dk_v = __dk_value;
-}
-
-fun SL_Tagged_get_f(__dk_p: cptr SL_Tagged) -> f32 = {
-    let __dk_view = __dk_p as cptr SL_Tagged__view_f;
-    return __dk_view[0].__dk_v;
-}
-
-fun SL_Tagged_set_f(__dk_p: cptr SL_Tagged, __dk_value: f32) -> () = {
-    let __dk_view = __dk_p as cptr SL_Tagged__view_f;
-    __dk_view[0].__dk_v = __dk_value;
+fun SL_Tagged_as_f(__dk_p: cptr SL_Tagged) -> cptr f32 = {
+    let __dk_b = __dk_p as cptr u8;
+    return &__dk_b[4] as cptr f32;
 }
 
 fun SL_Tagged__anon0_as_i(__dk_p: cptr SL_Tagged__anon0) -> cptr i32 = {
@@ -221,14 +198,8 @@ fun SL_Flags_set_wide(__dk_p: cptr SL_Flags, __dk_value: u32) -> () = {
     __dk_b[3] = ((__dk_raw >> 16u64) & 255u64) as u8;
 }
 
-fun SL_Packed_get_tag(__dk_p: cptr SL_Packed) -> u8 = {
-    let __dk_view = __dk_p as cptr SL_Packed__view_tag;
-    return __dk_view[0].__dk_v;
-}
-
-fun SL_Packed_set_tag(__dk_p: cptr SL_Packed, __dk_value: u8) -> () = {
-    let __dk_view = __dk_p as cptr SL_Packed__view_tag;
-    __dk_view[0].__dk_v = __dk_value;
+fun SL_Packed_as_tag(__dk_p: cptr SL_Packed) -> cptr u8 = {
+    return __dk_p as cptr u8;
 }
 
 fun SL_Packed_get_value(__dk_p: cptr SL_Packed) -> u32 = {
