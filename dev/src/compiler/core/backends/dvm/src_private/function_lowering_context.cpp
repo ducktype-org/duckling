@@ -276,7 +276,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				);
 				const auto& current_pointer_layout
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-				auto pointee_layout = current_pointer_layout.getPointee();
+				auto pointee_layout = program_context.getPointeeLayout(current_pointer_layout);
 
 				if (current_place.isDirect()) {
 					// In this case we have a direct stack variable which stores a pointer.
@@ -364,7 +364,9 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					if (current_layout->is<tsl::StaticArrayTypeLayout>())
 						return current_layout->as<tsl::StaticArrayTypeLayout>().getElementLayout();
 					if (current_layout->is<tsl::PointerTypeLayout>())
-						return current_layout->as<tsl::PointerTypeLayout>().getPointee();
+						return program_context.getPointeeLayout(
+							current_layout->as<tsl::PointerTypeLayout>()
+						);
 					CORE_PANIC("Type is not indexable");
 				}();
 

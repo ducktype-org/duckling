@@ -90,10 +90,22 @@ compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLow
 		     lowered_ffi_function_order.size() };
 }
 
+CRef<compiler::tsl::TypeLayout> ProgramLoweringContext::getPointeeLayout(
+	const tsl::PointerTypeLayout& pointer_layout
+) const {
+	CORE_ASSERT(query_ctx_for_errors.has_value(), "Query context must be set for type lowering");
+	return pointer_layout.getPointee(*query_ctx_for_errors.value());
+}
+
 const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
 	const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
 ) {
-	auto pointee_name = typeName(pointee_type);
+	return lowerPointerType(typeName(pointee_type), kind);
+}
+
+const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
+	const base::StrID pointee_name, tsl::PointerTypeLayout::PointerKind kind
+) {
 	switch (kind) {
 	case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
 		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
@@ -441,10 +453,19 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			    and not pointer_layout.hasPointee())
 				return getVoidCPointerType();
 
+			const auto pointee_layout = getPointeeLayout(pointer_layout);
+			// The pointee class is being lowered further up the stack, so it gets its name now
+			// and its definition once its fields are done.
+			if (pointee_layout->is<tsl::ClassTypeLayout>()
+			    and classes_being_lowered.contains(pointee_layout->getMangledName()))
+				return lowerPointerType(
+					pointee_layout->getMangledName(), pointer_layout.getPointerKind()
+				);
+
 			// A pointer to an information-less type (e.g. the payload of a `()` variant
 			// alternative) still needs a named pointee type.
 			const vm::code::TypeOfData& pointee_type
-				= *lowerAndKeepTslType(pointer_layout.getPointee()).copyValueOr(&getUnitType());
+				= *lowerAndKeepTslType(pointee_layout).copyValueOr(&getUnitType());
 			return lowerPointerType(pointee_type, pointer_layout.getPointerKind());
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
@@ -460,15 +481,18 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			    _2: <type_of_field_2>
 			}
 			*/
+			const base::StrID class_name = class_layout.getMangledName();
+			classes_being_lowered.put(class_name, true);
 			// @TODO: #2100 Change that to indexes.
 			for (usize i{ 0 }; i < num_fields; i++) {
 				const auto field_layout = class_layout.getFieldLayoutOfLayoutIndex(i);
 				const vm::code::TypeOfData& vm_field_type = **lowerAndKeepTslType(field_layout);
 				fields.emplace_back(base::StrID(base::strConcat("_", i)), typeName(vm_field_type));
 			}
+			classes_being_lowered.erase(class_name);
 
 			return vm::code::DataType{
-				base::StrID(class_layout.getMangledName()),
+				class_name,
 				std::move(fields),
 			};
 		}

@@ -77,3 +77,18 @@ Tests:
         ExitCode: 134
       dvm:
         ExitCode: 1
+
+  # Classes which refer to their own type through a pointer or an optional reference.
+  self_referential_class:
+    Cases:
+      all:
+        Output:
+          String: "7\n5\n"
+        ExitCode: 0
+
+  self_referential_optional_ref:
+    Cases:
+      all:
+        Output:
+          String: "321\n"
+        ExitCode: 0

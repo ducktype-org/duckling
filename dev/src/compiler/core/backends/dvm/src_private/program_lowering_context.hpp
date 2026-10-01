@@ -20,10 +20,8 @@ namespace compiler::backend_vm::internal {
 		friend class CTVLowering;
 
 		/**
-		 * @brief Context used purely for throwing NotYetImplemented errors.
-		 * @note This context should not be used for anything other than throwing NotYetImplemented
-		 * errors.
-		 * Remove this field when applicable.
+		 * @brief Context used for throwing NotYetImplemented errors and for looking up the layouts
+		 * of pointees (see getPointeeLayout).
 		 */
 		base::Optional<Ref<query::Context>> query_ctx_for_errors;
 
@@ -64,6 +62,15 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const {
 			return query_ctx_for_errors;
 		}
+
+		/**
+		 * @brief Get the layout of the pointee of a typed pointer layout.
+		 * @param pointer_layout A pointer layout which has a pointee.
+		 * @return The layout of the pointee type.
+		 */
+		[[nodiscard]] CRef<tsl::TypeLayout> getPointeeLayout(
+			const tsl::PointerTypeLayout& pointer_layout
+		) const;
 
 		/**
 		 * @brief Lowers a LIR function into DVM bytecode function.
@@ -237,6 +244,13 @@ namespace compiler::backend_vm::internal {
 			const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
 		);
 
+		/**
+		 * @brief Constructs the VM pointer type from the name of the pointee type, internal.
+		 */
+		const vm::code::TypeOfData lowerPointerType(
+			base::StrID pointee_name, tsl::PointerTypeLayout::PointerKind kind
+		);
+
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.
 		/// symbol types) are lowered.
@@ -255,6 +269,10 @@ namespace compiler::backend_vm::internal {
 
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.
 		TypeStorage type_storage;
+		// Names of the class types whose fields are being lowered right now. A pointer to one of
+		// them (e.g. `class T { t: ptr T; }`) refers to the class by name instead of lowering it
+		// again, which would never end.
+		base::HashMap<base::StrID, bool> classes_being_lowered;
 		// Maintains insertion order for types so REPL can emit only new types.
 		std::vector<base::StrID> lowered_type_order;
 		// Maintains insertion order for functions so REPL can emit only new functions.

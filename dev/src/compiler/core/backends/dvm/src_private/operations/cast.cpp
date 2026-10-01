@@ -88,8 +88,10 @@ namespace compiler::backend_vm::internal {
 						using enum tsl::PointerTypeLayout::PointerKind;
 
 						const bool same_pointee
-							= pointer_layout.getPointee()->getSourceType()
-						   == target_pointer_layout.getPointee()->getSourceType();
+							= ctx->programCtx().getPointeeLayout(pointer_layout)->getSourceType()
+						   == ctx->programCtx()
+						          .getPointeeLayout(target_pointer_layout)
+						          ->getSourceType();
 
 						/**
 						 * @brief Takes the native address of `source` (a `ptr T`) into a fresh
@@ -101,7 +103,9 @@ namespace compiler::backend_vm::internal {
 							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
 							const vm::code::TypeOfData& source_pointee_type
 								= *ctx->programCtx()
-							           .lowerAndKeepTslType(pointer_layout.getPointee())
+							           .lowerAndKeepTslType(
+										   ctx->programCtx().getPointeeLayout(pointer_layout)
+									   )
 							           .value();
 							const vm::code::TypeOfData& source_pointer_type
 								= ctx->programCtx().getOrInsertPointerType(
@@ -121,7 +125,9 @@ namespace compiler::backend_vm::internal {
 							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
 							const vm::code::TypeOfData& vm_element_type
 								= *ctx->programCtx()
-							           .lowerAndKeepTslType(pointer_layout.getPointee())
+							           .lowerAndKeepTslType(
+										   ctx->programCtx().getPointeeLayout(pointer_layout)
+									   )
 							           .value();
 							const vm::code::TypeOfData& ptr_to_element_type
 								= ctx->programCtx().getOrInsertPointerType(vm_element_type);

@@ -188,7 +188,7 @@ private:
 				variant_case(PointerTypeLayout, l) {
 					assertTrue(l.hasPointee(), "Typed pointer layout should have pointee.");
 					assertEqual(
-						*l.getPointee(),
+						*l.getPointee(ctx),
 						*unit_layout,
 						"Pointee should be a layout of the pointed-to type."
 					);
