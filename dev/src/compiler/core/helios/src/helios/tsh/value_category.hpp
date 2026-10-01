@@ -15,6 +15,9 @@
 
 #include <hashing/hash.hpp>
 
+#include <string>
+#include <string_view>
+
 namespace compiler::tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
 	// Maybe in the future we want to bring back "Identifiable" and make a struct to keep more
@@ -39,6 +42,11 @@ namespace compiler::tsh {
 	 * @return The symbol's primary category.
 	 */
 	PrimaryCategory primaryCategoryOfSymbol(query::Context& ctx, compiler::helios::SymID symbol);
+
+	/**
+	 * @brief The name of a primary category.
+	 */
+	[[nodiscard]] std::string_view toString(PrimaryCategory category);
 }
 
 /**
@@ -98,8 +106,6 @@ namespace compiler::tsh {
 		// It is not obvious what the default value category should be,
 		// so the default constructor is disabled.
 		ValueCategory() = delete;
-
-		ValueCategory(const ValueCategory&) = default;
 
 		explicit ValueCategory(const PrimaryCategory&);
 
@@ -207,6 +213,11 @@ namespace compiler::tsh {
 		}
 
 		auto operator<=>(const ValueCategory& other) const = default;
+
+		/**
+		 * @brief A human readable description of the value category.
+		 */
+		[[nodiscard]] std::string toString() const;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {

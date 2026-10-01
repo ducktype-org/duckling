@@ -134,7 +134,9 @@ namespace compiler::helios {
 			const auto alternatives
 				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
 			for (usize i = 0; i < alternatives.size(); i++)
-				if (tsh::referenceCoercionRule(from.getRefKind(), alternatives[i].getRefKind())
+				if (tsh::coercions::referenceCoercionRule(
+						from.getRefKind(), alternatives[i].getRefKind()
+					)
 				        .isLegal()
 				    && alternatives[i].getType() == from.getType())
 					return std::pair{ i, alternatives[i] };

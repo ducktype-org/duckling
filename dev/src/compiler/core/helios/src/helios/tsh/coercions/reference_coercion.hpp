@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <string>
 
-namespace compiler::tsh {
+namespace compiler::tsh::coercions {
 	/**
 	 * @brief What has to happen to the reference part of a value to reach the target kind.
 	 */
@@ -27,6 +27,15 @@ namespace compiler::tsh {
 	 * @brief Everything a coercion needs to know about a reference-kind coercion.
 	 */
 	struct ReferenceCoercion final {
+		[[nodiscard]]
+		static ReferenceCoercion illegal() {
+			return ReferenceCoercion{
+				.adjustment        = ReferenceAdjustment::Illegal,
+				.creates_new_value = false,
+				.points_to_source  = false,
+			};
+		}
+
 		ReferenceAdjustment adjustment;
 
 		/**
