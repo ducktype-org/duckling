@@ -23,7 +23,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Context used for throwing NotYetImplemented errors and for looking up the layouts
 		 * of pointees (see getPointeeLayout).
 		 */
-		base::Optional<Ref<query::Context>> query_ctx_for_errors;
+		base::Optional<Ref<query::Context>> query_ctx;
 
 	public:
 		/**
@@ -45,14 +45,14 @@ namespace compiler::backend_vm::internal {
 		 * Should be called when entering a query scope with active context.
 		 * Must be paired with invalidateContext() when exiting the scope.
 		 */
-		void setContext(query::Context& query_ctx) { query_ctx_for_errors = &query_ctx; }
+		void setContext(query::Context& ctx) { query_ctx = &ctx; }
 
 		/**
 		 * @brief Clear the query context after compilation.
 		 *
 		 * Should be called when exiting the query scope to prevent dangling references.
 		 */
-		void invalidateContext() { query_ctx_for_errors = std::nullopt; }
+		void invalidateContext() { query_ctx = std::nullopt; }
 
 		/**
 		 * @brief Get the currently set query context.
@@ -60,17 +60,8 @@ namespace compiler::backend_vm::internal {
 		 * @return Optional reference to the active query context.
 		 */
 		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const {
-			return query_ctx_for_errors;
+			return query_ctx;
 		}
-
-		/**
-		 * @brief Get the layout of the pointee of a typed pointer layout.
-		 * @param pointer_layout A pointer layout which has a pointee.
-		 * @return The layout of the pointee type.
-		 */
-		[[nodiscard]] CRef<tsl::TypeLayout> getPointeeLayout(
-			const tsl::PointerTypeLayout& pointer_layout
-		) const;
 
 		/**
 		 * @brief Lowers a LIR function into DVM bytecode function.
@@ -81,13 +72,36 @@ namespace compiler::backend_vm::internal {
 		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
+		 * @brief Gets the name of the DVM type of a LIR type layout, lowering the layout with
+		 * lowerAndKeepTslType only if it has not been declared yet.
+		 * @return The DVM type name corresponding to the TypeLayout.
+		 * @note A declared type may still be in the middle of its lowering (e.g. the class `T` in
+		 * `class T { t: ptr T; }` while its fields are lowered), so this is the only safe way to
+		 * refer to a type from within the lowering of another type. Prefer it whenever only the
+		 * name is needed.
+		 */
+		base::StrID keepTslType(CRef<tsl::TypeLayout> layout);
+
+		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
 		 * It caches the result, so inserts the type into the program only if needed.
-		 * @return The DVM type corresponding to the TypeLayout or an empty optional for
-		 * `tsl::EmptyTypeLayout`, representing Unit / empty-layout return types that do not
-		 * have a DVM counterpart.
+		 * The type name is declared before the lowering, so the types it refers to can use it.
+		 * @return The DVM type corresponding to the TypeLayout.
+		 * @pre The layout is not in the middle of its lowering.
+		 * @note `tsl::EmptyTypeLayout` lowers to the `unit` opaque type, since the DVM identifies
+		 * variant alternatives and pointees by type name. It is opaque rather than a one-byte
+		 * primitive, so that it never collides with a `bool` or `i8` alternative of the same variant.
 		 */
-		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+		CRef<vm::code::TypeOfData> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+
+		/**
+		 * @brief Lowers a function return type layout like lowerAndKeepTslType.
+		 * @return The DVM return type, or an empty optional for `tsl::EmptyTypeLayout`, as a
+		 * function returning Unit has no DVM result.
+		 */
+		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepReturnTslType(
+			CRef<tsl::TypeLayout> layout
+		);
 
 		/**
 		 * @brief Inserts a manually created DVM type into the program context and returns a
@@ -101,7 +115,7 @@ namespace compiler::backend_vm::internal {
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
 		const vm::code::TypeOfData& getOrInsertPointerType(
-			const vm::code::TypeOfData&         pointee_type,
+			base::StrID                         pointee_name,
 			tsl::PointerTypeLayout::PointerKind kind
 			= tsl::PointerTypeLayout::PointerKind::SinglePointer
 		);
@@ -111,16 +125,6 @@ namespace compiler::backend_vm::internal {
 		 * counterpart of C's `void*`. Inserts it into the module on first use.
 		 */
 		const vm::code::TypeOfData& getVoidCPointerType();
-
-		/**
-		 * @brief Returns the DVM type standing in for an information-less type (`()`).
-		 *
-		 * Such a type has no representation of its own, but the DVM identifies variant
-		 * alternatives by type name, so the alternative still needs a name to be set and tested.
-		 * It is a distinct opaque type rather than a one-byte primitive, so that it never
-		 * collides with a `bool` or `i8` alternative of the same variant.
-		 */
-		const vm::code::TypeOfData& getUnitType();
 
 		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
@@ -235,14 +239,16 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] bool isCompTimeLowering() const;
 
 	private:
-		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
-
 		/**
-		 * @brief Actualy constructs the VM pointer type, internal.
+		 * @brief Computes the name of the DVM type a TypeLayout lowers to, without lowering it.
+		 * @param layout The layout to name.
+		 * @return The DVM type name; `unit` for `tsl::EmptyTypeLayout`.
+		 * @note A pointer is named after its pointee's name only, so the pointee is never lowered
+		 * and a class's name is its mangled name, so naming does not recurse into fields.
 		 */
-		const vm::code::TypeOfData lowerPointerType(
-			const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
-		);
+		base::StrID getTslNameInternal(CRef<tsl::TypeLayout> layout);
+
+		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
 		/**
 		 * @brief Constructs the VM pointer type from the name of the pointee type, internal.
@@ -269,10 +275,6 @@ namespace compiler::backend_vm::internal {
 
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.
 		TypeStorage type_storage;
-		// Names of the class types whose fields are being lowered right now. A pointer to one of
-		// them (e.g. `class T { t: ptr T; }`) refers to the class by name instead of lowering it
-		// again, which would never end.
-		base::HashMap<base::StrID, bool> classes_being_lowered;
 		// Maintains insertion order for types so REPL can emit only new types.
 		std::vector<base::StrID> lowered_type_order;
 		// Maintains insertion order for functions so REPL can emit only new functions.
