@@ -11,12 +11,11 @@
 
 #pragma once
 
-#include "helios/tsh/kind.hpp"
-
 #include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/kind.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
 
 #include <utility>
