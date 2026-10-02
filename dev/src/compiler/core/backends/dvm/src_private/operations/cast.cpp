@@ -120,7 +120,8 @@ namespace compiler::backend_vm::internal {
 							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
 							const vm::code::TypeOfData& ptr_to_element_type
 								= ctx->programCtx().getOrInsertPointerType(
-									ctx->programCtx().keepTslType(pointer_layout.getPointee())
+									ctx->programCtx().keepTslType(pointer_layout.getPointee(query_ctx
+							        ))
 								);
 
 							auto index_tmp

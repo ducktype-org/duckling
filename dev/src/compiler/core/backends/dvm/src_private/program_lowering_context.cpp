@@ -436,7 +436,7 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 		variant_case_novalue(tsl::FloatTypeLayout) {
 			return base::StrID(base::strConcat("f", layout->getSize().asInt()));
 		}
-		variant_case_novalue(tsl::MetaTypeLayout) { return base::StrID("meta_ptr"); }
+		variant_case_novalue(tsl::MetaTypeLayout) { return base::StrID("opaque_ptr"); }
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			using enum tsl::PointerTypeLayout::PointerKind;
 			const base::StrID pointee_name
