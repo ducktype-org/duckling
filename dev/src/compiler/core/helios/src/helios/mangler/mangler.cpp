@@ -82,7 +82,7 @@ namespace compiler::helios::mangler {
 
 			const auto sym_id = std::get<SymID>(key.symbol_key);
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-				variant_match(abi->valueOrThrow()) {
+				variant_match(abi->valueOrThrow().withoutValidation()) {
 					variant_case_novalue(CAbi) { return false; }
 					variant_case_novalue(DVMAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }

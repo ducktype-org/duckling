@@ -72,9 +72,9 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout>                     return_type,
 		const std::vector<CRef<tsl::TypeLayout>>& parameter_types
 	) {
-		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
-			"Handling errors in MIR is not supported yet"
-		);
+		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)
+		                   ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
+		                   .withoutValidation();
 		if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
 			return { LIRAbi::DefaultAbi{} };
 

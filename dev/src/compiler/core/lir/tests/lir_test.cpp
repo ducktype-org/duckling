@@ -9,6 +9,7 @@
 
 #include <driver/test_utils.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -720,8 +721,8 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			for (const auto& [name, symbol]: invalid_declarations)
 				assertTrue(
-					ctx.query<helios::QuerySymbolABI>(symbol)->hasFailed(),
-					base::strConcat("Expected the ABI query to fail for `", name, "`")
+					ctx.query<helios::QueryDeclOfFun>(symbol)->hasFailed(),
+					base::strConcat("Expected the declaration query to fail for `", name, "`")
 				);
 		});
 	}

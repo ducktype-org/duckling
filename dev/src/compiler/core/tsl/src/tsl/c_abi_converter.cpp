@@ -1,3 +1,5 @@
+#include "helios/tsh/symbol_type.hpp"
+
 #include <abi/type_system/type.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -6,6 +8,7 @@
 #include <tsl/c_abi_target.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
@@ -69,6 +72,9 @@ namespace compiler::tsl {
 		}
 
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
+			if (not v_matches(class_type.getABI(ctx), helios::CAbi))
+				return fail("nested non-extern(\"C\") class");
+
 			// Convert the fields to their C-ABI types and return them as a struct,
 			// borrowing each field's cached conversion (no clone).
 			std::vector<ats::AbiTypePtr> fields;
@@ -88,6 +94,30 @@ namespace compiler::tsl {
 			if (fields.empty()) return fail("class with no fields has zero size in C ABI");
 
 			return ok(ats::structType(std::move(fields)));
+		}
+
+		CAbiConversionResult checkPointee(tsh::SymbolType<> pointee, query::Context& ctx) {
+			if (pointee.getRefKind() != tsh::ReferenceKind::Direct)
+				return fail("pointee is a reference");
+
+			const tsh::AbstractType type = pointee.getType();
+			switch (type.getKind()) {
+			case tsh::Kind::Class:
+				if (not v_matches(tsh::ClassAbstractType(type).getABI(ctx), helios::CAbi))
+					return fail("pointee is a non-extern(\"C\") class");
+				return ok(ats::pointerType());
+			case tsh::Kind::StaticArray:
+				return checkPointee(tsh::StaticArrayAbstractType(type).getElementType(), ctx);
+			case tsh::Kind::CPointer:
+				return ok(ats::pointerType());
+			default:
+				break;
+			}
+
+			const auto& conversion = ctx.query<QueryCAbiTypeOf>(pointee)->valueOrThrow();
+			if (not conversion.has_value())
+				return fail(base::strConcat("pointee rejected: ", conversion.error()));
+			return ok(ats::pointerType());
 		}
 	}
 
@@ -114,7 +144,7 @@ namespace compiler::tsl {
 			case Kind::RawPointer:
 				return fail("raw pointer is not C-compatible; use `cptr T`");
 			case Kind::CPointer:
-				return ok(ats::pointerType());
+				return checkPointee(tsh::CPointerAbstractType(abstract).getPointee(), ctx);
 			case Kind::StaticArray:
 				return convertStaticArray(tsh::StaticArrayAbstractType(abstract), ctx);
 			case Kind::Class:

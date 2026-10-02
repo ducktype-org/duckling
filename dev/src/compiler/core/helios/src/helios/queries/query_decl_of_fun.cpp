@@ -726,6 +726,10 @@ namespace compiler::helios {
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						auto result = std::move(decl_maker.out).value();
 						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
+						ctx.query<QuerySymbolABI>(key)
+							->valueOrThrow()
+							.withValidation(ctx, &result)
+							.valueOrThrow();
 						return result;
 					}
 					variant_case(defgen::Constructor, ctor_data) {

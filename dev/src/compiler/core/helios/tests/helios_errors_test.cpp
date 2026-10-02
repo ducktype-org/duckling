@@ -1558,11 +1558,6 @@ private:
 	/**
 	 * @brief Errors reported for an `extern("C")` class whose fields have no
 	 * representation in the C ABI.
-	 *
-	 * Only classes are checked here: a class symbol is mangled during the duplicate
-	 * check of `QueryModuleHOUT`, and mangling asks for the symbol's ABI, so the
-	 * diagnostics land while the module HOUT is built. Function declarations are mangled
-	 * later, so the equivalent cases for them live in `lir_test`'s `cAbiSignatureTest`.
 	 */
 	void testExternCErrors() {
 		// C has no zero-sized structs. The class is never used, so this also covers the
@@ -1594,6 +1589,116 @@ private:
 		      "`slice` is not C-compatible" },
 			2,
 			false
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class Inner { a: i8 = 0i8; b: i64 = 0; }
+				extern("C") class Outer {
+					x: i32 = 0i32;
+					inner: Inner;
+				}
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{ "Field `inner`", "nested non-extern(\"C\") class" },
+			1,
+			false
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") class Node {
+					value: i32 = 0i32;
+					next: cptr Node;
+				}
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{},
+			0,
+			false
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") class Node {
+					value: i32 = 0i32;
+					next: cptr [Node; 2];
+				}
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{},
+			0,
+			false
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class Inner { a: i8 = 0i8; }
+				extern("C") class Outer { p: cptr [Inner; 2]; }
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{ "Field `p`", "pointee is a non-extern(\"C\") class" },
+			1,
+			false
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class Inner { a: i8 = 0i8; }
+				extern("C") class Outer { p: cptr Inner; }
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{ "Field `p`", "pointee is a non-extern(\"C\") class" },
+			1,
+			false
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") fundecl sliceParam(a: slice char) -> i64;
+				fun main() -> i64 = {
+					return sliceParam("abc");
+				} )",
+			{ "CABI function parameter is invalid", "`slice` is not C-compatible" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") fundecl tupleReturn(a: i32) -> (i32, i32);
+				fun main() -> i64 = {
+					tupleReturn(1i32);
+					return 0;
+				} )",
+			{ "CABI function return type is invalid", "tuples are not C-compatible" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class Inner { a: i8 = 0i8; }
+				extern("C") fundecl takesInner(v: Inner) -> i32;
+				fun main() -> i64 = {
+					takesInner(Inner());
+					return 0;
+				} )",
+			{ "CABI function parameter is invalid", "nested non-extern(\"C\") class" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") @cffi_variadic_fixed_params(0) fundecl zeroFixed(a: i64) -> i64;
+				fun main() -> i64 = {
+					return zeroFixed(1);
+				} )",
+			{ "at least one fixed parameter" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") @cffi_variadic_fixed_params(1) fundecl unpromoted(a: i64, b: u16) -> i64;
+				fun main() -> i64 = {
+					return unpromoted(1, 2u16);
+				} )",
+			{ "Variadic function parameter has to be promoted", "u16" },
+			1
 		);
 	}
 

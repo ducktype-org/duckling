@@ -45,7 +45,25 @@ namespace compiler::helios {
 
 	using SymbolABI = std::variant<DefaultAbi, CAbi, DVMAbi>;
 
-	using QuerySymbolABI_Result = query::QResult<SymbolABI>;
+	struct ABIWrapper {
+	private:
+		SymbolABI value;
+
+	public:
+		/**
+		 * @brief Get the ABI without checking that the symbol is representable in it.
+		 */
+		[[nodiscard]] const SymbolABI& withoutValidation() const { return value; }
+
+		ABIWrapper(SymbolABI val): value(val) {}
+
+		[[nodiscard]] query::QResult<CRef<SymbolABI>> withValidation(
+			query::Context&                                                           ctx,
+			std::variant<CRef<HOUTFunctionDeclaration>, CRef<tsh::ClassAbstractType>> val
+		) const;
+	};
+
+	using QuerySymbolABI_Result = query::QResult<ABIWrapper>;
 
 	/**
 	 * @brief Get the ABI of the HELIOS symbol ID.

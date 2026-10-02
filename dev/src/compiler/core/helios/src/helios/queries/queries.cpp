@@ -371,6 +371,11 @@ namespace compiler::helios {
 			if (interface_result->hasFailed()) return base::BAD;
 			Ref interface = &interface_result->valueOrPanic();
 
+			const auto abi = ctx.query<QuerySymbolABI>(class_sym);
+			if (abi->hasFailed()) return base::BAD;
+
+			auto validation_result = abi->valueOrPanic().withValidation(ctx, &class_type);
+			if (validation_result.hasFailed()) return base::BAD;
 
 			for (const auto& method: interface->getAnyMethodsView()) {
 				auto method_sym = method.getSymbol();

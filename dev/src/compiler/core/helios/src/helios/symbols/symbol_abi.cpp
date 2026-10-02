@@ -2,6 +2,8 @@
 
 #include "symbol_abi.hpp"
 
+#include "helios/hout/hout.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -143,93 +145,6 @@ namespace compiler::helios {
 
 			return fixed_params;
 		}
-
-		/**
-		 * @brief Validates that everything an `extern("C")` symbol exposes to C has a C-ABI
-		 * representation: the parameters and the return type of a function, or the class.
-		 */
-		query::QResult<std::monostate> checkCABITypes(query::Context& ctx, SymID sym) {
-			auto log_from_cabi = [&](tsl::CAbiConversionResult           result,
-			                         std::string_view                    elem,
-			                         base::Optional<dia::StablePosition> pos) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					base::strConcat("CABI ", elem, " is invalid. Reason: `", result.error(), "`."),
-					pos
-				));
-			};
-			if (isFunctionLike(kind(sym))) {
-				UNPACK_QRESULT_CREF(auto& decl =, ctx.query<QueryDeclOfFun>(sym));
-
-				for (auto& param: decl.parameters) {
-					UNPACK_QRESULT_CREF(auto& result =, ctx.query<tsl::QueryCAbiTypeOf>(param.type));
-					if (not result.has_value()) {
-						log_from_cabi(result, "function parameter", decl.origin);
-						return query::Failed();
-					}
-				}
-
-				const bool valueless_return
-					= decl.return_type.getRefKind() == tsh::ReferenceKind::Direct
-				  and (decl.return_type.getType().getKind() == tsh::Kind::Unit
-				       or decl.return_type.getType().getKind() == tsh::Kind::Void);
-
-				if (not valueless_return) {
-					UNPACK_QRESULT_CREF(
-						auto& result =, ctx.query<tsl::QueryCAbiTypeOf>(decl.return_type)
-					);
-					if (not result.has_value()) {
-						log_from_cabi(result, "function return type", decl.origin);
-						return query::Failed();
-					}
-				}
-
-				return {};
-			}
-
-			if (kind(sym) == SymbolKind::Class) {
-				const tsh::ClassAbstractType class_type = ctx.query<tsh::QueryClassType>(sym);
-
-				UNPACK_QRESULT_CREF(
-					auto& result =,
-					ctx.query<tsl::QueryCAbiTypeOf>(tsh::SymbolType<>::withDefaults(class_type))
-				);
-				if (result.has_value()) return {};
-
-				const dia::StablePosition class_position
-					= maybeSymbolPst(sym).value().unlock(ctx)->getStablePosition();
-
-				bool any_field = false;
-				for (const auto& element: class_type.getInterface(ctx)->getElements()) {
-					if (not element.isField()) continue;
-					any_field = true;
-
-					UNPACK_QRESULT_CREF(
-						auto& field_result =, ctx.query<tsl::QueryCAbiTypeOf>(element.getType(ctx))
-					);
-					if (field_result.has_value()) continue;
-
-					const auto field_pst = maybeSymbolPst(element.getSymbol());
-					ctx.logInt(makeBox<FieldNotCCompatibleError>(
-						ctx,
-						field_pst.has_value() ? field_pst.value().unlock(ctx)->getStablePosition()
-											  : class_position,
-						std::string(name(element.getSymbol()).strView()),
-						element.getType(ctx),
-						field_result.error()
-					));
-				}
-
-				// C has no zero-sized structs, so a class without fields has no C layout.
-				if (not any_field)
-					ctx.logInt(makeBox<ExternCClassEmptyError>(
-						class_position, std::string(name(sym).strView())
-					));
-
-				return query::Failed();
-			}
-
-			return {};
-		}
 	}
 
 	QuerySymbolABI_Result getSymbolABI(
@@ -259,17 +174,9 @@ namespace compiler::helios {
 				return query::Failed();
 			}
 
-			// We perform a check here, because unit types are removed from LIR.
-			UNPACK_QRESULT(auto _ =, checkCABITypes(ctx, sym));
-
 			if (isFunctionLike(kind(sym))) {
 				if_opt_some(getAttribute<attributes::CFFIVariadicFunction>(sym), variadic) {
-					UNPACK_QRESULT_CREF(auto& declaration =, ctx.query<QueryDeclOfFun>(sym));
-					UNPACK_QRESULT(
-						auto fixed_params =,
-						validateVariadicWithNFixed(ctx, declaration, variadic->fixed_params)
-					);
-					result.fixed_params = fixed_params;
+					result.fixed_params = variadic->fixed_params;
 				}
 			}
 
@@ -326,4 +233,103 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolABI)
+
+	query::QResult<CRef<SymbolABI>> ABIWrapper::withValidation(
+		query::Context&                                                           ctx,
+		std::variant<CRef<HOUTFunctionDeclaration>, CRef<tsh::ClassAbstractType>> val
+	) const {
+		v_if_matches(value, CAbi, c_abi) {
+			variant_match(val) {
+				variant_case(CRef<HOUTFunctionDeclaration>, decl_ref) {
+					const HOUTFunctionDeclaration& decl = *decl_ref;
+
+					auto log_from_cabi = [&](const tsl::CAbiConversionResult&    result,
+					                         std::string_view                    elem,
+					                         base::Optional<dia::StablePosition> pos) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat(
+								"CABI ", elem, " is invalid. Reason: `", result.error(), "`."
+							),
+							pos
+						));
+					};
+
+					if_opt_some(c_abi->fixed_params, fixed) {
+						UNPACK_QRESULT(auto _ =, validateVariadicWithNFixed(ctx, decl, fixed));
+					}
+
+					for (auto& param: decl.parameters) {
+						UNPACK_QRESULT_CREF(
+							auto& result =, ctx.query<tsl::QueryCAbiTypeOf>(param.type)
+						);
+						if (not result.has_value()) {
+							log_from_cabi(result, "function parameter", param.origin);
+							return query::Failed();
+						}
+					}
+
+					const bool valueless_return
+						= decl.return_type.getRefKind() == tsh::ReferenceKind::Direct
+					  and (decl.return_type.getType().getKind() == tsh::Kind::Unit
+					       or decl.return_type.getType().getKind() == tsh::Kind::Void);
+
+					if (not valueless_return) {
+						UNPACK_QRESULT_CREF(
+							auto& result =, ctx.query<tsl::QueryCAbiTypeOf>(decl.return_type)
+						);
+						if (not result.has_value()) {
+							log_from_cabi(result, "function return type", decl.origin);
+							return query::Failed();
+						}
+					}
+				}
+				variant_case(CRef<tsh::ClassAbstractType>, class_ref) {
+					const tsh::ClassAbstractType& class_type = *class_ref;
+
+					const dia::StablePosition class_position
+						= maybeSymbolPst(class_type.getSymbol())
+					          .value()
+					          .unlock(ctx)
+					          ->getStablePosition();
+
+					bool any_field  = false;
+					bool any_failed = false;
+					for (const auto& element: class_type.getInterface(ctx)->getElements()) {
+						if (not element.isField()) continue;
+						any_field = true;
+
+						UNPACK_QRESULT_CREF(
+							auto& field_result =,
+							ctx.query<tsl::QueryCAbiTypeOf>(element.getType(ctx))
+						);
+						if (field_result.has_value()) continue;
+						any_failed = true;
+
+						const auto field_pst = maybeSymbolPst(element.getSymbol());
+						ctx.logInt(makeBox<FieldNotCCompatibleError>(
+							ctx,
+							field_pst.has_value()
+								? field_pst.value().unlock(ctx)->getStablePosition()
+								: class_position,
+							std::string(name(element.getSymbol()).strView()),
+							element.getType(ctx),
+							field_result.error()
+						));
+					}
+
+					// C has no zero-sized structs, so a class without fields has no C layout.
+					if (not any_field) {
+						ctx.logInt(makeBox<ExternCClassEmptyError>(
+							class_position, std::string(name(class_type.getSymbol()).strView())
+						));
+						return query::Failed();
+					}
+
+					if (any_failed) return query::Failed();
+				}
+			}
+		}
+
+		return CRef<SymbolABI>(&value);
+	}
 }
