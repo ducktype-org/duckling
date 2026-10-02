@@ -366,6 +366,24 @@ private:
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
 				fun foo() = {
+					var a:i64 = 1;
+					a += 2;
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id, 1);
+				ASSERT_EQUAL(block.statements.size(), 1);
+				StmtKindCounter c;
+				block.statements.at(0)->acceptVisitor(c);
+				ASSERT_EQUAL(c.assignment_count, 1);
+			});
+		}
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
 					var a = 1;
 					a = 2;
 				}

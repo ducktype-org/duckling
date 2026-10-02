@@ -216,9 +216,19 @@ namespace lexer {
 		[[nodiscard]]
 		bool isChar() const;
 
+		/**
+		 * @brief Whether the token's value is literal text: a string, char, format-string part or
+		 * comment. Such a token is never a keyword, special or operator, whatever its text is.
+		 */
+		[[nodiscard]]
+		bool isLiteralText() const;
+
 		[[nodiscard]] bool is(Type) const;
+		/** @brief Whether the token is the special `spc`; never true for literal text. */
 		[[nodiscard]] bool is(Special) const;
+		/** @brief Whether the token is the operator `op`; never true for literal text. */
 		[[nodiscard]] bool is(Operator) const;
+		/** @brief Whether the token is the keyword `key`; never true for literal text. */
 		[[nodiscard]] bool is(Keyword) const;
 
 		[[nodiscard]]

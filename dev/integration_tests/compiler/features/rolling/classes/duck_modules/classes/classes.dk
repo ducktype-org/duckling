@@ -62,7 +62,7 @@ class Wrapper {
 # A static field is stored once for the whole program instead of once per instance.
 
 class Counter {
-    public static count: i64 = 1;
+    public global count: i64 = 1;
     public value: i64 = 0;
 
     public fun bump() -> i64 = {
@@ -72,20 +72,20 @@ class Counter {
 }
 
 class OtherCounter {
-    public static count: i64 = 100;
+    public global count: i64 = 100;
     public value: i64 = 0;
 }
 
 class Maker {
-    public static made: i64 = 0;
+    public global made: i64 = 0;
     public value: i64 = 0;
 
-    public static fun make(v: i64) -> i64 = {
+    public global fun make(v: i64) -> i64 = {
         made = made + 1;
         return v * 2;
     }
 
-    public static fun madeSoFar() -> i64 = {
+    public global fun madeSoFar() -> i64 = {
         return made;
     }
 

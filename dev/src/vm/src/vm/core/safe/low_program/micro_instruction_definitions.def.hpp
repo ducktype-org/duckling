@@ -550,8 +550,8 @@ DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::PlacePtr, vm::low::op
 
 // allocates given type, stores pointer
 DEF_MICRO_INSTR(alloc_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
-// frees block under pointer
-DEF_MICRO_INSTR(free_pptr, vm::low::opargs::PlacePtr)
+// frees block under pointer, expects block's type to match the passed type
+DEF_MICRO_INSTR(free_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 
 
 // stores local data at pointer

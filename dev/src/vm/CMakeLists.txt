@@ -38,15 +38,32 @@ set(vm_external_deps
     Crow::Crow JSON PkgConfig::LIBFFI
 )
 
+if(USE_REPLXX)
+    set(vm_external_deps
+        ${vm_external_deps}
+        replxx
+    )
+endif()
+
 set(vm_dependencies
     ${vm_internal_deps}
     ${vm_external_deps}
 )
 
 add_library(LibCommonVM OBJECT ${vm_common_sources})
+
+if (USE_REPLXX)
+    target_compile_definitions(LibCommonVM PUBLIC "USE_REPLXX")
+endif()
+
 make_module(LibCommonVM USES ${vm_dependencies})
 
 add_library(MainVM OBJECT ${exec_sources})
+
+if (USE_REPLXX)
+    target_compile_definitions(MainVM PUBLIC "USE_REPLXX")
+endif()
+
 make_module(MainVM USES ${vm_dependencies})
 
 if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies to allow full LTO later.

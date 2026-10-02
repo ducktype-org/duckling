@@ -1,6 +1,7 @@
 #include "repl_split_helpers.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
 

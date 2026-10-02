@@ -704,7 +704,10 @@ namespace vm::loader::compiler::safe::detail {
 					calleeStackDistance(sharedStackSpaceSizeOfMethod(i.object_ptr, i.method)) });
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
-			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }
+			instr_case(high::Op_free_pptr, i) {
+				opargs::Type expected_type = getPlaceType(i.ptr)->getInnerType().value()->getName();
+				addLow<Op_free_pptr_type>(i.ptr, expected_type);
+			}
 			instr_case(high::Op_store_pptr_pany, i) {
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 			}
