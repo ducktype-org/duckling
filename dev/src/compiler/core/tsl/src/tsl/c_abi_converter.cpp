@@ -1,7 +1,6 @@
-#include "helios/tsh/symbol_type.hpp"
-
 #include <abi/type_system/type.hpp>
 #include <helios/tsh/kind.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <tsl/c_abi_converter.hpp>

@@ -2,8 +2,6 @@
 
 #include "symbol_abi.hpp"
 
-#include "helios/hout/hout.hpp"
-
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -15,6 +13,7 @@
 #include <helios/errors/extern_c_class_empty.hpp>
 #include <helios/errors/field_not_c_compatible.hpp>
 #include <helios/hout/elements/stmt.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
