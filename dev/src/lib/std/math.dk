@@ -389,7 +389,7 @@ namespace impl {
         var result: T = 1 as T;
         var base: T = x;
         while (y > 0 as T) {
-            if (y % 2 as T == 1) {
+            if (y % 2 as T == 1 as T) {
                 result = result * base;
             }
             y = y / (2 as T);
