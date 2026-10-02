@@ -155,7 +155,10 @@ namespace pst {
 						// Handle empty field errors with sensible ranges
 						if (state.empty() || isEnding(state.ctokens(), 0)) {
 							auto pos = state.getPosition(-1);
-							if (!state.isEOF()) {
+							// Stretch the range to the ending token only if there is one. With
+							// nothing left (e.g. `import a,` at the end of the file) the next
+							// token is a sentinel past the end of the file.
+							if (state.notEmpty()) {
 								auto other = state.getPosition();
 								pos        = dia::SourcePosition(pos, other.getStart());
 							}

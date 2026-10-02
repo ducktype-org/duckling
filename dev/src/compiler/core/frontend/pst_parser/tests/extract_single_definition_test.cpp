@@ -1,3 +1,5 @@
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
@@ -19,6 +21,7 @@ public:
 		TESTER_ADD_TEST(testSingleUsingStatement);
 		TESTER_ADD_TEST(testSingleAliasDefinition);
 		TESTER_ADD_TEST(testMultipleStatements);
+		TESTER_ADD_TEST(testSelectorDeclarationKind);
 	}
 
 private:
@@ -30,6 +33,54 @@ private:
 			result = pst::extractSingleDefinition(ctx, pst.getRootElement());
 		});
 		return result;
+	}
+
+	/**
+	 * @brief Parses a single `using`/`import` and checks its `DeclKind` and declared name.
+	 */
+	void checkSelectorDecl(
+		std::string_view code, pst::DeclKind expected_kind, std::string_view expected_name = ""
+	) {
+		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
+		assertFalse(pst.hasErrors(), base::strConcat("Unexpected parse error in: ", code));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto stmt_opt = pst::extractSingleStatement(ctx, pst.getRootElement());
+			ASSERT_HAS_VALUE(stmt_opt, base::strConcat("Expected one statement in: ", code));
+			auto stmt = stmt_opt.value().unlock(ctx);
+
+			assertTrue(
+				stmt->isDeclaration() == expected_kind,
+				base::strConcat("Unexpected declaration kind of: ", code)
+			);
+
+			auto name = stmt->getDeclSymbolIdentifier();
+			if (expected_name.empty()) {
+				ASSERT_NO_VALUE(name, base::strConcat("Expected no declared name in: ", code));
+			} else {
+				ASSERT_HAS_VALUE(name, base::strConcat("Expected a declared name in: ", code));
+				ASSERT_EQUAL(std::string(expected_name), name.value().unlock(ctx)->unwrap().str());
+			}
+		});
+	}
+
+	void testSelectorDeclarationKind() {
+		using pst::DeclKind;
+		// One bound name: indexed by that name.
+		checkSelectorDecl("using a.b;", DeclKind::Symbol, "b");
+		checkSelectorDecl("using a.b as c;", DeclKind::Symbol, "c");
+		checkSelectorDecl("using a as c;", DeclKind::Symbol, "c");
+		checkSelectorDecl("import a.b;", DeclKind::Symbol, "b");
+		checkSelectorDecl("import a.b as c;", DeclKind::Symbol, "c");
+		// Anything else is transparent and declares no single name.
+		checkSelectorDecl("using a.b.*;", DeclKind::Transparent);
+		checkSelectorDecl("using a.* hides {x, y};", DeclKind::Transparent);
+		checkSelectorDecl("using a.{b};", DeclKind::Transparent);
+		checkSelectorDecl("using a.b.{c as d, e};", DeclKind::Transparent);
+		checkSelectorDecl("using a.a, b.b;", DeclKind::Transparent);
+		checkSelectorDecl("import a.b.*;", DeclKind::Transparent);
+		checkSelectorDecl("import a.b.{c, d};", DeclKind::Transparent);
+		checkSelectorDecl("import a.a, b.b;", DeclKind::Transparent);
 	}
 
 	void testEmptyInput() { ASSERT_NO_VALUE(extract(""), "Expected empty for empty input"); }
@@ -84,12 +135,12 @@ private:
 	}
 
 	void testSingleAliasDefinition() {
-		ASSERT_HAS_VALUE(extract("alias y = x;"), "Simple alias to symbol should be returned");
+		ASSERT_HAS_VALUE(extract("using x as y;"), "Simple alias to symbol should be returned");
 		ASSERT_HAS_VALUE(
-			extract("alias foo = obj.member;"), "Alias to dotted name should be returned"
+			extract("using obj.member as foo;"), "Alias to dotted name should be returned"
 		);
 		ASSERT_HAS_VALUE(
-			extract("alias nested = outer.inner.core.foo;"),
+			extract("using outer.inner.core.foo as nested;"),
 			"Alias to nested dotted name should be returned"
 		);
 	}

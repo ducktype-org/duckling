@@ -9,7 +9,6 @@ use russcip::prelude::{cons, var};
 use russcip::{Model, ProblemCreated, Solution, Variable, WithSolutions};
 use tracing::debug;
 
-use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
@@ -363,16 +362,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Forbid more that one version of the package to be chosen.
     pub fn forbid_more_that_one_version(
         &mut self,
-        identity: FullIdentity,
-        versions: &HashSet<Version>,
+        package_versions: Vec<PackageId>,
     ) -> QuackResult<()> {
-        let version_vars: QuackResult<Vec<Rc<Variable>>> = versions
-            .iter()
-            .copied()
-            .map(|version| {
-                let pkg = PackageId::new(identity, version);
-                self.get_package_variable(pkg, None)
-            })
+        let version_vars: QuackResult<Vec<Rc<Variable>>> = package_versions
+            .into_iter()
+            .map(|pkg| self.get_package_variable(pkg, None))
             .collect();
         let version_vars = version_vars?;
         self.model.at_most_one(version_vars);

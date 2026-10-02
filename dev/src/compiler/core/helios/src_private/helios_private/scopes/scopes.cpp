@@ -96,9 +96,9 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Import:
-		case pst::ElementKind::ImportIdentifierAs:
-		case pst::ElementKind::ImportStarHides:
-		case pst::ElementKind::ImportNested:
+		case pst::ElementKind::Selector:
+		case pst::ElementKind::SelectorList:
+		case pst::ElementKind::NestedSelectorList:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -125,7 +125,6 @@ namespace compiler::helios {
 		case pst::ElementKind::Namespace:
 		case pst::ElementKind::Variable:
 		case pst::ElementKind::Using:
-		case pst::ElementKind::Alias:
 		case pst::ElementKind::Const:
 		case pst::ElementKind::Class:
 		case pst::ElementKind::Action:

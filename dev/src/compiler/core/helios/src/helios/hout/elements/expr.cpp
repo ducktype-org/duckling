@@ -369,7 +369,6 @@ namespace compiler::helios::code {
 		case IntegerMul:
 		case IntegerDiv:
 		case IntegerMod:
-		case IntegerPow:
 		case IntegerBitAnd:
 		case IntegerBitOr:
 		case IntegerBitXor:
@@ -380,7 +379,6 @@ namespace compiler::helios::code {
 		case FloatMul:
 		case FloatDiv:
 		case FloatMod:
-		case FloatPow:
 			return lhs_type;
 		case IntegerLt:
 		case IntegerGt:
@@ -472,10 +470,6 @@ namespace compiler::helios::code {
 		case IntegerMod:
 		case FloatMod:
 			out << "%";
-			break;
-		case IntegerPow:
-		case FloatPow:
-			out << "**";
 			break;
 		case IntegerLt:
 		case FloatLt:
@@ -745,13 +739,6 @@ namespace compiler::helios::code {
 		  Expr(matchExpressionType(cases), origin),
 		  subject(std::move(subject)),
 		  cases(std::move(cases)) {
-		CORE_ASSERT(
-			this->subject->expression_type.getSymbolType().getRefKind()
-				!= tsh::ReferenceKind::Direct,
-			"A match subject has to be a reference to the matched variant, got: ",
-			this->subject->expression_type.getSymbolType().toString()
-		);
-
 		for (const auto& match_case: this->cases)
 			CORE_ASSERT(
 				!match_case.binding.has_value() || match_case.alternative_index.has_value(),
@@ -818,6 +805,7 @@ namespace compiler::helios::code {
 		cloned_cases.reserve(cases.size());
 		for (const auto& match_case: cases)
 			cloned_cases.emplace_back(Case{ .alternative_index = match_case.alternative_index,
+			                                .constraint_type   = match_case.constraint_type,
 			                                .binding           = match_case.binding,
 			                                .result            = match_case.result->clone() });
 		return makeBox<MatchExpr>(
@@ -1461,5 +1449,10 @@ namespace compiler::helios::code {
 
 	Box<Expr> BlockExpr::clone() const {
 		return makeBox<BlockExpr>(expression_type, origin, block->clone());
+	}
+
+	bool MatchExpr::Case::shouldBindToTemporary(query::Context& ctx) const {
+		return binding.empty() and constraint_type.has_value()
+		   and (not constraint_type->isTriviallyDestructible(ctx));
 	}
 }

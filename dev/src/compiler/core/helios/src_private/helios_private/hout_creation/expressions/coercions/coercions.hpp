@@ -17,6 +17,17 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
+	namespace code {
+		// Forward declaration for temporary friend declaration.
+		// @TODO: #3631 Remove the friend and this forward declaration.
+		Box<Expr> castAs(
+			query::Context&                        ctx,
+			Box<Expr>                              value,
+			tsh::SymbolType<>                      as_type,
+			pst::Access<pst::expr::BinaryOperator> stmt
+		);
+	}
+
 	/**
 	 * @brief This struct represents a function that performs a coercion from one expression to
 	 * another. It was added to make sure that the coercion is always valid (by calling
@@ -124,6 +135,14 @@ namespace compiler::helios {
 		friend query::QResult<Coercion> canCoerce(
 			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		);
+
+		// @TODO: #3631 Remove the friend
+		friend Box<code::Expr> code::castAs(
+			query::Context&                        ctx,
+			Box<code::Expr>                        value,
+			tsh::SymbolType<>                      as_type,
+			pst::Access<pst::expr::BinaryOperator> stmt
+		);
 	};
 
 	/**
@@ -149,9 +168,9 @@ namespace compiler::helios {
 	 * @note This is a convenience wrapper around `canCoerce` + `coercion.coerce()` for the common
 	 * case of coercing expressions with a `Box<code::Expr>` in hand, which is usual when handling
 	 * compiler generated code.
-	 * @return The coerced expression or an empty optional on error.
+	 * @return The coerced expression or an failed qresult on error or when coercion was invalid.
 	 */
-	base::Optional<Box<code::Expr>> coerceFromBox(
+	query::QResult<Box<code::Expr>> coerceFromBox(
 		query::Context&                     ctx,
 		Box<code::Expr>                     expr,
 		const tsh::SymbolType<>             expected_type,

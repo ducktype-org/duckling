@@ -74,3 +74,13 @@ Tests:
             6
             10
         ExitCode: 0
+  # `@c_symbol_name` links C functions whose names are Duckling keywords (`match`, `in`).
+  ffi_c_symbol_name:
+    Cases:
+      all:
+        Output:
+          String: |
+            21
+            40
+            2
+        ExitCode: 0
