@@ -949,6 +949,14 @@ private:
 				{ "Index operator base must be indexable." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				const ARR = [42, "is the answer"];
+			)",
+				{ "Type `const slice char` cannot be converted to type `i32`." },
+				1
+			);
 		}
 
 		// ========================= Not-yet-implemented errors =========================

@@ -995,7 +995,6 @@ namespace compiler::helios::code {
 				auto                   list_unlocked = stmt->getList().unlock(ctx);
 				std::vector<Box<Expr>> elems;
 				elems.reserve(list_unlocked->size());
-
 				base::Optional<tsh::SymbolType<>> elem_type;
 
 				for (auto elem_holder: *list_unlocked) {
@@ -1008,8 +1007,9 @@ namespace compiler::helios::code {
 						elem_type = elems.back()->expression_type.getSymbolType();
 				}
 
-                // Some type had to be chosen. Void would perhaps make more sense,
+                // Some type had to be chosen. `void` would perhaps make more sense,
                 // but it seemed to break some assumptions of the compiler and cause panics.
+                // @TODO: #3707 When fixed, think about making this `void`.
 				auto elem_type_of_empty_array = tsh::SymbolType<>{
 					tsh::getUnitType(),  
 					tsh::ReferenceKind::Direct,
