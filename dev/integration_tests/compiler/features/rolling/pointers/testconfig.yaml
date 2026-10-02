@@ -83,12 +83,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "7\n5\n"
-        ExitCode: 0
-
-  self_referential_optional_ref:
-    Cases:
-      all:
-        Output:
-          String: "321\n"
+          String: "7\n5\n321\n"
         ExitCode: 0
