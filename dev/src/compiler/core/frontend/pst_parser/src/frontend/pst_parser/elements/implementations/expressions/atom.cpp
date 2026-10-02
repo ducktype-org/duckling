@@ -1,5 +1,6 @@
 #include "../../hierarchy/expressions/atom.hpp"
 
+#include "../../hierarchy/expressions/array_literal_expr.hpp"
 #include "../../hierarchy/expressions/block_expr.hpp"
 #include "../../hierarchy/expressions/char_value.hpp"
 #include "../../hierarchy/expressions/format_string_value.hpp"
@@ -8,7 +9,6 @@
 #include "../../hierarchy/expressions/match_expr.hpp"
 #include "../../hierarchy/expressions/numeric_value.hpp"
 #include "../../hierarchy/expressions/round_expr.hpp"
-#include "../../hierarchy/expressions/array_literal_expr.hpp"
 #include "../../hierarchy/expressions/string_value.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"

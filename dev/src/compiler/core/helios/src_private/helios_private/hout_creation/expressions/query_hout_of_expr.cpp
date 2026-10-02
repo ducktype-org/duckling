@@ -1003,15 +1003,14 @@ namespace compiler::helios::code {
 					                      : subExprFromPST(ctx, elem_pst_expr);
 					if (elem.hasFailed()) return;
 					elems.emplace_back(std::move(elem).valueOrThrow());
-					if (!elem_type)
-						elem_type = elems.back()->expression_type.getSymbolType();
+					if (!elem_type) elem_type = elems.back()->expression_type.getSymbolType();
 				}
 
-                // Some type had to be chosen. `void` would perhaps make more sense,
-                // but it seemed to break some assumptions of the compiler and cause panics.
-                // @TODO: #3707 When fixed, think about making this `void`.
+				// Some type had to be chosen. `void` would perhaps make more sense,
+				// but it seemed to break some assumptions of the compiler and cause panics.
+				// @TODO: #3707 When fixed, think about making this `void`.
 				auto elem_type_of_empty_array = tsh::SymbolType<>{
-					tsh::getUnitType(),  
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};

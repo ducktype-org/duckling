@@ -6,7 +6,8 @@ namespace pst {
 	/**
 	 * @brief Function declaration parameter list.
 	 */
-	class ArrayLiteralList final: public List<UniversalExprHolder, internal::NameGetters::arrayLiteralList> {
+	class ArrayLiteralList final:
+		  public List<UniversalExprHolder, internal::NameGetters::arrayLiteralList> {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ArrayLiteralList, List);
 		CLONE_SUBELEMENTS();
 

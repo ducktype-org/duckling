@@ -1,7 +1,7 @@
 #pragma once
 
-#include "expr_common.hpp"
 #include "../lists/array_literal_list.hpp"
+#include "expr_common.hpp"
 
 namespace pst::expr {
 	/**

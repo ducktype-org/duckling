@@ -1961,11 +1961,11 @@ private:
 		{
 			// let magic_square = LITERAL;
 			auto& def = dynamic_cast<const VariableStmt&>(*statements.at(0));
-			auto agg = dynamic_cast<const CreateAggregateExpr*>(def.initial_value.get());
-            // [2, 7, 6]
-            auto first_row = dynamic_cast<const CreateAggregateExpr*>(agg->values.at(0).get());
-            auto elem = dynamic_cast<const LiteralNumericExpr*>(first_row->values.at(1).get());
-            auto inner = elem->value.get<i32>();
+			auto  agg = dynamic_cast<const CreateAggregateExpr*>(def.initial_value.get());
+			// [2, 7, 6]
+			auto first_row = dynamic_cast<const CreateAggregateExpr*>(agg->values.at(0).get());
+			auto elem      = dynamic_cast<const LiteralNumericExpr*>(first_row->values.at(1).get());
+			auto inner     = elem->value.get<i32>();
 			ASSERT_TRUE(inner.has_value());
 			ASSERT_EQUAL(*inner, 7);
 		}
