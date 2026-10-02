@@ -29,6 +29,12 @@ namespace compiler::helios {
 		 * Empty if a function is not variadic.
 		 */
 		base::Optional<u64> fixed_params;
+
+		/**
+		 * @brief The linked symbol name set with `@c_symbol_name("<name>")`.
+		 * Empty when the symbol links under its own name.
+		 */
+		base::Optional<base::StrID> symbol_name;
 	};
 
 	struct DefaultAbi final {};

@@ -55,6 +55,7 @@ public:
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
 		TESTER_ADD_TEST(testManglingErrors);
@@ -530,6 +531,29 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				fun main() -> i64 = {
+					let x: i64 = 0;
+					x += 1;
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x: i32 = 0;
+					var y: i64 = 1;
+					x += y;
+				}
+			)",
+				{ "Type `i64` cannot be converted to type `i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
 				fun main() = {
 					var arr: i32[5];
 					arr["index"] = 1;
@@ -831,6 +855,15 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
+
+			// @TODO: #2104 Uncomment when operation assignment operators properly handle
+			// mutability. checkForErrorOnCompileModule( 	R"( 	fun main() -> i64 = { 		let
+			// x: i64 = 1; 		x += 123;
+			// 	}
+			// )",
+			// 	{ "Left side of assignment can't be immutable." },
+			// 	1
+			// );
 		}
 
 		// ============================ Variant errors ============================
@@ -1127,18 +1160,6 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-					var a: i64 = 0;
-					a += 1;
-					return a;
-				}
-			)",
-				{ "Feature not implemented" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
 				class A { x: i64 = 0; }
 				const a = A();
 
@@ -1419,15 +1440,15 @@ private:
 				false
 			);
 
-			// A member is either static or not, so `static` cannot be repeated either.
+			// A member is either global or not, so `global` cannot be repeated either.
 			checkForErrorOnCompileModule(
 				R"( class C {
-						public static static y: i64 = 0;
+						public global global y: i64 = 0;
 					}
 					fun main() -> i64 = {
 						return 0;
 					} )",
-				{ "Class static specifier is duplicated with another one." },
+				{ "Class global specifier is duplicated with another one." },
 				1,
 				false
 			);
@@ -1439,7 +1460,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"( class C {
 						public v: i64 = 1;
-						private static hidden: i64 = 2;
+						private global hidden: i64 = 2;
 					}
 					fun main() -> i64 = {
 						var x: i64 = C.hidden;
@@ -1508,7 +1529,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"( class C {
 						public v: i64 = 1;
-						public static s: i64 = 2;
+						public global s: i64 = 2;
 					}
 					fun main() -> i64 = {
 						var x: i64 = C.nope;
@@ -1523,7 +1544,7 @@ private:
 				R"( class C {
 						public v: i64 = 1;
 
-						public static fun sm() -> i64 = {
+						public global fun sm() -> i64 = {
 							return 2;
 						}
 					}
@@ -2722,6 +2743,50 @@ private:
             )",
 			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
 			2
+		);
+	}
+
+	/**
+	 * @brief Tests the argument checks of `@c_symbol_name("<name>")`: it takes exactly one string
+	 * literal, which must be a valid C identifier, and only goes on a `fundecl`.
+	 */
+	void testCSymbolNameAttributeErrors() {
+		constexpr std::string_view EXPECTS_ONE_STRING
+			= "Attribute 'c_symbol_name' expects exactly one string literal argument.";
+
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name fundecl f(a: i64) -> i64; })", { EXPECTS_ONE_STRING }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name() fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name("a", "b") fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name(1) fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+
+		for (std::string_view bad_name: { "", "1abc", "a-b", "a b" }) {
+			auto module = base::strConcat(
+				R"(extern("C") { @c_symbol_name(")", bad_name, R"(") fundecl f(a: i64) -> i64; })"
+			);
+			auto message = base::strConcat(
+				"Attribute 'c_symbol_name' expects a valid C identifier, got '", bad_name, "'."
+			);
+			checkForErrorOnCompileModule(module, { message }, 1);
+		}
+
+		checkForErrorOnCompileModule(
+			R"(@c_symbol_name("f") fun f() -> i64 = 0;)",
+			{ "Attribute is not supported on this type of statement" },
+			1
 		);
 	}
 

@@ -154,7 +154,7 @@ namespace lang_def {
 		Public,
 		Private,
 		Protected,
-		Static,
+		Global,
 		Self,
 		Extends,
 		Implements,
@@ -251,6 +251,19 @@ namespace lang_def {
 		Divide,
 		Remainder,
 		Exponentiate,
+
+		EqPlus,
+		EqMinus,
+		EqMultiply,
+		EqDivide,
+		EqRemainder,
+		EqExponentiate,
+
+		EqPipe,       // | for variants and bitwise or.
+		EqAmpersand,  // & for references and bitwise and.
+		EqBitXor,
+		EqLeftShift,
+		EqRightShift,
 	};
 
 	enum class NumericLiteralTypeSpecifier {

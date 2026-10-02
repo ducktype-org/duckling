@@ -71,27 +71,32 @@ namespace compiler::helios::mangler {
 			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
 
 		/**
-		 * @brief Check if the symbol should be mangled in the first place.
+		 * @brief The name a symbol links under when it is not mangled (C/DVM linkage), or none
+		 * when it has to be mangled. For `extern("C")` it is the `@c_symbol_name` when one is set.
 		 * @note: See mangling-scheme.md for details
 		 */
-		bool shouldMangle(query::Context& ctx, const KeyOf_MangledSymbol& key) {
+		base::Optional<base::StrID> unmangledName(
+			query::Context& ctx, const KeyOf_MangledSymbol& key
+		) {
 			if (key.kind != ManglingSymbolKind::Standard) {
 				// Non-standard symbols can't have C mangling
-				return true;
+				return std::nullopt;
 			}
 
 			const auto sym_id = std::get<SymID>(key.symbol_key);
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow().withoutValidation()) {
-					variant_case_novalue(CAbi) { return false; }
-					variant_case_novalue(DVMAbi) { return false; }
-					variant_case_novalue(MainAbi) { return false; }
-					variant_case_novalue(DefaultAbi) { return true; }
-					variant_default { CORE_PANIC("Unknown ABI in shouldMangle()"); }
+					variant_case(CAbi, c_abi) {
+						return c_abi.symbol_name.copyValueOr(name(sym_id));
+					}
+					variant_case_novalue(DVMAbi) { return name(sym_id); }
+					variant_case_novalue(MainAbi) { return name(sym_id); }
+					variant_case_novalue(DefaultAbi) { return std::nullopt; }
+					variant_default { CORE_PANIC("Unknown ABI in unmangledName()"); }
 				}
 			}
 
-			return true;
+			return std::nullopt;
 		}
 
 		/**
@@ -863,7 +868,7 @@ namespace compiler::helios::mangler {
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (not internal::shouldMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
+			if_opt_some(internal::unmangledName(ctx, key), unmangled) return unmangled;
 
 			// note: global identifiers starting with underscore and a capital letter are
 			// reserved in C. Q seems to be free and stands for both query and quack

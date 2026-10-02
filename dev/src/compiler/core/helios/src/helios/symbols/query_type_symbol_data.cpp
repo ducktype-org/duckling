@@ -41,8 +41,8 @@ namespace compiler::helios {
 			return keyword == lang_def::Keyword::Private || keyword == lang_def::Keyword::Public
 			    || keyword == lang_def::Keyword::Protected;
 		};
-		auto is_static_keyword
-			= [](lang_def::Keyword keyword) { return keyword == lang_def::Keyword::Static; };
+		auto is_global_keyword
+			= [](lang_def::Keyword keyword) { return keyword == lang_def::Keyword::Global; };
 
 		for (auto specifier_locked: *specifiers) {
 			auto specifier = specifier_locked.unlock(ctx);
@@ -53,9 +53,9 @@ namespace compiler::helios {
 					"Class visibility specifier is duplicated with another one.",
 					specifier->getStablePosition()
 				));
-			if (is_static_keyword(keyword) and is_static)
+			if (is_global_keyword(keyword) and is_static)
 				ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Class static specifier is duplicated with another one.",
+					"Class global specifier is duplicated with another one.",
 					specifier->getStablePosition()
 				));
 			if (keyword == lang_def::Keyword::Public)
@@ -64,7 +64,7 @@ namespace compiler::helios {
 				visibility_opt = tsh::MemberVisibility::Protected;
 			if (keyword == lang_def::Keyword::Private)
 				visibility_opt = tsh::MemberVisibility::Private;
-			if (keyword == lang_def::Keyword::Static) is_static = true;
+			if (keyword == lang_def::Keyword::Global) is_static = true;
 		}
 		return { .sym = sym, .visibility_opt = visibility_opt, .is_static = is_static };
 	}

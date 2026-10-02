@@ -1,4 +1,5 @@
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>

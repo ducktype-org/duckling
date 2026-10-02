@@ -23,14 +23,18 @@
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/passing.hpp>
+#include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/placeholder.hpp>
+#include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
@@ -136,15 +140,11 @@ namespace compiler::helios {
 		void visitUsing(pst::Access<pst::Using>) override {}
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
+			using namespace compiler::helios::code::shorthands;
+			Shorthand s{ ctx };
+
 			auto op_wrapped = assignment->getAssignmentType().unlock(ctx);
 			auto op         = op_wrapped->unwrap();
-			if (op != base::StrID("=")) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					base::strConcat("This assignment type: '", op.str(), "'."),
-					assignment->getStablePosition()
-				));
-				query::throwFailed();
-			}
 
 			auto var = assignment->getVariables();
 			auto val = assignment->getValue();
@@ -181,6 +181,7 @@ namespace compiler::helios {
 				return;
 			}
 
+			// 1. Handle regular assignement
 			if (op == base::StrID("=")) {
 				// The new `SymbolType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now
@@ -201,13 +202,12 @@ namespace compiler::helios {
 				return;
 			}
 
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-				base::strConcat(
-					"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
-				),
-				assignment->getStablePosition()
-			));
-			query::throwFailed();
+			// 2. Handle custom assignement operator
+			// @TODO: #3702 implement this
+
+			// 3. Fallback to desugaring
+			output(code::desugarAssignmentOperator(ctx, assignment));
+			return;
 		}
 
 		void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
