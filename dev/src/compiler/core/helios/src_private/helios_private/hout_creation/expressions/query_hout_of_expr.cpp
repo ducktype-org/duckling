@@ -3,6 +3,7 @@
 #include "coercions/coercions.hpp"
 #include "coercions/errors.hpp"
 #include "function_calls/call_processing.hpp"
+#include "helios/tsh/queries/types.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -991,10 +992,34 @@ namespace compiler::helios::code {
 			}
 
 			void visitArrayLiteralExpr(pst::Access<pst::expr::ArrayLiteralExpr> stmt) override {
-                // @TODOB
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					base::strConcat("Lowering of array literals to hout.\n It has ", stmt->getList().unlock(ctx)->size(), " elems tho."), stmt->getStablePosition()
-				));
+				auto                   list_unlocked = stmt->getList().unlock(ctx);
+				std::vector<Box<Expr>> elems;
+				elems.reserve(list_unlocked->size());
+
+				base::Optional<tsh::SymbolType<>> elem_type;
+
+				for (auto elem_holder: *list_unlocked) {
+					auto elem_pst_expr = elem_holder.unlock(ctx)->getExpr();
+					auto elem = elem_type ? subExprFromPSTWithType(ctx, elem_pst_expr, *elem_type)
+					                      : subExprFromPST(ctx, elem_pst_expr);
+					if (elem.hasFailed()) return;
+					elems.emplace_back(std::move(elem).valueOrThrow());
+					if (!elem_type)
+						elem_type = elems.back()->expression_type.getSymbolType();
+				}
+
+                // Some type had to be chosen. Void would perhaps make more sense,
+                // but it seemed to break some assumptions of the compiler and cause panics.
+				auto elem_type_of_empty_array = tsh::SymbolType<>{
+					tsh::getUnitType(),  
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				auto type = ctx.query<tsh::QueryStaticArrayType>(
+					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }
+				);
+				node = makeBox<CreateAggregateExpr>(ctx, pstOrigin(stmt), type, std::move(elems));
 			}
 		};
 	}
