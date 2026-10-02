@@ -11,7 +11,7 @@ whitespace and indentation while preserving the meaning of the code.
 
 The formatter does **not** parse Duckling into an AST. It works one level lower,
 on the **token stream** produced by the lexer (`tokenizer::TokenSource`,
-tokenized with `keep_comments = true` so comments survive). Working on tokens
+tokenized with `{ .keep_comments = true }` so comments survive). Working on tokens
 rather than a syntax tree keeps the formatter simple, fast (no query state, no
 driver), and robust against incomplete or in-progress code — but it also bounds
 what the formatter can know. See *Limitations* below.
@@ -83,7 +83,7 @@ compiler, under `src/tools/` — the home for standalone developer tools.
 #include <formatter/formatter.hpp>
 
 std::string formatter::formatTokens(
-    const lexer::TokenData& tokens,   // result of tokenize(keep_comments=true)
+    const lexer::TokenData& tokens,   // result of tokenize({ .keep_comments = true })
     const FormatConfig&     config);
 ```
 

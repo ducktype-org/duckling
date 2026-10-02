@@ -10,7 +10,7 @@
  * lines (the comment text is preserved, but one comment token becomes several).
  *
  * @note Comments only appear in the token stream when the source is tokenized
- *       with keep_comments set (`tokenize(true)`); otherwise the lexer discards
+ *       with comments kept (`tokenize({ .keep_comments = true })`); otherwise the lexer discards
  *       them and formatting would drop them from the output.
  */
 #pragma once

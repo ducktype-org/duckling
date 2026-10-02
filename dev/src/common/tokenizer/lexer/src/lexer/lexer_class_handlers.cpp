@@ -222,7 +222,7 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "line comment");
-		if (keep_comments)
+		if (options.keep_comments)
 			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
 			);
 	}
@@ -250,7 +250,7 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 		addTokenMsg(begin, end, "block comment");
-		if (keep_comments)
+		if (options.keep_comments)
 			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
 			);
 	}

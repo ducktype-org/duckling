@@ -70,7 +70,7 @@ namespace {
 
 		auto token_source = tokenizer::makeTokenSource(file_to_format);
 		// Comments must stay in the token stream, or formatting would erase them.
-		if (not token_source->tokenize(/*keep_comments=*/true)) {
+		if (not token_source->tokenize({ .keep_comments = true })) {
 			token_source->getIntLogger()->terminalPrint(std::cerr);
 			return 1;
 		}

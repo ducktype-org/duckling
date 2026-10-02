@@ -27,7 +27,7 @@ namespace {
 	std::string fmt(std::string_view source, const FormatConfig& config = FormatConfig::defaults()) {
 		auto token_source
 			= tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(source));
-		token_source->tokenize(/*keep_comments=*/true);
+		token_source->tokenize({ .keep_comments = true });
 		return formatter::formatTokens(token_source->getTokenData(), config);
 	}
 
@@ -56,7 +56,7 @@ namespace {
 	TokenSignature signatureOf(std::string_view source) {
 		auto token_source
 			= tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(source));
-		token_source->tokenize(/*keep_comments=*/true);
+		token_source->tokenize({ .keep_comments = true });
 		TokenSignature signature;
 		collectSignature(token_source->getTokenData().tokens, signature);
 		return signature;
