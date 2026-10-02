@@ -11,7 +11,7 @@ fun forward(values: i64[3]) -> i64[3] = {
 }
 
 fun main() -> i64 = {
-    var source: i64[3] = [10, 20, 30];
+    var source: i64[3] = [10i64, 20i64, 30i64];
 
     var duplicate = source;
     source[2] = 99;
