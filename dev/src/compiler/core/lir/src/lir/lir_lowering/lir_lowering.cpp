@@ -78,8 +78,11 @@ namespace compiler::lir {
 		if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
 			return { LIRAbi::DefaultAbi{} };
 
-		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
-		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
+		CORE_ASSERT(
+			v_matches(sym_abi, helios::CAbi, helios::MainAbi), "There are more than 4 abis."
+		);
+		base::Optional<u64> fixed_params;
+		v_if_matches(sym_abi, helios::CAbi, c_abi_info) { fixed_params = c_abi_info->fixed_params; }
 
 		auto abi_type_of = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
 			return &ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())->valueOrPanic().value();
@@ -95,7 +98,7 @@ namespace compiler::lir {
 			.return_type = return_abi_or_empty(return_type),
 			.param_types
 			= parameter_types | std::views::transform(abi_type_of) | std::ranges::to<std::vector>(),
-			.num_fixed_params = c_abi_info.fixed_params,
+			.num_fixed_params = fixed_params,
 		};
 		return { LIRAbi::CAbi{
 			.function_info

@@ -1621,7 +1621,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( extern("C") class Node {
 					value: i32 = 0i32;
-					next: cptr [Node; 2];
+					next: cptr Node[2];
 				}
 				fun main() -> i64 = {
 					return 0;
@@ -1633,7 +1633,7 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"( class Inner { a: i8 = 0i8; }
-				extern("C") class Outer { p: cptr [Inner; 2]; }
+				extern("C") class Outer { p: cptr Inner[2]; }
 				fun main() -> i64 = {
 					return 0;
 				} )",

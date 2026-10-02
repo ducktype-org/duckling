@@ -85,6 +85,7 @@ namespace compiler::helios::mangler {
 				variant_match(abi->valueOrThrow().withoutValidation()) {
 					variant_case_novalue(CAbi) { return false; }
 					variant_case_novalue(DVMAbi) { return false; }
+					variant_case_novalue(MainAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_PANIC("Unknown ABI in shouldMangle()"); }
 				}

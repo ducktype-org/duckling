@@ -43,7 +43,16 @@ namespace compiler::helios {
 	 */
 	struct DVMAbi final {};
 
-	using SymbolABI = std::variant<DefaultAbi, CAbi, DVMAbi>;
+	/**
+	 * @brief ABI of the global `main` function.
+	 *
+	 * Like `CAbi`, the name is not mangled and the function is lowered with the C calling
+	 * convention, so the C runtime can call it. Unlike `CAbi`, the declaration is not
+	 * validated against the C ABI.
+	 */
+	struct MainAbi final {};
+
+	using SymbolABI = std::variant<DefaultAbi, CAbi, DVMAbi, MainAbi>;
 
 	struct ABIWrapper {
 	private:

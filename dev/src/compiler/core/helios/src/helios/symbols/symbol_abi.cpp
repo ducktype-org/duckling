@@ -205,10 +205,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: #895 fix it when we add script based package targets
-			if (isGlobalMain(key)) {
-				// main is not mangled
-				return CAbi{};
-			}
+			if (isGlobalMain(key)) return MainAbi{};
 
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {
