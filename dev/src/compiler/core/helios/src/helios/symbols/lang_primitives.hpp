@@ -11,6 +11,13 @@
 
 MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
     Panic,
+
+	// Power `**` operator
+	PowInt,
+	PowF32,
+	PowF64,
+	
+	// String
 	String,
 	StringifyStr,
 	StringifyChar,

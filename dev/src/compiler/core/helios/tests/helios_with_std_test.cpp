@@ -48,6 +48,7 @@
 #include <any>
 #include <array>
 #include <iostream>
+#include <regex>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -75,6 +76,7 @@ public:
 		TESTER_ADD_TEST(testReferenceKindCollapsing);
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testDestructors);
+		TESTER_ADD_TEST(testOperatorsWithPrimitives);
 	}
 
 protected:
@@ -1870,6 +1872,22 @@ private:
 			);
 			ASSERT_TRUE(boxAllocArg(box_copy.get()) != nullptr);
 		});
+	}
+
+	void testOperatorsWithPrimitives() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/std_operators")));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
+
+		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
+
+		auto              sym_v256 = getChain("V256", root_scope).back();
+		std::stringstream out_v256;
+		auto              tree_v256 = getExprOfConst(sym_v256);
+		tree_v256->debugPrint(out_v256);
+		ASSERT_TRUE(std::regex_match(
+			out_v256.str(),
+			std::regex{ R"(\(Symbol powi \((\d+)\)\)\(3 \+ 4 - 4 \* 16 / 5 % 7, 8\))" }
+		));
 	}
 };
 

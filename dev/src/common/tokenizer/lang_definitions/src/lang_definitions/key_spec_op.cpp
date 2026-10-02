@@ -256,6 +256,19 @@ namespace lang_def {
 		{ NamedOperator::Divide, "/" },
 		{ NamedOperator::Remainder, "%" },
 		{ NamedOperator::Exponentiate, "**" },
+
+		{ NamedOperator::EqPlus, "+=" },
+		{ NamedOperator::EqMinus, "-=" },
+		{ NamedOperator::EqMultiply, "*=" },
+		{ NamedOperator::EqDivide, "/=" },
+		{ NamedOperator::EqRemainder, "%=" },
+		{ NamedOperator::EqExponentiate, "**=" },
+
+		{ NamedOperator::EqPipe, "|=" },
+		{ NamedOperator::EqAmpersand, "&=" },
+		{ NamedOperator::EqBitXor, "^=" },
+		{ NamedOperator::EqLeftShift, "<<=" },
+		{ NamedOperator::EqRightShift, ">>=" },
 	});
 
 	constexpr auto NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY
