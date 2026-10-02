@@ -81,6 +81,9 @@ pub enum PackageCompilationStrategy {
     DvmExe {
         /// Path to the output file.
         output_file: PathBuf,
+        /// Bytecode libraries and shared objects to link in.
+        #[serde(default, skip_serializing_if = "DvmLinkingOptions::is_empty")]
+        dvm_linking_options: DvmLinkingOptions,
     },
     /// Compile this task into a DVM library.
     // Serializes to "dvm_lib" (see the note on `DvmExe`).
@@ -109,6 +112,24 @@ pub enum PackageCompilationStrategy {
     /// Compile to an LLVM object (`.o` file).
     #[serde(rename = "obj")]
     EmitLLVMObject {},
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq, Hash)]
+/// Linking options of a DVM executable.
+pub struct DvmLinkingOptions {
+    /// Shared objects the VM `dlopen`s at load time.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_libraries: Vec<PathBuf>,
+    /// `.dbc` libraries merged into the executable.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_libraries: Vec<PathBuf>,
+}
+
+impl DvmLinkingOptions {
+    /// Whether there is nothing to link.
+    pub fn is_empty(&self) -> bool {
+        self.shared_libraries.is_empty() && self.link_libraries.is_empty()
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -787,24 +808,28 @@ mod tests {
                 package_id: "app1".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app1_dvm"),
+                    dvm_linking_options: DvmLinkingOptions::default(),
                 },
             },
             PackageCompilationTask {
                 package_id: "app2".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app2_dvm"),
+                    dvm_linking_options: DvmLinkingOptions::default(),
                 },
             },
             PackageCompilationTask {
                 package_id: "app3".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_dvm"),
+                    dvm_linking_options: DvmLinkingOptions::default(),
                 },
             },
             PackageCompilationTask {
                 package_id: "app3_alias".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_alias_dvm"),
+                    dvm_linking_options: DvmLinkingOptions::default(),
                 },
             },
             PackageCompilationTask {

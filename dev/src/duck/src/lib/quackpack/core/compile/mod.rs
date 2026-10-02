@@ -11,7 +11,7 @@ use tracing::info;
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
 use self::profiles::Profile;
 use self::unit::graph::lower_early_graph;
-use self::unit_runner::{CompilationOutput, UnitRunner};
+use self::unit_runner::{CompilationOutput, CompilationTarget, UnitRunner};
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::storage::paths::Storage;
@@ -53,6 +53,22 @@ pub struct BuildContext<'duck, 'ctx> {
     pub jobs: usize,
 }
 
+impl BuildContext<'_, '_> {
+    /// Returns `true` whether we should compile to DVM.
+    pub fn targets_dvm(&self) -> bool {
+        self.compilation_target().is_dvm()
+    }
+
+    /// Returns [`CompilationTarget`] for this build.
+    pub fn compilation_target(&self) -> CompilationTarget {
+        if self.profile.dvm_bytecode {
+            CompilationTarget::DVM
+        } else {
+            CompilationTarget::LLVM
+        }
+    }
+}
+
 /// Compile project inside the [`BuildContext`].
 /// Note:
 /// -----
@@ -68,7 +84,7 @@ pub fn compile(
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
     let runner = UnitRunner::new(unit_graph, &bcx);
     runner.run()
 }
