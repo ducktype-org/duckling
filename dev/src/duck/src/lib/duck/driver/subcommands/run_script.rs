@@ -88,16 +88,6 @@ pub fn check_is_script(path: &Path) -> QuackResult<()> {
     Ok(())
 }
 
-/// Guess whether the user meant to provide a path to a script to run.
-pub fn possible_script_path_subcmd(args: &ArgMatches) -> Option<&str> {
-    let sub_cmd = args.subcommand_name()?;
-    if is_name_possible_script_path_subcmd(sub_cmd) {
-        Some(sub_cmd)
-    } else {
-        None
-    }
-}
-
 /// Guess whether name could be a path to a script to run.
 pub fn is_name_possible_script_path_subcmd(name: &str) -> bool {
     let path = Path::new(name);

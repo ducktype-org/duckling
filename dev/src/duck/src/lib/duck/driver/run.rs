@@ -10,9 +10,10 @@ use super::cli_args_preprocessing::aliases_expansion::expand_aliases;
 use super::cli_args_preprocessing::typos_fixing::fix_typos;
 use super::global_options::GlobalOptions;
 use super::subcommands::exec_for;
-use super::subcommands::run_script::{check_is_script, possible_script_path_subcmd};
+use super::subcommands::run_script::check_is_script;
 use crate::duck::driver::cli_ext::ArgMatchesExt;
 use crate::duck::driver::external_subcommands::ExternalSubcommands;
+use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
 use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::command_ext::CommandExt;
@@ -111,8 +112,8 @@ fn run_subcmd(
         return execute_external_subcmd(exec_path, args)
             .with_context(|| format!("failed to execute the external subcommand `{name}`"));
     }
-    if let Some(path) = possible_script_path_subcmd(args) {
-        let path = Path::new(path);
+    if is_name_possible_script_path_subcmd(name) {
+        let path = Path::new(name);
         let path = path.resolve_with_tilde(ctx);
         check_is_script(&path)?;
         let args = external_cli_args(args);
