@@ -293,6 +293,11 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * @brief The symbol representing real module from the module tree.
+	 * @note The module is not generated, only the symbol is. It's purpose is
+	 * to unify the Namespace and Module handling by the chain processing `a.b.c`.
+	 */
 	struct Module final {
 		frontend::ModuleID module_id;
 

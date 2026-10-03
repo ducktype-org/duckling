@@ -8,7 +8,7 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
-	struct KeyOf_LookupInNamespaceOrModule {
+	struct KeyOf_LookupInNamespaceOrModule final {
 		/**
 		 * @brief Symbol of the module or the namespace.
 		 */
@@ -29,7 +29,7 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query result of lookup of single name within the using or import statement.
+	 * @brief Query result of lookup of single name within the namespace or module.
 	 *
 	 * \query_thread_safe_if_cache_and_struct
 	 */
@@ -40,7 +40,7 @@ namespace compiler::helios {
 		({})
 	);
 
-	struct KeyOf_LookupInUsingOrImport {
+	struct KeyOf_LookupInUsingOrImport final {
 		/**
 		 * @brief Symbol to lookup in
 		 */

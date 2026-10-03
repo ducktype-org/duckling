@@ -32,7 +32,6 @@ namespace compiler::helios {
 
 			last = result.back();
 		}
-		CORE_ASSERT(not result.empty(), "Lookup chain invalid call if empty list.");
 		return result;
 	}
 }

@@ -63,7 +63,7 @@ namespace compiler::helios {
 		 * @brief The interface of the scope.
 		 * It lookups from the set of all the symbols in the scope.
 		 */
-		struct ScopeInterface {
+		struct ScopeInterface final {
 			helios::ScopeID scope;
 		};
 
@@ -71,35 +71,35 @@ namespace compiler::helios {
 		 * @brief The interface of the scope and all its parents.
 		 * It lookups from the set of all the symbols in the scope and all the scopes parents.
 		 */
-		struct ScopeWithParentsInterface {
+		struct ScopeWithParentsInterface final {
 			helios::ScopeID scope;
 		};
 
 		/**
 		 * @brief Interface of a module.
 		 */
-		struct ModuleInterface {
+		struct ModuleInterface final {
 			helios::SymID id;
 		};
 
 		/**
 		 * @brief Interface of a namespace.
 		 */
-		struct NamespaceInterface {
+		struct NamespaceInterface final {
 			helios::SymID id;
 		};
 
 		/**
 		 * @brief Interface of an import.
 		 */
-		struct ImportInterface {
+		struct ImportInterface final {
 			helios::SymID symbol;
 		};
 
 		/**
 		 * @brief Interface of a using.
 		 */
-		struct UsingInterface {
+		struct UsingInterface final {
 			helios::SymID symbol;
 		};
 
@@ -108,7 +108,7 @@ namespace compiler::helios {
 		 * The behavior depends on the type, but in general it
 		 * represents what `symbol-of-given-type.abc` would do.
 		 */
-		struct TypeInstanceInterface {
+		struct TypeInstanceInterface final {
 			tsh::AbstractType type;
 		};
 
@@ -117,14 +117,14 @@ namespace compiler::helios {
 		 * The behavior depends on the type, but in general it
 		 * represents what `given-type.abc` would do.
 		 */
-		struct TypeMetaInterface {
+		struct TypeMetaInterface final {
 			tsh::AbstractType type;
 		};
 
 		/**
 		 * @brief A custom interface — anyone can create their own interface.
 		 */
-		struct CustomInterface {
+		struct CustomInterface final {
 			Box<CustomInterfaceABC> custom;
 		};
 

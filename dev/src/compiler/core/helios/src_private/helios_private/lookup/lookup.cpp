@@ -146,6 +146,10 @@ namespace compiler::helios {
 			const LookupChainKey&      pointed_chain
 		) {
 			UNPACK_QRESULT_MOVE(auto sym_chain =, lookupChain(ctx, pointed_chain));
+			CORE_ASSERT(
+				not sym_chain.empty(),
+				"It should be impossible to create chain that doesn't resolve to any symbol."
+			);
 			auto pointed = sym_chain.back();
 
 			LookupResult result;
