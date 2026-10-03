@@ -60,7 +60,10 @@ namespace compiler::helios {
 
 	using SymbolABI = std::variant<DefaultAbi, CAbi, DVMAbi, MainAbi>;
 
-	struct ABIWrapper {
+	/**
+	 * @brief Simple wrapper on a SymbolABI.
+	 */
+	struct ABIWrapper final {
 	private:
 		SymbolABI value;
 

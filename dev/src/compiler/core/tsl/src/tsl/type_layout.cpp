@@ -230,8 +230,7 @@ namespace compiler::tsl {
 		 * @brief Computes the C-ABI layout for an `extern("C")` class.
 		 *
 		 * Every field is known to be convertible by the time this runs: `QuerySymbolABI`
-		 * converts the whole class (and reports a diagnostic per offending field) before
-		 * it answers with `CAbi`, and `pickClassLayout` asks for that answer first.
+		 * is validated before this call.
 		 */
 		PickedClassLayout cAbiPickedLayout(
 			const std::vector<tsh::InterfaceElement>& field_elements, query::Context& ctx
@@ -276,7 +275,12 @@ namespace compiler::tsl {
 			const std::vector<CRef<TypeLayout>>&      field_layouts,
 			query::Context&                           ctx
 		) {
-			const compiler::helios::SymbolABI abi = class_type.getABI(ctx);
+			const compiler::helios::SymbolABI abi
+				= *ctx.query<compiler::helios::QuerySymbolABI>(class_type.getSymbol())
+			           ->valueOrThrow()
+			           .withValidation(ctx, &class_type)
+			           .valueOrThrow();
+
 			variant_match(abi) {
 				variant_case_novalue(compiler::helios::DefaultAbi) {
 					return ducklingPickedLayout(field_layouts);

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
+#include "helios/symbols/symbol_abi.hpp"
 #include "hout_fd.hpp"        // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
@@ -74,6 +75,8 @@ namespace compiler::helios {
 
 		Operatoriness operatoriness;
 
+		SymbolABI abi;
+
 		tsh::SymbolType<> return_type;
 
 		std::vector<code::Parameter> parameters;
@@ -91,6 +94,7 @@ namespace compiler::helios {
 			Operatoriness                operatoriness,
 			tsh::SymbolType<>            ret_type,
 			std::vector<code::Parameter> parameters,
+			SymbolABI                    abi,
 			code::ElementOrigin          origin
 		);
 		friend ImplementationOf_QueryDeclOfFun;

@@ -95,6 +95,10 @@ namespace compiler::tsl {
 			return ok(ats::structType(std::move(fields)));
 		}
 
+		/**
+		 * @brief Checks if a `cpr <target>` <target> is a C-friendly type. Avoids query cycle on
+		 * classes. We are not 100% sure we want this behaviour, may change in the future.
+		 */
 		CAbiConversionResult checkPointee(tsh::SymbolType<> pointee, query::Context& ctx) {
 			if (pointee.getRefKind() != tsh::ReferenceKind::Direct)
 				return fail("pointee is a reference");
@@ -108,7 +112,7 @@ namespace compiler::tsl {
 			case tsh::Kind::StaticArray:
 				return checkPointee(tsh::StaticArrayAbstractType(type).getElementType(), ctx);
 			case tsh::Kind::CPointer:
-				return ok(ats::pointerType());
+				return checkPointee(tsh::CPointerAbstractType(type).getPointee(), ctx);
 			default:
 				break;
 			}
