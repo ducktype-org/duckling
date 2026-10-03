@@ -75,19 +75,6 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The dotted prefix of a single selector, as plain names.
-		 */
-		std::vector<base::StrID> selectorPathNames(
-			query::Context& ctx, pst::Access<pst::Selector> selector
-		) {
-			std::vector<base::StrID> path;
-			path.reserve(selector->numberOfNames());
-			for (usize i = 0; i < selector->numberOfNames(); i++)
-				path.push_back(selector->getNameByIndex(i).unlock(ctx)->unwrap());
-			return path;
-		}
-
-		/**
 		 * @brief Can this selector provide @p name, judging by the selector alone?
 		 *
 		 * The name a selector introduces is written in the selector itself: the `as` name for an
