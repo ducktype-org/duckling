@@ -721,7 +721,7 @@ namespace compiler::backend_llvm {
 
 
 								// Update layout/type
-								current_layout = pointer_layout.getPointee();
+								current_layout = pointer_layout.getPointee(ctx);
 								current_type   = typeFromLayout(module, current_layout);
 							}
 							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
@@ -736,7 +736,7 @@ namespace compiler::backend_llvm {
 
 						const auto& current_pointer_layout
 							= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-						current_layout = current_pointer_layout.getPointee();
+						current_layout = current_pointer_layout.getPointee(ctx);
 						current_type   = typeFromLayout(module, current_layout);
 					}
 				}

@@ -164,6 +164,14 @@ namespace compiler::tsh {
 		 */
 		bool isTriviallyCopyable(query::Context& ctx) const;
 
+		/**
+		 * @brief Check if the type is a numeric type.
+		 * @return Whether the type is numeric.
+		 */
+		[[nodiscard]]
+		bool isNumeric() const {
+			return getKind() == tsh::Kind::Integral or getKind() == tsh::Kind::Float;
+		}
 
 		/**
 		 * @brief The default constructor is deleted.

@@ -90,7 +90,8 @@ namespace compiler::backend_vm::internal {
 			const DVMPlace offset_tmp = ctx->pushTempLocal(u64_type, "ptr_parts_offset");
 			ctx->pushInstruction({ OpKind::ptrParts, id_tmp, offset_tmp, ptr.asArgument() });
 
-			const auto& ptr_to_u64_type = ctx->program_context.getOrInsertPointerType(u64_type);
+			const auto& ptr_to_u64_type
+				= ctx->program_context.getOrInsertPointerType(typeName(u64_type));
 
 			// We store the results in a two-element array.
 			const std::array<DVMPlace, 2> halves{ id_tmp, offset_tmp };

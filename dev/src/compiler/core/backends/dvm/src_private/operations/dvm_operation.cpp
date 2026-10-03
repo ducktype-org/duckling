@@ -72,12 +72,12 @@ namespace compiler::backend_vm::internal {
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
 		base::Optional<vm::code::TypeOfData> called_result_type
-			= program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+			= program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
 		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 
 		std::vector<vm::code::TypeOfData> param_types
 			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-				  return **program_context.lowerAndKeepTslType(layout);
+				  return *program_context.lowerAndKeepTslType(layout);
 			  })
 		    | std::ranges::to<std::vector>();
 
@@ -195,7 +195,7 @@ namespace compiler::backend_vm::internal {
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
 				base::Optional<vm::code::TypeOfData> return_type
-					= ctx.program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+					= ctx.program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
 				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 				return BuiltinCallOperation{
 					.kind        = builtin,
