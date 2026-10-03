@@ -8,7 +8,8 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const AddressOfOperation& op) {
 		DVMPlace address = [&]() -> DVMPlace {
 			if (op.src.isDirect()) {
-				auto temp_type = ctx->program_context.getOrInsertPointerType(op.src.getType());
+				auto temp_type
+					= ctx->program_context.getOrInsertPointerType(typeName(op.src.getType()));
 				auto addr_temp = ctx->pushTempLocal(temp_type, "addr_of");
 				// If access to the variable is direct, we take it's address.
 				ctx->pushInstruction({ OpKind::ref, addr_temp.asArgument(), op.src.asAnyArgument() }
@@ -23,15 +24,14 @@ namespace compiler::backend_vm::internal {
 		if (op.dest_layout.empty()) return;
 
 		const vm::code::TypeOfData& dest_type
-			= **ctx->program_context.lowerAndKeepTslType(op.dest_layout.value());
+			= *ctx->program_context.lowerAndKeepTslType(op.dest_layout.value());
 
 		if (v_matches(dest_type, vm::code::CPointerType)) {
 			if (v_matches(address.getType(), vm::code::PointerType)) {
-				const vm::code::TypeOfData& src_type
-					= **ctx->program_context.lowerAndKeepTslType(op.src_layout);
 				const vm::code::TypeOfData& src_cptr_type
 					= ctx->program_context.getOrInsertPointerType(
-						src_type, tsl::PointerTypeLayout::PointerKind::CPointer
+						ctx->program_context.keepTslType(op.src_layout),
+						tsl::PointerTypeLayout::PointerKind::CPointer
 					);
 				DVMPlace cptr_temp = ctx->pushTempLocal(src_cptr_type, "addr_of_cptr");
 				ctx->pushInstruction({ OpKind::cast, cptr_temp, address });

@@ -403,10 +403,10 @@ namespace compiler::lir {
 
 				variant_match(mir_place.base) {
 					variant_case(mir::MIRLocalRef, local) {
-						return { getLocal(local), std::move(lir_projection_chain) };
+						return { ctx, getLocal(local), std::move(lir_projection_chain) };
 					}
 					variant_case(mir::MIRGlobal, global) {
-						return { getGlobal(global), std::move(lir_projection_chain) };
+						return { ctx, getGlobal(global), std::move(lir_projection_chain) };
 					}
 				}
 				CORE_UNREACHABLE();
@@ -695,7 +695,7 @@ namespace compiler::lir {
 					// The destructor takes `self: ref T`, so the address of the destructed
 					// place is materialized first.
 					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
-					LIRPlace    addr_place{ addr_local, {} };
+					LIRPlace    addr_place{ addr_local };
 
 					auto& address_instr = block->instructions.emplace_back(
 						Operation::AddressOf,

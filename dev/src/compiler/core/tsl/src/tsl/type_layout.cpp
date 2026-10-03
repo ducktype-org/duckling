@@ -627,21 +627,21 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::CPointer) {
 		auto& pointee_cabi_type
 			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
@@ -655,13 +655,18 @@ namespace compiler::tsl {
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee(&ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()),
+		  pointee_type(tsh::SymbolType<>::withDefaults(symbol_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "
 			"without reference indirection is forbidden."
 		);
+	}
+
+	CRef<TypeLayout> PointerTypeLayout::getPointee(query::Context& ctx) const {
+		CORE_ASSERT(pointee_type.has_value(), "Untyped pointer layout has no pointee.");
+		return &ctx.query<QuerySymbolTypeLayout>(*pointee_type)->valueOrThrow();
 	}
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }

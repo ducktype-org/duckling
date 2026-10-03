@@ -776,8 +776,8 @@ private:
 		auto module  = getLIROfModule(path("modules/simple"));
 		auto foo_lir = module.lirFunc("foo");
 
-		lir::LIRPlace output{ foo_lir->local_list[0], {} };
-		lir::LIRPlace argument{ foo_lir->local_list[1], {} };
+		lir::LIRPlace output{ foo_lir->local_list[0] };
+		lir::LIRPlace argument{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		output.debugPrint(place_output);
@@ -837,7 +837,7 @@ private:
 
 		// Standalone printing would assign Local(?0) to this place because it is the first
 		// encountered local. Function context preserves its actual index in local_list.
-		lir::LIRPlace place{ foo_lir->local_list[1], {} };
+		lir::LIRPlace place{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		place.debugPrint(place_output, foo_lir);
@@ -849,8 +849,7 @@ private:
 
 		lir::Instruction  instruction{ lir::Operation::Assign,
                                       place,
-			                           { lir::LIRValue{
-                                          lir::LIRPlace{ foo_lir->local_list[0], {} } } },
+			                           { lir::LIRValue{ lir::LIRPlace{ foo_lir->local_list[0] } } },
 			                           {} };
 		std::stringstream instruction_output;
 		instruction.debugPrint(instruction_output, foo_lir);

@@ -458,7 +458,19 @@ namespace compiler::lir {
 		std::vector<Projection> projection_chain;
 
 
-		LIRPlace(BaseVariant base, std::vector<Projection> access_chain);
+		/**
+		 * @brief Construct a place and compute the layout it ends at.
+		 * @param ctx The query::Context used to look up the layouts of dereferenced pointees.
+		 * @param base The base variable of the place.
+		 * @param access_chain The projections applied to the base.
+		 */
+		LIRPlace(query::Context& ctx, BaseVariant base, std::vector<Projection> access_chain);
+
+		/**
+		 * @brief Construct a place without projections, which ends at the layout of its base.
+		 * @param base The base variable of the place.
+		 */
+		explicit LIRPlace(BaseVariant base);
 
 		[[nodiscard]]
 		bool isLocal() const {
