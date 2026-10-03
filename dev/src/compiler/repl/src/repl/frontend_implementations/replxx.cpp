@@ -25,10 +25,10 @@ namespace compiler::repl {
 		"and", "as", "assert", "block", "box", "break", "case", "catch",
 		"class", "compile_assert", "const", "continue", "copy", "copyof", "debug", "defer",
 		"dict", "else", "expand", "export", "extends", "extern", "false", "for", "fun",
-		"fundecl", "hides", "if", "implements", "import", "in", "lambda", "let", "loop",
+		"fundecl", "global", "hides", "if", "implements", "import", "in", "lambda", "let", "loop",
 		"match", "move", "namespace", "none", "not", "or", "pattern", "private",
 		"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
-		"refof", "ptrof", "restart", "return", "set", "sizeof", "static", "str", "switch",
+		"refof", "ptrof", "restart", "return", "set", "sizeof", "str", "switch",
 		"then", "this", "throw", "true", "try", "type", "using", "var",
 		"vec", "while", "with", "xor"
 	};

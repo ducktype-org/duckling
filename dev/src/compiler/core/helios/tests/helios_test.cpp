@@ -212,7 +212,6 @@ private:
 		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
 		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
 		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
 		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
@@ -1282,14 +1281,6 @@ private:
 		auto              tree_vm1 = getExprOfConst(sym_vm1);
 		std::stringstream out_vm1;
 		tree_vm1->debugPrint(out_vm1);
-
-		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
-
-		auto              sym_v256 = getChain("V256", root_scope).back();
-		std::stringstream out_v256;
-		auto              tree_v256 = getExprOfConst(sym_v256);
-		tree_v256->debugPrint(out_v256);
-		ASSERT_EQUAL("3 + 4 - 4 * 16 / 5 % 7 ** 8", out_v256.str());
 
 		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();

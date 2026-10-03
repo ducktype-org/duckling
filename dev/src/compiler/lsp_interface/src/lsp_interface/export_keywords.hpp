@@ -1,6 +1,7 @@
 /**
  * @file export_keywords.hpp
  * @brief LSP Interface
+ * @TODO: #3604 bring this back
  */
 
 #pragma once

@@ -82,7 +82,7 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Extern, "extern", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Debug, "debug", KeywordFlagsOptions::IsSpecifier },
-			{ Keyword::Static, "static", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Global, "global", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Export, "export", KeywordFlagsOptions::IsSpecifier },
 
 			// If doesn't always indicate statement start.
@@ -256,6 +256,19 @@ namespace lang_def {
 		{ NamedOperator::Divide, "/" },
 		{ NamedOperator::Remainder, "%" },
 		{ NamedOperator::Exponentiate, "**" },
+
+		{ NamedOperator::EqPlus, "+=" },
+		{ NamedOperator::EqMinus, "-=" },
+		{ NamedOperator::EqMultiply, "*=" },
+		{ NamedOperator::EqDivide, "/=" },
+		{ NamedOperator::EqRemainder, "%=" },
+		{ NamedOperator::EqExponentiate, "**=" },
+
+		{ NamedOperator::EqPipe, "|=" },
+		{ NamedOperator::EqAmpersand, "&=" },
+		{ NamedOperator::EqBitXor, "^=" },
+		{ NamedOperator::EqLeftShift, "<<=" },
+		{ NamedOperator::EqRightShift, ">>=" },
 	});
 
 	constexpr auto NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY

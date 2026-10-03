@@ -207,12 +207,13 @@ private:
 				ctx, base::StrID("variant_unit_alternative_test"), false, false
 			);
 			const auto dvm_type = program_ctx.lowerAndKeepTslType(layout);
-			ASSERT_HAS_VALUE(dvm_type);
 
-			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(**dvm_type);
+			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(*dvm_type);
 			ASSERT_HAS_VALUE(dvm_variant);
 
-			const auto& unit_dvm_type = program_ctx.getUnitType();
+			const auto& unit_dvm_type = *program_ctx.lowerAndKeepTslType(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(unit_type.getType())->valueOrThrow()
+			);
 			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
 				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
@@ -293,6 +294,7 @@ private:
 			"7\n33\n9\n33\n9\n4\n21\n21\n15\n33\n"
 			"100\n2\n50\n0\n0\n3\n3\n"
 			"5\n6\n7\n"
+			"12\n13\n17\n8\n"
 			"4\n50\n4\n"
 		);
 	}

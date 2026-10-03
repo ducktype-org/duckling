@@ -88,7 +88,7 @@ jobs:
         env:  # untrusted event data is passed via env vars, never interpolated into the script
           GH_TOKEN: ${{ steps.app.outputs.token }}
           ORG: ${{ github.repository_owner }}
-          CORE_DEV_TEAM: core-dev
+          DEV_TEAM: dev
           EVENT: ${{ github.event_name }}
           LABEL: ${{ github.event.label.name }}
           SENDER: ${{ github.event.sender.login }}
@@ -106,35 +106,35 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           run=false; mode=; a1=; a2=
-          # Returns 0 (true) iff the given GitHub user is an active member of the core-dev team.
+          # Returns 0 (true) iff the given GitHub user is an active member of the dev team.
           # Requires the Quacker App to hold the organization "Members: read" permission; if it
           # does not, this fails closed (no one can trigger the bot) rather than open.
-          is_core_dev() {
+          is_dev() {
             [ -n "$1" ] || return 1
             local state
-            state="$(gh api "orgs/$ORG/teams/$CORE_DEV_TEAM/memberships/$1" --jq '.state' 2>/dev/null || true)"
+            state="$(gh api "orgs/$ORG/teams/$DEV_TEAM/memberships/$1" --jq '.state' 2>/dev/null || true)"
             [ "$state" = "active" ]
           }
           case "$EVENT" in
             issues)
-              # Only core-dev members may start a task by adding the "quacker" label.
-              [ "$LABEL" = "quacker" ] && is_core_dev "$SENDER" && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
+              # Only dev members may start a task by adding the "quacker" label.
+              [ "$LABEL" = "quacker" ] && is_dev "$SENDER" && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
             issue_comment)
-              # Only core-dev members may invoke the bot via @quacker-bot — it runs with the App
+              # Only dev members may invoke the bot via @quacker-bot — it runs with the App
               # token's write access and can push commits. Bot comments are skipped (including
               # quacker's own) so the bot can't trigger itself. On a PR -> `comment` mode (works on
               # the PR branch); on an issue -> `issue-comment` mode (works on quacker-bot/issue-N).
               if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
                  printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
-                 is_core_dev "$COMMENT_USER"; then
+                 is_dev "$COMMENT_USER"; then
                 if [ -n "$IS_PR" ]; then run=true; mode=comment;       a1="$ISSUE_NUM"
                 else                     run=true; mode=issue-comment; a1="$ISSUE_NUM"; fi
               fi ;;
             pull_request_review_comment)
-              # Inline/review-comment mention of @quacker-bot — same core-dev gate as above.
+              # Inline/review-comment mention of @quacker-bot — same dev gate as above.
               if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
                  printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
-                 is_core_dev "$COMMENT_USER"; then
+                 is_dev "$COMMENT_USER"; then
                 run=true; mode=comment; a1="$PR_NUM"
               fi ;;
             workflow_run)
