@@ -4,12 +4,17 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
+#include <driver/initialize.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/source_position_locked.hpp>
 #include <global_state/packages.hpp>
@@ -26,6 +31,7 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/external/api.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 
 #include <cctype>
 #include <functional>
@@ -138,9 +144,22 @@ namespace duck_ls {
 		return base::StrID(id.str());
 	}
 
-	Compiler::Compiler(base::Ref<ServerSession> session, base::Ref<FilesCache> files):
+	Compiler::Compiler(
+		base::Ref<ServerSession>                                                session,
+		base::Ref<FilesCache>                                                   files,
+		compiler::driver::CompilerModeOfOperationAndOptions::LanguageServerMode options
+	):
 		  session(session),
-		  files(files) {}
+		  files(files),
+		  options(std::move(options)),
+		  report(compiler::driver::diagnostics::makeGlobalLoggerReporter()) {}
+
+	base::OkBad Compiler::initialize() {
+		query::setTrackReverseGraph(true);
+		compiler::frontend::use_module_modifier_remove = true;
+
+		return compiler::driver::initializeTheCompiler(options).status();
+	}
 
 	void Compiler::addWorkspace(const lsp::Uri& root) {
 		if_opt_some(files->sourcePathFor(root), path) files->addWorkspaceRoot(path);
@@ -169,12 +188,38 @@ namespace duck_ls {
 			if (files->isOpened(source_path)) return { files->cachePath(source_path) };
 			return source_file;
 		};
+		auto package_id = packageIdForRoot(package_root);
+		auto module_id
+			= ModuleTreeBuilder::create(fs::File(package_root), package_id, resolver)->getModuleID();
+		packages::RawPackageInfo raw_package_info{
+			.package_id   = package_id,
+			.package_name = package_id,
+			.version      = base::StrID("not_supported"),
+			.package_path = package_root,
+			.features     = {},
+			.dependencies = {},
+		};
 
-		auto module_id = ModuleTreeBuilder::create(
-							 fs::File(package_root), packageIdForRoot(package_root), resolver
-		)
-		                     ->getModuleID();
-		global_state::setters::addPackage(module_id);
+		std::vector<packages::RawPackageInfo> all_packages_info;
+		if_opt_some(compiler::driver::resolveStdPath(options.stdlib_options), std_path) {
+			auto std_packages_info = compiler::driver::getStandardLibraryPackages(std_path, report);
+			if (std_packages_info) {
+				all_packages_info = std::move(*std_packages_info);
+				if (compiler::driver::addDependenciesOnStandardLibraryForPackage(
+						raw_package_info, report
+					)
+				        .isBad())
+					raw_package_info.dependencies.clear();
+			}
+		}
+		all_packages_info.push_back(raw_package_info);
+
+		auto package_info
+			= packages::createPackageInfo(raw_package_info, all_packages_info, report, module_id);
+		if (package_info)
+			global_state::setters::addPackage(*package_info);
+		else
+			global_state::setters::addPackage(module_id);
 		tracked_packages.push_back(module_id);
 
 		std::cerr << "duck_ls: loaded package " << package_root.strView() << "\n";
