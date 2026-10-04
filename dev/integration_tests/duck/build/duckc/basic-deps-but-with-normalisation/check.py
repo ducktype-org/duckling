@@ -140,7 +140,10 @@ expected = f"""{{
       "package": "{root_name}",
       "strategy": "native",
       "output_file": "{str(layout / "my-cool-root")}",
-      "linking_options": "{str(dep_artifacts / f"{dep_name}.a")} {str(dep2_artifacts / f"{dep2_name}.a")}"
+      "linking_options": [
+        "{str(dep_artifacts / f"{dep_name}.a")}",
+        "{str(dep2_artifacts / f"{dep2_name}.a")}"
+      ]
     }}
   ]
 }}"""

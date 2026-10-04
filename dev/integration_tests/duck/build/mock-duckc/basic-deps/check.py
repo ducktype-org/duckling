@@ -95,7 +95,9 @@ expected = f"""{{
       "package": "{foo_name}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}",
-      "linking_options": "{str(bar_artifacts / f"{bar_name}.a")}"
+      "linking_options": [
+        "{str(bar_artifacts / f"{bar_name}.a")}"
+      ]
     }}
   ]
 }}"""

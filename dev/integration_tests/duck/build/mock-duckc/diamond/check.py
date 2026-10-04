@@ -213,7 +213,11 @@ expected = f"""{{
       "package": "{root_name}",
       "strategy": "native",
       "output_file": "{str(layout / "root")}",
-      "linking_options": "{str(bar_artifacts / bar_name)}.a {str(foo_artifacts / foo_name)}.a {str(baz_artifacts / baz_name)}.a"
+      "linking_options": [
+        "{str(bar_artifacts / bar_name)}.a",
+        "{str(foo_artifacts / foo_name)}.a",
+        "{str(baz_artifacts / baz_name)}.a"
+      ]
     }}
   ]
 }}"""
