@@ -4,11 +4,11 @@ Thanks for your interest in Duckling! Bug reports, fixes, improvements, Duckling
 
 ## Before you start
 
-Duckling is at an early stage. For now the best way to start is to join the [Duckling Discord server](https://discord.gg/REPLACE_ME) and discuss your ideas with us directly. This is especially worthwhile before working on anything larger, or anything that affects the language itself.
+Duckling is at an early stage. For now the best way to start is to join the [Duckling Discord server](https://discord.gg/YxY2jhdZ2b) and discuss your ideas with us directly. This is especially worthwhile before working on anything larger, or anything that affects the language itself.
 
 ## Contributions affecting this repository and CLA
 
-At this stage, we only accept contributions that affect the contents of this repository from people who have signed our Contributor License Agreement (CLA). Before opening your first pull request, contact us via the [Duckling Discord server](...) or write to `licensing@ducktype.org`. You only need to sign once.
+At this stage, we only accept contributions that affect the contents of this repository from people who have signed our Contributor License Agreement (CLA). Before opening your first pull request, contact us via the [Duckling Discord server](https://discord.gg/YxY2jhdZ2b) or write to `licensing@ducktype.org`. You only need to sign once.
 
 Please note that the CLA allows DuckType LLC to relicense your contribution under terms other than the DuckType Compiler License. We plan to move Duckling to an open-source license once it stabilises, and the CLA is what makes that possible.
 
