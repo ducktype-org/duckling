@@ -77,6 +77,8 @@ namespace ser {
 			if (const auto c = internal::readLength<T>(ar, n); c != Errc::Ok) return c;
 
 			v.clear();
+			// resize + fill in place is cheaper than emplace_back per element, the else branch
+			// is for elements that cannot be default-constructed and have to be built
 			if constexpr (FILLABLE) {
 				v.resize(n);
 				for (::std::size_t i = 0; i < n; ++i)

@@ -167,7 +167,11 @@ namespace ser {
 		}
 	};
 
-	/** @brief the four specializations */
+	/**
+	 * @brief The smallest serialized map or set is an empty one, which is just its length
+	 * prefix. Reading a container of maps uses this to reject a corrupt length before
+	 * allocating.
+	 */
 	template<class K, class V, class C, class Al>
 	struct min_wire_size<::std::map<K, V, C, Al>> {
 		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);

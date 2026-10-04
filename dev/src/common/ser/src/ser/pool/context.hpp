@@ -5,6 +5,18 @@
 
 #include <cstddef>
 
+/**
+ * @file
+ * @brief The context an archive carries for pools.
+ * @details A pool is storage shared by one whole message: a value that many objects refer to
+ * is written once into the pool, and every occurrence writes only its index. The planned
+ * ones are a string pool for `StrID` (#90002) and an object pool for `Box` / `Ref`, so
+ * sharing and aliasing survive a round trip (#90003).
+ *
+ * None exists yet, so every archive runs with `no_context`. The `Ctx` parameter is there so
+ * adding a pool does not change the archive API.
+ */
+
 namespace ser {
 
 	/**
@@ -18,6 +30,7 @@ namespace ser {
 		constexpr Errc finish() noexcept { return Errc::Ok; }
 	};
 
+	// @TODO: #90002 implement context with the StrID pool
 	/** @brief Not implemented yet. Declared so that `context<...>` names a type. */
 	template<class... Pools>
 	struct context;

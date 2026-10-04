@@ -3,9 +3,9 @@
 namespace ser {
 
 	/**
-	 * @brief The type an ADL serMake dispatches on: a function cannot be overloaded on its return
-	 * type, so `serMake(ar)` alone could never say WHICH type to build. The tag also drags
-	 * namespace ser into the associated set, so the barrier in internal/adl.hpp finds the hook.
+	 * @brief Tells an ADL `serMake` which type to build: `serMake(ar, ser::tag<T>{})`. A
+	 * function cannot be overloaded on its return type alone, so the type has to be an
+	 * argument.
 	 */
 	template<class T>
 	struct tag final {

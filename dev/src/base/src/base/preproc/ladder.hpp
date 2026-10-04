@@ -6,22 +6,19 @@
 
 /**
  * @file
- * @brief The structured-bindings arity table: one rung per member count, 1 to
- * `base::LADDER_MAX`.
- * @details A binding declaration spells its arity out - `auto&& [a, b] = obj;` - so "hand me
- * every member" needs one branch per possible member count. `BASE_LADDER(RUNG)` expands
- * `RUNG(n)` for every count, and `BASE_LADDER_NAMES(n)` hands a rung its n names. Each entry of
- * the name table is the previous one plus a name, so a typo is either a duplicate binding or a
- * missing one, and both are compile errors.
+ * @brief A table of macros for structured bindings with 1 to `base::LADDER_MAX` names.
+ * @details A structured binding has to list its names, `auto&& [a, b] = obj;`, so code that
+ * binds every member of any aggregate needs one branch per member count. `BASE_LADDER(RUNG)`
+ * expands `RUNG(n)` for n = 1 .. LADDER_MAX, and `BASE_LADDER_NAMES(n)` gives a rung its n
+ * names: m0, m1, ... m(n-1).
  *
- * The arity of a structured binding is CHECKED against the type and never deduced, so a rung
- * that does not match the type fails to compile rather than quietly binding the wrong count.
+ * The compiler checks the binding count against the type, so a rung with the wrong count is a
+ * compile error, never a wrong binding.
  *
- * @note `base/preproc/while.hpp`'s `REPEAT` cannot generate this: it counts with `DEC` from
- * macro_base.hpp, which is defined only for single digits. Do not "simplify" the table into it
- * without extending that arithmetic to 64 first.
- * @note This header is the table only. The rungs that need types - walking members, collecting
- * their declared types - are in base/comptime/member_walk.hpp.
+ * @note `REPEAT` from base/preproc/while.hpp cannot generate this table: its `DEC` only handles
+ * single digits.
+ * @note The rungs themselves (walking members, collecting their types) are in
+ * base/comptime/member_walk.hpp.
  */
 
 namespace base {

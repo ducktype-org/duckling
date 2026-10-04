@@ -2,14 +2,9 @@
 
 /*
  * MIN_WIRE_SIZE_V<T>
- * The fewest bytes T can possibly occupy in a stream. It exists for one job: `n` elements
- * cannot be there unless `n * MIN_WIRE_SIZE_V<E>` bytes are, and without that arithmetic a
- * corrupt length prefix is an allocation.
- *
- * A LOWER bound, never an estimate: anything this cannot measure answers 1, because a bound
- * that is too small only weakens the check while one that is too large would reject a
- * perfectly valid stream. A class template rather than a function, so the std adapters can
- * specialize it - a vector's minimum is its prefix, whatever the element is.
+ * A lower bound on the number of bytes a serialized T takes. Reading a container with
+ * length n, ser rejects the length when fewer than n * MIN_WIRE_SIZE_V<E> bytes are left, so
+ * a corrupt length cannot trigger a huge allocation. A type it cannot measure gets 1.
  */
 
 #include <base/comptime/type_list.hpp>

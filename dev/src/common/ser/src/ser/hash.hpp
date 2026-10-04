@@ -339,6 +339,7 @@ namespace ser {
 					if constexpr (access::HAS_DESCRIBED_V<U> && !TRAIT_LEVEL_HOOK_V<U, Ar>)
 						return schemaStruct<U, Mode, Next>(h, described_types_t<U>{});
 					else
+						// @TODO: #90006 make this a compile error that names the three ways out
 						return schemaOpaque<U>(h, "hook");
 				else if constexpr (builtin::scalar_like<U>)
 					return schemaScalar<U>(h);
@@ -351,6 +352,8 @@ namespace ser {
 					 * Nothing serializes this type either - dispatch refuses it with a
 					 * list of fixes. Answering rather than failing keeps schema_hash
 					 * usable as a question.
+					 *
+					 * @TODO: #90006 make this a compile error as well
 					 */
 					return schemaOpaque<U>(h, "opaque");
 			}

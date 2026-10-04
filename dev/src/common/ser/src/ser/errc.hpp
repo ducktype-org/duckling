@@ -13,24 +13,33 @@
 
 namespace ser {
 
+	/**
+	 * @brief Why a write or a read stopped. `Ok` is the only success; toString() gives the
+	 * message for each code.
+	 */
 	enum class Errc : ::std::uint8_t {
 		Ok = 0,
+
+		// the buffer: too short to read from, too small to write into, or not used up
 		Truncated,
 		BufferFull,
 		UnexpectedEnd,
 		TrailingBytes,
 
+		// the values: a length or a value the stream cannot hold, or nesting too deep
 		SizeOverflow,
 		MessageSize,
 		InvalidValue,
 		Misaligned,
 		DepthExceeded,
 
+		// the header: not a ser stream, or written for another type or platform
 		BadMagic,
 		SchemaMismatch,
 		PlatformMismatch,
 		ChecksumFailed,
 
+		// the pools: nothing returns these yet, see #90002 and #90003
 		PoolMissing,
 		PoolModified,
 		DanglingRef,

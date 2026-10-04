@@ -435,21 +435,26 @@ Schema Hash
 format I write". It hashes the **wire**, field by field: padding and alignment stay out, so
 a layout change does not invalidate a stream that is still readable.
 
-It is deliberately **not a portable number** - the root mixes the byte order and the
-pointer and length widths - because its job is to refuse a stream *this program* cannot
-read back, not to prove that two platforms describe the same format. Pin the *relations* in
-tests ("these two types agree", "this change has to move the number") and pin a literal
-only per toolchain.
+The number is **not portable**: it also covers the byte order and the pointer and length
+widths, because its only job is to reject a stream this build cannot read. In a module that
+stores ser data, test it in one of two ways:
 
-```cpp
-static_assert(ser::schemaHash<Described>() == ser::schemaHash<Twin>());
-```
+* that two types have the same format - this holds on every platform:
+
+  ```cpp
+  static_assert(ser::schemaHash<Described>() == ser::schemaHash<Twin>());
+  ```
+
+* that the format of a stored type did not change by accident - pin the literal read back
+  with `ser::peekHeader`, the way `debug_info_test` does for `.di` files. The literal is
+  only valid for one platform. When it changes on purpose, update it: every file written
+  before is now `SchemaMismatch`.
 
 A type whose format ser cannot see - a hand-written `serWrite`, a class with private
 members - hashes as `"hook"` plus `sizeof` and `alignof`, which two unrelated types can
-share. Three ways to say what it really writes, in the order they are consulted: a
-`ser::schema<T>` specialization, an in-class `using ser_wire_as = W;` (with an optional
-`ser_schema_tag`), or `ser::config<T>::schema_id`. `ser_wire_as` says "the wire is this type";
+share. Three ways to say what it really writes, in the order they are consulted:
+`ser::config<T>::schema_id`, a `ser::schema<T>` specialization, or an in-class
+`using ser_wire_as = W;` (with an optional `ser_schema_tag`). `ser_wire_as` says "the wire is this type";
 `ser_schema_tag` is a discriminator mixed into the hash, so two strong typedefs over one
 integer do not collide.
 
