@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::Optional
- * Byte for byte the format of std::optional, and hashed as one: a presence byte written as
+/**
+ * @file
+ * @brief base::Optional
+ * @details Byte for byte the format of std::optional, and hashed as one: a presence byte written as
  * an explicit 0 or 1 and validated on read, then the value if there is one. A byte that is
  * neither is corrupt input, not a value to be interpreted - the same rule as bool, and for
  * the same reason.
@@ -42,7 +43,7 @@ namespace ser {
 
 	template<class T>
 	struct MinSerializedSize<::base::Optional<T>> {
-		static constexpr ::std::size_t VALUE = 1; /* the presence byte, always there */
+		static constexpr ::std::size_t VALUE = 1;  // the presence byte, always there
 	};
 
 	/**
@@ -92,4 +93,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

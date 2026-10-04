@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::StableVector
- * A length prefix and then the elements - byte for byte a std::vector<Data>, and hashed as
+/**
+ * @file
+ * @brief base::StableVector
+ * @details A length prefix and then the elements - byte for byte a std::vector<Data>, and hashed as
  * one, because the stability the type provides is a property of its storage and not of the
  * stream. So a std::vector stream reads into a StableVector and back.
  *
@@ -70,10 +71,8 @@ namespace ser {
 		static constexpr Errc write(Writer auto& ar, const VectorType& v) {
 			if (const auto c = internal::writeLength<ElementType>(ar, v.size()); c != Errc::Ok)
 				return c;
-			/*
-			 * Indexed rather than iterated: operator[] hands back a CRef, and the element
-			 * type is what dispatch has to see - not whatever the iterator dereferences to.
-			 */
+			// Indexed rather than iterated: operator[] hands back a CRef, and the element
+			// type is what dispatch has to see - not whatever the iterator dereferences to.
 			for (::std::size_t i = 0; i < v.size(); ++i)
 				if (const auto c = internal::dispatchWrite<ElementType>(ar, *v[i]); c != Errc::Ok)
 					return c;
@@ -83,10 +82,8 @@ namespace ser {
 		static constexpr Errc read(Reader auto& ar, VectorType& v)
 			requires(FILLABLE || internal::BUILDABLE_V<ElementType>) {
 			::std::size_t n = 0;
-			/*
-			 * Before clear(), and before any element exists: readLength is what refuses a
-			 * prefix claiming more elements than the stream could possibly hold.
-			 */
+			// Before clear(), and before any element exists: readLength is what refuses a
+			// prefix claiming more elements than the stream could possibly hold.
 			if (const auto c = internal::readLength<ElementType>(ar, n); c != Errc::Ok) return c;
 
 			CORE_ASSERT(v.empty(), "ser: reading into a non-empty base::StableVector");
@@ -103,4 +100,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

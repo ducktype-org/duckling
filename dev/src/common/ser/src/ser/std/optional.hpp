@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * std::optional
- * One byte of presence, written as an explicit 0 or 1 and validated on read, then the
+/**
+ * @file
+ * @brief std::optional
+ * @details One byte of presence, written as an explicit 0 or 1 and validated on read, then the
  * value if there is one. Same rule as bool and for the same reason: a byte that is
  * neither is corrupt input, not a value to be interpreted.
  *
@@ -36,7 +37,7 @@ namespace ser {
 
 	template<class T>
 	struct MinSerializedSize<::std::optional<T>> {
-		static constexpr ::std::size_t VALUE = 1; /* the presence byte, always there */
+		static constexpr ::std::size_t VALUE = 1;  // the presence byte, always there
 	};
 
 	template<class T>
@@ -81,4 +82,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

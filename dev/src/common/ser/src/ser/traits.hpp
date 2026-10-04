@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * MIN_SERIALIZED_SIZE_V<T>
- * A lower bound on the number of bytes a serialized T takes. Reading a container with
+/**
+ * @file
+ * @brief MIN_SERIALIZED_SIZE_V<T>
+ * @details A lower bound on the number of bytes a serialized T takes. Reading a container with
  * length n, ser rejects the length when fewer than n * MIN_SERIALIZED_SIZE_V<E> bytes are left, so
  * a corrupt length cannot trigger a huge allocation. A type it cannot measure gets 1.
  */
@@ -42,10 +43,8 @@ namespace ser {
 
 		template<class T>
 		[[nodiscard]] consteval ::std::size_t computeMinSerializedSize() {
-			/**
-			 * @brief bool is one byte in the stream whatever sizeof(bool) is on this platform:
-			 * the object representation never reaches the stream.
-			 */
+			// bool is one byte in the stream whatever sizeof(bool) is on this platform:
+			// the object representation never reaches the stream.
 			if constexpr (::std::is_same_v<T, bool>)
 				return 1;
 			else if constexpr (builtin::ScalarLike<T> || builtin::EnumLike<T>)
@@ -53,20 +52,20 @@ namespace ser {
 			else if constexpr (Access::HAS_SERIALIZE_AS_V<T>)
 				return MIN_SERIALIZED_SIZE_V<::std::remove_cv_t<Access::SerializeAsT<T>>>;
 			else if constexpr (::std::is_empty_v<T>)
-				return 0; /* truthful: an empty type writes nothing */
+				return 0;  // truthful: an empty type writes nothing
 			else if constexpr (Access::HAS_DESCRIBED_V<T>)
 				return sumMinSerializedSize(DescribedTypesT<T>{});
 			else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)
 				return sumMinSerializedSize(FieldTypesT<T>{});
 			else
-				return 1; /* a hook, a container, anything unmeasured */
+				return 1;  // a hook, a container, anything unmeasured
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<class T>
 	struct MinSerializedSize {
 		static constexpr ::std::size_t VALUE = internal::computeMinSerializedSize<T>();
 	};
 
-} /* namespace ser */
+}  // namespace ser

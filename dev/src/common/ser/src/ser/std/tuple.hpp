@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * std::pair and std::tuple
- * The elements in order, nothing else: no count, because the type carries it, and no
+/**
+ * @file
+ * @brief std::pair and std::tuple
+ * @details The elements in order, nothing else: no count, because the type carries it, and no
  * padding. A pair is its first element followed by its second, which is what makes
  * pair<K, V> and a two-field aggregate the same bytes.
  *
@@ -75,7 +76,7 @@ namespace ser {
 		inline constexpr bool TUPLE_ELEMENTS_FILLABLE<::std::tuple<Es...>>
 			= (::std::is_move_assignable_v<Es> && ... && true);
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	/**
 	 * @brief A pair is the same bytes as a two-field aggregate and hashes DIFFERENTLY, because
@@ -143,4 +144,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * std::string and friends
- * Length prefix, then the characters. Nothing about the encoding is in the stream and no
+/**
+ * @file
+ * @brief std::string and friends
+ * @details Length prefix, then the characters. Nothing about the encoding is in the stream and no
  * terminator is written: a string is `n` and `n` characters, so an embedded '\0' is
  * ordinary data and survives the round-trip.
  *
@@ -12,7 +13,7 @@
  *
  * A ONE-BYTE character type is copied in bulk, because a single byte has no representation
  * to swap and a memcpy cannot disagree with a dispatch loop. char16_t and char32_t go one at
- * a time so that a custom serializer<Ch> is honoured - NOT for byte order: nothing in this
+ * a time so that a custom Serializer<Ch> is honoured - NOT for byte order: nothing in this
  * library swaps bytes, so the element path is byte-identical native-endian output too, and
  * endianness is the envelope's job through StreamHeader::flags and PlatformMismatch. The
  * bulk path is also skipped under constant evaluation, which may not contain a
@@ -79,21 +80,17 @@ namespace ser {
 			::std::size_t n = 0;
 			if (const auto c = internal::readLength<Ch>(ar, n); c != Errc::Ok) return c;
 
-			/*
-			 * resize AFTER the checks in readLength, never before - that is the whole
-			 * point of them. Cleared first so a partial read cannot leave the tail of a
-			 * previous value behind.
-			 */
+			// resize AFTER the checks in readLength, never before - that is the whole
+			// point of them. Cleared first so a partial read cannot leave the tail of a
+			// previous value behind.
 			s.clear();
 			s.resize(n);
 
 			if constexpr (BULK)
 				if !consteval {
-					/*
-					 * ensure() before take(), which has it as a precondition. readLength
-					 * has already bounded n, so this cannot fail - it is what makes that
-					 * guarantee local instead of remote.
-					 */
+					// ensure() before take(), which has it as a precondition. readLength
+					// has already bounded n, so this cannot fail - it is what makes that
+					// guarantee local instead of remote.
 					if (const auto c = ar.ensure(n); c != Errc::Ok) return c;
 					internal::copyBytes(
 						reinterpret_cast<::std::byte*>(s.data()), ar.take(n).data(), n
@@ -107,4 +104,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

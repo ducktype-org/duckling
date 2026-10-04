@@ -70,7 +70,7 @@ namespace ser::internal {
 	template<class T, class Ar>
 	consteval bool walkCanFill() {
 		if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
-			return false; /* the walk is not the way */
+			return false;  // the walk is not the way
 		else
 			return walkCanFillFields<Ar>(FieldDeclsT<T>{});
 	}
@@ -89,17 +89,17 @@ namespace ser::internal {
 		if constexpr (::std::is_move_assignable_v<T>)
 			return true;
 		else if constexpr (HAS_ANY_READ_HOOK_V<T, Ar>)
-			return true; /* the hook does it */
+			return true;  // the hook does it
 		else if constexpr (builtin::DENIED_V<T>)
-			return true; /* refused elsewhere */
+			return true;  // refused elsewhere
 		else if constexpr (builtin::ScalarLike<T>)
 			return true;
 		else if constexpr (builtin::EnumLike<T>)
 			return true;
 		else if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
-			return true;                 /* not this trait's call */
+			return true;                  // not this trait's call
 		else
-			return walkCanFill<T, Ar>(); /* step 8, or nothing */
+			return walkCanFill<T, Ar>();  // step 8, or nothing
 	}
 
 	/**
@@ -113,7 +113,7 @@ namespace ser::internal {
 		else if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
 			return false;
 		else if constexpr (walkCanFill<T, Ar>())
-			return false; /* step 8 has it */
+			return false;  // step 8 has it
 		else
 			return ::std::is_move_assignable_v<T>;
 	}
@@ -197,38 +197,34 @@ namespace ser::internal {
 			return Errc::InvalidValue;
 		}
 
-		else if constexpr (HAS_WRITE_V<Access::TraitHooks, U, Ar>)        /* 1 */
+		else if constexpr (HAS_WRITE_V<Access::TraitHooks, U, Ar>)         // 1
 			return Serializer<U>::write(ar, x);
-		else if constexpr (HAS_VISIT_V<Access::TraitHooks, const U, Ar>)  /* 2 */
+		else if constexpr (HAS_VISIT_V<Access::TraitHooks, const U, Ar>)   // 2
 			return Serializer<U>::visit(ar, x);
-		else if constexpr (HAS_WRITE_V<Access::MemberHooks, U, Ar>)       /* 3 */
+		else if constexpr (HAS_WRITE_V<Access::MemberHooks, U, Ar>)        // 3
 			return Access::callWrite<U>(ar, x);
-		else if constexpr (HAS_VISIT_V<Access::MemberHooks, const U, Ar>) /* 4 */
+		else if constexpr (HAS_VISIT_V<Access::MemberHooks, const U, Ar>)  // 4
 			return Access::callVisit(ar, x);
-		else if constexpr (HAS_WRITE_V<AdlHooks, U, Ar>)                  /* 5 */
+		else if constexpr (HAS_WRITE_V<AdlHooks, U, Ar>)                   // 5
 			return adl_barrier::callWrite(ar, x);
-		else if constexpr (HAS_VISIT_V<AdlHooks, const U, Ar>)            /* 6 */
+		else if constexpr (HAS_VISIT_V<AdlHooks, const U, Ar>)             // 6
 			return adl_barrier::callVisit(ar, x);
 
 		else if constexpr (builtin::ScalarLike<U>)
-			return builtin::writeScalar<U>(ar, x); /* 7 */
+			return builtin::writeScalar<U>(ar, x);  // 7
 		else if constexpr (builtin::EnumLike<U>)
 			return builtin::writeEnum<U>(ar, x);
 
-		/**
-		 * @brief Step 8. No hook, no builtin rule: walk the fields. It is last among the paths
-		 * that DO something, so a hook always outranks it - which is what keeps a
-		 * container-shaped type with serVisit from being taken apart field by field.
-		 */
-		else if constexpr (CAN_ENUMERATE_MEMBERS_V<U>) { /* 8 */
+		// Step 8. No hook, no builtin rule: walk the fields. It is last among the paths
+		// that DO something, so a hook always outranks it - which is what keeps a
+		// container-shaped type with serVisit from being taken apart field by field.
+		else if constexpr (CAN_ENUMERATE_MEMBERS_V<U>) {  // 8
 			checkWalkableFields<U>();
 			return visitMembers(x, [&ar](const auto&... fields) { return ar(fields...); });
 		}
 
-		/**
-		 * @brief checkHooks has already reported the hook this archive cannot call; the
-		 * generic message below would only point away from it.
-		 */
+		// checkHooks has already reported the hook this archive cannot call; the
+		// generic message below would only point away from it.
 		else if constexpr (::std::is_aggregate_v<U> && !CAN_ENUMERATE_MEMBERS_V<U>)
 			static_assert(
 				::base::DEPENDENT_FALSE_V<T>,
@@ -245,7 +241,7 @@ namespace ser::internal {
 
 		else if constexpr (NONGENERIC_ANY_HOOK_V<U, Ar>)
 			return Errc::InvalidValue;
-		else if constexpr (builtin::looksPointerLike<U>()) { /* 9 */
+		else if constexpr (builtin::looksPointerLike<U>()) {  // 9
 			builtin::denyPointerLike<U>();
 			return Errc::InvalidValue;
 		} else
@@ -270,11 +266,9 @@ namespace ser::internal {
 	template<class T, Reader Ar>
 	constexpr Errc dispatchRead(Ar& ar, T& x) {
 		using U = ::std::remove_cv_t<T>;
-		/*
-		 * Reachable from the member walk even though ser::In::operator() has its own
-		 * requires clause: a const FIELD gets here with the enclosing object perfectly
-		 * non-const.
-		 */
+		// Reachable from the member walk even though ser::In::operator() has its own
+		// requires clause: a const FIELD gets here with the enclosing object perfectly
+		// non-const.
 		static_assert(
 			!::std::is_const_v<T>,
 			"ser: cannot read into a const object - reading overwrites it.\n"
@@ -293,41 +287,37 @@ namespace ser::internal {
 			return Errc::InvalidValue;
 		}
 
-		else if constexpr (HAS_READ_V<Access::TraitHooks, U, Ar>)   /* 1 */
+		else if constexpr (HAS_READ_V<Access::TraitHooks, U, Ar>)    // 1
 			return codeFromHook([&] { return Serializer<U>::read(ar, x); });
-		else if constexpr (HAS_VISIT_V<Access::TraitHooks, U, Ar>)  /* 2 */
+		else if constexpr (HAS_VISIT_V<Access::TraitHooks, U, Ar>)   // 2
 			return codeFromHook([&] { return Serializer<U>::visit(ar, x); });
-		else if constexpr (HAS_READ_V<Access::MemberHooks, U, Ar>)  /* 3 */
+		else if constexpr (HAS_READ_V<Access::MemberHooks, U, Ar>)   // 3
 			return codeFromHook([&] { return Access::callRead<U>(ar, x); });
-		else if constexpr (HAS_VISIT_V<Access::MemberHooks, U, Ar>) /* 4 */
+		else if constexpr (HAS_VISIT_V<Access::MemberHooks, U, Ar>)  // 4
 			return codeFromHook([&] { return Access::callVisit(ar, x); });
-		else if constexpr (HAS_READ_V<AdlHooks, U, Ar>)             /* 5 */
+		else if constexpr (HAS_READ_V<AdlHooks, U, Ar>)              // 5
 			return codeFromHook([&] { return adl_barrier::callRead(ar, x); });
-		else if constexpr (HAS_VISIT_V<AdlHooks, U, Ar>)            /* 6 */
+		else if constexpr (HAS_VISIT_V<AdlHooks, U, Ar>)             // 6
 			return codeFromHook([&] { return adl_barrier::callVisit(ar, x); });
 
 		else if constexpr (builtin::ScalarLike<U>)
-			return builtin::readScalar<U>(ar, x); /* 7 */
+			return builtin::readScalar<U>(ar, x);  // 7
 		else if constexpr (builtin::EnumLike<U>)
 			return builtin::readEnum<U>(ar, x);
 
-		/** @brief Step 8. The walk must not take a type whose author wrote serMake */
+		// Step 8. The walk must not take a type whose author wrote serMake
 		else if constexpr (!HAS_ANY_MAKE_HOOK_V<U, Ar> && WALK_CAN_FILL_V<U, Ar>) {
 			checkWalkableFields<U>();
 			return visitMembers(x, [&ar](auto&... fields) { return ar(fields...); });
 		}
 
-		/**
-		 * @brief Step 9. The object exists and cannot be written into field by field, so the only
-		 * way left is to build a fresh one and assign it - either a type offering only
-		 * serMake, or one the walk cannot fill (a BIT-FIELD field being that case). It
-		 * costs one assignment, which is why a type that can offer serRead should.
-		 */
+		// Step 9. The object exists and cannot be written into field by field, so the only
+		// way left is to build a fresh one and assign it - either a type offering only
+		// serMake, or one the walk cannot fill (a BIT-FIELD field being that case). It
+		// costs one assignment, which is why a type that can offer serRead should.
 		else if constexpr (READ_BY_BUILDING_V<U, Ar>) {
-			/*
-			 * dispatchMake signals by throwing; this context returns a code. The boundary
-			 * between the two conventions is here and nowhere else.
-			 */
+			// dispatchMake signals by throwing; this context returns a code. The boundary
+			// between the two conventions is here and nowhere else.
 			try {
 				x = dispatchMake<U>(ar);
 				return Errc::Ok;
@@ -336,19 +326,17 @@ namespace ser::internal {
 
 		else if constexpr (HAS_ANY_MAKE_HOOK_V<U, Ar>)
 			static_assert(
-				::base::DEPENDENT_FALSE_V<T>, /* 10 */
+				::base::DEPENDENT_FALSE_V<T>,  // 10
 				"ser: this type has serMake but no serRead, and it is not move-assignable, "
 				"so an existing object cannot be filled in. Add serRead(ar, x), or make the "
 				"type move-assignable."
 			);
 
-		/**
-		 * @brief The same dead end reached from the other side: the walk cannot write into this
-		 * type's fields and it cannot be built-and-assigned either. A CONST field is what
-		 * produces that pair, because const is exactly what makes a type non-assignable.
-		 * Such a type is still readable on its own - ser::read<T>(bytes) builds it - just
-		 * not as a field of an object that is being filled.
-		 */
+		// The same dead end reached from the other side: the walk cannot write into this
+		// type's fields and it cannot be built-and-assigned either. A CONST field is what
+		// produces that pair, because const is exactly what makes a type non-assignable.
+		// Such a type is still readable on its own - ser::read<T>(bytes) builds it - just
+		// not as a field of an object that is being filled.
 		else if constexpr (MUST_BE_BUILT_V<U, Ar>)
 			static_assert(
 				::base::DEPENDENT_FALSE_V<T>,
@@ -390,14 +378,12 @@ namespace ser::internal {
 			);
 	}
 
-	/*
-	 * building an object out of the stream, field by field
-	 * BRACES, never parentheses: [dcl.init.list]/4 orders the initializer clauses left to
-	 * right, so field 0 reads the first bytes of the record, while parentheses leave the
-	 * order unspecified. Every clause is a prvalue straight out of dispatchMake, so each
-	 * field is built once in its final storage - const fields, fields with no default
-	 * constructor and fields that cannot be moved all work.
-	 */
+	// building an object out of the stream, field by field
+	// BRACES, never parentheses: [dcl.init.list]/4 orders the initializer clauses left to
+	// right, so field 0 reads the first bytes of the record, while parentheses leave the
+	// order unspecified. Every clause is a prvalue straight out of dispatchMake, so each
+	// field is built once in its final storage - const fields, fields with no default
+	// constructor and fields that cannot be moved all work.
 
 	/**
 	 * @brief one field is not always one clause
@@ -428,17 +414,15 @@ namespace ser::internal {
 	template<class T>
 	using FlatFieldsT = typename FlatFields<T, ::std::make_index_sequence<MEMBER_COUNT_V<T>>>::type;
 
-	/*
-	 * Two warnings are wrong about this function, and both are suppressed narrowly.
-	 *
-	 * Wmissing-braces is backwards: brace elision filling an array field one clause per
-	 * element is the mechanism here, and adding the braces would be the bug.
-	 *
-	 * Wconversion fires on a BIT-FIELD initialized from a prvalue of its own DECLARED type,
-	 * so the clause narrows to the width. It cannot lose anything - the write side read that
-	 * same bit-field and widened it - and there is nothing to cast to, a width not being a
-	 * type.
-	 */
+	// Two warnings are wrong about this function, and both are suppressed narrowly.
+	//
+	// Wmissing-braces is backwards: brace elision filling an array field one clause per
+	// element is the mechanism here, and adding the braces would be the bug.
+	//
+	// Wconversion fires on a BIT-FIELD initialized from a prvalue of its own DECLARED type,
+	// so the clause narrows to the width. It cannot lose anything - the write side read that
+	// same bit-field and widened it - and there is nothing to cast to, a width not being a
+	// type.
 #if defined(__clang__)
 	#pragma clang diagnostic push
 	#pragma clang diagnostic ignored "-Wmissing-braces"
@@ -464,11 +448,9 @@ namespace ser::internal {
 	 */
 	template<class T, class... Fs>
 	constexpr T makeOneClausePerField(Reader auto& ar, ::base::TypeList<Fs...>) {
-		/*
-		 * No flattening here, so an array field has nowhere to go: it would need a
-		 * clause of its own, and no expression yields an array to fill one with.
-		 * Saying so beats the raw "no matching overloaded function" from below.
-		 */
+		// No flattening here, so an array field has nowhere to go: it would need a
+		// clause of its own, and no expression yields an array to fill one with.
+		// Saying so beats the raw "no matching overloaded function" from below.
 		static_assert(
 			!(::std::is_array_v<Fs> || ... || false),
 			"ser: this type is not an aggregate and has a C array field, so it cannot be "
@@ -557,10 +539,8 @@ namespace ser::internal {
 	requires(!::std::is_array_v<T>) constexpr T dispatchMake(Ar& ar) {
 		checkHooks<T, Ar>();
 
-		/**
-		 * @brief A serMake that reads its fields with subMake recurses through here without
-		 * ever touching dispatchRead, so this path needs its own guard.
-		 */
+		// A serMake that reads its fields with subMake recurses through here without
+		// ever touching dispatchRead, so this path needs its own guard.
 		DepthGuard g{ ar };
 		if (!g.entered()) throwError(Errc::DepthExceeded, ar.position());
 
@@ -570,37 +550,31 @@ namespace ser::internal {
 		}
 
 		else if constexpr (HAS_MAKE_V<Access::TraitHooks, T, Ar>)
-			return Serializer<T>::make(ar);                    /* 1 */
+			return Serializer<T>::make(ar);                     // 1
 		else if constexpr (HAS_MAKE_V<Access::MemberHooks, T, Ar>)
-			return Access::callMake<T>(ar);                    /* 2 */
+			return Access::callMake<T>(ar);                     // 2
 		else if constexpr (HAS_MAKE_V<AdlHooks, T, Ar>)
-			return adl_barrier::callMake(ar, ::ser::Tag<T>{}); /* 3 */
+			return adl_barrier::callMake(ar, ::ser::Tag<T>{});  // 3
 
-		/*
-		 * Every one of those three returns the hook's prvalue straight out of a return
-		 * statement, so the object is built once, in the caller's storage. That is what
-		 * makes a non-movable type readable at all.
-		 */
+		// Every one of those three returns the hook's prvalue straight out of a return
+		// statement, so the object is built once, in the caller's storage. That is what
+		// makes a non-movable type readable at all.
 
-		/**
-		 * @brief `return x;` is NRVO - permitted, not guaranteed - so a move constructor must exist
-		 * as the fallback. All three conditions are asked in the CONDITION so that a type
-		 * failing any of them falls through to step 4b, which builds T from prvalues and
-		 * needs none of them. Declining here also breaks the cycle with step 9 of
-		 * dispatchRead, which comes back into this function.
-		 */
+		// `return x;` is NRVO - permitted, not guaranteed - so a move constructor must exist
+		// as the fallback. All three conditions are asked in the CONDITION so that a type
+		// failing any of them falls through to step 4b, which builds T from prvalues and
+		// needs none of them. Declining here also breaks the cycle with step 9 of
+		// dispatchRead, which comes back into this function.
 		else if constexpr (::std::default_initializable<T> && ::std::move_constructible<T>
-		                   && !MUST_BE_BUILT_V<T, Ar>) { /* 4 */
+		                   && !MUST_BE_BUILT_V<T, Ar>) {  // 4
 			T x{};
 			if (const auto e = dispatchRead<T>(ar, x); e != Errc::Ok) throwError(e, ar.position());
 			return x;
 		}
-		/**
-		 * @brief Step 4b. An aggregate that step 4 declined: no default constructor, a const
-		 * field, or nothing to move it with. Aggregate initialization needs none of the
-		 * three - it builds every field in place from a prvalue.
-		 */
-		else if constexpr (AGGREGATE_MAKEABLE_V<T, Ar>) /* 4b */
+		// Step 4b. An aggregate that step 4 declined: no default constructor, a const
+		// field, or nothing to move it with. Aggregate initialization needs none of the
+		// three - it builds every field in place from a prvalue.
+		else if constexpr (AGGREGATE_MAKEABLE_V<T, Ar>)  // 4b
 			return makeByFields<T>(ar);
 
 		else if constexpr (MUST_BE_BUILT_V<T, Ar> && !::std::is_aggregate_v<T>)
@@ -617,14 +591,14 @@ namespace ser::internal {
 
 		else if constexpr (::std::default_initializable<T>)
 			static_assert(
-				::base::DEPENDENT_FALSE_V<T>, /* 4c */
+				::base::DEPENDENT_FALSE_V<T>,  // 4c
 				"ser: this type is default constructible but not movable, so it cannot be "
 				"returned by value. Read it in place instead: T obj; ser::In{bytes}(obj). "
 				"Or give it a serMake hook - a hook's result is returned directly and is "
 				"never moved."
 			);
 
-		else if constexpr (::std::is_aggregate_v<T> && CAN_ENUMERATE_MEMBERS_V<T>) /* 4d */
+		else if constexpr (::std::is_aggregate_v<T> && CAN_ENUMERATE_MEMBERS_V<T>)  // 4d
 			static_assert(
 				::base::DEPENDENT_FALSE_V<T>,
 				"ser: this type has an array field with a serializer of its own, and no way "
@@ -635,13 +609,11 @@ namespace ser::internal {
 				"type itself a serMake hook."
 			);
 
-		/**
-		 * @brief The same refusal the other two contexts have, and it belongs here most of all: an
-		 * aggregate with a const ARRAY field arrives here and nowhere else, and without this
-		 * rung it would get the generic message below, whose suggestions are all about
-		 * something other than what is wrong.
-		 */
-		else if constexpr (::std::is_aggregate_v<T> && !CAN_ENUMERATE_MEMBERS_V<T>) /* 4e */
+		// The same refusal the other two contexts have, and it belongs here most of all: an
+		// aggregate with a const ARRAY field arrives here and nowhere else, and without this
+		// rung it would get the generic message below, whose suggestions are all about
+		// something other than what is wrong.
+		else if constexpr (::std::is_aggregate_v<T> && !CAN_ENUMERATE_MEMBERS_V<T>)  // 4e
 			static_assert(
 				::base::DEPENDENT_FALSE_V<T>,
 				"ser: this type is an aggregate whose field count cannot be worked out, "
@@ -665,8 +637,8 @@ namespace ser::internal {
 				"ser: don't know how to construct this type.\n"
 				"  Has a constructor?          SER_MAKE_FROM(Type, a, b, c);\n"
 				"  Not your type?              ser::Serializer<T>::make\n"
-				"  Has non-public fields?      SER_MAKE_FROM, or friend ser::Access + members<N>"
+				"  Has non-public fields?      SER_MAKE_FROM, or friend ser::Access + Members<N>"
 			);
 	}
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

@@ -175,4 +175,4 @@ namespace ser {
 		if constexpr (!::std::is_void_v<T>) return *r;
 	}
 
-} /* namespace ser */
+}  // namespace ser

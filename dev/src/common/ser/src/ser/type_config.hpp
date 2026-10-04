@@ -22,4 +22,4 @@ namespace ser {
 	template<class T>
 	struct Config {};
 
-} /* namespace ser */
+}  // namespace ser

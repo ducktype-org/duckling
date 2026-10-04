@@ -28,4 +28,4 @@ namespace ser {
 	template<class T>
 	struct Serializer {};
 
-} /* namespace ser */
+}  // namespace ser

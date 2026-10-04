@@ -8,24 +8,22 @@
 
 namespace ser::internal {
 
-	/*
-	 * the shape of every hook question
-	 * A hook can live in three places (the order is on ser::Serializer in serializer.hpp), and
-	 * each place is asked the same questions about the same four forms. Only the call
-	 * differs, so each place is a tag struct with one probe per form - access::trait_hooks
-	 * and access::member_hooks in access.hpp, AdlHooks in internal/adl.hpp - and every
-	 * question below is written once and asked with the tag passed as `L`.
-	 *
-	 * A probe is declared, never defined, and has a trailing return type, so a missing hook
-	 * is a substitution failure these requires-expressions can see.
-	 *
-	 * For `visit`, T keeps the object's const, so a hook that only takes a non-const object is
-	 * invisible on the write side; internal::checkHooks reports that.
-	 *
-	 * Each form comes in two versions. The loose one does not check the return type, so
-	 * "loose but not strict" means "the hook is there and returns the wrong thing", which
-	 * gets its own message.
-	 */
+	// the shape of every hook question
+	// A hook can live in three places (the order is on ser::Serializer in serializer.hpp), and
+	// each place is asked the same questions about the same four forms. Only the call
+	// differs, so each place is a tag struct with one probe per form - access::trait_hooks
+	// and access::member_hooks in access.hpp, AdlHooks in internal/adl.hpp - and every
+	// question below is written once and asked with the tag passed as `L`.
+	//
+	// A probe is declared, never defined, and has a trailing return type, so a missing hook
+	// is a substitution failure these requires-expressions can see.
+	//
+	// For `visit`, T keeps the object's const, so a hook that only takes a non-const object is
+	// invisible on the write side; internal::checkHooks reports that.
+	//
+	// Each form comes in two versions. The loose one does not check the return type, so
+	// "loose but not strict" means "the hook is there and returns the wrong thing", which
+	// gets its own message.
 
 	/** @brief The symmetric form, at level L: one hook for both directions. */
 	template<class L, class T, class Ar>
@@ -89,4 +87,4 @@ namespace ser::internal {
 	inline constexpr bool HAS_READ_RVALUE_V
 		= requires(Ar& ar, ::std::remove_cvref_t<T>&& x) { L::read(ar, ::std::move(x)); };
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

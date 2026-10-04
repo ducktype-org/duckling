@@ -38,30 +38,26 @@ namespace ser::internal {
 		using U = ::std::remove_cv_t<T>;
 
 		if constexpr (Access::NAMES_MEMBER_COUNT_V<U>)
-			return true; /* the author said so */
+			return true;  // the author said so
 		else if constexpr (::std::is_union_v<U> || ::std::is_array_v<U> || !::std::is_class_v<U>)
 			return false;
 		else if constexpr (!::std::is_aggregate_v<U>)
-			return false; /* cannot probe a non-aggregate */
-		/**
-		 * @brief No check for a polymorphic type: a class with virtual functions is never an
-		 * aggregate, so the line above has already refused it.
-		 */
+			return false;  // cannot probe a non-aggregate
+		// No check for a polymorphic type: a class with virtual functions is never an
+		// aggregate, so the line above has already refused it.
 		else if constexpr (::base::HAS_BASE_V<U>)
-			return false; /* the probe would count the base */
+			return false;  // the probe would count the base
 		else if constexpr (::std::is_empty_v<U>)
-			return true;  /* zero fields, and that is known */
+			return true;   // zero fields, and that is known
 		else
-			/*
-			 * Zero is not a count for a type that has fields - it means only the empty
-			 * clause list compiled - and a number past the ladder's limit has no rung
-			 * that could walk it.
-			 */
+			// Zero is not a count for a type that has fields - it means only the empty
+			// clause list compiled - and a number past the ladder's limit has no rung
+			// that could walk it.
 			return ::base::ELIDED_ARITY_V<U> != ::base::NO_ARITY && ::base::ELIDED_ARITY_V<U> != 0
 			    && ::base::ELIDED_ARITY_V<U> <= MAX_MEMBERS;
 	}
 
-} /* namespace ser::internal */
+}  // namespace ser::internal
 
 namespace ser {
 
@@ -99,13 +95,11 @@ namespace ser {
 	template<class T, class F>
 	constexpr decltype(auto) visitMembers(T&& obj, F&& f) {
 		using U = ::std::remove_cvref_t<T>;
-		/*
-		 * A declared count is NOT compared against the probe, because the probe errs in both
-		 * directions - a C array field overshoots, and the scan undershoots on a member no
-		 * clause can initialize. A wrong ser::Members<N> is caught where it cannot be wrong
-		 * about anything: the arity of a structured binding is CHECKED against the type, so
-		 * it is a compile error in the rung it selects.
-		 */
+		// A declared count is NOT compared against the probe, because the probe errs in both
+		// directions - a C array field overshoots, and the scan undershoots on a member no
+		// clause can initialize. A wrong ser::Members<N> is caught where it cannot be wrong
+		// about anything: the arity of a structured binding is CHECKED against the type, so
+		// it is a compile error in the rung it selects.
 		static_assert(
 			CAN_ENUMERATE_MEMBERS_V<U>,
 			"ser: cannot enumerate this type's fields. Declare the count in the class:\n"
@@ -135,13 +129,11 @@ namespace ser {
 	template<class T>
 	using MemberTupleT = decltype(tieMembers(::std::declval<::std::remove_cv_t<T>&>()));
 
-	/*
-	 * The stripping here is why FieldDeclsT below exists at all. A field's DECLARED type
-	 * survives only as long as the binding does: handing one to an `auto&` parameter turns
-	 * both a `const int&` member and a `const int` member into `const int&`. So no guard
-	 * downstream of the walk can tell a reference field from a const one - and one of those
-	 * two is a shape that works, which is why the guards ask FieldDeclsT instead.
-	 */
+	// The stripping here is why FieldDeclsT below exists at all. A field's DECLARED type
+	// survives only as long as the binding does: handing one to an `auto&` parameter turns
+	// both a `const int&` member and a `const int` member into `const int&`. So no guard
+	// downstream of the walk can tell a reference field from a const one - and one of those
+	// two is a shape that works, which is why the guards ask FieldDeclsT instead.
 
 	/**
 	 * @brief The same fields as FieldTypesT, but as they were DECLARED - `int&` for a
@@ -174,4 +166,4 @@ namespace ser {
 	template<class T>
 	using FieldTypesT = typename ::base::DeclFieldTypes<FieldDeclsT<T>>::List;
 
-} /* namespace ser */
+}  // namespace ser

@@ -59,7 +59,7 @@ std::span<const std::byte> view(const ByteBuf& b, usize n) {
 
 enum class Color : u16 { Red = 1, Green = 2, Blue = 65'535 };
 
-enum Shape { ROUND = 0, SQUARE = 3 }; /* unscoped, and the compiler picks its underlying type */
+enum Shape { ROUND = 0, SQUARE = 3 };  // unscoped, and the compiler picks its underlying type
 
 /**
  * @brief Zero bytes in the stream, whatever the count - which is what makes a container of them the
@@ -187,8 +187,8 @@ Tree sampleTree() {
 
 	Branch other = branch;
 	other.name   = "branch-two";
-	other.maybe  = std::nullopt; /* the empty optional has to survive too */
-	other.leaves.clear();        /* and so does the empty vector */
+	other.maybe  = std::nullopt;  // the empty optional has to survive too
+	other.leaves.clear();         // and so does the empty vector
 
 	Trunk trunk;
 	trunk.main     = branch;
@@ -327,7 +327,7 @@ namespace geom {
 		friend bool operator==(const Point&, const Point&) = default;
 	};
 
-	/*
+	/**
 	 * Both overloads, not one `auto&`: the const one is what the write side needs, and
 	 * leaving it out is the asymmetry the library refuses - a hook found when reading and
 	 * missed when writing means the two directions disagree about the format.
@@ -350,11 +350,9 @@ namespace geom {
 struct Described {
 	i32         x = 0;
 	std::string s;
-	i32         skipped = 0; /* not described, so it comes back default-constructed */
+	i32         skipped = 0;  // not described, so it comes back default-constructed
 
-	/*
-	 * SER_DESCRIBE expands to the field list the round-trip report names its fields from.
-	 */
+	/** SER_DESCRIBE expands to the field list the round-trip report names its fields from. */
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 	SER_DESCRIBE(x, s)
 
@@ -372,9 +370,7 @@ struct Renamed {
 	i32         y = 0;
 	std::string s;
 
-	/*
-	 * SER_DESCRIBE expands to the field list the round-trip report names its fields from.
-	 */
+	/** SER_DESCRIBE expands to the field list the round-trip report names its fields from. */
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 	SER_DESCRIBE(y, s)
 };
@@ -402,9 +398,7 @@ private:
 	const u64   id;
 	std::string name;
 
-	/*
-	 * SER_DESCRIBE expands to the field list the round-trip report names its fields from.
-	 */
+	/** SER_DESCRIBE expands to the field list the round-trip report names its fields from. */
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 	SER_DESCRIBE_MAKE(Built, id, name)
 };
@@ -431,21 +425,19 @@ struct Hooked {
 static_assert(!std::is_default_constructible_v<Hooked>, "Hooked must be BUILT on read, not filled");
 static_assert(ser::CAN_ENUMERATE_MEMBERS_V<Branch>, "the field probe has to count Branch on its own");
 
-/*
+/**
  * A described aggregate and the same aggregate walked automatically are the same format,
  * so adding SER_DESCRIBE to a type invalidates no stream that was already written.
  */
 static_assert(ser::schemaHash<Described>() == ser::schemaHash<Twin>());
 
-/*
- * ═══════════════════════════════════════════════════════════════════════════════════
- *  Structure four: the variant, and the shapes that make it awkward.
- *
- *  Every question this adapter answers is "which alternative does the TAG name" - never
- *  "which alternative does this value convert to". The types below are the cases where
- *  those two answers differ, or where the answer costs something.
- * ═══════════════════════════════════════════════════════════════════════════════════
- */
+// ═══════════════════════════════════════════════════════════════════════════════════
+//  Structure four: the variant, and the shapes that make it awkward.
+//
+//  Every question this adapter answers is "which alternative does the TAG name" - never
+//  "which alternative does this value convert to". The types below are the cases where
+//  those two answers differ, or where the answer costs something.
+// ═══════════════════════════════════════════════════════════════════════════════════
 
 /**
  * @brief monostate, containers, and an alternative that has to be BUILT.
@@ -464,7 +456,7 @@ using Twins = std::variant<i32, i32>;
 using Ambiguous = std::variant<bool, std::string>;
 
 /** @brief A variant as a field of a type with a serRead, which is the only way an
- *  EXISTING variant is handed to serializer<Payload>::read rather than being built. */
+ *  EXISTING variant is handed to Serializer<Payload>::read rather than being built. */
 struct Slot {
 	Payload held;
 
@@ -522,15 +514,15 @@ static_assert(
 );
 static_assert(
 	!std::is_move_assignable_v<Payload>,
-	"which is why serializer<Payload>::read has to exist - `x = make(ar)` would not compile"
+	"which is why Serializer<Payload>::read has to exist - `x = make(ar)` would not compile"
 );
 
-/* The tag, plus the smallest alternative - and monostate writes nothing at all. */
+/** The tag, plus the smallest alternative - and monostate writes nothing at all. */
 static_assert(ser::MIN_SERIALIZED_SIZE_V<std::monostate> == 0);
 static_assert(ser::MIN_SERIALIZED_SIZE_V<Payload> == sizeof(u64));
 static_assert(ser::MIN_SERIALIZED_SIZE_V<Twins> == sizeof(u64) + sizeof(i32));
 
-/*
+/**
  * A tag means nothing without the alternative LIST it indexes, so order and count are
  * both part of the format - and a variant is not the tuple of the same types.
  */
@@ -545,22 +537,20 @@ static_assert(
 	ser::schemaHash<std::variant<i32, double>>() != ser::schemaHash<std::tuple<i32, double>>()
 );
 
-/* A cv-qualified alternative is the same serialized type as the alternative itself. */
+/** A cv-qualified alternative is the same serialized type as the alternative itself. */
 static_assert(
 	ser::schemaHash<std::variant<const i32, std::string>>()
 	== ser::schemaHash<std::variant<i32, std::string>>()
 );
 
-/*
- * ═══════════════════════════════════════════════════════════════════════════════════
- *  Structure five: types that contain themselves, and wrappers over one integer.
- *
- *  Both are about ser::schemaHash rather than about the bytes. A self-referential type
- *  makes the schema walk meet a type it is already inside, which is the one shape whose
- *  hash cannot be a plain description of the fields; a strong typedef is a type whose
- *  format the walk cannot see at all, so it has to say what it is.
- * ═══════════════════════════════════════════════════════════════════════════════════
- */
+// ═══════════════════════════════════════════════════════════════════════════════════
+//  Structure five: types that contain themselves, and wrappers over one integer.
+//
+//  Both are about ser::schemaHash rather than about the bytes. A self-referential type
+//  makes the schema walk meet a type it is already inside, which is the one shape whose
+//  hash cannot be a plain description of the fields; a strong typedef is a type whose
+//  format the walk cannot see at all, so it has to say what it is.
+// ═══════════════════════════════════════════════════════════════════════════════════
 
 /** @brief Contains itself through a vector - the shape the "recur" token exists for. */
 struct Node final {
@@ -617,7 +607,7 @@ struct Chain final {
 	friend bool operator==(const Chain&, const Chain&) = default;
 };
 
-/*
+/**
  * A self-referential type has a hash AT ALL, which is the whole point: the walk meets
  * itself and mixes a back-reference instead of recursing for ever. This is a compile-time
  * property, so the static_assert is the test.
@@ -628,7 +618,7 @@ static_assert(ser::debugHash<Node>() != 0);
 static_assert(ser::schemaHash<Branchy>() != 0);
 static_assert(ser::schemaHash<Twig>() != 0);
 
-/*
+/**
  * And the back-reference carries WHERE it points, so two different recursion shapes over
  * the same field types are different formats.
  */
@@ -636,7 +626,7 @@ static_assert(ser::schemaHash<Node>() != ser::schemaHash<Chain>());
 static_assert(ser::schemaHash<Node>() != ser::schemaHash<Branchy>());
 static_assert(ser::schemaHash<Twig>() != ser::schemaHash<Branchy>());
 
-/*
+/**
  * The envelope of a recursive type is buildable too - StreamHeader::forType is where a
  * broken hash of one used to surface.
  */
@@ -657,7 +647,7 @@ struct KeyedByB final {
 	i32     extra = 0;
 };
 
-/*
+/**
  * A strong typedef writes exactly its integer, and nothing in the class is walkable - the
  * value is private - so without ser_serialize_as it would hash as sizeof + alignof and every
  * one of these would share a number. What has to hold instead: the WIDTH and the SIGN of
@@ -669,7 +659,7 @@ static_assert(ser::schemaHash<TestIdA>() != ser::schemaHash<std::uint32_t>());
 static_assert(ser::schemaHash<TestIdA>() != ser::schemaHash<u8>());
 static_assert(ser::schemaHash<KeyedByA>() != ser::schemaHash<KeyedByB>());
 
-/*
+/**
  * And the same alias makes the length-prefix check truthful: a vector of ids can only claim
  * as many elements as four bytes each will fit in the stream, where a hooked type with no
  * alias would fall back to one byte and let a corrupt prefix through four times as far.
@@ -816,10 +806,8 @@ private:
 		ASSERT_TRUE(back.has_value());
 		assertTrue(back->value == tree, "the tree did not survive the round trip");
 
-		/*
-		 * Appending, not overwriting: the second message lands after the first, and one
-		 * archive reads both back in order.
-		 */
+		// Appending, not overwriting: the second message lands after the first, and one
+		// archive reads both back in order.
 		const usize first = buf.size();
 		ASSERT_TRUE(ser::write(buf, tree).has_value());
 		ASSERT_EQUAL(2 * first, buf.size());
@@ -831,11 +819,9 @@ private:
 		assertTrue(one == tree && two == tree, "two appended messages did not read back");
 		ASSERT_EQUAL(buf.size(), ar.position());
 
-		/**
-		 * @brief The position lives in the ARCHIVE, so one call per message reads the same bytes as
-		 * one call with both - and position() says where the next one begins, which is the
-		 * thing ser::read cannot tell a caller.
-		 */
+		// The position lives in the ARCHIVE, so one call per message reads the same bytes as
+		// one call with both - and position() says where the next one begins, which is the
+		// thing ser::read cannot tell a caller.
 		ser::In split{ view(buf) };
 		Tree    first_back;
 		Tree    second_back;
@@ -847,10 +833,8 @@ private:
 			first_back == tree && second_back == tree, "one call per message read different bytes"
 		);
 
-		/*
-		 * The library's own round-trip check, which names the field that came back wrong
-		 * instead of only reporting that something did.
-		 */
+		// The library's own round-trip check, which names the field that came back wrong
+		// instead of only reporting that something did.
 		ASSERT_TRUE(SER_TEST_ROUNDTRIP(tree));
 	}
 
@@ -870,11 +854,9 @@ private:
 		expectRung<PRIV_STAMP>(PrivMake{ 5u, 6u }, 1 + 4 + 4, "private serWrite/serMake");
 		expectRung<ADL_STAMP>(geom::Point{ .x = 1.5, .y = -2.5 }, 1 + 8 + 8, "ADL serVisit");
 
-		/**
-		 * @brief SER_DESCRIBE has no stamp of its own - it IS the field list - so what it has to
-		 * prove is the other half: the described fields survive and the skipped one does
-		 * not come back.
-		 */
+		// SER_DESCRIBE has no stamp of its own - it IS the field list - so what it has to
+		// prove is the other half: the described fields survive and the skipped one does
+		// not come back.
 		ByteBuf described;
 		ASSERT_TRUE(ser::write(described, Described{ .x = 9, .s = "nine", .skipped = 7 }).has_value()
 		);
@@ -884,11 +866,9 @@ private:
 		ASSERT_EQUAL(std::string{ "nine" }, described_back->value.s);
 		ASSERT_EQUAL(0, described_back->value.skipped);
 
-		/*
-		 * And the whole ladder underneath one automatic walk. Hooked cannot be default
-		 * constructed, so this is the build path: each field is a prvalue produced by its
-		 * own rung and placed straight into the object.
-		 */
+		// And the whole ladder underneath one automatic walk. Hooked cannot be default
+		// constructed, so this is the build path: each field is a prvalue produced by its
+		// own rung and placed straight into the object.
 		const Hooked hooked{
 			.trait     = { .a = 10u, .b = 11u },
 			.member    = { .a = 12u, .b = 13u },
@@ -914,7 +894,7 @@ private:
 	 * names no alternative is refused before anything is built from it.
 	 */
 	void variants() {
-		/** @brief monostate writes nothing: the tag is the entire message. */
+		// monostate writes nothing: the tag is the entire message.
 		ByteBuf empty_alternative;
 		ASSERT_TRUE(ser::write(empty_alternative, Payload{}).has_value());
 		ASSERT_EQUAL(sizeof(u64), empty_alternative.size());
@@ -925,25 +905,21 @@ private:
 		expectAlternative(Payload{ i32{ -7 } }, 1);
 		expectAlternative(Payload{ std::string{ "text" } }, 2);
 		expectAlternative(Payload{ std::vector<Leaf>{ Leaf{ .a = 1, .b = 0.5 } } }, 3);
-		expectAlternative(Payload{ Built{ 5u, "five" } }, 4); /* built, then emplaced */
+		expectAlternative(Payload{ Built{ 5u, "five" } }, 4);  // built, then emplaced
 
-		/*
-		 * Two alternatives of the same type, and one where a converting constructor would
-		 * have sent "text" to bool. Only the tag distinguishes either case.
-		 */
+		// Two alternatives of the same type, and one where a converting constructor would
+		// have sent "text" to bool. Only the tag distinguishes either case.
 		expectAlternative(Twins{ std::in_place_index<0>, 5 }, 0);
 		expectAlternative(Twins{ std::in_place_index<1>, 5 }, 1);
 		expectAlternative(Ambiguous{ true }, 0);
 		expectAlternative(Ambiguous{ std::string{ "text" } }, 1);
 
-		/* Nested, and a const alternative - which is not fillable, so it is emplaced. */
+		// Nested, and a const alternative - which is not fillable, so it is emplaced.
 		expectAlternative(std::variant<i32, Payload>{ Payload{ std::string{ "inner" } } }, 1);
 		expectAlternative(std::variant<const i32, std::string>{ std::in_place_index<0>, 3 }, 0);
 
-		/*
-		 * An EXISTING variant, handed over by Slot::serRead. This is the fill path, and
-		 * the static_asserts above are why it has to exist: a Payload cannot be assigned.
-		 */
+		// An EXISTING variant, handed over by Slot::serRead. This is the fill path, and
+		// the static_asserts above are why it has to exist: a Payload cannot be assigned.
 		const Slot slot{ .held = Payload{ Built{ 9u, "nine" } } };
 		ByteBuf    slot_bytes;
 		ASSERT_TRUE(ser::write(slot_bytes, slot).has_value());
@@ -951,22 +927,18 @@ private:
 		ASSERT_TRUE(slot_back.has_value());
 		assertTrue(slot_back->value == slot, "the filled variant did not come back");
 
-		/**
-		 * @brief A tag no alternative answers to, and a tag with nothing behind it. Both are
-		 * refused before the alternative is touched.
-		 */
+		// A tag no alternative answers to, and a tag with nothing behind it. Both are
+		// refused before the alternative is touched.
 		ByteBuf bad_tag;
 		(void) ser::write(bad_tag, u64{ 99 });
 		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::codeOf(ser::read<Payload>(view(bad_tag))));
 
 		ByteBuf tag_only;
-		(void) ser::write(tag_only, u64{ 2 }); /* the std::string alternative, and no string */
+		(void) ser::write(tag_only, u64{ 2 });  // the std::string alternative, and no string
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<Payload>(view(tag_only))));
 
-		/**
-		 * @brief A valueless variant is refused rather than written: variant_npos names no
-		 * alternative, so no tag could describe it and nothing may reach the buffer.
-		 */
+		// A valueless variant is refused rather than written: variant_npos names no
+		// alternative, so no tag could describe it and nothing may reach the buffer.
 		Fragile fragile;
 		try {
 			fragile.emplace<1>(i32{ 0 });
@@ -977,7 +949,7 @@ private:
 		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::codeOf(ser::write(refused, fragile)));
 		assertTrue(refused.empty(), "a refused write must not leave bytes behind");
 
-		/* And in the shapes it will actually appear in: a field and a container element. */
+		// And in the shapes it will actually appear in: a field and a container element.
 		const Tagged tagged{
 			.id      = 7,
 			.payload = Payload{ std::string{ "top" } },
@@ -991,10 +963,8 @@ private:
 		assertTrue(tagged_back->value == tagged, "the variant fields did not survive");
 		ASSERT_TRUE(SER_TEST_ROUNDTRIP(tagged));
 
-		/*
-		 * No truncation of that stream may be accepted: a tag whose alternative is missing
-		 * is the same class of damage as a length prefix with no elements behind it.
-		 */
+		// No truncation of that stream may be accepted: a tag whose alternative is missing
+		// is the same class of damage as a length prefix with no elements behind it.
 		for (usize n = 0; n < composite.size(); ++n) {
 			const auto cut = ser::read<Tagged>(view(composite, n));
 			assertTrue(!cut.has_value(), base::strConcat("a prefix of ", n, " bytes was accepted"));
@@ -1030,10 +1000,10 @@ private:
 		const ser::Options opts{ .header = true, .user_magic = MAGIC };
 		ASSERT_TRUE(ser::read<Tree>(view(framed), opts).has_value());
 
-		/* 1. the envelope has to be there at all */
+		// 1. the envelope has to be there at all
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<Tree>(view(framed, 16), opts)));
 
-		/* 2. then the magic - somebody else's ser stream, and a damaged one */
+		// 2. then the magic - somebody else's ser stream, and a damaged one
 		ASSERT_EQUAL(
 			ser::Errc::BadMagic, ser::codeOf(ser::read<Tree>(view(framed), { .header = true }))
 		);
@@ -1041,12 +1011,12 @@ private:
 		damaged[1]      = std::byte{ 'X' };
 		ASSERT_EQUAL(ser::Errc::BadMagic, ser::codeOf(ser::read<Tree>(view(damaged), opts)));
 
-		/* 3. then the platform, which is checked before anything in the stream is believed */
+		// 3. then the platform, which is checked before anything in the stream is believed
 		damaged     = framed;
-		damaged[28] = std::byte{ 0xFF }; /* the low byte of `flags` */
+		damaged[28] = std::byte{ 0xFF };  // the low byte of `flags`
 		ASSERT_EQUAL(ser::Errc::PlatformMismatch, ser::codeOf(ser::read<Tree>(view(damaged), opts)));
 
-		/* 4. and only then the schema, which is the one step that needs the type */
+		// 4. and only then the schema, which is the one step that needs the type
 		ASSERT_EQUAL(ser::Errc::SchemaMismatch, ser::codeOf(ser::read<Leaf>(view(framed), opts)));
 	}
 
@@ -1066,20 +1036,16 @@ private:
 			assertTrue(!cut.has_value(), base::strConcat("a prefix of ", n, " bytes was accepted"));
 		}
 
-		/**
-		 * @brief A bool holding anything but 0 or 1 is undefined behaviour, so the object
-		 * representation never reaches the stream and what comes back is validated.
-		 */
+		// A bool holding anything but 0 or 1 is undefined behaviour, so the object
+		// representation never reaches the stream and what comes back is validated.
 		ByteBuf flag;
 		ASSERT_TRUE(ser::write(flag, true).has_value());
 		ASSERT_EQUAL(usize{ 1 }, flag.size());
 		flag[0] = std::byte{ 2 };
 		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::codeOf(ser::read<bool>(view(flag))));
 
-		/**
-		 * @brief The same key twice is a damaged stream, not a merge: keeping the first would
-		 * turn it into a map smaller than the one that was written.
-		 */
+		// The same key twice is a damaged stream, not a merge: keeping the first would
+		// turn it into a map smaller than the one that was written.
 		ByteBuf duplicate;
 		(void) ser::write(duplicate, u64{ 2 });
 		(void) ser::write(duplicate, u32{ 1 });
@@ -1089,52 +1055,42 @@ private:
 		using Table = std::map<u32, u32>;
 		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::codeOf(ser::read<Table>(view(duplicate))));
 
-		/**
-		 * @brief A length prefix is the first thing an attacker reaches for: it arrives before
-		 * the elements it counts, so it is checked against what the stream can hold BEFORE
-		 * anything is reserved.
-		 */
+		// A length prefix is the first thing an attacker reaches for: it arrives before
+		// the elements it counts, so it is checked against what the stream can hold BEFORE
+		// anything is reserved.
 		ByteBuf lying;
 		(void) ser::write(lying, u64{ 1'000 });
 		using Numbers = std::vector<u32>;
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<Numbers>(view(lying))));
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<std::string>(view(lying))));
 
-		/**
-		 * @brief No ceiling is involved for an element that has bytes in the stream, and that is
-		 * deliberate: n * MIN_SERIALIZED_SIZE_V<E> bytes have to be there, which bounds the count
-		 * by the input itself and lets a legitimately huge container read.
-		 */
+		// No ceiling is involved for an element that has bytes in the stream, and that is
+		// deliberate: n * MIN_SERIALIZED_SIZE_V<E> bytes have to be there, which bounds the count
+		// by the input itself and lets a legitimately huge container read.
 		ByteBuf absurd;
 		(void) ser::write(absurd, u64{ 1 } << 40);
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<Numbers>(view(absurd))));
 
-		/**
-		 * @brief An EMPTY element is the one case that argument cannot reach: any number of them
-		 * occupies no bytes, so the stream carries no evidence about the count and the
-		 * policy ceiling is the only bound there is.
-		 */
+		// An EMPTY element is the one case that argument cannot reach: any number of them
+		// occupies no bytes, so the stream carries no evidence about the count and the
+		// policy ceiling is the only bound there is.
 		ByteBuf empties;
 		(void) ser::write(empties, u64{ ser::ConfigGlobal::MAX_ZERO_SIZE_ELEMENTS } + 1);
 		ASSERT_EQUAL(
 			ser::Errc::MessageSize, ser::codeOf(ser::read<std::vector<Nothing>>(view(empties)))
 		);
 
-		/**
-		 * @brief The buffer has to be used up. A record read as a SHORTER one leaves bytes over,
-		 * and that is the only signal there is that the two shapes disagree - the payload
-		 * itself is perfectly well-formed either way.
-		 */
+		// The buffer has to be used up. A record read as a SHORTER one leaves bytes over,
+		// and that is the only signal there is that the two shapes disagree - the payload
+		// itself is perfectly well-formed either way.
 		ByteBuf pair;
 		(void) ser::write(pair, u64{ 1 });
 		(void) ser::write(pair, u64{ 2 });
 		ASSERT_EQUAL(ser::Errc::TrailingBytes, ser::codeOf(ser::read<u64>(view(pair))));
 		ASSERT_TRUE(ser::read<u64>(view(pair, sizeof(u64))).has_value());
 
-		/**
-		 * @brief The archive is the other half of that rule: reading several appended messages is
-		 * what it is for, so it counts nothing and says where it stopped.
-		 */
+		// The archive is the other half of that rule: reading several appended messages is
+		// what it is for, so it counts nothing and says where it stopped.
 		ser::In appended{ view(pair) };
 		u64     one = 0;
 		u64     two = 0;
@@ -1142,11 +1098,9 @@ private:
 		ASSERT_EQUAL(u64{ 1 }, one);
 		ASSERT_EQUAL(u64{ 2 }, two);
 
-		/**
-		 * @brief A hook that reads with ser::subMake throws from inside a function declared to
-		 * return a code. Neither entry point may let that out: ser::read turns it into a
-		 * result, and the ARCHIVE - which is documented never to throw - into a code.
-		 */
+		// A hook that reads with ser::subMake throws from inside a function declared to
+		// return a code. Neither entry point may let that out: ser::read turns it into a
+		// result, and the ARCHIVE - which is documented never to throw - into a code.
 		ByteBuf half;
 		(void) ser::write(half, i32{ 7 });
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<Thrower>(view(half))));
@@ -1159,16 +1113,14 @@ private:
 		(void) ser::write(whole, Thrower{ .a = 3, .b = 4 });
 		ASSERT_TRUE(SER_TEST_ROUNDTRIP(Thrower{ .a = 3, .b = 4 }));
 
-		/**
-		 * @brief The depth counter, checked against the configured limit rather than an
-		 * accidental one. No braces on `deep`: Clang materializes the whole initializer
-		 * tree and overflows its own frontend stack somewhere past 200 levels.
-		 */
+		// The depth counter, checked against the configured limit rather than an
+		// accidental one. No braces on `deep`: Clang materializes the whole initializer
+		// tree and overflows its own frontend stack somewhere past 200 levels.
 		static NestT<ser::ConfigGlobal::MAX_DEPTH + 8> deep;
 		ByteBuf                                        nested;
 		ser::Out                                       ar{ nested };
 		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
-		ASSERT_EQUAL(usize{ 0 }, ar.depth()); /* the guard unwound cleanly */
+		ASSERT_EQUAL(usize{ 0 }, ar.depth());  // the guard unwound cleanly
 	}
 
 	/**
@@ -1217,27 +1169,21 @@ private:
 	 * make it useful.
 	 */
 	void formatContract() {
-		/**
-		 * @brief The bytes are the same and a stream really does read back from one into the
-		 * other, so the format is the same.
-		 */
+		// The bytes are the same and a stream really does read back from one into the
+		// other, so the format is the same.
 		constexpr u64 ORDERED   = ser::schemaHash<std::map<u32, Leaf>>();
 		constexpr u64 UNORDERED = ser::schemaHash<std::unordered_map<u32, Leaf>>();
 		ASSERT_EQUAL(ORDERED, UNORDERED);
 
-		/**
-		 * @brief The element type is part of the format, and no sizeof of anybody's std::vector
-		 * enters into it.
-		 */
+		// The element type is part of the format, and no sizeof of anybody's std::vector
+		// enters into it.
 		constexpr u64 OF_U32   = ser::schemaHash<std::vector<u32>>();
 		constexpr u64 OF_FLOAT = ser::schemaHash<std::vector<float>>();
 		assertTrue(OF_U32 != OF_FLOAT, "vector<u32> and vector<float> are not the same format");
 
-		/**
-		 * @brief A rename is not a format change, and that is the whole reason field names stay
-		 * out of the schema hash: the C++23 and C++26 backends must agree on it, and only
-		 * one of them knows the names. debugHash is where they go.
-		 */
+		// A rename is not a format change, and that is the whole reason field names stay
+		// out of the schema hash: the C++23 and C++26 backends must agree on it, and only
+		// one of them knows the names. debugHash is where they go.
 		constexpr u64 DESCRIBED_SCHEMA = ser::schemaHash<Described>();
 		constexpr u64 RENAMED_SCHEMA   = ser::schemaHash<Renamed>();
 		ASSERT_EQUAL(DESCRIBED_SCHEMA, RENAMED_SCHEMA);
@@ -1246,10 +1192,8 @@ private:
 		constexpr u64 RENAMED_DEBUG   = ser::debugHash<Renamed>();
 		assertTrue(DESCRIBED_DEBUG != RENAMED_DEBUG, "debugHash has to see the rename");
 
-		/*
-		 * A lower bound and nothing else, but it has to be a truthful one: it is what
-		 * stands between a corrupt length prefix and an allocation.
-		 */
+		// A lower bound and nothing else, but it has to be a truthful one: it is what
+		// stands between a corrupt length prefix and an allocation.
 		static_assert(
 			ser::MIN_SERIALIZED_SIZE_V<Leaf> >= sizeof(i32) + sizeof(double) + 1 + sizeof(u16) + 4
 		);
@@ -1278,7 +1222,7 @@ private:
 		ASSERT_TRUE(back.has_value());
 		assertTrue(back->value == tree, "the recursive value did not survive the round trip");
 
-		/* Through two types, and through an optional - the shapes the hash tells apart. */
+		// Through two types, and through an optional - the shapes the hash tells apart.
 		const Branchy nested{ .value = 5,
 			                  .twig  = Twig{ .branches = { Branchy{ .value = 6, .twig = {} } } } };
 		ASSERT_TRUE(SER_TEST_ROUNDTRIP(nested));
@@ -1287,27 +1231,23 @@ private:
 			               .rest = std::vector<Chain>{ Chain{ .value = 8, .rest = std::nullopt } } };
 		ASSERT_TRUE(SER_TEST_ROUNDTRIP(chain));
 
-		/*
-		 * The envelope of a recursive type, end to end: the schema check is what the
-		 * back-reference feeds, so a stream of a Node is refused for a Chain.
-		 */
+		// The envelope of a recursive type, end to end: the schema check is what the
+		// back-reference feeds, so a stream of a Node is refused for a Chain.
 		const ser::Options opts{ .header = true };
 		ByteBuf            framed;
 		ASSERT_TRUE(ser::write(framed, tree, opts).has_value());
 		ASSERT_TRUE(ser::read<Node>(view(framed), opts).has_value());
 		ASSERT_EQUAL(ser::Errc::SchemaMismatch, ser::codeOf(ser::read<Chain>(view(framed), opts)));
 
-		/* No prefix of it may be accepted, exactly as for any other type. */
+		// No prefix of it may be accepted, exactly as for any other type.
 		for (usize n = 0; n < buf.size(); ++n)
 			assertTrue(
 				!ser::read<Node>(view(buf, n)).has_value(),
 				base::strConcat("a prefix of ", n, " bytes was accepted")
 			);
 
-		/**
-		 * @brief Data-dependent nesting is bounded by the depth guard rather than by the stack: a
-		 * chain deeper than MAX_DEPTH is refused on the way in.
-		 */
+		// Data-dependent nesting is bounded by the depth guard rather than by the stack: a
+		// chain deeper than MAX_DEPTH is refused on the way in.
 		Node deep;
 		{
 			Node* tip = &deep;
@@ -1319,12 +1259,10 @@ private:
 		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
 		ASSERT_EQUAL(usize{ 0 }, ar.depth());
 
-		/**
-		 * @brief And on the way OUT, which is the direction that faces a disk: a chain nobody could
-		 * have written, built by hand rather than from an object, has to come back as a code
-		 * and not as a stack overflow. Twelve bytes per level - an i32 and a count of one -
-		 * and the last level closes with a count of zero.
-		 */
+		// And on the way OUT, which is the direction that faces a disk: a chain nobody could
+		// have written, built by hand rather than from an object, has to come back as a code
+		// and not as a stack overflow. Twelve bytes per level - an i32 and a count of one -
+		// and the last level closes with a count of zero.
 		ByteBuf  handmade;
 		ser::Out deep_ar{ handmade };
 		for (usize i = 0; i < ser::ConfigGlobal::MAX_DEPTH + 64; ++i)
@@ -1334,10 +1272,8 @@ private:
 		const auto too_deep = ser::read<Node>(view(handmade));
 		ASSERT_EQUAL(ser::Errc::DepthExceeded, ser::codeOf(too_deep));
 
-		/**
-		 * @brief The same shape within the limit still reads, so the guard is a limit and not a
-		 * refusal of nesting.
-		 */
+		// The same shape within the limit still reads, so the guard is a limit and not a
+		// refusal of nesting.
 		ByteBuf  shallow;
 		ser::Out shallow_ar{ shallow };
 		for (usize i = 0; i < 10; ++i) ASSERT_EQUAL(ser::Errc::Ok, shallow_ar(i32{ 1 }, u64{ 1 }));
@@ -1361,7 +1297,7 @@ private:
 		ASSERT_TRUE(back.has_value());
 		ASSERT_EQUAL(i32{ -1 }, back->value.f0);
 		ASSERT_EQUAL(i32{ 4'242 }, back->value.f63);
-		/* The middle of the chain, so a rung dropped anywhere shows up here. */
+		// The middle of the chain, so a rung dropped anywhere shows up here.
 		ASSERT_EQUAL(i32{ 32 }, back->value.f32);
 	}
 
@@ -1406,7 +1342,7 @@ private:
 		ASSERT_EQUAL(u16{ 6 }, back->codes[2]);
 	}
 
-	/* helpers */
+	// helpers
 
 	/** @brief Round-trips one alternative and checks the tag it came back under. */
 	template<class V>

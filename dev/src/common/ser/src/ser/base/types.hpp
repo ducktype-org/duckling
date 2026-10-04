@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::Bit256, base::CheckedOkBad
- * Bit256 is four u64s in base 2^64 with the lowest word first, and that is exactly what
+/**
+ * @file
+ * @brief base::Bit256, base::CheckedOkBad
+ * @details Bit256 is four u64s in base 2^64 with the lowest word first, and that is exactly what
  * goes in the stream - low word first, each through dispatch, so the stream is the same on a
  * big-endian machine as on a little-endian one. A SHA-256 written on one reads back equal
  * on the other.
@@ -60,7 +61,7 @@ namespace ser {
 	namespace internal {
 
 		/**
-		 * @brief Keyed to the ARCHIVE type, and that is load-bearing: serializer<CheckedOkBad> is a
+		 * @brief Keyed to the ARCHIVE type, and that is load-bearing: Serializer<CheckedOkBad> is a
 		 * full specialization, so an assert naming the type would fire where the header is
 		 * parsed rather than where a write is attempted. See denyNonOwningRef in refs.hpp.
 		 */
@@ -77,7 +78,7 @@ namespace ser {
 			return Errc::InvalidValue;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<>
 	struct Serializer<::base::CheckedOkBad> {
@@ -90,4 +91,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

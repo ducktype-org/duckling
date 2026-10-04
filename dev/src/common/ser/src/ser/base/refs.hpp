@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::Ref, base::CRef, base::MRef, base::MCRef
- * Refused, in both directions. A Ref is an address that does not own what it points at,
+/**
+ * @file
+ * @brief base::Ref, base::CRef, base::MRef, base::MCRef
+ * @details Refused, in both directions. A Ref is an address that does not own what it points at,
  * and neither half of that survives the trip: the address means nothing in another
  * process, and nothing in the type says who keeps the pointee alive. There is no honest
  * thing to write, and on read there is nothing to rebind - a Ref cannot be made to point
@@ -52,7 +53,7 @@ namespace ser {
 			return Errc::InvalidValue;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<class T>
 	struct Serializer<::base::Ref<T>> {
@@ -81,4 +82,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

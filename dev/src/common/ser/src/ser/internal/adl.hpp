@@ -57,7 +57,7 @@ namespace ser::internal::adl_barrier {
 		return serMake(ar, t);
 	}
 
-} /* namespace ser::internal::adl_barrier */
+}  // namespace ser::internal::adl_barrier
 
 namespace ser::internal {
 
@@ -87,4 +87,4 @@ namespace ser::internal {
 			-> decltype(adl_barrier::callMake(ar, ::ser::Tag<::std::remove_cvref_t<T>>{}));
 	};
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

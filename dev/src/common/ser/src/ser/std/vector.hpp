@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * std::vector
- * Length prefix, then the elements through full dispatch, so an element with its own
+/**
+ * @file
+ * @brief std::vector
+ * @details Length prefix, then the elements through full dispatch, so an element with its own
  * hook is written by that hook.
  *
  * Two read paths, and which one is taken is about the ELEMENT, not the container:
@@ -126,4 +127,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * the length prefix, and the three checks that must precede any allocation
- * The prefix is attacker-controlled data, so `n` is not a count until it has been checked
+/**
+ * @file
+ * @brief the length prefix, and the three checks that must precede any allocation
+ * @details The prefix is attacker-controlled data, so `n` is not a count until it has been checked
  * against something real - and getting the ORDER wrong is the difference between an error
  * code and an out-of-memory.
  *
@@ -57,4 +58,4 @@ namespace ser::internal {
 		return Errc::Ok;
 	}
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

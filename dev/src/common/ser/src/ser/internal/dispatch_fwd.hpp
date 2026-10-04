@@ -27,4 +27,4 @@ namespace ser::internal {
 	template<class T, Reader Ar>
 	requires(!::std::is_array_v<T>) constexpr T dispatchMake(Ar& ar);
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

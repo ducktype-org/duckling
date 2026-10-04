@@ -31,9 +31,9 @@ namespace ser {
 	inline constexpr ::std::size_t NO_FIELD = static_cast<::std::size_t>(-1);
 
 	struct RoundtripReport final {
-		Errc          code  = Errc::Ok; /* the round-trip itself */
-		::std::size_t field = NO_FIELD; /* first field that came back different */
-		const char*   name  = nullptr;  /* its name, when SER_DESCRIBE gave one */
+		Errc          code  = Errc::Ok;  // the round-trip itself
+		::std::size_t field = NO_FIELD;  // first field that came back different
+		const char*   name  = nullptr;   // its name, when SER_DESCRIBE gave one
 
 		[[nodiscard]] constexpr bool ok() const noexcept {
 			return code == Errc::Ok && field == NO_FIELD;
@@ -54,12 +54,10 @@ namespace ser {
 			if constexpr (Access::HAS_DESCRIBED_V<T>) {
 				return Access::described(x);
 			} else {
-				/*
-				 * tieMembers goes straight to the ladder, past the check visitMembers makes,
-				 * so for a type nobody can enumerate it yields an EMPTY tuple and every
-				 * round-trip reports as faithful. A test that cannot fail is worse than no
-				 * test.
-				 */
+				// tieMembers goes straight to the ladder, past the check visitMembers makes,
+				// so for a type nobody can enumerate it yields an EMPTY tuple and every
+				// round-trip reports as faithful. A test that cannot fail is worse than no
+				// test.
 				static_assert(
 					CAN_ENUMERATE_MEMBERS_V<T>,
 					"ser: SER_TEST_ROUNDTRIP cannot see this type's fields, so it would "
@@ -120,7 +118,7 @@ namespace ser {
 			return false;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	/**
 	 * @brief Writes the sample, reads it back and compares. The throwing read rather than
@@ -144,7 +142,7 @@ namespace ser {
 		} catch (const Exception& e) { return RoundtripReport{ .code = e.err().code }; }
 	}
 
-} /* namespace ser */
+}  // namespace ser
 
 /**
  * @brief Yields true when the round-trip is faithful, and prints which field is not otherwise.

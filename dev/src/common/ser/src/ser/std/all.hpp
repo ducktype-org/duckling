@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * Every std adapter at once. They are separate headers because each one costs the
- * standard header it wraps, and separate includes are the whole reason they are
+/**
+ * @file
+ * @brief Every std adapter at once. They are separate headers because each one costs the
+ * @details standard header it wraps, and separate includes are the whole reason they are
  * ser::Serializer<T> specializations rather than rules inside dispatch: <ser/ser.hpp>
  * serializes a type it has never heard of, and never pays for <map> to do it.
  *

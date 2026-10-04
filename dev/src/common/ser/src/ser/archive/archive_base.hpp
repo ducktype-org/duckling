@@ -88,4 +88,4 @@ namespace ser::internal {
 		NO_UNIQUE_ADDRESS CtxStorage ctx{};
 	};
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

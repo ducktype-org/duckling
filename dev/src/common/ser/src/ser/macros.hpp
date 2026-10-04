@@ -45,12 +45,10 @@
 
 namespace ser::internal {
 
-	/*
-	 * what the SER_MAKE_FROM checks are made of
-	 * Every one of them exists because getting it wrong is SILENT: a permuted argument list
-	 * of the same types compiles and reads back as garbage, and a missing field compiles
-	 * and produces a stream one field short.
-	 */
+	// what the SER_MAKE_FROM checks are made of
+	// Every one of them exists because getting it wrong is SILENT: a permuted argument list
+	// of the same types compiles and reads back as garbage, and a missing field compiles
+	// and produces a stream one field short.
 
 	/**
 	 * @brief The argument count has to match the field count, when it is knowable at all. For a
@@ -59,11 +57,9 @@ namespace ser::internal {
 	 */
 	template<class T, ::std::size_t N>
 	consteval bool makeFromArityOk() {
-		/**
-		 * @brief A base class makes the two numbers mean different things: the declared count is
-		 * about this class's own members, while the macro lists every field that goes into the
-		 * stream, inherited ones included. Comparing them would refuse code that works.
-		 */
+		// A base class makes the two numbers mean different things: the declared count is
+		// about this class's own members, while the macro lists every field that goes into the
+		// stream, inherited ones included. Comparing them would refuse code that works.
 		if constexpr (::base::HAS_BASE_V<T>)
 			return true;
 		else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)
@@ -81,7 +77,7 @@ namespace ser::internal {
 	 * therefore a prvalue, and the braces are the macro's own.
 	 */
 	template<class F>
-	F asPrvalue(); /* NOT defined, on purpose */
+	F asPrvalue();  // NOT defined, on purpose
 
 	template<class T, class... Fs>
 	concept BracedFromFields = requires { T{ asPrvalue<Fs>()... }; };
@@ -108,7 +104,7 @@ namespace ser::internal {
 	template<class T>
 	inline constexpr bool HAS_INITIALIZER_LIST_CTOR_V = hasInitializerListCtor<T>();
 
-} /* namespace ser::internal */
+}  // namespace ser::internal
 
 /**
  * @brief the two field shapes a hook has to refuse for itself
@@ -156,14 +152,12 @@ namespace ser::internal {
 	using ser_internal_field_self_t = ::std::remove_cvref_t<decltype(self)>; \
 	FOR_EACH(SER_INTERNAL_FIELD_OK, __VA_ARGS__)
 
-/*
- * SER_DESCRIBE
- * Lists the fields that go in the stream, in order, and skips the rest. It expands to an
- * in-class serVisit, so dispatch finds it at level 2 and nothing else has to know about
- * it - and to the field names, which is what lets SER_TEST_ROUNDTRIP say which field came
- * back wrong instead of just "not equal". At least one field, and the macro signature is
- * what enforces it.
- */
+// SER_DESCRIBE
+// Lists the fields that go in the stream, in order, and skips the rest. It expands to an
+// in-class serVisit, so dispatch finds it at level 2 and nothing else has to know about
+// it - and to the field names, which is what lets SER_TEST_ROUNDTRIP say which field came
+// back wrong instead of just "not equal". At least one field, and the macro signature is
+// what enforces it.
 
 /**
  * @brief The half that only DESCRIBES: the count, the names, and the fields as a tuple.

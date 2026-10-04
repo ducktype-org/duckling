@@ -20,20 +20,18 @@ namespace base {
 
 	namespace internal {
 
-		/*
-		 * the counting probe
-		 * Converts to anything and is deliberately never defined: it appears only inside a
-		 * requires-expression, where the initialization is never evaluated. Clang reports
-		 * Wundefined-inline anyway, because it counts being CHOSEN by overload resolution as
-		 * being used, so the warning is silenced exactly here.
-		 */
+		// the counting probe
+		// Converts to anything and is deliberately never defined: it appears only inside a
+		// requires-expression, where the initialization is never evaluated. Clang reports
+		// Wundefined-inline anyway, because it counts being CHOSEN by overload resolution as
+		// being used, so the warning is silenced exactly here.
 #if defined(__clang__)
 	#pragma clang diagnostic push
 	#pragma clang diagnostic ignored "-Wundefined-inline"
 #endif
 		struct AnyInit final {
 			template<class T>
-			constexpr operator T() const; /* NOT defined, on purpose */
+			constexpr operator T() const;  // NOT defined, on purpose
 		};
 #if defined(__clang__)
 	#pragma clang diagnostic pop
@@ -75,11 +73,11 @@ namespace base {
 			if constexpr (N > LADDER_MAX + 1)
 				return Best;
 			else if constexpr (initWithSeq<T>(::std::make_index_sequence<N>{}))
-				return scanArity<T, N + 1, N>();        /* keep going */
+				return scanArity<T, N + 1, N>();         // keep going
 			else if constexpr (Best != NO_ARITY)
-				return Best;                            /* one past the top */
+				return Best;                             // one past the top
 			else
-				return scanArity<T, N + 1, NO_ARITY>(); /* nothing has fit yet */
+				return scanArity<T, N + 1, NO_ARITY>();  // nothing has fit yet
 		}
 
 		template<class T, ::std::size_t... I>
@@ -97,7 +95,7 @@ namespace base {
 		struct BaseInit final {
 			template<class U>
 			requires(!::std::is_same_v<U, T> && ::std::is_base_of_v<U, T>)
-			constexpr operator U() const; /* NOT defined, on purpose */
+			constexpr operator U() const;  // NOT defined, on purpose
 		};
 
 	}  // namespace internal

@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::DynamicBitset
- * The bit count, then ceil(count / 64) words of 64 bits, low word first and each word
+/**
+ * @file
+ * @brief base::DynamicBitset
+ * @details The bit count, then ceil(count / 64) words of 64 bits, low word first and each word
  * through dispatch - so the stream is the same on a big-endian machine as on a little-
  * endian one, and a bitset written by one reads back on the other.
  *
@@ -55,10 +56,8 @@ namespace ser {
 			if (const auto c = dispatchRead<LengthType>(ar, bits); c != Errc::Ok) return c;
 			if (!::base::fitsIn<::std::size_t>(bits)) return Errc::SizeOverflow;
 
-			/*
-			 * bitsetWordCount rounds UP, so a count within a word of the maximum would
-			 * overflow on the way to the byte figure that is the real bound.
-			 */
+			// bitsetWordCount rounds UP, so a count within a word of the maximum would
+			// overflow on the way to the byte figure that is the real bound.
 			const auto bit_count = static_cast<::std::size_t>(bits);
 			if (bit_count > ::std::numeric_limits<::std::size_t>::max() - (BITSET_BITS_PER_WORD - 1))
 				return Errc::SizeOverflow;
@@ -72,7 +71,7 @@ namespace ser {
 			return Errc::Ok;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<>
 	struct MinSerializedSize<::base::DynamicBitset> {
@@ -115,10 +114,8 @@ namespace ser {
 			::std::size_t bits = 0;
 			if (const auto c = internal::readBitCount(ar, bits); c != Errc::Ok) return c;
 
-			/*
-			 * Assigned rather than filled: the capacity is fixed at construction, so there
-			 * is no way to resize the one that is already here.
-			 */
+			// Assigned rather than filled: the capacity is fixed at construction, so there
+			// is no way to resize the one that is already here.
 			b = ::base::DynamicBitset(bits);
 
 			for (::std::size_t w = 0; w < internal::bitsetWordCount(bits); ++w) {
@@ -129,7 +126,7 @@ namespace ser {
 					if ((word & (::u64{ 1 } << i)) == 0) continue;
 
 					const ::std::size_t bit = w * internal::BITSET_BITS_PER_WORD + i;
-					if (bit >= bits) return Errc::InvalidValue; /* set above the capacity */
+					if (bit >= bits) return Errc::InvalidValue;  // set above the capacity
 					b.set(bit);
 				}
 			}
@@ -137,4 +134,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

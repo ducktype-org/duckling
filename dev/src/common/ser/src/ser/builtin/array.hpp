@@ -1,9 +1,10 @@
 #pragma once
 
-/*
- * std::array<T, N> and T[N]
- * The elements in order, nothing else: the extent is part of the type, so no length goes in
- * the stream. Each element goes through full dispatch rather than a bulk copy - an element may
+/**
+ * @file
+ * @brief std::array<T, N> and T[N]
+ * @details The elements in order, nothing else: the extent is part of the type, so no length goes
+ * in the stream. Each element goes through full dispatch rather than a bulk copy - an element may
  * have its own hook, and the stream has neither padding nor the platform's alignment.
  *
  * Only write and read. An array of elements that cannot be filled in place is built through
@@ -43,7 +44,7 @@ namespace ser {
 			);
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<class T, ::std::size_t N>
 	struct MinSerializedSize<::std::array<T, N>> {
@@ -106,4 +107,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

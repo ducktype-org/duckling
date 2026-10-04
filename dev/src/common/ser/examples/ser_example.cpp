@@ -20,11 +20,11 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
-#include <ser/base/all.hpp> /* opt-in: base::Optional, base::Box, base::Map, ... */
+#include <ser/base/all.hpp>  // opt-in: base::Optional, base::Box, base::Map, ...
 #include <ser/macros.hpp>
 #include <ser/ser.hpp>
-#include <ser/std/all.hpp> /* opt-in: std::string, std::vector, std::map, ... */
-#include <ser/test.hpp>    /* SER_TEST_ROUNDTRIP */
+#include <ser/std/all.hpp>  // opt-in: std::string, std::vector, std::map, ...
+#include <ser/test.hpp>     // SER_TEST_ROUNDTRIP
 
 #include <array>
 #include <cstddef>
@@ -55,14 +55,12 @@ void plainAggregateExample() {
 
 	const Point point{ .x = 3, .y = -4 };
 
-	/*
-	 * Writing an object we are already holding cannot fail unless the program is broken,
-	 * so this is the panicking form. It APPENDS to the buffer.
-	 */
+	// Writing an object we are already holding cannot fail unless the program is broken,
+	// so this is the panicking form. It APPENDS to the buffer.
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, point);
 
-	/* The bytes are ours too - written a line ago - so the read may panic as well. */
+	// The bytes are ours too - written a line ago - so the read may panic as well.
 	const auto back = ser::readOrPanicForce<Point>(bytes);
 
 	std::println(
@@ -80,20 +78,20 @@ void plainAggregateExample() {
  * is what teaches ser about the std and base types.
  */
 
-enum class Color : std::uint8_t { Red = 1, Blue = 2 }; /* travels as its underlying type */
+enum class Color : std::uint8_t { Red = 1, Blue = 2 };  // travels as its underlying type
 
 struct Person final {
 	std::string                 name;
 	Color                       color = Color::Red;
-	std::array<Point, 2>        pins;     /* length is in the TYPE, so it is not written */
-	std::vector<i32>            scores;   /* container: u64 length, then the elements */
-	std::optional<std::string>  nickname; /* presence byte, then the value if present */
-	std::map<std::string, i32>  debts;    /* ordered, so equal maps give equal bytes */
-	base::Optional<std::string> note;     /* base: byte for byte a std::optional */
-	base::Box<Point>            home;     /* the pointer is storage, not format: a Point */
+	std::array<Point, 2>        pins;      // length is in the TYPE, so it is not written
+	std::vector<i32>            scores;    // container: u64 length, then the elements
+	std::optional<std::string>  nickname;  // presence byte, then the value if present
+	std::map<std::string, i32>  debts;     // ordered, so equal maps give equal bytes
+	base::Optional<std::string> note;      // base: byte for byte a std::optional
+	base::Box<Point>            home;      // the pointer is storage, not format: a Point
 };
 
-/* The static analyzer does not model base::Box's deleter and reads makeBox as a leak. */
+/** The static analyzer does not model base::Box's deleter and reads makeBox as a leak. */
 // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 Person samplePerson() {
 	return Person{
@@ -182,7 +180,7 @@ void memberCountExample() {
 
 class Message final {
 public:
-	Message() = default; /* serVisit FILLS an object, so there has to be one to fill */
+	Message() = default;  // serVisit FILLS an object, so there has to be one to fill
 
 	explicit Message(std::string text): text(std::move(text)), length(this->text.size()) {}
 
@@ -190,11 +188,11 @@ public:
 
 	[[nodiscard]] usize cachedLength() const { return length; }
 
-SER_FRIEND /* = friend struct ser::Access; - without it the macro below is invisible */
+SER_FRIEND  // = friend struct ser::Access; - without it the macro below is invisible
 	private: std::string text;
 	usize                length = 0;
 
-	SER_DESCRIBE(text) /* the serialized form is exactly this one field */
+	SER_DESCRIBE(text)  // the serialized form is exactly this one field
 };
 
 void describeExample() {
@@ -263,10 +261,8 @@ void describeMakeExample() {
 		back.sensor() == measurement.sensor()
 	);
 
-	/*
-	 * Two fields of the SAME type swapped in the macro's list compiles and writes the wrong
-	 * bytes - no hash can see that, so this round-trip check is what does.
-	 */
+	// Two fields of the SAME type swapped in the macro's list compiles and writes the wrong
+	// bytes - no hash can see that, so this round-trip check is what does.
 	std::println("  SER_TEST_ROUNDTRIP: {}", SER_TEST_ROUNDTRIP(Measurement{ 7, 1.5F }));
 }
 
@@ -323,7 +319,7 @@ struct Config final {
 
 	static ser::Errc serRead(ser::Reader auto& ar, Config& x) {
 		if (const auto e = ar(x.version); e != ser::Errc::Ok) return e;
-		if (x.version != 2) return ser::Errc::InvalidValue; /* our own rule, mid-stream */
+		if (x.version != 2) return ser::Errc::InvalidValue;  // our own rule, mid-stream
 		return ar(x.data);
 	}
 };
@@ -345,10 +341,8 @@ void writeReadHookExample() {
 		back.data == config.data
 	);
 
-	/*
-	 * A config from a build that wrote version 1. These bytes are not ours to trust, so
-	 * ser::read - which hands back a code and the position that failed - and not a panic.
-	 */
+	// A config from a build that wrote version 1. These bytes are not ours to trust, so
+	// ser::read - which hands back a code and the position that failed - and not a panic.
 	std::vector<std::byte> old_bytes;
 	ser::writeOrPanic(old_bytes, Config{ .version = 1, .data = {} });
 
@@ -399,7 +393,7 @@ void makeHookExample() {
 	);
 }
 
-/* ═══ 9. a type in someone else's namespace: ADL ═══════════════════════════════════ */
+// ═══ 9. a type in someone else's namespace: ADL ═══════════════════════════════════
 
 namespace vendor {
 
@@ -428,7 +422,7 @@ namespace vendor {
 		u32 id = 0;
 	};
 
-} /* namespace vendor */
+}  // namespace vendor
 
 void adlExample() {
 	std::println("\n── 9. someone else's type, through ADL ───────────────");
@@ -443,11 +437,9 @@ void adlExample() {
 	std::println("  {} bytes; back ({}, {})", bytes.size(), back.lat, back.lon);
 }
 
-/*
- * ═══ 10. a type we cannot edit at all: ser::Serializer<T> ═════════════════════════
- * The last resort and the highest rank: it outranks every hook, and it lives in OUR code,
- * so nothing in the vendor's headers has to change.
- */
+// ═══ 10. a type we cannot edit at all: ser::Serializer<T> ═════════════════════════
+// The last resort and the highest rank: it outranks every hook, and it lives in OUR code,
+// so nothing in the vendor's headers has to change.
 
 namespace ser {
 
@@ -456,7 +448,7 @@ namespace ser {
 		static constexpr Errc visit(auto& ar, auto& self) { return ar(self.id); }
 	};
 
-} /* namespace ser */
+}  // namespace ser
 
 void serializerExample() {
 	std::println("\n── 10. a sealed type, through ser::Serializer<T> ───────────────");
@@ -487,10 +479,8 @@ void badInputExample() {
 	const auto cut = ser::read<Person>(std::span{ bytes }.first(bytes.size() / 2));
 	std::println("  half a Person: {}", cut ? "accepted" : cut.error().message());
 
-	/*
-	 * The first eight bytes are the name's length. A corrupt length is caught before
-	 * anything is allocated - a stream is untrusted input, not a plan for a malloc.
-	 */
+	// The first eight bytes are the name's length. A corrupt length is caught before
+	// anything is allocated - a stream is untrusted input, not a plan for a malloc.
 	std::vector<std::byte> corrupt = bytes;
 	for (usize i = 0; i < 8; ++i) corrupt[i] = std::byte{ 0xFF };
 
@@ -590,7 +580,7 @@ static_assert(ser::schemaHash<Point>() != ser::schemaHash<Person>());
 
 /** @brief A whole round trip during compilation: no heap, so a fixed-size buffer. */
 consteval bool roundTripWhileCompiling() {
-	std::array<std::byte, 12> buf{}; /* a fixed buffer: its size() is CAPACITY */
+	std::array<std::byte, 12> buf{};  // a fixed buffer: its size() is CAPACITY
 	ser::Out                  out{ buf };
 	if (out(Timestamp{ .seconds = 1'700'000'000, .nanos = 250 }) != ser::Errc::Ok) return false;
 	if (out.finish() != ser::Errc::Ok) return false;
@@ -603,7 +593,7 @@ consteval bool roundTripWhileCompiling() {
 
 /** @brief And a fixed buffer that cannot hold the object answers with a code, not a resize. */
 consteval bool refusesToOverflow() {
-	std::array<std::byte, 4> tiny{}; /* a Timestamp needs 12 */
+	std::array<std::byte, 4> tiny{};  // a Timestamp needs 12
 	ser::Out                 ar{ tiny };
 	return ar(Timestamp{}) == ser::Errc::BufferFull;
 }
@@ -640,17 +630,15 @@ int main() {
 	std::println("");
 }
 
-/*
- * what ser refuses, and what to write instead
- * None of these means anything outside the writing process, so each is a compile error
- * naming the fix rather than bytes nobody can read back. Paste one in and read it.
- *
- *   Point*, Point&, void*   the value itself, or an index into a table you own
- *   std::string_view        the owning type - a view cannot be read back into
- *   base::SharedBox         write the objects once, store an index per holder
- *   a union                 a tag next to the payload and a serVisit that switches on it
- *   std::vector<bool>       std::vector<u8>, or std::bitset<N>
- *
- *   struct HasAPointer { Point* point; };
- *   struct MiscountsItself { char code[4]; u32 n; };   // ser_members<2>, as Marker has
- */
+// what ser refuses, and what to write instead
+// None of these means anything outside the writing process, so each is a compile error
+// naming the fix rather than bytes nobody can read back. Paste one in and read it.
+//
+//   Point*, Point&, void*   the value itself, or an index into a table you own
+//   std::string_view        the owning type - a view cannot be read back into
+//   base::SharedBox         write the objects once, store an index per holder
+//   a union                 a tag next to the payload and a serVisit that switches on it
+//   std::vector<bool>       std::vector<u8>, or std::bitset<N>
+//
+//   struct HasAPointer { Point* point; };
+//   struct MiscountsItself { char code[4]; u32 n; };   // ser_members<2>, as Marker has

@@ -67,4 +67,4 @@ namespace ser {
 	template<class T>
 	concept TriviallySerializable = ::std::is_trivially_copyable_v<T> && !::std::is_pointer_v<T>;
 
-} /* namespace ser */
+}  // namespace ser

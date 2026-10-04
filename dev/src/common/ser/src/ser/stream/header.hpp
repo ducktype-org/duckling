@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * the envelope
- * Thirty-two bytes in front of the payload: a stream from another version of the program,
+/**
+ * @file
+ * @brief the envelope
+ * @details Thirty-two bytes in front of the payload: a stream from another version of the program,
  * another byte order or another schema is refused with an error code instead of being
  * interpreted as data.
  *
@@ -151,10 +152,8 @@ namespace ser {
 		if (raw.header_size < StreamHeader::SERIALIZED_SIZE) return Errc::BadMagic;
 		if (raw.flags != nativeFlags()) return Errc::PlatformMismatch;
 
-		/*
-		 * In u64 throughout, never in size_t: payload_size comes from the stream and a
-		 * 32-bit reader must not turn 2^32 + 4 into 4 by narrowing it.
-		 */
+		// In u64 throughout, never in size_t: payload_size comes from the stream and a
+		// 32-bit reader must not turn 2^32 + 4 into 4 by narrowing it.
 		::std::uint64_t total = 0;
 		if (::base::addOvf(static_cast<::std::uint64_t>(start), raw.totalSize(), total))
 			return Errc::SizeOverflow;
@@ -189,4 +188,4 @@ namespace ser {
 		return Result<StreamHeader>{ h };
 	}
 
-} /* namespace ser */
+}  // namespace ser

@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::Map, base::HashMap, base::VectorMap, base::StableHashMap
- * Three shapes, three reasons.
+/**
+ * @file
+ * @brief base::Map, base::HashMap, base::VectorMap, base::StableHashMap
+ * @details Three shapes, three reasons.
  *
  *   MapWrapper<C>     base::Map and base::HashMap are this over std::map and
  *                     std::unordered_map. It IS its container - public inheritance, no
@@ -95,13 +96,11 @@ namespace ser {
 	struct Schema<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			/*
-			 * The key is not in the stream - it is the index - but it is in the hash on
-			 * purpose: two VectorMaps keyed by different strong id types produce
-			 * byte-identical streams, and without this the envelope could not tell them
-			 * apart. is_move and is_copy are left out for the mirror-image reason: they
-			 * change what the type lets you do, not what it writes.
-			 */
+			// The key is not in the stream - it is the index - but it is in the hash on
+			// purpose: two VectorMaps keyed by different strong id types produce
+			// byte-identical streams, and without this the envelope could not tell them
+			// apart. is_move and is_copy are left out for the mirror-image reason: they
+			// change what the type lets you do, not what it writes.
 			h = internal::schemaText(h, "base.VectorMap");
 			h = internal::schemaOf<KEY_T, Mode, Seen>(h);
 			return internal::schemaOf<DATA_T, Mode, Seen>(h);
@@ -179,20 +178,16 @@ namespace ser {
 
 			m.clear();
 			for (::std::size_t i = 0; i < n; ++i) {
-				/**
-				 * @brief Two statements, never two arguments of one call - argument evaluation
-				 * order is unspecified. See the note in std/map.hpp.
-				 */
+				// Two statements, never two arguments of one call - argument evaluation
+				// order is unspecified. See the note in std/map.hpp.
 				auto key   = internal::dispatchMake<KEY_T>(ar);
 				auto value = internal::dispatchMake<DATA_T>(ar);
-				/*
-				 * maybePut rather than put: put PANICS on a repeated key, and a repeated
-				 * key is corrupt input - an error code, not a crash.
-				 */
+				// maybePut rather than put: put PANICS on a repeated key, and a repeated
+				// key is corrupt input - an error code, not a crash.
 				if (!m.maybePut(::std::move(key), ::std::move(value))) return Errc::InvalidValue;
 			}
 			return Errc::Ok;
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

@@ -34,7 +34,7 @@ namespace ser {
 
 		using Base = internal::ArchiveBase<Ctx>;
 		using Base::context;
-		using Base::pos; /* the base is dependent, so pos is not found unqualified */
+		using Base::pos;  // the base is dependent, so pos is not found unqualified
 
 		Buf& buf;
 
@@ -129,4 +129,4 @@ namespace ser {
 		constexpr Errc finish() { return context().finish(); }
 	};
 
-} /* namespace ser */
+}  // namespace ser

@@ -26,19 +26,17 @@ namespace ser {
 	template<class T>
 	struct EnumRange;
 
-} /* namespace ser */
+}  // namespace ser
 
 namespace ser::builtin {
 
 	template<class T>
 	concept EnumLike = ::std::is_enum_v<::std::remove_cv_t<T>>;
 
-	/*
-	 * The underlying type is what goes in the stream, so changing it changes the format -
-	 * ser::schemaHash is what catches that. No enumerator validation on read: without
-	 * reflection there is no list to check against, and a scoped enum holding an unlisted
-	 * value is well-defined as long as it fits.
-	 */
+	// The underlying type is what goes in the stream, so changing it changes the format -
+	// ser::schemaHash is what catches that. No enumerator validation on read: without
+	// reflection there is no list to check against, and a scoped enum holding an unlisted
+	// value is well-defined as long as it fits.
 
 	/**
 	 * @brief List-initialization from the underlying type is the discriminator: it is valid for a
@@ -91,4 +89,4 @@ namespace ser::builtin {
 		return Errc::Ok;
 	}
 
-} /* namespace ser::builtin */
+}  // namespace ser::builtin

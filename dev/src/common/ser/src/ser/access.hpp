@@ -307,4 +307,4 @@ namespace ser {
  */
 #define SER_FRIEND friend struct ::ser::Access;
 
-} /* namespace ser */
+}  // namespace ser

@@ -52,4 +52,4 @@ namespace ser::internal {
 	template<class B>
 	inline constexpr bool BUFFER_CAN_FAIL = !ResizableBuffer<B>;
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

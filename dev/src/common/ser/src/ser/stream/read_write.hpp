@@ -56,12 +56,12 @@ namespace ser {
 			if (const auto e = checkHeader<T, Ctx>(h); e != Errc::Ok) throwError(e, ar.position());
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	/**
-	 * @brief owned<T, Ctx>
+	 * @brief Owned<T, Ctx>
 	 * @details An AGGREGATE on purpose: ser::read builds it as
-	 *     owned<T, Ctx>{ dispatchMake<T>(ar), std::move(ctx) }
+	 *     Owned<T, Ctx>{ dispatchMake<T>(ar), std::move(ctx) }
 	 * where the prvalue initializes `value` directly - no move, and it compiles for types
 	 * with const fields.
 	 */
@@ -139,12 +139,10 @@ namespace ser {
 			Ctx     ctx{};
 			In<Ctx> ar{ bytes, ctx };
 			if (opt.header) readEnvelope<T, Ctx>(ar, opt);
-			/*
-			 * Left-to-right evaluation is guaranteed for braced init, so `ar` is done being
-			 * used before `ctx` is moved out from under it - and that is also the one place
-			 * the end-of-buffer check can run: after the object exists, without naming it,
-			 * which would cost the move this path exists to avoid.
-			 */
+			// Left-to-right evaluation is guaranteed for braced init, so `ar` is done being
+			// used before `ctx` is moved out from under it - and that is also the one place
+			// the end-of-buffer check can run: after the object exists, without naming it,
+			// which would cost the move this path exists to avoid.
 			return Owned<T, Ctx>{ dispatchMake<T>(ar),
 				                  (requireFullyConsumed(ar), ::std::move(ctx)) };
 		}
@@ -176,36 +174,34 @@ namespace ser {
 			}
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
-	/*
-	 * read
-	 * Two ways to be told a stream is bad, and which one to reach for is a property of
-	 * where the bytes came from:
-	 *
-	 *   read          -> result<owned<T, Ctx>>. The stream is INPUT: a file somebody else
-	 *                    wrote, a cache from an older build, anything that is allowed to
-	 *                    be wrong. A bad stream is information - log it and carry on
-	 *                    without whatever it was going to give you.
-	 *   readOrPanic   -> owned<T, Ctx>, and CORE_PANIC on a bad stream. The bytes are OURS
-	 *                    - a blob this program wrote - so reading them back cannot fail
-	 *                    unless the program is already broken, and there is no state to
-	 *                    recover to. readOrPanicForce is the same thing returning a bare T.
-	 *
-	 * The line between them is not a matter of taste - see internal::panicOnStreamError. Input
-	 * goes through ser::read. Always.
-	 *
-	 * Both return owned<T, Ctx> rather than a bare T, even when Ctx is empty, so that pools
-	 * can be added later without touching a call site. readOrPanicForce is the exception,
-	 * and it says so in its name.
-	 *
-	 * All three read the unqualified T: an object is built before it can be const, so
-	 * read<const X> is read<X>.
-	 */
+	// read
+	// Two ways to be told a stream is bad, and which one to reach for is a property of
+	// where the bytes came from:
+	//
+	//   read          -> Result<Owned<T, Ctx>>. The stream is INPUT: a file somebody else
+	//                    wrote, a cache from an older build, anything that is allowed to
+	//                    be wrong. A bad stream is information - log it and carry on
+	//                    without whatever it was going to give you.
+	//   readOrPanic   -> Owned<T, Ctx>, and CORE_PANIC on a bad stream. The bytes are OURS
+	//                    - a blob this program wrote - so reading them back cannot fail
+	//                    unless the program is already broken, and there is no state to
+	//                    recover to. readOrPanicForce is the same thing returning a bare T.
+	//
+	// The line between them is not a matter of taste - see internal::panicOnStreamError. Input
+	// goes through ser::read. Always.
+	//
+	// Both return Owned<T, Ctx> rather than a bare T, even when Ctx is empty, so that pools
+	// can be added later without touching a call site. readOrPanicForce is the exception,
+	// and it says so in its name.
+	//
+	// All three read the unqualified T: an object is built before it can be const, so
+	// read<const X> is read<X>.
 
 	/**
 	 * @brief The bundle reaches std::expected through a constructor parameter, and elision never
-	 * crosses one - so this path costs exactly one move of owned<T, Ctx>.
+	 * crosses one - so this path costs exactly one move of Owned<T, Ctx>.
 	 */
 	template<class T, class Ctx = NoContext>
 	[[nodiscard]] Result<Owned<::std::remove_cv_t<T>, Ctx>> read(
@@ -213,9 +209,9 @@ namespace ser {
 	) {
 		static_assert(
 			::std::move_constructible<::std::remove_cv_t<T>>,
-			"ser::read: T must be movable, because result<owned<T, Ctx>> has to "
+			"ser::read: T must be movable, because Result<Owned<T, Ctx>> has to "
 			"move the bundle into std::expected. For a type that cannot be moved "
-			"use ser::readOrPanic<T>(bytes) - it returns owned<T, Ctx> by value "
+			"use ser::readOrPanic<T>(bytes) - it returns Owned<T, Ctx> by value "
 			"and elides everything."
 		);
 		try {
@@ -287,11 +283,9 @@ namespace ser {
 		Out<Buf>            ar{ buf };
 		const ::std::size_t start = ar.position();
 
-		/**
-		 * @brief Written twice, and that is what payload_size costs: the size is not known until the
-		 * payload is out, so the first copy reserves the 32 bytes and the second - after
-		 * finish(), so pool data counts as payload - patches them.
-		 */
+		// Written twice, and that is what payload_size costs: the size is not known until the
+		// payload is out, so the first copy reserves the 32 bytes and the second - after
+		// finish(), so pool data counts as payload - patches them.
 		StreamHeader h{};
 		if (opt.header) {
 			h = StreamHeader::forType<T>(opt.user_magic);
@@ -322,4 +316,4 @@ namespace ser {
 			internal::panicOnStreamError("failed to serialize: ", r.error());
 	}
 
-} /* namespace ser */
+}  // namespace ser

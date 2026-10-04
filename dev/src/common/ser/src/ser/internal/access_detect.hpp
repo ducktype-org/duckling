@@ -46,7 +46,7 @@ namespace ser::internal {
 	 *
 	 * ser::In<Ctx> is exact. The writer is exact only in its context, the buffer being the
 	 * caller's choice; that can matter only for a hook pinned to one concrete
-	 * out<Buf, Ctx>, which NONGENERIC_*_HOOK_V reports anyway.
+	 * Out<Buf, Ctx>, which NONGENERIC_*_HOOK_V reports anyway.
 	 */
 	template<class Ar>
 	using ReaderFor = ::std::conditional_t<Reader<Ar>, Ar, In<typename Ar::ContextType>>;
@@ -233,16 +233,14 @@ namespace ser::internal {
 	   || NONSTATIC_VISIT_HOOK_V<T, Ar> || NONSTATIC_WRITE_HOOK_V<T, Ar>
 	   || NONSTATIC_READ_HOOK_V<T, Ar> || NONSTATIC_MAKE_HOOK_V<T, Ar>;
 
-	/*
-	 * checkHooks<T, Ar>()
-	 * Called at the top of all three dispatch contexts. Everything here is a compile-time
-	 * diagnostic and produces no code; the order matters, because the most specific message
-	 * about a hook that exists has to come before the vaguer ones about hooks that do not.
-	 *
-	 * `serMake` with `serRead` is allowed - they answer different questions. `serVisit`
-	 * with `serWrite` is not: both answer "write this one", and nothing says which format
-	 * was meant.
-	 */
+	// checkHooks<T, Ar>()
+	// Called at the top of all three dispatch contexts. Everything here is a compile-time
+	// diagnostic and produces no code; the order matters, because the most specific message
+	// about a hook that exists has to come before the vaguer ones about hooks that do not.
+	//
+	// `serMake` with `serRead` is allowed - they answer different questions. `serVisit`
+	// with `serWrite` is not: both answer "write this one", and nothing says which format
+	// was meant.
 
 	/**
 	 * @brief A visit hook that binds only a non-const object is found when reading and missed
@@ -298,10 +296,8 @@ namespace ser::internal {
 
 	template<class T, class Ar>
 	constexpr void checkHooks() {
-		/*
-		 * A hook nothing can name comes first: every message below it describes a hook
-		 * that at least exists as far as the library is concerned.
-		 */
+		// A hook nothing can name comes first: every message below it describes a hook
+		// that at least exists as far as the library is concerned.
 		SER_INTERNAL_ASSERT_HOOK_STATIC(
 			(NONSTATIC_VISIT_HOOK_V<T, Ar>),
 			"this type's serVisit",
@@ -326,10 +322,8 @@ namespace ser::internal {
 			"be called at all."
 		)
 
-		/*
-		 * A hook the archive in use cannot call is a hook that silently does nothing;
-		 * everything below it is about hooks that are actually being used.
-		 */
+		// A hook the archive in use cannot call is a hook that silently does nothing;
+		// everything below it is about hooks that are actually being used.
 		static_assert(
 			!NONGENERIC_VISIT_HOOK_V<T, Ar>,
 			"ser: this type declares a visit hook that the archive in use cannot call, so "
@@ -394,7 +388,7 @@ namespace ser::internal {
 
 		SER_INTERNAL_ASSERT_READ_FILLS(
 			Access::TraitHooks,
-			"serializer<T>::read",
+			"Serializer<T>::read",
 			"static ser::Errc read(ser::Reader auto& ar, T& x)."
 		)
 		SER_INTERNAL_ASSERT_READ_FILLS(
@@ -409,7 +403,7 @@ namespace ser::internal {
 		)
 		SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(
 			Access::TraitHooks,
-			"serializer<T>::visit",
+			"Serializer<T>::visit",
 			"static ser::Errc visit(auto& ar, auto& self)."
 		)
 		SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(
@@ -425,7 +419,7 @@ namespace ser::internal {
 
 		SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(
 			Access::TraitHooks,
-			"serializer<T> declares both visit and write/read",
+			"Serializer<T> declares both visit and write/read",
 			"visit for a symmetric format, or the write/read pair for an asymmetric one."
 		)
 		SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(
@@ -440,11 +434,9 @@ namespace ser::internal {
 			"serVisit for a symmetric format, or the pair for an asymmetric one."
 		)
 
-		/**
-		 * @brief Both pairing rules go quiet when a hook is being ignored: with the hook out of
-		 * sight the type looks half-serializable, and saying so would send the reader
-		 * looking for a missing hook instead of at the one they wrote.
-		 */
+		// Both pairing rules go quiet when a hook is being ignored: with the hook out of
+		// sight the type looks half-serializable, and saying so would send the reader
+		// looking for a missing hook instead of at the one they wrote.
 		if constexpr (!NONGENERIC_ANY_HOOK_V<T, Ar>) {
 			static_assert(
 				!(HAS_ANY_WRITE_HOOK_V<T, Ar> && !HAS_ANY_READ_HOOK_V<T, Ar>),
@@ -463,4 +455,4 @@ namespace ser::internal {
 		}
 	}
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

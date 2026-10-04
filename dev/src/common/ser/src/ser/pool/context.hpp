@@ -42,4 +42,4 @@ namespace ser {
 	 */
 	inline NoContext no_context_instance{};
 
-} /* namespace ser */
+}  // namespace ser

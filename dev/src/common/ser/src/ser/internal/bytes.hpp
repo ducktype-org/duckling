@@ -82,4 +82,4 @@ namespace ser::internal {
 		return (n + a - 1) & ~(a - 1);
 	}
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

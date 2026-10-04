@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * std::variant and std::monostate
- * A tag, then the alternative the tag names. The tag is a plain 64-bit integer - the same
+/**
+ * @file
+ * @brief std::variant and std::monostate
+ * @details A tag, then the alternative the tag names. The tag is a plain 64-bit integer - the same
  * width as a container's length prefix - so a stream stays readable on a machine whose
  * ::std::size_t is not the writer's. It costs seven bytes over a byte tag, and buys a
  * format that never has to decide how many alternatives are "few enough".
@@ -80,7 +81,7 @@ namespace ser {
 			return smallest;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<class... Ts>
 	struct MinSerializedSize<::std::variant<Ts...>> {
@@ -91,7 +92,7 @@ namespace ser {
 
 	template<>
 	struct MinSerializedSize<::std::monostate> {
-		static constexpr ::std::size_t VALUE = 0; /* an empty type writes nothing */
+		static constexpr ::std::size_t VALUE = 0;  // an empty type writes nothing
 	};
 
 	/**
@@ -130,10 +131,8 @@ namespace ser {
 		static constexpr bool FILLABLE = (internal::READABLE_ELEMENT_V<Ts> && ...);
 
 		static constexpr Errc write(Writer auto& ar, const VariantType& o) {
-			/*
-			 * variant_npos is the only index a valueless variant has, and it names no
-			 * alternative. Refuse it here rather than write a tag nothing can read.
-			 */
+			// variant_npos is the only index a valueless variant has, and it names no
+			// alternative. Refuse it here rather than write a tag nothing can read.
 			if (o.valueless_by_exception()) return Errc::InvalidValue;
 
 			const ::std::size_t index = o.index();
@@ -156,10 +155,8 @@ namespace ser {
 				using Alternative = ::std::variant_alternative_t<I, VariantType>;
 				using T           = ::std::remove_cv_t<Alternative>;
 
-				/**
-				 * @brief A const alternative never takes the first branch - const is exactly what
-				 * makes it unassignable - so ::std::get<I> below is never a const ref.
-				 */
+				// A const alternative never takes the first branch - const is exactly what
+				// makes it unassignable - so ::std::get<I> below is never a const ref.
 				if constexpr (FILLS_IN_PLACE<Alternative>) {
 					o.template emplace<I>();
 					return internal::dispatchRead<T>(ar, ::std::get<I>(o));
@@ -210,4 +207,4 @@ namespace ser {
 		static constexpr ::std::monostate make(Reader auto&) { return {}; }
 	};
 
-} /* namespace ser */
+}  // namespace ser

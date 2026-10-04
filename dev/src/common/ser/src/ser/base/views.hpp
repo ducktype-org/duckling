@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::RawView, ModRawView, OwningView, SharedView
- * The split is ownership again, and here it is the same line the library already draws for
+/**
+ * @file
+ * @brief base::RawView, ModRawView, OwningView, SharedView
+ * @details The split is ownership again, and here it is the same line the library already draws for
  * std::string_view (see the note in std/string.hpp): a view that does not own its bytes
  * cannot be read back, because the only thing a read could do is point into the input
  * buffer, which stops being valid the moment the caller frees it.
@@ -85,11 +86,9 @@ namespace ser {
 		 */
 		constexpr Errc readByteBlob(Reader auto& ar, ::std::byte*& out, ::std::size_t& out_size) {
 			::std::size_t n = 0;
-			/*
-			 * readLength is what makes the allocation below safe - it refuses a prefix
-			 * claiming more bytes than the stream can hold. ensure() after it is take()'s
-			 * precondition.
-			 */
+			// readLength is what makes the allocation below safe - it refuses a prefix
+			// claiming more bytes than the stream can hold. ensure() after it is take()'s
+			// precondition.
 			if (const auto c = readLength<::std::byte>(ar, n); c != Errc::Ok) return c;
 			if (const auto c = ar.ensure(n); c != Errc::Ok) return c;
 
@@ -101,7 +100,7 @@ namespace ser {
 			return Errc::Ok;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	/** @brief the two refusals */
 
@@ -134,7 +133,7 @@ namespace ser {
 		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
-	/* Shared with SharedView on purpose - see the note at the top. */
+	/** Shared with SharedView on purpose - see the note at the top. */
 	namespace internal {
 
 		template<class Mode, class Seen>
@@ -142,7 +141,7 @@ namespace ser {
 			return schemaOf<::std::byte, Mode, Seen>(schemaText(h, "base.byte_blob"));
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<>
 	struct Schema<::base::OwningView> {
@@ -162,10 +161,8 @@ namespace ser {
 			::std::byte*  raw = nullptr;
 			::std::size_t n   = 0;
 			if (const auto c = internal::readByteBlob(ar, raw, n); c != Errc::Ok) return c;
-			/*
-			 * Move assignment frees whatever the view held before, which is what a read
-			 * into an existing object has to do.
-			 */
+			// Move assignment frees whatever the view held before, which is what a read
+			// into an existing object has to do.
 			v = ::base::OwningView(raw, n);
 			return Errc::Ok;
 		}
@@ -214,4 +211,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

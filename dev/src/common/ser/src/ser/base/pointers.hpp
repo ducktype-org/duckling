@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * base::Box, base::MBox, base::SharedBox, base::BoxOrCRef
- * Two of these serialize and two are refused, and the line between them is ownership.
+/**
+ * @file
+ * @brief base::Box, base::MBox, base::SharedBox, base::BoxOrCRef
+ * @details Two of these serialize and two are refused, and the line between them is ownership.
  *
  *   Box<T>       the sole owner of one T. The pointer is storage, not format: a Box<T>
  *                writes exactly what a T writes, and nothing says "this was behind a
@@ -100,9 +101,9 @@ namespace ser {
 			return Errc::InvalidValue;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
-	/* which deleters a read may allocate for */
+	// which deleters a read may allocate for
 
 	/**
 	 * @brief Does D free its pointee with plain `delete`, and carry no state?
@@ -162,10 +163,8 @@ namespace ser {
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				return internal::denyCustomBoxDeleter<decltype(ar)>();
 			else
-				/*
-				 * operator* is const and hands back T&, and a Box is never null - the class
-				 * panics before it can be - so there is no presence byte and no check here.
-				 */
+				// operator* is const and hands back T&, and a Box is never null - the class
+				// panics before it can be - so there is no presence byte and no check here.
 				return internal::dispatchWrite<T>(ar, *b);
 		}
 
@@ -173,10 +172,8 @@ namespace ser {
 			requires(internal::READABLE_ELEMENT_V<T>) {
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				return internal::denyCustomBoxDeleter<decltype(ar)>();
-			/**
-			 * @brief The Box already owns an object, so reading fills THAT object rather than
-			 * allocating a second one and throwing the first away.
-			 */
+			// The Box already owns an object, so reading fills THAT object rather than
+			// allocating a second one and throwing the first away.
 			else if constexpr (internal::FILL_IN_PLACE_V<T>)
 				return internal::dispatchRead<T>(ar, *b);
 			else {
@@ -186,10 +183,8 @@ namespace ser {
 		}
 
 		static BoxType make(Reader auto& ar) requires(internal::READABLE_ELEMENT_V<T>) {
-			/**
-			 * @brief throwError only so this compiles once the static_assert has had its say - a
-			 * make has a box to return and a refused deleter has none.
-			 */
+			// throwError only so this compiles once the static_assert has had its say - a
+			// make has a box to return and a refused deleter has none.
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				throwError(internal::denyCustomBoxDeleter<decltype(ar)>(), ar.position());
 			else if constexpr (internal::FILL_IN_PLACE_V<T>) {
@@ -253,19 +248,17 @@ namespace ser {
 				if (const auto c = internal::dispatchRead<::std::uint8_t>(ar, present);
 				    c != Errc::Ok)
 					return c;
-				/*
-				 * A byte that is neither 0 nor 1 is corrupt input, not a value to interpret -
-				 * the same rule the optional and bool adapters follow.
-				 */
+				// A byte that is neither 0 nor 1 is corrupt input, not a value to interpret -
+				// the same rule the optional and bool adapters follow.
 				if (present > 1) return Errc::InvalidValue;
 
 				if (present == 0) {
-					b = BoxType{}; /* drops whatever was there, which is the point of a read */
+					b = BoxType{};  // drops whatever was there, which is the point of a read
 					return Errc::Ok;
 				}
 
 				if constexpr (internal::FILL_IN_PLACE_V<T>) {
-					/* Reuse the allocation when there is one; allocate only for a null MBox. */
+					// Reuse the allocation when there is one; allocate only for a null MBox.
 					if (!b) b = ::base::makeBox<T, D>();
 					return internal::dispatchRead<T>(ar, *b);
 				} else {
@@ -300,4 +293,4 @@ namespace ser {
 		}
 	};
 
-} /* namespace ser */
+}  // namespace ser

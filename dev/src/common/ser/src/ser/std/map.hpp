@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * std::map, std::unordered_map, std::set, std::unordered_set
- * Length prefix, then the elements: for a map each key followed by its value, for a set
+/**
+ * @file
+ * @brief std::map, std::unordered_map, std::set, std::unordered_set
+ * @details Length prefix, then the elements: for a map each key followed by its value, for a set
  * each key. The container's own structure - buckets, tree shape, load factor - is not in
  * the stream and is rebuilt by the reader, which is why a map written by one implementation
  * reads back on another.
@@ -74,10 +75,10 @@ namespace ser {
 				m.clear();
 				reserveIfPossible(m, n);
 				for (::std::size_t i = 0; i < n; ++i) {
-					auto key   = dispatchMake<K>(ar); /* two statements, and that is */
-					auto value = dispatchMake<V>(ar); /* the whole point - see above */
+					auto key   = dispatchMake<K>(ar);  // two statements, and that is
+					auto value = dispatchMake<V>(ar);  // the whole point - see above
 					if (!m.emplace(::std::move(key), ::std::move(value)).second)
-						return Errc::InvalidValue;    /* the same key twice */
+						return Errc::InvalidValue;     // the same key twice
 				}
 				return Errc::Ok;
 			}
@@ -105,9 +106,9 @@ namespace ser {
 			}
 		};
 
-	} /* namespace internal */
+	}  // namespace internal
 
-	/*
+	/**
 	 * the schema of a keyed container
 	 * std::map and std::unordered_map hash IDENTICALLY, and so do the two sets. They have
 	 * to: the serialized format is the same length prefix followed by the same elements, and a
@@ -133,7 +134,7 @@ namespace ser {
 			return schemaOf<K, Mode, Seen>(schemaText(h, "set"));
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	template<class K, class V, class C, class Al>
 	struct Schema<::std::map<K, V, C, Al>> {
@@ -207,4 +208,4 @@ namespace ser {
 	struct Serializer<::std::unordered_set<K, H, E, Al>>:
 		  internal::SetAdapter<::std::unordered_set<K, H, E, Al>, K> {};
 
-} /* namespace ser */
+}  // namespace ser

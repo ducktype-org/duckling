@@ -44,4 +44,4 @@ namespace ser {
 		// @TODO: #90001 align flat arrays of trivially copyable elements for zero-copy reads
 	};
 
-} /* namespace ser */
+}  // namespace ser

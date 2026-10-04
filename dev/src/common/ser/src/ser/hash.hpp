@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * schemaHash<T, Ctx>()
- * One 64-bit number that says "this is the format I write". It goes into the envelope
+/**
+ * @file
+ * @brief schemaHash<T, Ctx>()
+ * @details One 64-bit number that says "this is the format I write". It goes into the envelope
  * (stream/header.hpp) and is checked before a single payload byte is interpreted, so a
  * stream written before a field was added comes back as Errc::SchemaMismatch instead of
  * plausible garbage. It takes Ctx because the pools registered in a context are part of
@@ -140,7 +141,7 @@ namespace ser {
 			return h;
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	/**
 	 * @brief nativeFlags()
@@ -189,7 +190,7 @@ namespace ser {
 		template<class T, class Mode, class Seen>
 		[[nodiscard]] consteval ::std::uint64_t schemaOf(::std::uint64_t h);
 
-		/*
+		/**
 		 * the leaves
 		 * The token is the serialized KIND and the serialized WIDTH, never the C++ type's name. So
 		 * int64_t hashes the same whether it spells itself `long` or `long long`, while
@@ -319,11 +320,9 @@ namespace ser {
 			else {
 				using Next = ::base::CatListsT<Seen, ::base::TypeList<U>>;
 
-				/**
-				 * @brief The hook question needs an archive and a hash cannot have one, so it is
-				 * asked with the canonical writer for this context - the same shape
-				 * internal::writer_for builds.
-				 */
+				// The hook question needs an archive and a hash cannot have one, so it is
+				// asked with the canonical writer for this context - the same shape
+				// internal::writer_for builds.
 				using Ar = Out<::std::span<::std::byte>, typename Mode::Context>;
 
 				if constexpr (HAS_SCHEMA_ID_V<U>)
@@ -347,13 +346,11 @@ namespace ser {
 				else if constexpr (CAN_ENUMERATE_MEMBERS_V<U>)
 					return schemaStruct<U, Mode, Next>(h, FieldTypesT<U>{});
 				else
-					/*
-					 * Nothing serializes this type either - dispatch refuses it with a
-					 * list of fixes. Answering rather than failing keeps schema_hash
-					 * usable as a question.
-					 *
-					 * @TODO: #90006 make this a compile error as well
-					 */
+					// Nothing serializes this type either - dispatch refuses it with a
+					// list of fixes. Answering rather than failing keeps schema_hash
+					// usable as a question.
+					//
+					// @TODO: #90006 make this a compile error as well
 					return schemaOpaque<U>(h, "opaque");
 			}
 		}
@@ -371,17 +368,15 @@ namespace ser {
 			h                 = schemaNumber(h, static_cast<::std::uint64_t>(VERSION));
 			h                 = schemaNumber(h, sizeof(ConfigGlobal::SizeType));
 			h                 = schemaNumber(h, nativeFlags());
-			/*
-			 * The pool count is the whole of it for now, and it is what makes
-			 * context<str_pool> and context<> different formats for free - no bytes in
-			 * the stream, no runtime check.
-			 */
+			// The pool count is the whole of it for now, and it is what makes
+			// Context<str_pool> and Context<> different formats for free - no bytes in
+			// the stream, no runtime check.
 			h = schemaText(h, "ctx");
 			h = schemaNumber(h, static_cast<::std::uint64_t>(Mode::Context::POOL_COUNT));
 			return schemaOf<T, Mode, ::base::TypeList<>>(h);
 		}
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	/**
 	 * @brief The number that goes into the envelope.
@@ -402,4 +397,4 @@ namespace ser {
 		return internal::schemaRoot<T, internal::SchemaMode<Ctx, true>>();
 	}
 
-} /* namespace ser */
+}  // namespace ser

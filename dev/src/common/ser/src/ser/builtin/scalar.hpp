@@ -27,7 +27,7 @@ namespace ser::builtin {
 		"ser: long double cannot go in the stream - it has more bytes than it has value, " \
 		"so the padding between them would be written as it happened to be and the same "  \
 		"number would not give the same stream twice. Use double, or store the "           \
-		"significant bytes yourself through a serializer<T> of your own."                  \
+		"significant bytes yourself through a Serializer<T> of your own."                  \
 	);
 
 	/**
@@ -66,4 +66,4 @@ namespace ser::builtin {
 	inline constexpr ::std::size_t SCALAR_SERIALIZED_SIZE
 		= ::std::is_same_v<::std::remove_cv_t<T>, bool> ? ::std::size_t{ 1 } : sizeof(T);
 
-} /* namespace ser::builtin */
+}  // namespace ser::builtin

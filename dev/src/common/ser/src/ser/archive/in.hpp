@@ -25,7 +25,7 @@ namespace ser {
 	template<class Ctx = NoContext>
 	class In final: public internal::ArchiveBase<Ctx> {
 		using Base = internal::ArchiveBase<Ctx>;
-		using Base::pos; /* the base is dependent, so pos is not found unqualified */
+		using Base::pos;  // the base is dependent, so pos is not found unqualified
 
 		::std::span<const ::std::byte> bytes;
 
@@ -90,7 +90,7 @@ namespace ser {
 		}
 	};
 
-	/* ser::In{span} without naming the context. */
+	/** ser::In{span} without naming the context. */
 	In(::std::span<const ::std::byte>) -> In<NoContext>;
 
-} /* namespace ser */
+}  // namespace ser

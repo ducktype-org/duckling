@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * Every base adapter at once, and the same trade as <ser/std/all.hpp>: separate headers,
- * because each one costs the base header it wraps.
+/**
+ * @file
+ * @brief Every base adapter at once, and the same trade as <ser/std/all.hpp>: separate headers,
+ * @details because each one costs the base header it wraps.
  *
  * Include this before the first ser::write or ser::read of a type that uses one of them - a
  * specialization has to be declared before the use that would instantiate the primary

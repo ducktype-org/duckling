@@ -44,4 +44,4 @@ namespace ser {
 
 	inline constexpr BytesTag BYTES_TAG{};
 
-} /* namespace ser */
+}  // namespace ser

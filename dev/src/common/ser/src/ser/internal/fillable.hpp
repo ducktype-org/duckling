@@ -1,8 +1,9 @@
 #pragma once
 
-/*
- * fill, or build?
- * Every adapter that holds other objects - a vector, an optional, a map, a Box - asks the
+/**
+ * @file
+ * @brief fill, or build?
+ * @details Every adapter that holds other objects - a vector, an optional, a map, a Box - asks the
  * same two questions about the type it holds, and the answers decide both which code runs
  * and whether the adapter has a read path at all.
  *
@@ -49,4 +50,4 @@ namespace ser::internal {
 	template<class T>
 	inline constexpr bool READABLE_ELEMENT_V = FILL_IN_PLACE_V<T> || BUILDABLE_V<T>;
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

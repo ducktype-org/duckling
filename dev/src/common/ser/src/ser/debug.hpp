@@ -30,4 +30,4 @@ namespace ser::internal {
 #endif
 	}
 
-} /* namespace ser::internal */
+}  // namespace ser::internal

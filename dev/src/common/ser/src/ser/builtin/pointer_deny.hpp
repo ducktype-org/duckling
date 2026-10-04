@@ -143,4 +143,4 @@ namespace ser::builtin {
 		);
 	}
 
-} /* namespace ser::builtin */
+}  // namespace ser::builtin
