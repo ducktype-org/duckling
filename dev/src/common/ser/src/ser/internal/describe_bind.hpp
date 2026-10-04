@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/comptime/aggregate_arity.hpp>
+#include <base/comptime/decl_field_types.hpp>
 #include <base/comptime/member_walk.hpp>
 #include <base/comptime/type_list.hpp>
 #include <base/comptime/type_traits.hpp>
@@ -141,20 +142,6 @@ namespace ser {
 	 * downstream of the walk can tell a reference field from a const one - and one of those
 	 * two is a shape that works, which is why the guards ask FieldDeclsT instead.
 	 */
-	namespace internal {
-		/**
-		 * @brief FieldDeclsT -> the same fields with cv and references stripped, in both the
-		 * shapes the rest of the library asks for.
-		 */
-		template<class L>
-		struct DeclFieldTypes;
-
-		template<class... Ds>
-		struct DeclFieldTypes<::base::TypeList<Ds...>> {
-			using Tuple = ::std::tuple<::std::remove_cvref_t<typename Ds::type>...>;
-			using List  = ::base::TypeList<::std::remove_cvref_t<typename Ds::type>...>;
-		};
-	}
 
 	/**
 	 * @brief The same fields as FieldTypesT, but as they were DECLARED - `int&` for a
@@ -178,13 +165,13 @@ namespace ser {
 	 */
 	template<class T, ::std::size_t I>
 	using MemberTypeT
-		= ::std::tuple_element_t<I, typename internal::DeclFieldTypes<FieldDeclsT<T>>::Tuple>;
+		= ::std::tuple_element_t<I, typename ::base::DeclFieldTypes<FieldDeclsT<T>>::Tuple>;
 
 	/**
 	 * @brief The same types as a pack rather than one index at a time - what a caller needs when
 	 * it wants every field type at once, and what dispatch hands to the build path.
 	 */
 	template<class T>
-	using FieldTypesT = typename internal::DeclFieldTypes<FieldDeclsT<T>>::List;
+	using FieldTypesT = typename ::base::DeclFieldTypes<FieldDeclsT<T>>::List;
 
 } /* namespace ser */
