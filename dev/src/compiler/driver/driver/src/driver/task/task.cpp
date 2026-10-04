@@ -172,13 +172,8 @@ namespace compiler::driver {
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
 				if (linking_json.is_array()) {
-					auto options_value = js::getArrayOfStrings(
-						linking_json,
-						"linking_options",
-						"linking_options must be an array",
-						"linking_options must be an array of strings",
-						report
-					);
+					auto options_value
+						= js::getArrayOfStrings(linking_json, "linking_options", report);
 					if (options_value)
 						linking_options.additional_link_options = std::move(*options_value);
 					else
@@ -215,18 +210,24 @@ namespace compiler::driver {
 						}
 
 						if (linking_obj->contains("additional_link_options")) {
-							auto additional_options = js::getArrayOfStrings(
+							auto array = js::getArray(
 								*linking_obj,
-								"additional_linking_options",
-								"additional_linking_options must be an array",
-								"additional_linking_options must be an array of strings",
+								"additional_link_options",
+								"additional_link_options must be an array of strings",
 								report
 							);
-							if (additional_options)
-								linking_options.additional_link_options
-									= std::move(*additional_options);
-							else
+							if (array) {
+								auto additional_options = js::getArrayOfStrings(
+									*array, "additional_linking_options", report
+								);
+								if (additional_options)
+									linking_options.additional_link_options
+										= std::move(*additional_options);
+								else
+									had_error = true;
+							} else {
 								had_error = true;
+							}
 						}
 
 						if (linking_obj->contains("link_c_standard_library")) {

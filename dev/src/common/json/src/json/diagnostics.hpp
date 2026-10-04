@@ -106,14 +106,10 @@ namespace js {
 		const DiagnosticLogger& report
 	);
 
-	/** @brief Extract an array field and reinterpret is as an array of strings; report an error on
-	 * failure. */
+	/** @brief Assuming `array` is a JSON array extracted from key `key`, try to convert it into an
+	 * array of strings. */
 	base::Optional<std::vector<std::string>> getArrayOfStrings(
-		const nlohmann::json&   json,
-		std::string_view        key,
-		std::string_view        key_error_message,
-		std::string_view        field_error_message,
-		const DiagnosticLogger& report
+		const nlohmann::json& array, std::string_view key, const DiagnosticLogger& report
 	);
 
 	/** @brief Extract an object field; report a warning on failure. */

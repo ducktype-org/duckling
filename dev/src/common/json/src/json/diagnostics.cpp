@@ -8,6 +8,7 @@
 
 #include "extract.hpp"
 
+#include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <nlohmann/json.hpp>
@@ -164,22 +165,14 @@ namespace js {
 	}
 
 	base::Optional<std::vector<std::string>> getArrayOfStrings(
-		const nlohmann::json&   json,
-		std::string_view        key,
-		std::string_view        key_error_message,
-		std::string_view        field_error_message,
-		const DiagnosticLogger& report
+		const nlohmann::json& array, std::string_view key, const DiagnosticLogger& report
 	) {
-		auto array = extractArray(json, key);
-		if (!array.has_value()) {
-			reportFieldError(report, "array", key, key_error_message, true);
-			return {};
-		}
+		CORE_ASSERT(array.is_array(), "getArrayOfStrings called not on an array");
 		std::vector<std::string> result{};
-		result.reserve(array->size());
+		result.reserve(array.size());
 		bool encountered_errors = false;
-		for (const auto& json: *array) {
-			auto maybe_string = getString(json, key, field_error_message, report);
+		for (const auto& item: array) {
+			auto maybe_string = getStringFromArray(item, key, report);
 			if (!maybe_string.has_value())
 				encountered_errors = true;
 			else
