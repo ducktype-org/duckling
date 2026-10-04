@@ -1,9 +1,3 @@
-// Copyright 2026 DuckType LLC
-//
-// This file is part of the Duckling project, licensed under the DuckType
-// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
-// of this repository or https://ducktype.org/licenses/DTCL-1.0
-
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>

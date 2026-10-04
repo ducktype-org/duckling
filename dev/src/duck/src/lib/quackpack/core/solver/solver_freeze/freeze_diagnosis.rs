@@ -1,9 +1,3 @@
-// Copyright 2026 DuckType LLC
-//
-// This file is part of the Duckling project, licensed under the DuckType
-// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
-// of this repository or https://ducktype.org/licenses/DTCL-1.0
-
 //! Module responsible for finding a correct subfreeze inside a [`SolverFreeze`].
 //! Namely, given a newly deserialized [`SolverFreeze`] this module keeps as much information from it as possible,
 //! but discards things that are no longer correct.

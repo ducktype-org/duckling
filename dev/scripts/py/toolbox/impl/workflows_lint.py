@@ -1,9 +1,3 @@
-# Copyright 2026 DuckType LLC
-#
-# This file is part of the Duckling project, licensed under the DuckType
-# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
-# of this repository or https://ducktype.org/licenses/DTCL-1.0
-
 """
 GitHub creates no runs for a workflow whose file does not parse as YAML —
 no failure, no annotation on the PR, other workflows keep running. The

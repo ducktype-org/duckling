@@ -1,9 +1,3 @@
-// Copyright 2026 DuckType LLC
-//
-// This file is part of the Duckling project, licensed under the DuckType
-// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
-// of this repository or https://ducktype.org/licenses/DTCL-1.0
-
 //! This module contains the utilities necessary for gathering manifests of the  packages
 //! possibly occurring in the dependency resolution.
 //! The two main modules are [`gatherer`] which contains the API of the module with code performing fetches

@@ -1,9 +1,3 @@
-# Copyright 2026 DuckType LLC
-#
-# This file is part of the Duckling project, licensed under the DuckType
-# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
-# of this repository or https://ducktype.org/licenses/DTCL-1.0
-
 """
 `cloc` knows nothing about Duckling on its own - every `.duck`/`.dbc` file
 would be skipped as an unknown extension. `duckling.cloc`, at the root of the
