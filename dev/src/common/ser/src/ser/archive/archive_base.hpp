@@ -3,6 +3,7 @@
 #include <base/comptime/type_list.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/misc/no_unique_address.hpp>
 
 #include <ser/config.hpp>
 #include <ser/pool/context.hpp>
@@ -83,8 +84,8 @@ namespace ser::internal {
 		 */
 		using ctx_storage = ::std::conditional_t<::std::is_empty_v<Ctx>, Ctx, Ctx*>;
 
-		::std::size_t                     nesting = 0;
-		SER_NO_UNIQUE_ADDRESS ctx_storage ctx{};
+		::std::size_t                 nesting = 0;
+		NO_UNIQUE_ADDRESS ctx_storage ctx{};
 	};
 
 } /* namespace ser::internal */

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/except/exceptions.hpp>
+#include <base/misc/no_unique_address.hpp>
 
 #include <ser/archive/in.hpp>
 #include <ser/archive/out.hpp>
@@ -66,8 +67,8 @@ namespace ser {
 	 */
 	template<class T, class Ctx>
 	struct owned final {
-		T                         value;
-		SER_NO_UNIQUE_ADDRESS Ctx ctx;
+		T                     value;
+		NO_UNIQUE_ADDRESS Ctx ctx;
 
 		constexpr T* operator->() noexcept { return &value; }
 

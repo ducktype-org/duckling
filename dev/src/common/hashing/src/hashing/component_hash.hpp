@@ -5,6 +5,7 @@
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/misc/ignore.hpp>
+#include <base/misc/no_unique_address.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -35,7 +36,7 @@ namespace hashing {
 		using ElementsType
 			= std::conditional_t<base::IS_BUILD_TYPE_DEV, std::vector<std::string>, base::Ignore>;
 
-		[[no_unique_address]]
+		NO_UNIQUE_ADDRESS
 		ElementsType elements;
 
 		// Default constructible so containers holding ComponentHash can be value-initialized

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/comptime/type_traits.hpp>
+#include <base/misc/no_unique_address.hpp>
 #include <base/pointers/default_deleter.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -34,8 +35,8 @@ namespace base {
 
 		// note: it shouldn't be possible to get uninitialized members
 		// the defaults help analyzers avoid false-positive warnings
-		T*                            ptr = nullptr;
-		[[no_unique_address]] Deleter deleter{};
+		T*                        ptr = nullptr;
+		NO_UNIQUE_ADDRESS Deleter deleter{};
 
 		template<class U, class UDeleter>
 		friend class Box;
@@ -189,8 +190,8 @@ namespace base {
 
 		// note: it shouldn't be possible to get uninitialized members
 		// the defaults help analyzers avoid false-positive warnings
-		T*                            ptr = nullptr;
-		[[no_unique_address]] Deleter deleter{};
+		T*                        ptr = nullptr;
+		NO_UNIQUE_ADDRESS Deleter deleter{};
 
 		template<class U, class UDeleter>
 		friend class MBox;

@@ -76,12 +76,6 @@
 	#define SER_HAS_ASAN 0
 #endif
 
-#if defined(_MSC_VER)
-	#define SER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
-#else
-	#define SER_NO_UNIQUE_ADDRESS [[no_unique_address]]
-#endif
-
 #if defined(__has_builtin)
 	#if __has_builtin(__builtin_bit_cast)
 		#define SER_BIT_CAST(T, x) __builtin_bit_cast(T, x)
