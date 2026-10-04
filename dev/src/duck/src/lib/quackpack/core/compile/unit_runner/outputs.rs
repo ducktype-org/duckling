@@ -97,7 +97,7 @@ pub fn collect_packages(
 /// Right now, this:
 /// 1. returns `None` if there are no dependencies,
 /// 2. creates a [`multipackage_schema::LinkerOptions::RawLinkerArgs`] only for
-///    [`ArtifactsType::IsADependencyArtifact`] dependencies (which _should_ be only `.a` files).
+///    [`UnitType::Dependency`] dependencies (which _should_ be only `.a` files).
 #[instrument(skip_all)]
 pub fn get_linker_options(
     unit: &Unit,

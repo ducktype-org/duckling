@@ -47,7 +47,7 @@ impl fmt::Debug for Unit {
             .field("name", &inner.package.name())
             .field("version", &inner.package.version())
             .field("identity", &inner.identity)
-            .field("package_type", &inner.unit_type)
+            .field("unit_type", &inner.unit_type)
             .finish()
     }
 }
@@ -132,7 +132,7 @@ impl Unit {
         &self.inner.enabled_features
     }
 
-    /// Get the type this [`Unit`].
+    /// Get the type of this [`Unit`].
     pub fn unit_type(&self) -> UnitType {
         self.inner.unit_type
     }

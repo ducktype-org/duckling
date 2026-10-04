@@ -304,7 +304,7 @@ fn stable_sort_identities(mut identities: Vec<Identity>) -> Vec<Identity> {
     identities
 }
 
-/// Infer an appropriate [`ArtifactsType`].
+/// Infer an appropriate [`UnitType`].
 fn infer_unit_type(unit_identity: Identity, root_identity: Identity) -> UnitType {
     let is_root = unit_identity == root_identity;
     if is_root {

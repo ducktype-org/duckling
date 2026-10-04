@@ -54,7 +54,7 @@ pub struct BuildContext<'duck, 'ctx> {
 }
 
 impl BuildContext<'_, '_> {
-    /// Returns `true` whether we should compile to DVM.
+    /// Returns `true` if we should compile to DVM.
     pub fn targets_dvm(&self) -> bool {
         self.compilation_target().is_dvm()
     }

@@ -258,6 +258,7 @@ impl CompilationTarget {
 pub struct CompilationOutput {
     /// Root [`Unit`] and path to its output.
     pub root: (Unit, PathBuf),
+    /// To which target have we compiled.
     pub target: CompilationTarget,
 }
 
