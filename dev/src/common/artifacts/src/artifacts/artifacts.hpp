@@ -18,7 +18,7 @@
 
 namespace artifacts {
 	/**
-	 * @brief What a blob may hold is whatever the `ser` module can put on the wire: an
+	 * @brief What a blob may hold is whatever the `ser` module can put in the stream: an
 	 * aggregate needs no code at all, and anything else declares one of the `ser` hooks. A
 	 * raw pointer is refused rather than copied, which is what the trivially-copyable
 	 * requirement this replaced could not say.

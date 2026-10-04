@@ -219,11 +219,11 @@ namespace ser {
 		}
 
 		template<class T>
-		static constexpr bool HAS_WIRE_AS_V
-			= requires { typename ::std::remove_cvref_t<T>::ser_wire_as; };
+		static constexpr bool HAS_SERIALIZE_AS_V
+			= requires { typename ::std::remove_cvref_t<T>::ser_serialize_as; };
 
 		template<class T>
-		using WireAsT = typename ::std::remove_cvref_t<T>::ser_wire_as;
+		using SerializeAsT = typename ::std::remove_cvref_t<T>::ser_serialize_as;
 
 		template<class T>
 		static constexpr bool HAS_SCHEMA_TAG_V = requires {

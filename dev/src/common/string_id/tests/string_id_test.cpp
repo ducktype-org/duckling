@@ -113,7 +113,7 @@ private:
 		assertTrue(unset.isBad(), "a default-constructed StrID is bad");
 		std::vector<std::byte> refused;
 		const auto             wrote = ::ser::write(refused, unset);
-		assertFalse(wrote.has_value(), "a bad StrID must not reach the wire");
+		assertFalse(wrote.has_value(), "a bad StrID must not reach the stream");
 		assertTrue(::ser::codeOf(wrote) == ::ser::Errc::InvalidValue, "and it says why");
 	}
 

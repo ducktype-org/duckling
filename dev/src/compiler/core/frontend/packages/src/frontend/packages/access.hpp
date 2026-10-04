@@ -34,7 +34,7 @@ namespace compiler::frontend::packages {
 	 * so that distinct outcomes (alias missing / present-pointing-to-X / present-pointing-to-Y)
 	 * are tracked as independent dependencies.
 	 * Stored as metadata so it can be re-created during driver initialization, which is what
-	 * puts it on the wire.
+	 * puts it in the stream.
 	 */
 	struct KeyOf_PackageDependencyAliasSideInput final {
 		hashing::ComponentHash::HashType package_hash;       //< owner package hash

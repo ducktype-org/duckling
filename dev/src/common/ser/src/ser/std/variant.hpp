@@ -65,15 +65,16 @@ namespace ser {
 		}
 
 		/**
-		 * @brief The minimum of the alternatives, because exactly one of them is on the wire.
+		 * @brief The minimum of the alternatives, because exactly one of them is in the stream.
 		 * An empty variant has no alternative and therefore no lower bound to add.
 		 */
 		template<class... Ts>
-		[[nodiscard]] consteval ::std::size_t minAlternativeWire() {
+		[[nodiscard]] consteval ::std::size_t minAlternativeSize() {
 			::std::size_t smallest = 0;
 			bool          first    = true;
-			((first ? (smallest = MIN_WIRE_SIZE_V<Ts>, first = false)
-			        : (smallest = MIN_WIRE_SIZE_V<Ts> < smallest ? MIN_WIRE_SIZE_V<Ts> : smallest,
+			((first ? (smallest = MIN_SERIALIZED_SIZE_V<Ts>, first = false)
+			        : (smallest = MIN_SERIALIZED_SIZE_V<Ts> < smallest ? MIN_SERIALIZED_SIZE_V<Ts>
+			                                                           : smallest,
 			           false)),
 			 ...);
 			return smallest;
@@ -82,14 +83,14 @@ namespace ser {
 	} /* namespace internal */
 
 	template<class... Ts>
-	struct MinWireSize<::std::variant<Ts...>> {
+	struct MinSerializedSize<::std::variant<Ts...>> {
 		static constexpr ::std::size_t VALUE
-			= MIN_WIRE_SIZE_V<::std::uint64_t>
-		    + internal::minAlternativeWire<::std::remove_cv_t<Ts>...>();
+			= MIN_SERIALIZED_SIZE_V<::std::uint64_t>
+		    + internal::minAlternativeSize<::std::remove_cv_t<Ts>...>();
 	};
 
 	template<>
-	struct MinWireSize<::std::monostate> {
+	struct MinSerializedSize<::std::monostate> {
 		static constexpr ::std::size_t VALUE = 0; /* an empty type writes nothing */
 	};
 

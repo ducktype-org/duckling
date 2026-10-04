@@ -169,7 +169,7 @@ private:
 		ImplementationOf_DiskQuery::fake_disk.insert(orphan_hash);
 		ImplementationOf_DiskQuery::fake_disk.insert(live_hash);
 
-		// Build a previous graph holding all three nodes and install it. The wire form is
+		// Build a previous graph holding all three nodes and install it. The serialized form is
 		// plain data, so it goes through `ser` and comes back as itself.
 		std::vector<std::byte> prev_bytes;
 		ser::orThrow(ser::write(

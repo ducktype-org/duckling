@@ -3,7 +3,7 @@
 /*
  * base::Bit256, base::CheckedOkBad
  * Bit256 is four u64s in base 2^64 with the lowest word first, and that is exactly what
- * goes on the wire - low word first, each through dispatch, so the stream is the same on a
+ * goes in the stream - low word first, each through dispatch, so the stream is the same on a
  * big-endian machine as on a little-endian one. A SHA-256 written on one reads back equal
  * on the other.
  *
@@ -35,7 +35,7 @@
 namespace ser {
 
 	template<>
-	struct MinWireSize<::base::Bit256> {
+	struct MinSerializedSize<::base::Bit256> {
 		static constexpr ::std::size_t VALUE = 4 * sizeof(::u64);
 	};
 

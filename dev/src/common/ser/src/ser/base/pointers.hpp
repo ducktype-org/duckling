@@ -57,7 +57,7 @@ namespace ser {
 			static_assert(
 				::base::DEPENDENT_FALSE_V<Ar>,
 				"ser: cannot serialize base::SharedBox - what the type provides is SHARING, "
-				"and sharing is not on the wire. Two SharedBoxes onto one object would be "
+				"and sharing is not in the stream. Two SharedBoxes onto one object would be "
 				"written as two objects and read back as two objects, so the reader would "
 				"silently get a different object graph rather than an error.\n"
 				"  Only one holder in the payload?  serialize the VALUE (or a Box<T>)\n"
@@ -77,7 +77,7 @@ namespace ser {
 				"default-constructed deleter. A custom deleter says the pointee came from "
 				"somewhere else - an arena, a pool, malloc, a C API - so ser would hand "
 				"`new`-ed memory to something that frees it another way, and the state the "
-				"deleter needs to find its way home (WHICH arena) is not on the wire.\n"
+				"deleter needs to find its way home (WHICH arena) is not in the stream.\n"
 				"  The default deleter?  base::Box<T> / base::MBox<T>, nothing to do\n"
 				"  An arena or a pool?   serialize the VALUE, and put it back where it "
 				"belongs yourself after reading\n"
@@ -135,8 +135,8 @@ namespace ser {
 	/** @brief Box */
 
 	template<class T, class D>
-	struct MinWireSize<::base::Box<T, D>> {
-		static constexpr ::std::size_t VALUE = MinWireSize<T>::VALUE;
+	struct MinSerializedSize<::base::Box<T, D>> {
+		static constexpr ::std::size_t VALUE = MinSerializedSize<T>::VALUE;
 	};
 
 	/** @brief Transparent on purpose - the pointer is storage, not format. See the note above. */
@@ -205,8 +205,8 @@ namespace ser {
 	/** @brief MBox */
 
 	template<class T, class D>
-	struct MinWireSize<::base::MBox<T, D>> {
-		static constexpr ::std::size_t VALUE = MinWireSize<::std::optional<T>>::VALUE;
+	struct MinSerializedSize<::base::MBox<T, D>> {
+		static constexpr ::std::size_t VALUE = MinSerializedSize<::std::optional<T>>::VALUE;
 	};
 
 	/**

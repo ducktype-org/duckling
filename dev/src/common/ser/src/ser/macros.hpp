@@ -61,8 +61,8 @@ namespace ser::internal {
 	consteval bool makeFromArityOk() {
 		/**
 		 * @brief A base class makes the two numbers mean different things: the declared count is
-		 * about this class's own members, while the macro lists every field that goes on the
-		 * wire, inherited ones included. Comparing them would refuse code that works.
+		 * about this class's own members, while the macro lists every field that goes into the
+		 * stream, inherited ones included. Comparing them would refuse code that works.
 		 */
 		if constexpr (::base::HAS_BASE_V<T>)
 			return true;
@@ -136,7 +136,7 @@ namespace ser::internal {
 		"The automatic member walk handles a bit-field by BUILDING the object instead, so " \
 		"there are three ways out: drop SER_DESCRIBE and let the walk do it, use "          \
 		"SER_DESCRIBE_MAKE(Type, a, b) whose read side builds, or leave this field out of " \
-		"the list. The wire widens a bit-field to its declared type either way."            \
+		"the list. Serialization widens a bit-field to its declared type either way."       \
 	);
 
 /** @brief The two halves together, for a hook that reads by writing through a reference. */
@@ -158,7 +158,7 @@ namespace ser::internal {
 
 /*
  * SER_DESCRIBE
- * Lists the fields that go on the wire, in order, and skips the rest. It expands to an
+ * Lists the fields that go in the stream, in order, and skips the rest. It expands to an
  * in-class serVisit, so dispatch finds it at level 2 and nothing else has to know about
  * it - and to the field names, which is what lets SER_TEST_ROUNDTRIP say which field came
  * back wrong instead of just "not equal". At least one field, and the macro signature is
@@ -221,7 +221,7 @@ namespace ser::internal {
 	static_assert(                                                                                    \
 		::ser::internal::makeFromArityOk<Self, SER_INTERNAL_FIELD_COUNT(__VA_ARGS__)>(),              \
 		"ser: SER_MAKE_FROM lists a different number of fields than this type has. "                  \
-		"List every field that goes on the wire, in declaration order."                               \
+		"List every field that goes in the stream, in declaration order."                             \
 	);                                                                                                \
 	static_assert(                                                                                    \
 		!::ser::internal::HAS_INITIALIZER_LIST_CTOR_V<Self>,                                          \
@@ -344,7 +344,7 @@ namespace ser::internal {
 		static_assert(                                                                       \
 			::ser::internal::makeFromArityOk<Self, SER_INTERNAL_FIELD_COUNT(__VA_ARGS__)>(), \
 			"ser: SER_MAKE_FROM_PAREN lists a different number of fields than this "         \
-			"type has. List every field that goes on the wire, in declaration order."        \
+			"type has. List every field that goes in the stream, in declaration order."      \
 		);                                                                                   \
 		FOR_EACH(SER_INTERNAL_MAKE_LOCAL, __VA_ARGS__)                                       \
 		return Self(FOR_EACH_COMMA(SER_INTERNAL_MOVE_LOCAL, __VA_ARGS__));                   \

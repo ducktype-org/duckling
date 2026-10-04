@@ -10,7 +10,7 @@
  *                     work to the std adapter. Same bytes, same schema: a base::Map stream
  *                     reads into a std::map and back.
  *   VectorMap         a vector of Optional slots indexed by the key, so the key is never
- *                     on the wire. Written densely, so empty slots at the end survive the
+ *                     in the stream. Written densely, so empty slots at the end survive the
  *                     round-trip - but not canonically: erase() resets a slot without
  *                     shrinking the vector, so a map that once held key 5 writes six slots
  *                     where an equal map built without it writes one.
@@ -50,8 +50,8 @@ namespace ser {
 	/** @brief MapWrapper: base::Map, base::HashMap */
 
 	template<class ContainerType>
-	struct MinWireSize<::base::MapWrapper<ContainerType>> {
-		static constexpr ::std::size_t VALUE = MinWireSize<ContainerType>::VALUE;
+	struct MinSerializedSize<::base::MapWrapper<ContainerType>> {
+		static constexpr ::std::size_t VALUE = MinSerializedSize<ContainerType>::VALUE;
 	};
 
 	/**
@@ -86,9 +86,9 @@ namespace ser {
 	/** @brief VectorMap */
 
 	template<class KEY_T, class DATA_T, bool is_move, bool is_copy>
-	struct MinWireSize<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
+	struct MinSerializedSize<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		static constexpr ::std::size_t VALUE
-			= MinWireSize<::std::vector<::base::Optional<DATA_T>>>::VALUE;
+			= MinSerializedSize<::std::vector<::base::Optional<DATA_T>>>::VALUE;
 	};
 
 	template<class KEY_T, class DATA_T, bool is_move, bool is_copy>
@@ -96,7 +96,7 @@ namespace ser {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			/*
-			 * The key is not on the wire - it is the index - but it is in the hash on
+			 * The key is not in the stream - it is the index - but it is in the hash on
 			 * purpose: two VectorMaps keyed by different strong id types produce
 			 * byte-identical streams, and without this the envelope could not tell them
 			 * apart. is_move and is_copy are left out for the mirror-image reason: they
@@ -114,7 +114,7 @@ namespace ser {
 
 		/**
 		 * @brief Asymmetric, and that is why this is not a visit: element_count is a function of
-		 * the slot vector, so it is recomputed on read rather than read off the wire. Writing it
+		 * the slot vector, so it is recomputed on read rather than read from the stream. Writing it
 		 * would let a corrupt stream disagree with the vector, and then size() and empty() both
 		 * lie.
 		 */
@@ -133,13 +133,13 @@ namespace ser {
 	/** @brief StableHashMap */
 
 	template<class KEY_T, class DATA_T, class HASH_T, ::u64 BLOCK>
-	struct MinWireSize<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	/**
 	 * @brief The same hash as std::map and std::unordered_map, because it is the same format. The
-	 * hash functor and the allocator block size are not on the wire and are not hashed.
+	 * hash functor and the allocator block size are not in the stream and are not hashed.
 	 */
 	template<class KEY_T, class DATA_T, class HASH_T, ::u64 BLOCK>
 	struct Schema<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {

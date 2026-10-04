@@ -53,7 +53,7 @@ namespace ser {
 		::std::uint16_t flags        = 0;
 		::std::uint16_t header_size  = 32;
 
-		static constexpr ::std::size_t WIRE_SIZE = 32;
+		static constexpr ::std::size_t SERIALIZED_SIZE = 32;
 
 		/**
 		 * @brief the magic
@@ -97,7 +97,7 @@ namespace ser {
 			h.setUserMagic(user);
 			h.schema_hash = ::ser::schemaHash<T, Ctx>();
 			h.flags       = ::ser::nativeFlags();
-			h.header_size = static_cast<::std::uint16_t>(WIRE_SIZE);
+			h.header_size = static_cast<::std::uint16_t>(SERIALIZED_SIZE);
 			return h;
 		}
 
@@ -105,7 +105,7 @@ namespace ser {
 	};
 
 	static_assert(
-		sizeof(StreamHeader) == StreamHeader::WIRE_SIZE,
+		sizeof(StreamHeader) == StreamHeader::SERIALIZED_SIZE,
 		"ser: the envelope is a fixed 32 bytes - see the layout note above."
 	);
 	static_assert(
@@ -148,11 +148,11 @@ namespace ser {
 
 		if (!raw.magicOk()) return Errc::BadMagic;
 		if (raw.userMagic() != user_magic) return Errc::BadMagic;
-		if (raw.header_size < StreamHeader::WIRE_SIZE) return Errc::BadMagic;
+		if (raw.header_size < StreamHeader::SERIALIZED_SIZE) return Errc::BadMagic;
 		if (raw.flags != nativeFlags()) return Errc::PlatformMismatch;
 
 		/*
-		 * In u64 throughout, never in size_t: payload_size comes off the wire and a
+		 * In u64 throughout, never in size_t: payload_size comes from the stream and a
 		 * 32-bit reader must not turn 2^32 + 4 into 4 by narrowing it.
 		 */
 		::std::uint64_t total = 0;

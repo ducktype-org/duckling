@@ -29,13 +29,14 @@
 namespace ser {
 
 	template<class A, class B>
-	struct MinWireSize<::std::pair<A, B>> {
-		static constexpr ::std::size_t VALUE = MIN_WIRE_SIZE_V<A> + MIN_WIRE_SIZE_V<B>;
+	struct MinSerializedSize<::std::pair<A, B>> {
+		static constexpr ::std::size_t VALUE = MIN_SERIALIZED_SIZE_V<A> + MIN_SERIALIZED_SIZE_V<B>;
 	};
 
 	template<class... Es>
-	struct MinWireSize<::std::tuple<Es...>> {
-		static constexpr ::std::size_t VALUE = (::std::size_t{ 0 } + ... + MIN_WIRE_SIZE_V<Es>);
+	struct MinSerializedSize<::std::tuple<Es...>> {
+		static constexpr ::std::size_t VALUE
+			= (::std::size_t{ 0 } + ... + MIN_SERIALIZED_SIZE_V<Es>);
 	};
 
 	namespace internal {

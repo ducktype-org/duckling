@@ -28,7 +28,7 @@ namespace ser {
 	 *
 	 * header DEFAULTS TO FALSE: without it a stream loses version, platform and schema
 	 * validation and nothing else, and ser::write then produces exactly the payload - which
-	 * is what makes the wire testable byte for byte.
+	 * is what makes the format testable byte for byte.
 	 *
 	 * user_magic brands the stream as yours: four bytes after "SER\0" that a reader passes
 	 * back in, so somebody else's ser stream is BadMagic rather than reaching your schema

@@ -27,7 +27,7 @@
 #include <vector>
 
 /**
- * @brief The graph on its way to bytes: its wire form is plain data, so `ser::write` is the
+ * @brief The graph on its way to bytes: its serialized form is plain data, so `ser::write` is the
  * whole of it.
  */
 std::vector<std::byte> writeGraph(const query::internal::QueryGraph& graph) {
@@ -975,7 +975,7 @@ private:
 		query::entryPoint<Fibonacci>(Key1{ 10 });
 
 		const auto& graph = query::Context::getState().getGraph();
-		// Serialize the graph - the wire form is plain data, so `ser` needs nothing else
+		// Serialize the graph - the serialized form is plain data, so `ser` needs nothing else
 		auto serialized_data = writeGraph(graph);
 
 		auto deserialized_graph = readGraph(serialized_data);

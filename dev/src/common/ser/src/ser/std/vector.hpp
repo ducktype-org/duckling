@@ -37,14 +37,14 @@
 namespace ser {
 
 	template<class T, class Al>
-	struct MinWireSize<::std::vector<T, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::std::vector<T, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	/**
 	 * @brief The hash is STRUCTURAL, not a sizeof: the ELEMENT type is the whole of the format
 	 * after the length prefix, and without this specialization vector<int> would be
-	 * indistinguishable from vector<float>. The allocator never reaches the wire.
+	 * indistinguishable from vector<float>. The allocator never reaches the stream.
 	 */
 	template<class T, class Al>
 	struct Schema<::std::vector<T, Al>> {

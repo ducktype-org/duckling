@@ -3,7 +3,7 @@
  *
  * The adapters for the base types: <ser/base/all.hpp>. Kept apart from ser_test.cpp
  * because it is a different question - that suite pins the library's own rules, this one
- * pins what each base type does on the wire, which types are refused, and which streams
+ * pins what each base type does in the stream, which types are refused, and which streams
  * are interchangeable with their std counterparts.
  *
  * The refusals cannot be tested from here: a static_assert that fires is a build failure,
@@ -42,7 +42,7 @@
 #include <vector>
 
 
-/** @brief Two ids over the same integer: nothing but their names differs on the wire. */
+/** @brief Two ids over the same integer: nothing but their names differs in the stream. */
 STRONG_TYPEDEF_INT(TestKeyA, usize);
 STRONG_TYPEDEF_INT(TestKeyB, usize);
 
@@ -75,7 +75,7 @@ std::span<const std::byte> view(const ByteBuf& b, usize n) {
 	return { b.data(), n < b.size() ? n : b.size() };
 }
 
-/** @brief Bytes of one object, for the cases that check the wire size. */
+/** @brief Bytes of one object, for the cases that check the serialized size. */
 template<class T>
 ByteBuf bytesOf(const T& x) {
 	ByteBuf buf;
@@ -121,7 +121,7 @@ private:
 	 *
 	 * OkBad is an aggregate over an enum class with bool as its underlying type, so it
 	 * rides the member walk and the byte is validated on the way back. Monostate is an
-	 * empty aggregate and writes nothing at all - a type whose whole wire form is its
+	 * empty aggregate and writes nothing at all - a type whose whole serialized form is its
 	 * absence. Bit256 needs an adapter only because it has constructors.
 	 */
 	void plainValues() {
@@ -130,7 +130,7 @@ private:
 		ASSERT_EQUAL(usize{ 1 }, bytesOf(base::OK).size());
 
 		ASSERT_TRUE(bytesOf(base::Monostate{}).empty());
-		ASSERT_EQUAL(usize{ 0 }, ser::MIN_WIRE_SIZE_V<base::Monostate>);
+		ASSERT_EQUAL(usize{ 0 }, ser::MIN_SERIALIZED_SIZE_V<base::Monostate>);
 
 		const base::Bit256 hash{ 1, 2, 3, 4 };
 		ASSERT_TRUE(roundTrip(hash) == hash);
@@ -167,7 +167,7 @@ private:
 	 * @brief Box is transparent, MBox is an optional.
 	 *
 	 * "Transparent" is the pinned property: a Box<T> writes exactly what a T writes, so
-	 * the wire size is the value's and nothing marks that a pointer was involved.
+	 * the serialized size is the value's and nothing marks that a pointer was involved.
 	 */
 	void owningPointers() {
 		const auto boxed = bytesOf(base::makeBox<i32>(42));
@@ -209,7 +209,7 @@ private:
 		using PlainMBox = base::MBox<i32, TestPlainDeleter<i32>>;
 
 		/*
-		 * The deleter is not on the wire, so an opted-in Box is still transparent and still
+		 * The deleter is not in the stream, so an opted-in Box is still transparent and still
 		 * interchangeable with the default-deleter one.
 		 */
 		const auto bytes = bytesOf(base::makeBox<i32, TestPlainDeleter<i32>>(42));
@@ -280,7 +280,7 @@ private:
 
 		/*
 		 * element_count is recomputed rather than read, so the count and the slots cannot
-		 * disagree: nothing on the wire says how many there are.
+		 * disagree: nothing in the stream says how many there are.
 		 */
 		ASSERT_EQUAL(bytesOf(vec_map).size(), bytesOf(vec_back).size());
 
@@ -342,7 +342,7 @@ private:
 	/**
 	 * @brief DynamicBitset: the capacity, then the words.
 	 *
-	 * The capacity is on the wire because it cannot be recovered from the words - three
+	 * The capacity is in the stream because it cannot be recovered from the words - three
 	 * bits and sixty-four both occupy one word - and the type is not resizable, so its
 	 * size is data.
 	 */
@@ -425,7 +425,7 @@ private:
 		);
 
 		/*
-		 * The KEY of a VectorMap is never on the wire - it is the index - so two maps keyed
+		 * The KEY of a VectorMap is never in the stream - it is the index - so two maps keyed
 		 * by different id types write byte-identical streams, and the hash is the only thing
 		 * that can tell them apart. That is what serializer<VectorMap>'s schema mixes the key
 		 * for, and it only works because a strong typedef says what it wraps: without that

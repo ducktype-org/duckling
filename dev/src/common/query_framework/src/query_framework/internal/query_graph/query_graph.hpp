@@ -258,17 +258,17 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief The graph as the plain data that goes on the wire. This is used for testing only.
+		 * @brief The graph as the plain data that goes in the stream. This is used for testing only.
 		 * @note This DOES NOT optimize anything, it just flattens: every node in the graph
 		 * becomes an entry, and every dependency an index into it.
 		 * In the production flow, the graph is optimized before being serialized, so this is not
-		 * the form that goes on the wire.
+		 * the form that goes in the stream.
 		 * @return The nodes and their adjacency lists.
 		 */
 		[[nodiscard]] ReducedGraphData toReducedGraphData() const;
 
 		/**
-		 * @brief Rebuilds a graph from its wire form.
+		 * @brief Rebuilds a graph from its serialized form.
 		 * @details The mapping must mirror the exact structure that was persisted, i.e. each
 		 * adjacency index references the NodeID at the same position.
 		 * @param reduced_graph The nodes and their adjacency lists.

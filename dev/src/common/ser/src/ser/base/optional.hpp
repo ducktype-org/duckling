@@ -41,7 +41,7 @@
 namespace ser {
 
 	template<class T>
-	struct MinWireSize<::base::Optional<T>> {
+	struct MinSerializedSize<::base::Optional<T>> {
 		static constexpr ::std::size_t VALUE = 1; /* the presence byte, always there */
 	};
 

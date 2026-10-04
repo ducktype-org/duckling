@@ -130,8 +130,8 @@ namespace ser {
 	/** @brief OwningView */
 
 	template<>
-	struct MinWireSize<::base::OwningView> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::base::OwningView> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	/* Shared with SharedView on purpose - see the note at the top. */
@@ -174,8 +174,8 @@ namespace ser {
 	/** @brief SharedView */
 
 	template<>
-	struct MinWireSize<::base::SharedView> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::base::SharedView> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	template<>

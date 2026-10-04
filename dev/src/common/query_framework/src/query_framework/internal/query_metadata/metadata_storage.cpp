@@ -106,7 +106,7 @@ namespace query::internal {
 				    e != ::ser::Errc::Ok)
 					return e;
 
-				// Which of the two shapes an instance takes is NOT on the wire: it is a
+				// Which of the two shapes an instance takes is NOT in the stream: it is a
 				// property of the type, and the type is already there as its index into the
 				// table above. The reader asks the MetadataRegistry the same question.
 				for (const auto& metadata: metadata_vec) {
@@ -133,10 +133,10 @@ namespace query::internal {
 		u64                      node_count = 0;
 		if (const auto e = ar(type_table, strid_table, node_count); e != ::ser::Errc::Ok) return e;
 
-		// Nothing is reserved from a count that came off the wire: every entry below reads
+		// Nothing is reserved from a count that came from the stream: every entry below reads
 		// at least one byte, so a damaged count runs out of stream instead of memory.
 		//
-		// Everything that came off the wire is checked with a CODE rather than an assert,
+		// Everything that came from the stream is checked with a CODE rather than an assert,
 		// the two index bounds included: a damaged cache has to be reportable, and the caller
 		// then compiles without one.
 		for (u64 i = 0; i < node_count; ++i) {

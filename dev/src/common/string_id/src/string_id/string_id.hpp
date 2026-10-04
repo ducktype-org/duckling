@@ -187,12 +187,12 @@ namespace base {
 		}
 
 		// ser
-		// A StrID is a std::string on the wire, so `ser_wire_as` gives it that type's
-		// schema and its MinWireSize for free - no ser::Schema or ser::MinWireSize
+		// A StrID is a std::string in the stream, so `ser_serialize_as` gives it that type's
+		// schema and its MinSerializedSize for free - no ser::Schema or ser::MinSerializedSize
 		// specialization needed.
 
-		/** @brief The wire type: a StrID travels as the string it interns. */
-		using ser_wire_as = std::string;
+		/** @brief The serialized type: a StrID travels as the string it interns. */
+		using ser_serialize_as = std::string;
 
 		/**
 		 * @brief Writes the interned string.

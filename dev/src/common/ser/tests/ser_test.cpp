@@ -62,7 +62,7 @@ enum class Color : u16 { Red = 1, Green = 2, Blue = 65'535 };
 enum Shape { ROUND = 0, SQUARE = 3 }; /* unscoped, and the compiler picks its underlying type */
 
 /**
- * @brief Zero bytes on the wire, whatever the count - which is what makes a container of them the
+ * @brief Zero bytes in the stream, whatever the count - which is what makes a container of them the
  * one place a policy ceiling has to do the bounding.
  */
 struct Nothing {
@@ -346,7 +346,7 @@ namespace geom {
 
 }
 
-/** @brief SER_DESCRIBE names the fields that go on the wire, and skips the rest. */
+/** @brief SER_DESCRIBE names the fields that go in the stream, and skips the rest. */
 struct Described {
 	i32         x = 0;
 	std::string s;
@@ -526,9 +526,9 @@ static_assert(
 );
 
 /* The tag, plus the smallest alternative - and monostate writes nothing at all. */
-static_assert(ser::MIN_WIRE_SIZE_V<std::monostate> == 0);
-static_assert(ser::MIN_WIRE_SIZE_V<Payload> == sizeof(u64));
-static_assert(ser::MIN_WIRE_SIZE_V<Twins> == sizeof(u64) + sizeof(i32));
+static_assert(ser::MIN_SERIALIZED_SIZE_V<std::monostate> == 0);
+static_assert(ser::MIN_SERIALIZED_SIZE_V<Payload> == sizeof(u64));
+static_assert(ser::MIN_SERIALIZED_SIZE_V<Twins> == sizeof(u64) + sizeof(i32));
 
 /*
  * A tag means nothing without the alternative LIST it indexes, so order and count are
@@ -545,7 +545,7 @@ static_assert(
 	ser::schemaHash<std::variant<i32, double>>() != ser::schemaHash<std::tuple<i32, double>>()
 );
 
-/* A cv-qualified alternative is the same wire type as the alternative itself. */
+/* A cv-qualified alternative is the same serialized type as the alternative itself. */
 static_assert(
 	ser::schemaHash<std::variant<const i32, std::string>>()
 	== ser::schemaHash<std::variant<i32, std::string>>()
@@ -659,7 +659,7 @@ struct KeyedByB final {
 
 /*
  * A strong typedef writes exactly its integer, and nothing in the class is walkable - the
- * value is private - so without ser_wire_as it would hash as sizeof + alignof and every
+ * value is private - so without ser_serialize_as it would hash as sizeof + alignof and every
  * one of these would share a number. What has to hold instead: the WIDTH and the SIGN of
  * the wrapped integer are in the hash, and so is the type's own name.
  */
@@ -674,9 +674,9 @@ static_assert(ser::schemaHash<KeyedByA>() != ser::schemaHash<KeyedByB>());
  * as many elements as four bytes each will fit in the stream, where a hooked type with no
  * alias would fall back to one byte and let a corrupt prefix through four times as far.
  */
-static_assert(ser::MIN_WIRE_SIZE_V<TestIdA> == sizeof(std::uint32_t));
-static_assert(ser::MIN_WIRE_SIZE_V<u8> == 1);
-static_assert(ser::MIN_WIRE_SIZE_V<KeyedByA> == sizeof(std::uint32_t) + sizeof(i32));
+static_assert(ser::MIN_SERIALIZED_SIZE_V<TestIdA> == sizeof(std::uint32_t));
+static_assert(ser::MIN_SERIALIZED_SIZE_V<u8> == 1);
+static_assert(ser::MIN_SERIALIZED_SIZE_V<KeyedByA> == sizeof(std::uint32_t) + sizeof(i32));
 
 /**
  * @brief An aggregate that cannot be filled in place (the const field) with a C array field,
@@ -857,7 +857,7 @@ private:
 	/**
 	 * @brief Every rung of the dispatch ladder, and which one ran.
 	 *
-	 * The stamp byte and the wire size together: the byte says which rung handled the
+	 * The stamp byte and the serialized size together: the byte says which rung handled the
 	 * type, the size says that rung wrote nothing else.
 	 */
 	void hookLadder() {
@@ -906,7 +906,7 @@ private:
 	}
 
 	/**
-	 * @brief The tag decides which alternative is on the wire, and nothing else does.
+	 * @brief The tag decides which alternative is in the stream, and nothing else does.
 	 *
 	 * Four properties, and each one is a thing that goes wrong when an implementation
 	 * takes the obvious shortcut: monostate costs no bytes, the tag beats overload
@@ -1017,7 +1017,7 @@ private:
 		ByteBuf framed;
 		ASSERT_TRUE(ser::write(plain, tree).has_value());
 		ASSERT_TRUE(ser::write(framed, tree, { .header = true, .user_magic = MAGIC }).has_value());
-		ASSERT_EQUAL(plain.size() + ser::StreamHeader::WIRE_SIZE, framed.size());
+		ASSERT_EQUAL(plain.size() + ser::StreamHeader::SERIALIZED_SIZE, framed.size());
 
 		const auto peeked = ser::peekHeader(view(framed), MAGIC);
 		ASSERT_TRUE(peeked.has_value());
@@ -1068,7 +1068,7 @@ private:
 
 		/**
 		 * @brief A bool holding anything but 0 or 1 is undefined behaviour, so the object
-		 * representation never reaches the wire and what comes back is validated.
+		 * representation never reaches the stream and what comes back is validated.
 		 */
 		ByteBuf flag;
 		ASSERT_TRUE(ser::write(flag, true).has_value());
@@ -1101,8 +1101,8 @@ private:
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<std::string>(view(lying))));
 
 		/**
-		 * @brief No ceiling is involved for an element that has bytes on the wire, and that is
-		 * deliberate: n * MIN_WIRE_SIZE_V<E> bytes have to be there, which bounds the count
+		 * @brief No ceiling is involved for an element that has bytes in the stream, and that is
+		 * deliberate: n * MIN_SERIALIZED_SIZE_V<E> bytes have to be there, which bounds the count
 		 * by the input itself and lets a legitimately huge container read.
 		 */
 		ByteBuf absurd;
@@ -1235,7 +1235,7 @@ private:
 
 		/**
 		 * @brief A rename is not a format change, and that is the whole reason field names stay
-		 * out of the wire hash: the C++23 and C++26 backends must agree on it, and only
+		 * out of the schema hash: the C++23 and C++26 backends must agree on it, and only
 		 * one of them knows the names. debugHash is where they go.
 		 */
 		constexpr u64 DESCRIBED_SCHEMA = ser::schemaHash<Described>();
@@ -1251,9 +1251,9 @@ private:
 		 * stands between a corrupt length prefix and an allocation.
 		 */
 		static_assert(
-			ser::MIN_WIRE_SIZE_V<Leaf> >= sizeof(i32) + sizeof(double) + 1 + sizeof(u16) + 4
+			ser::MIN_SERIALIZED_SIZE_V<Leaf> >= sizeof(i32) + sizeof(double) + 1 + sizeof(u16) + 4
 		);
-		static_assert(ser::MIN_WIRE_SIZE_V<std::vector<Leaf>> >= sizeof(u64));
+		static_assert(ser::MIN_SERIALIZED_SIZE_V<std::vector<Leaf>> >= sizeof(u64));
 	}
 
 	/**
@@ -1261,7 +1261,7 @@ private:
 	 *
 	 * The hash is the interesting half and it is pinned by the static_asserts above this
 	 * class - a back-reference is a compile-time thing. What runs here is the other half:
-	 * the same nesting really does survive the wire, and the depth guard is what stops a
+	 * the same nesting really does survive serialization, and the depth guard is what stops a
 	 * stream that claims more nesting than the reader will do.
 	 */
 	void recursiveTypes() {
@@ -1389,7 +1389,7 @@ private:
 		static_assert(
 			ser::schemaHash<std::array<u32, 3>>() != ser::schemaHash<std::array<u32, 4>>()
 		);
-		static_assert(ser::MIN_WIRE_SIZE_V<CArray> == 3 * sizeof(u32));
+		static_assert(ser::MIN_SERIALIZED_SIZE_V<CArray> == 3 * sizeof(u32));
 
 		ByteBuf from_std;
 		ASSERT_TRUE(ser::write(from_std, std::array<u32, 3>{ 1, 2, 3 }).has_value());
@@ -1424,12 +1424,14 @@ private:
 
 	/** @brief Writes `sample`, checks which rung produced the bytes, and reads it back. */
 	template<uchar M, class T>
-	void expectRung(const T& sample, usize wire_size, std::string_view what) {
+	void expectRung(const T& sample, usize serialized_size, std::string_view what) {
 		ByteBuf buf;
 		assertTrue(ser::write(buf, sample).has_value(), base::strConcat("write failed: ", what));
 		assertTrue(
-			buf.size() == wire_size,
-			base::strConcat("wrong wire size for ", what, ": ", buf.size(), " != ", wire_size)
+			buf.size() == serialized_size,
+			base::strConcat(
+				"wrong serialized size for ", what, ": ", buf.size(), " != ", serialized_size
+			)
 		);
 		assertTrue(buf[0] == std::byte{ M }, base::strConcat("a different rung handled ", what));
 

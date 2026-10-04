@@ -6,7 +6,7 @@
  * through dispatch - so the stream is the same on a big-endian machine as on a little-
  * endian one, and a bitset written by one reads back on the other.
  *
- * The capacity is on the wire because it is not recoverable from the words: a bitset of 3
+ * The capacity is in the stream because it is not recoverable from the words: a bitset of 3
  * bits and one of 64 both occupy exactly one word, and they are not the same object - the
  * type is not resizable, so its size is data.
  *
@@ -46,13 +46,13 @@ namespace ser {
 
 		/**
 		 * @brief The checks readLength makes, redone for a count of BITS. readLength cannot do this
-		 * one: its bound is n * MIN_WIRE_SIZE_V<E> bytes, and a bit costs an eighth of a byte,
-		 * so it would refuse every bitset wider than the stream holding it. The order matters
+		 * one: its bound is n * MIN_SERIALIZED_SIZE_V<E> bytes, and a bit costs an eighth of a
+		 * byte, so it would refuse every bitset wider than the stream holding it. The order matters
 		 * for the same reason as there - each check makes the next one safe to perform.
 		 */
 		constexpr Errc readBitCount(Reader auto& ar, ::std::size_t& out) {
-			WireSizeType bits = 0;
-			if (const auto c = dispatchRead<WireSizeType>(ar, bits); c != Errc::Ok) return c;
+			LengthType bits = 0;
+			if (const auto c = dispatchRead<LengthType>(ar, bits); c != Errc::Ok) return c;
 			if (!::base::fitsIn<::std::size_t>(bits)) return Errc::SizeOverflow;
 
 			/*
@@ -75,8 +75,8 @@ namespace ser {
 	} /* namespace internal */
 
 	template<>
-	struct MinWireSize<::base::DynamicBitset> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::base::DynamicBitset> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	template<>
@@ -93,8 +93,8 @@ namespace ser {
 	struct Serializer<::base::DynamicBitset> {
 		static constexpr Errc write(Writer auto& ar, const ::base::DynamicBitset& b) {
 			const ::std::size_t bits = b.size();
-			if (const auto c = internal::dispatchWrite<internal::WireSizeType>(
-					ar, static_cast<internal::WireSizeType>(bits)
+			if (const auto c = internal::dispatchWrite<internal::LengthType>(
+					ar, static_cast<internal::LengthType>(bits)
 				);
 			    c != Errc::Ok)
 				return c;

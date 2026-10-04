@@ -20,7 +20,7 @@ Contents
 * [The Envelope](#the-envelope)
 * [Schema Hash](#schema-hash)
 * [Testing Your Format](#testing-your-format)
-* [The Wire Format At A Glance](#the-wire-format-at-a-glance)
+* [The Serialized Format At A Glance](#the-serialized-format-at-a-glance)
 * [Limits And Knobs](#limits-and-knobs)
 * [C++23 Today, C++26 Later](#c23-today-c26-later)
 * [Compilers](#compilers)
@@ -153,13 +153,13 @@ Error Codes
 
 What Works With No Code At All
 ------------------------------
-* **Aggregates** with public fields, nested to any depth. Fields go on the wire in
+* **Aggregates** with public fields, nested to any depth. Fields go in the stream in
   declaration order.
 * **Scalars**: every arithmetic type and `std::byte`, in native bytes. `bool` is the
   exception - it goes out as an explicit `0`/`1` byte and comes back validated, because a
   `bool` holding anything else is undefined behaviour, not a wrong value. `long double` is
-  refused: it has more bytes than it has value, so the padding between them would go on the
-  wire as it happened to be and the same number would not give the same stream twice.
+  refused: it has more bytes than it has value, so the padding between them would go into the
+  stream as it happened to be and the same number would not give the same stream twice.
 * **Enums**, scoped and unscoped, as their underlying type. Changing the underlying type
   changes the format; nothing validates the enumerator list.
 
@@ -182,7 +182,7 @@ What Works With No Code At All
   };
   ```
 * **Fixed arrays**: `T[N]` and `std::array<T, N>`. The length is in the type, so nothing
-  about it goes on the wire.
+  about it goes in the stream.
 * **Strong integer typedefs**: `STRONG_TYPEDEF_INT` and `STRONG_TYPEDEF_INT_DIMENSIONAL`
   declare their own hook, so a strong typedef - and any struct with a field of one -
   round-trips with nothing written. (`STRONG_TYPEDEF_ID` does not: its value is private
@@ -210,7 +210,7 @@ first two hold state a stream cannot describe, and a flag type's mask is private
 `Box` and `MBox` are the plain ones only. Reading either **allocates**, and the one
 allocation ser has is `new T` with a default-constructed deleter - so a custom deleter (an
 arena, a pool, `malloc`, a C API) is refused: the pairing would be wrong, and the state the
-deleter needs to find its way home is not on the wire. If yours is stateless and really does
+deleter needs to find its way home is not in the stream. If yours is stateless and really does
 plain `delete`, say so in one line:
 
 ```cpp
@@ -224,7 +224,7 @@ A refusal is only visible if you included the header. Leave `<ser/base/all.hpp>`
 struct with a `Ref` field gets the generic "looks pointer-like" message instead of the one
 that tells you what to do.
 
-Some pairs are deliberately **interchangeable on the wire**: a `Box<T>` stream reads back
+Some pairs are deliberately **interchangeable in the stream**: a `Box<T>` stream reads back
 into a `T`, a `std::vector<T>` into a `StableVector<T>`, a `std::map` into a
 `base::Map` or a `StableHashMap`, a `std::optional` into a `base::Optional`, an
 `OwningView` into a `SharedView`. Same bytes, same schema hash - the storage is not part of
@@ -360,7 +360,7 @@ object and a reference can never be rebound. Hold the value, or leave the field 
 **A `const` field or a bit-field** cannot be written through a reference, so such a type is
 **built** rather than filled. As a whole object it reads fine (`ser::read<T>` builds it);
 as a *field* of an object being filled it needs the enclosing type to have a `serMake`, or
-`SER_DESCRIBE_MAKE`. A bit-field widens to its declared type on the wire.
+`SER_DESCRIBE_MAKE`. A bit-field widens to its declared type in the stream.
 
 **More than 64 members** is past the limit of the structured-bindings ladder. Split the
 type, or give it a `serVisit`.
@@ -432,8 +432,8 @@ zero - there is no checksum yet.
 Schema Hash
 -----------
 `ser::schemaHash<T>()` is `consteval` and returns one 64-bit number meaning "this is the
-format I write". It hashes the **wire**, field by field: padding and alignment stay out, so
-a layout change does not invalidate a stream that is still readable.
+format I write". It hashes the **serialized form**, field by field: padding and alignment
+stay out, so a layout change does not invalidate a stream that is still readable.
 
 The number is **not portable**: it also covers the byte order and the pointer and length
 widths, because its only job is to reject a stream this build cannot read. In a module that
@@ -454,9 +454,9 @@ A type whose format ser cannot see - a hand-written `serWrite`, a class with pri
 members - hashes as `"hook"` plus `sizeof` and `alignof`, which two unrelated types can
 share. Three ways to say what it really writes, in the order they are consulted:
 `ser::Config<T>::schema_id`, a `ser::Schema<T>` specialization, or an in-class
-`using ser_wire_as = W;` (with an optional `ser_schema_tag`). `ser_wire_as` says "the wire is this type";
-`ser_schema_tag` is a discriminator mixed into the hash, so two strong typedefs over one
-integer do not collide.
+`using ser_serialize_as = W;` (with an optional `ser_schema_tag`). `ser_serialize_as` says
+"serialize me as `W`"; `ser_schema_tag` is a discriminator mixed into the hash, so two strong
+typedefs over one integer do not collide.
 
 Field names are absent from `schemaHash` on purpose. They go into `ser::debugHash<T>()`,
 which is diagnostics only: equal `schemaHash` with different `debugHash` is exactly
@@ -478,7 +478,7 @@ a suggestion. The same goes for a type that pairs `serVisit` with `serMake`: tha
 allowed - it is how a type that cannot be filled in place is read - but the two are separate
 descriptions of one format, and nothing but a round-trip can tell you they still agree.
 
-The Wire Format At A Glance
+The Serialized Format At A Glance
 ---------------------------
 No padding, no alignment, no field names, no type tags. Nothing is packed and nothing is
 compressed.

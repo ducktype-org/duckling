@@ -43,8 +43,8 @@
 namespace ser {
 
 	template<class Data>
-	struct MinWireSize<::base::StableVector<Data>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::base::StableVector<Data>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	/**

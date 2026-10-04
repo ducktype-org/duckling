@@ -174,10 +174,10 @@ void memberCountExample() {
 }
 
 /**
- * @brief ═══ 4. SER_DESCRIBE: naming the fields that go on the wire ═══════════════════════
+ * @brief ═══ 4. SER_DESCRIBE: naming the fields that go in the stream ═══════════════════════
  * Two reasons here, either enough alone: the fields are PRIVATE, which the walk cannot
  * probe (SER_FRIEND is what lets ser look), and `length` is derived from `text`, so it has
- * no business on the wire. A field left out of the list comes back default-built.
+ * no business in the stream. A field left out of the list comes back default-built.
  */
 
 class Message final {
@@ -194,7 +194,7 @@ SER_FRIEND /* = friend struct ser::Access; - without it the macro below is invis
 	private: std::string text;
 	usize                length = 0;
 
-	SER_DESCRIBE(text) /* the wire is exactly this one field */
+	SER_DESCRIBE(text) /* the serialized form is exactly this one field */
 };
 
 void describeExample() {
@@ -578,13 +578,13 @@ struct CoordsRenamed final {
 };
 
 /**
- * @brief schemaHash means "this is the format I write", and it hashes the WIRE - so a rename is
- * not a format change, and only the diagnostics hash sees it. Pin the relations you rely
+ * @brief schemaHash means "this is the format I write", and it hashes the SERIALIZED FORM - so a
+ * rename is not a format change, and only the diagnostics hash sees it. Pin the relations you rely
  * on; the number itself is per toolchain and not portable.
  */
-constexpr bool SAME_WIRE   = ser::schemaHash<Coords>() == ser::schemaHash<CoordsRenamed>();
+constexpr bool SAME_FORMAT = ser::schemaHash<Coords>() == ser::schemaHash<CoordsRenamed>();
 constexpr bool RENAME_SEEN = ser::debugHash<Coords>() != ser::debugHash<CoordsRenamed>();
-static_assert(SAME_WIRE, "the two types have to agree on the format");
+static_assert(SAME_FORMAT, "the two types have to agree on the format");
 static_assert(RENAME_SEEN, "and debugHash is what notices a renamed field");
 static_assert(ser::schemaHash<Point>() != ser::schemaHash<Person>());
 
@@ -615,7 +615,7 @@ static_assert(REFUSED_TINY, "and a fixed buffer that cannot hold the object says
 
 void compileTimeExample() {
 	std::println("\n── 14. at compile time, all of it decided during the build ───────────────");
-	std::println("  schemaHash survives a rename:     {}", SAME_WIRE);
+	std::println("  schemaHash survives a rename:     {}", SAME_FORMAT);
 	std::println("  debugHash notices the rename:     {}", RENAME_SEEN);
 	std::println("  round trip in a constant expr:    {}", ROUND_TRIPPED);
 	std::println("  a 12 B object into a 4 B buffer:  {}", REFUSED_TINY ? "BufferFull" : "??");

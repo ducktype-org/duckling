@@ -8,9 +8,9 @@
  * plausible garbage. It takes Ctx because the pools registered in a context are part of
  * the format.
  *
- * It hashes the WIRE, one field at a time: sizeof and alignof are never mixed for a type
- * whose fields are walked, because the wire has neither padding nor alignment. Same rule
- * as bool, whose wire size is 1 and never sizeof(bool).
+ * It hashes the SERIALIZED FORM, one field at a time: sizeof and alignof are never mixed for a type
+ * whose fields are walked, because the stream has neither padding nor alignment. Same rule
+ * as bool, whose serialized size is 1 and never sizeof(bool).
  *
  * IT IS NOT A PORTABLE NUMBER, AND THAT IS THE POINT. schemaRoot() mixes nativeFlags(), so
  * the question it answers is "can THIS program read that stream" rather than "do two
@@ -19,13 +19,13 @@
  *
  * What is visible, and how much:
  *
- *   scalar / enum / fixed array   the wire kind and width, recursively
+ *   scalar / enum / fixed array   the serialized kind and width, recursively
  *   a walked aggregate            the field count and every field's schema
  *   SER_DESCRIBE / _MAKE          the DESCRIBED field list - which is the format those
  *                                 macros emit, so a described aggregate and the same
  *                                 aggregate walked automatically hash IDENTICALLY
  *   std adapters                  a structural token per container (ser::Schema<T>)
- *   ser_wire_as (+ _tag)         the wire type it names, behind an optional token - the
+ *   ser_serialize_as (+ _tag)         the serialized type it names, behind an optional token - the
  *                                 in-class form of the same thing, for a type that cannot
  *                                 reach into namespace ser
  *   a hand-written hook           "hook", sizeof, alignof
@@ -34,7 +34,7 @@
  * A hooked type is the weak spot: sizeof and alignof are all there is, so two unrelated
  * hooked types of the same size and alignment share a hash. Three ways out, in the order
  * schemaOf consults them - ser::Config<T>::schema_id, a ser::Schema<T> specialization, or
- * an in-class `ser_wire_as` alias (what every STRONG_TYPEDEF_INT uses).
+ * an in-class `ser_serialize_as` alias (what every STRONG_TYPEDEF_INT uses).
  *
  * NO FIELD NAMES: the ladder does not know them, and byte identity with a reflection-based
  * implementation outranks a stronger hash. Names go into debugHash(), which never reaches
@@ -84,7 +84,7 @@ namespace ser {
 	 * Mode and Seen are passed straight through and never inspected. No token is injected
 	 * before the call, so a serializer that writes exactly a std::uint32_t can hash
 	 * identically to the scalar it is. A type that cannot reach into namespace ser says the
-	 * same thing in-class with `using ser_wire_as = W;` - see ser::Access.
+	 * same thing in-class with `using ser_serialize_as = W;` - see ser::Access.
 	 */
 	template<class T>
 	struct Schema {};
@@ -191,15 +191,15 @@ namespace ser {
 
 		/*
 		 * the leaves
-		 * The token is the wire KIND and the wire WIDTH, never the C++ type's name. So
+		 * The token is the serialized KIND and the serialized WIDTH, never the C++ type's name. So
 		 * int64_t hashes the same whether it spells itself `long` or `long long`, while
 		 * long double does not hash as double - that really is a different number of bytes.
 		 * char, wchar_t and the char*_t family share the "char" kind, because whether plain
-		 * char is signed is a platform property that never reaches the wire.
+		 * char is signed is a platform property that never reaches the stream.
 		 */
 		static_assert(
-			builtin::SCALAR_WIRE_SIZE<bool> == 1,
-			"ser: bool is one byte on the wire and schema_hash must hash that 1, "
+			builtin::SCALAR_SERIALIZED_SIZE<bool> == 1,
+			"ser: bool is one byte in the stream and schema_hash must hash that 1, "
 			"not sizeof(bool) - otherwise two platforms agreeing on the format "
 			"disagree on the hash."
 		);
@@ -207,7 +207,7 @@ namespace ser {
 		template<class T>
 		[[nodiscard]] consteval ::std::uint64_t schemaScalar(::std::uint64_t h) {
 			using U              = ::std::remove_cv_t<T>;
-			constexpr auto WIDTH = static_cast<::std::uint64_t>(builtin::SCALAR_WIRE_SIZE<U>);
+			constexpr auto WIDTH = static_cast<::std::uint64_t>(builtin::SCALAR_SERIALIZED_SIZE<U>);
 
 			if constexpr (::std::is_same_v<U, bool>)
 				return schemaNumber(schemaText(h, "bool"), WIDTH);
@@ -247,7 +247,7 @@ namespace ser {
 		[[nodiscard]] consteval ::std::uint64_t schemaAs(::std::uint64_t h) {
 			using U = ::std::remove_cv_t<T>;
 			if constexpr (Access::HAS_SCHEMA_TAG_V<U>) h = schemaText(h, Access::schemaTag<U>());
-			return schemaOf<::std::remove_cv_t<Access::WireAsT<U>>, Mode, Seen>(h);
+			return schemaOf<::std::remove_cv_t<Access::SerializeAsT<U>>, Mode, Seen>(h);
 		}
 
 		/** @brief Diagnostics only: debugHash mixes the field name when SER_DESCRIBE left one. */
@@ -332,7 +332,7 @@ namespace ser {
 					);
 				else if constexpr (HAS_SCHEMA_MIX_V<U, Mode, Next>)
 					return Schema<U>::template mix<Mode, Next>(h);
-				else if constexpr (Access::HAS_WIRE_AS_V<U>)
+				else if constexpr (Access::HAS_SERIALIZE_AS_V<U>)
 					return schemaAs<U, Mode, Next>(h);
 				else if constexpr (HAS_CUSTOM_SERIALIZER_V<U, Ar>)
 					if constexpr (Access::HAS_DESCRIBED_V<U> && !TRAIT_LEVEL_HOOK_V<U, Ar>)

@@ -3,7 +3,7 @@
  * @brief DECLARE_METADATA macro for easy metadata type declaration.
  *
  * This file provides macros for declaring metadata types:
- * - DECLARE_METADATA: for any type the `ser` module can put on the wire, from a u64 up
+ * - DECLARE_METADATA: for any type the `ser` module can put in the stream, from a u64 up
  * - DECLARE_METADATA_STRID: for StrID values (optimized string table serialization)
  *
  * The bytes come from the `ser` module, so the wrapped type needs no serialization code of
@@ -107,7 +107,7 @@ namespace query {
 
 #define INTERNAL_DECLARE_METADATA(Metadata, type)                                                   \
 	static_assert(                                                                                  \
-		::ser::MIN_WIRE_SIZE_V<type> > 0,                                                           \
+		::ser::MIN_SERIALIZED_SIZE_V<type> > 0,                                                     \
 		"query: this metadata type writes NO bytes, and MetadataStorage relies on "                 \
 		"every entry reading at least one byte"                                                     \
 	);                                                                                              \

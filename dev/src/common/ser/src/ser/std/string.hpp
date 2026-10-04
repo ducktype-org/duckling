@@ -2,7 +2,7 @@
 
 /*
  * std::string and friends
- * Length prefix, then the characters. Nothing about the encoding is on the wire and no
+ * Length prefix, then the characters. Nothing about the encoding is in the stream and no
  * terminator is written: a string is `n` and `n` characters, so an embedded '\0' is
  * ordinary data and survives the round-trip.
  *
@@ -39,12 +39,12 @@
 namespace ser {
 
 	template<class Ch, class Tr, class Al>
-	struct MinWireSize<::std::basic_string<Ch, Tr, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::std::basic_string<Ch, Tr, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	/**
-	 * @brief The character type is the format; the traits and the allocator are not on the wire
+	 * @brief The character type is the format; the traits and the allocator are not in the stream
 	 * and are not hashed. See the note on ser::Schema in hash.hpp for why an adapter says
 	 * this itself instead of letting a sizeof stand in for it.
 	 */

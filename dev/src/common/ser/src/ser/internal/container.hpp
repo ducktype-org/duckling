@@ -7,7 +7,7 @@
  * code and an out-of-memory.
  *
  *   1. n does not fit in size_t                -> SizeOverflow  (the cast below)
- *   2. n * MIN_WIRE_SIZE_V<E> overflows        -> SizeOverflow  (the multiply itself)
+ *   2. n * MIN_SERIALIZED_SIZE_V<E> overflows        -> SizeOverflow  (the multiply itself)
  *   3. that many bytes are not there           -> Truncated     (what the stream can hold)
  *
  * Only then may a caller reserve or resize.
@@ -27,26 +27,26 @@
 
 namespace ser::internal {
 
-	using WireSizeType = ConfigGlobal::SizeType;
+	using LengthType = ConfigGlobal::SizeType;
 
 	template<class E, Writer Ar>
 	constexpr Errc writeLength(Ar& ar, ::std::size_t n) {
-		if constexpr (MIN_WIRE_SIZE_V<E> == 0) {
+		if constexpr (MIN_SERIALIZED_SIZE_V<E> == 0) {
 			if (n > ConfigGlobal::MAX_ZERO_SIZE_ELEMENTS) return Errc::MessageSize;
 		}
-		return dispatchWrite<WireSizeType>(ar, static_cast<WireSizeType>(n));
+		return dispatchWrite<LengthType>(ar, static_cast<LengthType>(n));
 	}
 
 	template<class E, Reader Ar>
 	constexpr Errc readLength(Ar& ar, ::std::size_t& out) {
-		WireSizeType n = 0;
-		if (const auto c = dispatchRead<WireSizeType>(ar, n); c != Errc::Ok) return c;
+		LengthType n = 0;
+		if (const auto c = dispatchRead<LengthType>(ar, n); c != Errc::Ok) return c;
 
 		if (!::base::fitsIn<::std::size_t>(n)) return Errc::SizeOverflow;
 
-		if constexpr (MIN_WIRE_SIZE_V<E> > 0) {
+		if constexpr (MIN_SERIALIZED_SIZE_V<E> > 0) {
 			::std::size_t lower_bound = 0;
-			if (::base::mulOvf(static_cast<::std::size_t>(n), MIN_WIRE_SIZE_V<E>, lower_bound))
+			if (::base::mulOvf(static_cast<::std::size_t>(n), MIN_SERIALIZED_SIZE_V<E>, lower_bound))
 				return Errc::SizeOverflow;
 			if (lower_bound > ar.avail()) return Errc::Truncated;
 		} else {

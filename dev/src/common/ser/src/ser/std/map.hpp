@@ -3,8 +3,8 @@
 /*
  * std::map, std::unordered_map, std::set, std::unordered_set
  * Length prefix, then the elements: for a map each key followed by its value, for a set
- * each key. The container's own structure - buckets, tree shape, load factor - is not on
- * the wire and is rebuilt by the reader, which is why a map written by one implementation
+ * each key. The container's own structure - buckets, tree shape, load factor - is not in
+ * the stream and is rebuilt by the reader, which is why a map written by one implementation
  * reads back on another.
  *
  * THE KEY AND THE VALUE ARE READ AS TWO STATEMENTS, never as two arguments of one call.
@@ -110,9 +110,9 @@ namespace ser {
 	/*
 	 * the schema of a keyed container
 	 * std::map and std::unordered_map hash IDENTICALLY, and so do the two sets. They have
-	 * to: the wire format is the same length prefix followed by the same elements, and a
+	 * to: the serialized format is the same length prefix followed by the same elements, and a
 	 * stream written from one really does read back into the other - the comparator, the
-	 * hash and the bucket count are not on the wire. Hashing them apart would refuse a
+	 * hash and the bucket count are not in the stream. Hashing them apart would refuse a
 	 * stream that is perfectly readable.
 	 *
 	 * What is NOT the same is ordering: a std::map stream is sorted, an unordered one is
@@ -173,23 +173,23 @@ namespace ser {
 	 * allocating.
 	 */
 	template<class K, class V, class C, class Al>
-	struct MinWireSize<::std::map<K, V, C, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::std::map<K, V, C, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	template<class K, class V, class H, class E, class Al>
-	struct MinWireSize<::std::unordered_map<K, V, H, E, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::std::unordered_map<K, V, H, E, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	template<class K, class C, class Al>
-	struct MinWireSize<::std::set<K, C, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::std::set<K, C, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	template<class K, class H, class E, class Al>
-	struct MinWireSize<::std::unordered_set<K, H, E, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
+	struct MinSerializedSize<::std::unordered_set<K, H, E, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::LengthType);
 	};
 
 	template<class K, class V, class C, class Al>
