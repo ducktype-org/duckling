@@ -311,7 +311,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	linking_options.native_linker_path = parsing_result.getValue<std::string>("linker");
 
-	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
+	if (auto lib_path = parsing_result.getValue<std::vector<std::string>>("additional-link-options"))
 		linking_options.native_additional_link_options = lib_path.value();
 
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
@@ -768,13 +768,11 @@ clah::Clah getClahForMain() {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_llvm.exe");
 						auto linking_options = getLinkingOptionsFromClah(options);
-						linking_options.native_additional_link_options = base::strConcat(
-							linking_options.native_additional_link_options.copyValueOr(""),
-							libraries_to_link | std::views::transform([](fs::FilePath& path) {
-								return path.native();
-							}) | base::rangesIntersperse(std::string(", "))
-								| std::views::join | std::ranges::to<std::string>()
-						);
+						if (!linking_options.native_additional_link_options)
+							linking_options.native_additional_link_options
+								= std::vector<std::string>{};
+						for (const auto& lib: libraries_to_link)
+							linking_options.native_additional_link_options->push_back(lib.native());
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetLLVMExecutable{

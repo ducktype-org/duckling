@@ -171,12 +171,16 @@ namespace compiler::driver {
 			};
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
-				if (linking_json.is_string()) {
-					auto options_value = js::getStringValue(
-						linking_json, "linking_options", "linking_options must be a string", report
+				if (linking_json.is_array()) {
+					auto options_value = js::getArrayOfStrings(
+						linking_json,
+						"linking_options",
+						"linking_options must be an array",
+						"linking_options must be an array of strings",
+						report
 					);
 					if (options_value)
-						linking_options.additional_link_options = options_value->str();
+						linking_options.additional_link_options = std::move(*options_value);
 					else
 						had_error = true;
 				} else {
@@ -211,14 +215,16 @@ namespace compiler::driver {
 						}
 
 						if (linking_obj->contains("additional_link_options")) {
-							auto additional_options = js::getStringIfPresent(
+							auto additional_options = js::getArrayOfStrings(
 								*linking_obj,
-								"additional_link_options",
-								"linking_options.additional_link_options must be a string",
+								"additional_linking_options",
+								"additional_linking_options must be an array",
+								"additional_linking_options must be an array of strings",
 								report
 							);
 							if (additional_options)
-								linking_options.additional_link_options = additional_options->str();
+								linking_options.additional_link_options
+									= std::move(*additional_options);
 							else
 								had_error = true;
 						}
@@ -393,7 +399,7 @@ namespace compiler::driver {
 		return {
 			.linker_path = linking_options.native_linker_path,
 			.additional_link_options
-			= linking_options.native_additional_link_options.copyValueOr(""),
+			= linking_options.native_additional_link_options.copyValueOr(std::vector<std::string>{}),
 			.link_c_standard_library = linking_options.native_link_c_standard_lib,
 			.stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
 		};

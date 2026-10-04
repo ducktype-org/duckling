@@ -106,6 +106,16 @@ namespace js {
 		const DiagnosticLogger& report
 	);
 
+	/** @brief Extract an array field and reinterpret is as an array of strings; report an error on
+	 * failure. */
+	base::Optional<std::vector<std::string>> getArrayOfStrings(
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        key_error_message,
+		std::string_view        field_error_message,
+		const DiagnosticLogger& report
+	);
+
 	/** @brief Extract an object field; report a warning on failure. */
 	base::Optional<nlohmann::json> getObjectWarning(
 		const nlohmann::json&   json,

@@ -163,6 +163,32 @@ namespace js {
 		return toOpt(std::move(result));
 	}
 
+	base::Optional<std::vector<std::string>> getArrayOfStrings(
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        key_error_message,
+		std::string_view        field_error_message,
+		const DiagnosticLogger& report
+	) {
+		auto array = extractArray(json, key);
+		if (!array.has_value()) {
+			reportFieldError(report, "array", key, key_error_message, true);
+			return {};
+		}
+		std::vector<std::string> result{};
+		result.reserve(array->size());
+		bool encountered_errors = false;
+		for (const auto& json: *array) {
+			auto maybe_string = getString(json, key, field_error_message, report);
+			if (!maybe_string.has_value())
+				encountered_errors = true;
+			else
+				result.push_back(maybe_string->str());
+		}
+		if (encountered_errors) return {};
+		return result;
+	}
+
 	base::Optional<nlohmann::json> getObjectWarning(
 		const nlohmann::json&   json,
 		std::string_view        key,
