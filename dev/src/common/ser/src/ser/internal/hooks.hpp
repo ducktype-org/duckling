@@ -10,10 +10,10 @@ namespace ser::internal {
 
 	/*
 	 * the shape of every hook question
-	 * A hook can live in three places (the order is on ser::serializer in serializer.hpp), and
+	 * A hook can live in three places (the order is on ser::Serializer in serializer.hpp), and
 	 * each place is asked the same questions about the same four forms. Only the call
 	 * differs, so each place is a tag struct with one probe per form - access::trait_hooks
-	 * and access::member_hooks in access.hpp, adl_hooks in internal/adl.hpp - and every
+	 * and access::member_hooks in access.hpp, AdlHooks in internal/adl.hpp - and every
 	 * question below is written once and asked with the tag passed as `L`.
 	 *
 	 * A probe is declared, never defined, and has a trailing return type, so a missing hook

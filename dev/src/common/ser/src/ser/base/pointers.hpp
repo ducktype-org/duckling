@@ -82,7 +82,7 @@ namespace ser {
 				"  An arena or a pool?   serialize the VALUE, and put it back where it "
 				"belongs yourself after reading\n"
 				"  Stateless, and really plain `delete`?  opt in with one line:\n"
-				"    template<> struct ser::box_deleter_is_new_delete<MyDeleter> { static "
+				"    template<> struct ser::BoxDeleterIsNewDelete<MyDeleter> { static "
 				"constexpr bool VALUE = true; };"
 			);
 			return Errc::InvalidValue;
@@ -111,12 +111,12 @@ namespace ser {
 	 * else is refused unless you opt in with one line:
 	 *
 	 *     template<>
-	 *     struct ser::box_deleter_is_new_delete<MyDeleter> {
+	 *     struct ser::BoxDeleterIsNewDelete<MyDeleter> {
 	 *         static constexpr bool VALUE = true;
 	 *     };
 	 */
 	template<class D>
-	struct box_deleter_is_new_delete final {
+	struct BoxDeleterIsNewDelete final {
 		static constexpr bool VALUE = false;
 	};
 
@@ -125,23 +125,23 @@ namespace ser {
 	 * is exactly what makeBox's `new` pairs with.
 	 */
 	template<class U>
-	struct box_deleter_is_new_delete<::base::DefaultBoxPtrDeleter<U>> {
+	struct BoxDeleterIsNewDelete<::base::DefaultBoxPtrDeleter<U>> {
 		static constexpr bool VALUE = true;
 	};
 
 	template<class D>
-	inline constexpr bool BOX_DELETER_IS_NEW_DELETE_V = box_deleter_is_new_delete<D>::VALUE;
+	inline constexpr bool BOX_DELETER_IS_NEW_DELETE_V = BoxDeleterIsNewDelete<D>::VALUE;
 
 	/** @brief Box */
 
 	template<class T, class D>
-	struct min_wire_size<::base::Box<T, D>> {
-		static constexpr ::std::size_t VALUE = min_wire_size<T>::VALUE;
+	struct MinWireSize<::base::Box<T, D>> {
+		static constexpr ::std::size_t VALUE = MinWireSize<T>::VALUE;
 	};
 
 	/** @brief Transparent on purpose - the pointer is storage, not format. See the note above. */
 	template<class T, class D>
-	struct schema<::base::Box<T, D>> {
+	struct Schema<::base::Box<T, D>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<T, Mode, Seen>(h);
@@ -149,8 +149,8 @@ namespace ser {
 	};
 
 	template<class T, class D>
-	struct serializer<::base::Box<T, D>> {
-		using box_type = ::base::Box<T, D>;
+	struct Serializer<::base::Box<T, D>> {
+		using BoxType = ::base::Box<T, D>;
 
 		/**
 		 * @brief Writing needs nothing from the deleter, so this could have let a custom one
@@ -158,7 +158,7 @@ namespace ser {
 		 * in checkHooks exists to refuse, and the refusal reads better at the write than as
 		 * a surprise at the first read.
 		 */
-		static constexpr Errc write(writer auto& ar, const box_type& b) {
+		static constexpr Errc write(Writer auto& ar, const BoxType& b) {
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				return internal::denyCustomBoxDeleter<decltype(ar)>();
 			else
@@ -169,7 +169,7 @@ namespace ser {
 				return internal::dispatchWrite<T>(ar, *b);
 		}
 
-		static constexpr Errc read(reader auto& ar, box_type& b)
+		static constexpr Errc read(Reader auto& ar, BoxType& b)
 			requires(internal::READABLE_ELEMENT_V<T>) {
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				return internal::denyCustomBoxDeleter<decltype(ar)>();
@@ -185,7 +185,7 @@ namespace ser {
 			}
 		}
 
-		static box_type make(reader auto& ar) requires(internal::READABLE_ELEMENT_V<T>) {
+		static BoxType make(Reader auto& ar) requires(internal::READABLE_ELEMENT_V<T>) {
 			/**
 			 * @brief throwError only so this compiles once the static_assert has had its say - a
 			 * make has a box to return and a refused deleter has none.
@@ -193,7 +193,7 @@ namespace ser {
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				throwError(internal::denyCustomBoxDeleter<decltype(ar)>(), ar.position());
 			else if constexpr (internal::FILL_IN_PLACE_V<T>) {
-				box_type b = ::base::makeBox<T, D>();
+				BoxType b = ::base::makeBox<T, D>();
 				if (const auto c = internal::dispatchRead<T>(ar, *b); c != Errc::Ok)
 					throwError(c, ar.position());
 				return b;
@@ -205,8 +205,8 @@ namespace ser {
 	/** @brief MBox */
 
 	template<class T, class D>
-	struct min_wire_size<::base::MBox<T, D>> {
-		static constexpr ::std::size_t VALUE = min_wire_size<::std::optional<T>>::VALUE;
+	struct MinWireSize<::base::MBox<T, D>> {
+		static constexpr ::std::size_t VALUE = MinWireSize<::std::optional<T>>::VALUE;
 	};
 
 	/**
@@ -214,7 +214,7 @@ namespace ser {
 	 * optional field reads into an MBox field and back.
 	 */
 	template<class T, class D>
-	struct schema<::base::MBox<T, D>> {
+	struct Schema<::base::MBox<T, D>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<::std::optional<T>, Mode, Seen>(h);
@@ -222,10 +222,10 @@ namespace ser {
 	};
 
 	template<class T, class D>
-	struct serializer<::base::MBox<T, D>> {
-		using box_type = ::base::MBox<T, D>;
+	struct Serializer<::base::MBox<T, D>> {
+		using BoxType = ::base::MBox<T, D>;
 
-		static constexpr Errc write(writer auto& ar, const box_type& b) {
+		static constexpr Errc write(Writer auto& ar, const BoxType& b) {
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				return internal::denyCustomBoxDeleter<decltype(ar)>();
 			else {
@@ -240,11 +240,11 @@ namespace ser {
 
 		/**
 		 * @brief An MBox is worse off than a Box even on the fill path: reading a null assigns a
-		 * fresh box_type, and reading a value into one that is null allocates - so whether
+		 * fresh BoxType, and reading a value into one that is null allocates - so whether
 		 * the deleter survives would depend on the BYTES, which is the same runtime-property
 		 * objection that refuses BoxOrCRef above.
 		 */
-		static constexpr Errc read(reader auto& ar, box_type& b)
+		static constexpr Errc read(Reader auto& ar, BoxType& b)
 			requires(internal::READABLE_ELEMENT_V<T>) {
 			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
 				return internal::denyCustomBoxDeleter<decltype(ar)>();
@@ -260,7 +260,7 @@ namespace ser {
 				if (present > 1) return Errc::InvalidValue;
 
 				if (present == 0) {
-					b = box_type{}; /* drops whatever was there, which is the point of a read */
+					b = BoxType{}; /* drops whatever was there, which is the point of a read */
 					return Errc::Ok;
 				}
 
@@ -279,23 +279,23 @@ namespace ser {
 	/** @brief the two refusals */
 
 	template<class T>
-	struct serializer<::base::SharedBox<T>> {
-		static constexpr Errc write(writer auto& ar, const ::base::SharedBox<T>&) {
+	struct Serializer<::base::SharedBox<T>> {
+		static constexpr Errc write(Writer auto& ar, const ::base::SharedBox<T>&) {
 			return internal::denySharedBox<decltype(ar)>();
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::SharedBox<T>&) {
+		static constexpr Errc read(Reader auto& ar, ::base::SharedBox<T>&) {
 			return internal::denySharedBox<decltype(ar)>();
 		}
 	};
 
 	template<class T>
-	struct serializer<::base::BoxOrCRef<T>> {
-		static constexpr Errc write(writer auto& ar, const ::base::BoxOrCRef<T>&) {
+	struct Serializer<::base::BoxOrCRef<T>> {
+		static constexpr Errc write(Writer auto& ar, const ::base::BoxOrCRef<T>&) {
 			return internal::denyBoxOrCRef<decltype(ar)>();
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::BoxOrCRef<T>&) {
+		static constexpr Errc read(Reader auto& ar, ::base::BoxOrCRef<T>&) {
 			return internal::denyBoxOrCRef<decltype(ar)>();
 		}
 	};

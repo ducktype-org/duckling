@@ -37,8 +37,8 @@
 namespace ser {
 
 	template<class T, class Al>
-	struct min_wire_size<::std::vector<T, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::std::vector<T, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	/**
@@ -47,7 +47,7 @@ namespace ser {
 	 * indistinguishable from vector<float>. The allocator never reaches the wire.
 	 */
 	template<class T, class Al>
-	struct schema<::std::vector<T, Al>> {
+	struct Schema<::std::vector<T, Al>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<T, Mode, Seen>(internal::schemaText(h, "vector"));
@@ -55,8 +55,8 @@ namespace ser {
 	};
 
 	template<class T, class Al>
-	struct serializer<::std::vector<T, Al>> {
-		using vector_type = ::std::vector<T, Al>;
+	struct Serializer<::std::vector<T, Al>> {
+		using VectorType = ::std::vector<T, Al>;
 
 		/**
 		 * @brief "Can this element be filled in rather than built?" Asked of the element type
@@ -64,14 +64,14 @@ namespace ser {
 		 */
 		static constexpr bool FILLABLE = internal::FILL_IN_PLACE_V<T>;
 
-		static constexpr Errc write(writer auto& ar, const vector_type& v) {
+		static constexpr Errc write(Writer auto& ar, const VectorType& v) {
 			if (const auto c = internal::writeLength<T>(ar, v.size()); c != Errc::Ok) return c;
 			for (const T& e: v)
 				if (const auto c = internal::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, vector_type& v)
+		static constexpr Errc read(Reader auto& ar, VectorType& v)
 			requires(internal::READABLE_ELEMENT_V<T>) {
 			::std::size_t n = 0;
 			if (const auto c = internal::readLength<T>(ar, n); c != Errc::Ok) return c;
@@ -98,22 +98,22 @@ namespace ser {
 	 * every other T would silently read nothing.
 	 */
 	template<class Al>
-	struct serializer<::std::vector<bool, Al>> {
-		static constexpr Errc write(writer auto& ar, const ::std::vector<bool, Al>& v) {
+	struct Serializer<::std::vector<bool, Al>> {
+		static constexpr Errc write(Writer auto& ar, const ::std::vector<bool, Al>& v) {
 			static_assert(
 				::base::DEPENDENT_FALSE_V<Al>,
 				"ser: std::vector<bool> is a bit-packed proxy container, not a container of "
 				"bool, so the element loop cannot read into it. Use std::vector<std::uint8_t> "
 				"for a byte per flag, or std::bitset<N> when the count is fixed - and note "
 				"that neither has vector<bool>'s packing, which is a format decision either "
-				"way. Specialize ser::serializer<std::vector<bool>> to make that decision."
+				"way. Specialize ser::Serializer<std::vector<bool>> to make that decision."
 			);
 			(void) ar;
 			(void) v;
 			return Errc::InvalidValue;
 		}
 
-		static constexpr Errc read(reader auto& ar, ::std::vector<bool, Al>& v) {
+		static constexpr Errc read(Reader auto& ar, ::std::vector<bool, Al>& v) {
 			static_assert(
 				::base::DEPENDENT_FALSE_V<Al>,
 				"ser: std::vector<bool> is a bit-packed proxy container, not a container of "

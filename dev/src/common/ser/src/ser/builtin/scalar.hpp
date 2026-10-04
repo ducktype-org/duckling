@@ -10,8 +10,8 @@
 namespace ser::builtin {
 
 	template<class T>
-	concept scalar_like = ::std::is_arithmetic_v<::std::remove_cv_t<T>>
-	                   || ::std::is_same_v<::std::remove_cv_t<T>, ::std::byte>;
+	concept ScalarLike = ::std::is_arithmetic_v<::std::remove_cv_t<T>>
+	                  || ::std::is_same_v<::std::remove_cv_t<T>, ::std::byte>;
 
 	/**
 	 * @brief long double is not a wire type
@@ -37,7 +37,7 @@ namespace ser::builtin {
 	 * on it. So bool goes on the wire as an explicit 0/1 byte and comes back validated.
 	 */
 
-	template<class T, writer Ar>
+	template<class T, Writer Ar>
 	constexpr Errc writeScalar(Ar& ar, const T& v) {
 		using U = ::std::remove_cv_t<T>;
 		SER_INTERNAL_ASSERT_SCALAR_WIRE_SAFE(U)
@@ -47,7 +47,7 @@ namespace ser::builtin {
 			return ar.writeRaw(v);
 	}
 
-	template<class T, reader Ar>
+	template<class T, Reader Ar>
 	constexpr Errc readScalar(Ar& ar, T& v) {
 		using U = ::std::remove_cv_t<T>;
 		SER_INTERNAL_ASSERT_SCALAR_WIRE_SAFE(U)

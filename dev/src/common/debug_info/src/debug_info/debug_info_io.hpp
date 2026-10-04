@@ -23,7 +23,7 @@ namespace debug_info {
 	 *
 	 * The header carries the magic, the platform flags, `schema_hash`.
 	 */
-	inline constexpr ::ser::options DI_STREAM{
+	inline constexpr ::ser::Options DI_STREAM{
 		.header = true,
 		// 'DINF', little-endian
 		.user_magic = ::std::uint32_t{ 0x46'4E'49'44 },

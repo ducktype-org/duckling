@@ -13,7 +13,7 @@
  * ones are a string pool for `StrID` (#90002) and an object pool for `Box` / `Ref`, so
  * sharing and aliasing survive a round trip (#90003).
  *
- * None exists yet, so every archive runs with `no_context`. The `Ctx` parameter is there so
+ * None exists yet, so every archive runs with `NoContext`. The `Ctx` parameter is there so
  * adding a pool does not change the archive API.
  */
 
@@ -24,22 +24,22 @@ namespace ser {
 	 * is additive - no call site changes shape. `POOL_COUNT == 0` is the compile-time
 	 * switch that removes every pool branch from the generated code.
 	 */
-	struct no_context final {
+	struct NoContext final {
 		static constexpr ::std::size_t POOL_COUNT = 0;
 
 		constexpr Errc finish() noexcept { return Errc::Ok; }
 	};
 
 	// @TODO: #90002 implement context with the StrID pool
-	/** @brief Not implemented yet. Declared so that `context<...>` names a type. */
+	/** @brief Not implemented yet. Declared so that `Context<...>` names a type. */
 	template<class... Pools>
-	struct context;
+	struct Context;
 
 	/**
 	 * @brief out{buf} must work without the caller naming a context, and an archive stores an empty
 	 * one BY VALUE - so this singleton exists only for the one-argument constructor to have
 	 * something to bind to.
 	 */
-	inline no_context no_context_instance{};
+	inline NoContext no_context_instance{};
 
 } /* namespace ser */

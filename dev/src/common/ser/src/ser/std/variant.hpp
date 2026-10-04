@@ -82,14 +82,14 @@ namespace ser {
 	} /* namespace internal */
 
 	template<class... Ts>
-	struct min_wire_size<::std::variant<Ts...>> {
+	struct MinWireSize<::std::variant<Ts...>> {
 		static constexpr ::std::size_t VALUE
 			= MIN_WIRE_SIZE_V<::std::uint64_t>
 		    + internal::minAlternativeWire<::std::remove_cv_t<Ts>...>();
 	};
 
 	template<>
-	struct min_wire_size<::std::monostate> {
+	struct MinWireSize<::std::monostate> {
 		static constexpr ::std::size_t VALUE = 0; /* an empty type writes nothing */
 	};
 
@@ -99,7 +99,7 @@ namespace ser {
 	 * changes the format, because the set of tags a reader will accept is now larger.
 	 */
 	template<class... Ts>
-	struct schema<::std::variant<Ts...>> {
+	struct Schema<::std::variant<Ts...>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			h = internal::schemaNumber(internal::schemaText(h, "variant"), sizeof...(Ts));
@@ -109,7 +109,7 @@ namespace ser {
 	};
 
 	template<>
-	struct schema<::std::monostate> {
+	struct Schema<::std::monostate> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaText(h, "monostate");
@@ -117,9 +117,9 @@ namespace ser {
 	};
 
 	template<class... Ts>
-	struct serializer<::std::variant<Ts...>> {
-		using variant_type = ::std::variant<Ts...>;
-		using tag_type     = ::std::uint64_t;
+	struct Serializer<::std::variant<Ts...>> {
+		using VariantType = ::std::variant<Ts...>;
+		using TagType     = ::std::uint64_t;
 
 		static constexpr ::std::size_t ALTERNATIVE_COUNT = sizeof...(Ts);
 
@@ -128,7 +128,7 @@ namespace ser {
 
 		static constexpr bool FILLABLE = (internal::READABLE_ELEMENT_V<Ts> && ...);
 
-		static constexpr Errc write(writer auto& ar, const variant_type& o) {
+		static constexpr Errc write(Writer auto& ar, const VariantType& o) {
 			/*
 			 * variant_npos is the only index a valueless variant has, and it names no
 			 * alternative. Refuse it here rather than write a tag nothing can read.
@@ -136,30 +136,30 @@ namespace ser {
 			if (o.valueless_by_exception()) return Errc::InvalidValue;
 
 			const ::std::size_t index = o.index();
-			if (const auto c = internal::dispatchWrite<tag_type>(ar, static_cast<tag_type>(index));
+			if (const auto c = internal::dispatchWrite<TagType>(ar, static_cast<TagType>(index));
 			    c != Errc::Ok)
 				return c;
 
 			const auto write_alternative = [&ar, &o]<::std::size_t I>() {
-				using T = ::std::remove_cv_t<::std::variant_alternative_t<I, variant_type>>;
+				using T = ::std::remove_cv_t<::std::variant_alternative_t<I, VariantType>>;
 				return internal::dispatchWrite<T>(ar, ::std::get<I>(o));
 			};
-			return internal::applyByIndex<variant_type, Errc>(index, write_alternative);
+			return internal::applyByIndex<VariantType, Errc>(index, write_alternative);
 		}
 
-		static constexpr Errc read(reader auto& ar, variant_type& o) requires(FILLABLE) {
+		static constexpr Errc read(Reader auto& ar, VariantType& o) requires(FILLABLE) {
 			::std::size_t index = 0;
 			if (const auto c = readTag(ar, index); c != Errc::Ok) return c;
 
 			const auto fill_alternative = [&ar, &o]<::std::size_t I>() {
-				using alternative = ::std::variant_alternative_t<I, variant_type>;
-				using T           = ::std::remove_cv_t<alternative>;
+				using Alternative = ::std::variant_alternative_t<I, VariantType>;
+				using T           = ::std::remove_cv_t<Alternative>;
 
 				/**
 				 * @brief A const alternative never takes the first branch - const is exactly what
 				 * makes it unassignable - so ::std::get<I> below is never a const ref.
 				 */
-				if constexpr (FILLS_IN_PLACE<alternative>) {
+				if constexpr (FILLS_IN_PLACE<Alternative>) {
 					o.template emplace<I>();
 					return internal::dispatchRead<T>(ar, ::std::get<I>(o));
 				} else {
@@ -167,29 +167,29 @@ namespace ser {
 					return Errc::Ok;
 				}
 			};
-			return internal::applyByIndex<variant_type, Errc>(index, fill_alternative);
+			return internal::applyByIndex<VariantType, Errc>(index, fill_alternative);
 		}
 
-		static constexpr variant_type make(reader auto& ar)
+		static constexpr VariantType make(Reader auto& ar)
 			requires((internal::BUILDABLE_V<Ts> && ...)) {
 			::std::size_t index = 0;
 			if (const auto c = readTag(ar, index); c != Errc::Ok) throwError(c, ar.position());
 
 			const auto build_alternative = [&ar]<::std::size_t I>() {
-				using T = ::std::remove_cv_t<::std::variant_alternative_t<I, variant_type>>;
-				return variant_type{ ::std::in_place_index<I>, internal::dispatchMake<T>(ar) };
+				using T = ::std::remove_cv_t<::std::variant_alternative_t<I, VariantType>>;
+				return VariantType{ ::std::in_place_index<I>, internal::dispatchMake<T>(ar) };
 			};
-			return internal::applyByIndex<variant_type, variant_type>(index, build_alternative);
+			return internal::applyByIndex<VariantType, VariantType>(index, build_alternative);
 		}
 
 	private:
 		/** @brief Reads the tag and turns it into an index, or fails. */
-		static constexpr Errc readTag(reader auto& ar, ::std::size_t& out) {
-			tag_type tag = 0;
-			if (const auto c = internal::dispatchRead<tag_type>(ar, tag); c != Errc::Ok) return c;
+		static constexpr Errc readTag(Reader auto& ar, ::std::size_t& out) {
+			TagType tag = 0;
+			if (const auto c = internal::dispatchRead<TagType>(ar, tag); c != Errc::Ok) return c;
 
-			if constexpr (sizeof(tag_type) > sizeof(::std::size_t))
-				if (tag > static_cast<tag_type>(::std::numeric_limits<::std::size_t>::max()))
+			if constexpr (sizeof(TagType) > sizeof(::std::size_t))
+				if (tag > static_cast<TagType>(::std::numeric_limits<::std::size_t>::max()))
 					return Errc::InvalidValue;
 
 			const auto index = static_cast<::std::size_t>(tag);
@@ -201,12 +201,12 @@ namespace ser {
 	};
 
 	template<>
-	struct serializer<::std::monostate> {
-		static constexpr Errc write(writer auto&, const ::std::monostate&) { return Errc::Ok; }
+	struct Serializer<::std::monostate> {
+		static constexpr Errc write(Writer auto&, const ::std::monostate&) { return Errc::Ok; }
 
-		static constexpr Errc read(reader auto&, ::std::monostate&) { return Errc::Ok; }
+		static constexpr Errc read(Reader auto&, ::std::monostate&) { return Errc::Ok; }
 
-		static constexpr ::std::monostate make(reader auto&) { return {}; }
+		static constexpr ::std::monostate make(Reader auto&) { return {}; }
 	};
 
 } /* namespace ser */

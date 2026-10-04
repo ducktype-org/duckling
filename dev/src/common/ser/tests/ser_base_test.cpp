@@ -53,7 +53,7 @@ struct TestPlainDeleter final {
 };
 
 template<class T>
-struct ser::box_deleter_is_new_delete<TestPlainDeleter<T>> {
+struct ser::BoxDeleterIsNewDelete<TestPlainDeleter<T>> {
 	static constexpr bool VALUE = true;
 };
 
@@ -158,7 +158,7 @@ private:
 		 */
 		base::Optional<i32> target(7);
 		const auto          empty = bytesOf(base::Optional<i32>());
-		ser::in             ar{ view(empty) };
+		ser::In             ar{ view(empty) };
 		ASSERT_EQUAL(ser::Errc::Ok, ar(target));
 		ASSERT_TRUE(!target.has_value());
 	}
@@ -187,7 +187,7 @@ private:
 
 		/* Reading a null over an engaged MBox releases what it held. */
 		base::MBox<std::string> target = base::makeBox<std::string>("old");
-		ser::in                 ar{ view(null_bytes) };
+		ser::In                 ar{ view(null_bytes) };
 		ASSERT_EQUAL(ser::Errc::Ok, ar(target));
 		ASSERT_TRUE(!static_cast<bool>(target));
 	}
@@ -458,7 +458,7 @@ private:
 		 * @brief The envelope refuses a type whose schema differs, which is the whole point of
 		 * the specializations above being specific.
 		 */
-		ser::options opt{};
+		ser::Options opt{};
 		opt.header = true;
 		ByteBuf with_header;
 		ASSERT_TRUE(ser::write(with_header, base::Optional<u32>(1U), opt).has_value());
@@ -485,7 +485,7 @@ private:
 		ASSERT_EQUAL(sizeof(u64) + sizeof(u64), tampered.size());
 		tampered[sizeof(u64)] |= std::byte{ 0x20 };
 		base::DynamicBitset target;
-		ser::in             tampered_ar{ view(tampered) };
+		ser::In             tampered_ar{ view(tampered) };
 		ASSERT_EQUAL(ser::Errc::InvalidValue, tampered_ar(target));
 
 		/**
@@ -494,14 +494,14 @@ private:
 		 * itself and not a policy ceiling - a bitset that really is huge still loads.
 		 */
 		ByteBuf  absurd;
-		ser::out absurd_ar{ absurd };
+		ser::Out absurd_ar{ absurd };
 		ASSERT_EQUAL(ser::Errc::Ok, absurd_ar(u64{ 1 } << 40));
-		ser::in absurd_read{ view(absurd) };
+		ser::In absurd_read{ view(absurd) };
 		ASSERT_EQUAL(ser::Errc::Truncated, absurd_read(target));
 
 		/* The prefix is there and the words are not. */
 		const auto truncated = bytesOf(small);
-		ser::in    truncated_ar{ view(truncated, sizeof(u64)) };
+		ser::In    truncated_ar{ view(truncated, sizeof(u64)) };
 		ASSERT_EQUAL(ser::Errc::Truncated, truncated_ar(target));
 
 		/**
@@ -509,21 +509,21 @@ private:
 		 * to use the checking insert and report corrupt input instead.
 		 */
 		ByteBuf  repeated;
-		ser::out repeated_ar{ repeated };
+		ser::Out repeated_ar{ repeated };
 		ASSERT_EQUAL(
 			ser::Errc::Ok,
 			repeated_ar(u64{ 2 }, i32{ 1 }, std::string("a"), i32{ 1 }, std::string("b"))
 		);
 		base::StableHashMap<i32, std::string> stable;
-		ser::in                               repeated_read{ view(repeated) };
+		ser::In                               repeated_read{ view(repeated) };
 		ASSERT_EQUAL(ser::Errc::InvalidValue, repeated_read(stable));
 
 		/** @brief A view whose length prefix promises more bytes than the stream holds. */
 		ByteBuf  lying;
-		ser::out lying_ar{ lying };
+		ser::Out lying_ar{ lying };
 		ASSERT_EQUAL(ser::Errc::Ok, lying_ar(u64{ 64 }, u32{ 0 }));
 		base::OwningView blob;
-		ser::in          lying_read{ view(lying) };
+		ser::In          lying_read{ view(lying) };
 		ASSERT_EQUAL(ser::Errc::Truncated, lying_read(blob));
 	}
 
@@ -537,7 +537,7 @@ private:
 	/** @brief Reads into an existing object, for the types that cannot be returned. */
 	template<class T>
 	void readInPlace(const ByteBuf& bytes, T& target) {
-		ser::in ar{ view(bytes) };
+		ser::In ar{ view(bytes) };
 		ASSERT_EQUAL(ser::Errc::Ok, ar(target));
 	}
 };

@@ -139,7 +139,7 @@ namespace ser::builtin {
 			"  unique_ptr/shared_ptr?  not supported yet\n"
 			"  base::Box / base::Ref?  #include <ser/base/all.hpp> - Box and MBox serialize, "
 			"Ref and SharedBox are refused there with a message of their own\n"
-			"  your own handle type?   specialize ser::serializer<T>"
+			"  your own handle type?   specialize ser::Serializer<T>"
 		);
 	}
 

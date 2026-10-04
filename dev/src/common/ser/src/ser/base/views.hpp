@@ -74,7 +74,7 @@ namespace ser {
 		 * buy nothing. Still constexpr-safe: internal::copyBytes switches to an element loop
 		 * under `if consteval`.
 		 */
-		constexpr Errc writeByteBlob(writer auto& ar, const ::base::RawView& v) {
+		constexpr Errc writeByteBlob(Writer auto& ar, const ::base::RawView& v) {
 			if (const auto c = writeLength<::std::byte>(ar, v.size()); c != Errc::Ok) return c;
 			return ar.rawWrite({ v.getBegin(), v.size() });
 		}
@@ -83,7 +83,7 @@ namespace ser {
 		 * @brief Reads the prefix, allocates exactly that much and fills it. The buffer is handed
 		 * out raw because both owning views take ownership of a `new byte[]` block.
 		 */
-		constexpr Errc readByteBlob(reader auto& ar, ::std::byte*& out, ::std::size_t& out_size) {
+		constexpr Errc readByteBlob(Reader auto& ar, ::std::byte*& out, ::std::size_t& out_size) {
 			::std::size_t n = 0;
 			/*
 			 * readLength is what makes the allocation below safe - it refuses a prefix
@@ -106,23 +106,23 @@ namespace ser {
 	/** @brief the two refusals */
 
 	template<>
-	struct serializer<::base::RawView> {
-		static constexpr Errc write(writer auto& ar, const ::base::RawView&) {
+	struct Serializer<::base::RawView> {
+		static constexpr Errc write(Writer auto& ar, const ::base::RawView&) {
 			return internal::denyNonOwningView<decltype(ar)>();
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::RawView&) {
+		static constexpr Errc read(Reader auto& ar, ::base::RawView&) {
 			return internal::denyNonOwningView<decltype(ar)>();
 		}
 	};
 
 	template<>
-	struct serializer<::base::ModRawView> {
-		static constexpr Errc write(writer auto& ar, const ::base::ModRawView&) {
+	struct Serializer<::base::ModRawView> {
+		static constexpr Errc write(Writer auto& ar, const ::base::ModRawView&) {
 			return internal::denyNonOwningView<decltype(ar)>();
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::ModRawView&) {
+		static constexpr Errc read(Reader auto& ar, ::base::ModRawView&) {
 			return internal::denyNonOwningView<decltype(ar)>();
 		}
 	};
@@ -130,8 +130,8 @@ namespace ser {
 	/** @brief OwningView */
 
 	template<>
-	struct min_wire_size<::base::OwningView> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::base::OwningView> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	/* Shared with SharedView on purpose - see the note at the top. */
@@ -145,7 +145,7 @@ namespace ser {
 	} /* namespace internal */
 
 	template<>
-	struct schema<::base::OwningView> {
+	struct Schema<::base::OwningView> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaByteBlob<Mode, Seen>(h);
@@ -153,12 +153,12 @@ namespace ser {
 	};
 
 	template<>
-	struct serializer<::base::OwningView> {
-		static constexpr Errc write(writer auto& ar, const ::base::OwningView& v) {
+	struct Serializer<::base::OwningView> {
+		static constexpr Errc write(Writer auto& ar, const ::base::OwningView& v) {
 			return internal::writeByteBlob(ar, v.view());
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::OwningView& v) {
+		static constexpr Errc read(Reader auto& ar, ::base::OwningView& v) {
 			::std::byte*  raw = nullptr;
 			::std::size_t n   = 0;
 			if (const auto c = internal::readByteBlob(ar, raw, n); c != Errc::Ok) return c;
@@ -174,12 +174,12 @@ namespace ser {
 	/** @brief SharedView */
 
 	template<>
-	struct min_wire_size<::base::SharedView> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::base::SharedView> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	template<>
-	struct schema<::base::SharedView> {
+	struct Schema<::base::SharedView> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaByteBlob<Mode, Seen>(h);
@@ -187,12 +187,12 @@ namespace ser {
 	};
 
 	template<>
-	struct serializer<::base::SharedView> {
-		static constexpr Errc write(writer auto& ar, const ::base::SharedView& v) {
+	struct Serializer<::base::SharedView> {
+		static constexpr Errc write(Writer auto& ar, const ::base::SharedView& v) {
 			return internal::writeByteBlob(ar, v.view());
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::SharedView& v) {
+		static constexpr Errc read(Reader auto& ar, ::base::SharedView& v) {
 			::std::byte*  raw = nullptr;
 			::std::size_t n   = 0;
 			if (const auto c = internal::readByteBlob(ar, raw, n); c != Errc::Ok) return c;
@@ -205,7 +205,7 @@ namespace ser {
 		 * reading into a fresh object - without this it could not be a top-level
 		 * ser::read, an element of a container, or a field of a type that has to be built.
 		 */
-		static ::base::SharedView make(reader auto& ar) {
+		static ::base::SharedView make(Reader auto& ar) {
 			::std::byte*  raw = nullptr;
 			::std::size_t n   = 0;
 			if (const auto c = internal::readByteBlob(ar, raw, n); c != Errc::Ok)

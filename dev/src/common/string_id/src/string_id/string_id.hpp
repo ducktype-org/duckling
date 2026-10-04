@@ -188,7 +188,7 @@ namespace base {
 
 		// ser
 		// A StrID is a std::string on the wire, so `ser_wire_as` gives it that type's
-		// schema and its min_wire_size for free - no ser::schema or ser::min_wire_size
+		// schema and its MinWireSize for free - no ser::Schema or ser::MinWireSize
 		// specialization needed.
 
 		/** @brief The wire type: a StrID travels as the string it interns. */
@@ -200,13 +200,13 @@ namespace base {
 		 * refusing it here is the only place that can, because the read side cannot
 		 * represent it - interning "" yields a GOOD id, so isBad() never round-trips.
 		 */
-		static ser::Errc serWrite(ser::writer auto& ar, const StrID& s) {
+		static ser::Errc serWrite(ser::Writer auto& ar, const StrID& s) {
 			if (s.isBad()) return ser::Errc::InvalidValue;
 			return ar(s.str());
 		}
 
 		/** @brief Reads a string and interns it. */
-		static ser::Errc serRead(ser::reader auto& ar, StrID& s) {
+		static ser::Errc serRead(ser::Reader auto& ar, StrID& s) {
 			std::string str;
 			if (const auto c = ar(str); c != ser::Errc::Ok) return c;
 			s = StrID{ str };

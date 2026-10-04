@@ -32,9 +32,9 @@ namespace ser {
 	 */
 	inline constexpr int VERSION = 1;
 
-	struct config_global final {
+	struct ConfigGlobal final {
 		/** @brief use u64 as size_type to avoid silent overflows from size_t conversions */
-		using size_type = ::std::uint64_t;
+		using SizeType = ::std::uint64_t;
 
 		/** @brief Bounds nesting, so data-dependent recursion cannot overflow the stack. */
 		static constexpr ::std::size_t MAX_DEPTH = 256;

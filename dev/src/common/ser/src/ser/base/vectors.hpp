@@ -43,8 +43,8 @@
 namespace ser {
 
 	template<class Data>
-	struct min_wire_size<::base::StableVector<Data>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::base::StableVector<Data>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	/**
@@ -52,7 +52,7 @@ namespace ser {
 	 * unlocked forms write the same bytes, so they are one format and one hash.
 	 */
 	template<class Data>
-	struct schema<::base::StableVector<Data>> {
+	struct Schema<::base::StableVector<Data>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<::std::vector<::std::remove_const_t<Data>>, Mode, Seen>(h);
@@ -60,44 +60,44 @@ namespace ser {
 	};
 
 	template<class Data>
-	struct serializer<::base::StableVector<Data>> {
-		using vector_type  = ::base::StableVector<Data>;
-		using element_type = ::std::remove_const_t<Data>;
+	struct Serializer<::base::StableVector<Data>> {
+		using VectorType  = ::base::StableVector<Data>;
+		using ElementType = ::std::remove_const_t<Data>;
 
 		static constexpr bool FILLABLE
-			= !::std::is_const_v<Data> && internal::FILL_IN_PLACE_V<element_type>;
+			= !::std::is_const_v<Data> && internal::FILL_IN_PLACE_V<ElementType>;
 
-		static constexpr Errc write(writer auto& ar, const vector_type& v) {
-			if (const auto c = internal::writeLength<element_type>(ar, v.size()); c != Errc::Ok)
+		static constexpr Errc write(Writer auto& ar, const VectorType& v) {
+			if (const auto c = internal::writeLength<ElementType>(ar, v.size()); c != Errc::Ok)
 				return c;
 			/*
 			 * Indexed rather than iterated: operator[] hands back a CRef, and the element
 			 * type is what dispatch has to see - not whatever the iterator dereferences to.
 			 */
 			for (::std::size_t i = 0; i < v.size(); ++i)
-				if (const auto c = internal::dispatchWrite<element_type>(ar, *v[i]); c != Errc::Ok)
+				if (const auto c = internal::dispatchWrite<ElementType>(ar, *v[i]); c != Errc::Ok)
 					return c;
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, vector_type& v)
-			requires(FILLABLE || internal::BUILDABLE_V<element_type>) {
+		static constexpr Errc read(Reader auto& ar, VectorType& v)
+			requires(FILLABLE || internal::BUILDABLE_V<ElementType>) {
 			::std::size_t n = 0;
 			/*
 			 * Before clear(), and before any element exists: readLength is what refuses a
 			 * prefix claiming more elements than the stream could possibly hold.
 			 */
-			if (const auto c = internal::readLength<element_type>(ar, n); c != Errc::Ok) return c;
+			if (const auto c = internal::readLength<ElementType>(ar, n); c != Errc::Ok) return c;
 
 			CORE_ASSERT(v.empty(), "ser: reading into a non-empty base::StableVector");
 			for (::std::size_t i = 0; i < n; ++i) {
 				if constexpr (FILLABLE) {
 					v.emplaceBack();
-					if (const auto c = internal::dispatchRead<element_type>(ar, *v.last());
+					if (const auto c = internal::dispatchRead<ElementType>(ar, *v.last());
 					    c != Errc::Ok)
 						return c;
 				} else
-					v.emplaceBack(internal::dispatchMake<element_type>(ar));
+					v.emplaceBack(internal::dispatchMake<ElementType>(ar));
 			}
 			return Errc::Ok;
 		}

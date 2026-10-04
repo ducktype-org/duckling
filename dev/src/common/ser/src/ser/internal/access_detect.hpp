@@ -4,10 +4,10 @@
  * @file
  * @brief The hook DETECTORS and the refusals built on them - `ser`'s diagnostic layer.
  * @details Split out of `<ser/access.hpp>` so that header carries only what a serializable
- * type writes by hand: `ser::members<N>`, `ser::access` and `SER_FRIEND`. Everything here
+ * type writes by hand: `ser::Members<N>`, `ser::Access` and `SER_FRIEND`. Everything here
  * answers "which hook does this type have, and is it the hook the author meant" - questions
  * the library asks itself. Nothing here is part of the public surface.
- * @note `ser::access` itself stays public and keeps its own in-class detectors: access
+ * @note `ser::Access` itself stays public and keeps its own in-class detectors: access
  * control is part of SFINAE, so a detector that must see a PRIVATE hook has to live in the
  * class the type befriends. Only the layer above it moved.
  */
@@ -26,16 +26,16 @@ namespace ser::internal {
 
 	/** @brief the types SER_DESCRIBE named */
 	template<class T>
-	struct tuple_field_list;
+	struct TupleFieldList;
 
 	template<class... Es>
-	struct tuple_field_list<::std::tuple<Es...>> {
+	struct TupleFieldList<::std::tuple<Es...>> {
 		using type = ::base::TypeList<::std::remove_cvref_t<Es>...>;
 	};
 
 	template<class T>
-	using described_types_t = typename tuple_field_list<
-		decltype(access::described(::std::declval<const ::std::remove_cv_t<T>&>()))>::type;
+	using DescribedTypesT = typename TupleFieldList<
+		decltype(Access::described(::std::declval<const ::std::remove_cv_t<T>&>()))>::type;
 
 	/**
 	 * @brief the other direction of an archive
@@ -44,16 +44,16 @@ namespace ser::internal {
 	 * archive carrying the same Ctx, so a hook reaching for ar.pool<P>() compiles during
 	 * detection.
 	 *
-	 * ser::in<Ctx> is exact. The writer is exact only in its context, the buffer being the
+	 * ser::In<Ctx> is exact. The writer is exact only in its context, the buffer being the
 	 * caller's choice; that can matter only for a hook pinned to one concrete
 	 * out<Buf, Ctx>, which NONGENERIC_*_HOOK_V reports anyway.
 	 */
 	template<class Ar>
-	using reader_for = ::std::conditional_t<reader<Ar>, Ar, in<typename Ar::context_type>>;
+	using ReaderFor = ::std::conditional_t<Reader<Ar>, Ar, In<typename Ar::ContextType>>;
 
 	template<class Ar>
-	using writer_for
-		= ::std::conditional_t<writer<Ar>, Ar, out<::std::span<::std::byte>, typename Ar::context_type>>;
+	using WriterFor
+		= ::std::conditional_t<Writer<Ar>, Ar, Out<::std::span<::std::byte>, typename Ar::ContextType>>;
 
 	/**
 	 * @brief per-level summaries
@@ -63,22 +63,22 @@ namespace ser::internal {
 	 * three of them.
 	 */
 	template<class L, class T, class Ar>
-	inline constexpr bool LVL_VISIT_WRITE_V = HAS_VISIT_V<L, const T, writer_for<Ar>>;
+	inline constexpr bool LVL_VISIT_WRITE_V = HAS_VISIT_V<L, const T, WriterFor<Ar>>;
 
 	template<class L, class T, class Ar>
-	inline constexpr bool LVL_VISIT_READ_V = HAS_VISIT_V<L, T, reader_for<Ar>>;
+	inline constexpr bool LVL_VISIT_READ_V = HAS_VISIT_V<L, T, ReaderFor<Ar>>;
 
 	template<class L, class T, class Ar>
-	inline constexpr bool LVL_WRITE_V = HAS_WRITE_V<L, T, writer_for<Ar>>;
+	inline constexpr bool LVL_WRITE_V = HAS_WRITE_V<L, T, WriterFor<Ar>>;
 
 	template<class L, class T, class Ar>
-	inline constexpr bool LVL_READ_V = HAS_READ_V<L, T, reader_for<Ar>>;
+	inline constexpr bool LVL_READ_V = HAS_READ_V<L, T, ReaderFor<Ar>>;
 
 	template<class L, class T, class Ar>
-	inline constexpr bool LVL_MAKE_V = HAS_MAKE_V<L, T, reader_for<Ar>>;
+	inline constexpr bool LVL_MAKE_V = HAS_MAKE_V<L, T, ReaderFor<Ar>>;
 
 	template<class L, class T, class Ar>
-	inline constexpr bool LVL_READ_BY_COPY_V = HAS_READ_RVALUE_V<L, T, reader_for<Ar>>;
+	inline constexpr bool LVL_READ_BY_COPY_V = HAS_READ_RVALUE_V<L, T, ReaderFor<Ar>>;
 
 	/**
 	 * @brief A variable template cannot be passed as a template argument, so the fold over the
@@ -86,28 +86,28 @@ namespace ser::internal {
 	 */
 	template<class T, class Ar>
 	inline constexpr bool ANY_VISIT_WRITE_V
-		= LVL_VISIT_WRITE_V<access::trait_hooks, T, Ar>
-	   || LVL_VISIT_WRITE_V<access::member_hooks, T, Ar> || LVL_VISIT_WRITE_V<adl_hooks, T, Ar>;
+		= LVL_VISIT_WRITE_V<Access::TraitHooks, T, Ar>
+	   || LVL_VISIT_WRITE_V<Access::MemberHooks, T, Ar> || LVL_VISIT_WRITE_V<AdlHooks, T, Ar>;
 
 	template<class T, class Ar>
 	inline constexpr bool ANY_VISIT_READ_V
-		= LVL_VISIT_READ_V<access::trait_hooks, T, Ar>
-	   || LVL_VISIT_READ_V<access::member_hooks, T, Ar> || LVL_VISIT_READ_V<adl_hooks, T, Ar>;
+		= LVL_VISIT_READ_V<Access::TraitHooks, T, Ar>
+	   || LVL_VISIT_READ_V<Access::MemberHooks, T, Ar> || LVL_VISIT_READ_V<AdlHooks, T, Ar>;
 
 	template<class T, class Ar>
 	inline constexpr bool ANY_WRITE_V
-		= LVL_WRITE_V<access::trait_hooks, T, Ar> || LVL_WRITE_V<access::member_hooks, T, Ar>
-	   || LVL_WRITE_V<adl_hooks, T, Ar>;
+		= LVL_WRITE_V<Access::TraitHooks, T, Ar> || LVL_WRITE_V<Access::MemberHooks, T, Ar>
+	   || LVL_WRITE_V<AdlHooks, T, Ar>;
 
 	template<class T, class Ar>
 	inline constexpr bool ANY_READ_V
-		= LVL_READ_V<access::trait_hooks, T, Ar> || LVL_READ_V<access::member_hooks, T, Ar>
-	   || LVL_READ_V<adl_hooks, T, Ar>;
+		= LVL_READ_V<Access::TraitHooks, T, Ar> || LVL_READ_V<Access::MemberHooks, T, Ar>
+	   || LVL_READ_V<AdlHooks, T, Ar>;
 
 	template<class T, class Ar>
 	inline constexpr bool ANY_MAKE_V
-		= LVL_MAKE_V<access::trait_hooks, T, Ar> || LVL_MAKE_V<access::member_hooks, T, Ar>
-	   || LVL_MAKE_V<adl_hooks, T, Ar>;
+		= LVL_MAKE_V<Access::TraitHooks, T, Ar> || LVL_MAKE_V<Access::MemberHooks, T, Ar>
+	   || LVL_MAKE_V<AdlHooks, T, Ar>;
 
 	/**
 	 * @brief does this type describe its own format?
@@ -138,23 +138,23 @@ namespace ser::internal {
 	 */
 	template<class T, class Ar>
 	inline constexpr bool WRITE_WRONG_RETURN_V
-		= (HAS_WRITE_LOOSE_V<access::trait_hooks, T, writer_for<Ar>>
-	       || HAS_WRITE_LOOSE_V<access::member_hooks, T, writer_for<Ar>>
-	       || HAS_WRITE_LOOSE_V<adl_hooks, T, writer_for<Ar>>)
+		= (HAS_WRITE_LOOSE_V<Access::TraitHooks, T, WriterFor<Ar>>
+	       || HAS_WRITE_LOOSE_V<Access::MemberHooks, T, WriterFor<Ar>>
+	       || HAS_WRITE_LOOSE_V<AdlHooks, T, WriterFor<Ar>>)
 	   && !ANY_WRITE_V<T, Ar>;
 
 	template<class T, class Ar>
 	inline constexpr bool READ_WRONG_RETURN_V
-		= (HAS_READ_LOOSE_V<access::trait_hooks, T, reader_for<Ar>>
-	       || HAS_READ_LOOSE_V<access::member_hooks, T, reader_for<Ar>>
-	       || HAS_READ_LOOSE_V<adl_hooks, T, reader_for<Ar>>)
+		= (HAS_READ_LOOSE_V<Access::TraitHooks, T, ReaderFor<Ar>>
+	       || HAS_READ_LOOSE_V<Access::MemberHooks, T, ReaderFor<Ar>>
+	       || HAS_READ_LOOSE_V<AdlHooks, T, ReaderFor<Ar>>)
 	   && !ANY_READ_V<T, Ar>;
 
 	template<class T, class Ar>
 	inline constexpr bool MAKE_WRONG_RETURN_V
-		= (HAS_MAKE_LOOSE_V<access::trait_hooks, T, reader_for<Ar>>
-	       || HAS_MAKE_LOOSE_V<access::member_hooks, T, reader_for<Ar>>
-	       || HAS_MAKE_LOOSE_V<adl_hooks, T, reader_for<Ar>>)
+		= (HAS_MAKE_LOOSE_V<Access::TraitHooks, T, ReaderFor<Ar>>
+	       || HAS_MAKE_LOOSE_V<Access::MemberHooks, T, ReaderFor<Ar>>
+	       || HAS_MAKE_LOOSE_V<AdlHooks, T, ReaderFor<Ar>>)
 	   && !ANY_MAKE_V<T, Ar>;
 
 	/**
@@ -162,12 +162,12 @@ namespace ser::internal {
 	 */
 	template<class T, class Ar>
 	inline constexpr bool VISIT_WRONG_RETURN_V
-		= (HAS_VISIT_LOOSE_V<access::trait_hooks, T, reader_for<Ar>>
-	       || HAS_VISIT_LOOSE_V<access::trait_hooks, const T, writer_for<Ar>>
-	       || HAS_VISIT_LOOSE_V<access::member_hooks, T, reader_for<Ar>>
-	       || HAS_VISIT_LOOSE_V<access::member_hooks, const T, writer_for<Ar>>
-	       || HAS_VISIT_LOOSE_V<adl_hooks, T, reader_for<Ar>>
-	       || HAS_VISIT_LOOSE_V<adl_hooks, const T, writer_for<Ar>>)
+		= (HAS_VISIT_LOOSE_V<Access::TraitHooks, T, ReaderFor<Ar>>
+	       || HAS_VISIT_LOOSE_V<Access::TraitHooks, const T, WriterFor<Ar>>
+	       || HAS_VISIT_LOOSE_V<Access::MemberHooks, T, ReaderFor<Ar>>
+	       || HAS_VISIT_LOOSE_V<Access::MemberHooks, const T, WriterFor<Ar>>
+	       || HAS_VISIT_LOOSE_V<AdlHooks, T, ReaderFor<Ar>>
+	       || HAS_VISIT_LOOSE_V<AdlHooks, const T, WriterFor<Ar>>)
 	   && !(ANY_VISIT_READ_V<T, Ar> || ANY_VISIT_WRITE_V<T, Ar>);
 
 	/**
@@ -180,46 +180,46 @@ namespace ser::internal {
 	 */
 	template<class T, class Ar>
 	inline constexpr bool NONGENERIC_WRITE_HOOK_V
-		= (access::NAMES_TRAIT_WRITE_V<T> && !LVL_WRITE_V<access::trait_hooks, T, Ar>)
-	   || (access::NAMES_MEMBER_WRITE_V<T> && !LVL_WRITE_V<access::member_hooks, T, Ar>);
+		= (Access::NAMES_TRAIT_WRITE_V<T> && !LVL_WRITE_V<Access::TraitHooks, T, Ar>)
+	   || (Access::NAMES_MEMBER_WRITE_V<T> && !LVL_WRITE_V<Access::MemberHooks, T, Ar>);
 
 	template<class T, class Ar>
 	inline constexpr bool NONGENERIC_READ_HOOK_V
-		= (access::NAMES_TRAIT_READ_V<T> && !LVL_READ_V<access::trait_hooks, T, Ar>)
-	   || (access::NAMES_MEMBER_READ_V<T> && !LVL_READ_V<access::member_hooks, T, Ar>);
+		= (Access::NAMES_TRAIT_READ_V<T> && !LVL_READ_V<Access::TraitHooks, T, Ar>)
+	   || (Access::NAMES_MEMBER_READ_V<T> && !LVL_READ_V<Access::MemberHooks, T, Ar>);
 
 	template<class T, class Ar>
 	inline constexpr bool NONGENERIC_MAKE_HOOK_V
-		= (access::NAMES_TRAIT_MAKE_V<T> && !LVL_MAKE_V<access::trait_hooks, T, Ar>)
-	   || (access::NAMES_MEMBER_MAKE_V<T> && !LVL_MAKE_V<access::member_hooks, T, Ar>);
+		= (Access::NAMES_TRAIT_MAKE_V<T> && !LVL_MAKE_V<Access::TraitHooks, T, Ar>)
+	   || (Access::NAMES_MEMBER_MAKE_V<T> && !LVL_MAKE_V<Access::MemberHooks, T, Ar>);
 
 	template<class T, class Ar>
 	inline constexpr bool NONGENERIC_VISIT_HOOK_V
-		= (access::NAMES_TRAIT_VISIT_V<T>
-	       && !(LVL_VISIT_WRITE_V<access::trait_hooks, T, Ar> || LVL_VISIT_READ_V<access::trait_hooks, T, Ar>)
+		= (Access::NAMES_TRAIT_VISIT_V<T>
+	       && !(LVL_VISIT_WRITE_V<Access::TraitHooks, T, Ar> || LVL_VISIT_READ_V<Access::TraitHooks, T, Ar>)
 	      )
-	   || (access::NAMES_MEMBER_VISIT_V<T>
-	       && !(LVL_VISIT_WRITE_V<access::member_hooks, T, Ar> || LVL_VISIT_READ_V<access::member_hooks, T, Ar>)
+	   || (Access::NAMES_MEMBER_VISIT_V<T>
+	       && !(LVL_VISIT_WRITE_V<Access::MemberHooks, T, Ar> || LVL_VISIT_READ_V<Access::MemberHooks, T, Ar>)
 	   );
 
 	/** @brief a hook that is not static */
 	template<class T, class Ar>
 	inline constexpr bool NONSTATIC_VISIT_HOOK_V
-		= access::CALLS_MEMBER_VISIT_V<T, reader_for<Ar>>
-	   && !(LVL_VISIT_READ_V<access::member_hooks, T, Ar>
-	        || LVL_VISIT_WRITE_V<access::member_hooks, T, Ar>);
+		= Access::CALLS_MEMBER_VISIT_V<T, ReaderFor<Ar>>
+	   && !(LVL_VISIT_READ_V<Access::MemberHooks, T, Ar>
+	        || LVL_VISIT_WRITE_V<Access::MemberHooks, T, Ar>);
 
 	template<class T, class Ar>
-	inline constexpr bool NONSTATIC_WRITE_HOOK_V = access::CALLS_MEMBER_WRITE_V<T, writer_for<Ar>>
-	                                            && !LVL_WRITE_V<access::member_hooks, T, Ar>;
+	inline constexpr bool NONSTATIC_WRITE_HOOK_V = Access::CALLS_MEMBER_WRITE_V<T, WriterFor<Ar>>
+	                                            && !LVL_WRITE_V<Access::MemberHooks, T, Ar>;
 
 	template<class T, class Ar>
-	inline constexpr bool NONSTATIC_READ_HOOK_V = access::CALLS_MEMBER_READ_V<T, reader_for<Ar>>
-	                                           && !LVL_READ_V<access::member_hooks, T, Ar>;
+	inline constexpr bool NONSTATIC_READ_HOOK_V
+		= Access::CALLS_MEMBER_READ_V<T, ReaderFor<Ar>> && !LVL_READ_V<Access::MemberHooks, T, Ar>;
 
 	template<class T, class Ar>
-	inline constexpr bool NONSTATIC_MAKE_HOOK_V = access::CALLS_MEMBER_MAKE_V<T, reader_for<Ar>>
-	                                           && !LVL_MAKE_V<access::member_hooks, T, Ar>;
+	inline constexpr bool NONSTATIC_MAKE_HOOK_V
+		= Access::CALLS_MEMBER_MAKE_V<T, ReaderFor<Ar>> && !LVL_MAKE_V<Access::MemberHooks, T, Ar>;
 
 	/**
 	 * @brief Any of the four. Dispatch uses it to stay quiet: once checkHooks has said "the
@@ -305,23 +305,23 @@ namespace ser::internal {
 		SER_INTERNAL_ASSERT_HOOK_STATIC(
 			(NONSTATIC_VISIT_HOOK_V<T, Ar>),
 			"this type's serVisit",
-			"static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) { return "
+			"static ser::Errc serVisit(ser::ReaderOrWriter auto& ar, auto& self) { return "
 			"ar(self.a, self.b); }"
 		)
 		SER_INTERNAL_ASSERT_HOOK_STATIC(
 			(NONSTATIC_WRITE_HOOK_V<T, Ar>),
 			"this type's serWrite",
-			"static ser::Errc serWrite(ser::writer auto& ar, const T& x) { return ar(x.a); }"
+			"static ser::Errc serWrite(ser::Writer auto& ar, const T& x) { return ar(x.a); }"
 		)
 		SER_INTERNAL_ASSERT_HOOK_STATIC(
 			(NONSTATIC_READ_HOOK_V<T, Ar>),
 			"this type's serRead",
-			"static ser::Errc serRead(ser::reader auto& ar, T& x) { return ar(x.a); }"
+			"static ser::Errc serRead(ser::Reader auto& ar, T& x) { return ar(x.a); }"
 		)
 		SER_INTERNAL_ASSERT_HOOK_STATIC(
 			(NONSTATIC_MAKE_HOOK_V<T, Ar>),
 			"this type's serMake",
-			"static T serMake(ser::reader auto& ar) { return T{ ser::subMake<A>(ar) }; }"
+			"static T serMake(ser::Reader auto& ar) { return T{ ser::subMake<A>(ar) }; }"
 			"\n  There is no object yet when serMake runs, so a non-static one could never "
 			"be called at all."
 		)
@@ -334,7 +334,7 @@ namespace ser::internal {
 			!NONGENERIC_VISIT_HOOK_V<T, Ar>,
 			"ser: this type declares a visit hook that the archive in use cannot call, so "
 			"it is being ignored. Make it a template on the archive:\n"
-			"  static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) { return "
+			"  static ser::Errc serVisit(ser::ReaderOrWriter auto& ar, auto& self) { return "
 			"ar(self.a, self.b); }"
 		);
 
@@ -342,7 +342,7 @@ namespace ser::internal {
 			!NONGENERIC_WRITE_HOOK_V<T, Ar>,
 			"ser: this type declares a write hook that the archive in use cannot call, so "
 			"it is being ignored. Make it a template on the archive:\n"
-			"  static ser::Errc serWrite(ser::writer auto& ar, const T& x) { return ar(x.a, x.b); "
+			"  static ser::Errc serWrite(ser::Writer auto& ar, const T& x) { return ar(x.a, x.b); "
 			"}"
 		);
 
@@ -350,92 +350,92 @@ namespace ser::internal {
 			!NONGENERIC_READ_HOOK_V<T, Ar>,
 			"ser: this type declares a read hook that the archive in use cannot call, so "
 			"it is being ignored. Make it a template on the archive:\n"
-			"  static ser::Errc serRead(ser::reader auto& ar, T& x) { return ar(x.a, x.b); }"
+			"  static ser::Errc serRead(ser::Reader auto& ar, T& x) { return ar(x.a, x.b); }"
 		);
 
 		static_assert(
 			!NONGENERIC_MAKE_HOOK_V<T, Ar>,
 			"ser: this type declares a make hook that the archive in use cannot call, so "
 			"it is being ignored. Make it a template on the archive:\n"
-			"  static T serMake(ser::reader auto& ar) { return T{ ser::subMake<A>(ar) }; }"
+			"  static T serMake(ser::Reader auto& ar) { return T{ ser::subMake<A>(ar) }; }"
 		);
 
 		static_assert(
 			!VISIT_WRONG_RETURN_V<T, Ar>,
 			"ser: a serVisit hook for this type exists but does not return ser::Errc.\n"
-			"  in the class:  static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& "
+			"  in the class:  static ser::Errc serVisit(ser::ReaderOrWriter auto& ar, auto& "
 			"self) { return ar(self.a, "
 			"self.b); }\n"
-			"  by ADL:        ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)\n"
-			"  by trait:      ser::serializer<T>::visit, same signature"
+			"  by ADL:        ser::Errc serVisit(ser::ReaderOrWriter auto& ar, auto& self)\n"
+			"  by trait:      ser::Serializer<T>::visit, same signature"
 		);
 
 		static_assert(
 			!WRITE_WRONG_RETURN_V<T, Ar>,
 			"ser: a serWrite hook for this type exists but does not return ser::Errc.\n"
-			"  static ser::Errc serWrite(ser::writer auto& ar, const T& x) { return ar(x.a, x.b); "
+			"  static ser::Errc serWrite(ser::Writer auto& ar, const T& x) { return ar(x.a, x.b); "
 			"}"
 		);
 
 		static_assert(
 			!READ_WRONG_RETURN_V<T, Ar>,
 			"ser: a serRead hook for this type exists but does not return ser::Errc.\n"
-			"  static ser::Errc serRead(ser::reader auto& ar, T& x) { return ar(x.a, x.b); }"
+			"  static ser::Errc serRead(ser::Reader auto& ar, T& x) { return ar(x.a, x.b); }"
 		);
 
 		static_assert(
 			!MAKE_WRONG_RETURN_V<T, Ar>,
 			"ser: a serMake hook for this type exists but does not return T by value.\n"
-			"  static T serMake(ser::reader auto& ar) { return T{ ser::subMake<A>(ar), "
+			"  static T serMake(ser::Reader auto& ar) { return T{ ser::subMake<A>(ar), "
 			"ser::subMake<B>(ar) }; }\n"
 			"  Braces, not parentheses - the order in which constructor arguments are "
 			"evaluated is unspecified, and that would make the byte order compiler-dependent."
 		);
 
 		SER_INTERNAL_ASSERT_READ_FILLS(
-			access::trait_hooks,
+			Access::TraitHooks,
 			"serializer<T>::read",
-			"static ser::Errc read(ser::reader auto& ar, T& x)."
+			"static ser::Errc read(ser::Reader auto& ar, T& x)."
 		)
 		SER_INTERNAL_ASSERT_READ_FILLS(
-			access::member_hooks,
+			Access::MemberHooks,
 			"T::serRead",
-			"static ser::Errc serRead(ser::reader auto& ar, T& x)."
+			"static ser::Errc serRead(ser::Reader auto& ar, T& x)."
 		)
 		SER_INTERNAL_ASSERT_READ_FILLS(
-			adl_hooks,
+			AdlHooks,
 			"the ADL serRead for this type",
-			"ser::Errc serRead(ser::reader auto& ar, T& x)."
+			"ser::Errc serRead(ser::Reader auto& ar, T& x)."
 		)
 		SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(
-			access::trait_hooks,
+			Access::TraitHooks,
 			"serializer<T>::visit",
 			"static ser::Errc visit(auto& ar, auto& self)."
 		)
 		SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(
-			access::member_hooks,
+			Access::MemberHooks,
 			"T::serVisit",
-			"static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)."
+			"static ser::Errc serVisit(ser::ReaderOrWriter auto& ar, auto& self)."
 		)
 		SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(
-			adl_hooks,
+			AdlHooks,
 			"the ADL serVisit for this type",
-			"ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)."
+			"ser::Errc serVisit(ser::ReaderOrWriter auto& ar, auto& self)."
 		)
 
 		SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(
-			access::trait_hooks,
+			Access::TraitHooks,
 			"serializer<T> declares both visit and write/read",
 			"visit for a symmetric format, or the write/read pair for an asymmetric one."
 		)
 		SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(
-			access::member_hooks,
+			Access::MemberHooks,
 			"this type declares both serVisit and serWrite/serRead",
 			"serVisit for a symmetric format, or the serWrite/serRead pair for an "
 			"asymmetric one."
 		)
 		SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(
-			adl_hooks,
+			AdlHooks,
 			"this type has both an ADL serVisit and an ADL serWrite/serRead",
 			"serVisit for a symmetric format, or the pair for an asymmetric one."
 		)

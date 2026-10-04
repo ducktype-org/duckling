@@ -50,9 +50,9 @@ namespace ser {
 		 * so it would refuse every bitset wider than the stream holding it. The order matters
 		 * for the same reason as there - each check makes the next one safe to perform.
 		 */
-		constexpr Errc readBitCount(reader auto& ar, ::std::size_t& out) {
-			wire_size_type bits = 0;
-			if (const auto c = dispatchRead<wire_size_type>(ar, bits); c != Errc::Ok) return c;
+		constexpr Errc readBitCount(Reader auto& ar, ::std::size_t& out) {
+			WireSizeType bits = 0;
+			if (const auto c = dispatchRead<WireSizeType>(ar, bits); c != Errc::Ok) return c;
 			if (!::base::fitsIn<::std::size_t>(bits)) return Errc::SizeOverflow;
 
 			/*
@@ -75,12 +75,12 @@ namespace ser {
 	} /* namespace internal */
 
 	template<>
-	struct min_wire_size<::base::DynamicBitset> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::base::DynamicBitset> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	template<>
-	struct schema<::base::DynamicBitset> {
+	struct Schema<::base::DynamicBitset> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<::u64, Mode, Seen>(
@@ -90,11 +90,11 @@ namespace ser {
 	};
 
 	template<>
-	struct serializer<::base::DynamicBitset> {
-		static constexpr Errc write(writer auto& ar, const ::base::DynamicBitset& b) {
+	struct Serializer<::base::DynamicBitset> {
+		static constexpr Errc write(Writer auto& ar, const ::base::DynamicBitset& b) {
 			const ::std::size_t bits = b.size();
-			if (const auto c = internal::dispatchWrite<internal::wire_size_type>(
-					ar, static_cast<internal::wire_size_type>(bits)
+			if (const auto c = internal::dispatchWrite<internal::WireSizeType>(
+					ar, static_cast<internal::WireSizeType>(bits)
 				);
 			    c != Errc::Ok)
 				return c;
@@ -111,7 +111,7 @@ namespace ser {
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::DynamicBitset& b) {
+		static constexpr Errc read(Reader auto& ar, ::base::DynamicBitset& b) {
 			::std::size_t bits = 0;
 			if (const auto c = internal::readBitCount(ar, bits); c != Errc::Ok) return c;
 

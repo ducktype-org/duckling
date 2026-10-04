@@ -24,16 +24,16 @@
  *   SER_DESCRIBE / _MAKE          the DESCRIBED field list - which is the format those
  *                                 macros emit, so a described aggregate and the same
  *                                 aggregate walked automatically hash IDENTICALLY
- *   std adapters                  a structural token per container (ser::schema<T>)
+ *   std adapters                  a structural token per container (ser::Schema<T>)
  *   ser_wire_as (+ _tag)         the wire type it names, behind an optional token - the
  *                                 in-class form of the same thing, for a type that cannot
  *                                 reach into namespace ser
  *   a hand-written hook           "hook", sizeof, alignof
- *   ser::config<T>::schema_id     that number, and nothing else
+ *   ser::Config<T>::schema_id     that number, and nothing else
  *
  * A hooked type is the weak spot: sizeof and alignof are all there is, so two unrelated
  * hooked types of the same size and alignment share a hash. Three ways out, in the order
- * schemaOf consults them - ser::config<T>::schema_id, a ser::schema<T> specialization, or
+ * schemaOf consults them - ser::Config<T>::schema_id, a ser::Schema<T> specialization, or
  * an in-class `ser_wire_as` alias (what every STRONG_TYPEDEF_INT uses).
  *
  * NO FIELD NAMES: the ladder does not know them, and byte identity with a reflection-based
@@ -66,14 +66,14 @@
 namespace ser {
 
 	/**
-	 * @brief ser::schema<T>
+	 * @brief ser::Schema<T>
 	 * @details The extension point for "I know what this type's format is, hash THAT". Same shape as
-	 * ser::serializer<T>: an empty primary, and a specialization that wins. Every std
+	 * ser::Serializer<T>: an empty primary, and a specialization that wins. Every std
 	 * adapter has one, which is what keeps a container's hash structural - vector<int> and
 	 * vector<float> differ - rather than a sizeof of somebody's std::vector.
 	 *
 	 *     template <class T, class Al>
-	 *     struct ser::schema<std::vector<T, Al>> {
+	 *     struct ser::Schema<std::vector<T, Al>> {
 	 *         template <class Mode, class Seen>
 	 *         static consteval ::std::uint64_t mix(::std::uint64_t h) {
 	 *             return ser::internal::schemaOf<T, Mode, Seen>(
@@ -84,16 +84,16 @@ namespace ser {
 	 * Mode and Seen are passed straight through and never inspected. No token is injected
 	 * before the call, so a serializer that writes exactly a std::uint32_t can hash
 	 * identically to the scalar it is. A type that cannot reach into namespace ser says the
-	 * same thing in-class with `using ser_wire_as = W;` - see ser::access.
+	 * same thing in-class with `using ser_wire_as = W;` - see ser::Access.
 	 */
 	template<class T>
-	struct schema {};
+	struct Schema {};
 
 	/**
-	 * @internal Not part of the public surface. `ser::schema<T>` above and `schemaHash` /
+	 * @internal Not part of the public surface. `ser::Schema<T>` above and `schemaHash` /
 	 * `debugHash` below are; everything in this namespace is how they are computed.
 	 * @note It stays in this header rather than moving under `internal/` because the walk
-	 * needs `ser::schema<T>` complete, and every adapter that specializes `schema<T>` also
+	 * needs `ser::Schema<T>` complete, and every adapter that specializes `Schema<T>` also
 	 * calls `schemaOf` / `schemaText` - splitting them would make an adapter include an
 	 * `internal/` header to reach a public extension point.
 	 */
@@ -151,7 +151,7 @@ namespace ser {
 	 *
 	 * Layout, frozen:  bits 0-1  byte order (1 little, 2 big, 3 neither)
 	 *                  bits 2-5  sizeof(void*)
-	 *                  bits 6-9  sizeof(config_global::size_type)
+	 *                  bits 6-9  sizeof(ConfigGlobal::size_type)
 	 *
 	 * It is in the schema hash as well, and the two are not redundant: a stream written
 	 * WITHOUT an envelope has only the hash. It lives here rather than in
@@ -163,7 +163,7 @@ namespace ser {
 		                         : (::std::endian::native == ::std::endian::big)    ? 2u
 		                                                                            : 3u;
 		constexpr unsigned BITS  = ORDER | (static_cast<unsigned>(sizeof(void*)) << 2)
-		                        | (static_cast<unsigned>(sizeof(config_global::size_type)) << 6);
+		                        | (static_cast<unsigned>(sizeof(ConfigGlobal::SizeType)) << 6);
 		static_assert(
 			BITS <= 0xFF'FFu,
 			"ser: nativeFlags does not fit in 16 bits - a platform with a "
@@ -177,12 +177,12 @@ namespace ser {
 
 		/**
 		 * @brief Whether names are mixed, and which context the format is for. One type
-		 * parameter instead of two so that ser::schema<T> specializations forward it
+		 * parameter instead of two so that ser::Schema<T> specializations forward it
 		 * blind and never have to change when a third knob shows up.
 		 */
 		template<class Ctx, bool Names>
-		struct schema_mode final {
-			using context               = Ctx;
+		struct SchemaMode final {
+			using Context               = Ctx;
 			static constexpr bool NAMES = Names;
 		};
 
@@ -228,33 +228,33 @@ namespace ser {
 		/** @brief the two overrides, and the two field lists */
 		template<class T>
 		inline constexpr bool HAS_SCHEMA_ID_V = requires {
-			{ config<::std::remove_cv_t<T>>::schema_id } -> ::std::convertible_to<::std::uint64_t>;
+			{ Config<::std::remove_cv_t<T>>::schema_id } -> ::std::convertible_to<::std::uint64_t>;
 		};
 
 		template<class T, class Mode, class Seen>
 		inline constexpr bool HAS_SCHEMA_MIX_V = requires(::std::uint64_t h) {
 			{
-				schema<::std::remove_cv_t<T>>::template mix<Mode, Seen>(h)
+				Schema<::std::remove_cv_t<T>>::template mix<Mode, Seen>(h)
 			} -> ::std::convertible_to<::std::uint64_t>;
 		};
 
 		/**
-		 * @brief The in-class alias, and its optional name token - see the note in ser::access.
+		 * @brief The in-class alias, and its optional name token - see the note in ser::Access.
 		 * The token comes FIRST, so a named wrapper is a different format from the type it
 		 * wraps while an unnamed one is the same format, byte for byte and hash for hash.
 		 */
 		template<class T, class Mode, class Seen>
 		[[nodiscard]] consteval ::std::uint64_t schemaAs(::std::uint64_t h) {
 			using U = ::std::remove_cv_t<T>;
-			if constexpr (access::HAS_SCHEMA_TAG_V<U>) h = schemaText(h, access::schemaTag<U>());
-			return schemaOf<::std::remove_cv_t<access::wire_as_t<U>>, Mode, Seen>(h);
+			if constexpr (Access::HAS_SCHEMA_TAG_V<U>) h = schemaText(h, Access::schemaTag<U>());
+			return schemaOf<::std::remove_cv_t<Access::WireAsT<U>>, Mode, Seen>(h);
 		}
 
 		/** @brief Diagnostics only: debugHash mixes the field name when SER_DESCRIBE left one. */
 		template<class T, class Mode>
 		[[nodiscard]] consteval ::std::uint64_t schemaFieldName(::std::uint64_t h, ::std::size_t i) {
-			if constexpr (Mode::NAMES && access::HAS_FIELD_NAMES_V<T>)
-				return schemaText(h, access::fieldName<T>(i));
+			if constexpr (Mode::NAMES && Access::HAS_FIELD_NAMES_V<T>)
+				return schemaText(h, Access::fieldName<T>(i));
 			else
 				return (void) i, h;
 		}
@@ -283,7 +283,7 @@ namespace ser {
 		/**
 		 * @brief Everything the library cannot see through. sizeof and alignof are the whole of
 		 * it, which is weaker than a field list and stronger than nothing - see the note
-		 * at the top of the file, and ser::config<T>::schema_id for the way out.
+		 * at the top of the file, and ser::Config<T>::schema_id for the way out.
 		 */
 		template<class T>
 		[[nodiscard]] consteval ::std::uint64_t schemaOpaque(::std::uint64_t h, const char* kind) {
@@ -294,15 +294,14 @@ namespace ser {
 		/**
 		 * @brief which level's hook is the format
 		 * @details A trait-level hook outranks the in-class one, so a type carrying both
-		 * SER_DESCRIBE and a ser::serializer<T> specialization is written by the
+		 * SER_DESCRIBE and a ser::Serializer<T> specialization is written by the
 		 * specialization, and its described field list is NOT the format.
 		 */
 		template<class T, class Ar>
 		inline constexpr bool TRAIT_LEVEL_HOOK_V
-			= LVL_WRITE_V<access::trait_hooks, T, Ar> || LVL_READ_V<access::trait_hooks, T, Ar>
-		   || LVL_MAKE_V<access::trait_hooks, T, Ar>
-		   || LVL_VISIT_WRITE_V<access::trait_hooks, T, Ar>
-		   || LVL_VISIT_READ_V<access::trait_hooks, T, Ar>;
+			= LVL_WRITE_V<Access::TraitHooks, T, Ar> || LVL_READ_V<Access::TraitHooks, T, Ar>
+		   || LVL_MAKE_V<Access::TraitHooks, T, Ar> || LVL_VISIT_WRITE_V<Access::TraitHooks, T, Ar>
+		   || LVL_VISIT_READ_V<Access::TraitHooks, T, Ar>;
 
 		/**
 		 * @brief the recursion
@@ -325,28 +324,28 @@ namespace ser {
 				 * asked with the canonical writer for this context - the same shape
 				 * internal::writer_for builds.
 				 */
-				using Ar = out<::std::span<::std::byte>, typename Mode::context>;
+				using Ar = Out<::std::span<::std::byte>, typename Mode::Context>;
 
 				if constexpr (HAS_SCHEMA_ID_V<U>)
 					return schemaNumber(
-						schemaText(h, "id"), static_cast<::std::uint64_t>(config<U>::schema_id)
+						schemaText(h, "id"), static_cast<::std::uint64_t>(Config<U>::schema_id)
 					);
 				else if constexpr (HAS_SCHEMA_MIX_V<U, Mode, Next>)
-					return schema<U>::template mix<Mode, Next>(h);
-				else if constexpr (access::HAS_WIRE_AS_V<U>)
+					return Schema<U>::template mix<Mode, Next>(h);
+				else if constexpr (Access::HAS_WIRE_AS_V<U>)
 					return schemaAs<U, Mode, Next>(h);
 				else if constexpr (HAS_CUSTOM_SERIALIZER_V<U, Ar>)
-					if constexpr (access::HAS_DESCRIBED_V<U> && !TRAIT_LEVEL_HOOK_V<U, Ar>)
-						return schemaStruct<U, Mode, Next>(h, described_types_t<U>{});
+					if constexpr (Access::HAS_DESCRIBED_V<U> && !TRAIT_LEVEL_HOOK_V<U, Ar>)
+						return schemaStruct<U, Mode, Next>(h, DescribedTypesT<U>{});
 					else
 						// @TODO: #90006 make this a compile error that names the three ways out
 						return schemaOpaque<U>(h, "hook");
-				else if constexpr (builtin::scalar_like<U>)
+				else if constexpr (builtin::ScalarLike<U>)
 					return schemaScalar<U>(h);
-				else if constexpr (builtin::enum_like<U>)
+				else if constexpr (builtin::EnumLike<U>)
 					return schemaScalar<::std::underlying_type_t<U>>(schemaText(h, "enum"));
 				else if constexpr (CAN_ENUMERATE_MEMBERS_V<U>)
-					return schemaStruct<U, Mode, Next>(h, field_types_t<U>{});
+					return schemaStruct<U, Mode, Next>(h, FieldTypesT<U>{});
 				else
 					/*
 					 * Nothing serializes this type either - dispatch refuses it with a
@@ -370,7 +369,7 @@ namespace ser {
 			::std::uint64_t h = FNV_BASIS;
 			h                 = schemaText(h, Mode::NAMES ? "ser.debug.1" : "ser.schema.1");
 			h                 = schemaNumber(h, static_cast<::std::uint64_t>(VERSION));
-			h                 = schemaNumber(h, sizeof(config_global::size_type));
+			h                 = schemaNumber(h, sizeof(ConfigGlobal::SizeType));
 			h                 = schemaNumber(h, nativeFlags());
 			/*
 			 * The pool count is the whole of it for now, and it is what makes
@@ -378,7 +377,7 @@ namespace ser {
 			 * the stream, no runtime check.
 			 */
 			h = schemaText(h, "ctx");
-			h = schemaNumber(h, static_cast<::std::uint64_t>(Mode::context::POOL_COUNT));
+			h = schemaNumber(h, static_cast<::std::uint64_t>(Mode::Context::POOL_COUNT));
 			return schemaOf<T, Mode, ::base::TypeList<>>(h);
 		}
 
@@ -388,9 +387,9 @@ namespace ser {
 	 * @brief The number that goes into the envelope.
 	 *     static_assert(ser::schemaHash<Config>() == 0x...);
 	 */
-	template<class T, class Ctx = no_context>
+	template<class T, class Ctx = NoContext>
 	[[nodiscard]] consteval ::std::uint64_t schemaHash() {
-		return internal::schemaRoot<T, internal::schema_mode<Ctx, false>>();
+		return internal::schemaRoot<T, internal::SchemaMode<Ctx, false>>();
 	}
 
 	/**
@@ -398,9 +397,9 @@ namespace ser {
 	 * stream and nothing validates against it. Use it to tell "the struct changed" from
 	 * "only a name changed": schemaHash equal and debugHash different means a rename.
 	 */
-	template<class T, class Ctx = no_context>
+	template<class T, class Ctx = NoContext>
 	[[nodiscard]] consteval ::std::uint64_t debugHash() {
-		return internal::schemaRoot<T, internal::schema_mode<Ctx, true>>();
+		return internal::schemaRoot<T, internal::SchemaMode<Ctx, true>>();
 	}
 
 } /* namespace ser */

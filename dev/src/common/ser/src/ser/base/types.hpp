@@ -35,12 +35,12 @@
 namespace ser {
 
 	template<>
-	struct min_wire_size<::base::Bit256> {
+	struct MinWireSize<::base::Bit256> {
 		static constexpr ::std::size_t VALUE = 4 * sizeof(::u64);
 	};
 
 	template<>
-	struct schema<::base::Bit256> {
+	struct Schema<::base::Bit256> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<::u64, Mode, Seen>(internal::schemaText(h, "base.bit256"));
@@ -48,7 +48,7 @@ namespace ser {
 	};
 
 	template<>
-	struct serializer<::base::Bit256> {
+	struct Serializer<::base::Bit256> {
 		template<class Ar, class Self>
 		static constexpr Errc visit(Ar& ar, Self& self) {
 			for (auto& word: self.data)
@@ -80,12 +80,12 @@ namespace ser {
 	} /* namespace internal */
 
 	template<>
-	struct serializer<::base::CheckedOkBad> {
-		static constexpr Errc write(writer auto& ar, const ::base::CheckedOkBad&) {
+	struct Serializer<::base::CheckedOkBad> {
+		static constexpr Errc write(Writer auto& ar, const ::base::CheckedOkBad&) {
 			return internal::denyCheckedOkBad<decltype(ar)>();
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::CheckedOkBad&) {
+		static constexpr Errc read(Reader auto& ar, ::base::CheckedOkBad&) {
 			return internal::denyCheckedOkBad<decltype(ar)>();
 		}
 	};

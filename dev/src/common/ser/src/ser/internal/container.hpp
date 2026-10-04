@@ -27,20 +27,20 @@
 
 namespace ser::internal {
 
-	using wire_size_type = config_global::size_type;
+	using WireSizeType = ConfigGlobal::SizeType;
 
-	template<class E, writer Ar>
+	template<class E, Writer Ar>
 	constexpr Errc writeLength(Ar& ar, ::std::size_t n) {
 		if constexpr (MIN_WIRE_SIZE_V<E> == 0) {
-			if (n > config_global::MAX_ZERO_SIZE_ELEMENTS) return Errc::MessageSize;
+			if (n > ConfigGlobal::MAX_ZERO_SIZE_ELEMENTS) return Errc::MessageSize;
 		}
-		return dispatchWrite<wire_size_type>(ar, static_cast<wire_size_type>(n));
+		return dispatchWrite<WireSizeType>(ar, static_cast<WireSizeType>(n));
 	}
 
-	template<class E, reader Ar>
+	template<class E, Reader Ar>
 	constexpr Errc readLength(Ar& ar, ::std::size_t& out) {
-		wire_size_type n = 0;
-		if (const auto c = dispatchRead<wire_size_type>(ar, n); c != Errc::Ok) return c;
+		WireSizeType n = 0;
+		if (const auto c = dispatchRead<WireSizeType>(ar, n); c != Errc::Ok) return c;
 
 		if (!::base::fitsIn<::std::size_t>(n)) return Errc::SizeOverflow;
 
@@ -50,7 +50,7 @@ namespace ser::internal {
 				return Errc::SizeOverflow;
 			if (lower_bound > ar.avail()) return Errc::Truncated;
 		} else {
-			if (n > config_global::MAX_ZERO_SIZE_ELEMENTS) return Errc::MessageSize;
+			if (n > ConfigGlobal::MAX_ZERO_SIZE_ELEMENTS) return Errc::MessageSize;
 		}
 
 		out = static_cast<::std::size_t>(n);

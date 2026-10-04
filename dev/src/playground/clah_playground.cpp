@@ -46,7 +46,7 @@
  *     > 0: Hello, Charlie!
  *
  *
- * === Subcommand: `config` ===
+ * === Subcommand: `Config` ===
  * This command demonstrates how global options affect different parts of the application.
  *
  * 1.  Basic usage:

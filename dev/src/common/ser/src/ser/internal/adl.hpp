@@ -53,7 +53,7 @@ namespace ser::internal::adl_barrier {
 	 * against the poisoned declaration above rather than in the instantiation context.
 	 */
 	template<class Ar, class T>
-	constexpr auto callMake(Ar& ar, ::ser::tag<T> t) -> decltype(serMake(ar, t)) {
+	constexpr auto callMake(Ar& ar, ::ser::Tag<T> t) -> decltype(serMake(ar, t)) {
 		return serMake(ar, t);
 	}
 
@@ -67,7 +67,7 @@ namespace ser::internal {
 	 * defined; each one just names the barrier call for its form, whose own trailing return
 	 * type is what makes a missing hook a substitution failure.
 	 */
-	struct adl_hooks final {
+	struct AdlHooks final {
 		template<class Ar, class T>
 		static auto visit(Ar& ar, T& x) -> decltype(adl_barrier::callVisit(ar, x));
 
@@ -84,7 +84,7 @@ namespace ser::internal {
 		 */
 		template<class T, class Ar>
 		static auto make(Ar& ar)
-			-> decltype(adl_barrier::callMake(ar, ::ser::tag<::std::remove_cvref_t<T>>{}));
+			-> decltype(adl_barrier::callMake(ar, ::ser::Tag<::std::remove_cvref_t<T>>{}));
 	};
 
 } /* namespace ser::internal */

@@ -35,12 +35,12 @@
 namespace ser {
 
 	template<class T>
-	struct min_wire_size<::std::optional<T>> {
+	struct MinWireSize<::std::optional<T>> {
 		static constexpr ::std::size_t VALUE = 1; /* the presence byte, always there */
 	};
 
 	template<class T>
-	struct schema<::std::optional<T>> {
+	struct Schema<::std::optional<T>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<T, Mode, Seen>(internal::schemaText(h, "optional"));
@@ -48,10 +48,10 @@ namespace ser {
 	};
 
 	template<class T>
-	struct serializer<::std::optional<T>> {
+	struct Serializer<::std::optional<T>> {
 		static constexpr bool FILLABLE = internal::FILL_IN_PLACE_V<T>;
 
-		static constexpr Errc write(writer auto& ar, const ::std::optional<T>& o) {
+		static constexpr Errc write(Writer auto& ar, const ::std::optional<T>& o) {
 			const ::std::uint8_t present = o.has_value() ? 1u : 0u;
 			if (const auto c = internal::dispatchWrite<::std::uint8_t>(ar, present); c != Errc::Ok)
 				return c;
@@ -59,7 +59,7 @@ namespace ser {
 			return internal::dispatchWrite<T>(ar, *o);
 		}
 
-		static constexpr Errc read(reader auto& ar, ::std::optional<T>& o)
+		static constexpr Errc read(Reader auto& ar, ::std::optional<T>& o)
 			requires(internal::READABLE_ELEMENT_V<T>) {
 			::std::uint8_t present = 0;
 			if (const auto c = internal::dispatchRead<::std::uint8_t>(ar, present); c != Errc::Ok)

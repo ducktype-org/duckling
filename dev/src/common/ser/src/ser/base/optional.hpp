@@ -41,7 +41,7 @@
 namespace ser {
 
 	template<class T>
-	struct min_wire_size<::base::Optional<T>> {
+	struct MinWireSize<::base::Optional<T>> {
 		static constexpr ::std::size_t VALUE = 1; /* the presence byte, always there */
 	};
 
@@ -51,7 +51,7 @@ namespace ser {
 	 * base::Optional<f32> share both, so the envelope would read one as the other.
 	 */
 	template<class T>
-	struct schema<::base::Optional<T>> {
+	struct Schema<::base::Optional<T>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<::std::optional<T>, Mode, Seen>(h);
@@ -59,10 +59,10 @@ namespace ser {
 	};
 
 	template<class T>
-	struct serializer<::base::Optional<T>> {
+	struct Serializer<::base::Optional<T>> {
 		static constexpr bool FILLABLE = internal::FILL_IN_PLACE_V<T>;
 
-		static constexpr Errc write(writer auto& ar, const ::base::Optional<T>& o) {
+		static constexpr Errc write(Writer auto& ar, const ::base::Optional<T>& o) {
 			const ::std::uint8_t present = o.has_value() ? 1u : 0u;
 			if (const auto c = internal::dispatchWrite<::std::uint8_t>(ar, present); c != Errc::Ok)
 				return c;
@@ -70,7 +70,7 @@ namespace ser {
 			return internal::dispatchWrite<T>(ar, *o);
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::Optional<T>& o)
+		static constexpr Errc read(Reader auto& ar, ::base::Optional<T>& o)
 			requires(internal::READABLE_ELEMENT_V<T>) {
 			::std::uint8_t present = 0;
 			if (const auto c = internal::dispatchRead<::std::uint8_t>(ar, present); c != Errc::Ok)

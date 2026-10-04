@@ -29,12 +29,12 @@
 namespace ser {
 
 	template<class A, class B>
-	struct min_wire_size<::std::pair<A, B>> {
+	struct MinWireSize<::std::pair<A, B>> {
 		static constexpr ::std::size_t VALUE = MIN_WIRE_SIZE_V<A> + MIN_WIRE_SIZE_V<B>;
 	};
 
 	template<class... Es>
-	struct min_wire_size<::std::tuple<Es...>> {
+	struct MinWireSize<::std::tuple<Es...>> {
 		static constexpr ::std::size_t VALUE = (::std::size_t{ 0 } + ... + MIN_WIRE_SIZE_V<Es>);
 	};
 
@@ -46,7 +46,7 @@ namespace ser {
 		 * and read as its underlying type.
 		 */
 		template<class T, class... Es>
-		constexpr Errc writeElements(writer auto& ar, const T& t) {
+		constexpr Errc writeElements(Writer auto& ar, const T& t) {
 			Errc code = Errc::Ok;
 			[&]<::std::size_t... I>(::std::index_sequence<I...>) {
 				(void) ((code = dispatchWrite<Es>(ar, ::std::get<I>(t)), code == Errc::Ok) && ...);
@@ -55,7 +55,7 @@ namespace ser {
 		}
 
 		template<class T, class... Es>
-		constexpr Errc readElements(reader auto& ar, T& t) {
+		constexpr Errc readElements(Reader auto& ar, T& t) {
 			Errc code = Errc::Ok;
 			[&]<::std::size_t... I>(::std::index_sequence<I...>) {
 				(void) ((code = dispatchRead<Es>(ar, ::std::get<I>(t)), code == Errc::Ok) && ...);
@@ -83,7 +83,7 @@ namespace ser {
 	 * costs a misread stream.
 	 */
 	template<class A, class B>
-	struct schema<::std::pair<A, B>> {
+	struct Schema<::std::pair<A, B>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			h = internal::schemaText(h, "pair");
@@ -93,7 +93,7 @@ namespace ser {
 	};
 
 	template<class... Es>
-	struct schema<::std::tuple<Es...>> {
+	struct Schema<::std::tuple<Es...>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			h = internal::schemaNumber(internal::schemaText(h, "tuple"), sizeof...(Es));
@@ -103,43 +103,42 @@ namespace ser {
 	};
 
 	template<class A, class B>
-	struct serializer<::std::pair<A, B>> {
-		using pair_type = ::std::pair<A, B>;
-		using first     = ::std::remove_cv_t<A>;
-		using second    = ::std::remove_cv_t<B>;
+	struct Serializer<::std::pair<A, B>> {
+		using PairType = ::std::pair<A, B>;
+		using First    = ::std::remove_cv_t<A>;
+		using Second   = ::std::remove_cv_t<B>;
 
-		static constexpr Errc write(writer auto& ar, const pair_type& p) {
-			return internal::writeElements<pair_type, first, second>(ar, p);
+		static constexpr Errc write(Writer auto& ar, const PairType& p) {
+			return internal::writeElements<PairType, First, Second>(ar, p);
 		}
 
-		static constexpr Errc read(reader auto& ar, pair_type& p)
-			requires(internal::TUPLE_ELEMENTS_FILLABLE<pair_type>) {
-			return internal::readElements<pair_type, first, second>(ar, p);
+		static constexpr Errc read(Reader auto& ar, PairType& p)
+			requires(internal::TUPLE_ELEMENTS_FILLABLE<PairType>) {
+			return internal::readElements<PairType, First, Second>(ar, p);
 		}
 
-		static constexpr pair_type make(reader auto& ar)
-			requires(internal::BUILDABLE_V<first> && internal::BUILDABLE_V<second>) {
-			return pair_type{ internal::dispatchMake<first>(ar),
-				              internal::dispatchMake<second>(ar) };
+		static constexpr PairType make(Reader auto& ar)
+			requires(internal::BUILDABLE_V<First> && internal::BUILDABLE_V<Second>) {
+			return PairType{ internal::dispatchMake<First>(ar), internal::dispatchMake<Second>(ar) };
 		}
 	};
 
 	template<class... Es>
-	struct serializer<::std::tuple<Es...>> {
-		using tuple_type = ::std::tuple<Es...>;
+	struct Serializer<::std::tuple<Es...>> {
+		using TupleType = ::std::tuple<Es...>;
 
-		static constexpr Errc write(writer auto& ar, const tuple_type& t) {
-			return internal::writeElements<tuple_type, ::std::remove_cv_t<Es>...>(ar, t);
+		static constexpr Errc write(Writer auto& ar, const TupleType& t) {
+			return internal::writeElements<TupleType, ::std::remove_cv_t<Es>...>(ar, t);
 		}
 
-		static constexpr Errc read(reader auto& ar, tuple_type& t)
-			requires(internal::TUPLE_ELEMENTS_FILLABLE<tuple_type>) {
-			return internal::readElements<tuple_type, ::std::remove_cv_t<Es>...>(ar, t);
+		static constexpr Errc read(Reader auto& ar, TupleType& t)
+			requires(internal::TUPLE_ELEMENTS_FILLABLE<TupleType>) {
+			return internal::readElements<TupleType, ::std::remove_cv_t<Es>...>(ar, t);
 		}
 
-		static constexpr tuple_type make(reader auto& ar)
+		static constexpr TupleType make(Reader auto& ar)
 			requires((internal::BUILDABLE_V<::std::remove_cv_t<Es>> && ... && true)) {
-			return tuple_type{ internal::dispatchMake<::std::remove_cv_t<Es>>(ar)... };
+			return TupleType{ internal::dispatchMake<::std::remove_cv_t<Es>>(ar)... };
 		}
 	};
 

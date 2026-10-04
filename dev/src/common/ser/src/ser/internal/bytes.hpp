@@ -9,7 +9,7 @@
 namespace ser::internal {
 
 	template<class T>
-	using byte_array_t = ::std::array<::std::byte, sizeof(T)>;
+	using ByteArrayT = ::std::array<::std::byte, sizeof(T)>;
 
 	template<class T>
 	constexpr void store(::std::byte* dst, const T& v) noexcept {
@@ -18,7 +18,7 @@ namespace ser::internal {
 			"ser::internal::store requires a trivially copyable type"
 		);
 		if consteval {
-			const auto arr = ::std::bit_cast<byte_array_t<T>>(v);
+			const auto arr = ::std::bit_cast<ByteArrayT<T>>(v);
 			for (::std::size_t i = 0; i < sizeof(T); ++i) dst[i] = arr[i];
 		} else {
 			::std::memcpy(dst, &v, sizeof(T));
@@ -32,11 +32,11 @@ namespace ser::internal {
 			"ser::internal::load requires a trivially copyable type"
 		);
 		if consteval {
-			byte_array_t<T> arr{};
+			ByteArrayT<T> arr{};
 			for (::std::size_t i = 0; i < sizeof(T); ++i) arr[i] = src[i];
 			return ::std::bit_cast<T>(arr);
 		} else {
-			byte_array_t<T> arr;
+			ByteArrayT<T> arr;
 			::std::memcpy(arr.data(), src, sizeof(T));
 			return ::std::bit_cast<T>(arr);
 		}
@@ -54,7 +54,7 @@ namespace ser::internal {
 			"fields goes through serMake, not serRead"
 		);
 		if consteval {
-			byte_array_t<T> arr{};
+			ByteArrayT<T> arr{};
 			for (::std::size_t i = 0; i < sizeof(T); ++i) arr[i] = src[i];
 			dst = ::std::bit_cast<T>(arr);
 		} else {

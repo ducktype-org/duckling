@@ -17,21 +17,21 @@ namespace ser {
 	 *
 	 *     enum Kind { First, Second, Third };
 	 *     template<>
-	 *     struct ser::enum_range<Kind> {
+	 *     struct ser::EnumRange<Kind> {
 	 *         static constexpr Kind MIN = First;
 	 *         static constexpr Kind MAX = Third;
 	 *     };
 	 *
 	 */
 	template<class T>
-	struct enum_range;
+	struct EnumRange;
 
 } /* namespace ser */
 
 namespace ser::builtin {
 
 	template<class T>
-	concept enum_like = ::std::is_enum_v<::std::remove_cv_t<T>>;
+	concept EnumLike = ::std::is_enum_v<::std::remove_cv_t<T>>;
 
 	/*
 	 * The underlying type is what goes on the wire, so changing it changes the format -
@@ -51,17 +51,17 @@ namespace ser::builtin {
 
 	template<class T>
 	inline constexpr bool HAS_ENUM_RANGE_V = requires {
-		::ser::enum_range<::std::remove_cv_t<T>>::MIN;
-		::ser::enum_range<::std::remove_cv_t<T>>::MAX;
+		::ser::EnumRange<::std::remove_cv_t<T>>::MIN;
+		::ser::EnumRange<::std::remove_cv_t<T>>::MAX;
 	};
 
-	template<class T, writer Ar>
+	template<class T, Writer Ar>
 	constexpr Errc writeEnum(Ar& ar, const T& v) {
 		using U = ::std::remove_cv_t<T>;
 		return writeScalar(ar, ::std::to_underlying(static_cast<U>(v)));
 	}
 
-	template<class T, reader Ar>
+	template<class T, Reader Ar>
 	constexpr Errc readEnum(Ar& ar, T& v) {
 		using E = ::std::remove_cv_t<T>;
 		using U = ::std::underlying_type_t<E>;
@@ -74,7 +74,7 @@ namespace ser::builtin {
 			"out:\n"
 			"  give it a fixed underlying type - enum E : std::uint32_t { ... } - after which "
 			"every value of that type is a defined one\n"
-			"  or declare the range: template<> struct ser::enum_range<E> { static constexpr "
+			"  or declare the range: template<> struct ser::EnumRange<E> { static constexpr "
 			"E MIN = ..., MAX = ...; };"
 		);
 
@@ -82,8 +82,8 @@ namespace ser::builtin {
 		if (const auto e = readScalar(ar, raw); e != Errc::Ok) return e;
 
 		if constexpr (!ENUM_CONVERSION_DEFINED_V<E>) {
-			if (raw < static_cast<U>(::ser::enum_range<E>::MIN)
-			    || raw > static_cast<U>(::ser::enum_range<E>::MAX))
+			if (raw < static_cast<U>(::ser::EnumRange<E>::MIN)
+			    || raw > static_cast<U>(::ser::EnumRange<E>::MAX))
 				return Errc::InvalidValue;
 		}
 

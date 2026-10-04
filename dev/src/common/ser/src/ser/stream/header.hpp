@@ -8,7 +8,7 @@
  *
  *     [header 32 B]?  [payload]
  *
- * It is OPT-IN - ser::options{}.header is false - so a plain ser::write is exactly the
+ * It is OPT-IN - ser::Options{}.header is false - so a plain ser::write is exactly the
  * payload. Thirty-two is a multiple of sixteen on purpose, so the payload starts at a
  * 16-byte boundary whenever the buffer does. The layout is frozen, has no padding (both
  * asserted below) and every field is in native byte order, which `flags` is what makes
@@ -44,7 +44,7 @@
 
 namespace ser {
 
-	struct stream_header final {
+	struct StreamHeader final {
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		char            magic[8]     = { 'S', 'E', 'R', '\0', '\0', '\0', '\0', '\0' };
 		::std::uint64_t schema_hash  = 0;
@@ -91,9 +91,9 @@ namespace ser {
 		 * @brief payload_size is filled in after the payload is written - see the patch in
 		 * ser::write - so a header handed to writeHeader may carry a zero here.
 		 */
-		template<class T, class Ctx = no_context>
-		[[nodiscard]] static constexpr stream_header forType(::std::uint32_t user = 0) noexcept {
-			stream_header h{};
+		template<class T, class Ctx = NoContext>
+		[[nodiscard]] static constexpr StreamHeader forType(::std::uint32_t user = 0) noexcept {
+			StreamHeader h{};
 			h.setUserMagic(user);
 			h.schema_hash = ::ser::schemaHash<T, Ctx>();
 			h.flags       = ::ser::nativeFlags();
@@ -101,27 +101,27 @@ namespace ser {
 			return h;
 		}
 
-		friend constexpr bool operator==(const stream_header&, const stream_header&) = default;
+		friend constexpr bool operator==(const StreamHeader&, const StreamHeader&) = default;
 	};
 
 	static_assert(
-		sizeof(stream_header) == stream_header::WIRE_SIZE,
+		sizeof(StreamHeader) == StreamHeader::WIRE_SIZE,
 		"ser: the envelope is a fixed 32 bytes - see the layout note above."
 	);
 	static_assert(
-		::std::has_unique_object_representations_v<stream_header>,
+		::std::has_unique_object_representations_v<StreamHeader>,
 		"ser: the envelope must have no padding, because it is written as its "
 		"own object representation and padding would put indeterminate bytes "
 		"into the stream."
 	);
-	static_assert(::std::is_trivially_copyable_v<stream_header>);
+	static_assert(::std::is_trivially_copyable_v<StreamHeader>);
 
 	/**
 	 * @brief One store of 32 bytes, wherever the archive currently is - so a caller can put an
 	 * envelope in front of each of several messages in one buffer.
 	 */
-	template<writer Ar>
-	constexpr Errc writeHeader(Ar& ar, const stream_header& h) {
+	template<Writer Ar>
+	constexpr Errc writeHeader(Ar& ar, const StreamHeader& h) {
 		return ar.writeRaw(h);
 	}
 
@@ -139,16 +139,16 @@ namespace ser {
 	 * On success the archive is positioned at the payload - past header_size bytes, not
 	 * past 32, so a longer envelope from a later version is skipped rather than misread.
 	 */
-	template<reader Ar>
-	constexpr Errc readHeader(Ar& ar, stream_header& h, ::std::uint32_t user_magic = 0) {
+	template<Reader Ar>
+	constexpr Errc readHeader(Ar& ar, StreamHeader& h, ::std::uint32_t user_magic = 0) {
 		const ::std::size_t start = ar.position();
 
-		stream_header raw{};
+		StreamHeader raw{};
 		if (const auto e = ar.readRaw(raw); e != Errc::Ok) return e;
 
 		if (!raw.magicOk()) return Errc::BadMagic;
 		if (raw.userMagic() != user_magic) return Errc::BadMagic;
-		if (raw.header_size < stream_header::WIRE_SIZE) return Errc::BadMagic;
+		if (raw.header_size < StreamHeader::WIRE_SIZE) return Errc::BadMagic;
 		if (raw.flags != nativeFlags()) return Errc::PlatformMismatch;
 
 		/*
@@ -169,8 +169,8 @@ namespace ser {
 	 * @brief The part that needs the type. Split out so that a caller reading several different
 	 * messages out of one stream can look at the header first and decide what to read.
 	 */
-	template<class T, class Ctx = no_context>
-	[[nodiscard]] constexpr Errc checkHeader(const stream_header& h) noexcept {
+	template<class T, class Ctx = NoContext>
+	[[nodiscard]] constexpr Errc checkHeader(const StreamHeader& h) noexcept {
 		return h.schema_hash == ::ser::schemaHash<T, Ctx>() ? Errc::Ok : Errc::SchemaMismatch;
 	}
 
@@ -179,14 +179,14 @@ namespace ser {
 	 * schema_hash comes back as data, so a caller holding several possible types can
 	 * compare it against ser::schemaHash<T>() for each of them and pick.
 	 */
-	[[nodiscard]] inline result<stream_header> peekHeader(
+	[[nodiscard]] inline Result<StreamHeader> peekHeader(
 		::std::span<const ::std::byte> bytes, ::std::uint32_t user_magic = 0
 	) {
-		in<no_context> ar{ bytes };
-		stream_header  h{};
+		In<NoContext> ar{ bytes };
+		StreamHeader  h{};
 		if (const auto e = readHeader(ar, h, user_magic); e != Errc::Ok)
 			return fail(e, ar.position());
-		return result<stream_header>{ h };
+		return Result<StreamHeader>{ h };
 	}
 
 } /* namespace ser */

@@ -35,7 +35,7 @@ namespace ser {
 	 * check. There is no checksum flag, because payload_crc is written as 0 and a flag that
 	 * quietly does nothing is worse than an absent one.
 	 */
-	struct options final {
+	struct Options final {
 		bool            header     = false;
 		::std::uint32_t user_magic = 0;
 	};
@@ -49,8 +49,8 @@ namespace ser {
 		 * payload, so the caller just carries on.
 		 */
 		template<class T, class Ctx, class Ar>
-		void readEnvelope(Ar& ar, const options& opt) {
-			stream_header h{};
+		void readEnvelope(Ar& ar, const Options& opt) {
+			StreamHeader h{};
 			if (const auto e = readHeader(ar, h, opt.user_magic); e != Errc::Ok)
 				throwError(e, ar.position());
 			if (const auto e = checkHeader<T, Ctx>(h); e != Errc::Ok) throwError(e, ar.position());
@@ -66,7 +66,7 @@ namespace ser {
 	 * with const fields.
 	 */
 	template<class T, class Ctx>
-	struct owned final {
+	struct Owned final {
 		T                     value;
 		NO_UNIQUE_ADDRESS Ctx ctx;
 
@@ -93,7 +93,7 @@ namespace ser {
 				::std::move_constructible<T>,
 				"ser: owned::take needs a movable T - an object that cannot be moved "
 				"cannot be relocated out of the bundle. Build it where it belongs: "
-				"ser::in ar{bytes}; T obj{ ser::subMake<F>(ar), ... };"
+				"ser::In ar{bytes}; T obj{ ser::subMake<F>(ar), ... };"
 			);
 			return ::std::move(value);
 		}
@@ -109,7 +109,7 @@ namespace ser {
 		 * CORE_PANIC is std::unreachable() in Release, so a panicking form handed input that
 		 * is allowed to be wrong is undefined behaviour there, with no diagnostic.
 		 */
-		[[noreturn]] inline void panicOnStreamError(const char* what, const error& e) {
+		[[noreturn]] inline void panicOnStreamError(const char* what, const Error& e) {
 			CORE_PANIC(what, e.message());
 		}
 
@@ -126,18 +126,18 @@ namespace ser {
 		 * movable, while a return code has nowhere to sit next to the value.
 		 *
 		 * It is `internal` because that convention stops at the library's edge - every public
-		 * entry point below turns the exception into a ser::result or a CORE_PANIC, so no
-		 * ser::exception ever escapes into calling code.
+		 * entry point below turns the exception into a ser::Result or a CORE_PANIC, so no
+		 * ser::Exception ever escapes into calling code.
 		 */
 		template<class T, class Ctx>
-		[[nodiscard]] owned<T, Ctx> readThrowing(::std::span<const ::std::byte> bytes, options opt) {
+		[[nodiscard]] Owned<T, Ctx> readThrowing(::std::span<const ::std::byte> bytes, Options opt) {
 			static_assert(
 				!::std::is_array_v<T>,
 				"ser: cannot return a C array by value. Read it in "
-				"place: T arr; ser::in{bytes}(arr)."
+				"place: T arr; ser::In{bytes}(arr)."
 			);
 			Ctx     ctx{};
-			in<Ctx> ar{ bytes, ctx };
+			In<Ctx> ar{ bytes, ctx };
 			if (opt.header) readEnvelope<T, Ctx>(ar, opt);
 			/*
 			 * Left-to-right evaluation is guaranteed for braced init, so `ar` is done being
@@ -145,7 +145,7 @@ namespace ser {
 			 * the end-of-buffer check can run: after the object exists, without naming it,
 			 * which would cost the move this path exists to avoid.
 			 */
-			return owned<T, Ctx>{ dispatchMake<T>(ar),
+			return Owned<T, Ctx>{ dispatchMake<T>(ar),
 				                  (requireFullyConsumed(ar), ::std::move(ctx)) };
 		}
 
@@ -157,14 +157,14 @@ namespace ser {
 		 */
 		template<class T, class Ctx>
 		requires(::std::is_empty_v<Ctx>)
-		[[nodiscard]] T readThrowingForce(::std::span<const ::std::byte> bytes, options opt) {
+		[[nodiscard]] T readThrowingForce(::std::span<const ::std::byte> bytes, Options opt) {
 			static_assert(
 				!::std::is_array_v<T>,
 				"ser: cannot return a C array by value. Read it "
-				"in place: T arr; ser::in{bytes}(arr)."
+				"in place: T arr; ser::In{bytes}(arr)."
 			);
 			Ctx     ctx{};
-			in<Ctx> ar{ bytes, ctx };
+			In<Ctx> ar{ bytes, ctx };
 			if (opt.header) readEnvelope<T, Ctx>(ar, opt);
 
 			if constexpr (::std::move_constructible<T>) {
@@ -207,9 +207,9 @@ namespace ser {
 	 * @brief The bundle reaches std::expected through a constructor parameter, and elision never
 	 * crosses one - so this path costs exactly one move of owned<T, Ctx>.
 	 */
-	template<class T, class Ctx = no_context>
-	[[nodiscard]] result<owned<::std::remove_cv_t<T>, Ctx>> read(
-		::std::span<const ::std::byte> bytes, options opt = {}
+	template<class T, class Ctx = NoContext>
+	[[nodiscard]] Result<Owned<::std::remove_cv_t<T>, Ctx>> read(
+		::std::span<const ::std::byte> bytes, Options opt = {}
 	) {
 		static_assert(
 			::std::move_constructible<::std::remove_cv_t<T>>,
@@ -220,7 +220,7 @@ namespace ser {
 		);
 		try {
 			return internal::readThrowing<::std::remove_cv_t<T>, Ctx>(bytes, opt);
-		} catch (const exception& e) { return fail(e.err()); }
+		} catch (const Exception& e) { return fail(e.err()); }
 	}
 
 	/**
@@ -228,13 +228,13 @@ namespace ser {
 	 * copy elision inside a try block, so the object is built once, at its final address,
 	 * and a T that cannot be moved reads fine here.
 	 */
-	template<class T, class Ctx = no_context>
-	[[nodiscard]] owned<::std::remove_cv_t<T>, Ctx> readOrPanic(
-		::std::span<const ::std::byte> bytes, options opt = {}
+	template<class T, class Ctx = NoContext>
+	[[nodiscard]] Owned<::std::remove_cv_t<T>, Ctx> readOrPanic(
+		::std::span<const ::std::byte> bytes, Options opt = {}
 	) {
 		try {
 			return internal::readThrowing<::std::remove_cv_t<T>, Ctx>(bytes, opt);
-		} catch (const exception& e) {
+		} catch (const Exception& e) {
 			internal::panicOnStreamError("failed to deserialize: ", e.err());
 		}
 	}
@@ -247,13 +247,13 @@ namespace ser {
 	 * A stateful context means readOrPanic instead, and the object stays bundled with the
 	 * pools it may point into - see the note on internal::readThrowingForce.
 	 */
-	template<class T, class Ctx = no_context>
+	template<class T, class Ctx = NoContext>
 	requires(::std::is_empty_v<Ctx>) [[nodiscard]] ::std::remove_cv_t<T> readOrPanicForce(
-		::std::span<const ::std::byte> bytes, options opt = {}
+		::std::span<const ::std::byte> bytes, Options opt = {}
 	) {
 		try {
 			return internal::readThrowingForce<::std::remove_cv_t<T>, Ctx>(bytes, opt);
-		} catch (const exception& e) {
+		} catch (const Exception& e) {
 			internal::panicOnStreamError("failed to deserialize: ", e.err());
 		}
 	}
@@ -273,7 +273,7 @@ namespace ser {
 	 * archive does say: ar.position() is public, and so are ar.size(), ar.avail() and
 	 * ar.reset(p).
 	 *
-	 *     ser::in ar{bytes};
+	 *     ser::In ar{bytes};
 	 *     if (const auto e = ar(header); e != Errc::Ok) return {e, ar.position()};
 	 *     if (const auto e = ar(payload); e != Errc::Ok) return {e, ar.position()};
 	 *     const usize consumed = ar.position();   // where the next message begins
@@ -282,9 +282,9 @@ namespace ser {
 	 * appending several messages means several self-contained messages, not one message in
 	 * several pieces.
 	 */
-	template<byte_buffer Buf, class T>
-	[[nodiscard]] result<> write(Buf& buf, const T& x, options opt = {}) {
-		out<Buf>            ar{ buf };
+	template<ByteBuffer Buf, class T>
+	[[nodiscard]] Result<> write(Buf& buf, const T& x, Options opt = {}) {
+		Out<Buf>            ar{ buf };
 		const ::std::size_t start = ar.position();
 
 		/**
@@ -292,9 +292,9 @@ namespace ser {
 		 * payload is out, so the first copy reserves the 32 bytes and the second - after
 		 * finish(), so pool data counts as payload - patches them.
 		 */
-		stream_header h{};
+		StreamHeader h{};
 		if (opt.header) {
-			h = stream_header::forType<T>(opt.user_magic);
+			h = StreamHeader::forType<T>(opt.user_magic);
 			if (const auto e = writeHeader(ar, h); e != Errc::Ok) return fail(e, ar.position());
 		}
 		const ::std::size_t payload_start = ar.position();
@@ -316,8 +316,8 @@ namespace ser {
 	 * @brief Read can legitimately fail because its input is somebody else's bytes,
 	 * while a write is handed an object the caller is already holding
 	 */
-	template<byte_buffer Buf, class T>
-	void writeOrPanic(Buf& buf, const T& x, options opt = {}) {
+	template<ByteBuffer Buf, class T>
+	void writeOrPanic(Buf& buf, const T& x, Options opt = {}) {
 		if (const auto r = write(buf, x, opt); !r)
 			internal::panicOnStreamError("failed to serialize: ", r.error());
 	}

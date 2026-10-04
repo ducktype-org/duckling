@@ -53,10 +53,10 @@ namespace ser {
 			if constexpr (requires { c.reserve(n); }) c.reserve(n);
 		}
 
-		/** @brief NOT final: ser::serializer<std::map/unordered_map> derives from it below. */
+		/** @brief NOT final: ser::Serializer<std::map/unordered_map> derives from it below. */
 		template<class M, class K, class V>
-		struct map_adapter {
-			static constexpr Errc write(writer auto& ar, const M& m) {
+		struct MapAdapter {
+			static constexpr Errc write(Writer auto& ar, const M& m) {
 				if (const auto c = writeLength<::std::pair<K, V>>(ar, m.size()); c != Errc::Ok)
 					return c;
 				for (const auto& [key, value]: m) {
@@ -66,7 +66,7 @@ namespace ser {
 				return Errc::Ok;
 			}
 
-			static constexpr Errc read(reader auto& ar, M& m)
+			static constexpr Errc read(Reader auto& ar, M& m)
 				requires(BUILDABLE_V<K> && BUILDABLE_V<V>) {
 				::std::size_t n = 0;
 				if (const auto c = readLength<::std::pair<K, V>>(ar, n); c != Errc::Ok) return c;
@@ -83,17 +83,17 @@ namespace ser {
 			}
 		};
 
-		/** @brief NOT final: ser::serializer<std::set/unordered_set> derives from it below. */
+		/** @brief NOT final: ser::Serializer<std::set/unordered_set> derives from it below. */
 		template<class S, class K>
-		struct set_adapter {
-			static constexpr Errc write(writer auto& ar, const S& s) {
+		struct SetAdapter {
+			static constexpr Errc write(Writer auto& ar, const S& s) {
 				if (const auto c = writeLength<K>(ar, s.size()); c != Errc::Ok) return c;
 				for (const auto& key: s)
 					if (const auto c = dispatchWrite<K>(ar, key); c != Errc::Ok) return c;
 				return Errc::Ok;
 			}
 
-			static constexpr Errc read(reader auto& ar, S& s) requires(BUILDABLE_V<K>) {
+			static constexpr Errc read(Reader auto& ar, S& s) requires(BUILDABLE_V<K>) {
 				::std::size_t n = 0;
 				if (const auto c = readLength<K>(ar, n); c != Errc::Ok) return c;
 
@@ -136,7 +136,7 @@ namespace ser {
 	} /* namespace internal */
 
 	template<class K, class V, class C, class Al>
-	struct schema<::std::map<K, V, C, Al>> {
+	struct Schema<::std::map<K, V, C, Al>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaMap<Mode, Seen, K, V>(h);
@@ -144,7 +144,7 @@ namespace ser {
 	};
 
 	template<class K, class V, class H, class E, class Al>
-	struct schema<::std::unordered_map<K, V, H, E, Al>> {
+	struct Schema<::std::unordered_map<K, V, H, E, Al>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaMap<Mode, Seen, K, V>(h);
@@ -152,7 +152,7 @@ namespace ser {
 	};
 
 	template<class K, class C, class Al>
-	struct schema<::std::set<K, C, Al>> {
+	struct Schema<::std::set<K, C, Al>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaSet<Mode, Seen, K>(h);
@@ -160,7 +160,7 @@ namespace ser {
 	};
 
 	template<class K, class H, class E, class Al>
-	struct schema<::std::unordered_set<K, H, E, Al>> {
+	struct Schema<::std::unordered_set<K, H, E, Al>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaSet<Mode, Seen, K>(h);
@@ -173,38 +173,38 @@ namespace ser {
 	 * allocating.
 	 */
 	template<class K, class V, class C, class Al>
-	struct min_wire_size<::std::map<K, V, C, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::std::map<K, V, C, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	template<class K, class V, class H, class E, class Al>
-	struct min_wire_size<::std::unordered_map<K, V, H, E, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::std::unordered_map<K, V, H, E, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	template<class K, class C, class Al>
-	struct min_wire_size<::std::set<K, C, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::std::set<K, C, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	template<class K, class H, class E, class Al>
-	struct min_wire_size<::std::unordered_set<K, H, E, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::std::unordered_set<K, H, E, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	template<class K, class V, class C, class Al>
-	struct serializer<::std::map<K, V, C, Al>>:
-		  internal::map_adapter<::std::map<K, V, C, Al>, K, V> {};
+	struct Serializer<::std::map<K, V, C, Al>>:
+		  internal::MapAdapter<::std::map<K, V, C, Al>, K, V> {};
 
 	template<class K, class V, class H, class E, class Al>
-	struct serializer<::std::unordered_map<K, V, H, E, Al>>:
-		  internal::map_adapter<::std::unordered_map<K, V, H, E, Al>, K, V> {};
+	struct Serializer<::std::unordered_map<K, V, H, E, Al>>:
+		  internal::MapAdapter<::std::unordered_map<K, V, H, E, Al>, K, V> {};
 
 	template<class K, class C, class Al>
-	struct serializer<::std::set<K, C, Al>>: internal::set_adapter<::std::set<K, C, Al>, K> {};
+	struct Serializer<::std::set<K, C, Al>>: internal::SetAdapter<::std::set<K, C, Al>, K> {};
 
 	template<class K, class H, class E, class Al>
-	struct serializer<::std::unordered_set<K, H, E, Al>>:
-		  internal::set_adapter<::std::unordered_set<K, H, E, Al>, K> {};
+	struct Serializer<::std::unordered_set<K, H, E, Al>>:
+		  internal::SetAdapter<::std::unordered_set<K, H, E, Al>, K> {};
 
 } /* namespace ser */

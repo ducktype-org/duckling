@@ -20,24 +20,24 @@ namespace ser {
 
 	/**
 	 * @brief Shares position(), the depth counter, pool<P>() and the context storage with
-	 * ser::out through archive_base.
+	 * ser::Out through ArchiveBase.
 	 */
-	template<class Ctx = no_context>
-	class in final: public internal::archive_base<Ctx> {
-		using Base = internal::archive_base<Ctx>;
+	template<class Ctx = NoContext>
+	class In final: public internal::ArchiveBase<Ctx> {
+		using Base = internal::ArchiveBase<Ctx>;
 		using Base::pos; /* the base is dependent, so pos is not found unqualified */
 
 		::std::span<const ::std::byte> bytes;
 
 	public:
 		static constexpr bool IS_READING = true;
-		using context_type               = Ctx;
+		using ContextType                = Ctx;
 
-		constexpr explicit in(::std::span<const ::std::byte> b) noexcept
+		constexpr explicit In(::std::span<const ::std::byte> b) noexcept
 			requires(::std::is_empty_v<Ctx>)
 			  : bytes(b) {}
 
-		constexpr in(::std::span<const ::std::byte> b, Ctx& c) noexcept: Base(c), bytes(b) {}
+		constexpr In(::std::span<const ::std::byte> b, Ctx& c) noexcept: Base(c), bytes(b) {}
 
 		/**
 		 * @brief deserialization entry point
@@ -74,7 +74,7 @@ namespace ser {
 		 * Not noexcept: CORE_ASSERT throws base::Panic in a Dev build.
 		 */
 		[[nodiscard]] constexpr ::std::span<const ::std::byte> take(::std::size_t n) {
-			CORE_ASSERT(n <= avail(), "ser::in::take: called without a successful ensure()");
+			CORE_ASSERT(n <= avail(), "ser::In::take: called without a successful ensure()");
 			const auto chunk = bytes.subspan(pos, n);
 			pos += n;
 			return chunk;
@@ -85,12 +85,12 @@ namespace ser {
 
 		/** @brief Not noexcept: CORE_ASSERT throws base::Panic in a Dev build. */
 		constexpr void reset(::std::size_t p = 0) {
-			CORE_ASSERT(p <= bytes.size(), "ser::in::reset: position past the end of the stream");
+			CORE_ASSERT(p <= bytes.size(), "ser::In::reset: position past the end of the stream");
 			pos = p;
 		}
 	};
 
-	/* ser::in{span} without naming the context. */
-	in(::std::span<const ::std::byte>) -> in<no_context>;
+	/* ser::In{span} without naming the context. */
+	In(::std::span<const ::std::byte>) -> In<NoContext>;
 
 } /* namespace ser */

@@ -22,17 +22,17 @@ namespace ser {
 
 	/**
 	 * @brief position(), depth()/pushDepth()/popDepth(), pool<P>() and the context storage
-	 * come from archive_base - see the note there on why they are shared.
+	 * come from ArchiveBase - see the note there on why they are shared.
 	 */
-	template<class Buf, class Ctx = no_context>
-	class out final: public internal::archive_base<Ctx> {
+	template<class Buf, class Ctx = NoContext>
+	class Out final: public internal::ArchiveBase<Ctx> {
 		static_assert(
-			byte_buffer<Buf>,
-			"ser::out: Buf must expose data() -> std::byte* and size(). "
+			ByteBuffer<Buf>,
+			"ser::Out: Buf must expose data() -> std::byte* and size(). "
 			"Use std::vector<std::byte> (growable) or std::span<std::byte> (fixed)."
 		);
 
-		using Base = internal::archive_base<Ctx>;
+		using Base = internal::ArchiveBase<Ctx>;
 		using Base::context;
 		using Base::pos; /* the base is dependent, so pos is not found unqualified */
 
@@ -40,8 +40,8 @@ namespace ser {
 
 	public:
 		static constexpr bool IS_WRITING = true;
-		using buffer_type                = Buf;
-		using context_type               = Ctx;
+		using BufferType                 = Buf;
+		using ContextType                = Ctx;
 
 		/**
 		 * @brief where writing starts
@@ -54,11 +54,11 @@ namespace ser {
 		 * makes an error position point at the byte that failed. reset() takes buffer
 		 * offsets too.
 		 */
-		constexpr explicit out(Buf& b) noexcept requires(::std::is_empty_v<Ctx>): buf(b) {
+		constexpr explicit Out(Buf& b) noexcept requires(::std::is_empty_v<Ctx>): buf(b) {
 			pos = internal::bufferOrigin(b);
 		}
 
-		constexpr out(Buf& b, Ctx& c) noexcept: Base(c), buf(b) { pos = internal::bufferOrigin(b); }
+		constexpr Out(Buf& b, Ctx& c) noexcept: Base(c), buf(b) { pos = internal::bufferOrigin(b); }
 
 		/**
 		 * @brief serialization entry point
@@ -101,7 +101,7 @@ namespace ser {
 		constexpr Errc padTo(::std::size_t align) {
 			CORE_ASSERT(
 				align != 0 && (align & (align - 1)) == 0,
-				"ser::out::padTo: alignment must be a power of two"
+				"ser::Out::padTo: alignment must be a power of two"
 			);
 			const ::std::size_t n = internal::alignUp(pos, align) - pos;
 			if (n == 0) return Errc::Ok;
@@ -114,13 +114,13 @@ namespace ser {
 		/**
 		 * @brief position
 		 * @details Rewinding is how the header gets patched once the payload size is known. The
-		 * bound is the buffer, which is why reset() is not shared with ser::in.
+		 * bound is the buffer, which is why reset() is not shared with ser::In.
 		 * Not noexcept: CORE_ASSERT throws base::Panic in a Dev build.
 		 */
 		constexpr void reset(::std::size_t p = 0) {
 			CORE_ASSERT(
 				p <= internal::bufferSize(buf),
-				"ser::out::reset: position past the end of the buffer"
+				"ser::Out::reset: position past the end of the buffer"
 			);
 			pos = p;
 		}

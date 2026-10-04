@@ -22,13 +22,13 @@
 namespace ser {
 
 	template<class T>
-	struct min_wire_size;
+	struct MinWireSize;
 
 	template<class T>
-	inline constexpr ::std::size_t MIN_WIRE_SIZE_V = min_wire_size<::std::remove_cv_t<T>>::VALUE;
+	inline constexpr ::std::size_t MIN_WIRE_SIZE_V = MinWireSize<::std::remove_cv_t<T>>::VALUE;
 
 	/**
-	 * @internal How `min_wire_size` is computed. Kept in this header because the public half
+	 * @internal How `MinWireSize` is computed. Kept in this header because the public half
 	 * is a single trait over it: a separate file would leave an eight-line public header that
 	 * says nothing on its own.
 	 */
@@ -47,16 +47,16 @@ namespace ser {
 			 */
 			if constexpr (::std::is_same_v<T, bool>)
 				return 1;
-			else if constexpr (builtin::scalar_like<T> || builtin::enum_like<T>)
+			else if constexpr (builtin::ScalarLike<T> || builtin::EnumLike<T>)
 				return sizeof(T);
-			else if constexpr (access::HAS_WIRE_AS_V<T>)
-				return MIN_WIRE_SIZE_V<::std::remove_cv_t<access::wire_as_t<T>>>;
+			else if constexpr (Access::HAS_WIRE_AS_V<T>)
+				return MIN_WIRE_SIZE_V<::std::remove_cv_t<Access::WireAsT<T>>>;
 			else if constexpr (::std::is_empty_v<T>)
 				return 0; /* truthful: an empty type writes nothing */
-			else if constexpr (access::HAS_DESCRIBED_V<T>)
-				return sumMinWire(described_types_t<T>{});
+			else if constexpr (Access::HAS_DESCRIBED_V<T>)
+				return sumMinWire(DescribedTypesT<T>{});
 			else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)
-				return sumMinWire(field_types_t<T>{});
+				return sumMinWire(FieldTypesT<T>{});
 			else
 				return 1; /* a hook, a container, anything unmeasured */
 		}
@@ -64,7 +64,7 @@ namespace ser {
 	} /* namespace internal */
 
 	template<class T>
-	struct min_wire_size {
+	struct MinWireSize {
 		static constexpr ::std::size_t VALUE = internal::minWireCompute<T>();
 	};
 

@@ -50,8 +50,8 @@ namespace ser {
 	/** @brief MapWrapper: base::Map, base::HashMap */
 
 	template<class ContainerType>
-	struct min_wire_size<::base::MapWrapper<ContainerType>> {
-		static constexpr ::std::size_t VALUE = min_wire_size<ContainerType>::VALUE;
+	struct MinWireSize<::base::MapWrapper<ContainerType>> {
+		static constexpr ::std::size_t VALUE = MinWireSize<ContainerType>::VALUE;
 	};
 
 	/**
@@ -61,7 +61,7 @@ namespace ser {
 	 * share one schema.
 	 */
 	template<class ContainerType>
-	struct schema<::base::MapWrapper<ContainerType>> {
+	struct Schema<::base::MapWrapper<ContainerType>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<ContainerType, Mode, Seen>(h);
@@ -69,7 +69,7 @@ namespace ser {
 	};
 
 	template<class ContainerType>
-	struct serializer<::base::MapWrapper<ContainerType>> {
+	struct Serializer<::base::MapWrapper<ContainerType>> {
 		/**
 		 * @brief Self is a named template parameter rather than `auto&` so that is_const_v answers
 		 * about the OBJECT - decltype(self) would be a reference, and a reference is never
@@ -86,13 +86,13 @@ namespace ser {
 	/** @brief VectorMap */
 
 	template<class KEY_T, class DATA_T, bool is_move, bool is_copy>
-	struct min_wire_size<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
+	struct MinWireSize<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		static constexpr ::std::size_t VALUE
-			= min_wire_size<::std::vector<::base::Optional<DATA_T>>>::VALUE;
+			= MinWireSize<::std::vector<::base::Optional<DATA_T>>>::VALUE;
 	};
 
 	template<class KEY_T, class DATA_T, bool is_move, bool is_copy>
-	struct schema<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
+	struct Schema<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			/*
@@ -109,7 +109,7 @@ namespace ser {
 	};
 
 	template<class KEY_T, class DATA_T, bool is_move, bool is_copy>
-	struct serializer<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
+	struct Serializer<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		using Vm = ::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>;
 
 		/**
@@ -118,9 +118,9 @@ namespace ser {
 		 * would let a corrupt stream disagree with the vector, and then size() and empty() both
 		 * lie.
 		 */
-		static constexpr Errc write(writer auto& ar, const Vm& m) { return ar(m.map); }
+		static constexpr Errc write(Writer auto& ar, const Vm& m) { return ar(m.map); }
 
-		static constexpr Errc read(reader auto& ar, Vm& m) {
+		static constexpr Errc read(Reader auto& ar, Vm& m) {
 			m.element_count = 0;
 			if (const auto c = ar(m.map); c != Errc::Ok) return c;
 
@@ -133,8 +133,8 @@ namespace ser {
 	/** @brief StableHashMap */
 
 	template<class KEY_T, class DATA_T, class HASH_T, ::u64 BLOCK>
-	struct min_wire_size<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	/**
@@ -142,7 +142,7 @@ namespace ser {
 	 * hash functor and the allocator block size are not on the wire and are not hashed.
 	 */
 	template<class KEY_T, class DATA_T, class HASH_T, ::u64 BLOCK>
-	struct schema<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
+	struct Schema<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaMap<Mode, Seen, KEY_T, DATA_T>(h);
@@ -150,10 +150,10 @@ namespace ser {
 	};
 
 	template<class KEY_T, class DATA_T, class HASH_T, ::u64 BLOCK>
-	struct serializer<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
+	struct Serializer<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
 		using Shm = ::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>;
 
-		static constexpr Errc write(writer auto& ar, const Shm& m) {
+		static constexpr Errc write(Writer auto& ar, const Shm& m) {
 			if (const auto c = internal::writeLength<::std::pair<KEY_T, DATA_T>>(ar, m.size());
 			    c != Errc::Ok)
 				return c;
@@ -170,7 +170,7 @@ namespace ser {
 		 * @brief maybePut takes both by value, so there is no fill path and the key and the
 		 * value have to be movable - the same constraint the std map adapter carries.
 		 */
-		static constexpr Errc read(reader auto& ar, Shm& m)
+		static constexpr Errc read(Reader auto& ar, Shm& m)
 			requires(internal::BUILDABLE_V<KEY_T> && internal::BUILDABLE_V<DATA_T>) {
 			::std::size_t n = 0;
 			if (const auto c = internal::readLength<::std::pair<KEY_T, DATA_T>>(ar, n);

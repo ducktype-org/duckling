@@ -16,7 +16,7 @@
 
 namespace ser {
 	template<class T>
-	struct serializer;
+	struct Serializer;
 }
 
 namespace base {
@@ -136,7 +136,7 @@ namespace base {
 
 	public:
 		template<class T>
-		friend struct ::ser::serializer;
+		friend struct ::ser::Serializer;
 		using SelfType = VectorMap;
 		using IDType   = KEY_T;
 		using DataType = DATA_T;

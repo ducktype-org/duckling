@@ -84,7 +84,7 @@ namespace ser::internal {
 	F asPrvalue(); /* NOT defined, on purpose */
 
 	template<class T, class... Fs>
-	concept braced_from_fields = requires { T{ asPrvalue<Fs>()... }; };
+	concept BracedFromFields = requires { T{ asPrvalue<Fs>()... }; };
 
 	/**
 	 * @brief A constructor taking std::initializer_list swallows braces: Type{a, b} would build a
@@ -190,11 +190,11 @@ namespace ser::internal {
 	}
 
 
-#define SER_DESCRIBE(F1, ...)                                                             \
-	SER_INTERNAL_DESCRIBE_FIELDS(F1 __VA_OPT__(, ) __VA_ARGS__)                           \
-	static constexpr ::ser::Errc serVisit(::ser::reader_or_writer auto& ar, auto& self) { \
-		SER_INTERNAL_FIELD_CHECKS(F1 __VA_OPT__(, ) __VA_ARGS__)                          \
-		return ar(FOR_EACH_COMMA(SER_INTERNAL_QUALIFY, F1 __VA_OPT__(, ) __VA_ARGS__));   \
+#define SER_DESCRIBE(F1, ...)                                                           \
+	SER_INTERNAL_DESCRIBE_FIELDS(F1 __VA_OPT__(, ) __VA_ARGS__)                         \
+	static constexpr ::ser::Errc serVisit(::ser::ReaderOrWriter auto& ar, auto& self) { \
+		SER_INTERNAL_FIELD_CHECKS(F1 __VA_OPT__(, ) __VA_ARGS__)                        \
+		return ar(FOR_EACH_COMMA(SER_INTERNAL_QUALIFY, F1 __VA_OPT__(, ) __VA_ARGS__)); \
 	}
 
 /**
@@ -207,7 +207,7 @@ namespace ser::internal {
  *     public:
  *         Point(int a, int b) : x(a), y(b) {}
  *         SER_MAKE_FROM(Point, x, y)
- *         static ser::Errc serWrite(ser::writer auto& ar, const Point& p) { ... }
+ *         static ser::Errc serWrite(ser::Writer auto& ar, const Point& p) { ... }
  *     };
  *
  * No local variables anywhere in the expansion: each argument is a prvalue that
@@ -216,33 +216,31 @@ namespace ser::internal {
 #define SER_INTERNAL_MAKE_TYPE(x) ::std::remove_cv_t<decltype(ser_internal_self_t::x)>
 #define SER_INTERNAL_MAKE_ARG(x)  ::ser::subMake<SER_INTERNAL_MAKE_TYPE(x)>(ar)
 
-#define SER_INTERNAL_MAKE_FROM_CHECKS(Self, ...)                                         \
-	using ser_internal_self_t = Self;                                                    \
-	static_assert(                                                                       \
-		::ser::internal::makeFromArityOk<Self, SER_INTERNAL_FIELD_COUNT(__VA_ARGS__)>(), \
-		"ser: SER_MAKE_FROM lists a different number of fields than this type has. "     \
-		"List every field that goes on the wire, in declaration order."                  \
-	);                                                                                   \
-	static_assert(                                                                       \
-		!::ser::internal::HAS_INITIALIZER_LIST_CTOR_V<Self>,                             \
-		"ser: this type accepts a BRACED list of any length - a std::initializer_list "  \
-		"constructor - so the braces SER_MAKE_FROM expands to would be swallowed as a "  \
-		"list instead of calling the constructor with the fields as arguments. Use "     \
-		"SER_MAKE_FROM_PAREN(Type, a, b) - it uses parentheses."                         \
-	);                                                                                   \
-	static_assert(                                                                       \
-		::ser::internal::braced_from_fields<                                             \
-			Self,                                                                        \
-			FOR_EACH_COMMA(SER_INTERNAL_MAKE_TYPE, __VA_ARGS__)>,                        \
-		"ser: this type cannot be built from its fields, in braces, in the order "       \
-		"given. Check the order against the constructor - two fields of different "      \
-		"types swapped is exactly what this catches. If the order is right, the other "  \
-		"cause is a narrowing conversion, which braces refuse and parentheses allow: "   \
-		"SER_MAKE_FROM_PAREN(Type, a, b) accepts it, or widen the parameter."            \
+#define SER_INTERNAL_MAKE_FROM_CHECKS(Self, ...)                                                      \
+	using ser_internal_self_t = Self;                                                                 \
+	static_assert(                                                                                    \
+		::ser::internal::makeFromArityOk<Self, SER_INTERNAL_FIELD_COUNT(__VA_ARGS__)>(),              \
+		"ser: SER_MAKE_FROM lists a different number of fields than this type has. "                  \
+		"List every field that goes on the wire, in declaration order."                               \
+	);                                                                                                \
+	static_assert(                                                                                    \
+		!::ser::internal::HAS_INITIALIZER_LIST_CTOR_V<Self>,                                          \
+		"ser: this type accepts a BRACED list of any length - a std::initializer_list "               \
+		"constructor - so the braces SER_MAKE_FROM expands to would be swallowed as a "               \
+		"list instead of calling the constructor with the fields as arguments. Use "                  \
+		"SER_MAKE_FROM_PAREN(Type, a, b) - it uses parentheses."                                      \
+	);                                                                                                \
+	static_assert(                                                                                    \
+		::ser::internal::BracedFromFields<Self, FOR_EACH_COMMA(SER_INTERNAL_MAKE_TYPE, __VA_ARGS__)>, \
+		"ser: this type cannot be built from its fields, in braces, in the order "                    \
+		"given. Check the order against the constructor - two fields of different "                   \
+		"types swapped is exactly what this catches. If the order is right, the other "               \
+		"cause is a narrowing conversion, which braces refuse and parentheses allow: "                \
+		"SER_MAKE_FROM_PAREN(Type, a, b) accepts it, or widen the parameter."                         \
 	);
 
 #define SER_MAKE_FROM(Self, ...)                                           \
-	static Self serMake(::ser::reader auto& ar) {                          \
+	static Self serMake(::ser::Reader auto& ar) {                          \
 		SER_INTERNAL_MAKE_FROM_CHECKS(Self, __VA_ARGS__)                   \
 		return Self{ FOR_EACH_COMMA(SER_INTERNAL_MAKE_ARG, __VA_ARGS__) }; \
 	}
@@ -254,11 +252,11 @@ namespace ser::internal {
  * a suggestion.
  */
 #define SER_MAKE_FROM_MEMBERS(Self)                                                         \
-	static Self serMake(::ser::reader auto& ar) {                                           \
+	static Self serMake(::ser::Reader auto& ar) {                                           \
 		static_assert(                                                                      \
 			::ser::CAN_ENUMERATE_MEMBERS_V<Self>,                                           \
 			"ser: SER_MAKE_FROM_MEMBERS needs to know this type's fields. Declare "         \
-			"using ser_members = ser::members<N>; or list them: SER_MAKE_FROM(Type, a, b)." \
+			"using ser_members = ser::Members<N>; or list them: SER_MAKE_FROM(Type, a, b)." \
 		);                                                                                  \
 		static_assert(                                                                      \
 			!::ser::internal::HAS_INITIALIZER_LIST_CTOR_V<Self>,                            \
@@ -277,11 +275,11 @@ namespace ser::internal {
  * the other variants at once: nothing to list, and braces that would be swallowed.
  */
 #define SER_MAKE_FROM_MEMBERS_PAREN(Self)                                                         \
-	static Self serMake(::ser::reader auto& ar) {                                                 \
+	static Self serMake(::ser::Reader auto& ar) {                                                 \
 		static_assert(                                                                            \
 			::ser::CAN_ENUMERATE_MEMBERS_V<Self>,                                                 \
 			"ser: SER_MAKE_FROM_MEMBERS_PAREN needs to know this type's fields. Declare "         \
-			"using ser_members = ser::members<N>; or list them: SER_MAKE_FROM_PAREN(Type, a, b)." \
+			"using ser_members = ser::Members<N>; or list them: SER_MAKE_FROM_PAREN(Type, a, b)." \
 		);                                                                                        \
 		return ::ser::internal::makeParenByFields<Self>(ar);                                      \
 	}
@@ -312,7 +310,7 @@ namespace ser::internal {
  */
 #define SER_DESCRIBE_MAKE(Self, F1, ...)                                                \
 	SER_INTERNAL_DESCRIBE_FIELDS(F1 __VA_OPT__(, ) __VA_ARGS__)                         \
-	static constexpr ::ser::Errc serWrite(::ser::writer auto& ar, const Self& self) {   \
+	static constexpr ::ser::Errc serWrite(::ser::Writer auto& ar, const Self& self) {   \
 		SER_INTERNAL_FIELD_CHECKS_BUILT(F1 __VA_OPT__(, ) __VA_ARGS__)                  \
 		return ar(FOR_EACH_COMMA(SER_INTERNAL_QUALIFY, F1 __VA_OPT__(, ) __VA_ARGS__)); \
 	}                                                                                   \
@@ -324,7 +322,7 @@ namespace ser::internal {
  */
 #define SER_DESCRIBE_MAKE_PAREN(Self, F1, ...)                                          \
 	SER_INTERNAL_DESCRIBE_FIELDS(F1 __VA_OPT__(, ) __VA_ARGS__)                         \
-	static constexpr ::ser::Errc serWrite(::ser::writer auto& ar, const Self& self) {   \
+	static constexpr ::ser::Errc serWrite(::ser::Writer auto& ar, const Self& self) {   \
 		SER_INTERNAL_FIELD_CHECKS_BUILT(F1 __VA_OPT__(, ) __VA_ARGS__)                  \
 		return ar(FOR_EACH_COMMA(SER_INTERNAL_QUALIFY, F1 __VA_OPT__(, ) __VA_ARGS__)); \
 	}                                                                                   \
@@ -341,7 +339,7 @@ namespace ser::internal {
 #define SER_INTERNAL_MOVE_LOCAL(x) ::std::move(ser_local_##x)
 
 #define SER_MAKE_FROM_PAREN(Self, ...)                                                       \
-	static Self serMake(::ser::reader auto& ar) {                                            \
+	static Self serMake(::ser::Reader auto& ar) {                                            \
 		using ser_internal_self_t = Self;                                                    \
 		static_assert(                                                                       \
 			::ser::internal::makeFromArityOk<Self, SER_INTERNAL_FIELD_COUNT(__VA_ARGS__)>(), \

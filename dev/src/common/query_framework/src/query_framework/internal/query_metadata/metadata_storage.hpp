@@ -40,8 +40,8 @@ namespace query::internal {
 	 * is what makes the format a SINGLE stream: no instance ever gets a buffer of its own,
 	 * and a nested blob with its own length prefix does not exist.
 	 */
-	using MetadataOut = ::ser::out<std::vector<std::byte>>;
-	using MetadataIn  = ::ser::in<>;
+	using MetadataOut = ::ser::Out<std::vector<std::byte>>;
+	using MetadataIn  = ::ser::In<>;
 
 	/**
 	 * @brief Abstract base class for all metadata types.
@@ -430,11 +430,11 @@ namespace query::internal {
 		 * concurrently modified, as there is no large lock in place. It should be used in a
 		 * context where we can guarantee no concurrent modifications.
 		 */
-		static ::ser::Errc serWrite(::ser::writer auto& ar, const MetadataStorage& self) {
+		static ::ser::Errc serWrite(::ser::Writer auto& ar, const MetadataStorage& self) {
 			static_assert(
 				std::same_as<std::remove_cvref_t<decltype(ar)>, MetadataOut>,
 				"query: a MetadataStorage can only be written through "
-				"ser::out<std::vector<std::byte>>, because every metadata instance writes itself "
+				"ser::Out<std::vector<std::byte>>, because every metadata instance writes itself "
 				"through a virtual and a virtual cannot be a template. Serialize into a "
 				"std::vector<std::byte>."
 			);
@@ -445,10 +445,10 @@ namespace query::internal {
 		 * @brief `ser` hook: reads back what serWrite wrote, one instance at a time through
 		 * the MetadataRegistry.
 		 */
-		static ::ser::Errc serRead(::ser::reader auto& ar, MetadataStorage& self) {
+		static ::ser::Errc serRead(::ser::Reader auto& ar, MetadataStorage& self) {
 			static_assert(
 				std::same_as<std::remove_cvref_t<decltype(ar)>, MetadataIn>,
-				"query: a MetadataStorage can only be read through ser::in<> - see the note on "
+				"query: a MetadataStorage can only be read through ser::In<> - see the note on "
 				"serWrite."
 			);
 			return readFrom(ar, self);

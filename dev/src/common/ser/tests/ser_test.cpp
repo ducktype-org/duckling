@@ -52,7 +52,7 @@ std::span<const std::byte> view(const ByteBuf& b, usize n) {
  *
  *  Four levels of aggregate, with every std adapter and both enum kinds somewhere
  *  inside. Not one line of serialization code: an aggregate is walked field by field
- *  through structured bindings, and the adapters are ser::serializer specializations
+ *  through structured bindings, and the adapters are ser::Serializer specializations
  *  that <ser/std/all.hpp> brings in.
  * ═══════════════════════════════════════════════════════════════════════════════════
  */
@@ -75,7 +75,7 @@ struct Nothing {
  * readEnum refuses anything outside it. An `enum Shape : u16` would need none of this.
  */
 template<>
-struct ser::enum_range<Shape> {
+struct ser::EnumRange<Shape> {
 	static constexpr Shape MIN = ROUND;
 	static constexpr Shape MAX = SQUARE;
 };
@@ -96,7 +96,7 @@ struct Leaf {
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 	char tag[4] = {};
 
-	using ser_members = ser::members<5>;
+	using ser_members = ser::Members<5>;
 
 	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index): comparing tag[]
 	friend bool operator==(const Leaf&, const Leaf&) = default;
@@ -154,10 +154,10 @@ namespace ser {
 	 * OUTRANK that in-class hook, and the two produce the same byte either way.
 	 */
 	template<>
-	struct serializer<u8> {
-		static Errc write(writer auto& ar, const u8& x) { return ar(x.asInt()); }
+	struct Serializer<u8> {
+		static Errc write(Writer auto& ar, const u8& x) { return ar(x.asInt()); }
 
-		static Errc read(reader auto& ar, u8& x) {
+		static Errc read(Reader auto& ar, u8& x) {
 			uchar raw = 0;
 			if (const auto e = ar(raw); e != Errc::Ok) return e;
 			x = u8(raw);
@@ -233,11 +233,11 @@ constexpr ser::Errc stamp(auto& ar) {
 
 /** @brief The same for the make path, which has no room for a code next to the value. */
 template<uchar M>
-void expectStamp(ser::reader auto& ar) {
+void expectStamp(ser::Reader auto& ar) {
 	if (ser::subMake<uchar>(ar) != M) ser::throwError(ser::Errc::InvalidValue, ar.position());
 }
 
-/** @brief Level 1: ser::serializer<T>, in its symmetric `visit` form. */
+/** @brief Level 1: ser::Serializer<T>, in its symmetric `visit` form. */
 struct TraitVisit {
 	u32 a = 0;
 	u32 b = 0;
@@ -248,7 +248,7 @@ struct TraitVisit {
 namespace ser {
 
 	template<>
-	struct serializer<TraitVisit> {
+	struct Serializer<TraitVisit> {
 		static constexpr Errc visit(auto& ar, auto& self) {
 			if (const auto e = stamp<TRAIT_STAMP>(ar); e != Errc::Ok) return e;
 			return ar(self.a, self.b);
@@ -262,12 +262,12 @@ struct MemberPair {
 	u32 a = 0;
 	u32 b = 0;
 
-	static constexpr ser::Errc serWrite(ser::writer auto& ar, const MemberPair& x) {
+	static constexpr ser::Errc serWrite(ser::Writer auto& ar, const MemberPair& x) {
 		if (const auto e = stamp<MEMBER_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(x.a, x.b);
 	}
 
-	static constexpr ser::Errc serRead(ser::reader auto& ar, MemberPair& x) {
+	static constexpr ser::Errc serRead(ser::Reader auto& ar, MemberPair& x) {
 		if (const auto e = stamp<MEMBER_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(x.a, x.b);
 	}
@@ -281,7 +281,7 @@ struct MemberPair {
  * `const` fields and no default constructor, so there is nothing to fill in after the
  * fact: `serMake` returns a prvalue that initializes the caller's object where it
  * belongs. Private is the case every hook detector has to get right - written outside
- * `ser::access` they would all report false here and this type would silently take the
+ * `ser::Access` they would all report false here and this type would silently take the
  * automatic path.
  */
 class PrivMake {
@@ -306,12 +306,12 @@ private:
 	const u32 a;
 	const u32 b;
 
-	static ser::Errc serWrite(ser::writer auto& ar, const PrivMake& x) {
+	static ser::Errc serWrite(ser::Writer auto& ar, const PrivMake& x) {
 		if (const auto e = stamp<PRIV_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(x.a, x.b);
 	}
 
-	static PrivMake serMake(ser::reader auto& ar) {
+	static PrivMake serMake(ser::Reader auto& ar) {
 		expectStamp<PRIV_STAMP>(ar);
 		return PrivMake{ ser::subMake<u32>(ar), ser::subMake<u32>(ar) };
 	}
@@ -332,13 +332,13 @@ namespace geom {
 	 * leaving it out is the asymmetry the library refuses - a hook found when reading and
 	 * missed when writing means the two directions disagree about the format.
 	 */
-	template<ser::reader_or_writer Ar>
+	template<ser::ReaderOrWriter Ar>
 	ser::Errc serVisit(Ar& ar, Point& p) {
 		if (const auto e = stamp<ADL_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(p.x, p.y);
 	}
 
-	template<ser::reader_or_writer Ar>
+	template<ser::ReaderOrWriter Ar>
 	ser::Errc serVisit(Ar& ar, const Point& p) {
 		if (const auto e = stamp<ADL_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(p.x, p.y);
@@ -468,9 +468,9 @@ using Ambiguous = std::variant<bool, std::string>;
 struct Slot {
 	Payload held;
 
-	static constexpr ser::Errc serWrite(ser::writer auto& ar, const Slot& x) { return ar(x.held); }
+	static constexpr ser::Errc serWrite(ser::Writer auto& ar, const Slot& x) { return ar(x.held); }
 
-	static constexpr ser::Errc serRead(ser::reader auto& ar, Slot& x) { return ar(x.held); }
+	static constexpr ser::Errc serRead(ser::Reader auto& ar, Slot& x) { return ar(x.held); }
 
 	friend bool operator==(const Slot&, const Slot&) = default;
 };
@@ -505,19 +505,19 @@ struct Boom {
 
 	Boom(Boom&& other) noexcept(false): a(other.a) {}
 
-	static ser::Errc serWrite(ser::writer auto& ar, const Boom& x) { return ar(x.a); }
+	static ser::Errc serWrite(ser::Writer auto& ar, const Boom& x) { return ar(x.a); }
 
-	static ser::Errc serRead(ser::reader auto& ar, Boom& x) { return ar(x.a); }
+	static ser::Errc serRead(ser::Reader auto& ar, Boom& x) { return ar(x.a); }
 };
 
 using Fragile = std::variant<i32, Boom>;
 
 static_assert(
-	ser::serializer<Payload>::FILLABLE,
+	ser::Serializer<Payload>::FILLABLE,
 	"every alternative is reachable, so a Payload field is filled rather than assigned"
 );
 static_assert(
-	!ser::serializer<Payload>::FILLS_IN_PLACE<Built>,
+	!ser::Serializer<Payload>::FILLS_IN_PLACE<Built>,
 	"Built has a const field: it is built by dispatchMake and emplaced, not filled"
 );
 static_assert(
@@ -582,11 +582,11 @@ struct Thrower final {
 
 	friend bool operator==(const Thrower&, const Thrower&) = default;
 
-	static ser::Errc serWrite(ser::writer auto& ar, const Thrower& self) {
+	static ser::Errc serWrite(ser::Writer auto& ar, const Thrower& self) {
 		return ar(self.a, self.b);
 	}
 
-	static ser::Errc serRead(ser::reader auto& ar, Thrower& self) {
+	static ser::Errc serRead(ser::Reader auto& ar, Thrower& self) {
 		self.a = ser::subMake<i32>(ar);
 		self.b = ser::subMake<i32>(ar);
 		return ser::Errc::Ok;
@@ -637,10 +637,10 @@ static_assert(ser::schemaHash<Node>() != ser::schemaHash<Branchy>());
 static_assert(ser::schemaHash<Twig>() != ser::schemaHash<Branchy>());
 
 /*
- * The envelope of a recursive type is buildable too - stream_header::forType is where a
+ * The envelope of a recursive type is buildable too - StreamHeader::forType is where a
  * broken hash of one used to surface.
  */
-static_assert(ser::stream_header::forType<Node>().schema_hash == ser::schemaHash<Node>());
+static_assert(ser::StreamHeader::forType<Node>().schema_hash == ser::schemaHash<Node>());
 
 /** @brief Two ids over the same integer, and one over an integer of the same width. */
 STRONG_TYPEDEF_INT(TestIdA, std::uint32_t);
@@ -687,7 +687,7 @@ struct FrozenWithArray {
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 	u16 codes[3];
 
-	using ser_members = ser::members<2>;
+	using ser_members = ser::Members<2>;
 };
 
 /** @brief The nested array the depth guard is measured against. */
@@ -824,7 +824,7 @@ private:
 		ASSERT_TRUE(ser::write(buf, tree).has_value());
 		ASSERT_EQUAL(2 * first, buf.size());
 
-		ser::in ar{ view(buf) };
+		ser::In ar{ view(buf) };
 		Tree    one;
 		Tree    two;
 		ASSERT_EQUAL(ser::Errc::Ok, ar(one, two));
@@ -836,7 +836,7 @@ private:
 		 * one call with both - and position() says where the next one begins, which is the
 		 * thing ser::read cannot tell a caller.
 		 */
-		ser::in split{ view(buf) };
+		ser::In split{ view(buf) };
 		Tree    first_back;
 		Tree    second_back;
 		ASSERT_EQUAL(ser::Errc::Ok, split(first_back));
@@ -862,7 +862,7 @@ private:
 	 */
 	void hookLadder() {
 		expectRung<TRAIT_STAMP>(
-			TraitVisit{ .a = 1u, .b = 2u }, 1 + 4 + 4, "ser::serializer<T>::visit"
+			TraitVisit{ .a = 1u, .b = 2u }, 1 + 4 + 4, "ser::Serializer<T>::visit"
 		);
 		expectRung<MEMBER_STAMP>(
 			MemberPair{ .a = 3u, .b = 4u }, 1 + 4 + 4, "in-class serWrite/serRead"
@@ -1017,7 +1017,7 @@ private:
 		ByteBuf framed;
 		ASSERT_TRUE(ser::write(plain, tree).has_value());
 		ASSERT_TRUE(ser::write(framed, tree, { .header = true, .user_magic = MAGIC }).has_value());
-		ASSERT_EQUAL(plain.size() + ser::stream_header::WIRE_SIZE, framed.size());
+		ASSERT_EQUAL(plain.size() + ser::StreamHeader::WIRE_SIZE, framed.size());
 
 		const auto peeked = ser::peekHeader(view(framed), MAGIC);
 		ASSERT_TRUE(peeked.has_value());
@@ -1027,7 +1027,7 @@ private:
 		constexpr u64 TREE_SCHEMA = ser::schemaHash<Tree>();
 		ASSERT_EQUAL(TREE_SCHEMA, peeked->schema_hash);
 
-		const ser::options opts{ .header = true, .user_magic = MAGIC };
+		const ser::Options opts{ .header = true, .user_magic = MAGIC };
 		ASSERT_TRUE(ser::read<Tree>(view(framed), opts).has_value());
 
 		/* 1. the envelope has to be there at all */
@@ -1115,7 +1115,7 @@ private:
 		 * policy ceiling is the only bound there is.
 		 */
 		ByteBuf empties;
-		(void) ser::write(empties, u64{ ser::config_global::MAX_ZERO_SIZE_ELEMENTS } + 1);
+		(void) ser::write(empties, u64{ ser::ConfigGlobal::MAX_ZERO_SIZE_ELEMENTS } + 1);
 		ASSERT_EQUAL(
 			ser::Errc::MessageSize, ser::codeOf(ser::read<std::vector<Nothing>>(view(empties)))
 		);
@@ -1135,7 +1135,7 @@ private:
 		 * @brief The archive is the other half of that rule: reading several appended messages is
 		 * what it is for, so it counts nothing and says where it stopped.
 		 */
-		ser::in appended{ view(pair) };
+		ser::In appended{ view(pair) };
 		u64     one = 0;
 		u64     two = 0;
 		ASSERT_EQUAL(ser::Errc::Ok, appended(one, two));
@@ -1152,7 +1152,7 @@ private:
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::codeOf(ser::read<Thrower>(view(half))));
 
 		Thrower target;
-		ser::in throwing_ar{ view(half) };
+		ser::In throwing_ar{ view(half) };
 		ASSERT_EQUAL(ser::Errc::Truncated, throwing_ar(target));
 
 		ByteBuf whole;
@@ -1164,9 +1164,9 @@ private:
 		 * accidental one. No braces on `deep`: Clang materializes the whole initializer
 		 * tree and overflows its own frontend stack somewhere past 200 levels.
 		 */
-		static NestT<ser::config_global::MAX_DEPTH + 8> deep;
-		ByteBuf                                         nested;
-		ser::out                                        ar{ nested };
+		static NestT<ser::ConfigGlobal::MAX_DEPTH + 8> deep;
+		ByteBuf                                        nested;
+		ser::Out                                       ar{ nested };
 		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
 		ASSERT_EQUAL(usize{ 0 }, ar.depth()); /* the guard unwound cleanly */
 	}
@@ -1291,7 +1291,7 @@ private:
 		 * The envelope of a recursive type, end to end: the schema check is what the
 		 * back-reference feeds, so a stream of a Node is refused for a Chain.
 		 */
-		const ser::options opts{ .header = true };
+		const ser::Options opts{ .header = true };
 		ByteBuf            framed;
 		ASSERT_TRUE(ser::write(framed, tree, opts).has_value());
 		ASSERT_TRUE(ser::read<Node>(view(framed), opts).has_value());
@@ -1311,11 +1311,11 @@ private:
 		Node deep;
 		{
 			Node* tip = &deep;
-			for (usize i = 0; i < ser::config_global::MAX_DEPTH + 8; ++i)
+			for (usize i = 0; i < ser::ConfigGlobal::MAX_DEPTH + 8; ++i)
 				tip = &tip->kids.emplace_back();
 		}
 		ByteBuf  overflowing;
-		ser::out ar{ overflowing };
+		ser::Out ar{ overflowing };
 		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
 		ASSERT_EQUAL(usize{ 0 }, ar.depth());
 
@@ -1326,8 +1326,8 @@ private:
 		 * and the last level closes with a count of zero.
 		 */
 		ByteBuf  handmade;
-		ser::out deep_ar{ handmade };
-		for (usize i = 0; i < ser::config_global::MAX_DEPTH + 64; ++i)
+		ser::Out deep_ar{ handmade };
+		for (usize i = 0; i < ser::ConfigGlobal::MAX_DEPTH + 64; ++i)
 			ASSERT_EQUAL(ser::Errc::Ok, deep_ar(i32{ 1 }, u64{ 1 }));
 		ASSERT_EQUAL(ser::Errc::Ok, deep_ar(i32{ 1 }, u64{ 0 }));
 
@@ -1339,7 +1339,7 @@ private:
 		 * refusal of nesting.
 		 */
 		ByteBuf  shallow;
-		ser::out shallow_ar{ shallow };
+		ser::Out shallow_ar{ shallow };
 		for (usize i = 0; i < 10; ++i) ASSERT_EQUAL(ser::Errc::Ok, shallow_ar(i32{ 1 }, u64{ 1 }));
 		ASSERT_EQUAL(ser::Errc::Ok, shallow_ar(i32{ 1 }, u64{ 0 }));
 		ASSERT_TRUE(ser::read<Node>(view(shallow)).has_value());

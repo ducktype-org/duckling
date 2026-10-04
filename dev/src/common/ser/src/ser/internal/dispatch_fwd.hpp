@@ -15,16 +15,16 @@
 
 namespace ser::internal {
 
-	template<class T, writer Ar>
+	template<class T, Writer Ar>
 	constexpr Errc dispatchWrite(Ar& ar, const T& x);
-	template<class T, reader Ar>
+	template<class T, Reader Ar>
 	constexpr Errc dispatchRead(Ar& ar, T& x);
 
 	/**
 	 * @brief A function cannot return a C array, so `make` is not available for T[N].
 	 * Such a field is still readable in place through dispatchRead.
 	 */
-	template<class T, reader Ar>
+	template<class T, Reader Ar>
 	requires(!::std::is_array_v<T>) constexpr T dispatchMake(Ar& ar);
 
 } /* namespace ser::internal */

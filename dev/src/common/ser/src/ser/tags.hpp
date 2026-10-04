@@ -3,45 +3,45 @@
 namespace ser {
 
 	/**
-	 * @brief Tells an ADL `serMake` which type to build: `serMake(ar, ser::tag<T>{})`. A
+	 * @brief Tells an ADL `serMake` which type to build: `serMake(ar, ser::Tag<T>{})`. A
 	 * function cannot be overloaded on its return type alone, so the type has to be an
 	 * argument.
 	 */
 	template<class T>
-	struct tag final {
+	struct Tag final {
 		using type = T;
 	};
 
-	struct raw_init_t final {
-		explicit raw_init_t() = default;
+	struct RawInitTag final {
+		explicit RawInitTag() = default;
 	};
 
-	inline constexpr raw_init_t RAW_INIT{};
+	inline constexpr RawInitTag RAW_INIT{};
 
-	struct in_place_t final {
-		explicit in_place_t() = default;
+	struct InPlaceTag final {
+		explicit InPlaceTag() = default;
 	};
 
-	inline constexpr in_place_t IN_PLACE{};
+	inline constexpr InPlaceTag IN_PLACE{};
 
-	struct view_t final {
-		explicit view_t() = default;
+	struct ViewTag final {
+		explicit ViewTag() = default;
 	};
 
-	struct sized_t final {
-		explicit sized_t() = default;
+	struct SizedTag final {
+		explicit SizedTag() = default;
 	};
 
-	struct unsized_t final {
-		explicit unsized_t() = default;
+	struct UnsizedTag final {
+		explicit UnsizedTag() = default;
 	};
 
-	inline constexpr unsized_t UNSIZED_TAG{};
+	inline constexpr UnsizedTag UNSIZED_TAG{};
 
-	struct bytes_t final {
-		explicit bytes_t() = default;
+	struct BytesTag final {
+		explicit BytesTag() = default;
 	};
 
-	inline constexpr bytes_t BYTES_TAG{};
+	inline constexpr BytesTag BYTES_TAG{};
 
 } /* namespace ser */

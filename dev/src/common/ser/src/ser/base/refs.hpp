@@ -55,8 +55,8 @@ namespace ser {
 	} /* namespace internal */
 
 	template<class T>
-	struct serializer<::base::Ref<T>> {
-		static constexpr Errc write(writer auto& ar, const ::base::Ref<T>&) {
+	struct Serializer<::base::Ref<T>> {
+		static constexpr Errc write(Writer auto& ar, const ::base::Ref<T>&) {
 			return internal::denyNonOwningRef<decltype(ar)>();
 		}
 
@@ -65,18 +65,18 @@ namespace ser {
 		 * pairing rule in checkHooks fires first and complains about a missing read hook,
 		 * which is true and useless.
 		 */
-		static constexpr Errc read(reader auto& ar, ::base::Ref<T>&) {
+		static constexpr Errc read(Reader auto& ar, ::base::Ref<T>&) {
 			return internal::denyNonOwningRef<decltype(ar)>();
 		}
 	};
 
 	template<class T>
-	struct serializer<::base::MRef<T>> {
-		static constexpr Errc write(writer auto& ar, const ::base::MRef<T>&) {
+	struct Serializer<::base::MRef<T>> {
+		static constexpr Errc write(Writer auto& ar, const ::base::MRef<T>&) {
 			return internal::denyNonOwningRef<decltype(ar)>();
 		}
 
-		static constexpr Errc read(reader auto& ar, ::base::MRef<T>&) {
+		static constexpr Errc read(Reader auto& ar, ::base::MRef<T>&) {
 			return internal::denyNonOwningRef<decltype(ar)>();
 		}
 	};

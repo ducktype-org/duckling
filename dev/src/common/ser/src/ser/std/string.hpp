@@ -6,7 +6,7 @@
  * terminator is written: a string is `n` and `n` characters, so an embedded '\0' is
  * ordinary data and survives the round-trip.
  *
- * The adapters are ser::serializer<T> specializations, which is what lets them stay an
+ * The adapters are ser::Serializer<T> specializations, which is what lets them stay an
  * opt-in include: dispatch consults the trait first, so <ser/ser.hpp> never has to know
  * these types exist.
  *
@@ -14,7 +14,7 @@
  * to swap and a memcpy cannot disagree with a dispatch loop. char16_t and char32_t go one at
  * a time so that a custom serializer<Ch> is honoured - NOT for byte order: nothing in this
  * library swaps bytes, so the element path is byte-identical native-endian output too, and
- * endianness is the envelope's job through stream_header::flags and PlatformMismatch. The
+ * endianness is the envelope's job through StreamHeader::flags and PlatformMismatch. The
  * bulk path is also skipped under constant evaluation, which may not contain a
  * reinterpret_cast.
  *
@@ -39,17 +39,17 @@
 namespace ser {
 
 	template<class Ch, class Tr, class Al>
-	struct min_wire_size<::std::basic_string<Ch, Tr, Al>> {
-		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
+	struct MinWireSize<::std::basic_string<Ch, Tr, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(internal::WireSizeType);
 	};
 
 	/**
 	 * @brief The character type is the format; the traits and the allocator are not on the wire
-	 * and are not hashed. See the note on ser::schema in hash.hpp for why an adapter says
+	 * and are not hashed. See the note on ser::Schema in hash.hpp for why an adapter says
 	 * this itself instead of letting a sizeof stand in for it.
 	 */
 	template<class Ch, class Tr, class Al>
-	struct schema<::std::basic_string<Ch, Tr, Al>> {
+	struct Schema<::std::basic_string<Ch, Tr, Al>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaOf<Ch, Mode, Seen>(internal::schemaText(h, "string"));
@@ -57,12 +57,12 @@ namespace ser {
 	};
 
 	template<class Ch, class Tr, class Al>
-	struct serializer<::std::basic_string<Ch, Tr, Al>> {
-		using string_type = ::std::basic_string<Ch, Tr, Al>;
+	struct Serializer<::std::basic_string<Ch, Tr, Al>> {
+		using StringType = ::std::basic_string<Ch, Tr, Al>;
 
 		static constexpr bool BULK = sizeof(Ch) == 1 && ::std::is_trivially_copyable_v<Ch>;
 
-		static constexpr Errc write(writer auto& ar, const string_type& s) {
+		static constexpr Errc write(Writer auto& ar, const StringType& s) {
 			if (const auto c = internal::writeLength<Ch>(ar, s.size()); c != Errc::Ok) return c;
 
 			if constexpr (BULK)
@@ -75,7 +75,7 @@ namespace ser {
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, string_type& s) {
+		static constexpr Errc read(Reader auto& ar, StringType& s) {
 			::std::size_t n = 0;
 			if (const auto c = internal::readLength<Ch>(ar, n); c != Errc::Ok) return c;
 

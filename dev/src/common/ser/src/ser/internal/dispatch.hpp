@@ -26,7 +26,7 @@ namespace ser::internal {
 	/**
 	 * @brief what the walk refuses to take apart
 	 * @details A field shape no other guard here can see, because it is a property of the
-	 * DECLARATION and an expression never carries it - field_decls_t is the one thing that
+	 * DECLARATION and an expression never carries it - FieldDeclsT is the one thing that
 	 * still knows. Asked only where the walk is actually chosen, so a type with a hook
 	 * never has its fields judged.
 	 */
@@ -45,7 +45,7 @@ namespace ser::internal {
 
 	template<class T>
 	consteval void checkWalkableFields() {
-		checkFieldDecls(field_decls_t<T>{});
+		checkFieldDecls(FieldDeclsT<T>{});
 	}
 
 	/**
@@ -72,7 +72,7 @@ namespace ser::internal {
 		if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
 			return false; /* the walk is not the way */
 		else
-			return walkCanFillFields<Ar>(field_decls_t<T>{});
+			return walkCanFillFields<Ar>(FieldDeclsT<T>{});
 	}
 
 	template<class T, class Ar>
@@ -92,9 +92,9 @@ namespace ser::internal {
 			return true; /* the hook does it */
 		else if constexpr (builtin::DENIED_V<T>)
 			return true; /* refused elsewhere */
-		else if constexpr (builtin::scalar_like<T>)
+		else if constexpr (builtin::ScalarLike<T>)
 			return true;
-		else if constexpr (builtin::enum_like<T>)
+		else if constexpr (builtin::EnumLike<T>)
 			return true;
 		else if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
 			return true;                 /* not this trait's call */
@@ -131,9 +131,9 @@ namespace ser::internal {
 			return false;
 		else if constexpr (builtin::DENIED_V<T>)
 			return false;
-		else if constexpr (builtin::scalar_like<T>)
+		else if constexpr (builtin::ScalarLike<T>)
 			return false;
-		else if constexpr (builtin::enum_like<T>)
+		else if constexpr (builtin::EnumLike<T>)
 			return false;
 		else if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
 			return false;
@@ -150,19 +150,19 @@ namespace ser::internal {
 	 * vector on read and a stack overflow on write.
 	 */
 	template<class Ar>
-	class depth_guard final {
+	class DepthGuard final {
 		Ar&  ar;
 		bool held;
 
 	public:
-		explicit constexpr depth_guard(Ar& a) noexcept: ar(a), held(a.pushDepth()) {}
+		explicit constexpr DepthGuard(Ar& a) noexcept: ar(a), held(a.pushDepth()) {}
 
-		constexpr ~depth_guard() {
+		constexpr ~DepthGuard() {
 			if (held) ar.popDepth();
 		}
 
-		depth_guard(const depth_guard&)            = delete;
-		depth_guard& operator=(const depth_guard&) = delete;
+		DepthGuard(const DepthGuard&)            = delete;
+		DepthGuard& operator=(const DepthGuard&) = delete;
 
 		[[nodiscard]] constexpr bool entered() const noexcept { return held; }
 	};
@@ -176,7 +176,7 @@ namespace ser::internal {
 	 *
 	 * The order of the ladder is the whole design: a user hook outranks a builtin rule, a
 	 * builtin rule outranks guessing, and within a level the asymmetric form outranks the
-	 * symmetric one. Levels run trait, then in-class, then ADL - ser::serializer<T> has to
+	 * symmetric one. Levels run trait, then in-class, then ADL - ser::Serializer<T> has to
 	 * win, being the only one available for a type you cannot edit.
 	 *
 	 * Two rules that look like details and are not: a type with a hook is NEVER decomposed,
@@ -184,12 +184,12 @@ namespace ser::internal {
 	 * pointer.
 	 */
 
-	template<class T, writer Ar>
+	template<class T, Writer Ar>
 	constexpr Errc dispatchWrite(Ar& ar, const T& x) {
 		using U = ::std::remove_cv_t<T>;
 		checkHooks<U, Ar>();
 
-		depth_guard g{ ar };
+		DepthGuard g{ ar };
 		if (!g.entered()) return Errc::DepthExceeded;
 
 		if constexpr (builtin::DENIED_V<U>) {
@@ -197,22 +197,22 @@ namespace ser::internal {
 			return Errc::InvalidValue;
 		}
 
-		else if constexpr (HAS_WRITE_V<access::trait_hooks, U, Ar>)        /* 1 */
-			return serializer<U>::write(ar, x);
-		else if constexpr (HAS_VISIT_V<access::trait_hooks, const U, Ar>)  /* 2 */
-			return serializer<U>::visit(ar, x);
-		else if constexpr (HAS_WRITE_V<access::member_hooks, U, Ar>)       /* 3 */
-			return access::callWrite<U>(ar, x);
-		else if constexpr (HAS_VISIT_V<access::member_hooks, const U, Ar>) /* 4 */
-			return access::callVisit(ar, x);
-		else if constexpr (HAS_WRITE_V<adl_hooks, U, Ar>)                  /* 5 */
+		else if constexpr (HAS_WRITE_V<Access::TraitHooks, U, Ar>)        /* 1 */
+			return Serializer<U>::write(ar, x);
+		else if constexpr (HAS_VISIT_V<Access::TraitHooks, const U, Ar>)  /* 2 */
+			return Serializer<U>::visit(ar, x);
+		else if constexpr (HAS_WRITE_V<Access::MemberHooks, U, Ar>)       /* 3 */
+			return Access::callWrite<U>(ar, x);
+		else if constexpr (HAS_VISIT_V<Access::MemberHooks, const U, Ar>) /* 4 */
+			return Access::callVisit(ar, x);
+		else if constexpr (HAS_WRITE_V<AdlHooks, U, Ar>)                  /* 5 */
 			return adl_barrier::callWrite(ar, x);
-		else if constexpr (HAS_VISIT_V<adl_hooks, const U, Ar>)            /* 6 */
+		else if constexpr (HAS_VISIT_V<AdlHooks, const U, Ar>)            /* 6 */
 			return adl_barrier::callVisit(ar, x);
 
-		else if constexpr (builtin::scalar_like<U>)
+		else if constexpr (builtin::ScalarLike<U>)
 			return builtin::writeScalar<U>(ar, x); /* 7 */
-		else if constexpr (builtin::enum_like<U>)
+		else if constexpr (builtin::EnumLike<U>)
 			return builtin::writeEnum<U>(ar, x);
 
 		/**
@@ -237,7 +237,7 @@ namespace ser::internal {
 				"elements rather than the field. A BASE CLASS is an element of aggregate "
 				"initialization but not of a structured binding, so counting sees one "
 				"field too many. Declare the count in the class:\n"
-				"  using ser_members = ser::members<N>;\n"
+				"  using ser_members = ser::Members<N>;\n"
 				"That settles the array, and a base with no data members of its own. A base "
 				"that HAS data members cannot be decomposed at all - give the type a "
 				"serVisit hook."
@@ -253,10 +253,10 @@ namespace ser::internal {
 				::base::DEPENDENT_FALSE_V<T>,
 				"ser: no way to serialize this type.\n"
 				"  Aggregate with public fields?  nothing needed\n"
-				"  Private fields?                using ser_members = ser::members<N>; + "
+				"  Private fields?                using ser_members = ser::Members<N>; + "
 				"SER_FRIEND\n"
 				"  Has a constructor?             SER_MAKE_FROM(Type, a, b, c);\n"
-				"  Not your type?                 specialize ser::serializer<T>"
+				"  Not your type?                 specialize ser::Serializer<T>"
 			);
 	}
 
@@ -264,14 +264,14 @@ namespace ser::internal {
 	constexpr Errc codeFromHook(F&& f) {
 		try {
 			return ::std::forward<F>(f)();
-		} catch (const exception& e) { return e.code(); }
+		} catch (const Exception& e) { return e.code(); }
 	}
 
-	template<class T, reader Ar>
+	template<class T, Reader Ar>
 	constexpr Errc dispatchRead(Ar& ar, T& x) {
 		using U = ::std::remove_cv_t<T>;
 		/*
-		 * Reachable from the member walk even though ser::in::operator() has its own
+		 * Reachable from the member walk even though ser::In::operator() has its own
 		 * requires clause: a const FIELD gets here with the enclosing object perfectly
 		 * non-const.
 		 */
@@ -285,7 +285,7 @@ namespace ser::internal {
 
 		checkHooks<U, Ar>();
 
-		depth_guard g{ ar };
+		DepthGuard g{ ar };
 		if (!g.entered()) return Errc::DepthExceeded;
 
 		if constexpr (builtin::DENIED_V<U>) {
@@ -293,22 +293,22 @@ namespace ser::internal {
 			return Errc::InvalidValue;
 		}
 
-		else if constexpr (HAS_READ_V<access::trait_hooks, U, Ar>)   /* 1 */
-			return codeFromHook([&] { return serializer<U>::read(ar, x); });
-		else if constexpr (HAS_VISIT_V<access::trait_hooks, U, Ar>)  /* 2 */
-			return codeFromHook([&] { return serializer<U>::visit(ar, x); });
-		else if constexpr (HAS_READ_V<access::member_hooks, U, Ar>)  /* 3 */
-			return codeFromHook([&] { return access::callRead<U>(ar, x); });
-		else if constexpr (HAS_VISIT_V<access::member_hooks, U, Ar>) /* 4 */
-			return codeFromHook([&] { return access::callVisit(ar, x); });
-		else if constexpr (HAS_READ_V<adl_hooks, U, Ar>)             /* 5 */
+		else if constexpr (HAS_READ_V<Access::TraitHooks, U, Ar>)   /* 1 */
+			return codeFromHook([&] { return Serializer<U>::read(ar, x); });
+		else if constexpr (HAS_VISIT_V<Access::TraitHooks, U, Ar>)  /* 2 */
+			return codeFromHook([&] { return Serializer<U>::visit(ar, x); });
+		else if constexpr (HAS_READ_V<Access::MemberHooks, U, Ar>)  /* 3 */
+			return codeFromHook([&] { return Access::callRead<U>(ar, x); });
+		else if constexpr (HAS_VISIT_V<Access::MemberHooks, U, Ar>) /* 4 */
+			return codeFromHook([&] { return Access::callVisit(ar, x); });
+		else if constexpr (HAS_READ_V<AdlHooks, U, Ar>)             /* 5 */
 			return codeFromHook([&] { return adl_barrier::callRead(ar, x); });
-		else if constexpr (HAS_VISIT_V<adl_hooks, U, Ar>)            /* 6 */
+		else if constexpr (HAS_VISIT_V<AdlHooks, U, Ar>)            /* 6 */
 			return codeFromHook([&] { return adl_barrier::callVisit(ar, x); });
 
-		else if constexpr (builtin::scalar_like<U>)
+		else if constexpr (builtin::ScalarLike<U>)
 			return builtin::readScalar<U>(ar, x); /* 7 */
-		else if constexpr (builtin::enum_like<U>)
+		else if constexpr (builtin::EnumLike<U>)
 			return builtin::readEnum<U>(ar, x);
 
 		/** @brief Step 8. The walk must not take a type whose author wrote serMake */
@@ -331,7 +331,7 @@ namespace ser::internal {
 			try {
 				x = dispatchMake<U>(ar);
 				return Errc::Ok;
-			} catch (const exception& e) { return e.code(); }
+			} catch (const Exception& e) { return e.code(); }
 		}
 
 		else if constexpr (HAS_ANY_MAKE_HOOK_V<U, Ar>)
@@ -367,7 +367,7 @@ namespace ser::internal {
 				"elements rather than the field. A BASE CLASS is an element of aggregate "
 				"initialization but not of a structured binding, so counting sees one "
 				"field too many. Declare the count in the class:\n"
-				"  using ser_members = ser::members<N>;\n"
+				"  using ser_members = ser::Members<N>;\n"
 				"That settles the array, and a base with no data members of its own. A base "
 				"that HAS data members cannot be decomposed at all - give the type a "
 				"serVisit hook."
@@ -383,10 +383,10 @@ namespace ser::internal {
 				::base::DEPENDENT_FALSE_V<T>,
 				"ser: no way to deserialize this type.\n"
 				"  Aggregate with public fields?  nothing needed\n"
-				"  Private fields?                using ser_members = ser::members<N>; + "
+				"  Private fields?                using ser_members = ser::Members<N>; + "
 				"SER_FRIEND\n"
 				"  Has a constructor?             SER_MAKE_FROM(Type, a, b, c);\n"
-				"  Not your type?                 specialize ser::serializer<T>"
+				"  Not your type?                 specialize ser::Serializer<T>"
 			);
 	}
 
@@ -407,27 +407,26 @@ namespace ser::internal {
 	 * The bytes are unchanged: the write side walks the same array in the same order.
 	 */
 	template<class F>
-	struct flatten_field final {
+	struct FlattenField final {
 		using type = ::base::TypeList<F>;
 	};
 
 	template<class E, ::std::size_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-	struct flatten_field<E[N]> {
-		using type = ::base::RepeatListT<typename flatten_field<E>::type, N>;
+	struct FlattenField<E[N]> {
+		using type = ::base::RepeatListT<typename FlattenField<E>::type, N>;
 	};
 
 	template<class T, class Seq>
-	struct flat_fields;
+	struct FlatFields;
 
 	template<class T, ::std::size_t... I>
-	struct flat_fields<T, ::std::index_sequence<I...>> {
-		using type = ::base::CatListsT<typename flatten_field<member_type_t<T, I>>::type...>;
+	struct FlatFields<T, ::std::index_sequence<I...>> {
+		using type = ::base::CatListsT<typename FlattenField<MemberTypeT<T, I>>::type...>;
 	};
 
 	template<class T>
-	using flat_fields_t =
-		typename flat_fields<T, ::std::make_index_sequence<MEMBER_COUNT_V<T>>>::type;
+	using FlatFieldsT = typename FlatFields<T, ::std::make_index_sequence<MEMBER_COUNT_V<T>>>::type;
 
 	/*
 	 * Two warnings are wrong about this function, and both are suppressed narrowly.
@@ -449,7 +448,7 @@ namespace ser::internal {
 	#pragma GCC diagnostic ignored "-Wconversion"
 #endif
 	template<class T, class... Fs>
-	constexpr T makeFromClauses(reader auto& ar, ::base::TypeList<Fs...>) {
+	constexpr T makeFromClauses(Reader auto& ar, ::base::TypeList<Fs...>) {
 		return T{ dispatchMake<Fs>(ar)... };
 	}
 #if defined(__clang__)
@@ -460,11 +459,11 @@ namespace ser::internal {
 
 	/**
 	 * @brief One clause per field, and the fields come as a pack straight off the ladder rather
-	 * than index by index - member_type_t would ask tuple_element for each of them, for a
+	 * than index by index - MemberTypeT would ask tuple_element for each of them, for a
 	 * list the ladder produced whole.
 	 */
 	template<class T, class... Fs>
-	constexpr T makeOneClausePerField(reader auto& ar, ::base::TypeList<Fs...>) {
+	constexpr T makeOneClausePerField(Reader auto& ar, ::base::TypeList<Fs...>) {
 		/*
 		 * No flattening here, so an array field has nowhere to go: it would need a
 		 * clause of its own, and no expression yields an array to fill one with.
@@ -475,7 +474,7 @@ namespace ser::internal {
 			"ser: this type is not an aggregate and has a C array field, so it cannot be "
 			"built one clause per field - braces here call a CONSTRUCTOR, and nothing "
 			"returns an array to pass to it. Write serMake by hand and name the elements:\n"
-			"  static T serMake(ser::reader auto& ar) {\n"
+			"  static T serMake(ser::Reader auto& ar) {\n"
 			"      return T{ ser::subMake<E>(ar), ser::subMake<E>(ar), ... };\n"
 			"  }\n"
 			"Braced, so the reads stay in order. Or hold the field as std::array, which "
@@ -491,12 +490,12 @@ namespace ser::internal {
 	 * parameter would be a different overload, not brace elision.
 	 */
 	template<class T>
-	constexpr T makeByFields(reader auto& ar) {
+	constexpr T makeByFields(Reader auto& ar) {
 		checkWalkableFields<T>();
 		if constexpr (::std::is_aggregate_v<T>)
-			return makeFromClauses<T>(ar, flat_fields_t<T>{});
+			return makeFromClauses<T>(ar, FlatFieldsT<T>{});
 		else
-			return makeOneClausePerField<T>(ar, field_types_t<T>{});
+			return makeOneClausePerField<T>(ar, FieldTypesT<T>{});
 	}
 
 	/**
@@ -510,11 +509,11 @@ namespace ser::internal {
 	 * The price is one move per field, which is why braces stay the default.
 	 */
 	template<class T, class... Fs>
-	constexpr T makeParenFromList(reader auto& ar, ::base::TypeList<Fs...>) {
+	constexpr T makeParenFromList(Reader auto& ar, ::base::TypeList<Fs...>) {
 		static_assert(
 			!(::std::is_array_v<Fs> || ... || false),
 			"ser: this type has a C array field, and a constructor cannot be handed an "
-			"array by value. Read into an existing object instead - T obj; ser::in{bytes}(obj); "
+			"array by value. Read into an existing object instead - T obj; ser::In{bytes}(obj); "
 			"- or hold the field as std::array, which is a class and can be passed."
 		);
 
@@ -523,8 +522,8 @@ namespace ser::internal {
 	}
 
 	template<class T>
-	constexpr T makeParenByFields(reader auto& ar) {
-		return makeParenFromList<T>(ar, field_types_t<T>{});
+	constexpr T makeParenByFields(Reader auto& ar) {
+		return makeParenFromList<T>(ar, FieldTypesT<T>{});
 	}
 
 	/**
@@ -536,11 +535,11 @@ namespace ser::internal {
 	template<class F, class Ar>
 	inline constexpr bool HAS_OWN_ARRAY_SERIALIZER_V
 		= ::std::is_array_v<F> && HAS_CUSTOM_SERIALIZER_V<F, Ar>
-	   && !::std::is_base_of_v<elementwise_array, serializer<::std::remove_cv_t<F>>>;
+	   && !::std::is_base_of_v<ElementwiseArray, Serializer<::std::remove_cv_t<F>>>;
 
 	template<class T, class Ar, ::std::size_t... I>
 	consteval bool arrayFieldHasOwnSerializer(::std::index_sequence<I...>) {
-		return (HAS_OWN_ARRAY_SERIALIZER_V<member_type_t<T, I>, Ar> || ... || false);
+		return (HAS_OWN_ARRAY_SERIALIZER_V<MemberTypeT<T, I>, Ar> || ... || false);
 	}
 
 	template<class T, class Ar>
@@ -554,7 +553,7 @@ namespace ser::internal {
 	 * as an exception because there is no room for a return code next to the value -
 	 * ser::read catches it at the boundary. This is the only place with exceptions.
 	 */
-	template<class T, reader Ar>
+	template<class T, Reader Ar>
 	requires(!::std::is_array_v<T>) constexpr T dispatchMake(Ar& ar) {
 		checkHooks<T, Ar>();
 
@@ -562,7 +561,7 @@ namespace ser::internal {
 		 * @brief A serMake that reads its fields with subMake recurses through here without
 		 * ever touching dispatchRead, so this path needs its own guard.
 		 */
-		depth_guard g{ ar };
+		DepthGuard g{ ar };
 		if (!g.entered()) throwError(Errc::DepthExceeded, ar.position());
 
 		if constexpr (builtin::DENIED_V<T>) {
@@ -570,12 +569,12 @@ namespace ser::internal {
 			throwError(Errc::InvalidValue, ar.position());
 		}
 
-		else if constexpr (HAS_MAKE_V<access::trait_hooks, T, Ar>)
-			return serializer<T>::make(ar);                    /* 1 */
-		else if constexpr (HAS_MAKE_V<access::member_hooks, T, Ar>)
-			return access::callMake<T>(ar);                    /* 2 */
-		else if constexpr (HAS_MAKE_V<adl_hooks, T, Ar>)
-			return adl_barrier::callMake(ar, ::ser::tag<T>{}); /* 3 */
+		else if constexpr (HAS_MAKE_V<Access::TraitHooks, T, Ar>)
+			return Serializer<T>::make(ar);                    /* 1 */
+		else if constexpr (HAS_MAKE_V<Access::MemberHooks, T, Ar>)
+			return Access::callMake<T>(ar);                    /* 2 */
+		else if constexpr (HAS_MAKE_V<AdlHooks, T, Ar>)
+			return adl_barrier::callMake(ar, ::ser::Tag<T>{}); /* 3 */
 
 		/*
 		 * Every one of those three returns the hook's prvalue straight out of a return
@@ -620,7 +619,7 @@ namespace ser::internal {
 			static_assert(
 				::base::DEPENDENT_FALSE_V<T>, /* 4c */
 				"ser: this type is default constructible but not movable, so it cannot be "
-				"returned by value. Read it in place instead: T obj; ser::in{bytes}(obj). "
+				"returned by value. Read it in place instead: T obj; ser::In{bytes}(obj). "
 				"Or give it a serMake hook - a hook's result is returned directly and is "
 				"never moved."
 			);
@@ -632,7 +631,7 @@ namespace ser::internal {
 				"to be constructed. An array field is normally built one element per "
 				"initializer clause, but that would ignore the array's own serializer and "
 				"read a different format than was written. Give the type a default "
-				"constructor and read into it - T obj; ser::in{bytes}(obj); - or give the "
+				"constructor and read into it - T obj; ser::In{bytes}(obj); - or give the "
 				"type itself a serMake hook."
 			);
 
@@ -650,7 +649,7 @@ namespace ser::internal {
 				"counting sees its elements rather than the field; a BASE CLASS is an "
 				"element of aggregate initialization but not of a structured binding. "
 				"Declare the count in the class:\n"
-				"  using ser_members = ser::members<N>;\n"
+				"  using ser_members = ser::Members<N>;\n"
 				"A base that has data members of its own cannot be decomposed at all - "
 				"give the type a serMake hook instead."
 			);
@@ -665,8 +664,8 @@ namespace ser::internal {
 				::base::DEPENDENT_FALSE_V<T>,
 				"ser: don't know how to construct this type.\n"
 				"  Has a constructor?          SER_MAKE_FROM(Type, a, b, c);\n"
-				"  Not your type?              ser::serializer<T>::make\n"
-				"  Has non-public fields?      SER_MAKE_FROM, or friend ser::access + members<N>"
+				"  Not your type?              ser::Serializer<T>::make\n"
+				"  Has non-public fields?      SER_MAKE_FROM, or friend ser::Access + members<N>"
 			);
 	}
 

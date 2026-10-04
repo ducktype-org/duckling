@@ -30,7 +30,7 @@ namespace ser {
 		 * @brief Base of the two array serializers, so a C array field can tell them from a
 		 * serializer a user wrote for that array type.
 		 */
-		struct elementwise_array {};
+		struct ElementwiseArray {};
 
 		/**
 		 * @brief The extent then the element. The same for both kinds of array, because they
@@ -46,18 +46,18 @@ namespace ser {
 	} /* namespace internal */
 
 	template<class T, ::std::size_t N>
-	struct min_wire_size<::std::array<T, N>> {
+	struct MinWireSize<::std::array<T, N>> {
 		static constexpr ::std::size_t VALUE = N * MIN_WIRE_SIZE_V<T>;
 	};
 
 	template<class T, ::std::size_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-	struct min_wire_size<T[N]> {
+	struct MinWireSize<T[N]> {
 		static constexpr ::std::size_t VALUE = N * MIN_WIRE_SIZE_V<T>;
 	};
 
 	template<class T, ::std::size_t N>
-	struct schema<::std::array<T, N>> {
+	struct Schema<::std::array<T, N>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaArray<T, N, Mode, Seen>(h);
@@ -66,7 +66,7 @@ namespace ser {
 
 	template<class T, ::std::size_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-	struct schema<T[N]> {
+	struct Schema<T[N]> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
 			return internal::schemaArray<T, N, Mode, Seen>(h);
@@ -74,14 +74,14 @@ namespace ser {
 	};
 
 	template<class T, ::std::size_t N>
-	struct serializer<::std::array<T, N>>: internal::elementwise_array {
-		static constexpr Errc write(writer auto& ar, const ::std::array<T, N>& a) {
+	struct Serializer<::std::array<T, N>>: internal::ElementwiseArray {
+		static constexpr Errc write(Writer auto& ar, const ::std::array<T, N>& a) {
 			for (const auto& e: a)
 				if (const auto c = internal::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, ::std::array<T, N>& a) {
+		static constexpr Errc read(Reader auto& ar, ::std::array<T, N>& a) {
 			for (auto& e: a)
 				if (const auto c = internal::dispatchRead<T>(ar, e); c != Errc::Ok) return c;
 			return Errc::Ok;
@@ -90,16 +90,16 @@ namespace ser {
 
 	template<class T, ::std::size_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-	struct serializer<T[N]>: internal::elementwise_array {
+	struct Serializer<T[N]>: internal::ElementwiseArray {
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-		static constexpr Errc write(writer auto& ar, const T (&a)[N]) {
+		static constexpr Errc write(Writer auto& ar, const T (&a)[N]) {
 			for (const auto& e: a)
 				if (const auto c = internal::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
 			return Errc::Ok;
 		}
 
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-		static constexpr Errc read(reader auto& ar, T (&a)[N]) {
+		static constexpr Errc read(Reader auto& ar, T (&a)[N]) {
 			for (auto& e: a)
 				if (const auto c = internal::dispatchRead<T>(ar, e); c != Errc::Ok) return c;
 			return Errc::Ok;

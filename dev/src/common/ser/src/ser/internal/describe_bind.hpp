@@ -36,7 +36,7 @@ namespace ser::internal {
 	consteval bool canEnumerateImpl() {
 		using U = ::std::remove_cv_t<T>;
 
-		if constexpr (access::NAMES_MEMBER_COUNT_V<U>)
+		if constexpr (Access::NAMES_MEMBER_COUNT_V<U>)
 			return true; /* the author said so */
 		else if constexpr (::std::is_union_v<U> || ::std::is_array_v<U> || !::std::is_class_v<U>)
 			return false;
@@ -72,8 +72,8 @@ namespace ser {
 	namespace internal {
 		template<class T>
 		consteval ::std::size_t memberCountOf() {
-			if constexpr (access::NAMES_MEMBER_COUNT_V<T>)
-				return access::declaredMemberCount<T>();
+			if constexpr (Access::NAMES_MEMBER_COUNT_V<T>)
+				return Access::declaredMemberCount<T>();
 			else if constexpr (::std::is_empty_v<T>)
 				return 0;
 			else
@@ -91,8 +91,8 @@ namespace ser {
 
 	/**
 	 * @brief visiting
-	 * @details The arity lives here rather than in ser::access because the count needs the ladder
-	 * (member_type_t below is built out of it) and the ladder must therefore need
+	 * @details The arity lives here rather than in ser::Access because the count needs the ladder
+	 * (MemberTypeT below is built out of it) and the ladder must therefore need
 	 * nothing. access::visitMembersN takes N explicitly for exactly that reason.
 	 */
 	template<class T, class F>
@@ -101,90 +101,90 @@ namespace ser {
 		/*
 		 * A declared count is NOT compared against the probe, because the probe errs in both
 		 * directions - a C array field overshoots, and the scan undershoots on a member no
-		 * clause can initialize. A wrong ser::members<N> is caught where it cannot be wrong
+		 * clause can initialize. A wrong ser::Members<N> is caught where it cannot be wrong
 		 * about anything: the arity of a structured binding is CHECKED against the type, so
 		 * it is a compile error in the rung it selects.
 		 */
 		static_assert(
 			CAN_ENUMERATE_MEMBERS_V<U>,
 			"ser: cannot enumerate this type's fields. Declare the count in the class:\n"
-			"  using ser_members = ser::members<N>;   (with SER_FRIEND for private fields)\n"
+			"  using ser_members = ser::Members<N>;   (with SER_FRIEND for private fields)\n"
 			"or give the type a hook: serVisit, or serWrite + serRead.\n"
 			"A C array field is the common reason: it elides braces, so the count comes "
-			"out too large and ser::members<N> is what settles it."
+			"out too large and ser::Members<N> is what settles it."
 		);
-		return access::visitMembersN<MEMBER_COUNT_V<U>>(
+		return Access::visitMembersN<MEMBER_COUNT_V<U>>(
 			::std::forward<T>(obj), ::std::forward<F>(f)
 		);
 	}
 
 	/**
-	 * @brief member_type_t
+	 * @brief MemberTypeT
 	 * @details The Boost.PFR trick: tie the members into a tuple of references and read the types
 	 * back off it. Never called - only its return type is ever needed - so the
 	 * declval<T&> is harmless even for a type that cannot be created.
 	 */
 	template<class T>
 	constexpr auto tieMembers(T& obj) {
-		return access::visitMembersN<MEMBER_COUNT_V<T>>(obj, [](auto&... fields) {
+		return Access::visitMembersN<MEMBER_COUNT_V<T>>(obj, [](auto&... fields) {
 			return ::std::tie(fields...);
 		});
 	}
 
 	template<class T>
-	using member_tuple_t = decltype(tieMembers(::std::declval<::std::remove_cv_t<T>&>()));
+	using MemberTupleT = decltype(tieMembers(::std::declval<::std::remove_cv_t<T>&>()));
 
 	/*
-	 * The stripping here is why field_decls_t below exists at all. A field's DECLARED type
+	 * The stripping here is why FieldDeclsT below exists at all. A field's DECLARED type
 	 * survives only as long as the binding does: handing one to an `auto&` parameter turns
 	 * both a `const int&` member and a `const int` member into `const int&`. So no guard
 	 * downstream of the walk can tell a reference field from a const one - and one of those
-	 * two is a shape that works, which is why the guards ask field_decls_t instead.
+	 * two is a shape that works, which is why the guards ask FieldDeclsT instead.
 	 */
 	namespace internal {
 		/**
-		 * @brief field_decls_t -> the same fields with cv and references stripped, in both the
+		 * @brief FieldDeclsT -> the same fields with cv and references stripped, in both the
 		 * shapes the rest of the library asks for.
 		 */
 		template<class L>
-		struct decl_field_types;
+		struct DeclFieldTypes;
 
 		template<class... Ds>
-		struct decl_field_types<::base::TypeList<Ds...>> {
-			using tuple = ::std::tuple<::std::remove_cvref_t<typename Ds::type>...>;
-			using list  = ::base::TypeList<::std::remove_cvref_t<typename Ds::type>...>;
+		struct DeclFieldTypes<::base::TypeList<Ds...>> {
+			using Tuple = ::std::tuple<::std::remove_cvref_t<typename Ds::type>...>;
+			using List  = ::base::TypeList<::std::remove_cvref_t<typename Ds::type>...>;
 		};
 	}
 
 	/**
-	 * @brief The same fields as field_types_t, but as they were DECLARED - `int&` for a
+	 * @brief The same fields as FieldTypesT, but as they were DECLARED - `int&` for a
 	 * reference member, `const int` for a const one, plus whether a non-const lvalue
 	 * reference can bind to each.
 	 *
-	 * Only the guards use this. Every serializing path keeps using field_types_t, which
+	 * Only the guards use this. Every serializing path keeps using FieldTypesT, which
 	 * must stay stripped: a `const int` field has to dispatch as `int`.
 	 */
 	template<class T>
-	using field_decls_t = decltype(access::fieldDeclsN<MEMBER_COUNT_V<::std::remove_cv_t<T>>>(
+	using FieldDeclsT = decltype(Access::fieldDeclsN<MEMBER_COUNT_V<::std::remove_cv_t<T>>>(
 		::std::declval<::std::remove_cv_t<T>&>()
 	));
 
 	/**
-	 * @brief Taken off field_decls_t and not off member_tuple_t: member_tuple_t goes through
+	 * @brief Taken off FieldDeclsT and not off MemberTupleT: MemberTupleT goes through
 	 * std::tie, which needs a non-const reference per field, and nothing binds one to a
-	 * BIT-FIELD. field_decls_t asks decltype on the binding instead, which works for every
+	 * BIT-FIELD. FieldDeclsT asks decltype on the binding instead, which works for every
 	 * field there is. It matters because the BUILD path needs these types, and that path is
 	 * exactly what reads a type the walk cannot fill.
 	 */
 	template<class T, ::std::size_t I>
-	using member_type_t
-		= ::std::tuple_element_t<I, typename internal::decl_field_types<field_decls_t<T>>::tuple>;
+	using MemberTypeT
+		= ::std::tuple_element_t<I, typename internal::DeclFieldTypes<FieldDeclsT<T>>::Tuple>;
 
 	/**
 	 * @brief The same types as a pack rather than one index at a time - what a caller needs when
 	 * it wants every field type at once, and what dispatch hands to the build path.
 	 */
 	template<class T>
-	using field_types_t = typename internal::decl_field_types<field_decls_t<T>>::list;
+	using FieldTypesT = typename internal::DeclFieldTypes<FieldDeclsT<T>>::List;
 
 } /* namespace ser */

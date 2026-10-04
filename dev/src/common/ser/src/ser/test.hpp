@@ -30,7 +30,7 @@ namespace ser {
 
 	inline constexpr ::std::size_t NO_FIELD = static_cast<::std::size_t>(-1);
 
-	struct roundtrip_report final {
+	struct RoundtripReport final {
 		Errc          code  = Errc::Ok; /* the round-trip itself */
 		::std::size_t field = NO_FIELD; /* first field that came back different */
 		const char*   name  = nullptr;  /* its name, when SER_DESCRIBE gave one */
@@ -45,14 +45,14 @@ namespace ser {
 		/**
 		 * @brief The described fields when the type says which they are, every field otherwise:
 		 * SER_DESCRIBE deliberately leaves fields out, and those come back
-		 * default-constructed, which is not a failure. Asked through ser::access, because
+		 * default-constructed, which is not a failure. Asked through ser::Access, because
 		 * SER_DESCRIBE is normally written in a private section and a detector here would
 		 * answer false and quietly compare the skipped fields too.
 		 */
 		template<class T>
 		constexpr auto roundtripTie(const T& x) {
-			if constexpr (access::HAS_DESCRIBED_V<T>) {
-				return access::described(x);
+			if constexpr (Access::HAS_DESCRIBED_V<T>) {
+				return Access::described(x);
 			} else {
 				/*
 				 * tieMembers goes straight to the ladder, past the check visitMembers makes,
@@ -65,7 +65,7 @@ namespace ser {
 					"ser: SER_TEST_ROUNDTRIP cannot see this type's fields, so it would "
 					"compare nothing and pass. Add SER_DESCRIBE(a, b) to the class - it "
 					"names the fields to compare and gives the report their names - or "
-					"declare using ser_members = ser::members<N>; with SER_FRIEND."
+					"declare using ser_members = ser::Members<N>; with SER_FRIEND."
 				);
 				return tieMembers(x);
 			}
@@ -89,13 +89,13 @@ namespace ser {
 
 		template<class T>
 		constexpr const char* fieldName(::std::size_t i) {
-			if constexpr (access::HAS_FIELD_NAMES_V<T>)
-				return access::fieldName<T>(i);
+			if constexpr (Access::HAS_FIELD_NAMES_V<T>)
+				return Access::fieldName<T>(i);
 			else
 				return nullptr;
 		}
 
-		inline bool reportRoundtrip(const char* what, const roundtrip_report& r) {
+		inline bool reportRoundtrip(const char* what, const RoundtripReport& r) {
 			if (r.ok()) return true;
 			if (r.code != Errc::Ok) {
 				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,modernize-use-std-print)
@@ -127,21 +127,21 @@ namespace ser {
 	 * ser::read, so that a type which cannot be moved is testable too.
 	 */
 	template<class T>
-	[[nodiscard]] roundtrip_report testRoundtrip(const T& sample) {
+	[[nodiscard]] RoundtripReport testRoundtrip(const T& sample) {
 		::std::vector<::std::byte> buf;
 		if (const auto w = write(buf, sample); !w.has_value())
-			return roundtrip_report{ .code = codeOf(w) };
+			return RoundtripReport{ .code = codeOf(w) };
 
 		try {
-			const auto back = internal::readThrowing<T, no_context>(
-				::std::span<const ::std::byte>{ buf.data(), buf.size() }, options{}
+			const auto back = internal::readThrowing<T, NoContext>(
+				::std::span<const ::std::byte>{ buf.data(), buf.size() }, Options{}
 			);
 			const auto bad = internal::compareFields(sample, *back);
-			return roundtrip_report{ .code  = Errc::Ok,
-				                     .field = bad,
-				                     .name
-				                     = bad == NO_FIELD ? nullptr : internal::fieldName<T>(bad) };
-		} catch (const exception& e) { return roundtrip_report{ .code = e.err().code }; }
+			return RoundtripReport{ .code  = Errc::Ok,
+				                    .field = bad,
+				                    .name
+				                    = bad == NO_FIELD ? nullptr : internal::fieldName<T>(bad) };
+		} catch (const Exception& e) { return RoundtripReport{ .code = e.err().code }; }
 	}
 
 } /* namespace ser */

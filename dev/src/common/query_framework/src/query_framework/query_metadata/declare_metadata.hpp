@@ -9,7 +9,7 @@
  * The bytes come from the `ser` module, so the wrapped type needs no serialization code of
  * its own: an aggregate is walked field by field, and a type that needs more says so with
  * one of the `ser` hooks (`serVisit`, `serWrite` + `serRead`, `serWrite` + `serMake`) or a
- * `ser::serializer<T>` specialization. See @ref dev/src/common/ser/readme.md.
+ * `ser::Serializer<T>` specialization. See @ref dev/src/common/ser/readme.md.
  *
  * Usage:
  * @code

@@ -56,7 +56,7 @@ Writing it into a vector of bytes and reading it back:
 std::vector<std::byte> buf;
 ser::writeOrPanic(buf, Person{ "Person1", 25 });
 
-auto r = ser::read<Person>(buf);          // -> ser::result<ser::owned<Person>>
+auto r = ser::read<Person>(buf);          // -> ser::Result<ser::Owned<Person>>
 if (!r) { /* r.code() says why */ }
 Person back = std::move(*r).take();
 ```
@@ -69,7 +69,7 @@ you one stream. Into a fixed buffer (`std::span<std::byte>`) there is nothing to
 so each call fills it from the front and a buffer that is too small gives you
 `Errc::BufferFull` rather than a resize.
 
-`ser::read` never hands back a bare `T`. It returns `ser::owned<T>`, a bundle that will
+`ser::read` never hands back a bare `T`. It returns `ser::Owned<T>`, a bundle that will
 carry object pools in a later version; `*r` is the bundle, `r->field` reaches through it,
 and `std::move(*r).take()` moves the object out. `ser::readOrPanicForce<T>` is the one form
 that returns the plain object.
@@ -105,11 +105,11 @@ a broken program, and there is no state to recover to:
 
 ```cpp
 ser::writeOrPanic(buf, node);                          // writing what we hold cannot fail
-auto  owned = ser::readOrPanic<Node>(blob);            // returns ser::owned<Node>
+auto  owned = ser::readOrPanic<Node>(blob);            // returns ser::Owned<Node>
 Node  n     = ser::readOrPanicForce<Node>(blob);       // returns a bare Node
 ```
 
-Reading into an object you already hold - `ser::in ar{bytes}; ar(obj);` - overwrites it. For
+Reading into an object you already hold - `ser::In ar{bytes}; ar(obj);` - overwrites it. For
 `base::StableVector` that object has to be **empty**: the container promises a `Ref` handed
 out stays valid, so the adapter refuses a non-empty target rather than clearing it and
 dangling every reference. `std::vector` has no such promise and is simply cleared.
@@ -123,8 +123,8 @@ to be wrong is undefined behaviour there, with no diagnostic. Input goes through
 `ser::read`. Always.
 
 No public entry point throws. If
-you prefer an exception at your own call site, `ser::result` has `.orThrow()`, which raises
-`ser::exception` carrying the same code and position.
+you prefer an exception at your own call site, `ser::Result` has `.orThrow()`, which raises
+`ser::Exception` carrying the same code and position.
 
 `ser::read` is handed a buffer whose size it knows, so it also requires the object to
 account for **all** of it: bytes left over are `TrailingBytes`, which is what catches a
@@ -176,7 +176,7 @@ What Works With No Code At All
 
   ```cpp
   enum Kind { First, Second, Third };
-  template<> struct ser::enum_range<Kind> {
+  template<> struct ser::EnumRange<Kind> {
       static constexpr Kind MIN = First;
       static constexpr Kind MAX = Third;
   };
@@ -215,7 +215,7 @@ plain `delete`, say so in one line:
 
 ```cpp
 template<>
-struct ser::box_deleter_is_new_delete<MyDeleter> {
+struct ser::BoxDeleterIsNewDelete<MyDeleter> {
     static constexpr bool VALUE = true;
 };
 ```
@@ -236,11 +236,11 @@ Four ways, in the order the library consults them. The first one that answers wi
 type with a hook is **never** taken apart field by field - which is what keeps a
 container-shaped type of your own from being walked as if it were a container.
 
-**1. `ser::serializer<T>` - for a type you cannot edit.** It outranks everything below.
+**1. `ser::Serializer<T>` - for a type you cannot edit.** It outranks everything below.
 
 ```cpp
 template <>
-struct ser::serializer<third_party::Foreign> {
+struct ser::Serializer<third_party::Foreign> {
     static constexpr Errc visit(auto& ar, auto& self) { return ar(self.a, self.b); }
 };
 ```
@@ -253,10 +253,10 @@ struct Versioned {
     std::uint32_t v = 2;
     std::string   payload;
 
-    static ser::Errc serWrite(ser::writer auto& ar, const Versioned& x) {
+    static ser::Errc serWrite(ser::Writer auto& ar, const Versioned& x) {
         return ar(x.v, x.payload);
     }
-    static ser::Errc serRead(ser::reader auto& ar, Versioned& x) {
+    static ser::Errc serRead(ser::Reader auto& ar, Versioned& x) {
         if (const auto e = ar(x.v); e != ser::Errc::Ok) return e;
         if (x.v != 2) return ser::Errc::InvalidValue;      // your own validation
         return ar(x.payload);
@@ -264,7 +264,7 @@ struct Versioned {
 };
 ```
 
-* `serVisit(ser::reader_or_writer auto& ar, auto& self)` - one function, both directions. The object has to
+* `serVisit(ser::ReaderOrWriter auto& ar, auto& self)` - one function, both directions. The object has to
   exist before it can be filled in.
 * `serWrite` + `serRead` - the asymmetric pair, when the two directions genuinely differ.
 * `serWrite` + `serMake` - `serMake` **builds** the object and returns it by value, so it
@@ -288,8 +288,8 @@ Four rules the library enforces, each with its own message:
 * A hook returns `ser::Errc` (`serMake` returns `T` by value). A hook returning `bool` is
   reported as such, not as "no way to serialize this type".
 * A hook is a **template on the archive**. Three concepts name the directions, and spelling
-  one is optional but says the intention out loud: `ser::writer auto&` for `serWrite`,
-  `ser::reader auto&` for `serRead` and `serMake`, and `ser::reader_or_writer auto&` for the
+  one is optional but says the intention out loud: `ser::Writer auto&` for `serWrite`,
+  `ser::Reader auto&` for `serRead` and `serMake`, and `ser::ReaderOrWriter auto&` for the
   symmetric `serVisit`, which serves both. A hook pinned to a concrete archive type is
   silently unreachable, so ser reports it rather than walking past it.
 * Write and read must **pair**. A type that can be written and never read back is a bug
@@ -309,7 +309,7 @@ All of these come with `<ser/ser.hpp>`:
 | `SER_MAKE_FROM(T, a, b)` | just the `serMake`, when you write the write side yourself |
 | `SER_MAKE_FROM_MEMBERS(T)` | the same without a field list, taken from the walk |
 | `*_PAREN` variants | for a type whose braces would reach a `std::initializer_list` constructor |
-| `SER_FRIEND` | `friend struct ser::access;` - lets ser see private fields and private hooks |
+| `SER_FRIEND` | `friend struct ser::Access;` - lets ser see private fields and private hooks |
 
 `SER_DESCRIBE` is also what gives you field **names**, which is what
 `SER_TEST_ROUNDTRIP` reports and what `debugHash` mixes in. A described aggregate and the
@@ -341,11 +341,11 @@ count yourself:
 struct Frame {
     char tag[4]{};
     int  n{};
-    using ser_members = ser::members<2>;   // and the type serializes as any other
+    using ser_members = ser::Members<2>;   // and the type serializes as any other
 };
 ```
 
-**Private fields** cannot be probed at all. `using ser_members = ser::members<N>;` plus
+**Private fields** cannot be probed at all. `using ser_members = ser::Members<N>;` plus
 `SER_FRIEND` is the pair that fixes it - the alias may be private too. A wrong `N` is a
 compile error in the bindings ladder, so the format cannot drift silently.
 
@@ -381,7 +381,7 @@ guessing would be silent data corruption rather than an error:
 | `std::string_view`, `base::RawView` | the owning type - a view cannot be read back into |
 | `std::shared_ptr`, `std::unique_ptr` | not supported yet; `base::Box` / `base::MBox` do work |
 | a polymorphic `Box<Base>` | a tag plus a serializer of your own that switches on it |
-| a `Box` / `MBox` with a custom deleter | the value, put back where it belongs after reading - or opt in with `ser::box_deleter_is_new_delete` |
+| a `Box` / `MBox` with a custom deleter | the value, put back where it belongs after reading - or opt in with `ser::BoxDeleterIsNewDelete` |
 
 Archives: Several Messages In One Buffer
 ----------------------------------------
@@ -394,13 +394,13 @@ std::vector<std::byte> buf;
 ser::writeOrPanic(buf, header);       // buf: [header]
 ser::writeOrPanic(buf, payload);      // buf: [header][payload]
 
-ser::in ar{ std::span<const std::byte>{ buf } };
+ser::In ar{ std::span<const std::byte>{ buf } };
 if (const auto e = ar(header); e != ser::Errc::Ok) return { e, ar.position() };
 if (const auto e = ar(payload); e != ser::Errc::Ok) return { e, ar.position() };
 const std::size_t consumed = ar.position();     // where the next message begins
 ```
 
-`ar.position()`, `ar.size()`, `ar.avail()` and `ar.reset(p)` are all public. `ser::out`
+`ar.position()`, `ar.size()`, `ar.avail()` and `ar.reset(p)` are all public. `ser::Out`
 works the same way and takes several objects at once - `ar(a, b, c)` stops at the first
 failure and returns that argument's code. Call `ar.finish()` when a write archive is done;
 without pools it folds away to nothing.
@@ -412,7 +412,7 @@ order or another schema is refused instead of being interpreted as data. It is *
 default**, so a plain `ser::write` is exactly the payload and not one byte more.
 
 ```cpp
-constexpr ser::options opt{ .header = true, .user_magic = 0xD0C5 };
+constexpr ser::Options opt{ .header = true, .user_magic = 0xD0C5 };
 
 ser::writeOrPanic(buf, cfg, opt);
 const auto r = ser::read<Config>(buf, opt);
@@ -453,7 +453,7 @@ stores ser data, test it in one of two ways:
 A type whose format ser cannot see - a hand-written `serWrite`, a class with private
 members - hashes as `"hook"` plus `sizeof` and `alignof`, which two unrelated types can
 share. Three ways to say what it really writes, in the order they are consulted:
-`ser::config<T>::schema_id`, a `ser::schema<T>` specialization, or an in-class
+`ser::Config<T>::schema_id`, a `ser::Schema<T>` specialization, or an in-class
 `using ser_wire_as = W;` (with an optional `ser_schema_tag`). `ser_wire_as` says "the wire is this type";
 `ser_schema_tag` is a discriminator mixed into the hash, so two strong typedefs over one
 integer do not collide.
@@ -504,7 +504,7 @@ be signed or content-addressed.
 
 Limits And Knobs
 ----------------
-`ser::config_global` holds the policy: `MAX_DEPTH` is 256 (data-dependent recursion is a
+`ser::ConfigGlobal` holds the policy: `MAX_DEPTH` is 256 (data-dependent recursion is a
 stack overflow on write and an attack on read), `MAX_ZERO_SIZE_ELEMENTS` is 2^28, and the
 length prefix type is `u64`.
 
@@ -544,10 +544,9 @@ Compilers
 |---|---|
 | GCC 14 (`-std=c++23`) | works - the toolchain this repository builds with, and what runs the module's tests |
 | Clang 19 (`-std=c++23`) | works - both test files compile clean and produce byte-identical streams and the same `schemaHash` |
-| anything below C++23 | `#error "ser: C++23 is required"` |
-| MSVC | the guards are in place - `/std:c++latest`, `/Zc:__cplusplus` and `/Zc:preprocessor` are required and a missing one is an `#error` - but no build here exercises it |
+| MSVC | untested - needs `/std:c++latest`, `/Zc:__cplusplus` and `/Zc:preprocessor`, and no build here exercises it |
 
-C++23 is required for real reasons, not for tidiness: `std::expected` is what `ser::result`
+C++23 is required for real reasons, not for tidiness: `std::expected` is what `ser::Result`
 is, and `if !consteval` is what lets the bulk-copy paths exist next to the constant-evaluable
 ones.
 

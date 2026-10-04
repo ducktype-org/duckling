@@ -2,10 +2,10 @@
 
 /**
  * @file
- * @brief ser::config<T>, per-type settings. Today it has one: `schema_id`.
+ * @brief ser::Config<T>, per-type settings. Today it has one: `schema_id`.
  * @details `schema_id` replaces the schema hash computed for T with a fixed number:
  *
- *     template<> struct ser::config<Artifact> {
+ *     template<> struct ser::Config<Artifact> {
  *         static constexpr ::std::uint64_t schema_id = 0xA47F'0001;
  *     };
  *
@@ -20,6 +20,6 @@
 namespace ser {
 
 	template<class T>
-	struct config {};
+	struct Config {};
 
 } /* namespace ser */

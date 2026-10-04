@@ -7,7 +7,7 @@
  *    1-2  types that need no serialization code at all
  *    3-5  the macros: ser_members<N>, SER_DESCRIBE, SER_DESCRIBE_MAKE
  *    6-8  hooks written by hand: serVisit, serWrite + serRead, serWrite + serMake
- *   9-10  types we do not own: ADL serVisit, ser::serializer<T>
+ *   9-10  types we do not own: ADL serVisit, ser::Serializer<T>
  *  11-13  the stream: bad input, the envelope, several messages in one buffer
  *     14  at compile time: schemaHash, debugHash, a round trip inside a static_assert
  *
@@ -149,7 +149,7 @@ struct Marker final {
 	char code[4] = { 'S', 'E', 'R', '!' };
 	u32  count   = 0;
 
-	using ser_members = ser::members<2>;
+	using ser_members = ser::Members<2>;
 };
 
 void memberCountExample() {
@@ -190,7 +190,7 @@ public:
 
 	[[nodiscard]] usize cachedLength() const { return length; }
 
-SER_FRIEND /* = friend struct ser::access; - without it the macro below is invisible */
+SER_FRIEND /* = friend struct ser::Access; - without it the macro below is invisible */
 	private: std::string text;
 	usize                length = 0;
 
@@ -282,7 +282,7 @@ struct Timestamp final {
 	i64 seconds = 0;
 	i32 nanos   = 0;
 
-	static constexpr ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) {
+	static constexpr ser::Errc serVisit(ser::ReaderOrWriter auto& ar, auto& self) {
 		return ar(self.seconds, self.nanos);
 	}
 };
@@ -317,11 +317,11 @@ struct Config final {
 	u32             version = 2;
 	std::vector<u8> data;
 
-	static ser::Errc serWrite(ser::writer auto& ar, const Config& x) {
+	static ser::Errc serWrite(ser::Writer auto& ar, const Config& x) {
 		return ar(x.version, x.data);
 	}
 
-	static ser::Errc serRead(ser::reader auto& ar, Config& x) {
+	static ser::Errc serRead(ser::Reader auto& ar, Config& x) {
 		if (const auto e = ar(x.version); e != ser::Errc::Ok) return e;
 		if (x.version != 2) return ser::Errc::InvalidValue; /* our own rule, mid-stream */
 		return ar(x.data);
@@ -376,9 +376,9 @@ private:
 
 	std::string text;
 
-	static ser::Errc serWrite(ser::writer auto& ar, const Label& x) { return ar(x.text); }
+	static ser::Errc serWrite(ser::Writer auto& ar, const Label& x) { return ar(x.text); }
 
-	static Label serMake(ser::reader auto& ar) { return Label{ ser::subMake<std::string>(ar) }; }
+	static Label serMake(ser::Reader auto& ar) { return Label{ ser::subMake<std::string>(ar) }; }
 };
 
 void makeHookExample() {
@@ -413,12 +413,12 @@ namespace vendor {
 	 * @brief BOTH overloads: the const one is what the write side needs, and a hook found in one
 	 * direction only means the two directions disagree about the format, which ser refuses.
 	 */
-	template<ser::reader_or_writer Ar>
+	template<ser::ReaderOrWriter Ar>
 	ser::Errc serVisit(Ar& ar, Coord& c) {
 		return ar(c.lat, c.lon);
 	}
 
-	template<ser::reader_or_writer Ar>
+	template<ser::ReaderOrWriter Ar>
 	ser::Errc serVisit(Ar& ar, const Coord& c) {
 		return ar(c.lat, c.lon);
 	}
@@ -444,7 +444,7 @@ void adlExample() {
 }
 
 /*
- * ═══ 10. a type we cannot edit at all: ser::serializer<T> ═════════════════════════
+ * ═══ 10. a type we cannot edit at all: ser::Serializer<T> ═════════════════════════
  * The last resort and the highest rank: it outranks every hook, and it lives in OUR code,
  * so nothing in the vendor's headers has to change.
  */
@@ -452,14 +452,14 @@ void adlExample() {
 namespace ser {
 
 	template<>
-	struct serializer<::vendor::Handle> {
+	struct Serializer<::vendor::Handle> {
 		static constexpr Errc visit(auto& ar, auto& self) { return ar(self.id); }
 	};
 
 } /* namespace ser */
 
 void serializerExample() {
-	std::println("\n── 10. a sealed type, through ser::serializer<T> ───────────────");
+	std::println("\n── 10. a sealed type, through ser::Serializer<T> ───────────────");
 
 	const vendor::Handle handle{ .id = 7 };
 
@@ -508,7 +508,7 @@ void badInputExample() {
 void envelopeExample() {
 	std::println("\n── 12. the envelope, 32 bytes that refuse the wrong stream ───────────────");
 
-	constexpr ser::options OPT{ .header = true, .user_magic = 0xD0'CC'00'01U };
+	constexpr ser::Options OPT{ .header = true, .user_magic = 0xD0'CC'00'01U };
 
 	std::vector<std::byte> plain;
 	ser::writeOrPanic(plain, samplePerson());
@@ -538,7 +538,7 @@ void archiveExample() {
 	ser::writeOrPanic(bytes, Marker{ .code = { 'H', 'E', 'A', 'D' }, .count = 3 });
 	ser::writeOrPanic(bytes, Point{ .x = 8, .y = 9 });
 
-	ser::in ar{ std::span<const std::byte>{ bytes } };
+	ser::In ar{ std::span<const std::byte>{ bytes } };
 	Marker  marker;
 	Point   point;
 
@@ -591,11 +591,11 @@ static_assert(ser::schemaHash<Point>() != ser::schemaHash<Person>());
 /** @brief A whole round trip during compilation: no heap, so a fixed-size buffer. */
 consteval bool roundTripWhileCompiling() {
 	std::array<std::byte, 12> buf{}; /* a fixed buffer: its size() is CAPACITY */
-	ser::out                  out{ buf };
+	ser::Out                  out{ buf };
 	if (out(Timestamp{ .seconds = 1'700'000'000, .nanos = 250 }) != ser::Errc::Ok) return false;
 	if (out.finish() != ser::Errc::Ok) return false;
 
-	ser::in   in{ std::span<const std::byte>{ buf } };
+	ser::In   in{ std::span<const std::byte>{ buf } };
 	Timestamp back;
 	if (in(back) != ser::Errc::Ok) return false;
 	return back.seconds == 1'700'000'000 && back.nanos == 250 && in.position() == buf.size();
@@ -604,7 +604,7 @@ consteval bool roundTripWhileCompiling() {
 /** @brief And a fixed buffer that cannot hold the object answers with a code, not a resize. */
 consteval bool refusesToOverflow() {
 	std::array<std::byte, 4> tiny{}; /* a Timestamp needs 12 */
-	ser::out                 ar{ tiny };
+	ser::Out                 ar{ tiny };
 	return ar(Timestamp{}) == ser::Errc::BufferFull;
 }
 

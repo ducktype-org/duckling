@@ -23,21 +23,21 @@
 namespace ser {
 
 	/**
-	 * @brief ser::members<N>
+	 * @brief ser::Members<N>
 	 * @details The opt-in field count. It skips the counting phase and, together with
-	 * `friend ser::access`, is what lets the structured-bindings ladder see private
+	 * `friend ser::Access`, is what lets the structured-bindings ladder see private
 	 * fields. A wrong N is a compile error, so the format cannot drift silently.
 	 */
 	template<::std::size_t N>
-	struct members final {
+	struct Members final {
 		static constexpr ::std::size_t COUNT = N;
 	};
 
 	/**
-	 * @brief ser::access
+	 * @brief ser::Access
 	 * @details Every in-class hook detector lives HERE rather than in ser::internal because access
 	 * control is part of SFINAE: a detector written in ser::internal reports false for a
-	 * private serVisit that ser::access can call perfectly well. The trait-level detectors
+	 * private serVisit that ser::Access can call perfectly well. The trait-level detectors
 	 * have no access problem and live here anyway, so the whole priority table reads in one
 	 * place.
 	 *
@@ -45,21 +45,21 @@ namespace ser {
 	 * binding only a non-const object is invisible on the write side - which
 	 * detail::checkHooks reports instead of letting the two directions use different formats.
 	 */
-	struct access final {
+	struct Access final {
 		/**
-		 * @brief level 1: ser::serializer<T>
+		 * @brief level 1: ser::Serializer<T>
 		 * @details The probes the questions in detail/hooks.hpp are asked with: declared, never
 		 * defined, one per hook form. The trait level needs no access rights of its own,
 		 * but it lives here so the whole priority table reads in one place.
 		 */
-		struct trait_hooks final {
+		struct TraitHooks final {
 			template<class Ar, class T>
 			static auto visit(Ar& ar, T& x)
-				-> decltype(serializer<::std::remove_cvref_t<T>>::visit(ar, x));
+				-> decltype(Serializer<::std::remove_cvref_t<T>>::visit(ar, x));
 
 			template<class Ar, class T>
 			static auto write(Ar& ar, const T& x)
-				-> decltype(serializer<::std::remove_cvref_t<T>>::write(ar, x));
+				-> decltype(Serializer<::std::remove_cvref_t<T>>::write(ar, x));
 
 			/**
 			 * @brief Forwarding, so this one probe answers both "does it fill an lvalue" and
@@ -67,11 +67,11 @@ namespace ser {
 			 */
 			template<class Ar, class T>
 			static auto read(Ar& ar, T&& x)
-				-> decltype(serializer<::std::remove_cvref_t<T>>::read(ar, ::std::forward<T>(x)));
+				-> decltype(Serializer<::std::remove_cvref_t<T>>::read(ar, ::std::forward<T>(x)));
 
 			/** @brief T first: there is no argument to deduce it from. */
 			template<class T, class Ar>
-			static auto make(Ar& ar) -> decltype(serializer<::std::remove_cvref_t<T>>::make(ar));
+			static auto make(Ar& ar) -> decltype(Serializer<::std::remove_cvref_t<T>>::make(ar));
 		};
 
 		/**
@@ -81,7 +81,7 @@ namespace ser {
 		 * them would report false for a hook that works perfectly well. A nested class of a
 		 * befriended class has the same access rights the friend does.
 		 */
-		struct member_hooks final {
+		struct MemberHooks final {
 			template<class Ar, class T>
 			static auto visit(Ar& ar, T& x) -> decltype(::std::remove_cvref_t<T>::serVisit(ar, x));
 
@@ -107,16 +107,16 @@ namespace ser {
 		 */
 		template<class T>
 		static constexpr bool NAMES_TRAIT_VISIT_V
-			= requires { serializer<::std::remove_cvref_t<T>>::visit; };
+			= requires { Serializer<::std::remove_cvref_t<T>>::visit; };
 		template<class T>
 		static constexpr bool NAMES_TRAIT_WRITE_V
-			= requires { serializer<::std::remove_cvref_t<T>>::write; };
+			= requires { Serializer<::std::remove_cvref_t<T>>::write; };
 		template<class T>
 		static constexpr bool NAMES_TRAIT_READ_V
-			= requires { serializer<::std::remove_cvref_t<T>>::read; };
+			= requires { Serializer<::std::remove_cvref_t<T>>::read; };
 		template<class T>
 		static constexpr bool NAMES_TRAIT_MAKE_V
-			= requires { serializer<::std::remove_cvref_t<T>>::make; };
+			= requires { Serializer<::std::remove_cvref_t<T>>::make; };
 
 		template<class T>
 		static constexpr bool NAMES_MEMBER_VISIT_V
@@ -178,7 +178,7 @@ namespace ser {
 
 		/**
 		 * @brief the opt-in field count
-		 * @details `using ser_members = ser::members<2>;` inside the class, private if you like -
+		 * @details `using ser_members = ser::Members<2>;` inside the class, private if you like -
 		 * which is why the detector is here. It exists because COUNTING and DECOMPOSING
 		 * have different requirements: decomposition works on any class whose members are
 		 * accessible here, while the count is probed with aggregate initialization, which a
@@ -223,7 +223,7 @@ namespace ser {
 			= requires { typename ::std::remove_cvref_t<T>::ser_wire_as; };
 
 		template<class T>
-		using wire_as_t = typename ::std::remove_cvref_t<T>::ser_wire_as;
+		using WireAsT = typename ::std::remove_cvref_t<T>::ser_wire_as;
 
 		template<class T>
 		static constexpr bool HAS_SCHEMA_TAG_V = requires {
@@ -240,7 +240,7 @@ namespace ser {
 		 * @details Calls f with every member of obj as an lvalue. The arity is a template
 		 * parameter rather than something computed here, so this stays free of
 		 * describe_bind.hpp and the include graph has no cycle: counting needs the
-		 * ladder (member_type_t), the ladder needs nothing.
+		 * ladder (MemberTypeT), the ladder needs nothing.
 		 * @note The ladder binds obj and calls f in place; forwarding either would change what
 		 * the members bind as, which is the whole contract of the walk.
 		 */
@@ -256,7 +256,7 @@ namespace ser {
 				static_assert(
 					::std::is_empty_v<::std::remove_cvref_t<T>>,
 					"ser: this type declares zero members - `using ser_members = "
-					"ser::members<0>;` - but it has data. That format writes no bytes and a "
+					"ser::Members<0>;` - but it has data. That format writes no bytes and a "
 					"read leaves every field default-constructed, silently. Declare the real "
 					"count, or drop the declaration and let the walk count the fields."
 				);
@@ -292,19 +292,19 @@ namespace ser {
 	 * @details `serMake` builds its object rather than filling one, so it needs the fields as
 	 * values before the constructor runs. Braces are what guarantee several of these happen in
 	 * order: `return T{ ser::subMake<A>(ar), ser::subMake<B>(ar) };`
-	 * @note Signals by THROWING a `ser::exception`, like everything on the make path - a
+	 * @note Signals by THROWING a `ser::Exception`, like everything on the make path - a
 	 * constructor argument has nowhere to put an error code. `ser::read` turns it back into a
 	 * code at the boundary.
 	 */
-	template<class F, reader Ar>
+	template<class F, Reader Ar>
 	[[nodiscard]] constexpr F subMake(Ar& ar) {
 		return internal::dispatchMake<F>(ar);
 	}
 
 /**
- * @brief A type opts in with one line. `friend ser::access;` works just as well; the macro
+ * @brief A type opts in with one line. `friend ser::Access;` works just as well; the macro
  * exists so the spelling does not have to be remembered.
  */
-#define SER_FRIEND friend struct ::ser::access;
+#define SER_FRIEND friend struct ::ser::Access;
 
 } /* namespace ser */
