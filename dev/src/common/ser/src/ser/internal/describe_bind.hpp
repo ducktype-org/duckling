@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/comptime/aggregate_arity.hpp>
 #include <base/comptime/member_walk.hpp>
 #include <base/comptime/type_list.hpp>
 #include <base/comptime/type_traits.hpp>
@@ -14,124 +15,15 @@
 
 namespace ser::internal {
 
-	inline constexpr ::std::size_t NO_COUNT = static_cast<::std::size_t>(-1);
-
 	/** @brief Taken from the ladder itself, so the two cannot drift apart. */
 	inline constexpr ::std::size_t MAX_MEMBERS = ::base::LADDER_MAX;
 
-	/*
-	 * the counting probe
-	 * Converts to anything and is deliberately never defined: it appears only inside a
-	 * requires-expression, where the initialization is never evaluated. Clang reports
-	 * Wundefined-inline anyway, because it counts being CHOSEN by overload resolution as
-	 * being used, so the warning is silenced exactly here.
-	 */
-#if defined(__clang__)
-	#pragma clang diagnostic push
-	#pragma clang diagnostic ignored "-Wundefined-inline"
-#endif
-	struct any_init final {
-		template<class T>
-		constexpr operator T() const; /* NOT defined, on purpose */
-	};
-#if defined(__clang__)
-	#pragma clang diagnostic pop
-#endif
-
 	/**
-	 * @brief one probe, and why one is enough
-	 * @details T{ p, p, p } - the largest N that compiles is the field count. Each clause
-	 * COPY-INITIALIZES its member, which is the context where a conversion function is a
-	 * first-class path, so the probe reaches a member whatever its constructors look like. A
-	 * clause in BRACES would have to go through the member's copy constructor instead, and
-	 * that is where compilers part company - hence one probe, unbraced.
-	 *
-	 * THE PRICE IS C ARRAYS. An unbraced clause is subject to brace elision, and nothing
-	 * converts to `int[3]`, so an array field consumes one clause PER ELEMENT and the count
-	 * comes out too large. Since the arity of a structured binding is CHECKED against the
-	 * type, that surfaces as a compile error and never as wrong bytes; `using ser_members =
-	 * ser::members<N>;` skips the probe and such a type then serializes as any other.
-	 */
-	template<class T, ::std::size_t... I>
-	consteval bool initWith() {
-		return requires { T{ (void(I), any_init{})... }; };
-	}
-
-	template<class T, ::std::size_t... I>
-	consteval bool initWithSeq(::std::index_sequence<I...>) {
-		return initWith<T, I...>();
-	}
-
-	/**
-	 * @brief the scan
-	 * @details The valid clause counts form ONE CONTIGUOUS RUN, so the largest valid N is found by
-	 * walking up and stopping one past the last success. Best carries that success as a
-	 * template argument, because only a template argument can drive the `if constexpr` that
-	 * stops. A recursion and not a fold: a fold instantiates the probe over the whole range
-	 * for every type, while the scan spends about as many as the type has fields.
-	 */
-	template<class T, ::std::size_t N, ::std::size_t Best>
-	consteval ::std::size_t scanArity() {
-		if constexpr (N > MAX_MEMBERS + 1)
-			return Best;
-		else if constexpr (initWithSeq<T>(::std::make_index_sequence<N>{}))
-			return scanArity<T, N + 1, N>();        /* keep going */
-		else if constexpr (Best != NO_COUNT)
-			return Best;                            /* one past the top */
-		else
-			return scanArity<T, N + 1, NO_COUNT>(); /* nothing has fit yet */
-	}
-
-	/**
-	 * @brief Probed one PAST the ladder's limit on purpose. A type whose braces accept any number
-	 * of clauses - a std::initializer_list constructor - never stops, and reporting
-	 * MAX_MEMBERS + 1 tells it apart from a type that genuinely has MAX_MEMBERS fields.
+	 * @brief "Braces here do not mean fields." For SER_MAKE_FROM, which expands to braces and
+	 * has to refuse a type whose braces reach an initializer_list constructor instead.
 	 */
 	template<class T>
-	inline constexpr ::std::size_t ELIDED_ARITY_V = scanArity<T, 0, NO_COUNT>();
-
-	/**
-	 * @brief "are these braces a LIST?"
-	 * @details Not part of counting. This is for SER_MAKE_FROM, which expands to braces and has to
-	 * refuse a type whose braces reach an initializer_list constructor instead of the
-	 * fields: a constructor stops at its own arity, an initializer_list constructor never
-	 * does. It costs MAX_MEMBERS + 1 clauses, so it is asked only about the types
-	 * SER_MAKE_FROM is written on.
-	 */
-	template<class T, ::std::size_t... I>
-	consteval bool listInitWith() {
-		return requires { T{ { (void(I), any_init{}) }... }; };
-	}
-
-	template<class T, ::std::size_t... I>
-	consteval bool listInitWithSeq(::std::index_sequence<I...>) {
-		return listInitWith<T, I...>();
-	}
-
-	template<class T>
-	inline constexpr bool ACCEPTS_ANY_LENGTH_V
-		= listInitWithSeq<T>(::std::make_index_sequence<MAX_MEMBERS + 1>{});
-
-	/** @brief "Braces here do not mean fields." */
-	template<class T>
-	inline constexpr bool ARITY_SATURATED_V = ACCEPTS_ANY_LENGTH_V<T>;
-
-	/**
-	 * @brief does this type have a base class?
-	 * @details Aggregate initialization treats a base class as an ELEMENT - D{ B{1}, 2 } - while a
-	 * structured binding sees only data members, so a base silently makes the probed count
-	 * wrong. Detected the way Boost.PFR does it: a probe that converts to nothing except a
-	 * base of T, and if the first element accepts it, the first element is a base.
-	 */
-	template<class T>
-	struct base_init final {
-		template<class U>
-		requires(!::std::is_same_v<U, T> && ::std::is_base_of_v<U, T>)
-		constexpr operator U() const; /* NOT defined, on purpose */
-	};
-
-	template<class T>
-	inline constexpr bool HAS_BASE_V = requires { T{ base_init<T>{} }; };
+	inline constexpr bool ARITY_SATURATED_V = ::base::ACCEPTS_ANY_LENGTH_V<T>;
 
 	/**
 	 * @brief can we enumerate this type's fields?
@@ -154,7 +46,7 @@ namespace ser::internal {
 		 * @brief No check for a polymorphic type: a class with virtual functions is never an
 		 * aggregate, so the line above has already refused it.
 		 */
-		else if constexpr (HAS_BASE_V<U>)
+		else if constexpr (::base::HAS_BASE_V<U>)
 			return false; /* the probe would count the base */
 		else if constexpr (::std::is_empty_v<U>)
 			return true;  /* zero fields, and that is known */
@@ -164,8 +56,8 @@ namespace ser::internal {
 			 * clause list compiled - and a number past the ladder's limit has no rung
 			 * that could walk it.
 			 */
-			return ELIDED_ARITY_V<U> != NO_COUNT && ELIDED_ARITY_V<U> != 0
-			    && ELIDED_ARITY_V<U> <= MAX_MEMBERS;
+			return ::base::ELIDED_ARITY_V<U> != ::base::NO_ARITY && ::base::ELIDED_ARITY_V<U> != 0
+			    && ::base::ELIDED_ARITY_V<U> <= MAX_MEMBERS;
 	}
 
 } /* namespace ser::internal */
@@ -185,7 +77,7 @@ namespace ser {
 			else if constexpr (::std::is_empty_v<T>)
 				return 0;
 			else
-				return ELIDED_ARITY_V<T>;
+				return ::base::ELIDED_ARITY_V<T>;
 		}
 	}
 

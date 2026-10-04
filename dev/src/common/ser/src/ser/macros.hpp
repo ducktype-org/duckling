@@ -13,6 +13,7 @@
  *         SER_MAKE_FROM_MEMBERS(_PAREN). SER_FRIEND lives in <ser/access.hpp>.
  */
 
+#include <base/comptime/aggregate_arity.hpp>
 #include <base/comptime/type_list.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
@@ -63,7 +64,7 @@ namespace ser::internal {
 		 * about this class's own members, while the macro lists every field that goes on the
 		 * wire, inherited ones included. Comparing them would refuse code that works.
 		 */
-		if constexpr (HAS_BASE_V<T>)
+		if constexpr (::base::HAS_BASE_V<T>)
 			return true;
 		else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)
 			return N == MEMBER_COUNT_V<T>;

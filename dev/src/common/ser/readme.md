@@ -518,9 +518,10 @@ ser is a C++23 library and behaves identically whether or not you build with a l
 standard.
 
 Field enumeration is the only place where the standard version is visible. Today it is a
-structured-bindings ladder - the arity table lives in `base/preproc/ladder.hpp` and the rungs
-that walk members in `base/comptime/member_walk.hpp`, since neither says anything about
-serialization - and everything in
+structured-bindings ladder - the arity table lives in `base/preproc/ladder.hpp`, the field
+count probe in `base/comptime/aggregate_arity.hpp` and the rungs that walk members in
+`base/comptime/member_walk.hpp`, since none of them says anything about serialization - and
+everything in
 [When The Automatic Walk Needs Help](#when-the-automatic-walk-needs-help) follows from
 that: the 64-member limit, the C-array counting problem, and `ser_members<N>` for private
 fields.
