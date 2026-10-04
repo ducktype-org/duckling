@@ -2,7 +2,6 @@
 
 #include <concepts>
 #include <limits>
-#include <numeric>
 
 /**
  * @file
@@ -12,13 +11,6 @@
  * operation on two values stayed in range. The compiler builtins do it in one instruction
  * where they exist, and the fallbacks are exact.
  */
-
-/** @brief 1 when the standard library has std::add_sat / std::mul_sat (C++26). */
-#if defined(__cpp_lib_saturation_arithmetic)
-	#define BASE_HAS_SATURATING 1
-#else
-	#define BASE_HAS_SATURATING 0
-#endif
 
 namespace base {
 
@@ -68,26 +60,20 @@ namespace base {
 #endif
 	}
 
+	// @TODO: #90005 use std::add_sat / std::mul_sat once we are on C++26
+
 	/** @brief Adds @p a and @p b, clamping to the type's maximum instead of wrapping. */
 	template<::std::unsigned_integral T>
 	[[nodiscard]] constexpr T satAdd(T a, T b) noexcept {
-#if BASE_HAS_SATURATING
-		return ::std::add_sat(a, b);
-#else
 		T out{};
 		return addOvf(a, b, out) ? ::std::numeric_limits<T>::max() : out;
-#endif
 	}
 
 	/** @brief Multiplies @p a by @p b, clamping to the type's maximum instead of wrapping. */
 	template<::std::unsigned_integral T>
 	[[nodiscard]] constexpr T satMul(T a, T b) noexcept {
-#if BASE_HAS_SATURATING
-		return ::std::mul_sat(a, b);
-#else
 		T out{};
 		return mulOvf(a, b, out) ? ::std::numeric_limits<T>::max() : out;
-#endif
 	}
 
 }  // namespace base
