@@ -198,6 +198,9 @@ namespace ser {
 	 * Both return owned<T, Ctx> rather than a bare T, even when Ctx is empty, so that pools
 	 * can be added later without touching a call site. readOrPanicForce is the exception,
 	 * and it says so in its name.
+	 *
+	 * All three read the unqualified T: an object is built before it can be const, so
+	 * read<const X> is read<X>.
 	 */
 
 	/**
@@ -205,16 +208,18 @@ namespace ser {
 	 * crosses one - so this path costs exactly one move of owned<T, Ctx>.
 	 */
 	template<class T, class Ctx = no_context>
-	[[nodiscard]] result<owned<T, Ctx>> read(::std::span<const ::std::byte> bytes, options opt = {}) {
+	[[nodiscard]] result<owned<::std::remove_cv_t<T>, Ctx>> read(
+		::std::span<const ::std::byte> bytes, options opt = {}
+	) {
 		static_assert(
-			::std::move_constructible<T>,
+			::std::move_constructible<::std::remove_cv_t<T>>,
 			"ser::read: T must be movable, because result<owned<T, Ctx>> has to "
 			"move the bundle into std::expected. For a type that cannot be moved "
 			"use ser::readOrPanic<T>(bytes) - it returns owned<T, Ctx> by value "
 			"and elides everything."
 		);
 		try {
-			return internal::readThrowing<T, Ctx>(bytes, opt);
+			return internal::readThrowing<::std::remove_cv_t<T>, Ctx>(bytes, opt);
 		} catch (const exception& e) { return fail(e.err()); }
 	}
 
@@ -224,9 +229,11 @@ namespace ser {
 	 * and a T that cannot be moved reads fine here.
 	 */
 	template<class T, class Ctx = no_context>
-	[[nodiscard]] owned<T, Ctx> readOrPanic(::std::span<const ::std::byte> bytes, options opt = {}) {
+	[[nodiscard]] owned<::std::remove_cv_t<T>, Ctx> readOrPanic(
+		::std::span<const ::std::byte> bytes, options opt = {}
+	) {
 		try {
-			return internal::readThrowing<T, Ctx>(bytes, opt);
+			return internal::readThrowing<::std::remove_cv_t<T>, Ctx>(bytes, opt);
 		} catch (const exception& e) {
 			internal::panicOnStreamError("failed to deserialize: ", e.err());
 		}
@@ -241,10 +248,11 @@ namespace ser {
 	 * pools it may point into - see the note on internal::readThrowingForce.
 	 */
 	template<class T, class Ctx = no_context>
-	requires(::std::is_empty_v<Ctx>)
-	[[nodiscard]] T readOrPanicForce(::std::span<const ::std::byte> bytes, options opt = {}) {
+	requires(::std::is_empty_v<Ctx>) [[nodiscard]] ::std::remove_cv_t<T> readOrPanicForce(
+		::std::span<const ::std::byte> bytes, options opt = {}
+	) {
 		try {
-			return internal::readThrowingForce<T, Ctx>(bytes, opt);
+			return internal::readThrowingForce<::std::remove_cv_t<T>, Ctx>(bytes, opt);
 		} catch (const exception& e) {
 			internal::panicOnStreamError("failed to deserialize: ", e.err());
 		}
@@ -274,7 +282,7 @@ namespace ser {
 	 * appending several messages means several self-contained messages, not one message in
 	 * several pieces.
 	 */
-	template<class Buf, class T>
+	template<byte_buffer Buf, class T>
 	[[nodiscard]] result<> write(Buf& buf, const T& x, options opt = {}) {
 		out<Buf>            ar{ buf };
 		const ::std::size_t start = ar.position();
@@ -308,7 +316,7 @@ namespace ser {
 	 * @brief Read can legitimately fail because its input is somebody else's bytes,
 	 * while a write is handed an object the caller is already holding
 	 */
-	template<class Buf, class T>
+	template<byte_buffer Buf, class T>
 	void writeOrPanic(Buf& buf, const T& x, options opt = {}) {
 		if (const auto r = write(buf, x, opt); !r)
 			internal::panicOnStreamError("failed to serialize: ", r.error());

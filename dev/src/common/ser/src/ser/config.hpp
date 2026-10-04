@@ -2,13 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <version>
-
-#if defined(__cpp_impl_reflection) && defined(__cpp_expansion_statements)
-	#define SER_HAS_REFLECTION 1
-#else
-	#define SER_HAS_REFLECTION 0
-#endif
 
 #if defined(__SANITIZE_ADDRESS__)
 	#define SER_HAS_ASAN 1

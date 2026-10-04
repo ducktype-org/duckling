@@ -526,11 +526,8 @@ that: the 64-member limit, the C-array counting problem, and `ser_members<N>` fo
 fields.
 
 C++26 removes those causes - P1061 lets a structured binding introduce a pack, and P2996
-reflection can enumerate members directly, private ones included. The library reserves that
-path (`SER_HAS_REFLECTION`, set when a compiler defines both `__cpp_impl_reflection` and
-`__cpp_expansion_statements`) but **does not implement it**: no released compiler defines
-both, and the placeholder fails loudly rather than silently, so nothing changes today when
-you switch to `-std=c++2c`. When it does land, it lands behind the same public API - the
+reflection can enumerate members directly, private ones included. Neither is used yet: no
+released compiler supports both. When they land, they land behind the same public API - the
 `ser_members` declarations become unnecessary rather than wrong.
 
 Nothing else in the library waits on C++26.

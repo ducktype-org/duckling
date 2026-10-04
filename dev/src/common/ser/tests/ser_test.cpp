@@ -781,6 +781,7 @@ public:
 		TESTER_ADD_TEST(formatContract);
 		TESTER_ADD_TEST(recursiveTypes);
 		TESTER_ADD_TEST(memberCountLimit);
+		TESTER_ADD_TEST(constQualifiedRead);
 	}
 
 	~SerTest() override = default;
@@ -1349,6 +1350,22 @@ private:
 		ASSERT_EQUAL(i32{ 4'242 }, back->value.f63);
 		/* The middle of the chain, so a rung dropped anywhere shows up here. */
 		ASSERT_EQUAL(i32{ 32 }, back->value.f32);
+	}
+
+	/** @brief A const T reads as T, for a scalar and an aggregate alike. */
+	void constQualifiedRead() {
+		ByteBuf scalar;
+		ASSERT_TRUE(ser::write(scalar, i32{ -7 }).has_value());
+		const auto i = ser::read<const i32>(view(scalar));
+		static_assert(std::is_same_v<std::remove_cvref_t<decltype(i->value)>, i32>);
+		ASSERT_TRUE(i.has_value());
+		ASSERT_EQUAL(i32{ -7 }, i->value);
+		ASSERT_EQUAL(i32{ -7 }, ser::readOrPanicForce<const i32>(view(scalar)));
+
+		ByteBuf aggregate;
+		ASSERT_TRUE(ser::write(aggregate, Wide64{}).has_value());
+		const auto w = ser::readOrPanic<const Wide64>(view(aggregate));
+		ASSERT_EQUAL(i32{ 63 }, w->f63);
 	}
 
 	/* helpers */

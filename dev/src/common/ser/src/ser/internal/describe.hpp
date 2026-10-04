@@ -1,16 +1,4 @@
 #pragma once
 
-/*
- * Which implementation of "what are this type's fields" is in use.
- *
- * Not a fallback chain: structured bindings are the primary implementation, because
- * C++26 reflection is available on no released compiler. describe_refl.hpp is a
- * placeholder that fails loudly if this switch ever picks it by accident.
- */
-#include <ser/config.hpp>
-
-#if SER_HAS_REFLECTION
-	#include <ser/internal/describe_refl.hpp>
-#else
-	#include <ser/internal/describe_bind.hpp>
-#endif
+// @TODO: #90004 enumerate members with C++26 reflection instead of structured bindings
+#include <ser/internal/describe_bind.hpp>
