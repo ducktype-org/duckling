@@ -90,4 +90,4 @@ namespace base {
 #endif
 	}
 
-} /* namespace base */
+}  // namespace base

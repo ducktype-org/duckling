@@ -21,10 +21,10 @@ namespace query::internal {
 		auto extracted = storage.extract(node_id);
 
 		if (!extracted.has_value()) {
-			/* NodeID not found, return empty optional */
+			// NodeID not found, return empty optional
 			return base::Optional<ExtractedNodeMetadata>{};
 		} else {
-			/* We have to convert ConHashMap to StableHashMap for the extracted data */
+			// We have to convert ConHashMap to StableHashMap for the extracted data
 			base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> extracted_map;
 
 			for (auto& [type_id, metadata_vec]: extracted.value())
@@ -35,7 +35,7 @@ namespace query::internal {
 	}
 
 	void MetadataStorage::emplace(ExtractedNodeMetadata&& extracted) {
-		/** @brief convert StableHashMap back to ConHashMap for storage */
+		// convert StableHashMap back to ConHashMap for storage
 		TypeMap type_map;
 		for (auto& [type_id, metadata_vec]: extracted.type_map)
 			type_map.put(type_id, std::move(metadata_vec));
@@ -45,7 +45,7 @@ namespace query::internal {
 	}
 
 	void MetadataStorage::maybeEmplace(ExtractedNodeMetadata&& extracted) {
-		/** @brief convert StableHashMap back to ConHashMap for storage */
+		// convert StableHashMap back to ConHashMap for storage
 		TypeMap type_map;
 		for (auto& [type_id, metadata_vec]: extracted.type_map)
 			type_map.put(type_id, std::move(metadata_vec));
@@ -59,24 +59,24 @@ namespace query::internal {
 	bool MetadataStorage::empty() const { return storage.size() == 0; }
 
 	::ser::Errc MetadataStorage::writeInto(MetadataOut& ar, const MetadataStorage& self) {
-		/* First pass: collect all unique type names and assign IDs */
-		std::vector<base::StrID>              type_table; /* ID -> StrID */
-		base::StableHashMap<base::StrID, u64> type_to_id; /* StrID -> ID */
+		// First pass: collect all unique type names and assign IDs
+		std::vector<base::StrID>              type_table;  // ID -> StrID
+		base::StableHashMap<base::StrID, u64> type_to_id;  // StrID -> ID
 
-		/* Also collect all unique StrID values from StrID-type metadata */
-		std::vector<base::StrID>              strid_table; /* ID -> StrID value */
-		base::StableHashMap<base::StrID, u64> strid_to_id; /* StrID value -> ID */
+		// Also collect all unique StrID values from StrID-type metadata
+		std::vector<base::StrID>              strid_table;  // ID -> StrID value
+		base::StableHashMap<base::StrID, u64> strid_to_id;  // StrID value -> ID
 
 		for (const auto& [node_id, type_map]: self.storage) {
 			for (const auto& [type_id, metadata_vec]: type_map) {
-				/* Collect type names */
+				// Collect type names
 				if (!type_to_id.contains(type_id)) {
 					u64 new_id = type_table.size();
 					type_table.push_back(type_id);
 					type_to_id.put(type_id, new_id);
 				}
 
-				/* Collect StrID values from StrID-type metadata */
+				// Collect StrID values from StrID-type metadata
 				for (const auto& metadata: metadata_vec) {
 					if (metadata->usesStrIDTable()) {
 						base::StrID str_value = metadata->getStrIDValue();
@@ -90,7 +90,7 @@ namespace query::internal {
 			}
 		}
 
-		/* Both tables, then the node count */
+		// Both tables, then the node count
 		if (const auto e = ar(type_table, strid_table, static_cast<u64>(self.storage.size()));
 		    e != ::ser::Errc::Ok)
 			return e;
@@ -106,20 +106,18 @@ namespace query::internal {
 				    e != ::ser::Errc::Ok)
 					return e;
 
-				/*
-				 * Which of the two shapes an instance takes is NOT on the wire: it is a
-				 * property of the type, and the type is already there as its index into the
-				 * table above. The reader asks the MetadataRegistry the same question.
-				 */
+				// Which of the two shapes an instance takes is NOT on the wire: it is a
+				// property of the type, and the type is already there as its index into the
+				// table above. The reader asks the MetadataRegistry the same question.
 				for (const auto& metadata: metadata_vec) {
 					if (metadata->usesStrIDTable()) {
-						/** @brief For StrID types, only the index in the StrID table travels */
+						// For StrID types, only the index in the StrID table travels
 						base::StrID str_value = metadata->getStrIDValue();
 						if (const auto e = ar(*strid_to_id.atMaybe(str_value).value());
 						    e != ::ser::Errc::Ok)
 							return e;
 					} else {
-						/* Everything else writes itself, into this same stream */
+						// Everything else writes itself, into this same stream
 						if (const auto e = metadata->serWrite(ar); e != ::ser::Errc::Ok) return e;
 					}
 				}
@@ -135,19 +133,17 @@ namespace query::internal {
 		u64                      node_count = 0;
 		if (const auto e = ar(type_table, strid_table, node_count); e != ::ser::Errc::Ok) return e;
 
-		/*
-		 * Nothing is reserved from a count that came off the wire: every entry below reads
-		 * at least one byte, so a damaged count runs out of stream instead of memory.
-		 *
-		 * Everything that came off the wire is checked with a CODE rather than an assert,
-		 * the two index bounds included: a damaged cache has to be reportable, and the caller
-		 * then compiles without one.
-		 */
+		// Nothing is reserved from a count that came off the wire: every entry below reads
+		// at least one byte, so a damaged count runs out of stream instead of memory.
+		//
+		// Everything that came off the wire is checked with a CODE rather than an assert,
+		// the two index bounds included: a damaged cache has to be reportable, and the caller
+		// then compiles without one.
 		for (u64 i = 0; i < node_count; ++i) {
-			/* A NodeID has no default constructor, so it is built rather than filled */
+			// A NodeID has no default constructor, so it is built rather than filled
 			const auto node_id = ::ser::subMake<NodeID>(ar);
 
-			/* The NodeID has to be registered and preserved in the graph */
+			// The NodeID has to be registered and preserved in the graph
 			if (!node_id.q_id.registered() || !node_id.q_id.getData().tags.preserve_in_graph)
 				return ::ser::Errc::InvalidValue;
 
@@ -162,17 +158,15 @@ namespace query::internal {
 				if (type_index >= type_table.size()) return ::ser::Errc::InvalidValue;
 				base::StrID type_id = type_table[type_index];
 
-				/* A stream naming a type this build does not have is a stale cache, not a bug */
+				// A stream naming a type this build does not have is a stale cache, not a bug
 				if (!MetadataRegistry::instance().isRegistered(type_id))
 					return ::ser::Errc::InvalidValue;
 
-				/* Get deserializer variant */
+				// Get deserializer variant
 				const auto& deserializer = MetadataRegistry::instance().getDeserializer(type_id);
 
-				/*
-				 * The registry decides which shape to read, exactly as it decided which shape
-				 * to write - so nothing per instance says it again.
-				 */
+				// The registry decides which shape to read, exactly as it decided which shape
+				// to write - so nothing per instance says it again.
 				for (u64 k = 0; k < metadata_count; ++k) {
 					base::Optional<Box<BaseMetadata>> metadata_opt;
 
@@ -186,7 +180,7 @@ namespace query::internal {
 						variant_case(ArchiveDeserializeFunc, func) { metadata_opt = func(ar); }
 					}
 
-					/* Add to storage */
+					// Add to storage
 					if (!self.storage.contains(node_id)) self.storage.put(node_id, TypeMap{});
 					auto& node_map = *self.storage.atMaybe(node_id).value();
 					if (!node_map.contains(type_id))
@@ -216,4 +210,4 @@ namespace query::internal {
 		}
 	}
 
-} /* namespace query */
+}  // namespace query

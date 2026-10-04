@@ -100,19 +100,15 @@ private:
 		assertTrue(back.has_value(), "reading it back");
 		assertTrue(back->value == id, "the id has to intern to the same one");
 
-		/*
-		 * The same bytes a std::string would have produced - the schema says so, so a
-		 * stream really does move between the two.
-		 */
+		// The same bytes a std::string would have produced - the schema says so, so a
+		// stream really does move between the two.
 		std::vector<std::byte> as_string;
 		assertTrue(::ser::write(as_string, std::string("quack")).has_value(), "writing a string");
 		assertTrue(bytes == as_string, "StrID and std::string share the format");
 
-		/*
-		 * A default-constructed StrID holds a bad inner id. str() would panic on it, and the
-		 * read side could not restore the state anyway - StrID{""} comes back GOOD - so the
-		 * write is refused with a code instead.
-		 */
+		// A default-constructed StrID holds a bad inner id. str() would panic on it, and the
+		// read side could not restore the state anyway - StrID{""} comes back GOOD - so the
+		// write is refused with a code instead.
 		const base::StrID unset;
 		assertTrue(unset.isBad(), "a default-constructed StrID is bad");
 		std::vector<std::byte> refused;
@@ -122,13 +118,11 @@ private:
 	}
 
 	void bigStringBufferTest() {
-		/**
-		 * @brief A regular buffer with free space, then a string too big for any regular
-		 * buffer (which gets its own dedicated buffer at the end of the buffer
-		 * list), then a small string. The small string must open a new regular
-		 * buffer instead of being appended into the dedicated buffer, where it
-		 * would overwrite the interned bytes of the big string.
-		 */
+		// A regular buffer with free space, then a string too big for any regular
+		// buffer (which gets its own dedicated buffer at the end of the buffer
+		// list), then a small string. The small string must open a new regular
+		// buffer instead of being appended into the dedicated buffer, where it
+		// would overwrite the interned bytes of the big string.
 		base::StrID warmup(makeView("warmup"));
 
 		const std::string big(40'000, 'B');

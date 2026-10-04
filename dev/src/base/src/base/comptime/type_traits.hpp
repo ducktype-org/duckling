@@ -62,10 +62,8 @@ namespace base {
 			}
 		};
 
-		/**
-		 * @brief Source - https://stackoverflow.com/a/11251376/
-		 * {
-		 */
+		// Source - https://stackoverflow.com/a/11251376/
+		// {
 		template<typename T, template<typename...> typename Template>
 		inline constexpr bool IS_INSTANTIATION_OF_V = false;
 
@@ -78,12 +76,10 @@ namespace base {
 		template<template<typename, auto> class Template, typename U, auto V>
 		inline constexpr bool IS_INSTANTIATION_OF_TYPE_VALUE_V<Template<U, V>, Template> = true;
 
-		/* } */
+		// }
 
-		/**
-		 * @brief Source - https://stackoverflow.com/a/52303687
-		 * {
-		 */
+		// Source - https://stackoverflow.com/a/52303687
+		// {
 
 		template<typename...>
 		inline constexpr bool DEPENDENT_FALSE_V = false;
@@ -105,7 +101,7 @@ namespace base {
 			}
 		};
 
-		/* } */
+		// }
 	}
 
 	/**

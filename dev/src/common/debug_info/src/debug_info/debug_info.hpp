@@ -61,10 +61,10 @@ namespace debug_info {
 	enum class SourcePositionsType : u32 { PstHash, LineColumn };
 
 	struct DebugInfo final {
-		Target      target{};        /* for now only DBC (maybe in future other targets) */
-		std::string module_path{};   /* path to the module this debug info is for */
+		Target      target{};         // for now only DBC (maybe in future other targets)
+		std::string module_path{};    // path to the module this debug info is for
 		SourcePositionsType
-			source_positions_type{}; /* whether the debug info uses stable positions or not */
+			source_positions_type{};  // whether the debug info uses stable positions or not
 
 		base::Map<std::string, FunctionMetadata> functions{};
 		base::Map<std::string, TypeMetadata>     types{};

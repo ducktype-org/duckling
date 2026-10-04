@@ -72,11 +72,11 @@ namespace compiler::driver {
 			compiler::frontend::packages::RawPackageInfo& package_info,
 			frontend::packages::DiagnosticReporter&       report
 		) {
-			/* If the package is one of the standard library packages, we do nothing */
+			// If the package is one of the standard library packages, we do nothing
 			if (frontend::packages::isStandardLibraryPackage(package_info.package_id))
 				return base::OK;
 
-			/* Otherwise, we add dependencies on all standard library packages */
+			// Otherwise, we add dependencies on all standard library packages
 			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
 				if (hasDependencyOrAlias(package_info.dependencies, std_id, std_id)) {
 					report(
@@ -137,7 +137,7 @@ namespace compiler::driver {
 			}
 
 			for (const auto& std_package: frontend::packages::standardLibraryPackages()) {
-				/* A standard library package lives in a directory named after its id. */
+				// A standard library package lives in a directory named after its id.
 				auto package_path
 					= std_path.join(fs::FilePath(std::string(std_package.id.strView())));
 				if (not package_path.exists()) {
@@ -183,10 +183,8 @@ namespace compiler::driver {
 	std::vector<PackageCompilationTask> getRequiredStdLibCompilationTasks() {
 		base::Ref<artifacts::ArtifactCollection> art_collection = global_state::getRootCollection();
 		if_opt_some(global_state::getStdArtifactsCollection(), stdlib_art_collection) {
-			/*
-			 * If we use custom artifacts location and the required artifacts are present,
-			 * we don't require any tasks.
-			 */
+			// If we use custom artifacts location and the required artifacts are present,
+			// we don't require any tasks.
 			if (allStdlibArtifactsPresent()) {
 				CORE_USER_LOG(
 					"Using compiled standard library binaries from the custom directory.\n"
@@ -208,7 +206,7 @@ namespace compiler::driver {
 				global_state::getPackages().end(),
 				[&](const auto& pkg_info) { return pkg_info.getPackageID() == std_id; }
 			);
-			/* If pkg is not loaded then we skip it. */
+			// If pkg is not loaded then we skip it.
 			if (pkg == global_state::getPackages().end()) continue;
 
 			if (global_state::getBackendOptions()->llvm_backend.has_value())
@@ -247,7 +245,7 @@ namespace compiler::driver {
 		 */
 		struct StdLibArtifacts {
 			std::vector<artifacts::FileArtifact> artifacts;
-			/** @brief Whether an artifact was found for every standard library package. */
+			/// Whether an artifact was found for every standard library package.
 			bool all_present;
 		};
 

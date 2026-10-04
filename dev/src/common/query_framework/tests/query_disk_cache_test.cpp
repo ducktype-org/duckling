@@ -18,7 +18,7 @@
 #include <set>
 #include <vector>
 
-/** @brief A side input the disk-cached query depends on, so it can be invalidated. */
+// A side input the disk-cached query depends on, so it can be invalidated.
 struct KeyOf_DiskSideInput {
 	u64 v;
 
@@ -32,10 +32,8 @@ struct KeyOf_DiskSideInput {
 
 DECLARE_QUERY_SIDE_INPUT(DiskSideInput, KeyOf_DiskSideInput);
 
-/**
- * @brief A stable-hashed query that is cached on disk. It uses an in-memory set as a stand-in for
- * the on-disk artifact store so the test does not need the compiler's artifact collection.
- */
+// A stable-hashed query that is cached on disk. It uses an in-memory set as a stand-in for the
+// on-disk artifact store so the test does not need the compiler's artifact collection.
 struct KeyOf_Disk {
 	u64 v;
 
@@ -57,11 +55,11 @@ DECLARE_QUERY(
        .uses_qresult            = false })
 );
 
-/* A regular (non-disk) query, used to check that its disk-erase hook is a safe no-op. */
+// A regular (non-disk) query, used to check that its disk-erase hook is a safe no-op.
 DECLARE_QUERY(PlainQuery, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(DiskQuery, u64) {
-	/** @brief Stand-in for the on-disk artifact store, keyed by the query's stable key hash. */
+	// Stand-in for the on-disk artifact store, keyed by the query's stable key hash.
 	static inline std::set<base::Bit256> fake_disk;
 
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -116,14 +114,12 @@ private:
 		const auto hash = KeyOf_Disk{ 7 }.queryStablePerfectHash();
 		ImplementationOf_DiskQuery::fake_disk.insert(hash);
 
-		/* DiskQuery's disk-erase hook deletes the on-disk artifact identified by the hash. */
+		// DiskQuery's disk-erase hook deletes the on-disk artifact identified by the hash.
 		ASSERT_TRUE(DiskQuery::QUERY_DATA.cache_data.disk_erase_function(hash));
 		ASSERT_TRUE(not ImplementationOf_DiskQuery::fake_disk.contains(hash));
 
-		/*
-		 * PlainQuery is not cached on disk. Its hook is never reached in real use (callers guard on
-		 * can_be_loaded_from_disk), so invoking it directly must panic rather than silently no-op.
-		 */
+		// PlainQuery is not cached on disk. Its hook is never reached in real use (callers guard on
+		// can_be_loaded_from_disk), so invoking it directly must panic rather than silently no-op.
 		ASSERT_TRUE(not PlainQuery::QUERY_DATA.tags.can_be_loaded_from_disk);
 		assertThrows<base::Panic>(
 			[&] { PlainQuery::QUERY_DATA.cache_data.disk_erase_function(hash); },
@@ -142,7 +138,7 @@ private:
 		const auto disk_hash = KeyOf_Disk{ 1 }.queryStablePerfectHash();
 		ASSERT_TRUE(ImplementationOf_DiskQuery::fake_disk.contains(disk_hash));
 
-		/* No new inputs => invalidate everything, which removes DiskQuery(1) from the graph. */
+		// No new inputs => invalidate everything, which removes DiskQuery(1) from the graph.
 		query::external::invalidateQueries({});
 
 		ASSERT_TRUE(not ImplementationOf_DiskQuery::fake_disk.contains(disk_hash));
@@ -156,29 +152,25 @@ private:
 		auto state = query::internal::ContextAccess::getState();
 		ImplementationOf_DiskQuery::fake_disk.clear();
 
-		/*
-		 * Orphan: a disk-cached node present only in the previous graph (never demanded now, e.g.
-		 * because its query hash changed). We never run it, so it stays out of the current graph.
-		 */
+		// Orphan: a disk-cached node present only in the previous graph (never demanded now, e.g.
+		// because its query hash changed). We never run it, so it stays out of the current graph.
 		const auto orphan_node = query::internal::makeNodeID<DiskQuery>(KeyOf_Disk{ 555 });
 		const auto orphan_hash = KeyOf_Disk{ 555 }.queryStablePerfectHash();
 
-		/* Live: still demanded in the current compilation, so its artifact must be kept. */
+		// Live: still demanded in the current compilation, so its artifact must be kept.
 		query::entryPoint<DiskQuery>({ 1 });
 		const auto live_node = query::internal::makeNodeID<DiskQuery>(KeyOf_Disk{ 1 });
 		const auto live_hash = KeyOf_Disk{ 1 }.queryStablePerfectHash();
 
-		/* A non-disk node in the previous graph must never be touched by the cleanup. */
+		// A non-disk node in the previous graph must never be touched by the cleanup.
 		const auto plain_node = query::internal::makeNodeID<PlainQuery>(query::U64Key{ 9 });
 
-		/* Pretend both disk artifacts were written by a previous compilation. */
+		// Pretend both disk artifacts were written by a previous compilation.
 		ImplementationOf_DiskQuery::fake_disk.insert(orphan_hash);
 		ImplementationOf_DiskQuery::fake_disk.insert(live_hash);
 
-		/*
-		 * Build a previous graph holding all three nodes and install it. The wire form is
-		 * plain data, so it goes through `ser` and comes back as itself.
-		 */
+		// Build a previous graph holding all three nodes and install it. The wire form is
+		// plain data, so it goes through `ser` and comes back as itself.
 		std::vector<std::byte> prev_bytes;
 		ser::orThrow(ser::write(
 			prev_bytes,
@@ -195,7 +187,7 @@ private:
 
 		state->cleanupOrphanedDiskCaches();
 
-		/* Only the orphan's artifact is removed. */
+		// Only the orphan's artifact is removed.
 		ASSERT_TRUE(not ImplementationOf_DiskQuery::fake_disk.contains(orphan_hash));
 		ASSERT_TRUE(ImplementationOf_DiskQuery::fake_disk.contains(live_hash));
 	}

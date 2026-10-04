@@ -29,7 +29,7 @@ namespace base {
 	/** @brief The largest member count the table below covers. */
 	inline constexpr ::std::size_t LADDER_MAX = 64;
 
-} /* namespace base */
+}  // namespace base
 
 /** @brief The binding names of rung `n`: m0, m1, ... m(n-1). */
 #define BASE_LADDER_NAMES(n) CAT(BASE_LADDER_NAMES_, n)

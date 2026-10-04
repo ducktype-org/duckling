@@ -104,7 +104,7 @@ private:
 			func.instr_offsets_to_variable_init.size() == 2, "Expected 2 variable initializations"
 		);
 
-		/** @brief Instructions are stored in insertion order from the builder */
+		// Instructions are stored in insertion order from the builder
 		bool found0 = false, found4 = false;
 		for (const auto& [offset, meta]: func.instr_offsets_to_metadata) {
 			if (offset == 0) {
@@ -134,26 +134,26 @@ private:
 	void serializationRoundTripTest() {
 		auto info = makeTestDebugInfo();
 
-		/** @brief Serialize */
+		// Serialize
 		std::ostringstream oss;
 		debug_info::saveToStream(info, oss);
 		const std::string first_bytes = oss.str();
 
 		assertTrue(!first_bytes.empty(), "Serialized debug info should not be empty");
 
-		/** @brief Deserialize */
+		// Deserialize
 		std::istringstream iss(first_bytes);
 		auto               result = debug_info::loadFromStream(iss);
 		assertTrue(result.has_value(), "Deserialization of a valid stream should succeed");
 
-		/** @brief Serialize again and compare - the same object has to produce the same bytes */
+		// Serialize again and compare - the same object has to produce the same bytes
 		std::ostringstream oss2;
 		debug_info::saveToStream(*result, oss2);
 		const std::string second_bytes = oss2.str();
 
 		assertTrue(first_bytes == second_bytes, "Round-trip bytes should be identical");
 
-		/* Spot-check deserialized values */
+		// Spot-check deserialized values
 		assertTrue(result->target == debug_info::Target::DBC, "Round-trip: target incorrect");
 		assertTrue(result->module_path == "test.dbc", "Round-trip: module_path incorrect");
 		assertTrue(result->types.size() == 2, "Round-trip: wrong number of types");
@@ -192,21 +192,21 @@ private:
 
 	/** @brief What loadFromStream does with something that is not debug info. */
 	void invalidStreamTest() {
-		/* Not a stream this module wrote at all */
+		// Not a stream this module wrote at all
 		{
 			std::istringstream iss("not debug info at all, just text");
 			auto               result = debug_info::loadFromStream(iss);
 			assertFalse(result.has_value(), "Garbage bytes should fail to load");
 		}
 
-		/* Empty input */
+		// Empty input
 		{
 			std::istringstream iss("");
 			auto               result = debug_info::loadFromStream(iss);
 			assertFalse(result.has_value(), "Empty input should fail to load");
 		}
 
-		/* A valid stream cut short */
+		// A valid stream cut short
 		{
 			std::ostringstream oss;
 			debug_info::saveToStream(makeTestDebugInfo(), oss);
@@ -234,7 +234,7 @@ private:
 			debug_info::saveToStream(makeTestDebugInfo(), oss);
 			std::string whole = oss.str();
 
-			/* schema_hash sits right after the eight magic bytes - see stream/header.hpp. */
+			// schema_hash sits right after the eight magic bytes - see stream/header.hpp.
 			whole[8] = static_cast<char>(whole[8] ^ 0x01);
 
 			std::istringstream iss(whole);
@@ -242,11 +242,9 @@ private:
 			assertFalse(result.has_value(), "A foreign schema_hash should fail to load");
 		}
 
-		/*
-		 * Entry order is the object's own, not a canonical one: what a stream holds is what
-		 * the builder produced, so a reordered vector is a different object and not a
-		 * damaged file. The round-trip above is what pins that it comes back unchanged.
-		 */
+		// Entry order is the object's own, not a canonical one: what a stream holds is what
+		// the builder produced, so a reordered vector is a different object and not a
+		// damaged file. The round-trip above is what pins that it comes back unchanged.
 	}
 
 	/**
@@ -282,10 +280,8 @@ private:
 	}
 
 	void resolvePositionsTest() {
-		/**
-		 * @brief Build two functions whose positions are PstHashPostion.
-		 * Also add one variable init to verify nested metadata gets resolved too.
-		 */
+		// Build two functions whose positions are PstHashPostion.
+		// Also add one variable init to verify nested metadata gets resolved too.
 
 		auto make_hash_pos = [&](u64 a, u64 b) -> SourcePosition {
 			return SourcePosition{ .line_col_position = PstHashPostion{
@@ -308,7 +304,7 @@ private:
 			"Before resolve: type should be PstHash"
 		);
 
-		/* Resolver: encodes (a, b) from the hash into a deterministic FilePosition. */
+		// Resolver: encodes (a, b) from the hash into a deterministic FilePosition.
 		info.resolvePositions([](const PstHashPostion& p) -> FilePosition {
 			return FilePosition{
 				.file_path    = "resolved.duck",
@@ -402,7 +398,7 @@ private:
 		assertTrue(contains(dump, "types: 2"), "Dump should count the types");
 		assertTrue(contains(dump, "_TMyType -> MyType"), "Dump should map a type to its name");
 
-		/* An empty DebugInfo says so instead of printing bare zeroes. */
+		// An empty DebugInfo says so instead of printing bare zeroes.
 		const auto empty_dump = DebugInfoBuilder(Target::DBC, SourcePositionsType::PstHash)
 		                            .beginFunction("_Zempty", std::nullopt, std::nullopt)
 		                            .end()

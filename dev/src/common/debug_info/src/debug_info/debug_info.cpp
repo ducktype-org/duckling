@@ -21,7 +21,7 @@ namespace debug_info {
 				                   = resolver(std::get<PstHashPostion>(pos.line_col_position)) };
 		}
 
-	} /* namespace */
+	}  // namespace
 
 	void DebugInfo::resolvePositions(
 		const std::function<FilePosition(const PstHashPostion&)>& resolver
@@ -101,7 +101,7 @@ namespace debug_info {
 			return "<invalid>";
 		}
 
-	} /* namespace */
+	}  // namespace debug_info
 
 	std::string SourcePosition::toString() const {
 		variant_match(line_col_position) {
@@ -140,7 +140,7 @@ namespace debug_info {
 			                                          : "<unnamed>")
 			   << "\n      position: " << orElse(function.position) << "\n";
 
-			/* Parameters go by index, instructions and variable inits by bytecode offset. */
+			// Parameters go by index, instructions and variable inits by bytecode offset.
 			os << "      parameters: " << countOf(function.parameter_indexes_to_metadata.size())
 			   << "\n";
 			for (const auto& [index, parameter]: function.parameter_indexes_to_metadata)
@@ -173,4 +173,4 @@ namespace debug_info {
 		return out.str();
 	}
 
-} /* namespace debug_info */
+}  // namespace debug_info

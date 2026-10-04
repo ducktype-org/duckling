@@ -91,10 +91,8 @@ namespace {
 			}
 		);
 
-		/*
-		 * The offsets of `main` are the ones the assertions below name: 1 is the `let sum`,
-		 * 59 the call on line 17.
-		 */
+		// The offsets of `main` are the ones the assertions below name: 1 is the `let sum`,
+		// 59 the call on line 17.
 		info.functions.put(
 			"main",
 			debug_info::FunctionMetadata{
@@ -151,10 +149,8 @@ private:
 	 * @brief Checks mapping.
 	 */
 	void mappingTest() {
-		/**
-		 * @brief Normally debug symbols contain absolute paths but it's impossible to use them
-		 * simply in tests, so let's unify relative ones
-		 */
+		// Normally debug symbols contain absolute paths but it's impossible to use them simply in
+		// tests, so let's unify relative ones
 		auto original_path = std::filesystem::current_path();
 		std::filesystem::current_path(path(""));
 
@@ -163,10 +159,8 @@ private:
 		ASSERT_NO_VALUE(mapper.mainFile());
 		ASSERT_FALSE(mapper.containsFile("abc"));
 
-		/*
-		 * The mapping is produced by this test and read back through the same format the
-		 * compiler writes.
-		 */
+		// The mapping is produced by this test and read back through the same format the
+		// compiler writes.
 		ASSERT_HAS_VALUE(mapper.loadMapping(writeMappingFile()));
 
 		auto simple = fs::FilePath("simple.dk");

@@ -23,19 +23,19 @@ int main() {
 
 	SimpleStruct simple_struct{ .x = 10.5, .z = 50 };
 	{
-		/** @brief Create a collection */
+		// Create a collection
 		artifacts::ArtifactCollection collection(root);
 
-		/** @brief Create a simple blob artifact */
+		// Create a simple blob artifact
 		auto blob0 = collection.blobArtifactNew(b0);
 		blob0.setData<decltype(VALUE)>(VALUE);
 		assert(blob0.getData<decltype(VALUE)>().value() == VALUE);
 
-		/** @brief Save struct */
+		// Save struct
 		auto blob1 = collection.blobArtifactNew(b1);
 		blob1.setData(simple_struct);
 
-		/** @brief Create a file artifact */
+		// Create a file artifact
 		auto          file0 = collection.fileArtifactNew(f0);
 		std::ofstream file(file0.file.getFilePath().getPath());
 		file << "Hello!\n";
@@ -45,11 +45,11 @@ int main() {
 		auto sub_blob0      = sub_collection->blobArtifactNew(b0);
 		sub_blob0.setData(VALUE + 1);
 
-		/* Flush the collection before removing the object to save the blobs. */
+		// Flush the collection before removing the object to save the blobs.
 		collection.flush();
 	}
 	{
-		/** @brief Restore a collection */
+		// Restore a collection
 		artifacts::ArtifactCollection collection(root);
 
 		assert(collection.blobArtifactAt(b0).getData<decltype(VALUE)>().value() == VALUE);

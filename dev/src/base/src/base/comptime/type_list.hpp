@@ -119,7 +119,7 @@ namespace base {
 			}();
 		};
 
-	} /* namespace internal */
+	}  // namespace internal
 
 	/** @brief Whether @p T is a `base::TypeList`. */
 	template<class T>
@@ -144,4 +144,4 @@ namespace base {
 	template<class T, class List>
 	inline constexpr ::std::size_t LIST_INDEX_OF_V = internal::IndexOf<T, List>::VALUE;
 
-} /* namespace base */
+}  // namespace base

@@ -81,7 +81,7 @@ namespace query {
 			base.internal::BaseMetadata::prettyPrint(os);
 	}
 
-} /* namespace query */
+}  // namespace query
 
 /**
  * @brief Macro to declare a serializable metadata type.

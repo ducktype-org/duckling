@@ -94,7 +94,7 @@ namespace base {
 
 		explicit StrID(char character);
 
-		/** @brief Makes copy */
+		// Makes copy
 		explicit StrID(const RawView& data);
 		explicit StrID(const char* data);
 		explicit StrID(std::string_view data);
@@ -114,7 +114,7 @@ namespace base {
 			return view().stdString();
 		}
 
-		/* Ranges-friendly API (contiguous range over characters) */
+		// Ranges-friendly API (contiguous range over characters)
 		[[nodiscard]]
 		usize size() const noexcept {
 			return view().stringView().size();
@@ -186,12 +186,10 @@ namespace base {
 			hashing::addToHash(hash_alg, strView());
 		}
 
-		/*
-		 * ser
-		 * A StrID is a std::string on the wire, so `ser_wire_as` gives it that type's
-		 * schema and its min_wire_size for free - no ser::schema or ser::min_wire_size
-		 * specialization needed.
-		 */
+		// ser
+		// A StrID is a std::string on the wire, so `ser_wire_as` gives it that type's
+		// schema and its min_wire_size for free - no ser::schema or ser::min_wire_size
+		// specialization needed.
 
 		/** @brief The wire type: a StrID travels as the string it interns. */
 		using ser_wire_as = std::string;

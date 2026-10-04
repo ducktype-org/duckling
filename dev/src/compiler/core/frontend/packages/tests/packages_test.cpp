@@ -182,7 +182,7 @@ private:
 		};
 		std::ignore = alias_key.queryStablePerfectHash();
 
-		/* The key is an aggregate, so `ser` needs nothing from it to put it on the wire */
+		// The key is an aggregate, so `ser` needs nothing from it to put it on the wire
 		std::vector<std::byte> bytes;
 		ASSERT_TRUE(ser::write(bytes, alias_key).has_value());
 		auto decoded = ser::read<KeyOf_PackageDependencyAliasSideInput>(bytes);

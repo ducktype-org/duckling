@@ -67,10 +67,10 @@ namespace compiler::driver {
 		}
 		vm::code::CodeCollection merged_code = std::move(parse_result.value());
 
-		/* This is also a bit hacky here, because we don't have any other place to put this code. */
+		// This is also a bit hacky here, because we don't have any other place to put this code.
 		base::appendToVector(merged_code.object_files, runtime_config.shared_libraries);
 
-		/* @TODO: #2895 deal with this once weak/strong symbols are added */
+		// @TODO: #2895 deal with this once weak/strong symbols are added
 		deduplicateCodeCollection(merged_code);
 
 
@@ -78,7 +78,7 @@ namespace compiler::driver {
 		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
 		vm::code::serializeCode(merged_code, out);
 
-		/* Merge per-module debug info files into a single package debug info file. */
+		// Merge per-module debug info files into a single package debug info file.
 		if (!debug_info_artifacts.empty()) {
 			base::Optional<debug_info::DebugInfo> merged_debug_info;
 
@@ -110,7 +110,7 @@ namespace compiler::driver {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
 
 				auto output_file_stem = output_file.file.stem();
-				/* Try to keep the old behaviour, by manually stripping the most common DVM suffix. */
+				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
 				if (output_file_stem.ends_with(".dbc"))
 					output_file_stem.resize(output_file_stem.size() - 4);
 

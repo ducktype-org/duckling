@@ -29,12 +29,10 @@ namespace query::external {
 
 		auto state = ::query::internal::ContextAccess::getState();
 
-		/*
-		 * A damaged cache is information, not a failure: the previous graph is dropped and
-		 * the build carries on with none, exactly as it does on a first build. Two ways to be
-		 * damaged - bytes that are not a graph, and a graph whose adjacency indices do not
-		 * match its nodes - and fromReducedGraphData answers the second one itself.
-		 */
+		// A damaged cache is information, not a failure: the previous graph is dropped and
+		// the build carries on with none, exactly as it does on a first build. Two ways to be
+		// damaged - bytes that are not a graph, and a graph whose adjacency indices do not
+		// match its nodes - and fromReducedGraphData answers the second one itself.
 		const auto drop_previous_graph = [&state](const std::string& why) {
 			CORE_USER_LOG("Previous query graph was damaged, compiling without it.\n");
 			CORE_DEV_LOG(Incremental, "Previous query graph rejected: ", why, "\n");
@@ -48,10 +46,8 @@ namespace query::external {
 			return;
 		}
 
-		/**
-		 * @brief Remap NodeIDs while rebuilding so the framework keeps all QueryIDs registered and
-		 * avoids unstable hash collisions.
-		 */
+		// Remap NodeIDs while rebuilding so the framework keeps all QueryIDs registered and
+		// avoids unstable hash collisions.
 		auto graph = ::query::internal::QueryGraph::fromReducedGraphData(
 			std::move(*reduced).take(),
 			[state](::query::internal::NodeID node) {
@@ -75,10 +71,8 @@ namespace query::external {
 		auto reduced_graph = state->reduceOptimizeGraph(state->getGraph());
 		CORE_ASSERT(reduced_graph.isConsistent(), "Reduced graph data is inconsistent");
 
-		/*
-		 * Writing a graph we have just built cannot fail on the data - a code here means the
-		 * buffer or the format is wrong, which is a bug rather than a state to recover from.
-		 */
+		// Writing a graph we have just built cannot fail on the data - a code here means the
+		// buffer or the format is wrong, which is a bug rather than a state to recover from.
 		std::vector<byte> bytes;
 		if (const auto r = ::ser::write(bytes, reduced_graph); !r)
 			CORE_PANIC("Failed to serialize the query graph: ", r.error().message());
@@ -93,13 +87,13 @@ namespace query::external {
 	void setPreviousMetadataFromRawBytes(std::span<const std::byte> metadata_raw_bytes) {
 		auto state = ::query::internal::ContextAccess::getState();
 
-		/* No bytes is no previous metadata rather than a damaged stream */
+		// No bytes is no previous metadata rather than a damaged stream
 		if (metadata_raw_bytes.empty()) {
 			state->setPreviousMetadata(::query::internal::MetadataStorage{});
 			return;
 		}
 
-		/** @brief Damaged metadata is dropped, not fatal - same reasoning as the graph above. */
+		// Damaged metadata is dropped, not fatal - same reasoning as the graph above.
 		auto metadata = ::ser::read<::query::internal::MetadataStorage>(metadata_raw_bytes);
 		if (!metadata) {
 			CORE_USER_LOG("Previous metadata was damaged, compiling without it.\n");
@@ -116,7 +110,7 @@ namespace query::external {
 	std::vector<byte> serializeMetadata() {
 		auto state = ::query::internal::ContextAccess::getState();
 
-		/* As with the graph: a failure to write what we are holding is a bug, not a state. */
+		// As with the graph: a failure to write what we are holding is a bug, not a state.
 		std::vector<byte> bytes;
 		if (const auto r = ::ser::write(bytes, *state->getMetadataStorage()); !r)
 			CORE_PANIC("Failed to serialize the query metadata: ", r.error().message());
@@ -140,17 +134,15 @@ namespace query::external {
 
 		auto state = ::query::internal::ContextAccess::getState();
 
-		/*
-		 * Wait until all query execution has stopped: invalidation mutates the graph, caches and
-		 * task statuses, so it must not run concurrently with any query work.
-		 */
+		// Wait until all query execution has stopped: invalidation mutates the graph, caches and
+		// task statuses, so it must not run concurrently with any query work.
 		concurrent::worker::WorkerManager::get().waitForAllWorkersFree();
 
-		/* Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs. */
+		// Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs.
 		std::vector<internal::NodeID> start_nodes;
 
 		if_opt_some(previous_inputs_opt, previous_inputs) {
-			/* This is the difference: previous_inputs - new_inputs */
+			// This is the difference: previous_inputs - new_inputs
 			start_nodes = internal::findRemovedInputsFromSelectedInputs(
 				previous_inputs, std::move(new_inputs)
 			);
@@ -159,10 +151,8 @@ namespace query::external {
 			start_nodes = internal::findRemovedInputsFromCurrentGraph(std::move(new_inputs));
 		}
 
-		/*
-		 * If requested, fill the invalidated_inputs vector with the inputs corresponding to the
-		 * invalidated nodes.
-		 */
+		// If requested, fill the invalidated_inputs vector with the inputs corresponding to the
+		// invalidated nodes.
 		if_opt_some(invalidated_inputs_opt, invalidated_inputs) {
 			std::ranges::copy(
 				start_nodes | std::views::transform([](const internal::NodeID& node) {
@@ -172,20 +162,18 @@ namespace query::external {
 			);
 		}
 
-		/** @brief Step 1: Get all nodes to invalidate */
+		// Step 1: Get all nodes to invalidate
 		auto nodes_to_invalidate = state->getGraph().getDependentNodes(start_nodes);
 
-		/* Step 2: Erase nodes from the graph */
+		// Step 2: Erase nodes from the graph
 		state->getGraphMutable().eraseNodes(nodes_to_invalidate);
 
-		/* Step 3: Erase values of the invalidated nodes from their cache */
+		// Step 3: Erase values of the invalidated nodes from their cache
 		for (const auto& node: nodes_to_invalidate.dependents_recursive) {
 			if (not node.q_id.getData().isInputQuery()) {
 				internal::ContextAccess::getState()->getTaskPool()->invalidateTask(node);
-				/*
-				 * Disk-cached queries also leave an on-disk artifact; remove it too so invalidated
-				 * results are not silently reloaded from disk in a later compilation.
-				 */
+				// Disk-cached queries also leave an on-disk artifact; remove it too so invalidated
+				// results are not silently reloaded from disk in a later compilation.
 				if (node.q_id.getData().tags.can_be_loaded_from_disk)
 					node.q_id.getData().cache_data.disk_erase_function(node.hash.val);
 				node.q_id.getData().cache_data.erase_function(node.hash.val);
@@ -195,4 +183,4 @@ namespace query::external {
 			state->clearDiagnosticForNode(node);
 		}
 	}
-} /* namespace query::external */
+}  // namespace query::external

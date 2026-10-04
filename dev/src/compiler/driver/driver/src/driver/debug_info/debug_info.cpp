@@ -46,7 +46,7 @@ namespace compiler::driver {
 				.end_column   = end_column,
 			};
 		}
-	} /* namespace */
+	}  // namespace
 
 	base::Bit256 KeyOf_DebugInfoForModule::queryStablePerfectHash() const {
 		auto component_hash = compiler::frontend::ModuleTree::getPathComponentHash(module_id);
@@ -81,7 +81,7 @@ namespace compiler::driver {
 				"CompileModule does not return debug info. This should never happen."
 			);
 
-			/** @TODO: #2323 this is an expensive copy, this issue would fix this. */
+			//  @TODO: #2323 this is an expensive copy, this issue would fix this.
 			auto debug_info = compile_module_result.debug_info.value();
 			debug_info.resolvePositions(
 				[&](const debug_info::PstHashPostion& pos) -> debug_info::FilePosition {

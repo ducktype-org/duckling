@@ -113,7 +113,7 @@ namespace query::internal {
 		 * @param os The output stream to print to.
 		 */
 		virtual void prettyPrint(std::ostream& os) const {
-			/* Print that pretty print is not implemented for this type */
+			// Print that pretty print is not implemented for this type
 			os << "BaseMetadata (type: " << getTypeID().strView()
 			   << ") - prettyPrint not implemented.\n";
 		}
@@ -185,12 +185,12 @@ namespace query::internal {
 		void addMetadata(NodeID node_id, Args&&... args) {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			/** @brief Create the metadata instance */
+			// Create the metadata instance
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
-			/* Get or create the node's metadata map */
+			// Get or create the node's metadata map
 			storage.maybePutAndUpdate(node_id, {}, [&](Ref<TypeMap> node_map) {
-				/* Get or create the type's vector */
+				// Get or create the type's vector
 				node_map->maybePutAndUpdate(
 					type_id,
 					{},
@@ -221,20 +221,20 @@ namespace query::internal {
 		bool addMetadataIfNotExists(NodeID node_id, Args&&... args) {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			/** @brief Create the metadata instance */
+			// Create the metadata instance
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
 			bool was_added = false;
 
-			/* Get or create the node's metadata map */
+			// Get or create the node's metadata map
 			storage.maybePutAndUpdate(node_id, {}, [&](Ref<TypeMap> node_map) {
-				/* Get or create the type's vector */
+				// Get or create the type's vector
 				node_map->maybePutAndUpdate(
 					type_id,
 					{},
 					[&metadata, &was_added](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
 						if (metadata_vector->empty()) {
-							/* no metadata exists, so we add */
+							// no metadata exists, so we add
 							metadata_vector->push_back(std::move(metadata));
 							was_added = true;
 						}
@@ -265,7 +265,7 @@ namespace query::internal {
 					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
 						result.reserve(type_vec->size());
 						for (const auto& metadata_ptr: *type_vec) {
-							/* Safe downcast - we know the type matches because we used type id as key */
+							// Safe downcast - we know the type matches because we used type id as key
 							const auto* typed_ptr
 								= static_cast<const MetadataT*>(metadata_ptr.get());
 							result.push_back(CRef<MetadataT>(typed_ptr));
@@ -302,16 +302,14 @@ namespace query::internal {
 			std::vector<MetadataInfo<MetadataT>> result;
 			TypeID                               type_id = MetadataT::TYPE_ID;
 
-			/*
-			 * Single pass through all nodes
-			 * note that iteration here locks storage
-			 */
+			// Single pass through all nodes
+			// note that iteration here locks storage
 			for (const auto& [node_id, node_map]: storage) {
 				node_map.maybeCallOn(
 					type_id,
 					[&result, node_id](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
 						for (const auto& metadata_ptr: *type_vec) {
-							/* Safe downcast - we know the type matches because we used type id as key */
+							// Safe downcast - we know the type matches because we used type id as key
 							const auto* typed_ptr
 								= static_cast<const MetadataT*>(metadata_ptr.get());
 							result.push_back(MetadataInfo<MetadataT>{
@@ -344,9 +342,8 @@ namespace query::internal {
 				node_map->maybeCallOn(
 					type_id,
 					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-						result
-							= !type_vec->empty(); /* this will set result to true only if there */
-												  /* is at least one metadata of this type */
+						result = !type_vec->empty();  // this will set result to true only if there
+					                                  // is at least one metadata of this type
 					}
 				);
 			});
@@ -478,4 +475,4 @@ namespace query::internal {
 		static ::ser::Errc readFrom(MetadataIn& ar, MetadataStorage& self);
 	};
 
-} /* namespace query */
+}  // namespace query
