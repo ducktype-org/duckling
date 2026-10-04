@@ -87,6 +87,7 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg1],
         features: HashMap::new(),
@@ -100,6 +101,7 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg2, pkg3],
         features: HashMap::new(),
@@ -113,6 +115,7 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
@@ -215,7 +218,7 @@ fn without_cache_fetch_fails() {
     assert_eq!(
         err.to_string(),
         format!(
-            "while getting a metadata of `foo` version `1.2.5`
+            "while getting a metadata of `foo` version 1.2.5
 HTTP status client error (404) for url `{}/packages/foo/1.2.5`",
             server.base_url(),
         )
@@ -229,7 +232,8 @@ fn create_sample_metadata() -> registry::Manifest {
         "version": "1.2.3",
         "name": "quackpack",
         "license": "GPS",
-        "description": ""
+        "description": "",
+        "links": null
     },
     "dependencies": [
         {

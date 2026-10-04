@@ -26,7 +26,7 @@ impl DependencyGraph {
                     .unwrap_or_else(|| {
                         missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
                     })
-                    .is_enabled_for(this.enabled_features().iter().copied());
+                    .is_enabled_for(this.enabled_features());
                 debug!(
                     %k,
                     features = ?this.enabled_features(),
@@ -83,7 +83,7 @@ impl EarlyGraph {
                                 this,
                             )
                         });
-                    entry_in_dep_manifest.enabled_features(this_features.iter().copied())
+                    entry_in_dep_manifest.enabled_features(this_features)
                 };
                 debug!(node = %dep, features = ?enabled_features, "adding features to node");
                 let entry = self.packages.package(dep);

@@ -1,8 +1,8 @@
-#include <filesystem_private/vfs.hpp>
-
 #include <filesystem/file.hpp>
+#include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 
@@ -19,6 +19,7 @@ public:
 		TESTER_ADD_TEST(fileOperationsTest);
 		TESTER_ADD_TEST(fileManagerTest);
 		TESTER_ADD_TEST(fileTest);
+		TESTER_ADD_TEST(vfsBindingTest);
 	}
 
 private:
@@ -270,12 +271,6 @@ private:
 		fs::File temp_default = fs::FilePath::getDefaultTempDirectoryPath();
 		assertTrue(
 			temp_default.getType() == fs::FileType::Temporary, "Default temp dir should be temporary"
-		);
-
-		fs::File virtual_default = fs::FilePath::getDefaultVirtualDirectoryPath();
-		assertTrue(
-			virtual_default.getType() == fs::FileType::Virtual,
-			"Default virtual dir should be virtual"
 		);
 
 		// Test createFileIn with random name generation
@@ -546,14 +541,13 @@ private:
 		assertTrue(test_file.getFilePath().uri() != "", "URI should not be empty");
 		// Test getContentSafe
 		auto safe_content = test_file.getContentSafe();
-		assertTrue(safe_content.has_value(), "getContentSafe should succeed for existing file");
+		ASSERT_HAS_VALUE(safe_content, "getContentSafe should succeed for existing file");
 
 		// Delete file and test getContentSafe again
 		fs::FileManager::deleteFile(test_file);
 		auto safe_content_after_delete = test_file.getContentSafe();
-		assertTrue(
-			!safe_content_after_delete.has_value(),
-			"getContentSafe should fail for non-existent file"
+		ASSERT_NO_VALUE(
+			safe_content_after_delete, "getContentSafe should fail for non-existent file"
 		);
 
 		// Test getModifyTime for non-virtual file
@@ -571,6 +565,59 @@ private:
 
 		// Cleanup
 		std::filesystem::remove_all(physical_folder_path);
+	}
+
+	void vfsBindingTest() {
+		fs::VFS other;
+
+		fs::FilePath in_singleton("vfs:/binding/a.dk");
+		fs::FilePath in_other("vfs:/binding/a.dk", &other);
+
+		assertTrue(in_singleton != in_other, "Same spelling in two VFS instances must differ");
+		assertTrue(
+			std::hash<fs::FilePath>{}(in_singleton) != std::hash<fs::FilePath>{}(in_other),
+			"Same spelling in two VFS instances must hash differently"
+		);
+
+		fs::FileManager::createVirtualFile(in_other, "other content", true);
+		assertTrue(in_other.exists(), "File must exist in the explicitly bound VFS");
+		assertTrue(!in_singleton.exists(), "File must not leak into the singleton VFS");
+		assertTrue(
+			fs::File(in_other).getContent().view().stringView() == "other content",
+			"Content must be read back from the bound VFS"
+		);
+
+		// Derived paths keep the binding.
+		assertTrue(
+			in_other.parentPath().getVfs().value().get() == &other,
+			"parentPath must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.parentPath().join("b.dk").getVfs().value().get() == &other,
+			"join must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.absolute().getVfs().value().get() == &other,
+			"absolute must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.lexicallyNormal().getVfs().value().get() == &other,
+			"lexicallyNormal must keep the VFS binding"
+		);
+
+		// Physical paths carry no binding and hash on the path alone.
+		fs::FilePath physical(path("a_file.txt"));
+		assertTrue(physical.getVfs().empty(), "Physical paths must carry no VFS binding");
+		assertTrue(
+			std::hash<fs::FilePath>{}(physical) == std::filesystem::hash_value(physical.getPath()),
+			"Physical path hash must stay the plain path hash"
+		);
+
+		// toVirtualPath can target an explicit VFS.
+		auto as_virtual = physical.absolute().toVirtualPath(&other);
+		assertTrue(
+			as_virtual.getVfs().value().get() == &other, "toVirtualPath must honour its target"
+		);
 	}
 };
 

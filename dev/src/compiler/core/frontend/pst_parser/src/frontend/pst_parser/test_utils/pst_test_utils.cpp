@@ -1,6 +1,7 @@
 #include "pst_test_utils.hpp"
 
 #include <set>
+#include <sstream>
 
 namespace pst {
 	void viewAllSubTreeElementsAux(

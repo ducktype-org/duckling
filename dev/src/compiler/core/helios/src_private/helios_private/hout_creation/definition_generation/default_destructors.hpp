@@ -13,7 +13,7 @@ namespace compiler::helios::defgen {
 	 * This function always returns SymID, even if the requested type is trivially destructible,
 	 * in which case the SymID might be non-usable.
 	 */
-	SymID destructSymForType(query::Context& ctx, tsh::AbstractType type);
+	SymID generatedDestructSymForType(query::Context& ctx, tsh::AbstractType type);
 
 
 	/**
@@ -28,13 +28,6 @@ namespace compiler::helios::defgen {
 	bool isUserDefinedDestructor(query::Context& ctx, SymID sym);
 
 	/**
-	 * @brief Finds the user-defined destructor of a class, if it declares one.
-	 * @param class_sym The symbol of the class.
-	 * @return The destructor symbol, or an empty optional if the class doesn't declare one.
-	 */
-	base::Optional<SymID> userDestructorOf(query::Context& ctx, SymID class_sym);
-
-	/**
 	 * @brief Get the compiler-generated HOUT representation of a type's destructor.
 	 *
 	 * The destructor takes a `ref T self` parameter and returns unit. Destroys each
@@ -45,14 +38,4 @@ namespace compiler::helios::defgen {
 	DECLARE_QUERY(
 		QueryDefaultDestructor, tsh::AbstractType, CRef<query::QResult<HOUTFunction>>, ({})
 	);
-
-	/**
-	 * @brief Build the compiler-generated HOUT representation of the `box T` destructor.
-	 *
-	 * Takes a `self: box T` parameter and returns unit. Destroys the pointee (via its own
-	 * destructor) and then frees the box storage with the `box_free` builtin.
-	 *
-	 * @param pointee_type The pointee type `T`.
-	 */
-	HOUTFunction buildBoxDestructor(query::Context& ctx, tsh::AbstractType pointee_type);
 }

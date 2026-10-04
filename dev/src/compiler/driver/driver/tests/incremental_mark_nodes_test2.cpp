@@ -59,7 +59,7 @@ private:
 
 		// After initialization the previous graph (if present) should be loaded
 		auto prev_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
-		assertTrue(prev_opt.has_value(), "Previous graph should be present after initialization");
+		ASSERT_HAS_VALUE(prev_opt, "Previous graph should be present after initialization");
 		auto prev = prev_opt.value();
 
 		// Verify node colors: previously-leaf nodes are green and dependency count checks hold

@@ -11,6 +11,10 @@ namespace pst::internal {
 		return state[fwd].is(lang_def::Special::Semicolon);
 	}
 
+	bool Conditions::isSemicolonOrSentinel(const TokenStream& state, i64 fwd) {
+		return isSemicolon(state, fwd) || isSentinel(state, fwd);
+	}
+
 	bool Conditions::isSentinel(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(lexer::Token::Type::Sentinel);
 	}

@@ -35,6 +35,7 @@ class HoutStmtCompilationTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testControlFlowStatements);
+		TESTER_ADD_TEST(testConstIfStatements);
 		TESTER_ADD_TEST(testVariableDeclarations);
 		TESTER_ADD_TEST(testReturnStatements);
 		TESTER_ADD_TEST(testAssignmentAndExpressions);
@@ -183,6 +184,76 @@ private:
 	}
 
 	/**
+	 * @brief `if const` is evaluated at compile time and only the taken branch is compiled.
+	 * The branch that is not taken may contain code that would not compile.
+	 */
+	void testConstIfStatements() {
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					if const (1 == 1) {
+						var a = 1;
+					} else {
+						var b = this_symbol_does_not_exist;
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+				ASSERT_EQUAL(block.statements.size(), 1u);
+				StmtKindCounter c;
+				block.statements.at(0)->acceptVisitor(c);
+				ASSERT_EQUAL(c.if_count, 0u);
+				ASSERT_EQUAL(c.block_stmt_count, 1u);
+			});
+		}
+
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					if const (1 == 2) {
+						var a = this_symbol_does_not_exist;
+					} else {
+						var b = 2;
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+				ASSERT_EQUAL(block.statements.size(), 1u);
+				StmtKindCounter c;
+				block.statements.at(0)->acceptVisitor(c);
+				ASSERT_EQUAL(c.if_count, 0u);
+				ASSERT_EQUAL(c.block_stmt_count, 1u);
+			});
+		}
+
+		{
+			// A false `if const` without an else branch produces no statement at all.
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					if const (1 == 2) {
+						var a = this_symbol_does_not_exist;
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+				ASSERT_EQUAL(block.statements.size(), 0u);
+			});
+		}
+	}
+
+	/**
 	 * @brief compileSingleStatement correctly handles variable declarations.
 	 * Tests: variable with initialization, variable without initialization, and const declarations.
 	 */
@@ -291,6 +362,24 @@ private:
 	 * Tests: basic assignment, expression statements, and list operations (push/pop).
 	 */
 	void testAssignmentAndExpressions() {
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					var a:i64 = 1;
+					a += 2;
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id, 1);
+				ASSERT_EQUAL(block.statements.size(), 1);
+				StmtKindCounter c;
+				block.statements.at(0)->acceptVisitor(c);
+				ASSERT_EQUAL(c.assignment_count, 1);
+			});
+		}
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(

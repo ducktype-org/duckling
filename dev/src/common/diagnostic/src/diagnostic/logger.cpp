@@ -10,6 +10,8 @@
 #include <diagnostic/core/view_constructors.hpp>
 #include <diagnostic/term_ui/printers.hpp>
 
+#include <sstream>
+
 namespace dia {
 
 	void Logger::terminalPrint(std::ostream& out) const {

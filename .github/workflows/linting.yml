@@ -9,11 +9,15 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 env:
-  CXX_COMPILER: g++-14
-  CC_COMPILER: gcc-14
-  CLANGXX_COMPILER: clang++-19
-  CLANG_COMPILER: clang-19
+  CXX_COMPILER: clang++-19
+  CC_COMPILER: clang-19
+  CLANG_PACKAGE: clang-19
   TIDY_VERSION: 19
+  # Kept in sync with tests.yml so the linter configures the very same build the
+  # per-PR tests matrix does.
+  WORKSPACE: ${{ github.workspace }}/dev
+  BUILD_DIR: ${{ github.workspace }}/dev/build
+  BUILD_SYSTEM: Ninja
 
 jobs:
   # GitHub silently stops creating runs for a workflow whose file does not
@@ -30,8 +34,8 @@ jobs:
 
       - name: Validate workflow YAML
         run: |
-         cd dev
-         python3 toolbox.py workflows-lint
+          cd dev
+          python3 toolbox.py workflows-lint
         shell: bash
 
   determine-runners:
@@ -58,30 +62,57 @@ jobs:
 
       - uses: actions/checkout@v6
 
-      - name: Install gvc, LLVM and nlohmann_json
-        run: sudo apt -y install libgraphviz-dev llvm-19 ${{ env.CLANG_COMPILER }} llvm-19-dev nlohmann-json3-dev pkg-config libffi-dev ${{ env.CXX_COMPILER }} ${{ env.CC_COMPILER }}
-        # @TODO: Remove nlohmann-json3-dev dependency from here. It was added, because linter
-        # didn't see nlohmann_json library for some reason. It should be removed, because it is
-        # already added through CMake and version from package manager and in our configuration may differ.
+      - name: Update apt
+        run: sudo apt update
 
+      - name: Install gvc, LLVM and nlohmann_json
+        run: sudo apt -y install libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
+
+      - name: Install click and PyYAML
+        run: sudo pip install click pyyaml --break-system-packages --no-input
+
+      - name: Initialize project
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py init
+
+      # The build is configured through the toolbox with the same flags the per-PR tests
+      # matrix uses, so the linter cannot break on a configuration that no other workflow
+      # exercises. clang is used because dev/CMakeLists.txt rejects JIT with any other
+      # compiler. compile_commands.json is exported by dev/CMakeLists.txt itself, so no
+      # extra flag is needed here.
+      # --jit Yes enables C&P too, so the C&P stencil sources (only compiled with C&P)
+      # appear in compile_commands.json.
       - name: Create compile_commands
+        working-directory: ${{ env.WORKSPACE }}
         run: |
-         cd dev
-         cmake -DCMAKE_CXX_COMPILER=${{ env.CLANGXX_COMPILER }} -DCMAKE_C_COMPILER=${{ env.CLANG_COMPILER }} -DJIT_ENABLED=ON -DBUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-         cd ..
-        shell: bash
+          ./toolbox.py setup-build \
+            -b ${{ env.BUILD_DIR }} \
+            -s ${{ env.BUILD_SYSTEM }} \
+            -c ${{ env.CC_COMPILER }} \
+            -x ${{ env.CXX_COMPILER }} \
+            -t Dev \
+            --jit Yes \
+            --no-coverage \
+            --no-docs \
+            --ccache
+
+      # lspgen runs as a build step, so configuring alone leaves lsp/types.h and the rest of the
+      # generated headers missing and every file that reaches them fails to parse.
+      - name: Generate the lsp-framework headers
+        run: cmake --build ${{ env.BUILD_DIR }} --target lsp -j "$(nproc)"
 
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
           GITHUB_TOKEN: ${{ secrets.QUACKER_PAT }}
         with:
-          style: 'file'
-          tidy-checks: ''
+          style: "file"
+          tidy-checks: ""
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
-          database: 'dev'
-          ignore: '**/*.c'
+          database: "dev/build"
+          ignore: "**/*.c"
+          extra-args: "-Wno-unknown-warning-option"
 
           # Note that tidy-checks: '', means it uses .clang-tidy file
           # according to the cpp-linter action docs.
@@ -94,7 +125,6 @@ jobs:
           # in a pull request's thread. Set it to false to disable the comment.
           # Set it to true to post a new comment (and delete the old comment).
           step-summary: true
-
 
       - name: Fail fast?!
         if: steps.linter.outputs.checks-failed > 0
@@ -119,12 +149,12 @@ jobs:
       # Fetch origin/main for the following steps, because by default repo on the runners contains just the bare-minimum.
       - name: Fetch origin/main
         run: |
-         git fetch origin main
+          git fetch origin main
 
       - name: Run duck linter
         run: |
-         cd dev
-         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
+          cd dev
+          python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
         shell: bash
 
       - name: Run issue checker
@@ -132,14 +162,14 @@ jobs:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-         cd dev
-         python3 toolbox.py issue-checker --branch origin/main --no-merge-base
+          cd dev
+          python3 toolbox.py issue-checker --branch origin/main --no-merge-base
         shell: bash
 
       - name: Run TODO validation
         env:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
         run: |
-         cd dev
-         python3 toolbox.py todo-validate --branch origin/main --no-merge-base
+          cd dev
+          python3 toolbox.py todo-validate --branch origin/main --no-merge-base
         shell: bash

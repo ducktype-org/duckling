@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 pub mod command_ext;
+pub mod dependency_graph;
 pub mod env;
 pub mod error;
 pub mod extend;
@@ -24,33 +25,49 @@ pub trait DescriptionWithAnArticle {
 }
 
 /// English pluralization helper trait.
-pub trait IsPlural {
-    /// Return `s` if the data structure has 0 or at least 2 elements, otherwise return ``.
+pub trait Pluralize {
+    /// Determine whether `self` is plural or singular.
+    fn is_plural(&self) -> bool;
+
+    /// Return `s` if plural else an empty word.
     /// Obviously in english there are words for which the plural form is created differently to simply adding `s`.
     /// But in the project there are currently no such words displayed to the user.
-    fn s_if_plural(&self) -> &'static str;
-}
-
-impl<T> IsPlural for Vec<T> {
     fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+        if self.is_plural() { "s" } else { "" }
+    }
+
+    /// Return `were` if plural else `was`.
+    fn was_or_were(&self) -> &'static str {
+        if self.is_plural() { "were" } else { "was" }
     }
 }
 
-impl<T> IsPlural for &[T] {
-    fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+impl<T> Pluralize for Vec<T> {
+    fn is_plural(&self) -> bool {
+        self.len() != 1
     }
 }
 
-impl<K, V> IsPlural for HashMap<K, V> {
-    fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+impl<T> Pluralize for &[T] {
+    fn is_plural(&self) -> bool {
+        self.len() != 1
     }
 }
 
-impl<T> IsPlural for HashSet<T> {
-    fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+impl<K, V> Pluralize for HashMap<K, V> {
+    fn is_plural(&self) -> bool {
+        self.len() != 1
+    }
+}
+
+impl<T> Pluralize for HashSet<T> {
+    fn is_plural(&self) -> bool {
+        self.len() != 1
+    }
+}
+
+impl Pluralize for usize {
+    fn is_plural(&self) -> bool {
+        *self != 1
     }
 }

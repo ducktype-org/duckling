@@ -1,6 +1,9 @@
+# The program every case in this tree debugs.
+program: "../examples/input.dbc"
+
 Tests:
   debug_input:
-    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{program}"
     TimeOut: 1
     Cases:
       input: { }

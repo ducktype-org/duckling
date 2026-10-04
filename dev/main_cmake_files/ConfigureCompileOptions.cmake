@@ -27,6 +27,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-Werror=free-nonheap-object "
 		"-Werror=conversion "
 		"-Werror=implicit-fallthrough "
+		"-Werror=missing-field-initializers "
 		"-Werror=reorder "
 		"-Werror=invalid-memory-model "
 		"-Wall -Wextra "
@@ -65,6 +66,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 		"-Werror=free-nonheap-object "
 		"-Werror=conversion "
 		"-Werror=implicit-fallthrough "
+		"-Werror=missing-field-initializers "
 		"-Wall -Wextra "
 		"-pedantic "
 		"-Wno-sign-compare "
@@ -73,6 +75,24 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 	)
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
+
+	if(APPLE)
+		# Homebrew's clang is not the Apple one, so it does not find the macOS SDK on
+		# its own; point it at the SDK that xcrun reports.
+		if(NOT CMAKE_OSX_SYSROOT)
+			execute_process(COMMAND xcrun --show-sdk-path
+					OUTPUT_VARIABLE MACOS_SDK_PATH
+					OUTPUT_STRIP_TRAILING_WHITESPACE
+					ERROR_QUIET)
+			if(NOT MACOS_SDK_PATH)
+				message(FATAL_ERROR
+						"Could not determine the macOS SDK path. "
+						"Install the command line tools with `xcode-select --install`.")
+			endif()
+			message("-- Using macOS SDK: ${MACOS_SDK_PATH}")
+			set(CMAKE_OSX_SYSROOT "${MACOS_SDK_PATH}")
+		endif()
+	endif()
 
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
@@ -105,7 +125,13 @@ if(STRIP_SYMBOL_INFORMATION)
 	if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
 		message(FATAL_ERROR "Error: STRIP_SYMBOL_INFORMATION will likely fail (as is) compilers other then GCC and Clang. Fix or validate it first.")
 	endif()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
+	if(APPLE)
+		# ld64 still honours -s but prints "warning: -s is obsolete" on every link.
+		# Instead, `-x -S` is the supported spelling and should produce the same result.
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-x,-S")
+	else()
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
+	endif()
 endif()
 
 if (ENABLE_LINK_TIME_OPTIMIZATION)

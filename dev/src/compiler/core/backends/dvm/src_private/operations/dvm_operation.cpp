@@ -18,8 +18,6 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) { return op == lir::Operation::MetaTypeOperation; }
-
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
 		using namespace vm::code::builders;
@@ -28,6 +26,7 @@ namespace {
 		case IntegerNeg: 	return OpKind::neg;
 		case FloatNeg:   	return OpKind::fneg;
 		case BooleanNot: 	return OpKind::log_not;
+		case IntegerBitNot: return OpKind::bit_not;
 		case IntegerAdd:  	return OpKind::add;
 		case IntegerSub:  	return OpKind::sub;
 		case IntegerMul:  	return OpKind::mul;
@@ -35,6 +34,11 @@ namespace {
 		case IntegerSMod: 	return OpKind::mod;
 		case IntegerUDiv: 	return OpKind::udiv;
 		case IntegerUMod: 	return OpKind::umod;
+		case IntegerBitAnd: return OpKind::bit_and;
+        case IntegerBitOr:  return OpKind::bit_or;
+        case IntegerBitXor: return OpKind::bit_xor;
+        case IntegerShl:    return OpKind::shl;
+        case IntegerShr:    return OpKind::shr;
 		case FloatAdd:    	return OpKind::fadd;
 		case FloatSub:    	return OpKind::fsub;
 		case FloatMul:    	return OpKind::fmul;
@@ -68,12 +72,12 @@ namespace compiler::backend_vm::internal {
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
 		base::Optional<vm::code::TypeOfData> called_result_type
-			= program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+			= program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
 		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 
 		std::vector<vm::code::TypeOfData> param_types
 			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-				  return **program_context.lowerAndKeepTslType(layout);
+				  return *program_context.lowerAndKeepTslType(layout);
 			  })
 		    | std::ranges::to<std::vector>();
 
@@ -146,7 +150,12 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation)) {
+		switch (operation) {
+		/// Special operations ///
+		case MetaTypeOperation: {
+			// If we are not in the comp time lowering context ignore the instruction,
+			// same behaviour as on LLVM backend.
+			if (not ctx.program_context.isCompTimeLowering()) return NoOperation{};
 			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
 			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
 			return MetaOperation{
@@ -155,10 +164,6 @@ namespace compiler::backend_vm::internal {
 				.dest      = lower_opt_dest(),
 			};
 		}
-
-
-		switch (operation) {
-		/// Special operations ///
 		case ZeroInitialize:
 			// Data in DVM is zeroinitialized by default, so this is a NoOp.
 			return NoOperation{};
@@ -190,7 +195,7 @@ namespace compiler::backend_vm::internal {
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
 				base::Optional<vm::code::TypeOfData> return_type
-					= ctx.program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+					= ctx.program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
 				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 				return BuiltinCallOperation{
 					.kind        = builtin,
@@ -222,9 +227,12 @@ namespace compiler::backend_vm::internal {
 			// creates a copy of the value we try to reference on the stack. We have to lower it to
 			// a place and if it's direct, take a pointer to it, but if it's not, the resulting
 			// address is the pointer returned by `resolveLirPlace`.
+			const auto& src_place = instr.arguments[0].get<lir::LIRPlace>();
 			return AddressOfOperation{
-				.src  = ctx.resolveLirPlace(instr.arguments[0].get<lir::LIRPlace>()),
-				.dest = lower_opt_dest(),
+				.src         = ctx.resolveLirPlace(src_place),
+				.src_layout  = src_place.layout,
+				.dest        = lower_opt_dest(),
+				.dest_layout = instr.output.map(&lir::LIRPlace::layout),
 			};
 		}
 		case Assign: {
@@ -241,6 +249,7 @@ namespace compiler::backend_vm::internal {
 
 		/// Unary operations ///
 		case IntegerNeg:
+		case IntegerBitNot:
 		case FloatNeg:
 		case BooleanNot: {
 			CORE_ASSERT(
@@ -263,6 +272,11 @@ namespace compiler::backend_vm::internal {
 		case IntegerSMod:
 		case IntegerUDiv:
 		case IntegerUMod:
+		case IntegerBitAnd:
+		case IntegerBitOr:
+		case IntegerBitXor:
+		case IntegerShl:
+		case IntegerShr:
 		case FloatAdd:
 		case FloatSub:
 		case FloatMul:
@@ -316,16 +330,20 @@ namespace compiler::backend_vm::internal {
 
 		/// Variant operations ///
 		case VariantConstruct: {
+			// An alternative carrying no information (e.g. `()`) has its payload argument
+			// discarded in LIR, so there is nothing left to store.
 			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"VariantConstruct expects 1 argument, got: ",
+				instr.arguments.size() <= 1,
+				"VariantConstruct expects at most 1 argument, got: ",
 				instr.arguments.size()
 			);
 			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
 			CORE_ASSERT(variant_params != nullptr, "VariantConstruct without parameters");
 			return VariantConstructOperation{
 				.variant_params = *variant_params,
-				.payload        = lower_arg(instr.arguments[0]),
+				.payload        = instr.arguments.empty()
+				                    ? base::Optional<DVMValue>()
+				                    : base::Optional<DVMValue>(lower_arg(instr.arguments[0])),
 				.dest           = lower_dest(),
 			};
 		}
@@ -397,6 +415,11 @@ namespace compiler::backend_vm::internal {
 			return ReturnOperation{
 				.value       = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
 				                                           : base::Optional<DVMValue>(),
+				.scope_flags = instr.scope_flags,
+			};
+		}
+		case Unreachable: {
+			return UnreachableOperation{
 				.scope_flags = instr.scope_flags,
 			};
 		}

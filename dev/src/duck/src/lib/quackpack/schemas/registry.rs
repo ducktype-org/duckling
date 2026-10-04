@@ -38,6 +38,8 @@ pub struct Metadata {
     pub name: String,
     /// Package's description.
     pub description: String,
+    /// This package links against the specified library.
+    pub links: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

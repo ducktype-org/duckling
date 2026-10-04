@@ -13,8 +13,6 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
@@ -46,6 +44,15 @@
 #include <ranges>
 
 namespace compiler::helios::code {
+
+	namespace {
+		/**
+		 * @brief Helper to get the interface element of a symbol that is a type member.
+		 */
+		CRef<tsh::InterfaceElement> getInterfaceElementOfMemberSym(query::Context& ctx, SymID sym) {
+			return typeMemberOwner(sym).getInterface(ctx)->getElementBySym(sym).value();
+		}
+	}
 
 	/**
 	 * This is temporary helper used before #3095.
@@ -110,15 +117,15 @@ namespace compiler::helios::code {
 			auto arg_expr_result = subExprFromPST(query_ctx, arg_unlocked->getExpr());
 
 			if (arg_expr_result.hasFailed()) return query::Failed();
-			auto arg_expr                = std::move(arg_expr_result).valueOrPanic();
-			auto coerced_arg_expr_result = coerceFromBox(
-				query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition()
+			auto arg_expr = std::move(arg_expr_result).valueOrPanic();
+			UNPACK_QRESULT_MOVE(
+				auto coerced_arg_expr =,
+				coerceFromBox(
+					query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition()
+				)
 			);
-			if (coerced_arg_expr_result.empty()) return query::Failed();
 
-			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>(
-				{ coerced_arg_expr_result.value().ref() }
-			);
+			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_arg_expr.ref() });
 
 			if (ctv.hasFailed()) return query::Failed();
 			auto ctv_value = std::move(ctv).valueOrPanic();
@@ -181,6 +188,14 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 
+			variant_case(errors::Inaccessible, _) {
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
+					"Symbol found in lookup is not visible from here",
+					element_with_template_specifier->getStablePosition()
+				));
+				return query::Failed();
+			}
+
 			variant_default { CORE_PANIC("Invalid state: unexpected variant in lookup result"); }
 		}
 
@@ -232,9 +247,22 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief A type written in the chain, as in the `T` of `T.foo` or of `let t = T;`.
+	 *
+	 * It is kept as a type, and not as a `LiteralTypeExpr`, because what follows in the chain
+	 * decides what it becomes: an access on it is a lookup in the type, while a type that ends
+	 * the chain is a value of the meta type.
+	 */
+	struct TypeInChain final {
+		tsh::AbstractType type;
+		ElementOrigin     origin;
+	};
+
+	/**
 	 * State for the building of the chain expression in HOUT.
-	 * It mainly stores two distinct states:
+	 * It mainly stores three distinct states:
 	 * - namespace-like state, for example after processing "foo().Namespace"
+	 * - type state, for example after processing "foo().MyClass"
 	 * - expression state, for example after processing "foo().bar[20]"
 	 *
 	 * Its stores the state of chain expression creation that does not include
@@ -243,9 +271,13 @@ namespace compiler::helios::code {
 	struct ChainState final {
 		[[nodiscard]] bool isNamespaceLike() const { return namespace_like_symbol.has_value(); }
 
+		[[nodiscard]] bool isType() const { return type.has_value(); }
+
 		[[nodiscard]] bool isExpr() const { return expr.toOpt().has_value(); }
 
-		[[nodiscard]] bool isEmpty() const { return not isNamespaceLike() and not isExpr(); }
+		[[nodiscard]] bool isEmpty() const {
+			return not isNamespaceLike() and not isType() and not isExpr();
+		}
 
 		[[nodiscard]] auto getExpr() -> base::Box<Expr> {
 			return std::move(expr).toOptBox().value();
@@ -259,10 +291,34 @@ namespace compiler::helios::code {
 			return namespace_like_symbol.value().second;
 		}
 
+		[[nodiscard]] auto getType() -> TypeInChain { return type.value(); }
+
 		static ChainState ofExpr(base::Box<Expr> expr) { return { std::move(expr) }; }
 
 		static ChainState ofNamespaceLike(SymID namespace_like_symbol, ElementOrigin origin) {
 			return { namespace_like_symbol, origin };
+		}
+
+		static ChainState ofType(tsh::AbstractType type, ElementOrigin origin) {
+			return ChainState{ { .type = type, .origin = origin } };
+		}
+
+		/**
+		 * @brief The value a chain state holds, which for a type state is the type literal of the
+		 * type it carries. Empty for states that hold no value, like a namespace.
+		 */
+		auto asExpr(query::Context& ctx) -> base::Box<Expr> {
+			if (isExpr()) return getExpr();
+			if (isType()) {
+				auto type_in_chain = getType();
+				return makeBox<LiteralTypeExpr>(ctx, type_in_chain.origin, type_in_chain.type);
+			}
+			if (isNamespaceLike()) {
+				auto sym    = getNamespaceLikeSymbol();
+				auto origin = getNamespaceLikePstOrigin();
+				return makeBox<IdentifierExpr>(ctx, origin, sym);
+			}
+			CORE_PANIC("Invalid ChainState state.");
 		}
 
 	private:
@@ -276,8 +332,11 @@ namespace compiler::helios::code {
 			  expr(base::MBox<Expr>{}),
 			  namespace_like_symbol(std::make_pair(namespace_like_symbol, origin)) {}
 
+		explicit ChainState(TypeInChain type): expr(base::MBox<Expr>{}), type(type) {}
+
 		base::MBox<Expr>                                expr{};
 		base::Optional<std::pair<SymID, ElementOrigin>> namespace_like_symbol{};
+		base::Optional<TypeInChain>                     type{};
 
 		friend class ChainExprConstruction;
 	};
@@ -406,7 +465,7 @@ namespace compiler::helios::code {
 		query::QResult<std::vector<SymID>> getCallableCandidates(
 			const std::vector<SymID>& looked_up_callees
 		) const {
-			// @TODO: #2135 handle ambiguity in class scopes
+			if (looked_up_callees.empty()) return std::vector<SymID>{};
 
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
@@ -419,7 +478,22 @@ namespace compiler::helios::code {
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Method;
 				})) {
-				return looked_up_callees;
+				// Make sure that all of the found methods are either static methods or instance methods.
+				auto type      = typeMemberOwner(looked_up_callees.at(0));
+				auto interface = type.getInterface(query_ctx);
+				auto elements  = looked_up_callees | std::views::transform([&](SymID symbol) {
+                                    return interface->getElementBySym(symbol).value();
+                                })
+				              | std::ranges::to<std::vector<CRef<tsh::InterfaceElement>>>();
+
+				if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+						return interface->getElementBySym(symbol).value()->isStaticMethod();
+					}))
+					return looked_up_callees;
+				else if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+							 return interface->getElementBySym(symbol).value()->isMethod();
+						 }))
+					return looked_up_callees;
 			}
 
 			// Check error condition and report error.
@@ -442,10 +516,7 @@ namespace compiler::helios::code {
 			case SymbolKind::Class: {
 				// Retrieve constructors of the class.
 				// @TODO: #1290 Handle auxiliary constructors.
-				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
-				                      ->valueOrThrow()
-				                      .getType()
-				                      .as<tsh::ClassAbstractType>();
+				auto        class_type = query_ctx.query<tsh::QueryClassType>({ symbol });
 				const auto& ctor
 					= query_ctx.query<defgen::QueryImplicitClassConstructor>({ class_type })
 				          ->valueOrThrow();
@@ -531,16 +602,11 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
 
 
-				if (base_state.isExpr()) {
-					auto square_call_res
-						= processSquareCall(query_ctx, base_state.getExpr(), call_expr);
-					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-					return ChainState::ofExpr(std::move(expr));
-				}
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"This symbol cannot be indexed.", call_expr->getStablePosition()
-				));
-				return query::Failed();
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(base_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
@@ -713,7 +779,12 @@ namespace compiler::helios::code {
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_qresult
 				= HInterface::ofTypeInstance(current_expr_type)
-			          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
+			          .lookup(
+						  query_ctx,
+						  expr_access->getName().unlock(query_ctx)->unwrap(),
+						  { .accessing_scope
+			                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+					  );
 			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
 			// Note that if multiple symbols were found, it results in an error and enters
@@ -726,7 +797,12 @@ namespace compiler::helios::code {
 					// @TODO: #1412 handle dealias expressions:
 					auto sym = result.back();
 
-					if (kind(sym) == SymbolKind::Field) {
+					if (isStaticField(query_ctx, sym)) {
+						auto node = makeBox<IdentifierExpr>(
+							query_ctx, pstOriginOrdered(current_expr->origin, expr_access), sym
+						);
+						return ChainState::ofExpr(std::move(node));
+					} else if (kind(sym) == SymbolKind::Field) {
 						// Insert a deref if source of field access is not a direct type.
 						if (current_expr->expression_type.getSymbolType().getRefKind()
 						    != tsh::ReferenceKind::Direct) {
@@ -789,6 +865,15 @@ namespace compiler::helios::code {
 					));
 					return query::Failed();
 				}
+				variant_case_novalue(errors::Inaccessible) {
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
+						"Accessed value is not visible from here.",
+						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+							query_ctx
+						)
+					));
+					return query::Failed();
+				}
 
 				variant_default { CORE_PANIC("Unexpected result type from lookup"); }
 			}
@@ -831,40 +916,50 @@ namespace compiler::helios::code {
 				auto current_expr_type = current_expr->expression_type.getType();
 				auto lookup_qresult
 					= HInterface::ofTypeInstance(current_expr_type)
-				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
+				          .lookup(
+							  query_ctx,
+							  expr_access->getName().unlock(query_ctx)->unwrap(),
+							  { .accessing_scope
+				                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+						  );
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-				// The self expression may be passed by copy or by reference,
-				// depending on whether the type is simple or composite, respectively.
-				auto self_expr = current_expr->expression_type.getType().isSimple()
-				                   ? std::move(current_expr)
-				                   : Box<Expr>(makeBox<RefOfExpr>(
-										 query_ctx,
-										 current_expr->origin.generatedFrom(),
-										 std::move(current_expr)
-									 ));
+				base::Optional<base::Box<Expr>> expr{};
+				if (callees.size() > 0
+				    and getInterfaceElementOfMemberSym(query_ctx, callees.at(0))->isMethod()) {
+					// The self expression may be passed by copy or by reference,
+					// depending on whether the type is simple or composite, respectively.
+					auto self_expr = current_expr->expression_type.getType().isSimple()
+					                   ? std::move(current_expr)
+					                   : Box<Expr>(makeBox<RefOfExpr>(
+											 query_ctx,
+											 current_expr->origin.generatedFrom(),
+											 std::move(current_expr)
+										 ));
 
-				auto res = processMethodCall(
-					query_ctx, callees, expr_access, call_expr, std::move(self_expr)
-				);
-				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
-				return ChainState::ofExpr(std::move(expr));
+					auto res = processMethodCall(
+						query_ctx, callees, expr_access, call_expr, std::move(self_expr)
+					);
+					UNPACK_QRESULT_MOVE(expr =, res);
+				} else {
+					auto res = processFunctionCall(query_ctx, callees, expr_access, call_expr);
+					UNPACK_QRESULT_MOVE(expr =, res);
+				}
+				return ChainState::ofExpr(std::move(expr.value()));
 			}
 			case lexer::Token::Square: {
 				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
 
-				if (access_state.isExpr()) {
-					auto square_call_res
-						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
-					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-					return ChainState::ofExpr(std::move(expr));
-				}
-				return query::Failed();
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
@@ -907,32 +1002,13 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
-				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-				                         .lookupExpectUnique(
-											 expr_access->getStablePosition(),
-											 query_ctx,
-											 expr_access->getName().unlock(query_ctx)->unwrap()
-										 );
-				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-
-				auto whole_expr_origin
-					= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
-				auto state_res
-					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
-				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
-
-				if (access_state.isExpr()) {
-					auto square_call_res
-						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
-					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-					return ChainState::ofExpr(std::move(expr));
-				}
-
-
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"This symbol cannot be indexed", call_expr->getStablePosition()
-				));
-				return query::Failed();
+				auto access_res = processPSTExpr(namespace_like_symbol, expr_access);
+				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
@@ -944,6 +1020,88 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 			}
+		}
+
+		/**
+		 * Case when we have an access expression not followed by a call expression and the
+		 * current state is a type, for example "MyClass.CONSTANT".
+		 */
+		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::Access> expr_access)
+			-> query::QResult<ChainState> {
+			auto lookup_result = HInterface::ofTypeMeta(type.type).lookupExpectUnique(
+				expr_access->getStablePosition(),
+				query_ctx,
+				expr_access->getName().unlock(query_ctx)->unwrap(),
+				{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+			);
+			// @TODO: #1412 handle dealias expressions:
+			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+
+			auto whole_expr_origin = pstOriginOrdered(type.origin, expr_access);
+			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
+		}
+
+		/**
+		 * Case when we have an access expression followed by a call expression and the current
+		 * state is a type, for example:
+		 * - `MyClass.staticMethod()` - this may result in a static method overload.
+		 * - `MyClass.CONSTANT_ARRAY[ix]` - this is an index access into a constant of the class.
+		 */
+		auto processPSTExpr(
+			TypeInChain                    type,
+			pst::Access<pst::expr::Access> expr_access,
+			pst::Access<pst::expr::Call>   call_expr
+		) -> query::QResult<ChainState> {
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				auto lookup_qresult = HInterface::ofTypeMeta(type.type).lookup(
+					query_ctx,
+					expr_access->getName().unlock(query_ctx)->unwrap(),
+					{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+				);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+
+				UNPACK_QRESULT(
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, expr_access)
+				);
+
+				auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case lexer::Token::Square: {
+				auto access_res = processPSTExpr(type, expr_access);
+				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			default: {
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getStablePosition()
+				));
+				return query::Failed();
+			}
+			}
+		}
+
+		/**
+		 * Case when we have a call expression and the current state is a type,
+		 * for example "Point[3][3]".
+		 *
+		 * A call on a type is not a lookup in it, but an operation on the type used as a value,
+		 * so the type becomes a type literal and the call is processed as on any expression.
+		 */
+		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::Call> call_expr)
+			-> query::QResult<ChainState> {
+			return processPSTExpr(
+				Box<Expr>(makeBox<LiteralTypeExpr>(query_ctx, type.origin, type.type)), call_expr
+			);
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
@@ -972,14 +1130,17 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case SymbolKind::Class: {
-				auto type_qresult = query_ctx.query<QueryTypeFromDefinition>({ symbol });
-				UNPACK_QRESULT_CREF(auto type_info =, type_qresult);
-
-				auto expr
-					= makeBox<LiteralTypeExpr>(query_ctx, pst_element_origin, type_info.getType());
-				return ChainState::ofExpr(std::move(expr));
+				auto class_type = query_ctx.query<tsh::QueryClassType>({ symbol });
+				return ChainState::ofType(class_type, pst_element_origin);
 			}
 			case SymbolKind::Field: {
+				// A static field is stored once for the whole program, so it is referred to
+				// directly, the same way a global variable is, and not through a `self`.
+				if (isStaticField(query_ctx, symbol)) {
+					auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
+					return ChainState::ofExpr(std::move(expr));
+				}
+
 				auto expr = processFieldNoSelf(query_ctx, symbol, pst_element_origin, pst_elem);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> field_expr =, expr);
 				return ChainState::ofExpr(std::move(field_expr));
@@ -1083,6 +1244,11 @@ namespace compiler::helios::code {
 							));
 							return query::Failed();
 						}
+						variant_case_novalue(errors::Inaccessible) {
+							// `self` is looked up in a scope, and only the elements of the
+							// interface of a type are ever hidden by their visibility.
+							CORE_PANIC("The `self` argument cannot be inaccessible.");
+						}
 					}
 					CORE_UNREACHABLE();
 				};
@@ -1124,6 +1290,8 @@ namespace compiler::helios::code {
 				} else if (this->current_state.isNamespaceLike()) {
 					auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
 					return processPSTExpr(namespace_like_symbol, current_element_value);
+				} else if (this->current_state.isType()) {
+					return processPSTExpr(this->current_state.getType(), current_element_value);
 				}
 				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
@@ -1140,19 +1308,24 @@ namespace compiler::helios::code {
 		base::Optional<query::Failed> step() {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
-			auto res                   = [&]() -> query::QResult<ChainState> {
-                if (this->current_state.isExpr()) {
-                    auto expr = this->current_state.getExpr();
-                    return processPSTExpr(
-                        std::move(expr), current_element_value, next_element_value
-                    );
-                } else if (this->current_state.isNamespaceLike()) {
-                    auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
-                    return processPSTExpr(
-                        namespace_like_symbol, current_element_value, next_element_value
-                    );
-                }
-                CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
+
+			auto res = [&]() -> query::QResult<ChainState> {
+				if (this->current_state.isExpr()) {
+					auto expr = this->current_state.getExpr();
+					return processPSTExpr(
+						std::move(expr), current_element_value, next_element_value
+					);
+				} else if (this->current_state.isNamespaceLike()) {
+					auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
+					return processPSTExpr(
+						namespace_like_symbol, current_element_value, next_element_value
+					);
+				} else if (this->current_state.isType()) {
+					return processPSTExpr(
+						this->current_state.getType(), current_element_value, next_element_value
+					);
+				}
+				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
 			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
@@ -1255,6 +1428,13 @@ namespace compiler::helios::code {
 
 			if (this->current_state.isExpr())
 				result_sequence.push_back(this->current_state.getExpr());
+			// A type that ends the chain is used as a value, so it becomes a type literal.
+			if (this->current_state.isType()) {
+				auto type_in_chain = this->current_state.getType();
+				result_sequence.emplace_back(
+					makeBox<LiteralTypeExpr>(query_ctx, type_in_chain.origin, type_in_chain.type)
+				);
+			}
 			if (this->current_state.isNamespaceLike()) {
 				auto namespace_expr = makeBox<IdentifierExpr>(
 					query_ctx,

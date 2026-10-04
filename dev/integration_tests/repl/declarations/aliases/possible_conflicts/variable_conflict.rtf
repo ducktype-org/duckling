@@ -1,5 +1,5 @@
 class Test {var test = 21;}
 var t = Test();
-alias x = t.test;
+using t.test as x;
 x = 42;
 builtin_output_i64(t.test);

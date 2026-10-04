@@ -12,11 +12,12 @@
 
 #include <filesystem/file.hpp>
 
+#include <algorithm>
 #include <charconv>
 
 namespace clah {
-	namespace {
 
+	namespace utils {
 		std::vector<std::string> splitCommaSeparated(std::string_view value) {
 			std::vector<std::string> values;
 			usize                    pos = 0;
@@ -33,7 +34,9 @@ namespace clah {
 
 			return values;
 		}
+	}
 
+	namespace {
 		bool containsCategory(
 			const std::vector<std::string>& categories, std::string_view candidate
 		) {
@@ -135,15 +138,6 @@ namespace clah {
 		return { .value = filepath, .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult StringListParser::parse(std::string_view argument) const {
-		std::vector<std::string> values = splitCommaSeparated(argument);
-
-		return {
-			.value      = values,
-			.raw_source = std::string(argument),
-		};
-	}
-
 	std::string CategoryParser::debugPrintCategories(const std::vector<std::string>& categories) {
 		std::string result;
 		for (usize i = 0; i < categories.size(); ++i) {
@@ -175,33 +169,5 @@ namespace clah {
 		}
 
 		return { .value = std::string(argument), .raw_source = std::string(argument) };
-	}
-
-	ValueParsingResult CategoryListParser::parse(std::string_view argument) const {
-		if (categories.empty()) {
-			throw exceptions::ValueParsingException(
-				getTypeName().c_str(),
-				0,
-				argument.empty() ? 0 : argument.size() - 1,
-				argument,
-				"No categories configured for parser"
-			);
-		}
-
-		std::vector<std::string> values = splitCommaSeparated(argument);
-		for (const auto& value: values) {
-			if (!containsCategory(categories, value)) {
-				throw exceptions::ValueParsingException(
-					getTypeName().c_str(),
-					0,
-					argument.empty() ? 0 : argument.size() - 1,
-					argument,
-					"Invalid category in list: \"" + std::string(value)
-						+ "\". Allowed: " + CategoryParser::debugPrintCategories(categories)
-				);
-			}
-		}
-
-		return { .value = values, .raw_source = std::string(argument) };
 	}
 }

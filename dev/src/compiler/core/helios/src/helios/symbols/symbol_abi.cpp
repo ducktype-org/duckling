@@ -206,6 +206,12 @@ namespace compiler::helios {
 				}
 			}
 
+			// Like `@cffi_variadic_fixed_params`, `@c_symbol_name` only means something for the C
+			// ABI: on a default-ABI or `extern("DVM")` symbol it is ignored.
+			if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
+				result.symbol_name = link_name->name;
+			}
+
 			if (args.size() == 2) {  // `extern("C" "mylib")` case
 				UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
 				result.library = lib_str_lit;
@@ -230,16 +236,8 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto sym_ref = getSymRef(key);
-
-			// Builtin functions are implemented in C/C++ and use the C ABI.
-			variant_match(sym_ref->other) {
-				variant_case_novalue(defgen::BuiltinOperator) { return CAbi{}; }
-				variant_default {}
-			}
-
 			// @TODO: #895 fix it when we add script based package targets
-			if (name(key) == "main" && isGlobalFun(key)) {
+			if (isGlobalMain(key)) {
 				// main is not mangled
 				return CAbi{};
 			}

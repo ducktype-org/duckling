@@ -36,7 +36,7 @@ namespace compiler::backend_vm::internal {
 	) {
 		ProgramLoweringContext& pctx = fctx.program_context;
 		// We have to save the typename here.
-		const vm::code::TypeOfData& type = **pctx.lowerAndKeepTslType(constant.layout);
+		const vm::code::TypeOfData& type = *pctx.lowerAndKeepTslType(constant.layout);
 
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
@@ -61,8 +61,11 @@ namespace compiler::backend_vm::internal {
 		bool                         is_constant,
 		base::Optional<base::StrID>  lowered_global_name
 	) {
-		base::StrID global_name
-			= lowered_global_name.copyValueOr(pctx.getAnonymousGlobalName(base::StrID("ctv_value")));
+		// copyValueOrElse and not copyValueOr: getAnonymousGlobalName bumps a counter, so asking
+		// for a name we already have would burn one for nothing.
+		base::StrID global_name = lowered_global_name.copyValueOrElse([&pctx] {
+			return pctx.getAnonymousGlobalName(base::StrID("ctv_value"));
+		});
 
 		vm::code::GlobalData global_data{};
 		global_data.name        = global_name;
@@ -167,7 +170,8 @@ namespace compiler::backend_vm::internal {
 
 		// ref -> pointer to the static fixed-size table, then reinterpret as a
 		// dynamic-table pointer (the slice's `_0`).
-		const vm::code::TypeOfData& ptr_to_array_type = pctx.getOrInsertPointerType(array_type);
+		const vm::code::TypeOfData& ptr_to_array_type
+			= pctx.getOrInsertPointerType(typeName(array_type));
 		DVMPlace fst_ptr = ctor_ctx.pushTempLocal(ptr_to_array_type, "str_fst_ptr");
 		ctor_ctx.pushInstruction({ OpKind::ref, fst_ptr.asArgument(), array_global.asAnyArgument() }
 		);
@@ -218,10 +222,8 @@ namespace compiler::backend_vm::internal {
 			auto& field       = structure_type.fields[i];
 			auto& field_value = values[i];
 
-			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(
-				ctor_ctx.program_context.type_storage.dvm_types.at(field.type)
-			);
-			DVMPlace field_ptr = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
+			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(field.type);
+			DVMPlace field_ptr     = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
 			ctor_ctx.pushInstruction({ OpKind::structLea,
 			                           field_ptr,
 			                           destination,

@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::solver::gathering::fetch_types::{
@@ -97,10 +99,12 @@ impl PackageId {
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
+            debug!("doesn't satisfy versions");
             return Ok(false);
         }
         let source = dependency.source();
         if self.url() != source.url() || self.name() != dependency.name() {
+            debug!(other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
             return Ok(false);
         }
         self.origin()
@@ -116,6 +120,8 @@ impl PackageId {
                 format!("pinned dependency without a specified version, {dependency:#?}")
             })?;
             Ok(self.version() == *required_version)
+        } else if dependency.versions().is_empty() {
+            Ok(true)
         } else {
             Ok(dependency
                 .versions()
@@ -179,7 +185,7 @@ dependencies:
 "#,
         );
         let ctx = DuckContext::default();
-        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
@@ -223,7 +229,7 @@ dependencies:
 "#,
         );
         let ctx = DuckContext::default();
-        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()

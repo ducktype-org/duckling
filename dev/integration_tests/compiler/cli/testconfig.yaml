@@ -1,6 +1,29 @@
 # CLI tests
 
+# Every case gets a private scratch directory for its build artifacts,
+# so cases can run concurrently and never dirty the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+
+case_build: "$DIT_TMP_DIR/build"
+
+# Private copy of the shared warm std artifacts (see the root testconfig).
+# duckc rewrites the artifacts directory on exit, so concurrent cases must not
+# point at the shared one - same reason as in compiler/features.
+case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
+copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
+
 Run: "@{duckc_path} @{run_args}"
+
+# `<tool> <major>.<minor>[.<patch>...][-<prerelease>]`.
+version_regex: "[0-9]+(\\.[0-9]+)+(-[a-z]+)?"
+# The commit the binaries were built from. Every build regenerates the hash and the root PreNode
+# rebuilds duckc, VM and duck_ls first, so it is HEAD. Same command as GenerateCommitInfo.cmake.
+commit_hash: "$(git -C @{dev_dir} rev-parse --short=9 HEAD)"
+# The whole first line: `<tool> <version> (<commit hash> <commit date>)`.
+version_line_regex: "@{version_regex} \\(@{commit_hash} [0-9]+-[0-9]+-[0-9]+\\)\\n"
+# The `commit-hash:` row of `--version-verbose`.
+commit_hash_row_regex: "\\ncommit-hash: +@{commit_hash}\\n"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
@@ -30,3 +53,55 @@ Tests:
       bad-dev-logs:
         run_args: "--dev-logs \"\"  dummy "
         ExitCode: 1
+
+  compile-modules:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 3
+    Cases:
+      two-modules:
+        run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
+        ExitCode: 0
+
+  comp-time-output:
+    # Test compile time output to stderr
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    timeout_default: 5
+    Run: "@{expect_output} --err-regex '\\[comp-time\\] 3492'
+      -- @{duckc_path} compile_modules ./duck_modules/comp_time_output/comp_time_output.dk
+      -O 0 --no-incremental --dvm-backend -a @{case_build}
+      --custom-std-artifacts-path @{case_std_artifacts}"
+    Cases:
+      dvm-backend:
+        ExitCode: 0
+
+  cli-version:
+    # The shared rows are the Version module's job. What only the real binary can prove is that it
+    # names itself correctly, reports the commit it was built from and contributes its own extra rows.
+    Cases:
+      duckc-version:
+        Run: '@{expect_output} --out-regex "^duckc @{version_line_regex}" -- @{duckc_path} --version'
+
+      duckc-version-verbose:
+        Run: '@{expect_output} --out-regex "^duckc @{version_line_regex}"
+          --out-regex "@{commit_hash_row_regex}"
+          --out-regex "LLVM: +[0-9]+\."
+          --out-regex "JIT: +(enabled|disabled)"
+          -- @{duckc_path} --version-verbose'
+
+      vm-version:
+        Run: '@{expect_output} --out-regex "^DVM @{version_line_regex}" -- @{dvm_path} --version'
+
+      vm-version-verbose:
+        Run: '@{expect_output} --out-regex "^DVM @{version_line_regex}"
+          --out-regex "@{commit_hash_row_regex}"
+          --out-regex "dispatch: +[A-Za-z]"
+          -- @{dvm_path} --version-verbose'
+
+      duck-ls-version:
+        Run: '@{expect_output} --out-regex "^duck_ls @{version_line_regex}"
+          -- @{duck_ls_path} --version'
+
+      duck-ls-version-verbose:
+        Run: '@{expect_output} --out-regex "^duck_ls @{version_line_regex}"
+          --out-regex "@{commit_hash_row_regex}"
+          -- @{duck_ls_path} --version-verbose'

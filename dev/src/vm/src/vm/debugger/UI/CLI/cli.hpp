@@ -1,10 +1,17 @@
 #pragma once
 
+#include <clah/clah.hpp>
+#include <diagnostic/highlight_positions.hpp>
+
 #include <vm/debugger/debugger.hpp>
 
-#include <mutex>
+#include <sstream>
 
 namespace vm::debugger::cli {
+	namespace impl {
+		struct ImplementationSpecific;
+	}
+
 	/**
 	 * @class CLIDebugger
 	 * @brief Simple Command Line Interface Debugger
@@ -14,12 +21,13 @@ namespace vm::debugger::cli {
 	 */
 	class CLIDebugger {
 	public:
-		CLIDebugger();
 		CLIDebugger(const CLIDebugger&)            = delete;
 		CLIDebugger& operator=(const CLIDebugger&) = delete;
 		CLIDebugger(CLIDebugger&&)                 = delete;
 		CLIDebugger& operator=(CLIDebugger&&)      = delete;
-		~CLIDebugger()                             = default;
+
+		CLIDebugger();
+		~CLIDebugger();
 
 		// @TODO: #3020 Add support for multi-file debugging
 		std::expected<void, api::ApiError>                            load(const fs::File& file);
@@ -28,28 +36,37 @@ namespace vm::debugger::cli {
 		int  run();
 
 	private:
-		events::Listener<api::ProcStatus> status_change_listener;
-		events::Listener<std::string>     error_listener;
-		events::Listener<std::string>     output_listener;
-		Debugger                          debugger;
-		std::mutex                        output_mutex;
+		Debugger debugger;
 
 		base::Optional<fs::File>           selected_file;
 		std::expected<void, api::ApiError> load_result = {};
+
+		// --- Implementation specific data ---
+
+		std::unique_ptr<impl::ImplementationSpecific> spec;
+
+		// --- Implementation specific functions ---
+
+		void mainLoop(clah::Clah& clah);
+		void exitMainLoop();
+		void print(const printer::PrinterContentsSeq& content);
+
+		// --- Implementation independent print generalisation ---
 
 		void printCodePosition(const CodePosition& position);
 
 		template<typename... Args>
 		void print(const Args&... content) {
-			std::lock_guard lk(output_mutex);
-			((std::cout << content), ...);
+			std::stringstream sstr;
+			((sstr << content), ...);
+			print({ sstr.str() });
 		}
 
 		template<typename... Args>
 		void printNL(const Args&... content) {
-			std::lock_guard lk(output_mutex);
-			((std::cout << content), ...);
-			std::cout << "\n";
+			std::stringstream sstr;
+			((sstr << content), ...);
+			printNL({ sstr.str() });
 		}
 
 		template<typename... Args>
@@ -59,7 +76,6 @@ namespace vm::debugger::cli {
 			printError({ sstr.str() });
 		}
 
-		void print(const printer::PrinterContentsSeq& content);
 		void printNL(const printer::PrinterContentsSeq& content);
 		void printError(const printer::PrinterContentsSeq& content);
 	};

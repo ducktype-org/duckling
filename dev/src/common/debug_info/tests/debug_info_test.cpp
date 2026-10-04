@@ -96,7 +96,7 @@ private:
 		assertTrue(info.functions.size() == 1, "Expected 1 function");
 
 		const auto& func = info.functions.at("_Zfoo");
-		assertTrue(func.function_name.has_value(), "Function name should be present");
+		ASSERT_HAS_VALUE(func.function_name, "Function name should be present");
 		assertTrue(*func.function_name == "foo", "Function name incorrect");
 		assertTrue(func.parameter_indexes_to_metadata.size() == 2, "Expected 2 parameters");
 		assertTrue(func.instr_offsets_to_metadata.size() == 2, "Expected 2 instructions");
@@ -123,12 +123,12 @@ private:
 		const auto& [var_offset, var_meta] = func.instr_offsets_to_variable_init.front();
 		assertTrue(var_offset == 0, "Variable init offset incorrect");
 		assertTrue(var_meta.name == "local_x", "Variable name incorrect");
-		assertTrue(var_meta.position.has_value(), "Variable position should be present");
+		ASSERT_HAS_VALUE(var_meta.position, "Variable position should be present");
 
 		const auto& [var_offset2, var_meta2] = func.instr_offsets_to_variable_init.at(1);
 		assertTrue(var_offset2 == 8, "Second variable init offset incorrect");
 		assertTrue(var_meta2.name == "local_y", "Second variable name incorrect");
-		assertFalse(var_meta2.position.has_value(), "Second variable position should be absent");
+		ASSERT_NO_VALUE(var_meta2.position, "Second variable position should be absent");
 	}
 
 	void serializationRoundTripTest() {
@@ -144,7 +144,7 @@ private:
 		// Deserialize
 		std::istringstream iss(first_bytes);
 		auto               result = debug_info::loadFromStream(iss);
-		assertTrue(result.has_value(), "Deserialization of a valid stream should succeed");
+		ASSERT_HAS_VALUE(result, "Deserialization of a valid stream should succeed");
 
 		// Serialize again and compare - the same object has to produce the same bytes
 		std::ostringstream oss2;
@@ -171,21 +171,21 @@ private:
 			"Round-trip: wrong number of variable initializations"
 		);
 		const auto& round_trip_vars = result->functions.at("_Zfoo").instr_offsets_to_variable_init;
-		assertTrue(
-			round_trip_vars.at(0).second.position.has_value(),
+		ASSERT_HAS_VALUE(
+			round_trip_vars.at(0).second.position,
 			"Round-trip: first variable position should be present"
 		);
-		assertFalse(
-			round_trip_vars.at(1).second.position.has_value(),
+		ASSERT_NO_VALUE(
+			round_trip_vars.at(1).second.position,
 			"Round-trip: second variable position should be absent"
 		);
 		const auto& round_trip_params = result->functions.at("_Zfoo").parameter_indexes_to_metadata;
-		assertTrue(
-			round_trip_params.at(0).second.position.has_value(),
+		ASSERT_HAS_VALUE(
+			round_trip_params.at(0).second.position,
 			"Round-trip: first parameter position should be present"
 		);
-		assertFalse(
-			round_trip_params.at(1).second.position.has_value(),
+		ASSERT_NO_VALUE(
+			round_trip_params.at(1).second.position,
 			"Round-trip: second parameter position should be absent"
 		);
 	}
@@ -196,14 +196,14 @@ private:
 		{
 			std::istringstream iss("not debug info at all, just text");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Garbage bytes should fail to load");
+			ASSERT_NO_VALUE(result, "Garbage bytes should fail to load");
 		}
 
 		// Empty input
 		{
 			std::istringstream iss("");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Empty input should fail to load");
+			ASSERT_NO_VALUE(result, "Empty input should fail to load");
 		}
 
 		// A valid stream cut short
@@ -214,19 +214,19 @@ private:
 
 			std::istringstream iss(whole.substr(0, whole.size() / 2));
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "A truncated stream should fail to load");
+			ASSERT_NO_VALUE(result, "A truncated stream should fail to load");
 		}
 
 
 		{
 			std::vector<std::byte> raw;
 			const auto             wrote = ::ser::write(raw, makeTestDebugInfo());
-			assertTrue(wrote.has_value(), "The bare payload should still be writable");
+			ASSERT_HAS_VALUE(wrote, "The bare payload should still be writable");
 
 			std::istringstream iss(std::string(reinterpret_cast<const char*>(raw.data()), raw.size())
 			);
 			auto result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "A payload with no envelope should fail to load");
+			ASSERT_NO_VALUE(result, "A payload with no envelope should fail to load");
 		}
 
 		{
@@ -239,7 +239,7 @@ private:
 
 			std::istringstream iss(whole);
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "A foreign schema_hash should fail to load");
+			ASSERT_NO_VALUE(result, "A foreign schema_hash should fail to load");
 		}
 
 		// Entry order is the object's own, not a canonical one: what a stream holds is what
@@ -270,7 +270,7 @@ private:
 		                                whole.size() },
 			debug_info::DI_STREAM.user_magic
 		);
-		assertTrue(header.has_value(), "The header must read back");
+		ASSERT_HAS_VALUE(header, "The header must read back");
 		assertEqual(
 			u64{ 0x27'66'D3'6F'3B'C9'49'73 },
 			header->schema_hash,
@@ -332,9 +332,7 @@ private:
 
 		const auto& foo_var
 			= info.functions.at("_Zfoo").instr_offsets_to_variable_init.at(0).second;
-		assertTrue(
-			foo_var.position.has_value(), "Variable position should be present after resolve"
-		);
+		ASSERT_HAS_VALUE(foo_var.position, "Variable position should be present after resolve");
 		const auto& var_fp = std::get<FilePosition>(foo_var.position->line_col_position);
 		assertTrue(foo_var.name == "local_foo", "Variable name should be preserved");
 		assertTrue(var_fp.file_path == "resolved.duck", "Variable init: file_path incorrect");
@@ -344,7 +342,7 @@ private:
 		const auto& foo_param = info.functions.at("_Zfoo").parameter_indexes_to_metadata.at(0);
 		assertTrue(foo_param.first == 0, "Parameter index should be preserved");
 		assertTrue(foo_param.second.name == "arg_foo", "Parameter name should be preserved");
-		assertTrue(foo_param.second.position.has_value(), "Parameter position should be present");
+		ASSERT_HAS_VALUE(foo_param.second.position, "Parameter position should be present");
 		const auto& param_fp = std::get<FilePosition>(foo_param.second.position->line_col_position);
 		assertTrue(param_fp.file_path == "resolved.duck", "Parameter: file_path incorrect");
 		assertTrue(param_fp.start_line == 10, "Parameter: start_line incorrect");

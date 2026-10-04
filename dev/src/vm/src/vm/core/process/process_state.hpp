@@ -28,23 +28,23 @@
 #include <type_traits>
 #include <variant>
 
-namespace vm::process_sm {
-	using ThreadState = thread_sm::thread_state::ThreadState;
+namespace vm {
+	using ThreadState = thread_state::ThreadState;
 
 	namespace process_state {
-		struct NotStarted {};  ///< All VMThreads are in the `NotStarted` state.
+		struct NotStarted final {};  ///< All VMThreads are in the `NotStarted` state.
 
-		struct Running {};     ///< At least one VMThread is actively executing.
+		struct Running final {};     ///< At least one VMThread is actively executing.
 
-		struct Paused {};      ///< All active VMThreads are paused, none are running or sleeping.
+		struct Paused final {};  ///< All active VMThreads are paused, none are running or sleeping.
 
-		struct Sleeping {
+		struct Sleeping final {
 		};  ///< No VMThread is running - at least one is sleeping, none are running.
 
-		struct Stopping {};  ///< A stop has been requested and at least one VMThread has not yet
-		                     ///< reached a terminal state.
+		struct Stopping final {};  ///< A stop has been requested and at least one VMThread
+		                           ///< has not yet reached a terminal state.
 
-		struct Completed {
+		struct Completed final {
 			api::ExitValue exit_value;
 		};  ///< No VMThread is active any more and the main thread finished normally.
 
@@ -53,9 +53,9 @@ namespace vm::process_sm {
 		 * requested, or the main VMThread never finished (it was stopped, killed or never
 		 * started).
 		 */
-		struct Stopped {};
+		struct Stopped final {};
 
-		struct Panicked {
+		struct Panicked final {
 			std::string err;
 		};  ///< At least one VMThread panicked.
 
@@ -79,6 +79,12 @@ namespace vm::process_sm {
 		[[nodiscard]] inline bool canRespond(const ProcessState& state) {
 			return v_matches(state, NotStarted, Paused) || isTerminal(state);
 		}
+
+		/// True when `deinitAndValidate` is legal in the current state (the process is NotStarted
+		/// or Completed nicely). Panicked or Stopped states forbid the deinit.
+		[[nodiscard]] inline bool canDeinit(const ProcessState& state) {
+			return v_matches(state, NotStarted, Completed);
+		}
 	}
 
 	/**
@@ -86,11 +92,14 @@ namespace vm::process_sm {
 	 * they are handled per-thread, so they don't appear here.
 	 */
 	namespace process_event {
-		struct Run {};   ///< Start or re-run the process.
+		struct Run final {};   ///< Start or re-run the process.
 
-		struct Stop {};  ///< Request an orderly stop of all threads.
+		struct Stop final {};  ///< Request an orderly stop of all threads.
 
-		using ProcessEvent = std::variant<Run, Stop>;
+		struct DeinitAndValidate final {
+		};  ///< Deinitialize the process down and validate its memory state.
+
+		using ProcessEvent = std::variant<Run, Stop, DeinitAndValidate>;
 	}
 
 	/**
@@ -98,8 +107,8 @@ namespace vm::process_sm {
 	 *
 	 * This is the only state a VMProcess has - everything else is derived from it by `aggregate()`.
 	 */
-	struct ProcessStateAggregation {
-		struct ThreadEntry {
+	struct ProcessStateAggregation final {
+		struct ThreadEntry final {
 			ThreadState state;
 
 			/// Incremented on every state change of this thread. Enables to distinguish two
@@ -129,7 +138,7 @@ namespace vm::process_sm {
 			threads.insert_or_assign(
 				tid,
 				ThreadEntry{
-					.state                = thread_sm::thread_state::NotStarted{},
+					.state                = thread_state::NotStarted{},
 					.state_change_counter = 0,
 				}
 			);
@@ -142,7 +151,7 @@ namespace vm::process_sm {
 		void setThreadState(api::ThreadID tid, ThreadState state) {
 			// The first panic is the one the aggregate reports, so we save it here.
 			if (!first_panic_err.has_value())
-				v_if_matches(state, thread_sm::thread_state::Panicked, panicked) first_panic_err
+				v_if_matches(state, thread_state::Panicked, panicked) first_panic_err
 					= panicked->err;
 
 			const auto entry = threads.atMaybe(tid);
@@ -171,7 +180,7 @@ namespace vm::process_sm {
 		 */
 		[[nodiscard]] process_state::ProcessState aggregateState() const {
 			using namespace process_state;
-			namespace ts = thread_sm::thread_state;
+			namespace ts = thread_state;
 
 			// If any VMThread panicked - we panic as well, and report the first panic.
 			if (first_panic_err.has_value()) return Panicked{ *first_panic_err };
@@ -205,7 +214,7 @@ namespace vm::process_sm {
 				for (const auto& [tid, entry]: threads)
 					CORE_ASSERT(
 						ts::isTerminal(entry.state)
-							|| v_matches(entry.state, thread_sm::thread_state::NotStarted),
+							|| v_matches(entry.state, thread_state::NotStarted),
 						"Unhandled state: ",
 						threadStateName(entry.state)
 					);
@@ -238,19 +247,20 @@ namespace vm::process_sm {
 	}
 }
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::NotStarted, "NotStarted")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Running, "Running")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Sleeping, "Sleeping")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Paused, "Paused")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Stopping, "Stopping")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Completed, "Completed")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Stopped, "Stopped")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Panicked, "Panicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::NotStarted, "NotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Sleeping, "Sleeping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Paused, "Paused")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Stopping, "Stopping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Completed, "Completed")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Stopped, "Stopped")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Panicked, "Panicked")
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Run, "Run")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Stop, "Stop")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::Run, "Run")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::Stop, "Stop")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::DeinitAndValidate, "DeinitAndValidate")
 
-namespace vm::process_sm {
+namespace vm {
 	namespace process_state {
 		[[nodiscard]] inline std::string_view processStateName(const ProcessState& state) {
 			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());

@@ -23,35 +23,22 @@
 namespace compiler::helios::defgen {
 	using namespace code::shorthands;
 
-	bool isUserDefinedCopyConstructor(query::Context& ctx, const SymID sym) {
-		if (kind(sym) != SymbolKind::Constructor) return false;
-		const auto maybe_pst = maybeSymbolPst(sym);
-		CORE_ASSERT(maybe_pst.has_value(), "User defined copy constructor without a PST element");
-		const auto pst = maybe_pst.value();
-		return pst.unlock(ctx).dynamicCast<pst::CopyConstructor>().has_value();
-	}
-
-	base::Optional<SymID> userCopyConstructorOf(query::Context& ctx, const SymID class_sym) {
-		if (kind(class_sym) != SymbolKind::Class) return {};
-		const auto& class_data = ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow();
-		for (const SymID ctor: class_data.constructors)
-			if (isUserDefinedCopyConstructor(ctx, ctor)) return ctor;
-		return {};
-	}
-
-	SymID copyConstructorSymForType(query::Context& ctx, const tsh::AbstractType type) {
-		// First, try to get the user-defined constructor.
-		if (type.getKind() == tsh::Kind::Class) {
-			if (const auto user
-			    = userCopyConstructorOf(ctx, type.as<tsh::ClassAbstractType>().getSymbol()))
-				return user.value();
-		}
-
-		// Otherwise, we use the default one.
+	SymID generatedCopyConstructorSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name                  = base::StrID("__copy"),
 			.generated_symbol_data = Constructor{ .type = type, .kind = Constructor::Kind::Copy },
 		});
+	}
+
+	SymID copyConstructorSymForType(query::Context& ctx, const tsh::AbstractType type) {
+		// The interface holds the user-defined copy constructor when the type declares one.
+		if_opt_some(
+			type.getInterface(ctx)->getSpecialElement(tsh::MemberSpecialKind::CopyConstructor),
+			copy_constructor
+		) return copy_constructor->getSymbol();
+
+		// This is only used for tests.
+		return generatedCopyConstructorSymForType(ctx, type);
 	}
 
 	namespace {
@@ -143,6 +130,7 @@ namespace compiler::helios::defgen {
 
 				cases.emplace_back(Shorthand::matchCase(
 					i,
+					payload_type,
 					payload_sym,
 					makeBox<code::VariantConstructExpr>(
 						ctx, code::generatedOrigin(), std::move(payload_value), result_symbol_type, i

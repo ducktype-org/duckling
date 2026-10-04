@@ -15,17 +15,21 @@ namespace vm::exceptions {
 	};
 
 #define VM_RUNTIME_EXCEPTION(name, msg)                     \
-	struct name: public VMRuntimeException {                \
+	struct name final: public VMRuntimeException {          \
 		constexpr static std::string_view ERR_MSG = msg;    \
 		name(): VMRuntimeException(std::string(ERR_MSG)) {} \
 	}
 
 	VM_RUNTIME_EXCEPTION(VMPanicException, "Program panicked");
-	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Copying to/from null pointer");
 	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
 	VM_RUNTIME_EXCEPTION(VMVtableUnset, "Calling a virtual method with an unset vtable");
 	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");
+	VM_RUNTIME_EXCEPTION(VMDoubleFreeException, "Data was already freed");
+	VM_RUNTIME_EXCEPTION(
+		VMInvalidFreeException,
+		"Only whole heap allocations can be freed by allocator-returned pointer"
+	);
 	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "VM stack overflow");
 	VM_RUNTIME_EXCEPTION(VMResumedWithPausedStatusException, "Resumed with paused status");
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
@@ -40,7 +44,7 @@ namespace vm::exceptions {
 	);
 
 #define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \
-	struct name: public VMRuntimeException {                             \
+	struct name final: public VMRuntimeException {                       \
 		type                              value;                         \
 		constexpr static std::string_view ERR_MSG = msg;                 \
 		name(const type& value):                                         \

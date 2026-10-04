@@ -85,8 +85,11 @@ namespace compiler::helios {
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using SymbolSemantics
-			= std::variant<PstImplementedSemantics, BuiltinSemantics, GENERATED_SYMBOL_SEMANTICS_LIST>;
+		using SymbolSemantics = std::variant<
+			PstImplementedSemantics,
+			ClassMemberSemantics,
+			BuiltinSemantics,
+			GENERATED_SYMBOL_SEMANTICS_LIST>;
 
 		SymbolData(CommonSymbolData common, SymbolSemantics other);
 
@@ -100,6 +103,10 @@ namespace compiler::helios {
 
 		static SymbolData makePSTSymbolData(
 			CommonSymbolData common_data, PstImplementedSemantics pst_data
+		);
+
+		static SymbolData makeClassMemberSymbolData(
+			CommonSymbolData common_data, ClassMemberSemantics class_member_data
 		);
 
 		static SymbolData makeGeneratedSymbolData(
@@ -129,6 +136,13 @@ namespace compiler::helios {
 			if (auto ptr = std::get_if<T>(&other)) return CRef<T>{ ptr };
 			return std::nullopt;
 		}
+
+		/**
+		 * @brief Whether the symbol was created from a PST element written by the user,
+		 * that is a plain PST symbol or a class member.
+		 */
+		[[nodiscard]]
+		bool isPstImplemented() const;
 
 		[[nodiscard]]
 		base::Optional<pst::AccessLocked<pst::LangElement>> maybePstElement() const;

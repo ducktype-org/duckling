@@ -9,10 +9,6 @@ namespace pst::internal {
 		return base::makeBox<LangParserState>(std::move(token_stream), std::move(ctx), int_logger);
 	}
 
-	std::vector<ImportType> extractState(Box<LangParserState> state_ptr) {
-		return std::move(*state_ptr).extractState();
-	}
-
 	void finalizeParsing(Ref<LangParserState> state) { state->finalize(); }
 }
 

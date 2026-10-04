@@ -10,6 +10,7 @@
 
 #include <artifacts/artifacts.hpp>
 #include <logger/logger.hpp>
+#include <os_utils/executable_path.hpp>
 
 #include <algorithm>
 
@@ -20,7 +21,7 @@ namespace compiler::driver {
 #ifdef STD_FIXED_PATH
 			return { STD_FIXED_PATH };
 #else
-			return getExecutablePath().parentPath().parentPath().join(fs::FilePath("lib/core/std"));
+			return os_utils::getExecutablePath().parentPath().join(fs::FilePath("duck_lib/"));
 #endif
 		}
 	}
@@ -200,11 +201,11 @@ namespace compiler::driver {
 		}
 
 		std::vector<PackageCompilationTask> tasks;
-		for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
+		for (const auto& package: frontend::packages::standardLibraryPackages()) {
 			auto pkg = std::find_if(
 				global_state::getPackages().begin(),
 				global_state::getPackages().end(),
-				[&](const auto& pkg_info) { return pkg_info.getPackageID() == std_id; }
+				[&](const auto& pkg_info) { return pkg_info.getPackageID() == package.id; }
 			);
 			// If pkg is not loaded then we skip it.
 			if (pkg == global_state::getPackages().end()) continue;
@@ -212,16 +213,20 @@ namespace compiler::driver {
 			if (global_state::getBackendOptions()->llvm_backend.has_value())
 				tasks.emplace_back(
 					pkg->getRootModule().illegalAccess().getID(),
-					BuildTargetLLVMStaticLibrary{ .output_file_name
-				                                  = base::StrID(base::strConcat(std_id, ".a")),
-				                                  .archiving_options     = {},
-				                                  .custom_art_collection = art_collection }
+					BuildTargetLLVMStaticLibrary{
+						.output_file_name      = base::StrID(base::strConcat(package.id, ".a")),
+						.archiving_options     = {},
+						.custom_art_collection = art_collection,
+					}
 				);
+
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetDVMLibrary{ .output_file_name
-			                           = base::StrID(base::strConcat(std_id, ".dbc")),
-			                           .custom_art_collection = art_collection }
+				BuildTargetDVMLibrary{
+					.output_file_name = base::StrID(base::strConcat(package.id, ".dbc")),
+					.dvm_linking_options{ .shared_libraries = package.getSharedLibsAsStr() },
+					.custom_art_collection = art_collection,
+				}
 			);
 		}
 		return tasks;
@@ -281,8 +286,18 @@ namespace compiler::driver {
 		return getStdLibArtifacts(".dbc").artifacts;
 	}
 
-	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts() {
-		return getStdLibArtifacts(".di").artifacts;
+	std::vector<fs::FilePath> getStdLibDVMLinkingDependencies(
+		const options_types::StdLibOptions& standard_library_options
+	) {
+		if (!standard_library_options.stdActive()) return {};
+		CORE_ASSERT(
+			allStdlibArtifactsPresent(), "std DVM artifacts requested before they were compiled"
+		);
+
+		std::vector<fs::FilePath> dependencies;
+		for (const auto& art: getStdLibDVMArtifacts())
+			dependencies.push_back(art.file.getFilePath());
+		return dependencies;
 	}
 
 	bool allStdlibArtifactsPresent() {

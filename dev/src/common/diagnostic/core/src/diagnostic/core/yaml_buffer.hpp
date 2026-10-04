@@ -1,3 +1,5 @@
+#pragma once
+
 #include <streambuf>
 
 class string_view_streambuf: public std::streambuf {

@@ -1,0 +1,46 @@
+name: Setup Rust (macOS)
+description: >
+  Points the Rust build at what the mac already has, and gives sccache somewhere to write.
+  Nothing is installed here.
+
+inputs:
+  shared-dir:
+    description: >
+      Machine-local directory holding what outlives a job on the mac. sccache gets a subdirectory
+      of it PER ACCOUNT.
+    required: false
+    default: /Users/Shared/duckling-ci
+  sccache-size:
+    description: Disk budget for the sccache cache.
+    required: false
+    default: 1G
+
+runs:
+  using: composite
+  steps:
+    # Check if the machine has a per-account rustup. 
+    # If not, the mac is misconfigured and the job will fail.
+    - name: Check the per-account rustup
+      shell: bash
+      run: |
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        if [ ! -f "$HOME/.cargo/env" ] || [ ! -d "$HOME/.rustup/toolchains" ]; then
+          echo "::error::$(id -un) has no per-account rustup ($HOME/.cargo/env + $HOME/.rustup)."
+          exit 1
+        fi
+        # $GITHUB_PATH only applies to LATER steps, hence the explicit paths here.
+        "$HOME/.cargo/bin/cargo" --version
+        # A missing wrapper fails cargo with no useful message, so check it before it is set.
+        "$HOME/.cargo/bin/sccache" --version
+
+    # Outside the workspace so it survives the wipe at the start of every job. Nothing uploads it:
+    # on the mac the cache simply stays on the machine, and a weekly launchd job prunes it.
+    - name: Setup sccache environment
+      shell: bash
+      run: |
+        dir='${{ inputs.shared-dir }}/sccache-'"$(id -un)"
+        mkdir -p "$dir"
+        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        echo "SCCACHE_DIR=$dir" >> "$GITHUB_ENV"
+        echo "SCCACHE_CACHE_SIZE=${{ inputs.sccache-size }}" >> "$GITHUB_ENV"
+        echo "SCCACHE_SERVER_PORT=$((10000 + $(id -u)))" >> "$GITHUB_ENV"

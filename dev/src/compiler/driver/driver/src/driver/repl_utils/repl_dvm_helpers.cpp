@@ -12,6 +12,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <logger/logger.hpp>
@@ -21,6 +22,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <functional>
+#include <sstream>
 #include <variant>
 #include <vector>
 
@@ -56,15 +58,16 @@ namespace compiler::repl {
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
-		auto lir_data_qr
-			= driver::compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_unique_name);
+		auto lir_data_qr = driver::compileHOUTUnitToLIRModuleData(
+			ctx, hout_unit, module_unique_name, module_unique_name
+		);
 		if (lir_data_qr.hasFailed())
 			return std::unexpected("Failed to compile HOUTUnit to LIRModuleData");
 		auto lir_data = std::move(lir_data_qr.valueOrPanic());
 
 		if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
 			std::stringstream lir_unit_print;
-			lir_data.lir_unit.debugPrint(ctx, lir_unit_print);
+			lir_data.lir_unit.debugPrint(lir_unit_print, Ref{ &ctx });
 			CORE_DEV_LOG(REPL, "LIR unit:\n", lir_unit_print.str());
 		}
 
@@ -151,6 +154,12 @@ namespace compiler::repl {
 				lir_data_qr.valueOrPanic().lir_unit
 			));
 		}
+
+		// The REPL never goes through the DVM linker, which is the only other place declaring the
+		// shared libraries the standard library needs for its `ffi object` symbols, so they are
+		// declared straight on the preloaded batch.
+		for (const auto& package: frontend::packages::standardLibraryPackages())
+			base::appendToVector(preload_code.object_files, package.getSharedLibsAsStr());
 
 		return vm::api::loadCode(pid, preload_code).transform_error(vm::api::errorToString);
 	}

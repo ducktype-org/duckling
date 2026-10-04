@@ -18,8 +18,6 @@ namespace pst {
 		Box<LangParserState> makeState(
 			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia::Logger> int_logger
 		);
-		std::vector<ImportType> extractState(Box<LangParserState>);
-
 		void finalizeParsing(Ref<LangParserState>);
 	}
 
@@ -87,11 +85,6 @@ namespace pst {
 		AccessInternalAnonymous<Element> element;
 
 		/**
-		 * Import entries collected during parsing.
-		 */
-		std::vector<ImportType> imports;
-
-		/**
 		 * Contextual component path/hash of this PST for hierarchical naming.
 		 */
 		hashing::ComponentHash hash_ctx_info;
@@ -122,7 +115,6 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			internal::finalizeParsing(state_box.refMut());
-			imports = internal::extractState(std::move(state_box));
 
 			// Note: hash calculation should work even on errors in PST.
 			// We let it be calculated to don't worry about hash being unavailable during the
@@ -198,10 +190,6 @@ namespace pst {
 			  file(std::move(token_source)),
 			  element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
 			  hash_ctx_info(std::move(hash_ctx)) {
-			// @TODO: #3110 This does not clone imports.
-			// But also: maybe we should remove imports vector from PST,
-			// we don't use it in the end anyway.
-
 			calcElementPathHash();
 			calcHashes();
 			putInPSTHashHashMap();
@@ -335,11 +323,6 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<ImportType>& getImports() const {
-			return imports;
-		}
-
-		[[nodiscard]]
 		CRef<dia::Logger> getLogger() const {
 			return file->getIntLogger();
 		}
@@ -364,7 +347,6 @@ namespace pst {
 		PST(PST&& other) noexcept:
 			  file(std::move(other.file)),
 			  element(std::move(other.element)),
-			  imports(std::move(other.imports)),
 			  hash_ctx_info(std::move(other.hash_ctx_info)) {}
 
 		/**

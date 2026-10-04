@@ -6,39 +6,41 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from utilities import *
 
+# There is a space after `source:`.
+# If the checks fail it might be due to a subtle change in whitespaces added by yaml-edit.
 expected_manifest_1 = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   b:
-    source:
+    source: 
       name: a
       path: ../a
 """
 
 expected_manifest_21 = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   a:
-    source:
+    source: 
       path: ../a
   b:
-    source:
+    source: 
       name: a
       path: ../a
 """
 
 expected_manifest_22 = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   b:
-    source:
+    source: 
       name: a
       path: ../a
   a:
-    source:
+    source: 
       path: ../a
 """
 

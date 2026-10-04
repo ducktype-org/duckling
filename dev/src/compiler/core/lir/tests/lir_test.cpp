@@ -26,6 +26,8 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
+
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using namespace compiler::lir::test_utils;
@@ -51,6 +53,11 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
+		TESTER_ADD_TEST(cSymbolNameTest);
+		TESTER_ADD_TEST(debugPrintStandaloneElements);
+		TESTER_ADD_TEST(debugPrintElementsWithFunctionIDs);
+		TESTER_ADD_TEST(debugPrintFunctionWithAndWithoutContext);
+		TESTER_ADD_TEST(debugPrintAggregatesWithAndWithoutContext);
 	}
 
 protected:
@@ -98,7 +105,7 @@ private:
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
-			foo_lir->debugPrint(ctx, foo_str);
+			foo_lir->debugPrint(foo_str, Ref{ &ctx });
 		});
 	}
 
@@ -107,11 +114,18 @@ private:
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
-		// note: it might change where those branch operations are placed:
-		// if this happens, just see lir-output of tested module for lir block numbers
+		// The two `if`s are the only branches of the function. They are looked up by their
+		// terminator rather than by block index, because the number of blocks between them
+		// depends on how many edges the destructor pass had to split.
+		std::vector<CRef<compiler::lir::Instruction>> branches;
+		for (const auto& block: foo_lir->block_order)
+			if (block->terminator.operation == compiler::lir::Operation::Branch)
+				branches.emplace_back(&block->terminator);
 
-		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
-		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
+		ASSERT_EQUAL_PRINT(2, branches.size());
+
+		auto true_lir_value  = branches.at(0)->arguments.at(0);
+		auto false_lir_value = branches.at(1)->arguments.at(0);
 
 		auto true_lir_constant  = true_lir_value.get<compiler::lir::LIRConstant>().value;
 		auto false_lir_constant = false_lir_value.get<compiler::lir::LIRConstant>().value;
@@ -188,7 +202,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
 
-			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 			// The ctor writes the initial value through a pointer to the global, so it holds that
 			// pointer in a local.
 			ASSERT_EQUAL(g_ctor->local_list.size(), 1);
@@ -239,7 +253,7 @@ private:
 
 			// Test debug print:
 			std::stringstream foo_str;
-			foo_lir->debugPrint(ctx, foo_str);
+			foo_lir->debugPrint(foo_str, Ref{ &ctx });
 		});
 	}
 
@@ -258,7 +272,7 @@ private:
 				{ g_ctor, some_global_ctor, global_tuple_ctor },
 				base::StrID("_MODULE_CTOR_globals")
 			)
-				.debugPrint(ctx, foo_str);
+				.debugPrint(foo_str, Ref{ &ctx });
 		});
 	}
 
@@ -316,9 +330,10 @@ private:
 			lir_global.global.type == lir::LIRGlobalType::Constant,
 			"Expected FIB_10 to be a constant"
 		);
-		assertTrue(
-			std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
-			"Expected FIB_10 to have a CTV initial value"
+		ASSERT_MATCHES_MSG(
+			lir_global.data_initialization,
+			"Expected FIB_10 to have a CTV initial value",
+			ctv::CompileTimeValue
 		);
 		auto const_numeric = lir_global.getConstValue().get<numeric_value::NumericValue>();
 		auto const_value   = const_numeric->get<i64>();
@@ -420,12 +435,9 @@ private:
 					if (arg.projection_chain.empty()) {
 						found_simple_address_of = true;
 					} else if (arg.projection_chain.size() == 2) {
-						bool pattern_ok = std::holds_alternative<LIRPlace::DerefProjection>(
-											  arg.projection_chain[0].storage
-										  )
-						               && std::holds_alternative<LIRPlace::FieldProjection>(
-											  arg.projection_chain[1].storage
-									   );
+						bool pattern_ok
+							= v_matches(arg.projection_chain[0].storage, LIRPlace::DerefProjection)
+						   && v_matches(arg.projection_chain[1].storage, LIRPlace::FieldProjection);
 
 						if (pattern_ok) {
 							auto field = std::get<LIRPlace::FieldProjection>(
@@ -443,12 +455,11 @@ private:
 					if (out_place.projection_chain.size() == 5) {
 						const auto& chain = out_place.projection_chain;
 
-						bool pattern_ok
-							= std::holds_alternative<LIRPlace::DerefProjection>(chain[0].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage)
-						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[2].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[3].storage)
-						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[4].storage);
+						bool pattern_ok = v_matches(chain[0].storage, LIRPlace::DerefProjection)
+						               && v_matches(chain[1].storage, LIRPlace::FieldProjection)
+						               && v_matches(chain[2].storage, LIRPlace::DerefProjection)
+						               && v_matches(chain[3].storage, LIRPlace::FieldProjection)
+						               && v_matches(chain[4].storage, LIRPlace::DerefProjection);
 
 						if (pattern_ok) {
 							auto f_p = std::get<LIRPlace::FieldProjection>(chain[1].storage);
@@ -523,18 +534,15 @@ private:
 
 					// a[5] -> IndexProjection
 					if (name == "a" && out.projection_chain.size() == 1) {
-						if (std::holds_alternative<LIRPlace::IndexProjection>(
-								out.projection_chain[0].storage
-							))
+						if (v_matches(out.projection_chain[0].storage, LIRPlace::IndexProjection))
 							found_index_proj = true;
 					}
 
 					// b[1].y -> Index, Field
 					if (name == "b" && out.projection_chain.size() == 2) {
 						const auto& chain = out.projection_chain;
-						bool        pattern_ok
-							= std::holds_alternative<LIRPlace::IndexProjection>(chain[0].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage);
+						bool pattern_ok   = v_matches(chain[0].storage, LIRPlace::IndexProjection)
+						               && v_matches(chain[1].storage, LIRPlace::FieldProjection);
 
 						if (pattern_ok) {
 							auto field = std::get<LIRPlace::FieldProjection>(chain[1].storage);
@@ -716,6 +724,210 @@ private:
 					ctx.query<helios::QuerySymbolABI>(symbol)->hasFailed(),
 					base::strConcat("Expected the ABI query to fail for `", name, "`")
 				);
+		});
+	}
+
+	/**
+	 * @brief Tests `@c_symbol_name("<name>")` on `extern("C")` declarations.
+	 */
+	void cSymbolNameTest() {
+		auto module     = getLIROfModule(path("modules/c_symbol_name"));
+		auto caller_lir = module.lirFunc("caller");
+
+		using namespace compiler::lir;
+
+		std::vector<base::StrID> called;
+		for (const auto& block: caller_lir->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+
+				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
+				assertTrue(
+					std::holds_alternative<lir::LIRAbi::CAbi>(literal.abi.value),
+					"Expected the call to use the C ABI"
+				);
+				called.push_back(literal.mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(called.size(), 3);
+		ASSERT_EQUAL_PRINT(called.at(0), base::StrID("match"));
+		ASSERT_EQUAL_PRINT(called.at(1), base::StrID("in"));
+		ASSERT_EQUAL_PRINT(called.at(2), base::StrID("plain_c"));
+
+		// On a declaration that is not `extern("C")` the attribute is ignored.
+		std::vector<base::StrID> ignored_called;
+		for (const auto& block: module.lirFunc("ignored_caller")->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+				ignored_called.push_back(instr.arguments.at(0).get<FunctionLiteral>().mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(ignored_called.size(), 2);
+		assertTrue(
+			ignored_called.at(0).strView().starts_with("_Q"),
+			base::strConcat(
+				"Expected `notExternC` to be mangled, got `", ignored_called.at(0).str(), "`"
+			)
+		);
+		ASSERT_EQUAL_PRINT(ignored_called.at(1), base::StrID("dvmDecl"));
+	}
+
+	void debugPrintStandaloneElements() {
+		auto module  = getLIROfModule(path("modules/simple"));
+		auto foo_lir = module.lirFunc("foo");
+
+		lir::LIRPlace output{ foo_lir->local_list[0] };
+		lir::LIRPlace argument{ foo_lir->local_list[1] };
+
+		std::stringstream place_output;
+		output.debugPrint(place_output);
+		ASSERT_EQUAL(std::string("Local(?0)"), place_output.str());
+
+		std::stringstream value_output;
+		lir::LIRValue{ output }.debugPrint(value_output);
+		ASSERT_EQUAL(std::string("Local(?0)"), value_output.str());
+
+		lir::Instruction  instruction{ lir::Operation::Assign,
+                                      output,
+			                           { lir::LIRValue{ argument }, lir::LIRValue{ output } },
+			                           {} };
+		std::stringstream instruction_output;
+		instruction.debugPrint(instruction_output);
+		ASSERT_TRUE(instruction_output.str().find("Local(?0) :=") != std::string::npos);
+		ASSERT_TRUE(instruction_output.str().find("Assign") != std::string::npos);
+		ASSERT_TRUE(instruction_output.str().find("Local(?1), Local(?0)") != std::string::npos);
+
+		std::stringstream block_output;
+		lir::LIRValue{ foo_lir->block_order.at(0) }.debugPrint(block_output);
+		ASSERT_EQUAL(std::string("Block(?0)"), block_output.str());
+
+		std::stringstream function_output;
+		lir::LIRValue{ lir::FunctionLiteral::fromFunction(*foo_lir) }.debugPrint(function_output);
+		ASSERT_TRUE(function_output.str().find("Func(") == 0);
+		ASSERT_TRUE(
+			function_output.str().find(foo_lir->mangled_name.strView()) != std::string::npos
+		);
+
+		auto array_module = getLIROfModule(path("modules/static_arrays"));
+		auto array_func   = array_module.lirFunc("static_array_test");
+
+		base::Optional<lir::LIRPlace> indexed_place;
+		for (const auto block: array_func->block_order) {
+			for (const auto& array_instruction: block->instructions) {
+				for (const auto& array_argument: array_instruction.arguments) {
+					if (!array_argument.is<lir::LIRPlace>()) continue;
+					const auto& candidate = array_argument.get<lir::LIRPlace>();
+					for (const auto& projection: candidate.projection_chain)
+						if (v_matches(projection.storage, lir::LIRPlace::IndexProjection))
+							indexed_place.emplace(candidate);
+				}
+			}
+		}
+
+		ASSERT_HAS_VALUE(indexed_place);
+		std::stringstream indexed_output;
+		indexed_place->debugPrint(indexed_output);
+		ASSERT_TRUE(indexed_output.str().find('[') != std::string::npos);
+		ASSERT_TRUE(indexed_output.str().find(']') != std::string::npos);
+	}
+
+	void debugPrintElementsWithFunctionIDs() {
+		auto module  = getLIROfModule(path("modules/simple"));
+		auto foo_lir = module.lirFunc("foo");
+
+		// Standalone printing would assign Local(?0) to this place because it is the first
+		// encountered local. Function context preserves its actual index in local_list.
+		lir::LIRPlace place{ foo_lir->local_list[1] };
+
+		std::stringstream place_output;
+		place.debugPrint(place_output, foo_lir);
+		ASSERT_EQUAL(std::string("Local(1)"), place_output.str());
+
+		std::stringstream value_output;
+		lir::LIRValue{ place }.debugPrint(value_output, foo_lir);
+		ASSERT_EQUAL(std::string("Local(1)"), value_output.str());
+
+		lir::Instruction  instruction{ lir::Operation::Assign,
+                                      place,
+			                           { lir::LIRValue{ lir::LIRPlace{ foo_lir->local_list[0] } } },
+			                           {} };
+		std::stringstream instruction_output;
+		instruction.debugPrint(instruction_output, foo_lir);
+		const auto printed = instruction_output.str();
+
+		ASSERT_TRUE(printed.find("Local(1) :=") != std::string::npos);
+		ASSERT_TRUE(printed.find("Local(0)") != std::string::npos);
+	}
+
+	void debugPrintFunctionWithAndWithoutContext() {
+		auto module  = getLIROfModule(path("modules/simple"));
+		auto foo_lir = module.lirFunc("foo");
+
+		std::stringstream function_without_context_output;
+		foo_lir->debugPrint(function_without_context_output);
+		ASSERT_TRUE(
+			function_without_context_output.str().find(
+				foo_lir->local_list[0]->layout->toStringIdentification()
+			)
+			!= std::string::npos
+		);
+		withContextDo([&](query::Context& ctx) {
+			std::stringstream function_with_context_output;
+			foo_lir->debugPrint(function_with_context_output, Ref{ &ctx });
+			ASSERT_TRUE(
+				function_with_context_output.str().find(
+					foo_lir->local_list[0]->layout->toStringDefinition(ctx, true, 1)
+				)
+				!= std::string::npos
+			);
+		});
+	}
+
+	void debugPrintAggregatesWithAndWithoutContext() {
+		auto  module      = getLIROfModule(path("modules/globals"));
+		auto  global_data = module.lirGlobalData("g");
+		auto& global      = global_data.global;
+
+		std::stringstream global_without_context;
+		global.debugPrint(global_without_context);
+		ASSERT_TRUE(
+			global_without_context.str().find(global.layout->toStringIdentification())
+			!= std::string::npos
+		);
+
+		std::stringstream global_data_without_context;
+		global_data.debugPrint(global_data_without_context);
+		ASSERT_TRUE(
+			global_data_without_context.str().find(global.layout->toStringIdentification())
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			global_data_without_context.str().find("Data Initialization:") != std::string::npos
+		);
+
+		std::stringstream unit_without_context;
+		module.lir_unit.debugPrint(unit_without_context);
+		ASSERT_TRUE(unit_without_context.str().find("LIRUnit:") != std::string::npos);
+		ASSERT_TRUE(unit_without_context.str().find("Globals:") != std::string::npos);
+		ASSERT_TRUE(unit_without_context.str().find("Functions:") != std::string::npos);
+		ASSERT_TRUE(
+			unit_without_context.str().find(global.layout->toStringIdentification())
+			!= std::string::npos
+		);
+		withContextDo([&](query::Context& ctx) {
+			const auto definition = global.layout->toStringDefinition(ctx);
+
+			std::stringstream global_with_context;
+			global.debugPrint(global_with_context, Ref{ &ctx });
+			ASSERT_TRUE(global_with_context.str().find(definition) != std::string::npos);
+
+			std::stringstream global_data_with_context;
+			global_data.debugPrint(global_data_with_context, Ref{ &ctx });
+			ASSERT_TRUE(global_data_with_context.str().find(definition) != std::string::npos);
+
+			std::stringstream unit_with_context;
+			module.lir_unit.debugPrint(unit_with_context, Ref{ &ctx });
+			ASSERT_TRUE(unit_with_context.str().find(definition) != std::string::npos);
 		});
 	}
 };

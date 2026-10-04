@@ -1,13 +1,12 @@
 #include "file_path.hpp"
 
-#include <filesystem_private/vfs.hpp>
-
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
-namespace {
-	Ref<fs::VFS> vfs = fs::VFS::getInstance();
+#include <filepath_utils/file_uri.hpp>
+#include <filesystem/vfs.hpp>
 
+namespace {
 	/**
 	 * @brief Checks whether `path` lives inside the system's temporary directory.
 	 *
@@ -39,6 +38,11 @@ namespace {
 }
 
 namespace fs {
+	base::Optional<base::Ref<VFS>> FilePath::defaultVfsFor(PathType type) {
+		if (type == PathType::Virtual) return VFS::getInstance();
+		return {};
+	}
+
 	PathType FilePath::determinePathType(const std::filesystem::path& path) {
 		if (VFS::isVirtualPath(path))
 			return PathType::Virtual;
@@ -65,12 +69,12 @@ namespace fs {
 
 	FilePath FilePath::join(const FilePath& other) const {
 		CORE_ASSERT(other.isRelative(), "Cannot join absolute path: " + other.path.string());
-		return path / other.path;
+		return { path / other.path, type, vfs };
 	}
 
 	FilePath FilePath::operator/(const FilePath& other) const { return join(other); }
 
-	FilePath FilePath::toVirtualPath() const {
+	FilePath FilePath::toVirtualPath(base::Ref<VFS> target) const {
 		if (type == PathType::Virtual) CORE_PANIC("Path is already virtual: " + path.string());
 		if (type == PathType::Relative)
 			CORE_PANIC(
@@ -80,17 +84,17 @@ namespace fs {
 		if (type != PathType::Physical)
 			CORE_PANIC("Can only convert physical paths to virtual: " + path.string());
 
-		auto root     = vfs->getRootPath();
+		auto root     = target->getRootPath();
 		auto abs_path = std::filesystem::absolute(path);
 		// Manually concatenate strings since operator/ ignores left side for absolute paths
-		return root.generic_string() + abs_path.generic_string();
+		return { root.generic_string() + abs_path.generic_string(), PathType::Virtual, target };
 	}
 
 	FilePath FilePath::toPhysicalPath() const {
 		if (type != PathType::Virtual)
 			CORE_PANIC("Can only convert virtual paths to physical: " + path.string());
 
-		auto root     = vfs->getRootPath();
+		auto root     = getVfs().value()->getRootPath();
 		auto path_str = path.generic_string();
 		auto root_str = root.generic_string();
 
@@ -116,21 +120,24 @@ namespace fs {
 		return std::filesystem::absolute(path);
 	}
 
+	FilePath FilePath::lexicallyNormal() const { return { path.lexically_normal(), type, vfs }; }
+
 	bool FilePath::isAbsolute() const noexcept { return type != PathType::Relative; }
 
 	bool FilePath::exists() const {
 		if (type == PathType::Virtual)
-			return vfs->exists(path);
+			return vfs.value()->exists(path);
 		else
 			return std::filesystem::exists(path);
 	}
 
+	bool FilePath::isRegularFile() const {
+		if (type == PathType::Virtual) return vfs.value()->isFile(path);
+		return std::filesystem::is_regular_file(path);
+	}
+
 	std::string FilePath::uri() const {
-		std::string p = path.generic_string();
-#ifdef _WIN32
-		if (!p.empty() && p[1] == ':') return "file:///" + p;
-#endif
-		return "file://" + p;
+		return filepath_utils::formatFileUri(path.generic_string());
 	}
 
 	FilePath FilePath::getDefaultTempDirectoryPath() {
@@ -141,9 +148,11 @@ namespace fs {
 		}();
 		return temp_directory;
 	}
+}
 
-	FilePath FilePath::getDefaultVirtualDirectoryPath() {
-		static FilePath virtual_directory_path(vfs->getRootPath());
-		return virtual_directory_path;
-	}
+usize std::hash<fs::FilePath>::operator()(const fs::FilePath& key) const {
+	usize hash = std::filesystem::hash_value(key.getPath());
+	if (const auto* handle = key.vfsHandle())
+		hash ^= std::hash<const void*>{}(handle) + 0x9e'37'79'b9 + (hash << 6) + (hash >> 2);
+	return hash;
 }

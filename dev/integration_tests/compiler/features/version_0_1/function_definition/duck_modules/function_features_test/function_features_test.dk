@@ -1,0 +1,65 @@
+# Test advanced function features
+# Focus: static variables, default parameters, return type inference
+
+# Test function with default parameter
+fun greet(times: i64 = 1) -> i64 = times * 10;
+
+fun compute(a: i64, b: i64 = 5, c: i64 = 10) -> i64 = a + b + c;
+
+# Test function with static variable (per docs: shared across invocations)
+fun counter() -> i64 = {
+    global count: i64 = 0;
+    count = count + 1;
+    return count;
+}
+
+fun accumulator(val: i64) -> i64 = {
+    global total: i64 = 0;
+    total = total + val;
+    return total;
+}
+
+# Test function with return type inference (no explicit return type)
+fun inferDouble(x: i64) = {
+    return x * 2;
+}
+
+fun inferAdd(a: i64, b: i64) = a + b;
+
+fun inferBool(x: i64) = x > 0;
+
+fun main() -> i64 = {
+    # Test default parameter - using all defaults
+    builtin_output_i64(greet());            # 10 (1 * 10)
+
+    # Test default parameter - overriding default
+    builtin_output_i64(greet(3));           # 30 (3 * 10)
+
+    # Test multiple default parameters
+    builtin_output_i64(compute(1));         # 1 + 5 + 10 = 16
+    builtin_output_i64(compute(1, 2));      # 1 + 2 + 10 = 13
+    builtin_output_i64(compute(1, 2, 3));   # 1 + 2 + 3 = 6
+
+    # Test static variable - should increment across calls
+    builtin_output_i64(counter());          # 1
+    builtin_output_i64(counter());          # 2
+    builtin_output_i64(counter());          # 3
+
+    # Test static accumulator
+    builtin_output_i64(accumulator(10));    # 10
+    builtin_output_i64(accumulator(5));     # 15
+    builtin_output_i64(accumulator(25));    # 40
+
+    # Test inferred return types
+    builtin_output_i64(inferDouble(25));    # 50
+    builtin_output_i64(inferAdd(7, 8));     # 15
+
+    if (inferBool(5)) {
+        builtin_output_i64(1);              # 1
+    }
+    if (not inferBool(-5)) {
+        builtin_output_i64(2);              # 2
+    }
+
+    return 0;
+}

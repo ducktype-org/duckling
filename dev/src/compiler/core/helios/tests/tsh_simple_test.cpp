@@ -595,6 +595,10 @@ private:
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
+		const auto var_boxed = query::entryPoint<QueryVariantType>({
+			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
+		});
+
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
@@ -614,6 +618,15 @@ private:
 			assertTrue(
 				var_st.isTriviallyCopyable(ctx),
 				"Variant of Ints should be trivially copyable (if all components are)."
+			);
+
+			assertFalse(
+				var_boxed.isTriviallyDestructible(ctx),
+				"Variant with a boxed alternative should NOT be trivially destructible."
+			);
+			assertFalse(
+				st(var_boxed).isTriviallyCopyable(ctx),
+				"Variant with a boxed alternative should NOT be trivially copyable."
 			);
 		});
 	}
@@ -930,8 +943,12 @@ private:
 
 		const auto void_type = getVoidType();
 		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
-			"Void should not be coercible to anything."
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
+			"Void has no values, so it should be coercible to anything."
+		);
+		assertTrue(
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, void_type }),
+			"Nothing should be coercible to Void."
 		);
 
 		const auto i2_const

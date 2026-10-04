@@ -13,6 +13,7 @@
 #include <string_id/string_id.hpp>
 
 #include <span>
+#include <sstream>
 #include <type_traits>
 #include <vector>
 

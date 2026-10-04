@@ -43,7 +43,7 @@ namespace vm {
 	constexpr u64 STACK_LENGTH = ThreadStack::STACK_LENGTH;
 
 	/**
-	 * @brief This structure holds pointers to `frame_stack`, `local_stack`, `block_ref_stack`
+	 * @brief This structure holds pointers to `frame_stack`, `local_stack`, `slot_stack`
 	 * and global buffer vectors for fast access during runtime.
 	 *
 	 * Note that these pointers are non-owning and just for easier access (less dereferencing)
@@ -55,30 +55,28 @@ namespace vm {
 	 * own chunk. It also behaves like a stack, but can be moved forward by many bytes, so
 	 * `local_stack_top` is kept to remember where the top of the stack currently is.
 	 */
-	struct RuntimeData {
-		Frame* frame_stack_base;       /// Pointer to the first frame from `frame_stack` vector.
-		Frame* frame_stack_end;        /// Pointer to the first value not allocated.
-		Frame* frame_stack_current;    /// Pointer to the current frame - used only when debugging.
+	struct RuntimeData final {
+		Frame* frame_stack_base;     /// Pointer to the first frame from `frame_stack` vector.
+		Frame* frame_stack_end;      /// Pointer to the first value not allocated.
+		Frame* frame_stack_current;  /// Pointer to the current frame - used only when debugging.
 
-		std::byte* local_stack_base;   /// Pointer to the start of `local_stack_reserved`.
-		std::byte* local_stack_end;    /// Pointer to the first value not allocated.
+		byte* local_stack_base;      /// Pointer to the start of `local_stack_reserved`.
+		byte* local_stack_end;       /// Pointer to the first value not allocated.
 
-		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
-		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
+		LocalSlot* slot_stack_base;  /// Pointer to the start of the local variable slot stack.
+		LocalSlot* slot_stack_end;   /// Pointer to the first value not allocated.
 
-		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
+		byte*   global_data_buffer_base;       /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
-		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointers global_buffer_pointers):
+		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointersByte global_buffer_pointers):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()),
-			  block_ref_stack_base(stack->getBlockRefStack()->data()),
-			  block_ref_stack_end(
-				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
-			  ),
+			  slot_stack_base(stack->getSlotStack()->data()),
+			  slot_stack_end(stack->getSlotStack()->data() + stack->getSlotStack()->size()),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
 			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
 	};
@@ -129,17 +127,30 @@ namespace vm {
 		 */
 		std::string thread_ctx;
 
-#ifdef ENABLE_JIT
-		jit::JitData jit_data;
-#endif
-
 		/**
 		 * @brief RAII object guaranteeing the release of the GIL lock.
 		 */
-		struct ScopedGilGuard {
+		struct ScopedGilGuard final {
 			SafeVMThread& thread;
-			ScopedGilGuard(SafeVMThread& t);
+			explicit ScopedGilGuard(SafeVMThread& t);
+			ScopedGilGuard(const ScopedGilGuard&)            = delete;
+			ScopedGilGuard& operator=(const ScopedGilGuard&) = delete;
 			~ScopedGilGuard();
+		};
+
+		/**
+		 * @brief RAII guard for a blocking wait (IO, mutex, a condition variable):
+		 * reports the thread as sleeping and releases the GIL on construction, then reacquires the
+		 * GIL and reports the thread as running again when the scope ends.
+		 *
+		 * @note The thread must be `Running` when the guard is created.
+		 */
+		struct ScopedBlockingWait final {
+			SafeVMThread& thread;
+			explicit ScopedBlockingWait(SafeVMThread& t);
+			ScopedBlockingWait(const ScopedBlockingWait&)            = delete;
+			ScopedBlockingWait& operator=(const ScopedBlockingWait&) = delete;
+			~ScopedBlockingWait();
 		};
 
 		/**
@@ -174,10 +185,16 @@ namespace vm {
 
 		void execGlobalDestructors() override;
 
-		void handleKillProcessException(const KillProcessException& e);
+		/**
+		 * @brief Opcode of the instruction the thread would execute next. `breakpoint`
+		 * gets resolved to the instruction it replaced.
+		 */
+		[[nodiscard]] low::MicroOpcode getCurrentOpcode() const;
 
 	protected:
 		void executeOneStep() override;
+
+		[[nodiscard]] bool isAtExecutionEnd() const override;
 
 	public:
 		SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process);
@@ -204,6 +221,16 @@ namespace vm {
 		 *   -> otherwise does nothing.
 		 */
 		void stepGil();
+
+		/**
+		 * @brief Releases the GIL if it's taken.
+		 */
+		void releaseGilIfHeld() override;
+
+		/**
+		 * @brief Reacquires the GIL if it's not taken already.
+		 */
+		void acquireGilIfNotHeld() override;
 
 		/**
 		 * @brief Releases GIL.
@@ -241,7 +268,7 @@ namespace vm {
 		 * For now only the VMProcess calls this function after the global data memory is
 		 * reallocated and the pointers change.
 		 */
-		void updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers);
+		void updateGlobalDataBufferPointers(GlobalBufferPointersByte global_buffer_pointers);
 	};
 
 	/**
@@ -251,6 +278,6 @@ namespace vm {
 	 * @param instr - the first instruction that to be executed
 	 */
 	void runInterpreter(
-		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
+		const MicroInstruction* instr, byte*& local_stack, Frame*& frame, SafeVMThread& thread
 	);
 }

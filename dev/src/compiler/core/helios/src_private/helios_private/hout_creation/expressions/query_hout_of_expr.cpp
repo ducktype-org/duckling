@@ -2,7 +2,6 @@
 
 #include "coercions/coercions.hpp"
 #include "coercions/errors.hpp"
-#include "function_calls/call_processing.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -22,9 +21,9 @@
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/desugaring/match.hpp>
-#include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
+#include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -32,6 +31,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 
@@ -127,16 +127,6 @@ namespace compiler::helios::code {
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
-		}
-
-		void filterFunctionsByOperatoriness(
-			query::Context&                              ctx,
-			std::vector<SymID>&                          function_syms,
-			const HOUTFunctionDeclaration::Operatoriness opiness
-		) {
-			base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
-				return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
-			});
 		}
 
 		/**
@@ -303,106 +293,6 @@ namespace compiler::helios::code {
 				node = std::move(result_expr);
 			}
 
-			static bool isNumericType(const tsh::AbstractType type) {
-				return type.getKind() == tsh::Kind::Integral or type.getKind() == tsh::Kind::Float;
-			}
-
-			static bool isNumericOperator(const lexer::Operator op) {
-				// Only operators which allow their arguments to undergo numeric promotion.
-				static const std::set<std::string> numeric_ops
-					= { "+", "-", "*", "/", "%", "**", "<", "<=", ">", ">=", "==", "!=" };
-				return numeric_ops.contains(op.str());
-			}
-
-			/**
-			 * @brief Finds the appropriate unary operator to call and constructs the corresponding
-			 * HOUT expression. Consumes the provided argument expression.
-			 * Some cases, such as the ampersand and asterisk for references are not handled here.
-			 * Perhaps they will be moved here later.
-			 * @param op The operator
-			 * @param inner The precomputed argument
-			 * @param scope The scope in which the operator call happens
-			 * @param operatoriness Whether the operator is prefix or suffix
-			 */
-			[[nodiscard]]
-			Box<Expr> resolveUnaryOperator(
-				const pst::Access<pst::OperatorWrapper>      op,
-				Box<Expr>                                    inner,
-				const ScopeID                                scope,
-				const HOUTFunctionDeclaration::Operatoriness operatoriness
-			) const {
-				CORE_ASSERT(
-					operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
-						|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
-					"resolveUnaryOperator should only filter for prefix or suffix operators"
-				);
-				// Unary operator resolution happens in two steps:
-				// 1. If the argument is numeric (integral or float) and the operator is a built-in
-				//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
-				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
-				//    a. The calling scope (a user can define a standalone function named `+`).
-				//    b. The type of the only argument (for an operator method).
-				// Next, we perform typical overload resolution.
-
-				// Step 1. — special path for numeric promotions
-				if (isNumericType(inner->expression_type.getType())
-				    && isNumericOperator(op->unwrap())) {
-					auto numeric_builtin_opt
-						= findNumericUnaryBuiltin(ctx, op->unwrap(), inner.ref());
-					auto new_origin
-						= operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
-					        ? elementOriginOrdered(pstOrigin(op), inner->origin)
-					        : elementOriginOrdered(inner->origin, pstOrigin(op));
-
-					if_opt_some(numeric_builtin_opt, numeric_builtin) {
-						auto [operation, coercion] = numeric_builtin;
-						auto coerced_inner         = coercion.coerce(ctx, std::move(inner));
-						return makeBox<UnaryOperatorExpr>(
-							ctx, new_origin, operation, std::move(coerced_inner)
-						);
-					}
-				}
-
-				// Step 2. — Regular lookup and overload resolution
-				const auto lookup_result
-					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
-				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
-				for (const auto [builtin_operator_sym, _]:
-				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
-					if (name(builtin_operator_sym) == op->unwrap().value)
-						all_candidates.push_back(builtin_operator_sym);
-				}
-				filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
-
-				// Step 2b. — If nothing was found in the calling scope or among builtins, fall
-				// back to an operator method declared on the operand's own type.
-				// @TODO: #3133 This should be unified.
-				if (all_candidates.empty()) {
-					const auto inner_type = inner->expression_type.getType();
-					const auto method_lookup_result
-						= HInterface::ofTypeInstance(inner_type).lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
-					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
-					if (!method_candidates.empty()) {
-						auto self_expr = Shorthand{ ctx }.prepToPassSelf(std::move(inner));
-						return processUnaryOperatorCall(
-								   ctx,
-								   method_candidates,
-								   std::move(self_expr),
-								   pstOrigin(op),
-								   operatoriness
-						)
-						    .valueOrThrow();
-					}
-				}
-
-				return processUnaryOperatorCall(
-						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
-				)
-				    .valueOrThrow();
-			}
-
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				const auto op    = stmt->getOperator().unlock(ctx);
 				auto       inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
@@ -411,7 +301,9 @@ namespace compiler::helios::code {
 
 				// After the tricky cases have been handled, execute standard procedures.
 				node = resolveUnaryOperator(
-					op,
+					ctx,
+					op->unwrap(),
+					pstOrigin(op),
 					std::move(inner),
 					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
 					HOUTFunctionDeclaration::Operatoriness::Suffix
@@ -473,9 +365,10 @@ namespace compiler::helios::code {
 
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
-					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+					if (not(tsh::isPointerKind(inner_type.getType().getKind())
+					        or inner_type.getRefKind() != tsh::ReferenceKind::Direct)) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+							"Tried to dereference an invalid type", stmt->getStablePosition()
 						));
 						return;
 					}
@@ -508,8 +401,8 @@ namespace compiler::helios::code {
 						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
 					);
 
-					if (value.has_value())
-						node = makeBoxAllocCall(ctx, origin, std::move(value.value()));
+					if (value.hasValue())
+						node = makeBoxAllocCall(ctx, origin, std::move(value.valueOrPanic()));
 					return;
 				}
 
@@ -591,99 +484,13 @@ namespace compiler::helios::code {
 
 				// After the tricky cases have been handled, execute standard procedures.
 				node = resolveUnaryOperator(
-					op,
+					ctx,
+					op->unwrap(),
+					pstOrigin(op),
 					std::move(inner),
 					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
 					HOUTFunctionDeclaration::Operatoriness::Prefix
 				);
-			}
-
-			/**
-			 * @brief Finds the appropriate binary operator to call and constructs the corresponding
-			 * HOUT expression. Consumes the provided expressions of the arguments.
-			 * Currently used for all operators other than `As` (type cast) and `Pipe` (variant type
-			 * construction). Perhaps they will be moved here later.
-			 * @param op The operator
-			 * @param lhs The precomputed left-hand side argument
-			 * @param rhs The precomputed right-hand side argument
-			 * @param scope The scope in which the operator call happens
-			 */
-			[[nodiscard]]
-			Box<Expr> resolveBinaryOperator(
-				pst::Access<pst::OperatorWrapper> op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
-			) const {
-				const auto lhs_type = lhs->expression_type.getSymbolType();
-				const auto rhs_type = rhs->expression_type.getSymbolType();
-				Shorthand  s{ ctx };
-
-				// Binary operator resolution now happens in two steps:
-				// 1. If the arguments are both numeric (integral or float) and the operator is a
-				// built-in arithmetic operator, we look for promotions from left to right and from
-				// right to left, and then use the built-in operator on the promoted-to type.
-				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
-				//    a. The calling scope (a user can define a standalone function named `+`).
-				//    b. The type of the left-hand side argument (for an operator method).
-				// Next, we perform typical overload resolution.
-
-				// Step 1. — special path for numeric promotions
-				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
-				    && isNumericOperator(op->unwrap())) {
-					auto numeric_builtin_opt
-						= findNumericBinaryBuiltin(ctx, op->unwrap(), lhs.ref(), rhs.ref());
-					auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
-
-					if_opt_some(numeric_builtin_opt, numeric_builtin) {
-						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
-						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-						return makeBox<BinaryOperatorExpr>(
-							ctx, new_origin, operation, std::move(coerced_lhs), std::move(coerced_rhs)
-						);
-					}
-				}
-
-				// Step 2. — Regular lookup and overload resolution
-				const auto lookup_result
-					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
-				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
-				for (const auto [builtin_operator_sym, _]:
-				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
-					if (name(builtin_operator_sym) == op->unwrap().value)
-						all_candidates.push_back(builtin_operator_sym);
-				}
-				filterFunctionsByOperatoriness(
-					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
-				);
-
-				// Step 2b. — if nothing was found in the calling scope or among builtins, fall
-				// back to an operator method declared on the left-hand side's own type.
-				// @TODO: #3133 This should be unified.
-				if (all_candidates.empty()) {
-					const auto lhs_abstract_type    = lhs_type.getType();
-					const auto method_lookup_result = HInterface::ofTypeInstance(lhs_abstract_type)
-					                                      .lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
-					filterFunctionsByOperatoriness(
-						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
-					);
-					if (!method_candidates.empty()) {
-						auto self_expr = s.prepToPassSelf(std::move(lhs));
-						return processBinaryOperatorCall(
-								   ctx,
-								   method_candidates,
-								   std::move(self_expr),
-								   std::move(rhs),
-								   pstOrigin(op)
-						)
-						    .valueOrThrow();
-					}
-				}
-
-				return processBinaryOperatorCall(
-						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
-				)
-				    .valueOrThrow();
 			}
 
 			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
@@ -704,13 +511,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
+				if (lhs_res.hasFailed()) return;
+				auto lhs = std::move(lhs_res).valueOrThrow();
+
 				// Handle variant type construction
-				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
+				if (op->unwrap() == lang_def::NamedOperator::Pipe
+				    && lhs->expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					// Expect all subexpressions in variant constructor to be Meta types or try to
-					// lift them if they aren't.
 					const auto meta_type = tsh::SymbolType<>{
 						tsh::getMetaType(),
 						tsh::ReferenceKind::Direct,
@@ -721,10 +531,7 @@ namespace compiler::helios::code {
 						auto sub_expr_hout = subExprFromPSTWithType(
 							ctx, sub_expr, meta_type, op->getStablePosition()
 						);
-						if (sub_expr_hout.hasFailed()) {
-							// Error has occurred.
-							return;
-						}
+						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
 					}
 					node = makeBox<VariantTypeConstructorExpr>(
@@ -733,15 +540,17 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// Default case (typical operators, built-in or user-defined)
-				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
 				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand());
-
-				auto lhs = std::move(lhs_res).valueOrThrow();
+				if (rhs_res.hasFailed()) return;
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
 				node = resolveBinaryOperator(
-					op, std::move(lhs), std::move(rhs), ctx.query<QueryPrimaryCodeScopeFor>({ stmt })
+					ctx,
+					op->unwrap(),
+					pstOrigin(op),
+					std::move(lhs),
+					std::move(rhs),
+					ctx.query<QueryPrimaryCodeScopeFor>({ stmt })
 				);
 			}
 
@@ -785,6 +594,10 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::Type:
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
+					break;
+
+				case pst::Keyword::Void:
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getVoidType());
 					break;
 
 				case pst::Keyword::i128:
@@ -952,9 +765,9 @@ namespace compiler::helios::code {
 					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
 					auto next_lhs = rhs->nextUse();
 
-					comparisons.emplace_back(
-						resolveBinaryOperator(op, std::move(lhs), std::move(rhs), scope)
-					);
+					comparisons.emplace_back(resolveBinaryOperator(
+						ctx, op->unwrap(), pstOrigin(op), std::move(lhs), std::move(rhs), scope
+					));
 					lhs = std::move(next_lhs);
 				}
 
@@ -1091,7 +904,7 @@ namespace compiler::helios {
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
-		auto maybe_coerced = coerceFromBox(
+		return coerceFromBox(
 			ctx,
 			std::move(expr_hout),
 			expected_type,
@@ -1099,7 +912,5 @@ namespace compiler::helios {
 			coercion_expects_pos,
 			std::move(error_overrides)
 		);
-		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
-		return query::Failed();
 	}
 }

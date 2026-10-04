@@ -16,20 +16,25 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/passing.hpp>
+#include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/placeholder.hpp>
+#include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
@@ -89,7 +94,10 @@ namespace compiler::helios {
 				const auto pst_expr = val.value().unlock(ctx)->getExpr();
 
 				auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr });
-				if (expr_hout_qresult->hasFailed()) return;
+				if (expr_hout_qresult->hasFailed()) {
+					is_failed = true;
+					return;
+				}
 
 				const auto& expr_hout = expr_hout_qresult->valueOrThrow();
 
@@ -99,7 +107,7 @@ namespace compiler::helios {
 				auto expr_coerced = coerceFromBox(
 					ctx, std::move(returned), return_type, pst_expr.unlock(ctx)->getStablePosition()
 				);
-				if (expr_coerced.empty()) query::throwFailed();
+				if (expr_coerced.hasFailed()) query::throwFailed();
 
 				// Report only if the compilation of the return statement actually succeeded.
 				if (expr_hout->expression_type.getValueCategory().mustMove()) {
@@ -110,26 +118,33 @@ namespace compiler::helios {
 					));
 				}
 
-				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.value())));
+				output(
+					code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.valueOrPanic()))
+				);
 			} else {
+				const bool returns_unit = return_type.getType() == tsh::getUnitType()
+				                       && return_type.getRefKind() == tsh::ReferenceKind::Direct;
+
+				if (not returns_unit) {
+					ctx.logInt(makeBox<ReturnWithoutValueError>(
+						stmt->getStablePosition(), makeBox<InteractiveType>(ctx, return_type)
+					));
+					is_failed = true;
+					return;
+				}
+
 				output(code::VoidReturnStmt(code::pstOrigin(stmt)));
 			}
 		}
 
-		void visitAlias(pst::Access<pst::Alias>) override {}
-
 		void visitUsing(pst::Access<pst::Using>) override {}
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
+			using namespace compiler::helios::code::shorthands;
+			Shorthand s{ ctx };
+
 			auto op_wrapped = assignment->getAssignmentType().unlock(ctx);
 			auto op         = op_wrapped->unwrap();
-			if (op != base::StrID("=")) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					base::strConcat("This assignment type: '", op.str(), "'."),
-					assignment->getStablePosition()
-				));
-				query::throwFailed();
-			}
 
 			auto var = assignment->getVariables();
 			auto val = assignment->getValue();
@@ -166,6 +181,7 @@ namespace compiler::helios {
 				return;
 			}
 
+			// 1. Handle regular assignement
 			if (op == base::StrID("=")) {
 				// The new `SymbolType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now
@@ -186,13 +202,12 @@ namespace compiler::helios {
 				return;
 			}
 
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-				base::strConcat(
-					"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
-				),
-				assignment->getStablePosition()
-			));
-			query::throwFailed();
+			// 2. Handle custom assignement operator
+			// @TODO: #3702 implement this
+
+			// 3. Fallback to desugaring
+			output(code::desugarAssignmentOperator(ctx, assignment));
+			return;
 		}
 
 		void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
@@ -237,7 +252,51 @@ namespace compiler::helios {
 			output(code::ExprStmt(code::pstOrigin(stmt), expr));
 		}
 
+		/**
+		 * @brief Compiles `if const (...)`, evaluating the condition at compile time and
+		 * compiling only the taken branch.
+		 *
+		 * The branch that is not taken is never lowered to HOUT, so it may contain code that
+		 * would not compile for the current instantiation.
+		 */
+		void compileConstIf(pst::Access<pst::If> stmt) {
+			auto condition_holder = stmt->getCondition();
+			if (!condition_holder.has_value()) {
+				is_failed = true;
+				return;
+			}
+
+			auto taken = getBoolCTVFromPST(ctx, condition_holder.value().unlock(ctx)->getExpr());
+			if (taken.hasFailed()) {
+				is_failed = true;
+				return;
+			}
+
+			if (taken.valueOrThrow()) {
+				output(code::BlockStmt(
+					code::pstOrigin(stmt), processBlock(ctx, stmt->getThenBody(), return_type)
+				));
+				return;
+			}
+
+			match_optional(stmt->getElseBody()) {
+				opt_some(else_body) {
+					output(code::BlockStmt(
+						code::pstOrigin(stmt), processBlock(ctx, else_body, return_type)
+					));
+				}
+				opt_none {
+					// Nothing is emitted: neither branch is compiled.
+				}
+			}
+		}
+
 		void visitIf(pst::Access<pst::If> stmt) override {
+			if (stmt->isConst()) {
+				compileConstIf(stmt);
+				return;
+			}
+
 			// in the future we must also handle here different if-s variants
 			// for example: `if (let a = ...) {}`.
 			auto bool_type = tsh::SymbolType<>{
@@ -245,8 +304,14 @@ namespace compiler::helios {
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
+			auto condition_holder = stmt->getCondition();
+			if (!condition_holder.has_value()) {
+				is_failed = true;
+				return;
+			}
+
 			auto condition = getHoutOfExprWithExpectedType(
-								 ctx, stmt->getCondition().unlock(ctx)->getExpr(), bool_type
+								 ctx, condition_holder.value().unlock(ctx)->getExpr(), bool_type
 			)
 			                     .valueOrThrow();
 
@@ -275,8 +340,14 @@ namespace compiler::helios {
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
+			auto condition_holder = stmt->getCondition();
+			if (!condition_holder.has_value()) {
+				is_failed = true;
+				return;
+			}
+
 			auto condition = getHoutOfExprWithExpectedType(
-								 ctx, stmt->getCondition().unlock(ctx)->getExpr(), bool_type
+								 ctx, condition_holder.value().unlock(ctx)->getExpr(), bool_type
 			)
 			                     .valueOrThrow();
 

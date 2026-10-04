@@ -249,7 +249,7 @@ namespace compiler::repl {
 			ReplSession session;
 
 			auto var_result   = session.processLine("var symbol_source: i32 = 3;");
-			auto alias_result = session.processLine("alias symbol_alias = symbol_source;");
+			auto alias_result = session.processLine("using symbol_source as symbol_alias;");
 			auto const_result = session.processLine("const symbol_const: i64 = 42;");
 			auto class_result = session.processLine("class SymbolClass{}");
 
@@ -259,7 +259,7 @@ namespace compiler::repl {
 			);
 			assertTrue(
 				alias_result.status == ReplResult::Status::Success,
-				"Alias declaration should succeed before /symbols"
+				"`using ... as` declaration should succeed before /symbols"
 			);
 			assertTrue(
 				const_result.status == ReplResult::Status::Success,
@@ -1046,8 +1046,8 @@ namespace compiler::repl {
 				updated_history_size >= initial_history_size,
 				"History size should increase or stay same after processing"
 			);
-			assertTrue(
-				session.m_lowering_context.has_value(),
+			ASSERT_HAS_VALUE(
+				session.m_lowering_context,
 				"Lowering context should be initialized for REPL execution"
 			);
 		}

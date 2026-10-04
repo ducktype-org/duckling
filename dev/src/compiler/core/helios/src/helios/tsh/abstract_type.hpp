@@ -15,6 +15,7 @@
 
 #include <hashing/add_to_hash.hpp>
 #include <query_framework/context/context_fd.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <string>
 
@@ -106,6 +107,15 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getInterface(query::Context& ctx) const;
 
 		/**
+		 * @brief Same as @ref getInterface, but returns the failure of the interface creation
+		 * instead of throwing it.
+		 * @param ctx The Query Context necessary to deduce interfaces.
+		 * @return The TypeInterface of the type described by this object, or a failure.
+		 */
+		[[nodiscard]]
+		CRef<query::QResult<TypeInterface>> getInterfaceResult(query::Context& ctx) const;
+
+		/**
 		 * @brief Check if the type is a simple type, which correlates heavily with the type being
 		 * more efficient to be passed by copy instead of by reference.
 		 * @return Whether the type is a simple type.
@@ -154,6 +164,14 @@ namespace compiler::tsh {
 		 */
 		bool isTriviallyCopyable(query::Context& ctx) const;
 
+		/**
+		 * @brief Check if the type is a numeric type.
+		 * @return Whether the type is numeric.
+		 */
+		[[nodiscard]]
+		bool isNumeric() const {
+			return getKind() == tsh::Kind::Integral or getKind() == tsh::Kind::Float;
+		}
 
 		/**
 		 * @brief The default constructor is deleted.

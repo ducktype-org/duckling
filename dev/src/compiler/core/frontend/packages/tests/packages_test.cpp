@@ -15,6 +15,7 @@
 #include <json/json.hpp>
 
 #include <cstddef>
+#include <sstream>
 #include <vector>
 
 using namespace compiler::frontend::packages;
