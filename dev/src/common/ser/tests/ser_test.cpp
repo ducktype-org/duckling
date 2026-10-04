@@ -680,20 +680,6 @@ struct FrozenWithArray {
 	using ser_members = ser::Members<2>;
 };
 
-/** @brief The nested array the depth guard is measured against. */
-template<usize Depth>
-struct Nest {
-	using Type = std::array<typename Nest<Depth - 1>::Type, 1>;
-};
-
-template<>
-struct Nest<0> {
-	using Type = u32;
-};
-
-template<usize Depth>
-using NestT = typename Nest<Depth>::Type;
-
 /**
  * @brief Exactly as many members as the structured-bindings table covers.
  *
@@ -1114,11 +1100,16 @@ private:
 		ASSERT_TRUE(SER_TEST_ROUNDTRIP(Thrower{ .a = 3, .b = 4 }));
 
 		// The depth counter, checked against the configured limit rather than an
-		// accidental one. No braces on `deep`: Clang materializes the whole initializer
-		// tree and overflows its own frontend stack somewhere past 200 levels.
-		static NestT<ser::ConfigGlobal::MAX_DEPTH + 8> deep;
-		ByteBuf                                        nested;
-		ser::Out                                       ar{ nested };
+		// accidental one. The nesting is in the value, not in the type, so the compiler
+		// never sees it.
+		Node deep;
+		for (usize i = 0; i < ser::ConfigGlobal::MAX_DEPTH + 8; ++i) {
+			Node parent;
+			parent.kids.push_back(std::move(deep));
+			deep = std::move(parent);
+		}
+		ByteBuf  nested;
+		ser::Out ar{ nested };
 		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
 		ASSERT_EQUAL(usize{ 0 }, ar.depth());  // the guard unwound cleanly
 	}

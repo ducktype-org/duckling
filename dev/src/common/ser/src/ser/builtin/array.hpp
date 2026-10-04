@@ -33,6 +33,20 @@ namespace ser {
 		 */
 		struct ElementwiseArray {};
 
+		template<class E, class A>
+		constexpr Errc writeArray(Writer auto& ar, const A& a) {
+			for (const auto& e: a)
+				if (const auto c = dispatchWrite<E>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+
+		template<class E, class A>
+		constexpr Errc readArray(Reader auto& ar, A& a) {
+			for (auto& e: a)
+				if (const auto c = dispatchRead<E>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+
 		/**
 		 * @brief The extent then the element. The same for both kinds of array, because they
 		 * are the same bytes.
@@ -77,15 +91,11 @@ namespace ser {
 	template<class T, ::std::size_t N>
 	struct Serializer<::std::array<T, N>>: internal::ElementwiseArray {
 		static constexpr Errc write(Writer auto& ar, const ::std::array<T, N>& a) {
-			for (const auto& e: a)
-				if (const auto c = internal::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
-			return Errc::Ok;
+			return internal::writeArray<T>(ar, a);
 		}
 
 		static constexpr Errc read(Reader auto& ar, ::std::array<T, N>& a) {
-			for (auto& e: a)
-				if (const auto c = internal::dispatchRead<T>(ar, e); c != Errc::Ok) return c;
-			return Errc::Ok;
+			return internal::readArray<T>(ar, a);
 		}
 	};
 
@@ -94,16 +104,12 @@ namespace ser {
 	struct Serializer<T[N]>: internal::ElementwiseArray {
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		static constexpr Errc write(Writer auto& ar, const T (&a)[N]) {
-			for (const auto& e: a)
-				if (const auto c = internal::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
-			return Errc::Ok;
+			return internal::writeArray<T>(ar, a);
 		}
 
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		static constexpr Errc read(Reader auto& ar, T (&a)[N]) {
-			for (auto& e: a)
-				if (const auto c = internal::dispatchRead<T>(ar, e); c != Errc::Ok) return c;
-			return Errc::Ok;
+			return internal::readArray<T>(ar, a);
 		}
 	};
 
