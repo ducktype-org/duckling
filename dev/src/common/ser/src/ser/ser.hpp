@@ -34,9 +34,3 @@
 #include <ser/test.hpp>
 #include <ser/traits.hpp>
 #include <ser/type_config.hpp>
-
-namespace ser {
-	/** @brief The library's version, from `SER_VERSION`. */
-	inline constexpr int VERSION = SER_VERSION;
-
-} /* namespace ser */

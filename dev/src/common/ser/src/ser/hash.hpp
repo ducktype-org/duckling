@@ -371,7 +371,7 @@ namespace ser {
 		[[nodiscard]] consteval ::std::uint64_t schemaRoot() {
 			::std::uint64_t h = FNV_BASIS;
 			h                 = schemaText(h, Mode::NAMES ? "ser.debug.1" : "ser.schema.1");
-			h                 = schemaNumber(h, static_cast<::std::uint64_t>(SER_VERSION));
+			h                 = schemaNumber(h, static_cast<::std::uint64_t>(VERSION));
 			h                 = schemaNumber(h, sizeof(config_global::size_type));
 			h                 = schemaNumber(h, nativeFlags());
 			/*

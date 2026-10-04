@@ -1,14 +1,10 @@
 #pragma once
 
-#include <ser/config.hpp>
-
 #include <array>
 #include <bit>
 #include <cstddef>
 #include <cstring>
 #include <type_traits>
-
-#define SER_BYTE_ARRAY(T) ::ser::internal::byte_array_t<T>
 
 namespace ser::internal {
 
@@ -22,7 +18,7 @@ namespace ser::internal {
 			"ser::internal::store requires a trivially copyable type"
 		);
 		if consteval {
-			const auto arr = SER_BIT_CAST(SER_BYTE_ARRAY(T), v);
+			const auto arr = ::std::bit_cast<byte_array_t<T>>(v);
 			for (::std::size_t i = 0; i < sizeof(T); ++i) dst[i] = arr[i];
 		} else {
 			::std::memcpy(dst, &v, sizeof(T));
@@ -38,11 +34,11 @@ namespace ser::internal {
 		if consteval {
 			byte_array_t<T> arr{};
 			for (::std::size_t i = 0; i < sizeof(T); ++i) arr[i] = src[i];
-			return SER_BIT_CAST(T, arr);
+			return ::std::bit_cast<T>(arr);
 		} else {
 			byte_array_t<T> arr;
 			::std::memcpy(arr.data(), src, sizeof(T));
-			return SER_BIT_CAST(T, arr);
+			return ::std::bit_cast<T>(arr);
 		}
 	}
 
@@ -60,7 +56,7 @@ namespace ser::internal {
 		if consteval {
 			byte_array_t<T> arr{};
 			for (::std::size_t i = 0; i < sizeof(T); ++i) arr[i] = src[i];
-			dst = SER_BIT_CAST(T, arr);
+			dst = ::std::bit_cast<T>(arr);
 		} else {
 			::std::memcpy(&dst, src, sizeof(T));
 		}

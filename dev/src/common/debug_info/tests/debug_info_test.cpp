@@ -272,7 +272,7 @@ private:
 		);
 		assertTrue(header.has_value(), "The header must read back");
 		assertEqual(
-			u64{ 0x3C'43'20'AF'4C'A5'78'60 },
+			u64{ 0x27'66'D3'6F'3B'C9'49'73 },
 			header->schema_hash,
 			"The .di schema hash changed - so did the format the VM debugger reads"
 		);

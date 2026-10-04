@@ -13,6 +13,6 @@ namespace ser::duckling {
 	 */
 	extern const int MODULE_VERSION;
 
-	const int MODULE_VERSION = SER_VERSION;
+	const int MODULE_VERSION = ::ser::VERSION;
 
 }

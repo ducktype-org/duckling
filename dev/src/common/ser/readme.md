@@ -515,7 +515,7 @@ write as well as read, so nothing can be written that cannot be read back.
 C++23 Today, C++26 Later
 ------------------------
 ser is a C++23 library and behaves identically whether or not you build with a later
-standard. Below C++23 it stops with an `#error` rather than half-compiling.
+standard.
 
 Field enumeration is the only place where the standard version is visible. Today it is a
 structured-bindings ladder - the arity table lives in `base/preproc/ladder.hpp` and the rungs
