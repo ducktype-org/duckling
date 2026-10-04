@@ -96,8 +96,6 @@ namespace ser::internal {
 			return true;
 		else if constexpr (builtin::enum_like<T>)
 			return true;
-		else if constexpr (builtin::array_like<T>)
-			return true;
 		else if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
 			return true;                 /* not this trait's call */
 		else
@@ -136,8 +134,6 @@ namespace ser::internal {
 		else if constexpr (builtin::scalar_like<T>)
 			return false;
 		else if constexpr (builtin::enum_like<T>)
-			return false;
-		else if constexpr (builtin::array_like<T>)
 			return false;
 		else if constexpr (!CAN_ENUMERATE_MEMBERS_V<T>)
 			return false;
@@ -218,8 +214,6 @@ namespace ser::internal {
 			return builtin::writeScalar<U>(ar, x); /* 7 */
 		else if constexpr (builtin::enum_like<U>)
 			return builtin::writeEnum<U>(ar, x);
-		else if constexpr (builtin::array_like<U>)
-			return builtin::writeArray<U>(ar, x);
 
 		/**
 		 * @brief Step 8. No hook, no builtin rule: walk the fields. It is last among the paths
@@ -316,8 +310,6 @@ namespace ser::internal {
 			return builtin::readScalar<U>(ar, x); /* 7 */
 		else if constexpr (builtin::enum_like<U>)
 			return builtin::readEnum<U>(ar, x);
-		else if constexpr (builtin::array_like<U>)
-			return builtin::readArray<U>(ar, x);
 
 		/** @brief Step 8. The walk must not take a type whose author wrote serMake */
 		else if constexpr (!HAS_ANY_MAKE_HOOK_V<U, Ar> && WALK_CAN_FILL_V<U, Ar>) {
@@ -536,17 +528,19 @@ namespace ser::internal {
 	}
 
 	/**
-	 * @brief The one array field that must NOT be flattened: one with a serializer of its own.
-	 * The write side would use that hook, and reading the elements back one by one would
-	 * then be a different format. Such a type keeps the refusal below.
+	 * @brief The one array field that must NOT be flattened: one with a serializer of its own,
+	 * other than the element-by-element one every array has. The write side would use that
+	 * hook, and reading the elements back one by one would then be a different format. Such a
+	 * type keeps the refusal below.
 	 */
+	template<class F, class Ar>
+	inline constexpr bool HAS_OWN_ARRAY_SERIALIZER_V
+		= ::std::is_array_v<F> && HAS_CUSTOM_SERIALIZER_V<F, Ar>
+	   && !::std::is_base_of_v<elementwise_array, serializer<::std::remove_cv_t<F>>>;
+
 	template<class T, class Ar, ::std::size_t... I>
 	consteval bool arrayFieldHasOwnSerializer(::std::index_sequence<I...>) {
-		return (
-			(::std::is_array_v<member_type_t<T, I>>
-		     && HAS_CUSTOM_SERIALIZER_V<member_type_t<T, I>, Ar>)
-			|| ... || false
-		);
+		return (HAS_OWN_ARRAY_SERIALIZER_V<member_type_t<T, I>, Ar> || ... || false);
 	}
 
 	template<class T, class Ar>

@@ -46,7 +46,6 @@
 #include <base/comptime/type_traits.hpp>
 
 #include <ser/archive/out.hpp>
-#include <ser/builtin/array.hpp>
 #include <ser/builtin/enum.hpp>
 #include <ser/builtin/scalar.hpp>
 #include <ser/concepts.hpp>
@@ -345,10 +344,6 @@ namespace ser {
 					return schemaScalar<U>(h);
 				else if constexpr (builtin::enum_like<U>)
 					return schemaScalar<::std::underlying_type_t<U>>(schemaText(h, "enum"));
-				else if constexpr (builtin::array_like<U>)
-					return schemaOf<builtin::array_element_t<U>, Mode, Next>(
-						schemaNumber(schemaText(h, "array"), builtin::ARRAY_LENGTH_V<U>)
-					);
 				else if constexpr (CAN_ENUMERATE_MEMBERS_V<U>)
 					return schemaStruct<U, Mode, Next>(h, field_types_t<U>{});
 				else

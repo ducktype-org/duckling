@@ -1,83 +1,109 @@
 #pragma once
 
+/*
+ * std::array<T, N> and T[N]
+ * The elements in order, nothing else: the extent is part of the type, so no length goes on
+ * the wire. Each element goes through full dispatch rather than a bulk copy - an element may
+ * have its own hook, and the wire has neither padding nor the platform's alignment.
+ *
+ * Only write and read. An array of elements that cannot be filled in place is built through
+ * aggregate initialization instead, one clause per element, which is the same bytes.
+ */
+
 #include <ser/concepts.hpp>
 #include <ser/errc.hpp>
+#include <ser/hash.hpp>
 #include <ser/internal/dispatch_fwd.hpp>
+#include <ser/serializer.hpp>
+#include <ser/traits.hpp>
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
-namespace ser::builtin {
+namespace ser {
 
-	/** @brief Fixed extent, so nothing about the length goes on the wire - the type carries it. */
-	template<class T>
-	struct fixed_array: ::std::false_type {};
+	namespace internal {
 
-	/** @brief Specializing on a C array is what these three exist for. */
+		/**
+		 * @brief Base of the two array serializers, so a C array field can tell them from a
+		 * serializer a user wrote for that array type.
+		 */
+		struct elementwise_array {};
+
+		/**
+		 * @brief The extent then the element. The same for both kinds of array, because they
+		 * are the same bytes.
+		 */
+		template<class E, ::std::size_t N, class Mode, class Seen>
+		[[nodiscard]] consteval ::std::uint64_t schemaArray(::std::uint64_t h) {
+			return schemaOf<::std::remove_cv_t<E>, Mode, Seen>(
+				schemaNumber(schemaText(h, "array"), N)
+			);
+		}
+
+	} /* namespace internal */
+
 	template<class T, ::std::size_t N>
-	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-	struct fixed_array<T[N]>: ::std::true_type {};
-
-	template<class T, ::std::size_t N>
-	struct fixed_array<::std::array<T, N>>: ::std::true_type {};
-
-	template<class T>
-	concept array_like = fixed_array<::std::remove_cv_t<T>>::value;
-
-	template<class A>
-	struct array_element;
-
-	template<class T, ::std::size_t N>
-	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-	struct array_element<T[N]> {
-		using type = T;
+	struct min_wire_size<::std::array<T, N>> {
+		static constexpr ::std::size_t VALUE = N * MIN_WIRE_SIZE_V<T>;
 	};
 
 	template<class T, ::std::size_t N>
-	struct array_element<::std::array<T, N>> {
-		using type = T;
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+	struct min_wire_size<T[N]> {
+		static constexpr ::std::size_t VALUE = N * MIN_WIRE_SIZE_V<T>;
 	};
 
-	template<class A>
-	using array_element_t = typename array_element<::std::remove_cv_t<A>>::type;
-
-	/**
-	 * @brief The extent, which the type carries and the wire does not. MIN_WIRE_SIZE_V needs it
-	 * to turn an array field into a byte count, and sizeof arithmetic would not do:
-	 * sizeof(std::array<T, N>) is only N * sizeof(T) by convention, not by rule.
-	 */
-	template<class A>
-	struct array_length;
+	template<class T, ::std::size_t N>
+	struct schema<::std::array<T, N>> {
+		template<class Mode, class Seen>
+		static consteval ::std::uint64_t mix(::std::uint64_t h) {
+			return internal::schemaArray<T, N, Mode, Seen>(h);
+		}
+	};
 
 	template<class T, ::std::size_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-	struct array_length<T[N]>: ::std::integral_constant<::std::size_t, N> {};
+	struct schema<T[N]> {
+		template<class Mode, class Seen>
+		static consteval ::std::uint64_t mix(::std::uint64_t h) {
+			return internal::schemaArray<T, N, Mode, Seen>(h);
+		}
+	};
 
 	template<class T, ::std::size_t N>
-	struct array_length<::std::array<T, N>>: ::std::integral_constant<::std::size_t, N> {};
+	struct serializer<::std::array<T, N>>: internal::elementwise_array {
+		static constexpr Errc write(writer auto& ar, const ::std::array<T, N>& a) {
+			for (const auto& e: a)
+				if (const auto c = internal::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
 
-	template<class A>
-	inline constexpr ::std::size_t ARRAY_LENGTH_V = array_length<::std::remove_cv_t<A>>::value;
+		static constexpr Errc read(reader auto& ar, ::std::array<T, N>& a) {
+			for (auto& e: a)
+				if (const auto c = internal::dispatchRead<T>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+	};
 
-	/**
-	 * @brief Elements go through full dispatch, not a bulk copy: an element may have its own
-	 * hook, and the wire has neither padding nor the platform's alignment.
-	 */
-	template<class T, writer Ar>
-	constexpr Errc writeArray(Ar& ar, const T& a) {
-		using E = array_element_t<T>;
-		for (const auto& e: a)
-			if (const auto c = internal::dispatchWrite<E>(ar, e); c != Errc::Ok) return c;
-		return Errc::Ok;
-	}
+	template<class T, ::std::size_t N>
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+	struct serializer<T[N]>: internal::elementwise_array {
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+		static constexpr Errc write(writer auto& ar, const T (&a)[N]) {
+			for (const auto& e: a)
+				if (const auto c = internal::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
 
-	template<class T, reader Ar>
-	constexpr Errc readArray(Ar& ar, T& a) {
-		using E = array_element_t<T>;
-		for (auto& e: a)
-			if (const auto c = internal::dispatchRead<E>(ar, e); c != Errc::Ok) return c;
-		return Errc::Ok;
-	}
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+		static constexpr Errc read(reader auto& ar, T (&a)[N]) {
+			for (auto& e: a)
+				if (const auto c = internal::dispatchRead<T>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+	};
 
-} /* namespace ser::builtin */
+} /* namespace ser */

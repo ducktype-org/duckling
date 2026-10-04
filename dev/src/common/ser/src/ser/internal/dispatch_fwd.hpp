@@ -8,7 +8,7 @@
 /**
  * @file
  * @brief Declarations only, to break the cycle between dispatch.hpp and the adapters: dispatch.hpp
- * needs builtin::writeArray defined, and array.hpp calls dispatchWrite for every element.
+ * needs the array serializers defined, and array.hpp calls dispatchWrite for every element.
  * The call is a qualified name, looked up at definition time, so no include order fixes it.
  * The archives include this too, for decoupling rather than for a cycle.
  */

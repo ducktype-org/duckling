@@ -678,6 +678,18 @@ static_assert(ser::MIN_WIRE_SIZE_V<TestIdA> == sizeof(std::uint32_t));
 static_assert(ser::MIN_WIRE_SIZE_V<u8> == 1);
 static_assert(ser::MIN_WIRE_SIZE_V<KeyedByA> == sizeof(std::uint32_t) + sizeof(i32));
 
+/**
+ * @brief An aggregate that cannot be filled in place (the const field) with a C array field,
+ * so reading it builds it one clause per element.
+ */
+struct FrozenWithArray {
+	const i32 key;
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+	u16 codes[3];
+
+	using ser_members = ser::members<2>;
+};
+
 /** @brief The nested array the depth guard is measured against. */
 template<usize Depth>
 struct Nest {
@@ -782,6 +794,7 @@ public:
 		TESTER_ADD_TEST(recursiveTypes);
 		TESTER_ADD_TEST(memberCountLimit);
 		TESTER_ADD_TEST(constQualifiedRead);
+		TESTER_ADD_TEST(arrays);
 	}
 
 	~SerTest() override = default;
@@ -1366,6 +1379,31 @@ private:
 		ASSERT_TRUE(ser::write(aggregate, Wide64{}).has_value());
 		const auto w = ser::readOrPanic<const Wide64>(view(aggregate));
 		ASSERT_EQUAL(i32{ 63 }, w->f63);
+	}
+
+	/** @brief std::array and a C array are the same bytes and the same schema. */
+	void arrays() {
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+		using CArray = u32[3];
+		static_assert(ser::schemaHash<std::array<u32, 3>>() == ser::schemaHash<CArray>());
+		static_assert(
+			ser::schemaHash<std::array<u32, 3>>() != ser::schemaHash<std::array<u32, 4>>()
+		);
+		static_assert(ser::MIN_WIRE_SIZE_V<CArray> == 3 * sizeof(u32));
+
+		ByteBuf from_std;
+		ASSERT_TRUE(ser::write(from_std, std::array<u32, 3>{ 1, 2, 3 }).has_value());
+		ByteBuf      from_c;
+		const CArray c_array = { 1, 2, 3 };
+		ASSERT_TRUE(ser::write(from_c, c_array).has_value());
+		ASSERT_TRUE(from_std == from_c);
+
+		ByteBuf frozen;
+		ASSERT_TRUE(ser::write(frozen, FrozenWithArray{ .key = 7, .codes = { 4, 5, 6 } }).has_value()
+		);
+		const auto back = ser::readOrPanic<FrozenWithArray>(view(frozen));
+		ASSERT_EQUAL(i32{ 7 }, back->key);
+		ASSERT_EQUAL(u16{ 6 }, back->codes[2]);
 	}
 
 	/* helpers */
