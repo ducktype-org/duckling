@@ -1276,7 +1276,7 @@ private:
 	void memberCountLimit() {
 		ByteBuf buf;
 		ASSERT_TRUE(ser::write(buf, Wide64{}).has_value());
-		ASSERT_EQUAL(64 * sizeof(i32), buf.size());
+		ASSERT_EQUAL(::base::LADDER_MAX * sizeof(i32), buf.size());
 
 		Wide64 sample;
 		sample.f0  = -1;

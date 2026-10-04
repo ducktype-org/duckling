@@ -362,7 +362,7 @@ object and a reference can never be rebound. Hold the value, or leave the field 
 as a *field* of an object being filled it needs the enclosing type to have a `serMake`, or
 `SER_DESCRIBE_MAKE`. A bit-field widens to its declared type in the stream.
 
-**More than 64 members** is past the limit of the structured-bindings ladder. Split the
+**More than 64 members** (`::base::LADDER_MAX`) is past the limit of the structured-bindings ladder. Split the
 type, or give it a `serVisit`.
 
 What ser Refuses

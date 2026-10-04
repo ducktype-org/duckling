@@ -3,6 +3,8 @@
 #include <base/comptime/member_walk.hpp>
 #include <base/comptime/type_list.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/preproc/ladder.hpp>
+#include <base/preproc/stringify.hpp>
 
 #include <ser/archive/in.hpp>
 #include <ser/archive/out.hpp>
@@ -244,14 +246,22 @@ namespace ser {
 		 * @note The ladder binds obj and calls f in place; forwarding either would change what
 		 * the members bind as, which is the whole contract of the walk.
 		 */
+		/** @brief The member count has to have a rung in the structured-bindings ladder. */
+		template<::std::size_t N>
+		static consteval void checkArity() {
+			static_assert(
+				N <= ::base::LADDER_MAX,
+				"ser: this type has more than " STRINGIFY_2(BASE_LADDER_MAX
+			    ) " members "
+				  "(::base::LADDER_MAX), the limit of the structured-bindings ladder. Split it, "
+				  "or give it a serVisit hook."
+			);
+		}
+
 		template<::std::size_t N, class T, class F>
 		// NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
 		static constexpr decltype(auto) visitMembersN(T&& obj, F&& f) {
-			static_assert(
-				N <= ::base::LADDER_MAX,
-				"ser: this type has more than 64 members, which is the limit of the "
-				"structured-bindings ladder. Split it, or give it a serVisit hook."
-			);
+			checkArity<N>();
 			if constexpr (N == 0) {
 				static_assert(
 					::std::is_empty_v<::std::remove_cvref_t<T>>,
@@ -268,17 +278,13 @@ namespace ser {
 
 		/**
 		 * @brief The declared type of every field, which only a structured binding can still
-		 * see - see the note on field_decl in detail/meta.hpp. Never called either:
+		 * see - see base::FieldDecl in base/comptime/type_list.hpp. Never called either:
 		 * callers ask for decltype of it.
 		 */
 		template<::std::size_t N, class T>
 		// NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
 		static constexpr auto fieldDeclsN(T&& obj) {
-			static_assert(
-				N <= ::base::LADDER_MAX,
-				"ser: this type has more than 64 members, which is the limit of the "
-				"structured-bindings ladder. Split it, or give it a serVisit hook."
-			);
+			checkArity<N>();
 			if constexpr (N == 0) {
 				(void) obj;
 				return ::base::TypeList<>{};

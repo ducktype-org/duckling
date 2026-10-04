@@ -21,10 +21,16 @@
  * base/comptime/member_walk.hpp.
  */
 
+/**
+ * @brief The largest member count the table below covers, as a macro so it can be spelled into a
+ * string literal - use base::LADDER_MAX everywhere else.
+ */
+#define BASE_LADDER_MAX 64  // NOLINT(cppcoreguidelines-macro-to-enum,modernize-macro-to-enum)
+
 namespace base {
 
 	/** @brief The largest member count the table below covers. */
-	inline constexpr ::std::size_t LADDER_MAX = 64;
+	inline constexpr ::std::size_t LADDER_MAX = BASE_LADDER_MAX;
 
 }  // namespace base
 
