@@ -154,8 +154,7 @@ private:
 			if (auto* target_exe
 			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task_data.build_target)) {
 				// We expect the correct stdlib linking options based on getStdLibLinkingArgs
-				auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
-				ASSERT_HAS_VALUE(lib_args);
+				[[maybe_unused]] auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
 
 				// Ensure the options contain the stdlib args
 				assertTrue(

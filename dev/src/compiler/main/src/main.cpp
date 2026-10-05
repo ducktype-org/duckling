@@ -42,6 +42,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <clah/value_parser.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
@@ -279,7 +280,9 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Path to the linker to use when creating executables.")
 			.optional()
 			.build(),
-		clah::ParamBuilder::ofValue(clah::StringListParser::make("options"))
+		clah::ParamBuilder::ofValue(
+			clah::StringListParser::make("options", clah::StringParser::make())
+		)
 			.addLongName("additional-link-options")
 			.addShortDesc("Additional options to pass to the linker.")
 			.optional()
@@ -768,11 +771,8 @@ clah::Clah getClahForMain() {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_llvm.exe");
 						auto linking_options = getLinkingOptionsFromClah(options);
-						if (!linking_options.native_additional_link_options)
-							linking_options.native_additional_link_options
-								= std::vector<std::string>{};
 						for (const auto& lib: libraries_to_link)
-							linking_options.native_additional_link_options->push_back(lib.native());
+							linking_options.native_additional_link_options.push_back(lib.native());
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetLLVMExecutable{

@@ -238,7 +238,7 @@ namespace compiler::driver {
 		return tasks;
 	}
 
-	base::Optional<std::vector<std::string>> getNativeStdLibLinkingArgs(
+	std::vector<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	) {
 		if_opt_some(resolveStdPath(linking_options), _) {

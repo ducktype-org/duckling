@@ -51,6 +51,18 @@ namespace system_command {
 		SystemCommand& addArg(std::string arg);
 
 		/**
+		 * @brief Adds multiple arguments to the command.
+		 * @note The strings are passed as-is, the caller has to wrap them in the parenthesis
+		 * if they contains spaces.
+		 *
+		 * @param args
+		 */
+		SystemCommand& addArgs(const std::vector<std::string>& args) {
+			for (const auto& arg: args) this->addArg(arg);
+			return *this;
+		}
+
+		/**
 		 * @brief Adds an environment variable to the command's environment.
 		 *
 		 * The variable is set for the spawned command only, so this does not touch the

@@ -22,6 +22,8 @@
 #include <json/diagnostics.hpp>
 #include <nlohmann/json.hpp>
 
+#include <utility>
+
 namespace compiler::driver {
 
 	namespace task {
@@ -172,8 +174,9 @@ namespace compiler::driver {
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
 				if (linking_json.is_array()) {
-					auto options_value
-						= js::getArrayOfStrings(linking_json, "linking_options", report);
+					auto options_value = js::extractListOfStringsFromJsonArray(
+						linking_json, "linking_options", report
+					);
 					if (options_value)
 						linking_options.additional_link_options = std::move(*options_value);
 					else
@@ -210,21 +213,15 @@ namespace compiler::driver {
 						}
 
 						if (linking_obj->contains("additional_link_options")) {
-							auto array = js::getArray(
+							auto additional_linking_options = js::getArrayOfStrings(
 								*linking_obj,
 								"additional_link_options",
 								"additional_link_options must be an array of strings",
 								report
 							);
-							if (array) {
-								auto additional_options = js::getArrayOfStrings(
-									*array, "additional_linking_options", report
-								);
-								if (additional_options)
-									linking_options.additional_link_options
-										= std::move(*additional_options);
-								else
-									had_error = true;
+							if (additional_linking_options) {
+								linking_options.additional_link_options
+									= std::move(*additional_linking_options);
 							} else {
 								had_error = true;
 							}
@@ -398,9 +395,8 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options
 	) {
 		return {
-			.linker_path = linking_options.native_linker_path,
-			.additional_link_options
-			= linking_options.native_additional_link_options.copyValueOr(std::vector<std::string>{}),
+			.linker_path             = linking_options.native_linker_path,
+			.additional_link_options = linking_options.native_additional_link_options,
 			.link_c_standard_library = linking_options.native_link_c_standard_lib,
 			.stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
 		};

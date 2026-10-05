@@ -164,10 +164,14 @@ namespace js {
 		return toOpt(std::move(result));
 	}
 
-	base::Optional<std::vector<std::string>> getArrayOfStrings(
+	base::Optional<std::vector<std::string>> extractListOfStringsFromJsonArray(
 		const nlohmann::json& array, std::string_view key, const DiagnosticLogger& report
 	) {
-		CORE_ASSERT(array.is_array(), "getArrayOfStrings called not on an array");
+		CORE_ASSERT(
+			array.is_array(),
+			std::string("extractListOfStringsFromJsonArray: got `") + array.type_name()
+				+ "`, expected an array"
+		);
 		std::vector<std::string> result{};
 		result.reserve(array.size());
 		bool encountered_errors = false;
@@ -180,6 +184,18 @@ namespace js {
 		}
 		if (encountered_errors) return {};
 		return result;
+	}
+
+	base::Optional<std::vector<std::string>> getArrayOfStrings(
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
+		const DiagnosticLogger& report
+	) {
+		const auto maybe_array = getArray(json, key, error_message, report);
+		if (!maybe_array) return {};
+		const auto& array = *maybe_array;
+		return extractListOfStringsFromJsonArray(array, key, report);
 	}
 
 	base::Optional<nlohmann::json> getObjectWarning(
