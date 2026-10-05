@@ -102,8 +102,8 @@ namespace compiler::helios::code {
 		     std::views::zip(*argument_list, template_signature.parameters)) {
 			auto arg_unlocked = arg.unlock(query_ctx);
 			if (arg_unlocked->isNamedArg()) {
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Template arguments cannot be named.", arg_unlocked->getStablePosition()
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Named template arguments are not yet supported.", arg_unlocked->getStablePosition()
 				));
 				return query::Failed();
 			}

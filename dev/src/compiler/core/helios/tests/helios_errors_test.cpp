@@ -1981,21 +1981,6 @@ private:
 			1
 		);
 
-		checkForErrorOnCompileModule(
-			R"(
-				template(a: i64)
-				namespace N { }
-
-				fun main() -> i64 = {
-					N[a = 1];
-					return 0;
-				}
-
-			)",
-			{ "Template arguments cannot be named." },
-			1
-		);
-
 		// ============================ Bad template usage ============================
 
 		checkForErrorOnCompileModule(
@@ -2009,6 +1994,22 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N[a = 1];
+					return 0;
+				}
+
+			)",
+			{ "Not yet implemented" },
 			1
 		);
 	}
