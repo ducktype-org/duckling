@@ -17,6 +17,9 @@ namespace compiler::frontend {
 	/**
 	 * @brief Modifier class for making changes to ModuleTree instances.
 	 *
+	 * @note The API is designed to operate on Script Module/Standard Module layer
+	 * and don't go into synthetic REPL chain modules unless explicitly stated.
+	 *
 	 * ModuleTreeModifier provides static methods to add, remove, and update source files,
 	 * submodules, parent relationships, and other files within a ModuleTree.
 	 * All modifications are performed in-place and require a query context.

@@ -51,10 +51,11 @@ namespace compiler::repl {
 	 */
 	static base::Ref<frontend::ModuleTree> createProbeReplModule(std::string_view input) {
 		auto builder = frontend::ModuleTreeBuilder::create();
+		builder->setKind(frontend::ModuleKind::ReplChain);
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 		builder->setName(base::StrID("repl_probe"));
-		builder->setReplModule(frontend::ReplData{});
+		// PR: builder->setParent(std::nullopt);
 		return builder->finalize();
 	}
 

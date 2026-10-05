@@ -7,9 +7,15 @@
 #include "module_tree_modifier.hpp"
 
 #include "module_flags/module_flags.hpp"
+#include "module_module_tree.hpp"
+#include "module_tree.hpp"
+#include "script_module_tree.hpp"
 #include "source_file.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <algorithm>
 #include <functional>
@@ -25,20 +31,23 @@ namespace compiler::frontend {
 
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
+		auto main_source_file_slot = module->mainSourceFileSlot();
 		CORE_ASSERT(
-			!module->m_main_source_file.has_value(),
-			"Main source file is already set, remove it first"
+			!main_source_file_slot->has_value(), "Main source file is already set, remove it first"
 		);
-		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
+		*main_source_file_slot = SourceFile::create(file, ModuleID(module));
 		module->updateModuleHashFromRootToThis();
 	}
 
 	void ModuleTreeModifier::addSubmodule(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
-		base::StrID name = submodule->getName();
+		CORE_ASSERT(module->getKind() == ModuleKind::Module, "Module must be of kind 'Module'");
+
+		base::StrID name       = submodule->getName();
+		auto        submodules = module->submodulesSlot();
 		CORE_ASSERT(
-			!module->m_submodules.contains(name),
+			!submodules->contains(name),
 			base::strConcat(
 				"Submodule with name '",
 				name.strView(),
@@ -49,7 +58,7 @@ namespace compiler::frontend {
 		);
 
 
-		module->m_submodules.put(name, submodule);
+		submodules->put(name, submodule);
 
 		CORE_ASSERT(
 			!submodule->m_parent.has_value(),
@@ -87,15 +96,20 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
+		CORE_ASSERT(
+			module->getKind() == ModuleKind::Module,
+			"only modules of kind 'Module' can have other files"
+		);
+
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
-		if (!module->m_other_files.contains(ext_id))
-			module->m_other_files.put(ext_id, std::vector<fs::File>());
+		auto other_files = module->otherFilesSlot();
+		if (!other_files->contains(ext_id)) other_files->put(ext_id, std::vector<fs::File>());
 
 		CORE_ASSERT(
 			!std::ranges::any_of(
-				module->m_other_files.at(ext_id),
+				other_files->at(ext_id),
 				[&file](const fs::File& f) { return f.getFilePath() == file.getFilePath(); }
 			),
 			base::strConcat(
@@ -106,7 +120,7 @@ namespace compiler::frontend {
 			)
 		);
 
-		module->m_other_files.at(ext_id).push_back(file);
+		other_files->at(ext_id).push_back(file);
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
@@ -114,14 +128,15 @@ namespace compiler::frontend {
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
 		CORE_ASSERT(
-			module->m_main_source_file.has_value(),
+			module->hasMainSourceFile(),
 			base::strConcat(
 				"Module ", module->getName().strView(), " does not have a main source file"
 			)
 		);
+		auto main_source_file_slot = module->mainSourceFileSlot();
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
-		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
-		module->m_main_source_file = {};
+		SourceFile::removeSourceFileFromStorage(main_source_file_slot->value());
+		*main_source_file_slot = {};
 		module->updateModuleHashFromRootToThis();
 	}
 
@@ -129,8 +144,9 @@ namespace compiler::frontend {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
+		auto other_files = module->otherFilesSlot();
 		CORE_ASSERT(
-			module->m_other_files.contains(ext_id),
+			other_files->contains(ext_id),
 			base::strConcat(
 				"Other file with extension '",
 				ext_id.strView(),
@@ -139,7 +155,7 @@ namespace compiler::frontend {
 			)
 		);
 
-		auto& files = module->m_other_files.at(ext_id);
+		auto& files = other_files->at(ext_id);
 		auto  it    = std::ranges::find_if(files, [&file](const fs::File& f) {
             return f.getFilePath() == file.getFilePath();
         });
@@ -172,7 +188,7 @@ namespace compiler::frontend {
 
 		// remove this module from its parent's submodules
 		auto  parent     = module->m_parent.value();
-		auto& submodules = parent->m_submodules;
+		auto& submodules = *parent->submodulesSlot();
 		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
             return pair.second == module;
         });
@@ -209,9 +225,9 @@ namespace compiler::frontend {
 				  );
 				  internal->m_package_id = internal_new_package_id;
 
-				  // Change the package ID for all submodules recursively
-				  for (auto& [_, submodule]: internal->m_submodules)
-					  change_package_id(submodule, internal_new_package_id);
+				  // Change the package ID for all child modules recursively
+				  for (auto& child: internal->collectChildrenModules())
+					  change_package_id(child, internal_new_package_id);
 
 				  // Invalidate component hash for the module and its children as the package ID changed
 				  internal->invalidateHash();
@@ -224,12 +240,19 @@ namespace compiler::frontend {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
+		CORE_ASSERT(
+			module->getKind() == ModuleKind::Module or module->getKind() == ModuleKind::Script,
+			"Only modules of kind Module or Script can be removed via this function"
+		);
+
+		// note: removing Script module removes all synthetic submodules from its chain as well
+
 		auto parent = module->m_parent;
 
 		// Update parent module if it exists
 		if (parent.has_value()) {
 			// Remove the submodule from the parent's submodules
-			auto& submodules = parent.value()->m_submodules;
+			auto& submodules = *parent.value()->submodulesSlot();
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
                 return pair.second == module;
             });
@@ -247,20 +270,28 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// Change the parent of all submodules to the parent of the removed module
-		for (auto& [_, submodule]: module->m_submodules) {
-			if (parent.has_value()) {
-				parent.value()->m_submodules.put(submodule->getName(), submodule);
-				submodule->m_parent = parent.value();
-			} else {
-				submodule->m_parent = {};
+		if (module->getKind() == ModuleKind::Module) {
+			// Change the parent of all child modules to the parent of the removed module
+			for (auto& submodule: module->collectChildrenModules()) {
+				if (parent.has_value()) {
+					parent.value()->submodulesSlot()->put(submodule->getName(), submodule);
+					submodule->m_parent = parent.value();
+				} else {
+					submodule->m_parent = {};
+				}
+				submodule->invalidateHash();  // invalidate hash as parent changed
 			}
-			submodule->invalidateHash();  // invalidate hash as parent changed
+
+		} else if (module->getKind() == ModuleKind::Script) {
+			CORE_PANIC("NOT YET IMPLEMENTED FOR SCRIPT MODULES");
+		} else {
+			CORE_UNREACHABLE();
 		}
 
-		// Remove main source file. This will invalidate the SourceFile instance!
-		if (module->m_main_source_file.has_value())
-			SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
+
+		// Remove the source files of the module. This will invalidate the SourceFile instances!
+		if (module->hasMainSourceFile())
+			SourceFile::removeSourceFileFromStorage(module->mainSourceFileSlot()->value());
 
 		// Remove the module from storage. This will invalidate the ModuleTree instance!
 		ModuleTree::removeModuleFromStorage(module);
@@ -273,7 +304,7 @@ namespace compiler::frontend {
 		auto parent = module->m_parent;
 
 		if (parent.has_value()) {
-			auto& submodules = parent.value()->m_submodules;
+			auto& submodules = *parent.value()->submodulesSlot();
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
                 return pair.second == module;
             });
@@ -292,10 +323,10 @@ namespace compiler::frontend {
 		}
 
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
-			for (auto& [_, child]: current->m_submodules) self(self, child);
+			for (auto& child: current->collectChildrenModules()) self(self, child);
 
-			if (current->m_main_source_file.has_value())
-				SourceFile::removeSourceFileFromStorage(current->m_main_source_file.value());
+			if (current->hasMainSourceFile())
+				SourceFile::removeSourceFileFromStorage(current->mainSourceFileSlot()->value());
 
 			ModuleTree::removeModuleFromStorage(current);
 		};

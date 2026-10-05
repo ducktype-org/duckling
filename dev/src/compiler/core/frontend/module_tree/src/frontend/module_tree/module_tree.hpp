@@ -24,6 +24,7 @@
 #include <regex>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace compiler::frontend::packages {
 	class PackageAccessLocked;
@@ -32,13 +33,13 @@ namespace compiler::frontend::packages {
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file module.
+	 * it is a module file.
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dk";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file script.
+	 * it is a script file.
 	 */
 	constexpr std::string_view LANG_SCRIPT_FILE = ".dks";
 
@@ -64,29 +65,28 @@ namespace compiler::frontend {
 	struct GetModuleID_Functor;
 
 	/**
-	 * @brief REPL-specific data structure.
-	 *
-	 * Only used for repl modules.
+	 * @brief Enumerates the different kinds of module tree nodes.
 	 */
-	struct ReplData final {
-		/**
-		 * Parent REPL module in chronological order.
-		 * Optional - only empty for first REPL module.
-		 */
-		base::Optional<ModuleID> m_repl_module_parent;
-	};
+	enum class ModuleKind { Invalid, Module, Script, ReplChain };
 
 	/**
-	 * @brief Represents a single module in the Duckling project tree.
+	 * @brief Represents a single module tree node in the Duckling project tree.
+	 *
+	 * @note Each module is a standard module, a script module (created from a script file), or a
+	 * synthetic REPL chain module (one statement of a REPL session or script).
+	 *
+	 * @note This is an abstract class, the instances include:
+	 * - ModuleModuleTree: Represents a standard module.
+	 * - script related nodes
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
-	 * including its source files, submodules, and other files.
+	 * including its main source file, submodules, and other files.
 	 * The ModuleTree is the first instance of module in duckling compiling process
 	 * the main use case is to build a module tree form existing folder, and then
 	 * extract the pst from source files
 	 * But module tree can be also created manually.
 	 *
-	 * - Tracks main source file, additional source files, submodules, and other files.
+	 * - Tracks main source file, submodules, and other files.
 	 * - Supports pretty-printing for debugging and inspection.
 	 * - Immutable after construction; use ModuleTreeModifier for changes.
 	 * - Submodules form a tree structure, each with a parent reference.
@@ -99,13 +99,15 @@ namespace compiler::frontend {
 	 * component hash. Lazy writes can race
 	 * under concurrency.
 	 */
-	class ModuleTree final {
+	class ModuleTree {
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;
 		friend struct GetModuleID_Functor;
 		friend struct ModuleID;
 
 	public:
+		virtual ~ModuleTree();
+
 		ModuleID getModuleID() const;
 
 		/**
@@ -133,23 +135,28 @@ namespace compiler::frontend {
 
 		/**
 		 * Accesses the submodules located in this module.
+		 *
+		 * @note Only valid for modules that can have submodules (i.e., not REPL or script modules).
 		 * @note Use this only if you need all submodules. For single submodule access, use
 		 * getSubmoduleByName().
 		 * @return A lazy view that can be unlocked within a query context or accessed illegally
 		 * (outside queries).
 		 */
 		[[nodiscard]]
-		SubmodulesAccessLocked getSubmodules() const;
+		virtual SubmodulesAccessLocked getSubmodules() const;
 
 		/**
 		 * Access a single submodule edge by name.
+		 *
+		 * @note Only valid for modules that can have submodules (i.e., not REPL or script modules).
+		 *
 		 * Registers dependency via QueryModuleChildSideInput when unlocked.
 		 * Use this function in lookups when you need only a submodule with some name.
 		 * @param name Name of the submodule to access.
 		 * @return AccessLocked wrapper that may contain the submodule if it exists.
 		 */
 		[[nodiscard]]
-		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
+		virtual ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -157,7 +164,7 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
+		virtual const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
@@ -174,27 +181,18 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] packages::PackageAccessLocked getPackage() const;
 
+		[[nodiscard]]
+		ModuleKind getKind() const;
+
 		/**
 		 * Check if this module is a REPL-generated module.
 		 * REPL modules have special cross-module lookup behavior.
+		 * @TODO: #2762 remove this if possible
 		 * @return true if this is a REPL module, false otherwise
 		 */
 		[[nodiscard]]
 		bool isReplModule() const {
-			return m_repl_data.has_value();
-		}
-
-		/**
-		 * Get the parent REPL module.
-		 * Only valid for REPL modules.
-		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
-		 */
-		[[nodiscard]]
-		base::Optional<ModuleID> getReplModuleParent() const {
-			CORE_ASSERT(
-				m_repl_data.has_value(), "repl data of a node with parent should have value!"
-			);
-			return m_repl_data->m_repl_module_parent;
+			return getKind() == ModuleKind::ReplChain;
 		}
 
 		/**
@@ -245,9 +243,71 @@ namespace compiler::frontend {
 		ModuleTree& operator=(const ModuleTree&) = delete;
 		ModuleTree(ModuleTree&&) noexcept        = default;
 
-	private:
+	protected:
 		ModuleTree();
 
+		/**
+		 * Dummy function to make this class abstract.
+		 */
+		virtual void makeAbstract() = 0;
+
+		/**
+		 * @brief Access the slot holding the source file that acts as the main source file of this
+		 * module.
+		 *
+		 * For a standard module this is ModuleModuleTreeNode::m_main_source_file, for a synthetic
+		 * REPL chain module it is SyntheticReplChainModuleTreeNode::m_synthetic_source_file.
+		 * @note Panics for module types that have no main source file (scripts). Check the module
+		 * kind before calling this.
+		 */
+		[[nodiscard]]
+		virtual Ref<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot();
+
+		[[nodiscard]]
+		virtual CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const;
+
+		/**
+		 * @brief Access the submodules of this module.
+		 * @note Panics for module types that cannot have submodules. Check the module kind before
+		 * calling this.
+		 */
+		[[nodiscard]]
+		virtual Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot();
+
+		[[nodiscard]]
+		virtual CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const;
+
+		/**
+		 * @brief Collects all child modules of this module.
+		 * @return A vector containing references to all child modules.
+		 *
+		 * @important Submodules and child modules are not the same thing.
+		 * Submodules reflect the high-level Duckling module structure,
+		 * whereas child modules include all modules that are direct children in the module tree
+		 * structure (i.e. whose parent is this module).
+		 */
+		[[nodiscard]]
+		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const = 0;
+
+		/**
+		 * @brief Collects all owned source files modules of this module.
+		 * @return A vector containing references to all child modules.
+		 *
+		 * @note as of now, its always 0 or 1 owned source file per module,
+		 * but the interface returns a vector for ease of use and future extensibility.
+		 */
+		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const = 0;
+
+		/**
+		 * @brief Access the other files of this module.
+		 * @note Panics for module types that cannot have other files. Check the module kind before
+		 * calling this.
+		 */
+		[[nodiscard]]
+		virtual Ref<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot();
+
+		[[nodiscard]]
+		virtual CRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const;
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
@@ -273,11 +333,11 @@ namespace compiler::frontend {
 		void updateModuleHashFromRootToThis();
 
 		/**
-		 * @brief Create a new, empty ModuleTree in static storage.
+		 * @brief Add ModuleTree to static storage.
 		 * @note In principle it should only be used in ModuleTreeBuilder::finalize.
-		 * @return Reference to the stored ModuleTree, with its storage handle already set.
+		 * @return Reference to the stored ModuleTree, with its storage handle set.
 		 */
-		static base::Ref<ModuleTree> addModuleToStorage();
+		static base::Ref<ModuleTree> addModuleToStorage(base::Box<ModuleTree> module);
 
 		/**
 		 * @brief Remove ModuleTree from static storage.
@@ -292,33 +352,17 @@ namespace compiler::frontend {
 		 */
 		static void checkDanglingReference(const base::Ref<ModuleTree>& candidate);
 
-		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
-		base::Optional<ModuleID> m_id;
 
-		base::StrID m_name;
+		/* * * * * * * * * * * * * * *\
+		|  Universal data members:   *|
+		\* * * * * * * * * * * * * * */
 
-		base::Optional<base::Ref<ModuleTree>> m_parent;
+		ModuleKind kind = ModuleKind::Invalid;
 
-		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
-		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>>
-			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
-		                    // happening with them. Do not use this in query unless AccessLocked is
-		                    // implemented for this
-
-		base::Optional<usize> m_storage_handle;  //< Key to support removal from static storage
-
-		base::Optional<hashing::ComponentHash>
-			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
-		                            // package_name/root/submodule1/sub2
-		base::Optional<hashing::ComponentHash::HashType>
-			m_hash;                 //< This is the actual hash for the Module used in SideInput
 		/**
-		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
-		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
-		 * recomputation flow (updateModuleHashFromRootToThis/updateModuleHash).
+		 * this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		 */
-		mutable base::Box<std::mutex> m_hash_recompute_mutex;
+		base::Optional<ModuleID> m_id;
 
 		/**
 		 * Package ID associated with this module tree.
@@ -327,11 +371,40 @@ namespace compiler::frontend {
 		base::StrID m_package_id;
 
 		/**
-		 * REPL-specific data.
-		 * Optional - only set for modules created in REPL sessions.
-		 * Presence of this optional indicates the module is a REPL module.
+		 * Name of the module.
 		 */
-		base::Optional<ReplData> m_repl_data;
+		base::StrID m_name;
+
+		/**
+		 * Parent module, if any.
+		 * @note empty if this is a root module.
+		 */
+		base::Optional<base::Ref<ModuleTree>> m_parent;
+
+
+		/**
+		 * Key to support removal from static storage
+		 */
+		base::Optional<usize> m_storage_handle;
+
+		/**
+		 * ComponentHash of the module's logical path: eg
+		 * package_name/root/submodule1/sub2
+		 */
+		base::Optional<hashing::ComponentHash> m_path_component_hash;
+
+		/**
+		 * This is the actual hash for the Module used in SideInput
+		 */
+		base::Optional<hashing::ComponentHash::HashType> m_hash;
+
+
+		/**
+		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
+		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
+		 * recomputation flow (updateModuleHashFromRootToThis/updateModuleHash).
+		 */
+		mutable base::Box<std::mutex> m_hash_recompute_mutex;
 	};
 
 	/*

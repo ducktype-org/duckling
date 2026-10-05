@@ -136,7 +136,7 @@ namespace compiler::repl {
 	);
 
 	/**
-	 * @brief Create a synthetic REPL/script-style statement module with optional parent linkage.
+	 * @brief Creates a synthetic REPL/script-style statement module with optional parent linkage.
 	 *
 	 * This is the shared module-construction primitive used for top-level sequential
 	 * statement execution semantics in REPL and script compilation.
