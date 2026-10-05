@@ -337,7 +337,7 @@ namespace ser {
 					if constexpr (Access::HAS_DESCRIBED_V<U> && !TRAIT_LEVEL_HOOK_V<U, Ar>)
 						return schemaStruct<U, Mode, Next>(h, DescribedTypesT<U>{});
 					else
-						// @TODO: #90006 make this a compile error that names the three ways out
+						// @TODO: #3719 make this a compile error that names the three ways out
 						return schemaOpaque<U>(h, "hook");
 				else if constexpr (builtin::ScalarLike<U>)
 					return schemaScalar<U>(h);
@@ -350,7 +350,7 @@ namespace ser {
 					// list of fixes. Answering rather than failing keeps schema_hash
 					// usable as a question.
 					//
-					// @TODO: #90006 make this a compile error as well
+					// @TODO: #3719 make this a compile error as well
 					return schemaOpaque<U>(h, "opaque");
 			}
 		}

@@ -60,7 +60,7 @@ namespace base {
 #endif
 	}
 
-	// @TODO: #90005 use std::add_sat / std::mul_sat once we are on C++26
+	// @TODO: #3718 use std::add_sat / std::mul_sat once we are on C++26
 
 	/** @brief Adds @p a and @p b, clamping to the type's maximum instead of wrapping. */
 	template<::std::unsigned_integral T>

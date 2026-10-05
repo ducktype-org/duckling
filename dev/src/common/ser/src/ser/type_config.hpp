@@ -14,7 +14,7 @@
  * `sizeof(std::string)` is different under libstdc++ and libc++. `schema_id` gives the type a
  * hash that does not depend on any of that. Change the number when the hook's format changes.
  *
- * @TODO: #90006 require an explicit schema for such types instead of the sizeof fallback
+ * @TODO: #3719 require an explicit schema for such types instead of the sizeof fallback
  */
 
 namespace ser {

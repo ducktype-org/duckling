@@ -39,7 +39,7 @@ namespace ser {
 		PlatformMismatch,
 		ChecksumFailed,
 
-		// the pools: nothing returns these yet, see #90002 and #90003
+		// the pools: nothing returns these yet, see #3715 and #3716
 		PoolMissing,
 		PoolModified,
 		DanglingRef,

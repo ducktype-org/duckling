@@ -41,7 +41,7 @@ namespace ser {
 
 		static constexpr ::std::size_t MAX_ZERO_SIZE_ELEMENTS = ::std::size_t{ 1 } << 28;
 
-		// @TODO: #90001 align flat arrays of trivially copyable elements for zero-copy reads
+		// @TODO: #3714 align flat arrays of trivially copyable elements for zero-copy reads
 	};
 
 }  // namespace ser
