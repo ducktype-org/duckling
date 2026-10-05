@@ -238,13 +238,13 @@ namespace compiler::driver {
 		return tasks;
 	}
 
-	base::Optional<std::string> getNativeStdLibLinkingArgs(
+	std::vector<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	) {
 		if_opt_some(resolveStdPath(linking_options), _) {
-			std::string result;
+			std::vector<std::string> result{};
 			for (const auto& art: getStdLibNativeArtifacts())
-				result += " " + art.file.getFilePath().string();
+				result.push_back(art.file.getFilePath().string());
 			return result;
 		}
 		return {};

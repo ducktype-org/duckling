@@ -359,7 +359,7 @@ private:
 		clearLogger();
 
 		auto task_json = nlohmann::json::parse(
-			R"({ "package": "app", "strategy": "native", "output_file": "bin/app", "linking_options": "-lm" })"
+			R"({ "package": "app", "strategy": "native", "output_file": "bin/app", "linking_options": ["-lm"] })"
 		);
 		auto result = RawPackageCompilationTask::fromJson(
 			task_json, diagnostics::makeGlobalLoggerReporter()
@@ -369,7 +369,9 @@ private:
 		ASSERT_TRUE(logger().good());
 		ASSERT_MATCHES(result->build_target, BuildTargetLLVMExecutable);
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
-		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lm"));
+		ASSERT_EQUAL(
+			target.linking_options.additional_link_options, std::vector{ std::string("-lm") }
+		);
 	}
 
 	void nativeStrategyBadLinkingOptionsFails() {
@@ -398,7 +400,7 @@ private:
             "output_file": "bin/app",
             "linking_options": {
                 "linker": "ld",
-                "additional_link_options": "-lfoo",
+                "additional_link_options": ["-lfoo"],
                 "link_c_standard_library": false
             }
         })");
@@ -411,7 +413,9 @@ private:
 		ASSERT_MATCHES(result->build_target, BuildTargetLLVMExecutable);
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
 		ASSERT_EQUAL(target.linking_options.linker_path, std::string("ld"));
-		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lfoo"));
+		ASSERT_EQUAL(
+			target.linking_options.additional_link_options, std::vector{ std::string("-lfoo") }
+		);
 		ASSERT_TRUE(!target.linking_options.link_c_standard_library);
 	}
 
