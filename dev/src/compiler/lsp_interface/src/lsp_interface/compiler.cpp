@@ -13,6 +13,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
 #include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -265,6 +266,10 @@ namespace duck_ls {
 		// The old PST must still exist while its inputs are collected.
 		std::vector<query::external::InputData> previous_inputs;
 		previous_inputs.push_back(pst::SourcePositionLocked::getQueryInputNode());
+		for (auto& source_file: SourceFile::getSourceFilesFromPath(current.getFilePath()))
+			previous_inputs.emplace_back(
+				QueryFileSideInput::getID(), source_file->getComponentHash().hash
+			);
 		collectInputsFor(current, previous_inputs);
 
 		ModuleTreeModifier::removeMainSourceFile(module);
