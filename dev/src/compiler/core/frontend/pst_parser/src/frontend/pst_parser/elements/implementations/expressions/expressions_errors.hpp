@@ -85,18 +85,6 @@ namespace pst {
 		ImproperTernaryError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadTemplateError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_template_error" };
-		}
-
-	public:
-		BadTemplateError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
 	 * some situation where only a string value will be accepted in an expression.
