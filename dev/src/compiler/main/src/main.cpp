@@ -279,7 +279,7 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Path to the linker to use when creating executables.")
 			.optional()
 			.build(),
-		clah::ParamBuilder::ofValue(clah::StringParser::make("options"))
+		clah::ParamBuilder::ofValue(clah::StringListParser::make("options"))
 			.addLongName("additional-link-options")
 			.addShortDesc("Additional options to pass to the linker.")
 			.optional()

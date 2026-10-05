@@ -49,7 +49,7 @@ namespace compiler::driver {
 	 * @brief Based on the `StdLibOptions` returns the string with the arguments needed to
 	 * link the standard library. Can be empty if the standard library is not used.
 	 */
-	base::Optional<std::vector<std::string>> getNativeStdLibLinkingArgs(
+	std::vector<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	);
 

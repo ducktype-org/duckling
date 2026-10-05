@@ -39,7 +39,7 @@ namespace compiler::linker {
 		 * This is not automatically added by the package dependencies since the std lib
 		 * is not handled by the package manager.
 		 */
-		base::Optional<std::vector<std::string>> stdlib_link_options;
+		std::vector<std::string> stdlib_link_options;
 	};
 
 	/**
