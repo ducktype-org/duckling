@@ -38,8 +38,6 @@ namespace compiler::repl {
 				return "const";
 			case helios::SymbolKind::Class:
 				return "class";
-			case helios::SymbolKind::Alias:
-				return "alias";
 			case helios::SymbolKind::Using:
 				return "using";
 			case helios::SymbolKind::Variable:

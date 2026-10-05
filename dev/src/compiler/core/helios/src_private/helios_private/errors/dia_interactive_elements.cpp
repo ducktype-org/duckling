@@ -84,7 +84,7 @@ namespace compiler::helios {
 				if (current.children.size() != 1) return;
 
 				auto nested = current.children[0];
-				if (kind(nested.node) == SymbolKind::Alias) {
+				if (kind(nested.node) == SymbolKind::Using) {
 					// `using a.b as c;`: the underlying chain is the `a.b` part.
 					auto alias_stmt = getSymRef(nested.node)
 				                          ->maybePstElement()
