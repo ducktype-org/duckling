@@ -1,82 +1,67 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <vm_tester_utils.hpp>
+
 #include <base/misc/int_conv.hpp>
 
 #include <tester/tester.hpp>
 
 #include <vm/api/vm.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <future>
 #include <mutex>
 #include <thread>
 
-class VmDebugTest: public tester::TestSuite {
+namespace api = vm::api;
+
+/**
+ * @brief Tests of the DVM debugger endpoints on a single-threaded process.
+ *
+ * The multi-threaded behaviour of the same endpoints is covered by
+ * `multithreaded_debugger_tests.cpp`.
+ */
+class VmDebugTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmDebugTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(stopTest);
-		TESTER_ADD_TEST(killTest);
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(notPausesOnRemovedBreakpoint);
 		TESTER_ADD_TEST(executesStepByStep);
 		TESTER_ADD_TEST(stepsUntilProgramTerminates);
+		TESTER_ADD_TEST(pauseRefusals);
+		TESTER_ADD_TEST(pausesAThreadSleepingOnIo);
+		TESTER_ADD_TEST(resumeRefusals);
+		TESTER_ADD_TEST(stepRefusals);
+		TESTER_ADD_TEST(pauseAllEndpoint);
+		TESTER_ADD_TEST(waitForBreakpointRefusals);
+		TESTER_ADD_TEST(currentPositionEndpoint);
+		TESTER_ADD_TEST(stackFrameRefusals);
+		TESTER_ADD_TEST(setBreakpointRefusals);
 		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 		TESTER_ADD_TEST(outputTest);
 	}
 
-
 private:
-	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (loadProgram)");
-		auto pid = process_pid_response.value().pid;
-
-		fs::File file(path(std::string(path_name)));
-		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
-		ASSERT_HAS_VALUE(loaded_file_response, "Load failed (loadProgram)");
-		return pid;
-	}
-
-	/**
-	 * @brief Checks if the program can be stopped while waiting for input.
-	 */
-	void stopTest() {
-		auto pid = loadProgram("vm_api_tests.dbc");
-
-		auto run_response = vm::api::run(pid);
-		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-		auto stop_response = vm::api::stop(pid);
-		ASSERT_HAS_VALUE(stop_response, "Stop failed (1)");
-	}
-
-	/**
-	 * @brief Checks if the program can be killed while waiting for input.
-	 */
-	void killTest() {
-		auto pid = loadProgram("vm_api_tests.dbc");
-
-		auto run_response = vm::api::run(pid);
-		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-		auto kill_response = vm::api::kill(pid);
-		ASSERT_HAS_VALUE(kill_response, "Kill failed (1)");
-	}
-
 	/**
 	 * @brief Checks if the program will pause on breakpoint.
 	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
 	 */
 	void pausesOnBreakpointAndResumes() {
-		auto pid = loadProgram("breakpoint.dbc");
+		auto pid = spawnAndLoad("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
@@ -100,9 +85,11 @@ private:
 	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
 	 */
 	void notPausesOnRemovedBreakpoint() {
-		auto pid = loadProgram("breakpoint.dbc");
+		auto pid = spawnAndLoad("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
 
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false));
 
@@ -121,9 +108,11 @@ private:
 	 * @brief Checks if the program will execute step by step.
 	 */
 	void executesStepByStep() {
-		auto pid = loadProgram("breakpoint.dbc");
+		auto pid = spawnAndLoad("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
@@ -149,7 +138,7 @@ private:
 	}
 
 	void stepsUntilProgramTerminates() {
-		auto pid = loadProgram("breakpoint.dbc");
+		auto pid = spawnAndLoad("breakpoint.dbc");
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, true));
 		ASSERT_HAS_VALUE(vm::api::run(pid));
 		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
@@ -169,7 +158,7 @@ private:
 
 		auto status = vm::api::getExecutionStatus(pid);
 		ASSERT_HAS_VALUE(status);
-		ASSERT_MATCHES(status.value(), vm::api::ExecutionCompleted);
+		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionCompleted));
 
 		ASSERT_HAS_VALUE(vm::api::join(pid));
 
@@ -196,7 +185,7 @@ private:
 	template<typename FieldDataType>
 	FieldDataType getVMValueRefData(const SharedBox<vm::IVMValueRef>& vmvalue_ref) {
 		auto data_opt = vmvalue_ref->readData();
-		ASSERT_HAS_VALUE(data_opt, "VMValueRef: Referenced memory is dead");
+		assertTrue(data_opt.has_value(), "VMValueRef: Referenced memory is dead");
 		return std::get<FieldDataType>(data_opt.value());
 	}
 
@@ -214,11 +203,265 @@ private:
 		return getVMValueRefData<FieldDataType>(field.value);
 	}
 
+	void pauseRefusals() {
+		// `pause` refuses a thread that never started, one that already terminated and one it does
+		// not know. Pausing a thread that is already paused is a no-op, not an error.
+
+		const vm::PID pid = spawnAndLoad("while_true.dbc");
+
+		assertRefusedWith<api::OtherError>(
+			api::pause(pid, api::ThreadID{ 77 }), "pause of an unknown thread", "Thread not found"
+		);
+		assertRefusedWith<api::PauseError>(
+			api::pause(pid), "pause before a run", "the thread has not started"
+		);
+
+		assertSucceeded(api::run(pid), "run");
+		waitUntilStatus(pid, isRunning, "Running");
+
+		assertSucceeded(api::pause(pid), "pause of a running thread");
+		waitUntilStatus(pid, isPaused, "Paused");
+		assertSucceeded(api::pause(pid), "pause of an already paused thread");
+		waitUntilStatus(pid, isPaused, "still Paused");
+
+		assertSucceeded(api::stop(pid), "stop");
+		waitUntilStatus(pid, isTerminal, "Stopped");
+		assertRefusedWith<api::PauseError>(
+			api::pause(pid), "pause of a terminated thread", "the thread already terminated"
+		);
+		(void) api::kill(pid);
+	}
+
+	void pausesAThreadSleepingOnIo() {
+		// A thread sleeping on IO cannot park while it sleeps - `waitInterruptible` only looks at
+		// the stop flag - so `pause` keeps waiting and takes effect once the IO completes. The
+		// waiting `pause` must not lock the API out while it does: the `input` that ends the wait
+		// comes from another client thread.
+
+		const vm::PID pid = spawnAndLoad("io_then_loop.dbc");
+		assertSucceeded(api::run(pid), "run of io_then_loop.dbc");
+		waitUntilStatus(pid, isSleeping, "Sleeping on IO");
+
+		auto pending = std::async(std::launch::async, [pid] { return api::pause(pid); });
+		assertTrue(
+			pending.wait_for(BLOCKED_CALL_PROBE) != std::future_status::ready,
+			"pause returned while the thread was still sleeping on IO, instead of waiting for it"
+		);
+
+		assertSucceeded(api::input(pid, "5 "), "input that wakes the sleeping thread");
+
+		assertTrue(
+			pending.wait_for(UNBLOCKED_CALL_BUDGET) == std::future_status::ready,
+			"pause never returned after the IO it was waiting for completed"
+		);
+		auto position = pending.get();
+		assertSucceeded(position, "pause of a thread that woke up from IO");
+		ASSERT_EQUAL_PRINT(std::string("main"), position->function_name.str());
+		waitUntilStatus(pid, isPaused, "Paused after the woken thread parked");
+
+		assertSucceeded(api::stop(pid), "stop");
+		(void) api::kill(pid);
+	}
+
+	void resumeRefusals() {
+		// `resume` only means something to a paused thread.
+
+		const vm::PID pid = spawnAndLoad("while_true.dbc");
+
+		assertRefusedWith<api::OtherError>(
+			api::resume(pid, api::ThreadID{ 77 }), "resume of an unknown thread", "Thread not found"
+		);
+		assertRefusedWith<api::ResumeError>(
+			api::resume(pid), "resume before a run", "the thread is not paused"
+		);
+
+		assertSucceeded(api::run(pid), "run");
+		waitUntilStatus(pid, isRunning, "Running");
+		assertRefusedWith<api::ResumeError>(
+			api::resume(pid), "resume of a running thread", "the thread is not paused"
+		);
+
+		assertSucceeded(api::stop(pid), "stop");
+		(void) api::kill(pid);
+	}
+
+	void stepRefusals() {
+		// A thread that is not paused has no position to step from.
+
+		const vm::PID pid = spawnAndLoad("while_true.dbc");
+
+		assertRefusedWith<api::OtherError>(
+			api::step(pid, api::ThreadID{ 77 }), "step of an unknown thread", "Thread not found"
+		);
+		assertRefusedWith<api::OtherError>(
+			api::step(pid), "step before a run", "wrong execution status"
+		);
+
+		assertSucceeded(api::run(pid), "run");
+		waitUntilStatus(pid, isRunning, "Running");
+		assertRefusedWith<api::OtherError>(
+			api::step(pid), "step of a running thread", "wrong execution status"
+		);
+
+		assertSucceeded(api::stop(pid), "stop");
+		(void) api::kill(pid);
+	}
+
+	void pauseAllEndpoint() {
+		// On a single-threaded process `pauseAll` is `pause` of the main thread, and it reports an
+		// empty list when there is nothing to pause.
+
+		const vm::PID pid = spawnAndLoad("while_true.dbc");
+
+		auto nothing_running = api::pauseAll(pid);
+		assertSucceeded(nothing_running, "pauseAll on a NotStarted process");
+		ASSERT_EQUAL_PRINT(usize{ 0 }, nothing_running->thread_ids.size());
+
+		assertSucceeded(api::run(pid), "run");
+		waitUntilStatus(pid, isRunning, "Running");
+
+		auto paused = api::pauseAll(pid);
+		assertSucceeded(paused, "pauseAll of a running process");
+		ASSERT_EQUAL_PRINT(usize{ 1 }, paused->thread_ids.size());
+		ASSERT_TRUE(paused->thread_ids.at(0) == api::MAIN_THREAD_ID);
+		// Every thread parked, so the whole process reports Paused.
+		waitUntilStatus(pid, isPaused, "Paused after pauseAll");
+
+		// Idempotent: the already paused thread is reported again.
+		auto again = api::pauseAll(pid);
+		assertSucceeded(again, "a second pauseAll");
+		ASSERT_EQUAL_PRINT(usize{ 1 }, again->thread_ids.size());
+
+		assertSucceeded(api::resume(pid), "resume");
+		assertSucceeded(api::stop(pid), "stop");
+		(void) api::kill(pid);
+	}
+
+	void waitForBreakpointRefusals() {
+		// `waitForBreakpoint` says the thread terminated instead of hanging forever when no
+		// breakpoint is ever hit.
+
+		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
+		assertRefusedWith<api::OtherError>(
+			api::waitForBreakpoint(pid, api::ThreadID{ 77 }),
+			"waitForBreakpoint on an unknown thread",
+			"Thread not found"
+		);
+
+		assertSucceeded(api::run(pid), "run without any breakpoint");
+		assertRefusedWith<api::StateError>(
+			api::waitForBreakpoint(pid),
+			"waitForBreakpoint of a thread that completes",
+			"reached a terminal state instead of a breakpoint"
+		);
+		(void) api::kill(pid);
+	}
+
+	void currentPositionEndpoint() {
+		// `getCurrentPosition` answers for a paused thread only, and bounds-checks the frame index.
+
+		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		assertRefusedWith<api::OtherError>(
+			api::getCurrentPosition(pid), "getCurrentPosition before a run", "wrong execution status"
+		);
+
+		assertSucceeded(api::run(pid), "run");
+		waitUntilStatus(pid, isRunning, "Running");
+		assertRefusedWith<api::OtherError>(
+			api::getCurrentPosition(pid),
+			"getCurrentPosition of a running thread",
+			"wrong execution status"
+		);
+
+		assertSucceeded(api::pause(pid), "pause");
+		auto top_frame = api::getCurrentPosition(pid);
+		assertSucceeded(top_frame, "getCurrentPosition of a paused thread");
+		ASSERT_EQUAL_PRINT(std::string("main"), top_frame->function_name.str());
+
+		assertSucceeded(api::getCurrentPosition(pid, 0), "getCurrentPosition of frame 0");
+		assertRefusedWith<api::OtherError>(
+			api::getCurrentPosition(pid, 99),
+			"getCurrentPosition of a frame that does not exist",
+			"Frame index out of bounds"
+		);
+
+		assertSucceeded(api::stop(pid), "stop");
+		(void) api::kill(pid);
+	}
+
+	void stackFrameRefusals() {
+		// The two stack-frame endpoints read guest memory, so they refuse a process that is still
+		// executing - before they even look at the thread id. What they return for a parked thread
+		// is covered by `vmApiMemoryAllTypes`.
+
+		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		assertSucceeded(api::run(pid), "run");
+		waitUntilStatus(pid, isRunning, "Running");
+
+		assertRefusedWith<api::OtherError>(
+			api::debuggerGetNumberOfStackFrames(pid, api::MAIN_THREAD_ID),
+			"debuggerGetNumberOfStackFrames of a running process",
+			"while program is running"
+		);
+		assertRefusedWith<api::OtherError>(
+			api::debuggerGetStackFrameData(pid, api::MAIN_THREAD_ID, 0),
+			"debuggerGetStackFrameData of a running process",
+			"while program is running"
+		);
+
+		assertSucceeded(api::pause(pid), "pause");
+		waitUntilStatus(pid, isPaused, "Paused");
+
+		assertRefusedWith<api::OtherError>(
+			api::debuggerGetNumberOfStackFrames(pid, api::ThreadID{ 77 }),
+			"debuggerGetNumberOfStackFrames of an unknown thread",
+			"Thread not found"
+		);
+		assertRefusedWith<api::OtherError>(
+			api::debuggerGetStackFrameData(pid, api::ThreadID{ 77 }, 0),
+			"debuggerGetStackFrameData of an unknown thread",
+			"Thread not found"
+		);
+
+		assertSucceeded(api::stop(pid), "stop");
+		(void) api::kill(pid);
+	}
+
+	void setBreakpointRefusals() {
+		// `setBreakpoint` names why it refuses, and is idempotent in both directions.
+
+		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
+
+		assertRefusedWith<api::OtherError>(
+			api::setBreakpoint(pid, base::StrID("no_such_function"), 0, true),
+			"setBreakpoint in a function that does not exist",
+			"Function does not exist"
+		);
+		assertRefusedWith<api::OtherError>(
+			api::setBreakpoint(pid, base::StrID("main"), 9'999, true),
+			"setBreakpoint past the end of a function",
+			"Function too short"
+		);
+
+		assertSucceeded(api::setBreakpoint(pid, base::StrID("main"), 5, true), "setBreakpoint");
+		assertSucceeded(
+			api::setBreakpoint(pid, base::StrID("main"), 5, true), "the same setBreakpoint again"
+		);
+		assertSucceeded(
+			api::setBreakpoint(pid, base::StrID("main"), 5, false), "clearing the breakpoint"
+		);
+		assertSucceeded(
+			api::setBreakpoint(pid, base::StrID("main"), 5, false),
+			"clearing a breakpoint that is not set"
+		);
+		(void) api::kill(pid);
+	}
+
 	/**
 	 * @brief Checks dbc to cc mapping.
 	 */
 	void backMapTest() {
-		auto pid = loadProgram("vm_api_tests.dbc");
+		auto pid = spawnAndLoad("vm_api_tests.dbc");
 
 		auto assert_mapping = [&](usize line, usize index) {
 			fs::File file(path("vm_api_tests.dbc"));
@@ -254,7 +497,7 @@ private:
 	 * correctly.
 	 */
 	void vmApiMemoryAllTypes() {
-		auto pid = loadProgram("breakpoint_all_types.dbc");
+		auto pid = spawnAndLoad("breakpoint_all_types.dbc");
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true));
 		auto tid = vm::api::ThreadID(0);
 
@@ -365,7 +608,9 @@ private:
 		{
 			auto exit_code_response = vm::api::getExitValue(pid);
 			ASSERT_HAS_VALUE(exit_code_response);
-			ASSERT_MATCHES(exit_code_response.value(), std::vector<Ref<vm::IVMValue>>);
+			ASSERT_TRUE(
+				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value())
+			);
 			auto& exit_value_vec
 				= std::get<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value());
 			ASSERT_EQUAL(exit_value_vec.size(), 1);
@@ -381,7 +626,7 @@ private:
 		std::condition_variable cv;
 		std::mutex              m;
 
-		auto                          pid = loadProgram("vm_api_tests.dbc");
+		auto                          pid = spawnAndLoad("vm_api_tests.dbc");
 		events::Listener<std::string> output_listener([&](const std::string& str) {
 			ASSERT_EQUAL_PRINT("7", str);
 			output.store(true);

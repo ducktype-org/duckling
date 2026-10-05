@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Parsing of the frontmatter from its schema.
 //! A frontmatter is a fragment of yaml code similiar to a manifest, at the beginning of a Duckling script.
 //! It can specify script's dependencies, allowing the script to be run without any venv.

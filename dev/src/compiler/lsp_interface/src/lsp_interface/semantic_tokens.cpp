@@ -1,12 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file semantic_tokens.cpp
  * @brief This file defines the SemanticToken class, which provides functionality to export
  * semantic tokens in JSON format.
  */
-#include "semantic_tokens.hpp"
-
-#include "utils.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
@@ -22,6 +24,8 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/ls_utils/ls_utils.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <lsp_interface/semantic_tokens.hpp>
+#include <lsp_interface/utils.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/variant_match.hpp>

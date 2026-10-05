@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <artifacts/artifacts.hpp>
@@ -17,9 +23,10 @@ namespace compiler::linker {
 		base::Optional<std::string> linker_path;
 
 		/**
-		 * Additional options passed to the linker (e.g., "my_object.o" "-L/path/to/libs -lsomelib").
+		 * Additional options passed to the linker (e.g., ["my_object.o", "-L/path/to/libs",
+		 * "-lsomelib"]).
 		 */
-		std::string additional_link_options;
+		std::vector<std::string> additional_link_options;
 
 		/**
 		 * @brief Whether to link the C standard library.
@@ -27,12 +34,12 @@ namespace compiler::linker {
 		bool link_c_standard_library;
 
 		/**
-		 * @brief String that contains the options for linking the standard library.
+		 * @brief List that contains the options for linking the standard library.
 		 * Empty if we don't use the standard library.
 		 * This is not automatically added by the package dependencies since the std lib
 		 * is not handled by the package manager.
 		 */
-		base::Optional<std::string> stdlib_link_options;
+		std::vector<std::string> stdlib_link_options;
 	};
 
 	/**

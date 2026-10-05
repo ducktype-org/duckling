@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
@@ -595,6 +601,10 @@ private:
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
+		const auto var_boxed = query::entryPoint<QueryVariantType>({
+			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
+		});
+
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
@@ -614,6 +624,15 @@ private:
 			assertTrue(
 				var_st.isTriviallyCopyable(ctx),
 				"Variant of Ints should be trivially copyable (if all components are)."
+			);
+
+			assertFalse(
+				var_boxed.isTriviallyDestructible(ctx),
+				"Variant with a boxed alternative should NOT be trivially destructible."
+			);
+			assertFalse(
+				st(var_boxed).isTriviallyCopyable(ctx),
+				"Variant with a boxed alternative should NOT be trivially copyable."
 			);
 		});
 	}

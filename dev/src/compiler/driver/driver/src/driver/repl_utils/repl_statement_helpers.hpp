@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
@@ -130,14 +136,14 @@ namespace compiler::repl {
 	);
 
 	/**
-	 * @brief Create an ephemeral REPL/script-style statement module with optional parent linkage.
+	 * @brief Create a synthetic REPL/script-style statement module with optional parent linkage.
 	 *
 	 * This is the shared module-construction primitive used for top-level sequential
 	 * statement execution semantics in REPL and script compilation.
 	 *
 	 * @warning Do NOT call this function from inside query computations.
 	 */
-	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
+	base::Ref<frontend::ModuleTree> createSyntheticChainedStatementModule(
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,

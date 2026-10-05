@@ -1,0 +1,7 @@
+namespace NS {
+    const in_ns: i64 = 500;
+
+    namespace INNER {
+        const in_inner: i64 = 600;
+    }
+}

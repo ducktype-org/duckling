@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use super::outputs;
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
@@ -46,7 +52,7 @@ fn collects_packages() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
     for unit in unit_graph.units_sorted_by_id() {
         let expected: &[&str] = match unit.package().name().as_str() {
             "root" => &["bar", "baz", "foo", "root"],
@@ -92,7 +98,7 @@ fn collects_packages_cycle() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
     for unit in unit_graph.units_sorted_by_id() {
         let expected: &[&str] = match unit.package().name().as_str() {
             "root" | "cycle" => &["bar", "cycle", "foo", "root"],

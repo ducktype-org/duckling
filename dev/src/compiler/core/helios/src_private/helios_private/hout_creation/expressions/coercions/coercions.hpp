@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file coercions.hpp
  * @brief Implicit coercions: deciding whether a value of one type may be handed over where another
@@ -168,9 +174,9 @@ namespace compiler::helios {
 	 * @note This is a convenience wrapper around `canCoerce` + `coercion.coerce()` for the common
 	 * case of coercing expressions with a `Box<code::Expr>` in hand, which is usual when handling
 	 * compiler generated code.
-	 * @return The coerced expression or an empty optional on error.
+	 * @return The coerced expression or an failed qresult on error or when coercion was invalid.
 	 */
-	base::Optional<Box<code::Expr>> coerceFromBox(
+	query::QResult<Box<code::Expr>> coerceFromBox(
 		query::Context&                     ctx,
 		Box<code::Expr>                     expr,
 		const tsh::SymbolType<>             expected_type,

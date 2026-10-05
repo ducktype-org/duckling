@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file mir_lifetime_test.cpp
  * @brief Tests for MIR lifetime analysis and validation
@@ -37,6 +43,7 @@ public:
 		TESTER_ADD_TEST(moveValidationTest);
 		TESTER_ADD_TEST(reinitAfterMoveTest);
 		TESTER_ADD_TEST(moveDestructorTest);
+		TESTER_ADD_TEST(variantOwnershipLifetimeTest);
 		TESTER_ADD_TEST(lifetimeFlagsTest);
 		TESTER_ADD_TEST(moveOwnershipTest);
 		TESTER_ADD_TEST(simpleLifetimeSequenceTest);
@@ -302,6 +309,99 @@ private:
 			.expectInstruction(compiler::mir::Operation::DestructIf)
 			.expectDestruct("a")
 			.validate(maybe_move);
+	}
+
+	void variantOwnershipLifetimeTest() {
+		// A variant owns its active payload, so moving a value into one and matching it out
+		// again has to hand that ownership over each time - exactly one destruction in total,
+		// and never one of the source the value was moved out of.
+		using compiler::mir::Operation;
+		auto [module, scope] = getModule(fs::File(path("modules/variant_lifetime")));
+
+		auto count_flag_on = [this](
+								 CRef<compiler::mir::Function>      func,
+								 compiler::mir::OperationFlag::Flag flag,
+								 std::string_view                   var_name
+							 ) {
+			usize count = 0;
+			for (const auto* instr: allInstructions(func))
+				for (const auto& instr_flag: instr->flags)
+					if (instr_flag.flag == flag && instr_flag.local->getName().strView() == var_name)
+						count++;
+			return count;
+		};
+
+		auto count_destructions = [this](CRef<compiler::mir::Function> func) {
+			usize count = 0;
+			for (const auto* instr: allInstructions(func))
+				if (instr->operation == compiler::mir::Operation::Destruct
+				    || instr->operation == compiler::mir::Operation::DestructIf)
+					count++;
+			return count;
+		};
+
+		// The `VariantConstruct` moves the local into the variant, so `payload` is `Moved` and
+		// gets no destructor, while the variant is destroyed at its scope end.
+		auto move_into = getMIRFunctionByName(module, "moveIntoVariant");
+		LifetimeChecker{}
+			.expectConstruct("payload")
+			.expectScopeStart("payload")
+			.expectScopeStart("v")
+			.expectMove("payload")
+			.expectConstruct("v")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("v")
+			.expectScopeEnd("v")
+			.expectScopeEnd("payload")
+			.validate(move_into);
+		ASSERT_EQUAL_PRINT(
+			0, count_flag_on(move_into, compiler::mir::OperationFlag::Flag::Destruct, "payload")
+		);
+		ASSERT_EQUAL_PRINT(1, count_destructions(move_into));
+
+		// The match takes the variant over - `v` is `Moved` into the subject temporary, which
+		// carries `NoDestructor` - and the case binding is what takes the payload, destroyed
+		// conditionally once the match scope ends, since only one case constructs it.
+		auto match_out = getMIRFunctionByName(module, "matchOutOfVariant");
+		LifetimeChecker{}
+			.expectMove("payload")
+			.expectConstruct("v")
+			.expectScopeStart("r")
+			.expectMove("v")
+			.expectConstruct("r")
+			.expectInstruction(Operation::DestructIf)
+			.expectDestruct("r")
+			.expectScopeEnd("r")
+			.validate(match_out);
+		for (std::string_view moved_from: { "payload", "v" })
+			ASSERT_EQUAL_PRINT(
+				0, count_flag_on(match_out, compiler::mir::OperationFlag::Flag::Destruct, moved_from)
+			);
+		// The `i32` case binds a trivially destructible payload, so nothing is destroyed there.
+		ASSERT_EQUAL_PRINT(
+			0, count_flag_on(match_out, compiler::mir::OperationFlag::Flag::Destruct, "n")
+		);
+		// The binding is the only owner at the end, so the payload is destroyed exactly once -
+		// the subject temporary the variant was moved into must not destroy it as well.
+		ASSERT_EQUAL_PRINT(1, count_destructions(match_out));
+
+		// A constrained wildcard names no binding, so the payload lands in a temporary the match
+		// itself destroys - `v` is still never destroyed twice.
+		auto drop_in_match = getMIRFunctionByName(module, "dropInMatch");
+		LifetimeChecker{}
+			.expectMove("payload")
+			.expectConstruct("v")
+			.expectMove("v")
+			.expectInstruction(Operation::DestructIf)
+			.validate(drop_in_match);
+		for (std::string_view moved_from: { "payload", "v" })
+			ASSERT_EQUAL_PRINT(
+				0,
+				count_flag_on(
+					drop_in_match, compiler::mir::OperationFlag::Flag::Destruct, moved_from
+				)
+			);
+		ASSERT_EQUAL_PRINT(1, count_destructions(drop_in_match));
 	}
 
 	/**

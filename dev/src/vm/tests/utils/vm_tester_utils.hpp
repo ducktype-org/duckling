@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -40,6 +46,15 @@ protected:
 
 	/// Highest instruction index `releaseUntilTerminal` clears breakpoints up to.
 	static constexpr u64 MAX_BREAKPOINT_INDEX = 12;
+
+	/// How long a call that is expected to block is given to prove it is still blocked.
+	static constexpr auto BLOCKED_CALL_PROBE = std::chrono::milliseconds(300);
+
+	/// How long a call that is expected to return is given to do so.
+	static constexpr auto UNBLOCKED_CALL_BUDGET = std::chrono::seconds(15);
+
+	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
+	static constexpr usize SPIN_THREAD_COUNT = 4;
 
 	/**
 	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.

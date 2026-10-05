@@ -1,0 +1,38 @@
+# A worker that keeps writing to the output forever, next to an endlessly spinning main thread.
+# Used to observe that a paused thread does not hold the GIL - the worker must keep producing
+# output while the main thread is paused.
+
+function talker {} -> {} {
+	init_pany_type			n, i64;
+	init_pany_type			i, i64;
+
+	mov_p64_imm				n, 0;
+	label Loop;
+		mov_p64_imm			i, 20000;
+		label Spin;
+			sub_p64_imm		i, 1;
+			cmpGt_p64_imm	i, 0;
+			jmpIf_label		Spin;
+
+		add_p64_imm			n, 1;
+		output_p64			n;
+		jmp_label			Loop;
+
+	deinit; # i
+	deinit; # n
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type			t1, i64;
+	set_threadctx			talker;
+	call_builtinfunc		builtin_start_thread;
+
+	init_pany_type			tmp, i64;
+	mov_p64_imm				tmp, 0;
+	label MainLoop;
+		cmpEq_p64_imm		tmp, 0;
+		jmpIf_label			MainLoop;
+
+	ret;
+}

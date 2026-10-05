@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "safe_vmthread.hpp"
 
 #include "opcode_functions/opcodes_functions.hpp"
@@ -180,7 +186,7 @@ namespace vm {
 
 		// Argument validity was already checked when validating the API call.
 		for (const auto& [i, arg_value]: std::views::enumerate(func_args)) {
-			const auto& arg_type = func.parameters[i];
+			const auto& arg_type = func.parameters[static_cast<u64>(i)];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
 				initFromVMValue,
@@ -397,7 +403,9 @@ namespace vm {
 						anyArrayLoad_bany_pptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
 					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(
+						free_pptr_type, 48, str_type_arg
+					),                                              // free ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
 				}
 			);
@@ -407,7 +415,7 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),   // free *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(free_pptr_type, 8, argv_type_arg),  // free *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit ix

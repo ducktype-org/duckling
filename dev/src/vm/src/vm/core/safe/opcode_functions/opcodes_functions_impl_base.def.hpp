@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file opcodes_functions_impl_base.def.hpp
  * @brief The opcodes functions implementations.
@@ -895,12 +901,13 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr_type)(FUNCTION_ARGS) {
 		{
 			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
-				if (Memory::isBlockDeallocated(ptr.getBlock()))
-					throw exceptions::VMDoubleFreeException();
-				thread.process_memory.freeBlockData(ptr.getBlock());
+				const auto expected_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+				if (thread.process_memory.getBlockType(ptr.getBlock()) != expected_type)
+					throw exceptions::VMInvalidFreeException();
+				thread.process_memory.guardedFreeBlockData(ptr);
 			}
 		}
 		FUNCTION_CONT(1);
@@ -1370,48 +1377,17 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			const auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 
-			if (new_elem_count == 0) {
-				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
-				// null. This is one of two possible approaches:
-				// 1. Current approach: treat 0-sized arrays as non-existent, and set the pointer to
-				// null-pointer (what we do here)
-				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
-				// C-nullptr as their data, but on DVM level we would still allow pointer
-				// [0-sized-block, nullptr] to exist. Any access to such block would simply
-				// be out-of-bound access.
-				//
-				// It might be desired to switch to second approach in the future, depending on the
-				// semantics of Duckling arrays.
-				if (!tbl_pointer.isNull()) {
-					auto tbl_block = tbl_pointer.getBlock();
-					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
-						throw exceptions::VMDynTableReAllocTypeMismatch();
-					if (Memory::isBlockDeallocated(tbl_block))
-						throw exceptions::VMUseAfterFreeException();
-					thread.process_memory.freeBlockData(tbl_block);
-					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-						tbl_pointer, Pointer::null()
-					);
-					WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-				}
-			} else if (tbl_pointer.isNull()) {
-				auto new_block
-					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
-				const Pointer new_dst
-					= thread.process_memory.updatePointerAssignment(tbl_pointer, { new_block, 0 });
-				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-			} else {
-				auto tbl_block = tbl_pointer.getBlock();
-				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
-					throw exceptions::VMDynTableReAllocTypeMismatch();
-				if (Memory::isBlockDeallocated(tbl_block))
-					throw exceptions::VMUseAfterFreeException();
-				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
-			}
+			WRITE_TO_PLACE_ARG(
+				Pointer,
+				instr->arg0,
+				thread.process_memory.dynTableReallocateBlockDataN(
+					tbl_pointer, pointed_type, new_elem_count
+				)
+			);
 		}
 		FUNCTION_CONT(2);
 	}

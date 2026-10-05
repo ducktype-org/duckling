@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "coercions.hpp"
 
 #include "errors.hpp"
@@ -278,7 +284,7 @@ namespace compiler::helios {
 		return coerce(ctx, std::move(from_box));
 	}
 
-	base::Optional<Box<code::Expr>> coerceFromBox(
+	query::QResult<Box<code::Expr>> coerceFromBox(
 		query::Context&                     ctx,
 		Box<code::Expr>                     expr,
 		const tsh::SymbolType<>             expected_type,
@@ -286,14 +292,12 @@ namespace compiler::helios {
 		base::Optional<dia::StablePosition> coercion_expects_pos,
 		CoercionErrorOverrides              error_overrides
 	) {
-		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
-		if (coercion_qresult.hasFailed()) return {};
-		const Coercion& coercion_result = coercion_qresult.valueOrPanic();
-		if (coercion_result.isValid()) return coercion_result.coerce(ctx, std::move(expr));
+		UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr->expression_type, expected_type));
+		if (coercion.isValid()) return coercion.coerce(ctx, std::move(expr));
 
 		logCoercionFailure(
-			ctx, coercion_result, source_position, coercion_expects_pos, std::move(error_overrides)
+			ctx, coercion, source_position, coercion_expects_pos, std::move(error_overrides)
 		);
-		return {};
+		return query::Failed();
 	}
 }

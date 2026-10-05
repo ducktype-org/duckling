@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 
@@ -104,12 +110,17 @@ namespace compiler::frontend {
 		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
 
 		/**
-		 * @brief Retrieves all SourceFile instances associated with the given File.
-		 * @param file the fs::File
-		 * @return Vector of references to SourceFile instances for the given file.
-		 *         If no SourceFiles exist for the file, an empty vector is returned.
+		 * @brief Retrieves all SourceFile instances registered under the given path.
+		 *
+		 * The registry is keyed by path, so the question can be asked about a file that is no
+		 * longer there: a path whose file has been deleted is exactly the case where a leftover
+		 * registration matters.
+		 *
+		 * @param path the path the files were registered under
+		 * @return Vector of references to SourceFile instances for the given path.
+		 *         If no SourceFiles exist for the path, an empty vector is returned.
 		 */
-		static std::vector<base::Ref<SourceFile>> getSourceFilesFromFile(const fs::File& file);
+		static std::vector<base::Ref<SourceFile>> getSourceFilesFromPath(const fs::FilePath& path);
 
 		/**
 		 * @brief Returns the FileID associated with this SourceFile.
