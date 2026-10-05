@@ -80,6 +80,21 @@ impl DependencyGraph {
             .unwrap_or_else(|| missing_depenendcy_in_graph(*package, self))
     }
 
+    pub fn reachable_subgraph_nodes(&self, package: Identity) -> HashSet<Identity> {
+        let mut result = HashSet::new();
+        self.reachable_subgraph_nodes_inner(package, &mut result);
+        result
+    }
+
+    fn reachable_subgraph_nodes_inner(&self, package: Identity, visited: &mut HashSet<Identity>) {
+        if !visited.contains(&package) {
+            visited.insert(package);
+            for pkg_dep in self.dependencies_for_package(&package).dependencies() {
+                self.reachable_subgraph_nodes_inner(*pkg_dep, visited);
+            }
+        }
+    }
+
     /// Get the iterator over all entries in this graph.
     pub fn iter(&self) -> impl Iterator<Item = (&Identity, &DependencyNode)> {
         self.graph.iter()
