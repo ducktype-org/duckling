@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file micro_instruction_definitions.def.hpp
  * @brief Contains definitions of all micro bytecode instructions. Can be used for generating
@@ -550,8 +556,8 @@ DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::PlacePtr, vm::low::op
 
 // allocates given type, stores pointer
 DEF_MICRO_INSTR(alloc_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
-// frees block under pointer
-DEF_MICRO_INSTR(free_pptr, vm::low::opargs::PlacePtr)
+// frees block under pointer, expects block's type to match the passed type
+DEF_MICRO_INSTR(free_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 
 
 // stores local data at pointer

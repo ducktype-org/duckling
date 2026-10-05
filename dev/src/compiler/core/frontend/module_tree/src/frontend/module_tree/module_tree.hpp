@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "access.hpp"
@@ -267,6 +273,13 @@ namespace compiler::frontend {
 		void updateModuleHashFromRootToThis();
 
 		/**
+		 * @brief Create a new, empty ModuleTree in static storage.
+		 * @note In principle it should only be used in ModuleTreeBuilder::finalize.
+		 * @return Reference to the stored ModuleTree, with its storage handle already set.
+		 */
+		static base::Ref<ModuleTree> addModuleToStorage();
+
+		/**
 		 * @brief Remove ModuleTree from static storage.
 		 * @note This will invalidate all references!
 		 * In principle it should only be used in ModuleTreeModifier in pair with query invalidations.
@@ -319,263 +332,6 @@ namespace compiler::frontend {
 		 * Presence of this optional indicates the module is a REPL module.
 		 */
 		base::Optional<ReplData> m_repl_data;
-	};
-
-	/**
-	 * ModuleTreeBuilder - Builder class for constructing ModuleTree instances.
-	 *
-	 * Allows step-by-step construction of module trees with assertions that check the correctness
-	 * of module creation.
-	 */
-	class ModuleTreeBuilder final {
-	public:
-		/**
-		 * Creates a new builder instance.
-		 * @return Boxed ModuleTreeBuilder.
-		 */
-		static base::Box<ModuleTreeBuilder> create();
-
-		/**
-		 * Creates a new builder instance with a random package ID.
-		 * This is used for testing purposes.
-		 * @return Boxed ModuleTreeBuilder.
-		 */
-		static base::Box<ModuleTreeBuilder> createWithRandomPackageID();
-
-		/**
-		 * Factory method to create ModuleTree from filesystem tree.
-		 * @param root Pre-constructed fs::File with a module structure.
-		 * @param file_resolver Lambda, given a regular file on disk, may open a different file
-		 * (useful in the LS). Never called for directories.
-		 * @param file_reject Regex for rejecting files.
-		 * @param dir_reject Regex for rejecting directories.
-		 * @return A valid pointer with the root.
-		 */
-		static Ref<ModuleTree> create(
-			const fs::File&     root,
-			base::StrID         package_id,
-			const FileResolver& file_resolver = identityFileResolver(),
-			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX
-		);
-
-		/**
-		 * Factory method to create ModuleTree from filesystem tree with random package ID.
-		 * This is used for testing purposes.
-		 * @param root Pre-constructed fs::File with a module structure.
-		 * @param file_reject Regex for rejecting files.
-		 * @param dir_reject Regex for rejecting directories.
-		 * @return A valid pointer with the root.
-		 */
-		static Ref<ModuleTree> createWithRandomPackageID(
-			const fs::File&   root,
-			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
-		);
-
-		/**
-		 * Sets the main source file for the module.
-		 * @param file The main source file.
-		 */
-		void setMainSourceFile(const fs::File& file);
-
-		/**
-		 * Adds a submodule to the module being built.
-		 * @param submodule The submodule to add.
-		 */
-		void addSubmodule(base::Ref<ModuleTree> submodule);
-
-		/**
-		 * Adds an other file to the module being built.
-		 * @param file The file to add.
-		 */
-		void addOtherFile(const fs::File& file);
-
-		/**
-		 * Sets the name of the module.
-		 * @param name The name to set.
-		 */
-		void setName(base::StrID name);
-
-		/**
-		 * Sets the package ID for the module tree.
-		 * The package ID must be set for every module tree
-		 * @param package_id The package ID to set.
-		 */
-		void setPackageID(base::StrID package_id);
-
-		/**
-		 * Sets the parent module.
-		 * @param parent The parent module.
-		 */
-		void setParent(base::Ref<ModuleTree> parent);
-
-		/**
-		 * Sets REPL-specific module data.
-		 * @param repl_data The ReplData struct.
-		 */
-		void setReplModule(const ReplData& repl_data);
-
-		/**
-		 * Builds the module tree from a single file (single-file module).
-		 * @param file The file to build from.
-		 */
-		void buildFromSingleFile(const fs::File& file, base::StrID package_id);
-
-		/**
-		 * Checks if the builder is finalized.
-		 * @return True if finalized, false otherwise.
-		 */
-		[[nodiscard]]
-		bool isFinalized() const;
-
-		/**
-		 * Finalizes the construction and returns the built ModuleTree.
-		 * After calling this, the builder becomes invalid.
-		 * @return The constructed ModuleTree.
-		 */
-		base::Ref<ModuleTree> finalize();
-
-	private:
-		/**
-		 * Constructs a ModuleTreeBuilder.
-		 */
-		ModuleTreeBuilder();
-
-		/**
-		 * Builds the module tree from a directory structure.
-		 * This will recursively traverse the directory and build the module tree.
-		 * @param directory The root directory to build the module tree from.
-		 * @param file_resolver Lambda, given a regular file on disk, may open a different file
-		 * instead.
-		 * @param file_reject Regex for rejecting files.
-		 * @param dir_reject Regex for rejecting directories.
-		 */
-		void buildFromDirectory(
-			const fs::File&     directory,
-			base::StrID         package_id,
-			const FileResolver& file_resolver = identityFileResolver(),
-			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX
-		);
-
-		/**
-		 * Handles a new file found during directory traversal.
-		 * This is a helper function used when creating module tree from fs::File.
-		 * @param file The file to handle.
-		 */
-		void handleNewFile(const fs::File& file);
-
-		base::Optional<base::Ref<ModuleTree>>             m_parent;
-		base::Optional<fs::File>                          m_main_source_file_path;
-		base::StrID                                       m_package_id;
-		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-
-		base::StrID m_name;
-		bool        m_finalized;
-
-		base::Optional<ReplData> m_repl_data;
-	};
-
-	/**
-	 * @brief Modifier class for making changes to ModuleTree instances.
-	 *
-	 * ModuleTreeModifier provides static methods to add, remove, and update source files,
-	 * submodules, parent relationships, and other files within a ModuleTree.
-	 * All modifications are performed in-place and require a query context.
-	 * This class cannot be instantiated.
-	 * If you are using this class you should know what you are doing.
-	 */
-	class ModuleTreeModifier final {
-	public:
-		/**
-		 * Sets the main source file for the given module.
-		 * @param module The module to modify.
-		 * @param file The file to set as main source file.
-		 */
-		static void setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
-
-		/**
-		 * Removes the main source file from the given module.
-		 * @param module The module to modify.
-		 */
-		static void removeMainSourceFile(base::Ref<ModuleTree> module);
-
-		/**
-		 * Adds a submodule to the given module.
-		 * @param module The module to modify.
-		 * @param submodule The submodule to add.
-		 */
-		static void addSubmodule(base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule);
-
-		/**
-		 * Adds an "other" file to the given module.
-		 * @param module The module to modify.
-		 * @param file The file to add.
-		 */
-		static void addOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
-
-		/**
-		 * Removes an "other" file from the given module.
-		 * @param module The module to modify.
-		 * @param file The file to remove.
-		 */
-		static void removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
-
-		/**
-		 * Sets the parent of the given module.
-		 * If parent is set, adds this module as a submodule to the parent.
-		 * If parent is not set, removes the current parent.
-		 * @param module The module to modify.
-		 * @param parent The new parent module (optional).
-		 */
-		static void setParent(
-			base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
-		);
-
-		/**
-		 * Removes the parent from the given module.
-		 * @param module The module to modify.
-		 */
-		static void removeParent(base::Ref<ModuleTree> module);
-
-		/**
-		 * Changes the package ID of the given module and ALL its submodules recursively.
-		 * All modules in the same module tree must have the same package ID.
-		 * @note This can only be done on root modules (modules without a parent).
-		 * @param module The module to modify.
-		 * @param new_package_id The new package ID to set.
-		 */
-		static void changePackageID(base::Ref<ModuleTree> module, base::StrID new_package_id);
-
-		/**
-		 * Removes the module with the given ModuleID from the module map.
-		 * Also removes it from its parent's submodules and deletes associated source files.
-		 * @param module_id The ModuleID to remove.
-		 * This will set the parent of all submodules to the parent of the removed module.
-		 */
-		static void removeSingleModule(base::Ref<ModuleTree> module);
-
-		/**
-		 * Removes the given module and all of its submodules recursively.
-		 * Parent hashes are updated once after the entire subtree is removed.
-		 * @param module_id The ModuleID to remove.
-		 */
-		static void removeModuleRecursive(base::Ref<ModuleTree> module);
-
-
-		/**
-		 * Notifies that a file has been modified and updates its SourceFile.
-		 * @param file The file that was modified.
-		 */
-		static void fileModified(const fs::File& file);
-
-	private:
-		/**
-		 * Private constructor to prevent instantiation.
-		 */
-		ModuleTreeModifier() = default;
 	};
 
 	/*

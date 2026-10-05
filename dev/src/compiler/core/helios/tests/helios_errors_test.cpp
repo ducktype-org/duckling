@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
@@ -54,6 +59,7 @@ public:
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
 		TESTER_ADD_TEST(testManglingErrors);
@@ -61,6 +67,7 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 	}
 
 protected:
@@ -529,6 +536,29 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				fun main() -> i64 = {
+					let x: i64 = 0;
+					x += 1;
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x: i32 = 0;
+					var y: i64 = 1;
+					x += y;
+				}
+			)",
+				{ "Type `i64` cannot be converted to type `i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
 				fun main() = {
 					var arr: i32[5];
 					arr["index"] = 1;
@@ -830,6 +860,15 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
+
+			// @TODO: #2104 Uncomment when operation assignment operators properly handle
+			// mutability. checkForErrorOnCompileModule( 	R"( 	fun main() -> i64 = { 		let
+			// x: i64 = 1; 		x += 123;
+			// 	}
+			// )",
+			// 	{ "Left side of assignment can't be immutable." },
+			// 	1
+			// );
 		}
 
 		// ============================ Variant errors ============================
@@ -1126,18 +1165,6 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-					var a: i64 = 0;
-					a += 1;
-					return a;
-				}
-			)",
-				{ "Feature not implemented" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
 				class A { x: i64 = 0; }
 				const a = A();
 
@@ -1259,7 +1286,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{};
+					N[];
 					return 0;
 				}
 
@@ -1418,15 +1445,15 @@ private:
 				false
 			);
 
-			// A member is either static or not, so `static` cannot be repeated either.
+			// A member is either global or not, so `global` cannot be repeated either.
 			checkForErrorOnCompileModule(
 				R"( class C {
-						public static static y: i64 = 0;
+						public global global y: i64 = 0;
 					}
 					fun main() -> i64 = {
 						return 0;
 					} )",
-				{ "Class static specifier is duplicated with another one." },
+				{ "Class global specifier is duplicated with another one." },
 				1,
 				false
 			);
@@ -1438,7 +1465,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"( class C {
 						public v: i64 = 1;
-						private static hidden: i64 = 2;
+						private global hidden: i64 = 2;
 					}
 					fun main() -> i64 = {
 						var x: i64 = C.hidden;
@@ -1507,7 +1534,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"( class C {
 						public v: i64 = 1;
-						public static s: i64 = 2;
+						public global s: i64 = 2;
 					}
 					fun main() -> i64 = {
 						var x: i64 = C.nope;
@@ -1522,7 +1549,7 @@ private:
 				R"( class C {
 						public v: i64 = 1;
 
-						public static fun sm() -> i64 = {
+						public global fun sm() -> i64 = {
 							return 2;
 						}
 					}
@@ -1869,6 +1896,28 @@ private:
 			{ "cycle" },
 			1
 		);
+
+		// Two namespaces re-exporting each other: looking a name up in `A` follows `using B.*;`
+		// into `B`, which follows `using A.*;` straight back. Non-wildcard selectors are settled
+		// by the name they declare, so only wildcards can loop like this.
+		// @TODO: #2615 report this in terms of the usings involved, not of query nodes.
+		checkForErrorOnCompileModule(
+			R"(
+				namespace A {
+					using B.*;
+					const IN_A: i64 = 1;
+				}
+
+				namespace B {
+					using A.*;
+					const IN_B: i64 = 2;
+				}
+
+				const V: i64 = A.IN_B;
+			)",
+			{ "cycle" },
+			1
+		);
 	}
 
 	void testErrorLoggingTemplates() {
@@ -1884,7 +1933,7 @@ private:
 				}
 
 				fun main() = {
-					foo:{1}();
+					foo[1]();
 				}
 			)",
 			{ "Symbol 'b' not found in lookup" },
@@ -1899,7 +1948,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{1, 2, 3};
+					N[1, 2, 3];
 					return 0;
 				}
 
@@ -1914,7 +1963,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{i64};
+					N[i64];
 					return 0;
 				}
 
@@ -1929,7 +1978,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{a};
+					N[a];
 					return 0;
 				}
 
@@ -1938,19 +1987,20 @@ private:
 			1
 		);
 
-		// ============================ Non template bake ============================
+		// ============================ Square call on a non-template ============================
 
+		// `[]` on a value that is not a template is an index, not a bake.
 		checkForErrorOnCompileModule(
 			R"(
 				const a = 1;
 
 				fun main() -> i64 = {
-					a:{1};
+					a[1];
 					return 0;
 				}
 
 			)",
-			{ "non-template" },
+			{ "Index operator base must be indexable." },
 			1
 		);
 
@@ -1967,6 +2017,22 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N[a = 1];
+					return 0;
+				}
+
+			)",
+			{ "Feature not implemented" },
 			1
 		);
 	}
@@ -2519,6 +2585,30 @@ private:
 			);
 	}
 
+	void testWildcardNamesInSelectorPaths() {
+		checkForErrorOnCompileModule(
+			R"(
+				namespace N {
+					namespace M {
+						const C: i64 = 7;
+					}
+				}
+
+				using N.*;
+
+				# `M` is in scope here, so ordinary code may name it.
+				const DIRECT: i64 = M.C;
+
+				# ...but the path of a selector may not, so this one cannot be resolved.
+				using M.C;
+
+				const VIA_USING: i64 = C;
+			)",
+			{ "Symbol 'M' not found in lookup" },
+			1
+		);
+	}
+
 	void testDuplicatedDefinitions() {
 		// Duplicated function.
 		checkForErrorOnCompileModule(
@@ -2574,6 +2664,50 @@ private:
             )",
 			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
 			2
+		);
+	}
+
+	/**
+	 * @brief Tests the argument checks of `@c_symbol_name("<name>")`: it takes exactly one string
+	 * literal, which must be a valid C identifier, and only goes on a `fundecl`.
+	 */
+	void testCSymbolNameAttributeErrors() {
+		constexpr std::string_view EXPECTS_ONE_STRING
+			= "Attribute 'c_symbol_name' expects exactly one string literal argument.";
+
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name fundecl f(a: i64) -> i64; })", { EXPECTS_ONE_STRING }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name() fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name("a", "b") fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name(1) fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+
+		for (std::string_view bad_name: { "", "1abc", "a-b", "a b" }) {
+			auto module = base::strConcat(
+				R"(extern("C") { @c_symbol_name(")", bad_name, R"(") fundecl f(a: i64) -> i64; })"
+			);
+			auto message = base::strConcat(
+				"Attribute 'c_symbol_name' expects a valid C identifier, got '", bad_name, "'."
+			);
+			checkForErrorOnCompileModule(module, { message }, 1);
+		}
+
+		checkForErrorOnCompileModule(
+			R"(@c_symbol_name("f") fun f() -> i64 = 0;)",
+			{ "Attribute is not supported on this type of statement" },
+			1
 		);
 	}
 

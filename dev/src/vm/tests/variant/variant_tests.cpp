@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <base/misc/int_conv.hpp>
@@ -39,7 +45,7 @@ private:
 	void simpleVariant1() {
 		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("simple_variant.dbc", "1", "13"),
-			vm::exceptions::VMNullPointerCopyException::ERR_MSG
+			vm::exceptions::VMNullPointerAccessException::ERR_MSG
 		);
 	}
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file main.cpp
  * @brief This file implements logic and main procedure that can be used to
@@ -36,6 +42,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <clah/value_parser.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
@@ -273,7 +280,9 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Path to the linker to use when creating executables.")
 			.optional()
 			.build(),
-		clah::ParamBuilder::ofValue(clah::StringParser::make("options"))
+		clah::ParamBuilder::ofValue(
+			clah::StringListParser::make("options", clah::StringParser::make())
+		)
 			.addLongName("additional-link-options")
 			.addShortDesc("Additional options to pass to the linker.")
 			.optional()
@@ -305,7 +314,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	linking_options.native_linker_path = parsing_result.getValue<std::string>("linker");
 
-	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
+	if (auto lib_path = parsing_result.getValue<std::vector<std::string>>("additional-link-options"))
 		linking_options.native_additional_link_options = lib_path.value();
 
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
@@ -762,13 +771,8 @@ clah::Clah getClahForMain() {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_llvm.exe");
 						auto linking_options = getLinkingOptionsFromClah(options);
-						linking_options.native_additional_link_options = base::strConcat(
-							linking_options.native_additional_link_options.copyValueOr(""),
-							libraries_to_link | std::views::transform([](fs::FilePath& path) {
-								return path.native();
-							}) | base::rangesIntersperse(std::string(", "))
-								| std::views::join | std::ranges::to<std::string>()
-						);
+						for (const auto& lib: libraries_to_link)
+							linking_options.native_additional_link_options.push_back(lib.native());
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetLLVMExecutable{

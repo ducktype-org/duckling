@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "safe_compiler.hpp"
@@ -704,7 +710,10 @@ namespace vm::loader::compiler::safe::detail {
 					calleeStackDistance(sharedStackSpaceSizeOfMethod(i.object_ptr, i.method)) });
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
-			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }
+			instr_case(high::Op_free_pptr, i) {
+				opargs::Type expected_type = getPlaceType(i.ptr)->getInnerType().value()->getName();
+				addLow<Op_free_pptr_type>(i.ptr, expected_type);
+			}
 			instr_case(high::Op_store_pptr_pany, i) {
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 			}

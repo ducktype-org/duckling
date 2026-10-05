@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_symbols.hpp"
 
 #include <frontend/module_tree/functors.hpp>
@@ -32,8 +38,6 @@ namespace compiler::repl {
 				return "const";
 			case helios::SymbolKind::Class:
 				return "class";
-			case helios::SymbolKind::Alias:
-				return "alias";
 			case helios::SymbolKind::Using:
 				return "using";
 			case helios::SymbolKind::Variable:

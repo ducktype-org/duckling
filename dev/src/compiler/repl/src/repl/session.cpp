@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "session.hpp"
 
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
@@ -951,7 +957,7 @@ namespace compiler::repl {
 						CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
 					}
 
-					auto module_ref = createEphemeralChainedStatementModule(
+					auto module_ref = createSyntheticChainedStatementModule(
 						stmt_source, parent_module_id, m_line_counter, "repl_"
 					);
 					auto module_id = module_ref->getModuleID();

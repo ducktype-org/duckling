@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file generic_operations.cpp
  * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
@@ -421,12 +427,12 @@ namespace compiler::driver {
 				// Empty input should still produce a valid synthetic script main wrapper with
 				// no statement calls.
 				auto empty_script_module
-					= repl::createEphemeralChainedStatementModule("", {}, 0, "script_");
+					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_");
 				parent_module_id = empty_script_module->getModuleID();
 			}
 
 			for (const auto& statement_source: *split_result) {
-				auto module_ref = repl::createEphemeralChainedStatementModule(
+				auto module_ref = repl::createSyntheticChainedStatementModule(
 					statement_source, parent_module_id, statement_counter, "script_"
 				);
 				auto module_id   = module_ref->getModuleID();

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lir_tests.cpp
  * @brief Tests in this file are very bad right now, because MIR
@@ -53,6 +59,7 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
+		TESTER_ADD_TEST(cSymbolNameTest);
 		TESTER_ADD_TEST(debugPrintStandaloneElements);
 		TESTER_ADD_TEST(debugPrintElementsWithFunctionIDs);
 		TESTER_ADD_TEST(debugPrintFunctionWithAndWithoutContext);
@@ -726,12 +733,57 @@ private:
 		});
 	}
 
+	/**
+	 * @brief Tests `@c_symbol_name("<name>")` on `extern("C")` declarations.
+	 */
+	void cSymbolNameTest() {
+		auto module     = getLIROfModule(path("modules/c_symbol_name"));
+		auto caller_lir = module.lirFunc("caller");
+
+		using namespace compiler::lir;
+
+		std::vector<base::StrID> called;
+		for (const auto& block: caller_lir->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+
+				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
+				assertTrue(
+					std::holds_alternative<lir::LIRAbi::CAbi>(literal.abi.value),
+					"Expected the call to use the C ABI"
+				);
+				called.push_back(literal.mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(called.size(), 3);
+		ASSERT_EQUAL_PRINT(called.at(0), base::StrID("match"));
+		ASSERT_EQUAL_PRINT(called.at(1), base::StrID("in"));
+		ASSERT_EQUAL_PRINT(called.at(2), base::StrID("plain_c"));
+
+		// On a declaration that is not `extern("C")` the attribute is ignored.
+		std::vector<base::StrID> ignored_called;
+		for (const auto& block: module.lirFunc("ignored_caller")->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+				ignored_called.push_back(instr.arguments.at(0).get<FunctionLiteral>().mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(ignored_called.size(), 2);
+		assertTrue(
+			ignored_called.at(0).strView().starts_with("_Q"),
+			base::strConcat(
+				"Expected `notExternC` to be mangled, got `", ignored_called.at(0).str(), "`"
+			)
+		);
+		ASSERT_EQUAL_PRINT(ignored_called.at(1), base::StrID("dvmDecl"));
+	}
+
 	void debugPrintStandaloneElements() {
 		auto module  = getLIROfModule(path("modules/simple"));
 		auto foo_lir = module.lirFunc("foo");
 
-		lir::LIRPlace output{ foo_lir->local_list[0], {} };
-		lir::LIRPlace argument{ foo_lir->local_list[1], {} };
+		lir::LIRPlace output{ foo_lir->local_list[0] };
+		lir::LIRPlace argument{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		output.debugPrint(place_output);
@@ -791,7 +843,7 @@ private:
 
 		// Standalone printing would assign Local(?0) to this place because it is the first
 		// encountered local. Function context preserves its actual index in local_list.
-		lir::LIRPlace place{ foo_lir->local_list[1], {} };
+		lir::LIRPlace place{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		place.debugPrint(place_output, foo_lir);
@@ -803,8 +855,7 @@ private:
 
 		lir::Instruction  instruction{ lir::Operation::Assign,
                                       place,
-			                           { lir::LIRValue{
-                                          lir::LIRPlace{ foo_lir->local_list[0], {} } } },
+			                           { lir::LIRValue{ lir::LIRPlace{ foo_lir->local_list[0] } } },
 			                           {} };
 		std::stringstream instruction_output;
 		instruction.debugPrint(instruction_output, foo_lir);

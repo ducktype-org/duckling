@@ -1,8 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::convert::Infallible;
 use std::ops::ControlFlow;
 use std::path::PathBuf;
 
-use itertools::Itertools;
 use tracing::{debug, instrument, trace};
 
 use super::CompilationOutput;
@@ -110,7 +115,7 @@ pub fn get_linker_options(
     let external_libs = gather_external_libraries(unit, graph)
         .into_iter()
         .map(|x| x.to_string());
-    let string = outputs
+    let args = outputs
         .into_iter()
         .filter_map(|(unit, output)| {
             if unit.unit_type() == UnitType::Dependency {
@@ -121,14 +126,14 @@ pub fn get_linker_options(
         })
         .map(|output| output.display().to_string())
         .chain(external_libs)
-        .join(" ");
-    debug!(args = %string, "raw linker args");
-    if string.is_empty() {
+        .collect::<Vec<_>>();
+    debug!(?args, "raw linker args");
+    if args.is_empty() {
         debug!("empty linker options");
         return Ok(None);
     }
     Ok(Some(multipackage_schema::LinkerOptions::RawLinkerArgs(
-        string,
+        args,
     )))
 }
 
