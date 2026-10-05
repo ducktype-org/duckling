@@ -2009,7 +2009,7 @@ private:
 				}
 
 			)",
-			{ "Not yet implemented" },
+			{ "Feature not implemented" },
 			1
 		);
 	}
