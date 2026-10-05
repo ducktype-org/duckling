@@ -67,6 +67,7 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 	}
 
 protected:
@@ -1285,7 +1286,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{};
+					N[];
 					return 0;
 				}
 
@@ -1895,6 +1896,28 @@ private:
 			{ "cycle" },
 			1
 		);
+
+		// Two namespaces re-exporting each other: looking a name up in `A` follows `using B.*;`
+		// into `B`, which follows `using A.*;` straight back. Non-wildcard selectors are settled
+		// by the name they declare, so only wildcards can loop like this.
+		// @TODO: #2615 report this in terms of the usings involved, not of query nodes.
+		checkForErrorOnCompileModule(
+			R"(
+				namespace A {
+					using B.*;
+					const IN_A: i64 = 1;
+				}
+
+				namespace B {
+					using A.*;
+					const IN_B: i64 = 2;
+				}
+
+				const V: i64 = A.IN_B;
+			)",
+			{ "cycle" },
+			1
+		);
 	}
 
 	void testErrorLoggingTemplates() {
@@ -1910,7 +1933,7 @@ private:
 				}
 
 				fun main() = {
-					foo:{1}();
+					foo[1]();
 				}
 			)",
 			{ "Symbol 'b' not found in lookup" },
@@ -1925,7 +1948,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{1, 2, 3};
+					N[1, 2, 3];
 					return 0;
 				}
 
@@ -1940,7 +1963,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{i64};
+					N[i64];
 					return 0;
 				}
 
@@ -1955,7 +1978,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{a};
+					N[a];
 					return 0;
 				}
 
@@ -1964,19 +1987,20 @@ private:
 			1
 		);
 
-		// ============================ Non template bake ============================
+		// ============================ Square call on a non-template ============================
 
+		// `[]` on a value that is not a template is an index, not a bake.
 		checkForErrorOnCompileModule(
 			R"(
 				const a = 1;
 
 				fun main() -> i64 = {
-					a:{1};
+					a[1];
 					return 0;
 				}
 
 			)",
-			{ "non-template" },
+			{ "Index operator base must be indexable." },
 			1
 		);
 
@@ -1993,6 +2017,22 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N[a = 1];
+					return 0;
+				}
+
+			)",
+			{ "Feature not implemented" },
 			1
 		);
 	}
@@ -2543,6 +2583,30 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
+	}
+
+	void testWildcardNamesInSelectorPaths() {
+		checkForErrorOnCompileModule(
+			R"(
+				namespace N {
+					namespace M {
+						const C: i64 = 7;
+					}
+				}
+
+				using N.*;
+
+				# `M` is in scope here, so ordinary code may name it.
+				const DIRECT: i64 = M.C;
+
+				# ...but the path of a selector may not, so this one cannot be resolved.
+				using M.C;
+
+				const VIA_USING: i64 = C;
+			)",
+			{ "Symbol 'M' not found in lookup" },
+			1
+		);
 	}
 
 	void testDuplicatedDefinitions() {

@@ -12,4 +12,3 @@
 #include "implements_list.hpp"     // IWYU pragma: export
 #include "parameter_list.hpp"      // IWYU pragma: export
 #include "selector_list.hpp"       // IWYU pragma: export
-#include "template_list.hpp"       // IWYU pragma: export

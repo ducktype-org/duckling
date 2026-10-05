@@ -7,6 +7,7 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/pst_config.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
@@ -298,11 +299,24 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * @brief The symbol representing real module from the module tree.
+	 * @note The module is not generated, only the symbol is. It's purpose is
+	 * to unify the Namespace and Module handling by the chain processing `a.b.c`.
+	 */
+	struct Module final {
+		frontend::ModuleID module_id;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
 	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
 		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplInputWrapper,    \
-		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant
+		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant,          \
+		defgen::Module
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 
