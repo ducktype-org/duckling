@@ -122,7 +122,7 @@ pub fn get_linker_options(
         .map(|output| output.display().to_string())
         .chain(external_libs)
         .collect::<Vec<_>>();
-    debug!(args = ?args, "raw linker args");
+    debug!(?args, "raw linker args");
     if args.is_empty() {
         debug!("empty linker options");
         return Ok(None);
