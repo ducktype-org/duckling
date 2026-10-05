@@ -31,6 +31,5 @@
 #include "round_expr.hpp"           // IWYU pragma: export
 #include "string_value.hpp"         // IWYU pragma: export
 #include "suffix_operator.hpp"      // IWYU pragma: export
-#include "template_specifier.hpp"   // IWYU pragma: export
 #include "ternary.hpp"              // IWYU pragma: export
 #include "unit_expr.hpp"            // IWYU pragma: export

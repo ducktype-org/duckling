@@ -61,41 +61,22 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * This is temporary helper used before #3095.
-	 * It is written in a way that it can be used with minimal boilerplate with the current chain
-	 * chain expression processing code (as both chain expression processing and this function are
-	 * soon to be refactored)
+	 * @brief Bakes a template with the arguments of a square call, as in `List[i64]`.
 	 *
-	 * @TODO: #3095 remove it, move the relevant code to the handling of the new :{} PST node.
+	 * Each argument is evaluated at compile time, after a coercion to the type of its template
+	 * parameter.
 	 *
-	 * @note Usage of this function is added only in few places for now, after #3095 the number of
-	 * required places to handle templates here will be much lower either way.
-	 *
-	 * @return QResult<base::Optional<SymID>> - the resulting symbol id of the baked template, or
-	 * empty if the template did not happen (with standard QResult semantics on top of it).
+	 * @param template_sym_id The template symbol being baked.
+	 * @param square_call The `[...]` call holding the template arguments.
+	 * @return The symbol of the baked template.
 	 */
-	template<typename T>
-	query::QResult<base::Optional<SymID>> transformTemplateBake(
-		query::Context& query_ctx,
-		SymID           template_sym_id,
-		pst::Access<T>  element_with_template_specifier
-	) requires requires(T t) { t.getTemplateSpecifier(); } {
-		if (not element_with_template_specifier->getTemplateSpecifier().has_value())
-			return base::Optional<SymID>{};  // no template specifier, no bake
-
-		if (kind(template_sym_id) != SymbolKind::Template) {
-			query_ctx.logInt(makeBox<dia::PlaceholderError>(
-				"template bake called on non-template symbol",
-				element_with_template_specifier->getStablePosition()
-			));
-			return query::Failed();
-		}
-
-		auto template_specifier = element_with_template_specifier->getTemplateSpecifier().value();
-		auto template_specifier_dc
-			= template_specifier.template dynamicCast<pst::expr::TemplateSpecifier>().unlock(
-				query_ctx
-			);
+	query::QResult<SymID> bakeTemplate(
+		query::Context& query_ctx, SymID template_sym_id, pst::Access<pst::expr::Call> square_call
+	) {
+		CORE_ASSERT(
+			kind(template_sym_id) == SymbolKind::Template,
+			"bakeTemplate called on a non-template symbol"
+		);
 
 		templates::TemplateBakeKey key{
 			.template_sym_id    = template_sym_id,
@@ -107,20 +88,28 @@ namespace compiler::helios::code {
 		if (template_signature_qr.hasFailed()) return query::Failed();
 		const auto& template_signature = template_signature_qr.valueOrPanic();
 
-		auto argument_list = template_specifier_dc->getArgumentList().unlock(query_ctx);
+		auto argument_list = square_call->getArgs().unlock(query_ctx);
 
 		if (template_signature.parameters.size() != argument_list->size()) {
 			query_ctx.logInt(makeBox<dia::PlaceholderError>(
 				"argument count does not match template parameter count",
-				element_with_template_specifier->getStablePosition()
+				square_call->getStablePosition()
 			));
 			return query::Failed();
 		}
 
 		for (const auto& [arg, parameter]:
 		     std::views::zip(*argument_list, template_signature.parameters)) {
-			auto arg_unlocked    = arg.unlock(query_ctx);
-			auto arg_expr_result = subExprFromPST(query_ctx, arg_unlocked->getExpr());
+			auto arg_unlocked = arg.unlock(query_ctx);
+			if (arg_unlocked->isNamedArg()) {
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
+					"Template arguments cannot be named.", arg_unlocked->getStablePosition()
+				));
+				return query::Failed();
+			}
+
+			auto arg_expr_result
+				= subExprFromPST(query_ctx, arg_unlocked->getArg().unlock(query_ctx)->getExpr());
 
 			if (arg_expr_result.hasFailed()) return query::Failed();
 			auto arg_expr = std::move(arg_expr_result).valueOrPanic();
@@ -143,69 +132,6 @@ namespace compiler::helios::code {
 
 		if (resulting_symbol.hasFailed()) return query::Failed();
 		return resulting_symbol.valueOrPanic();
-	}
-
-	/**
-	 * This is temporary helper used before #3095 and before #3112
-	 *
-	 * @TODO: #3095 remove or adjust it, move the relevant code to the handling of the new :{} PST
-	 * node.
-	 */
-	template<typename T>
-	query::QResult<base::Optional<SymID>> transformTemplateBakeLookupResult(
-		query::Context&    query_ctx,
-		CRef<LookupResult> lookup_result,
-		pst::Access<T>     element_with_template_specifier
-	) requires requires(T t) { t.getTemplateSpecifier(); } {
-		if (not element_with_template_specifier->getTemplateSpecifier().has_value())
-			return base::Optional<SymID>{};  // no template specifier, no bake
-
-		auto as_single = lookup_result->getAsSingle();
-
-		if (as_single.hasFailed()) return query::Failed();
-
-		variant_match(as_single.valueOrPanic()) {
-			variant_case(SymbolList, symbol_list) {
-				CORE_ASSERT(
-					not symbol_list.empty(), "Invalid state: empty symbol list in lookup result"
-				);
-
-				// @TODO: #1412 fix dealias, this discards all aliases and takes the last symbol in
-				// the list
-				auto template_sym_id = symbol_list.list.back();
-				return transformTemplateBake(
-					query_ctx, template_sym_id, element_with_template_specifier
-				);
-			}
-
-			variant_case(errors::Ambiguity, _) {
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"template bake called on ambiguous lookup result",
-					element_with_template_specifier->getStablePosition()
-				));
-				return query::Failed();
-			}
-
-			variant_case(errors::SymbolNotFound, _) {
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Symbol not found in lookup",
-					element_with_template_specifier->getStablePosition()
-				));
-				return query::Failed();
-			}
-
-			variant_case(errors::Inaccessible, _) {
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Symbol found in lookup is not visible from here",
-					element_with_template_specifier->getStablePosition()
-				));
-				return query::Failed();
-			}
-
-			variant_default { CORE_PANIC("Invalid state: unexpected variant in lookup result"); }
-		}
-
-		CORE_UNREACHABLE();
 	}
 
 	/**
@@ -539,41 +465,13 @@ namespace compiler::helios::code {
 			CORE_UNREACHABLE();
 		}
 
-		/**
-		 * @brief Bakes the callee if it carries a template specifier, then resolves the result
-		 * into callable candidates.
-		 *
-		 * @param lookup_result The result of the lookup for the callee.
-		 * @param element_with_template_specifier The PST element naming the callee.
-		 * @return Candidates after baking and resolution of functions vs call operators.
-		 *
-		 * @TODO: #3095 fold into the handling of the new :{} PST node.
-		 */
-		template<typename T>
-		[[nodiscard]]
-		query::QResult<std::vector<SymID>> getCallableCandidatesWithBake(
-			CRef<LookupResult> lookup_result, pst::Access<T> element_with_template_specifier
-		) const {
-			UNPACK_QRESULT(
-				auto maybe_bake =,
-				transformTemplateBakeLookupResult(
-					query_ctx, lookup_result, element_with_template_specifier
-				)
-			);
-
-			// @TODO: #1412 fix dealias
-			if (maybe_bake.has_value())
-				return getCallableCandidates(std::vector{ maybe_bake.value() });
-			return getCallableCandidates(lookup_result->leaves);
-		}
-
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
 
 		/**
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain
-		 * Case when we have a global identifier followed by a call expression,
-		 * like "foo()" or array_like[i].
+		 * Case when we have a global identifier followed by a round call expression, like "foo()".
+		 * A square call after an identifier is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
@@ -587,31 +485,12 @@ namespace compiler::helios::code {
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				UNPACK_QRESULT(
-					const auto& callees =, getCallableCandidatesWithBake(lookup_result, ident)
-				);
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
-				return ChainState::ofExpr(std::move(expr));
-			}
-			case lexer::Token::Square: {
-				const auto lookup_result = h_interface.lookupExpectUnique(
-					ident->getStablePosition(),
-					query_ctx,
-					ident->getName().unlock(query_ctx)->unwrap()
-				);
-				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-
-				auto base_state_res
-					= processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
-				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
-
-
-				auto square_call_res = processSquareCall(
-					query_ctx, std::move(base_state).asExpr(query_ctx), call_expr
-				);
-				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
@@ -693,16 +572,6 @@ namespace compiler::helios::code {
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-			auto mock_symbol = sym_list.back();
-
-			UNPACK_QRESULT(
-				auto maybe_template_bake =, transformTemplateBake(query_ctx, mock_symbol, ident)
-			);
-
-			if_opt_some(maybe_template_bake, template_bake) {
-				return processNamespaceOrValue(template_bake, pstOrigin(ident), ident);
-			}
-
 			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
 		}
 
@@ -763,7 +632,8 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * Call on the namespace, for example Namespace()
+		 * Call on the namespace, for example Namespace().
+		 * A square call on a template, like `List[i64]`, is a bake and never gets here, see @p run.
 		 */
 		auto processPSTExpr(
 			[[maybe_unused]] SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr
@@ -910,7 +780,7 @@ namespace compiler::helios::code {
 		 * and current state is an expression.
 		 * For example:
 		 * - `my_expr.foo()` - this may result in a method. Method parameter overload is possible.
-		 * - `class.array_field[ix]` - this is an index access the an array which is a class field.
+		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
 			base::Box<Expr>                current_expr,
@@ -957,16 +827,6 @@ namespace compiler::helios::code {
 				}
 				return ChainState::ofExpr(std::move(expr.value()));
 			}
-			case lexer::Token::Square: {
-				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
-				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
-
-				auto square_call_res = processSquareCall(
-					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
-				);
-				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-				return ChainState::ofExpr(std::move(expr));
-			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
@@ -984,7 +844,7 @@ namespace compiler::helios::code {
 		 * and current state is a namespace.
 		 * For example:
 		 * - `my_ns.foo()` - this may result in function overload.
-		 * - `my_ns.array[ix]`
+		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
 			SymID                          namespace_like_symbol,
@@ -998,22 +858,13 @@ namespace compiler::helios::code {
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				UNPACK_QRESULT(
-					const auto& callees =, getCallableCandidatesWithBake(lookup_result, expr_access)
-				);
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto expr_result
 					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-				return ChainState::ofExpr(std::move(expr));
-			}
-			case lexer::Token::Square: {
-				auto access_res = processPSTExpr(namespace_like_symbol, expr_access);
-				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
-				auto square_call_res = processSquareCall(
-					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
-				);
-				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
@@ -1051,7 +902,7 @@ namespace compiler::helios::code {
 		 * Case when we have an access expression followed by a call expression and the current
 		 * state is a type, for example:
 		 * - `MyClass.staticMethod()` - this may result in a static method overload.
-		 * - `MyClass.CONSTANT_ARRAY[ix]` - this is an index access into a constant of the class.
+		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
 			TypeInChain                    type,
@@ -1067,21 +918,12 @@ namespace compiler::helios::code {
 				);
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				UNPACK_QRESULT(
-					const auto& callees =, getCallableCandidatesWithBake(lookup_result, expr_access)
-				);
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-				return ChainState::ofExpr(std::move(expr));
-			}
-			case lexer::Token::Square: {
-				auto access_res = processPSTExpr(type, expr_access);
-				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
-				auto square_call_res = processSquareCall(
-					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
-				);
-				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
@@ -1279,6 +1121,69 @@ namespace compiler::helios::code {
 			return processFunctionCall(ctx, candidates, callee_element, call_expr);
 		}
 
+		// =============================== TEMPLATE BAKES ===============================
+
+		/**
+		 * @brief Checks if the current element is a square call on a template, like the `[i64]` of
+		 * `List[i64]`. Such a call is a template bake, and not an index.
+		 */
+		bool isCurrentTemplateBake() {
+			if (not this->current_state.isNamespaceLike()) return false;
+			if (kind(this->current_state.getNamespaceLikeSymbol()) != SymbolKind::Template)
+				return false;
+			return isCurrentElement<pst::expr::Call>()
+			   and currentElem().value().dynamicCast<pst::expr::Call>().value()->getType()
+			           == lexer::Token::Square;
+		}
+
+		/**
+		 * @brief Checks if the next element is a round call, like the `()` of `foo[i64]()`.
+		 */
+		bool isNextRoundCall() {
+			return isNextElement<pst::expr::Call>()
+			   and nextElem().value().dynamicCast<pst::expr::Call>().value()->getType()
+			           == lexer::Token::Round;
+		}
+
+		/**
+		 * @brief Bakes the template of the current state with the current square call.
+		 *
+		 * The baked symbol becomes the next state, like any other looked-up symbol. When
+		 * @p with_call is set, the next element is a round call and the baked symbol is called
+		 * right away, like a function (`foo[i64]()`) or a class constructor (`List[i64]()`).
+		 *
+		 * @warning It assumes that @p isCurrentTemplateBake holds, and that the next element is a
+		 * round call when @p with_call is set.
+		 */
+		base::Optional<query::Failed> stepTemplateBake(bool with_call) {
+			auto square_call     = currentElem().value().dynamicCast<pst::expr::Call>().value();
+			auto template_origin = this->current_state.getNamespaceLikePstOrigin();
+			auto baked_result
+				= bakeTemplate(query_ctx, this->current_state.getNamespaceLikeSymbol(), square_call);
+			UNPACK_QRESULT_MOVE(auto baked =, baked_result);
+
+			if (not with_call) {
+				auto res = processNamespaceOrValue(
+					baked, pstOriginOrdered(template_origin, square_call), square_call
+				);
+				UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
+				return {};
+			}
+
+			auto round_call = nextElem().value().dynamicCast<pst::expr::Call>().value();
+			// The element naming the template is the callee, as in a call without a bake.
+			auto callee = chain_elements.at(this->index - 1).unlock(query_ctx);
+
+			// @TODO: #1412 fix dealias
+			const auto callees_q_result = getCallableCandidates(std::vector{ baked });
+			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+			auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, callee, round_call);
+			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+			this->current_state = ChainState::ofExpr(std::move(expr));
+			return {};
+		}
+
 		// =============================== MAIN PROCESSING LOOP ===============================
 
 		/**
@@ -1391,9 +1296,10 @@ namespace compiler::helios::code {
 		query::QResult<base::Box<Expr>> run() {
 			base::Optional<query::Failed> error{};
 
+			// A square call is never paired with the element before it: it may be a template bake
+			// (`List[i64]`), which needs the looked-up symbol first.
 			this->index = 0;
-			if (isCurrentElement<pst::expr::IdentifierLiteral>()
-			    && isNextElement<pst::expr::Call>()) {
+			if (isCurrentElement<pst::expr::IdentifierLiteral>() && isNextRoundCall()) {
 				error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>();
 				this->index += 2;
 			} else if (isCurrentElement<pst::expr::KeywordLiteral>()
@@ -1409,7 +1315,11 @@ namespace compiler::helios::code {
 			}
 
 			while (not error.has_value() && this->index < chain_elements.size()) {
-				if (isCurrentElement<pst::expr::Access>() && isNextElement<pst::expr::Call>()) {
+				if (isCurrentTemplateBake()) {
+					const bool with_call = isNextRoundCall();
+					error                = stepTemplateBake(with_call);
+					this->index += with_call ? 2 : 1;
+				} else if (isCurrentElement<pst::expr::Access>() && isNextRoundCall()) {
 					error = step<pst::expr::Access, pst::expr::Call>();
 					this->index += 2;  // skip next element, because it is handled
 				} else if (isCurrentElement<pst::expr::Access>()) {

@@ -12,7 +12,7 @@
 namespace pst::expr {
 	/**
 	 * @brief This represents a single access expression of type `[expression operator like . or
-	 * .?][name][optionally template specifier]`
+	 * .?][name]`
 	 */
 	class Access final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Access, ExprElement);
@@ -21,7 +21,6 @@ namespace pst::expr {
 	protected:
 		NAMED_CHILD(type, OperatorWrapper);  ///< either `.` or `.?` or `::`
 		NAMED_CHILD(name, IdentifierWrapper);
-		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
 		Access(const LangParserState& state): ExprElement(state, 300) {}
@@ -46,11 +45,6 @@ namespace pst::expr {
 		[[nodiscard]]
 		AccessLocked<IdentifierWrapper> getName() const {
 			return name.give();
-		}
-
-		[[nodiscard]]
-		base::Optional<AccessLocked<ExprElement>> getTemplateSpecifier() const {
-			return template_specifier.map([](const auto& t) { return t.give(); });
 		}
 	};
 }

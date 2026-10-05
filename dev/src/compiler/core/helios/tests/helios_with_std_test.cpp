@@ -160,7 +160,7 @@ private:
 	/**
 	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
 	 *
-	 * `new v` becomes `boxAlloc:{T}(v) as box T`: the primitive of `core.containers` hands the
+	 * `new v` becomes `boxAlloc[T](v) as box T`: the primitive of `core.containers` hands the
 	 * storage back as a `ptr T`, and the cast is what turns it into the box.
 	 */
 	static const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr
@@ -402,7 +402,7 @@ private:
 	// The `@builtin(...)` fundecls in core.builtins are templated, so their synthesized
 	// implementations are emitted once per element type they are baked for. The `builtins` module
 	// runs the alloc -> slice_from_ptr_len -> ptr_from_slice -> free chain for `str` and `i32`
-	// (and uses `ptr_from_slice:{char}` on a string literal).
+	// (and uses `ptr_from_slice[char]` on a string literal).
 	void testTemplatedBuiltinDefinitionsInModuleHOUT() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 
