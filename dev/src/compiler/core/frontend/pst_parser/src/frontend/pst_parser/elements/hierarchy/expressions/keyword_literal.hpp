@@ -19,7 +19,6 @@ namespace pst::expr {
 
 	protected:
 		NAMED_CHILD(keyword, KeywordWrapper);
-		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
 		KeywordLiteral(const LangParserState& state): ExprElement(state, 300) {}

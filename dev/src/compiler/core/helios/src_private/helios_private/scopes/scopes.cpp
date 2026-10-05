@@ -204,7 +204,6 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
-		case pst::ElementKind::TemplateList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::Expand:

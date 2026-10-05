@@ -18,7 +18,6 @@ namespace pst::expr {
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
-		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
 		IdentifierLiteral(const LangParserState& state): ExprElement(state, 300) {}
@@ -33,12 +32,6 @@ namespace pst::expr {
 		[[nodiscard]]
 		AccessLocked<IdentifierWrapper> getName() const {
 			return name.give();
-		}
-
-		[[nodiscard]]
-		auto getTemplateSpecifier() const -> base::Optional<AccessLocked<ExprElement>> {
-			if (template_specifier) return template_specifier.value().give();
-			return {};
 		}
 
 		[[nodiscard]]

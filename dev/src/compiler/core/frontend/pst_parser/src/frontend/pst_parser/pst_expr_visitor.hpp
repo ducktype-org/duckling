@@ -22,7 +22,6 @@ namespace pst::expr {
 		ExprStrValue,
 		ExprCharValue,
 		ExprFormatStrValue,
-		TemplateSpecifier,
 		IdentifierLiteral,
 		KeywordLiteral,
 		Access,

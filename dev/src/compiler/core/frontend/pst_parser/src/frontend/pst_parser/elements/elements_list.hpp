@@ -13,7 +13,6 @@ namespace pst {
 	// Lists
 	class ParamList;
 	class ImplementsList;
-	class TemplateList;
 	class AtrArgList;
 	class CallList;
 	class FlowPatternList;
@@ -96,7 +95,6 @@ namespace pst {
 		class ExprCharValue;
 		class ExprFormatStrValue;
 		class Literal;
-		class TemplateSpecifier;
 		class IdentifierLiteral;
 		class KeywordLiteral;
 		class Access;
