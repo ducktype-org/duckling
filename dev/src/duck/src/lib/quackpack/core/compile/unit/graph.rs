@@ -11,10 +11,10 @@ use std::collections::{HashMap, VecDeque};
 
 use tracing::instrument;
 
-use super::{ArtifactsType, BuildKind, Unit, UnitId};
+use super::{BuildKind, Unit, UnitId, UnitType};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_graph::{DependencyGraph, DependencyNode, EarlyGraph};
-use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph};
+use crate::quackpack::core::compile::missing_depenendcy_in_graph;
 use crate::quackpack::core::identity::Identity;
 
 #[derive(Debug)]
@@ -110,9 +110,9 @@ fn decompose_units(units: Vec<(Unit, Vec<UnitId>)>) -> (Vec<Unit>, Vec<Vec<UnitI
 
 /// Lower an [`EarlyGraph`] to the [`UnitGraph`].
 #[instrument(skip_all)]
-pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitGraph {
+pub fn lower_early_graph(graph: EarlyGraph) -> UnitGraph {
     let builder = UnitGraphBuilder::new(graph);
-    builder.lower(bcx)
+    builder.lower()
 }
 
 #[derive(Debug)]
@@ -163,8 +163,8 @@ impl UnitGraphBuilder {
     /// Lower (essentially) decomposed [`EarlyGraph`] (from [`new`]) to the [`UnitGraph`].
     ///
     /// [`new`]: Self::new
-    pub(crate) fn lower(self, bcx: &BuildContext<'_, '_>) -> UnitGraph {
-        self.populate_units(bcx);
+    pub(crate) fn lower(self) -> UnitGraph {
+        self.populate_units();
         self.finish_lowering()
     }
 
@@ -207,7 +207,7 @@ impl UnitGraphBuilder {
     /// Populate [`created_units_with_deps`] with [`Unit`]s and their dependencies.
     ///
     /// [`created_units_with_deps`]: Self::created_units_with_deps
-    fn populate_units(&self, bcx: &BuildContext<'_, '_>) {
+    fn populate_units(&self) {
         for identity in self.id_to_identity.iter().copied() {
             let package = self
                 .packages
@@ -215,7 +215,7 @@ impl UnitGraphBuilder {
                 .remove(&identity)
                 .unwrap_or_else(|| missing_depenendcy_in_graph(identity, &self.identity_to_id));
             let node = self.graph.dependencies_for_package(&identity);
-            let unit = self.create_single_unit(identity, package, bcx);
+            let unit = self.create_single_unit(identity, package);
             self.populate_unit_deps(&unit, node);
         }
     }
@@ -231,19 +231,14 @@ impl UnitGraphBuilder {
     ///
     /// [`next_available_id`]: Self::next_available_id
     /// [`created_units_with_deps`]: Self::created_units_with_deps
-    fn create_single_unit(
-        &self,
-        unit_identity: Identity,
-        package: CompilerPackage,
-        bcx: &BuildContext<'_, '_>,
-    ) -> Unit {
-        let artifacts_type = infer_artifacts_type(unit_identity, self.root_identity(), bcx);
+    fn create_single_unit(&self, unit_identity: Identity, package: CompilerPackage) -> Unit {
+        let unit_type = infer_unit_type(unit_identity, self.root_identity());
         let unit_id = self.next_available_id();
         let unit = Unit::new(
             unit_id,
             package,
             unit_identity,
-            artifacts_type,
+            unit_type,
             BuildKind::Compile,
         );
         let previous = self
@@ -315,20 +310,11 @@ fn stable_sort_identities(mut identities: Vec<Identity>) -> Vec<Identity> {
     identities
 }
 
-/// Infer an appropriate [`ArtifactsType`].
-fn infer_artifacts_type(
-    unit_identity: Identity,
-    root_identity: Identity,
-    bcx: &BuildContext<'_, '_>,
-) -> ArtifactsType {
-    let is_dvm = bcx.profile.dvm_bytecode;
+/// Infer an appropriate [`UnitType`].
+fn infer_unit_type(unit_identity: Identity, root_identity: Identity) -> UnitType {
     let is_root = unit_identity == root_identity;
-    if is_dvm && is_root {
-        return ArtifactsType::Dvm;
-    }
     if is_root {
-        return ArtifactsType::Binary;
+        return UnitType::Binary;
     }
-    // NOTE: Dependencies don't get their own tasks when compiling into DVM.
-    ArtifactsType::IsADependencyArtifact
+    UnitType::Dependency
 }

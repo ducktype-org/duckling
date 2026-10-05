@@ -840,6 +840,7 @@ features:
     /// Assures that there cannot be two versions of same package chosen.
     /// * `a` depends on `b` and `c` in version 1,
     /// * `b` depends on `c` version 2.
+    ///
     /// This should end in an error, since `c` is required in both versions.
     fn conflicting_versions_error() {
         let (_dir_a, path_a) = prepare_manifest(

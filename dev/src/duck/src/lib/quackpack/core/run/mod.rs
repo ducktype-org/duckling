@@ -10,20 +10,16 @@ use std::path::Path;
 use std::process::Command;
 
 use super::compile::unit_runner::CompilationOutput;
-use crate::quackpack::core::compile::unit::ArtifactsType;
+use crate::quackpack::core::compile::unit_runner::CompilationTarget;
 use crate::util::command_ext::CommandExt;
-use crate::{QuackResult, QuackResultContext, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext};
 
 /// Execute an executable file (either .exe or .dbc).
 pub fn run(output: CompilationOutput, args: Vec<&OsStr>) -> QuackResult<Infallible> {
-    let (unit, path) = output.root;
-    match unit.artifacts_type() {
-        ArtifactsType::Binary => run_exe(&path, args),
-        ArtifactsType::Dvm => run_dvm(&path, args),
-        _ => qp_bail_internal!(
-            "tried to execute not executable artifacts type {:?}",
-            unit.artifacts_type()
-        ),
+    let (_unit, path) = output.root;
+    match output.target {
+        CompilationTarget::LLVM => run_exe(&path, args),
+        CompilationTarget::DVM => run_dvm(&path, args),
     }
 }
 
