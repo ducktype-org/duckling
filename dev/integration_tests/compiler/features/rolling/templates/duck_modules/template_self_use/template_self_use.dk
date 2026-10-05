@@ -12,6 +12,6 @@ fun countDown(n: T) = {
 }
 
 fun main() -> i64 = {
-    countDown:{i64}(3);
+    countDown[i64](3);
     return 0;
 }

@@ -1285,7 +1285,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{};
+					N[];
 					return 0;
 				}
 
@@ -1910,7 +1910,7 @@ private:
 				}
 
 				fun main() = {
-					foo:{1}();
+					foo[1]();
 				}
 			)",
 			{ "Symbol 'b' not found in lookup" },
@@ -1925,7 +1925,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{1, 2, 3};
+					N[1, 2, 3];
 					return 0;
 				}
 
@@ -1940,7 +1940,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{i64};
+					N[i64];
 					return 0;
 				}
 
@@ -1955,7 +1955,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{a};
+					N[a];
 					return 0;
 				}
 
@@ -1964,19 +1964,20 @@ private:
 			1
 		);
 
-		// ============================ Non template bake ============================
+		// ============================ Square call on a non-template ============================
 
+		// `[]` on a value that is not a template is an index, not a bake.
 		checkForErrorOnCompileModule(
 			R"(
 				const a = 1;
 
 				fun main() -> i64 = {
-					a:{1};
+					a[1];
 					return 0;
 				}
 
 			)",
-			{ "non-template" },
+			{ "Index operator base must be indexable." },
 			1
 		);
 
@@ -1993,6 +1994,22 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N[a = 1];
+					return 0;
+				}
+
+			)",
+			{ "Feature not implemented" },
 			1
 		);
 	}

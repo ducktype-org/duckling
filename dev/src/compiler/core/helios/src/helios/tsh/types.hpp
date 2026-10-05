@@ -577,7 +577,7 @@ namespace compiler::tsh {
 	 *
 	 * This is a compile-time concept used primarily to implement generics.
 	 * A type template cannot hold values or exist in the final program's memory on its own,
-	 * baking it with template arguments (e.g., `List:{i64}`) results in a concrete type.
+	 * baking it with template arguments (e.g., `List[i64]`) results in a concrete type.
 	 *
 	 * @TODO: #717 This may come in handy when implementing generics/templates. This implementation
 	 * may change then.

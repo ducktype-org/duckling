@@ -3338,7 +3338,7 @@ private:
 	void testTemplates() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/templates")));
 
-		// `Number:{1i64}.inner` and `Number:{2i64}.inner` each bake a distinct instantiation of
+		// `Number[1i64].inner` and `Number[2i64].inner` each bake a distinct instantiation of
 		// the `Number` template namespace and evaluate the resulting constant.
 		ASSERT_EQUAL(1, getConstValueAs<i64>("one", root_scope));
 		ASSERT_EQUAL(2, getConstValueAs<i64>("two", root_scope));
@@ -3395,7 +3395,7 @@ private:
 		// Just `foo` function.
 		ASSERT_EQUAL_PRINT(hout_module.functions.size(), 1);
 
-		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by
+		// 4 constants + 1 weak const (Number[1].inner) added to the module, because it is used by
 		// `foo`.
 		ASSERT_EQUAL_PRINT(hout_module.glob_data.size(), 4 + 1);
 	}
