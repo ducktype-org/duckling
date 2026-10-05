@@ -103,7 +103,8 @@ namespace compiler::helios::code {
 			auto arg_unlocked = arg.unlock(query_ctx);
 			if (arg_unlocked->isNamedArg()) {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Named template arguments are not yet supported.", arg_unlocked->getStablePosition()
+					"Named template arguments are not yet supported.",
+					arg_unlocked->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -476,7 +477,9 @@ namespace compiler::helios::code {
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
-			CORE_ASSERT(call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'");
+			CORE_ASSERT(
+				call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'"
+			);
 
 			const auto scope       = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			auto       h_interface = HInterface::ofScopeWithParents(scope);
@@ -789,7 +792,9 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			CORE_ASSERT(call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'");
+			CORE_ASSERT(
+				call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'"
+			);
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
@@ -855,7 +860,9 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			CORE_ASSERT(call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'");
+			CORE_ASSERT(
+				call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'"
+			);
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
@@ -915,7 +922,9 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			CORE_ASSERT(call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'");
+			CORE_ASSERT(
+				call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'"
+			);
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
@@ -1164,7 +1173,9 @@ namespace compiler::helios::code {
 		 * round call when @p with_call is set.
 		 */
 		base::Optional<query::Failed> stepTemplateBake(bool with_call) {
-			CORE_ASSERT(isCurrentTemplateBake(), "Expected the current element to be a template bake.");
+			CORE_ASSERT(
+				isCurrentTemplateBake(), "Expected the current element to be a template bake."
+			);
 
 			auto square_call     = currentElem().value().dynamicCast<pst::expr::Call>().value();
 			auto template_origin = this->current_state.getNamespaceLikePstOrigin();
