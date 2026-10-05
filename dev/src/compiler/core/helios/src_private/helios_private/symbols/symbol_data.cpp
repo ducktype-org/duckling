@@ -91,6 +91,10 @@ namespace compiler::helios {
 			  value(std::move(value)),
 			  scope(scope) {}
 
+		base::Bit256 Module::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(module_id.queryUnstablePerfectHash());
+		}
+
 		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher;
 			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
@@ -156,6 +160,7 @@ namespace compiler::helios {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
+			variant_case_novalue(defgen::Module) { kind = SymbolKind::Module; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 

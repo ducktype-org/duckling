@@ -286,8 +286,8 @@ namespace compiler::repl {
 				"/symbols should list regular variables"
 			);
 			assertTrue(
-				output.find("[history #2] alias symbol_alias") != std::string::npos,
-				"/symbols should list aliases"
+				output.find("[history #2] using symbol_alias") != std::string::npos,
+				"/symbols should list `using ... as` declarations"
 			);
 			assertTrue(
 				output.find("[history #3] const symbol_const : const i64") != std::string::npos,

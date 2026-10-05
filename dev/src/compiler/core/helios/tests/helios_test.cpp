@@ -1259,6 +1259,12 @@ private:
 		test_value("sm1_through_sm11", 123'123);
 		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
+
+		test_value("imported_ns_v", 500);
+		test_value("imported_inner_v", 600);
+		test_value("imported_symbol_v", 500);
+		test_value("imported_unnamed_ns_v", 500);
+		test_value("imported_wildcard_v", 600);
 	}
 
 	void testExprTree() {
@@ -3320,9 +3326,20 @@ private:
 		// @TODO: #1412 make this less of a stub once proper dealias lands
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
 
+		// `using M.c;` brings `c` in under its own name, so looking `c` up in the root scope
+		// has to land on the very symbol `M.c` names.
 		auto nonwild_using        = getChain("c", root_scope);
 		auto nonwild_using_target = getChain("M.c", root_scope);
-		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
+		ASSERT_EQUAL(nonwild_using.back(), nonwild_using_target.back());
+
+		// `using n1.*;` where `n1` is itself `using N2 as n1;`: the wildcard is followed through
+		// the alias, so what `N2` holds is visible under its own name in the root scope.
+		ASSERT_EQUAL(77, getConstValueAs<i32>("in_n2", root_scope));
+
+		// The same wildcard also carries `using a as b;` out of `N2`, and that alias points at
+		// `using x as a;`, which points at the constant itself.
+		ASSERT_EQUAL(getChain("x", root_scope).back(), getChain("b", root_scope).back());
+		ASSERT_EQUAL(1'235, getConstValueAs<i32>("b", root_scope));
 	}
 
 	void testBackendDependentCompTime() {

@@ -70,7 +70,7 @@ namespace compiler::helios {
 	 * The elements hidden by their visibility are reported in `LookupResult::inaccessible`
 	 * instead of being dropped, so that the error can say that the name exists but cannot be used.
 	 *
-	 * In #1477 and/or #1392 this may need to be placed in a more appropriate location.
+	 * In #1392 this may need to be placed in a more appropriate location.
 	 *
 	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
 	 * for more info on type lookups.

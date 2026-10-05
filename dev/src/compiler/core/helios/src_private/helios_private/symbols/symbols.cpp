@@ -128,21 +128,6 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	/**
-	 * @brief Query "linked-scope", that is scope
-	 * that "lookup in" operation will perform lookup.
-	 *
-	 * @note For HELIOS internal use only
-	 * @note It is a partial-Query. It won't work for all symbol
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, query::QResult<ScopeID>, ({}));
-
-	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
-
-	bool isAlias(SymID id) { return getSymRef(id)->common.is_alias; }
-
 	bool isIgnoredByLookup(SymID id) { return getSymRef(id)->common.is_ignored_by_lookup; }
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
@@ -427,21 +412,6 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The dotted prefix (`a.b` of `a.b.*` / `a.b as c`) of the first selector.
-		 */
-		std::vector<pst::AccessLocked<pst::IdentifierWrapper>> selectorPath(
-			query::Context& ctx, pst::AccessLocked<pst::SelectorList> list
-		) {
-			auto selectors = list.unlock(ctx);
-			auto selector  = (*selectors->begin()).unlock(ctx);
-			std::vector<pst::AccessLocked<pst::IdentifierWrapper>> path;
-			path.reserve(selector->numberOfNames());
-			for (usize i = 0; i < selector->numberOfNames(); i++)
-				path.push_back(selector->getNameByIndex(i));
-			return path;
-		}
-
-		/**
 		 * @brief The first selector of a `using`/`import`, which is the one the symbol is made of.
 		 *
 		 * @TODO: #2791 One statement should give one symbol per selector. Until then a list of
@@ -518,24 +488,20 @@ namespace compiler::helios {
 				return CommonSymbolData{
 					.name = base::StrID(base::strConcat("<WILDCARD USING> ", first_name).c_str()),
 					.kind = SymbolKind::Using,
-					.is_wildcard = true,
-					.is_alias    = true,
 				};
 			case pst::SelectorTail::As:
 				// `using a.b as c;` gives `a.b` a new name.
 				return CommonSymbolData{
-					.name     = selector->getAsName().value().unlock(ctx)->unwrap(),
-					.kind     = SymbolKind::Alias,
-					.is_alias = true,
+					.name = selector->getAsName().value().unlock(ctx)->unwrap(),
+					.kind = SymbolKind::Using,
 				};
 			case pst::SelectorTail::Nested:
 				logSelectorNotSupported(ctx, selector, "A nested selector list in `using`");
 				[[fallthrough]];
 			case pst::SelectorTail::None:
 				return CommonSymbolData{
-					.name     = last_name,
-					.kind     = SymbolKind::Using,
-					.is_alias = true,
+					.name = last_name,
+					.kind = SymbolKind::Using,
 				};
 			}
 			CORE_PANIC("Unhandled selector tail kind");
@@ -543,10 +509,8 @@ namespace compiler::helios {
 		case pst::StmtKind::Variable: {
 			auto variable = stmt.dynamicCast<pst::Variable>().value();
 			return CommonSymbolData{
-				.name        = variable->getName().unlock(ctx)->unwrap(),
-				.kind        = SymbolKind::Variable,
-				.is_wildcard = false,
-				.is_alias    = false,
+				.name = variable->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Variable,
 			};
 		}
 		case pst::StmtKind::Import: {
@@ -563,29 +527,23 @@ namespace compiler::helios {
 			case pst::SelectorTail::None:
 			case pst::SelectorTail::As:
 				return CommonSymbolData{
-					.name        = selector->getDeclaredName().value().unlock(ctx)->unwrap(),
-					.kind        = SymbolKind::Import,
-					.is_wildcard = false,
-					.is_alias    = false,
+					.name = selector->getDeclaredName().value().unlock(ctx)->unwrap(),
+					.kind = SymbolKind::Import,
 				};
 			case pst::SelectorTail::Star:
 				// import a.b.c.*;
 				if (selector->numberOfHides() > 0)
 					logSelectorNotSupported(ctx, selector, "`hides` in `import`");
 				return CommonSymbolData{
-					.name        = last_name,
-					.kind        = SymbolKind::Import,
-					.is_wildcard = true,
-					.is_alias    = false,
+					.name = last_name,
+					.kind = SymbolKind::Import,
 				};
 			case pst::SelectorTail::Nested:
 				// import a.b.c.{...};
 				logSelectorNotSupported(ctx, selector, "A nested selector list in `import`");
 				return CommonSymbolData{
-					.name        = last_name,
-					.kind        = SymbolKind::Import,
-					.is_wildcard = false,
-					.is_alias    = false,
+					.name = last_name,
+					.kind = SymbolKind::Import,
 				};
 			}
 			CORE_PANIC("Unhandled selector tail kind");
@@ -836,181 +794,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
-
-	struct IMPLEMENT_QUERY(QueryLookupInSymbol, query::QResult<LookupResult>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			switch (key.symbol.ref->common.kind) {
-			case SymbolKind::Using:
-			case SymbolKind::Namespace:
-			case SymbolKind::Import: {
-				// @NOTE: for now imports are done via linked scope that looks at root
-				// module scope, but in the future it might be changed to custom code
-
-				// @note: this will probably brake for usings,
-				// when they look at a symbol without linked scope.
-				// We might just delete QueryLinkedScope at some point,
-				// when QueryLookupInSymbol will get more and more
-				// per-symbol-kind cases.
-
-				UNPACK_QRESULT(auto linked_scope =, ctx.query<QueryLinkedScope>(key.symbol));
-				return *HInterface::ofScope(linked_scope)
-				            .lookup(ctx, key.name, { key.follow_wildcards });
-			}
-
-			// @note: here case for variables will be calling TS
-			case SymbolKind::Template:
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Lookup in template requires an explicit template parameter."
-				));
-				return query::Failed();
-			default:
-				throw base::NotYetImplemented(
-					base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name)
-				);
-			}
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
-
-	struct IMPLEMENT_QUERY(QueryLinkedScope, query::QResult<ScopeID>) {
-		struct QueryLinkedScopeVisitor final: pst::PstVisitorEmpty {
-			query::Context& ctx;
-			QKey            key;
-
-			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
-
-			base::Optional<query::QResult<ScopeID>> result_scope;
-
-			void output(query::QResult<ScopeID> out) {
-				CORE_ASSERT(result_scope.empty(), "Output already set");
-				result_scope.emplace(out);
-			}
-
-			void visitUsing(pst::Access<pst::Using> using_stmt) final {
-				auto pointed_to_names = selectorPath(ctx, using_stmt->getSelectors());
-
-				auto lookup_res = lookupChain(
-					ctx,
-					LookupChainKey{ .names       = pointed_to_names,
-				                    .begin_scope = scope(key),
-				                    .params      = { .with_wildcards = false } }
-				);
-				CORE_ASSERT(
-					lookup_res.hasValue() && not lookup_res.valueOrThrow().empty(),
-					"Using points to something that does not exists or is empty"
-				);
-				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.valueOrThrow().back() });
-				output(ret);
-			}
-
-			void visitImport(pst::Access<pst::Import> import_stmt) final {
-				// @TODO: proper error handling
-
-				auto selectors = import_stmt->getSelectors().unlock(ctx);
-				auto selector  = (*selectors->begin()).unlock(ctx);
-
-				if (selector->getTailKind() == pst::SelectorTail::Nested) {
-					// Already reported as not supported when the symbol was made.
-					output(query::Failed());
-					return;
-				}
-
-				std::vector<base::StrID> module_path;
-				module_path.reserve(selector->numberOfNames());
-				for (usize i = 0; i < selector->numberOfNames(); i++)
-					module_path.push_back(selector->getNameByIndex(i).unlock(ctx)->unwrap());
-
-				auto maybe_imported_module
-					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
-
-				if (!maybe_imported_module.has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						"Module not found.", import_stmt->getStablePosition()
-					));
-					output(query::Failed());
-					return;
-				}
-
-				// Here we don't access just root scope, because root scopes are currently empty:
-				auto linked_scope
-					= queryRootScopeOfMainModuleFile(ctx, maybe_imported_module.value());
-
-				output(linked_scope);
-			}
-		};
-
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			switch (key.ref->common.kind) {
-			case SymbolKind::Namespace:
-				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast(ctx).value());
-
-
-			// Special cases for "wildcards":
-			case SymbolKind::Using:
-			case SymbolKind::Import: {
-				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->maybePstElement().value().unlock(ctx)->acceptVisitor(visitor);
-				return visitor.result_scope.value();
-			}
-			default: {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					base::strConcat(
-						"Linked scope for this symbol kind is not implemented yet: ",
-						key.ref->common.kind
-					),
-					stmt(ctx, key.ref).value()->getStablePosition()
-				));
-				return query::Failed();
-			}
-			}
-		}
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
-
-	base::Bit256 KeyOf_LookupInSymbol::queryUnstablePerfectHash() const {
-		auto hash_1 = symbol.queryUnstablePerfectHash();
-		auto hash_2 = std::hash<base::StrID>()(name);
-
-		return { hash_1, hash_2, static_cast<u64>(follow_wildcards) };
-	}
-
-	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// Both `using a.b;` (Using) and `using a.b as c;` (Alias) point to `a.b`.
-			if (kind(key) != SymbolKind::Using && kind(key) != SymbolKind::Alias)
-				return SymbolList{ { key } };
-
-			auto pointed_chain = selectorPath(
-				ctx,
-				getSymRef(key)
-					->maybePstElement()
-					.value()
-					.unlock(ctx)
-					.dynamicCast<pst::Using>()
-					.value()
-					->getSelectors()
-			);
-
-			UNPACK_QRESULT_MOVE(
-				auto lookup_chain =,
-				lookupChain(
-					ctx, LookupChainKey{ pointed_chain, scope(key), { .with_wildcards = false } }
-				)
-			);
-
-			return lookup_chain;
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
