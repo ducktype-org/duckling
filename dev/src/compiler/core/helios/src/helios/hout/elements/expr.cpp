@@ -503,6 +503,21 @@ namespace compiler::helios::code {
 		case MetaNeq:
 			out << "!=";
 			break;
+		case IntegerBitAnd:
+			out << "&";
+			break;
+		case IntegerBitOr:
+			out << "|";
+			break;
+		case IntegerBitXor:
+			out << "^";
+			break;
+		case IntegerShl:
+			out << "<<";
+			break;
+		case IntegerShr:
+			out << ">>";
+			break;
 		case BooleanAnd:
 			out << "and";
 			break;
