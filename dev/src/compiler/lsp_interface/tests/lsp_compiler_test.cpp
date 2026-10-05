@@ -101,7 +101,7 @@ private:
 			  "fun main() -> i64 = {\n"
 			  "    var m: i64 = math.abs(-1);\n"
 			  "    var text: String = \"abc\".toString();\n"
-			  "    var list: List:{i64};\n"
+			  "    var list: List[i64];\n"
 			  "    list.push(1);\n"
 			  "    return list.at(0);\n"
 			  "}\n";
@@ -110,7 +110,7 @@ private:
 			  "fun main() -> i64 = {\n"
 			  "    var m: i64 = math.abs(-1);\n"
 			  "    var text: String = \"abc\".toString();\n"
-			  "    var list: List:{i64};\n"
+			  "    var list: List[i64];\n"
 			  "    list.add(1);\n"
 			  "    return list.at(0);\n"
 			  "}\n";
@@ -122,7 +122,7 @@ private:
 		compiler.addWorkspace(workspace.uriOf());
 		compiler.openDocument(main_uri, "duckling", 1, VALID_CONTENT);
 		compiler.publishDiagnostics(main_uri);
-		assertTrue(session.noErrors(main_uri), "Using String and List:{i64} must not report errors");
+		assertTrue(session.noErrors(main_uri), "Using String and List[i64] must not report errors");
 
 		assertTrue(
 			compiler.updateDocument(main_uri, 2, { wholeDocument(INVALID_CONTENT) }).isOk(),
