@@ -8,6 +8,7 @@
 
 #include <driver/options.hpp>
 #include <frontend/module_tree/module_id.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/packages/packages.hpp>
 #include <lsp/types.h>
 #include <lsp/uri.h>
@@ -118,7 +119,10 @@ namespace duck_ls {
 		/**
 		 * @brief Walks `package_root` into the module tree and registers it as a package.
 		 */
-		void loadPackage(const fs::FilePath& package_root);
+		void loadPackage(
+			const fs::FilePath&                                 package_root,
+			const compiler::frontend::packages::RawPackageInfo& raw_package_info
+		);
 
 		/**
 		 * @brief Tears the package owning `path` down and walks it again from its source.
@@ -139,11 +143,22 @@ namespace duck_ls {
 			const fs::File&                           replacement
 		);
 
+		bool stdActive() const;
+
+		compiler::frontend::FileResolver getResolver() const;
+
+		std::vector<compiler::frontend::packages::RawPackageInfo>::iterator getRawPackageWithID(
+			base::StrID package_id
+		);
+
 		base::Ref<ServerSession> session;
 		base::Ref<FilesCache>    files;
 
 		compiler::driver::CompilerModeOfOperationAndOptions::LanguageServerMode options;
 		compiler::frontend::packages::DiagnosticReporter                        report;
+
+		/// Raw package infos of all of the packages loaded.
+		std::vector<compiler::frontend::packages::RawPackageInfo> raw_package_infos{};
 
 		std::vector<compiler::frontend::ModuleID> tracked_packages{};
 

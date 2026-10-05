@@ -207,7 +207,6 @@ namespace compiler::driver {
 
 		/**
 		 * @note: in the future this might hold more modes,
-		 * like lsp daemon, etc.
 		 * don't refrain from refactoring this file (and module) if needed.
 		 * We might also want to restrain compiler functionality based on the mode.
 		 */
