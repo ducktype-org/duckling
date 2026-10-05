@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file expr.cpp
  * @brief Implementation of methods in the Expr hierarchy.
@@ -496,6 +502,21 @@ namespace compiler::helios::code {
 		case FloatNeq:
 		case MetaNeq:
 			out << "!=";
+			break;
+		case IntegerBitAnd:
+			out << "&";
+			break;
+		case IntegerBitOr:
+			out << "|";
+			break;
+		case IntegerBitXor:
+			out << "^";
+			break;
+		case IntegerShl:
+			out << "<<";
+			break;
+		case IntegerShr:
+			out << ">>";
 			break;
 		case BooleanAnd:
 			out << "and";
