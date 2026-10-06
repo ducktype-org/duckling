@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/packages/packages.hpp>
@@ -105,7 +111,7 @@ namespace compiler::driver {
 			/**
 			 * @brief The options that will be passed "as-is" to linker.
 			 */
-			base::Optional<std::string> native_additional_link_options;
+			std::vector<std::string> native_additional_link_options{};
 			/**
 			 * @brief Whether to link the c standard library.
 			 */

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "standard_library.hpp"
 
 #include <driver/task/task.hpp>
@@ -232,13 +238,13 @@ namespace compiler::driver {
 		return tasks;
 	}
 
-	base::Optional<std::string> getNativeStdLibLinkingArgs(
+	std::vector<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	) {
 		if_opt_some(resolveStdPath(linking_options), _) {
-			std::string result;
+			std::vector<std::string> result{};
 			for (const auto& art: getStdLibNativeArtifacts())
-				result += " " + art.file.getFilePath().string();
+				result.push_back(art.file.getFilePath().string());
 			return result;
 		}
 		return {};

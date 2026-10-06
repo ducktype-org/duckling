@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -188,7 +194,7 @@ private:
 				variant_case(PointerTypeLayout, l) {
 					assertTrue(l.hasPointee(), "Typed pointer layout should have pointee.");
 					assertEqual(
-						*l.getPointee(),
+						*l.getPointee(ctx),
 						*unit_layout,
 						"Pointee should be a layout of the pointed-to type."
 					);

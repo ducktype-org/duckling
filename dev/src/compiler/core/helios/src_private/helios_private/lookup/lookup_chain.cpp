@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "lookup_chain.hpp"
 
@@ -5,18 +10,22 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
 namespace compiler::helios {
 
-
 	query::QResult<SymbolList> lookupChain(query::Context& ctx, const LookupChainKey& key) {
-		CORE_ASSERT(!key.names.empty(), "lookupChain received zero names");
-
-		bool       first_symbol = true;
 		SymbolList result;
+		if (v_matches(key.start, SymID)) result.pushBack(v_get(key.start, SymID));
+
+		std::variant<ScopeID, SymID> last = key.start;
+
 		for (auto pointed_locked: key.names) {
-			auto lookup_interface = first_symbol ? HInterface::ofScopeWithParents(key.begin_scope)
-			                                     : HInterface::ofSymbol(result.back());
+			auto lookup_interface = VARIANT_VISIT(
+				last,
+				VISIT_CASE_VAL(ScopeID, id, HInterface::ofScopeWithParents(id)),
+				VISIT_CASE_VAL(SymID, id, HInterface::ofSymbol(ctx, id))
+			);
 
 			auto pointed = pointed_locked.unlock(ctx);
 
@@ -26,7 +35,7 @@ namespace compiler::helios {
 								););
 			result.appendList(lookup);
 
-			first_symbol = false;
+			last = result.back();
 		}
 		return result;
 	}

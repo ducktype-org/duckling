@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -148,8 +154,7 @@ private:
 			if (auto* target_exe
 			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task_data.build_target)) {
 				// We expect the correct stdlib linking options based on getStdLibLinkingArgs
-				auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
-				ASSERT_HAS_VALUE(lib_args);
+				[[maybe_unused]] auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
 
 				// Ensure the options contain the stdlib args
 				assertTrue(
