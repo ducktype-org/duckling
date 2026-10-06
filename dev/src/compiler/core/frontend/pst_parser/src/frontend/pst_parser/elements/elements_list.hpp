@@ -105,7 +105,7 @@ namespace pst {
 		class RoundExpr;
 		class UnitExpr;
 		class BlockExpr;
-		class ArrayLiteralExpr;
+		class ArrayLiteral;
 		class MatchExpr;
 		class GeneralPrefix;
 		class GeneralSuffix;

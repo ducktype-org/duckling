@@ -6,7 +6,7 @@
 
 #include "../../hierarchy/expressions/atom.hpp"
 
-#include "../../hierarchy/expressions/array_literal_expr.hpp"
+#include "../../hierarchy/expressions/array_literal.hpp"
 #include "../../hierarchy/expressions/block_expr.hpp"
 #include "../../hierarchy/expressions/char_value.hpp"
 #include "../../hierarchy/expressions/format_string_value.hpp"
@@ -42,7 +42,7 @@ namespace pst::expr {
 		} else if (state[0].isBracketGroup(lexer::Token::Curly)) {
 			return BlockExpr::parse(state);
 		} else if (state[0].isBracketGroup(lexer::Token::Square)) {
-			return ArrayLiteralExpr::parse(state);
+			return ArrayLiteral::parse(state);
 		} else {
 			i64 length = base::safeIntConv<i64>(state.ctokens().size());
 

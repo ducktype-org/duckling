@@ -30,7 +30,7 @@ namespace pst::expr {
 		RoundExpr,
 		UnitExpr,
 		BlockExpr,
-		ArrayLiteralExpr,
+		ArrayLiteral,
 		MatchExpr,
 		ComparisonChain,
 		Ternary,

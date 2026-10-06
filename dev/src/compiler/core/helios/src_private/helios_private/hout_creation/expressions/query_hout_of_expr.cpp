@@ -813,7 +813,7 @@ namespace compiler::helios::code {
 				));
 			}
 
-			void visitArrayLiteralExpr(pst::Access<pst::expr::ArrayLiteralExpr> stmt) override {
+			void visitArrayLiteral(pst::Access<pst::expr::ArrayLiteral> stmt) override {
 				auto                   list_unlocked = stmt->getList().unlock(ctx);
 				std::vector<Box<Expr>> elems;
 				elems.reserve(list_unlocked->size());
