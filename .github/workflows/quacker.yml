@@ -1,4 +1,4 @@
-# Entry point for quacker-bot: one workflow handling all four triggers.
+# Entry point for quacker-bot: one workflow handling all five triggers.
 # The `setup` job runs on a GitHub-hosted runner and decides whether and in which
 # mode the bot should run. The `agent` job then mints a GitHub App token (tokens
 # cannot be passed between jobs — Actions drops outputs that contain secrets)
@@ -12,6 +12,8 @@ on:
     types: [created]                    # "@quacker-bot" mentioned on a PR gets a reply
   pull_request_review_comment:
     types: [created]                     # "@quacker-bot" mentioned in an inline PR review comment
+  pull_request:
+    types: [opened, ready_for_review]   # PR becomes ready for review -> automatic review
   workflow_run:
     workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
     types: [completed]
@@ -24,7 +26,8 @@ on:
 #   2. issue_comment on an ISSUE + '@quacker-bot'           -> quacker-issue-<issue#>  (shares the issue's branch -> serialize with #1)
 #   3. issue_comment on a PR + '@quacker-bot'               -> quacker-mention-<PR#>   (issue.number == PR number here)
 #   4. pull_request_review_comment + '@quacker-bot'         -> quacker-mention-<PR#>
-#   5. anything else (non-mention comment / non-quacker label / workflow_run) -> run_id (unique -> skips, never cancels a real run)
+#   5. pull_request, non-draft, not from a fork              -> quacker-mention-<PR#>   (serialize with @quacker-bot on the same PR)
+#   6. anything else (non-mention comment / non-quacker label / draft PR / workflow_run) -> run_id (unique -> skips, never cancels a real run)
 concurrency:
   group: >-
     ${{
@@ -38,6 +41,9 @@ concurrency:
         && format('quacker-mention-{0}', github.event.issue.number)
       || github.event_name == 'pull_request_review_comment'
         && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-mention-{0}', github.event.pull_request.number)
+      || github.event_name == 'pull_request' && !github.event.pull_request.draft
+        && github.event.pull_request.head.repo.full_name == github.repository
         && format('quacker-mention-{0}', github.event.pull_request.number)
       || github.run_id
     }}
@@ -62,6 +68,11 @@ jobs:
         github.event.comment.user.type != 'Bot' &&
         (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER') &&
         contains(github.event.comment.body, '@quacker-bot')
+      ) || (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.draft == false &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.sender.type != 'Bot'
       ) || (
         github.event_name == 'workflow_run' &&
         github.event.workflow_run.conclusion == 'failure' &&
@@ -98,6 +109,8 @@ jobs:
           COMMENT_USER: ${{ github.event.comment.user.login }}
           COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
           PR_NUM: ${{ github.event.pull_request.number }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
           WR_ID: ${{ github.event.workflow_run.id }}
@@ -136,6 +149,13 @@ jobs:
                  printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
                  is_dev "$COMMENT_USER"; then
                 run=true; mode=comment; a1="$PR_NUM"
+              fi ;;
+            pull_request)
+              # PR entered the "ready for review" state (opened as non-draft, or converted from
+              # draft): run the same review as "@quacker-bot review". Fork PRs are skipped (their
+              # runs get no secrets anyway); the dev gate on the sender also keeps bots out.
+              if [ "$PR_DRAFT" = "false" ] && [ "$PR_HEAD_REPO" = "$REPO" ] && is_dev "$SENDER"; then
+                run=true; mode=review; a1="$PR_NUM"
               fi ;;
             workflow_run)
               # Self-heal only the bot's own failed CI. Require all of:
