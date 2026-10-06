@@ -6,6 +6,8 @@
 
 #include "repl_symbols.hpp"
 
+#include "helios/symbols/symbol_kind.hpp"
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
@@ -32,6 +34,8 @@ namespace compiler::repl {
 				return "namespace";
 			case helios::SymbolKind::Function:
 				return "function";
+			case helios::SymbolKind::Module:
+				return "module";
 			case helios::SymbolKind::FunctionDeclaration:
 				return "function-decl";
 			case helios::SymbolKind::Const:
