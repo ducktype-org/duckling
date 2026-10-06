@@ -25,42 +25,6 @@
 
 namespace {
 	/**
-	 * @brief A session that keeps what it was asked to push instead of writing to a client.
-	 *
-	 * The endpoint it is built on is never used: `pushDiagnostics` is the only thing the
-	 * compiler calls, and it is overridden here.
-	 */
-	struct CollectingSession final: public duck_ls::ServerSession {
-		using ServerSession::ServerSession;
-
-		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> pushed;
-
-		void pushDiagnostics(const lsp::Uri& uri, const std::vector<lsp::Diagnostic>& diagnostics)
-			override {
-			pushed[uri] = diagnostics;
-		}
-
-		/**
-		 * @brief Whether the last publish for `uri` reported something.
-		 */
-		[[nodiscard]] bool hasErrors(const lsp::Uri& uri) const {
-			auto it = pushed.find(uri);
-			return it != pushed.end() && !it->second.empty();
-		}
-
-		/**
-		 * @brief Whether `uri` was published with nothing to report.
-		 *
-		 * False for a URI that was never published at all: a file the server said nothing about
-		 * is not a file the server found clean.
-		 */
-		[[nodiscard]] bool noErrors(const lsp::Uri& uri) const {
-			auto it = pushed.find(uri);
-			return it != pushed.end() && it->second.empty();
-		}
-	};
-
-	/**
 	 * @brief A compiler wired to a collecting session, with the endpoint it never talks to.
 	 *
 	 * Everything is held together so that a test can name one object and get a working compiler.
@@ -70,11 +34,11 @@ namespace {
 			  files(source_vfs),
 			  compiler{ &session, &files } {}
 
-		duck_ls_test::StringStream stream{ "" };
-		lsp::ServerEndpoint        endpoint{ stream };
-		CollectingSession          session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
-		duck_ls::FilesCache        files;
-		duck_ls::Compiler          compiler;
+		duck_ls_test::StringStream      stream{ "" };
+		lsp::ServerEndpoint             endpoint{ stream };
+		duck_ls_test::CollectingSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
+		duck_ls::FilesCache             files;
+		duck_ls::Compiler               compiler;
 	};
 
 	std::string content(const fs::File& file) {

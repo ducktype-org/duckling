@@ -29,13 +29,16 @@ namespace compiler::repl {
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,
-		std::string_view                          module_name_prefix
+		std::string_view                          module_name_prefix,
+		ReplSessionID                             session_id
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
-		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
+		auto module_name = base::strConcat(
+			module_name_prefix, std::to_string(session_id.asInt()), "_", std::to_string(line_counter)
+		);
 		builder->setName(base::StrID(module_name));
 
 		frontend::ReplData repl_data;

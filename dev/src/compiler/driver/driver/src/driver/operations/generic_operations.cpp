@@ -73,9 +73,11 @@
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
-		return { module_id.queryUnstablePerfectHash(),
-			     std::to_underlying(backend_type),
-			     build_debug_info };
+		hashing::ComponentHash::HashAlg hasher;
+		hashing::addToHash(hasher, module_id.queryUnstablePerfectHash());
+		hashing::addToHash(hasher, std::to_underlying(backend_type));
+		hashing::addToHash(hasher, build_debug_info);
+		return hasher.finalize();
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
@@ -422,18 +424,19 @@ namespace compiler::driver {
 			std::vector<helios::SymID>         wrapper_symbols;
 			base::Optional<frontend::ModuleID> parent_module_id;
 			u64                                statement_counter = 0;
+			auto                               session_id        = repl::ReplSessionID::next();
 
 			if (split_result->empty()) {
 				// Empty input should still produce a valid synthetic script main wrapper with
 				// no statement calls.
 				auto empty_script_module
-					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_");
+					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_", session_id);
 				parent_module_id = empty_script_module->getModuleID();
 			}
 
 			for (const auto& statement_source: *split_result) {
 				auto module_ref = repl::createSyntheticChainedStatementModule(
-					statement_source, parent_module_id, statement_counter, "script_"
+					statement_source, parent_module_id, statement_counter, "script_", session_id
 				);
 				auto module_id   = module_ref->getModuleID();
 				parent_module_id = module_id;
@@ -443,7 +446,7 @@ namespace compiler::driver {
 					"compile_script: statement #",
 					statement_counter + 1,
 					", module #",
-					module_id.queryUnstablePerfectHash(),
+					module_id.queryUnstablePerfectHash().toStringHex(),
 					"\n"
 				);
 
