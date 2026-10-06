@@ -6,8 +6,6 @@
 
 #include "repl_symbols.hpp"
 
-#include "helios/symbols/symbol_kind.hpp"
-
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
