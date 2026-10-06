@@ -71,7 +71,7 @@ namespace compiler::frontend {
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
 
-	ModuleID ModuleTree::getModuleID() const { return ModuleID(m_self.value()); }
+	ModuleID ModuleTree::getModuleID() const { return { m_self.value() }; }
 
 	base::Optional<ModuleAccessLocked> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return ModuleAccessLocked(m_parent.value()->getModuleID());

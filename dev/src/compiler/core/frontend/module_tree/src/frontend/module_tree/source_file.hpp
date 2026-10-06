@@ -134,7 +134,7 @@ namespace compiler::frontend {
 		/**
 		 * @brief Returns the FileID associated with this SourceFile.
 		 */
-		[[nodiscard]] FileID getFileID() const { return FileID(self.value()); }
+		[[nodiscard]] FileID getFileID() const { return { self.value() }; }
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.

@@ -11,10 +11,11 @@
 #include <base/config/build_type.hpp>
 
 namespace compiler::frontend {
-	ModuleID::ModuleID(base::Ref<ModuleTree> ref) {
-		ref->updateModuleHashFromRootToThis();
-		hash = ref->m_hash.value();
-	}
+	ModuleID::ModuleID(base::Ref<ModuleTree> ref):
+		  hash([ref] {
+			  ref->updateModuleHashFromRootToThis();
+			  return ref->m_hash.value();
+		  }()) {}
 
 	base::Ref<ModuleTree> ModuleID::resolve() const {
 		auto ref = ModuleTree::getRegisteredModule(hash);
