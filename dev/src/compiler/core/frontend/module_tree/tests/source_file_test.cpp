@@ -159,21 +159,20 @@ private:
 		auto source_file2 = SourceFile::create(temp_file2, dummy_module->getModuleID());
 
 		// Test hash generation
-		u64 hash1 = source_file1->getFileID().queryUnstablePerfectHash();
-		u64 hash2 = source_file2->getFileID().queryUnstablePerfectHash();
+		auto hash1 = source_file1->getFileID().queryUnstablePerfectHash();
+		auto hash2 = source_file2->getFileID().queryUnstablePerfectHash();
 
 		// Hashes should be different for different files
 		assertTrue(hash1 != hash2, "Hashes should be different for different files");
 
 		// Same file should return same hash
-		u64 hash1_again = source_file1->getFileID().queryUnstablePerfectHash();
+		auto hash1_again = source_file1->getFileID().queryUnstablePerfectHash();
 		ASSERT_EQUAL(hash1, hash1_again);
 
-		// Create another SourceFile with same path - the hash must be different this is because the
-		// file might be in different module and the mangled names will be different
 		auto source_file1_copy = SourceFile::create(temp_file1, dummy_module->getModuleID());
-		u64  hash1_copy        = source_file1_copy->getFileID().queryUnstablePerfectHash();
-		ASSERT_TRUE(hash1_copy != hash1);
+		auto hash1_copy        = source_file1_copy->getFileID().queryUnstablePerfectHash();
+		ASSERT_EQUAL(hash1_copy, hash1);
+		ASSERT_EQUAL(source_file1_copy->getFileID(), source_file1->getFileID());
 
 		// Cleanup
 		fs::FileManager::deleteFile(temp_file1);
@@ -213,9 +212,9 @@ private:
 		for (auto& source_file: source_files) source_file->getPST();
 
 		// Test unique hashes
-		std::set<u64> unique_hashes;
+		std::set<base::Bit256> unique_hashes;
 		for (auto& source_file: source_files) {
-			u64 hash = source_file->getFileID().queryUnstablePerfectHash();
+			auto hash = source_file->getFileID().queryUnstablePerfectHash();
 			assertTrue(unique_hashes.find(hash) == unique_hashes.end(), "Hashes should be unique");
 			unique_hashes.insert(hash);
 		}
@@ -253,8 +252,8 @@ private:
 		);
 
 		// Should have different hashes
-		u64 hash1 = source_file1->getFileID().queryUnstablePerfectHash();
-		u64 hash2 = source_file2->getFileID().queryUnstablePerfectHash();
+		auto hash1 = source_file1->getFileID().queryUnstablePerfectHash();
+		auto hash2 = source_file2->getFileID().queryUnstablePerfectHash();
 		assertTrue(hash1 != hash2, "Should have different hashes");
 
 		// Cleanup

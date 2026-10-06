@@ -40,12 +40,14 @@ namespace {
 	 */
 	base::StableHashMap<usize, compiler::frontend::ModuleTree> modules;
 	usize                                                      next_module_storage_key = 0;
+
+	concurrent::ConHashMap<base::Bit256, base::Ref<compiler::frontend::ModuleTree>> module_registry;
 }
 
 namespace compiler::frontend {
 
 	const hashing::ComponentHash& ModuleTree::getPathComponentHash(ModuleID module_id) {
-		Ref<ModuleTree> module = module_id.ref;
+		Ref<ModuleTree> module = module_id.resolve();
 		// Update the component hash from root to this module if not valid
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(
@@ -56,7 +58,7 @@ namespace compiler::frontend {
 	}
 
 	const hashing::ComponentHash::HashType& ModuleTree::getModuleHash(ModuleID module_id) {
-		Ref<ModuleTree> module = module_id.ref;
+		Ref<ModuleTree> module = module_id.resolve();
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(module->m_hash.has_value(), "Module hash should have value after update!");
 		return module->m_hash.value();
@@ -69,7 +71,7 @@ namespace compiler::frontend {
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
 
-	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
+	ModuleID ModuleTree::getModuleID() const { return ModuleID(m_self.value()); }
 
 	base::Optional<ModuleAccessLocked> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return ModuleAccessLocked(m_parent.value()->getModuleID());
@@ -128,7 +130,8 @@ namespace compiler::frontend {
 			indent += (i % 3 == 0 ? "│" : " ");
 
 		if (getName().isBad())
-			output << indent << "/ [id: " << reinterpret_cast<u64>(this) << "]\n";
+			output << indent << "/ [id: " << getModuleID().queryUnstablePerfectHash().toStringHex()
+				   << "]\n";
 		else
 			output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
 
@@ -229,6 +232,7 @@ namespace compiler::frontend {
 		// component hash
 
 		m_hash = partial.finalize();
+		module_registry.putOrAssign(m_hash.value(), Ref<ModuleTree>(this));
 	}
 
 	void ModuleTree::updateModuleHashFromRootToThis() {
@@ -257,6 +261,12 @@ namespace compiler::frontend {
 		const auto storage_key = module->m_storage_handle.value();
 		const bool erased      = modules.erase(storage_key);
 		CORE_ASSERT(erased, "Failed to remove ModuleTree from storage");
+	}
+
+	Ref<ModuleTree> ModuleTree::getRegisteredModule(const base::Bit256& hash) {
+		auto registered = module_registry.atMaybeCopy(hash);
+		CORE_ASSERT(registered.has_value(), "No module registered under the given hash");
+		return registered.value();
 	}
 
 	void ModuleTree::checkDanglingReference([[maybe_unused]] const base::Ref<ModuleTree>& candidate

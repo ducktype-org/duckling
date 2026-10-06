@@ -256,8 +256,7 @@ namespace duck_ls {
 
 		loadPackage(package_root.value(), *rpi);
 
-		auto new_inputs = compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
-		query::external::invalidateQueries(std::move(new_inputs), {}, {});
+		query::external::invalidateQueries({}, {}, {});
 	}
 
 	void Compiler::swapMainSourceFile(

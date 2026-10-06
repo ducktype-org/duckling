@@ -11,7 +11,14 @@
 #include <base/config/build_type.hpp>
 
 namespace compiler::frontend {
-	void ModuleID::checkDanglingReference() const {
+	ModuleID::ModuleID(base::Ref<ModuleTree> ref) {
+		ref->updateModuleHashFromRootToThis();
+		hash = ref->m_hash.value();
+	}
+
+	base::Ref<ModuleTree> ModuleID::resolve() const {
+		auto ref = ModuleTree::getRegisteredModule(hash);
 		IF_BUILD_TYPE_DEV(ModuleTree::checkDanglingReference(ref));
+		return ref;
 	}
 }

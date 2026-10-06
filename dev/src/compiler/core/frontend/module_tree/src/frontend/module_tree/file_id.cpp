@@ -11,7 +11,11 @@
 #include <base/config/build_type.hpp>
 
 namespace compiler::frontend {
-	void FileID::checkDanglingReference() const {
+	FileID::FileID(base::Ref<SourceFile> ref): hash(ref->getComponentHash().hash) {}
+
+	base::Ref<SourceFile> FileID::resolve() const {
+		auto ref = SourceFile::getRegisteredFile(hash);
 		IF_BUILD_TYPE_DEV(SourceFile::checkDanglingReference(ref));
+		return ref;
 	}
 }

@@ -73,9 +73,11 @@
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
-		return { module_id.queryUnstablePerfectHash(),
-			     std::to_underlying(backend_type),
-			     build_debug_info };
+		hashing::ComponentHash::HashAlg hasher;
+		hashing::addToHash(hasher, module_id.queryUnstablePerfectHash());
+		hashing::addToHash(hasher, std::to_underlying(backend_type));
+		hashing::addToHash(hasher, build_debug_info);
+		return hasher.finalize();
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
@@ -443,7 +445,7 @@ namespace compiler::driver {
 					"compile_script: statement #",
 					statement_counter + 1,
 					", module #",
-					module_id.queryUnstablePerfectHash(),
+					module_id.queryUnstablePerfectHash().toStringHex(),
 					"\n"
 				);
 

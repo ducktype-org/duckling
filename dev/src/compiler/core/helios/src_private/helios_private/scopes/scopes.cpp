@@ -913,7 +913,7 @@ namespace compiler::helios {
 			CORE_DEV_LOG(
 				REPL,
 				"At root scope, module #",
-				current_module_id.queryUnstablePerfectHash(),
+				current_module_id.queryUnstablePerfectHash().toStringHex(),
 				", isRepl=",
 				is_repl_module,
 				", hasParent=",

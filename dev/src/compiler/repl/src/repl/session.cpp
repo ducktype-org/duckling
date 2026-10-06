@@ -950,7 +950,8 @@ namespace compiler::repl {
 						CORE_DEV_LOG(
 							REPL,
 							"Setting REPL parent to module #",
-							m_session_history.back().module_id.queryUnstablePerfectHash(),
+							m_session_history.back().module_id.queryUnstablePerfectHash().toStringHex(
+							),
 							"\n"
 						);
 					} else {
@@ -966,7 +967,7 @@ namespace compiler::repl {
 					CORE_DEV_LOG(
 						REPL,
 						"Module created: #",
-						module_id.queryUnstablePerfectHash(),
+						module_id.queryUnstablePerfectHash().toStringHex(),
 						", isRepl=",
 						module_ref->isReplModule(),
 						", hasParent=",

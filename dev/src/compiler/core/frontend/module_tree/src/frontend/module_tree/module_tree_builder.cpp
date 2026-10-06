@@ -234,9 +234,8 @@ namespace compiler::frontend {
 
 		// Create new ModuleTree instance
 		Ref<ModuleTree> module_ref = ModuleTree::addModuleToStorage();
-		ModuleID        mod_id(module_ref);
 
-		module_ref->m_id = mod_id;
+		module_ref->m_self = module_ref;
 
 		// Set ID and name
 		module_ref->m_name        = m_name;
@@ -253,7 +252,7 @@ namespace compiler::frontend {
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
 			module_ref->m_main_source_file
-				= SourceFile::create(m_main_source_file_path.value(), mod_id);
+				= SourceFile::create(m_main_source_file_path.value(), ModuleID(module_ref));
 		}
 
 		for (const auto& [name, submodule]: m_submodules)
