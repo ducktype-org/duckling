@@ -7,7 +7,9 @@
 #pragma once
 
 #include <lsp/io/stream.h>
+#include <lsp/types.h>
 #include <lsp/uri.h>
+#include <lsp_interface/server_session.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -18,6 +20,8 @@
 #include <cstring>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace duck_ls_test {
 
@@ -106,4 +110,39 @@ namespace duck_ls_test {
 		fs::FilePath root_path;
 	};
 
+	/**
+	 * @brief A session that keeps what it was asked to push instead of writing to a client.
+	 *
+	 * The endpoint it is built on is never used: `pushDiagnostics` is the only thing the
+	 * compiler calls, and it is overridden here.
+	 */
+	struct CollectingSession final: public duck_ls::ServerSession {
+		using ServerSession::ServerSession;
+
+		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> pushed;
+
+		void pushDiagnostics(const lsp::Uri& uri, const std::vector<lsp::Diagnostic>& diagnostics)
+			override {
+			pushed[uri] = diagnostics;
+		}
+
+		/**
+		 * @brief Whether the last publish for `uri` reported something.
+		 */
+		[[nodiscard]] bool hasErrors(const lsp::Uri& uri) const {
+			auto it = pushed.find(uri);
+			return it != pushed.end() && !it->second.empty();
+		}
+
+		/**
+		 * @brief Whether `uri` was published with nothing to report.
+		 *
+		 * False for a URI that was never published at all: a file the server said nothing about
+		 * is not a file the server found clean.
+		 */
+		[[nodiscard]] bool noErrors(const lsp::Uri& uri) const {
+			auto it = pushed.find(uri);
+			return it != pushed.end() && it->second.empty();
+		}
+	};
 }

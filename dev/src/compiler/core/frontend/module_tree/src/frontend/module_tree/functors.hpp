@@ -18,14 +18,10 @@ namespace compiler::frontend {
 	 * If you use this, you must know what you are doing. It is a struct so FileID can friend it.
 	 */
 	struct GetFileID_Functor final {
-		static auto get(FileID id) {
-			SourceFile::checkDanglingReference(id.ref);
-			return base::CRef<SourceFile>{ id.ref };
-		}
+		static auto get(FileID id) { return base::CRef<SourceFile>{ id.resolve() }; }
 
 		static auto getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(FileID id) {
-			SourceFile::checkDanglingReference(id.ref);
-			return id.ref;
+			return id.resolve();
 		}
 	};
 
@@ -36,14 +32,10 @@ namespace compiler::frontend {
 	 * If you use this, you must know what you are doing. It is a struct so ModuleID can friend it.
 	 */
 	struct GetModuleID_Functor final {
-		static auto get(ModuleID id) {
-			ModuleTree::checkDanglingReference(id.ref);
-			return base::CRef<ModuleTree>{ id.ref };
-		}
+		static auto get(ModuleID id) { return base::CRef<ModuleTree>{ id.resolve() }; }
 
 		static auto getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(ModuleID id) {
-			ModuleTree::checkDanglingReference(id.ref);
-			return id.ref;
+			return id.resolve();
 		}
 	};
 

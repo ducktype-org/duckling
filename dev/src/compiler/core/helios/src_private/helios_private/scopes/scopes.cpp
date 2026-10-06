@@ -263,12 +263,6 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
-		/**
-		 * @brief Cache to verify parent scopes are consistent.
-		 * @note It is intentionally thread safe.
-		 */
-		inline static concurrent::ConHashMap<pst::PstID, ScopeID> parent_map;
-
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
 			auto element_scope_kind = getScopeKind(ctx, element_key.element);
@@ -305,14 +299,6 @@ namespace compiler::helios {
 				);
 				return parent.ref->parent->ref->perfectClone();
 			}
-
-
-			// simple parent sanity check:
-			// it is technically not needed anymore, but it left as an additional
-			// layer of bug detection.
-			parent_map.maybePutAndUpdate(element->getID(), parent, [&](CRef<ScopeID> existing) {
-				CORE_ASSERT(*existing == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
-			});
 
 			return ScopeData{
 				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
@@ -913,7 +899,7 @@ namespace compiler::helios {
 			CORE_DEV_LOG(
 				REPL,
 				"At root scope, module #",
-				current_module_id.queryUnstablePerfectHash(),
+				current_module_id.queryUnstablePerfectHash().toStringHex(),
 				", isRepl=",
 				is_repl_module,
 				", hasParent=",

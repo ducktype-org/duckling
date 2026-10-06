@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/pointers/ref.hpp>
+#include <base/types/bit256.hpp>
 
 namespace compiler::frontend {
 
@@ -25,22 +26,28 @@ namespace compiler::frontend {
 		// hash. For now it should work, but might break in the future. Decide what to do about it.
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return reinterpret_cast<u64>(ref.get());
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hash;
 		}
 
 		bool operator==(const ModuleID&) const = default;
 
+		auto operator<=>(const ModuleID&) const = default;
+
 	private:
-		ModuleID(base::Ref<ModuleTree> ref): ref(ref) {}
+		/**
+		 * @brief Creates the ID from the current hash of the module and registers the module under
+		 * that hash.
+		 */
+		ModuleID(base::Ref<ModuleTree> ref);
 
 		/**
-		 * @brief Ensures the referenced SourceFile is still valid during development builds.
-		 * This function will work only if use_module_modifier_remove is enabled.
+		 * @brief Resolves the ID to the module currently registered under its hash.
+		 * In development builds it panics when that module was removed from storage.
 		 */
-		void checkDanglingReference() const;
+		[[nodiscard]] base::Ref<ModuleTree> resolve() const;
 
-		base::Ref<ModuleTree> ref;
+		base::Bit256 hash;
 
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;
@@ -53,7 +60,7 @@ namespace std {
 	template<>
 	struct hash<compiler::frontend::ModuleID> {
 		size_t operator()(const compiler::frontend::ModuleID& module_id) const noexcept {
-			return static_cast<size_t>(module_id.queryUnstablePerfectHash());
+			return std::hash<base::Bit256>{}(module_id.queryUnstablePerfectHash());
 		}
 	};
 }
