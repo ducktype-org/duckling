@@ -1,17 +1,19 @@
 import core.panicking as panicking;
 
-#{
-    The empty alternative of an optional `?T`, which is the variant `T | None`.
-#}
-class None {
-    placeholder: u32 = 0u32;
-}
+var none: optional_primitives.None = optional_primitives.None();
 
 #{
     Language primitives backing the interface of `?T`. The compiler bakes them for the held type
     and exposes them as the methods of the optional.
 #}
 namespace optional_primitives {
+    #{
+        The empty alternative of an optional `?T`, which is the variant `T | None`.
+    #}
+    class None {
+        placeholder: u32 = 0u32;
+    }
+
     namespace by_value {
         #{
             Takes the held value out of the optional. Panics when the optional is empty.

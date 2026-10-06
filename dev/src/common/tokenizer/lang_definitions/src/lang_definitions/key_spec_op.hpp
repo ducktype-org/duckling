@@ -127,7 +127,6 @@ namespace lang_def {
 		Array,
 
 		// Const values:
-		None,
 		True,
 		False,
 

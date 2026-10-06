@@ -60,7 +60,7 @@ fun compTime() -> () = {
 	# `?` binds tighter than `|`.
 	var u: ?i64 | f32 = 1.5 as f32;
 
-	var w: ?(i64 | f32) = None();
+	var w: ?(i64 | f32) = none;
 	if (w.full()) builtin_output_i64(41i64);
 }
 
