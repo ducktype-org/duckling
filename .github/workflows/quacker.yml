@@ -26,7 +26,8 @@ on:
 #   2. issue_comment on an ISSUE + '@quacker-bot'           -> quacker-issue-<issue#>  (shares the issue's branch -> serialize with #1)
 #   3. issue_comment on a PR + '@quacker-bot'               -> quacker-mention-<PR#>   (issue.number == PR number here)
 #   4. pull_request_review_comment + '@quacker-bot'         -> quacker-mention-<PR#>
-#   5. pull_request, non-draft, not from a fork              -> quacker-mention-<PR#>   (serialize with @quacker-bot on the same PR)
+#   5. pull_request, non-draft, not from a fork, not a bot  -> quacker-mention-<PR#>   (serialize with @quacker-bot on the same PR;
+#      the org-membership check can't run in an expression, but only org members can push same-repo branches anyway)
 #   6. anything else (non-mention comment / non-quacker label / draft PR / workflow_run) -> run_id (unique -> skips, never cancels a real run)
 concurrency:
   group: >-
@@ -44,6 +45,7 @@ concurrency:
         && format('quacker-mention-{0}', github.event.pull_request.number)
       || github.event_name == 'pull_request' && !github.event.pull_request.draft
         && github.event.pull_request.head.repo.full_name == github.repository
+        && github.event.sender.type != 'Bot'
         && format('quacker-mention-{0}', github.event.pull_request.number)
       || github.run_id
     }}
@@ -109,6 +111,7 @@ jobs:
           COMMENT_USER: ${{ github.event.comment.user.login }}
           COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
           PR_NUM: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_DRAFT: ${{ github.event.pull_request.draft }}
           PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
@@ -126,6 +129,14 @@ jobs:
             [ -n "$1" ] || return 1
             local state
             state="$(gh api "orgs/$ORG/teams/$DEV_TEAM/memberships/$1" --jq '.state' 2>/dev/null || true)"
+            [ "$state" = "active" ]
+          }
+          # Returns 0 (true) iff the given GitHub user is an active member of the organization
+          # (any team, e.g. zpp/interns). Same "Members: read" requirement and fail-closed behavior.
+          is_member() {
+            [ -n "$1" ] || return 1
+            local state
+            state="$(gh api "orgs/$ORG/memberships/$1" --jq '.state' 2>/dev/null || true)"
             [ "$state" = "active" ]
           }
           case "$EVENT" in
@@ -153,8 +164,9 @@ jobs:
             pull_request)
               # PR entered the "ready for review" state (opened as non-draft, or converted from
               # draft): run the same review as "@quacker-bot review". Fork PRs are skipped (their
-              # runs get no secrets anyway); the dev gate on the sender also keeps bots out.
-              if [ "$PR_DRAFT" = "false" ] && [ "$PR_HEAD_REPO" = "$REPO" ] && is_dev "$SENDER"; then
+              # runs get no secrets anyway). Any org member's PR is reviewed, not only dev's; bot
+              # authors (Dependabot, quacker-bot's own PRs) are never org members, so they skip.
+              if [ "$PR_DRAFT" = "false" ] && [ "$PR_HEAD_REPO" = "$REPO" ] && is_member "$PR_AUTHOR"; then
                 run=true; mode=review; a1="$PR_NUM"
               fi ;;
             workflow_run)
