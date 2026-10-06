@@ -22,4 +22,6 @@ fun main() -> i64 = {
         }
         col += 1;
     }
+
+    return 0;
 }
