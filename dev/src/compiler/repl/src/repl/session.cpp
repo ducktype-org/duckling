@@ -443,6 +443,7 @@ namespace compiler::repl {
 	):
 		  m_should_exit(false),
 		  m_line_counter(0),
+		  m_session_id(ReplSessionID::next()),
 		  m_dvm_pid(0),
 		  m_frontend(completions_enabled, bracketed_paste_enabled, decorative_output),
 		  m_decorative_output(decorative_output),
@@ -959,7 +960,7 @@ namespace compiler::repl {
 					}
 
 					auto module_ref = createSyntheticChainedStatementModule(
-						stmt_source, parent_module_id, m_line_counter, "repl_"
+						stmt_source, parent_module_id, m_line_counter, "repl_", m_session_id
 					);
 					auto module_id = module_ref->getModuleID();
 

@@ -52,19 +52,11 @@ namespace compiler::frontend {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
 	}
 
-	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
+	Ref<SourceFile> SourceFile::create(fs::File file, Ref<ModuleTree> linked_module) {
 		auto abs_path = file.getFilePath().absolute();
 
 		const auto storage_key = next_storage_key.fetch_add(1);
-		auto       inserted    = files.put(
-            storage_key,
-            SourceFile(
-                std::move(file),
-                GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-                    linked_module
-                )
-            )
-        );
+		auto       inserted    = files.put(storage_key, SourceFile(std::move(file), linked_module));
 		Ref<SourceFile> created_ref(&inserted->value);
 		created_ref->storage_handle = storage_key;
 		created_ref->self           = created_ref;

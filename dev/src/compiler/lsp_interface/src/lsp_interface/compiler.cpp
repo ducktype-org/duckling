@@ -223,7 +223,7 @@ namespace duck_ls {
 		base::Optional<packages::RawPackageInfo> rpi;
 
 		if (auto module_ref_opt = findModuleForFile(root_file)) {
-			// If the module is found, meanin the package is loaded, we want to reuse the
+			// If the module is found, meaning the package is loaded, we want to reuse the
 			// RawPackageInfo. It holds the dependencies of the package.
 			auto module_ref     = *module_ref_opt;
 			auto package_id     = module_ref->getPackage().illegalAccess().getID();
@@ -256,7 +256,8 @@ namespace duck_ls {
 
 		loadPackage(package_root.value(), *rpi);
 
-		query::external::invalidateQueries({}, {}, {});
+		auto new_inputs = compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
+		query::external::invalidateQueries(std::move(new_inputs), {}, {});
 	}
 
 	void Compiler::swapMainSourceFile(

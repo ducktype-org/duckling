@@ -252,7 +252,7 @@ namespace compiler::frontend {
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
 			module_ref->m_main_source_file
-				= SourceFile::create(m_main_source_file_path.value(), ModuleID(module_ref));
+				= SourceFile::create(m_main_source_file_path.value(), module_ref);
 		}
 
 		for (const auto& [name, submodule]: m_submodules)

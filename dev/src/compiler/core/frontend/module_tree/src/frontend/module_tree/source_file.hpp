@@ -111,11 +111,12 @@ namespace compiler::frontend {
 		 * @return Reference to the created or existing SourceFile.
 		 * @note If a SourceFile for the given file already exists, and the content matches,
 		 *       the new SourceFile is returned. If the content differs, an assertion fails.
-		 *       A new FileID is always assigned for a new SourceFile.
 		 *       The file content is always hashed and cached.
-		 *       Each fileID has a unique UnstableHash even if it is pointing to the same fs::File
+		 *       The FileID is derived from the module path and the file name, so two SourceFiles
+		 *       with the same name in the same module share it.
+		 *       The module may still be under construction; its hash is not computed here.
 		 */
-		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
+		static Ref<SourceFile> create(fs::File file, Ref<ModuleTree> linked_module);
 
 		/**
 		 * @brief Retrieves all SourceFile instances registered under the given path.

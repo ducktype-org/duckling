@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(loadedPackageDependsOnStdTest);
 		TESTER_ADD_TEST(stdTypesDiagnosticsTest);
 		TESTER_ADD_TEST(reloadedStdPackageKeepsItsIdTest);
+		TESTER_ADD_TEST(reloadingStdUsedByLoadedPackageTest);
 	}
 
 protected:
@@ -183,6 +184,38 @@ private:
 		compiler.addWorkspace(workspace.uriOf());
 		compiler.openDocument(main_uri, "duckling", 1, CONTENT);
 		compiler.publishDiagnostics(main_uri);
+		assertTrue(session.noErrors(main_uri), "Using std after its reload must not report errors");
+	}
+
+	/**
+	 * @brief Reloading the standard library after a loaded package compiled against it, and then
+	 * publishing diagnostics of every tracked package, reports no errors.
+	 */
+	void reloadingStdUsedByLoadedPackageTest() {
+		constexpr auto CONTENT
+			= "import std.math;\n"
+			  "fun main() -> i64 = {\n"
+			  "    return math.abs(-1);\n"
+			  "}\n";
+		duck_ls_test::VfsWorkspace workspace("lsp_compiler_std_reload_after_use_ws");
+		workspace.add("pkg/pkg.dk", CONTENT);
+		const auto main_uri = workspace.uriOf("pkg/pkg.dk");
+
+		compiler.addWorkspace(workspace.uriOf());
+		compiler.openDocument(main_uri, "duckling", 1, CONTENT);
+		compiler.publishDiagnostics(main_uri);
+		assertTrue(session.noErrors(main_uri), "Using std before its reload must not report errors");
+
+		auto std_path
+			= compiler::driver::resolveStdPath(compiler::driver::options_types::StdLibOptions{
+				.std_lib_type = compiler::driver::options_types::StdLibOptions::DefaultStd{} });
+		assertTrue(std_path.has_value(), "The default standard library path must resolve");
+
+		files.addWorkspaceRoot(std_path.value());
+		compiler.reloadPackageOwning(
+			std_path.value().join(fs::FilePath("std")).join(fs::FilePath("std.dk"))
+		);
+		compiler.publishDiagnostics({});
 		assertTrue(session.noErrors(main_uri), "Using std after its reload must not report errors");
 	}
 
