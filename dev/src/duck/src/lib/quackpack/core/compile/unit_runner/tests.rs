@@ -52,7 +52,7 @@ fn collects_packages() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
     for unit in unit_graph.units_sorted_by_id() {
         let expected: &[&str] = match unit.package().name().as_str() {
             "root" => &["bar", "baz", "foo", "root"],
@@ -98,7 +98,7 @@ fn collects_packages_cycle() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
     for unit in unit_graph.units_sorted_by_id() {
         let expected: &[&str] = match unit.package().name().as_str() {
             "root" | "cycle" => &["bar", "cycle", "foo", "root"],

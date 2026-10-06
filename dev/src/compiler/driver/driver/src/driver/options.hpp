@@ -111,7 +111,7 @@ namespace compiler::driver {
 			/**
 			 * @brief The options that will be passed "as-is" to linker.
 			 */
-			base::Optional<std::string> native_additional_link_options;
+			std::vector<std::string> native_additional_link_options{};
 			/**
 			 * @brief Whether to link the c standard library.
 			 */

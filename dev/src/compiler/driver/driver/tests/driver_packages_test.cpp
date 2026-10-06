@@ -41,14 +41,16 @@
 using namespace compiler;
 
 namespace {
-	std::string rewriteBuildPaths(std::string_view options, const fs::FilePath& artifacts_path) {
-		const std::string build_prefix = "build/";
-		const std::string replacement  = artifacts_path.getPath().string() + "/";
-		std::string       result(options);
-		size_t            pos = 0;
-		while ((pos = result.find(build_prefix, pos)) != std::string::npos) {
-			result.replace(pos, build_prefix.size(), replacement);
-			pos += replacement.size();
+	std::vector<std::string> rewriteBuildPaths(
+		const std::vector<std::string>& options, const fs::FilePath& artifacts_path
+	) {
+		const std::string        build_prefix = "build/";
+		const std::string        replacement  = artifacts_path.getPath().string() + "/";
+		std::vector<std::string> result{};
+		for (auto path: options) {
+			size_t pos = 0;
+			if ((pos = path.find(build_prefix)) != std::string::npos)
+				result.push_back(path.replace(pos, build_prefix.size(), replacement));
 		}
 		return result;
 	}

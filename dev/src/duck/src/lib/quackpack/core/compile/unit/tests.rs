@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use super::graph::lower_early_graph;
 use super::unit_visitor::UnitVisitor;
-use super::{ArtifactsType, Unit, UnitId};
+use super::{Unit, UnitId, UnitType};
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
@@ -73,7 +73,7 @@ fn lowers_early_graph() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
 
     let root_id = 0;
     let foo_id = 2;
@@ -85,7 +85,7 @@ fn lowers_early_graph() {
 
     let root_unit = unit_graph.unit_for(root_id);
     assert_eq!(root_unit, unit_graph.root_unit());
-    assert_eq!(root_unit.artifacts_type(), ArtifactsType::Binary);
+    assert_eq!(root_unit.unit_type(), UnitType::Binary);
     assert_eq!(root_unit.unit_id(), root_id);
     assert_eq!(deps_for(root_unit), [bar_id, foo_id]);
     assert_eq!(
@@ -94,19 +94,19 @@ fn lowers_early_graph() {
     );
 
     let foo = unit_graph.unit_for(foo_id);
-    assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
+    assert_eq!(foo.unit_type(), UnitType::Dependency);
     assert_eq!(foo.unit_id(), foo_id);
     assert_eq!(deps_for(foo), [baz_id]);
     assert_eq!(foo.identity(), mock_registry_identity("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
-    assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
+    assert_eq!(bar.unit_type(), UnitType::Dependency);
     assert_eq!(bar.unit_id(), bar_id);
     assert_eq!(deps_for(bar), [baz_id]);
     assert_eq!(bar.identity(), mock_registry_identity("bar"));
 
     let baz = unit_graph.unit_for(baz_id);
-    assert_eq!(baz.artifacts_type(), ArtifactsType::IsADependencyArtifact);
+    assert_eq!(baz.unit_type(), UnitType::Dependency);
     assert_eq!(baz.unit_id(), baz_id);
     assert_eq!(deps_for(baz), [0u64; 0]);
     assert_eq!(baz.identity(), mock_registry_identity("baz"));
@@ -145,7 +145,7 @@ fn lowers_early_graph_with_cycle() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
 
     let root_id = 0;
     let foo_id = 3;
@@ -155,7 +155,7 @@ fn lowers_early_graph_with_cycle() {
 
     let root_unit = unit_graph.unit_for(root_id);
     assert_eq!(root_unit, unit_graph.root_unit());
-    assert_eq!(root_unit.artifacts_type(), ArtifactsType::Binary);
+    assert_eq!(root_unit.unit_type(), UnitType::Binary);
     assert_eq!(root_unit.unit_id(), root_id);
     assert_eq!(
         root_unit.identity(),
@@ -166,19 +166,19 @@ fn lowers_early_graph_with_cycle() {
     assert_eq!(deps_for(root_unit), [bar_id, cycle_id, foo_id]);
 
     let foo = unit_graph.unit_for(foo_id);
-    assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
+    assert_eq!(foo.unit_type(), UnitType::Dependency);
     assert_eq!(foo.unit_id(), foo_id);
     assert_eq!(deps_for(foo), [0u64; 0]);
     assert_eq!(foo.identity(), mock_registry_identity("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
-    assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
+    assert_eq!(bar.unit_type(), UnitType::Dependency);
     assert_eq!(bar.unit_id(), bar_id);
     assert_eq!(deps_for(bar), [0u64; 0]);
     assert_eq!(bar.identity(), mock_registry_identity("bar"));
 
     let cycle = unit_graph.unit_for(cycle_id);
-    assert_eq!(cycle.artifacts_type(), ArtifactsType::IsADependencyArtifact);
+    assert_eq!(cycle.unit_type(), UnitType::Dependency);
     assert_eq!(cycle.unit_id(), cycle_id);
     assert_eq!(deps_for(cycle), [root_id]);
     assert_eq!(cycle.identity(), mock_local_identity(root.path(), "cycle"));
@@ -217,7 +217,7 @@ fn basic_visitor_order_cycle() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
     let root_id = 0;
     let foo_id = 3;
     let bar_id = 1;
@@ -281,7 +281,7 @@ fn basic_visitor_order() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
+    let unit_graph = lower_early_graph(graph);
 
     let root_id = 0;
     let foo_id = 2;
