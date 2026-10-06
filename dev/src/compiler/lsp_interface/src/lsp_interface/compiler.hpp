@@ -6,7 +6,10 @@
 
 #pragma once
 
+#include <driver/options.hpp>
 #include <frontend/module_tree/module_id.hpp>
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/packages/packages.hpp>
 #include <lsp/types.h>
 #include <lsp/uri.h>
 #include <lsp_interface/files_cache.hpp>
@@ -22,6 +25,8 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+
+class LspCompilerTest;
 
 namespace duck_ls {
 
@@ -40,11 +45,25 @@ namespace duck_ls {
 	 */
 	class Compiler {
 	public:
-		Compiler(base::Ref<ServerSession> session, base::Ref<FilesCache> files);
+		Compiler(
+			base::Ref<ServerSession>                                                session,
+			base::Ref<FilesCache>                                                   files,
+			compiler::driver::CompilerModeOfOperationAndOptions::LanguageServerMode options = {}
+		);
 
 		Compiler(const Compiler&)            = delete;
 		Compiler& operator=(const Compiler&) = delete;
 		virtual ~Compiler()                  = default;
+
+		/**
+		 * @brief Initializes the compiler driver with the options given at construction and
+		 * registers the standard library packages.
+		 *
+		 * @pre Called once per process, before any document is handled, with the global logger
+		 * already set.
+		 * @return Bad when the initialization failed; the reason is reported to the global logger.
+		 */
+		base::OkBad initialize();
 
 		/**
 		 * @brief Registers a workspace root, bounding the upward search for a package root.
@@ -90,6 +109,8 @@ namespace duck_ls {
 		virtual void publishDiagnostics(const base::Optional<lsp::Uri>& queried_file_opt);
 
 	private:
+		friend class ::LspCompilerTest;
+
 		/**
 		 * @brief Finds the package root owning `path`, bounded by the workspace root.
 		 */
@@ -98,7 +119,10 @@ namespace duck_ls {
 		/**
 		 * @brief Walks `package_root` into the module tree and registers it as a package.
 		 */
-		void loadPackage(const fs::FilePath& package_root);
+		void loadPackage(
+			const fs::FilePath&                                 package_root,
+			const compiler::frontend::packages::RawPackageInfo& raw_package_info
+		);
 
 		/**
 		 * @brief Tears the package owning `path` down and walks it again from its source.
@@ -119,8 +143,22 @@ namespace duck_ls {
 			const fs::File&                           replacement
 		);
 
+		bool stdActive() const;
+
+		compiler::frontend::FileResolver getResolver() const;
+
+		std::vector<compiler::frontend::packages::RawPackageInfo>::iterator getRawPackageWithID(
+			base::StrID package_id
+		);
+
 		base::Ref<ServerSession> session;
 		base::Ref<FilesCache>    files;
+
+		compiler::driver::CompilerModeOfOperationAndOptions::LanguageServerMode options;
+		compiler::frontend::packages::DiagnosticReporter                        report;
+
+		/// Raw package infos of all of the packages loaded.
+		std::vector<compiler::frontend::packages::RawPackageInfo> raw_package_infos{};
 
 		std::vector<compiler::frontend::ModuleID> tracked_packages{};
 

@@ -4,12 +4,18 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
+#include <driver/initialize.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/source_position_locked.hpp>
 #include <global_state/packages.hpp>
@@ -26,7 +32,9 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/external/api.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
 #include <iomanip>
@@ -138,9 +146,27 @@ namespace duck_ls {
 		return base::StrID(id.str());
 	}
 
-	Compiler::Compiler(base::Ref<ServerSession> session, base::Ref<FilesCache> files):
+	Compiler::Compiler(
+		base::Ref<ServerSession>                                                session,
+		base::Ref<FilesCache>                                                   files,
+		compiler::driver::CompilerModeOfOperationAndOptions::LanguageServerMode options
+	):
 		  session(session),
-		  files(files) {}
+		  files(files),
+		  options(std::move(options)),
+		  report(compiler::driver::diagnostics::makeGlobalLoggerReporter()) {}
+
+	base::OkBad Compiler::initialize() {
+		query::setTrackReverseGraph(true);
+		compiler::frontend::use_module_modifier_remove = true;
+
+		if_opt_some(compiler::driver::resolveStdPath(options.stdlib_options), std_path) {
+			raw_package_infos
+				= compiler::driver::getStandardLibraryPackages(std_path, report).copyValueOr({});
+		}
+
+		return compiler::driver::initializeTheCompiler(options).status();
+	}
 
 	void Compiler::addWorkspace(const lsp::Uri& root) {
 		if_opt_some(files->sourcePathFor(root), path) files->addWorkspaceRoot(path);
@@ -163,19 +189,20 @@ namespace duck_ls {
 		return package_root;
 	}
 
-	void Compiler::loadPackage(const fs::FilePath& package_root) {
-		auto resolver = [this](const fs::File& source_file) -> fs::File {
-			auto source_path = source_file.getFilePath();
-			if (files->isOpened(source_path)) return { files->cachePath(source_path) };
-			return source_file;
-		};
-
+	void Compiler::loadPackage(
+		const fs::FilePath& package_root, const packages::RawPackageInfo& raw_package_info
+	) {
 		auto module_id = ModuleTreeBuilder::create(
-							 fs::File(package_root), packageIdForRoot(package_root), resolver
+							 fs::File(package_root), raw_package_info.package_id, getResolver()
 		)
 		                     ->getModuleID();
-		global_state::setters::addPackage(module_id);
+
+		auto package_info
+			= packages::createPackageInfo(raw_package_info, raw_package_infos, report, module_id);
+		CORE_ASSERT(package_info.has_value(), "should always be valid");
+		global_state::setters::addPackage(*package_info);
 		tracked_packages.push_back(module_id);
+		raw_package_infos.push_back(raw_package_info);
 
 		std::cerr << "duck_ls: loaded package " << package_root.strView() << "\n";
 	}
@@ -193,13 +220,41 @@ namespace duck_ls {
 		                   ? fs::File(files->cachePath(root_module_file))
 		                   : fs::File(root_module_file);
 
-		if_opt_some(findModuleForFile(root_file), module_ref) {
+		base::Optional<packages::RawPackageInfo> rpi;
+
+		if (auto module_ref_opt = findModuleForFile(root_file)) {
+			// If the module is found, meaning the package is loaded, we want to reuse the
+			// RawPackageInfo. It holds the dependencies of the package.
+			auto module_ref     = *module_ref_opt;
+			auto package_id     = module_ref->getPackage().illegalAccess().getID();
+			auto raw_package_it = getRawPackageWithID(package_id);
+			rpi                 = *raw_package_it;
+
 			global_state::setters::removePackage(module_ref->getModuleID());
-			ModuleTreeModifier::removeModuleRecursive(module_ref);
 			std::erase(tracked_packages, module_ref->getModuleID());
+			raw_package_infos.erase(raw_package_it);
+
+			ModuleTreeModifier::removeModuleRecursive(module_ref);
+		} else {
+			auto package_id = packageIdForRoot(*package_root);
+
+			rpi = packages::RawPackageInfo{
+				.package_id   = package_id,
+				.package_name = package_id,
+				.version      = base::StrID("not_supported"),
+				.package_path = *package_root,
+				.features     = {},
+				.dependencies = {},
+			};
+
+			if (stdActive()) {
+				auto result
+					= compiler::driver::addDependenciesOnStandardLibraryForPackage(*rpi, report);
+				CORE_ASSERT(result.isOk(), "Should always be valid.");
+			}
 		}
 
-		loadPackage(package_root.value());
+		loadPackage(package_root.value(), *rpi);
 
 		auto new_inputs = compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
 		query::external::invalidateQueries(std::move(new_inputs), {}, {});
@@ -211,6 +266,10 @@ namespace duck_ls {
 		// The old PST must still exist while its inputs are collected.
 		std::vector<query::external::InputData> previous_inputs;
 		previous_inputs.push_back(pst::SourcePositionLocked::getQueryInputNode());
+		for (auto& source_file: SourceFile::getSourceFilesFromPath(current.getFilePath()))
+			previous_inputs.emplace_back(
+				QueryFileSideInput::getID(), source_file->getComponentHash().hash
+			);
 		collectInputsFor(current, previous_inputs);
 
 		ModuleTreeModifier::removeMainSourceFile(module);
@@ -386,4 +445,23 @@ namespace duck_ls {
 		last_published_diagnostics = std::move(published);
 	}
 
+	bool Compiler::stdActive() const { return options.stdlib_options.stdActive(); }
+
+	compiler::frontend::FileResolver Compiler::getResolver() const {
+		return [this](const fs::File& source_file) -> fs::File {
+			auto source_path = source_file.getFilePath();
+			if (files->isOpened(source_path)) return { files->cachePath(source_path) };
+			return source_file;
+		};
+	}
+
+	std::vector<compiler::frontend::packages::RawPackageInfo>::iterator Compiler::getRawPackageWithID(
+		base::StrID package_id
+	) {
+		auto it = std::ranges::find_if(raw_package_infos, [&](auto& rpi) {
+			return rpi.package_id == package_id;
+		});
+		CORE_ASSERT(it != raw_package_infos.end(), "Should always be found.");
+		return it;
+	}
 }
