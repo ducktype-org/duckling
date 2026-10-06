@@ -49,6 +49,8 @@ namespace compiler::tsh {
 			const auto from_ref_kind = key.source.getRefKind();
 			const auto to_ref_kind   = key.target.getRefKind();
 
+			if (key.source.getType().getKind() == Kind::Void) return true;
+
 			if (!referenceCoercionRule(from_ref_kind, to_ref_kind).isLegal()) return false;
 
 			// For pointer-like symbol types (ex. ref/box) the element types must match exactly.

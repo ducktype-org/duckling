@@ -747,7 +747,10 @@ namespace compiler::helios {
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
-					ctx.query<tsh::QueryVariantType>({ subtypes }),
+					ctx.query<tsh::QueryVariantType>({
+						.underlying_types         = subtypes,
+						.represents_optional_type = expr.represents_optional_type,
+					}),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };

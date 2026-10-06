@@ -664,6 +664,28 @@ namespace compiler::mir {
 			std::vector<MIRValue> subtype_values;
 			subtype_values.reserve(expr.subtypes.size());
 
+			if (expr.represents_optional_type) {
+				auto value_type_lowered = lowerSubExpr(*expr.subtypes.front(), current);
+				subtype_values.push_back(value_type_lowered.getResult(function));
+				current = value_type_lowered.begin;
+
+				noValueOutput(
+					current,
+					hole,
+					Instruction(
+						Operation::MetaTypeOperation,
+						{},
+						subtype_values,
+						{},
+						expr_scope,
+						MetaParameters{ MetaKind::CreateOptional },
+						{ expr.getPosition() }
+					),
+					result_type
+				);
+				return;
+			}
+
 			for (const auto& element: expr.subtypes | std::views::reverse) {
 				auto elem_lowered = lowerSubExpr(*element, current);
 				subtype_values.push_back(elem_lowered.getResult(function));

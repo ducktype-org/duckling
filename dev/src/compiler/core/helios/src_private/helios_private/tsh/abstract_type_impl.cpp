@@ -302,8 +302,14 @@ namespace compiler::tsh {
 		);
 	}
 
-	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
+	VariantAbstractTypeImpl::VariantAbstractTypeImpl(
+		const std::vector<SymbolType<>>& variant_types, const bool represents_optional_type
+	):
 		  underlying_types(variant_types) {
+		CORE_ASSERT(
+			not represents_optional_type or variant_types.size() == 2,
+			"An optional type has to consist of exactly the value type and the None type."
+		);
 		// Variants are unordered; canonicalize the alternative order so that the runtime tag
 		// (= index into getUnderlyingTypes()) does not depend on construction order.
 		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
@@ -311,7 +317,12 @@ namespace compiler::tsh {
 		std::ranges::stable_sort(underlying_types, [](const SymbolType<>& a, const SymbolType<>& b) {
 			return a.toString() < b.toString();
 		});
-		representation = "Variant " + stringifyTypeVector(underlying_types);
+		if (represents_optional_type) {
+			optional_value_type = variant_types.front();
+			representation      = "?" + variant_types.front().toString();
+		} else {
+			representation = "Variant " + stringifyTypeVector(underlying_types);
+		}
 	}
 
 	bool VariantAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
@@ -412,7 +423,11 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("Function type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
+		if (representsOptionalType())
+			return &ctx.query<QueryInterfaceOfOptional>(toAbstractType().as<VariantAbstractType>())
+			            ->valueOrThrow();
+
 		// A variant declares nothing of its own: it is reached through its alternatives, so its
 		// whole interface is the default one.
 		static TypeInterface empty{};

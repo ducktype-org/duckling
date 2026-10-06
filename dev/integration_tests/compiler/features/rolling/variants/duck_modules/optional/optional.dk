@@ -1,0 +1,73 @@
+import core.builtins.*;
+
+# Every check is silent while it holds, so a passing run prints nothing at all and a failing one
+# prints only the ids of the checks that broke.
+fun check(actual: i64, expected: i64, id: i64) -> () = {
+	if (actual != expected) builtin_output_i64(id);
+}
+
+# ===== The interface of `?T` on a trivially copyable value =====
+
+# A direct receiver selects the by-value `value`.
+fun byValue(o: ?i64) -> i64 = o.value();
+
+# A `ref` receiver selects the by-ref `value`, so a write lands in the optional.
+fun byRef(o: ref ?i64) -> () = {
+	o.value() = 42i64;
+}
+
+fun trivialValue() -> () = {
+	var o: ?i64 = 5i64;
+	check(o.value(), 5i64, 1i64);
+	if (not o.full()) builtin_output_i64(2i64);
+	if (o.empty()) builtin_output_i64(3i64);
+	check(byValue(o), 5i64, 4i64);
+
+	byRef(&o);
+	check(o.value(), 42i64, 5i64);
+
+	o.reset();
+	if (o.full()) builtin_output_i64(6i64);
+	if (not o.empty()) builtin_output_i64(7i64);
+
+	o = 7i64;
+	check(o.value(), 7i64, 8i64);
+}
+
+# ===== The interface of `?T` on an owning value =====
+
+fun owningValue() -> () = {
+	var s: ?String = "hello".toString();
+	check(s.value().length(), 5i64, 20i64);
+
+	# The receiver is a variable, so `value` refers to the held string instead of copying it.
+	s.value().append('!');
+	check(s.value().length(), 6i64, 21i64);
+
+	# Resetting destroys the held string.
+	s.reset();
+	if (s.full()) builtin_output_i64(22i64);
+}
+
+# ===== `?` is a compile-time type operator =====
+
+fun Opt(t: type) -> type = ?t;
+
+fun compTime() -> () = {
+	var t: Opt(i32) = 3i32;
+	check(t.value() as i64, 3i64, 40i64);
+
+	# `?` binds tighter than `|`.
+	var u: ?i64 | f32 = 1.5 as f32;
+
+	var w: ?(i64 | f32) = None();
+	if (w.full()) builtin_output_i64(41i64);
+}
+
+fun main() -> i64 = {
+	trivialValue();
+	owningValue();
+	compTime();
+
+	return 0i64;
+}

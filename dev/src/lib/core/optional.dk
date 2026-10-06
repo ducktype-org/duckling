@@ -1,0 +1,70 @@
+import core.panicking as panicking;
+
+#{
+    The empty alternative of an optional `?T`, which is the variant `T | None`.
+#}
+class None {
+    placeholder: u32 = 0u32;
+}
+
+#{
+    Language primitives backing the interface of `?T`. The compiler bakes them for the held type
+    and exposes them as the methods of the optional.
+#}
+namespace optional_primitives {
+    namespace by_value {
+        #{
+            Takes the held value out of the optional. Panics when the optional is empty.
+        #}
+        template(T: type)
+        fun value(o: ?T) -> T = {
+            return match (move o) {
+                case v: T = move v;
+                case _: None = panicking.panic();
+            };
+        }
+    }
+
+    namespace by_ref {
+        #{
+            Refers to the held value of the optional. Panics when the optional is empty.
+        #}
+        template(T: type)
+        fun value(o: ref ?T) -> ref T = {
+            return match (o) {
+                case v: ref T = &v;
+                case _: None = panicking.panic();
+            };
+        }
+    }
+
+    #{
+        Whether the optional holds a value.
+    #}
+    template(T: type)
+    fun full(o: const ref ?T) -> bool = {
+        return match (o) {
+            case _: const ref T = true;
+            case _: None = false;
+        };
+    }
+
+    #{
+        Whether the optional holds no value.
+    #}
+    template(T: type)
+    fun empty(o: const ref ?T) -> bool = {
+        return match (o) {
+            case _: const ref T = false;
+            case _: None = true;
+        };
+    }
+
+    #{
+        Destroys the held value, if any, leaving the optional empty.
+    #}
+    template(T: type)
+    fun reset(o: ref ?T) -> () = {
+        o = None();
+    }
+}

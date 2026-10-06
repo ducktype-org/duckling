@@ -105,6 +105,7 @@ either in the scheme or it's implementation, they should be reflected here.
                  | "CP" <type> "E"                          // c pointer
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
+                 | "Q" <type> "E"                           // optional type (?T)
 
 <tuple-type> ::= "T" <type>* "E"                            // tuple type
 

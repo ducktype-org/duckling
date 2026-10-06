@@ -148,6 +148,14 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getMember(index);
 	}
 
+	bool VariantAbstractType::representsOptionalType() const {
+		return toCPimpl(pimpl)->representsOptionalType();
+	}
+
+	SymbolType<> VariantAbstractType::getOptionalValueType() const {
+		return toCPimpl(pimpl)->getOptionalValueType();
+	}
+
 	compiler::helios::SymID ClassAbstractType::getSymbol() const {
 		return toCPimpl(pimpl)->getSymbol();
 	}

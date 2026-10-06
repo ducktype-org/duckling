@@ -152,11 +152,17 @@ namespace compiler::helios {
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
+		if (implicit_ref_of)
+			from = makeBox<code::RefOfExpr>(ctx, from->origin.generatedFrom(), std::move(from));
+
 		// An owned rvalue passed to a new owner is implicitly moved.
 		if (transfers_ownership)
 			from = makeBox<code::MoveExpr>(
 				ctx, from->origin.generatedFrom(), std::move(from), code::MoveExpr::MoveKind::Implicit
 			);
+
+		if (from->expression_type.getType().getKind() == tsh::Kind::Void)
+			return makeBox<code::CastExpr>(ctx, from->origin.generatedFrom(), std::move(from), to);
 
 		// Wrapping into a variant happens before the reference kind is adjusted, as the chosen
 		// alternative (and not the variant itself) decides whether the value is dereferenced.
@@ -225,9 +231,23 @@ namespace compiler::helios {
 	}
 
 	query::QResult<Coercion> canCoerce(
-		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		query::Context&              ctx,
+		const tsh::ExpressionType<>& from,
+		const tsh::SymbolType<>&     to,
+		const CoercionMode           mode
 	) {
 		const tsh::SymbolType<> from_type = from.getSymbolType();
+
+		if (mode == CoercionMode::ImplicitRefOf and to.getRefKind() == tsh::ReferenceKind::Ref
+		    and from_type.getRefKind() != tsh::ReferenceKind::Ref) {
+			UNPACK_QRESULT(
+				const auto ref_coercion =,
+				canCoerce(ctx, code::RefOfExpr::typeOfRefTo(from), to, CoercionMode::Default)
+			);
+			if (ref_coercion.isInvalid())
+				return Coercion::invalid(from_type, to, ref_coercion.getInvalidReason());
+			return Coercion(from_type, to, {}, ref_coercion.transfers_ownership, true);
+		}
 
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible

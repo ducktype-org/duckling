@@ -104,4 +104,19 @@ namespace compiler::tsh {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryInterfaceOfSlice, SliceAbstractType, CRef<query::QResult<TypeInterface>>, ({}))
+
+	/**
+	 * TSH-private query to get the interface of an optional `?T`.
+	 *
+	 * The methods of an optional are the optional language primitives of `core.optional`, baked
+	 * for the held type `T`.
+	 *
+	 * To access the interface of an optional from outside the TSH module, use
+	 * `AbstractType::getInterface`
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryInterfaceOfOptional, VariantAbstractType, CRef<query::QResult<TypeInterface>>, ({})
+	)
 }

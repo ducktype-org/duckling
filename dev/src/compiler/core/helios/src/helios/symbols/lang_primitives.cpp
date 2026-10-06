@@ -8,6 +8,7 @@
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/templates/templates.hpp>
@@ -122,6 +123,33 @@ namespace compiler::helios {
 				    .path       = { "containers" },
 				    .namespaces = {},
 				    .element    = "boxFree" } },
+				{ LanguagePrimitive::OptionalNone,
+				  { .package = "core", .path = { "optional" }, .namespaces = {}, .element = "None" } },
+				{ LanguagePrimitive::OptionalValue,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives", "by_value" },
+				    .element    = "value" } },
+				{ LanguagePrimitive::OptionalValueRef,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives", "by_ref" },
+				    .element    = "value" } },
+				{ LanguagePrimitive::OptionalFull,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives" },
+				    .element    = "full" } },
+				{ LanguagePrimitive::OptionalEmpty,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives" },
+				    .element    = "empty" } },
+				{ LanguagePrimitive::OptionalReset,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives" },
+				    .element    = "reset" } },
 			};
 			return paths;
 		}
@@ -242,5 +270,19 @@ namespace compiler::helios {
 		    | std::views::transform([](auto& type) { return ctv::CompileTimeValue(type); })
 		    | std::ranges::to<std::vector>();
 		return bakeLanguagePrimitive(ctx, primitive, std::move(ctv_args));
+	}
+
+	tsh::SymbolType<> getOptionalNoneType(query::Context& ctx) {
+		const SymID none_sym
+			= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::OptionalNone })
+		          ->valueOrThrow();
+		return tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryClassType>(none_sym));
+	}
+
+	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type) {
+		return ctx.query<tsh::QueryVariantType>({
+			.underlying_types         = { std::move(value_type), getOptionalNoneType(ctx) },
+			.represents_optional_type = true,
+		});
 	}
 }

@@ -8,6 +8,7 @@
 
 #include "abstract_type_impl.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -122,4 +123,31 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfSlice)
+
+	struct IMPLEMENT_QUERY(QueryInterfaceOfOptional, query::QResult<TypeInterface>) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			using helios::LanguagePrimitive;
+
+			const auto value_type = key.getOptionalValueType();
+
+			TypeInterfaceBuilder builder(key);
+			for (const auto primitive: { LanguagePrimitive::OptionalValue,
+			                             LanguagePrimitive::OptionalValueRef,
+			                             LanguagePrimitive::OptionalFull,
+			                             LanguagePrimitive::OptionalEmpty,
+			                             LanguagePrimitive::OptionalReset }) {
+				builder.push(
+					helios::bakeLanguagePrimitiveWithTypes(ctx, primitive, { value_type }),
+					InterfaceElement::InterfaceElementKind::Method,
+					MemberVisibility::Public
+				);
+			}
+
+			return builder.build();
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfOptional)
 }

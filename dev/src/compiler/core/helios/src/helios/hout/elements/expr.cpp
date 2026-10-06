@@ -636,7 +636,10 @@ namespace compiler::helios::code {
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
-		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> subtypes
+		query::Context&,
+		ElementOrigin          origin,
+		std::vector<Box<Expr>> subtypes,
+		const bool             represents_optional_type
 	):
 		  Expr(
 
@@ -650,17 +653,30 @@ namespace compiler::helios::code {
 			  },
 			  origin
 		  ),
-		  subtypes(std::move(subtypes)) {}
+		  subtypes(std::move(subtypes)),
+		  represents_optional_type(represents_optional_type) {
+		CORE_ASSERT(
+			not represents_optional_type or this->subtypes.size() == 2,
+			"An optional type constructor needs exactly the value type and the None type."
+		);
+	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
 		tsh::ExpressionType<>        expression_type,
 		ElementOrigin                origin,
-		std::vector<base::Box<Expr>> subtypes
+		std::vector<base::Box<Expr>> subtypes,
+		const bool                   represents_optional_type
 	):
 		  Expr(expression_type, origin),
-		  subtypes(std::move(subtypes)) {}
+		  subtypes(std::move(subtypes)),
+		  represents_optional_type(represents_optional_type) {}
 
 	void VariantTypeConstructorExpr::debugPrint(std::ostream& out) const {
+		if (represents_optional_type) {
+			out << "?";
+			subtypes.front()->debugPrint(out);
+			return;
+		}
 		out << "(";
 		for (bool add_pipe = false; auto&& subtype: subtypes) {
 			if (add_pipe) out << " | ";
@@ -675,7 +691,7 @@ namespace compiler::helios::code {
 		cloned_subtypes.reserve(subtypes.size());
 		for (const auto& subtype: subtypes) cloned_subtypes.push_back(subtype->clone());
 		return makeBox<VariantTypeConstructorExpr>(
-			expression_type, origin, std::move(cloned_subtypes)
+			expression_type, origin, std::move(cloned_subtypes), represents_optional_type
 		);
 	}
 
@@ -1205,25 +1221,25 @@ namespace compiler::helios::code {
 	}
 
 	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  [](const tsh::ExpressionType<>& inner_type) -> tsh::ValueCategory {
-					  switch (inner_type.getSymbolType().getRefKind()) {
-					  case tsh::ReferenceKind::Direct:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
-					  case tsh::ReferenceKind::Ref:
-						  return inner_type.getValueCategory();
-					  case tsh::ReferenceKind::Box:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
-					  }
-					  CORE_UNREACHABLE();
-				  }(inner->expression_type)
-
-			  ),
-			  origin
-		  ),
+		  Expr(typeOfRefTo(inner->expression_type), origin),
 		  inner(std::move(inner)) {}
+
+	tsh::ExpressionType<> RefOfExpr::typeOfRefTo(const tsh::ExpressionType<>& inner_type) {
+		return tsh::ExpressionType<>(
+			inner_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
+			[&]() -> tsh::ValueCategory {
+				switch (inner_type.getSymbolType().getRefKind()) {
+				case tsh::ReferenceKind::Direct:
+					return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+				case tsh::ReferenceKind::Ref:
+					return inner_type.getValueCategory();
+				case tsh::ReferenceKind::Box:
+					return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+				}
+				CORE_UNREACHABLE();
+			}()
+		);
+	}
 
 	RefOfExpr::RefOfExpr(
 		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner

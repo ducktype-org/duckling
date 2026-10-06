@@ -10,3 +10,13 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+  optional:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm_valgrind:
+        Output:
+          String: ""
+        ExitCode: 0
