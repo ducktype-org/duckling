@@ -17,7 +17,6 @@
 #include <vm/utils/interpret.hpp>
 
 #include <limits>
-#include <stdexcept>
 
 class VmVariantTest: public VmTestSuite {
 #undef TESTER_CLASS
