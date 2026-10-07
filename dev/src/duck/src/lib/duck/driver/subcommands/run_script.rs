@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
@@ -86,16 +92,6 @@ pub fn check_is_script(path: &Path) -> QuackResult<()> {
         );
     }
     Ok(())
-}
-
-/// Guess whether the user meant to provide a path to a script to run.
-pub fn possible_script_path_subcmd(args: &ArgMatches) -> Option<&str> {
-    let sub_cmd = args.subcommand_name()?;
-    if is_name_possible_script_path_subcmd(sub_cmd) {
-        Some(sub_cmd)
-    } else {
-        None
-    }
 }
 
 /// Guess whether name could be a path to a script to run.

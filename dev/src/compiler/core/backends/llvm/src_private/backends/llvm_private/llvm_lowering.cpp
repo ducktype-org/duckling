@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <backends/llvm_private/abi_converter.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -721,7 +727,7 @@ namespace compiler::backend_llvm {
 
 
 								// Update layout/type
-								current_layout = pointer_layout.getPointee();
+								current_layout = pointer_layout.getPointee(ctx);
 								current_type   = typeFromLayout(module, current_layout);
 							}
 							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
@@ -736,7 +742,7 @@ namespace compiler::backend_llvm {
 
 						const auto& current_pointer_layout
 							= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-						current_layout = current_pointer_layout.getPointee();
+						current_layout = current_pointer_layout.getPointee(ctx);
 						current_type   = typeFromLayout(module, current_layout);
 					}
 				}

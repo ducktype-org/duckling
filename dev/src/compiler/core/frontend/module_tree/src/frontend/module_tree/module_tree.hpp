@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "access.hpp"
@@ -286,8 +292,15 @@ namespace compiler::frontend {
 		 */
 		static void checkDanglingReference(const base::Ref<ModuleTree>& candidate);
 
+		/**
+		 * @brief Returns the module registered under the given module hash.
+		 * A module is registered every time its hash is computed; entries are never removed, so a
+		 * hash of a removed module that was not rebuilt resolves to a dangling reference.
+		 */
+		static base::Ref<ModuleTree> getRegisteredModule(const base::Bit256& hash);
+
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
-		base::Optional<ModuleID> m_id;
+		base::Optional<base::Ref<ModuleTree>> m_self;
 
 		base::StrID m_name;
 
