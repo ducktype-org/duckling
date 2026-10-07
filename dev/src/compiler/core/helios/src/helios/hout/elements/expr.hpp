@@ -767,10 +767,14 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
+		[[nodiscard]] bool createsTemporary() const;
+
 		[[nodiscard]] Box<Expr> clone() const final;
 
 	private:
 		FRIEND_MAKEBOX
+
+		static bool createsTemporary(tsh::SymbolType<> source, tsh::SymbolType<> dst);
 
 		CastExpr(
 			tsh::ExpressionType<> expression_type,

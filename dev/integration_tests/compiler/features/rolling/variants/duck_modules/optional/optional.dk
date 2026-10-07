@@ -1,52 +1,66 @@
 import core.builtins.*;
 
-# Every check is silent while it holds, so a passing run prints nothing at all and a failing one
-# prints only the ids of the checks that broke.
-fun check(actual: i64, expected: i64, id: i64) -> () = {
-	if (actual != expected) builtin_output_i64(id);
+fun check(actual: i64, expected: i64, msg: str) -> () = {
+	if (actual != expected) print(msg);
+}
+fun check(actual: bool, expected: bool, msg:  str) -> () = {
+	if (actual != expected) print(msg);
 }
 
-# ===== The interface of `?T` on a trivially copyable value =====
-
-# A direct receiver selects the by-value `value`.
-fun byValue(o: ?i64) -> i64 = o.value();
-
-# A `ref` receiver selects the by-ref `value`, so a write lands in the optional.
-fun byRef(o: ref ?i64) -> () = {
-	o.value() = 42i64;
+class Cls {
+	x: i64;
 }
 
-fun trivialValue() -> () = {
-	var o: ?i64 = 5i64;
-	check(o.value(), 5i64, 1i64);
-	if (not o.full()) builtin_output_i64(2i64);
-	if (o.empty()) builtin_output_i64(3i64);
-	check(byValue(o), 5i64, 4i64);
-
-	byRef(&o);
-	check(o.value(), 42i64, 5i64);
-
-	o.reset();
-	if (o.full()) builtin_output_i64(6i64);
-	if (not o.empty()) builtin_output_i64(7i64);
-
-	o = 7i64;
-	check(o.value(), 7i64, 8i64);
+class NonTrivialCls {
+	x: String
 }
 
-# ===== The interface of `?T` on an owning value =====
+fun checkType(v: str) = ();
 
-fun owningValue() -> () = {
-	var s: ?String = "hello".toString();
-	check(s.value().length(), 5i64, 20i64);
+fun intro() -> () = {
+	var c: ?Cls = Cls(1);
+	check(c.full(), true, "intro 1");
+	check(c.empty(), false, "intro 2");
+	check(c.value().x, 1, "intro 3");
 
-	# The receiver is a variable, so `value` refers to the held string instead of copying it.
-	s.value().append('!');
-	check(s.value().length(), 6i64, 21i64);
+	c = none;
+	check(c.valueOr(Cls(2)).x, 2, "intro 4");
 
-	# Resetting destroys the held string.
-	s.reset();
-	if (s.full()) builtin_output_i64(22i64);
+	var c_ref : ref ?Cls = &c;
+	check(c_ref.valueOr(Cls(2)).x, 2, "intro 5");
+	c = Cls(1);
+
+	check(c.full(), true, "intro 6");
+	check(c.empty(), false, "intro 7");
+	check(c.value().x, 1, "intro 8");
+
+
+	var c_value = Cls(1);
+	var c_opt_ref : ? ref Cls = &c_value;
+	check(c.value().x, 1, "intro 9");
+
+	var ntc: ?NonTrivialCls = NonTrivialCls("a".toString());
+	check(c.full(), true, "intro 10");
+	check(c.empty(), false, "intro 11");
+
+	ntc = none;
+	check(ntc.full(), false, "intro 12");
+	check(ntc.empty(), true, "intro 13");
+
+	var ntc_ref : ref ? NonTrivialCls = &ntc;
+	{
+		var tmp = NonTrivialCls("aa".toString());
+		check(ntc_ref.valueOr(&tmp).x.length(), 2, "intro 14");
+	};
+
+	ntc = NonTrivialCls("a".toString());
+	check(c.full(), true, "intro 15");
+	{
+		var should_be_ref : ref NonTrivialCls = ntc.value();
+	};
+
+	var should_be_value : NonTrivialCls = (move ntc).value();
+	check(should_be_value.x.length(), 1, "intro 16");
 }
 
 # ===== `?` is a compile-time type operator =====
@@ -55,18 +69,18 @@ fun Opt(t: type) -> type = ?t;
 
 fun compTime() -> () = {
 	var t: Opt(i32) = 3i32;
-	check(t.value() as i64, 3i64, 40i64);
-
-	# `?` binds tighter than `|`.
+	check(t.value() as i64, 3i64, "comp time 1");
+	# ? binds tighter than |
 	var u: ?i64 | f32 = 1.5 as f32;
-
 	var w: ?(i64 | f32) = none;
-	if (w.full()) builtin_output_i64(41i64);
+	const same_type: bool = (?i32) == (i32 | optional_primitives.None);
+	check(same_type as bool, false, "comp time 2"); 
+	check(w.full(), false, "precedence 1");
+	check(w.empty(), true, "precedence 2");
 }
 
 fun main() -> i64 = {
-	trivialValue();
-	owningValue();
+	intro();
 	compTime();
 
 	return 0i64;

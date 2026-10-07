@@ -6,6 +6,8 @@
 
 #include "expr_lowering.hpp"
 
+#include "helios/tsh/symbol_type.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -1209,29 +1211,6 @@ namespace compiler::mir {
 				output(std::move(result));
 		}
 
-		bool isEmptyCast(const hc::CastExpr& expr) {
-			if (expr.source_expr->expression_type.getSymbolType() == expr.target_type) return true;
-
-			// If cast is from ref T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Ref
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
-			}
-
-			// If cast is from box T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Box
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
-			}
-
-			if (expr.source_expr->expression_type.getType().getKind() == tsh::Kind::Void)
-				return true;
-
-			return false;
-		}
-
 		/**
 		 * @brief Whether the cast hands a `ptr T` over to a `box T`.
 		 *
@@ -1261,9 +1240,8 @@ namespace compiler::mir {
 		}
 
 		void visitCastExpr(const hc::CastExpr& expr) override {
-			// Maybe in the future the cast expr can be converted into more specific instructions.
-			if (isEmptyCast(expr)) {
-				// If the cast doesn't change the representation, simply ignore it.
+			// If the cast doesn't involves temporaries, it's safe to just lower the source.
+			if (not expr.createsTemporary()) {
 				output(lowerSubExpr(*expr.source_expr, continuation));
 				return;
 			}

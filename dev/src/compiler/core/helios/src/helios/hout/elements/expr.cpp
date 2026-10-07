@@ -173,7 +173,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  tsh::getCharSliceType(ctx),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
@@ -1192,9 +1192,13 @@ namespace compiler::helios::code {
 		query::Context&, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type
 	):
 		  Expr(
-			  tsh::ExpressionType<>(
-				  target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
+			  CastExpr::createsTemporary(source_expr->expression_type.getSymbolType(), target_type)
+				  ? tsh::ExpressionType<>(
+						target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+					)
+				  : tsh::ExpressionType<>(
+						target_type, source_expr->expression_type.getValueCategory()
+					),
 			  origin
 		  ),
 		  source_expr(std::move(source_expr)),
@@ -1218,6 +1222,37 @@ namespace compiler::helios::code {
 
 	Box<Expr> CastExpr::clone() const {
 		return makeBox<CastExpr>(expression_type, origin, source_expr->clone(), target_type);
+	}
+
+	bool CastExpr::createsTemporary(tsh::SymbolType<> source, tsh::SymbolType<> target) {
+		auto is_direct = [](const tsh::SymbolType<>& type) -> bool {
+			return type.getRefKind() == tsh::ReferenceKind::Direct;
+		};
+
+		if (source == target) return false;
+
+		// If cast is from ref T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Ref
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		// If cast is from box T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Box
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		if (source.getType().getKind() == tsh::Kind::Void) return false;
+
+		if (is_direct(source) && is_direct(target)) {
+			if (source.getType() == target.getType()) return false;  // const drop
+		}
+		return true;
+	}
+
+	bool CastExpr::createsTemporary() const {
+		return CastExpr::createsTemporary(source_expr->expression_type.getSymbolType(), target_type);
 	}
 
 	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):

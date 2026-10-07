@@ -784,7 +784,11 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				const auto& ctv     = expr_to_cast.valueOrThrow();
+				const auto& ctv = expr_to_cast.valueOrThrow();
+				if (cast.source_expr->expression_type.getType() == cast.target_type.getType()) {
+					result = ctv;
+					return;
+				}
 				const auto& numeric = ctv.get<NumericValue>();
 				if (!numeric) {
 					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(

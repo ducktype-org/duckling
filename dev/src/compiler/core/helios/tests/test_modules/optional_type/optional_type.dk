@@ -1,0 +1,2 @@
+var OPTIONAL: ?i64 = none;
+var VARIANT: i64 | optional_primitives.None = none;

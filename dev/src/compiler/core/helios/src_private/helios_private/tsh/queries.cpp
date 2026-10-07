@@ -133,6 +133,8 @@ namespace compiler::tsh {
 			TypeInterfaceBuilder builder(key);
 			for (const auto primitive: { LanguagePrimitive::OptionalValue,
 			                             LanguagePrimitive::OptionalValueRef,
+			                             LanguagePrimitive::OptionalValueOr,
+			                             LanguagePrimitive::OptionalValueOrRef,
 			                             LanguagePrimitive::OptionalFull,
 			                             LanguagePrimitive::OptionalEmpty,
 			                             LanguagePrimitive::OptionalReset }) {

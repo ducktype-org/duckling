@@ -44,6 +44,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	OptionalNone,
 	OptionalValue,
 	OptionalValueRef,
+	OptionalValueOr,
+	OptionalValueOrRef,
 	OptionalFull,
 	OptionalEmpty,
 	OptionalReset
