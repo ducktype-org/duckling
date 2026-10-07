@@ -12,6 +12,7 @@
 #include <base/str/str_utils.hpp>
 
 #include <logger/logger.hpp>
+#include <os_utils/thread_safe_wrappers.hpp>
 
 #include <cstddef>
 #include <cstring>
@@ -132,8 +133,7 @@ static int handleRc(
 			"` terminated by signal: "sv,
 			signal,
 			" ("sv,
-			// NOLINTNEXTLINE(concurrency-mt-unsafe),
-			strsignal(signal),
+			os_utils::threadSafeStrsignal(signal),
 			")"sv
 		);
 		behaviourHandleMessage(behaviour, message);
@@ -211,10 +211,8 @@ namespace system_command {
 		// Child.
 		if (pid == 0) {
 			// @TODO: #3734 Change this to `execvpe`.
-			for (const auto& env: this->environment) {
-				// NOLINTNEXTLINE(concurrency-mt-unsafe),
-				setenv(env.first.c_str(), env.second.c_str(), 1);
-			}
+			for (const auto& env: this->environment)
+				os_utils::threadSafeSetenv(env.first.c_str(), env.second.c_str(), 1);
 
 			// SAFETY: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exec.html, section
 			// “Rationale” about constants (look for “The statement about argv[] and envp[] being
