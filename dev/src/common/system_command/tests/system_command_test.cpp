@@ -16,16 +16,19 @@ public:
 
 private:
 	void exitCode() {
-		// https://en.wikipedia.org/wiki/True_and_false_(commands)
-		auto true_ec = system_command::SystemCommand("true").execute();
+		// Do NOT use `true` nor `false`: they are shell built-ins, and not executables.
+		auto true_ec = system_command::SystemCommand("/bin/ls").execute();
 		assertTrue(true_ec == 0, "true command should return 0");
-		auto false_ec = system_command::SystemCommand("false").execute(
-			system_command::SystemCommand::ExitCodeHandling::Ignore
-		);
+		auto false_ec = system_command::SystemCommand("/i-really-hope-this-is-not-executable")
+		                    .execute(system_command::SystemCommand::ExitCodeHandling::Ignore);
 		assertTrue(false_ec == 1, "false command should return 1");
 
 		assertThrows<base::Panic>(
-			[&]() { system_command::SystemCommand("false").execute(); },
+			[&]() {
+				[[maybe_unused]] auto rc
+					= system_command::SystemCommand("/i-really-hope-this-is-not-executable")
+			              .execute();
+			},
 			"command should panic on non-zero exit code"
 		);
 	}

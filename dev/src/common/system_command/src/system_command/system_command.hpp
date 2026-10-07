@@ -91,7 +91,7 @@ namespace system_command {
 		 *
 		 * @return i32 exit code of the command.
 		 */
-		i32 execute(ExitCodeHandling on_exit_code = ExitCodeHandling::Panic);
+		[[nodiscard]] i32 execute(ExitCodeHandling on_exit_code = ExitCodeHandling::Panic) const;
 
 		~SystemCommand() = default;
 	};
