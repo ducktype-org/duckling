@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Provides operations on the virtual environment state file, which preserve
 //! coherency of the storage. Also exposes simpler helpers for general
 //! system-failure safe file operations, which are be used to build

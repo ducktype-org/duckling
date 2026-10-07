@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/pst_parser/elements/elements_common.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
@@ -328,7 +333,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true> trailing_comma_call_list{ "print(\"windows\",);" };
 	Example<pst::Stmt, true> trailing_comma_nested_import{ "import A.B.{C,}" };
 	Example<pst::Stmt, true> trailing_comma_parameter_list{ "fun foo(a: A,) = {}" };
-	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y:{1,};" };
+	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y[1,];" };
+	// The old `:{}` template bake syntax is gone, `x.y[1]` replaced it.
+	Example<pst::Stmt, false> old_template_bake_syntax{ "x.y:{1};" };
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };
@@ -336,7 +343,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::For, false> no_in_for{ "for(a a + c) {}" };
 
 	Example<pst::Class, true> simple_class{ "class x{}" };
-	Example<pst::Class, true> complicated_class{ "class x extends y implements z:{}, d:{T} {}" };
+	Example<pst::Class, true> complicated_class{ "class x extends y implements z[], d[T] {}" };
 	Example<pst::Class, true> nested_class{
 		"class outer { class inner { x: i32 = 0; } x: i32 = 0;}"
 	};
@@ -435,9 +442,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::UniversalExprHolder, true> simple_chain_expr{ "(x * t).y.z(4)[3]" };
 
-	Example<pst::UniversalExprHolder, true> simple_template_expr{
-		"(x * t).y:{x, y}::z:{abc}(4)[3]"
-	};
+	Example<pst::UniversalExprHolder, true> simple_template_expr{ "(x * t).y[x, y]::z[abc](4)[3]" };
 
 	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };
 	Example<pst::FlowPattern, true> flow_tuple_nested{ "(1, (x, _))" };
@@ -546,7 +551,6 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::MultipleTernaryError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::PartialTernaryError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::ImproperTernaryError>(ss, dia::SourcePosition::fakePosition());
-		testDiagnosticMessage<pst::BadTemplateError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadStrValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::MoreThanStrValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadRoundExprError>(ss, dia::SourcePosition::fakePosition());
