@@ -31,5 +31,5 @@ namespace os_utils {
 	 *         On Windows, returns the exit code of the spawned process.
 	 *         On error, returns error details.
 	 */
-	ExecSelfResult execSelf(std::vector<std::string>& g_argv);
+	ExecSelfResult execSelf(const std::vector<std::string>& g_argv);
 }
