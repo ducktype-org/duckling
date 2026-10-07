@@ -368,7 +368,7 @@ namespace lexer {
 
 		// A sentinel names a boundary in the token stream, not source text.
 		const std::string_view value = getStrValue();
-		if (value.empty()) return "an unexpected end of the statement";
+		if (value.empty()) return "the end of the statement";
 		if (value == "EOF") return "EOF";
 		if (value == "BOF") return "BOF";
 		return base::strConcat("the end of the '", value, "' group");

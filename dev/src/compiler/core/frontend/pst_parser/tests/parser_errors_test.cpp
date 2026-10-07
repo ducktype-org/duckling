@@ -647,7 +647,7 @@ class PSTErrorTests: public tester::TestSuite {
 				base::strConcat("the internal token kind leaked into the message, got:\n", text)
 			);
 			assertTrue(
-				text.find("an unexpected end of the statement") != std::string::npos,
+				text.find("the end of the statement") != std::string::npos,
 				base::strConcat("`var var = 10;` should describe the boundary, got:\n", text)
 			);
 			assertTrue(
