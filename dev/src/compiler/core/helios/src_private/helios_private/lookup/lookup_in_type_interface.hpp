@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lookup_in_type_interface.hpp
  * @brief The lookups performed in the interface of a type, that is what `obj.x` and `T.x` do.
@@ -64,7 +70,7 @@ namespace compiler::helios {
 	 * The elements hidden by their visibility are reported in `LookupResult::inaccessible`
 	 * instead of being dropped, so that the error can say that the name exists but cannot be used.
 	 *
-	 * In #1477 and/or #1392 this may need to be placed in a more appropriate location.
+	 * In #1392 this may need to be placed in a more appropriate location.
 	 *
 	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
 	 * for more info on type lookups.

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
@@ -8,6 +14,7 @@
 #include <helios/repl_utils/repl_queries.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -18,6 +25,12 @@
 #include <variant>
 
 namespace compiler::repl {
+	/**
+	 * @brief Identifies a REPL session, a script compilation or a statement probe. It is part of
+	 * the synthetic module names, so their modules stay distinct within one process.
+	 */
+	STRONG_TYPEDEF_ID(ReplSessionID);
+
 	/**
 	 * @brief Payload for a single expression statement.
 	 *
@@ -134,6 +147,7 @@ namespace compiler::repl {
 	 *
 	 * This is the shared module-construction primitive used for top-level sequential
 	 * statement execution semantics in REPL and script compilation.
+	 * The module is named `<module_name_prefix><session_id>_<line_counter>`.
 	 *
 	 * @warning Do NOT call this function from inside query computations.
 	 */
@@ -141,7 +155,8 @@ namespace compiler::repl {
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,
-		std::string_view                          module_name_prefix
+		std::string_view                          module_name_prefix,
+		ReplSessionID                             session_id
 	);
 
 	/**
