@@ -254,9 +254,9 @@ if (JIT_ENABLED)
     )
     set(common_sc_bc ${CMAKE_CURRENT_BINARY_DIR}/common_sc.bc)
 
-    # This source embeds the generated bitcode with #embed. CMake and ccache 4.9.1 do not
-    # discover that dependency automatically: CMake would not rebuild the object after the
-    # bitcode changes, and ccache's direct mode could return an object embedding stale bytes.
+    # ccache 4.9.1's direct mode does not hash files used by #embed, so it could return an
+    # object containing stale bytes. OBJECT_DEPENDS is a safety net for compilers whose depfile
+    # does not list the embedded bitcode.
     set_property(SOURCE ${opcodes_bitcode_source} APPEND PROPERTY OBJECT_DEPENDS ${common_sc_bc})
     if (USE_CCACHE)
         set_property(TARGET JitDep APPEND PROPERTY CXX_COMPILER_LAUNCHER
