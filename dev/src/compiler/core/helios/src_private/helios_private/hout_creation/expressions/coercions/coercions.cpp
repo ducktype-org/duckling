@@ -135,7 +135,6 @@ namespace compiler::helios {
 			const tsh::SymbolType<>& from, const tsh::SymbolType<>& to
 		) {
 			if (to.getType().getKind() != tsh::Kind::Variant) return {};
-			if (from.getType().getKind() == tsh::Kind::Variant) return {};
 
 			const auto alternatives
 				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();

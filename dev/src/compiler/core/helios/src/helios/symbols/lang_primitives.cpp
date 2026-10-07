@@ -294,7 +294,7 @@ namespace compiler::helios {
 
 	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type) {
 		return ctx.query<tsh::QueryVariantType>({
-			.underlying_types         = { std::move(value_type), getOptionalNoneType(ctx) },
+			.underlying_types         = { value_type, getOptionalNoneType(ctx) },
 			.represents_optional_type = true,
 		});
 	}

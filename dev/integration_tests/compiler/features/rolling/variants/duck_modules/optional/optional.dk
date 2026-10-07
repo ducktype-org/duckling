@@ -63,6 +63,22 @@ fun intro() -> () = {
 	check(should_be_value.x.length(), 1, "intro 16");
 }
 
+template(T: type)
+fun checkFor(val: T) -> () = {
+	var opt_t : ?T = val;
+	check(opt_t.full(), true, "checkFor 1");
+	opt_t = none;
+	check(opt_t.full(), false, "checkFor 2");
+}
+
+fun advanced() -> () = {
+	checkFor[i32](0);
+	checkFor[?i32](0 as (?i32));
+	checkFor[?i32](none);
+	checkFor[? ?i32]((0 as (?i32)) as (? ?i32));
+	checkFor[? ?i32]((none as (?i32)) as (? ?i32));
+}
+
 # ===== `?` is a compile-time type operator =====
 
 fun Opt(t: type) -> type = ?t;

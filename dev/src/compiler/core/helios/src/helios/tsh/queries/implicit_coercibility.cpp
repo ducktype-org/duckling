@@ -59,8 +59,7 @@ namespace compiler::tsh {
 
 			// A value coerces into a variant only when its type is exactly equal to one of the
 			// variant's alternatives (no chained coercions).
-			if (key.target.getType().getKind() == Kind::Variant
-			    && key.source.getType().getKind() != Kind::Variant) {
+			if (key.target.getType().getKind() == Kind::Variant) {
 				const VariantAbstractType target_variant = key.target.getType();
 				for (const auto& alternative: target_variant.getUnderlyingTypes())
 					if (referenceCoercionRule(from_ref_kind, alternative.getRefKind()).isLegal()

@@ -348,8 +348,8 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::QuestionMark
 				    and inner_type.getType().getKind() == tsh::Kind::Meta) {
 					std::vector<Box<Expr>> subtypes;
-					subtypes.push_back(std::move(inner));
-					subtypes.push_back(makeBox<LiteralTypeExpr>(
+					subtypes.emplace_back(std::move(inner));
+					subtypes.emplace_back(makeBox<LiteralTypeExpr>(
 						ctx, generatedOrigin(), getOptionalNoneType(ctx).getType()
 					));
 					node = makeBox<VariantTypeConstructorExpr>(

@@ -1260,20 +1260,18 @@ namespace compiler::helios::code {
 		  inner(std::move(inner)) {}
 
 	tsh::ExpressionType<> RefOfExpr::typeOfRefTo(const tsh::ExpressionType<>& inner_type) {
-		return tsh::ExpressionType<>(
-			inner_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-			[&]() -> tsh::ValueCategory {
-				switch (inner_type.getSymbolType().getRefKind()) {
-				case tsh::ReferenceKind::Direct:
-					return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
-				case tsh::ReferenceKind::Ref:
-					return inner_type.getValueCategory();
-				case tsh::ReferenceKind::Box:
-					return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
-				}
-				CORE_UNREACHABLE();
-			}()
-		);
+		return { inner_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
+			     [&]() -> tsh::ValueCategory {
+					 switch (inner_type.getSymbolType().getRefKind()) {
+					 case tsh::ReferenceKind::Direct:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+					 case tsh::ReferenceKind::Ref:
+						 return inner_type.getValueCategory();
+					 case tsh::ReferenceKind::Box:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+					 }
+					 CORE_UNREACHABLE();
+				 }() };
 	}
 
 	RefOfExpr::RefOfExpr(
