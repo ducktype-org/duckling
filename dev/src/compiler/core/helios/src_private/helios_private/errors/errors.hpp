@@ -72,6 +72,32 @@ namespace compiler::helios {
 		}
 	};
 
+	class MissingUnaryOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "missing_unary_operator_fixity" };
+		}
+
+	public:
+		explicit MissingUnaryOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class InvalidOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "invalid_operator_fixity" };
+		}
+
+	public:
+		explicit InvalidOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
 	class ReturnWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

@@ -45,6 +45,8 @@ namespace lang_def {
 		Using,
 		In,
 		Lambda,
+		Prefix,
+		Suffix,
 
 		// Var-like:
 		Var,

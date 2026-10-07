@@ -5,7 +5,11 @@ class Foo {
         return x + a;
     }
 
-    fun -*() -> i64 = {
+    fun prefix -*() -> i64 = {
+        return x;
+    }
+
+    fun suffix ++() -> i64 = {
         return x;
     }
 }
@@ -18,4 +22,9 @@ fun useInfix() -> i64 = {
 fun usePrefix() -> i64 = {
     var foo = Foo(7);
     return -*foo;
+}
+
+fun useSuffix() -> i64 = {
+    var foo = Foo(7);
+    return foo++;
 }

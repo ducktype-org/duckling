@@ -16,7 +16,7 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class Fun final: public Decl {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Fun, Decl);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Fun, Decl, operator_fixity);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -24,6 +24,7 @@ namespace pst {
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
+		OperatorFixity operator_fixity = OperatorFixity::None;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -39,6 +40,11 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
 			return params.give();
+		}
+
+		[[nodiscard]]
+		OperatorFixity getOperatorFixity() const {
+			return operator_fixity;
 		}
 
 		/**

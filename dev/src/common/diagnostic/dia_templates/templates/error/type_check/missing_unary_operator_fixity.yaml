@@ -1,0 +1,30 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "missing_unary_operator_fixity"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The unary operator declaration."
+  code_location:
+    description: "The location."
+
+header_message:
+  - "Unary operator declarations must specify either `prefix` or `suffix`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "add `prefix` or `suffix` after `fun`"

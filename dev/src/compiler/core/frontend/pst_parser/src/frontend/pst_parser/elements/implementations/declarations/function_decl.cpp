@@ -19,6 +19,10 @@ namespace pst {
 		if (!assertStmtChoice<FunDecl>(state, state[0].is(Keyword::FunDecl))) return nullptr;
 
 		PARSE().all(Keyword::FunDecl);
+		if (PARSE().tryEat(Keyword::Prefix))
+			out->operator_fixity = OperatorFixity::Prefix;
+		else if (PARSE().tryEat(Keyword::Suffix))
+			out->operator_fixity = OperatorFixity::Suffix;
 		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
 		PARSE().one(&out->params);
 
@@ -29,6 +33,10 @@ namespace pst {
 
 	void FunDecl::dprint(std::ostream& out) const {
 		out << "{";
+		if (operator_fixity != OperatorFixity::None) {
+			out << "\"operator_fixity\":\""
+				<< (operator_fixity == OperatorFixity::Prefix ? "prefix" : "suffix") << "\",";
+		}
 		out << "\"name\":";
 		nullAwareDprint(name, out);
 		out << ",\"parameters\":";
@@ -46,6 +54,7 @@ namespace pst {
 	}
 
 	HashAlg& FunDecl::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, operator_fixity);
 		addToHash(partial_hash, ret.has_value());
 		return partial_hash;
 	}

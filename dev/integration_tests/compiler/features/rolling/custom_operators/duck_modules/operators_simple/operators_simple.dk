@@ -2,11 +2,13 @@ fun +*(a: i64, b: i64) -> i64 = {
     return a * b + a;
 }
 
-fun -*(a: i64) -> i64 = {
+fun prefix -*(a: i64) -> i64 = {
     return a * 6;
 }
 
-# @TODO: #3131 Add case for suffix standalone operator
+fun suffix -*(a: i64) -> i64 = {
+    return a * 7;
+}
 
 class Foo {
     x: i64 = 0;
@@ -15,11 +17,13 @@ class Foo {
         return x * a + x;
     }
 
-    fun -() -> i64 = {
+    fun prefix -() -> i64 = {
         return x * 6;
     }
 
-    # @TODO: #3131 Add case for suffix method operator
+    fun suffix -() -> i64 = {
+        return x * 7;
+    }
 }
 
 fun main() -> i64 = {
@@ -27,6 +31,8 @@ fun main() -> i64 = {
     builtin_output_i64(x);
     let y = -* 7;
     builtin_output_i64(y);
+    let z = 7 -*;
+    builtin_output_i64(z);
 
     var fu = Foo(7);
     let u = fu + 5;
@@ -34,6 +40,9 @@ fun main() -> i64 = {
     var fv = Foo(7);
     let v = -fv;
     builtin_output_i64(v);
+    var fw = Foo(7);
+    let w = fw-;
+    builtin_output_i64(w);
 
     return 0;
 }

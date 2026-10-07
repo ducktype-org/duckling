@@ -216,12 +216,12 @@ private:
 				R"(
                 class Number {
                     val: i64;
-                    fun -() -> Number = {
+                    fun prefix -() -> Number = {
                         return Number(-self.val);
                     }
                 }
 
-                fun -(n: Number) -> Number = {
+                fun prefix -(n: Number) -> Number = {
                     return Number(-n.val);
                 }
 
@@ -232,6 +232,21 @@ private:
                 }
             )",
 				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun -(n: i64) -> i64 = n;)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun prefix ordinary(n: i64) -> i64 = n;)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun suffix +(lhs: i64, rhs: i64) -> i64 = lhs;)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
 			);
 		}
