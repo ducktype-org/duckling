@@ -97,6 +97,7 @@ fun compTime() -> () = {
 
 fun main() -> i64 = {
 	intro();
+	advanced();
 	compTime();
 
 	return 0i64;
