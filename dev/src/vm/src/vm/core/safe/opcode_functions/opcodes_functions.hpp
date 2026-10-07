@@ -298,19 +298,20 @@ namespace vm {
 				nested_data_ptr.getBlock(), nested_data_ptr.getOffset(), wanted_type
 			);
 
-			// Find the type tag. Zero is reserved for a variant with no active alternative.
-			auto  alternatives         = variant_type->getVariantAlternatives().value();
-			usize alternative_type_tag = 0;
+			// Find the zero-based alternative index. The stored tag is one-based because zero
+			// denotes no active alternative.
+			auto  alternatives      = variant_type->getVariantAlternatives().value();
+			usize alternative_index = 0;
 
-			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt == wanted_type) {
-					alternative_type_tag = static_cast<usize>(idx) + 1;
-					break;
-				}
+			while (alternative_index < alternatives.size()
+			       && alternatives[alternative_index] != wanted_type)
+				++alternative_index;
 
 			CORE_ASSERT(
-				alternative_type_tag != 0, "The variant must contain the requested alternative type"
+				alternative_index < alternatives.size(),
+				"The variant must contain the requested alternative type"
 			);
+			const usize alternative_type_tag = alternative_index + 1;
 
 			// Write the type tag
 			auto variant_block_data_view
