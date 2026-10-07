@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/pointers/ref.hpp>
+#include <base/types/bit256.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -19,25 +26,28 @@ namespace compiler::frontend {
 	 */
 	struct FileID final {
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			checkDanglingReference();
-			return reinterpret_cast<u64>(ref.get());
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hash;
 		}
 
 		bool operator==(const FileID&) const = default;
 
-		auto operator<=>(const FileID& other) const { return ref.get() <=> other.ref.get(); }
+		auto operator<=>(const FileID&) const = default;
 
 	private:
-		FileID(base::Ref<SourceFile> ref): ref(ref) {}
+		/**
+		 * @brief Creates the ID from the current component hash of the file and registers the file
+		 * under that hash.
+		 */
+		FileID(base::Ref<SourceFile> ref);
 
 		/**
-		 * @brief Ensures the referenced SourceFile is still valid during development builds.
-		 * This function will work only if use_module_modifier_remove is enabled.
+		 * @brief Resolves the ID to the file currently registered under its hash.
+		 * In development builds it panics when that file was removed from storage.
 		 */
-		void checkDanglingReference() const;
+		[[nodiscard]] base::Ref<SourceFile> resolve() const;
 
-		base::Ref<SourceFile> ref;
+		base::Bit256 hash;
 
 		friend class SourceFile;
 		friend struct GetFileID_Functor;

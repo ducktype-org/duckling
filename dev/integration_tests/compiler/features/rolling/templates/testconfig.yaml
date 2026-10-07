@@ -15,6 +15,13 @@ Tests:
           String: "5\n10\n42\n"
         ExitCode: 0
 
+  square_bracket_bakes:
+    Cases:
+      all:
+        Output:
+          String: "12\n12\n9\n"
+        ExitCode: 0
+
   simple_function_template:
     Cases:
       all:

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! [`UnitRunner`] takes a [`UnitGraph`] and a [`UnitTaskGenerator`] and drives the compilation
 //! process using them.
 
@@ -61,7 +67,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
         self.run_all_needed_units(&*profile_layout)?;
-        outputs::get_compiler_output(&self.graph, &*profile_layout)
+        outputs::get_compiler_output(&self.graph, &*profile_layout, self.bcx)
     }
 
     #[instrument(skip_all)]
@@ -190,7 +196,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
 impl BuildContext<'_, '_> {
     /// Get an appropriate [`UnitTaskGenerator`].
     pub fn task_generator(&self) -> Box<dyn UnitTaskGenerator> {
-        if self.profile.dvm_bytecode {
+        if self.targets_dvm() {
             debug!("returning DvmTaskGenerator");
             return Box::new(DvmTaskGenerator);
         }
@@ -224,6 +230,33 @@ enum UnitStatus {
     Finished,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Which compilation backend we target.
+pub enum CompilationTarget {
+    /// We have compiled to LLVM.
+    LLVM,
+    /// We have compiled to DVM.
+    DVM,
+}
+
+impl CompilationTarget {
+    /// Returns `true` if the compilation target is [`LLVM`].
+    ///
+    /// [`LLVM`]: CompilationTarget::LLVM
+    #[must_use]
+    pub fn is_llvm(self) -> bool {
+        matches!(self, Self::LLVM)
+    }
+
+    /// Returns `true` if the compilation target is [`DVM`].
+    ///
+    /// [`DVM`]: CompilationTarget::DVM
+    #[must_use]
+    pub fn is_dvm(self) -> bool {
+        matches!(self, Self::DVM)
+    }
+}
+
 #[derive(Debug)]
 /// Output of [`run`].
 ///
@@ -231,6 +264,8 @@ enum UnitStatus {
 pub struct CompilationOutput {
     /// Root [`Unit`] and path to its output.
     pub root: (Unit, PathBuf),
+    /// To which target have we compiled.
+    pub target: CompilationTarget,
 }
 
 /// Write a manifest into a file.

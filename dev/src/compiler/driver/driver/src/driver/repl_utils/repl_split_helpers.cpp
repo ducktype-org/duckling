@@ -1,4 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_split_helpers.hpp"
+
+#include "repl_statement_helpers.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
@@ -47,7 +55,9 @@ namespace compiler::repl {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
-		builder->setName(base::StrID("repl_probe"));
+		builder->setName(base::StrID(
+			base::strConcat("repl_probe_", std::to_string(ReplSessionID::next().asInt()))
+		));
 		builder->setReplModule(frontend::ReplData{});
 		return builder->finalize();
 	}

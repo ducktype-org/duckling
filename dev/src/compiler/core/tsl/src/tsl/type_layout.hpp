@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "size_constants.hpp"
@@ -491,10 +497,10 @@ namespace compiler::tsl {
 		enum class PointerKind { SinglePointer, ManyPointer, CPointer };
 
 	private:
-		// The layout of the pointee type.
-		// Since a pointer may be untyped, the layout of the pointee may be unknown.
-		// Hence, the use of a nullable ref.
-		MCRef<TypeLayout> pointee{};
+		// The type of the pointee. Its layout is looked up lazily (see getPointee), so that a
+		// type may hold a pointer to itself (e.g. `class T { t: ptr T; }`) without a query
+		// cycle. Since a pointer may be untyped, the pointee may be unknown, hence the Optional.
+		base::Optional<tsh::SymbolType<>> pointee_type{};
 
 		PointerKind pointer_kind;
 
@@ -540,19 +546,30 @@ namespace compiler::tsl {
 		friend struct ImplementationOf_QuerySymbolTypeLayout;
 
 	public:
+		/**
+		 * @brief Get the type of the pointee, if the pointer is typed.
+		 * @return The pointee type, or an empty Optional for an untyped pointer.
+		 */
 		[[nodiscard]]
-		base::Optional<CRef<TypeLayout>> getPointeeOpt() const {
-			return pointee.toOpt();
+		base::Optional<tsh::SymbolType<>> getPointeeTypeOpt() const {
+			return pointee_type;
 		}
 
+		/**
+		 * @brief Get the layout of the pointee. The pointer must be typed.
+		 * @param ctx The query::Context used to look up the layout of the pointee.
+		 * @return The layout of the pointee type.
+		 */
 		[[nodiscard]]
-		CRef<TypeLayout> getPointee() const {
-			return pointee.toOpt().value();
-		}
+		CRef<TypeLayout> getPointee(query::Context& ctx) const;
 
+		/**
+		 * @brief Check whether the pointer is typed, i.e. whether it has a pointee.
+		 * @return Whether the pointer has a pointee.
+		 */
 		[[nodiscard]]
 		bool hasPointee() const {
-			return pointee;
+			return pointee_type.has_value();
 		}
 
 		[[nodiscard]] PointerKind getPointerKind() const { return pointer_kind; }
