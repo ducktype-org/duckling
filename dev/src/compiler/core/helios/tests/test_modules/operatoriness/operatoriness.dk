@@ -14,6 +14,8 @@ fun suffix ++(a: i64) -> i64 = {
     return a;
 }
 
+fundecl suffix **(a: i64) -> i64
+
 class Foo {
     x: i64 = 0;
 

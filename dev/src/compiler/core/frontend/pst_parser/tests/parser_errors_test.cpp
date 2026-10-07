@@ -225,6 +225,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
+	Example<pst::Fun, true>      contextual_fixity_names{
+        "fun prefix(suffix: i64) -> i64 = { return suffix; }"
+	};
 
 	Example<pst::Fun, true>     operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
 	Example<pst::Fun, true>     prefix_operator_function{ "fun prefix +*(a: i64) -> i64 = {}" };

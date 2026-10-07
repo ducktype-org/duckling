@@ -19,10 +19,7 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		PARSE().all(Keyword::Fun);
-		if (PARSE().tryEat(Keyword::Prefix))
-			out->operator_fixity = OperatorFixity::Prefix;
-		else if (PARSE().tryEat(Keyword::Suffix))
-			out->operator_fixity = OperatorFixity::Suffix;
+		out->operator_fixity = parseOperatorFixity(state);
 		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
 		PARSE().one(&out->params);
 
@@ -43,7 +40,7 @@ namespace pst {
 	void Fun::dprint(std::ostream& out) const {
 		out << "{";
 		if (operator_fixity != OperatorFixity::None) {
-			out << "\"operator_fixity\":\""
+			out << R"("operator_fixity":")"
 				<< (operator_fixity == OperatorFixity::Prefix ? "prefix" : "suffix") << "\",";
 		}
 		out << "\"name\":";

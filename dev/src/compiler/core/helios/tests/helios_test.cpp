@@ -3453,6 +3453,12 @@ private:
 				->valueOrThrow()
 				.operatoriness
 		);
+		ASSERT_EQUAL(
+			Operatoriness::Suffix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("**", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
 
 		// Operator methods: 1 explicit param + implicit `self` = infix; 0 explicit params +
 		// implicit `self` = unary with its declared fixity.

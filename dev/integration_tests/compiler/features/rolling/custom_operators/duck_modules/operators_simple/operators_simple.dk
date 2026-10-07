@@ -10,6 +10,10 @@ fun suffix -*(a: i64) -> i64 = {
     return a * 7;
 }
 
+fun suffix -(a: i64) -> i64 = {
+    return a * 8;
+}
+
 class Foo {
     x: i64 = 0;
 
@@ -27,12 +31,16 @@ class Foo {
 }
 
 fun main() -> i64 = {
+    let prefix = 1;
+    let suffix = prefix;
     let x = 7 +* 5;
     builtin_output_i64(x);
     let y = -* 7;
     builtin_output_i64(y);
     let z = 7 -*;
     builtin_output_i64(z);
+    let numeric_suffix = 7 -;
+    builtin_output_i64(numeric_suffix);
 
     var fu = Foo(7);
     let u = fu + 5;
@@ -43,6 +51,7 @@ fun main() -> i64 = {
     var fw = Foo(7);
     let w = fw-;
     builtin_output_i64(w);
+    assert suffix == 1;
 
     return 0;
 }

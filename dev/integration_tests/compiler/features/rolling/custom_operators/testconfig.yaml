@@ -5,7 +5,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "42\n42\n49\n42\n42\n49\n"
+          String: "42\n42\n49\n56\n42\n42\n49\n"
         ExitCode: 0
 
   operator_method_only:

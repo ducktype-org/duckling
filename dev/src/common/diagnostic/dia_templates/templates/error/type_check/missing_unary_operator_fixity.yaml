@@ -27,4 +27,4 @@ pointer_messages:
     priority: 1
     type: "error"
     content:
-      - "add `prefix` or `suffix` after `fun`"
+      - "add `prefix` or `suffix` before the operator name"

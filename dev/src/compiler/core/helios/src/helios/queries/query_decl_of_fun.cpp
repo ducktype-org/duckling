@@ -336,7 +336,8 @@ namespace compiler::helios {
 	}
 
 	/**
-	 * @brief Determines whether a user-declared function or method is an operator.
+	 * @brief Determines whether a user-declared function or method is an operator and validates its
+	 * fixity.
 	 *
 	 * @param arity Parameter count, including the implicit `self` parameter of non-static methods.
 	 */
@@ -349,13 +350,12 @@ namespace compiler::helios {
 	) {
 		using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
-		if (!lexer::isOperatorSymbolString(name.strView())) {
-			if (fixity != pst::OperatorFixity::None) {
-				ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
-				query::throwFailed();
-			}
-			return Operatoriness::None;
+		const bool is_operator = lexer::isOperatorSymbolString(name.strView());
+		if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
+			ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
+			query::throwFailed();
 		}
+		if (!is_operator) return Operatoriness::None;
 
 		switch (arity) {
 		case 1:
@@ -370,16 +370,8 @@ namespace compiler::helios {
 			}
 			CORE_UNREACHABLE();
 		case 2:
-			if (fixity != pst::OperatorFixity::None) {
-				ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
-				query::throwFailed();
-			}
 			return Operatoriness::Infix;
 		default:
-			if (fixity != pst::OperatorFixity::None) {
-				ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
-				query::throwFailed();
-			}
 			return Operatoriness::None;
 		}
 	}
