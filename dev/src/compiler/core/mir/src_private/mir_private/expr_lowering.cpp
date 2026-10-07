@@ -6,7 +6,6 @@
 
 #include "expr_lowering.hpp"
 
-#include "helios/tsh/symbol_type.hpp"
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
