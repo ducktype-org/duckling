@@ -141,7 +141,7 @@ namespace vm {
 		};
 
 		struct Variant final {
-			u64                    type_tag = 0;
+			u64                    alternative_index = 0;
 			SharedBox<IVMValueRef> referenced;
 		};
 
