@@ -73,10 +73,10 @@ fun checkFor(val: T) -> () = {
 
 fun advanced() -> () = {
 	checkFor[i32](0);
-	checkFor[?i32](0 as (?i32));
+	checkFor[?i32](0);
 	checkFor[?i32](none);
-	checkFor[? ?i32]((0 as (?i32)) as (? ?i32));
-	checkFor[? ?i32]((none as (?i32)) as (? ?i32));
+	checkFor[? ?i32]((0 as (?i32)));
+	checkFor[? ?i32]((none as (?i32)));
 }
 
 # ===== `?` is a compile-time type operator =====
