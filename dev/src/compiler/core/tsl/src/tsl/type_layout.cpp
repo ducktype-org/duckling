@@ -29,7 +29,6 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_errors.hpp>
 
-#include <bit>
 #include <sstream>
 
 using base::bytes2bits;
