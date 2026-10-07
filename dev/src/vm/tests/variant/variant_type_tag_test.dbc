@@ -776,6 +776,7 @@ type variant: CustomVariant16 {
 
 type pointer: ptr_CustomInt0 CustomInt0
 type pointer: ptr_CustomInt1 CustomInt1
+type pointer: ptr_CustomInt254 CustomInt254
 type pointer: ptr_CustomInt255 CustomInt255
 
 function getCustomVariant8Alternative0 { i64 } -> { CustomVariant8 } {
@@ -798,6 +799,18 @@ function getCustomVariant8Alternative1 { i64 } -> { CustomVariant8 } {
 
     cast_p64_type arg0, CustomInt1;
     store_pptr_pany ptr, arg0;
+    ret;
+}
+
+function getCustomVariant8Alternative254 { i64 } -> { CustomVariant8 } {
+    variantSetInner_pvnt_type ret0, CustomInt254;
+
+    init_pany_type ptr, ptr_CustomInt254;
+    variantGetInner_pptr_pvnt_type ptr, ret0, CustomInt254;
+
+    cast_p64_type arg0, CustomInt254;
+    store_pptr_pany ptr, arg0;
+
     ret;
 }
 

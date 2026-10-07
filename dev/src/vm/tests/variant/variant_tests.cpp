@@ -11,6 +11,7 @@
 #include <vm/utils/interpret.hpp>
 
 #include <limits>
+#include <stdexcept>
 
 class VmVariantTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -127,6 +128,16 @@ private:
 			ASSERT_EQUAL_PRINT(
 				vm::safeReadPointerBytes<u64>(vm_value->getBytes(), type_tag_bits / 8), wanted_value
 			);
+
+			auto decoded_variant = vm_value->readData<vm::interpreted_data_variant::Variant>();
+			ASSERT_HAS_VALUE(decoded_variant);
+			ASSERT_EQUAL_PRINT(decoded_variant->alternative_index, alternative_index);
+
+			if (type_tag_bits == 8)
+				vm_value->writeBytes<uint8_t>(0);
+			else
+				vm_value->writeBytes<u16>(0);
+			ASSERT_NO_VALUE(vm_value->readData<vm::interpreted_data_variant::Variant>());
 		};
 
 
@@ -138,9 +149,24 @@ private:
 
 		assert_type_tag(8, 0);
 		assert_type_tag(8, 1);
+		assert_type_tag(8, 254);
 		assert_type_tag(16, 0);
 		assert_type_tag(16, 1);
 		assert_type_tag(16, 255);
+
+		auto invalid_variant_response = vm::api::getVMValue(pid, "CustomVariant16");
+		ASSERT_HAS_VALUE(invalid_variant_response);
+		auto invalid_variant = std::move(invalid_variant_response->vm_value);
+		invalid_variant->writeBytes<u16>(257);
+		assertThrows<std::out_of_range>(
+			[&] {
+				static_cast<void>(invalid_variant->readData<vm::interpreted_data_variant::Variant>()
+			    );
+			},
+			"An out-of-range variant tag must not be treated as an empty variant."
+		);
+		invalid_variant->freeData();
+
 		vm_value_max64->freeData();
 		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}

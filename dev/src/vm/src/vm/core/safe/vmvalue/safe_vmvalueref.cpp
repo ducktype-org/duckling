@@ -140,8 +140,7 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVMValueRef::readData() const 
 				throw "Invalid variant type tag size!";
 			}
 
-			if (alternative_type_tag == 0 || alternative_type_tag > variant_kind.alternatives.size())
-				return std::nullopt;
+			if (alternative_type_tag == 0) return std::nullopt;
 
 			const u64 alternative_index = alternative_type_tag - 1;
 			TypeCRef  inner_type        = variant_kind.alternatives.at(alternative_index);
@@ -155,7 +154,7 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVMValueRef::readData() const 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {
 					return vm::interpreted_data_variant::Variant{
-						.type_tag = alternative_index,
+						.alternative_index = alternative_index,
 						.referenced
 						= makeShared(*my_process.get(), inner_type, Pointer(view_block, 0)),
 					};
