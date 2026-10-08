@@ -46,7 +46,7 @@ namespace pst {
 		|    PROTECTED METHODS    |
 		\***********************/
 
-		PST<>(hashing::ComponentHash&& hash_ctx_info): hash_ctx_info(std::move(hash_ctx_info)){};
+		PST(hashing::ComponentHash&& hash_ctx_info): hash_ctx_info(std::move(hash_ctx_info)) {}
 
 		void assignRoot(MBox<Element>&& box) {
 			CORE_ASSERT(!element.internal(), "Tried to overwrite root element.");
