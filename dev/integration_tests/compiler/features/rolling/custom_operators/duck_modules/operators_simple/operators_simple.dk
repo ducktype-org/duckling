@@ -39,7 +39,7 @@ fun main() -> i64 = {
     builtin_output_i64(y);
     let z = 7 -*;
     builtin_output_i64(z);
-    let numeric_suffix = 7 -;
+    let numeric_suffix = (6 + suffix) -;
     builtin_output_i64(numeric_suffix);
 
     var fu = Foo(7);
@@ -51,7 +51,5 @@ fun main() -> i64 = {
     var fw = Foo(7);
     let w = fw-;
     builtin_output_i64(w);
-    assert suffix == 1;
-
     return 0;
 }
