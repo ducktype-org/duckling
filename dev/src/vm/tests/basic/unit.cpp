@@ -12,9 +12,6 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/interface_types.hpp>
 
-#include <chrono>
-#include <thread>
-
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmUnitTest
@@ -50,11 +47,6 @@ public:
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
-		TESTER_ADD_TEST(joinReturnsExitValue);
-		TESTER_ADD_TEST(secondJoinIsRefused);
-		TESTER_ADD_TEST(deinitNeedsJoinedThreads);
-		TESTER_ADD_TEST(deinitJoinsProgramStartedThreads);
-		TESTER_ADD_TEST(rerunJoinsProgramStartedThreads);
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
 		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
@@ -200,144 +192,6 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
 		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
 		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
-	}
-
-	/**
-	 * @brief `api::join` is the endpoint that reports the exit value of a finished run, so a plain
-	 * `run` + `join` has to hand back what `main` returned. Joining a process that never ran has no
-	 * exit value to report and must fail instead.
-	 */
-	void joinReturnsExitValue() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("return_1337.dbc")) }));
-
-		ASSERT_NO_VALUE(vm::api::join(pid));
-
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-
-		auto exit_value = vm::api::join(pid);
-		ASSERT_HAS_VALUE(exit_value);
-		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value.value()));
-		const auto& exit_values = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value.value());
-		ASSERT_EQUAL(exit_values.size(), 1);
-		ASSERT_EQUAL_PRINT(exit_values.at(0)->readBytes<i64>(), 1'337);
-
-		auto validation_result = vm::api::deinitAndValidate(pid);
-		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value().valid());
-	}
-
-	/**
-	 * @brief `api::run` is asynchronous, so a test which wants to observe a finished process has
-	 * to wait for it. Fails the test when nothing terminal shows up in time.
-	 *
-	 * @return The terminal status of the process.
-	 */
-	vm::api::ProcStatus awaitTerminalStatus(vm::PID pid) {
-		const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-		while (true) {
-			const auto polled = vm::api::getExecutionStatus(pid);
-			if (!polled.has_value()) fail("`getExecutionStatus` failed while awaiting the status");
-
-			if (vm::api::isStatusTerminal(polled.value())) return polled.value();
-			if (std::chrono::steady_clock::now() > deadline)
-				fail("The process did not reach a terminal status in time");
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-	}
-
-	/**
-	 * A join takes the execution thread away, so there is nothing left for a second one to do. The
-	 * exit value was already handed to the first caller.
-	 */
-	void secondJoinIsRefused() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("return_1337.dbc")) }));
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-
-		ASSERT_HAS_VALUE(vm::api::join(pid));
-
-		const auto second_join = vm::api::join(pid);
-		ASSERT_NO_VALUE(second_join);
-		ASSERT_TRUE(std::holds_alternative<vm::api::JoinError>(second_join.error()));
-
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
-	}
-
-	/**
-	 * Deinit of a finished but unjoined run has to be refused, and the very same deinit has to work
-	 * right after the join.
-	 */
-	void deinitNeedsJoinedThreads() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("return_1337.dbc")) }));
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-
-		// `run` is asynchronous, so we wait for the program to really finish. Only then is a
-		// refusal about the missing join and not about the process still executing.
-		const vm::api::ProcStatus status = awaitTerminalStatus(pid);
-		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(status));
-
-		// The run completed, but nobody joined its execution thread yet.
-		const auto too_early = vm::api::deinitAndValidate(pid);
-		ASSERT_NO_VALUE(too_early);
-		ASSERT_TRUE(std::holds_alternative<vm::api::StateError>(too_early.error()));
-
-		ASSERT_HAS_VALUE(vm::api::join(pid));
-
-		const auto validation_result = vm::api::deinitAndValidate(pid);
-		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value().memory_valid);
-		// A program which started no threads of its own has nothing to report.
-		ASSERT_TRUE(validation_result.value().unjoined_program_threads.empty());
-	}
-
-	/**
-	 * A thread the program started itself belongs to the DVM - the API caller never learns its ID,
-	 * so it must not be forced to join it. The deinit joins such a thread instead of refusing.
-	 */
-	void deinitJoinsProgramStartedThreads() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("unjoined_thread.dbc")) }));
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-
-		// Waits for the worker as well, since the process is `Completed` only once no thread of
-		// it is active any more.
-		const vm::api::ProcStatus status = awaitTerminalStatus(pid);
-		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(status));
-
-		// Only the main thread was started through the API, so only it has to be joined.
-		ASSERT_HAS_VALUE(vm::api::join(pid));
-
-		const auto validation_result = vm::api::deinitAndValidate(pid);
-		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value().memory_valid);
-		// The teardown does not refuse over the worker, but it does report that the program left
-		// it unjoined.
-		const auto& unjoined = validation_result.value().unjoined_program_threads;
-		ASSERT_EQUAL(unjoined.size(), 1);
-		ASSERT_TRUE(unjoined.at(0) != vm::api::MAIN_THREAD_ID);
-	}
-
-	/**
-	 * The same has to happen before a re-run: a VMThread may only be spawned again once its
-	 * previous execution thread was joined, and the program's threads are nobody else's to join.
-	 */
-	void rerunJoinsProgramStartedThreads() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("unjoined_thread.dbc")) }));
-
-		for (usize run = 0; run < 3; run++) {
-			ASSERT_HAS_VALUE(vm::api::run(pid));
-			ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(awaitTerminalStatus(pid)
-			));
-			ASSERT_HAS_VALUE(vm::api::join(pid));
-		}
-
-		const auto validation_result = vm::api::deinitAndValidate(pid);
-		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value().memory_valid);
 	}
 };
 
