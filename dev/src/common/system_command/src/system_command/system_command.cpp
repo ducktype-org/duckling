@@ -34,7 +34,7 @@ enum class WhyHandleError {
 	ForkFailed,
 	ExecFailed,
 	WaitFailed,
-	SubprocessFailed,
+	SpawnFailed,
 };
 
 static std::string_view whyHandleErrorToString(WhyHandleError why) {
@@ -43,15 +43,15 @@ static std::string_view whyHandleErrorToString(WhyHandleError why) {
 		return "fork failed"sv;
 	case WhyHandleError::ExecFailed:
 		return "exec failed"sv;
-	case WhyHandleError::SubprocessFailed:
-		return "failed to spawn a command"sv;
 	case WhyHandleError::WaitFailed:
 		return "waiting for a child failed"sv;
+	case WhyHandleError::SpawnFailed:
+		return "failed to spawn a subcommand"sv;
 	}
 	CORE_UNREACHABLE();
 }
 
-static int handleRc(
+static void handleRc(
 	system_command::SystemCommand::ExitCodeHandling behaviour,
 	os_rc_t                                         rc,
 	WhyHandleError                                  why,
@@ -77,14 +77,14 @@ static void behaviourHandleMessage(
 }
 
 #if BASE_TARGET_OS_WINDOWS
-static int handleRc(
+static void handleRc(
 	system_command::SystemCommand::ExitCodeHandling behaviour,
 	os_rc_t                                         rc,
 	WhyHandleError                                  why,
 	std::string_view                                command
 ) {
-	CORE_ASSERT(why == WhyHandleError::SubprocessFailed, "Windows doesn't have fork&exec");
-	if (rc == 0) return rc;
+	CORE_ASSERT(why == WhyHandleError::SpawnFailed, "Windows doesn't have fork&exec");
+	if (rc == 0) return;
 	// -1 means that we failed to spawn a process.
 	if (rc == -1) {
 		std::array<char, 1'024> buffer{};
@@ -93,42 +93,45 @@ static int handleRc(
 			whyHandleErrorToString(why), "; command: `"sv, command, "`: "sv, buffer.data()
 		);
 		behaviourHandleMessage(behaviour, message);
-		return rc;
+		return;
 	}
 
 	auto message = base::strConcat(
 		whyHandleErrorToString(why), ": "sv, "command exited with a non-zero code: "sv, rc
 	);
 	behaviourHandleMessage(behaviour, message);
-	return rc;
+	return;
 }
 #else
-static int handleRc(
+static void handleRc(
 	system_command::SystemCommand::ExitCodeHandling behaviour,
 	os_rc_t                                         rc,
 	WhyHandleError                                  why,
 	std::string_view                                command
 ) {
-	if (why != WhyHandleError::SubprocessFailed) {
-		if (rc == 0) return 0;
+	if (rc == 0) return;
 
-		if (rc == -1) {
-			std::array<char, 1'024> buffer{};
-			strerror_r(errno, buffer.data(), buffer.size());
-			auto message = base::strConcat(
-				whyHandleErrorToString(why), "; command: `"sv, command, "`: "sv, buffer.data()
-			);
-			behaviourHandleMessage(behaviour, message);
-			return -1;
-		}
-		// Wait, fork and exec return -1 on error.
-		CORE_UNREACHABLE();
+	if (rc == -1) {
+		std::array<char, 1'024> buffer{};
+		strerror_r(errno, buffer.data(), buffer.size());
+		auto message = base::strConcat(
+			whyHandleErrorToString(why), "; command: `"sv, command, "`: "sv, buffer.data()
+		);
+		behaviourHandleMessage(behaviour, message);
+		return;
 	}
+	// Wait, fork and exec return -1 on error.
+	CORE_UNREACHABLE();
+}
+
+static int handleWaitpidStatus(
+	system_command::SystemCommand::ExitCodeHandling behaviour, int status, std::string_view command
+) {
+	int rc = status;
 	if (WIFSIGNALED(rc)) {
 		auto signal  = WTERMSIG(rc);
 		auto message = base::strConcat(
-			whyHandleErrorToString(why),
-			": command `"sv,
+			"subcommand `"sv,
 			command,
 			"` terminated by signal: "sv,
 			signal,
@@ -145,14 +148,8 @@ static int handleRc(
 	rc = WEXITSTATUS(rc);
 	if (rc == 0) return 0;
 
-	auto message = base::strConcat(
-		whyHandleErrorToString(why),
-		": "sv,
-		"command: `"sv,
-		command,
-		"` exited with a non-zero code: "sv,
-		rc
-	);
+	auto message
+		= base::strConcat("subcommand: `"sv, command, "` exited with a non-zero code: "sv, rc);
 	behaviourHandleMessage(behaviour, message);
 	return rc;
 }
@@ -174,7 +171,7 @@ namespace system_command {
 		std::vector<const char*> args;
 		// +2 is for program name and nullptr;
 		args.reserve(this->arguments.size() + 2);
-		args.push_back(this->program_name.data());
+		args.push_back(this->program_name.c_str());
 		for (const auto& arg: this->arguments) args.push_back(arg.c_str());
 		args.push_back(nullptr);
 
@@ -199,7 +196,7 @@ namespace system_command {
 
 #if BASE_TARGET_OS_WINDOWS
 		intptr_t result = _spawnvpe(_P_WAIT, args[0], args.data(), environment_cstr.data());
-		handleRc(on_exit_code, result, WhyHandleError::SubprocessFailed, command_display);
+		handleRc(on_exit_code, result, WhyHandleError::SpawnFailed, command_display);
 
 		return static_cast<int>(result);
 #else
@@ -234,7 +231,7 @@ namespace system_command {
 			handleRc(on_exit_code, -1, WhyHandleError::WaitFailed, command_display);
 			return -1;
 		}
-		return handleRc(on_exit_code, status, WhyHandleError::SubprocessFailed, command_display);
+		return handleWaitpidStatus(on_exit_code, status, command_display);
 #endif
 	}
 }

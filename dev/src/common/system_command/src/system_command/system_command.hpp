@@ -43,8 +43,8 @@ namespace system_command {
 
 		/**
 		 * @brief Adds an argument to the command.
-		 * @note The string is passed as-is, the caller has to wrap it in the parenthesis
-		 * if it contains spaces.
+		 * @note The string is appended to the `argv` vector, and passed to the
+		 * `execvp`/`_spawnvpe`.
 		 *
 		 * @param arg
 		 */
@@ -52,8 +52,8 @@ namespace system_command {
 
 		/**
 		 * @brief Adds multiple arguments to the command.
-		 * @note The strings are passed as-is, the caller has to wrap them in the parenthesis
-		 * if they contains spaces.
+		 * @note The strings are appended to the `argv` vector, and passed to the
+		 * `execvp`/`_spawnvpe`.
 		 *
 		 * @param args
 		 */
@@ -65,11 +65,8 @@ namespace system_command {
 		/**
 		 * @brief Adds an environment variable to the command's environment.
 		 *
-		 * The variable is set for the spawned command only, so this does not touch the
+		 * The variable should be set for the spawned command only, so this should not touch the
 		 * environment of the compiler itself (which several threads may be reading).
-		 *
-		 * @note The string is passed as-is, the caller has to wrap it in the parenthesis
-		 * if it contains spaces.
 		 *
 		 * @param name
 		 * @param value
