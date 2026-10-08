@@ -19,6 +19,7 @@ use super::duckc::multipackage_schema;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
 use crate::QuackResult;
+use crate::quackpack::core::compile::unit::graph::GraphNodeId;
 
 /// A generic duckc driver.
 pub trait UnitTaskGenerator: Debug {
@@ -38,6 +39,7 @@ pub trait UnitTaskGenerator: Debug {
     fn create_tasks(
         &self,
         unit: &Unit,
+        unit_id_in_graph: GraphNodeId,
         graph: &UnitGraph,
         layout: &dyn ProfileLayout,
         bcx: &BuildContext<'_, '_>,

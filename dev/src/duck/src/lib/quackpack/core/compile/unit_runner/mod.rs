@@ -4,46 +4,41 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! [`UnitRunner`] takes a [`UnitGraph`] and a [`UnitTaskGenerator`] and drives the compilation
-//! process using them.
-
+use core::fmt;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
 use tracing::{debug, error, info, instrument, trace};
 
-use super::BuildContext;
-use super::artifacts_layout::shared::SharedArtifactsLayout;
-use super::artifacts_layout::standard::StandardArtifactsLayout;
-use super::artifacts_layout::{ArtifactsLayout, DependencyLayout, ProfileLayout};
-use super::duckc::process_builder::{self, DuckcSubcommand};
-use super::duckc::{Duckc, multipackage_schema};
-use super::profiles::Profile;
-use super::unit::graph::UnitGraph;
-use super::unit::{Unit, UnitId};
-use super::unit_task_generator::UnitTaskGenerator;
-use super::unit_task_generator::default::DefaultTaskGenerator;
-use super::unit_task_generator::dvm::DvmTaskGenerator;
-use crate::quackpack::core::compile::unit::BuildKind;
+use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::artifacts_layout::shared::SharedArtifactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::standard::StandardArtifactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::{
+    ArtifactsLayout, DependencyLayout, ProfileLayout,
+};
+use crate::quackpack::core::compile::duckc::process_builder::{self, DuckcSubcommand};
+use crate::quackpack::core::compile::duckc::{Duckc, multipackage_schema};
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
+use crate::quackpack::core::compile::unit::{Unit, UnitType};
+use crate::quackpack::core::compile::unit_task_generator::UnitTaskGenerator;
+use crate::quackpack::core::compile::unit_task_generator::default::DefaultTaskGenerator;
+use crate::quackpack::core::compile::unit_task_generator::dvm::DvmTaskGenerator;
 use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
 pub mod external_libs;
 pub mod outputs;
 
-#[cfg(test)]
-mod tests;
-
 #[derive(Debug)]
 /// A runner of [`Unit`]s.
 pub struct UnitRunner<'duck, 'ctx> {
     graph: UnitGraph,
     task_generator: Box<dyn UnitTaskGenerator>,
-    unit_statuses: RefCell<HashMap<UnitId, UnitStatus>>,
+    unit_statuses: RefCell<HashMap<GraphNodeId, UnitStatus>>,
     bcx: &'ctx BuildContext<'duck, 'ctx>,
 }
 
@@ -75,31 +70,41 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     ///
     /// [`should_run`]: UnitTaskGenerator::should_run
     fn run_all_needed_units(&self, layout: &dyn ProfileLayout) -> QuackResult<()> {
-        // @TODO: #3636 We should have a dedicated struct for determining compilation order.
-        for unit in self.graph.compilation_order() {
+        for node in self.graph.compilation_order() {
+            let node_id = node.id();
+            let Some(unit) = node.as_unit() else {
+                continue;
+            };
             if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
                 continue;
             }
-            match unit.build_kind() {
-                BuildKind::Compile => self.compile_unit(unit, layout)?,
+            match unit.unit_type() {
+                UnitType::Binary | UnitType::Library | UnitType::Dependency => {
+                    self.compile_unit(unit, node_id, layout)?;
+                }
             }
         }
         Ok(())
     }
 
-    #[instrument(skip_all, fields(id = %unit.unit_id(), name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
+    #[instrument(skip_all, fields(id = %id_in_graph, name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
     /// Compile a single [`Unit`].
     /// May panic, if this [`Unit`] shouldn't be compiled ([`should_run`] returned `false`).
     ///
     /// [`should_run`]: UnitTaskGenerator::should_run
-    fn compile_unit(&self, unit: &Unit, layout: &dyn ProfileLayout) -> QuackResult<()> {
+    fn compile_unit(
+        &self,
+        unit: &Unit,
+        id_in_graph: GraphNodeId,
+        layout: &dyn ProfileLayout,
+    ) -> QuackResult<()> {
         info!("starting compilation of a unit");
-        self.set_unit_status(unit, UnitStatus::InProgress);
-        let tasks = self
-            .task_generator
-            .create_tasks(unit, &self.graph, layout, self.bcx)?;
-        self.compile_unit_with_tasks(unit, layout, tasks)?;
-        self.set_unit_status(unit, UnitStatus::Finished);
+        self.set_unit_status(id_in_graph, unit, UnitStatus::InProgress);
+        let tasks =
+            self.task_generator
+                .create_tasks(unit, id_in_graph, &self.graph, layout, self.bcx)?;
+        self.compile_unit_with_tasks(unit, id_in_graph, layout, tasks)?;
+        self.set_unit_status(id_in_graph, unit, UnitStatus::Finished);
         Ok(())
     }
 
@@ -108,14 +113,15 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     fn compile_unit_with_tasks(
         &self,
         unit: &Unit,
+        unit_id_in_graph: GraphNodeId,
         layout: &dyn ProfileLayout,
         tasks: Vec<multipackage_schema::Task>,
     ) -> QuackResult<()> {
         trace!(?tasks);
-        let packages = outputs::collect_packages(unit, &self.graph)?;
+        let packages = outputs::collect_packages(unit_id_in_graph, &self.graph)?;
         let schema = multipackage_schema::MultiPackage { packages, tasks };
         trace!(?schema);
-        self.compile_unit_with_schema(unit, layout, schema)
+        self.compile_unit_with_schema(unit, unit_id_in_graph, layout, schema)
     }
 
     /// Compile a single [`Unit`] with its finished schema.
@@ -123,12 +129,13 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     fn compile_unit_with_schema(
         &self,
         unit: &Unit,
+        unit_id_in_graph: GraphNodeId,
         layout: &dyn ProfileLayout,
         schema: multipackage_schema::MultiPackage,
     ) -> QuackResult<()> {
         let name = unit.package().name();
         let status = (|| {
-            let unit_layout = layout.for_dependency(unit, &self.graph)?;
+            let unit_layout = layout.for_dependency(unit_id_in_graph, &self.graph)?;
             let builder =
                 self.finished_builder_for_layout_and_profile(&*unit_layout, self.bcx.profile);
             let _lock = unit_layout.acquire_lock(self.bcx.pcx.ctx())?;
@@ -183,14 +190,80 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     }
 
     /// Set a [`UnitStatus`] for the given [`Unit`].
-    fn set_unit_status(&self, unit: &Unit, status: UnitStatus) {
-        let id = unit.unit_id();
+    fn set_unit_status(&self, unit_id_in_graph: GraphNodeId, unit: &Unit, status: UnitStatus) {
         debug_assert!(
-            self.unit_statuses.borrow().contains_key(&id),
+            self.unit_statuses.borrow().contains_key(&unit_id_in_graph),
             "missing status for unit {unit:?}, but we set an initial status for every unit"
         );
-        self.unit_statuses.borrow_mut().insert(id, status);
+        self.unit_statuses
+            .borrow_mut()
+            .insert(unit_id_in_graph, status);
     }
+}
+
+#[derive(Debug)]
+/// Output of [`run`].
+///
+/// [`run`]: UnitRunner::run
+pub struct CompilationOutput {
+    /// Root [`Unit`] and path to its output.
+    pub root: (Unit, PathBuf),
+    /// To which target have we compiled.
+    pub target: CompilationTarget,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Which compilation backend we target.
+pub enum CompilationTarget {
+    /// We have compiled to LLVM.
+    LLVM,
+    /// We have compiled to DVM.
+    DVM,
+}
+
+impl CompilationTarget {
+    /// Returns `true` if the compilation target is [`LLVM`].
+    ///
+    /// [`LLVM`]: CompilationTarget::LLVM
+    #[must_use]
+    pub fn is_llvm(self) -> bool {
+        matches!(self, Self::LLVM)
+    }
+
+    /// Returns `true` if the compilation target is [`DVM`].
+    ///
+    /// [`DVM`]: CompilationTarget::DVM
+    #[must_use]
+    pub fn is_dvm(self) -> bool {
+        matches!(self, Self::DVM)
+    }
+}
+
+/// Write a manifest into a file.
+#[instrument(skip_all)]
+fn write_schema(
+    schema: multipackage_schema::MultiPackage,
+    locked_manifest_file: &LockedFile,
+) -> QuackResult<()> {
+    let manifest_json = serde_json::to_string_pretty(&schema).with_context_internal(|| {
+        format!("failed to convert manifest into a JSON string: {schema:#?}")
+    })?;
+    locked_manifest_file.file().set_len(0).with_context(|| {
+        format!(
+            "failed to truncate `{}`",
+            locked_manifest_file.path().display()
+        )
+    })?;
+    locked_manifest_file
+        .file()
+        .write_all(manifest_json.as_bytes())
+        .with_context(|| {
+            format!(
+                "failed to write manifest to `{}`",
+                locked_manifest_file.path().display()
+            )
+        })?;
+    Ok(())
 }
 
 impl BuildContext<'_, '_> {
@@ -230,80 +303,15 @@ enum UnitStatus {
     Finished,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-/// Which compilation backend we target.
-pub enum CompilationTarget {
-    /// We have compiled to LLVM.
-    LLVM,
-    /// We have compiled to DVM.
-    DVM,
-}
-
-impl CompilationTarget {
-    /// Returns `true` if the compilation target is [`LLVM`].
-    ///
-    /// [`LLVM`]: CompilationTarget::LLVM
-    #[must_use]
-    pub fn is_llvm(self) -> bool {
-        matches!(self, Self::LLVM)
-    }
-
-    /// Returns `true` if the compilation target is [`DVM`].
-    ///
-    /// [`DVM`]: CompilationTarget::DVM
-    #[must_use]
-    pub fn is_dvm(self) -> bool {
-        matches!(self, Self::DVM)
-    }
-}
-
-#[derive(Debug)]
-/// Output of [`run`].
-///
-/// [`run`]: UnitRunner::run
-pub struct CompilationOutput {
-    /// Root [`Unit`] and path to its output.
-    pub root: (Unit, PathBuf),
-    /// To which target have we compiled.
-    pub target: CompilationTarget,
-}
-
-/// Write a manifest into a file.
-#[instrument(skip_all)]
-fn write_schema(
-    schema: multipackage_schema::MultiPackage,
-    locked_manifest_file: &LockedFile,
-) -> QuackResult<()> {
-    let manifest_json = serde_json::to_string_pretty(&schema).with_context_internal(|| {
-        format!("failed to convert manifest into a JSON string: {schema:#?}")
-    })?;
-    locked_manifest_file.file().set_len(0).with_context(|| {
-        format!(
-            "failed to truncate `{}`",
-            locked_manifest_file.path().display()
-        )
-    })?;
-    locked_manifest_file
-        .file()
-        .write_all(manifest_json.as_bytes())
-        .with_context(|| {
-            format!(
-                "failed to write manifest to `{}`",
-                locked_manifest_file.path().display()
-            )
-        })?;
-    Ok(())
-}
-
 /// Create an initial map with statuses of all known [`Unit`]s.
 ///
 /// By default all are [`NotStarted`]
 ///
 /// [`NotStarted`]: UnitStatus::NotStarted
-fn build_initial_unit_statuses(graph: &UnitGraph) -> HashMap<UnitId, UnitStatus> {
+fn build_initial_unit_statuses(graph: &UnitGraph) -> HashMap<GraphNodeId, UnitStatus> {
     graph
-        .units_sorted_by_id()
+        .compilation_order()
         .iter()
-        .map(|unit| (unit.unit_id(), UnitStatus::NotStarted))
+        .filter_map(|node| node.as_unit().map(|_| (node.id(), UnitStatus::NotStarted)))
         .collect()
 }

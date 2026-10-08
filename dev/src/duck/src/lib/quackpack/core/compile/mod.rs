@@ -30,11 +30,8 @@ pub mod duckc;
 pub mod early_graph;
 pub mod profiles;
 pub mod unit;
-pub mod unit_new;
 pub mod unit_runner;
-pub mod unit_runner_new;
 pub mod unit_task_generator;
-pub mod unit_task_generator_new;
 
 /// A common message for panicking when a manifest is missing a dependency.
 pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {
@@ -93,7 +90,7 @@ pub fn compile(
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
-    let unit_graph = lower_early_graph(graph);
+    let unit_graph = lower_early_graph(graph)?;
     let runner = UnitRunner::new(unit_graph, &bcx);
     runner.run()
 }

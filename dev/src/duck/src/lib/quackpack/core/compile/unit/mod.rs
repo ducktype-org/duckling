@@ -4,29 +4,26 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! [`Unit`] is supposed to be all information required to invoke a single instance of duckc.
+//! [`Unit`] is a single task to be performed during the compilation pipeline.
+//! This is not to be misleaded with [`Task`](crate::quackpack::core::compile::duckc::multipackage_schema::Task),
+//! which represents a low-level duckc task.
 
-use std::collections::{HashSet, VecDeque};
-use std::convert::Infallible;
+use std::collections::HashSet;
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
-use std::fmt;
 use std::hash::Hash;
-use std::ops::ControlFlow;
 use std::sync::Arc;
 
-use self::graph::UnitGraph;
-use self::unit_visitor::{TryUnitVisitor, UnitVisitor};
-use super::BuildContext;
-use super::compiler_package::CompilerPackage;
 use super::duckc::multipackage_schema;
+use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit_runner::CompilationTarget;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::{AnyPackage, FeatureName};
 use crate::util::hash::sha256_string;
-use crate::{QuackResult, qp_bail_internal};
+use crate::{QuackResult, StrId, qp_bail_internal};
 
 pub mod graph;
-pub mod unit_visitor;
+pub mod graph_visitor;
 
 // Missing constants from [`std::env::consts`].
 const STATIC_LIB_SUFFIX: &str = ".a";
@@ -34,128 +31,68 @@ const STATIC_LIB_SUFFIX: &str = ".a";
 // Duckling specific.
 const DVM_SUFFIX: &str = ".dbc";
 
-pub type UnitId = u64;
-
-#[cfg(test)]
-mod tests;
-
-#[derive(Clone)]
-/// Information required to invoke duckc once.
+#[derive(Clone, Debug)]
+/// A single action to be performed during the compilation process.
 pub struct Unit {
-    inner: Arc<UnitInner>,
-}
-
-impl fmt::Debug for Unit {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inner = &*self.inner;
-        f.debug_struct("Unit")
-            .field("unit_id", &inner.unit_id)
-            .field("name", &inner.package.name())
-            .field("version", &inner.package.version())
-            .field("identity", &inner.identity)
-            .field("unit_type", &inner.unit_type)
-            .finish()
-    }
+    /// Necessary information about the package for which this [`Unit`] is constructed.
+    package_data: Arc<PackageData>,
+    /// Type of the task to perform.
+    unit_type: UnitType,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-/// What this [`Unit`] represents.
-///
-/// Note: Mapping to the [`Strategy`] is done by [`UnitTaskGenerator`].
-///
-/// [`Strategy`]: super::duckc::multipackage_schema::PackageCompilationStrategy
-/// [`UnitTaskGenerator`]: super::unit_task_generator::UnitTaskGenerator
+/// What type of artifacts a given [`Unit`] produces.
 pub enum UnitType {
-    /// Compile to a binary.
-    /// Maps to the `Native` or `DvmExe` strategy.
+    /// Compile to a binary
+    /// Maps to the `Native` strategy
     Binary,
-    /// Compile to a library (`.dll`, `.so`, `.a`, etc).
-    /// This type is (still) unsupported.
+    /// Compile to a library (`.dll`, `.so`, `.a`, etc)
+    /// Maps to the `Native` strategy
     Library,
-    /// This [`Unit`] is a dependency and can produce only minimal artifacts.
-    /// Maps to the `Lib` or `DvmLib` compilation strategy, and will produce only minimal archives:
+    /// This [`Unit`] is a dependency and can produce only minimal artifacts
+    /// Maps to the `Lib` compilation strategy, and we'll produce only minimal archives:
     /// they might be incomplete, but linker will take care of this (when compiling the root package
     /// with [`Binary`](Self::Binary) or [`Library`](Self::Library) types).
     Dependency,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-/// How each [`Unit`] should be executed/treated?
-pub enum BuildKind {
-    /// This [`Unit`] should be compiled.
-    Compile,
-}
-
-struct UnitInner {
-    /// An internal, but unique identifier.
-    unit_id: UnitId,
-    /// Which package we're compiling.
-    package: AnyPackage,
-    /// Enabled features of this [`Unit`].
-    enabled_features: HashSet<FeatureName>,
-    /// How have we got this package.
-    identity: Identity,
-    /// What artifacts should this unit produce.
-    unit_type: UnitType,
-    /// [`BuildKind`] of this [`Unit`].
-    build_kind: BuildKind,
-}
-
 impl Unit {
     /// Create a new [`Unit`].
-    pub fn new(
-        unit_id: UnitId,
-        package: CompilerPackage,
-        identity: Identity,
-        unit_type: UnitType,
-        build_kind: BuildKind,
-    ) -> Self {
-        let (package, enabled_features, _) = package.decompose();
+    pub fn new(package: Arc<PackageData>, unit_type: UnitType) -> Self {
         Self {
-            inner: Arc::new(UnitInner {
-                unit_id,
-                package,
-                enabled_features,
-                identity,
-                unit_type,
-                build_kind,
-            }),
+            package_data: package,
+            unit_type,
         }
-    }
-
-    /// Get the unique ID of this [`Unit`].
-    pub fn unit_id(&self) -> UnitId {
-        self.inner.unit_id
     }
 
     /// Get the package of this [`Unit`].
     pub fn package(&self) -> &AnyPackage {
-        &self.inner.package
+        &self.package_data.package
+    }
+
+    /// Get the [`PackageData`] of the package of this [`Unit`].
+    pub fn package_data(&self) -> &PackageData {
+        &self.package_data
     }
 
     /// Get the enabled features of this [`Unit`].
     pub fn enabled_features(&self) -> &HashSet<FeatureName> {
-        &self.inner.enabled_features
+        &self.package_data.enabled_features
     }
 
-    /// Get the type of this [`Unit`].
+    /// Get the type of produced artifacts by this [`Unit`].
     pub fn unit_type(&self) -> UnitType {
-        self.inner.unit_type
+        self.unit_type
     }
 
     /// Get the [`Identity`] of this [`Unit`].
     pub fn identity(&self) -> Identity {
-        self.inner.identity
+        self.package_data.identity
     }
 
-    /// Get the [`BuildKind`] of this [`Unit`].
-    pub fn build_kind(&self) -> BuildKind {
-        self.inner.build_kind
-    }
-
-    /// Get a unique (in terms of the current compilation graph) name, which can be used as a directory
-    /// name for storing artifacts.
-    pub fn unique_name(&self) -> String {
+    /// Get a unique (in terms of the current compilation graph) name of the underlying package.
+    /// It can be used as a directory name for storing artifacts.
+    pub fn pkg_unique_name(&self) -> String {
         // Can we trim this hash?
         let id = sha256_string(self.identity().origin().to_string());
         let name = self.package().name();
@@ -163,10 +100,10 @@ impl Unit {
         format!("{}-{}-{}", name, version, id)
     }
 
-    /// Get a descriptive name of this [`Unit`].
+    /// Get a descriptive name of the underlying package.
     ///
     /// It's a _nice_ name, which can be displayed to the user.
-    pub fn descriptive_name(&self) -> String {
+    pub fn pkg_descriptive_name(&self) -> String {
         let name = self.package().name();
         let version = self.package().version();
         format!("{name} version {version}")
@@ -182,7 +119,7 @@ impl Unit {
                 format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX)
             }
             (UnitType::Dependency, CompilationTarget::LLVM) => {
-                format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX)
+                format!("{}{}", self.pkg_unique_name(), STATIC_LIB_SUFFIX)
             }
 
             // DVM
@@ -190,49 +127,53 @@ impl Unit {
                 format!("{}{}", name, DVM_SUFFIX)
             }
             (UnitType::Dependency, CompilationTarget::DVM) => {
-                format!("{}{}", self.unique_name(), DVM_SUFFIX)
+                format!("{}{}", self.pkg_unique_name(), DVM_SUFFIX)
             }
         }
     }
+}
 
-    /// Get a single [`multipackage_schema::Package`] for this [`Unit`].
+/// All compilation-necessary information about a singular package.
+#[derive(Clone, Debug)]
+pub struct PackageData {
+    package: AnyPackage,
+    /// Pairs `(pkg, alias)`.
+    deps_realization: Vec<(Identity, Option<StrId>)>,
+    enabled_features: HashSet<FeatureName>,
+    identity: Identity,
+}
+
+impl PackageData {
+    /// Get a unique (in terms of the current compilation graph) name of the package.
+    /// It can be used as a directory name for storing artifacts.
+    pub fn unique_name(&self) -> String {
+        let id = sha256_string(self.identity.origin().to_string());
+        let name = self.package.name();
+        let version = self.package.version();
+        format!("{}-{}-{}", name, version, id)
+    }
+
+    /// Get a single [`multipackage_schema::Package`] for this package.
     pub fn multipackage_schema_package(
         &self,
         graph: &UnitGraph,
     ) -> QuackResult<multipackage_schema::Package> {
-        let package = self.package();
+        let package = &self.package;
         let import_name = package.normalised_name();
         let version = package.version();
         let features = {
-            let mut features = self.enabled_features().iter().copied().collect::<Vec<_>>();
+            let mut features = self.enabled_features.iter().copied().collect::<Vec<_>>();
             features.sort();
             features
         };
-        let dependencies = {
-            let mut result = vec![];
-            for dep_id in graph.deps_for(self.unit_id()) {
-                let unit_dep = graph.unit_for(*dep_id);
-                let dep_name = unit_dep.package().name();
-                let dep = package
-                    .manifest()
-                    .dependencies()
-                    .get_by_name(dep_name)
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?! `{self:?}` {graph:#?}",
-                            self.unit_id(),
-                            import_name,
-                            dep_id,
-                            dep_name
-                        )
-                    });
-                result.push(multipackage_schema::Dependency {
-                    id: unit_dep.unique_name().into(),
-                    alias: dep.normalised_alias(),
-                });
-            }
-            result
-        };
+        let dependencies = self
+            .deps_realization
+            .iter()
+            .map(|(dep, alias)| multipackage_schema::Dependency {
+                id: graph.package_data(*dep).unique_name().into(),
+                alias: alias.map(|alias| alias.to_string()),
+            })
+            .collect();
         let Some(source_directory) = package.src() else {
             qp_bail_internal!(
                 "asked for src directory of the global package or a script: {package:#?}"
@@ -247,70 +188,11 @@ impl Unit {
             dependencies,
         })
     }
-
-    /// Accept a [`UnitVisitor`].
-    ///
-    /// This method should only drive the visitor through dependencies of this [`Unit`].
-    ///
-    /// If visitor returns `ControlFlow::Break(b)`, we short circuit to `Some(b)`.
-    ///
-    /// Otherwise (no breaks), we return `None`.
-    pub fn accept<V: UnitVisitor + ?Sized>(
-        &self,
-        visitor: &mut V,
-        graph: &UnitGraph,
-    ) -> Option<V::Break> {
-        struct VisitorAsTryVisitor<'a, U: ?Sized> {
-            visitor: &'a mut U,
-        }
-        impl<U: UnitVisitor + ?Sized> TryUnitVisitor for VisitorAsTryVisitor<'_, U> {
-            type Err = Infallible;
-
-            type Break = U::Break;
-
-            fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
-                Ok(self.visitor.visit(unit))
-            }
-        }
-        let result = self.try_accept(&mut VisitorAsTryVisitor { visitor }, graph);
-        let Ok(result) = result;
-        result
-    }
-
-    /// Accept a [`TryUnitVisitor`].
-    ///
-    /// This method should only drive the visitor through dependencies of this [`Unit`].
-    ///
-    /// If visitor returns an `Err(e)`, we short circuit to `Err(e)`
-    ///
-    /// If it returns `Ok(ControlFlow::Break(b))`, we short circuit to `Ok(Some(b))`.
-    ///
-    /// Otherwise (no errors + no breaks), we return `Ok(None)`.
-    pub fn try_accept<V: TryUnitVisitor + ?Sized>(
-        &self,
-        visitor: &mut V,
-        graph: &UnitGraph,
-    ) -> Result<Option<V::Break>, V::Err> {
-        let mut stack = VecDeque::from([self.unit_id()]);
-        let mut visited = HashSet::new();
-        while let Some(id) = stack.pop_front() {
-            if visited.contains(&id) {
-                continue;
-            }
-            visited.insert(id);
-            let unit = graph.unit_for(id);
-            if let ControlFlow::Break(b) = visitor.try_visit(unit)? {
-                return Ok(Some(b));
-            }
-            stack.extend(graph.deps_for(unit.unit_id()));
-        }
-        Ok(None)
-    }
 }
 
 impl PartialEq for Unit {
     fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.inner, &other.inner)
+        self.unit_type == other.unit_type && Arc::ptr_eq(&self.package_data, &other.package_data)
     }
 }
 
@@ -318,7 +200,8 @@ impl Eq for Unit {}
 
 impl Hash for Unit {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let ptr = Arc::as_ptr(&self.inner);
-        std::ptr::hash(ptr, state)
+        let ptr = Arc::as_ptr(&self.package_data);
+        std::ptr::hash(ptr, state);
+        self.unit_type.hash(state);
     }
 }
