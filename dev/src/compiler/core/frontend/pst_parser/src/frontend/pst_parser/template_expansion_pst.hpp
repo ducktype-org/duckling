@@ -7,7 +7,7 @@ namespace pst {
 	/**
 	 * @brief PST holder for generated sub trees. For now will be used for template expansion.
 	 *
-	 * @TODO: Maybe add some information about the original PST.
+	 * For now this holds minimal information.
 	 */
 	template<std::derived_from<LangElement> Element = TemplateTopLevel>
 	class TemplateExpansionPST final: public PST<Element> {
