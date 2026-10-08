@@ -21,6 +21,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
@@ -810,6 +811,36 @@ namespace compiler::helios::code {
 					),
 					stmt->getStablePosition()
 				));
+			}
+
+			void visitArrayLiteral(pst::Access<pst::expr::ArrayLiteral> stmt) override {
+				auto                   list_unlocked = stmt->getList().unlock(ctx);
+				std::vector<Box<Expr>> elems;
+				elems.reserve(list_unlocked->size());
+				base::Optional<tsh::SymbolType<>> elem_type;
+
+				for (auto elem_holder: *list_unlocked) {
+					auto elem_pst_expr = elem_holder.unlock(ctx)->getExpr();
+					auto elem = elem_type ? subExprFromPSTWithType(ctx, elem_pst_expr, *elem_type)
+					                      : subExprFromPST(ctx, elem_pst_expr);
+					if (elem.hasFailed()) return;
+					elems.emplace_back(std::move(elem).valueOrThrow());
+					if (!elem_type) elem_type = elems.back()->expression_type.getSymbolType();
+				}
+
+				// Some type had to be chosen. `void` would perhaps make more sense,
+				// but it seemed to break some assumptions of the compiler and cause panics.
+				// @TODO: #3707 When fixed, think about making this `void`.
+				auto elem_type_of_empty_array = tsh::SymbolType<>{
+					tsh::getUnitType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				auto type = ctx.query<tsh::QueryStaticArrayType>(
+					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }
+				);
+				node = makeBox<CreateAggregateExpr>(ctx, pstOrigin(stmt), type, std::move(elems));
 			}
 		};
 	}
