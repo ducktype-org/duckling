@@ -18,7 +18,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit AtrArgList(const LangParserState& state): List(state) {
+		explicit AtrArgList(LangElementConstructionArgument state): List(state) {
 			this->element_kind = ElementKind::AtrArgList;
 		}
 

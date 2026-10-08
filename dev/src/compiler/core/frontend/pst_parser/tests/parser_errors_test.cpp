@@ -21,7 +21,7 @@
 #include <frontend/pst_parser/elements/implementations/preamble.hpp>
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
 #include <frontend/pst_parser/elements/parser_common_errors.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -42,12 +42,12 @@ class PSTErrorTests: public tester::TestSuite {
 
 		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
-		template<typename Element, typename Parser>
+		template<typename Element>
 		[[nodiscard]]
-		static base::OkBad testCloning(const pst::PST<Element, Parser>& pst) {
-			if (not pst.hasErrors()) {
+		static base::OkBad testCloning(CRef<pst::PST<Element>> pst) {
+			if (not pst->hasErrors()) {
 				return pst::testElementCloning(
-					base::CRef(&*pst.getRootElement().illegalAccess().value())
+					base::CRef(&*pst->getRootElement().illegalAccess().value())
 				);
 			}
 			return base::OK;
@@ -66,8 +66,10 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
+			auto parsed = pst::ParsedPST<Element>::template fromContents<Parser>(
+				code, pst::PSTType::Program
+			);
+			return ((not parsed->hasErrors()) == good && testCloning<Element>(parsed.ref()).isOk());
 		}
 
 		[[nodiscard]]
@@ -75,48 +77,6 @@ class PSTErrorTests: public tester::TestSuite {
 			std::stringstream ss;
 			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
 			ss << base::typeName<Element>();
-			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
-			return ss.str();
-		}
-	};
-
-	template<bool good, typename Parser>
-	struct Example<pst::CodeBlock, good, Parser>: public GenExample {
-		Example(std::string code): GenExample(std::move(code)) {}
-
-		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}
-			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
-		}
-
-		[[nodiscard]]
-		std::string message() const override {
-			std::stringstream ss;
-			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
-			ss << base::typeName<pst::CodeBlock>();
-			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
-			return ss.str();
-		}
-	};
-
-	template<bool good, typename Parser>
-	struct Example<pst::CodeBlockOrStmt, good, Parser>: public GenExample {
-		Example(std::string code): GenExample(std::move(code)) {}
-
-		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}
-			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
-		}
-
-		[[nodiscard]]
-		std::string message() const override {
-			std::stringstream ss;
-			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
-			ss << base::typeName<pst::CodeBlockOrStmt>();
 			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
 			return ss.str();
 		}
@@ -133,14 +93,14 @@ class PSTErrorTests: public tester::TestSuite {
 			  class_name(base::StrID(class_name.c_str())) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
+			auto parsed = pst::ParsedPST<Element>::template fromContents<Parser>(
 				this->code,
 				makeBox<pst::LangParserContext>(
 					class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class
 				),
 				hashing::ComponentHash{}
 			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
+			return ((not parsed->hasErrors()) == good && testCloning<Element>(parsed.ref()).isOk());
 		}
 
 		[[nodiscard]]

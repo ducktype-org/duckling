@@ -30,7 +30,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit If(const LangParserState& state): CodeDecl(state) {
+		explicit If(LangElementConstructionArgument state): CodeDecl(state) {
 			element_kind = ElementKind::If;
 		}
 

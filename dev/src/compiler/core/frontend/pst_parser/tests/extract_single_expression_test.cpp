@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>
@@ -24,11 +24,11 @@ public:
 
 private:
 	base::Optional<pst::AccessLocked<pst::ExprStmt>> extract(std::string_view code) {
-		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
 
 		base::Optional<pst::AccessLocked<pst::ExprStmt>> result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			result = pst::extractSingleExpression(ctx, pst.getRootElement());
+			result = pst::extractSingleExpression(ctx, pst->getRootElement());
 		});
 		return result;
 	}

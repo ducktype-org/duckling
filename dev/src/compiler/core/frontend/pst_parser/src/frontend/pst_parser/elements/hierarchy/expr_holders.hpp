@@ -36,7 +36,7 @@ namespace pst {
 	public:
 		ELEMENT_CLONE_DECL(ExprHolder);
 
-		explicit ExprHolder(const LangParserState& state): NotStmt(state) {
+		explicit ExprHolder(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::ExprHolder;
 		}
 

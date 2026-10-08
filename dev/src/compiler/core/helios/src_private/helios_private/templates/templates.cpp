@@ -8,7 +8,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/lang_parser_context.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/template_expansion_pst.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -88,7 +88,7 @@ namespace compiler::helios::templates {
 		SymID baked_template_sym_id;
 
 		// @TODO: #3071 see if anything will have to be changed here
-		pst::PST<pst::TemplateStmt> baked_template_pst;
+		Box<pst::PST<pst::TemplateStmt>> baked_template_pst;
 	};
 
 	void TemplateBakePSTLinkedData::PostponedDataDeleter::del(std::atomic<MRef<PostponedData>>* ptr
@@ -177,15 +177,15 @@ namespace compiler::helios::templates {
 			                                     .getSource()
 			                                     ->getFile());
 
-			auto baked_pst = pst::PST<pst::TemplateStmt>::fromClone(
-				std::move(cloned), std::move(token_source_hack), hash_ctx
+			auto baked_pst = pst::TemplateExpansionPST<pst::TemplateStmt>::fromElement(
+				std::move(cloned), std::move(hash_ctx)
 			);
 
 
-			auto baked_root      = baked_pst.getRootElement().unlock(ctx);
+			auto baked_root      = baked_pst->getRootElement().unlock(ctx);
 			auto baked_statement = baked_root->getInnerStatement();
 
-			baked_pst.setAdditionalRootData(pst::AdditionalRootData{
+			baked_pst->setAdditionalRootData(pst::AdditionalRootData{
 				.pst_parent = pst::AdditionalRootData::BakedTemplateParent{
 					.template_bake_data = TemplateBakePSTLinkedData{
 						.pst_parent_element

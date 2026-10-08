@@ -16,7 +16,7 @@ namespace pst::expr {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(UnitExpr, ExprElement);
 
 	public:
-		explicit UnitExpr(const LangParserState& state): ExprElement(state, 0) {}
+		explicit UnitExpr(LangElementConstructionArgument state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

@@ -24,7 +24,7 @@ namespace pst::expr {
 	public:
 		ELEMENT_CLONE_DECL(SuffixOperator);
 
-		explicit SuffixOperator(const LangParserState& state, i64 precedence):
+		explicit SuffixOperator(LangElementConstructionArgument state, i64 precedence):
 			  ExprElement(state, precedence) {}
 
 		~SuffixOperator() override = default;

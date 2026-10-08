@@ -20,7 +20,7 @@ namespace pst {
 		NAMED_CHILD(expr, AssignmentExprHolder);
 
 	public:
-		explicit ExprStmt(const LangParserState& state): Stmt(StmtKind::ExprStmt, state) {
+		explicit ExprStmt(LangElementConstructionArgument state): Stmt(StmtKind::ExprStmt, state) {
 			this->element_kind = ElementKind::ExprStmt;
 		}
 

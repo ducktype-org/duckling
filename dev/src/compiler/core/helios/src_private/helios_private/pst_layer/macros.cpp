@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -23,7 +23,7 @@
 
 namespace compiler::helios {
 
-	struct IMPLEMENT_QUERY(QueryMacroExpansion, query::QResult<pst::PST<pst::Stmt>>) {
+	struct IMPLEMENT_QUERY(QueryMacroExpansion, query::QResult<Box<pst::ParsedPST<pst::Stmt>>>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			auto expand = key.element.unlock(ctx);
 
@@ -58,7 +58,7 @@ namespace compiler::helios {
 			};
 			if (auto expand_str_opt = get_ctv_string_content(expand_ctv)) {
 				auto expand_str = expand_str_opt.value();
-				auto pst        = pst::PST<pst::Stmt>::fromExpand(
+				auto pst        = pst::ParsedPST<pst::Stmt>::fromExpand(
                     expand->getStablePosition(),
                     expand_str.strView(),
                     makeBox<pst::LangParserContext>(expand->getContext()),
@@ -70,13 +70,13 @@ namespace compiler::helios {
                     // the expand path.
                     hashing::ComponentHash({}, expand->getHash().toStringHex())
                 );
-				bool parse_errors = pst.hasErrors();
+				bool parse_errors = pst->hasErrors();
 
-				ctx.moveDiagnosticsFrom(*pst.getLoggerMut());
+				ctx.moveDiagnosticsFrom(*pst->getLoggerMut());
 				if (parse_errors) return query::Failed();
 
-				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
-					pst.setAdditionalRootData(pst::AdditionalRootData{
+				if (pst->getRootElement().unlockOpt(ctx).has_value()) {
+					pst->setAdditionalRootData(pst::AdditionalRootData{
 						pst::AdditionalRootData::MacroExpansionParent{ .expand_element = expand } });
 				}
 
@@ -90,16 +90,17 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto extractResult(CRef<query::QResult<pst::PST<pst::Stmt>>> p_result) -> QResult {
+		static auto extractResult(CRef<query::QResult<Box<pst::ParsedPST<pst::Stmt>>>> p_result)
+			-> QResult {
 			if (p_result->hasFailed())
 				return query::Failed{};
 			else {
 				Ref pst_ref = &p_result->valueOrPanic();
 				CORE_ASSERT(
-					pst_ref->getLogger()->good(),
+					(*pst_ref)->getLogger()->good(),
 					"PST from macro expansion should have been checked for errors in provide()"
 				);
-				return { pst_ref->getRootElement() };
+				return { (*pst_ref)->getRootElement() };
 			}
 		}
 

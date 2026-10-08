@@ -21,7 +21,7 @@ namespace pst::expr {
 		std::vector<AccessInternalAnonymous<FormatSubElement>> sub_elements;
 
 	public:
-		explicit ExprFormatStrValue(const LangParserState& state): ExprElement(state, 0) {}
+		explicit ExprFormatStrValue(LangElementConstructionArgument state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

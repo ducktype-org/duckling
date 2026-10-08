@@ -11,6 +11,7 @@
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
+#include "lang_parser_element_construction_data.hpp"
 #include "pst_config.hpp"
 #include "pst_id.hpp"
 #include "source_position_locked.hpp"
@@ -97,7 +98,7 @@ namespace pst {
 		 */
 		explicit LangElement(pst::CloneDummy, const LangElement& other):
 			  source_position(other.source_position),
-			  context_hash(other.context_hash),
+			  context_hash(),
 			  element_kind(other.element_kind),
 			  id(PstID::next()) {}
 
@@ -127,7 +128,7 @@ namespace pst {
 		/**
 		 * @brief Needed for access to element path methods.
 		 */
-		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
+		template<std::derived_from<LangElement>>
 		friend class PST;
 
 		/**
@@ -137,6 +138,7 @@ namespace pst {
 
 		template<typename X>
 		friend class PSTAutomatic;
+		friend class FreeAutomatic;
 		friend class CloningUtils;
 
 		using Child = AccessLocked<LangElement>;
@@ -148,7 +150,7 @@ namespace pst {
 
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
-		explicit LangElement(const LangParserState& state):
+		explicit LangElement(LangElementConstructionArgument state):
 			  source_position(internal::getPosition(state)),
 			  context_hash(internal::getContextHash(state)),
 			  id(PstID::next()) {}

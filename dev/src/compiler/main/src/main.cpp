@@ -22,7 +22,7 @@
 #include <driver/task/task.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
@@ -477,14 +477,14 @@ clah::Clah getClahForMain() {
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
 					// @TODO: #1879 Currently defaults to program
-					auto pst = pst::PST(file_to_parse, pst::PSTType::Program);
+					auto pst = pst::ParsedPST<>::fromFile(file_to_parse, pst::PSTType::Program);
 
 					int exit_code = 0;
 
-					if (pst.hasErrors()) exit_code = 1;
+					if (pst->hasErrors()) exit_code = 1;
 
 					std::cout << "Parsed tree:\n";
-					pst.dprint(std::cout);
+					pst->dprint(std::cout);
 					std::cout << "\n";
 
 					return exit_code;

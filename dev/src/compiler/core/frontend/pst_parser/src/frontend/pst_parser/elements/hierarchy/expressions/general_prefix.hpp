@@ -21,7 +21,7 @@ namespace pst::expr {
 		using Self  = GeneralPrefix;
 
 	public:
-		explicit GeneralPrefix(const LangParserState& state): PrefixOperator(state, 400) {}
+		explicit GeneralPrefix(LangElementConstructionArgument state): PrefixOperator(state, 400) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

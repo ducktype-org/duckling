@@ -13,7 +13,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Redo, Action);
 
 	public:
-		explicit Redo(const LangParserState& state): Action(state) {}
+		explicit Redo(LangElementConstructionArgument state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;

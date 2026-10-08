@@ -6,7 +6,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>
@@ -32,11 +32,11 @@ public:
 
 private:
 	base::Optional<pst::AccessLocked<pst::Stmt>> extract(std::string_view code) {
-		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
 
 		base::Optional<pst::AccessLocked<pst::Stmt>> result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			result = pst::extractSingleDefinition(ctx, pst.getRootElement());
+			result = pst::extractSingleDefinition(ctx, pst->getRootElement());
 		});
 		return result;
 	}
@@ -47,11 +47,11 @@ private:
 	void checkSelectorDecl(
 		std::string_view code, pst::DeclKind expected_kind, std::string_view expected_name = ""
 	) {
-		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
-		assertFalse(pst.hasErrors(), base::strConcat("Unexpected parse error in: ", code));
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+		assertFalse(pst->hasErrors(), base::strConcat("Unexpected parse error in: ", code));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto stmt_opt = pst::extractSingleStatement(ctx, pst.getRootElement());
+			auto stmt_opt = pst::extractSingleStatement(ctx, pst->getRootElement());
 			ASSERT_HAS_VALUE(stmt_opt, base::strConcat("Expected one statement in: ", code));
 			auto stmt = stmt_opt.value().unlock(ctx);
 
