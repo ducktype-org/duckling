@@ -6,9 +6,15 @@ fun +*(a: i64, b: i64) -> i64 = {
     return a;
 }
 
-fun -*(a: i64) -> i64 = {
+fun prefix -*(a: i64) -> i64 = {
     return a;
 }
+
+fun suffix ++(a: i64) -> i64 = {
+    return a;
+}
+
+fundecl suffix **(a: i64) -> i64
 
 class Foo {
     x: i64 = 0;
@@ -17,7 +23,11 @@ class Foo {
         return a;
     }
 
-    fun -*() -> i64 = {
+    fun prefix -*() -> i64 = {
+        return x;
+    }
+
+    fun suffix ++() -> i64 = {
         return x;
     }
 }

@@ -336,24 +336,39 @@ namespace compiler::helios {
 	}
 
 	/**
-	 * @brief Deduces the operatoriness of a user-declared function/method from its name and arity
-	 * (parameter count, including an implicit `self` for methods).
+	 * @brief Determines whether a user-declared function or method is an operator and validates its
+	 * fixity.
 	 *
-	 * @note There is no dedicated syntax yet to declare fixity (prefix vs. suffix), so a
-	 * single-parameter operator name is assumed to be a prefix operator. Suffix stays unreachable
-	 * from user code until that syntax exists.
-	 * @TODO: #3131 Extract fixity in unary operators from keywords used in PST.
+	 * @param arity Parameter count, including the implicit `self` parameter of non-static methods.
 	 */
-	static HOUTFunctionDeclaration::Operatoriness operatorinessFromNameAndArity(
-		base::StrID name, u64 arity
+	static HOUTFunctionDeclaration::Operatoriness operatorinessFromDeclaration(
+		query::Context&     ctx,
+		base::StrID         name,
+		u64                 arity,
+		pst::OperatorFixity fixity,
+		dia::StablePosition source_position
 	) {
 		using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
-		if (!lexer::isOperatorSymbolString(name.strView())) return Operatoriness::None;
+		const bool is_operator = lexer::isOperatorSymbolString(name.strView());
+		if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
+			ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
+			query::throwFailed();
+		}
+		if (!is_operator) return Operatoriness::None;
 
 		switch (arity) {
 		case 1:
-			return Operatoriness::Prefix;
+			switch (fixity) {
+			case pst::OperatorFixity::Prefix:
+				return Operatoriness::Prefix;
+			case pst::OperatorFixity::Suffix:
+				return Operatoriness::Suffix;
+			case pst::OperatorFixity::None:
+				ctx.logInt(makeBox<MissingUnaryOperatorFixityError>(source_position));
+				query::throwFailed();
+			}
+			CORE_UNREACHABLE();
 		case 2:
 			return Operatoriness::Infix;
 		default:
@@ -470,15 +485,23 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				const auto operatoriness = operatorinessFromNameAndArity(
-					name(original_symbol), stmt->getParams().unlock(ctx)->size()
+				const auto operatoriness = operatorinessFromDeclaration(
+					ctx,
+					name(original_symbol),
+					stmt->getParams().unlock(ctx)->size(),
+					stmt->getOperatorFixity(),
+					stmt->getStablePosition()
 				);
 				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				const auto operatoriness = operatorinessFromNameAndArity(
-					name(original_symbol), stmt->getParams().unlock(ctx)->size()
+				const auto operatoriness = operatorinessFromDeclaration(
+					ctx,
+					name(original_symbol),
+					stmt->getParams().unlock(ctx)->size(),
+					stmt->getOperatorFixity(),
+					stmt->getStablePosition()
 				);
 				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 			}
@@ -488,14 +511,22 @@ namespace compiler::helios {
 				// can use the declaration of function query, and we could get a cycle.
 				auto specifiers = getClassMemberSpecifiers(ctx, original_symbol);
 				if (specifiers.is_static) {
-					const auto operatoriness = operatorinessFromNameAndArity(
-						name(original_symbol), stmt->getParams().unlock(ctx)->size()
+					const auto operatoriness = operatorinessFromDeclaration(
+						ctx,
+						name(original_symbol),
+						stmt->getParams().unlock(ctx)->size(),
+						stmt->getOperatorFixity(),
+						stmt->getStablePosition()
 					);
 					emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 					return;
 				}
-				const auto operatoriness = operatorinessFromNameAndArity(
-					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
+				const auto operatoriness = operatorinessFromDeclaration(
+					ctx,
+					name(original_symbol),
+					stmt->getParams().unlock(ctx)->size() + 1,
+					stmt->getOperatorFixity(),
+					stmt->getStablePosition()
 				);
 				// +1 for the implicit `self` parameter.
 				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
