@@ -1,11 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Dependency DAG and dictionary with all parsed [`CompilerPackage`]s.
 
 use std::collections::{HashMap, HashSet};
 
+use crate::QuackResult;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::missing_depenendcy_in_graph;
 use crate::quackpack::core::identity::Identity;
-use crate::{QuackError, QuackResult};
 
 pub mod creating_graph;
 pub mod modifying_graph;

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "default_destructors.hpp"
 
 #include <helios/attributes/builtins.hpp>
@@ -31,7 +37,7 @@ namespace compiler::helios::defgen {
 		}
 	}
 
-	SymID destructSymForType(query::Context& ctx, const tsh::AbstractType type) {
+	SymID generatedDestructSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("__destruct"),
 			.generated_symbol_data
@@ -45,16 +51,11 @@ namespace compiler::helios::defgen {
 		// the pointee and frees the storage. It takes a `ptr T`, which is what a box is
 		// underneath, so it can stand in as the box destructor directly.
 		if (type.getRefKind() == tsh::ReferenceKind::Box) return boxFreeSymFor(ctx, type.getType());
-		return destructSymForType(ctx, type.getType());
+		return generatedDestructSymForType(ctx, type.getType());
 	}
 
 	bool isUserDefinedDestructor(query::Context&, const SymID sym) {
 		return kind(sym) == SymbolKind::Destructor;
-	}
-
-	base::Optional<SymID> userDestructorOf(query::Context& ctx, const SymID class_sym) {
-		if (kind(class_sym) != SymbolKind::Class) return {};
-		return ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow().destructor;
 	}
 
 	namespace {
@@ -101,7 +102,7 @@ namespace compiler::helios::defgen {
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);
 
-			const SymID dtor_sym = destructSymForType(ctx, abstract_type);
+			const SymID dtor_sym = generatedDestructSymForType(ctx, abstract_type);
 			body.emplace_back(s.expr(s.call(s.ident(dtor_sym), s.refOf(std::move(location)))));
 		}
 
@@ -127,11 +128,12 @@ namespace compiler::helios::defgen {
 
 			// For a class that declares its own destructor, run the user code before destroying the
 			// members.
-			if (owner_type.getKind() == tsh::Kind::Class) {
-				if (const auto user
-				    = userDestructorOf(ctx, owner_type.as<tsh::ClassAbstractType>().getSymbol())) {
-					body.emplace_back(s.expr(s.call(s.ident(user.value()), s.ident(self_symbol))));
-				}
+			if (const auto user = owner_type.getInterface(ctx)->getSpecialElement(
+					tsh::MemberSpecialKind::UserDestructor
+				)) {
+				body.emplace_back(
+					s.expr(s.call(s.ident(user.value()->getSymbol()), s.ident(self_symbol)))
+				);
 			}
 
 			const std::vector<tsh::InterfaceElement> fields
@@ -192,7 +194,10 @@ namespace compiler::helios::defgen {
 					= destructSymForSymbolType(ctx, alternatives[i]).value();
 
 				cases.emplace_back(Shorthand::matchCase(
-					i, payload_sym, s.call(s.ident(alternative_dtor), s.ident(payload_sym))
+					i,
+					payload_type,
+					payload_sym,
+					s.call(s.ident(alternative_dtor), s.ident(payload_sym))
 				));
 			}
 
@@ -203,7 +208,7 @@ namespace compiler::helios::defgen {
 			// Only the alternatives that own something are listed, so the match needs a wildcard
 			// to stay exhaustive. Without it the lowering would enter the last case
 			// unconditionally and destroy a payload that is not there.
-			cases.emplace_back(Shorthand::matchCase({}, {}, s.litUnit()));
+			cases.emplace_back(Shorthand::matchCase({}, {}, {}, s.litUnit()));
 
 			// `self` is already a reference to the variant, which is what the match wants. The
 			// destructor calls are unit-valued, so the match is used as a plain statement.
@@ -290,7 +295,7 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryDefaultDestructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const SymID dtor_sym    = destructSymForType(ctx, owner_type);
+			const SymID dtor_sym    = generatedDestructSymForType(ctx, owner_type);
 			const auto& dtor_decl   = ctx.query<QueryDeclOfFun>(dtor_sym)->valueOrThrow();
 			const SymID self_symbol = dtor_decl.parameters.at(0).helios_symbol;
 

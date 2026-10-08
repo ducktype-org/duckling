@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios_private/errors/dia_interactive_elements.hpp>
@@ -46,6 +52,40 @@ namespace compiler::helios {
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia::InteractiveArgument>("duplicated_type", std::move(duplicated_type));
+		}
+	};
+
+	class InvalidMainReturnTypeError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "invalid_main_return_type" };
+		}
+
+	public:
+		InvalidMainReturnTypeError(
+			dia::StablePosition source_position, Box<InteractiveType> given_type
+		):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("given_type", std::move(given_type));
+		}
+	};
+
+	class ReturnWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "return_without_value" };
+		}
+
+	public:
+		ReturnWithoutValueError(
+			dia::StablePosition source_position, Box<InteractiveType> expected_type
+		):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("expected_type", std::move(expected_type));
 		}
 	};
 }

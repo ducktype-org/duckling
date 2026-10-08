@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "for.hpp"
 
 #include <frontend/pst_parser/access.hpp>
@@ -194,13 +200,13 @@ namespace compiler::helios::desugaring {
                         },
                 }
             );
-			if (!element_expr.has_value()) return {};
+			if (element_expr.hasFailed()) return {};
 
 			code::CodeBlock body{};
 
 			// let <user_var> = __collection[__idx];
 			body.statements.emplace_back(makeBox<code::VariableStmt>(
-				ctx.iterator_origin, std::move(element_expr.value()), iter_type, iter_sym
+				ctx.iterator_origin, std::move(element_expr.valueOrPanic()), iter_type, iter_sym
 			));
 
 			// <body>;
@@ -233,10 +239,9 @@ namespace compiler::helios::desugaring {
 		ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 		auto get_generated_local = [&](base::StrID role, tsh::SymbolType<> type) {
-			// Compose the name with the current scope hash, so we don't have naming collisions
-			// with nested loops.
-			auto unique = for_scope.queryUnstablePerfectHash();
-			auto name   = base::StrID(base::strConcat(role, unique));
+			// No discriminator in the name: it is part of the query key, so anything derived from
+			// the loop (scope id, position, hash) would differ per compilation or move on edits.
+			auto name = role;
 
 			// @TODO: #2799 Reconsider the generated symbols scope.
 			return ctx.query<defgen::QueryGeneratedSymbol>({
@@ -250,7 +255,6 @@ namespace compiler::helios::desugaring {
 			});
 		};
 
-		// @TODO: #3290 generated variables names
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),

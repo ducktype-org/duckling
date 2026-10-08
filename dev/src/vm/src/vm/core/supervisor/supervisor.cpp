@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "supervisor.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -36,7 +42,7 @@ namespace vm {
 			switch (options.mode) {
 			case api::ProcessMode::Safe:
 				return Box<IVMProcess>::fromPointer(
-					new SafeVMProcess(pid, options.enable_deadlock_detection)
+					new SafeVMProcess(pid, options.enable_deadlock_detection, options.enable_jit)
 				);
 			case api::ProcessMode::Fast:
 				return Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid));

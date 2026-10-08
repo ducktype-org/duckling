@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 /**
@@ -409,11 +415,17 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		static MatchExpr::Case matchCase(
-			base::Optional<usize> alternative_index, base::Optional<SymID> binding, Box<Expr> result
+			base::Optional<usize>             alternative_index,
+			base::Optional<tsh::SymbolType<>> constraint_type,
+			base::Optional<SymID>             binding,
+			Box<Expr>                         result
 		) {
-			return MatchExpr::Case{ .alternative_index = alternative_index,
-				                    .binding           = binding,
-				                    .result            = std::move(result) };
+			return MatchExpr::Case{
+				.alternative_index = alternative_index,
+				.constraint_type   = constraint_type,
+				.binding           = binding,
+				.result            = std::move(result),
+			};
 		}
 
 		/** @brief A `match (subject) { cases }`. Cases are tried in order. */

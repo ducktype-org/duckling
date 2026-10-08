@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file diagnostics.hpp
  *
@@ -18,15 +24,19 @@
  */
 #pragma once
 
-#if defined(__clang__)
+#include <base/config/target_info.hpp>
+
+#if BASE_TARGET_COMPILER_CLANG
 	#define PUSH_DIAGNOSTIC _Pragma("clang diagnostic push")
 	#define NO_SHADOW       _Pragma("clang diagnostic ignored \"-Wshadow-all\"")
 	#define UNHANDLED_ENUM  _Pragma("clang diagnostic error \"-Wswitch\"")
 	#define ALLOW_EXTENSIONS                                     \
 		_Pragma("clang diagnostic ignored \"-Wc23-extensions\"") \
 			_Pragma("clang diagnostic ignored \"-Wc++26-extensions\"")
+	#define IGNORE_ASSUME  _Pragma("clang diagnostic ignored \"-Wassume\"")
 	#define POP_DIAGNOSTIC _Pragma("clang diagnostic pop")
-#elif defined(__GNUC__)
+
+#elif BASE_TARGET_COMPILER_GCC
 	#define PUSH_DIAGNOSTIC _Pragma("GCC diagnostic push")
 	#define NO_SHADOW                                        \
 		_Pragma("GCC diagnostic ignored \"-Wshadow=local\"") \
@@ -35,5 +45,6 @@
 	#define ALLOW_EXTENSIONS                                   \
 		_Pragma("GCC diagnostic ignored \"-Wc23-extensions\"") \
 			_Pragma("GCC diagnostic ignored \"-Wc++26-extensions\"")
+	#define IGNORE_ASSUME
 	#define POP_DIAGNOSTIC _Pragma("GCC diagnostic pop")
 #endif

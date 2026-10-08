@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
@@ -57,8 +63,8 @@ public:
 			auto maybe_rght = dir.atLeftOpt(vals.at(i));
 			auto maybe_left = dir.atRightOpt(i);
 
-			ASSERT_TRUE(maybe_left.has_value());
-			ASSERT_TRUE(maybe_rght.has_value());
+			ASSERT_HAS_VALUE(maybe_left);
+			ASSERT_HAS_VALUE(maybe_rght);
 
 			ASSERT_EQUAL(i, *maybe_rght);
 			ASSERT_EQUAL(vals.at(i), *maybe_left);
@@ -88,7 +94,7 @@ public:
 
 			for (auto [idx, var]: expected) {
 				ASSERT_TRUE(view.contains(idx));
-				ASSERT_TRUE(view.atMaybe(idx).has_value());
+				ASSERT_HAS_VALUE(view.atMaybe(idx));
 				ASSERT_EQUAL(view[idx], var);
 			}
 		};
@@ -186,9 +192,9 @@ public:
 		auto   state = memory.set(Memory::EMPTY, 10, 100);
 		state        = memory.set(state, 20, 200);
 
-		ASSERT_TRUE(memory.access(state, 10).has_value());
+		ASSERT_HAS_VALUE(memory.access(state, 10));
 		ASSERT_EQUAL(100, *memory.access(state, 10));
-		ASSERT_TRUE(memory.access(state, 20).has_value());
+		ASSERT_HAS_VALUE(memory.access(state, 20));
 		ASSERT_EQUAL(200, *memory.access(state, 20));
 
 		MemoryStateView                      view(memory, state);
@@ -202,34 +208,34 @@ public:
 
 		for (auto dir: { Memory::Dir::Left, Memory::Dir::Rght }) {
 			auto path = memory.getPathTo(state, 10, dir);
-			ASSERT_TRUE(path.has_value());
+			ASSERT_HAS_VALUE(path);
 			ASSERT_EQUAL(10, path->getIdx());
 			ASSERT_EQUAL(100, path->getValue());
 
 			path = memory.getPathTo(state, 20, dir);
-			ASSERT_TRUE(path.has_value());
+			ASSERT_HAS_VALUE(path);
 			ASSERT_EQUAL(20, path->getIdx());
 			ASSERT_EQUAL(200, path->getValue());
 		}
 
 		auto left_path = memory.getPathTo(state, 15, Memory::Dir::Left);
-		ASSERT_TRUE(left_path.has_value());
+		ASSERT_HAS_VALUE(left_path);
 		ASSERT_EQUAL(10, left_path->getIdx());
 		ASSERT_EQUAL(100, left_path->getValue());
 
 		auto right_path = memory.getPathTo(state, 15, Memory::Dir::Rght);
-		ASSERT_TRUE(right_path.has_value());
+		ASSERT_HAS_VALUE(right_path);
 		ASSERT_EQUAL(20, right_path->getIdx());
 		ASSERT_EQUAL(200, right_path->getValue());
 
 		ASSERT_TRUE(memory.getPathTo(state, 5, Memory::Dir::Left).empty());
 		left_path = memory.getPathTo(state, 5, Memory::Dir::Rght);
-		ASSERT_TRUE(left_path.has_value());
+		ASSERT_HAS_VALUE(left_path);
 		ASSERT_EQUAL(10, left_path->getIdx());
 		ASSERT_EQUAL(100, left_path->getValue());
 
 		left_path = memory.getPathTo(state, 100'000, Memory::Dir::Left);
-		ASSERT_TRUE(left_path.has_value());
+		ASSERT_HAS_VALUE(left_path);
 		ASSERT_EQUAL(20, left_path->getIdx());
 		ASSERT_EQUAL(200, left_path->getValue());
 		ASSERT_TRUE(memory.getPathTo(state, 100'000, Memory::Dir::Rght).empty());

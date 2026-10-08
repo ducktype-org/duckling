@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -116,7 +122,7 @@ JSON_REGISTER_TYPE_WITH_NAME(Ref<vm::IVMValue>, "Ref<VMValue>");
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
-struct nlohmann::adl_serializer<vm::IVMValue> {
+struct nlohmann::adl_serializer<vm::IVMValue> final {
 	static void to_json(json& j, const vm::IVMValue& v) {
 		j["type"]        = std::string(TypeParseTraits<vm::IVMValue>::NAME.data());
 		j["data_type"]   = v.getType()->getName().str();

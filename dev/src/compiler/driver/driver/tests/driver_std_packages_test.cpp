@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -10,7 +16,6 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
-#include <os_utils/system_libraries.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
@@ -18,6 +23,7 @@
 
 #include <diagnostic/logger.hpp>
 #include <filesystem/file_path.hpp>
+#include <os_utils/system_libraries.hpp>
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
@@ -59,7 +65,7 @@ protected:
 		auto           manifest_opt  = driver::PackageCompilationManifest::fromJson(
             manifest_json, compiler::driver::diagnostics::makeGlobalLoggerReporter()
         );
-		assertTrue(manifest_opt.has_value(), "Failed to parse packages manifest");
+		ASSERT_HAS_VALUE(manifest_opt, "Failed to parse packages manifest");
 		assertTrue(
 			manifest_opt->verify(compiler::driver::diagnostics::makeGlobalLoggerReporter()).isOk(),
 			"Manifest verification failed"
@@ -148,8 +154,7 @@ private:
 			if (auto* target_exe
 			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task_data.build_target)) {
 				// We expect the correct stdlib linking options based on getStdLibLinkingArgs
-				auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
-				ASSERT_HAS_VALUE(lib_args);
+				[[maybe_unused]] auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
 
 				// Ensure the options contain the stdlib args
 				assertTrue(

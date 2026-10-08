@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file tester.hpp
  * @author Andrzej
@@ -10,6 +16,7 @@
 #include "tester_config.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>  // IWYU pragma: export
 #include <base/types/ints.hpp>
 
 #include <init/init.hpp>  // IWYU pragma: export
@@ -49,9 +56,117 @@
 
 #define ASSERT_TRUE(actual) ASSERT_EQUAL(true, actual)
 
-#define ASSERT_HAS_VALUE(actual) ASSERT_EQUAL(true, tester::detail::hasValue(actual))
+/**
+ * @brief Asserts that `actual` holds a value. Accepts anything with `has_value()`, `hasValue()`,
+ * `->has_value()` or `->hasValue()`.
+ *
+ * Everything after `actual` is an optional message, concatenated the way `strConcat` does it and
+ * appended to the diagnostic.
+ */
+#define ASSERT_HAS_VALUE(actual, ... /*message*/)                 \
+	assertTrue(                                                   \
+		tester::detail::hasValue(actual),                         \
+		base::strConcat(                                          \
+			"Expected a value:\n\t\tIn line ",                    \
+			__LINE__,                                             \
+			": ",                                                 \
+			#actual,                                              \
+			" holds no value" __VA_OPT__(, "\n\t\t", __VA_ARGS__) \
+		)                                                         \
+	)
 
-#define ASSERT_NO_VALUE(actual) ASSERT_EQUAL(false, tester::detail::hasValue(actual))
+/**
+ * @brief Asserts that `actual` holds no value. Accepts anything with `has_value()`, `hasValue()`,
+ * `->has_value()` or `->hasValue()`.
+ *
+ * Everything after `actual` is an optional message, concatenated the way `strConcat` does it and
+ * appended to the diagnostic.
+ */
+#define ASSERT_NO_VALUE(actual, ... /*message*/)                 \
+	assertFalse(                                                 \
+		tester::detail::hasValue(actual),                        \
+		base::strConcat(                                         \
+			"Expected no value:\n\t\tIn line ",                  \
+			__LINE__,                                            \
+			": ",                                                \
+			#actual,                                             \
+			" holds a value" __VA_OPT__(, "\n\t\t", __VA_ARGS__) \
+		)                                                        \
+	)
+
+/**
+ * @brief Asserts that the variant `value` holds one of the listed alternatives.
+ * Same semantics as `v_matches`, so any number of types may be listed.
+ *
+ * Use instead of `ASSERT_TRUE(std::holds_alternative<T>(v))`.
+ */
+#define ASSERT_MATCHES(value, ... /*types*/)                                  \
+	assertTrue(                                                               \
+		v_matches(value, __VA_ARGS__),                                        \
+		base::strConcat(                                                      \
+			"Variant holds none of the expected alternatives:\n\t\tIn line ", \
+			__LINE__,                                                         \
+			": ",                                                             \
+			#value,                                                           \
+			" does not match ",                                               \
+			#__VA_ARGS__                                                      \
+		)                                                                     \
+	)
+
+/**
+ * @brief `ASSERT_MATCHES` with `message` appended to the diagnostic.
+ */
+#define ASSERT_MATCHES_MSG(value, message, ... /*types*/)                     \
+	assertTrue(                                                               \
+		v_matches(value, __VA_ARGS__),                                        \
+		base::strConcat(                                                      \
+			"Variant holds none of the expected alternatives:\n\t\tIn line ", \
+			__LINE__,                                                         \
+			": ",                                                             \
+			#value,                                                           \
+			" does not match ",                                               \
+			#__VA_ARGS__,                                                     \
+			"\n\t\t",                                                         \
+			message                                                           \
+		)                                                                     \
+	)
+
+/**
+ * @brief Asserts that the variant `value` holds none of the listed alternatives.
+ * Same semantics as `v_matches`, so any number of types may be listed.
+ *
+ * Use instead of `ASSERT_EQUAL(false, std::holds_alternative<T>(v))`.
+ */
+#define ASSERT_NOT_MATCHES(value, ... /*types*/)                      \
+	assertFalse(                                                      \
+		v_matches(value, __VA_ARGS__),                                \
+		base::strConcat(                                              \
+			"Variant holds an unexpected alternative:\n\t\tIn line ", \
+			__LINE__,                                                 \
+			": ",                                                     \
+			#value,                                                   \
+			" matches ",                                              \
+			#__VA_ARGS__                                              \
+		)                                                             \
+	)
+
+/**
+ * @brief `ASSERT_NOT_MATCHES` with `message` appended to the diagnostic.
+ */
+#define ASSERT_NOT_MATCHES_MSG(value, message, ... /*types*/)         \
+	assertFalse(                                                      \
+		v_matches(value, __VA_ARGS__),                                \
+		base::strConcat(                                              \
+			"Variant holds an unexpected alternative:\n\t\tIn line ", \
+			__LINE__,                                                 \
+			": ",                                                     \
+			#value,                                                   \
+			" matches ",                                              \
+			#__VA_ARGS__,                                             \
+			"\n\t\t",                                                 \
+			message                                                   \
+		)                                                             \
+	)
 
 
 class SimpleTesterTest;

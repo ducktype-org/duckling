@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "comp_time.hpp"
 
 #include <ctv/ctv.hpp>
@@ -11,7 +17,6 @@
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
@@ -41,30 +46,6 @@
 
 namespace compiler::helios {
 	using namespace ctv;
-
-	// Integer exponentiation with deterministic two's-complement wraparound.
-	// std::pow routes through double and the out-of-range float->int cast is UB:
-	// x86 wraps, arm64 saturates. Comptime relies on wrapping (e.g. `2 ** 31 - 1`),
-	// so compute it via modular unsigned arithmetic instead.
-	template<std::integral IntT>
-	IntT comptimeIntPow(IntT base, IntT exp) {
-		// A negative exponent truncates toward zero: only |base| == 1 survives.
-		if constexpr (std::is_signed_v<IntT>) {
-			if (exp < 0) {
-				if (base != 1 && base != -1) return 0;
-				return exp % 2 == 0 ? IntT{ 1 } : base;
-			}
-		}
-		// Square-and-multiply mod 2^64. Signed values sign-extend, which preserves
-		// congruence mod 2^N, so the final truncation is the exact wrapped result.
-		u64  result = 1;
-		auto b      = static_cast<u64>(base);
-		for (auto e = static_cast<u64>(exp); e != 0; e /= 2) {
-			if (e % 2 == 1) result *= b;
-			b *= b;
-		}
-		return static_cast<IntT>(result);
-	}
 
 	struct IMPLEMENT_QUERY(QueryEvaluateHOUTExpression, CompTimeEvalResult) {
 		/**
@@ -280,8 +261,9 @@ namespace compiler::helios {
 					result                = const_val_result.valueOrThrow();
 				} else if (kind(expr.symbol) == SymbolKind::Class) {
 					// Special case for type definitions.
-					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->valueOrThrow();
+					result = tsh::SymbolType<>::withDefaults(
+						ctx.query<tsh::QueryClassType>({ expr.symbol })
+					);
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
@@ -468,16 +450,6 @@ namespace compiler::helios {
 											set_num_result(lhs_val % rhs_val);
 										else
 											set_num_result(std::fmod(lhs_val, rhs_val));
-										break;
-									case IntegerPow:
-									case FloatPow:
-										if constexpr (std::is_integral_v<ResultT>)
-											set_num_result(comptimeIntPow<ResultT>(lhs_val, rhs_val)
-									        );
-										else
-											set_num_result(
-												static_cast<ResultT>(std::pow(lhs_val, rhs_val))
-											);
 										break;
 									default:
 										ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(

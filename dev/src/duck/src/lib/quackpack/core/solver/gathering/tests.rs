@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -12,7 +18,7 @@ use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
+use crate::quackpack::core::{FeatureName, PackageId, Source, Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -566,20 +572,16 @@ dependencies:
     assert_eq!(
         packages,
         gathered_info
-            .gathered_manifests
+            .packages_data
             .keys()
             .copied()
             .collect::<HashSet<PackageId>>()
     );
-    assert_eq!(
-        packages,
-        gathered_info
-            .possible_features
-            .keys()
-            .copied()
-            .collect::<HashSet<PackageId>>()
-    );
-    for (_, features) in gathered_info.possible_features {
+    for features in gathered_info
+        .packages_data
+        .values()
+        .map(|data| &data.requested_features)
+    {
         assert!(features.is_empty());
     }
     assert_eq!(
@@ -705,7 +707,11 @@ features:
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (
                 PackageId::new(identity_root, root_version),
@@ -791,7 +797,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (
@@ -856,7 +866,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (
@@ -922,7 +936,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (

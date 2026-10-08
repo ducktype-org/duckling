@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 #include <nlohmann/json.hpp>
 
@@ -36,15 +42,15 @@ namespace dap {
 		[[nodiscard]] virtual nlohmann::json getBody() const { return {}; }
 	};
 
-	struct InitializedEvent: public Event {
+	struct InitializedEvent final: public Event {
 		[[nodiscard]] EventType getType() const override { return EventType::Initialized; }
 	};
 
-	struct TerminatedEvent: public Event {
+	struct TerminatedEvent final: public Event {
 		[[nodiscard]] EventType getType() const override { return EventType::Terminated; }
 	};
 
-	struct ExitedEvent: public Event {
+	struct ExitedEvent final: public Event {
 		int64_t exitCode;  // NOLINT(readability-identifier-naming)
 
 		explicit ExitedEvent(int64_t code): exitCode(code) {}
@@ -60,7 +66,7 @@ namespace dap {
 
 	inline nlohmann::json ExitedEvent::getBody() const { return *this; }
 
-	struct StoppedEvent: public Event {
+	struct StoppedEvent final: public Event {
 		std::string reason;
 		uint64_t    threadId;                  // NOLINT(readability-identifier-naming)
 		bool        allThreadsStopped = true;  // NOLINT(readability-identifier-naming)
@@ -81,7 +87,7 @@ namespace dap {
 
 	inline nlohmann::json StoppedEvent::getBody() const { return *this; }
 
-	struct Breakpoint {
+	struct Breakpoint final {
 		bool                       verified;
 		std::optional<uint64_t>    line;
 		std::optional<std::string> message;
@@ -96,7 +102,7 @@ namespace dap {
 		}
 	};
 
-	struct BreakpointEvent: public Event {
+	struct BreakpointEvent final: public Event {
 		std::string reason;
 		Breakpoint  breakpoint;
 
@@ -113,7 +119,7 @@ namespace dap {
 		}
 	};
 
-	struct OutputEvent: public Event {
+	struct OutputEvent final: public Event {
 		std::string output;
 		std::string category = "stdout";
 

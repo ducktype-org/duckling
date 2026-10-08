@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
 use super::{registry_url_hash, setup_mock_storage};
@@ -5,14 +11,14 @@ use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
+use crate::quackpack::core::storage::freeze::{DepIdWithAlias, FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::tests::{
     create_mock_package_at_tmpdir, create_mock_package_with_deps_at_tmpdir,
 };
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::storage::{self, StorageSyncOptions, ops};
+use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
 use crate::quackpack::core::{PackageLoader, Version};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -293,7 +299,13 @@ fn save_trims_files() {
 fn sync() {
     let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -372,7 +384,13 @@ fn sync_overwrite_success() {
     // Create a second package at a different directory.
     let (root2, pcx2) = create_mock_package_at_tmpdir(&ctx, "my-package");
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx2,
         StorageSyncOptions {
             overwrite: true,
@@ -440,7 +458,13 @@ fn can_sync_after_clean() {
 
     storage::ops::delete_venv(&ctx, &storage_root, "my-package").unwrap();
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx2,
         StorageSyncOptions {
             overwrite: false,
@@ -468,17 +492,23 @@ fn sync_with_deps() {
     let (mut ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
 
-    let mock_simple_identity = |name: &str| {
+    let mock_simple_dep_identity = |name: &str| {
         let path = root.path().join(name).normalize();
         let simple_origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), simple_origin)
+        DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
         let path = root.path().join(name).normalize();
         let origin = FullOrigin::for_local(&path).unwrap();
         FullIdentity::new(name.into(), origin)
     };
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -497,7 +527,10 @@ fn sync_with_deps() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
+    assert_eq!(
+        root_package.dependencies(),
+        [mock_simple_dep_identity("dep")],
+    );
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
@@ -513,10 +546,10 @@ fn sync_with_deps() {
 fn sync_with_deps_and_expose_freezefile() {
     let (mut ctx, _home, storage_root) = setup_mock_storage();
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
-    let mock_simple_identity = |name: &str| {
+    let mock_simple_dep_identity = |name: &str| {
         let path = root.path().join(name).normalize();
         let simple_origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), simple_origin)
+        DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
         let path = root.path().join(name).normalize();
@@ -533,7 +566,13 @@ fn sync_with_deps_and_expose_freezefile() {
     // Reload venv config changes
     let pcx = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -552,7 +591,10 @@ fn sync_with_deps_and_expose_freezefile() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
+    assert_eq!(
+        root_package.dependencies(),
+        [mock_simple_dep_identity("dep")],
+    );
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(

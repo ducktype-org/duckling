@@ -1,8 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "symbol_data.hpp"
 
 #include <helios/scope_id.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -87,6 +91,10 @@ namespace compiler::helios {
 			  value(std::move(value)),
 			  scope(scope) {}
 
+		base::Bit256 Module::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(module_id.queryUnstablePerfectHash());
+		}
+
 		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher;
 			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
@@ -112,10 +120,17 @@ namespace compiler::helios {
 		return { std::move(common_data), pst_data };
 	}
 
+	SymbolData SymbolData::makeClassMemberSymbolData(
+		CommonSymbolData common_data, ClassMemberSemantics class_member_data
+	) {
+		return { std::move(common_data), class_member_data };
+	}
+
 	SymbolData SymbolData::makeGeneratedSymbolData(
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
 		SymbolKind kind{};
+		bool       ignored_by_lookup = false;
 		variant_match(generated_data) {
 			variant_case_novalue(defgen::BuiltinOperator) {
 				kind = SymbolKind::FunctionDeclaration;
@@ -137,21 +152,23 @@ namespace compiler::helios {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::Field) { kind = SymbolKind::Field; }
-			variant_case_novalue(
-				defgen::GeneratedFunctionVariable,
-				defgen::ControlFlowLocal,
-				defgen::ReplEmptyVariable
-			) {
+			variant_case_novalue(defgen::ControlFlowLocal) {
+				kind              = SymbolKind::Variable;
+				ignored_by_lookup = true;
+			}
+			variant_case_novalue(defgen::GeneratedFunctionVariable, defgen::ReplEmptyVariable) {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
+			variant_case_novalue(defgen::Module) { kind = SymbolKind::Module; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 
 		return {
 			{
-				.name = name,
-				.kind = kind,
+				.name                 = name,
+				.kind                 = kind,
+				.is_ignored_by_lookup = ignored_by_lookup,
 			},
 			std::visit(
 				[](auto&& x) -> SymbolData::SymbolSemantics { return std::forward<decltype(x)>(x); },
@@ -164,6 +181,7 @@ namespace compiler::helios {
 		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
+			variant_case(ClassMemberSemantics, member_data) { return member_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
@@ -174,9 +192,15 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
+	bool SymbolData::isPstImplemented() const {
+		return std::holds_alternative<PstImplementedSemantics>(other)
+		    or std::holds_alternative<ClassMemberSemantics>(other);
+	}
+
 	base::Optional<pst::AccessLocked<pst::LangElement>> SymbolData::maybePstElement() const {
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, data) { return data.getElement(); }
+			variant_case(ClassMemberSemantics, data) { return data.getElement(); }
 			variant_case(BuiltinSemantics, data) { return data.getElement(); }
 			variant_default { return {}; }
 		}

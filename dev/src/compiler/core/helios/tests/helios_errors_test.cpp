@@ -1,18 +1,28 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/errors.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
@@ -34,7 +44,9 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -47,11 +59,15 @@ public:
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
-
+		TESTER_ADD_TEST(testManglingErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
+		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
+		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 	}
 
 protected:
@@ -65,29 +81,17 @@ protected:
 private:
 	/**
 	 * @brief Helper function that check for HELIOS compilation
-	 * errors in a module with given content, when compiling it to HOUT module.
+	 * errors.
 	 *
-	 * It creates a virtual file from the `module_content` argument
-	 * and creates a module tree from it every function call.
 	 * The `present_phrases` are checked to be present in the logged
 	 * error messages in the given order.
 	 *
 	 * @TODO: #2213 Add PST errors handling here.
 	 *
-	 * @param module_content The content of the module main source file.
 	 * @param logged_msg_count Expected number of logged error messages.
 	 * @param present_phrases List of phrases that should be present in the logged errors in order.
 	 */
-	void checkForErrorOnCompileModule(
-		std::string_view                     module_content,
-		const std::vector<std::string_view>& present_phrases,
-		u64                                  logged_msg_count
-	) {
-		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
-
-		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
-
-		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+	void checkForError(const std::vector<std::string_view>& present_phrases, u64 logged_msg_count) {
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
 		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
@@ -114,6 +118,36 @@ private:
 			);
 			if (found_pos != std::string::npos) current_pos = found_pos + phrase.length();
 		}
+	}
+
+	/**
+	 * @brief Helper function that check for HELIOS compilation
+	 * errors in a module with given content, when compiling it to HOUT module.
+	 *
+	 * It creates a virtual file from the `module_content` argument
+	 * and creates a module tree from it every function call.
+	 * The `present_phrases` are checked to be present in the logged
+	 * error messages in the given order.
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
+	 * @param module_content The content of the module main source file.
+	 * @param logged_msg_count Expected number of logged error messages.
+	 * @param present_phrases List of phrases that should be present in the logged errors in order.
+	 */
+	void checkForErrorOnCompileModule(
+		std::string_view                     module_content,
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count,
+		bool                                 expect_failure = true
+	) {
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
+		if (expect_failure)
+			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+		checkForError(present_phrases, logged_msg_count);
 	}
 
 	/**
@@ -153,6 +187,51 @@ private:
 				}
 			)",
 				{ "Call failed because no matching functions were found." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun +(rhs: Number) -> Number = {
+                        return Number(self.val + rhs.val);
+                    }
+                }
+
+                fun +(lhs: Number, rhs: Number) -> Number = {
+                    return Number(lhs.val + rhs.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let b = Number(20);
+                    let c = a + b;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun -() -> Number = {
+                        return Number(-self.val);
+                    }
+                }
+
+                fun -(n: Number) -> Number = {
+                    return Number(-n.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let c = -a;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
 				1
 			);
 		}
@@ -421,21 +500,6 @@ private:
 			      "object being copied." },
 				1
 			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
-				class MyClass {
-					x:i64 = 0;
-
-					MyClass.abc(a: i64) = {
-						return MyClass(1);
-					}
-				}
-			)",
-				{ "User-defined constructors are not yet supported" },
-				1
-			);
 		}
 
 		// ============================ Typecheck errors ============================
@@ -467,6 +531,29 @@ private:
 				}
 			)",
 				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					let x: i64 = 0;
+					x += 1;
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x: i32 = 0;
+					var y: i64 = 1;
+					x += y;
+				}
+			)",
+				{ "Type `i64` cannot be converted to type `i32`." },
 				1
 			);
 
@@ -538,6 +625,23 @@ private:
 				1
 			);
 
+			// `void` is uninhabited, so a function returning it must never return. Reaching the
+			// end of the body contradicts that, and the error says which annotation was meant.
+			checkForErrorOnCompileModule(
+				R"(
+				fun neverReturns() -> void = {
+					if (true) return neverReturns();
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+				{ "has return type `void`, so it must never return, "
+			      "but it can reach the end of its body" },
+				1
+			);
+
 			checkForErrorOnCompileModule(
 				R"(
 					fun main() = {
@@ -595,6 +699,17 @@ private:
 				fun main() = {
 					if Loop <= 1 { # no parenthesis around condition
 					
+					}
+				}
+			)",
+			{},
+			0
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					while true { # no parenthesis around condition
 					}
 				}
 			)",
@@ -745,6 +860,15 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
+
+			// @TODO: #2104 Uncomment when operation assignment operators properly handle
+			// mutability. checkForErrorOnCompileModule( 	R"( 	fun main() -> i64 = { 		let
+			// x: i64 = 1; 		x += 123;
+			// 	}
+			// )",
+			// 	{ "Left side of assignment can't be immutable." },
+			// 	1
+			// );
 		}
 
 		// ============================ Variant errors ============================
@@ -773,24 +897,140 @@ private:
 				1
 			);
 
+			// ============================ Match errors ============================
+			//
+			// `Holder` owns a box, which makes it - and every variant listing it - non-trivially
+			// copyable and non-trivially destructible. Matching such a variant by value takes
+			// its ownership, which is what the cases then have to account for.
+			constexpr std::string_view HOLDER = "class Holder { p: box i32; }\n";
+
+			// A match over a borrowed variant: the payloads stay owned by the subject.
+			const auto check_ref_match_error
+				= [&](std::string_view body, const std::vector<std::string_view>& phrases) {
+					  checkForErrorOnCompileModule(
+						  base::strConcat(
+							  HOLDER,
+							  "fun main(v: ref (Holder | f32)) -> i64 = { var r: i64 = ",
+							  body,
+							  " return r; }"
+						  ),
+						  phrases,
+						  1
+					  );
+				  };
+
+			// A match that owns its subject: every payload has to be moved out of the variant.
+			const auto check_owning_match_error
+				= [&](std::string_view body, const std::vector<std::string_view>& phrases) {
+					  checkForErrorOnCompileModule(
+						  base::strConcat(
+							  HOLDER,
+							  "fun main(v: Holder | f32) -> i64 = { var r: i64 = ",
+							  body,
+							  " return r; }"
+						  ),
+						  phrases,
+						  1
+					  );
+				  };
+
+			// Only variants can be matched, and never through a box.
+			checkForErrorOnCompileModule(
+				"fun main(v: i64) -> i64 = { var r: i64 = match (v) { case _ = 0i64; }; return r; "
+				"}",
+				{ "`match` on a non-variant type. Got `i64`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				base::strConcat(
+					HOLDER,
+					"fun main(v: box (Holder | f32)) -> i64 = "
+					"{ var r: i64 = match (v) { case _ = 0i64; }; return r; }"
+				),
+				{ "`match` cannot look through a box. Got `box Variant (Class Holder, f32)`." },
+				1
+			);
+
+			// A borrowing case cannot bind a box payload.
+			check_ref_match_error(
+				"match (v) { case b : box Holder = 1i64; case _ = 0i64; };",
+				{ "This `match` only borrows its subject, so a case cannot take a `box` payload "
+			      "out of it." }
+			);
+
+			// The constraint has to name one of the alternatives.
+			check_ref_match_error(
+				"match (v) { case x : i64 = 1i64; case _ = 0i64; };",
+				{ "Failed to find the alternative of the variant for `i64" }
+			);
+
+			// Alternatives are told apart by their underlying type, so `f32` and `ref f32` name
+			// the same one.
+			check_ref_match_error(
+				"match (v) { case x : f32 = 1i64; case y : ref f32 = 2i64; case _ = 0i64; };",
+				{ "Alternative `ref f32` is matched by more than one case." }
+			);
+
+			// The subject is only borrowed, so an owning payload cannot be bound by value.
+			check_ref_match_error(
+				"match (v) { case x : Holder = 1i64; case _ = 0i64; };",
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class Holder` "
+			      "out of `ref Class Holder`" }
+			);
+
+			// Matching by value takes the variant's ownership, so it has to be given up
+			// explicitly.
+			check_owning_match_error(
+				"match (v) { case x : Holder = 1i64; case y : f32 = 0i64; };",
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Variant (Class "
+			      "Holder, f32)`" }
+			);
+
+			// The payload is moved out of the variant and into the case, so a case of an owning
+			// match cannot borrow it.
+			check_owning_match_error(
+				"match (move v) { case x : ref Holder = 1i64; case y : f32 = 0i64; };",
+				{ "Failed to find the alternative of the variant for `ref Class Holder`",
+			      "The type has to match exactly the variant alternative." }
+			);
+
+			// A wildcard binds nothing, so the payloads it covers would never be destroyed.
+			check_owning_match_error(
+				"match (move v) { case _ = 0i64; };",
+				{ "A bare `case _` binds nothing, so the payload it covers would never be "
+			      "destroyed, "
+			      "and the alternative `Class Holder` it covers has a destructor." }
+			);
+
+			// Every case yields the match's value, so they all have to agree on its type, and
+			// the cases together have to cover the variant.
+			check_ref_match_error(
+				"match (v) { case x : ref Holder = 1i64; case y : f32 = 1i32; };",
+				{ "All `match` cases have to be of the same type" }
+			);
+			check_ref_match_error(
+				"match (v) { case x : f32 = 1i64; };",
+				{ "`match` is not exhaustive: it covers 1 of 2 alternatives" }
+			);
+
+			// A binding needs a type constraint to know which alternative it names.
+			check_ref_match_error(
+				"match (v) { case x = 0i64; };",
+				{ "Match pattern bindings without a type constraint" }
+			);
 			checkForErrorOnCompileModule(
 				R"(
-				class Holder {
-					p: box i32;
-				}
-
 				fun main() -> i64 = {
-					var v: Holder | f32 = Holder(new 1i32);
+					var v: i32 | f32 = 1i32;
 					var r: i64 = match (v) {
-						case x : Holder = 1i64;
-						case _ = -1i64;
+						case x : i32 = x;
+						case _ = 1i64;
 					};
 					return 0i64;
 				}
 			)",
-				{ "Alternative `Class Holder` cannot be bound by value because it is not "
-			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
-			      "Holder`." },
+				{ "All `match` cases have to be of the same type,"
+			      " but this one is `i64` while an earlier one is `i32`." },
 				1
 			);
 		}
@@ -925,18 +1165,6 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-					var a: i64 = 0;
-					a += 1;
-					return a;
-				}
-			)",
-				{ "Feature not implemented" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
 				class A { x: i64 = 0; }
 				const a = A();
 
@@ -1058,7 +1286,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{};
+					N[];
 					return 0;
 				}
 
@@ -1195,6 +1423,182 @@ private:
 				1
 			);
 		}
+	}
+
+	/**
+	 * @brief Errors of the members of a class: their specifiers, their visibility and the names
+	 * that a class does not declare at all.
+	 */
+	void testClassErrors() {
+		// ==================== Duplicated member specifiers ====================
+		{
+			// A member carries at most one visibility specifier.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public private x: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class visibility specifier is duplicated with another one." },
+				1,
+				false
+			);
+
+			// A member is either global or not, so `global` cannot be repeated either.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public global global y: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class global specifier is duplicated with another one." },
+				1,
+				false
+			);
+		}
+
+		// ==================== Members hidden by their visibility ====================
+		{
+			// Reached through the type, which is the path that reports the declaration as well.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private global hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.hidden;
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here.", "Found declaration:" },
+				1
+			);
+
+			// Reached through a value of the type.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1, 2);
+						var x: i64 = c.hidden;
+						return 0;
+					} )",
+				// The access through a value does not point at the declaration yet.
+				{ "Accessed value is not visible from here." },
+				1
+			);
+
+			// A protected member is hidden from a class that does not inherit from the declaring
+			// one.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						protected shared: i64 = 2;
+					}
+					class Unrelated {
+						public other: i64 = 3;
+
+						public fun reach(c: const ref C) -> i64 = {
+							var x: i64 = c.shared;
+							return 0;
+						}
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here." },
+				1
+			);
+		}
+
+		// ==================== Names a class does not declare ====================
+		{
+			// A field reached through a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope;
+						return 0;
+					} )",
+				{ "Accessed value not found." },
+				1
+			);
+
+			// A static field reached through the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						public global s: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope;
+						return 0;
+					} )",
+				{ "Symbol 'nope' not found in lookup" },
+				1
+			);
+
+			// A static method called on the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public global fun sm() -> i64 = {
+							return 2;
+						}
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
+
+			// A method called on a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public fun m() -> i64 = {
+							return v;
+						}
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
+		}
+	}
+
+	void testMainReturnErrors() {
+		checkForErrorOnCompileModule(
+			R"(fun main() -> i32 = { return 0; })", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> () = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> ref i64 = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return; })", { "return` without a value", "i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return "bad"; })",
+			{ "slice char", "cannot be converted to type `i64`" },
+			1
+		);
 	}
 
 	void testCopyabilityErrors() {
@@ -1492,6 +1896,28 @@ private:
 			{ "cycle" },
 			1
 		);
+
+		// Two namespaces re-exporting each other: looking a name up in `A` follows `using B.*;`
+		// into `B`, which follows `using A.*;` straight back. Non-wildcard selectors are settled
+		// by the name they declare, so only wildcards can loop like this.
+		// @TODO: #2615 report this in terms of the usings involved, not of query nodes.
+		checkForErrorOnCompileModule(
+			R"(
+				namespace A {
+					using B.*;
+					const IN_A: i64 = 1;
+				}
+
+				namespace B {
+					using A.*;
+					const IN_B: i64 = 2;
+				}
+
+				const V: i64 = A.IN_B;
+			)",
+			{ "cycle" },
+			1
+		);
 	}
 
 	void testErrorLoggingTemplates() {
@@ -1507,7 +1933,7 @@ private:
 				}
 
 				fun main() = {
-					foo:{1}();
+					foo[1]();
 				}
 			)",
 			{ "Symbol 'b' not found in lookup" },
@@ -1522,7 +1948,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{1, 2, 3};
+					N[1, 2, 3];
 					return 0;
 				}
 
@@ -1537,7 +1963,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{i64};
+					N[i64];
 					return 0;
 				}
 
@@ -1552,7 +1978,7 @@ private:
 				namespace N { }
 
 				fun main() -> i64 = {
-					N:{a};
+					N[a];
 					return 0;
 				}
 
@@ -1561,19 +1987,20 @@ private:
 			1
 		);
 
-		// ============================ Non template bake ============================
+		// ============================ Square call on a non-template ============================
 
+		// `[]` on a value that is not a template is an index, not a bake.
 		checkForErrorOnCompileModule(
 			R"(
 				const a = 1;
 
 				fun main() -> i64 = {
-					a:{1};
+					a[1];
 					return 0;
 				}
 
 			)",
-			{ "non-template" },
+			{ "Index operator base must be indexable." },
 			1
 		);
 
@@ -1590,6 +2017,22 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N[a = 1];
+					return 0;
+				}
+
+			)",
+			{ "Feature not implemented" },
 			1
 		);
 	}
@@ -1899,6 +2342,41 @@ private:
 		}
 	}
 
+	void testManglingErrors() {
+		using namespace compiler::helios;
+		constexpr char PRINTABLE     = '@';
+		constexpr char NON_PRINTABLE = '\x07f';
+
+		const auto [_, root_scope_prt] = test_utils::getModule(fs::File(
+			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
+		));
+		const auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
+
+		// note: `Delete` is not-printable on win/linux/mac but it's allowed in filenames
+		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
+		const auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
+			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
+		)));
+		std::ignore                         = dummy;  // @todo: #761 replace `dummy` with `_`
+		const auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_prt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: '@' (int: 64)" },
+				1
+			);
+
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_nprt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: [not-printable] (int: 127)" },
+				1
+			);
+		});
+	}
+
 	void testErrorBadExpr() {
 		using namespace compiler::helios;
 
@@ -2025,6 +2503,112 @@ private:
 		});
 	}
 
+	/**
+	 * An `InteractiveType` made from the PST of a type expression names the type the way the
+	 * user wrote it, here the `using ... as` alias `Q`, and not the class it resolves to.
+	 */
+	void testInteractiveTypeKeepsWrittenAliasName() {
+		using namespace helios;
+		using namespace helios::code;
+
+		auto module_id = frontend::createModuleTreeFromContents(R"(
+			namespace N {
+				class Point { x: i64; }
+			}
+			using N.Point as P;
+			using P as Q;
+			var v: Q;
+		)");
+		auto scope     = test_utils::getModuleScope(module_id);
+		auto v_sym     = test_utils::getChain("v", scope).back();
+		auto v_type    = test_utils::getSymbolTypeOf("v", scope);
+
+		std::stringstream written;
+		std::stringstream resolved;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto variable = maybeSymbolPst(v_sym).value().unlock(ctx).dynamicCast<pst::Variable>();
+			assertTrue(variable.has_value(), "Expected `v` to be declared by a variable.");
+			auto type_expr = variable.value()->getType().value().unlock(ctx)->getExpr().unlock(ctx);
+
+			dia::testDiagnosticMessage<UndefinedUnaryOperatorError>(
+				written,
+				dia::StablePosition::fakePosition(),
+				"-",
+				makeBox<InteractiveType>(ctx, v_type, type_expr)
+			);
+			dia::testDiagnosticMessage<UndefinedUnaryOperatorError>(
+				resolved,
+				dia::StablePosition::fakePosition(),
+				"-",
+				makeBox<InteractiveType>(ctx, v_type)
+			);
+		});
+
+		assertTrue(
+			written.str().contains("for type `Q`"),
+			"Expected the written alias name `Q`:\n" + written.str()
+		);
+		assertTrue(
+			!resolved.str().contains("for type `Q`"),
+			"Expected the resolved type without a PST expression:\n" + resolved.str()
+		);
+	}
+
+	/**
+	 * `using` / `import` forms that already parse but are not compiled yet must say so, instead
+	 * of silently compiling only a part of the statement.
+	 */
+	void testUnsupportedSelectorErrors() {
+		// Drop what the earlier tests left in the logger, so each case counts only its own error.
+		query::Context::dumpToOneLoggerAndClear();
+
+		constexpr std::string_view NAMESPACE = R"(
+			namespace N {
+				const a = 1;
+				const b = 2;
+			}
+		)";
+
+		const std::vector<std::pair<std::string_view, std::string_view>> cases = {
+			{ "using N.* hides a;", "`hides` in `using` is not supported yet." },
+			{ "using N.* hides {a, b};", "`hides` in `using` is not supported yet." },
+			{ "using N.{a};", "A nested selector list in `using` is not supported yet." },
+			{ "using N.a, N.b;", "More than one selector in `using` is not supported yet." },
+			{ "import N.* hides a;", "`hides` in `import` is not supported yet." },
+			{ "import N.{a, b};", "A nested selector list in `import` is not supported yet." },
+			{ "import N.a, N.b;", "More than one selector in `import` is not supported yet." },
+		};
+
+		for (const auto& [statement, message]: cases)
+			checkForErrorOnCompileModule(
+				base::strConcat(NAMESPACE, statement), { message }, 1, false
+			);
+	}
+
+	void testWildcardNamesInSelectorPaths() {
+		checkForErrorOnCompileModule(
+			R"(
+				namespace N {
+					namespace M {
+						const C: i64 = 7;
+					}
+				}
+
+				using N.*;
+
+				# `M` is in scope here, so ordinary code may name it.
+				const DIRECT: i64 = M.C;
+
+				# ...but the path of a selector may not, so this one cannot be resolved.
+				using M.C;
+
+				const VIA_USING: i64 = C;
+			)",
+			{ "Symbol 'M' not found in lookup" },
+			1
+		);
+	}
+
 	void testDuplicatedDefinitions() {
 		// Duplicated function.
 		checkForErrorOnCompileModule(
@@ -2080,6 +2664,50 @@ private:
             )",
 			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
 			2
+		);
+	}
+
+	/**
+	 * @brief Tests the argument checks of `@c_symbol_name("<name>")`: it takes exactly one string
+	 * literal, which must be a valid C identifier, and only goes on a `fundecl`.
+	 */
+	void testCSymbolNameAttributeErrors() {
+		constexpr std::string_view EXPECTS_ONE_STRING
+			= "Attribute 'c_symbol_name' expects exactly one string literal argument.";
+
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name fundecl f(a: i64) -> i64; })", { EXPECTS_ONE_STRING }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name() fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name("a", "b") fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(extern("C") { @c_symbol_name(1) fundecl f(a: i64) -> i64; })",
+			{ EXPECTS_ONE_STRING },
+			1
+		);
+
+		for (std::string_view bad_name: { "", "1abc", "a-b", "a b" }) {
+			auto module = base::strConcat(
+				R"(extern("C") { @c_symbol_name(")", bad_name, R"(") fundecl f(a: i64) -> i64; })"
+			);
+			auto message = base::strConcat(
+				"Attribute 'c_symbol_name' expects a valid C identifier, got '", bad_name, "'."
+			);
+			checkForErrorOnCompileModule(module, { message }, 1);
+		}
+
+		checkForErrorOnCompileModule(
+			R"(@c_symbol_name("f") fun f() -> i64 = 0;)",
+			{ "Attribute is not supported on this type of statement" },
+			1
 		);
 	}
 

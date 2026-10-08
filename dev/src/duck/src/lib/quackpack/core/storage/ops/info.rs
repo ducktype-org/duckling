@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Querying a storage's data.
 use std::collections::HashMap;
 use std::path::Path;
@@ -58,7 +64,7 @@ pub fn display_venv_info(ctx: &DuckContext, venv: Venv) -> QuackResult<()> {
     let last_synchronization_string = last_synchronization_date
         .format("%Y-%m-%d %H:%M:%S")
         .to_string();
-    ctx.console().print(format!(
+    ctx.print(format!(
         "{}:
   last-location: {}
   last-access: {}

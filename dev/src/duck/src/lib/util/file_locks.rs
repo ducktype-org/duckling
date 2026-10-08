@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! General file lock support in QuackPack.
 use std::fs::{File, OpenOptions, TryLockError};
 use std::io::{self, Read, Seek, Write};
@@ -280,7 +286,6 @@ fn lock(
         return Ok(());
     }
     debug!(path = %path.display(), "locking blocking");
-    ctx.console()
-        .info(format!("waiting for file lock `{}`", path.display()))?;
+    ctx.info(format!("waiting for file lock `{}`", path.display()))?;
     blocking().with_context(|| format!("failed to lock `{}`", path.display()))
 }

@@ -1,10 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::solver::solving::FoundSolution;
-use crate::quackpack::core::{FeatureName, Manifest, PackageId};
+use crate::quackpack::core::{FeatureName, Manifest, PackageId, Selector};
 use crate::util::extend::QpExtend;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
@@ -99,14 +105,15 @@ impl SolverFreeze {
         let Some(base_manifest) = manifests.get(&base_pkg) else {
             qp_bail_internal!("freeze package `{base_pkg:?}` without a manifest: {manifests:#?}")
         };
-        let base_pkg_features = self.current_pkg_features(new_pkg_freezes, base_pkg)?;
+        let base_pkg_features = self
+            .current_pkg_features(new_pkg_freezes, base_pkg)?
+            .clone();
         debug!(?base_pkg);
 
-        for dependency in base_manifest.dependencies().all_dependencies() {
-            if !dependency.is_enabled_for(base_pkg_features.clone()) {
-                debug!(dep = %dependency.name(), root = ?base_pkg, root_features = ?base_pkg_features, "is not enabled");
-                continue;
-            }
+        for dependency in base_manifest
+            .dependencies()
+            .select(&Selector::EnabledBy(&base_pkg_features))
+        {
             let dep_name = dependency.effective_name();
             let realization = self.get_realization(base_pkg, dep_name)?;
             let Some(dep_manifest) = manifests.get(&realization) else {
@@ -115,7 +122,7 @@ impl SolverFreeze {
                 )
             };
             Self::add_realization(new_pkg_freezes, base_pkg, dep_name, realization)?;
-            let enabled_features = dependency.enabled_features(base_pkg_features.clone());
+            let enabled_features = dependency.enabled_features(&base_pkg_features);
             let forced_features = dep_manifest
                 .features()
                 .expand_features(enabled_features.iter().copied())
@@ -141,17 +148,17 @@ impl SolverFreeze {
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Finds with what features the package is currently listed in the new package freezes map.
-    fn current_pkg_features(
+    fn current_pkg_features<'a>(
         &self,
-        new_pkg_freezes: &mut HashMap<PackageId, SolverPackageFreeze>,
+        new_pkg_freezes: &'a HashMap<PackageId, SolverPackageFreeze>,
         pkg: PackageId,
-    ) -> QuackResult<Vec<FeatureName>> {
+    ) -> QuackResult<&'a HashSet<FeatureName>> {
         let Some(pkg) = new_pkg_freezes.get(&pkg) else {
             qp_bail_internal!(
                 "current package `{pkg:?}` does not appear in the new package freezes map: {new_pkg_freezes:#?}"
             )
         };
-        Ok(pkg.features.iter().cloned().collect())
+        Ok(&pkg.features)
     }
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].

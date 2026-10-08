@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! [`Fetcher`] manages all network-related clients.
 //!
 //! It incorporates [`DucknestClient`](ducknest::DucknestClient) with
@@ -265,7 +271,7 @@ impl<'duck> Fetcher<'duck> {
         retries: u32,
     ) -> QuackResult<PathBuf> {
         debug!("fetching with retries");
-        self.ctx.console().info(format!(
+        self.ctx.info(format!(
             "starting a download of `{}` version {} from `{}`",
             pkg.name, pkg.version, pkg.url
         ))?;
@@ -282,7 +288,7 @@ impl<'duck> Fetcher<'duck> {
                     if will_retry {
                         debug!(%attempt, "retrying fetch");
                     }
-                    self.ctx.console().warning(format!(
+                    self.ctx.warning(format!(
                         "failed to download `{}` version {} from `{}`: {e}",
                         pkg.name, pkg.version, pkg.url
                     ))?;

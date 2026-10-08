@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! [`Unit`] is supposed to be all information required to invoke a single instance of duckc.
 
 use std::collections::{HashSet, VecDeque};
@@ -10,9 +16,12 @@ use std::sync::Arc;
 
 use self::graph::UnitGraph;
 use self::unit_visitor::{TryUnitVisitor, UnitVisitor};
+use super::BuildContext;
 use super::compiler_package::CompilerPackage;
 use super::duckc::multipackage_schema;
+use crate::quackpack::core::compile::unit_runner::CompilationTarget;
 use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::{AnyPackage, FeatureName};
 use crate::util::hash::sha256_string;
 use crate::{QuackResult, qp_bail_internal};
 
@@ -24,6 +33,8 @@ const STATIC_LIB_SUFFIX: &str = ".a";
 
 // Duckling specific.
 const DVM_SUFFIX: &str = ".dbc";
+
+pub type UnitId = u64;
 
 #[cfg(test)]
 mod tests;
@@ -39,90 +50,97 @@ impl fmt::Debug for Unit {
         let inner = &*self.inner;
         f.debug_struct("Unit")
             .field("unit_id", &inner.unit_id)
-            .field("name", &inner.package.package().name())
-            .field("version", &inner.package.package().version())
+            .field("name", &inner.package.name())
+            .field("version", &inner.package.version())
             .field("identity", &inner.identity)
-            .field("dependencies_by_id", &inner.dependencies_by_id)
-            .field("package_type", &inner.package_type)
+            .field("unit_type", &inner.unit_type)
             .finish()
     }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-/// What type of artifacts a given [`Unit`] produces.
-pub enum ArtifactsType {
-    /// Compile to a binary
-    /// Maps to the `Native` strategy
+/// What this [`Unit`] represents.
+///
+/// Note: Mapping to the [`Strategy`] is done by [`UnitTaskGenerator`].
+///
+/// [`Strategy`]: super::duckc::multipackage_schema::PackageCompilationStrategy
+/// [`UnitTaskGenerator`]: super::unit_task_generator::UnitTaskGenerator
+pub enum UnitType {
+    /// Compile to a binary.
+    /// Maps to the `Native` or `DvmExe` strategy.
     Binary,
-    /// Compile to a library (`.dll`, `.so`, `.a`, etc)
-    /// Maps to the `Native` strategy
+    /// Compile to a library (`.dll`, `.so`, `.a`, etc).
+    /// This type is (still) unsupported.
     Library,
-    /// Compile to a DVM file
-    /// Maps to the `Dvm` strategy
-    Dvm,
-    /// This [`Unit`] is a dependency and can produce only minimal artifacts
-    /// Maps to the `Lib` compilation strategy, and we'll produce only minimal archives:
+    /// This [`Unit`] is a dependency and can produce only minimal artifacts.
+    /// Maps to the `Lib` or `DvmLib` compilation strategy, and will produce only minimal archives:
     /// they might be incomplete, but linker will take care of this (when compiling the root package
     /// with [`Binary`](Self::Binary) or [`Library`](Self::Library) types).
-    IsADependencyArtifact,
+    Dependency,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// How each [`Unit`] should be executed/treated?
+pub enum BuildKind {
+    /// This [`Unit`] should be compiled.
+    Compile,
 }
 
 struct UnitInner {
     /// An internal, but unique identifier.
-    unit_id: u64,
+    unit_id: UnitId,
     /// Which package we're compiling.
-    package: CompilerPackage,
+    package: AnyPackage,
+    /// Enabled features of this [`Unit`].
+    enabled_features: HashSet<FeatureName>,
     /// How have we got this package.
     identity: Identity,
-    /// ID's of all __direct__ dependencies of this [`Unit`].
-    dependencies_by_id: Vec<u64>,
     /// What artifacts should this unit produce.
-    package_type: ArtifactsType,
+    unit_type: UnitType,
+    /// [`BuildKind`] of this [`Unit`].
+    build_kind: BuildKind,
 }
 
 impl Unit {
     /// Create a new [`Unit`].
     pub fn new(
-        unit_id: u64,
+        unit_id: UnitId,
         package: CompilerPackage,
         identity: Identity,
-        dependencies: Vec<u64>,
-        package_type: ArtifactsType,
+        unit_type: UnitType,
+        build_kind: BuildKind,
     ) -> Self {
-        assert!(
-            dependencies.is_sorted(),
-            "dependencies IDs should be sorted: {:?}",
-            dependencies
-        );
+        let (package, enabled_features, _) = package.decompose();
         Self {
             inner: Arc::new(UnitInner {
                 unit_id,
                 package,
+                enabled_features,
                 identity,
-                dependencies_by_id: dependencies,
-                package_type,
+                unit_type,
+                build_kind,
             }),
         }
     }
 
     /// Get the unique ID of this [`Unit`].
-    pub fn unit_id(&self) -> u64 {
+    pub fn unit_id(&self) -> UnitId {
         self.inner.unit_id
     }
 
-    /// Get the root package of this [`Unit`].
-    pub fn root_package(&self) -> &CompilerPackage {
+    /// Get the package of this [`Unit`].
+    pub fn package(&self) -> &AnyPackage {
         &self.inner.package
     }
 
-    /// Get the ID's of all __direct__ dependencies of this [`Unit`].
-    pub fn deps_sorted_by_unit_id(&self) -> &[u64] {
-        &self.inner.dependencies_by_id
+    /// Get the enabled features of this [`Unit`].
+    pub fn enabled_features(&self) -> &HashSet<FeatureName> {
+        &self.inner.enabled_features
     }
 
-    /// Get the type of produced artifacts by this [`Unit`].
-    pub fn artifacts_type(&self) -> ArtifactsType {
-        self.inner.package_type
+    /// Get the type of this [`Unit`].
+    pub fn unit_type(&self) -> UnitType {
+        self.inner.unit_type
     }
 
     /// Get the [`Identity`] of this [`Unit`].
@@ -130,13 +148,18 @@ impl Unit {
         self.inner.identity
     }
 
+    /// Get the [`BuildKind`] of this [`Unit`].
+    pub fn build_kind(&self) -> BuildKind {
+        self.inner.build_kind
+    }
+
     /// Get a unique (in terms of the current compilation graph) name, which can be used as a directory
     /// name for storing artifacts.
     pub fn unique_name(&self) -> String {
         // Can we trim this hash?
         let id = sha256_string(self.identity().origin().to_string());
-        let name = self.root_package().package().name();
-        let version = self.root_package().package().version();
+        let name = self.package().name();
+        let version = self.package().version();
         format!("{}-{}-{}", name, version, id)
     }
 
@@ -144,20 +167,30 @@ impl Unit {
     ///
     /// It's a _nice_ name, which can be displayed to the user.
     pub fn descriptive_name(&self) -> String {
-        let name = self.root_package().package().name();
-        let version = self.root_package().package().version();
+        let name = self.package().name();
+        let version = self.package().version();
         format!("{name} version {version}")
     }
 
     /// Get the filename of the output of this [`Unit`].
-    pub fn output_file_name(&self) -> String {
-        let name = self.root_package().package().name();
-        match self.artifacts_type() {
-            ArtifactsType::Binary => format!("{}{}", name, EXE_SUFFIX),
-            ArtifactsType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
-            ArtifactsType::Dvm => format!("{}{}", name, DVM_SUFFIX),
-            ArtifactsType::IsADependencyArtifact => {
+    pub fn output_file_name(&self, bcx: &BuildContext<'_, '_>) -> String {
+        let name = self.package().name();
+        match (self.unit_type(), bcx.compilation_target()) {
+            // LLVM
+            (UnitType::Binary, CompilationTarget::LLVM) => format!("{}{}", name, EXE_SUFFIX),
+            (UnitType::Library, CompilationTarget::LLVM) => {
+                format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX)
+            }
+            (UnitType::Dependency, CompilationTarget::LLVM) => {
                 format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX)
+            }
+
+            // DVM
+            (UnitType::Binary | UnitType::Library, CompilationTarget::DVM) => {
+                format!("{}{}", name, DVM_SUFFIX)
+            }
+            (UnitType::Dependency, CompilationTarget::DVM) => {
+                format!("{}{}", self.unique_name(), DVM_SUFFIX)
             }
         }
     }
@@ -167,24 +200,19 @@ impl Unit {
         &self,
         graph: &UnitGraph,
     ) -> QuackResult<multipackage_schema::Package> {
-        let package = self.root_package().package();
+        let package = self.package();
         let import_name = package.normalised_name();
         let version = package.version();
         let features = {
-            let mut features = self
-                .root_package()
-                .enabled_features()
-                .iter()
-                .copied()
-                .collect::<Vec<_>>();
+            let mut features = self.enabled_features().iter().copied().collect::<Vec<_>>();
             features.sort();
             features
         };
         let dependencies = {
             let mut result = vec![];
-            for dep_id in self.deps_sorted_by_unit_id() {
+            for dep_id in graph.deps_for(self.unit_id()) {
                 let unit_dep = graph.unit_for(*dep_id);
-                let dep_name = unit_dep.root_package().package().name();
+                let dep_name = unit_dep.package().name();
                 let dep = package
                     .manifest()
                     .dependencies()
@@ -274,7 +302,7 @@ impl Unit {
             if let ControlFlow::Break(b) = visitor.try_visit(unit)? {
                 return Ok(Some(b));
             }
-            stack.extend(unit.deps_sorted_by_unit_id());
+            stack.extend(graph.deps_for(unit.unit_id()));
         }
         Ok(None)
     }

@@ -1,9 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::PathBuf;
 
 use crate::duck::util::indent::indent;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::quackpack::core::storage::{self, CleanOutput, delete_venv};
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Options for the clean-storage operation.
@@ -41,33 +47,29 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
                 encountered_errors,
             } = storage::clean_storage(ctx, &storage_path)
                 .context("when trying to clean the storage")?;
-            ctx.console().print(format!(
+            ctx.print(format!(
                 "Removed {} venv{}",
                 removed_venvs.len(),
                 removed_venvs.s_if_plural(),
             ))?;
             for venv in removed_venvs {
-                ctx.console()
-                    .print(indent(&format!("venv with id `{}`", venv), 2))?;
+                ctx.print(indent(&format!("venv with id `{}`", venv), 2))?;
             }
-            ctx.console().print(format!(
+            ctx.print(format!(
                 "Removed {} package{}",
                 removed_packages.len(),
                 removed_packages.s_if_plural(),
             ))?;
             for pkg_path in removed_packages {
-                ctx.console()
-                    .print(indent(&format!("package at `{}`", pkg_path.display()), 2))?;
+                ctx.print(indent(&format!("package at `{}`", pkg_path.display()), 2))?;
             }
             if encountered_errors.has_errors() {
                 let count = encountered_errors.logged_errors();
                 let plural = if count == 1 { "" } else { "s" };
-                ctx.console()
-                    .warning(format!("encountered {count} error{plural} during clean"))?;
+                ctx.warning(format!("encountered {count} error{plural} during clean"))?;
             }
             for error in encountered_errors {
-                ctx.error_console()
-                    .error(format!("encountered error during clean: {error}"))?;
+                ctx.error(format!("encountered error during clean: {error}"))?;
             }
             Ok(())
         }

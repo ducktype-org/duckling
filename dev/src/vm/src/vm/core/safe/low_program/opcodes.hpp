@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file opcodes.hpp
  * @brief Defines enum for all opcodes in the VM.
@@ -96,4 +102,8 @@ namespace vm::low {
 	constexpr bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
 		return std::ranges::find(NON_EXEC_OPCODES, opcode) != NON_EXEC_OPCODES.end();
 	}
+
+	template<vm::low::MicroOpcode opcode>
+	constexpr bool IS_OPCODE_RETURNING
+		= opcode == MicroOpcode::ret || opcode == MicroOpcode::ret_tailcall_func;
 }

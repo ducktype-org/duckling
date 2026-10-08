@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Module responsible for interacting with Git repositories.
 
 use std::path::Path;
@@ -40,9 +46,7 @@ impl<'duck> GitClient<'duck> {
         reference: GitReference,
         destination: &Path,
     ) -> QuackResult<GitCloneResponse> {
-        self.ctx
-            .console()
-            .info(format!("cloning a repository at `{url}`"))?;
+        self.ctx.info(format!("cloning a repository at `{url}`"))?;
         let mut builder = RepoBuilder::new();
 
         builder.fetch_options(self.fetch_options_for(url, reference));
@@ -65,11 +69,10 @@ impl<'duck> GitClient<'duck> {
                 }
                 debug!("will attempt a full clone");
                 // We print this only here because otherwise the user gets information from the error.
-                self.ctx.console().warning(format!(
+                self.ctx.warning(format!(
                     "failed to shallow clone the repository at `{url}`: {e}"
                 ))?;
                 self.ctx
-                    .console()
                     .info("retrying with a full clone instead of a shallow clone")?;
                 let mut fetch_options = self.fetch_options_for(url, reference);
                 // Here we always want to perform full clone, so set depth to 0.
@@ -150,12 +153,10 @@ impl<'duck> GitClient<'duck> {
     fn username_and_password_callback(&self) -> Result<Cred, git2::Error> {
         let username = self
             .ctx
-            .console()
             .prompt_once("username")
             .map_err(|_| git2::Error::from_str("failed to get username"))?;
         let password = self
             .ctx
-            .console()
             .password_once("password")
             .map_err(|_| git2::Error::from_str("failed to get password"))?;
         Cred::userpass_plaintext(&username, &password)

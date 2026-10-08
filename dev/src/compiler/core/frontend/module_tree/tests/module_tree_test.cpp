@@ -1,6 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
+#include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/packages/access.hpp>
 
@@ -70,6 +78,7 @@ public:
 		TESTER_ADD_TEST(testModuleRecursiveRemoval);
 		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
+		TESTER_ADD_TEST(testFileResolverSubstitution);
 	}
 
 protected:
@@ -100,7 +109,7 @@ private:
 		auto        no_name_module = no_name_builder->finalize();
 		auto        no_name_id     = no_name_module->getModuleID();
 		auto        tree_str2      = printModuleTree(no_name_id);
-		std::string hash_str       = std::to_string(no_name_id.queryUnstablePerfectHash());
+		std::string hash_str       = no_name_id.queryUnstablePerfectHash().toStringHex();
 		assertTrue(
 			tree_str2.find("id:") != std::string::npos, "Output should contain 'id:' for bad name"
 		);
@@ -110,10 +119,64 @@ private:
 		fs::FileManager::deleteFile(temp_file2);
 	}
 
+	void testFileResolverSubstitution() {
+		auto root = fs::File(path("test_module"));
+
+		// Substitute a buffer for awe.dk, leaving every other file on disk untouched. The twin
+		// keeps the file name, exactly as the editor overlay does.
+		auto substitute = fs::FileManager::createVirtualFile(
+			fs::FilePath(path("test_module/awe.dk")).toVirtualPath(), "fn substituted() {}\n", true
+		);
+
+		std::vector<std::string> resolved;
+		auto                     resolver = [&](const fs::File& disk_file) -> fs::File {
+            resolved.push_back(disk_file.name());
+            if (disk_file.name() == "awe.dk") return substitute;
+            return disk_file;
+		};
+
+		auto module_id
+			= ModuleTreeBuilder::create(
+				  root, base::StrID("resolver_package_id"), resolver, test_regex, test_regex
+			)
+		          ->getModuleID();
+		auto mt = getModuleRef(module_id);
+
+		assertTrue(
+			std::ranges::find(resolved, std::string("awe.dk")) != resolved.end(),
+			"The resolver must see every file the walk finds"
+		);
+
+		ASSERT_TRUE(mt->hasMainSourceFile());
+		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
+
+		auto awe = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe"));
+		ASSERT_TRUE(getRef(awe)->hasMainSourceFile());
+		assertTrue(
+			getFileRef(getRef(awe)->getMainSourceFile().illegalAccess().getID())
+					->getFileIllegalAccess()
+					.getFilePath()
+				== substitute.getFilePath(),
+			"The substituted file must back the module, not the one on disk"
+		);
+
+		auto another = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another"));
+		assertTrue(
+			getFileRef(getRef(another)->getMainSourceFile().illegalAccess().getID())
+				->getFileIllegalAccess()
+				.getFilePath()
+				.isPhysical(),
+			"Files the resolver passed through must still come from disk"
+		);
+
+		fs::FileManager::deleteFile(substitute);
+	}
+
 	void parseModule() {
 		auto pth = fs::File(path("test_module"));
-		auto mt
-			= ModuleTreeBuilder::create(pth, base::StrID("test_package_id"), test_regex, test_regex);
+		auto mt  = ModuleTreeBuilder::create(
+            pth, base::StrID("test_package_id"), identityFileResolver(), test_regex, test_regex
+        );
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
@@ -199,22 +262,18 @@ private:
 		testModuleIDInSourceFile(getRef(mod_module));
 		testModuleIDInSourceFile(mt);
 
-		assertTrue(not mt->getParentModule().has_value(), "Root module has a parent");
-		assertTrue(
-			getRef(awe_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (1)"
+		ASSERT_NO_VALUE(mt->getParentModule(), "Root module has a parent");
+		ASSERT_HAS_VALUE(
+			getRef(awe_module)->getParentModule(), "Non-root module does not have a parent (1)"
 		);
-		assertTrue(
-			getRef(another_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (2)"
+		ASSERT_HAS_VALUE(
+			getRef(another_module)->getParentModule(), "Non-root module does not have a parent (2)"
 		);
-		assertTrue(
-			getRef(awesome_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (3)"
+		ASSERT_HAS_VALUE(
+			getRef(awesome_module)->getParentModule(), "Non-root module does not have a parent (3)"
 		);
-		assertTrue(
-			getRef(mod_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (4)"
+		ASSERT_HAS_VALUE(
+			getRef(mod_module)->getParentModule(), "Non-root module does not have a parent (4)"
 		);
 
 		ASSERT_EQUAL(
@@ -250,7 +309,11 @@ private:
 		// This test is adapted from the old FsTree parseDirectory test.
 		const auto root = fs::File(path("test_directory_tree"));
 		auto       mt   = ModuleTreeBuilder::create(
-            root, base::StrID("test_package_id23423423"), test_regex, test_regex
+            root,
+            base::StrID("test_package_id23423423"),
+            identityFileResolver(),
+            test_regex,
+            test_regex
         );
 
 		// Only files with valid names/extensions are included as source or other files.
@@ -401,7 +464,7 @@ private:
 		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), sub_mod->getName()));
 		// Remove parent
 		ModuleTreeModifier::removeParent(sub_mod);
-		ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
+		ASSERT_NO_VALUE(sub_mod->getParentModule());
 		// Set parent again
 		ModuleTreeModifier::setParent(sub_mod, mt);
 		ASSERT_EQUAL(mt, getRef(sub_mod->getParentModule().value()));

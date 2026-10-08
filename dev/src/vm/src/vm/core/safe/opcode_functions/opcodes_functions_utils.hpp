@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../../config.hpp"
@@ -12,7 +18,7 @@
 namespace vm {
 	template<typename EntryT>
 	class GenericBlock;
-	using Block = GenericBlock<std::byte>;
+	using Block = GenericBlock<byte>;
 }
 
 /**
@@ -22,37 +28,15 @@ namespace vm {
  * @param arg - the mentioned argument
  */
 [[gnu::always_inline]]
-inline static std::byte* getBytePtrFromPlaceArg(
-	std::byte* local_stack, std::byte* global_buffer, u64 arg
-) {
+inline static byte* getBytePtrFromPlaceArg(byte* local_stack, byte* global_buffer, u64 arg) {
 	// Extract the highest bit.
 	bool is_global = (arg >> 63) != 0;
 
 	// Mask out the highest bit to get the offset.
 	u64 offset = arg & ~(1ULL << 63);
 	// The compiler will turn this ternary into a fast, branchless `cmov`.
-	std::byte* base = is_global ? global_buffer : local_stack;
+	byte* base = is_global ? global_buffer : local_stack;
 	return base + offset;
-}
-
-/**
- * @brief Given the argument of type "place", which is an index in the local block reference stack
- * or global block reference buffer, with the highest bit indicating whether it's global or local,
- * returns the actual block reference.
- * @param arg - the mentioned argument
- */
-[[nodiscard]] [[gnu::always_inline]]
-inline static Ref<vm::Block> getBlockRefFromArg(
-	vm::Block** local_stack_blocks, vm::Block** global_buffer_blocks, u64 arg
-) {
-	// Extract the highest bit.
-	bool is_global = (arg >> 63) != 0;
-
-	// Mask out the highest bit to get the offset.
-	u64 offset = arg & ~(1ULL << 63);
-
-	vm::Block** base = is_global ? global_buffer_blocks : local_stack_blocks;
-	return { base[offset] };
 }
 
 /**
@@ -61,7 +45,7 @@ inline static Ref<vm::Block> getBlockRefFromArg(
  */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
-inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg) {
+inline static T readFromPlace(byte* local_stack, byte* global_buffer, u64 place_arg) {
 	return vm::safeReadPointerBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg)
 	);
 }
@@ -73,7 +57,7 @@ inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, 
 template<typename T>
 [[gnu::always_inline]]
 inline static void writeToPlace(
-	std::byte* local_stack, std::byte* global_buffer, u64 place_arg, const T& value
+	byte* local_stack, byte* global_buffer, u64 place_arg, const T& value
 ) {
 	vm::safeWriteBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg), value);
 }
@@ -86,10 +70,8 @@ inline static void writeToPlace(
 	readFromPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG)
 #define WRITE_TO_PLACE_ARG(TYPE, ARG, VALUE) \
 	writeToPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG, VALUE)
-#define READ_BLOCK_REF_FROM_ARG(ARG)                                                             \
-	getBlockRefFromArg(                                                                          \
-		frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG \
-	)
+// Resolves a block place argument, creating the local's block if it does not exist yet.
+#define READ_BLOCK_REF_FROM_ARG(ARG) OpFuns::readBlockRefFromArg(frame, thread, ARG)
 /**
  * @brief Helper macro for reading a value from a immediate argument.
  */

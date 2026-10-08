@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Abstraction over manifest which allows for lossless edits of the underlying file,
 //! meaning that e.g. comments and stylistic choices in the underlying YAML file are kept.
 //! Used by `add` and `remove` subcommands.
@@ -233,7 +239,7 @@ impl<'duck> EditableManifest<'duck> {
                 self.manifest_path().display()
             )
         })?;
-        self.ctx.console().info(format!(
+        self.ctx.info(format!(
             "written new manifest to `{}`",
             self.manifest_path().display()
         ))

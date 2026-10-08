@@ -1,5 +1,8 @@
+import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
-import { workspace, ExtensionContext, commands } from "vscode";
+
+import { ExtensionContext, commands, window, workspace } from "vscode";
 
 import {
 	LanguageClient,
@@ -8,58 +11,100 @@ import {
 	TransportKind
 } from "vscode-languageclient/node";
 
-let client: LanguageClient;
+/** The settings section, and the id the client derives `trace.server` from. */
+const SECTION = "DucklingLanguageSupport";
 
-export function activate(context: ExtensionContext) {
-	// The server is implemented in node
-	const serverModule = context.asAbsolutePath(
-		path.join("server", "out", "server.js")
-	);
+const DEFAULT_EXECUTABLE_PATH = "~/.local/bin/duck_ls";
 
-	// If the extension is launched in debug mode then the debug server options are used
-	// Otherwise the run options are used
-	const serverOptions: ServerOptions = {
-		run: { module: serverModule, transport: TransportKind.ipc },
-		debug: {
-			module: serverModule,
-			transport: TransportKind.ipc,
-			options: { execArgv: ["--nolazy", "--inspect=6009"] }
-		}
-	};
+let client: LanguageClient | undefined;
 
-	// Options to control the language client
-	const clientOptions: LanguageClientOptions = {
-		// Register the server for duckling documents
-		documentSelector: [{ scheme: "file", language: "duckling" }],
-		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
-			configurationSection: 'DucklingLanguageSupport'
-		}
-	};
-
-	// Create the language client and start the client.
-	client = new LanguageClient(
-		"DucklingLanguageSupport",
-		"Duckling Server",
-		serverOptions,
-		clientOptions
-	);
-
-	// Start the client. This will also launch the server
-	client.start();
-
-	context.subscriptions.push(
-		commands.registerCommand('duckling.restartServer', () => {
-			client.sendRequest('duckling/restart');
-		})
-	);
+/**
+ * Expands a leading `~`, which VS Code does not do for configuration values.
+ */
+function resolveExecutablePath(configured: string): string {
+	const trimmed = configured.trim();
+	if (trimmed === "~") return os.homedir();
+	if (trimmed.startsWith("~/")) return path.join(os.homedir(), trimmed.slice(2));
+	return trimmed;
 }
 
-// This method is called when your extension is deactivated
-export function deactivate(): Thenable<void> | undefined {
-	if (!client) {
-		return undefined;
+/**
+ * Starts duck_ls and connects to it over stdio, doing nothing when the server is turned off.
+ *
+ * Everything the extension contributes declaratively, syntax highlighting above all, is
+ * independent of this, so a missing or disabled server leaves the editor usable.
+ */
+async function startClient(): Promise<void> {
+	if (client) return;
+
+	const configuration = workspace.getConfiguration(SECTION);
+	if (!configuration.get<boolean>("enable", true)) return;
+
+	const executable = resolveExecutablePath(
+		configuration.get<string>("executablePath", DEFAULT_EXECUTABLE_PATH)
+	);
+
+	// A bare name is looked up on the PATH, where existsSync cannot find it; let the spawn
+	// report the failure in that case.
+	const isPath = executable.includes(path.sep) || executable.includes("/");
+
+	if (isPath && !fs.existsSync(executable)) {
+		window.showErrorMessage(
+			`Duckling: no duck_ls binary at ${executable}. Point ${SECTION}.executablePath at it, ` +
+			`or set ${SECTION}.enable to false to use the extension without a language server.`
+		);
+		return;
 	}
-	return client.stop();
+
+	const serverOptions: ServerOptions = {
+		command: executable,
+		transport: TransportKind.stdio
+	};
+
+	const clientOptions: LanguageClientOptions = {
+		documentSelector: [{ scheme: "file", language: "duckling" }],
+		synchronize: {
+			// duck_ls rebuilds the package a file belongs to when one appears or disappears, so
+			// it has to hear about the sources themselves.
+			fileEvents: workspace.createFileSystemWatcher("**/*.{dk,dks,dl,duck}")
+		}
+	};
+
+	client = new LanguageClient(SECTION, "Duckling Language Server", serverOptions, clientOptions);
+
+	await client.start();
+}
+
+async function stopClient(): Promise<void> {
+	const running = client;
+	client = undefined;
+	if (running) await running.stop();
+}
+
+async function restartClient(): Promise<void> {
+	await stopClient();
+	await startClient();
+}
+
+export async function activate(context: ExtensionContext): Promise<void> {
+	context.subscriptions.push(
+		commands.registerCommand("duckling.restartServer", restartClient)
+	);
+
+	// Turning the server off, or pointing it at another binary, takes effect without a reload.
+	context.subscriptions.push(
+		workspace.onDidChangeConfiguration(async event => {
+			if (
+				event.affectsConfiguration(`${SECTION}.enable`) ||
+				event.affectsConfiguration(`${SECTION}.executablePath`)
+			)
+				await restartClient();
+		})
+	);
+
+	await startClient();
+}
+
+export async function deactivate(): Promise<void> {
+	await stopClient();
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Parsing of the frontmatter from its schema.
 //! A frontmatter is a fragment of yaml code similiar to a manifest, at the beginning of a Duckling script.
 //! It can specify script's dependencies, allowing the script to be run without any venv.
@@ -59,7 +65,14 @@ pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMa
 fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
     let mut warnings = Warnings::default();
     let schema = generate_schema(path, &mut warnings)?;
-    let frontmatter = parse(&schema, path, ParseMode::FrontMatter, &mut warnings, ctx)?;
+    let frontmatter = parse(
+        &schema,
+        ParseMode::FrontMatter {
+            frontmatter_path: path,
+        },
+        &mut warnings,
+        ctx,
+    )?;
     FrontMatter::new(path.to_path_buf(), schema, Box::new(frontmatter))
         .map(|frontmatter| (frontmatter, warnings))
 }

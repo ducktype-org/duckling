@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <json/json.hpp>
@@ -6,46 +12,46 @@
 #include <variant>
 
 namespace vm::api {
-	struct ResumeError {
+	struct ResumeError final {
 		std::string why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ResumeError, why);
 	};
 
-	struct PauseError {
+	struct PauseError final {
 		std::string why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(PauseError, why);
 	};
 
-	struct RunError {
+	struct RunError final {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(RunError, error);
 	};
 
-	struct JoinError {};
+	struct JoinError final {};
 
-	struct AttachDetachError {};
+	struct AttachDetachError final {};
 
-	struct OtherError {
+	struct OtherError final {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(OtherError, error);
 	};
 
-	struct IOError {
+	struct IOError final {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IOError, error);
 	};
 
-	struct LoadProgramError {
+	struct LoadProgramError final {
 		std::string why;
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(LoadProgramError, why);
 	};
 
-	struct ProcessNotFound {};
+	struct ProcessNotFound final {};
 
-	struct WrongResponse {};
+	struct WrongResponse final {};
 
-	struct StateError {
+	struct StateError final {
 		std::string why;
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(StateError, why);
@@ -55,13 +61,13 @@ namespace vm::api {
 	 * @brief A computation which run panicked. Returned by every endpoint executing bytecode when
 	 * an evaluation fails.
 	 */
-	struct Panicked {
+	struct Panicked final {
 		std::string why;
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Panicked, why);
 	};
 
-	struct UnsupportedOperation {
+	struct UnsupportedOperation final {
 		std::string why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(UnsupportedOperation, why);
 	};
@@ -69,7 +75,7 @@ namespace vm::api {
 	/**
 	 * @brief Represents an error indicating that a feature is not yet implemented.
 	 */
-	struct NotImplementedError {
+	struct NotImplementedError final {
 		std::string why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(NotImplementedError, why);
 	};

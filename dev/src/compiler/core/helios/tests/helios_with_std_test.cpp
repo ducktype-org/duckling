@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file helios_with_std_test.cpp
  * @brief HELIOS tests that need the standard library available (e.g. to resolve
@@ -17,7 +23,6 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/mutability.hpp>
@@ -35,6 +40,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/extend_cpp/defer.hpp>
+
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <query_framework/context/context.hpp>
@@ -46,6 +53,8 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#include <iostream>
+#include <regex>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -63,6 +72,7 @@ public:
 		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCompTimeStrings);
+		TESTER_ADD_TEST(testCompTimeOutput);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testCopy);
@@ -72,6 +82,7 @@ public:
 		TESTER_ADD_TEST(testReferenceKindCollapsing);
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testDestructors);
+		TESTER_ADD_TEST(testOperatorsWithPrimitives);
 	}
 
 protected:
@@ -80,7 +91,8 @@ protected:
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
 			{ fs::FilePath(path("test_modules/strings")), "strings" },
-			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" }
+			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" },
+			{ fs::FilePath(path("test_modules/comp_time_output")), "comp_time_output" }
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -148,7 +160,7 @@ private:
 	/**
 	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
 	 *
-	 * `new v` becomes `boxAlloc:{T}(v) as box T`: the primitive of `core.containers` hands the
+	 * `new v` becomes `boxAlloc[T](v) as box T`: the primitive of `core.containers` hands the
 	 * storage back as a `ptr T`, and the cast is what turns it into the box.
 	 */
 	static const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr
@@ -184,7 +196,9 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow();
+				return compiler::tsh::SymbolType<>::withDefaults(
+					ctx.query<compiler::tsh::QueryClassType>(sym_id)
+				);
 			};
 
 			auto i32_st = st(compiler::tsh::getIntegralType(
@@ -388,7 +402,7 @@ private:
 	// The `@builtin(...)` fundecls in core.builtins are templated, so their synthesized
 	// implementations are emitted once per element type they are baked for. The `builtins` module
 	// runs the alloc -> slice_from_ptr_len -> ptr_from_slice -> free chain for `str` and `i32`
-	// (and uses `ptr_from_slice:{char}` on a string literal).
+	// (and uses `ptr_from_slice[char]` on a string literal).
 	void testTemplatedBuiltinDefinitionsInModuleHOUT() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 
@@ -483,6 +497,24 @@ private:
 		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
 		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());
 		ASSERT_TRUE(!getChain("expanded.fromSlice", root_scope).empty());
+	}
+
+	/**
+	 * The compile-time DVM buffers whatever the evaluated code prints, so a `print` inside a
+	 * compile-time evaluation used to be dropped. It now ends up on `std::cerr` instead.
+	 */
+	void testCompTimeOutput() {
+		auto module     = compiler::driver::test_utils::getModuleIdFromPath("comp_time_output");
+		auto root_scope = getModuleScope(module);
+
+		std::ostringstream captured_cerr;
+		auto*              real_cerr_buffer = std::cerr.rdbuf(captured_cerr.rdbuf());
+		defer(std::cerr.rdbuf(real_cerr_buffer));
+
+		// Evaluating the const runs `printAtCompTime` on the compile-time DVM.
+		ASSERT_EQUAL(1, getConstValueAs<i64>("printed_at_comp_time", root_scope));
+
+		ASSERT_TRUE(captured_cerr.str().contains("[comp-time] 3492"));
 	}
 
 	void testStrings() {
@@ -677,8 +709,8 @@ private:
 		auto check_var_init_expr_origin = [&](base::StrID name, bool is_generated) {
 			auto glob_opt = get_global_by_name(name);
 			auto var_opt  = get_pst_variable_by_name(name);
-			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
-			assertTrue(var_opt.has_value(), "Variable not found in PST");
+			ASSERT_HAS_VALUE(glob_opt, "Global not found in HOUT");
+			ASSERT_HAS_VALUE(var_opt, "Variable not found in PST");
 			auto glob              = glob_opt.value();
 			auto var_pst           = var_opt.value();
 			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
@@ -733,8 +765,8 @@ private:
 		auto check_function_origin = [&](base::StrID name) {
 			auto fun_opt     = get_hout_function_by_name(name);
 			auto pst_fun_opt = get_pst_function_by_name(name);
-			assertTrue(fun_opt.has_value(), "Function not found in HOUT");
-			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
+			ASSERT_HAS_VALUE(fun_opt, "Function not found in HOUT");
+			ASSERT_HAS_VALUE(pst_fun_opt, "Function not found in PST");
 			auto fun = fun_opt.value();
 
 
@@ -945,9 +977,8 @@ private:
 		auto mega_sym    = getChain("FinalBoss", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
-			};
+			auto get_class_type
+				= [&](SymID sym_id) { return ctx.query<compiler::tsh::QueryClassType>(sym_id); };
 
 			// Classes, tuples and static arrays are copied by a single `create_aggregate` that the
 			// body returns, with one value per copied element.
@@ -1088,15 +1119,13 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_TRUE(v_matches(
-				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
-			));
+			ASSERT_MATCHES(getSymRef(callee_of(rhs_of("nested_user")))->other, ClassMemberSemantics);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto boxed = boxAllocArg(rhs_of("deep"));
 				ASSERT_TRUE(boxed != nullptr);
-				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, PstImplementedSemantics));
+				ASSERT_MATCHES(getSymRef(callee_of(boxed))->other, ClassMemberSemantics);
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -1141,7 +1170,7 @@ private:
 				ASSERT_EQUAL_PRINT(1, aggregate.values.size());
 				assert_generated_copy(stripImplicitMove(aggregate.values.at(0).get()));
 
-				ASSERT_TRUE(aggregate.per_element_body.has_value());
+				ASSERT_HAS_VALUE(aggregate.per_element_body);
 				const auto& per_element = (*aggregate.per_element_body)->statements;
 				ASSERT_EQUAL_PRINT(1, per_element.size());
 				ASSERT_TRUE(dynamic_cast<const AssignmentStmt*>(per_element.at(0).get()) != nullptr);
@@ -1190,13 +1219,35 @@ private:
 				const auto& alternatives = variant_type.getUnderlyingTypes();
 				ASSERT_EQUAL_PRINT(alternatives.size(), match->cases.size());
 
+				// The cases survive a clone, which the lowering relies on to know how a payload
+				// is bound.
+				auto cloned_expr = match->clone();
+				auto cloned      = dynamic_cast<const MatchExpr*>(cloned_expr.get());
+				ASSERT_TRUE(cloned != nullptr);
+				ASSERT_EQUAL_PRINT(match->cases.size(), cloned->cases.size());
+
 				// Every case tests its own alternative, binds the payload, and rebuilds the
 				// variant with that same alternative index - no wildcard is needed.
 				for (usize i = 0; i < match->cases.size(); i++) {
 					const auto& match_case = match->cases.at(i);
-					ASSERT_TRUE(match_case.alternative_index.has_value());
+					ASSERT_HAS_VALUE(match_case.alternative_index);
 					ASSERT_EQUAL_PRINT(i, match_case.alternative_index.value());
-					ASSERT_TRUE(match_case.binding.has_value());
+					ASSERT_HAS_VALUE(match_case.binding);
+
+					// The subject is borrowed, so the constraint is the type the payload is
+					// bound with: a mutable reference to the alternative.
+					ASSERT_TRUE(match_case.constraint_type.has_value());
+					ASSERT_EQUAL(
+						alternatives.at(i)
+							.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
+							.withMutability(compiler::tsh::Mutability::Mutable),
+						match_case.constraint_type.value()
+					);
+					ASSERT_TRUE(cloned->cases.at(i).constraint_type.has_value());
+					ASSERT_EQUAL(
+						match_case.constraint_type.value(),
+						cloned->cases.at(i).constraint_type.value()
+					);
 
 					auto construct = dynamic_cast<const VariantConstructExpr*>(
 						stripImplicitMove(match_case.result.get())
@@ -1234,19 +1285,22 @@ private:
 		auto boss_sym         = getChain("FinalBoss", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
-			};
+			auto get_class_type
+				= [&](SymID sym_id) { return ctx.query<compiler::tsh::QueryClassType>(sym_id); };
 
-			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
-				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
-				if (expr_stmt == nullptr) return false;
-				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			auto is_method_call_expr = [&](const Expr* expr, Method::Kind kind) -> bool {
+				auto call = dynamic_cast<const CallExpr*>(expr);
 				if (call == nullptr) return false;
 				auto callee = getIdentifierExprSymID(call->callee.ref());
 				if (!callee.has_value()) return false;
 				const auto* method = std::get_if<Method>(&getSymRef(callee.value())->other);
 				return method != nullptr && method->kind == kind;
+			};
+
+			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return false;
+				return is_method_call_expr(expr_stmt->expr.get(), kind);
 			};
 
 			// Returns the callee symbol of a statement of the form `f(...);`, if any.
@@ -1312,10 +1366,13 @@ private:
 				const auto type = get_class_type(user_sym);
 				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
-				const auto user_dtor = userDestructorOf(ctx, user_sym);
-				ASSERT_HAS_VALUE(user_dtor);
-				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor.value()));
-				ctx.query<QueryCodeOfFun>(user_dtor.value())->valueOrThrow();
+				const auto user_dtor_element = type.getInterface(ctx)->getSpecialElement(
+					compiler::tsh::MemberSpecialKind::UserDestructor
+				);
+				ASSERT_HAS_VALUE(user_dtor_element);
+				const auto user_dtor = user_dtor_element.value()->getSymbol();
+				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor));
+				ctx.query<QueryCodeOfFun>(user_dtor)->valueOrThrow();
 
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
@@ -1325,7 +1382,7 @@ private:
 				ASSERT_TRUE(expr_stmt != nullptr);
 				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
 				ASSERT_TRUE(call != nullptr);
-				ASSERT_EQUAL(user_dtor.value(), getIdentifierExprSymID(call->callee.ref()).value());
+				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(call->callee.ref()).value());
 			}
 
 			// A class with a user destructor and non-trivial members should call the user code
@@ -1337,10 +1394,14 @@ private:
 				ASSERT_EQUAL_PRINT(3, stmts.size());
 
 				// [0] user destructor call.
-				const auto user_dtor = userDestructorOf(ctx, user_members_sym).value();
-				auto       user_call = dynamic_cast<const CallExpr*>(
-                    dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
-                );
+				const auto user_dtor
+					= type.getInterface(ctx)
+				          ->getSpecialElement(compiler::tsh::MemberSpecialKind::UserDestructor)
+				          .value()
+				          ->getSymbol();
+				auto user_call = dynamic_cast<const CallExpr*>(
+					dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
+				);
 				ASSERT_TRUE(user_call != nullptr);
 				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(user_call->callee.ref()).value());
 
@@ -1348,6 +1409,54 @@ private:
 				ASSERT_TRUE(is_box_free_call(stmts.at(1).get()));
 				// [2] `first` (HasBox) destroyed
 				ASSERT_TRUE(is_method_call(stmts.at(2).get(), Method::Kind::DefaultDestructor));
+			}
+
+			// A variant destroys only the alternatives that own something, by matching the
+			// active one. The alternatives are ordered by name, so `HasBox` comes first.
+			{
+				auto i32_type = compiler::tsh::getIntegralType(
+					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				const auto variant_type = ctx.query<compiler::tsh::QueryVariantType>({
+					{ st(i32_type), st(get_class_type(has_box_sym)) },
+				});
+				ASSERT_TRUE(!variant_type.isTriviallyDestructible(ctx));
+
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(variant_type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmts.at(0).get());
+				ASSERT_TRUE(expr_stmt != nullptr);
+				auto match = dynamic_cast<const MatchExpr*>(expr_stmt->expr.get());
+				ASSERT_TRUE(match != nullptr);
+
+				// One case for the owning alternative, plus the wildcard that keeps the match
+				// exhaustive over the trivially destructible one.
+				ASSERT_EQUAL_PRINT(2, match->cases.size());
+
+				const auto& owning_case = match->cases.at(0);
+				ASSERT_TRUE(owning_case.alternative_index.has_value());
+				ASSERT_EQUAL_PRINT(0, owning_case.alternative_index.value());
+				ASSERT_TRUE(owning_case.binding.has_value());
+				// The payload is destroyed in place, so it is bound as a mutable reference.
+				ASSERT_TRUE(owning_case.constraint_type.has_value());
+				ASSERT_EQUAL(
+					variant_type.getUnderlyingTypes()
+						.at(0)
+						.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
+						.withMutability(compiler::tsh::Mutability::Mutable),
+					owning_case.constraint_type.value()
+				);
+				ASSERT_TRUE(
+					is_method_call_expr(owning_case.result.get(), Method::Kind::DefaultDestructor)
+				);
+
+				// The wildcard names no alternative, so it binds nothing and constrains nothing.
+				const auto& wildcard_case = match->cases.at(1);
+				ASSERT_TRUE(wildcard_case.alternative_index.empty());
+				ASSERT_TRUE(wildcard_case.binding.empty());
+				ASSERT_TRUE(wildcard_case.constraint_type.empty());
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -1769,6 +1878,22 @@ private:
 			);
 			ASSERT_TRUE(boxAllocArg(box_copy.get()) != nullptr);
 		});
+	}
+
+	void testOperatorsWithPrimitives() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/std_operators")));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
+
+		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
+
+		auto              sym_v256 = getChain("V256", root_scope).back();
+		std::stringstream out_v256;
+		auto              tree_v256 = getExprOfConst(sym_v256);
+		tree_v256->debugPrint(out_v256);
+		ASSERT_TRUE(std::regex_match(
+			out_v256.str(),
+			std::regex{ R"(\(Symbol powi \((\d+)\)\)\(3 \+ 4 - 4 \* 16 / 5 % 7, 8\))" }
+		));
 	}
 };
 

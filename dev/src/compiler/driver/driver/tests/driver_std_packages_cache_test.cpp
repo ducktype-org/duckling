@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -54,7 +60,7 @@ protected:
 		auto           manifest_opt  = driver::PackageCompilationManifest::fromJson(
             manifest_json, compiler::driver::diagnostics::makeGlobalLoggerReporter()
         );
-		assertTrue(manifest_opt.has_value(), "Failed to parse packages manifest");
+		ASSERT_HAS_VALUE(manifest_opt, "Failed to parse packages manifest");
 		assertTrue(
 			manifest_opt->verify(compiler::driver::diagnostics::makeGlobalLoggerReporter()).isOk(),
 			"Manifest verification failed"

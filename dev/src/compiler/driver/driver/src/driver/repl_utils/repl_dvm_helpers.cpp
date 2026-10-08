@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_dvm_helpers.hpp"
 
 #include <backends/dvm/repl_lowering.hpp>
@@ -58,8 +64,9 @@ namespace compiler::repl {
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
-		auto lir_data_qr
-			= driver::compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_unique_name);
+		auto lir_data_qr = driver::compileHOUTUnitToLIRModuleData(
+			ctx, hout_unit, module_unique_name, module_unique_name
+		);
 		if (lir_data_qr.hasFailed())
 			return std::unexpected("Failed to compile HOUTUnit to LIRModuleData");
 		auto lir_data = std::move(lir_data_qr.valueOrPanic());

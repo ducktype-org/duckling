@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "scopes.hpp"
 
 #include <frontend/module_tree/functors.hpp>
@@ -19,6 +25,7 @@
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
@@ -96,9 +103,9 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Import:
-		case pst::ElementKind::ImportIdentifierAs:
-		case pst::ElementKind::ImportStarHides:
-		case pst::ElementKind::ImportNested:
+		case pst::ElementKind::Selector:
+		case pst::ElementKind::SelectorList:
+		case pst::ElementKind::NestedSelectorList:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -125,7 +132,6 @@ namespace compiler::helios {
 		case pst::ElementKind::Namespace:
 		case pst::ElementKind::Variable:
 		case pst::ElementKind::Using:
-		case pst::ElementKind::Alias:
 		case pst::ElementKind::Const:
 		case pst::ElementKind::Class:
 		case pst::ElementKind::Action:
@@ -198,7 +204,6 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
-		case pst::ElementKind::TemplateList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::Expand:
@@ -258,12 +263,6 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
-		/**
-		 * @brief Cache to verify parent scopes are consistent.
-		 * @note It is intentionally thread safe.
-		 */
-		inline static concurrent::ConHashMap<pst::PstID, ScopeID> parent_map;
-
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
 			auto element_scope_kind = getScopeKind(ctx, element_key.element);
@@ -300,14 +299,6 @@ namespace compiler::helios {
 				);
 				return parent.ref->parent->ref->perfectClone();
 			}
-
-
-			// simple parent sanity check:
-			// it is technically not needed anymore, but it left as an additional
-			// layer of bug detection.
-			parent_map.maybePutAndUpdate(element->getID(), parent, [&](CRef<ScopeID> existing) {
-				CORE_ASSERT(*existing == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
-			});
 
 			return ScopeData{
 				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
@@ -783,6 +774,7 @@ namespace compiler::helios {
 			static const std::vector<PreludeImport> imports{
 				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
 				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("prints") } },
 			};
 			return imports;
 		}
@@ -806,7 +798,7 @@ namespace compiler::helios {
 		query::QResult<LookupResult> lookupImplicitPrelude(
 			query::Context& ctx, frontend::ModuleID module_id, base::StrID name, bool with_wildcards
 		) {
-			LookupResult result{ .leaves = {}, .children = {} };
+			LookupResult result{};
 			if (isStandardLibraryModule(ctx, module_id)) return result;
 
 			for (const auto& prelude_import: preludeImports()) {
@@ -823,7 +815,9 @@ namespace compiler::helios {
 				// The prelude re-exports the contents of the module, but not the modules it
 				// imports itself - otherwise every `import` written in a prelude module would
 				// collide with the same import written by the user.
-				LookupResult exported{ .leaves = {}, .children = prelude_result->children };
+				LookupResult exported{ .leaves       = {},
+					                   .inaccessible = {},
+					                   .children     = prelude_result->children };
 				for (const SymID sym: prelude_result->leaves)
 					if (kind(sym) != SymbolKind::Import) exported.leaves.push_back(sym);
 
@@ -837,26 +831,22 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
-			LookupResult result{ .leaves = {}, .children = {} };
+			LookupResult result{};
 
 			for (const auto& sym: *symbol_list) {
 				if (isIgnoredByLookup(sym)) continue;
 
-				if (isWildcard(sym)) {
-					if (key.with_wildcards) {
-						auto wild_result_qresult
-							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
-						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						// The correct code that works for using is commented out,
-						// to make the import a.*; work correctly.
-						// @TODO: #1412 fix this properly
-						// if (!wild_result->isEmpty())
-						// 	result.children.push_back(wild_result->toNode(sym));
-						if (!wild_result->isEmpty()) result.merge(*wild_result);
-					}
-				} else if (isAlias(sym) && name(sym) == key.name) {
-					// @TODO: #1412 fix dealias
-					result.leaves.push_back(sym);
+				if (kind(sym) == SymbolKind::Using or kind(sym) == SymbolKind::Import) {
+					UNPACK_QRESULT_CREF(
+						CRef<LookupResult> pointed_result = &,
+						ctx.query<QueryLookupInUsingImport>({ sym, key.name, key.with_wildcards })
+					);
+					// The correct code that works for using is commented out,
+					// to make the import a.*; work correctly.
+					// @TODO: #1412 fix this properly
+					// if (!pointed_result->isEmpty())
+					// 	result.children.push_back(pointed_result->toNode(sym));
+					if (!pointed_result->isEmpty()) result.merge(*pointed_result);
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
 				} else {
@@ -909,7 +899,7 @@ namespace compiler::helios {
 			CORE_DEV_LOG(
 				REPL,
 				"At root scope, module #",
-				current_module_id.queryUnstablePerfectHash(),
+				current_module_id.queryUnstablePerfectHash().toStringHex(),
 				", isRepl=",
 				is_repl_module,
 				", hasParent=",

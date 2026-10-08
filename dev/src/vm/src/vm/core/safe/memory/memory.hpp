@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "allocator/block_data.hpp"
@@ -26,7 +32,7 @@ namespace vm {
 	 * @brief Helper structure that holds pointers to the global data buffer and global blocks buffer.
 	 */
 	template<typename EntryT, typename BlockT = GenericBlock<EntryT>>
-	struct GlobalBufferPointers {
+	struct GlobalBufferPointers final {
 		EntryT*  data_buffer_base;    /// Base pointer to the global data buffer.
 		BlockT** blocks_buffer_base;  /// Base pointer to the global blocks buffer.
 	};
@@ -56,6 +62,16 @@ namespace vm {
 
 		base::StableObjectPool<BlockT, BlockID, true, true> blocks_pool;
 
+		/**
+		 * @brief Registers a block over `data` without touching the data itself.
+		 * @note Only for data that already holds a live value, see `adoptDummy`.
+		 */
+		[[nodiscard]]
+		Ref<BlockT> adoptBlock(BlockData<EntryT> data) {
+			auto id = blocks_pool.add(data);
+			return blocks_pool.get(id);
+		}
+
 		[[nodiscard]]
 		Ref<BlockT> createBlock(BlockData<EntryT> data) {
 			if constexpr (std::is_trivially_default_constructible_v<EntryT>)
@@ -63,8 +79,7 @@ namespace vm {
 			else
 				std::fill(data.view.getBegin(), data.view.getBegin() + data.view.size(), EntryT{});
 
-			auto id = blocks_pool.add(data);
-			return blocks_pool.get(id);
+			return adoptBlock(data);
 		}
 
 		[[nodiscard]]
@@ -208,13 +223,6 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Executes destructors on a range of objects, that lay next to each other.
-		 */
-		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
-		}
-
-		/**
 		 * @brief Executes copy constructors on individual objects that are in the block.
 		 * @param block The block to source the data from.
 		 */
@@ -330,7 +338,7 @@ namespace vm {
 		 * somewhere else.
 		 */
 		void runObjectDestructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			switch (type->getKind()) {
 			case Type::Kind::Pointer: {
 				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
@@ -362,7 +370,7 @@ namespace vm {
 		 * somewhere else.
 		 */
 		void runObjectCopyConstructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			switch (type->getKind()) {
 			case Type::Kind::Pointer: {
 				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
@@ -387,6 +395,14 @@ namespace vm {
 		}
 
 	public:
+		/**
+		 * @brief Executes destructors on a range of objects, that lay next to each other.
+		 */
+		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type)
+			requires std::is_same_v<EntryT, byte> {
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
+		}
+
 		GenericMemory() = default;
 
 		// =================== Used by the process ===================
@@ -408,12 +424,17 @@ namespace vm {
 		 */
 		void deinitGlobals();
 
-		struct GlobalBlocksConfig {
+		/**
+		 * @brief Free left-over block data, so that VM does not leak memory :)
+		 */
+		void freeAllocatedBlockData();
+
+		struct GlobalBlocksConfig final {
 			std::vector<usize>    global_data_offsets;
 			std::vector<usize>    global_blocks_idxs;
 			std::vector<TypeCRef> global_types;
-			Bytes                 total_global_data_size;
-			usize                 global_count;
+			Bytes                 total_global_data_size = Bytes(0);
+			usize                 global_count           = 0;
 		};
 
 		/**
@@ -501,7 +522,8 @@ namespace vm {
 		}
 
 		auto allocateHeap(TypeCRef type) -> Ref<BlockT> {
-			return createBlock(heap_allocator.allocate(type));
+			auto block = createBlock(heap_allocator.allocate(type));
+			return block;
 		}
 
 		/**
@@ -509,8 +531,12 @@ namespace vm {
 		 * @note Assumes that type is a dynamic table type.
 		 */
 		auto dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<BlockT> {
-			auto inner_type = type->getInnerType().value();
-			return createBlock(heap_allocator.dynTableAllocateN(type, inner_type, n));
+			auto block = createBlock(heap_allocator.dynTableAllocateN(type, n));
+			return block;
+		}
+
+		bool isHeapAllocated(Ref<BlockT> block) {
+			return block->parent == nullptr && block->data.allocator.get() == &heap_allocator;
 		}
 
 		/**
@@ -521,27 +547,86 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Dynamically reallocates block data.
-		 * @note Assumes that type is a dynamic table type and reallocates it to
-		   a table of size n with elements of type equal to type's inner type.
+		 * @brief Like `allocateDummy`, but leaves the pointed data untouched.
+		 *
+		 * Used when a block is created for a local variable that was already initialized
+		 * without one - zeroing it would destroy the value it holds.
 		 */
-		auto dynTableReallocateBlockDataN(Ref<BlockT> block, u64 n) -> void {
-			TypeCRef tbl_type   = block->data.element_type;
-			TypeCRef inner_type = tbl_type->getInnerType().value();
-
-			BlockData<EntryT> new_block_data
-				= heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
-
-			changeBlockData(block, new_block_data);
+		auto adoptDummy(TypeCRef type, Ref<EntryT> data_pointer) -> Ref<BlockT> {
+			return adoptBlock(dummy_allocator.allocate(type, data_pointer));
 		}
 
 		/**
-		 * @brief Frees block's data, but not the block structure itself.
-		 * For the block to be freed, use deleteBlock.
+		 * @brief Dynamically reallocates block data to a table of size n with elements of type
+		 * equal to the block type's inner type.
+		 * @throws VMDynTableReAllocTypeMismatch if the block does not hold a dynamic table
+		 * @throws VMUseAfterFreeException if its data is already gone.
+		 */
+		auto dynTableReallocateBlockDataN(Pointer ptr, TypeCRef type, u64 n) -> Pointer {
+			if (ptr.isNull()) {
+				if (n == 0) return ptr;
+				auto new_block = dynTableAllocateHeapN(type, n);
+				return updatePointerAssignment(ptr, { new_block, 0 });
+			} else {
+				auto block = ptr.getBlock();
+				if (getBlockType(block)->getKind() != Type::Kind::DynamicTable)
+					throw exceptions::VMDynTableReAllocTypeMismatch();
+
+				if (n == 0) {
+					// When reallocating dynamic data to 0 elements, we free the data and set
+					// pointer to null. This is one of two possible approaches:
+					// 1. Current approach: treat 0-sized arrays as non-existent, and set the
+					// pointer to null-pointer (what we do here)
+					// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
+					// C-nullptr as their data, but on DVM level we would still allow pointer
+					// [0-sized-block, nullptr] to exist. Any access to such block would simply
+					// be out-of-bound access.
+					//
+					// It might be desired to switch to second approach in the future, depending on
+					// the semantics of Duckling arrays.
+					guardedFreeBlockData(ptr);
+					return updatePointerAssignment(ptr, Pointer::null());
+				} else {
+					if (block->deallocated) throw exceptions::VMUseAfterFreeException();
+
+					TypeCRef tbl_type = block->data.element_type;
+
+					BlockData<EntryT> new_block_data
+						= heap_allocator.dynTableAllocateN(tbl_type, n);
+
+					changeBlockData(block, new_block_data);
+					return ptr;  // no change
+				}
+			}
+		}
+
+		/**
+		 * @brief Frees the data behind a pointer, refusing what a program must not free:
+		 * anything but a heap allocation, its interior, and data that is already gone.
+		 */
+		void guardedFreeBlockData(Pointer pointer) requires std::is_same_v<EntryT, byte> {
+			Ref<BlockT> block = pointer.getBlock();
+			// Only the whole allocation can be freed, not a field or an element of it.
+			if (!isHeapAllocated(block) || pointer.getOffset() != 0)
+				throw exceptions::VMInvalidFreeException();
+			if (block->deallocated) throw exceptions::VMDoubleFreeException();
+			freeBlockData(block);
+		}
+
+		/**
+		 * @brief Frees the block's data and its children. A child block also drops the reference
+		 * its parent held, which may delete it; a root block stays in the pool until its refcount
+		 * hits 0.
+		 * @note The block must still hold its data - user frees go through
+		 * `guardedFreeBlockData`.
 		 */
 		void freeBlockData(Ref<BlockT> block) {
+			CORE_ASSERT(!block->deallocated, "Freeing a block that is already deallocated");
+
 			for (const auto child: block->children_blocks | std::views::values)
 				freeBlockData(child);
+
+			block->children_blocks.clear();
 
 			runDataDestructors(block);
 
@@ -601,6 +686,8 @@ namespace vm {
 		 * `Pointer` get a `VMNullPointerAccessException` from `Pointer::getBlock()` on null.
 		 */
 		static MRef<BlockT> getNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
+			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
+
 			if_opt_some(parent_block->children_blocks.atMaybe(offset), nested) {
 				if ((*nested)->data.element_type == type) return *nested;
 			}
@@ -613,6 +700,8 @@ namespace vm {
 		 * `Pointer` get a `VMNullPointerAccessException` from `Pointer::getBlock()` on null.
 		 */
 		void setNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
+			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
+
 			auto& children = parent_block->children_blocks;
 			if_opt_some(children.atMaybe(offset), nested) {
 				freeBlockData(*nested);
@@ -622,7 +711,6 @@ namespace vm {
 			auto block_data         = parent_block->data;
 			block_data.element_type = type;
 			u64 entry_count         = type->getSize().asInt();
-			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (offset + entry_count > parent_block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();
 			block_data.view = { parent_block->data.view.getBegin() + offset, entry_count };
@@ -653,7 +741,7 @@ namespace vm {
 
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			increaseBlockRefcount(block);
 			return { block, offset };
 		}
@@ -661,7 +749,7 @@ namespace vm {
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 entry_count)
-				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
+				-> base::TypedModRawView<byte> requires std::is_same_v<EntryT, byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + entry_count > pointer.block->data.view.size())
@@ -673,7 +761,7 @@ namespace vm {
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getRemainingPointerData(Pointer pointer)
-				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
+				-> base::TypedModRawView<byte> requires std::is_same_v<EntryT, byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset > pointer.block->data.view.size())
@@ -688,10 +776,11 @@ namespace vm {
 		 * that it is the type of the blocks pointed-to by `dst` and `src`.
 		 */
 		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void
-			requires std::is_same_v<EntryT, std::byte> {
-			if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
-
+			requires std::is_same_v<EntryT, byte> {
+			// getPointerData also checks for null and use-after-free.
 			const usize entry_count = type->getSize().asInt();
+			const auto  dst_view    = getPointerData(dst, entry_count);
+			const auto  src_view    = getPointerData(src, entry_count);
 
 			// Free child blocks.
 			auto& dst_child_blocks = dst.getBlock()->children_blocks;
@@ -701,8 +790,6 @@ namespace vm {
 				freeBlockData(iter->second);
 			}
 
-			const auto dst_view = getPointerData(dst, entry_count);
-			const auto src_view = getPointerData(src, entry_count);
 			runDataDestructors(dst_view, type);
 
 			// Copy the child blocks
@@ -720,13 +807,12 @@ namespace vm {
 			runDataCopyConstructors(dst_view, type);
 		}
 
-		auto destroyBlockReference(Pointer pointer) -> void
-			requires std::is_same_v<EntryT, std::byte> {
+		auto destroyBlockReference(Pointer pointer) -> void requires std::is_same_v<EntryT, byte> {
 			if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 		}
 
 		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			if (dst.block != src.block) {
 				destroyBlockReference(dst);
 				if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
@@ -753,12 +839,12 @@ namespace vm {
 		}
 	};
 
-	using Memory                   = GenericMemory<std::byte>;
-	using GlobalBufferPointersByte = GlobalBufferPointers<std::byte>;
+	using Memory                   = GenericMemory<byte>;
+	using GlobalBufferPointersByte = GlobalBufferPointers<byte>;
 
 	// The member specialization is defined in initialization_from_const.cpp. It must be declared
 	// here so it is visible in every TU before the explicit instantiation of
-	// GenericMemory<std::byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
+	// GenericMemory<byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
 	template<>
 	void Memory::initializeBlockFromConstValue(
 		Ref<Block> block, const code::ConstantValue& const_value
@@ -767,5 +853,5 @@ namespace vm {
 	// Suppress implicit instantiation in every TU that uses `Memory`; the members are emitted once
 	// by the explicit instantiation definition in memory.cpp. Must come after the member
 	// specialization declaration above.
-	extern template class GenericMemory<std::byte>;
+	extern template class GenericMemory<byte>;
 }

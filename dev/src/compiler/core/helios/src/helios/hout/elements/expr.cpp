@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file expr.cpp
  * @brief Implementation of methods in the Expr hierarchy.
@@ -369,7 +375,6 @@ namespace compiler::helios::code {
 		case IntegerMul:
 		case IntegerDiv:
 		case IntegerMod:
-		case IntegerPow:
 		case IntegerBitAnd:
 		case IntegerBitOr:
 		case IntegerBitXor:
@@ -380,7 +385,6 @@ namespace compiler::helios::code {
 		case FloatMul:
 		case FloatDiv:
 		case FloatMod:
-		case FloatPow:
 			return lhs_type;
 		case IntegerLt:
 		case IntegerGt:
@@ -473,10 +477,6 @@ namespace compiler::helios::code {
 		case FloatMod:
 			out << "%";
 			break;
-		case IntegerPow:
-		case FloatPow:
-			out << "**";
-			break;
 		case IntegerLt:
 		case FloatLt:
 			out << "<";
@@ -502,6 +502,21 @@ namespace compiler::helios::code {
 		case FloatNeq:
 		case MetaNeq:
 			out << "!=";
+			break;
+		case IntegerBitAnd:
+			out << "&";
+			break;
+		case IntegerBitOr:
+			out << "|";
+			break;
+		case IntegerBitXor:
+			out << "^";
+			break;
+		case IntegerShl:
+			out << "<<";
+			break;
+		case IntegerShr:
+			out << ">>";
 			break;
 		case BooleanAnd:
 			out << "and";
@@ -745,13 +760,6 @@ namespace compiler::helios::code {
 		  Expr(matchExpressionType(cases), origin),
 		  subject(std::move(subject)),
 		  cases(std::move(cases)) {
-		CORE_ASSERT(
-			this->subject->expression_type.getSymbolType().getRefKind()
-				!= tsh::ReferenceKind::Direct,
-			"A match subject has to be a reference to the matched variant, got: ",
-			this->subject->expression_type.getSymbolType().toString()
-		);
-
 		for (const auto& match_case: this->cases)
 			CORE_ASSERT(
 				!match_case.binding.has_value() || match_case.alternative_index.has_value(),
@@ -818,6 +826,7 @@ namespace compiler::helios::code {
 		cloned_cases.reserve(cases.size());
 		for (const auto& match_case: cases)
 			cloned_cases.emplace_back(Case{ .alternative_index = match_case.alternative_index,
+			                                .constraint_type   = match_case.constraint_type,
 			                                .binding           = match_case.binding,
 			                                .result            = match_case.result->clone() });
 		return makeBox<MatchExpr>(
@@ -1461,5 +1470,10 @@ namespace compiler::helios::code {
 
 	Box<Expr> BlockExpr::clone() const {
 		return makeBox<BlockExpr>(expression_type, origin, block->clone());
+	}
+
+	bool MatchExpr::Case::shouldBindToTemporary(query::Context& ctx) const {
+		return binding.empty() and constraint_type.has_value()
+		   and (not constraint_type->isTriviallyDestructible(ctx));
 	}
 }

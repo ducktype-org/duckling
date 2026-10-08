@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <vm/loader/parser/parser.hpp>
@@ -80,7 +86,7 @@ private:
 	void opcodeSourcePositions() {
 		fs::File file(path("source_positions.dbc"));
 		auto     parsing_result = parser::parse({ file });
-		assertTrue(parsing_result.has_value(), "Expected successful parse.");
+		ASSERT_HAS_VALUE(parsing_result, "Expected successful parse.");
 
 		const auto& opcodes = parsing_result->front().functions.front()->code->opcodes;
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! The goal of module is to turn CLI-specified description of the dependency to add,
 //! into a pair that can be directly inserted into the manifest schema.
 //!
@@ -35,6 +41,7 @@ use crate::quackpack::core::{GitReference, PackageContext, Source, SourceKind, V
 use crate::quackpack::schemas::manifest::{
     Dependency, DependencyFeature, DependencySource as SourceSchema, DetailedSource, OredSemver,
 };
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::ErrorsLogger;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -104,6 +111,8 @@ pub fn construct_dependency(
     } = dep_spec;
     // Dependency's source.
     let (source, local_path) = construct_source(source_spec, pcx.package().root(), pcx.ctx())?;
+    disallow_adding_itself(pcx.package().root(), source)?;
+
     // For now it is not possible to specify feature conditions through `add` interface.
     let features: Vec<DependencyFeature> = features
         .into_iter()
@@ -354,4 +363,13 @@ fn construct_source_schema(
             })))
         }
     }
+}
+
+fn disallow_adding_itself(root: &Path, dep_source: Source) -> QuackResult<()> {
+    if let Ok(dep_path) = dep_source.url().to_path_buf()
+        && root == dep_path
+    {
+        qp_bail!("tried to add root package as its own dependency")
+    }
+    Ok(())
 }

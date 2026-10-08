@@ -1,8 +1,9 @@
 # The toolchain is built by the root PreNode; do not inherit it here.
 PreNode: ""
 
+# Skip all debugger CLI tests when JIT is enabled.
+Enabled: '[ "$(@{is_jit_enabled})" != "ON" ]'
+
 SubDirs:
   - basic
   - advanced
-
-# @TODO: #2798 Write advanced integration tests for debugger CLI

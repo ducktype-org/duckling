@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file main.cpp
  * @brief This file implements logic and main procedure that can be used to
@@ -23,9 +29,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
-#include <os_utils/exec_self.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
+#include <version/version.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/ranges_utils.hpp>
@@ -36,12 +42,14 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <clah/value_parser.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
 #include <logger/logger.hpp>
+#include <os_utils/exec_self.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -50,6 +58,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <iostream>
 #include <ranges>
@@ -106,12 +115,28 @@ namespace {
 	}
 }
 
+/**
+ * @brief The version facts only duckc can report.
+ */
+constexpr std::array<version::ExtraField, 2> DUCKC_VERSION_FIELDS{
+	version::ExtraField{ "LLVM", DUCKC_LLVM_VERSION },
+#ifdef ENABLE_JIT
+	version::ExtraField{ "JIT", "enabled" },
+#else
+	version::ExtraField{ "JIT", "disabled" },
+#endif
+};
+
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
+	             .build())
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addLongName("version-verbose")
+	             .addShortDesc("Print version together with build information and exit")
 	             .build())
 	    // Note that dev-logs options are not handled in pre-handler below,
 	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and
@@ -123,8 +148,12 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("Enable developer logs for given categories.")
 	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("version-verbose")) {
+				std::cout << version::renderVerbose("duckc", DUCKC_VERSION_FIELDS) << '\n';
+				throw clah::exceptions::SuccessExitException(options);
+			}
 			if (options.isFlag("version")) {
-				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
+				std::cout << version::renderShort("duckc") << '\n';
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		});
@@ -251,7 +280,9 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Path to the linker to use when creating executables.")
 			.optional()
 			.build(),
-		clah::ParamBuilder::ofValue(clah::StringParser::make("options"))
+		clah::ParamBuilder::ofValue(
+			clah::StringListParser::make("options", clah::StringParser::make())
+		)
 			.addLongName("additional-link-options")
 			.addShortDesc("Additional options to pass to the linker.")
 			.optional()
@@ -283,7 +314,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	linking_options.native_linker_path = parsing_result.getValue<std::string>("linker");
 
-	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
+	if (auto lib_path = parsing_result.getValue<std::vector<std::string>>("additional-link-options"))
 		linking_options.native_additional_link_options = lib_path.value();
 
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
@@ -306,14 +337,15 @@ namespace debug_options {
 	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
 			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
-			{ "lir", &DebugOptions::dump_lir }, { "mir", &DebugOptions::dump_mir },
-			{ "hir", &DebugOptions::dump_hir },
+			{ "dbc", &DebugOptions::dump_dbc }, { "lir", &DebugOptions::dump_lir },
+			{ "mir", &DebugOptions::dump_mir }, { "hir", &DebugOptions::dump_hir },
 		};
 		return dump_field_mapping;
 	}
 
 	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
+			{ "dbc", &DebugOptions::print_dbc },
 			{ "lir", &DebugOptions::print_lir },
 			{ "mir", &DebugOptions::print_mir },
 			{ "hir", &DebugOptions::print_hir },
@@ -337,7 +369,8 @@ namespace debug_options {
 										))
 				.addLongName("dump-ir")
 				.addShortDesc("Dump to file the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: asm, llvm, lir, mir, hir.")
+				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc "
+			                 "requires --dvm-backend.")
 				.build(),
 			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
 											"categories",
@@ -345,7 +378,7 @@ namespace debug_options {
 										))
 				.addLongName("print-ir")
 				.addShortDesc("Print to stdout the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: lir, mir, hir.")
+				.addLongDesc("Possible values are: dbc, lir, mir, hir.")
 				.build(),
 		};
 	}
@@ -738,13 +771,8 @@ clah::Clah getClahForMain() {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_llvm.exe");
 						auto linking_options = getLinkingOptionsFromClah(options);
-						linking_options.native_additional_link_options = base::strConcat(
-							linking_options.native_additional_link_options.copyValueOr(""),
-							libraries_to_link | std::views::transform([](fs::FilePath& path) {
-								return path.native();
-							}) | base::rangesIntersperse(std::string(", "))
-								| std::views::join | std::ranges::to<std::string>()
-						);
+						for (const auto& lib: libraries_to_link)
+							linking_options.native_additional_link_options.push_back(lib.native());
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetLLVMExecutable{
@@ -1269,6 +1297,10 @@ clah::Clah getClahForMain() {
 	                     .addLongName("silent")
 	                     .addShortDesc("Replay history without output (internal).")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("plain-output")
+	                     .addShortDesc("Print REPL results without interactive decorations.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto stdlib_opts = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
@@ -1288,13 +1320,20 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("no-completions")) completions = false;
 
 					bool bracketed = compiler::repl::FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED;
-					if (options.isFlag("disable-bracketed-paste")) bracketed = false;
+					bool decorative_output = !options.isFlag("plain-output");
+
+					// Bracketed paste emits terminal-control sequences, which would violate plain
+		            // output.
+					if (options.isFlag("disable-bracketed-paste") || !decorative_output)
+						bracketed = false;
 
 					base::Optional<usize>      reset_replay_count;
 					bool                       reset_replay_silent = false;
 					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
 					{
-						compiler::repl::ReplSession session(completions, bracketed);
+						compiler::repl::ReplSession session(
+							completions, bracketed, decorative_output
+						);
 						if (stdlib_opts.stdActive()) session.preloadStandardLibrary();
 
 						auto replay_count_opt = options.getValue<i64>("history-entries");
@@ -1335,6 +1374,8 @@ clah::Clah getClahForMain() {
 					}
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
+						// We need to flush stdout before execSelf to avoid losing any buffered output.
+						std::cout.flush();
 						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
 						auto exec_result = os_utils::execSelf(g_argv);
 						if (exec_result.status == os_utils::ExecSelfStatus::Error) return 1;

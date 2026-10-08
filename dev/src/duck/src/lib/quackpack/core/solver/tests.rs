@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -8,10 +14,13 @@ use tempfile::{TempDir, tempdir};
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::{Fetcher, types};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::solver::Solver;
 use crate::quackpack::core::solver::git_access::GitAccess;
-use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::solver_freeze::SolverPackageFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverGathererData};
+use crate::quackpack::core::storage::freeze::{
+    DepIdWithAlias, FreezePackage, RootPackage, VenvFreeze,
+};
 use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -183,34 +192,24 @@ dependencies:
     let identity_b = FullIdentity::new("b".into(), origin_registry);
     let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
 
-    let previous_freeze = SolverFreeze {
-        main_pkg: pkg_root,
-        package_freezes: [
-            (
-                pkg_root,
-                SolverPackageFreeze {
-                    dependencies_realization: [("a".into(), pkg_a)].into(),
-                    features: [].into(),
-                },
-            ),
-            (
-                pkg_a,
-                SolverPackageFreeze {
-                    dependencies_realization: [].into(),
-                    features: [].into(),
-                },
-            ),
-        ]
-        .into(),
-    };
+    let previous_freeze = VenvFreeze::new(
+        RootPackage::new(
+            "root".into(),
+            Version::new(0, 1, 0),
+            vec![],
+            vec![DepIdWithAlias::new("a".into(), identity_a.into())],
+        ),
+        vec![FreezePackage::new(identity_a, 1.into(), vec![], vec![])],
+    );
 
-    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) =
-        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
-    else {
-        panic!()
-    };
-    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
+    let solver = Solver::new(
+        &pcx,
+        Some(&previous_freeze),
+        &fetcher,
+        MockGitAccess(),
+        SolverMode::default(),
+    );
+    let new_freeze = block_on(solver.solve()).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,
@@ -274,45 +273,34 @@ dependencies:
     let pkg_root = PackageId::new(identity_root, Version::new(0, 1, 0));
 
     let identity_a = FullIdentity::new("a".into(), origin_registry);
-    let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
 
     let identity_b = FullIdentity::new("b".into(), origin_registry);
     let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
 
-    let previous_freeze = SolverFreeze {
-        main_pkg: pkg_root,
-        package_freezes: [
-            (
-                pkg_root,
-                SolverPackageFreeze {
-                    dependencies_realization: [("a".into(), pkg_a), ("b".into(), pkg_b)].into(),
-                    features: [].into(),
-                },
-            ),
-            (
-                pkg_a,
-                SolverPackageFreeze {
-                    dependencies_realization: [].into(),
-                    features: [].into(),
-                },
-            ),
-            (
-                pkg_b,
-                SolverPackageFreeze {
-                    dependencies_realization: [].into(),
-                    features: [].into(),
-                },
-            ),
-        ]
-        .into(),
-    };
+    let previous_freeze = VenvFreeze::new(
+        RootPackage::new(
+            "root".into(),
+            Version::new(0, 1, 0),
+            vec![],
+            vec![
+                DepIdWithAlias::new("a".into(), identity_a.into()),
+                DepIdWithAlias::new("b".into(), identity_b.into()),
+            ],
+        ),
+        vec![
+            FreezePackage::new(identity_a, 1.into(), vec![], vec![]),
+            FreezePackage::new(identity_b, 2.into(), vec![], vec![]),
+        ],
+    );
 
-    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::No(answer) =
-        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
-    else {
-        panic!()
-    };
+    let solver = Solver::new(
+        &pcx,
+        Some(&previous_freeze),
+        &fetcher,
+        MockGitAccess(),
+        SolverMode::default(),
+    );
+    let answer = block_on(solver.solve()).unwrap();
     assert_eq!(answer.new_freeze.main_pkg, pkg_root);
     assert_eq!(
         answer.new_freeze.package_freezes,
@@ -337,7 +325,7 @@ dependencies:
 }
 
 #[test]
-/// Tests that when supplied freeze realization is not correct, a new, correct realization is chosen.
+/// Tests that when supplied freeze realization is insufficient, solver is rerun.
 /// Main package depends on *a* with feature *a*, supplied freeze has *a* in version 1.0.0,
 /// which does not have the requested feature.
 /// Only *a* in version 2.0.0 has that feature and should be chosen to the new freeze.
@@ -375,41 +363,30 @@ dependencies:
     let pkg_root = PackageId::new(identity_root, Version::new(0, 1, 0));
 
     let identity_a = FullIdentity::new("a".into(), origin_registry);
-    let pkg_a1 = PackageId::new(identity_a, Version::new(1, 0, 0));
     let pkg_a2 = PackageId::new(identity_a, Version::new(2, 0, 0));
 
-    let previous_freeze = SolverFreeze {
-        main_pkg: pkg_root,
-        package_freezes: [
-            (
-                pkg_root,
-                SolverPackageFreeze {
-                    dependencies_realization: [("a".into(), pkg_a1)].into(),
-                    features: [].into(),
-                },
-            ),
-            (
-                pkg_a1,
-                SolverPackageFreeze {
-                    dependencies_realization: [].into(),
-                    features: [].into(),
-                },
-            ),
-        ]
-        .into(),
-    };
-
+    let previous_freeze = VenvFreeze::new(
+        RootPackage::new(
+            "root".into(),
+            Version::new(0, 1, 0),
+            vec![],
+            vec![DepIdWithAlias::new("a".into(), identity_a.into())],
+        ),
+        vec![FreezePackage::new(identity_a, 1.into(), vec![], vec![])],
+    );
     let mode = SolverMode {
         suppress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = SolverGathererData::new(&pcx, previous_freeze, mode).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) =
-        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
-    else {
-        panic!()
-    };
-    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
+
+    let solver = Solver::new(
+        &pcx,
+        Some(&previous_freeze),
+        &fetcher,
+        MockGitAccess(),
+        mode,
+    );
+    let new_freeze = block_on(solver.solve()).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lir_builtins_test.cpp
  * @brief LIR tests over the `function_calls` file, which declares the LIR-implemented builtins
@@ -73,21 +79,19 @@ private:
 
 		auto is_deref = [](const LIRPlace& place) {
 			return place.projection_chain.size() == 1
-			    && std::holds_alternative<LIRPlace::DerefProjection>(
-					   place.projection_chain.front().storage
-				);
+			    && v_matches(place.projection_chain.front().storage, LIRPlace::DerefProjection);
 		};
 
 		auto first_instruction = [](CRef<Function> function) {
 			return function->block_order.front()->instructions.front();
 		};
 
-		// move_in:{i64}(pointer, value) -> `(*pointer) := Assign value`
+		// move_in[i64](pointer, value) -> `(*pointer) := Assign value`
 		auto store = first_instruction(module.lirFunc("writeInto"));
 		ASSERT_TRUE(store.operation == Operation::Assign);
 		ASSERT_TRUE(is_deref(store.output.value()));
 
-		// move_out:{i64}(pointer) -> `<result> := Assign (*pointer)`
+		// move_out[i64](pointer) -> `<result> := Assign (*pointer)`
 		auto read = first_instruction(module.lirFunc("readOut"));
 		ASSERT_TRUE(read.operation == Operation::Assign);
 		ASSERT_TRUE(is_deref(read.arguments.at(0).get<LIRPlace>()));
@@ -119,8 +123,8 @@ private:
 							<< source_start << ", " << source_end << "]\n";
 			  };
 
-		assertTrue(
-			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
+		ASSERT_HAS_VALUE(
+			foo_lir->metadata.position, "Expected function metadata position in LIR foo"
 		);
 		print_stable_position(foo_lir->metadata.position, "foo.function");
 		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));

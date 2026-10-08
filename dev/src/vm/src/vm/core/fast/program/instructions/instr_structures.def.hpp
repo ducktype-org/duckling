@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @brief This file define the instruction structures and instruction union
  * given argument type definitions. It also defines instruction maker functions for easier
@@ -24,7 +30,7 @@
 namespace instr_structs {
 	#define _DETAIL_CREATE_MEMBER(type, name) ARG_NAMESPACE type name;
 	#define HANDLE_INSTR_ARGS(NAME, ...)                        \
-		struct NAME {                                           \
+		struct NAME final {                                     \
 			FOR_EACH(_DETAIL_CREATE_MEMBER EXPAND, __VA_ARGS__) \
 		};                                                      \
 		static_assert(sizeof(NAME) <= 16);
@@ -36,7 +42,7 @@ namespace instr_structs {
 #endif
 
 #ifdef MAKE_INSTRUCTION_UNION
-struct Instruction {
+struct Instruction final {
 	union {
 	#define HANDLE_INSTR(NAME) instr_structs::NAME CAT(instr_, NAME);
 	#include "instruction_definitions.def.hpp"

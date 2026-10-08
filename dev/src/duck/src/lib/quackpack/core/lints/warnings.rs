@@ -1,23 +1,24 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Various warnings created when parsing the [`manifest`].
 //!
+//! They are simple diagnostics, not associated with any lint, and are not checked when running
+//! [`run_lint_passes`].
+//!
 //! [`manifest`]: crate::quackpack::core::parse
+//! [`run_lint_passes`]: super::run_lint_passes
 
-use std::fmt;
-use std::sync::Arc;
-
+use super::{Diagnostic, macros};
 use crate::{DuckContext, QuackResult};
 
-pub trait Warning: fmt::Debug + fmt::Display + Sync + Send {}
-
-impl<T: Warning + ?Sized> Warning for &T {}
-impl<T: Warning + ?Sized> Warning for &mut T {}
-impl<T: Warning + ?Sized> Warning for Box<T> {}
-impl<T: Warning + ?Sized> Warning for Arc<T> {}
-
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 /// Warnings encountered when parsing the manifest.
 pub struct Warnings {
-    warnings: Vec<Arc<dyn Warning + 'static>>,
+    warnings: Vec<Box<dyn Diagnostic + 'static>>,
 }
 
 impl Warnings {
@@ -26,12 +27,12 @@ impl Warnings {
         Self::default()
     }
 
-    /// Register a new [`Warning`] to be emitted later.
-    pub fn push<T: Warning + 'static>(&mut self, warning: T) {
-        self.warnings.push(Arc::new(warning));
+    /// Register a new [`Diagnostic`] to be emitted later.
+    pub fn push<T: Diagnostic + 'static>(&mut self, warning: T) {
+        self.warnings.push(Box::new(warning));
     }
 
-    /// Emit all registered [`Warning`]s.
+    /// Emit all registered [`Diagnostic`]s.
     pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
         for warning in &self.warnings {
             emit_warning(warning, ctx)?;
@@ -40,36 +41,34 @@ impl Warnings {
     }
 }
 
-/// Emit a single [`Warning`] to an appropriate [`Terminal`](crate::duck::util::terminal::Terminal).
-fn emit_warning(warning: &impl Warning, ctx: &DuckContext) -> QuackResult<()> {
-    ctx.console().warning(warning)
+/// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](crate::duck::util::terminal::Terminal).
+fn emit_warning(warning: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()> {
+    ctx.warning(warning)
 }
 
-#[derive(Debug)]
-/// A [`Warning`] for an unused key.
-pub struct UnusedKey {
-    key: String,
+macros::make_diagnostic! {
+    pub struct UnusedKey {
+        key: String,
+    }
+    display("the key `{}` is unused", key)
 }
 
 impl UnusedKey {
-    /// Create a new [`UnusedKey`] [`Warning`] for the given key.
+    /// Create a new [`UnusedKey`] [`Diagnostic`] for the given key.
     pub fn new(key: String) -> Self {
         Self { key }
     }
 }
 
-impl fmt::Display for UnusedKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "the key `{}` is unused", self.key)
+macros::make_diagnostic! {
+    pub struct GitUrlIsPath {
+        url: String,
+        path_to_dep: String,
     }
-}
-
-impl Warning for UnusedKey {}
-
-#[derive(Debug)]
-pub struct GitUrlIsPath {
-    url: String,
-    path_to_dep: String,
+    display(
+        "git url `{}` of a dependency `{}` is a path; it can cause surprising effects",
+        url, path_to_dep
+    )
 }
 
 impl GitUrlIsPath {
@@ -80,15 +79,3 @@ impl GitUrlIsPath {
         }
     }
 }
-
-impl fmt::Display for GitUrlIsPath {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "git url `{}` of a dependency `{}` is a path; it can cause surprising effects",
-            self.url, self.path_to_dep
-        )
-    }
-}
-
-impl Warning for GitUrlIsPath {}

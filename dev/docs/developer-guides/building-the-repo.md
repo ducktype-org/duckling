@@ -29,7 +29,7 @@ sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g+
 #### Arch linux
 
 ```bash
-sudo pacman -S python python-pip python-click doxygen graphviz lcov pkgconf libffi --noconfirm
+sudo pacman -S python python-pip gcc clang lld mold python-click python-requests python-yaml ninja cmake doxygen graphviz lcov pkgconf libffi --noconfirm
 ```
 
 > **Note**  
@@ -79,6 +79,8 @@ You can install it using:
 ```bash
 brew install llvm@23
 brew install llvm@19
+# The linker. Homebrew keeps it in its own formula, so neither llvm above provides one.
+brew install lld
 ```
 
 Installing using Homebrew doesn't expose the aliases visible from the terminal session 
@@ -94,7 +96,8 @@ in our project add this export:
 export CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm@19${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 ```
 
-You can also now use the LLVM linker which now supports the DARWIN object files, by passing `--linker lld` to setup-build.
+lld supports Mach-O these days, and `setup-build` picks it on macOS on its own - see the linker note
+below. Pass `--linker default` to go back to Apple's `ld`.
 
 In order to run toolbox the requirements are the same as for MacOS (gcc).
 
@@ -191,8 +194,11 @@ The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed 
 export ICU_ROOT=${HOMEBREW_PREFIX}/opt/icu4c
 ```
 
-`setup-build` auto-selects the system linker (`ld64`) on macOS; mold and lld only handle ELF, not the
-Mach-O format macOS uses.
+`setup-build` auto-selects `lld` on macOS, and falls back to the system linker when it is missing.
+mold is never a candidate there: it has no Mach-O backend, only ELF. lld does (`ld64.lld`), and on
+the CI mac it links measurably faster than Apple's `ld` - 0.43s against 0.63s for the common test
+pack - while not emitting the duplicate-library warnings `ld` prints. Install it with
+`brew install lld`; Homebrew keeps it in its own formula, so `llvm@23` does not bring one.
 
 
 ## Compiling the project

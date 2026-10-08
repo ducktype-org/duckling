@@ -1,0 +1,17 @@
+# An operator method named after a built-in operator must be found.
+
+class Number {
+    val: i64 = 0;
+
+    fun +(rhs: Number) -> Number = {
+        return Number(self.val + rhs.val);
+    }
+}
+
+fun main() -> i64 = {
+    var a = Number(10);
+    var b = Number(32);
+    let c = a + b;
+    builtin_output_i64(c.val);  # 42
+    return 0;
+}

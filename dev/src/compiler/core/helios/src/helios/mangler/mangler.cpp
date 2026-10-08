@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "mangler.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -7,6 +13,7 @@
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <global_state/packages.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -46,12 +53,14 @@ namespace compiler::helios::mangler {
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
-		if (k.symbol_key.index() == 0)
-			addToHash(h, std::get<0>(k.symbol_key));
-		else if (k.symbol_key.index() == 1)
-			addToHash(h, std::get<1>(k.symbol_key));
-		else
-			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
+		variant_match(k.symbol_key) {
+			variant_case(SymID, val) { addToHash(h, val); }
+			variant_case(special_symbol_keys::LIRModuleID, val) { addToHash(h, val); }
+			variant_default {
+				CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+			}
+		}
 
 		addToHash(h, k.kind);
 		addToHash(h, k.mangling_scheme_version);
@@ -68,26 +77,31 @@ namespace compiler::helios::mangler {
 			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
 
 		/**
-		 * @brief Check if the symbol should be mangled in the first place.
+		 * @brief The name a symbol links under when it is not mangled (C/DVM linkage), or none
+		 * when it has to be mangled. For `extern("C")` it is the `@c_symbol_name` when one is set.
 		 * @note: See mangling-scheme.md for details
 		 */
-		bool shouldMangle(query::Context& ctx, const auto& key) {
+		base::Optional<base::StrID> unmangledName(
+			query::Context& ctx, const KeyOf_MangledSymbol& key
+		) {
 			if (key.kind != ManglingSymbolKind::Standard) {
 				// Non-standard symbols can't have C mangling
-				return true;
+				return std::nullopt;
 			}
 
 			const auto sym_id = std::get<SymID>(key.symbol_key);
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
-					variant_case_novalue(CAbi) { return false; }
-					variant_case_novalue(DVMAbi) { return false; }
-					variant_case_novalue(DefaultAbi) { return true; }
-					variant_default { CORE_PANIC("Unknown ABI in shouldMangle()"); }
+					variant_case(CAbi, c_abi) {
+						return c_abi.symbol_name.copyValueOr(name(sym_id));
+					}
+					variant_case_novalue(DVMAbi) { return name(sym_id); }
+					variant_case_novalue(DefaultAbi) { return std::nullopt; }
+					variant_default { CORE_PANIC("Unknown ABI in unmangledName()"); }
 				}
 			}
 
-			return true;
+			return std::nullopt;
 		}
 
 		/**
@@ -110,28 +124,51 @@ namespace compiler::helios::mangler {
 			return ret;
 		}
 
+		constexpr base::Optional<const char> findExtendedChar(std::string_view str) {
+			auto it = std::ranges::find_if_not(str, [](char c) -> bool {
+				return c == '_' || BASE_62_DIGITS.contains(c);
+			});
+
+			if (it != str.end())
+				return *it;
+			else
+				return std::nullopt;
+		}
+
+		auto quoteExtendedChar(const char c) {
+			if (std::isprint(static_cast<unsigned char>(c)))
+				return base::strConcat(
+					'\'', c, "' (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
+				);
+			else
+				return base::strConcat(
+					"[not-printable] (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
+				);
+		}
+
 		/**
 		 * @brief Returns bare identifier of the symbol prefixed with its size
-		 * If the name contains characters outside of the allowed set,
-		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * If the name contains characters outside of the set allowed in symbols,
+		 * it will be prefixed with 'U' and punycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
 		void identifier(std::stringstream& ss, std::string_view name) {
-			// @future: use punnycode for unicode strings
-			if (/* hasCharsOnlyFromAllowedCharacterSet */ true) {
+			// @TODO: #3285 add backreferences
+			if (not findExtendedChar(name)) {
 				ss << name.size() << name;
 				return;
 			} else {
-				constexpr char   UNICODE_PREFIX = 'U';
-				std::string_view punny_string   = name;  // @future: convert to punnycode
-				ss << UNICODE_PREFIX << punny_string.size() << punny_string;
+				constexpr char UNICODE_PREFIX = 'U';
+				// @TODO: #3286 convert to punycode
+				std::string_view puny_string = name;
+				ss << UNICODE_PREFIX << puny_string.size() << puny_string;
 			}
 		}
 
 		/**
 		 * @brief Returns bare identifier of the symbol prefixed with its size
-		 * If the name contains characters outside of the allowed set,
-		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * If the name contains characters outside of the set allowed in symbols,
+		 * it will be prefixed with 'U' and punycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string identifier(std::string_view name) {
@@ -145,45 +182,73 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string pathPrefix(query::Context& ctx, SymID symbol_id) {
-			// @future
-			// currently package_id is a random string
-			// package name should be added when we start using it
-			// auto package = curr->getPackageID().strView();
+			// @future: add scripts after #2762
+			std::stringstream ret_ss;
 
-			// "M" <module-name>+                                // standalone module
-			// @future: templated modules
-			if (/* standalone module */ true) {
-				auto enclosing_scope = scope(symbol_id);
+			// package/module prefix
+			const auto module_id = module(scope(symbol_id));
+			// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
+			const auto package_id
+				= ctx.query<compiler::frontend::QueryPackageOfModule>(module_id).unlock(ctx).getID();
 
-				std::vector<std::string_view> modules;
-				auto                          curr = module(enclosing_scope);
-				modules.push_back(frontend::moduleName(curr).strView());
+			// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
+			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
+				/* we're in a package */
+				// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
+				auto raw_package_name = package_ref_opt.value()->getName().str();
 
-				while (auto parent = ctx.query<frontend::QueryParentModule>(curr)) {
-					curr = parent.value();
-					modules.push_back(frontend::moduleName(curr).strView());
+				// @TODO: #3286 for now we allow '-' and just treat it as '_'
+				if (raw_package_name.contains('-') && raw_package_name.contains('_'))
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						"Currently it is not allowed to mix '-' and '_' in package names."
+					));
+				std::ranges::replace(raw_package_name, '-', '_');
+				auto package_name = identifier(raw_package_name);
+
+				if (const auto c = findExtendedChar(package_name)) {
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
+						"Name of a package contains a character that is not allowed yet: ",
+						quoteExtendedChar(c.value())
+					)));
 				}
-
-				std::stringstream ret;
-				ret << "M";
-				for (auto& mod: modules | std::views::reverse) identifier(ret, mod);
-
-				return ret.str();
+				ret_ss << 'P' << package_name;
+			} else {
+				/* standalone module */
+				ret_ss << 'M';
 			}
 
-			// @future: add support for packages & scripts when they are implemented
-			// "P" <package-name> <module-name>                  // module in a package
-			// "S" <script-name>                                 // standalone script
-			// "R" <package-name> <module-name> <script-name>    // script in a package
+			// <module-name>+
+			// @future: templated modules
+			{
+				std::vector<std::string_view> modules;
+				modules.push_back(frontend::moduleName(module_id).strView());
 
-			// @todo: backreference -- this will be added in the next PR
+				for (auto current_module = module_id;
+				     auto parent_module = ctx.query<frontend::QueryParentModule>(current_module);) {
+					current_module = parent_module.value();
+					modules.push_back(frontend::moduleName(current_module).strView());
+				}
+
+				for (auto mod: modules | std::views::reverse) identifier(ret_ss, mod);
+			}
+
+			auto ret = ret_ss.str();
+			// @TODO: #3286 for now we allow '-' and just treat it as '_'
+			std::ranges::replace(ret, '-', '_');
+			if (const auto c = findExtendedChar(ret))
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
+					"Name of a module contains a character that is not allowed yet: ",
+					quoteExtendedChar(c.value())
+				)));
+
+			// @TODO: #3285 add backreferences
+			return ret;
 		}
 
 		std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
-			// "M" <module-name>                                 // standalone module
+			// @TODO: #2643 rething compiler-generated symbols
+			// @TODO: #3285 add backreferences
 			return base::strConcat("M", mod_id.id);
-
-			// @future: add support for packages & scripts when they are implemented
 		}
 
 		/**
@@ -296,6 +361,7 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string unscopedName(query::Context& ctx, SymID symbol_id) {
+			// @TODO: #3285 add backreferences
 			if (isFunctionLike(kind(symbol_id))) {
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
@@ -303,6 +369,34 @@ namespace compiler::helios::mangler {
 					return operatorNameEncoding(fun_decl);
 			}
 			return identifier(compiler::helios::name(symbol_id).strView());
+		}
+
+		/**
+		 * @brief Adds the identifier of the name for the ancestor unless it was already added
+		 * before which can happen for template identifiers
+		 */
+		template<typename ElemT>
+		auto checkAndAddElem(
+			const auto& it, const auto& ancestors, const auto& ancestor, auto& ret, auto& ctx
+		) {
+			if (std::ranges::any_of(
+					std::ranges::subrange(ancestors.rbegin(), it),
+					[&](const auto& elem) { return elem.second == ancestor->getID(); }
+				))
+				return;
+
+			const auto val = ancestor.template dynamicCast<ElemT>().value();
+
+			if constexpr (std::same_as<ElemT, pst::Fun>) {
+				auto sym = ctx.template query<QuerySymbolOfSTMT>({ val }).valueOrPanic();
+				ret += unscopedName(ctx, sym);
+
+				std::string func(query::Context&, SymID);
+				ret += func(ctx, sym);
+				return;
+			}
+
+			ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
 		}
 
 		/**
@@ -322,7 +416,9 @@ namespace compiler::helios::mangler {
 			// additional cases that are handled below.
 			auto ancestor_opt = [&]() {
 				variant_match(getSymRef(symbol_id)->other) {
-					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+					variant_case_novalue(
+						PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+					) {
 						auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
 						return getPSTElementParent(ctx, ancestor);
 					}
@@ -355,6 +451,7 @@ namespace compiler::helios::mangler {
 					using enum pst::ElementKind;
 				case Namespace:
 				case Class:
+				case Fun:
 					is_nested = true;
 					ancestors.emplace_back(ancestor, std::nullopt);
 					break;
@@ -378,24 +475,19 @@ namespace compiler::helios::mangler {
 			for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
 				const auto [ancestor, _] = *it;
 
+				// @TODO: #3285 add backreferences -- <name-prefix>
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) break;
-
-					const auto val = ancestor.dynamicCast<pst::Namespace>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-
+					checkAndAddElem<pst::Namespace>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case Class: {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) break;
-
-					const auto val = ancestor.dynamicCast<pst::Class>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-
+					checkAndAddElem<pst::Class>(it, ancestors, ancestor, ret, ctx);
+					break;
+				}
+				case Fun: {
+					checkAndAddElem<pst::Fun>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case TemplateStmt: {
@@ -467,6 +559,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
 			auto prefix = pathPrefix(ctx, symbol_id);
+			// @TODO: #3285 add backreferences
 			return base::strConcat(std::move(prefix), symbolName(ctx, symbol_id));
 		}
 
@@ -520,7 +613,9 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Destructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
-					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+					variant_case_novalue(
+						PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+					) {
 						// If the symbol originates from the PST (including builtins), use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
@@ -639,7 +734,7 @@ namespace compiler::helios::mangler {
 		 * @brief Get the encoding of a symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string encoding(query::Context& ctx, const auto& key) {
+		std::string encoding(query::Context& ctx, const KeyOf_MangledSymbol& key) {
 			switch (key.kind) {
 			case ManglingSymbolKind::Standard:
 				return internal::symbolEncoding(ctx, std::get<SymID>(key.symbol_key));
@@ -742,6 +837,7 @@ namespace compiler::helios::mangler {
 	}  // namespace internal
 
 	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value) {
+		// @TODO: #3285 add backreferences
 		variant_match(value.getStorage()) {
 			variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
 			variant_case(compiler::numeric_value::NumericValue, num) {
@@ -777,7 +873,7 @@ namespace compiler::helios::mangler {
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (not internal::shouldMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
+			if_opt_some(internal::unmangledName(ctx, key), unmangled) return unmangled;
 
 			// note: global identifiers starting with underscore and a capital letter are
 			// reserved in C. Q seems to be free and stands for both query and quack
@@ -855,7 +951,7 @@ namespace compiler::helios::mangler {
 			case 128:
 				return "q";
 			default:
-				// @future: "b" for brain float
+				// @future: brain float
 				CORE_PANIC("Unknown floating-point type in mangle(FloatAbstractType)");
 			}
 		}
@@ -983,6 +1079,7 @@ namespace compiler::helios::mangler {
 		}
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			// @TODO: #3285 add backreferences
 			return base::StrID{ base::strConcat(
 				key.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
 				key.getLeakage() == tsh::Leakage::Leaking ? "L" : "",

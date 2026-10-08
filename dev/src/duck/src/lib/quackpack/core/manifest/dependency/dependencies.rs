@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Managing all dependencies of the root package.
 use std::collections::HashSet;
 
@@ -39,7 +45,7 @@ impl Dependencies {
 
     /// Get a dependency by a name.
     pub fn get_by_name(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(&Selector::Name(name)).next()
+        self.select(&Selector::Name(name)).next()
     }
 
     /// Check if a dependency exists by an alias.
@@ -49,7 +55,7 @@ impl Dependencies {
 
     /// Get a dependency by an alias.
     pub fn get_by_alias(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(&Selector::Alias(name)).next()
+        self.select(&Selector::Alias(name)).next()
     }
 
     /// Check if a dependency exists by an effective name.
@@ -59,17 +65,17 @@ impl Dependencies {
 
     /// Get a dependency by a compilation name.
     pub fn get_by_effective_name(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(&Selector::EffectiveName(name)).next()
+        self.select(&Selector::EffectiveName(name)).next()
     }
 
     /// Get a dependency by a given [`Selector`].
-    pub fn get_by_selector(&self, selector: &Selector) -> impl Iterator<Item = &Dependency> {
+    pub fn select(&self, selector: &Selector) -> impl Iterator<Item = &Dependency> {
         self.0.iter().filter(|dep| selector.selects(dep))
     }
 
     /// Get a dependency by a given [`Selector`].
     pub fn has_by_selector(&self, selector: &Selector) -> bool {
-        self.get_by_selector(selector).next().is_some()
+        self.select(selector).next().is_some()
     }
 
     /// Filter by [`DependencyKind`].

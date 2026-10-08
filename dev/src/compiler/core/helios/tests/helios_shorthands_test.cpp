@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file helios_shorthands_test.cpp
  * @brief Tests for the HOUT construction shorthands (@ref shorthands.hpp).
@@ -532,7 +538,7 @@ public:
 			const auto pst_origin
 				= pstOrigin(compiler::helios::maybeSymbolPst(dummy_symbol).value().unlock(ctx));
 			ASSERT_TRUE(!pst_origin.isGenerated());
-			ASSERT_TRUE(pst_origin.getStablePosition().has_value());
+			ASSERT_HAS_VALUE(pst_origin.getStablePosition());
 
 			// Check that origin is generated before override.
 			ASSERT_TRUE(dummy_ident->origin.isGenerated());
@@ -543,7 +549,7 @@ public:
 
 			// The HOUT Expr now carries the specified origin.
 			ASSERT_TRUE(!dummy_ident->origin.isGenerated());
-			ASSERT_TRUE(dummy_ident->origin.getStablePosition().has_value());
+			ASSERT_HAS_VALUE(dummy_ident->origin.getStablePosition());
 		});
 	}
 };

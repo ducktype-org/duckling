@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file types.hpp
  * @brief Interfaces of the simpler kinds of types.
@@ -516,15 +522,6 @@ namespace compiler::tsh {
 		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
 		) const;
 
-		/**
-		 * Gets the type of a member.
-		 * @param sym The member, the type of which is requested.
-		 * @param ctx The Query Context necessary to refer to the definition of the class.
-		 * @return The type of the member.
-		 */
-		[[nodiscard]]
-		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
-
 		CONSTRUCT_WITH_CHECKED_CAST(ClassAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(ClassAbstractType)
@@ -580,7 +577,7 @@ namespace compiler::tsh {
 	 *
 	 * This is a compile-time concept used primarily to implement generics.
 	 * A type template cannot hold values or exist in the final program's memory on its own,
-	 * baking it with template arguments (e.g., `List:{i64}`) results in a concrete type.
+	 * baking it with template arguments (e.g., `List[i64]`) results in a concrete type.
 	 *
 	 * @TODO: #717 This may come in handy when implementing generics/templates. This implementation
 	 * may change then.

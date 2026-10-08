@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "dvm_operation.hpp"
 
 #include "../dvm_value.hpp"
@@ -72,12 +78,12 @@ namespace compiler::backend_vm::internal {
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
 		base::Optional<vm::code::TypeOfData> called_result_type
-			= program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+			= program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
 		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 
 		std::vector<vm::code::TypeOfData> param_types
 			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-				  return **program_context.lowerAndKeepTslType(layout);
+				  return *program_context.lowerAndKeepTslType(layout);
 			  })
 		    | std::ranges::to<std::vector>();
 
@@ -195,7 +201,7 @@ namespace compiler::backend_vm::internal {
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
 				base::Optional<vm::code::TypeOfData> return_type
-					= ctx.program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+					= ctx.program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
 				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 				return BuiltinCallOperation{
 					.kind        = builtin,
@@ -227,9 +233,12 @@ namespace compiler::backend_vm::internal {
 			// creates a copy of the value we try to reference on the stack. We have to lower it to
 			// a place and if it's direct, take a pointer to it, but if it's not, the resulting
 			// address is the pointer returned by `resolveLirPlace`.
+			const auto& src_place = instr.arguments[0].get<lir::LIRPlace>();
 			return AddressOfOperation{
-				.src  = ctx.resolveLirPlace(instr.arguments[0].get<lir::LIRPlace>()),
-				.dest = lower_opt_dest(),
+				.src         = ctx.resolveLirPlace(src_place),
+				.src_layout  = src_place.layout,
+				.dest        = lower_opt_dest(),
+				.dest_layout = instr.output.map(&lir::LIRPlace::layout),
 			};
 		}
 		case Assign: {

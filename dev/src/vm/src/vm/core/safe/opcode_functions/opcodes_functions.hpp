@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../../config.hpp"
@@ -10,6 +16,7 @@
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
@@ -26,6 +33,13 @@
 	#define RETURN_TYPE RETURN_TYPE_OPFUN_TC
 #else
 	#define RETURN_TYPE RETURN_TYPE_OPFUN_REF
+#endif
+
+// A dev-debug build leaves the opfun helpers out of line, so that they can be stepped into.
+#ifdef BUILD_TYPE_DEV_DEBUG
+	#define VM_OPFUN_INLINE
+#else
+	#define VM_OPFUN_INLINE __attribute__((always_inline))
 #endif
 
 namespace vm {
@@ -95,6 +109,68 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Zeroes a freshly initialized local variable and reserves its slot.
+		 *
+		 * @param zeroed_size Purely an optimization: always the size of `type`, which the
+		 * assertion below pins. It is taken separately so that a caller knowing it at compile time
+		 * zeroes with a plain store instead of reading the size back out of the type.
+		 */
+		static void pushLocalSlot(
+			Frame* frame, TypeCRef type, byte* data, u64 zeroed_size, Block* block
+		) {
+			CORE_ASSERT(
+				zeroed_size == type->getSize().asInt(),
+				"A local variable has to be zeroed over its whole size"
+			);
+			std::memset(data, 0, zeroed_size);
+
+			*frame->local_slot_stack_end = { .type = type.get(), .data = data, .block = block };
+			frame->local_slot_stack_end += 1;
+		}
+
+		/**
+		 * @brief Drops the topmost local variable slot without touching its block.
+		 */
+		static void popLocalSlot(Frame* frame) { frame->local_slot_stack_end -= 1; }
+
+		/**
+		 * @brief The topmost local variable slot.
+		 */
+		static const LocalSlot& topLocalSlot(Frame* frame) {
+			return frame->local_slot_stack_end[-1];
+		}
+
+		/// `createLocalSlotBlock`, kept out of line: it runs at most once per variable,
+		/// so it must not bloat the opfuns.
+		[[gnu::noinline]]
+		static Ref<Block> createLocalBlock(Frame* frame, SafeVMThread& thread, u64 slot_index) {
+			return createLocalSlotBlock(*frame, thread.process_memory, slot_index);
+		}
+
+		/**
+		 * @brief Resolves a block place argument - an index into the frame's local slot stack,
+		 * or into the global block buffer when the highest bit is set - to a block.
+		 *
+		 * Globals always have their blocks; a local gets one created on the spot the first time
+		 * one is needed.
+		 */
+		[[nodiscard]]
+		VM_OPFUN_INLINE static Ref<Block> readBlockRefFromArg(
+			Frame* frame, SafeVMThread& thread, u64 arg
+		) {
+			// The highest bit tells globals apart from locals, the rest is the index.
+			const bool is_global = (arg >> 63) != 0;
+			const u64  index     = arg & ~(1ULL << 63);
+
+			if (is_global) return { thread.runtime_data.global_block_ref_buffer_base[index] };
+
+			if (frame->local_slot_stack_base[index].block == nullptr) [[unlikely]]
+				return createLocalBlock(frame, thread, index);
+
+			return { frame->local_slot_stack_base[index].block };
+		}
+
+		/**
 		 * @brief Prepares the execution variables and frames for a call to a function with a
 		 * specified id.
 		 *
@@ -107,18 +183,15 @@ namespace vm {
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			performFunctionCall(
-				const MicroInstruction*& instr,
-				std::byte*&              local_stack,
-				Frame*&                  frame,
-				SafeVMThread&            thread,
-				usize                    function_id
-			) {
+		static VM_OPFUN_INLINE void performFunctionCall(
+			const MicroInstruction*& instr,
+			byte*&                   local_stack,
+			Frame*&                  frame,
+			SafeVMThread&            thread,
+			usize                    function_id,
+			u64                      callee_stack_distance,
+			u64                      instruction_size
+		) {
 			auto& runtime_data = thread.runtime_data;
 			auto& called_func  = thread.process_program->getFunctions()[function_id];
 
@@ -132,103 +205,90 @@ namespace vm {
 					";\n"
 				);
 
-			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
-
 			auto arg_count           = called_func.parameters.size();
 			auto ret_count           = called_func.result_types.size();
 			auto shared_blocks_count = arg_count + ret_count;
-			u64  prev_frame_block_ref_count
-				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			u64  prev_frame_slot_count
+				= u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
 
 			// Save current registers and flow.
-			frame->instr       = instr + 1;
+			frame->instr       = instr + instruction_size;
 			frame->local_stack = local_stack;
 
 			// Save the last frame
 			auto* prev_frame = frame;
 
 			frame++;
-			frame->current_function = &called_func;
 
 			if (frame + 1 >= runtime_data.frame_stack_end)
 				throw exceptions::VMStackOverflowException();
 
+			frame->current_function = &called_func;
+
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
-			// New local_stack address is the local_stack_head (all typed initialized by the caller
-			// up to this point) - the size of ret_vals and arguments passed to callee.
-			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
-			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
-			                                  + (prev_frame_block_ref_count - shared_blocks_count);
+			// The callee's local stack starts where the space shared with the caller (its return
+			// values followed by its arguments) begins.
+			local_stack += callee_stack_distance;
+			frame->local_slot_stack_base
+				= prev_frame->local_slot_stack_base + (prev_frame_slot_count - shared_blocks_count);
+
+			// Cross-checks the distance, computed at lowering time, against the address the
+			// caller's own `init` recorded for the first slot they share.
+			CORE_ASSERT(
+				shared_blocks_count == 0 || frame->local_slot_stack_base[0].data == local_stack,
+				"The callee's shared slots have to start where its local stack does"
+			);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
-			if (frame->local_block_ref_stack_base + called_func.local_block_count
-			    >= runtime_data.block_ref_stack_end)
+			if (frame->local_slot_stack_base + called_func.local_slot_count
+			    >= runtime_data.slot_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			frame->local_stack_head          = shared_stack_space_size;
-			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
+			frame->local_slot_stack_end = prev_frame->local_slot_stack_end;
 
-			// Remove the argument blocks from caller's block stack. Only the return value stays in
-			// the block stack.
+			// Remove the argument slots from the caller's slot stack. Only the return value stays
+			// there.
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
-			prev_frame->local_block_ref_stack_end -= arg_count;
-			prev_frame->local_stack_head -= called_func.arg_size;
+			prev_frame->local_slot_stack_end -= arg_count;
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			performInit(
-				[[maybe_unused]] const MicroInstruction*& instr,
-				std::byte*&                               local_stack,
-				Frame*&                                   frame,
-				SafeVMThread&                             thread,
-				TypeCRef                                  type
-			) {
-			auto data_ptr = local_stack + frame->local_stack_head;
-			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
+		/**
+		 * @brief Initializes a local variable together with its block.
+		 *
+		 * Unlike `init_off_type`, which leaves the slot blockless until something asks for a
+		 * block, this creates one up front. Nothing the lowering emits takes this path any more;
+		 * the only caller left is `initFromVMValue`, i.e. the hand-built start functions.
+		 */
+		static VM_OPFUN_INLINE void performInit(
+			byte*& local_stack, Frame*& frame, SafeVMThread& thread, u64 byte_offset, TypeCRef type
+		) {
+			auto data_ptr = local_stack + byte_offset;
+			// The variable is zeroed by `pushLocalSlot`, so the block only adopts its bytes.
+			auto block = thread.process_memory.adoptDummy(type, data_ptr);
 
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
-			*frame->local_block_ref_stack_end = block.get();
-			frame->local_block_ref_stack_end += 1;
-			frame->local_stack_head += type->getSize().asInt();
+			pushLocalSlot(frame, type, data_ptr, type->getSize().asInt(), block.get());
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			performDeinit(Frame*& frame, SafeVMThread& thread) {
-			auto block = frame->local_block_ref_stack_end[-1];
-			auto type  = thread.process_memory.getBlockType(block);
+		static VM_OPFUN_INLINE void performDeinit(Frame*& frame, SafeVMThread& thread) {
+			// A variable that never needed a block has none to free.
+			if (Block* block = frame->local_slot_stack_end[-1].block) {
+				thread.process_memory.freeBlockData(block);
+				thread.process_memory.decreaseBlockRefcount(block);
+			}
 
-			thread.process_memory.freeBlockData(block);
-			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_stack_head -= type->getSize().asInt();
-			frame->local_block_ref_stack_end -= 1;
+			popLocalSlot(frame);
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			setVariantType(
-				SafeVMThread& thread,
-				Pointer       variant_pointer,
-				TypeCRef      wanted_type,
-				TypeCRef      variant_type
-			) {
+		static VM_OPFUN_INLINE void setVariantType(
+			SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+		) {
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -238,14 +298,20 @@ namespace vm {
 				nested_data_ptr.getBlock(), nested_data_ptr.getOffset(), wanted_type
 			);
 
-			// Find type index
+			// Find the zero-based alternative index. The stored tag is one-based because zero
+			// denotes no active alternative.
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
 
-			// @TODO: #3374 - Make usage of type 0 be accounted here as well
-			// Also, optimize this...
-			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
+			while (alternative_index < alternatives.size()
+			       && alternatives[alternative_index] != wanted_type)
+				++alternative_index;
+
+			CORE_ASSERT(
+				alternative_index < alternatives.size(),
+				"The variant must contain the requested alternative type"
+			);
+			const usize alternative_type_tag = alternative_index + 1;
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -258,34 +324,25 @@ namespace vm {
 			switch (variant_type_tag_size.asInt()) {
 			case 1:
 				// byte, using uint8_t below since byte is not std::integral
-				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_type_tag));
 				break;
 			case 2:
-				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_type_tag));
 				break;
 			case 4:
-				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_type_tag));
 				break;
 			case 8:
-				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_type_tag));
 				break;
 			default:
 				CORE_PANIC("Invalid variant size: ", variant_type_tag_size.asInt());
 			}
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			Pointer
-			getVariantPtr(
-				SafeVMThread& thread,
-				Pointer       variant_pointer,
-				TypeCRef      wanted_type,
-				TypeCRef      variant_type
-			) {
-
+		static VM_OPFUN_INLINE Pointer getVariantPtr(
+			SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+		) {
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
 				variant_pointer.getBlock(),
 				variant_pointer.getOffset() + variant_type->getTypeTagSizeBytes()->asInt(),
@@ -302,12 +359,7 @@ namespace vm {
 		/**
 		 * @brief A null cpointer (e.g. a default-initialized local) must not be dereferenced.
 		 */
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			assertCPtrNotNull(void* cptr) {
+		static VM_OPFUN_INLINE void assertCPtrNotNull(void* cptr) {
 			if (cptr == nullptr) throw vm::exceptions::VMFFIError("Accessed null CPointer");
 		}
 	};

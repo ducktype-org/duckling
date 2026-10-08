@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
@@ -125,7 +131,7 @@ namespace vm {
 		};
 
 		struct Data final {
-			struct FieldDesc {
+			struct FieldDesc final {
 				Bytes                  offset = Bytes(0);
 				SharedBox<IVMValueRef> value;
 			};
@@ -135,7 +141,7 @@ namespace vm {
 		};
 
 		struct Variant final {
-			u64                    type_tag = 0;
+			u64                    alternative_index = 0;
 			SharedBox<IVMValueRef> referenced;
 		};
 

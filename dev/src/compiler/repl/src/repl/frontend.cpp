@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "frontend.hpp"
 
 #include <cctype>
@@ -5,8 +11,10 @@
 #include <string>
 
 namespace compiler::repl {
-	ReplFrontend::ReplFrontend(bool completions_enabled, bool bracketed_paste_enabled):
-		  m_impl(completions_enabled, bracketed_paste_enabled) {}
+	ReplFrontend::ReplFrontend(
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output
+	):
+		  m_impl(completions_enabled, bracketed_paste_enabled, decorative_output) {}
 
 	void ReplFrontend::printWelcome() const { m_impl.printWelcome(); }
 

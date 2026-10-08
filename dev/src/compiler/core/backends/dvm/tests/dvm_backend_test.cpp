@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/queries/queries.hpp>
@@ -5,13 +11,13 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
-#include <os_utils/system_libraries.hpp>
 #include <program_lowering_context.hpp>
 #include <tsl/queries.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
 
+#include <os_utils/system_libraries.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
@@ -83,8 +89,8 @@ protected:
 
 private:
 	static inline const std::vector<std::string> ALL_CORE_MODULES{
-		"core/builtins", "core/io",        "core/containers",
-		"core/runtime",  "core/panicking", "core/clib",
+		"core/builtins", "core/primitive_io", "core/containers",
+		"core/runtime",  "core/panicking",    "core/clib",
 	};
 
 	auto getModuleFromPath(
@@ -94,21 +100,22 @@ private:
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
-		auto                     append_module_to_code = [&](const std::string& module_path) {
-            auto module = driver::test_utils::getModuleIdFromPath(module_path);
-            query::utils::withContextDo([&](query::Context& ctx) {
-                auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+		auto append_module_to_code = [&](const std::string& module_path) {
+			auto module = driver::test_utils::getModuleIdFromPath(module_path);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+				auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+				ASSERT_HAS_VALUE(mir_unit, "MIR lowering failed");
 
-                backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
-                m.insertLIRUnit(lir_unit);
+				auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-                code.mergeFrom(m.build());
-            });
+				backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
+				m.insertLIRUnit(lir_unit);
+
+				code.mergeFrom(m.build());
+			});
 		};
 		for (auto& module_path: module_paths_to_load) append_module_to_code(module_path);
 		append_module_to_code(main_module_path);
@@ -206,13 +213,14 @@ private:
 				ctx, base::StrID("variant_unit_alternative_test"), false, false
 			);
 			const auto dvm_type = program_ctx.lowerAndKeepTslType(layout);
-			ASSERT_HAS_VALUE(dvm_type);
 
-			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(**dvm_type);
+			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(*dvm_type);
 			ASSERT_HAS_VALUE(dvm_variant);
 
-			const auto& unit_dvm_type = program_ctx.getUnitType();
-			ASSERT_TRUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type).has_value());
+			const auto& unit_dvm_type = *program_ctx.lowerAndKeepTslType(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(unit_type.getType())->valueOrThrow()
+			);
+			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
 				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
 			));
@@ -292,6 +300,7 @@ private:
 			"7\n33\n9\n33\n9\n4\n21\n21\n15\n33\n"
 			"100\n2\n50\n0\n0\n3\n3\n"
 			"5\n6\n7\n"
+			"12\n13\n17\n8\n"
 			"4\n50\n4\n"
 		);
 	}

@@ -3,4 +3,4 @@ PreNode: ""
 
 SubDirs:
   - cli
-  - compilation
+  - features

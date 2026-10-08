@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "class_constructors.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
@@ -22,8 +28,6 @@ namespace compiler::helios::defgen {
 			using std::ranges::to;
 			using std::views::transform;
 
-			// Construct the constructor's type.
-			// @TODO: #1328 Properly handle value categories in class constructors.
 			const std::vector<tsh::InterfaceElement> fields
 				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();

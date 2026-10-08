@@ -1,10 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <tester/tester.hpp>
 
 #include <vm/core/safe/exceptions.hpp>
-
-#include <sstream>
 
 class VmMemoryTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -17,135 +21,102 @@ public:
 		TESTER_ADD_TEST(noDoubleDestructorCalls);
 		TESTER_ADD_TEST(nestedLeaks);
 		TESTER_ADD_TEST(variantDestructor);
-		TESTER_ADD_TEST(deinitAfterPanicIsRefused);
-		TESTER_ADD_TEST(deinitOrKillTearsDownEitherWay);
-		TESTER_ADD_TEST(deinitKillsTheProcessWhenAGlobalDestructorPanics);
-		TESTER_ADD_TEST(deinitOrKillHandlesAProcessKilledByItsFailedDeinit);
-		TESTER_ADD_TEST(deinitOnNotStartedProcessRunsNoGlobalDestructors);
+		TESTER_ADD_TEST(doubleFreeIsRefused);
+		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
+		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
+		TESTER_ADD_TEST(freeingALocalIsRefused);
+		TESTER_ADD_TEST(freeingAGlobalIsRefused);
+		TESTER_ADD_TEST(freeingAVariantPayloadIsRefused);
+		TESTER_ADD_TEST(freeingAStructFieldIsRefused);
+		TESTER_ADD_TEST(readingANestedBlockAfterFreeIsRefused);
 	}
 
 private:
 	void localLeakTest() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("local_leak.dbc", "", ""),
+			runTestOnVmGetResult("local_leak.dbc"),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
 
 	void globalLeakTest() {
-		const auto result = runTestOnVmGetResult("global_leak.dbc", "", "");
+		const auto result = runTestOnVmGetResult("global_leak.dbc");
 		ASSERT_HAS_VALUE(result.run_result);
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
 		ASSERT_HAS_VALUE(validation_result);
 		ASSERT_TRUE(validation_result.value().memory_valid == false);
 	}
 
-	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc", "", ""); }
+	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc"); }
 
 	void nestedLeaks() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("nested_leaks.dbc", "", ""),
+			runTestOnVmGetResult("nested_leaks.dbc"),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
 
-	void variantDestructor() { runTestOnVm("variant_destructor.dbc", "", ""); }
+	void variantDestructor() { runTestOnVm("variant_destructor.dbc"); }
 
-	// Note: Those will be moved to `api_test` in the next PR. I just needed a place to put them in.
-
-	/// A refused deinit should leave the process alive, so we can still kill it.
-	void deinitAfterPanicIsRefused() {
-		const auto result = runTestOnVmGetResult("local_leak.dbc", "", "");
-		ASSERT_NO_VALUE(result.run_result);
-
-		const auto deinit = vm::api::deinitAndValidate(result.pid);
-		ASSERT_NO_VALUE(deinit);
-		ASSERT_TRUE(v_matches(deinit.error(), vm::api::StateError));
-
-		const auto status = vm::api::getExecutionStatus(result.pid);
-		ASSERT_HAS_VALUE(status);
-		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionPanicked));
-
-		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
-		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
-	}
-
-	/// `deinitOrKill` deinitializes a completed process and kills a panicked one.
-	void deinitOrKillTearsDownEitherWay() {
-		const auto completed = runTestOnVmGetResult("no_double_destructor.dbc", "", "");
-		ASSERT_HAS_VALUE(completed.run_result);
-		const auto clean_teardown = vm::api::deinitOrKill(completed.pid);
-		ASSERT_HAS_VALUE(clean_teardown);
-		ASSERT_TRUE(clean_teardown.value().has_value());
-		ASSERT_TRUE(clean_teardown.value().value().memory_valid);
-
-		const auto panicked = runTestOnVmGetResult("local_leak.dbc", "", "");
-		ASSERT_NO_VALUE(panicked.run_result);
-		const auto forced_teardown = vm::api::deinitOrKill(panicked.pid);
-		ASSERT_HAS_VALUE(forced_teardown);
-		ASSERT_TRUE(!forced_teardown.value().has_value());
-
-		ASSERT_NO_VALUE(vm::api::getExecutionStatus(completed.pid));
-		ASSERT_NO_VALUE(vm::api::getExecutionStatus(panicked.pid));
-	}
-
-	/// Run completes and the deinit is legal, but we panic in a global destructor.
-	void deinitKillsTheProcessWhenAGlobalDestructorPanics() {
-		const auto result = runTestOnVmGetResult("panicking_global_destructor.dbc", "", "");
-		ASSERT_HAS_VALUE(result.run_result);
-
-		const auto status = vm::api::getExecutionStatus(result.pid);
-		ASSERT_HAS_VALUE(status);
-		ASSERT_TRUE(vm::api::canDeinit(status.value()));
-
-		const auto deinit = vm::api::deinitAndValidate(result.pid);
-		ASSERT_NO_VALUE(deinit);
-		ASSERT_TRUE(v_matches(deinit.error(), vm::api::Panicked));
-
-		// Process should be gone.
-		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
-		// Second deinit should not run.
-		const auto second = vm::api::deinitAndValidate(result.pid);
-		ASSERT_NO_VALUE(second);
-		ASSERT_TRUE(v_matches(second.error(), vm::api::ProcessNotFound));
-	}
-
-	void deinitOrKillHandlesAProcessKilledByItsFailedDeinit() {
-		const auto result = runTestOnVmGetResult("two_globals_second_destructor_aborts.dbc");
-		ASSERT_HAS_VALUE(result.run_result);
-
-		std::ostringstream captured;
-		ASSERT_HAS_VALUE(vm::api::attach(result.pid, std::cin, captured));
-
-		const auto teardown = vm::api::deinitOrKill(result.pid);
-		ASSERT_HAS_VALUE(teardown);
-		// Deinit or kill should report that the deinit failed.
-		ASSERT_TRUE(!teardown.value().has_value());
-		// But the process should be gone either way.
-		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
-
-		// `b_dtor` ran once, before `a_dtor` aborted.
-		ASSERT_EQUAL_PRINT(std::string("2"), captured.str());
-	}
-
-	/**
-	 * @brief No constructor ran on a process which was only loaded, so the deinit must not run any
-	 * destructor either.
-	 */
-	void deinitOnNotStartedProcessRunsNoGlobalDestructors() {
-		const vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(
-			vm::api::loadFiles(pid, { fs::File(path("two_globals_second_destructor_aborts.dbc")) })
+	void doubleFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("double_free.dbc"), vm::exceptions::VMDoubleFreeException::ERR_MSG
 		);
+	}
 
-		std::ostringstream captured;
-		ASSERT_HAS_VALUE(vm::api::attach(pid, std::cin, captured));
+	void dynTableReAllocAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("dyn_table_realloc_after_free.dbc"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
 
-		const auto deinit = vm::api::deinitAndValidate(pid);
-		ASSERT_HAS_VALUE(deinit);
-		ASSERT_TRUE(deinit.value().memory_valid);
-		ASSERT_EQUAL_PRINT(std::string(""), captured.str());
-		ASSERT_NO_VALUE(vm::api::getExecutionStatus(pid));
+	void dynTableFreeAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("dyn_table_free_after_free.dbc"),
+			vm::exceptions::VMDoubleFreeException::ERR_MSG
+		);
+	}
+
+	void freeingALocalIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_local.dbc"), vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	void freeingAGlobalIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_global.dbc"), vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// A payload is a view into the variant, so freeing it would leave the parent holding a
+	/// deallocated child.
+	void freeingAVariantPayloadIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_variant_payload.dbc"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// Freeing an interior pointer would free the whole allocation behind it.
+	void freeingAStructFieldIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_struct_field.dbc", "0"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_struct_field.dbc", "1"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// A freed variant must not hand out its nested block, whose pool slot is already reusable.
+	void readingANestedBlockAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("read_nested_after_free.dbc"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
 	}
 };
 

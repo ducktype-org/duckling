@@ -1,6 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <filesystem/file.hpp>
+#include <lexer/token.hpp>
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
+
+#include <string>
+#include <string_view>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -22,6 +32,8 @@ public:
 		TESTER_ADD_TEST(testGroup8);
 		TESTER_ADD_TEST(testGroup9);
 		TESTER_ADD_TEST(testSourcePosition);
+		TESTER_ADD_TEST(testLiteralTextIsNotKeyword);
+		TESTER_ADD_TEST(testDescribeSentinelsDoNotLeakInternalNames);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -132,6 +144,64 @@ private:
 
 	void testGroup9() {
 		testTokenGroup<9, lexer::Token::Type::FormatString, &lexer::Token::isFormatString>();
+	}
+
+	/**
+	 * @brief A string or char whose text is a keyword or a special (`"match"`, `';'`) must not be
+	 * recognised as one, or the parser reads `return "match";` as a `match` expression.
+	 */
+	void testLiteralTextIsNotKeyword() {
+		for (usize group: { 7UZ, 8UZ }) {
+			for (const auto& token: td->getTokenData().tokens[group].getRecursive()) {
+				assertTrue(
+					not token.is(lang_def::Keyword::Match) and not token.is(lang_def::Keyword::If)
+						and not token.is(lang_def::Special::Semicolon),
+					base::strConcat(
+						"Literal `", token.getStrValue(), "` is read as a keyword/special"
+					)
+				);
+			}
+		}
+
+		const auto& keywords = td->getTokenData().tokens[1].getRecursive();
+		ASSERT_TRUE(keywords.at(3).is(lang_def::Keyword::If));
+		ASSERT_TRUE(
+			td->getTokenData().tokens[4].getRecursive().at(0).is(lang_def::Special::Semicolon)
+		);
+	}
+
+	/**
+	 * @brief `Token::describe()` is what parser diagnostics print after `but got: `. A sentinel
+	 * should not be printed as such, but as a boundary description.
+	 */
+	void testDescribeSentinelsDoNotLeakInternalNames() {
+		const auto pos = dia::SourcePosition::fakePosition();
+
+		const auto check = [&](std::string_view what, const lexer::Token& token) {
+			const std::string described = token.describe();
+
+			assertTrue(
+				described.find("Sentinel") == std::string::npos,
+				base::strConcat(what, ": `", described, "` leaks the internal token kind")
+			);
+			assertTrue(
+				described.find("''") == std::string::npos,
+				base::strConcat(what, ": `", described, "` contains an empty quoted payload")
+			);
+			assertTrue(
+				not described.empty(), base::strConcat(what, ": rendered an empty description")
+			);
+		};
+
+		check("end of the fallback window", lexer::Token::makeIdentifier("x", pos).asSentinel());
+		check("end of file", lexer::Token::makeSentinelEof(pos));
+		check("beginning of file", lexer::Token::makeSentinelBof(pos));
+
+		for (const char* bracket: { "(", ")", "[", "]", "{", "}" })
+			check(
+				base::strConcat("bracket `", bracket, "`"),
+				lexer::Token::makeSentinel(base::RawView(bracket), pos)
+			);
 	}
 
 	void testSourcePosition() {

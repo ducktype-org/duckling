@@ -1,12 +1,13 @@
-import sys
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from dap_client import DAPTestClient
 
-if len(sys.argv) < 2:
-    sys.stderr.write("Error: Missing scenario argument\n")
-    sys.exit(1)
-
-scenario = sys.argv[2]
-client = DAPTestClient(program_name="../examples/simple_fun_call.dbc")
+client = DAPTestClient()
+scenario = client.scenario
 
 init_seq = client.send_initialize()
 client.wait_for(responses=[init_seq])

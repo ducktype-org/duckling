@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lir_tests.cpp
  * @brief Tests in this file are very bad right now, because MIR
@@ -53,6 +59,7 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
+		TESTER_ADD_TEST(cSymbolNameTest);
 		TESTER_ADD_TEST(debugPrintStandaloneElements);
 		TESTER_ADD_TEST(debugPrintElementsWithFunctionIDs);
 		TESTER_ADD_TEST(debugPrintFunctionWithAndWithoutContext);
@@ -113,11 +120,18 @@ private:
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
-		// note: it might change where those branch operations are placed:
-		// if this happens, just see lir-output of tested module for lir block numbers
+		// The two `if`s are the only branches of the function. They are looked up by their
+		// terminator rather than by block index, because the number of blocks between them
+		// depends on how many edges the destructor pass had to split.
+		std::vector<CRef<compiler::lir::Instruction>> branches;
+		for (const auto& block: foo_lir->block_order)
+			if (block->terminator.operation == compiler::lir::Operation::Branch)
+				branches.emplace_back(&block->terminator);
 
-		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
-		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
+		ASSERT_EQUAL_PRINT(2, branches.size());
+
+		auto true_lir_value  = branches.at(0)->arguments.at(0);
+		auto false_lir_value = branches.at(1)->arguments.at(0);
 
 		auto true_lir_constant  = true_lir_value.get<compiler::lir::LIRConstant>().value;
 		auto false_lir_constant = false_lir_value.get<compiler::lir::LIRConstant>().value;
@@ -194,7 +208,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
 
-			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 			// The ctor writes the initial value through a pointer to the global, so it holds that
 			// pointer in a local.
 			ASSERT_EQUAL(g_ctor->local_list.size(), 1);
@@ -322,9 +336,10 @@ private:
 			lir_global.global.type == lir::LIRGlobalType::Constant,
 			"Expected FIB_10 to be a constant"
 		);
-		assertTrue(
-			std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
-			"Expected FIB_10 to have a CTV initial value"
+		ASSERT_MATCHES_MSG(
+			lir_global.data_initialization,
+			"Expected FIB_10 to have a CTV initial value",
+			ctv::CompileTimeValue
 		);
 		auto const_numeric = lir_global.getConstValue().get<numeric_value::NumericValue>();
 		auto const_value   = const_numeric->get<i64>();
@@ -426,12 +441,9 @@ private:
 					if (arg.projection_chain.empty()) {
 						found_simple_address_of = true;
 					} else if (arg.projection_chain.size() == 2) {
-						bool pattern_ok = std::holds_alternative<LIRPlace::DerefProjection>(
-											  arg.projection_chain[0].storage
-										  )
-						               && std::holds_alternative<LIRPlace::FieldProjection>(
-											  arg.projection_chain[1].storage
-									   );
+						bool pattern_ok
+							= v_matches(arg.projection_chain[0].storage, LIRPlace::DerefProjection)
+						   && v_matches(arg.projection_chain[1].storage, LIRPlace::FieldProjection);
 
 						if (pattern_ok) {
 							auto field = std::get<LIRPlace::FieldProjection>(
@@ -449,12 +461,11 @@ private:
 					if (out_place.projection_chain.size() == 5) {
 						const auto& chain = out_place.projection_chain;
 
-						bool pattern_ok
-							= std::holds_alternative<LIRPlace::DerefProjection>(chain[0].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage)
-						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[2].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[3].storage)
-						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[4].storage);
+						bool pattern_ok = v_matches(chain[0].storage, LIRPlace::DerefProjection)
+						               && v_matches(chain[1].storage, LIRPlace::FieldProjection)
+						               && v_matches(chain[2].storage, LIRPlace::DerefProjection)
+						               && v_matches(chain[3].storage, LIRPlace::FieldProjection)
+						               && v_matches(chain[4].storage, LIRPlace::DerefProjection);
 
 						if (pattern_ok) {
 							auto f_p = std::get<LIRPlace::FieldProjection>(chain[1].storage);
@@ -529,18 +540,15 @@ private:
 
 					// a[5] -> IndexProjection
 					if (name == "a" && out.projection_chain.size() == 1) {
-						if (std::holds_alternative<LIRPlace::IndexProjection>(
-								out.projection_chain[0].storage
-							))
+						if (v_matches(out.projection_chain[0].storage, LIRPlace::IndexProjection))
 							found_index_proj = true;
 					}
 
 					// b[1].y -> Index, Field
 					if (name == "b" && out.projection_chain.size() == 2) {
 						const auto& chain = out.projection_chain;
-						bool        pattern_ok
-							= std::holds_alternative<LIRPlace::IndexProjection>(chain[0].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage);
+						bool pattern_ok   = v_matches(chain[0].storage, LIRPlace::IndexProjection)
+						               && v_matches(chain[1].storage, LIRPlace::FieldProjection);
 
 						if (pattern_ok) {
 							auto field = std::get<LIRPlace::FieldProjection>(chain[1].storage);
@@ -725,12 +733,57 @@ private:
 		});
 	}
 
+	/**
+	 * @brief Tests `@c_symbol_name("<name>")` on `extern("C")` declarations.
+	 */
+	void cSymbolNameTest() {
+		auto module     = getLIROfModule(path("modules/c_symbol_name"));
+		auto caller_lir = module.lirFunc("caller");
+
+		using namespace compiler::lir;
+
+		std::vector<base::StrID> called;
+		for (const auto& block: caller_lir->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+
+				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
+				assertTrue(
+					std::holds_alternative<lir::LIRAbi::CAbi>(literal.abi.value),
+					"Expected the call to use the C ABI"
+				);
+				called.push_back(literal.mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(called.size(), 3);
+		ASSERT_EQUAL_PRINT(called.at(0), base::StrID("match"));
+		ASSERT_EQUAL_PRINT(called.at(1), base::StrID("in"));
+		ASSERT_EQUAL_PRINT(called.at(2), base::StrID("plain_c"));
+
+		// On a declaration that is not `extern("C")` the attribute is ignored.
+		std::vector<base::StrID> ignored_called;
+		for (const auto& block: module.lirFunc("ignored_caller")->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+				ignored_called.push_back(instr.arguments.at(0).get<FunctionLiteral>().mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(ignored_called.size(), 2);
+		assertTrue(
+			ignored_called.at(0).strView().starts_with("_Q"),
+			base::strConcat(
+				"Expected `notExternC` to be mangled, got `", ignored_called.at(0).str(), "`"
+			)
+		);
+		ASSERT_EQUAL_PRINT(ignored_called.at(1), base::StrID("dvmDecl"));
+	}
+
 	void debugPrintStandaloneElements() {
 		auto module  = getLIROfModule(path("modules/simple"));
 		auto foo_lir = module.lirFunc("foo");
 
-		lir::LIRPlace output{ foo_lir->local_list[0], {} };
-		lir::LIRPlace argument{ foo_lir->local_list[1], {} };
+		lir::LIRPlace output{ foo_lir->local_list[0] };
+		lir::LIRPlace argument{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		output.debugPrint(place_output);
@@ -771,8 +824,7 @@ private:
 					if (!array_argument.is<lir::LIRPlace>()) continue;
 					const auto& candidate = array_argument.get<lir::LIRPlace>();
 					for (const auto& projection: candidate.projection_chain)
-						if (std::holds_alternative<lir::LIRPlace::IndexProjection>(projection.storage
-						    ))
+						if (v_matches(projection.storage, lir::LIRPlace::IndexProjection))
 							indexed_place.emplace(candidate);
 				}
 			}
@@ -791,7 +843,7 @@ private:
 
 		// Standalone printing would assign Local(?0) to this place because it is the first
 		// encountered local. Function context preserves its actual index in local_list.
-		lir::LIRPlace place{ foo_lir->local_list[1], {} };
+		lir::LIRPlace place{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		place.debugPrint(place_output, foo_lir);
@@ -803,8 +855,7 @@ private:
 
 		lir::Instruction  instruction{ lir::Operation::Assign,
                                       place,
-			                           { lir::LIRValue{
-                                          lir::LIRPlace{ foo_lir->local_list[0], {} } } },
+			                           { lir::LIRValue{ lir::LIRPlace{ foo_lir->local_list[0] } } },
 			                           {} };
 		std::stringstream instruction_output;
 		instruction.debugPrint(instruction_output, foo_lir);

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/task/task.hpp>
@@ -258,7 +264,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetDVMLibrary);
 		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
 		ASSERT_EQUAL(target.output_file_name.str(), std::string("bin/mylib_dvm"));
 		ASSERT_EQUAL(result->package_id.str(), std::string("mylib"));
@@ -282,7 +288,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMExecutable>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetDVMExecutable);
 		const auto& target = std::get<BuildTargetDVMExecutable>(result->build_target);
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "libm.so.6", "libfoo.so" }),
@@ -309,7 +315,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetDVMLibrary);
 		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "libm.so.6" }), target.dvm_linking_options.shared_libraries
@@ -353,7 +359,7 @@ private:
 		clearLogger();
 
 		auto task_json = nlohmann::json::parse(
-			R"({ "package": "app", "strategy": "native", "output_file": "bin/app", "linking_options": "-lm" })"
+			R"({ "package": "app", "strategy": "native", "output_file": "bin/app", "linking_options": ["-lm"] })"
 		);
 		auto result = RawPackageCompilationTask::fromJson(
 			task_json, diagnostics::makeGlobalLoggerReporter()
@@ -361,9 +367,11 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetLLVMExecutable);
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
-		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lm"));
+		ASSERT_EQUAL(
+			target.linking_options.additional_link_options, std::vector{ std::string("-lm") }
+		);
 	}
 
 	void nativeStrategyBadLinkingOptionsFails() {
@@ -392,7 +400,7 @@ private:
             "output_file": "bin/app",
             "linking_options": {
                 "linker": "ld",
-                "additional_link_options": "-lfoo",
+                "additional_link_options": ["-lfoo"],
                 "link_c_standard_library": false
             }
         })");
@@ -402,10 +410,12 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetLLVMExecutable);
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
 		ASSERT_EQUAL(target.linking_options.linker_path, std::string("ld"));
-		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lfoo"));
+		ASSERT_EQUAL(
+			target.linking_options.additional_link_options, std::vector{ std::string("-lfoo") }
+		);
 		ASSERT_TRUE(!target.linking_options.link_c_standard_library);
 	}
 

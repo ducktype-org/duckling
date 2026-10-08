@@ -1,0 +1,13 @@
+import core.containers.*;
+
+fun main() -> i64 = {
+    var z: manyptr i32 = allocation[i32].many_alloc(2);
+    z[0] = 10;
+    z[1] = 20;
+    var r : ref i32 = &z[1];
+    r = 99;
+    builtin_output_i64(z[0]);
+    builtin_output_i64(z[1]);
+    allocation[i32].many_free(z);
+    return 0;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "micro_instruction_args.hpp"
@@ -16,19 +22,19 @@
 /// Tags for use as template parameters.
 namespace vm::low::instruction_tags {
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR)                           \
-	struct Op_##INSTR {                                           \
+	struct Op_##INSTR final {                                     \
 		using ArgTypes                      = std::tuple<>;       \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR; \
 	};
 
 #define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)                     \
-	struct Op_##INSTR {                                           \
+	struct Op_##INSTR final {                                     \
 		using ArgTypes                      = std::tuple<ARG0>;   \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR; \
 	};
 
 #define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                   \
-	struct Op_##INSTR {                                               \
+	struct Op_##INSTR final {                                         \
 		using ArgTypes                      = std::tuple<ARG0, ARG1>; \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR;     \
 	};

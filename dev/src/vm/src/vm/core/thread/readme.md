@@ -38,9 +38,9 @@ provides a executor architectures :
   the previous strategies.
       ```cpp
       // instr_t *instr - instruction pointer
-      // std::byte *stack - local stack
+      // byte *stack - local stack
       // frame_t *frame - current frame
-      static u64 op_mov_p64_imm(const MicroInstruction*& instr, std::byte*& stack, Frame*& frame, VMThread& thread) {
+      static u64 op_mov_p64_imm(const MicroInstruction*& instr, byte*& stack, Frame*& frame, VMThread& thread) {
         deref<u64>(stack, instr->arg0) = instr->arg1;
         // instr[1].fn is a pointer to the implementation of the next instruction.
         return instr[1].fn(&instr[1], stack, frame, thread);

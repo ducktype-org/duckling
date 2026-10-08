@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/comptime/type_traits.hpp>
 
 #include <tester/tester.hpp>
@@ -5,6 +11,7 @@
 #include <vm/debugger/debugger.hpp>
 
 #include <condition_variable>
+#include <fstream>
 #include <mutex>
 #include <variant>
 
@@ -26,13 +33,64 @@ public:
 		TESTER_ADD_TEST(outputTest);
 		TESTER_ADD_TEST(memoryTest);
 		TESTER_ADD_TEST(inputTest);
+		TESTER_ADD_TEST(loadedFilesTest);
+		TESTER_ADD_TEST(loadDefaultTest);
 	}
 
 private:
+	void loadedFilesTest() {
+		vm::debugger::Debugger debugger;
+		auto                   loaded = fs::File(path("debugger_test.dbc"));
+		auto                   other  = fs::File(path("while_true.dbc"));
+
+		ASSERT_TRUE(debugger.getLoadedFiles().empty());
+		ASSERT_TRUE(!debugger.isFileAvailable(loaded));
+
+		ASSERT_HAS_VALUE(debugger.loadFiles({ loaded }));
+
+		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
+		ASSERT_TRUE(debugger.getLoadedFiles().contains(loaded));
+		ASSERT_TRUE(debugger.isFileAvailable(loaded));
+		ASSERT_TRUE(!debugger.isFileAvailable(other));
+	}
+
+	void loadDefaultTest() {
+		fs::FilePath package = fs::FileManager::createRandomTempDirectory().getFilePath();
+		fs::FilePath build   = package / "duck_build";
+
+		vm::debugger::Debugger debugger;
+		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
+
+		std::filesystem::create_directories(build.getPath());
+		std::filesystem::copy_file(path("debugger_test.dbc"), (build / "package_dvm.dbc").getPath());
+		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
+		ASSERT_TRUE(debugger.getLoadedFiles().empty());
+
+		// Real mappings contain absolute paths, the fixture has relative ones
+		auto             source = fs::File(path("simple.dk"));
+		std::ifstream    fixture(path("package_dvm.di.json"));
+		std::string      mapping((std::istreambuf_iterator<char>(fixture)), {});
+		std::string_view relative    = "\"simple.dk\"";
+		std::string      replacement = "\"" + source.getFilePath().string() + "\"";
+		for (usize pos = 0; (pos = mapping.find(relative, pos)) != std::string::npos;) {
+			mapping.replace(pos, relative.size(), replacement);
+			pos += replacement.size();
+		}
+		std::ofstream(build.getPath() / "package_dvm.di.json") << mapping;
+
+		ASSERT_HAS_VALUE(debugger.loadDefault(package));
+
+		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
+		ASSERT_TRUE(debugger.isFileAvailable(source));
+		ASSERT_TRUE(!debugger.isFileAvailable(fs::File(path("while_true.dbc"))));
+
+		fs::FileManager::deleteFolder(package, true);
+	}
+
 	void noRunTest() {
 		vm::debugger::Debugger debugger;
 		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
-		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::NotStarted);
 	}
 
 	/**
@@ -67,7 +125,7 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(v_matches(exit_value_variant, std::vector<Ref<vm::IVMValue>>));
+						ASSERT_MATCHES(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
@@ -99,8 +157,9 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 		for (u64 breakpoint: breakpoints)
-			ASSERT_TRUE(debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
-			                .has_value());
+			ASSERT_HAS_VALUE(
+				debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
+			);
 		ASSERT_HAS_VALUE(debugger.runMain());
 		std::unique_lock lk(m);
 		// timeout for the test
@@ -219,7 +278,7 @@ private:
 			return status_counter == expected_statuses.size();
 		}));
 
-		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::Paused));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::Paused);
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 	}
 
@@ -251,7 +310,7 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(v_matches(exit_value_variant, std::vector<Ref<vm::IVMValue>>));
+						ASSERT_MATCHES(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
@@ -299,7 +358,7 @@ private:
 			}));
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 		}
-		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::ExecutionCompleted));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::ExecutionCompleted);
 		std::lock_guard lk(m);
 		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter.load());
 	}
@@ -321,7 +380,7 @@ private:
 
 		ASSERT_HAS_VALUE(debugger.resume());
 
-		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::Running));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::Running);
 	}
 
 	/**

@@ -1,6 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debugger.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
+
+#include <filesystem/file_path.hpp>
 
 #include <vm/api/vm.hpp>
 
@@ -96,17 +104,31 @@ namespace vm::debugger {
 		    .value();
 	}
 
-	std::expected<void, api::ApiError> Debugger::loadFiles(const std::vector<fs::File>& files) {
-		return api::loadFiles(pid, files);
+	const std::set<fs::File>& Debugger::getLoadedFiles() const { return loaded_files; }
+
+	bool Debugger::isFileAvailable(const fs::File& file) const {
+		return loaded_files.contains(file) || mapper.containsFile(file.getFilePath());
 	}
 
-	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault() {
+	std::expected<void, api::ApiError> Debugger::loadFiles(const std::vector<fs::File>& files) {
+		auto response = api::loadFiles(pid, files);
+
+		if (response) loaded_files.insert(files.begin(), files.end());
+
+		return response;
+	}
+
+	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault(
+		base::Optional<fs::FilePath> prefix
+	) {
 		fs::FilePath fp = "duck_build/package_dvm.dbc";
+		if (prefix.has_value()) fp = prefix.value() / fp;
 		if (!fp.exists())
 			return std::unexpected(api::OtherError{
 				"No compiled program in the current directory." });
 
 		fs::FilePath fp_map = "duck_build/package_dvm.di.json";
+		if (prefix.has_value()) fp_map = prefix.value() / fp_map;
 		if (!fp_map.exists())
 			return std::unexpected(api::OtherError{
 				"No compiled program mapping in the current directory." });

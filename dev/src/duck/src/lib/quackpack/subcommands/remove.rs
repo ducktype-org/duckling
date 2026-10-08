@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
 use crate::quackpack::core::editable_manifest::{DependencyRemoved, EditableManifest};
@@ -34,7 +40,7 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     remove_dep(&editable_manifest, name, kind, pkg_name, &pkg_root)?;
     editable_manifest.save()?;
 
-    ctx.console().info(format!(
+    ctx.info(format!(
         "successfully removed {kind} dependency `{name}` from the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;

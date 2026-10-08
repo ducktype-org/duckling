@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
@@ -29,7 +35,7 @@ namespace vm::code {
 		using NameStackID    = LocalStackDb::NameStackID;
 		using TypeStackID    = LocalStackDb::TypeStackID;
 
-		struct Child {
+		struct Child final {
 			base::StrID          name;
 			valid_type::TypeSize byte_offset;
 
@@ -44,7 +50,7 @@ namespace vm::code {
 			}
 		};
 
-		struct TreeNode {
+		struct TreeNode final {
 			base::HashMap<Child, NameStackID, ChildHash> children{};
 			persistent::HashMapStateID name_map_id = persistent::HashMap<base::StrID, usize>::EMPTY;
 			persistent::VectorStateID  name_stack_id = persistent::Vector<base::StrID>::EMPTY;

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 import pathlib
 import sys
@@ -29,12 +34,6 @@ from scripts.py.toolbox.commands.test import test
 from scripts.py.toolbox.commands.todo_counter import todo_counter
 from scripts.py.toolbox.commands.todo_validate import todo_validate
 from scripts.py.toolbox.commands.workflows_lint import workflows_lint
-
-
-DATA_USER = "dev"
-# @FUTURE: change this password and hide it:
-DATA_PASS = "7ocwXWOAwg="
-
 
 @click.group()
 def cli():
