@@ -228,6 +228,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>      contextual_fixity_names{
         "fun prefix(suffix: i64) -> i64 = { return suffix; }"
 	};
+	Example<pst::Fun, false> fixity_on_plain_name{ "fun prefix ordinary(n: i64) -> i64 = n;" };
 
 	Example<pst::Fun, true>     operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
 	Example<pst::Fun, true>     prefix_operator_function{ "fun prefix +*(a: i64) -> i64 = {}" };
