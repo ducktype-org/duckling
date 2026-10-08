@@ -28,7 +28,7 @@ function main { i64, ptr_argv } -> { i64 } {
     setVTable_pptr_type a_obj, A;
     init_pany_type a_ptr, pointer_A;
     mov_pptr_pptr a_ptr, a_obj;
-    virtual_call_pptr_method a_obj, foo;
+    virtualCall_pptr_method a_obj, foo;
 
     free_pptr a_obj;
 

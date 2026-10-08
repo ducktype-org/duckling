@@ -16,11 +16,11 @@ function bump {} -> {} {
 
 function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type			t1, i64;
-	set_threadctx			bump;
+	setThreadCtx_func			bump;
 	call_builtinfunc		builtin_start_thread;
 
 	init_pany_type			t2, i64;
-	set_threadctx			bump;
+	setThreadCtx_func			bump;
 	call_builtinfunc		builtin_start_thread;
 
 	mov_p64_imm				ret0, 0;

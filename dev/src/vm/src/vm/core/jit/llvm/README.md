@@ -12,7 +12,7 @@ To allow for better optimizations, the (compile-time) information about argument
 
 ### Returning the `*instr`
 
-Since the instruction pointer was moved to the aforementioned list, it has to be reset. This happens naturally, in the case of functions thanks to the last instruction being the `ret` (or `ret_tailcall_func`). In the case of loops, the offset from the original instruction pointer (which is stored in the CFG) is returned. 
+Since the instruction pointer was moved to the aforementioned list, it has to be reset. This happens naturally, in the case of functions thanks to the last instruction being the `ret` (or `retTailcall_func`). In the case of loops, the offset from the original instruction pointer (which is stored in the CFG) is returned. 
 
 ## Importing bitcode
 

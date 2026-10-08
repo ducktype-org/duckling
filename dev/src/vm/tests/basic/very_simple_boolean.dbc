@@ -9,15 +9,15 @@ function main { i64, ptr_argv } -> { i64 } {
     mov_p8_imm tmp, 1;
     mov_p8_imm tmp2, 1;
 
-    log_and_p8_p8 tmp, tmp2;
+    logAnd_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 1;
     jmpIfNot_label Finish;
 
-    log_or_p8_p8 tmp, tmp2;
+    logOr_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 1;
     jmpIfNot_label Finish;
 
-    log_xor_p8_p8 tmp, tmp2;
+    logXor_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 0;
     jmpIfNot_label Finish;
 
@@ -25,16 +25,16 @@ function main { i64, ptr_argv } -> { i64 } {
     mov_p8_imm tmp, 0;
     mov_p8_imm tmp2, 1;
 
-    log_and_p8_p8 tmp, tmp2;
+    logAnd_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 0;
     jmpIfNot_label Finish;
 
-    log_or_p8_p8 tmp, tmp2;
+    logOr_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 1;
     jmpIfNot_label Finish;
 
     mov_p8_imm tmp, 0;
-    log_xor_p8_p8 tmp, tmp2;
+    logXor_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 1;
     jmpIfNot_label Finish;
 
@@ -43,24 +43,24 @@ function main { i64, ptr_argv } -> { i64 } {
     mov_p8_imm tmp, 0;
     mov_p8_imm tmp2, 0;
 
-    log_and_p8_p8 tmp, tmp2;
+    logAnd_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 0;
     jmpIfNot_label Finish;
     
-    log_xor_p8_p8 tmp, tmp2;
+    logXor_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 0;
     jmpIfNot_label Finish;
 
-    log_or_p8_p8 tmp, tmp2;
+    logOr_p8_p8 tmp, tmp2;
     cmpEq_p8_imm tmp, 0;
     jmpIfNot_label Finish;
 
     # not
-    log_not_p8 tmp;
+    logNot_p8 tmp;
     cmpEq_p8_imm tmp, 1;
     jmpIfNot_label Finish;
 
-    log_not_p8 tmp;
+    logNot_p8 tmp;
     cmpEq_p8_imm tmp, 0;
     jmpIfNot_label Finish;
 

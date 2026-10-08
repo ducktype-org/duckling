@@ -4,7 +4,7 @@ function dummy { i64 } -> { i64 } {
 	jmpIf_label    End;
 
 	sub_p64_imm       arg0, 1;
-	ret_tailcall_func      dummy;
+	retTailcall_func      dummy;
 
 	label End;
 

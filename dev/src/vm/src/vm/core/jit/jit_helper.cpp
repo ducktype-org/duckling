@@ -20,15 +20,14 @@
 namespace vm::jit::helpers {
 	void trampoline(OPFUN_REF_ARGS) {
 		// Some instructions consume following ext_* slots as extra arguments. Of the instructions
-		// that can be trampolined (the non-jittable ones), only virtual_call does so, reading its
+		// that can be trampolined (the non-jittable ones), only virtualCall does so, reading its
 		// local stack distance from a following ext_imm.
 		const usize slot_count
-			= vm::getInstructionOpcode(*instr) == vm::low::MicroOpcode::virtual_call_pptr_method
-		        ? 2
-		        : 1;
+			= vm::getInstructionOpcode(*instr) == vm::low::MicroOpcode::virtualCall_pptr_method ? 2
+		                                                                                        : 1;
 		CORE_ASSERT(
 			slot_count == 1 || vm::getInstructionOpcode(instr[1]) == vm::low::MicroOpcode::ext_imm,
-			"virtual_call must be followed by an ext_imm slot"
+			"virtualCall must be followed by an ext_imm slot"
 		);
 
 		std::array<vm::MicroInstruction, 3> buffer{};
