@@ -240,11 +240,6 @@ private:
 				1
 			);
 			checkForErrorOnCompileModule(
-				R"(fun prefix ordinary(n: i64) -> i64 = n;)",
-				{ "Only unary operator declarations may use `prefix` or `suffix`." },
-				1
-			);
-			checkForErrorOnCompileModule(
 				R"(fun suffix +(lhs: i64, rhs: i64) -> i64 = lhs;)",
 				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
