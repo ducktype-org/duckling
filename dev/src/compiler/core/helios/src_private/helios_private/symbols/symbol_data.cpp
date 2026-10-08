@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "symbol_data.hpp"
 
 #include <helios/scope_id.hpp>
@@ -85,6 +91,10 @@ namespace compiler::helios {
 			  value(std::move(value)),
 			  scope(scope) {}
 
+		base::Bit256 Module::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(module_id.queryUnstablePerfectHash());
+		}
+
 		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher;
 			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
@@ -150,6 +160,7 @@ namespace compiler::helios {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
+			variant_case_novalue(defgen::Module) { kind = SymbolKind::Module; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../../config.hpp"
@@ -292,14 +298,20 @@ namespace vm {
 				nested_data_ptr.getBlock(), nested_data_ptr.getOffset(), wanted_type
 			);
 
-			// Find type index
+			// Find the zero-based alternative index. The stored tag is one-based because zero
+			// denotes no active alternative.
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
 
-			// @TODO: #3374 - Make usage of type 0 be accounted here as well
-			// Also, optimize this...
-			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
+			while (alternative_index < alternatives.size()
+			       && alternatives[alternative_index] != wanted_type)
+				++alternative_index;
+
+			CORE_ASSERT(
+				alternative_index < alternatives.size(),
+				"The variant must contain the requested alternative type"
+			);
+			const usize alternative_type_tag = alternative_index + 1;
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -312,16 +324,16 @@ namespace vm {
 			switch (variant_type_tag_size.asInt()) {
 			case 1:
 				// byte, using uint8_t below since byte is not std::integral
-				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_type_tag));
 				break;
 			case 2:
-				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_type_tag));
 				break;
 			case 4:
-				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_type_tag));
 				break;
 			case 8:
-				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_type_tag));
 				break;
 			default:
 				CORE_PANIC("Invalid variant size: ", variant_type_tag_size.asInt());

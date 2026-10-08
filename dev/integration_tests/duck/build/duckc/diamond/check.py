@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import sys
 from pathlib import Path
 
@@ -206,7 +212,11 @@ expected = f"""{{
       "package": "{root_name}",
       "strategy": "native",
       "output_file": "{str(layout / "root")}",
-      "linking_options": "{str(bar_artifacts / bar_name)}.a {str(foo_artifacts / foo_name)}.a {str(baz_artifacts / baz_name)}.a"
+      "linking_options": [
+        "{str(bar_artifacts / bar_name)}.a",
+        "{str(foo_artifacts / foo_name)}.a",
+        "{str(baz_artifacts / baz_name)}.a"
+      ]
     }}
   ]
 }}"""

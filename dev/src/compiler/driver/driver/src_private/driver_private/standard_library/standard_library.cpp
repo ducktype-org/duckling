@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "standard_library.hpp"
 
 #include <driver/task/task.hpp>
@@ -55,130 +61,71 @@ namespace compiler::driver {
 				    or (dep.alias.has_value() && *dep.alias == target_package_name);
 			});
 		}
+	}
 
-		bool hasPackageNameOrID(
-			const std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-			base::StrID                                                      name,
-			base::StrID                                                      id
-		) {
-			return std::ranges::any_of(
-				packages_info,
-				[&](const compiler::frontend::packages::RawPackageInfo& package) {
-					return package.package_id == id or package.package_name == name;
-				}
-			);
+	base::OkBad addDependenciesOnStandardLibraryForPackage(
+		compiler::frontend::packages::RawPackageInfo& package_info,
+		frontend::packages::DiagnosticReporter&       report
+	) {
+		// If the package is one of the standard library packages, we do nothing
+		if (frontend::packages::isStandardLibraryPackage(package_info.package_id)) return base::OK;
+
+		// Otherwise, we add dependencies on all standard library packages
+		for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
+			if (hasDependencyOrAlias(package_info.dependencies, std_id, std_id)) {
+				report(
+					"Standard library package name is already used as an external dependency.",
+					base::strConcat(
+						"Package '", package_info.package_name, "' depends on '", std_id
+					),
+					true
+				);
+				return base::BAD;
+			}
+			package_info.dependencies.push_back(compiler::frontend::packages::RawDependencyInfo{
+				.package_id = std_id,
+				.alias      = {},
+			});
 		}
+		return base::OK;
+	}
 
-		base::OkBad addDependenciesOnStandardLibraryForPackage(
-			compiler::frontend::packages::RawPackageInfo& package_info,
-			frontend::packages::DiagnosticReporter&       report
-		) {
-			// If the package is one of the standard library packages, we do nothing
-			if (frontend::packages::isStandardLibraryPackage(package_info.package_id))
-				return base::OK;
+	base::Optional<std::vector<compiler::frontend::packages::RawPackageInfo>> getStandardLibraryPackages(
+		const fs::FilePath& std_path, frontend::packages::DiagnosticReporter& report
+	) {
+		using compiler::frontend::packages::RawDependencyInfo;
+		using compiler::frontend::packages::RawPackageInfo;
 
-			// Otherwise, we add dependencies on all standard library packages
-			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
-				if (hasDependencyOrAlias(package_info.dependencies, std_id, std_id)) {
-					report(
-						"Standard library package name is already used as an external dependency.",
-						base::strConcat(
-							"Package '", package_info.package_name, "' depends on '", std_id
-						),
-						true
-					);
-					return base::BAD;
-				}
-				package_info.dependencies.push_back(compiler::frontend::packages::RawDependencyInfo{
-					.package_id = std_id,
+		std::vector<RawPackageInfo> packages_info;
+		for (const auto& std_package: frontend::packages::standardLibraryPackages()) {
+			// A standard library package lives in a directory named after its id.
+			auto package_path = std_path.join(fs::FilePath(std::string(std_package.id.strView())));
+			if (not package_path.exists()) {
+				report(
+					"Standard library package path does not exist.",
+					base::strConcat("Expected standard library package at: ", package_path.string()),
+					true
+				);
+				return {};
+			}
+			RawPackageInfo raw_package_info{
+				.package_id   = std_package.id,
+				.package_name = std_package.id,
+				.version      = base::StrID("not_supported"),
+				.package_path = package_path,
+				.features     = {},
+				.dependencies = {},
+			};
+
+			for (const auto& dependency_id: std_package.dependencies) {
+				raw_package_info.dependencies.push_back(RawDependencyInfo{
+					.package_id = dependency_id,
 					.alias      = {},
 				});
 			}
-			return base::OK;
+			packages_info.push_back(std::move(raw_package_info));
 		}
-
-		/**
-		 * @brief To the `packages_info` vector, to each `RawPackageInfo` in it
-		 * adds the dependency on all standard library packages. This way this dependency
-		 * doesn't have to be provided by the user in the manifest and is added by the compiler.
-		 */
-		base::OkBad addDependenciesOnStandardLibrary(
-			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-			frontend::packages::DiagnosticReporter&                    report
-
-		) {
-			for (auto& package_info: packages_info)
-				if (addDependenciesOnStandardLibraryForPackage(package_info, report).isBad())
-					return base::BAD;
-			return base::OK;
-		}
-
-		/**
-		 * @brief Creates packages for the standard library and adds them to the provided vector.
-		 * @param packages_info[out] The std lib packages will be added here as dependencies.
-		 * @param std_path Path to the standard library.
-		 * @param report Diagnostic reporter to report any issues with the standard library packages
-		 * (like a missing package).
-		 */
-		base::OkBad appendStandardLibraryPackages(
-			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-			const fs::FilePath&                                        std_path,
-			frontend::packages::DiagnosticReporter&                    report
-		) {
-			using compiler::frontend::packages::RawDependencyInfo;
-			using compiler::frontend::packages::RawPackageInfo;
-
-			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
-				if (hasPackageNameOrID(packages_info, std_id, std_id)) {
-					report(
-						base::strConcat("Package with name `", std_id, "` already exist."), "", true
-					);
-					return base::BAD;
-				}
-			}
-
-			for (const auto& std_package: frontend::packages::standardLibraryPackages()) {
-				// A standard library package lives in a directory named after its id.
-				auto package_path
-					= std_path.join(fs::FilePath(std::string(std_package.id.strView())));
-				if (not package_path.exists()) {
-					report(
-						"Standard library package path does not exist.",
-						base::strConcat(
-							"Expected standard library package at: ", package_path.string()
-						),
-						true
-					);
-					return base::BAD;
-				}
-				RawPackageInfo raw_package_info{
-					.package_id   = std_package.id,
-					.package_name = std_package.id,
-					.version      = base::StrID("not_supported"),
-					.package_path = package_path,
-					.features     = {},
-					.dependencies = {},
-				};
-
-				for (const auto& dependency_id: std_package.dependencies) {
-					raw_package_info.dependencies.push_back(RawDependencyInfo{
-						.package_id = dependency_id,
-						.alias      = {},
-					});
-				}
-				packages_info.push_back(std::move(raw_package_info));
-			}
-			return base::OK;
-		}
-	}
-
-	base::OkBad addStandardLibraryPackages(
-		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-		const fs::FilePath&                                        std_path,
-		frontend::packages::DiagnosticReporter&                    report
-	) {
-		if (addDependenciesOnStandardLibrary(packages_info, report).isBad()) return base::BAD;
-		return appendStandardLibraryPackages(packages_info, std_path, report);
+		return packages_info;
 	}
 
 	std::vector<PackageCompilationTask> getRequiredStdLibCompilationTasks() {
@@ -232,13 +179,13 @@ namespace compiler::driver {
 		return tasks;
 	}
 
-	base::Optional<std::string> getNativeStdLibLinkingArgs(
+	std::vector<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	) {
 		if_opt_some(resolveStdPath(linking_options), _) {
-			std::string result;
+			std::vector<std::string> result{};
 			for (const auto& art: getStdLibNativeArtifacts())
-				result += " " + art.file.getFilePath().string();
+				result.push_back(art.file.getFilePath().string());
 			return result;
 		}
 		return {};

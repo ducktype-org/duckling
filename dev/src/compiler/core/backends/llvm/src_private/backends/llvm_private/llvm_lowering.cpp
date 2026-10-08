@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <backends/llvm_private/abi_converter.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -273,6 +279,14 @@ namespace compiler::backend_llvm {
 	 */
 	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
 
+	llvm::IntegerType* variantTagType(
+		llvm::LLVMContext& context, const tsl::VariantTypeLayout& layout
+	) {
+		return llvm::Type::getIntNTy(
+			context, base::safeIntConv<unsigned>(layout.getTagSize().asInt())
+		);
+	}
+
 	/**
 	 * @brief Converts a TypeLayout into its corresponding llvm::Type representation.
 	 *
@@ -386,17 +400,18 @@ namespace compiler::backend_llvm {
 			}
 			variant_case(tsl::VariantTypeLayout, variant_layout) {
 				// Variants lower to a packed literal struct (structurally uniqued by LLVM):
-				// { i8 tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
+				// { tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
 				const usize data_offset = variant_layout.getDataOffset().asInt();
+				const usize tag_bytes   = base::bits2bytes(variant_layout.getTagSize()).asInt();
 				const usize total_bytes = base::bits2bytes(layout->getSize()).asInt();
 				const usize data_bytes  = total_bytes - data_offset;
 
 				llvm::Type* i8_type = llvm::Type::getInt8Ty(llvm_context);
 
 				std::vector<llvm::Type*> members;
-				members.push_back(i8_type);  // The tag.
-				if (data_offset > 1)
-					members.push_back(llvm::ArrayType::get(i8_type, data_offset - 1));
+				members.push_back(variantTagType(llvm_context, variant_layout));
+				if (data_offset > tag_bytes)
+					members.push_back(llvm::ArrayType::get(i8_type, data_offset - tag_bytes));
 				members.push_back(llvm::ArrayType::get(i8_type, data_bytes));
 
 				return llvm::StructType::get(llvm_context, members, /*isPacked=*/true);
@@ -721,7 +736,7 @@ namespace compiler::backend_llvm {
 
 
 								// Update layout/type
-								current_layout = pointer_layout.getPointee();
+								current_layout = pointer_layout.getPointee(ctx);
 								current_type   = typeFromLayout(module, current_layout);
 							}
 							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
@@ -736,7 +751,7 @@ namespace compiler::backend_llvm {
 
 						const auto& current_pointer_layout
 							= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-						current_layout = current_pointer_layout.getPointee();
+						current_layout = current_pointer_layout.getPointee(ctx);
 						current_type   = typeFromLayout(module, current_layout);
 					}
 				}
@@ -1452,10 +1467,10 @@ namespace compiler::backend_llvm {
 				llvm::Value* variant_ptr
 					= gepPointerFromLIRPlace(lir_instruction.output.value(), builder);
 
-				// The tag lives at offset 0.
+				// The tag lives at offset 0 and uses the width specified by the variant layout.
+				llvm::IntegerType* tag_type = variantTagType(builder.getContext(), variant_layout);
 				builder.CreateStore(
-					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
-					variant_ptr
+					llvm::ConstantInt::get(tag_type, params.alternative_index + 1), variant_ptr
 				);
 
 				// An alternative whose payload carries no information (e.g. `()`) has no value to
@@ -1484,13 +1499,13 @@ namespace compiler::backend_llvm {
 				// in the place rather than the place's own address.
 				llvm::Value* variant_ptr = loadLIRValue(lir_instruction.arguments.at(0), builder);
 
-				llvm::Value* tag
-					= builder.CreateLoad(builder.getInt8Ty(), variant_ptr, "variant_tag");
-				llvm::Value* tag_matches = builder.CreateICmpEQ(
-					tag,
-					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
-					"tag_matches"
-				);
+				llvm::IntegerType* tag_type = variantTagType(builder.getContext(), variant_layout);
+				llvm::Value*       tag = builder.CreateLoad(tag_type, variant_ptr, "variant_tag");
+				llvm::Value*       tag_matches = builder.CreateICmpEQ(
+                    tag,
+                    llvm::ConstantInt::get(tag_type, params.alternative_index + 1),
+                    "tag_matches"
+                );
 				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
 					builder.getInt8Ty(),
 					variant_ptr,

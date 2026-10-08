@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lir_lowering.cpp
  * @brief File implementing process of creating LIR function from MIR function
@@ -403,10 +409,10 @@ namespace compiler::lir {
 
 				variant_match(mir_place.base) {
 					variant_case(mir::MIRLocalRef, local) {
-						return { getLocal(local), std::move(lir_projection_chain) };
+						return { ctx, getLocal(local), std::move(lir_projection_chain) };
 					}
 					variant_case(mir::MIRGlobal, global) {
-						return { getGlobal(global), std::move(lir_projection_chain) };
+						return { ctx, getGlobal(global), std::move(lir_projection_chain) };
 					}
 				}
 				CORE_UNREACHABLE();
@@ -695,7 +701,7 @@ namespace compiler::lir {
 					// The destructor takes `self: ref T`, so the address of the destructed
 					// place is materialized first.
 					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
-					LIRPlace    addr_place{ addr_local, {} };
+					LIRPlace    addr_place{ addr_local };
 
 					auto& address_instr = block->instructions.emplace_back(
 						Operation::AddressOf,

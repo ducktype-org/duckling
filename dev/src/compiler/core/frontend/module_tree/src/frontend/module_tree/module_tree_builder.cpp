@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "module_tree_builder.hpp"
 
 #include "module_tree_modifier.hpp"
@@ -228,9 +234,8 @@ namespace compiler::frontend {
 
 		// Create new ModuleTree instance
 		Ref<ModuleTree> module_ref = ModuleTree::addModuleToStorage();
-		ModuleID        mod_id(module_ref);
 
-		module_ref->m_id = mod_id;
+		module_ref->m_self = module_ref;
 
 		// Set ID and name
 		module_ref->m_name        = m_name;
@@ -247,7 +252,7 @@ namespace compiler::frontend {
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
 			module_ref->m_main_source_file
-				= SourceFile::create(m_main_source_file_path.value(), mod_id);
+				= SourceFile::create(m_main_source_file_path.value(), module_ref);
 		}
 
 		for (const auto& [name, submodule]: m_submodules)

@@ -1,4 +1,10 @@
-#include <frontend/module_tree/module_flags/module_flags.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <driver/initialize.hpp>
 #include <lsp/io/stream.h>
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/files_cache.hpp>
@@ -10,7 +16,6 @@
 #include <clah/clah_class.hpp>
 #include <clah/param_builder.hpp>
 #include <init/init.hpp>
-#include <query_framework/module_flags/module_flags.hpp>
 
 #include <cerrno>
 #include <cstdio>
@@ -82,8 +87,22 @@ namespace {
 
 		duck_ls::ServerSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
 		duck_ls::FilesCache    files;
-		duck_ls::Compiler      compiler{ base::Ref<duck_ls::ServerSession>(&session),
-                                    base::Ref<duck_ls::FilesCache>(&files) };
+		duck_ls::Compiler      compiler{
+            base::Ref<duck_ls::ServerSession>(&session),
+            base::Ref<duck_ls::FilesCache>(&files),
+            compiler::driver::CompilerModeOfOperationAndOptions::LanguageServerMode{
+					 .debug_options     = {},
+					 .execution_options = {},
+					 .stdlib_options
+                = { .std_lib_type = compiler::driver::options_types::StdLibOptions::DefaultStd{} },
+            },
+		};
+
+		compiler::driver::initializeGlobalLogger();
+		if (compiler.initialize().isBad()) {
+			std::cerr << "duck_ls: failed to initialize the compiler\n";
+			return 1;
+		}
 
 		session.registerHandlers(compiler);
 
@@ -124,9 +143,6 @@ namespace {
 				}
 			})
 		    .setHandler([](const clah::ParsingResult&) -> int {
-				query::setTrackReverseGraph(true);
-				compiler::frontend::use_module_modifier_remove = true;
-
 				ProtocolStream stream(claimStdout());
 				return serve(stream);
 			});

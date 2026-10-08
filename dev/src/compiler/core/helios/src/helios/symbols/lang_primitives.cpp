@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "lang_primitives.hpp"
 
 #include <frontend/module_tree/queries.hpp>
@@ -135,7 +141,7 @@ namespace compiler::helios {
 
 			return lookupInterfaceOfNamespacePath(
 				ctx,
-				base::makeBox<HInterface>(HInterface::ofSymbol(next)),
+				base::makeBox<HInterface>(HInterface::ofNamespace(next)),
 				std::vector<std::string>(namespaces.begin() + 1, namespaces.end())
 			);
 		}
