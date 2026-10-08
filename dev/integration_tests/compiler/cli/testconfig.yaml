@@ -62,6 +62,23 @@ Tests:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
 
+  compile-package-inferred-name:
+    # Without -n, compile_package names the package after its directory or root module file.
+    # The package id is the prefix of the dumped IR file name, so check that file exists.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 3
+    inferred_hir: "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.hir"
+    Run: "@{duckc_path} compile_package @{package_path} -O 0 --no-incremental --dvm-backend
+      --dump-ir hir -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+      && test -f @{inferred_hir}"
+    Cases:
+      from-directory:
+        package_path: "./duck_modules/inferred_name"
+        ExitCode: 0
+      from-root-module-file:
+        package_path: "./duck_modules/inferred_name/inferred_name.dk"
+        ExitCode: 0
+
   comp-time-output:
     # Test compile time output to stderr
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
