@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "loader.hpp"
 
 #include "parser/elements.hpp"
@@ -21,6 +27,7 @@
 #include <vm/loader/logger.hpp>
 
 #include <algorithm>
+#include <sstream>
 #include <vector>
 
 using namespace vm::loader;
@@ -144,7 +151,7 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderError>& err) {
+			[&](Box<dia::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(

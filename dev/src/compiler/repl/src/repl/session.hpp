@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file session.hpp
  * @brief REPL (Read-Eval-Print Loop) session management for Duckling compiler.
@@ -12,6 +18,7 @@
 #include "helpers.hpp"
 
 #include <backends/dvm/repl_lowering.hpp>
+#include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
@@ -38,9 +45,12 @@ namespace compiler::repl {
 	class ReplSession final {
 	public:
 		explicit ReplSession(
-			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
-			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+			bool completions_enabled       = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled   = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED,
+			bool decorative_output_enabled = FRONTEND_DEFAULT_DECORATIVE_OUTPUT
 		);
+
+		~ReplSession();
 
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
@@ -55,7 +65,7 @@ namespace compiler::repl {
 		 * @note Loading is non-transactional: execution stops at the first error and statements
 		 * that finished successfully before that error remain applied in the session.
 		 *
-		 * @param file_path Path to a .ds file
+		 * @param file_path Path to a .dks file
 		 * @return ReplResult indicating success or an error message
 		 */
 		ReplResult loadScriptFile(std::string_view file_path);
@@ -293,9 +303,11 @@ namespace compiler::repl {
 		                     ///< then it is checked by the main run loop.
 		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
 		ResetState                 m_reset_state;      ///< Struct to control reset.
-		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
-		ReplFrontend m_frontend;      ///< Frontend for user interaction
+		u64           m_line_counter;  ///< Counter for generating unique wrapper function names
+		ReplSessionID m_session_id;    ///< Part of the names of this session's statement modules
+		vm::PID       m_dvm_pid;       ///< Process ID of the running DVM instance
+		ReplFrontend  m_frontend;      ///< Frontend for user interaction
+		bool          m_decorative_output;
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *

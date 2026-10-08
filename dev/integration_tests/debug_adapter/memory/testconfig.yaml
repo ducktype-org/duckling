@@ -1,6 +1,7 @@
 Tests:
   debug_memory:
-    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{scenario}"
+    program: "../examples/all_types_test.dbc"
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{program} @{scenario}"
     TimeOut: 1
     Cases:
       inspect_complex_types:
@@ -9,3 +10,10 @@ Tests:
         scenario: "test_double_expansion"
       test_multi_phase_and_next_reset:
         scenario: "test_multi_phase_and_next_reset"
+  debug_position:
+    program: "../examples/simple_fun_call.dbc"
+    Run: "PYTHONPATH=../helpers python3 dap_runner_pos.py @{build_dir} @{program} @{scenario}"
+    TimeOut: 1
+    Cases:
+      frame_position:
+        scenario: "frame_position"

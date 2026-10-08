@@ -1,10 +1,19 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_statement_helpers.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
 
@@ -12,19 +21,24 @@
 
 #include <filesystem/file.hpp>
 
+#include <expected>
+
 namespace compiler::repl {
 
-	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
+	base::Ref<frontend::ModuleTree> createSyntheticChainedStatementModule(
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,
-		std::string_view                          module_name_prefix
+		std::string_view                          module_name_prefix,
+		ReplSessionID                             session_id
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
-		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
+		auto module_name = base::strConcat(
+			module_name_prefix, std::to_string(session_id.asInt()), "_", std::to_string(line_counter)
+		);
 		builder->setName(base::StrID(module_name));
 
 		frontend::ReplData repl_data;
@@ -43,14 +57,25 @@ namespace compiler::repl {
 		);
 	}
 
-	helios::HOUTUnit makeExecutableHOUTUnit(const helios::HOUTFunction& wrapper_function) {
+	std::expected<helios::HOUTUnit, std::string> makeExecutableHOUTUnit(
+		query::Context&                              ctx,
+		const helios::HOUTFunction&                  wrapper_function,
+		base::Optional<CRef<helios::HOUTGlobalData>> additional_global_var
+	) {
 		helios::HOUTUnit hout_unit;
 		hout_unit.functions.emplace_back(&wrapper_function);
+		if_opt_some(additional_global_var, var) { hout_unit.glob_data.emplace_back(var); }
+		auto result = helios::collectReplicatedSymbols(ctx, hout_unit);
+		if (result.isBad()) return std::unexpected("Failed to collect replicated symbols.");
 		return hout_unit;
 	}
 
-	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id) {
-		return ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+	std::expected<base::CRef<helios::HOUTUnit>, std::string> getDefinitionHOUTUnit(
+		query::Context& ctx, frontend::ModuleID module_id
+	) {
+		const auto& hout_qresult = ctx.query<helios::QueryModuleHOUT>(module_id);
+		if (hout_qresult->hasFailed()) return std::unexpected("Failed to compile a module.");
+		return &hout_qresult->valueOrPanic();
 	}
 
 	std::expected<SingleStatementInfo, std::string> classifySingleStatement(
@@ -82,8 +107,14 @@ namespace compiler::repl {
 		}
 
 		auto definition_stmt_opt = pst::extractSingleDefinition(ctx, root);
-		if (definition_stmt_opt.has_value())
-			return DefinitionSingleStatementInfo{ .definition_stmt = definition_stmt_opt.value() };
+		if (definition_stmt_opt.has_value()) {
+			auto definition_stmt = definition_stmt_opt.value();
+
+			if (auto as_variable = definition_stmt.unlock(ctx).dynamicCast<pst::Variable>())
+				return VariableSingleStatementInfo{ .variable_stmt = as_variable.value() };
+
+			return DefinitionSingleStatementInfo{ .definition_stmt = definition_stmt };
+		}
 
 		auto single_stmt_opt = pst::extractSingleStatement(ctx, root);
 		if (single_stmt_opt.has_value()) {
@@ -105,51 +136,72 @@ namespace compiler::repl {
 	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
 		query::Context& ctx, const SingleStatementInfo& statement_info, u64 counter
 	) {
-		return std::visit(
-			[&](const auto& statement_payload
-		    ) -> std::expected<StatementWrapperBuildResult, std::string> {
-				using PayloadT = std::decay_t<decltype(statement_payload)>;
+		if (not v_matches(
+				statement_info,
+				repl::ExpressionSingleStatementInfo,
+				repl::InstructionSingleStatementInfo
+			))
+			return std::unexpected("Definitions do not have executable wrappers.");
 
-				if constexpr (std::is_same_v<PayloadT, ExpressionSingleStatementInfo>) {
-					auto wrapper_result = ctx.query<QueryReplExpressionWrapper>({
-						.expr_stmt = statement_payload.expr_stmt,
-						.counter   = counter,
-					});
-					if (wrapper_result.hasFailed())
-						return std::unexpected(
-							"Failed to build REPL expression wrapper (see diagnostics above)."
-						);
-					auto wrapper      = wrapper_result.valueOrPanic();
-					auto mangled_name = helios::mangler::getSimpleMangledName(
-						ctx, wrapper.declaration->original_symbol
-					);
-					return StatementWrapperBuildResult{
-						.wrapper_function  = std::move(wrapper),
-						.wrapper_func_name = std::string(mangled_name.strView()),
-					};
-				} else if constexpr (std::is_same_v<PayloadT, InstructionSingleStatementInfo>) {
-					auto wrapper_result = ctx.query<QueryReplInstructionWrapper>({
-						.stmt    = statement_payload.instruction_stmt,
-						.counter = counter,
-					});
-					if (wrapper_result.hasFailed())
-						return std::unexpected(
-							"Failed to build REPL instruction wrapper (see diagnostics above)."
-						);
-					auto wrapper      = wrapper_result.valueOrPanic();
-					auto mangled_name = helios::mangler::getSimpleMangledName(
-						ctx, wrapper.declaration->original_symbol
-					);
-					return StatementWrapperBuildResult{
-						.wrapper_function  = std::move(wrapper),
-						.wrapper_func_name = std::string(mangled_name.strView()),
-					};
-				} else {
-					return std::unexpected("Definitions do not have executable wrappers");
+		auto symbol_result = [&] -> query::QResult<helios::SymID> {
+			variant_match(statement_info) {
+				variant_case(repl::ExpressionSingleStatementInfo, val) {
+					return queryReplExpressionWrapperSymbol(ctx, val.expr_stmt, counter);
 				}
-			},
-			statement_info
-		);
+				variant_case(repl::InstructionSingleStatementInfo, val) {
+					return queryReplInstructionWrapperSymbol(ctx, val.instruction_stmt, counter);
+				}
+				variant_default { CORE_PANIC("Invalid usage."); }
+			}
+		}();
+		if (symbol_result.hasFailed())
+			return std::unexpected(
+				"Failed to build REPL expression wrapper (see diagnostics above)."
+			);
+
+		const auto& function_result
+			= ctx.query<helios::QueryCodeOfFun>(symbol_result.valueOrPanic());
+		if (function_result->hasFailed())
+			return std::unexpected(
+				"Failed to build REPL expression wrapper (see diagnostics above)."
+			);
+		auto function = function_result->valueOrPanic();
+
+		auto mangled_name
+			= helios::mangler::getSimpleMangledName(ctx, function.declaration->original_symbol);
+		return StatementWrapperBuildResult{
+			.wrapper_function  = std::move(function),
+			.wrapper_func_name = std::string(mangled_name.strView()),
+		};
 	}
 
-}  // namespace compiler::repl
+	std::expected<VariableBuildResult, std::string> buildVariableWrapper(
+		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
+	) {
+		auto initializer_symbol
+			= queryReplGlobalInitializerWrapperSymbol(ctx, statement_info.variable_stmt, counter);
+		const auto& function_result = ctx.query<helios::QueryCodeOfFun>(initializer_symbol);
+		if (function_result->hasFailed())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+
+		// The declared initial value is constructed by the initializer function, so what the
+		// declaration itself contributes is the storage holding an empty (zero) value.
+		auto empty_variable_symbol
+			= queryReplEmptyVariableSymbol(ctx, getVariableSymID(ctx, statement_info.variable_stmt));
+
+		const auto& global_data_result
+			= ctx.query<helios::QueryHOUTGlobalData>(empty_variable_symbol);
+		if (global_data_result->hasFailed())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+
+		helios::HOUTUnit result;
+		result.glob_data.emplace_back(&global_data_result->valueOrPanic());
+		result.functions.emplace_back(&function_result->valueOrPanic());
+
+		if (helios::collectReplicatedSymbols(ctx, result).isBad())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+
+		return VariableBuildResult{ .hout_unit            = std::move(result),
+			                        .initializer_function = initializer_symbol };
+	}
+}

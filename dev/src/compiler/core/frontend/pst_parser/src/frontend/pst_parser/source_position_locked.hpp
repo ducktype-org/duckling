@@ -1,8 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
-#include <diagnostic_interactive/stable_position.hpp>
-
 #include <diagnostic/source_position.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/external/api.hpp>
 
 namespace query {
@@ -45,12 +50,12 @@ namespace pst {
 	 */
 	class ResolvesToPosition final {
 		using ResolverFunction = std::function<dia::SourcePosition(query::Context&)>;
-		std::variant<dia_int::StablePosition, ResolverFunction> data;
+		std::variant<dia::StablePosition, ResolverFunction> data;
 
 		static ResolverFunction fromSourcePosition(dia::SourcePosition position);
 
 	public:
-		ResolvesToPosition(dia_int::StablePosition pos): data(pos) {}
+		ResolvesToPosition(dia::StablePosition pos): data(pos) {}
 
 		ResolvesToPosition(dia::SourcePosition position): data(fromSourcePosition(position)) {}
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <tester/tester.hpp>
@@ -39,8 +45,8 @@ public:
 		assertTrue(std::get<char>(v) == 'a', "something went wrong");
 
 		assertTrue(v_get(v, char) == 'a', "something went wrong");
-		assertTrue(v_matches(v, char), "something went wrong");
-		assertTrue(!v_matches(v, int, bool), "something went wrong");
+		ASSERT_MATCHES(v, char);
+		ASSERT_NOT_MATCHES(v, int, bool);
 		v_if_matches(v, bool, _) fail("if_v_matches");
 		bool got_in = false;
 		v_if_matches(v, char, _) { got_in = true; }

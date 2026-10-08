@@ -1,10 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "char.hpp"
 #include "token.hpp"
 
-#include <diagnostic_interactive/logger.hpp>
-
+#include <diagnostic/logger.hpp>
 #include <printer/stream_printer.hpp>
 #include <token_source/source.hpp>
 
@@ -120,7 +125,7 @@ namespace lexer {
 
 		usize                       where = 0;  ///< Current position in file
 		Ref<tokenizer::TokenSource> file;
-		Ref<dia_int::Logger>        logger;
+		Ref<dia::Logger>            logger;
 		const CharArray&            char_array;
 		Tokens                      tokens;
 

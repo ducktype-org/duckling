@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <ctv/ctv.hpp>
 #include <helios/tsh/queries/types.hpp>
 
@@ -58,11 +64,12 @@ private:
 			unique_values.emplace_back(' ');
 
 			unique_values.emplace_back(CompileTimeValue::UnitCTV{});
-			unique_values.emplace_back(base::StrID("test_string_1"));
-			unique_values.emplace_back(base::StrID("a"));
-			unique_values.emplace_back(base::StrID("b"));
-			unique_values.emplace_back(base::StrID("d"));
-			unique_values.emplace_back(base::StrID(" "));
+			unique_values.emplace_back(CompileTimeValue::CharSliceValue{
+				base::StrID("test_string_1") });
+			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID("a") });
+			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID("b") });
+			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID("d") });
+			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID(" ") });
 		});
 
 		std::set<base::Bit256> hashes;

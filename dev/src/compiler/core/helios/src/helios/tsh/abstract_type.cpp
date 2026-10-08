@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file abstract_type.cpp
  * @brief Implementation of AbstractType.
@@ -19,13 +25,18 @@ namespace compiler::tsh {
 	}
 
 	[[nodiscard]]
+	CRef<query::QResult<TypeInterface>> AbstractType::getInterfaceResult(query::Context& ctx) const {
+		return pimpl->getInterfaceResult(ctx);
+	}
+
+	[[nodiscard]]
 	bool AbstractType::isSimple() const {
 		return pimpl->isSimple();
 	}
 
 	[[nodiscard]]
-	bool AbstractType::hasNoOpDestructor(query::Context& ctx) const {
-		return pimpl->hasNoOpDestructor(ctx);
+	bool AbstractType::isTriviallyDestructible(query::Context& ctx) const {
+		return pimpl->isTriviallyDestructible(ctx);
 	}
 
 	[[nodiscard]]

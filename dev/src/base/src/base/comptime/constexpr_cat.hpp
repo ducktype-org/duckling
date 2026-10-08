@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file constexpr_cat.hpp
  * @brief Constexpr concatenation of char, string literal and char sequence types.
@@ -31,30 +37,37 @@ namespace base {
 		// constexpr copy_n for char sequences
 
 		// size(char) -> 1 overload to complement std::size
-		constexpr usize size(const char&) { return 1U; }
+		constexpr usize mySize(const char&) { return 1; }
 
-		// data(char) -> char* overload to complement std::data
-		constexpr const char* data(const char& c) { return &c; }
-
-		// size(char[N]) overrides std::size(char[N]) as more specialized
-		// ***Assumes char[N] is string literal*** ***STRIPS ZERO TERMINATOR***
 		// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		template<usize N>
-		constexpr usize size(const char (&)[N]) {
+		constexpr usize mySize(const char (&)[N]) {
 			return N - 1;
 		}
 
 		// NOLINTEND(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 
+		template<usize N>
+		constexpr usize mySize(const std::array<char, N>& arr) {
+			usize s = N;
+			while (s && arr[s - 1] == '\0') s--;
+			return s;
+		}
 
-		constexpr char* copyN(const char* cs, usize n, char* p) {
-			for (usize i = 0; i < n; i++) *(p + i) = *(cs + i);
-			return p + n;
+		// data(char) -> char* overload to complement std::data
+		constexpr const char* data(const char& c) { return &c; }
+
+		/**
+		 * @brief Copies `n` bytes between `from` and `to`. Returns `to` + `n`
+		 */
+		constexpr char* copyN(const char* from, usize n, char* to) {
+			for (usize i = 0; i < n; i++) *(to + i) = *(from + i);
+			return to + n;
 		}
 
 		template<typename... Cs>
 		constexpr usize sizeSum(const Cs&... cs) {
-			return (0U + ... + size(cs));
+			return (mySize(cs) + ...);
 		}
 	}
 
@@ -64,20 +77,27 @@ namespace base {
 	 * @note Unsafe when wrong length supplied.
 	 */
 	template<usize SIZE, typename... Cs>
-	constexpr auto cat(const Cs&... cs) {
+	constexpr std::array<char, SIZE> cat(const Cs&... cs) {
 		using impl::data;
-		using impl::size;
+		using impl::mySize;
 		using std::data;
 		std::array<char, SIZE> ret{ {} };
 		if constexpr (ret.size()) {
 			char* p = ret.data();
-			((p = impl::copyN(data(cs), size(cs), p)), ...);
+			((p = impl::copyN(data(cs), mySize(cs), p)), ...);
 		}
 		return ret;
 	}
 }
 
 /**
- * @brief Returns an std::array<char> concatenation with inferred length.
+ * @brief Returns a std::array<char> concatenation with inferred length.
+ * @note std::array is not null-terminated!
  */
 #define CONSTEXPR_CAT(...) base::cat<base::impl::sizeSum(__VA_ARGS__)>(__VA_ARGS__)
+
+/**
+ * @brief Returns a null-terminated std::array<char> concatenation with inferred length.
+ * It is safe to e.g. use .data()'s content in streams
+ */
+#define CONSTEXPR_CAT_CSTR(...) CONSTEXPR_CAT(__VA_ARGS__, '\0')

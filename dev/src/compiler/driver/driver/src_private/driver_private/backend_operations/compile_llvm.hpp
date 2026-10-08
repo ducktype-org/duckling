@@ -1,10 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../lir_unit_with_name.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 
-#include <artifacts/artifacts.hpp>
 #include <query_framework/context/context_fd.hpp>
 
 namespace compiler::driver {
@@ -15,10 +20,4 @@ namespace compiler::driver {
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
 	);
-
-
-	/**
-	 * Compile builtin LLVM library into an object file.
-	 */
-	artifacts::FileArtifact emitBuiltinLLVMObjectFile();
 }

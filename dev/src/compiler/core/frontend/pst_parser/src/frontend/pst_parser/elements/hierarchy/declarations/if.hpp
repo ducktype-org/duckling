@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "preamble.hpp"
@@ -5,9 +11,12 @@
 namespace pst {
 	/**
 	 * @brief If declaration
+	 *
+	 * Also covers `if const (...)`, which is evaluated at compile time and compiles only the
+	 * taken branch.
 	 */
 	class If final: public CodeDecl {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(If, CodeDecl);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(If, CodeDecl, is_const);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -15,6 +24,7 @@ namespace pst {
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
 		NAMED_CHILD(then_body, CodeBlockOrStmt);
 		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
+		bool is_const = false;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -36,7 +46,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprHolder> getCondition() const;
+		bool isConst() const {
+			return is_const;
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getCondition() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getThenBody() const {

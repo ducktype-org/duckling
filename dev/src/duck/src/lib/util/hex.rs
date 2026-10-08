@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Module containing hex encoding (and, maybe in the future, decoding too).
 
 /// Encode data as a hex string.
@@ -42,7 +48,7 @@ fn format_hex(hex: u8) -> char {
         13 => 'd',
         14 => 'e',
         15 => 'f',
-        _ => unreachable!("it's a hex value"),
+        _ => unreachable!("`{hex}` is not a hex value?"),
     }
 }
 

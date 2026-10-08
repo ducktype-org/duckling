@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "stmt_lowering.hpp"
 
 #include "expr_lowering.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
@@ -42,7 +49,7 @@ namespace compiler::mir {
 		}
 
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
-			auto return_block = function.newBlock();
+			auto return_block = function.newBlock("return");
 			auto return_scope = function.newScope(parent_scope);
 
 			auto retrieve_value = return_block->addHole();
@@ -66,16 +73,8 @@ namespace compiler::mir {
 				                                            : expr_res.getResultType();
 
 				auto return_value = function.addReturnTmp(res_type);
-
-				// Set move flag only if value exists.
-				std::vector<OperationFlag> flags = {};
-				if (possible_result.has_value())
-					flags.push_back(flagMove(possible_result->get<MIRPlace>().getBase<MIRLocalRef>()
-					));
-
-
 				expr_res.storeResultInGivenPlace(
-					MIRPlace(return_value), retrieve_value, flags, return_scope, {}
+					MIRPlace(return_value), retrieve_value, {}, return_scope, {}
 				);
 
 				possible_result = return_value;
@@ -95,7 +94,7 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
-			auto return_block = function.newBlock();
+			auto return_block = function.newBlock("return.void");
 			auto return_scope = function.newScope(parent_scope);
 			return_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, return_scope, {}, { stmt.getPosition() } }
@@ -120,17 +119,17 @@ namespace compiler::mir {
 			auto then_scope = function.newScope(parent_scope);
 			auto else_scope = function.newScope(parent_scope);
 
-			auto else_block = function.newBlock();
+			auto else_block = function.newBlock("if.else");
 			else_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
 			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
 
-			auto then_block = function.newBlock();
+			auto then_block = function.newBlock("if.then");
 			then_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
 			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
 
-			auto condition_block = function.newBlock();
+			auto condition_block = function.newBlock("if.cond");
 
 			auto get_condition_return = condition_block->addHole();
 
@@ -180,7 +179,7 @@ namespace compiler::mir {
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
 			auto condition_scope = function.newScope(parent_scope);
 
-			auto condition_continuation_block = function.newBlock();
+			auto condition_continuation_block = function.newBlock("while.cond");
 
 			auto get_condition_return = condition_continuation_block->addHole();
 
@@ -190,7 +189,7 @@ namespace compiler::mir {
 
 			auto loop_scope = function.newScope(parent_scope);
 
-			auto loop_continuation_block = function.newBlock();
+			auto loop_continuation_block = function.newBlock("while.body.end");
 
 			loop_continuation_block->setTerminator(
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
@@ -199,7 +198,7 @@ namespace compiler::mir {
 			auto loop_body
 				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
 
-			auto entry_block = function.newBlock();
+			auto entry_block = function.newBlock("while.entry");
 
 			entry_block->setTerminator(
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
@@ -269,10 +268,23 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
-			// @TODO: #448 Search for location in global scope as well.
 			auto assignment_scope = function.newScope(parent_scope);
 
 			auto target_construction_hole = continuation->addHole();
+
+			// This is for cases like
+			// a = foo(&a)
+			// Where the a destructor will be inserted, but we don't know if `foo` uses `a`.
+			// In that case we should make a temporary result and then assign to the output.
+			// tmp = foo(&a)
+			// destruct(a) <- added in the later pass
+			// a = tmp
+			bool destructor_in_between
+				= not stmt.location_expr->expression_type.getSymbolType().isTriviallyDestructible(
+					function.getContext()
+				);
+			base::Optional<BlockBuilder::InstructionHole> second_hole;
+			if (destructor_in_between) second_hole = continuation->addHole();
 
 			auto right_result
 				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
@@ -289,22 +301,46 @@ namespace compiler::mir {
 				"a global variable."
 			);
 
+
 			variant_match(left_val.getVariant()) {
 				variant_case(MIRPlace, place) {
-					// Reinitialize the whole local: marks it alive again for liveness (e.g. after a
-					// move-out). Only for a bare local target — a projected store (`x.p = ...`,
-					// `aa[i] = ...`) writes a sub-place and does not change the whole-local liveness.
+					// Reinitialize the whole local: marks it alive again for liveness (e.g.
+					// after a move-out). Only for a bare local target — a projected store (`x.p
+					// = ...`, `aa[i] = ...`) writes a sub-place and does not change the
+					// whole-local liveness.
 					std::vector<OperationFlag> flags;
 					if (place.isLocal() && place.projection_chain.empty())
 						flags.push_back(flagReinit(place.getBase<MIRLocalRef>()));
 
-					right_result.storeResultInGivenPlace(
-						place,
-						target_construction_hole,
-						flags,
-						assignment_scope,
-						{ stmt.getPosition() }
-					);
+					// We want to cover cases like a = a
+					if (destructor_in_between) {
+						auto tmp = function.addTmp(place.type, assignment_scope);
+						right_result.storeResultInGivenPlace(
+							MIRPlace(tmp),
+							second_hole.value(),
+							{ flagConstruct(tmp) },
+							assignment_scope,
+							{ stmt.getPosition() }
+						);
+						auto tmp_result = ExprLowerRes(right_result.begin, tmp);
+						flags.push_back(flagMove(tmp));
+
+						tmp_result.storeResultInGivenPlace(
+							place,
+							target_construction_hole,
+							flags,
+							assignment_scope,
+							{ stmt.getPosition() }
+						);
+					} else {
+						right_result.storeResultInGivenPlace(
+							place,
+							target_construction_hole,
+							flags,
+							assignment_scope,
+							{ stmt.getPosition() }
+						);
+					}
 					output({ left_result.begin });
 				}
 				variant_default { CORE_PANIC("Assignment to unsupported MIRValue kind."); }

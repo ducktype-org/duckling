@@ -1,11 +1,18 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::cmp::Ordering;
 use std::path::PathBuf;
-use std::time::SystemTime;
+
+use chrono::{DateTime, Utc};
 
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::{display_venv_info, list_venvs};
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Options for the list operation.
@@ -29,7 +36,7 @@ pub enum VenvOrderings {
 
 impl VenvOrderings {
     /// Return the correct function pointer for comparing venvs.
-    pub fn comparator(&self) -> fn(&Venv, &Venv) -> Ordering {
+    pub fn comparator(self) -> fn(&Venv, &Venv) -> Ordering {
         match self {
             VenvOrderings::Name => Venv::compare_name,
             VenvOrderings::Access => Venv::compare_access,
@@ -49,11 +56,11 @@ impl Venv {
         self.data().last_access().cmp(&other.data().last_access())
     }
 
-    /// Compare venvs by last_modification ascendingly.
+    /// Compare venvs by last_synchronization ascendingly.
     fn compare_modification(&self, other: &Self) -> Ordering {
         self.data()
-            .last_modification()
-            .cmp(&other.data().last_modification())
+            .last_synchronization()
+            .cmp(&other.data().last_synchronization())
     }
 }
 
@@ -66,7 +73,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         storage_path,
     } = opts;
     let storage = Storage::new(storage_path);
-    let venvs_list: Vec<(Venv, SystemTime)> = list_venvs(storage.root(), ctx)
+    let venvs_list: Vec<(Venv, DateTime<Utc>)> = list_venvs(storage.root(), ctx)
         .context("when listing the venvs")?
         .into_values()
         .collect();
@@ -85,7 +92,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         venvs_list.reverse();
     }
 
-    ctx.console().print(format!(
+    ctx.print(format!(
         "Found {} venv{}",
         venvs_list.len(),
         venvs_list.s_if_plural(),

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "type_layout.hpp"
 
 #include "c_abi_converter.hpp"
@@ -174,13 +180,15 @@ namespace compiler::tsl {
 			const std::vector<CRef<TypeLayout>>&      layouts
 		) {
 			Bytes total_size{ 0 };
+			Bytes max_alignment{ 1 };
 			for (usize component_idx = 0; component_idx < offsets.size(); component_idx++)
 				if (auto offset = offsets[component_idx]; offset.has_value()) {
 					const auto layout_size = layouts[component_idx]->getSize();
 					const auto layout_end  = offset.value() + base::bits2bytesRoundUp(layout_size);
 					total_size             = std::max(total_size, layout_end);
+					max_alignment = std::max(max_alignment, layouts[component_idx]->getAlignment());
 				}
-			return bytes2bits(total_size);
+			return bytes2bits(base::bytesRoundTo(total_size, max_alignment));
 		}
 
 		/**
@@ -209,7 +217,7 @@ namespace compiler::tsl {
 		 * @brief Source position of the class declaration, used to anchor
 		 * diagnostics about the class itself.
 		 */
-		dia_int::StablePosition classDiagnosticPosition(
+		dia::StablePosition classDiagnosticPosition(
 			compiler::helios::SymID class_sym, query::Context& ctx
 		) {
 			auto class_pst = compiler::helios::maybeSymbolPst(class_sym);
@@ -223,7 +231,7 @@ namespace compiler::tsl {
 		 * diagnostics about its type. Falls back to the class declaration when
 		 * the field has no PST node.
 		 */
-		dia_int::StablePosition fieldDiagnosticPosition(
+		dia::StablePosition fieldDiagnosticPosition(
 			compiler::helios::SymID field_sym, compiler::helios::SymID class_sym, query::Context& ctx
 		) {
 			auto field_pst = compiler::helios::maybeSymbolPst(field_sym);
@@ -387,15 +395,24 @@ namespace compiler::tsl {
 
 	struct VariantTypeLayoutConstructionHelper {
 		tsh::VariantAbstractType variant_type;
+		Bits                     tag_size;
 		Bits                     max_component_size;
 		std::vector<Bytes>       offsets;
+
+		static Bits requiredTagSize(usize number_of_alternatives) {
+			// Zero denotes no active alternative, so the largest tag equals the count.
+			const usize needed_bits  = std::bit_width(number_of_alternatives);
+			const usize needed_bytes = (needed_bits + 7) / 8;
+			return Bits(8 * std::bit_ceil(needed_bytes));
+		}
 
 		VariantTypeLayoutConstructionHelper(
 			const tsh::VariantAbstractType variant_type, query::Context& ctx
 		):
 			  variant_type(variant_type),
+			  tag_size(requiredTagSize(variant_type.getUnderlyingTypes().size())),
 			  max_component_size(maxTypeSizeInVector(variant_type.getUnderlyingTypes(), ctx)),
-			  offsets(alignOffsetsForSizeVector({ Bits(8), max_component_size })) {}
+			  offsets(alignOffsetsForSizeVector({ tag_size, max_component_size })) {}
 	};
 
 	VariantTypeLayout::VariantTypeLayout(
@@ -411,9 +428,9 @@ namespace compiler::tsl {
 			  tsh::SymbolType<>::withDefaults(helper.variant_type),
 			  ctx
 		  ),
-		  tag_offset{ 0 },                   // 0 bytes
-		  tag_size{ 8 },                     // 8 bits
-		  data_offset{ helper.offsets[1] },  // up to 8 bytes
+		  tag_offset{ 0 },  // 0 bytes
+		  tag_size{ helper.tag_size },
+		  data_offset{ helper.offsets[1] },
 		  data_size{ helper.max_component_size } {
 		u32 i = 0;
 		for (auto type: helper.variant_type.getUnderlyingTypes()) {
@@ -541,18 +558,6 @@ namespace compiler::tsl {
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
 			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
 			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
-
-		ClassTypeLayoutConstructionHelper(
-			const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-		):
-			  type(dynamic_array_type),
-			  field_elements(getFieldsOfInterface(dynamic_array_type.getInterface(ctx))),
-			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
-			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
-			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
-			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
-			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
-			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
 	};
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
@@ -563,11 +568,6 @@ namespace compiler::tsl {
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::SliceAbstractType slice_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(slice_type, ctx), ctx) {}
-
-	ClassTypeLayout::ClassTypeLayout(
-		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-	):
-		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(dynamic_array_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(
@@ -642,32 +642,46 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
-		  pointer_kind(PointerKind::CPointer) {}
+		  pointee_type(pointer_type.getPointee()),
+		  pointer_kind(PointerKind::CPointer) {
+		auto& pointee_cabi_type
+			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
+		if (not pointee_cabi_type.has_value()) {
+			ctx.logInt(
+				makeBox<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
+			);
+			query::throwFailed();
+		}
+	}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee(&ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()),
+		  pointee_type(tsh::SymbolType<>::withDefaults(symbol_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "
 			"without reference indirection is forbidden."
 		);
+	}
+
+	CRef<TypeLayout> PointerTypeLayout::getPointee(query::Context& ctx) const {
+		CORE_ASSERT(pointee_type.has_value(), "Untyped pointer layout has no pointee.");
+		return &ctx.query<QuerySymbolTypeLayout>(*pointee_type)->valueOrThrow();
 	}
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }

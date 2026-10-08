@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "go_to_definition.hpp"
 
@@ -29,10 +34,6 @@ namespace compiler::helios {
 		}
 
 		void visitIdentifierExpr(const IdentifierExpr& val) override { symbol = val.symbol; }
-
-		void visitParenthesisExpr(const ParenthesisExpr& val) override {
-			val.inner->acceptVisitor(*this);
-		}
 
 		void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
 			// note: it should be possible if given operator points to a

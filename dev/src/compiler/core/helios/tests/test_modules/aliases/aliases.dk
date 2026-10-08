@@ -1,0 +1,24 @@
+const x: i32 = 1235;
+using x as a;
+namespace N2 {
+	using a as b;
+	const in_n2: i32 = 77;
+}
+using N2 as n1;
+using N2 as n2;
+using n1.*;
+
+namespace M {
+	const c = 42;
+}
+using M.c;
+
+class T {
+	x: i64;
+
+	# aliases in classes not supported yet
+	# using x.a.b.c.*;
+}
+
+var t: T;
+# t.z; dealias to t.x.z

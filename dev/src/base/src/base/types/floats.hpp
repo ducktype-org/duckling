@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file floats.hpp
  *
@@ -20,7 +26,10 @@
 
 #include <cfloat>  // For mantissa sizes.
 #include <limits>
-#include <stdfloat>
+#if __has_include(<stdfloat>)
+	#include <stdfloat>
+#endif
+
 #if defined(__STDCPP_FLOAT32_T__) && defined(__STDCPP_FLOAT64_T__)
 using f32 = std::float32_t;
 using f64 = std::float64_t;

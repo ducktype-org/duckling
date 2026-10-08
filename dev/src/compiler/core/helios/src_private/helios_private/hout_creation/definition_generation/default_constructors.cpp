@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "default_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -6,6 +12,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -15,6 +22,8 @@
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	using namespace code::shorthands;
+
 	// -----------------------------------------------------------
 	//                  Class Default Constructors
 	// -----------------------------------------------------------
@@ -33,44 +42,23 @@ namespace compiler::helios::defgen {
 				= class_interface->getFieldsView() | to<std::vector>();
 
 			// Prepare the ctor symbol and declaration.
-			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>(
-				{ .name = name(class_symbol),
-			      .generated_symbol_data
-			      = Constructor{ .type = class_type, .kind = Constructor::Kind::Default } }
-			);
+			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
+				.name = name(class_symbol),
+				.generated_symbol_data
+				= Constructor{ .type = class_type, .kind = Constructor::Kind::Default },
+			});
 
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
 
 			// Prepare the body of the constructor.
-			std::vector<Box<code::Stmt>> body{};
-			// - One declaration, one assignment per field, one return.
-			body.reserve(1 + fields.size() + 1);
+			const Shorthand s{ ctx };
 
-			// @TODO: #2307 Classes with a field named `__result`.
-			// - Declare result variable.
-			const auto result_symbol_type = ctor_decl.return_type;
-			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name                  = base::StrID("__result"),
-					 .generated_symbol_data = GeneratedFunctionVariable{
-						 .function_symbol = ctor_symbol,
-						 .variable_index  = 0,
-						 .type            = result_symbol_type,
-                },
-            });
+			// One value per field, in declaration order: the field's own initializer when it has
+			// one, its type's default initializer otherwise.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(fields.size());
 
-			// By default all fields with no initial value are zeroed.
-			// var result: Class = <default_initializer>;
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				result_symbol
-			));
-
-			// - Assign each field with the initializing expression or a default value expression.
 			for (const auto& field: fields) {
 				const auto field_pst_data = maybeSymbolPst(field.getSymbol())
 				                                .value()
@@ -79,44 +67,38 @@ namespace compiler::helios::defgen {
 				                                .value();
 				auto field_init_expr_opt = field_pst_data->getInit();
 
-				auto init_expr = [&]() -> BoxOrCRef<code::Expr> {
-					match_optional(field_init_expr_opt) {
-						opt_some(field_init) {
-							// If the field has an initializer value we use it.
-							const auto field_type = field.getType(ctx);
-							auto       expr
-								= getHoutOfExprWithExpectedType(
-									  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
-								)
-							          .valueOrThrow();
-							return expr;
-						}
-						opt_none {
-							// Otherwise initialize it with the default initializer expression.
-							return ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
-							    ->valueOrThrow()
-							    .ref();
-						}
+				match_optional(field_init_expr_opt) {
+					opt_some(field_init) {
+						// If the field has an initializer value we use it. The HOUT of the
+						// initializer may be owned by a query cache, in which case it is cloned.
+						const auto field_type = field.getType(ctx);
+						auto       field_init_hout
+							= getHoutOfExprWithExpectedType(
+								  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
+							)
+						          .valueOrThrow();
+						field_values.emplace_back(
+							field_init_hout.isBox() ? std::move(field_init_hout.getBox())
+													: field_init_hout->clone()
+						);
 					}
-					CORE_UNREACHABLE();
-				}();
-
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						field.getSymbol()
-					),
-					std::move(init_expr)
-				));
+					opt_none {
+						// Otherwise initialize it with the default initializer expression. That
+						// expr is owned by its query cache, so it has to be cloned into the
+						// aggregate.
+						field_values.emplace_back(
+							ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
+								->valueOrThrow()
+								->clone()
+						);
+					}
+				}
 			}
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
+			// The whole value is built in place by a single expression:
+			// `return create_aggregate(Class) { field_values... };`
+			std::vector<Box<code::Stmt>> body{};
+			body.emplace_back(s.ret(s.createAggregate(class_type, std::move(field_values))));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
@@ -156,53 +138,21 @@ namespace compiler::helios::defgen {
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
 
 			// Prepare the body of the constructor.
+			const Shorthand s{ ctx };
+
+			// One value per field, in declaration order. Tuple fields have no initializers, so
+			// every value is the field type's default initializer. Those exprs are owned by their
+			// query cache, so they have to be cloned into the aggregate.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(fields.size());
+			for (const auto& field: fields)
+				field_values.emplace_back(ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
+				                              ->valueOrThrow()
+				                              ->clone());
+
+			// `return create_aggregate(Tuple) { field_values... };`
 			std::vector<Box<code::Stmt>> body{};
-			// - One declaration, one assignment per field, one return.
-			body.reserve(1 + fields.size() + 1);
-
-			// - Declare result variable.
-			const auto result_symbol_type = ctor_decl.return_type;
-			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name                  = base::StrID("__result"),
-					 .generated_symbol_data = GeneratedFunctionVariable{ 
-						 .function_symbol = ctor_symbol,
-						 .variable_index  = 0,
-						 .type            = result_symbol_type,
-                },
-            });
-
-			// All fields are zeroed.
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				result_symbol
-			));
-
-			// - Assign each field with the initializing expression.
-			for (const auto& field: fields) {
-				auto init_expr = ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
-				                     ->valueOrThrow()
-				                     .ref();
-
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						field.getSymbol()
-					),
-					init_expr
-				));
-			}
-
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
+			body.emplace_back(s.ret(s.createAggregate(tuple_type, std::move(field_values))));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
@@ -225,13 +175,8 @@ namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryDefaultStaticArrayConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey array_type) {
 			// Preamble, get some basic data.
-			const auto  element_type   = array_type.getElementType();
-			const usize size           = array_type.getSize();
-			const auto  array_sym_type = tsh::SymbolType<>{ array_type,
-				                                            tsh::ReferenceKind::Direct,
-				                                            tsh::Mutability::Mutable };
-
-			using Variable = GeneratedFunctionVariable;
+			const auto  element_type = array_type.getElementType();
+			const usize size         = array_type.getSize();
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
@@ -242,100 +187,23 @@ namespace compiler::helios::defgen {
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
 
+			const Shorthand s{ ctx };
+
 			std::vector<Box<code::Stmt>> body{};
 
-			// var res: T[N];
-			const SymID res_sym
-				= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__result"),
-			                                        .generated_symbol_data = Variable{
-														.function_symbol = ctor_symbol,
-														.variable_index  = 0,
-														.type            = array_sym_type,
-													} });
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), array_type),
-				array_sym_type,
-				res_sym
-			));
-
-			// Generate the loop only if the static array is not empty.
-			if (size > 0) {
-				auto u64_abs_type
-					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-				auto u64_type = tsh::SymbolType<>{ u64_abs_type,
-					                               tsh::ReferenceKind::Direct,
-					                               tsh::Mutability::Mutable };
-				// var i: i64 = 0;
-				const SymID i_sym
-					= ctx.query<QueryGeneratedSymbol>({ .name                  = base::StrID("__i"),
-				                                        .generated_symbol_data = Variable{
-															.function_symbol = ctor_symbol,
-															.variable_index  = 1,
-															.type            = u64_type,
-														} });
-				auto zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-				                    .expect("u64 creation failed");
-				body.emplace_back(makeBox<code::VariableStmt>(
-					code::generatedOrigin(),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-					u64_type,
-					i_sym
-				));
-
-				// i < size
-				auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
-				                    .expect("u64 creation failed");
-				auto condition = makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerLt,
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
+			if (size == 0) {
+				// There is no element to construct, so there is nothing for an aggregate to build.
+				// `return zero_initialized T[0];`
+				body.emplace_back(s.ret(s.defaultValue(array_type)));
+			} else {
+				std::vector<Box<code::Expr>> element_values;
+				element_values.emplace_back(
+					ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow()->clone()
 				);
 
-				// while (i < size) { res[i] = default_init(T); i = i + 1; }
-				code::CodeBlock loop_body{};
-				auto            element_init
-					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow().ref();
-
-				// res[i] = default_init(T)
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IndexExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-					),
-					element_init
-				));
-
-				// i = i + 1
-				auto one_val = numeric_value::NumericValue::createOfType(u64_type.getType(), 1)
-				                   .expect("u64 creation failed");
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::BinaryOperatorExpr>(
-						ctx,
-						code::generatedOrigin(),
-						code::BuiltinBinary::IntegerAdd,
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
-					)
-				));
-
-				body.emplace_back(makeBox<code::WhileStmt>(
-					code::generatedOrigin(), std::move(condition), std::move(loop_body)
-				));
+				// `return create_aggregate(T[N]) [ element_init ];`
+				body.emplace_back(s.ret(s.createAggregate(array_type, std::move(element_values))));
 			}
-
-			// return result
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-			));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
@@ -361,13 +229,12 @@ namespace compiler::helios::defgen {
 				sym_type.isDefaultConstructible(ctx),
 				"QueryDefaultInitializerExpr called on non default constructible type"
 			);
+			const Shorthand s{ ctx };
+
 			// For types that are trivially zero initializable, we just insert a default value expr
 			// which will map to ZeroInitialize.
-			if (sym_type.isTriviallyZeroInitializable(ctx)) {
-				return makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), sym_type.getType()
-				);
-			}
+			if (sym_type.isTriviallyZeroInitializable(ctx))
+				return s.defaultValue(sym_type.getType());
 
 			const auto& type = sym_type.getType();
 			switch (type.getKind()) {
@@ -375,48 +242,25 @@ namespace compiler::helios::defgen {
 				auto array_type = type.as<tsh::StaticArrayAbstractType>();
 				auto ctor
 					= ctx.query<QueryDefaultStaticArrayConstructor>(array_type)->valueOrThrow();
-				return makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), ctor.declaration->original_symbol
-					),
-					std::vector<Box<code::Expr>>{}
-				);
+				return s.call(s.ident(ctor.declaration->original_symbol));
 			}
 			case tsh::Kind::Class: {
 				auto class_type = type.as<tsh::ClassAbstractType>();
 				auto ctor = ctx.query<QueryDefaultClassConstructor>(class_type)->valueOrThrow();
-				return makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), ctor.declaration->original_symbol
-					),
-					std::vector<Box<code::Expr>>{}
-				);
+				return s.call(s.ident(ctor.declaration->original_symbol));
 			}
 			case tsh::Kind::Tuple: {
 				auto tuple_type = type.as<tsh::TupleAbstractType>();
 				auto ctor = ctx.query<QueryDefaultTupleConstructor>(tuple_type)->valueOrThrow();
-				return makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), ctor.declaration->original_symbol
-					),
-					std::vector<Box<code::Expr>>{}
-				);
+				return s.call(s.ident(ctor.declaration->original_symbol));
 			}
 			case tsh::Kind::Unit: {
 				// Unit is default constructed with a unit.
-				return makeBox<code::LiteralUnitExpr>(ctx, code::generatedOrigin());
+				return s.litUnit();
 			}
 			case tsh::Kind::Meta: {
 				// Meta is default initialized with a void type.
-				return makeBox<code::LiteralTypeExpr>(
-					ctx, code::generatedOrigin(), tsh::getVoidType()
-				);
+				return s.litType(tsh::getVoidType());
 			}
 			default: {
 				CORE_PANIC(
@@ -433,10 +277,10 @@ namespace compiler::helios::defgen {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
 
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia_int::StablePosition pos
+		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
 			));
 			return query::Failed();

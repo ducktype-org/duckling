@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file cf_analysis.cpp
  * @brief Implementation of basic-block boundary analysis.
@@ -60,4 +66,13 @@ namespace vm::low::cf {
 		}
 		return block_beginnings;
 	}
+
+#ifdef ENABLE_JIT
+	usize functionEntrypointOffset(const MicroBytecode& bc) {
+		for (usize i = 0; i < bc.size(); ++i)
+			if (getInstructionOpcode(bc[i]) == MicroOpcode::jitFuncEntrypoint) return i;
+		// A missing entrypoint means the lowering and this scan have drifted apart.
+		CORE_PANIC("No jitFuncEntrypoint instruction found in the bytecode");
+	}
+#endif
 }  // namespace vm::low::cf

@@ -1,18 +1,25 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file errors.hpp
  * @brief Errors and error messages related to helios expression processing.
  */
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+
+#include <diagnostic/message.hpp>
 
 #include <string>
 
 namespace compiler::helios::code {
 
-	class UndefinedBinaryOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UndefinedBinaryOperatorError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -21,20 +28,20 @@ namespace compiler::helios::code {
 
 	public:
 		UndefinedBinaryOperatorError(
-			dia_int::StablePosition source_position,
-			std::string             op,
-			Box<InteractiveType>    lhs_type,
-			Box<InteractiveType>    rhs_type
+			dia::StablePosition  source_position,
+			std::string          op,
+			Box<InteractiveType> lhs_type,
+			Box<InteractiveType> rhs_type
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			addArgument<dia_int::TextArgument>("operator", std::move(op));
-			addArgument<dia_int::InteractiveArgument>("lhs_type", std::move(lhs_type));
-			addArgument<dia_int::InteractiveArgument>("rhs_type", std::move(rhs_type));
+			addArgument<dia::TextArgument>("operator", std::move(op));
+			addArgument<dia::InteractiveArgument>("lhs_type", std::move(lhs_type));
+			addArgument<dia::InteractiveArgument>("rhs_type", std::move(rhs_type));
 		}
 	};
 
-	class UndefinedUnaryOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UndefinedUnaryOperatorError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -43,16 +50,16 @@ namespace compiler::helios::code {
 
 	public:
 		UndefinedUnaryOperatorError(
-			dia_int::StablePosition source_position, std::string op, Box<InteractiveType> type
+			dia::StablePosition source_position, std::string op, Box<InteractiveType> type
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			addArgument<dia_int::TextArgument>("operator", std::move(op));
-			addArgument<dia_int::InteractiveArgument>("type", std::move(type));
+			addArgument<dia::TextArgument>("operator", std::move(op));
+			addArgument<dia::InteractiveArgument>("type", std::move(type));
 		}
 	};
 
-	class InvalidNumericLiteralError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class InvalidNumericLiteralError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -60,12 +67,12 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		InvalidNumericLiteralError(dia_int::StablePosition source_position):
+		InvalidNumericLiteralError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class NumericLiteralTooLargeError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NumericLiteralTooLargeError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -73,12 +80,12 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		NumericLiteralTooLargeError(dia_int::StablePosition source_position):
+		NumericLiteralTooLargeError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class LiteralDoesNotFitError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class LiteralDoesNotFitError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -86,9 +93,9 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		LiteralDoesNotFitError(dia_int::StablePosition source_position, std::string type_desc):
+		LiteralDoesNotFitError(dia::StablePosition source_position, std::string type_desc):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			addArgument<dia_int::TextArgument>("type_desc", std::move(type_desc));
+			addArgument<dia::TextArgument>("type_desc", std::move(type_desc));
 		}
 	};
 

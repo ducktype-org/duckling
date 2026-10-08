@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include <ctv/ctv_fd.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -10,6 +17,8 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios::mangler {
+
+	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value);
 
 	namespace special_symbol_keys {
 		struct LIRModuleID {

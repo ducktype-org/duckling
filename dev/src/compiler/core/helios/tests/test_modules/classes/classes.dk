@@ -1,0 +1,83 @@
+# Class fixtures shared by the HELIOS class, interface, symbol and lookup tests.
+#
+# `Base` declares a member of every kind, `Derived` inherits from it, `Empty` is as trivial as a
+# class gets, and `ClassWithMember` holds a value of `Base` while being unrelated to it.
+
+class Base {
+    public pub_field: i64 = 1;
+    protected prot_field: i64 = 2;
+    private priv_field: i64 = 3;
+    private unspecified: f32 = 4.0;
+
+    public global counter: i64 = 5;
+
+    public global fun make() -> i64 = {
+        return counter;
+    }
+
+    public fun getPub() -> i64 = {
+        return pub_field;
+    }
+
+    public fun setPub(new_value: i64) = {
+        pub_field = new_value;
+    }
+
+    # A body inside `Base`, which may use every member of `Base` whatever its visibility.
+    public fun insidePrivate() -> i64 = {
+        return priv_field;
+    }
+
+    private {
+        Base.copy(other: const ref Base) = {
+            return Base(other.pub_field, other.prot_field, other.priv_field, other.unspecified);
+        }
+    }
+
+    public Base.destroy() = {}
+}
+
+class Derived extends Base {
+    public derived_field: i64 = 6;
+
+    # A body inside a class that inherits from `Base`.
+    public fun insideDerived() -> i64 = {
+        return derived_field;
+    }
+}
+
+class Empty extends Base {}
+
+class ClassWithMember {
+    public member: Base = Base(1, 2, 3, 4.0 as f32);
+
+    # A body inside a class unrelated to `Base`.
+    public fun getMemberPub() -> i64 = {
+        return member.getPub();
+    }
+}
+
+fun freeFunction() -> i64 = {
+    return 0;
+}
+
+let base_value: Base = Base(1, 2, 3, 4.0 as f32);
+let base_copy = copy base_value;
+
+var c            = ClassWithMember(Base(5, 6, 7, 8.0 as f32));
+var c_member     = copy c.member;
+var c_member_pub = c.getMemberPub();
+
+let global_counter: i64 = 9;
+
+let pair: (i64, i64) = (10, 11);
+
+# Nested classes
+
+# @TODO: #1503 Support nested classes in HELIOS
+# class OuterClass {
+    # class InnerClass {
+        # x: i64 = 0;
+    # }
+# }
+# let inner: OuterClass.InnerClass = OuterClass.InnerClass(3);

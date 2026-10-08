@@ -1,4 +1,9 @@
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -7,6 +12,7 @@
 
 #include <base/types/ints.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -75,7 +81,7 @@ namespace compiler::repl {
 		}
 
 		void beforeAll() override {
-			dia_int::configureImmediatePrint(&std::cerr);
+			dia::configureImmediatePrint(&std::cerr);
 			// enable if needed
 			// logger::enable_dev_logs = true;
 			// logger::enableDevCategoryByStringName("REPL");
@@ -249,7 +255,7 @@ namespace compiler::repl {
 			ReplSession session;
 
 			auto var_result   = session.processLine("var symbol_source: i32 = 3;");
-			auto alias_result = session.processLine("alias symbol_alias = symbol_source;");
+			auto alias_result = session.processLine("using symbol_source as symbol_alias;");
 			auto const_result = session.processLine("const symbol_const: i64 = 42;");
 			auto class_result = session.processLine("class SymbolClass{}");
 
@@ -259,7 +265,7 @@ namespace compiler::repl {
 			);
 			assertTrue(
 				alias_result.status == ReplResult::Status::Success,
-				"Alias declaration should succeed before /symbols"
+				"`using ... as` declaration should succeed before /symbols"
 			);
 			assertTrue(
 				const_result.status == ReplResult::Status::Success,
@@ -280,8 +286,8 @@ namespace compiler::repl {
 				"/symbols should list regular variables"
 			);
 			assertTrue(
-				output.find("[history #2] alias symbol_alias") != std::string::npos,
-				"/symbols should list aliases"
+				output.find("[history #2] using symbol_alias") != std::string::npos,
+				"/symbols should list `using ... as` declarations"
 			);
 			assertTrue(
 				output.find("[history #3] const symbol_const : const i64") != std::string::npos,
@@ -1046,8 +1052,8 @@ namespace compiler::repl {
 				updated_history_size >= initial_history_size,
 				"History size should increase or stay same after processing"
 			);
-			assertTrue(
-				session.m_lowering_context.has_value(),
+			ASSERT_HAS_VALUE(
+				session.m_lowering_context,
 				"Lowering context should be initialized for REPL execution"
 			);
 		}

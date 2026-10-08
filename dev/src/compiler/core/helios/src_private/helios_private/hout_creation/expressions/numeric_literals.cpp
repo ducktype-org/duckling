@@ -1,11 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "numeric_literals.hpp"
 
 #include "errors.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -21,10 +27,10 @@ namespace compiler::helios::code {
 		 * error is logged.
 		 */
 		bool handleFromCharsFailure(
-			const std::from_chars_result&  result,
-			std::string_view               value,
-			const dia_int::StablePosition& position,
-			query::Context&                ctx
+			const std::from_chars_result& result,
+			std::string_view              value,
+			const dia::StablePosition&    position,
+			query::Context&               ctx
 		) {
 			if (result.ec != std::errc()) {
 				if (result.ec
@@ -50,10 +56,7 @@ namespace compiler::helios::code {
 
 		template<typename TargetInt>
 		base::Optional<numeric_value::NumericValue> parseSignedInteger(
-			std::string_view               value,
-			int                            base,
-			const dia_int::StablePosition& position,
-			query::Context&                ctx
+			std::string_view value, int base, const dia::StablePosition& position, query::Context& ctx
 		) {
 			i64  parsed_value = 0;
 			auto result
@@ -71,10 +74,7 @@ namespace compiler::helios::code {
 
 		template<typename TargetUInt>
 		base::Optional<numeric_value::NumericValue> parseUnsignedInteger(
-			std::string_view               value,
-			int                            base,
-			const dia_int::StablePosition& position,
-			query::Context&                ctx
+			std::string_view value, int base, const dia::StablePosition& position, query::Context& ctx
 		) {
 			u64  parsed_value = 0;
 			auto result
@@ -90,7 +90,7 @@ namespace compiler::helios::code {
 
 		template<typename TargetFloat>
 		base::Optional<numeric_value::NumericValue> parseFloat(
-			std::string_view value, const dia_int::StablePosition& position, query::Context& ctx
+			std::string_view value, const dia::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
@@ -101,10 +101,7 @@ namespace compiler::helios::code {
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceIntegerType(
-			std::string_view               value,
-			int                            base,
-			const dia_int::StablePosition& position,
-			query::Context&                ctx
+			std::string_view value, int base, const dia::StablePosition& position, query::Context& ctx
 		) {
 			i64  parsed_value = 0;
 			auto result
@@ -114,7 +111,7 @@ namespace compiler::helios::code {
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceFloatType(
-			std::string_view value, const dia_int::StablePosition& position, query::Context& ctx
+			std::string_view value, const dia::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);

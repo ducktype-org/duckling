@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "evaluator.hpp"
 
 #include <vm/api/data/status.hpp>
@@ -86,10 +92,10 @@ IMPL(output_p64) {
 }
 
 IMPL(input_p64) {
-	thread.setProcessStatus(api::Sleeping{});
+	thread.reportAsSleeping();
 	i64 io_value = thread.getMyProcess().getIO().getInput<i64>(thread);
 	WRITE_PLACE(instr.dst, io_value);
-	thread.setProcessStatus(api::Running{});
+	thread.reportAsRunning();
 	PROGRESS_BY(1);
 }
 

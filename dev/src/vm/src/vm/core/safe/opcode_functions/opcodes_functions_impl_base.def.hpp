@@ -1,0 +1,1542 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+/**
+ * @file opcodes_functions_impl_base.def.hpp
+ * @brief The opcodes functions implementations.
+ *
+ * @warning Do not include this file directly. Include `opcodes_functions_impl_exec.cpp` or
+ * `opcodes_functions_impl_debug.cpp` instead.
+ *
+ * Motivation: each opcode that thread executes has its own function that is called to
+ * perform the opcode operation. They are called "OpFuns". At the end of each
+ * function, there is a call to `FUNCTION_CONT` macro that tail calls (in TC version)
+ * to the next instruction. But in debug mode, if we want to step only one instruction,
+ * we need OpFun that doesn't tail call to the next instruction, but pauses the execution instead.
+ *
+ * This file has **two versions**. One is for the OpFuns implementation and the other is
+ * for the debug version of the OpFuns (DebugOpFun), which is a copy of the OpFuns but
+ * with different `FUNCTION_CONT` and `ARGS`. This file **should not be included**.
+ * If you want to include the OpFuns, include `opcodes_functions.hpp` or
+ * `opcodes_functions_debug.hpp`.
+ *
+ * If `DEBUG_OPCODES` is defined, the debug version will be included, otherwise the regular
+ * version will be included. This way we also have C++ language server support while writing
+ * the code.
+ *
+ * @warning This file has to contain only the OpFuns. Any other functions will be declared
+ * and defined twice leading to multiple definition error. Utilities functions are defined in
+ * `opcodes_functions_utils.hpp`.
+ */
+
+#include "opcodes_functions_utils.hpp"
+
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/preproc/for_each.hpp>
+#include <base/types/ints.hpp>
+
+#include <cstring>
+#ifdef ENABLE_JIT
+	#include <vm/core/jit/jit_compiler.hpp>
+	#include <vm/core/jit/jit_helper.hpp>
+#endif
+#include <base/types/floats.hpp>
+
+#include <vm/core/builtin_functions.hpp>
+#include <vm/core/safe/exceptions.hpp>
+#include <vm/core/safe/low_program/opcodes.hpp>
+#include <vm/core/safe/memory/memory.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
+#include <vm/core/safe/safe_vmprocess.hpp>
+#include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
+#include <vm/utils/interpret.hpp>
+
+#include <cmath>
+#include <limits>
+
+// jittable_interface.py depends on the instructions exact, fully-qualified names
+#ifdef DEBUG_OPCODES
+	#define OPCODE_NAME(name)   op_debug_##name
+	#define FUNCTION_ARGS       OPFUN_REF_ARGS
+	#define FUNCTION_CONT(step) instr += step;
+	#define OP_FUN              vm::DebugOpFun
+#else
+	#define OPCODE_NAME(name)   op_##name
+	#define FUNCTION_ARGS       OPFUN_ARGS
+	#define FUNCTION_CONT(step) OPFUN_CONT(step)
+	#define OP_FUN              vm::OpFun
+#endif
+
+namespace vm {
+
+	// NOTE: functions that implement opcodes (opfunctions) must be done this way:
+	//
+	// RETURN_TYPE OpFuns::op_<opcode_name>(FUNCTION_ARGS) {
+	//  {
+	//    <function_body>
+	//  }
+	//  FUNCTION_CONT(<step>);
+	// }
+	//
+	// Function body must be separated from the scope of FUNCTION_CONT to make sure
+	// that all its destructors have been called before invoking next tail call.
+	// Otherwise, the compiler may get confused and may schedule destructors from
+	// the body after the next tail call, which then becomes a regular function
+	// call and may cause the stack to explode.
+
+	// `op_exit` is the only opcode without the `FUNCTION_CONT` macro. This means,
+	// every other instruction will jump to the next at the end of it with
+	// `FUNCTION_CONT`, so the the only way to end execution is to
+	// use this opcode. It also requires different macro surrounding the function call in the
+	// switch case because in this approach we can't end execution from
+	// within the function, but we have to add some instructions on the outside of it. Hence we use
+	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
+	// inside interpreter loop.
+	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
+		{
+			++instr;
+			if (thread.isBreakRequested())
+				return handle_execution_break(instr, local_stack, frame, thread);
+		}
+		FUNCTION_CONT(0);
+	}
+
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
+		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }     \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {          \
+		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, READ_FROM_PLACE_ARG(TYPE, instr->arg1)); }     \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
+		{                                                                                      \
+			if (frame->flags.flag) {                                                           \
+				const auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
+				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value);                                  \
+			}                                                                                  \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                  \
+		{                                                                                      \
+			if (frame->flags.flag)                                                             \
+				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
+	}
+
+	DEFINE_MOVE_OPS(64, u64)
+	DEFINE_MOVE_OPS(32, u32)
+	DEFINE_MOVE_OPS(16, u16)
+	DEFINE_MOVE_OPS(8, u8)
+
+#define DEFINE_BINARY_OP(NAME, BITS_SIZE, TYPE, OP)                                      \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
+			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));        \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
+			const auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                    \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));        \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}
+
+#define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {  \
+		{                                                                                 \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
+			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                      \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));         \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
+		{                                                                                 \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
+			const auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                     \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));         \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}
+
+#define DEFINE_UNARY_OP(NAME, BITS_SIZE, TYPE, OP)                              \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {       \
+		{                                                                       \
+			const auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);          \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(OP value)); \
+		}                                                                       \
+		FUNCTION_CONT(1);                                                       \
+	}
+
+// @TODO: #1216 Check for over/under flows.
+#define DEFINE_INT_N_ARITHMETIC(SIZE)               \
+	DEFINE_BINARY_OP(add, SIZE, i##SIZE, +)         \
+	DEFINE_BINARY_OP(sub, SIZE, i##SIZE, -)         \
+	DEFINE_BINARY_OP(mul, SIZE, i##SIZE, *)         \
+	DEFINE_BINARY_OP(umul, SIZE, u##SIZE, *)        \
+	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %)  \
+	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /)  \
+	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %) \
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /) \
+	DEFINE_UNARY_OP(neg, SIZE, i##SIZE, -)
+
+	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
+
+#define DEFINE_INT_N_BITWISE(SIZE)              \
+	DEFINE_BINARY_OP(bit_and, SIZE, u##SIZE, &) \
+	DEFINE_BINARY_OP(bit_or, SIZE, u##SIZE, |)  \
+	DEFINE_BINARY_OP(bit_xor, SIZE, u##SIZE, ^) \
+	DEFINE_BINARY_OP(shl, SIZE, u##SIZE, <<)    \
+	DEFINE_BINARY_OP(shr, SIZE, u##SIZE, >>)    \
+	DEFINE_UNARY_OP(bit_not, SIZE, u##SIZE, ~)
+
+	FOR_EACH(DEFINE_INT_N_BITWISE, 64, 32, 16, 8)
+
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)             \
+	DEFINE_BINARY_OP(fadd, SIZE, f##SIZE, +)        \
+	DEFINE_BINARY_OP(fsub, SIZE, f##SIZE, -)        \
+	DEFINE_BINARY_OP(fmul, SIZE, f##SIZE, *)        \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, f##SIZE, /) \
+	DEFINE_UNARY_OP(fneg, SIZE, f##SIZE, -)
+
+	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
+
+
+#define DEFINE_BOOLEAN_OP(NAME, OP)                                              \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_p8)(FUNCTION_ARGS) {             \
+		{                                                                        \
+			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 });  \
+			const bool rhs = (READ_FROM_PLACE_ARG(u8, instr->arg1) != u8{ 0 });  \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));    \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
+	}                                                                            \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_imm)(FUNCTION_ARGS) {            \
+		{                                                                        \
+			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 });  \
+			const bool rhs = (READ_FROM_DIRECT_ARG(u8, instr->arg1) != u8{ 0 }); \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));    \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
+	}
+
+	DEFINE_BOOLEAN_OP(log_and, &&)
+	DEFINE_BOOLEAN_OP(log_or, ||)
+	DEFINE_BOOLEAN_OP(log_xor, !=)
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_p8)(FUNCTION_ARGS) {
+		{
+			bool result = (READ_FROM_PLACE_ARG(u8, instr->arg0) == u8{ 0 });
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
+		}
+		FUNCTION_CONT(1);
+	}
+
+#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			frame->flags.flag = READ_FROM_PLACE_ARG(TYPE, instr->arg0)                   \
+				OP READ_FROM_PLACE_ARG(TYPE, instr->arg1);                               \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			frame->flags.flag = READ_FROM_PLACE_ARG(TYPE, instr->arg0)                   \
+				OP READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                              \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}
+
+#define DEFINE_INT_N_COMPARISONS(SIZE)              \
+	DEFINE_COMPARISON_OP(cmpEq, SIZE, i##SIZE, ==)  \
+	DEFINE_COMPARISON_OP(cmpNeq, SIZE, i##SIZE, !=) \
+	DEFINE_COMPARISON_OP(cmpGt, SIZE, i##SIZE, >)   \
+	DEFINE_COMPARISON_OP(cmpGe, SIZE, i##SIZE, >=)  \
+	DEFINE_COMPARISON_OP(cmpLt, SIZE, i##SIZE, <)   \
+	DEFINE_COMPARISON_OP(cmpLe, SIZE, i##SIZE, <=)  \
+	DEFINE_COMPARISON_OP(ucmpGt, SIZE, u##SIZE, >)  \
+	DEFINE_COMPARISON_OP(ucmpGe, SIZE, u##SIZE, >=) \
+	DEFINE_COMPARISON_OP(ucmpLt, SIZE, u##SIZE, <)  \
+	DEFINE_COMPARISON_OP(ucmpLe, SIZE, u##SIZE, <=)
+
+	FOR_EACH(DEFINE_INT_N_COMPARISONS, 64, 32, 16, 8)
+
+#define DEFINE_FLOAT_N_COMPARISONS(SIZE)             \
+	DEFINE_COMPARISON_OP(fcmpEq, SIZE, f##SIZE, ==)  \
+	DEFINE_COMPARISON_OP(fcmpNeq, SIZE, f##SIZE, !=) \
+	DEFINE_COMPARISON_OP(fcmpGt, SIZE, f##SIZE, >)   \
+	DEFINE_COMPARISON_OP(fcmpGe, SIZE, f##SIZE, >=)  \
+	DEFINE_COMPARISON_OP(fcmpLt, SIZE, f##SIZE, <)   \
+	DEFINE_COMPARISON_OP(fcmpLe, SIZE, f##SIZE, <=)
+
+	FOR_EACH(DEFINE_FLOAT_N_COMPARISONS, 64, 32)
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_pptr)(FUNCTION_ARGS) {
+		{
+			auto pointer      = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			frame->flags.flag = pointer.isNull();
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
+		{ instr += instr->arg0; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIf_label)(FUNCTION_ARGS) {
+		{
+			if (frame->flags.flag) instr += instr->arg0;
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIfNot_label)(FUNCTION_ARGS) {
+		{
+			if (!frame->flags.flag) instr += instr->arg0;
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
+		{
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr->arg1, 1);
+		}
+		// After acquiring the `executing_code` of the new function we have instruction pointer
+		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
+		// would mean that we skipped the first instruction. That's why we move forward zero
+		// instructions. For future returns, the first instruction that should be executed after
+		// call is saved on frame so that `op_ret`s have to move forward zero instructions after
+		// restoring `instr` from frame.
+		FUNCTION_CONT(0);
+	}
+
+#ifdef ENABLE_JIT
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitFuncEntrypoint)(FUNCTION_ARGS) {
+		{
+			// This function operates on the assumption that the operation "underneath" it is a nop.
+			const auto& current_func_obj = *frame->current_function;
+			auto        cfg_offset       = current_func_obj.jit_func_entrypoint_offset;
+			CORE_ASSERT(cfg_offset == 0, "Function entrypoint should be first");
+			// The pristine bytecode copy (used for compilation) lives on the function itself.
+			const auto& original_bc = current_func_obj.orig_bc;
+
+			// Entrypoint opcodes are only patched in by the compiler when JIT data was built,
+			// so it is guaranteed to be initialized here.
+			CORE_ASSERT(
+				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled function"
+			);
+			jit::JitFuncData& my_data = current_func_obj.jit_data;
+			if (my_data.llvm_compiled_code_ptrs[cfg_offset]) {
+				// is LLVM-compiled
+				(*my_data.llvm_compiled_code_ptrs[cfg_offset])(
+					&instr, &local_stack, &frame, &thread
+				);
+			}
+	#if COMPILE_WITH_CNP
+			else if (my_data.cp_memory) {
+				// is CP-compiled
+				if (0 < my_data.until_compilation[cfg_offset])
+					--my_data.until_compilation[cfg_offset];
+				if (my_data.until_compilation[cfg_offset] == 0) {
+					// should be LLVM-compiled and executed now
+					MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+					);
+					if (compiled) {
+						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
+						(*compiled)(&instr, &local_stack, &frame, &thread);
+					} else {
+							// Dev builds must never see a failed compilation; in prod we keep
+							// executing the CP-compiled code instead. The panic must stay
+							// dev-only: CORE_PANIC is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
+		#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							"LLVM compilation failed"
+						);
+						auto cp_compiled = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
+						std::invoke(cp_compiled, CP_PASS_ARGS);
+						frame       = thread.runtime_data.frame_stack_current;
+						instr       = frame->instr;
+						local_stack = frame->local_stack;
+					}
+				} else {
+					// should be LLVM-compiled later, execute CP version
+					auto cp_compiled = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
+					std::invoke(cp_compiled, CP_PASS_ARGS);
+					frame       = thread.runtime_data.frame_stack_current;
+					instr       = frame->instr;
+					local_stack = frame->local_stack;
+				}
+			}
+	#endif
+			else {
+				if (0 < my_data.until_compilation[cfg_offset])
+					--my_data.until_compilation[cfg_offset];
+				if (my_data.until_compilation[cfg_offset] == 0) {
+					// should be compiled with the first viable compiler
+	#if COMPILE_WITH_CNP
+					auto expected_compiled = jit::compileCP(my_data.cfgs[cfg_offset], original_bc);
+					if (expected_compiled) {
+						my_data.cp_memory = std::move(expected_compiled).value();
+						auto cp_compiled  = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
+						std::invoke(cp_compiled, CP_PASS_ARGS);
+						frame       = thread.runtime_data.frame_stack_current;
+						instr       = frame->instr;
+						local_stack = frame->local_stack;
+						my_data.until_compilation[cfg_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
+					} else {
+							// Dev builds must never see a failed compilation; in prod we fall back
+							// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+							// is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("C&P compilation failed");
+		#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							expected_compiled.error()
+						);
+						// The entrypoint replaced a nop; skip it and continue interpreting.
+						++instr;
+					}
+	#else
+					auto compiled = jit::compileLLVM(
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+					);
+					if (compiled) {
+						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
+						(*compiled)(&instr, &local_stack, &frame, &thread);
+					} else {
+							// Dev builds must never see a failed compilation; in prod we fall back
+							// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+							// is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
+		#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							"LLVM compilation failed"
+						);
+						// The entrypoint replaced a nop; skip it and continue interpreting.
+						++instr;
+					}
+	#endif
+				} else {
+					++instr;
+				}
+			}
+		}
+		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopEntrypoint)(FUNCTION_ARGS) {
+		{
+			const auto& current_func_obj = *frame->current_function;
+			auto        cfg_offset       = instr - current_func_obj.bc.data();
+			CORE_ASSERT(cfg_offset, "loop cfg offset should never be null");
+			// Loop entrypoint opcodes are only patched in by the compiler when JIT data was
+			// built, so it is guaranteed to be initialized here.
+			CORE_ASSERT(
+				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled loop"
+			);
+			jit::JitFuncData& my_data = current_func_obj.jit_data;
+
+			auto& llvm_compiled_code_ptr = my_data.llvm_compiled_code_ptrs[cfg_offset];
+			auto& until_compilation      = my_data.until_compilation[cfg_offset];
+
+			if (llvm_compiled_code_ptr) {
+				// is already LLVM-compiled
+				const MicroInstruction* saved_instr = instr;
+				const Frame*            saved_frame = frame;
+				i64 offset = (*llvm_compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+				if (saved_frame == frame) instr = saved_instr + offset;
+			} else {
+				if (0 < until_compilation) --until_compilation;
+				if (until_compilation == 0) {
+					// should be LLVM-compiled and executed now
+					// The pristine bytecode copy (used for compilation) lives on the function.
+					const auto&            original_bc = current_func_obj.orig_bc;
+					MRef<jit::JitLLVMFunc> compiled    = jit::compileLLVM(
+                        my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+                    );
+					if (compiled) {
+						llvm_compiled_code_ptr              = compiled;
+						const MicroInstruction* saved_instr = instr;
+						const Frame*            saved_frame = frame;
+						i64                     offset
+							= (*llvm_compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+						if (saved_frame == frame) instr = saved_instr + offset;
+					} else {
+						// Dev builds must never see a failed compilation; in prod we fall back
+						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+						// is std::unreachable() in other builds.
+	#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr");
+	#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							"LLVM compilation failed"
+						);
+						save_execution_state(instr, local_stack, frame, thread);
+						thread.executeOneStep();
+						frame       = thread.runtime_data.frame_stack_current;
+						instr       = frame->instr;
+						local_stack = frame->local_stack;
+					}
+				} else {
+					// should be LLVM-compiled later
+					save_execution_state(instr, local_stack, frame, thread);
+					thread.executeOneStep();
+					frame       = thread.runtime_data.frame_stack_current;
+					instr       = frame->instr;
+					local_stack = frame->local_stack;
+				}
+			}
+		}
+		FUNCTION_CONT(0);
+	}
+#endif
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
+		{
+			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
+			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
+			auto arg_count          = function_signature->parameters.size();
+
+			std::vector<Box<SafeVMValue>> args;
+			auto                          slot_stack_count
+				= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
+			u64 first_arg_idx = slot_stack_count - arg_count;
+
+			// Create VMValue objects from local arguments. The argument's actual block type is
+			// used (verification guarantees it matches what the builtin expects).
+			for (u64 i = 0; i < arg_count; i++) {
+				auto     block     = OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx + i);
+				TypeCRef real_type = Memory::getBlockType(block);
+				args.push_back(thread.safe_process.createOwnedVMValue(real_type, Pointer(block, 0)));
+			}
+
+			std::vector<TypeCRef> result_types = {};
+			auto                  ret_count    = function_signature->result_types.size();
+			result_types.reserve(ret_count);
+			for (u64 i = 0; i < ret_count; i++) {
+				result_types.emplace_back(
+					thread.process_program->getTypes().at(function_signature->result_types[i])
+				);
+			}
+
+			base::Optional<Box<SafeVMValue>> return_value = builtins::callBuiltinFunction(
+				builtin_id, result_types, thread.safe_process, thread, args
+			);
+
+			if (return_value.has_value()) {
+				auto value = std::move(return_value.value());
+				value->exportData(
+					Pointer(OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx - 1), 0)
+				);
+				value->freeData();
+			}
+			for (auto& vm_value: args) vm_value->freeData();
+
+			// Similar as in call_func, but we deinit the arguments blocks as well,
+			// but without the return value.
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+		}
+
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
+		{
+			auto ext_func = READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
+
+			auto arg_count = ext_func->parameters.size();
+			bool is_void   = ext_func->result_types.size() == 0;
+			CORE_ASSERT(
+				ext_func->result_types.size() <= 1, "C function cannot return more than 1 type"
+			);
+
+			if (arg_count == 0 && is_void) {
+				// Special case: void function with no arguments.
+				ext_func->function_pointer(nullptr, nullptr);
+			} else {
+				// Calculate the index of the result value on the block stack.
+				// If the function is void, there is no result value, so we don't
+				// need to account for it.
+				// Local stack layout:
+				// 		CURRENT_FUNC_RESULT_VALUE (this is where the stack begins)
+				// 		...
+				// 		result_value,
+				// 		arg0,
+				// 		arg1
+				// 		...
+				// 		argN
+				u64 slot_stack_count
+					= u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
+				u64        result_value_idx = slot_stack_count - arg_count - (is_void ? 0 : 1);
+				const auto result_pointer   = frame->local_slot_stack_base[result_value_idx].data;
+
+				byte* args_pointer
+					= result_pointer
+				    + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
+
+				ext_func->function_pointer(result_pointer, args_pointer);
+
+				for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+			}
+		}
+
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_ffifunc)(FUNCTION_ARGS) {
+		{
+			auto ffi_func = READ_FROM_DIRECT_ARG(CRef<low::LowFFIFunction>, instr->arg0);
+
+			auto arg_count = ffi_func->parameters.size();
+			bool is_void   = ffi_func->result_types.size() == 0;
+			CORE_ASSERT(
+				ffi_func->result_types.size() <= 1, "FFI function cannot return more than 1 type"
+			);
+
+			// Local stack layout is the same as for call_cfunc:
+			// [..., result_value (if any), arg0, ..., argN]. Only the first byte of each is
+			// wanted, which the slot records, so none of them has to be given a block.
+			u64 slot_stack_count = u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
+			u64 first_slot_idx   = slot_stack_count - arg_count - (is_void ? 0 : 1);
+			u64 first_arg_idx    = first_slot_idx + (is_void ? 0 : 1);
+
+			std::vector<void*> arg_values(arg_count);
+			for (u64 i = 0; i < arg_count; i++)
+				arg_values[i] = frame->local_slot_stack_base[first_arg_idx + i].data;
+
+			auto* cif = &ffi_func->cif;
+
+			if (is_void) {
+				ffi_call(cif, ffi_func->symbol, nullptr, arg_values.data());
+			} else {
+				byte* result_pointer = frame->local_slot_stack_base[first_slot_idx].data;
+				usize result_size    = ffi_func->result_types.at(0)->getSize().asInt();
+
+				if (result_size >= sizeof(ffi_arg)) {
+					ffi_call(cif, ffi_func->symbol, result_pointer, arg_values.data());
+				} else {
+					// libffi requires the return buffer to be at least sizeof(ffi_arg) big -
+					// call into a temporary and copy the low bytes (little-endian).
+					ffi_arg tmp_result = 0;
+					ffi_call(cif, ffi_func->symbol, &tmp_result, arg_values.data());
+					std::memcpy(result_pointer, &tmp_result, result_size);
+				}
+			}
+
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+		}
+
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
+		{
+			auto& called_func = thread.process_program->getFunctions()[instr->arg0];
+			thread.setThreadCtx(called_func.name.str());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_pptr_method)(FUNCTION_ARGS) {
+		{
+			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+
+			// Objects are guaranteed to hold inheritance metadata pointers as their first field.
+			// This is verified by static verification.
+
+			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
+			const auto* inh_meta_pointer = readFromView<const Type*>(view);
+
+			if (inh_meta_pointer == nullptr) throw exceptions::VMVtableUnset();
+
+			const auto inh_metadata = inh_meta_pointer->getInheritanceMetadata().value();
+			const auto method_name  = thread.process_program->getMethodNamePool()[instr->arg1];
+			const auto implementation_name = inh_metadata->vtable[method_name];
+
+			const usize function_id
+				= *thread.process_program->getFunctions().idOf(implementation_name);
+
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr[1].arg0, 2);
+		}
+		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
+		{
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+			auto& function          = thread.process_program->getFunctions()[function_id];
+			instr                   = function.bc.data();
+			frame->current_function = &function;
+
+			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
+				throw exceptions::VMStackOverflowException();
+		}
+		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
+		{
+			// Frame of the function we're returning from.
+			auto* callee_frame = frame;
+
+			// The function deinitialized its own locals, so the only entries left on its slot
+			// stack are its return values, which the caller took care of and keeps using.
+			CORE_ASSERT(
+				usize(callee_frame->local_slot_stack_end - callee_frame->local_slot_stack_base)
+					== callee_frame->current_function->result_types.size(),
+				"On return only the function's return values may be left on the slot stack"
+			);
+
+			// Previous frame is just before current frame in the array, so that
+			// substracting one from the pointer will give us the previous frame.
+			// The `instr`, `local_stack` and `frame` values should be restored from the previous
+			// call stack frame.
+			frame--;  // This is now the caller's frame.
+
+			callee_frame->resetFrameData();
+
+			// Load previous frame.
+			instr       = frame->instr;  // This is already a pointer to next instr.
+			local_stack = frame->local_stack;
+		}
+		// Here the argument is `0` because of the convention defined in the op_call_func.
+		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_off_type)(FUNCTION_ARGS) {
+		{
+			// No block: one is created only if something ends up needing it.
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, type->getSize().asInt(), nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(init64_off_type)(FUNCTION_ARGS) {
+		{
+			// A size known here zeroes with a plain store instead of a call to `memset`.
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, 8, nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(init128_off_type)(FUNCTION_ARGS) {
+		{
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, 16, nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
+		{ performDeinit(frame, thread); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
+		{
+			if (frame->local_slot_stack_end[-1].block == nullptr) {
+				// Without a block there is nothing to run the destructors off, so they are run
+				// over the variable's bytes directly.
+				const LocalSlot& slot = topLocalSlot(frame);
+				thread.process_memory.runDataDestructors(
+					{ slot.data, slot.type->getSize().asInt() }, slot.type
+				);
+			}
+
+			performDeinit(frame, thread);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_p64)(FUNCTION_ARGS) {
+		{
+			i64 io_value = 0;
+			{
+				const SafeVMThread::ScopedBlockingWait io_wait(thread);
+				io_value = thread.safe_process.getIO().getInput<i64>(thread);
+			}
+			// Write to a place only when the GIL is held.
+			WRITE_TO_PLACE_ARG(i64, instr->arg0, io_value);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_p64)(FUNCTION_ARGS) {
+		{ thread.safe_process.getIO().writeOutput(READ_FROM_PLACE_ARG(u64, instr->arg0)); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_p32)(FUNCTION_ARGS) {
+		{
+			i32 io_value = 0;
+			{
+				const SafeVMThread::ScopedBlockingWait io_wait(thread);
+				io_value = thread.safe_process.getIO().getInput<i32>(thread);
+			}
+			// Write to a place only when the GIL is held.
+			WRITE_TO_PLACE_ARG(i32, instr->arg0, io_value);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_p32)(FUNCTION_ARGS) {
+		{ thread.safe_process.getIO().writeOutput(READ_FROM_PLACE_ARG(u32, instr->arg0)); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(strOutput_pptr)(FUNCTION_ARGS) {
+		{
+			auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+
+			auto block      = ptr.getBlock();
+			auto block_id   = thread.process_memory.requestBlockID(block);
+			auto block_data = thread.process_memory.requestBlockData(block_id);
+			auto str_data   = block_data.stdString();
+			thread.safe_process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1));
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_p64 not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_pptr)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_pptr not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_imm)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_imm not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_field)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_field not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_p64_type not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_field not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_p64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_p64 not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_type not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_pptr_type)(FUNCTION_ARGS) {
+		{
+			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       type    = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto       block   = thread.process_memory.allocateHeap(type);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr_type)(FUNCTION_ARGS) {
+		{
+			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
+				const auto expected_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+				if (thread.process_memory.getBlockType(ptr.getBlock()) != expected_type)
+					throw exceptions::VMInvalidFreeException();
+				thread.process_memory.guardedFreeBlockData(ptr);
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_pptr_bany)(FUNCTION_ARGS) {
+		{
+			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto    dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto    src     = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_popq)(FUNCTION_ARGS) {
+		{
+			const auto type_size = instr[1].arg0;
+			auto       dst       = getBytePtrFromPlaceArg(
+                local_stack, thread.runtime_data.global_data_buffer_base, instr->arg0
+            );
+			auto src = getBytePtrFromPlaceArg(
+				local_stack, thread.runtime_data.global_data_buffer_base, instr->arg1
+			);
+			std::memcpy(dst, src, type_size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bste_bste)(FUNCTION_ARGS) {
+		{
+			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bfst_bfst)(FUNCTION_ARGS) {
+		{
+			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bvnt_bvnt)(FUNCTION_ARGS) {
+		{
+			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_pptr)(FUNCTION_ARGS) {
+		{
+			const auto    dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_pptr_type)(FUNCTION_ARGS) {
+		{
+			auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto type    = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+
+			// Objects hold vtable pointer as their first field.
+			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			// This writes a pointer to the type at object's first field.
+			writeToView<const Type*>(view, type.get());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_pptr)(FUNCTION_ARGS) {
+		{
+			auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto view    = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			writeToView<const Type*>(view, nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_bvnt_type)(FUNCTION_ARGS) {
+		{
+			auto variant_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto alt_type      = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto variant_type  = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type, variant_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_pptr_bvnt)(FUNCTION_ARGS) {
+		{
+			const auto dst           = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       variant_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto       alt_type      = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			auto       variant_type  = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			const auto new_dst = thread.process_memory.updatePointerAssignment(
+				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), alt_type, variant_type)
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_pptr_type)(FUNCTION_ARGS) {
+		{
+			auto variant_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto alt_type        = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto variant_type    = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			OpFuns::setVariantType(thread, variant_pointer, alt_type, variant_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto dst             = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       variant_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       alt_type        = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			auto       variant_type    = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			const auto new_dst = thread.process_memory.updatePointerAssignment(
+				dst, OpFuns::getVariantPtr(thread, variant_pointer, alt_type, variant_type)
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+
+			auto dst_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+
+			// Classes are guaranteed to hold vtable pointer as their first field.
+			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
+			const auto* src_ptr      = readFromView<const Type*>(view);
+			auto        cast_allowed = src_ptr->inheritsFrom(dst_type);
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, cast_allowed ? src : Pointer::null()
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_pptr_bany)(FUNCTION_ARGS) {
+		{
+			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto src_pointer = Pointer(src_block, 0);
+
+			auto type = Memory::getBlockType(src_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_bany_pptr)(FUNCTION_ARGS) {
+		{
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto dst_pointer = Pointer(dst_block, 0);
+
+			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+
+			auto type = Memory::getBlockType(dst_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrLoad_bany_p64)(FUNCTION_ARGS) {
+		{
+			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
+			auto       view = thread.process_memory.getBlockViewUnsafe(dst_block);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
+			std::memcpy(view.getBegin(), src, view.size());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrStore_p64_bany)(FUNCTION_ARGS) {
+		{
+			const auto dst       = READ_FROM_PLACE_ARG(void*, instr->arg0);
+			auto       src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
+			auto view = thread.process_memory.getBlockViewUnsafe(src_block);
+			assertCPtrNotNull(dst);
+			std::memcpy(dst, view.getBegin(), view.size());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrRead_pptr_p64)(FUNCTION_ARGS) {
+		{
+			const auto size = instr[1].arg0;
+			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
+			auto view = Memory::getPointerData(dst, size);
+			std::memcpy(view.getBegin(), src, size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWrite_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto size = instr[1].arg0;
+			const auto dst  = READ_FROM_PLACE_ARG(void*, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			assertCPtrNotNull(dst);
+			auto view = Memory::getPointerData(src, size);
+			std::memcpy(dst, view.getBegin(), size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrCast_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       view = Memory::getRemainingPointerData(src);
+			WRITE_TO_PLACE_ARG(void*, instr->arg0, static_cast<void*>(view.getBegin()));
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ptrParts_p64_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto src    = READ_FROM_PLACE_ARG(Pointer, instr[1].arg0);
+			const u64  id     = thread.process_memory.requestBlockID(src.getBlock()).asInt();
+			const u64  offset = src.getOffset();
+			WRITE_TO_PLACE_ARG(u64, instr->arg0, id);
+			WRITE_TO_PLACE_ARG(u64, instr->arg1, offset);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto dst    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       src    = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       offset = static_cast<usize>(instr[1].arg0);
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { src.getBlock(), src.getOffset() + offset }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_pptr_bany)(FUNCTION_ARGS) {
+		{
+			auto dst_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			dst_pointer.movePointer(field_offset);
+
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto src_pointer = Pointer(src_block, 0);
+
+			auto type = Memory::getBlockType(src_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_bany_pptr)(FUNCTION_ARGS) {
+		{
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto dst_pointer = Pointer(dst_block, 0);
+
+			auto src_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			src_pointer.movePointer(field_offset);
+
+			auto type = Memory::getBlockType(dst_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_bste)(FUNCTION_ARGS) {
+		{
+			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto       offset    = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { src_block, offset });
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_bste_bany)(FUNCTION_ARGS) {
+		{
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto dst_pointer = Pointer(dst_block, 0);
+
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			dst_pointer.movePointer(field_offset);
+
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto src_pointer = Pointer(src_block, 0);
+
+			auto type = Memory::getBlockType(src_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_bany_bste)(FUNCTION_ARGS) {
+		{
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto dst_pointer = Pointer(dst_block, 0);
+
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto src_pointer = Pointer(src_block, 0);
+
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			src_pointer.movePointer(field_offset);
+
+			auto type = Memory::getBlockType(dst_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayLea_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			auto dst         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64  data_offset = elem_type->getSize().asInt() * index;
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayStore_pptr_bany)(FUNCTION_ARGS) {
+		{
+			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64  data_offset = index * elem_type->getSize().asInt();
+
+			tbl_pointer.movePointer(data_offset);
+
+			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto       src_pointer = Pointer(src_block, 0);
+
+			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, elem_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayLoad_bany_pptr)(FUNCTION_ARGS) {
+		{
+			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Pointer    dst_pointer = Pointer(dst_block, 0);
+			auto       tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
+
+			tbl_pointer.movePointer(data_offset);
+
+			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, elem_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_bfst)(FUNCTION_ARGS) {
+		{
+			const auto dst         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			Ref<Block> tbl_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
+
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { tbl_block, data_offset });
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_bany_bfst)(FUNCTION_ARGS) {
+		{
+			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto       dst_pointer = Pointer(dst_block, 0);
+			Ref<Block> tbl_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
+
+			auto src_pointer = Pointer(tbl_block, data_offset);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, elem_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_bfst_bany)(FUNCTION_ARGS) {
+		{
+			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
+
+			auto dst_pointer = Pointer(dst_block, data_offset);
+			auto src_pointer = Pointer(src_block, 0);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, elem_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {
+		{
+			const auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			const auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+
+			WRITE_TO_PLACE_ARG(
+				Pointer,
+				instr->arg0,
+				thread.process_memory.dynTableReallocateBlockDataN(
+					tbl_pointer, pointed_type, new_elem_count
+				)
+			);
+		}
+		FUNCTION_CONT(2);
+	}
+
+#define DEFINE_STATIC_CAST_CONVERSION_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE) \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##DST_SIZE##_p##SRC_SIZE)(FUNCTION_ARGS) { \
+		{                                                                              \
+			auto val = READ_FROM_PLACE_ARG(SRC_TYPE, instr->arg1);                     \
+			WRITE_TO_PLACE_ARG(DST_TYPE, instr->arg0, static_cast<DST_TYPE>(val));     \
+		}                                                                              \
+		FUNCTION_CONT(1);                                                              \
+	}
+
+	// Sign Extension
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 16, 8, i16, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 32, 8, i32, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 8, i64, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 32, 16, i32, i16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 16, i64, i16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 32, i64, i32)
+
+	// Zero Extension
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 16, 8, u16, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 32, 8, u32, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 8, u64, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 32, 16, u32, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 16, u64, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 32, u64, u32)
+
+	// Truncation
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 16, u8, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 32, u8, u32)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 64, u8, u64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 16, 32, u16, u32)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 16, 64, u16, u64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 32, 64, u32, u64)
+
+
+#define DEFINE_INT_TO_FLOAT(DST_SIZE)                                        \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 8, f##DST_SIZE, i8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 8, f##DST_SIZE, u8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 16, f##DST_SIZE, i16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 16, f##DST_SIZE, u16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 32, f##DST_SIZE, i32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 32, f##DST_SIZE, u32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 64, f##DST_SIZE, i64) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 64, f##DST_SIZE, u64)
+
+	DEFINE_INT_TO_FLOAT(32)
+	DEFINE_INT_TO_FLOAT(64)
+
+
+#define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                        \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##DST_SIZE##_p##SRC_SIZE)(FUNCTION_ARGS) {        \
+		{                                                                                     \
+			using IntT   = DST_TYPE;                                                          \
+			using FloatT = SRC_TYPE;                                                          \
+			auto x       = READ_FROM_PLACE_ARG(FloatT, instr->arg1);                          \
+			IntT res;                                                                         \
+			if (std::isnan(x)) {                                                              \
+				res = IntT{ 0 };                                                              \
+			} else {                                                                          \
+				constexpr FloatT min = static_cast<FloatT>(std::numeric_limits<IntT>::min()); \
+				constexpr FloatT max = static_cast<FloatT>(std::numeric_limits<IntT>::max()); \
+				if (x <= min) {                                                               \
+					res = std::numeric_limits<IntT>::min();                                   \
+				} else if (x >= max) {                                                        \
+					res = std::numeric_limits<IntT>::max();                                   \
+				} else {                                                                      \
+					res = static_cast<IntT>(x);                                               \
+				}                                                                             \
+			}                                                                                 \
+			WRITE_TO_PLACE_ARG(IntT, instr->arg0, res);                                       \
+		}                                                                                     \
+		FUNCTION_CONT(1);                                                                     \
+	}
+
+#define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                         \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##DST_SIZE##_p##SRC_SIZE)(FUNCTION_ARGS) {         \
+		{                                                                                      \
+			using UIntT  = DST_TYPE;                                                           \
+			using FloatT = SRC_TYPE;                                                           \
+			auto  x      = READ_FROM_PLACE_ARG(FloatT, instr->arg1);                           \
+			UIntT res;                                                                         \
+			if (std::isnan(x)) {                                                               \
+				res = UIntT{ 0 };                                                              \
+			} else {                                                                           \
+				constexpr FloatT max = static_cast<FloatT>(std::numeric_limits<UIntT>::max()); \
+				if (x <= FloatT{ 0 }) {                                                        \
+					res = UIntT{ 0 };                                                          \
+				} else if (x >= max) {                                                         \
+					res = std::numeric_limits<UIntT>::max();                                   \
+				} else {                                                                       \
+					res = static_cast<UIntT>(x);                                               \
+				}                                                                              \
+			}                                                                                  \
+			WRITE_TO_PLACE_ARG(UIntT, instr->arg0, res);                                       \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
+	}
+
+#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                \
+	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE, std::int8_t, f##SRC_SIZE)  \
+	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE, std::uint8_t, f##SRC_SIZE) \
+	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE, i16, f##SRC_SIZE)         \
+	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE, u16, f##SRC_SIZE)         \
+	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE, i32, f##SRC_SIZE)         \
+	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE, u32, f##SRC_SIZE)         \
+	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE, i64, f##SRC_SIZE)         \
+	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE, u64, f##SRC_SIZE)
+
+	DEFINE_FLOAT_TO_INT(32)
+	DEFINE_FLOAT_TO_INT(64)
+
+	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, f32, f64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, f64, f32)
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
+		{
+			save_execution_state(instr, local_stack, frame, thread);
+
+			thread.handleBreakpoint();
+			thread.executeOneStep();
+
+			// Restore current flow.
+			// They can be changed when doing "step by step" execution.
+			frame       = thread.runtime_data.frame_stack_current;
+			instr       = frame->instr;
+			local_stack = frame->local_stack;
+		}
+
+		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
+		{ thread.stepGil(); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue)(FUNCTION_ARGS) {
+		{
+			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
+			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);
+			safe_vm_value.exportData({ Ref(frame->local_slot_stack_end[-1].block), 0 });
+		}
+		FUNCTION_CONT(1);
+	}
+}
+
+#undef OPCODE_NAME
+#undef FUNCTION_ARGS
+#undef FUNCTION_CONT

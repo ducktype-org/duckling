@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/misc/int_conv.hpp>
 
 #include <tester/tester.hpp>
@@ -36,7 +42,7 @@ private:
 
 		ASSERT_HAS_VALUE(mapper.loadMapping(fs::File(path("package_dvm.di.json"))));
 
-		auto simple = fs::FilePath("simple.dmf");
+		auto simple = fs::FilePath("simple.dk");
 		ASSERT_TRUE(mapper.containsFile(simple));
 
 		auto assert_mapping

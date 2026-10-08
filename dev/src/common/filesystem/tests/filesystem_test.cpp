@@ -1,8 +1,14 @@
-#include <filesystem_private/vfs.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <filesystem/file.hpp>
+#include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 
@@ -19,6 +25,7 @@ public:
 		TESTER_ADD_TEST(fileOperationsTest);
 		TESTER_ADD_TEST(fileManagerTest);
 		TESTER_ADD_TEST(fileTest);
+		TESTER_ADD_TEST(vfsBindingTest);
 	}
 
 private:
@@ -56,7 +63,7 @@ private:
 		// Test FilePath::canonical() on virtual path (should throw)
 		try {
 			fs::FilePath vpath("vfs:/some_virtual_path");
-			(void) vpath.canonical();
+			std::ignore = vpath.canonical();
 			assertTrue(false, "canonical() on virtual path should throw");
 		} catch (const base::Panic&) {
 			// Expected
@@ -220,7 +227,7 @@ private:
 
 		// Test creating a file with duplicate name (should throw)
 		try {
-			(void) virtual_dir.createSubFile("Duplicate content", "testFile.txt");
+			std::ignore = virtual_dir.createSubFile("Duplicate content", "testFile.txt");
 			assertTrue(false, "Creating a file with duplicate name should throw");
 		} catch (const base::Panic&) {
 			// Expected behavior
@@ -270,12 +277,6 @@ private:
 		fs::File temp_default = fs::FilePath::getDefaultTempDirectoryPath();
 		assertTrue(
 			temp_default.getType() == fs::FileType::Temporary, "Default temp dir should be temporary"
-		);
-
-		fs::File virtual_default = fs::FilePath::getDefaultVirtualDirectoryPath();
-		assertTrue(
-			virtual_default.getType() == fs::FileType::Virtual,
-			"Default virtual dir should be virtual"
 		);
 
 		// Test createFileIn with random name generation
@@ -370,21 +371,21 @@ private:
 
 		// Test error cases for path conversions
 		try {
-			(void) fs::FilePath("vfs:/invalid").toVirtualPath();
+			std::ignore = fs::FilePath("vfs:/invalid").toVirtualPath();
 			assertTrue(false, "Should fail to convert virtual path to virtual path");
 		} catch (const base::Panic&) {
 			// Expected behavior
 		}
 
 		try {
-			(void) temp_folder_path.toVirtualPath();
+			std::ignore = temp_folder_path.toVirtualPath();
 			assertTrue(false, "Should fail to convert temp path to virtual path");
 		} catch (const base::Panic&) {
 			// Expected behavior
 		}
 
 		try {
-			(void) simple_physical_path.toPhysicalPath();
+			std::ignore = simple_physical_path.toPhysicalPath();
 			assertTrue(false, "Should fail to convert non-virtual path from virtual path");
 		} catch (const base::Panic&) {
 			// Expected behavior
@@ -394,9 +395,9 @@ private:
 
 		// Test createFileIn with duplicate name in virtual directory
 		auto test_virtual_dir = fs::FileManager::createRandomVirtualDirectory();
-		(void) test_virtual_dir.createSubFile("content", "duplicate.txt");
+		std::ignore           = test_virtual_dir.createSubFile("content", "duplicate.txt");
 		try {
-			(void) test_virtual_dir.createSubFile("content", "duplicate.txt");
+			std::ignore = test_virtual_dir.createSubFile("content", "duplicate.txt");
 			assertTrue(false, "Should fail to create duplicate file in virtual directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("File already exists in virtual directory: ...")
@@ -404,27 +405,27 @@ private:
 
 		// Test createFileIn with duplicate name in physical directory
 		auto test_temp_dir = fs::FileManager::createRandomTempDirectory();
-		(void) test_temp_dir.createSubFile("content", "duplicate.txt");
+		std::ignore        = test_temp_dir.createSubFile("content", "duplicate.txt");
 		try {
-			(void) test_temp_dir.createSubFile("content", "duplicate.txt");
+			std::ignore = test_temp_dir.createSubFile("content", "duplicate.txt");
 			assertTrue(false, "Should fail to create duplicate file in physical directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("File already exists in directory: ...")
 		}
 
 		// Test createDirectoryIn with duplicate name in virtual directory
-		(void) test_virtual_dir.createSubDirectory("duplicate_dir");
+		std::ignore = test_virtual_dir.createSubDirectory("duplicate_dir");
 		try {
-			(void) test_virtual_dir.createSubDirectory("duplicate_dir");
+			std::ignore = test_virtual_dir.createSubDirectory("duplicate_dir");
 			assertTrue(false, "Should fail to create duplicate directory in virtual directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("Directory already exists in virtual directory: ...")
 		}
 
 		// Test createDirectoryIn with duplicate name in physical directory
-		(void) test_temp_dir.createSubDirectory("duplicate_dir");
+		std::ignore = test_temp_dir.createSubDirectory("duplicate_dir");
 		try {
-			(void) test_temp_dir.createSubDirectory("duplicate_dir");
+			std::ignore = test_temp_dir.createSubDirectory("duplicate_dir");
 			assertTrue(false, "Should fail to create duplicate directory in physical directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("Directory already exists: ...")
@@ -546,14 +547,13 @@ private:
 		assertTrue(test_file.getFilePath().uri() != "", "URI should not be empty");
 		// Test getContentSafe
 		auto safe_content = test_file.getContentSafe();
-		assertTrue(safe_content.has_value(), "getContentSafe should succeed for existing file");
+		ASSERT_HAS_VALUE(safe_content, "getContentSafe should succeed for existing file");
 
 		// Delete file and test getContentSafe again
 		fs::FileManager::deleteFile(test_file);
 		auto safe_content_after_delete = test_file.getContentSafe();
-		assertTrue(
-			!safe_content_after_delete.has_value(),
-			"getContentSafe should fail for non-existent file"
+		ASSERT_NO_VALUE(
+			safe_content_after_delete, "getContentSafe should fail for non-existent file"
 		);
 
 		// Test getModifyTime for non-virtual file
@@ -571,6 +571,59 @@ private:
 
 		// Cleanup
 		std::filesystem::remove_all(physical_folder_path);
+	}
+
+	void vfsBindingTest() {
+		fs::VFS other;
+
+		fs::FilePath in_singleton("vfs:/binding/a.dk");
+		fs::FilePath in_other("vfs:/binding/a.dk", &other);
+
+		assertTrue(in_singleton != in_other, "Same spelling in two VFS instances must differ");
+		assertTrue(
+			std::hash<fs::FilePath>{}(in_singleton) != std::hash<fs::FilePath>{}(in_other),
+			"Same spelling in two VFS instances must hash differently"
+		);
+
+		fs::FileManager::createVirtualFile(in_other, "other content", true);
+		assertTrue(in_other.exists(), "File must exist in the explicitly bound VFS");
+		assertTrue(!in_singleton.exists(), "File must not leak into the singleton VFS");
+		assertTrue(
+			fs::File(in_other).getContent().view().stringView() == "other content",
+			"Content must be read back from the bound VFS"
+		);
+
+		// Derived paths keep the binding.
+		assertTrue(
+			in_other.parentPath().getVfs().value().get() == &other,
+			"parentPath must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.parentPath().join("b.dk").getVfs().value().get() == &other,
+			"join must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.absolute().getVfs().value().get() == &other,
+			"absolute must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.lexicallyNormal().getVfs().value().get() == &other,
+			"lexicallyNormal must keep the VFS binding"
+		);
+
+		// Physical paths carry no binding and hash on the path alone.
+		fs::FilePath physical(path("a_file.txt"));
+		assertTrue(physical.getVfs().empty(), "Physical paths must carry no VFS binding");
+		assertTrue(
+			std::hash<fs::FilePath>{}(physical) == std::filesystem::hash_value(physical.getPath()),
+			"Physical path hash must stay the plain path hash"
+		);
+
+		// toVirtualPath can target an explicit VFS.
+		auto as_virtual = physical.absolute().toVirtualPath(&other);
+		assertTrue(
+			as_virtual.getVfs().value().get() == &other, "toVirtualPath must honour its target"
+		);
 	}
 };
 

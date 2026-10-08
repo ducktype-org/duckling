@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Duck-library consists of two main modules: [`duck`], which is responsible for the binary side
 //! of the duck-binary, and [`quackpack`], the main package manager logic.
 //!
@@ -17,7 +23,6 @@ pub mod util;
 
 pub use duck::main;
 pub use duck::util::duck_context::DuckContext;
-pub use quackpack::util::qp_context::QpContext;
 pub use quackpack::util::str_id::*;
 pub use util::error::{QuackError, QuackResultContext};
 

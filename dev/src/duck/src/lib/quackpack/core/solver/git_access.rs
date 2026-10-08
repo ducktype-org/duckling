@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::{Path, PathBuf};
 
 use crate::QuackResult;
@@ -10,7 +16,7 @@ pub trait GitAccess {
     /// Check whether a given package is stored.
     fn is_stored(&self, url: InternedUrl, commit: &str) -> bool;
     /// Store a given package, which currently is under a given path.
-    fn store(&mut self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()>;
+    fn store(&self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()>;
     /// As [`GitAccess::git_path`], but only returns the path if the package is actually stored.
     fn path_if_stored(&self, url: InternedUrl, commit: &str) -> Option<PathBuf> {
         if self.is_stored(url, commit) {

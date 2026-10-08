@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Self
@@ -22,6 +28,7 @@ class Case:
     expected_exitcode: int
     expected_output: Optional[IOData]
     expected_err: Optional[IOData]
+    needed_threads: int
     timeout: int
 
 
@@ -42,6 +49,9 @@ class Test:
     post_test: str
     fail_fast: bool
     clean: str
+    # Run this test's cases with nothing else executing concurrently
+    # (for cases sensitive to machine load, e.g. tight timeouts).
+    no_parallel: bool
 
     def __str__(self) -> str:
         return f"{self.name}: {self.description if self.description else ''}"

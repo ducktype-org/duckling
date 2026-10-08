@@ -38,9 +38,9 @@ provides a executor architectures :
   the previous strategies.
       ```cpp
       // instr_t *instr - instruction pointer
-      // std::byte *stack - local stack
+      // byte *stack - local stack
       // frame_t *frame - current frame
-      static u64 op_mov_p64_imm(const MicroInstruction*& instr, std::byte*& stack, Frame*& frame, VMThread& thread) {
+      static u64 op_mov_p64_imm(const MicroInstruction*& instr, byte*& stack, Frame*& frame, VMThread& thread) {
         deref<u64>(stack, instr->arg0) = instr->arg1;
         // instr[1].fn is a pointer to the implementation of the next instruction.
         return instr[1].fn(&instr[1], stack, frame, thread);
@@ -97,7 +97,7 @@ This process can be broken down into three key concepts:
     *   `frame`: A pointer to the current `Frame` on the call stack.
     *   `local_stack`: A pointer to the base of the *current function's* variable space within the large local data stack block.
     *   `thread`: A reference to the `VMThread` instance, used to access process-level services like using
-        the using memory blocks, creating `VmValue` objects or interacting with built-in functions.
+        the using memory blocks, creating `VMValue` objects or interacting with built-in functions.
 
 When an opcode like `call_func` is executed, it can efficiently push a new `Frame`, advance the `local_stack` pointer,
 and jump the `instr` pointer to the first instruction of the new function.
@@ -133,35 +133,35 @@ When a program needs to perform a blocking operation, such as waiting for user i
 pauses its execution loop and waits for the necessary data to become available before resuming.
 
 
-## VmValue
-The [`VmValue`](./vmvalue.hpp) class is the key mechanism for bidirectional communication between the
+## VMValue
+The [`VMValue`](./vmvalue.hpp) class is the key mechanism for bidirectional communication between the
 external world (e.g the compiler or other C++ code) and the virtual machine's internal environment. It
 functions as a data transfer object designed to safely package, transfer, and unpack data across in DVM.
 
-The `VmValue`'s primary purpose is to enable the transfer of values that may have complex, hierarchical structures,
+The `VMValue`'s primary purpose is to enable the transfer of values that may have complex, hierarchical structures,
 not just simple byte streams.
 
 ### Key Aspects
 
-1.  **Integration with the Memory module:** A `VmValue` is not just a simple byte buffer. Internally, it
+1.  **Integration with the Memory module:** A `VMValue` is not just a simple byte buffer. Internally, it
     holds its data in a `std::vector<byte>`, but critically, it also uses a special mechanism to register
     the data with the parent process's `Memory` module. As a result, from the VM's perspective, the data
-    within a `VmValue` looks and behaves like a native, fully-functional memory `Block`. This allows standard
+    within a `VMValue` looks and behaves like a native, fully-functional memory `Block`. This allows standard
     memory operations, such as creating nested child blocks, copying complex data structures and reference
     counting, to be performed on it.
 
-2.  **The Bridge for Input and Output:** `VmValue` is the standard method for interacting with executing code.
+2.  **The Bridge for Input and Output:** `VMValue` is the standard method for interacting with executing code.
     Its primary use cases include:
     *   **Passing Arguments to Functions:** When a user wants to call a function inside the VM, its arguments
-        are first packaged into `VmValue` objects. The execution engine (`VMThread`) then treats these as
+        are first packaged into `VMValue` objects. The execution engine (`VMThread`) then treats these as
         source memory blocks from which to read the input data. Typically the argument values are created
-        with the `vm::api::getVmValue()` endpoint, filled in with the appropriate data and passed to the
-        `vm::api::runFunction()` endpoint. An important note is that all the `VmValue` objects created by the
-        `getVmValue()` endpoint are owned by the caller. This means they are expected to be freed by the caller.
+        with the `vm::api::getVMValue()` endpoint, filled in with the appropriate data and passed to the
+        `vm::api::runFunction()` endpoint. An important note is that all the `VMValue` objects created by the
+        `getVMValue()` endpoint are owned by the caller. This means they are expected to be freed by the caller.
         If not freed, they will be counted as memory leaks when calling `vm::api::deinitAndValidate()`.
     *   **Receiving Results:** After execution completes, the function's return value (or the entire program's
-        exit code) is packaged into a `VmValue` which can be read with the `vm::api::getExitCode()` endpoint
-        and interpreted. Note that `VmValues` returned by the `vm::api::getExitCode()` are owned by the
+        exit code) is packaged into a `VMValue` which can be read with the `vm::api::getExitCode()` endpoint
+        and interpreted. Note that `VMValues` returned by the `vm::api::getExitCode()` are owned by the
         `VMProcess` and are automatically freed when the process is destroyed.
     Some may ask: why aren't all `VMValue` objects owned by the process. This is done to improve performance.
     When calling functions in the VM multiple times we want to avoid the memory bloat which we may encounter

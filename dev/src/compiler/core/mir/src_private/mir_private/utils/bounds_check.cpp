@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "bounds_check.hpp"
 
 #include <helios/symbols/lang_primitives.hpp>
@@ -6,10 +12,10 @@
 
 namespace compiler::mir {
 	void boundsCheck(
-		BoundsCheckBuilderContext                      context,
-		const MIRValue&                                index,
-		const MIRValue&                                length,
-		const base::Optional<dia_int::StablePosition>& pos
+		BoundsCheckBuilderContext                  context,
+		const MIRValue&                            index,
+		const MIRValue&                            length,
+		const base::Optional<dia::StablePosition>& pos
 	) {
 		auto& function        = context.function;
 		auto& condition_block = context.condition_block;

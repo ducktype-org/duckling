@@ -1,7 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
+#include <diagnostic/message.hpp>
+#include <diagnostic/stable_position.hpp>
 
 #include <string>
 
@@ -13,8 +19,8 @@ namespace compiler::helios {
 	 * Empty structs are not legal in C, so such a class has no valid C-ABI
 	 * layout.
 	 */
-	class ExternCClassEmptyError final: public dia_int::MessageWithCodeFragmentAndCause {
-		[[nodiscard]] dia_int::Metadata getMetadata() const final {
+	class ExternCClassEmptyError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -22,7 +28,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		ExternCClassEmptyError(dia_int::StablePosition source_position, std::string class_name);
+		ExternCClassEmptyError(dia::StablePosition source_position, std::string class_name);
 	};
 
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 
 use crate::StrId;
@@ -21,7 +27,7 @@ impl DependencyEdge {
         source_to_origin_resolver: &HashMap<Source, FullOrigin>,
     ) -> Option<Self> {
         source_to_origin_resolver
-            .get(manifest_dependency.source())
+            .get(&manifest_dependency.source())
             .map(|child_origin| Self {
                 parent,
                 dep_identity: FullIdentity::new(manifest_dependency.name(), *child_origin),

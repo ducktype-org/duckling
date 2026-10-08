@@ -1,10 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/class_elements/move_constructor.hpp"
 
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
-	CLONE_SUB_ELEMENTS_DEF(MoveConstructor, params, inits, body)
+	CLONE_SUB_ELEMENTS_DEF(MoveConstructor, params, body)
 
 	MBox<MoveConstructor> MoveConstructor::parse(LangParserState& state) {
 		auto out = makeBox<MoveConstructor>(state);
@@ -18,7 +24,6 @@ namespace pst {
 		PARSE().all(NamedOperator::Period, Keyword::Move);
 
 		PARSE().one(&out->params);
-		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
@@ -35,8 +40,6 @@ namespace pst {
 		out << "\"" << getInternalSymbolName()->str() << "\"";
 		out << ",\"params\":";
 		nullAwareDprint(params, out);
-		out << ",\"inits\":";
-		nullAwareDprint(inits, out);
 		out << ",\"body\":";
 		nullAwareDprint(body, out);
 		out << "}";

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file queries.hpp
  * @brief This file contains top-level queries for interacting with HELIOS.
@@ -53,4 +59,7 @@ namespace compiler::helios {
 	 * @TODO: #2878 remove this maybe -- try to replace its usages with QueryModuleHOUT
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
+
+	// =================================== Utilities ===================================
+	base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit);
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "dvm_value.hpp"
@@ -85,6 +91,30 @@ namespace compiler::backend_vm::internal {
 			ProgramLoweringContext& program_context, base::StrID name
 		);
 
+		void pushInstruction(const vm::code::Instruction& instruction);
+
+		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
+
+		/**
+		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
+		 * `current_temp_count`. This temporary local will be automatically deinitialized after
+		 * `pushInstruction` is executed.
+		 *
+		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
+		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
+		 * These temporaries have to be deinitialized manually.
+		 */
+		DVMPlace pushTempLocal(
+			const vm::code::TypeOfData&      type,
+			base::Optional<std::string_view> name_hint = {},
+			bool                             tracked   = true
+		);
+
+		[[nodiscard]]
+		ProgramLoweringContext& programCtx() {
+			return program_context;
+		}
+
 	private:
 		/**
 		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
@@ -107,6 +137,20 @@ namespace compiler::backend_vm::internal {
 		 * Return the place representing the temporary local variable.
 		 */
 		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
+
+		void cPointerStructLea(
+			const DVMPlace&             base_place,
+			const DVMPlace&             dest,
+			const tsl::ClassTypeLayout& class_layout,
+			helios::SymID               field_id
+		);
+
+		void cPointerArrayLea(
+			const DVMPlace&       base_place,
+			const DVMPlace&       dest,
+			CRef<tsl::TypeLayout> element_layout,
+			const DVMValue&       index
+		);
 
 		/**
 		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
@@ -156,11 +200,6 @@ namespace compiler::backend_vm::internal {
 			const std::vector<lir::ScopeFlag>& scope_flags, bool& deinits_pushed
 		);
 
-
-		void pushInstruction(const vm::code::Instruction& instruction);
-
-		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
-
 		/// Push single init instruction
 		void pushInit(lir::LIRLocalRef lir_local);
 
@@ -174,21 +213,6 @@ namespace compiler::backend_vm::internal {
 		 */
 		void cleanUpRegisteredTemps();
 
-		/**
-		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
-		 * `current_temp_count`. This temporary local will be automatically deinitialized after
-		 * `pushInstruction` is executed.
-		 *
-		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
-		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
-		 * These temporaries have to be deinitialized manually.
-		 */
-		DVMPlace pushTempLocal(
-			const vm::code::TypeOfData&      type,
-			base::Optional<std::string_view> name_hint = {},
-			bool                             tracked   = true
-		);
-
 		[[nodiscard]] usize instructionsCount() const;
 
 		ProgramLoweringContext& program_context;
@@ -197,7 +221,7 @@ namespace compiler::backend_vm::internal {
 		base::Map<lir::BlockRef, base::StrID> block_to_label;
 
 		base::Optional<vm::code::TypeOfData> function_return_type;
-		std::vector<vm::code::TypeOfData>    function_parameter_types;
+		std::vector<base::StrID>             function_parameter_types;
 		base::StrID                          function_name;
 		std::vector<vm::code::Instruction>   function_body;
 

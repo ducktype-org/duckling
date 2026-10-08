@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
@@ -13,6 +19,7 @@ from .helpers import (
     bash_command_get_output,
     exit_with_error,
     get_input,
+    log_good,
     log_info,
     log_new_line,
     log_warning,
@@ -84,8 +91,31 @@ def cpp_linter_impl(
             to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
             apply = to_format.lower() in ["y", "yes", ""]
         if apply:
-            bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
-            clang_format_failed = False
+            # The fix must cover exactly what the check looked at: the same scope, and
+            # never the untracked files the check warned about skipping.
+            scope = "--all --no-untracked" if all else "--no-untracked"
+            try:
+                bash_command(
+                    "./scripts/formatting/format_repo_cpp.sh "
+                    f"{scope} {clang_format_path}"
+                )
+                clang_format_failed = False
+            except BashCommandError as e:
+                # The files are still unformatted, so keep reporting the failure
+                # (`bash_command` already let the script's own output through)
+                log_warning(f"Formatting the repo {e.reason_string}")
+
+    # `run_linter_on` skips everything that is not a C++ source, so a diff without any
+    # would otherwise report a pass over zero files.
+    checked_count = sum(1 for f in file_diffs if is_cpp_source(f))
+    if not checked_count:
+        log_info("No C++ files to lint. Nothing to check.")
+        return clang_tidy_failed, clang_format_failed
+
+    if clang_tidy_path and not clang_tidy_failed:
+        log_good(f"clang-tidy found no issues in the {checked_count} checked file(s)")
+    if clang_format_path and not clang_format_failed:
+        log_good(f"clang-format found no issues in the {checked_count} checked file(s)")
 
     return clang_tidy_failed, clang_format_failed
 
@@ -246,6 +276,14 @@ def clang_format_on(
     return False
 
 
+def is_cpp_source(file: str) -> bool:
+    """
+    Whether the linters have anything to say about `file`. Everything else is
+    skipped by `run_linter_on`.
+    """
+    return file.endswith(".hpp") or file.endswith(".cpp")
+
+
 def run_linter_on(
     clang_tidy_path: str | None,
     clang_format_path: str | None,
@@ -256,7 +294,7 @@ def run_linter_on(
     clang_format_failed = False
     clang_tidy_failed = False
     logs = ""
-    if file.endswith(".hpp") or file.endswith(".cpp"):
+    if is_cpp_source(file):
         log_file = tempfile.TemporaryFile("w+")
         log_info(f"Linting: {file}", file=log_file)
 

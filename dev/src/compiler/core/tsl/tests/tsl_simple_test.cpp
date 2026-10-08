@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -30,8 +36,8 @@ class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
-		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
+		TESTER_ADD_TEST(variantTagWidthTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
@@ -189,7 +195,7 @@ private:
 				variant_case(PointerTypeLayout, l) {
 					assertTrue(l.hasPointee(), "Typed pointer layout should have pointee.");
 					assertEqual(
-						*l.getPointee(),
+						*l.getPointee(ctx),
 						*unit_layout,
 						"Pointee should be a layout of the pointed-to type."
 					);
@@ -197,37 +203,6 @@ private:
 				variant_default { fail("Layout of pointer type should be pointer-like."); }
 			}
 			testPrinting(unit_pointer_layout, ctx);
-		});
-	}
-
-	void dynamicArrayTest() {
-		withContextDo([&](query::Context& ctx) -> void {
-			const UnitAbstractType unit_type = getUnitType();
-
-			const DynamicArrayAbstractType dynamic_array_type
-				= ctx.query<QueryDynamicArrayType>(st(unit_type));
-			const auto dynamic_array_layout = queryLayout(ctx, dynamic_array_type);
-
-			assertEqual(
-				dynamic_array_layout->getSourceType().getType(),
-				dynamic_array_type,
-				"Layout should have source type as constructed."
-			);
-			variant_match(dynamic_array_layout->getVariant()) {
-				variant_case(ClassTypeLayout, l) {
-					assertEqual(
-						l.getNumSubLayouts(),
-						usize(4),
-						"Dynamic array layout should have 4 fields (ptr, len, off_start_reserved, "
-						"off_end_reserved)."
-					);
-				}
-				variant_default {
-					fail("Layout of dynamic array type should be a class-like struct.");
-				}
-			}
-
-			testPrinting(dynamic_array_layout, ctx, true);
 		});
 	}
 
@@ -324,6 +299,39 @@ private:
 				variant_default { fail("Layout of variant type should be variant-like."); }
 			}
 			testPrinting(variant_layout, ctx, true);
+		});
+	}
+
+	void variantTagWidthTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			std::vector<SymbolType<>> alternatives;
+			alternatives.reserve(256);
+			for (usize count = 1; count <= 256; ++count) {
+				const StaticArrayAbstractType array_type
+					= ctx.query<QueryStaticArrayType>({ st(getByteType()), count });
+				alternatives.push_back(st(array_type));
+
+				if (count != 255 && count != 256) continue;
+
+				const VariantAbstractType variant_type
+					= ctx.query<QueryVariantType>({ alternatives });
+				const auto layout = queryLayout(ctx, variant_type);
+				variant_match(layout->getVariant()) {
+					variant_case(VariantTypeLayout, variant_layout) {
+						const Bits expected_tag_size = count == 255 ? Bits(8) : Bits(16);
+						assertEqual(
+							variant_layout.getTagSize(),
+							expected_tag_size,
+							"The tag must fit zero and every alternative."
+						);
+						assertTrue(
+							variant_layout.getDataOffset() >= base::bits2bytes(expected_tag_size),
+							"The payload must start after the entire tag."
+						);
+					}
+					variant_default { fail("Layout of variant type should be variant-like."); }
+				}
+			}
 		});
 	}
 

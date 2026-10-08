@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <backends/dvm/repl_lowering.hpp>
 #include <program_lowering_context.hpp>
 
@@ -7,8 +13,8 @@
 
 namespace compiler::backend_vm {
 
-	ReplDVMCodeBuilder::ReplDVMCodeBuilder(query::Context& query_ctx):
-		  code_builder(query_ctx, base::StrID("repl"), false, false) {}
+	ReplDVMCodeBuilder::ReplDVMCodeBuilder(query::Context& query_ctx, bool is_comp_time_lowering):
+		  code_builder(query_ctx, base::StrID("repl"), false, is_comp_time_lowering) {}
 
 	ReplDVMCodeBuilder::~ReplDVMCodeBuilder()                                        = default;
 	ReplDVMCodeBuilder::ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept            = default;
@@ -49,5 +55,9 @@ namespace compiler::backend_vm {
 		vm::code::CodeCollection new_code
 			= code_builder.program_context->collectNewCodeSince(snapshot);
 		return new_code;
+	}
+
+	void ReplDVMCodeBuilder::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
+		code_builder.insertRawBytecodeDefinitions(bytecode);
 	}
 }

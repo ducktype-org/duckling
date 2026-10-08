@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/collections/stable_container.hpp>
 #include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
@@ -54,15 +60,15 @@ private:
 		for (int i = 0; i < 100; i++) vector.pushBack(i);
 
 		// we check that it doesn't throw:
-		(void) vector[102];
+		std::ignore = vector[102];
 
 		assertThrows<std::exception>(
-			[&]() { (void) vector[103]; }, "Out of range access didn't throw"
+			[&]() { std::ignore = vector[103]; }, "Out of range access didn't throw"
 		);
 
 
 		assertThrows<std::exception>(
-			[&]() { (void) vector[104]; }, "Out of range access didn't throw"
+			[&]() { std::ignore = vector[104]; }, "Out of range access didn't throw"
 		);
 
 		assertTrue(vector.size() == 103, "bad list size");

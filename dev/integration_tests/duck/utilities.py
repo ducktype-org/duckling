@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import hashlib
 import os
 import subprocess
@@ -84,7 +90,7 @@ def get_venv_freeze(file: Path) -> dict[str, Any]:
 
 def check_venv_last_location(*, file: Path, expected: Path) -> None:
     data = get_venv_data(file)
-    location = Path(data["last_known_location"])
+    location = Path(data["last-known-location"])
     if expected != location:
         print(f"expected last location to be {expected}, but instead is {location}")
         sys.exit(1)
@@ -121,7 +127,7 @@ def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
 
 
 def check_src_from_root(root: Path):
-    src = (root / "src" / "src.dmf").read_text()
+    src = (root / "src" / "src.dk").read_text()
     assert_eq(src, DEFAULT_SRC)
 
 
@@ -162,6 +168,11 @@ def check_is_git_root(root: Path):
 
 def check_not_git_root(root: Path):
     assert_eq(is_git_root(root), False)
+
+
+def check_num_subfolders(root: Path, n: int):
+    count = sum(1 for item in root.iterdir() if item.is_dir())
+    assert_eq(count, n)
 
 
 def artifacts_dir_for_root(root: Path) -> Path:

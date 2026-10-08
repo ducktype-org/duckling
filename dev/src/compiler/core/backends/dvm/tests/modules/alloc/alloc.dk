@@ -1,0 +1,104 @@
+import core.builtins.*;
+
+# Exercises the DVM-backend allocation and slice builtins whose implementations are synthesized by
+# the compiler (see the DVM `BuiltinCallOperation` lowering): `dvm_alloc_arr`, `dvm_realloc_arr`,
+# `dvm_free_arr`, `dvm_alloc`, `dvm_free`, `slice_from_ptr_len` and `ptr_from_slice`, baked for more
+# than one element type. Both the array builtins (`manyptr T`) and the single-object ones (`ptr T`)
+# are covered, as well as element types that hold a pointer inside an aggregate.
+fun charChain() -> i64 = {
+    # Allocate a dynamic char table with 8 elements.
+    var p = dvm_alloc_arr[char](8i64);
+    p[0] = 'A';
+    let a = p[0];
+
+    # Grow the table and use the newly available space to prove the reallocation happened.
+    dvm_realloc_arr[char](p, 16i64);
+    p[10] = 'B';
+    let b = p[10];
+
+    dvm_free_arr[char](p);
+
+    # The written chars must survive the round-trip through the allocated / reallocated table.
+    if (a == 'A' and b == 'B') return 42i64;
+    return 0i64;
+}
+
+fun i32Chain() -> i32 = {
+    var p = dvm_alloc_arr[i32](2i64);
+    p[0] = 7i32;
+    p[1] = 9i32;
+
+    let s = slice_from_ptr_len[i32](p, 2i64);
+    let q = ptr_from_slice[i32](s);
+    let sum = q[0] + q[1];
+
+    dvm_free_arr[i32](p);
+    return sum;
+}
+
+fun i64ReallocChain() -> i64 = {
+    var p = dvm_alloc_arr[i64](2i64);
+    p[0] = 100i64;
+    let first = p[0];
+
+    dvm_realloc_arr[i64](p, 8i64);
+    p[7] = 23i64;
+    let last = p[7];
+
+    let s = slice_from_ptr_len[i64](p, 8i64);
+    let len = s.length();
+
+    dvm_free_arr[i64](p);
+    return first + last + len;
+}
+
+# Single-object allocation: `dvm_alloc[T]()` returns a `ptr T` (no element count) and is freed with
+# `dvm_free[T]`, separate names from the `_arr` builtins above.
+fun singleObjectChain() -> i64 = {
+    var p = dvm_alloc[i64]();
+    *p = 55i64;
+    let value = *p;
+    dvm_free[i64](p);
+
+    var c = dvm_alloc[char]();
+    *c = 'Z';
+    let letter = *c;
+    dvm_free[char](c);
+
+    return value + (letter as i64);
+}
+
+# The element type is an aggregate that *holds* a pointer (`str` is a `slice char`), so the pointed
+# to blocks are one level below the table's elements. Storing into the table copies the slice and
+# takes a reference, so freeing the table has to walk into the element's fields to give it back -
+# a walk that stops at the element leaks those refcounts silently.
+class Labelled {
+    name: str = "";
+    tag: i64 = 0;
+}
+
+fun strChain() -> i64 = {
+    var p = dvm_alloc_arr[str](2i64);
+    p[0] = "ab";
+    p[1] = "cde";
+    let table_total = p[0].length() + p[1].length();
+    dvm_free_arr[str](p);
+
+    # One level deeper: the pointer now sits three levels below the table, as
+    # table -> Labelled -> str -> ptr char, so the walk has to keep descending through aggregates.
+    var q = dvm_alloc_arr[Labelled](2i64);
+    q[0] = Labelled("wxyz", 1i64);
+    q[1] = Labelled("v", 2i64);
+    let nested_total = q[0].name.length() + q[1].name.length();
+    dvm_free_arr[Labelled](q);
+
+    return table_total + nested_total;
+}
+
+fun main() -> i64 = {
+    builtin_output_i64(i32Chain() as i64);
+    builtin_output_i64(i64ReallocChain());
+    builtin_output_i64(singleObjectChain());
+    builtin_output_i64(strChain());
+    return charChain();
+}

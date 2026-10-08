@@ -1,0 +1,34 @@
+fun int_float_saturate() -> i64 = {
+    var v: i64 = 3000000000;
+    var vf: f64 = v as f64;
+    var vi: i32 = vf as i32;
+    return 0i64;
+}
+
+fun int_trunc_widen() -> i64 = {
+    var big: i64 = 4294967295;
+    var t32: i32 = big as i32;
+    var back: i64 = t32 as i64;
+    return 0i64;
+}
+
+fun bool_to_i32() -> i64 = {
+    var b: bool = true;
+    var i: i32 = b as i32;
+    var back: bool = i as bool;
+    return 0i64;
+}
+
+fun widen_implicit() -> i64 = {
+    var s16: i16 = 7 as i16;
+    var w64: i64 = s16; # implicit widening
+    return 0i64;
+}
+
+fun bool_implicit() -> i64 = {
+    var a: i64 = 10;
+    # @TODO: #3631 Temporarily explicit
+    var b: bool = a as bool;
+    var c: i64 = b;
+    return 0i64;
+}

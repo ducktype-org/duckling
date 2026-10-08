@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Schemas used when communicating with a registry.
 use std::collections::HashMap;
 
@@ -15,10 +21,8 @@ pub type Dependencies = Vec<Dependency>;
 pub struct Manifest {
     /// Package's metadata.
     pub metadata: Metadata,
-    /// Package's dependencies.
+    /// All direct package's dependencies.
     pub dependencies: Dependencies,
-    /// Package's dev dependencies.
-    pub dev_dependencies: Dependencies,
     /// Package's features.
     pub features: HashMap<String, Vec<String>>,
     /// Package's profiles.
@@ -40,6 +44,8 @@ pub struct Metadata {
     pub name: String,
     /// Package's description.
     pub description: String,
+    /// This package links against the specified library.
+    pub links: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -53,6 +59,8 @@ pub struct Dependency {
     pub version: Vec<Version>,
     /// Source of the dependency.
     pub source: DependencySource,
+    /// Type of this dependency.
+    pub kind: DependencyKind,
     /// Dependency's features.
     pub features: Vec<DependencyFeature>,
     /// Is this dependency pinned to a specific version.
@@ -61,6 +69,16 @@ pub struct Dependency {
     pub conditions: DependencyCondition,
     /// Whether it's aliased.
     pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+/// A [`Dependency`] kind.
+pub enum DependencyKind {
+    /// A normal dependency, comes from `dependencies:` map.
+    Normal,
+    /// A dev dependency, comes from `dev-dependencies:` map.
+    Dev,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

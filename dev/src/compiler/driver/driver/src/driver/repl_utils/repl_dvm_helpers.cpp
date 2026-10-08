@@ -1,17 +1,24 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_dvm_helpers.hpp"
 
 #include <backends/dvm/repl_lowering.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
-#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <logger/logger.hpp>
@@ -21,6 +28,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <functional>
+#include <sstream>
 #include <variant>
 #include <vector>
 
@@ -56,15 +64,16 @@ namespace compiler::repl {
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
-		auto lir_data_qr
-			= driver::compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_unique_name);
+		auto lir_data_qr = driver::compileHOUTUnitToLIRModuleData(
+			ctx, hout_unit, module_unique_name, module_unique_name
+		);
 		if (lir_data_qr.hasFailed())
 			return std::unexpected("Failed to compile HOUTUnit to LIRModuleData");
 		auto lir_data = std::move(lir_data_qr.valueOrPanic());
 
 		if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
 			std::stringstream lir_unit_print;
-			lir_data.lir_unit.debugPrint(ctx, lir_unit_print);
+			lir_data.lir_unit.debugPrint(lir_unit_print, Ref{ &ctx });
 			CORE_DEV_LOG(REPL, "LIR unit:\n", lir_unit_print.str());
 		}
 
@@ -126,7 +135,7 @@ namespace compiler::repl {
 	std::expected<void, std::string> preloadStandardLibrary(
 		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
-		const auto root_modules = driver::getStandardLibraryRootModules();
+		const auto root_modules = frontend::packages::standardLibraryRootModules(ctx);
 		if (root_modules.empty()) return {};  // No standard library registered: nothing to load.
 
 		// Collect every module reachable from the standard library package roots.
@@ -152,6 +161,12 @@ namespace compiler::repl {
 			));
 		}
 
+		// The REPL never goes through the DVM linker, which is the only other place declaring the
+		// shared libraries the standard library needs for its `ffi object` symbols, so they are
+		// declared straight on the preloaded batch.
+		for (const auto& package: frontend::packages::standardLibraryPackages())
+			base::appendToVector(preload_code.object_files, package.getSharedLibsAsStr());
+
 		return vm::api::loadCode(pid, preload_code).transform_error(vm::api::errorToString);
 	}
 
@@ -176,11 +191,11 @@ namespace compiler::repl {
 				[type_view](vm::api::ExitValue exit_values
 		        ) -> std::expected<std::string, std::string> {
 					CORE_ASSERT(
-						std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values),
-						"Expecting exit values to be a vector of VmValue references"
+						std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_values),
+						"Expecting exit values to be a vector of VMValue references"
 					);
 					const auto& exit_values_vec
-						= std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
+						= std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
 					if (type_view == "()") {
 						CORE_ASSERT(
 							exit_values_vec.empty(),

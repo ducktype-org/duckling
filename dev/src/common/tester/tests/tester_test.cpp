@@ -1,7 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/except/exceptions.hpp>
 
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#include <optional>
+#include <variant>
 
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -22,6 +31,12 @@ public:
 		TESTER_ADD_SHOULD_FAIL_TEST(throwException);
 		TESTER_ADD_SHOULD_FAIL_TEST(throwStdRuntimeError);
 		TESTER_ADD_SHOULD_FAIL_TEST(throwStdLogicError);
+		TESTER_ADD_TEST(assertMatchesPasses);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertMatchesFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertNotMatchesFails);
+		TESTER_ADD_TEST(assertValuePasses);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertHasValueFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertNoValueFails);
 		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
 		TESTER_ADD_TEST(addSpacesTest);
 	}
@@ -86,6 +101,60 @@ private:
 	void assertEqualFails() {
 		message("Expected to fail: checks that assertEqual fails when values are not equal");
 		assertEqual(1, 2, "expected failure: assertEqual failed");
+	}
+
+	using TestVariant = std::variant<i32, char, bool>;
+
+	void assertMatchesPasses() {
+		TestVariant v = 'a';
+
+		ASSERT_MATCHES(v, char);
+		ASSERT_MATCHES(v, i32, char);
+		ASSERT_NOT_MATCHES(v, i32);
+		ASSERT_NOT_MATCHES(v, i32, bool);
+
+		// The message variants: the message goes before the types.
+		ASSERT_MATCHES_MSG(v, "The variant was assigned a char", char);
+		ASSERT_MATCHES_MSG(v, "The variant was assigned a char", i32, char);
+		ASSERT_NOT_MATCHES_MSG(v, "The variant was not assigned an i32", i32);
+		ASSERT_NOT_MATCHES_MSG(v, base::strConcat("Nothing but a ", "char"), i32, bool);
+	}
+
+	void assertValuePasses() {
+		std::optional<i32> some = 42;
+		std::optional<i32> none;
+
+		ASSERT_HAS_VALUE(some);
+		ASSERT_NO_VALUE(none);
+
+		// Everything after the operand is the message, concatenated like `strConcat` does it.
+		ASSERT_HAS_VALUE(some, "The optional was assigned a value");
+		ASSERT_NO_VALUE(none, "The optional was left empty");
+		ASSERT_HAS_VALUE(some, "The optional was assigned ", 42);
+	}
+
+	void assertHasValueFails() {
+		message("Expected to fail: checks that ASSERT_HAS_VALUE fails on an empty operand");
+		std::optional<i32> none;
+		ASSERT_HAS_VALUE(none, "expected failure: the optional is empty");
+	}
+
+	void assertNoValueFails() {
+		message("Expected to fail: checks that ASSERT_NO_VALUE fails on a filled operand");
+		std::optional<i32> some = 42;
+		ASSERT_NO_VALUE(some, "expected failure: the optional holds a value");
+	}
+
+	void assertMatchesFails() {
+		message("Expected to fail: checks that ASSERT_MATCHES fails on a different alternative");
+		TestVariant v = 'a';
+		ASSERT_MATCHES_MSG(v, "expected failure: the variant holds a char", i32, bool);
+	}
+
+	void assertNotMatchesFails() {
+		message("Expected to fail: checks that ASSERT_NOT_MATCHES fails on a held alternative");
+		TestVariant v = 'a';
+		ASSERT_NOT_MATCHES(v, i32, char);
 	}
 
 	void verySimpleTestingUtilsTest() {

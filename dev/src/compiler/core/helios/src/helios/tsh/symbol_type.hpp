@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "abstract_type.hpp"
@@ -209,7 +215,7 @@ namespace compiler::tsh {
 		 * @return true if the symbol has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		bool hasNoOpDestructor(query::Context& ctx) const {
+		bool isTriviallyDestructible(query::Context& ctx) const {
 			if (reference_kind == ReferenceKind::Ref) {
 				// Ref types have trivial destructors, because it do not own its contents.
 				return true;
@@ -219,7 +225,7 @@ namespace compiler::tsh {
 				// memory.
 				return false;
 			}
-			if (abstract_type.hasNoOpDestructor(ctx)) return true;
+			if (abstract_type.isTriviallyDestructible(ctx)) return true;
 			return false;
 		}
 

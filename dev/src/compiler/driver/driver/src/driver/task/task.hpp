@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <archiver/archive.hpp>
@@ -43,6 +49,22 @@ namespace compiler::driver {
 	}  // namespace task
 
 	/**
+	 * @brief Config/metadata that needs to be saved in the generated DBC code,
+	 * in order to properly run the code.
+	 */
+	struct DVMLinkingOptions {
+		/**
+		 * @brief Shared libraries that have to be loaded to run the code.
+		 */
+		std::vector<std::string> shared_libraries{};
+
+		/**
+		 * @brief DBC libraries paths to link to final executable.
+		 */
+		std::vector<fs::FilePath> link_libraries{};
+	};
+
+	/**
 	 * @brief Package build target.
 	 */
 	struct BuildTargetDVMLibrary final {
@@ -50,6 +72,11 @@ namespace compiler::driver {
 		 * @brief The output file path name for the compiled DVM package.
 		 */
 		base::StrID output_file_name = base::StrID("package_dvm.dbc");
+
+		/**
+		 * @brief Runtime config of the DVM.
+		 */
+		DVMLinkingOptions dvm_linking_options = {};
 
 		/**
 		 * @brief If a value is present, use this artifact collection
@@ -68,10 +95,11 @@ namespace compiler::driver {
 		base::StrID output_file_name;
 
 		/**
-		 * @brief Whether to include in the final output the standard
-		 * library packages that the executable depends on.
+		 * @brief Runtime config of the DVM.
+		 * @note The standard library packages the executable depends on are added to
+		 * `link_libraries` by `mergeBuildTargetWithGlobalOptions`.
 		 */
-		bool link_std_packages = false;
+		DVMLinkingOptions dvm_linking_options = {};
 	};
 
 	/**
@@ -181,5 +209,17 @@ namespace compiler::driver {
 	linker::LinkingOptions constructNativeLinkerOptions(
 		const options_types::LinkingOptions& linking_options,
 		const options_types::StdLibOptions&  stdlib_options
+	);
+
+	/**
+	 * @brief Construct DVM linking options for a given task, based on the task's build target and
+	 * the standard library options.
+	 * @param is_static_lib a static library does not link the standard library - that is left to
+	 * the executable depending on it.
+	 */
+	DVMLinkingOptions constructDVMLinkingOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options,
+		bool                                 is_static_lib
 	);
 }

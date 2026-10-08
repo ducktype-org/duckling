@@ -1,6 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
+#include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/packages/access.hpp>
 
@@ -70,6 +78,7 @@ public:
 		TESTER_ADD_TEST(testModuleRecursiveRemoval);
 		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
+		TESTER_ADD_TEST(testFileResolverSubstitution);
 	}
 
 protected:
@@ -100,7 +109,7 @@ private:
 		auto        no_name_module = no_name_builder->finalize();
 		auto        no_name_id     = no_name_module->getModuleID();
 		auto        tree_str2      = printModuleTree(no_name_id);
-		std::string hash_str       = std::to_string(no_name_id.queryUnstablePerfectHash());
+		std::string hash_str       = no_name_id.queryUnstablePerfectHash().toStringHex();
 		assertTrue(
 			tree_str2.find("id:") != std::string::npos, "Output should contain 'id:' for bad name"
 		);
@@ -110,10 +119,64 @@ private:
 		fs::FileManager::deleteFile(temp_file2);
 	}
 
+	void testFileResolverSubstitution() {
+		auto root = fs::File(path("test_module"));
+
+		// Substitute a buffer for awe.dk, leaving every other file on disk untouched. The twin
+		// keeps the file name, exactly as the editor overlay does.
+		auto substitute = fs::FileManager::createVirtualFile(
+			fs::FilePath(path("test_module/awe.dk")).toVirtualPath(), "fn substituted() {}\n", true
+		);
+
+		std::vector<std::string> resolved;
+		auto                     resolver = [&](const fs::File& disk_file) -> fs::File {
+            resolved.push_back(disk_file.name());
+            if (disk_file.name() == "awe.dk") return substitute;
+            return disk_file;
+		};
+
+		auto module_id
+			= ModuleTreeBuilder::create(
+				  root, base::StrID("resolver_package_id"), resolver, test_regex, test_regex
+			)
+		          ->getModuleID();
+		auto mt = getModuleRef(module_id);
+
+		assertTrue(
+			std::ranges::find(resolved, std::string("awe.dk")) != resolved.end(),
+			"The resolver must see every file the walk finds"
+		);
+
+		ASSERT_TRUE(mt->hasMainSourceFile());
+		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
+
+		auto awe = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe"));
+		ASSERT_TRUE(getRef(awe)->hasMainSourceFile());
+		assertTrue(
+			getFileRef(getRef(awe)->getMainSourceFile().illegalAccess().getID())
+					->getFileIllegalAccess()
+					.getFilePath()
+				== substitute.getFilePath(),
+			"The substituted file must back the module, not the one on disk"
+		);
+
+		auto another = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another"));
+		assertTrue(
+			getFileRef(getRef(another)->getMainSourceFile().illegalAccess().getID())
+				->getFileIllegalAccess()
+				.getFilePath()
+				.isPhysical(),
+			"Files the resolver passed through must still come from disk"
+		);
+
+		fs::FileManager::deleteFile(substitute);
+	}
+
 	void parseModule() {
 		auto pth = fs::File(path("test_module"));
-		auto mt
-			= ModuleTreeBuilder::create(pth, base::StrID("test_package_id"), test_regex, test_regex);
+		auto mt  = ModuleTreeBuilder::create(
+            pth, base::StrID("test_package_id"), identityFileResolver(), test_regex, test_regex
+        );
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
@@ -136,7 +199,7 @@ private:
 		ASSERT_EQUAL(0, getRef(awe_module)->getOtherFiles().size());
 		ASSERT_TRUE(getRef(awe_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
-			"awe.dmf", getRef(getRef(awe_module)->getMainSourceFile())->getFileIllegalAccess().name()
+			"awe.dk", getRef(getRef(awe_module)->getMainSourceFile())->getFileIllegalAccess().name()
 		);
 	}
 
@@ -199,22 +262,18 @@ private:
 		testModuleIDInSourceFile(getRef(mod_module));
 		testModuleIDInSourceFile(mt);
 
-		assertTrue(not mt->getParentModule().has_value(), "Root module has a parent");
-		assertTrue(
-			getRef(awe_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (1)"
+		ASSERT_NO_VALUE(mt->getParentModule(), "Root module has a parent");
+		ASSERT_HAS_VALUE(
+			getRef(awe_module)->getParentModule(), "Non-root module does not have a parent (1)"
 		);
-		assertTrue(
-			getRef(another_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (2)"
+		ASSERT_HAS_VALUE(
+			getRef(another_module)->getParentModule(), "Non-root module does not have a parent (2)"
 		);
-		assertTrue(
-			getRef(awesome_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (3)"
+		ASSERT_HAS_VALUE(
+			getRef(awesome_module)->getParentModule(), "Non-root module does not have a parent (3)"
 		);
-		assertTrue(
-			getRef(mod_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (4)"
+		ASSERT_HAS_VALUE(
+			getRef(mod_module)->getParentModule(), "Non-root module does not have a parent (4)"
 		);
 
 		ASSERT_EQUAL(
@@ -250,7 +309,11 @@ private:
 		// This test is adapted from the old FsTree parseDirectory test.
 		const auto root = fs::File(path("test_directory_tree"));
 		auto       mt   = ModuleTreeBuilder::create(
-            root, base::StrID("test_package_id23423423"), test_regex, test_regex
+            root,
+            base::StrID("test_package_id23423423"),
+            identityFileResolver(),
+            test_regex,
+            test_regex
         );
 
 		// Only files with valid names/extensions are included as source or other files.
@@ -307,9 +370,9 @@ private:
 		auto sub_dir1 = root.createSubDirectory("subDir1");
 		auto sub_dir2 = root.createSubDirectory("subDir2");
 		auto file1    = root.createSubFile("File1 content", "file1.txt");
-		auto file4    = sub_dir1.createSubFile("File2 content", "subDir1.dmf");
+		auto file4    = sub_dir1.createSubFile("File2 content", "subDir1.dk");
 		auto file2    = sub_dir1.createSubFile("File2 content", "file2.txt");
-		auto file3    = sub_dir2.createSubFile("File2 content", "subDir2.dmf");
+		auto file3    = sub_dir2.createSubFile("File2 content", "subDir2.dk");
 
 		// Create ModuleTree from the virtual root directory
 		auto mt = ModuleTreeBuilder::create(root, base::StrID("virtual_package_id1312"));
@@ -355,7 +418,7 @@ private:
 	void testModuleTreeModifierVariants() {
 		// Create a virtual root directory and files for testing
 		auto root_dir = fs::FileManager::createRandomVirtualDirectory();
-		auto file1    = root_dir.createSubFile("main content", "main.dmf");
+		auto file1    = root_dir.createSubFile("main content", "main.dk");
 		auto file2    = root_dir.createSubFile("src content", "src1.duck");
 		auto file3    = root_dir.createSubFile("other content", "other.txt");
 		auto file4    = root_dir.createSubFile("other2 content", "other2.md");
@@ -370,9 +433,9 @@ private:
 			ModuleTreeModifier::removeMainSourceFile(mt);
 			ASSERT_EQUAL(false, mt->hasMainSourceFile());
 		}
-		auto new_main = root_dir.createSubFile("main2", "main2.dmf");
+		auto new_main = root_dir.createSubFile("main2", "main2.dk");
 		ModuleTreeModifier::setMainSourceFile(mt, new_main);
-		ASSERT_EQUAL("main2.dmf", getRef(mt->getMainSourceFile())->getFileIllegalAccess().name());
+		ASSERT_EQUAL("main2.dk", getRef(mt->getMainSourceFile())->getFileIllegalAccess().name());
 
 		// Test removeMainSourceFile explicitly
 		ModuleTreeModifier::removeMainSourceFile(mt);
@@ -401,7 +464,7 @@ private:
 		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), sub_mod->getName()));
 		// Remove parent
 		ModuleTreeModifier::removeParent(sub_mod);
-		ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
+		ASSERT_NO_VALUE(sub_mod->getParentModule());
 		// Set parent again
 		ModuleTreeModifier::setParent(sub_mod, mt);
 		ASSERT_EQUAL(mt, getRef(sub_mod->getParentModule().value()));
@@ -421,7 +484,7 @@ private:
 		{
 			// Use unique variable names to avoid shadowing
 			auto removable_sub_dir   = root_dir.createSubDirectory("removable");
-			auto removable_main_file = removable_sub_dir.createSubFile("main", "removable.dmf");
+			auto removable_main_file = removable_sub_dir.createSubFile("main", "removable.dk");
 			auto removable_sub_mod   = ModuleTreeBuilder::create(
                 removable_sub_dir, base::StrID("modifier_test_package_id65")
             );
@@ -520,7 +583,7 @@ private:
 		);
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { (void) GetModuleID_Functor::get(child_id); },
+							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
 							  "Dangling ModuleTree should panic after removeModule"
 		);)
 
@@ -572,11 +635,11 @@ private:
 		ASSERT_TRUE(root->getSubmodules().illegalAccess().empty());
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { (void) GetModuleID_Functor::get(child_id); },
+							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
 							  "Dangling ModuleTree should panic after removeModuleRecursive"
 		);
 		                  assertThrows<base::Panic>(
-							  [&]() { (void) GetModuleID_Functor::get(grand_child_id); },
+							  [&]() { std::ignore = GetModuleID_Functor::get(grand_child_id); },
 							  "Recursive removal should also invalidate grandchildren"
 						  );)
 
@@ -593,7 +656,7 @@ private:
 
 		// Create virtual files
 		auto root_dir   = fs::FileManager::createRandomVirtualDirectory();
-		auto main_file  = root_dir.createSubFile("main", "manual_mod.dmf");
+		auto main_file  = root_dir.createSubFile("main", "manual_mod.dk");
 		auto other_file = root_dir.createSubFile("other", "other.txt");
 
 		// Set main source file
@@ -606,7 +669,7 @@ private:
 		auto sub_builder = ModuleTreeBuilder::create();
 		sub_builder->setPackageID(base::StrID("manual_package_id456"));
 		sub_builder->setName(base::StrID("subdir"));
-		auto sub_main = sub_dir.createSubFile("submain", "subdir.dmf");
+		auto sub_main = sub_dir.createSubFile("submain", "subdir.dk");
 		sub_builder->setMainSourceFile(sub_main);
 
 		// Test isValid before finalize
@@ -622,7 +685,7 @@ private:
 		auto parent_builder = ModuleTreeBuilder::create();
 		parent_builder->setName(base::StrID("parent_mod"));
 		parent_builder->setPackageID(base::StrID("manual_package_id456"));
-		auto parent_file = root_dir.createSubFile("parent", "parent_mod.dmf");
+		auto parent_file = root_dir.createSubFile("parent", "parent_mod.dk");
 		parent_builder->setMainSourceFile(parent_file);
 		auto parent_mod = parent_builder->finalize();
 		builder->setParent(parent_mod);
@@ -651,11 +714,11 @@ private:
 	}
 
 	void testModuleLoop() {
-		auto root = fs::FileManager::createRandomVirtualDirectory();
-		auto md1  = root.createSubDirectory("md1");
-		(void) md1.createSubFile("main1", "md1.dmf");
-		auto md2 = root.createSubDirectory("md2");
-		(void) md2.createSubFile("main2", "md2.dmf");
+		auto root   = fs::FileManager::createRandomVirtualDirectory();
+		auto md1    = root.createSubDirectory("md1");
+		std::ignore = md1.createSubFile("main1", "md1.dk");
+		auto md2    = root.createSubDirectory("md2");
+		std::ignore = md2.createSubFile("main2", "md2.dk");
 
 		auto mt1 = ModuleTreeBuilder::create(md1, base::StrID("md1_package_id"));
 		auto mt2 = ModuleTreeBuilder::create(md2, base::StrID("md1_package_id"));
@@ -672,14 +735,14 @@ private:
 		// Create virtual directory with main module and two submodules
 		auto random = fs::FileManager::createRandomVirtualDirectory();
 		auto root   = random.createSubDirectory("root");
-		(void) root.createSubFile("root", "root.dmf");
+		std::ignore = root.createSubFile("root", "root.dk");
 
-		auto sd1 = root.createSubDirectory("sub1");
-		(void) sd1.createSubFile("sub1 main", "sub1.dmf");
-		auto sd2 = root.createSubDirectory("sub2");
-		(void) sd2.createSubFile("sub2 main", "sub2.dmf");
+		auto sd1    = root.createSubDirectory("sub1");
+		std::ignore = sd1.createSubFile("sub1 main", "sub1.dk");
+		auto sd2    = root.createSubDirectory("sub2");
+		std::ignore = sd2.createSubFile("sub2 main", "sub2.dk");
 
-		(void) sd1.createSubFile("subsub main", "subsub.dmf");
+		std::ignore = sd1.createSubFile("subsub main", "subsub.dk");
 
 		// Build two module trees from the same virtual directory and compare component hashes
 		auto mt1 = ModuleTreeBuilder::create(root, base::StrID("root_package_id11e3"));

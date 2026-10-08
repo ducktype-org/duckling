@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/types/ints.hpp>
 
 #include <hashing/add_to_hash.hpp>
@@ -6,7 +12,9 @@
 #include <hashing/hashing_algorithms.hpp>
 #include <tester/tester.hpp>
 
+#include <array>
 #include <unordered_map>
+#include <vector>
 
 
 using namespace hashing;
@@ -146,6 +154,7 @@ public:
 		TESTER_ADD_TEST(hashTest<SHA256>);
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
 		TESTER_ADD_TEST(sha256Test);
+		TESTER_ADD_TEST(byAddressTest);
 	}
 
 private:
@@ -196,6 +205,39 @@ private:
 		Hash<T> h2;
 		h2(123);
 		h2(std::string_view{ "hello" });
+	}
+
+	void byAddressTest() {
+		// raw pointers must not sneak into a hash through the "hash a contiguous range as
+		// bytes" path either
+		assertTrue(
+			not internal::can_hash_range_as_bytes<SHA256, std::vector<int*>>,
+			"a range of raw pointers should not be hashable as bytes"
+		);
+
+		std::array<int, 2> values{ 1, 2 };
+		int* const         first  = values.data();
+		int* const         second = values.data() + 1;
+
+		Hash<SHA256> hasher;
+
+		assertTrue(
+			hasher(HashByAddress{ first }) == hasher(HashByAddress{ first }),
+			"the same address should hash to the same value"
+		);
+		assertTrue(
+			hasher(HashByAddress{ first }) != hasher(HashByAddress{ second }),
+			"different addresses should hash to different values"
+		);
+		assertTrue(HashByAddress{ first }.get() == first, "get() should return the wrapped pointer");
+
+		// only the address matters - neither the pointee nor the pointer's constness does
+		const int* const also_second = second;
+		values.at(1)                 = 42;
+		assertTrue(
+			hasher(HashByAddress{ second }) == hasher(HashByAddress{ also_second }),
+			"the hash should depend only on the address"
+		);
 	}
 
 	void sha256Test() {

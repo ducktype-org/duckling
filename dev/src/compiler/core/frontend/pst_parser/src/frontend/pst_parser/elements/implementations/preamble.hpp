@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../../cloning_automatic.hpp"  // IWYU pragma: export
@@ -7,11 +13,10 @@
 #include "../includes/basic.hpp"        // IWYU pragma: export
 #include "../parser_common_errors.hpp"  // IWYU pragma: export
 
-#include <diagnostic_interactive/message.hpp>
-
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/message.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <lang_definitions/operator_precedence.hpp>
 #include <lexer/token.hpp>
@@ -32,8 +37,8 @@ namespace pst {
 	 * @note This error that should generally not happen outside of our errors.
 	 */
 	template<typename Type>
-	class BadStatementChoice final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadStatementChoice final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -41,8 +46,8 @@ namespace pst {
 		}
 
 	public:
-		BadStatementChoice(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("type_name", std::string(base::typeName<Type>()));
+		BadStatementChoice(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("type_name", std::string(base::typeName<Type>()));
 		}
 	};
 

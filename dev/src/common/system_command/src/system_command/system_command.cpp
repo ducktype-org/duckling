@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "system_command.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -14,8 +20,22 @@ namespace system_command {
 		return *this;
 	}
 
+	SystemCommand& SystemCommand::addEnv(std::string name, std::string value) {
+		environment.emplace_back(std::move(name), std::move(value));
+		return *this;
+	}
+
 	i32 SystemCommand::execute(ExitCodeHandling on_exit_code) {
-		std::string out = program_name;
+		std::string out;
+
+		for (const auto& [name, value]: environment) {
+			out += name;
+			out += "=";
+			out += value;
+			out += " ";
+		}
+
+		out += program_name;
 		out += " ";
 
 		for (const auto& arg: arguments) {

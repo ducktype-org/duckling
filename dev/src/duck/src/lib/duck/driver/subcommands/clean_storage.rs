@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
@@ -12,7 +18,7 @@ use crate::{DuckContext, QuackResult, QuackResultContext};
 /// Creates parser for the `clean-storage` subcommand.
 pub fn get_parser() -> Command {
     subcommand("clean-storage")
-        .about("Clean the from expired ephemeral venvs and unused packages")
+        .about("Clean the expired ephemeral venvs and unused packages")
         .arg(optional(
             "venv",
             "Remove only the venv with such name (regardless of whether it is ephemeral or not), do not clean packages",
@@ -28,7 +34,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).with_context(|| {
             HintMessage::new("to clean the global storage use `global-storage` flag")
         })?;
-        pcx.storage_path()?
+        pcx.storage_path().to_path_buf()
     };
     let clean_mode = match matches.get_one::<String>("venv") {
         None => CleanStorageMode::CleanStorage,

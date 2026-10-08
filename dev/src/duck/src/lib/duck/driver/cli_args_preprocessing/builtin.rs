@@ -1,16 +1,22 @@
-use tracing::debug;
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+use tracing::trace;
 
 use crate::duck::driver::subcommands::exec_for;
 
 // All builtin aliases should be set here.
-// Format is `(alias, command)`. Current code assumes only „simple” aliases,
+// Format is `(alias, command)`. Current code assumes only “simple” aliases,
 // f.e. `("t", "test")` is fine, but not `("foo", "build --help")`.
 // It's guarded by `driver::no_aliases_in_parser()` test.
 const BUILTIN_ALIASES: [(&str, &str); 3] = [("b", "build"), ("r", "run"), ("rs", "run-script")];
 
 /// Get expanded command for the alias `name`.
 pub fn get_builtin_alias_expansion(name: &str) -> Option<&'static str> {
-    debug!("getting the builtin alias for `{name}`");
+    trace!(?name, "getting the builtin alias");
     BUILTIN_ALIASES.iter().find_map(|(alias, expansion)| {
         if *alias == name {
             Some(*expansion)

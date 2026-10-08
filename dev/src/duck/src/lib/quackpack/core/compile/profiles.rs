@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::LazyLock;
@@ -185,7 +191,7 @@ macro_rules! determine_field {
                     PREDEFINED_PROFILES
                         .get(&parent_name)
                         .map(|prof| prof.$name)
-                        .context_internal("Parent profile neither in profiles map nor predefined")
+                        .with_context_internal(|| format!("parent profile `{parent_name}` neither in profiles map nor predefined"))
                 }
             } else {
                 // None of the inheritance ancestors specified the field.
@@ -245,6 +251,14 @@ impl Profile {
             incremental: determine_incremental(profile_name, manifest_profiles)?,
             c_std: determine_c_std(profile_name, manifest_profiles)?,
         })
+    }
+
+    /// Get a [`String`] describing the value (everything except `name`) of this profile.
+    pub fn serialize_raw(self) -> String {
+        format!(
+            "{}-{}-{}-{}",
+            self.opt_level, self.incremental, self.c_std, self.dvm_bytecode
+        )
     }
 }
 

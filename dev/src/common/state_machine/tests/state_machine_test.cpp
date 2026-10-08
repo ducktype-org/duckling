@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <state_machine/state_machine.hpp>
 
 #include <base/pointers/box.hpp>
@@ -76,12 +82,12 @@ private:
 		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
 
 		LightMachine m(Red{}, &def);
-		assertTrue(std::holds_alternative<Red>(m.getState()), "Initial state should be Red");
+		ASSERT_MATCHES_MSG(m.getState(), "Initial state should be Red", Red);
 
 		auto res = m.handleEvent(Tick{});
-		assertTrue(res.has_value(), "Transition should be configured");
-		assertTrue(res.value().has_value(), "Transition should succeed");
-		assertTrue(std::holds_alternative<Green>(m.getState()), "After Tick should be Green");
+		ASSERT_HAS_VALUE(res, "Transition should be configured");
+		ASSERT_HAS_VALUE(res.value(), "Transition should succeed");
+		ASSERT_MATCHES_MSG(m.getState(), "After Tick should be Green", Green);
 	}
 
 	void noTransitionTest() {
@@ -91,8 +97,8 @@ private:
 		// (Green, Tick) doesn't exist.
 		LightMachine m(Green{}, &def);
 		auto         res = m.handleEvent(Tick{});
-		assertTrue(!res.has_value(), "Should return nullopt when no transition is configured");
-		assertTrue(std::holds_alternative<Green>(m.getState()), "State should be unchanged");
+		ASSERT_NO_VALUE(res, "Should return nullopt when no transition is configured");
+		ASSERT_MATCHES_MSG(m.getState(), "State should be unchanged", Green);
 	}
 
 	void multipleSourceStatesTest() {
@@ -103,19 +109,21 @@ private:
 
 		LightMachine m1(Yellow{}, &def);
 		auto         r1 = m1.handleEvent(Reset{});
-		assertTrue(r1.has_value() && r1.value().has_value(), "Yellow + Reset should succeed");
-		assertTrue(std::holds_alternative<Red>(m1.getState()), "Yellow + Reset -> Red");
+		ASSERT_HAS_VALUE(r1, "Yellow + Reset has a transition");
+		ASSERT_HAS_VALUE(r1.value(), "Yellow + Reset should succeed");
+		ASSERT_MATCHES_MSG(m1.getState(), "Yellow + Reset -> Red", Red);
 
 		LightMachine m2(Green{}, &def);
 		auto         r2 = m2.handleEvent(Reset{});
-		assertTrue(r2.has_value() && r2.value().has_value(), "Green + Reset should succeed");
-		assertTrue(std::holds_alternative<Red>(m2.getState()), "Green + Reset -> Red");
+		ASSERT_HAS_VALUE(r2, "Green + Reset has a transition");
+		ASSERT_HAS_VALUE(r2.value(), "Green + Reset should succeed");
+		ASSERT_MATCHES_MSG(m2.getState(), "Green + Reset -> Red", Red);
 
 		// Red was not in FromStates, so Reset is undefined for it.
 		LightMachine m3(Red{}, &def);
 		auto         r3 = m3.handleEvent(Reset{});
-		assertTrue(!r3.has_value(), "No transition for (Red, Reset)");
-		assertTrue(std::holds_alternative<Red>(m3.getState()), "Red unchanged");
+		ASSERT_NO_VALUE(r3, "No transition for (Red, Reset)");
+		ASSERT_MATCHES_MSG(m3.getState(), "Red unchanged", Red);
 	}
 
 	void allStatesTransitionTest() {
@@ -126,15 +134,15 @@ private:
 
 		LightMachine m1(Yellow{}, &def);
 		m1.handleEvent(Reset{});
-		assertTrue(std::holds_alternative<Red>(m1.getState()), "Yellow -> Red");
+		ASSERT_MATCHES_MSG(m1.getState(), "Yellow -> Red", Red);
 
 		LightMachine m2(Green{}, &def);
 		m2.handleEvent(Reset{});
-		assertTrue(std::holds_alternative<Red>(m2.getState()), "Green -> Red");
+		ASSERT_MATCHES_MSG(m2.getState(), "Green -> Red", Red);
 
 		LightMachine m3(Red{}, &def);
 		m3.handleEvent(Reset{});
-		assertTrue(std::holds_alternative<Red>(m3.getState()), "Red -> Red still works");
+		ASSERT_MATCHES_MSG(m3.getState(), "Red -> Red still works", Red);
 	}
 
 	void transitionToDifferentStateTest() {
@@ -150,11 +158,11 @@ private:
 
 		LightMachine m(Red{}, &def);
 		m.handleEvent(Tick{});
-		assertTrue(std::holds_alternative<Green>(m.getState()), "Red -> Green");
+		ASSERT_MATCHES_MSG(m.getState(), "Red -> Green", Green);
 		m.handleEvent(Tick{});
-		assertTrue(std::holds_alternative<Yellow>(m.getState()), "Green -> Yellow");
+		ASSERT_MATCHES_MSG(m.getState(), "Green -> Yellow", Yellow);
 		m.handleEvent(Tick{});
-		assertTrue(std::holds_alternative<Red>(m.getState()), "Yellow -> Red");
+		ASSERT_MATCHES_MSG(m.getState(), "Yellow -> Red", Red);
 	}
 
 	void failedActionTest() {
@@ -166,10 +174,10 @@ private:
 
 		LightMachine m(Red{}, &def);
 		auto         res = m.handleEvent(Tick{});
-		assertTrue(res.has_value(), "Transition is configured");
-		assertTrue(!res.value().has_value(), "Action should fail");
+		ASSERT_HAS_VALUE(res, "Transition is configured");
+		ASSERT_NO_VALUE(res.value(), "Action should fail");
 		assertTrue(res.value().error() == "action failed", "Error message should be propagated");
-		assertTrue(std::holds_alternative<Red>(m.getState()), "State should be unchanged");
+		ASSERT_MATCHES_MSG(m.getState(), "State should be unchanged", Red);
 	}
 
 	struct Empty {};
@@ -206,7 +214,7 @@ private:
 
 		CounterMachine m(Empty{}, &def);
 		m.handleEvent(Init{ 10 });
-		assertTrue(std::holds_alternative<Counter>(m.getState()), "Should be Counter after Init");
+		ASSERT_MATCHES_MSG(m.getState(), "Should be Counter after Init", Counter);
 		assertTrue(std::get<Counter>(m.getState()).value == 10, "Counter should be 10");
 
 		m.handleEvent(Increment{ 5 });
@@ -236,11 +244,11 @@ private:
 		});
 
 		CounterMachine m(Empty{}, &def);
-		assertTrue(std::holds_alternative<Empty>(m.getState()), "Initial state");
+		ASSERT_MATCHES_MSG(m.getState(), "Initial state", Empty);
 
 		// getState should reflect updates after a transition fires.
 		m.handleEvent(Init{ 99 });
-		assertTrue(std::holds_alternative<Counter>(m.getState()), "Updated state");
+		ASSERT_MATCHES_MSG(m.getState(), "Updated state", Counter);
 		assertTrue(std::get<Counter>(m.getState()).value == 99, "Updated value");
 	}
 
@@ -252,11 +260,11 @@ private:
 		LightMachine m2(Red{}, &def);
 
 		m1.handleEvent(Tick{});
-		assertTrue(std::holds_alternative<Green>(m1.getState()), "m1 should advance");
-		assertTrue(std::holds_alternative<Red>(m2.getState()), "m2 should be unaffected");
+		ASSERT_MATCHES_MSG(m1.getState(), "m1 should advance", Green);
+		ASSERT_MATCHES_MSG(m2.getState(), "m2 should be unaffected", Red);
 
 		m2.handleEvent(Tick{});
-		assertTrue(std::holds_alternative<Green>(m2.getState()), "m2 should advance independently");
+		ASSERT_MATCHES_MSG(m2.getState(), "m2 should advance independently", Green);
 	}
 
 	using AtomicLightMachine   = state_machine::AtomicStateMachine<LightState, LightEvent>;
@@ -268,9 +276,10 @@ private:
 
 		AtomicLightMachine m(Red{}, &def);
 		auto               res = m.handleEvent(Tick{});
-		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
+		ASSERT_HAS_VALUE(res, "Transition is configured");
+		ASSERT_HAS_VALUE(res.value(), "Transition should succeed");
 		assertTrue(
-			m.withState([](const LightState& s) { return std::holds_alternative<Green>(s); }),
+			m.withState([](const LightState& s) { return v_matches(s, Green); }),
 			"Should be Green after Tick"
 		);
 	}
@@ -324,7 +333,8 @@ private:
 
 		AM   m(Empty{}, &def);
 		auto res = m.handleEvent(Init{});
-		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
+		ASSERT_HAS_VALUE(res, "Transition is configured");
+		ASSERT_HAS_VALUE(res.value(), "Transition should succeed");
 
 		i32 observed = m.withState([](const S& s) -> i32 { return *std::get<WithPtr>(s).p; });
 		assertTrue(observed == 42, "withState works with move-only states");
@@ -371,14 +381,13 @@ private:
 
 		WaitableLightMachine m(Red{}, &def);
 		auto                 res = m.handleEvent(Tick{});
-		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
-		assertTrue(
-			std::holds_alternative<Green>(m.getStateCopy()), "Machine should hold the new state"
-		);
+		ASSERT_HAS_VALUE(res, "Transition is configured");
+		ASSERT_HAS_VALUE(res.value(), "Transition should succeed");
+		ASSERT_MATCHES_MSG(m.getStateCopy(), "Machine should hold the new state", Green);
 
 		auto rejected = m.handleEvent(Tick{});
-		assertTrue(!rejected.has_value(), "Unregistered transition should return nullopt");
-		assertTrue(std::holds_alternative<Green>(m.getStateCopy()), "State should be unchanged");
+		ASSERT_NO_VALUE(rejected, "Unregistered transition should return nullopt");
+		ASSERT_MATCHES_MSG(m.getStateCopy(), "State should be unchanged", Green);
 	}
 
 	void waitableVersionBumpTest() {
@@ -407,10 +416,10 @@ private:
 		m.subscribe([&notified](const LightState&, const LightState&, u64) { ++notified; });
 
 		auto res = m.handleEvent(Tick{});
-		assertTrue(res.has_value(), "Transition is configured");
-		assertTrue(!res.value().has_value(), "Action should fail");
+		ASSERT_HAS_VALUE(res, "Transition is configured");
+		ASSERT_NO_VALUE(res.value(), "Action should fail");
 		assertTrue(res.value().error() == "action failed", "Error message should be propagated");
-		assertTrue(std::holds_alternative<Red>(m.getStateCopy()), "State should be unchanged");
+		ASSERT_MATCHES_MSG(m.getStateCopy(), "State should be unchanged", Red);
 		assertTrue(m.getStateChangeCount() == 0, "Failed action must not bump the version");
 		assertTrue(notified == 0, "Failed action must not invoke listeners");
 	}
@@ -439,7 +448,7 @@ private:
 		assertTrue(observed.size() == 2, "Listener should fire once per successful transition");
 
 		// First transition: Empty -> Counter{10}, generation 0.
-		assertTrue(std::holds_alternative<Empty>(std::get<0>(observed[0])), "First from is Empty");
+		ASSERT_MATCHES_MSG(std::get<0>(observed[0]), "First from is Empty", Empty);
 		assertTrue(
 			std::get<Counter>(std::get<1>(observed[0])).value == 10, "First to is Counter{10}"
 		);
@@ -476,11 +485,10 @@ private:
 		WaitableLightMachine m(Red{}, &def);
 
 		std::thread waker([&m] { m.handleEvent(Tick{}); });
-		auto        state
-			= m.waitForState([](const LightState& s) { return std::holds_alternative<Green>(s); });
+		auto        state = m.waitForState([](const LightState& s) { return v_matches(s, Green); });
 		waker.join();
 
-		assertTrue(std::holds_alternative<Green>(state), "Waiter should observe Green");
+		ASSERT_MATCHES_MSG(state, "Waiter should observe Green", Green);
 		assertTrue(m.getStateChangeCount() == 1, "Waiter should observe the bumped version");
 	}
 
@@ -489,9 +497,8 @@ private:
 		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
 
 		WaitableLightMachine m(Red{}, &def);
-		auto                 state
-			= m.waitForState([](const LightState& s) { return std::holds_alternative<Red>(s); });
-		assertTrue(std::holds_alternative<Red>(state), "Should return the already-matching state");
+		auto state = m.waitForState([](const LightState& s) { return v_matches(s, Red); });
+		ASSERT_MATCHES_MSG(state, "Should return the already-matching state", Red);
 	}
 
 	void waitableWaitForFreshStateTest() {
@@ -515,12 +522,12 @@ private:
 			m.handleEvent(Increment{ 1 });
 		});
 		auto        state = m.waitForFreshState(start_version, [](const CounterState& s) {
-            return std::holds_alternative<Counter>(s);
+            return v_matches(s, Counter);
         });
 		waker.join();
 
 		assertTrue(m.getStateChangeCount() > start_version, "Version should have advanced");
-		assertTrue(std::holds_alternative<Counter>(state), "Waiter should observe a Counter state");
+		ASSERT_MATCHES_MSG(state, "Waiter should observe a Counter state", Counter);
 	}
 
 	void waitableConcurrentHandleEventTest() {

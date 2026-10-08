@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "flags.hpp"
 
 #include "validator/errors.hpp"
@@ -34,7 +40,8 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::I64ToString:
 			// Number-to-string conversions that write the result through a pointer operand.
 			// No console I/O and no threading; like every other pointer-deref write (see the
-			// CptrRead/CptrWrite note below) they are not classified as GlobalRead/GlobalWrite.
+			// `deref_write` no-op in getFlagsForInstruction) they are not classified as
+			// GlobalRead/GlobalWrite.
 			return {};
 		case builtins::BuiltinFunctionID::StartThread:
 			return FunctionFlag(Multithread) | ControlFlowModifying;
@@ -51,15 +58,6 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::LockMutex:
 		case builtins::BuiltinFunctionID::WaitCV:
 			return FunctionFlag(Multithread) | MayBlock | ReleaseGIL;
-		case builtins::BuiltinFunctionID::CptrRead:
-		case builtins::BuiltinFunctionID::CptrWrite:
-			// Raw memory copies between VM memory and C memory addressed by a `cptr`. They perform
-			// no console I/O and do not spawn threads. The VM side is accessed through a pointer
-			// operand, and like every other pointer-deref write in this module (see the
-			// `deref_write` no-op in getFlagsForInstruction) such accesses are not classified as
-			// GlobalRead/GlobalWrite: the analysis cannot tell whether the pointer aliases a
-			// global. So no config restriction applies here.
-			return {};
 		}
 		CORE_PANIC("Invalid builtin function ID");
 	}
@@ -96,7 +94,7 @@ namespace vm::code {
 		};
 		// dst that is read and then written (arith/cmov/cast in-place)
 		auto rdwr = [&](const auto& place) {
-			if (is_global(place.var_name)) flags |= InstructionFlag(GlobalRead) | GlobalWrite;
+			if (is_global(place.var_name)) flags |= GlobalRead | GlobalWrite;
 		};
 
 		// Dereferencing a pointer contributes no global read/write flags for now.
@@ -155,10 +153,11 @@ namespace vm::code {
 			FLAGS_W_R(mov_p32_p32)
 			FLAGS_W_R(mov_p64_p64)
 			FLAGS_W_R(mov_pptr_pptr)
-			FLAGS_W_R(mov_pcpt_pcpt)
+			FLAGS_W_R(mov_pcptr_pcptr)
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
+			FLAGS_W_R(mov_pvnt_pvnt)
 
 			// ===== Conditional moves: dst is read (kept conditionally) and written =====
 			FLAGS_RW_R(cmov_p8_p8)
@@ -273,6 +272,59 @@ namespace vm::code {
 			FLAGS_RW_R(log_xor_p8_p8)
 			FLAGS_RW(log_xor_p8_imm)
 
+			// ===== Bitwise (and / or / xor / shl / shr / not) =====
+			// 64-bit
+			FLAGS_RW_R(bit_and_p64_p64)
+			FLAGS_RW(bit_and_p64_imm)
+			FLAGS_RW_R(bit_or_p64_p64)
+			FLAGS_RW(bit_or_p64_imm)
+			FLAGS_RW_R(bit_xor_p64_p64)
+			FLAGS_RW(bit_xor_p64_imm)
+			FLAGS_RW_R(shl_p64_p64)
+			FLAGS_RW(shl_p64_imm)
+			FLAGS_RW_R(shr_p64_p64)
+			FLAGS_RW(shr_p64_imm)
+			FLAGS_RW(bit_not_p64)
+
+			// 32-bit
+			FLAGS_RW_R(bit_and_p32_p32)
+			FLAGS_RW(bit_and_p32_imm)
+			FLAGS_RW_R(bit_or_p32_p32)
+			FLAGS_RW(bit_or_p32_imm)
+			FLAGS_RW_R(bit_xor_p32_p32)
+			FLAGS_RW(bit_xor_p32_imm)
+			FLAGS_RW_R(shl_p32_p32)
+			FLAGS_RW(shl_p32_imm)
+			FLAGS_RW_R(shr_p32_p32)
+			FLAGS_RW(shr_p32_imm)
+			FLAGS_RW(bit_not_p32)
+
+			// 16-bit
+			FLAGS_RW_R(bit_and_p16_p16)
+			FLAGS_RW(bit_and_p16_imm)
+			FLAGS_RW_R(bit_or_p16_p16)
+			FLAGS_RW(bit_or_p16_imm)
+			FLAGS_RW_R(bit_xor_p16_p16)
+			FLAGS_RW(bit_xor_p16_imm)
+			FLAGS_RW_R(shl_p16_p16)
+			FLAGS_RW(shl_p16_imm)
+			FLAGS_RW_R(shr_p16_p16)
+			FLAGS_RW(shr_p16_imm)
+			FLAGS_RW(bit_not_p16)
+
+			// 8-bit
+			FLAGS_RW_R(bit_and_p8_p8)
+			FLAGS_RW(bit_and_p8_imm)
+			FLAGS_RW_R(bit_or_p8_p8)
+			FLAGS_RW(bit_or_p8_imm)
+			FLAGS_RW_R(bit_xor_p8_p8)
+			FLAGS_RW(bit_xor_p8_imm)
+			FLAGS_RW_R(shl_p8_p8)
+			FLAGS_RW(shl_p8_imm)
+			FLAGS_RW_R(shr_p8_p8)
+			FLAGS_RW(shr_p8_imm)
+			FLAGS_RW(bit_not_p8)
+
 			// ===== Comparisons: lhs/rhs are read =====
 			FLAGS_CMP(cmpEq_p64_p64)
 			FLAGS_CMP_IMM(cmpEq_p64_imm)
@@ -378,6 +430,7 @@ namespace vm::code {
 			FLAGS_CMP_IMM(fcmpLt_p32_imm)
 			FLAGS_CMP(fcmpLe_p32_p32)
 			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
+			instr_case(ins::Op_cmpNull_pcptr, i) { rd(i.ptr); }
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }
@@ -396,23 +449,13 @@ namespace vm::code {
 			}
 
 			// ===== Labels & jumps =====
-			instr_case(ins::Op_label, i) { (void) i; }
-			instr_case(ins::Op_jmp_label, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
-			instr_case(ins::Op_jmpIf_label, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
-			instr_case(ins::Op_jmpIfNot_label, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
+			instr_case(ins::Op_label, i) {}
+			instr_case(ins::Op_jmp_label, i) { flags |= ControlFlowModifying; }
+			instr_case(ins::Op_jmpIf_label, i) { flags |= ControlFlowModifying; }
+			instr_case(ins::Op_jmpIfNot_label, i) { flags |= ControlFlowModifying; }
 
 			// ===== Calls =====
 			instr_case(ins::Op_call_func, i) {
-				(void) i;
 				flags |= Call | InstructionFlag(ControlFlowModifying);
 			}
 			instr_case(ins::Op_call_builtinfunc, i) {
@@ -432,7 +475,6 @@ namespace vm::code {
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
 			}
 			instr_case(ins::Op_call_ffifunc, i) {
-				(void) i;
 				// An FFI call dispatches through libffi into a shared object: like an external C
 				// call it is opaque, may do IO, runs outside the VM, and can block.
 				flags |= CallExternal | InstructionFlag(ControlFlowModifying)
@@ -440,22 +482,17 @@ namespace vm::code {
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
 			}
 			instr_case(ins::Op_set_threadctx, i) {
-				(void) i;
 				flags
 					|= Call | InstructionFlag(Multithread) | InstructionFlag(ControlFlowModifying);
 			}
 			instr_case(ins::Op_ret_tailcall_func, i) {
-				(void) i;
 				flags |= Call | InstructionFlag(ControlFlowModifying);
 			}
-			instr_case(ins::Op_ret, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
+			instr_case(ins::Op_ret, i) { flags |= ControlFlowModifying; }
 
 			// ===== Stack lifecycle =====
 			instr_case(ins::Op_init_pany_type, i) { wr(i.var); }
-			instr_case(ins::Op_deinit, i) { (void) i; }
+			instr_case(ins::Op_deinit, i) {}
 
 			// ===== IO =====
 			instr_case(ins::Op_input_p64, i) {
@@ -501,8 +538,6 @@ namespace vm::code {
 				deref_read();
 			}
 			instr_case(ins::Op_virtual_call_pptr_method, i) {
-				(void) i;
-
 				// Known limitation: a virtual call is opaque, so we conservatively raise every
 				// flag. As a result no execution config (no_io / read_only / single_thread) can
 				// admit code that performs a dynamic dispatch. Lifting this needs per-callsite
@@ -540,6 +575,46 @@ namespace vm::code {
 				wr(i.dst_ptr);
 				rd(i.src);
 			}
+
+			// ===== C pointers =====
+			instr_case(ins::Op_load_pany_pcptr, i) {
+				wr(i.dst);
+				rd(i.src_ptr);
+			}
+			instr_case(ins::Op_store_pcptr_pany, i) {
+				rd(i.dst_ptr);
+				rd(i.src);
+			}
+			instr_case(ins::Op_read_pptr_pcptr, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				deref_write();
+			}
+			instr_case(ins::Op_write_pcptr_pptr, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				deref_read();
+			}
+			instr_case(ins::Op_cast_pcptr_pcptr, i) {
+				wr(i.dst);
+				rd(i.src);
+			}
+			// Taking an address only reads the pointer operand, like the ref/lea ops above.
+			instr_case(ins::Op_cast_pcptr_pptr, i) {
+				wr(i.dst);
+				rd(i.src_ptr);
+			}
+			// Decomposing a pointer only reads it, like the cast above.
+			instr_case(ins::Op_ptrParts_p64_p64_pptr, i) {
+				wr(i.dst_id);
+				wr(i.dst_offset);
+				rd(i.src_ptr);
+			}
+			instr_case(ins::Op_add_pcptr_p64, i) {
+				rdwr(i.dst);
+				rd(i.offset);
+			}
+			instr_case(ins::Op_add_pcptr_imm, i) { rdwr(i.dst); }
 
 			// ===== Structs =====
 			// Lea = pure address arithmetic, no memory access through src_data_ptr
@@ -702,13 +777,10 @@ namespace vm::code {
 			FLAGS_W_R(fpext_p64_p32)
 
 			// ===== Misc =====
-			instr_case(ins::Op_nop, i) { (void) i; }
-			instr_case(ins::Op_exit, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
-			instr_case(ins::Op_initFromVmValue, i) { (void) i; }
-			instr_case(ins::Comment, i) { (void) i; }
+			instr_case(ins::Op_nop, i) {}
+			instr_case(ins::Op_exit, i) { flags |= ControlFlowModifying; }
+			instr_case(ins::Op_initFromVMValue, i) {}
+			instr_case(ins::Comment, i) {}
 			instr_default { CORE_PANIC("Unhandled instruction: ", internal_value.name()); }
 		}
 		POP_DIAGNOSTIC

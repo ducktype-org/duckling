@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::PathBuf;
 
 use clap::builder::ValueParser;
@@ -44,8 +50,8 @@ pub fn get_parser() -> Command {
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let at = matches
         .get_one::<PathBuf>("path")
-        .expect("required by clap")
-        .resolve()?;
+        .expect("required by clap");
+    let at = at.resolve_with_tilde(ctx);
     let explicit_name = matches.get_one::<String>("name").map(String::as_str);
     init(InitOptions {
         ctx,

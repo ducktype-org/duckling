@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use crate::quackpack::core::PackageContext;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{display_venv_info, venv_info};
@@ -7,9 +13,9 @@ use crate::{QuackResult, QuackResultContext, qp_err};
 /// Logic for executing the `info` subcommand.
 pub fn info(pcx: PackageContext) -> QuackResult<()> {
     let ctx = pcx.ctx();
-    let storage_localization = pcx.storage_path()?;
+    let storage_localization = pcx.storage_path();
     let venv_id = pcx.to_venv_id();
-    let Some((mut venv, previous_access)) = venv_info(&storage_localization, venv_id, ctx)
+    let Some((mut venv, previous_access)) = venv_info(storage_localization, venv_id, ctx)
         .context("when getting information about the venv")?
     else {
         let err = qp_err!(HintMessage::new(

@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import re
 
 from ..commands.helpers import get_cpu_count
@@ -6,6 +12,7 @@ from .helpers import (
     bash_command,
     bash_command_get_output,
     exit_with_error,
+    log_good,
 )
 
 
@@ -118,4 +125,7 @@ def test_impl(
         ctest_cmd += " --force-new-ctest-process --test-action memcheck"
 
     # Execute in build directory
+    # `bash_command` raises on a non-zero exit code, so getting past it means
+    # every selected test has passed.
     bash_command(ctest_cmd, cwd=build_dir)
+    log_good("All unit tests have passed")

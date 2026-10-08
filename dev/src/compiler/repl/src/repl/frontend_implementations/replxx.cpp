@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "replxx.hpp"
 
 #include "replxx_helpers.hpp"
@@ -22,14 +28,14 @@ namespace compiler::repl {
 
 	// clang-format off
 	static const std::set<std::string> DUCKLING_KEYWORDS = {
-		"alias", "and", "as", "assert", "block", "box", "break", "case", "catch",
-		"class", "compile_assert", "const", "continue", "copy", "debug", "defer",
-		"dict", "else", "expand", "extends", "extern", "false", "for", "fun",
-		"fundecl", "if", "implements", "import", "in", "lambda", "let", "loop",
+		"and", "as", "assert", "block", "box", "break", "case", "catch",
+		"class", "compile_assert", "const", "continue", "copy", "copyof", "debug", "defer",
+		"dict", "else", "expand", "export", "extends", "extern", "false", "for", "fun",
+		"fundecl", "global", "hides", "if", "implements", "import", "in", "lambda", "let", "loop",
 		"match", "move", "namespace", "none", "not", "or", "pattern", "private",
 		"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
-		"refof", "restart", "return", "set", "sizeof", "static", "str", "switch",
-		"test", "then", "this", "throw", "true", "try", "type", "using", "var",
+		"refof", "ptrof", "restart", "return", "set", "sizeof", "str", "switch",
+		"then", "this", "throw", "true", "try", "type", "using", "var",
 		"vec", "while", "with", "xor"
 	};
 
@@ -53,9 +59,10 @@ namespace compiler::repl {
 	// ─── Construction / destruction ──────────────────────────────────────────────
 
 	FrontendReplxxImplementation::FrontendReplxxImplementation(
-		bool completions_enabled, bool bracketed_paste_enabled
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output
 	):
-		  m_completions_enabled(completions_enabled) {
+		  m_completions_enabled(completions_enabled),
+		  m_decorative_output(decorative_output) {
 		m_replxx.set_max_history_size(1'000);
 		m_replxx.set_word_break_characters(" \t\n;,+-/*%^&|~<>=!?@#$:(){}[]");
 		m_replxx.set_indent_multiline(true);
@@ -364,13 +371,16 @@ namespace compiler::repl {
 	// ─── Welcome / prompt / help / history ──────────────────────────────────────
 
 	void FrontendReplxxImplementation::printWelcome() const {
-		std::cout << "Duckling REPL\n";
-		std::cout << "Type /help for available commands, /exit to quit.\n";
-		std::cout << "Press Enter to submit. Press Alt+Enter for new line.\n\n";
+		if (m_decorative_output) {
+			std::cout << "Duckling REPL\n";
+			std::cout << "Type /help for available commands, /exit to quit.\n";
+			std::cout << "Press Enter to submit. Press Alt+Enter for new line.\n\n";
+		}
 	}
 
 	std::string FrontendReplxxImplementation::readLine() {
-		const char* input = m_replxx.input(ReplConfig::PROMPT);
+		const std::string prompt = m_decorative_output ? ReplConfig::PROMPT : "";
+		const char*       input  = m_replxx.input(prompt);
 
 		if (input == nullptr) {
 			// EOF (Ctrl-D) or error.

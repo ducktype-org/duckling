@@ -1,9 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/module_tree/module_id.hpp>
-#include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
+#include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax this dependency, just expr is needed
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>

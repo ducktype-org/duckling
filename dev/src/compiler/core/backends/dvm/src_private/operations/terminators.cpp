@@ -1,8 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../dvm_value.hpp"
 #include "../function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
 
 #include <base/collections/optional.hpp>
+
+#include <vm/core/builtin_functions.hpp>
 
 namespace compiler::backend_vm::internal {
 	using namespace vm::code;
@@ -37,6 +45,17 @@ namespace compiler::backend_vm::internal {
 		}
 	}
 
+	void InstructionLowerer::lower(const BranchIfNullOperation& op) {
+		ctx->pushInstruction({ OpKind::cmpNull, op.pointer.asArgument() });
+
+		ctx->cleanUpRegisteredTemps();
+		// Deinits are pushed between the null check and the jumps, like in Branch.
+		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
+
+		ctx->pushInstruction({ OpKind::jmpIf, op.null_target.asArgument() });
+		ctx->pushInstruction({ OpKind::jmpIfNot, op.not_null_target.asArgument() });
+	}
+
 	void InstructionLowerer::lower(const ReturnOperation& op) {
 		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
@@ -55,5 +74,22 @@ namespace compiler::backend_vm::internal {
 			);
 		}
 		ctx->pushInstruction({ OpKind::ret });
+	}
+
+	void InstructionLowerer::lower(const UnreachableOperation& op) {
+		const auto& abort_name
+			= vm::builtins::getBuiltinFunctions()->at(vm::builtins::BuiltinFunctionID::Abort).name;
+
+		lower(CallOperation{
+			.call_info = { .call_target = DVMFunctionName{ .name = abort_name },
+		                   .return_type = {},
+		                   .param_types = {} },
+			.args      = {},
+			.dest      = {},
+		});
+		lower(ReturnOperation{
+			.value       = {},
+			.scope_flags = op.scope_flags,
+		});
 	}
 }

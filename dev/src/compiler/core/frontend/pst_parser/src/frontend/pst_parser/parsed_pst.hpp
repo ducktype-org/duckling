@@ -5,8 +5,8 @@
 #include "pst_state_forward.hpp"
 #include "pst_type.hpp"
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <token_source/source.hpp>
@@ -15,10 +15,8 @@ namespace pst {
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState> makeState(
-			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia_int::Logger> int_logger
+			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia::Logger> int_logger
 		);
-		std::vector<ImportType> extractState(Box<LangParserState>);
-
 		void finalizeParsing(Ref<LangParserState>);
 
 		template<typename T>
@@ -64,11 +62,6 @@ namespace pst {
 		 */
 		Box<tokenizer::TokenSource> file;
 
-		/**
-		 * Import entries collected during parsing.
-		 */
-		std::vector<ImportType> imports;
-
 		/***********************\
 		|    PRIVATE METHODS    |
 		\***********************/
@@ -95,7 +88,6 @@ namespace pst {
             );
 			this->assignRoot(Parser::parse(*state_box, std::forward<Args>(args)...));
 			internal::finalizeParsing(state_box.refMut());
-			imports = internal::extractState(std::move(state_box));
 		}
 
 		template<typename Parser, typename... Args>
@@ -159,7 +151,7 @@ namespace pst {
 		template<typename Parser, typename... Args>
 		explicit ParsedPST(
 			internal::ConstructorTemplateInference<Parser>,
-			dia_int::StablePosition pos,
+			dia::StablePosition pos,
 			std::string_view        content,
 			Box<LangParserContext>  parsing_ctx,
 			hashing::ComponentHash  hash_ctx = {},
@@ -226,7 +218,7 @@ namespace pst {
 
 		template<typename Parser = Element, typename... Args>
 		static Box<ParsedPST> fromExpand(
-			dia_int::StablePosition pos,
+			dia::StablePosition pos,
 			std::string_view        contents,
 			Box<LangParserContext>  parsing_ctx,
 			hashing::ComponentHash  hash_ctx = {},
@@ -235,7 +227,6 @@ namespace pst {
 			auto out = makeParsedPstBox<Parser>(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
-			CORE_ASSERT(out->imports.size() == 0, "Imports are not supported in expands");
 			return out;
 		}
 
@@ -259,17 +250,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<ImportType>& getImports() const {
-			return imports;
-		}
-
-		[[nodiscard]]
-		CRef<dia_int::Logger> getLogger() const {
+		CRef<dia::Logger> getLogger() const {
 			return file->getIntLogger();
 		}
 
 		[[nodiscard]]
-		Ref<dia_int::Logger> getLoggerMut() {
+		Ref<dia::Logger> getLoggerMut() {
 			return file->getIntLogger();
 		}
 
@@ -279,5 +265,7 @@ namespace pst {
 		Ref<tokenizer::TokenSource> getFile() const {
 			return file.ref();
 		}
+
+		~ParsedPST() final = default;
 	};
 }

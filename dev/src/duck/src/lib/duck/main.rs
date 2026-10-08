@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::backtrace::Backtrace;
 
-use tracing::debug;
+use chrono::Local;
+use tracing::info;
 
 use crate::duck::util::indent::indent;
 use crate::duck::util::terminal::Terminal;
@@ -19,17 +26,23 @@ pub fn main() {
         }
     };
     if let Err(e) = crate::duck::driver::run::run(&mut ctx) {
-        print_error_and_exit(e, ctx.console(), ctx.error_console())
+        print_error_and_exit(e, ctx.stdout(), ctx.stderr())
     }
 }
 
 /// Setup [`tracing`] loggers.
 pub fn setup_logger() {
+    use tracing::level_filters::LevelFilter;
     use tracing_subscriber::fmt::layer;
     use tracing_subscriber::fmt::time::Uptime;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{EnvFilter, Layer, registry};
-    let subscriber = EnvFilter::from_env("DUCK_DEBUG");
+    let subscriber = EnvFilter::builder()
+        .with_env_var("DUCK_DEBUG")
+        // NOTE: This level determines which logs are _always_ visible, without any filter.
+        // The default is `ERROR`, which means every `error!` log is visible to a user by default.
+        .with_default_directive(LevelFilter::OFF.into())
+        .from_env_lossy();
     let layer = layer()
         .with_timer(Uptime::default())
         .with_ansi(true)
@@ -37,7 +50,7 @@ pub fn setup_logger() {
         .with_filter(subscriber);
 
     registry().with(layer).init();
-    debug!("start = {:#?}", std::time::SystemTime::now());
+    info!(start = %Local::now());
 }
 
 /// Print returned [`QuackError`] to the appropriate [`Terminal`] and exit.
@@ -80,7 +93,9 @@ fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
             ErrorType::BareMessage => {
                 let _ = term.print(msg);
             }
-            _ => qp_bail_internal!("Errors and internal errors should not be printed on stdout"),
+            error_type => qp_bail_internal!(
+                "errors and internal errors should not be printed on stdout; {error_type:?}"
+            ),
         }
     }
     Ok(())

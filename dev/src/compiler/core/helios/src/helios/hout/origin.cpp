@@ -1,20 +1,26 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "origin.hpp"
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <diagnostic/stable_position.hpp>
 
 namespace compiler::helios::code {
 	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition(query::Context& ctx) const {
-		return source_position.map([&ctx](const dia_int::StablePosition& pos) {
+		return source_position.map([&ctx](const dia::StablePosition& pos) {
 			return pos.getActiveSourcePosition(ctx);
 		});
 	}
 
-	base::Optional<dia_int::StablePosition> ElementOrigin::getStablePosition() const {
+	base::Optional<dia::StablePosition> ElementOrigin::getStablePosition() const {
 		return source_position;
 	}
 

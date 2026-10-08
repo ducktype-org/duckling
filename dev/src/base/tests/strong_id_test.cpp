@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/extend_cpp/strongly_typed_id.hpp>
 
 #include <tester/tester.hpp>
@@ -36,9 +42,9 @@ public:
 		ASSERT_EQUAL(u64(id1), 1);
 		assertTrue(id1.isGood(), "ID is not good.");
 
-		(void) B::next();
-		(void) B::next();
-		(void) B::next();
+		std::ignore = B::next();
+		std::ignore = B::next();
+		std::ignore = B::next();
 
 		ASSERT_EQUAL(id0.asInt(), 0);
 		ASSERT_EQUAL(u64(id0), 0);

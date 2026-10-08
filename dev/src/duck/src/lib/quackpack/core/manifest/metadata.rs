@@ -1,40 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Various (for us mostly unneeded) metadata of the root package.
 
 #[derive(Clone, Debug, Default)]
 /// Various package metadata.
 /// This is mostly useless information for us, but it may be useful for a user.
 pub struct PackageMetadata {
-    authors: Vec<String>,
-    license: Option<String>,
-    description: Option<String>,
-}
-
-impl PackageMetadata {
-    /// Create a new [`PackageMetadata`].
-    pub fn new(authors: Vec<String>, license: Option<String>, description: Option<String>) -> Self {
-        Self {
-            authors,
-            license,
-            description,
-        }
-    }
-
-    /// Get the package license
-    pub fn license(&self) -> Option<&str> {
-        self.license.as_deref()
-    }
-
-    /// Get the package authors
-    pub fn authors(&self) -> &[String] {
-        &self.authors
-    }
-
-    /// Get the package description
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
-    }
-
-    pub fn into_authors(self) -> Vec<String> {
-        self.authors
-    }
+    pub authors: Vec<String>,
+    pub license: Option<String>,
+    pub description: Option<String>,
 }

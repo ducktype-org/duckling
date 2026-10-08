@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/save_artifacts.hpp>
 #include <global_state/artifacts_location.hpp>
 
 #include <base/types/ints.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
 #include <string_id/string_id.hpp>
 
@@ -20,6 +27,13 @@ namespace compiler::driver {
 				= query_collection->blobArtifactAtOrNew(base::StrID("query_graph"));
 
 			std::vector<byte> serialized = query::external::optAndSerializeQueryGraph();
+
+			// Reclaim on-disk caches orphaned by this compilation (nodes dropped from the graph,
+			// e.g. because their query hash changed) before the graph blob is written and flushed.
+			const u64 deleted_disk_caches = query::external::deleteOrphanedDiskCaches();
+			CORE_DEV_LOG(
+				Artifacts, "Removed ", deleted_disk_caches, " orphaned on-disk query cache(s)\n"
+			);
 
 			if (!serialized.empty())
 				query_collection->setBlobData(

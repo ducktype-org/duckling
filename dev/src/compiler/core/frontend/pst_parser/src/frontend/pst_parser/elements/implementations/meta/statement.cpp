@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/class_elements/all_class_elements.hpp"
 #include "../../hierarchy/declarations/all_declarations.hpp"
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
@@ -46,7 +52,8 @@ namespace pst {
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
-				    || Conditions::isBlockGroup(state, fwd - 1);
+				    || (Conditions::isBlockGroup(state, fwd - 1)
+				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
 		};
 
@@ -81,6 +88,28 @@ namespace pst {
 					return true;
 
 				return false;
+			}
+		};
+
+		/**
+		 * @brief Statements whose body is a `SelectorList`.
+		 */
+		template<class T>
+		concept SelectorStmt = std::same_as<T, Using> || std::same_as<T, Import>;
+
+		template<class T>
+		requires SelectorStmt<T> struct StmtClassifiers<T> {
+			/**
+			 * @brief Like the general function, but a `{}` does not end the statement: in
+			 * `using a.{b, c};` and `import a.* hides {b, c};` the bracket is part of a selector.
+			 */
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 			}
 		};
 
@@ -226,9 +255,6 @@ namespace pst {
 			case Keyword::Const:
 				return internal::parseStmt<Const>(state);
 
-			case Keyword::Alias:
-				return internal::parseStmt<Alias>(state);
-
 			case Keyword::Var:
 			case Keyword::Let:
 				return internal::parseStmt<Variable>(state);
@@ -268,8 +294,6 @@ namespace pst {
 				return parseStmt<Field>(state);
 			// These are statements that are not class-specific when adding new ones be careful
 			// about the fact that ContextStmt is set to Class here.
-			case Keyword::Alias:
-				return parseStmt<Alias>(state);
 			case Keyword::Using:
 				return parseStmt<Using>(state);
 			case Keyword::Class:

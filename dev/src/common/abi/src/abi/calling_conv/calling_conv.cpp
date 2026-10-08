@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "calling_conv.hpp"
 
 #include <abi/layout/compute_c_layout.hpp>
@@ -93,10 +99,12 @@ namespace abi::calling_conv {
 		}
 
 		/**
-		 * @brief Build a scalar `ByValue` for the x86-64 System V ABI, setting the sign/zero
-		 * extension flag when required.
+		 * @brief Build a scalar `ByValue`, setting the sign/zero extension flag when the ABI
+		 * requires the caller to extend sub-word integers to 32 bits.
+		 *
+		 * @note The classification is the same for the x86-64 System V and Apple arm64 ABIs.
 		 */
-		ArgInfo scalarByValueSysV(const types::AbiType& scalar) {
+		ArgInfo scalarByValueWithExt(const types::AbiType& scalar) {
 			bool sign_ext = false;
 			bool zero_ext = false;
 			variant_match(scalar.value) {
@@ -212,7 +220,7 @@ namespace abi::calling_conv {
 					types::BoolType,
 					types::PointerType
 				))
-				return ARG_ENTRY(scalarByValueSysV(*original_type));
+				return ARG_ENTRY(scalarByValueWithExt(*original_type));
 
 			if (size_align.size <= Bytes(16)) {
 				layout::ComputedLayout expanded_layout;
@@ -234,7 +242,8 @@ namespace abi::calling_conv {
 		};
 		return FunctionInfo{ .return_info = ft.return_type.map(compute_return_entry),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
-			                             | std::ranges::to<std::vector>() };
+			                             | std::ranges::to<std::vector>(),
+			                 .num_fixed_params = ft.num_fixed_params };
 	}
 
 	/**
@@ -251,6 +260,10 @@ namespace abi::calling_conv {
 	}
 
 	FunctionInfo AArch64ABIInfo::computeInfo(const FunctionType& ft) const {
+		auto scalar_by_value = [&](const types::AbiType& scalar) {
+			if (callerExtendsNarrowArgs()) return scalarByValueWithExt(scalar);
+			return ArgInfo::byValue(types::cloneAbiType(scalar));
+		};
 		auto homogeneous_arg_info = [&](std::vector<types::AbiType> types) {
 			std::vector<types::AbiTypePtr> fields;
 			fields.reserve(types.size());
@@ -275,7 +288,7 @@ namespace abi::calling_conv {
 					types::BoolType,
 					types::PointerType
 				))
-				return ARG_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)));
+				return ARG_ENTRY(scalar_by_value(*original_type));
 
 			layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
@@ -301,7 +314,7 @@ namespace abi::calling_conv {
 					types::BoolType,
 					types::PointerType
 				))
-				return RETURN_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)), false);
+				return RETURN_ENTRY(scalar_by_value(*original_type), false);
 
 
 			layout::ComputedLayout computed_layout;
@@ -326,7 +339,8 @@ namespace abi::calling_conv {
 
 		return FunctionInfo{ .return_info = ft.return_type.map(compute_return_entry),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
-			                             | std::ranges::to<std::vector>() };
+			                             | std::ranges::to<std::vector>(),
+			                 .num_fixed_params = ft.num_fixed_params };
 	}
 
 	FunctionInfo computeCallingConv(const TargetABI& target, const FunctionType& ft) {
@@ -334,6 +348,8 @@ namespace abi::calling_conv {
 		case Arch::X86_64:
 			return X86_64ABIInfo{}.computeInfo(ft);
 		case Arch::AArch64:
+			if (target.triple.os == OperatingSystem::Darwin)
+				return AArch64DarwinABIInfo{}.computeInfo(ft);
 			return AArch64ABIInfo{}.computeInfo(ft);
 		default:
 			CORE_UNREACHABLE();

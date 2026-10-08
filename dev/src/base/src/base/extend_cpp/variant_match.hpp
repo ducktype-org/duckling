@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file variant.hpp
  *
@@ -70,7 +76,7 @@ namespace base {
 	 * @brief Helper function for filtering variants
 	 */
 	template<typename T, typename U>
-	static bool holds(const U& el) {
+	bool holds(const U& el) {
 		return std::holds_alternative<T>(el);
 	}
 
@@ -79,7 +85,7 @@ namespace base {
 	 * @TODO: #3073 change to ref
 	 */
 	template<typename T, typename U>
-	static T choose(const U& el) {
+	T choose(const U& el) {
 		return std::get<T>(el);
 	}
 
@@ -148,15 +154,16 @@ namespace base {
 /**
  * @brief An `if` clause called when `v` holds `type`. The inner type is accessible through `name`.
  */
-#define v_if_matches(v, type, name) if (const auto* name = std::get_if<type>(&v))
+#define v_if_matches(v, type, name) if (auto* name = std::get_if<type>(&v))
 
 /**
  * @brief Use instead of `std::visit` with multiple choices.
  */
 #define VARIANT_VISIT(value, /*cases*/...) \
-	{ std::visit(::base::internal::VisitOverloaded{ __VA_ARGS__ }, (value)); }
+	std::visit(::base::internal::VisitOverloaded{ __VA_ARGS__ }, (value));
 
-#define VISIT_CASE(type, name, code) [&](type name) { code; }
+#define VISIT_CASE_VAL(type, name, ...) [&](type name) { return __VA_ARGS__; }
+#define VISIT_CASE(type, name, ...)     [&](type name) { __VA_ARGS__; }
 
 
 /**

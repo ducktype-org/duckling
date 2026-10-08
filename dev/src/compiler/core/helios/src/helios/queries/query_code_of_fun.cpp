@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "function_queries.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -12,8 +18,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/repl_utils/repl_queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -24,7 +29,6 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
-#include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -88,24 +92,43 @@ namespace compiler::helios {
 			std::shared_ptr<const code::CodeBlock> processBody(
 				const HOUTFunctionDeclaration& decl, pst::AccessLocked<pst::CodeBlockOrStmt> body
 			) {
-				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
+				const auto unlocked_body = body.unlock(ctx);
 
-				if (body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+				if (unlocked_body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
 					// The `fun abc() = expr;` case.
+					auto function_body
+						= queryCodeOfSingleStmtFunctionBody(ctx, unlocked_body, decl.return_type);
 
-					code::CodeBlock function_body
-						= queryCodeOfSingleStmtFunctionBody(ctx, body.unlock(ctx), decl.return_type);
-					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
-				} else {
-					CORE_ASSERT(
-						body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
-						"This should not happen"
-					);
-					output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
+					return std::make_shared<const code::CodeBlock>(std::move(function_body));
 				}
-				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
-				return output_body;
+				CORE_ASSERT(
+					unlocked_body->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+					"This should not happen"
+				);
+
+				auto output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
+
+				const bool ends_with_return
+					= !output_body->statements.empty()
+				   && dynamic_cast<const code::ReturnStmt*>(output_body->statements.back().get())
+				          != nullptr;
+
+				// Only block-bodied global main functions receive an implicit return.
+				if (!isGlobalMain(original_symbol) || ends_with_return) return output_body;
+
+				auto mutable_body = output_body->clone();
+				auto zero = numeric_value::NumericValue::createOfType(decl.return_type.getType(), 0)
+				                .expect("Failed to create implicit main return value.");
+
+				const auto origin    = code::pstOrigin(unlocked_body).generatedFrom();
+				auto       zero_expr = makeBox<code::LiteralNumericExpr>(ctx, origin, zero);
+
+				mutable_body->statements.emplace_back(
+					makeBox<code::ReturnStmt>(origin, std::move(zero_expr))
+				);
+
+				return std::make_shared<const code::CodeBlock>(std::move(*mutable_body));
 			}
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
@@ -127,6 +150,13 @@ namespace compiler::helios {
 				auto output_body = processBody(decl, fun_body);
 
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
+			}
+
+			void visitConstructor(pst::Access<pst::Constructor>) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Support for user defined constructors will be deleted."
+				));
+				query::throwFailed();
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
@@ -155,13 +185,12 @@ namespace compiler::helios {
 			void validateConstructorSource(
 				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
 			) {
-				const auto class_type
-					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				const auto class_type = classMemberOwner(original_symbol);
 
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
 				if (decl.parameters.size() != 1) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						"A copy constructor must declare exactly one parameter: a reference to "
 						"the object being copied.",
 						params_source
@@ -178,9 +207,10 @@ namespace compiler::helios {
 				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
 				// resolves to an immutable reference.
 				if (!is_reference || !is_matching_class) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
-							"A copy constructor's parameter must be a reference to its own class `",
+							"A copy constructor's parameter must be a reference to its own "
+							"class `",
 							name(class_type.getSymbol()),
 							"`."
 						),
@@ -196,7 +226,7 @@ namespace compiler::helios {
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
-				variant_case(PstImplementedSemantics, data) {
+				variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
 					CORE_ASSERT(
 						isFunctionLike(kind(key)),
 						"Function creation called on non-function, non-method and non-constructor "
@@ -204,6 +234,9 @@ namespace compiler::helios {
 					);
 					HOUTFunctionMaker func_maker(ctx, key);
 					stmt(ctx, key).value()->acceptVisitor(func_maker);
+
+					// A visitor that could not build the function has reported why.
+					if_opt_none(func_maker.out) return query::Failed();
 
 					return func_maker.out.value();
 				}
@@ -269,12 +302,14 @@ namespace compiler::helios {
 					case defgen::Method::Kind::LengthMethod:
 						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
 						    ->valueOrThrow();
-					case defgen::Method::Kind::Push:
-						return ctx.query<defgen::QueryPushMethod>(method.owner_type)->valueOrThrow();
-					case defgen::Method::Kind::Pop:
-						return ctx.query<defgen::QueryPopMethod>(method.owner_type)->valueOrThrow();
 					}
 					CORE_UNREACHABLE();
+				}
+				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
+					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
+				}
+				variant_case(defgen::ReplInputWrapper, input) {
+					return repl::getReplInputFunction(ctx, input);
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "log_helpers.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
 
 #include <base/pointers/box.hpp>
+
+#include <diagnostic/placeholder.hpp>
 
 #include <string>
 
@@ -14,11 +21,11 @@ namespace compiler::driver::diagnostics {
 			if (!global_state::hasGlobalLogger()) return;
 			auto& logger = *global_state::getGlobalLogger();
 			if (is_error) {
-				logger.log(makeBox<dia_int::PlaceholderError>(
+				logger.log(makeBox<dia::PlaceholderError>(
 					std::string{ header }, std::string{ description }
 				));
 			} else {
-				logger.log(makeBox<dia_int::PlaceholderWarning>(
+				logger.log(makeBox<dia::PlaceholderWarning>(
 					std::string{ header }, std::string{ description }
 				));
 			}

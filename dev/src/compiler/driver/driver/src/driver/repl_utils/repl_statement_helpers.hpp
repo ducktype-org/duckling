@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
@@ -5,8 +11,10 @@
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/repl_utils/repl_queries.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -17,6 +25,12 @@
 #include <variant>
 
 namespace compiler::repl {
+	/**
+	 * @brief Identifies a REPL session, a script compilation or a statement probe. It is part of
+	 * the synthetic module names, so their modules stay distinct within one process.
+	 */
+	STRONG_TYPEDEF_ID(ReplSessionID);
+
 	/**
 	 * @brief Payload for a single expression statement.
 	 *
@@ -50,6 +64,10 @@ namespace compiler::repl {
 		pst::AccessLocked<pst::Stmt> definition_stmt;
 	};
 
+	struct VariableSingleStatementInfo final {
+		pst::AccessLocked<pst::Variable> variable_stmt;
+	};
+
 	/**
 	 * @brief A tagged payload representing exactly one classified REPL/script statement.
 	 *
@@ -61,7 +79,8 @@ namespace compiler::repl {
 	using SingleStatementInfo = std::variant<
 		ExpressionSingleStatementInfo,
 		InstructionSingleStatementInfo,
-		DefinitionSingleStatementInfo>;
+		DefinitionSingleStatementInfo,
+		VariableSingleStatementInfo>;
 
 	/**
 	 * @brief Result of building an executable wrapper around a single statement (expression or
@@ -97,19 +116,47 @@ namespace compiler::repl {
 		query::Context& ctx, const SingleStatementInfo& statement_info, u64 counter
 	);
 
+	struct VariableBuildResult final {
+		/**
+		 * @brief The empty storage of the variable together with the function initializing it.
+		 */
+		helios::HOUTUnit hout_unit;
+
+		/**
+		 * @brief Symbol of the initializing function, to be called in statement order.
+		 */
+		helios::SymID initializer_function;
+	};
+
 	/**
-	 * @brief Create an ephemeral REPL/script-style statement module with optional parent linkage.
+	 * @brief Build the empty storage and the initializing function of a global variable
+	 * declaration.
+	 *
+	 * A top-level `var` is split in two, so that its initial value is constructed in statement
+	 * order instead of before the entry point runs together with every other global.
+	 *
+	 * @param statement_info Classified variable statement.
+	 * @param counter Unique wrapper counter used in generated symbol names.
+	 */
+	std::expected<VariableBuildResult, std::string> buildVariableWrapper(
+		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
+	);
+
+	/**
+	 * @brief Create a synthetic REPL/script-style statement module with optional parent linkage.
 	 *
 	 * This is the shared module-construction primitive used for top-level sequential
 	 * statement execution semantics in REPL and script compilation.
+	 * The module is named `<module_name_prefix><session_id>_<line_counter>`.
 	 *
 	 * @warning Do NOT call this function from inside query computations.
 	 */
-	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
+	base::Ref<frontend::ModuleTree> createSyntheticChainedStatementModule(
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,
-		std::string_view                          module_name_prefix
+		std::string_view                          module_name_prefix,
+		ReplSessionID                             session_id
 	);
 
 	/**
@@ -122,11 +169,19 @@ namespace compiler::repl {
 	/**
 	 * @brief Create a temporary HOUT unit that exposes a single executable wrapper function.
 	 */
-	helios::HOUTUnit makeExecutableHOUTUnit(const helios::HOUTFunction& wrapper_function);
+	std::expected<helios::HOUTUnit, std::string> makeExecutableHOUTUnit(
+		query::Context&                              ctx,
+		const helios::HOUTFunction&                  wrapper_function,
+		base::Optional<CRef<helios::HOUTGlobalData>> additional_global_var = {}
+	);
 
 	/**
 	 * @brief Retrieve the module HOUT for a definition statement module.
+	 * @return An error when the module failed to compile. The callers are not inside a query that
+	 * catches query failures, so the failure has to be reported instead of thrown.
 	 */
-	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id);
+	std::expected<base::CRef<helios::HOUTUnit>, std::string> getDefinitionHOUTUnit(
+		query::Context& ctx, frontend::ModuleID module_id
+	);
 
 }  // namespace compiler::repl

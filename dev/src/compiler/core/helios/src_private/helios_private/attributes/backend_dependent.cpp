@@ -1,11 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "backend_dependent.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios_private/hout/hout.hpp>
 #include <helios_private/scopes/scopes.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
@@ -19,7 +25,7 @@ namespace compiler::helios {
 		for (auto s: symbols)
 			if (name(s) == searched_name && hasAttribute<Attr>(s)) results.push_back(s);
 		if (results.size() > 1) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
+			ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
 				"Multiple symbols with name `",
 				searched_name,
 				"` and attribute `",
@@ -29,7 +35,7 @@ namespace compiler::helios {
 			query::throwFailed();
 		}
 		if (results.empty()) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
+			ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
 				"No symbol with name `",
 				searched_name,
 				"` and attribute `",

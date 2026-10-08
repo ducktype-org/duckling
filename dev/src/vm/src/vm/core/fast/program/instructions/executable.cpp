@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 // @note This file is relevant only in tailcall mode
 #include "executable.hpp"
 
@@ -23,7 +29,7 @@ using namespace vm::fast;
 				MUST_TAIL return frame->ip->id(state, local_stack, frame, thread, *frame->ip); \
 			}                                                                                  \
 		}
-	#include <vm/core/fast/program/instructions/instruction_definitions.hpp>
+	#include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 	#undef HANDLE_INSTR
 
 // NOLINTNEXTLINE(modernize-concat-nested-namespaces) inner `maker` namespace comes from the include
@@ -32,7 +38,7 @@ namespace vm::fast::exec {
 	#define ID_TYPE()               vm::fast::DispatcherFunction
 	#define MAKE_ID_FROM_NAME(NAME) dispatcher_##NAME
 	#define MAKE_MAKERS_JUST_IMPL
-	#include "instr_structures.hpp"
+	#include "instr_structures.def.hpp"
 }
 
 

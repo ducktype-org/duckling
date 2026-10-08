@@ -1,18 +1,43 @@
-use crate::{DuckContext, QuackResult, qp_bail};
-use clap::{ArgMatches, Command};
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
+use clap::{Arg, ArgMatches, Command};
+
+use crate::duck::driver::cli_ext::{flag, subcommand};
+use crate::quackpack::core::DependencyKind;
+use crate::quackpack::subcommands::remove::{RemoveOptions, remove};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `remove` subcommand.
 pub fn get_parser() -> Command {
     subcommand("remove")
-        .about("Remove the packages from the current venv")
-        .arg(flag("global", "Remove the packages from the global venv instead").short('g'))
-        .add_dev("Remove dev dependencies")
-        .add_packages("Packages to remove")
+        .about("Remove a dependency from the current venv")
+        .arg(flag("global", "Remove a dependency from the global venv instead").short('g'))
+        .arg(flag("dev", "Remove a dev dependency instead"))
+        .arg(
+            Arg::new("name")
+                .help("Name of the dependency to remove")
+                .required(true),
+        )
 }
 
 /// Logic for executing the `remove` subcommand.
-pub fn execute(_ctx: &DuckContext, _matches: &ArgMatches) -> QuackResult<()> {
-    qp_bail!("implement remove")
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+    let name = matches.get_one::<String>("name").expect("required by clap");
+    let global = matches.get_flag("global");
+    let kind = determine_kind(matches);
+    let options = RemoveOptions { name, global, kind };
+    remove(ctx, options)
+}
+
+/// Determine the kind of the dependency to remove.
+fn determine_kind(matches: &ArgMatches) -> DependencyKind {
+    if matches.get_flag("dev") {
+        DependencyKind::Dev
+    } else {
+        DependencyKind::Normal
+    }
 }

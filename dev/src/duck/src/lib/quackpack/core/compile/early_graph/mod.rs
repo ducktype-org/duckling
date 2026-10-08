@@ -1,13 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Dependency DAG and dictionary with all parsed [`CompilerPackage`]s.
 
 use std::collections::{HashMap, HashSet};
 
-use itertools::Itertools;
-
+use crate::QuackResult;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
-use crate::quackpack::core::compile::missing_depenendcy_in_graph_message;
+use crate::quackpack::core::compile::missing_depenendcy_in_graph;
 use crate::quackpack::core::identity::Identity;
-use crate::{QuackError, QuackResult};
 
 pub mod creating_graph;
 pub mod modifying_graph;
@@ -28,14 +32,17 @@ impl PackagesSet {
     pub fn package(&self, name: &Identity) -> &CompilerPackage {
         self.inner
             .get(name)
-            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*name)))
+            .unwrap_or_else(|| missing_depenendcy_in_graph(*name, self))
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
     pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
         self.inner
             .get_mut(name)
-            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*name)))
+            // @TODO: #3318 Because of borrows, we can't pass `self`.
+            // Although this requires rust to change their borrow checker, which, at the time of
+            // writing this, has only been enabled on nightly.
+            .unwrap_or_else(|| panic!("missing dependency `{name}` in the graph"))
     }
 
     /// Get the underlying packages' map.
@@ -76,7 +83,7 @@ impl DependencyGraph {
     pub fn dependencies_for_package(&self, package: &Identity) -> &DependencyNode {
         self.graph
             .get(package)
-            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*package)))
+            .unwrap_or_else(|| missing_depenendcy_in_graph(*package, self))
     }
 
     /// Get the iterator over all entries in this graph.

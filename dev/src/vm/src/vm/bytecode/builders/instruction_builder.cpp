@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "instruction_builder.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -53,7 +59,7 @@ namespace vm::code::builders {
 #define HANDLE_INSTR(opcode) \
 	std::make_pair(base::StrID(#opcode), fromArgs<VM_INSTR_FROM_NAME(opcode)>),
 		static std::unordered_map name_to_factory{
-#include <vm/bytecode/instruction_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.def.hpp>
 		};
 #undef HANDLE_INSTR
 

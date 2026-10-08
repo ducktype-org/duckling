@@ -1,10 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/errors.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <query_framework/query_int.hpp>
@@ -38,6 +45,7 @@ namespace compiler::helios::code {
 		query::Context&                     ctx,
 		pst::AccessLocked<pst::ExprElement> element,
 		tsh::SymbolType<>                   expected_type,
-		CoercionErrorOverrides              error_overrides = {}
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		CoercionErrorOverrides              error_overrides      = {}
 	);
 }

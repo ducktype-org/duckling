@@ -1,4 +1,10 @@
-use std::ffi::OsString;
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+use std::ffi::{OsStr, OsString};
 
 use clap::{Arg, ArgMatches, Command, value_parser};
 
@@ -45,6 +51,10 @@ pub fn get_parser() -> Command {
                 .num_args(0..)
                 .value_parser(value_parser!(OsString)),
         )
+        .arg(flag(
+            "shared-artifacts",
+            "Compile dependencies where their code is located",
+        ))
 }
 
 /// Logic for executing the `run` subcommand.
@@ -54,14 +64,16 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
     let features = features_from_matches(matches, pcx.package().get_package());
     let profile = profile_from_matches(matches);
-    let args: Vec<OsString> = matches
+    let args: Vec<&OsStr> = matches
         .get_many::<OsString>("args")
-        .map(|values| values.cloned().collect())
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .map(OsString::as_os_str)
+        .collect();
     let opts = RunOptions {
         pcx,
         used_features: features,
         profile,
+        shared: matches.get_flag("shared-artifacts"),
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
         strict_errors: matches.get_flag("external-errors"),

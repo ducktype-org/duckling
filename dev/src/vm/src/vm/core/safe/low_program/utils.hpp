@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "micro_instruction_args.hpp"
@@ -16,24 +22,24 @@
 /// Tags for use as template parameters.
 namespace vm::low::instruction_tags {
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR)                           \
-	struct Op_##INSTR {                                           \
+	struct Op_##INSTR final {                                     \
 		using ArgTypes                      = std::tuple<>;       \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR; \
 	};
 
 #define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)                     \
-	struct Op_##INSTR {                                           \
+	struct Op_##INSTR final {                                     \
 		using ArgTypes                      = std::tuple<ARG0>;   \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR; \
 	};
 
 #define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                   \
-	struct Op_##INSTR {                                               \
+	struct Op_##INSTR final {                                         \
 		using ArgTypes                      = std::tuple<ARG0, ARG1>; \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR;     \
 	};
 
-#include "micro_instruction_definitions.hpp"
+#include "micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR_0ARGS
 #undef HANDLE_MICRO_INSTR_1ARGS
 #undef HANDLE_MICRO_INSTR_2ARGS
@@ -63,7 +69,7 @@ namespace vm::low::instruction_tags {
 	template<>                                                                             \
 	inline constexpr bool IS_ARG_LABEL<Op_##INSTR, 1> = std::same_as<ARG1, opargs::Label>;
 
-#include "micro_instruction_definitions.hpp"
+#include "micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR_0ARGS
 #undef HANDLE_MICRO_INSTR_1ARGS
 #undef HANDLE_MICRO_INSTR_2ARGS
@@ -81,7 +87,7 @@ namespace vm::low::instruction_tags {
 	inline constexpr auto IS_ARGUMENT_LABEL = std::to_array<std::array<bool, 2>>({
 #define HANDLE_MICRO_INSTR(INSTR) \
 	{ detail::IS_ARG_LABEL<Op_##INSTR, 0>, detail::IS_ARG_LABEL<Op_##INSTR, 1> },
-#include "micro_instruction_definitions.hpp"
+#include "micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR
 	});
 }

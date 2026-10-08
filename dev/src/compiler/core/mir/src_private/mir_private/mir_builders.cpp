@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "mir_builders.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -39,7 +45,10 @@ namespace compiler::mir {
 		});
 	}
 
-	BlockBuilder::BlockBuilder(usize vector_index): id(vector_index) {}
+	BlockBuilder::BlockBuilder(usize vector_index, const std::string_view debug_name):
+		  id(vector_index) {
+		if (not debug_name.empty()) this->debug_name.emplace(base::StrID(debug_name));
+	}
 
 	[[nodiscard]]
 	Block BlockBuilder::build() const {
@@ -52,6 +61,7 @@ namespace compiler::mir {
 			.id           = id,
 			.instructions = std::move(instructions),
 			.terminator   = terminator.value(),
+			.debug_name   = debug_name,
 		};
 	}
 
@@ -160,6 +170,7 @@ namespace compiler::mir {
 			std::move(function_blocks),
 			std::move(block_order),
 			std::move(local_list).toConstData(),
+			next_local_id,
 			std::move(lifetime_scope_tree),
 			no_lifetime_scope,
 			helios_symbol,
@@ -270,9 +281,9 @@ namespace compiler::mir {
 	}
 
 	[[nodiscard]]
-	BlockBuilderRef FunctionBuilder::newBlock() {
+	BlockBuilderRef FunctionBuilder::newBlock(const std::string_view debug_name) {
 		auto vector_index = blocks.size();
-		blocks.emplaceBack(BlockBuilder{ vector_index });
+		blocks.emplaceBack(BlockBuilder{ vector_index, debug_name });
 		CORE_ASSERT(u64(blocks.last()->getID()) == blocks.lastIndex(), "Bad block id");
 		return blocks.last();
 	}

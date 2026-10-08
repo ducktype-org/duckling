@@ -1,7 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "lexer_class.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
+#include <diagnostic/message.hpp>
 #include <logger/logger.hpp>
 #include <unicode_classification/classifications.hpp>
 
@@ -9,8 +14,8 @@ namespace lexer {
 
 	using Class = unicode::Classifications;
 
-	class TokenStartError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class TokenStartError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -18,11 +23,11 @@ namespace lexer {
 		}
 
 	public:
-		TokenStartError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		TokenStartError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedCommentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnclosedCommentError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -30,12 +35,11 @@ namespace lexer {
 		}
 
 	public:
-		UnclosedCommentError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		UnclosedCommentError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedStringEolError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnclosedStringEolError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -44,11 +48,11 @@ namespace lexer {
 
 	public:
 		UnclosedStringEolError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedStringEofError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnclosedStringEofError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -57,11 +61,11 @@ namespace lexer {
 
 	public:
 		UnclosedStringEofError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedCharEolError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnclosedCharEolError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -69,12 +73,11 @@ namespace lexer {
 		}
 
 	public:
-		UnclosedCharEolError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		UnclosedCharEolError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedCharEofError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnclosedCharEofError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -82,12 +85,11 @@ namespace lexer {
 		}
 
 	public:
-		UnclosedCharEofError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		UnclosedCharEofError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class EmptyCharError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class EmptyCharError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -95,11 +97,11 @@ namespace lexer {
 		}
 
 	public:
-		EmptyCharError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		EmptyCharError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MultiCharacterCharError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MultiCharacterCharError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -108,11 +110,11 @@ namespace lexer {
 
 	public:
 		MultiCharacterCharError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnknownLiteralTypeSpecifierError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnknownLiteralTypeSpecifierError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -121,11 +123,11 @@ namespace lexer {
 
 	public:
 		UnknownLiteralTypeSpecifierError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnmatchedBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnmatchedBracketError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -133,8 +135,8 @@ namespace lexer {
 		}
 
 	public:
-		class EndBlock final: public dia_int::MessageWithCodeFragmentAndCause {
-			dia_int::Metadata getMetadata() const final {
+		class EndBlock final: public dia::MessageWithCodeFragmentAndCause {
+			dia::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "note",
 					     .family        = "lexer",
@@ -143,17 +145,17 @@ namespace lexer {
 
 		public:
 			EndBlock(dia::SourcePosition pos, UChar32 closing_bracket):
-				  dia_int::MessageWithCodeFragmentAndCause(pos) {
+				  dia::MessageWithCodeFragmentAndCause(pos) {
 				std::string s;
 				icu::UnicodeString(closing_bracket).toUTF8String(s);
-				addArgument<dia_int::TextArgument>("closing_bracket", s);
+				addArgument<dia::TextArgument>("closing_bracket", s);
 			}
 		};
 
 		UnmatchedBracketError(
 			dia::SourcePosition start_pos, dia::SourcePosition expected_pos, UChar32 closing_bracket
 		):
-			  dia_int::MessageWithCodeFragmentAndCause(start_pos) {
+			  dia::MessageWithCodeFragmentAndCause(start_pos) {
 			addAttachedMessage(makeBox<EndBlock>(expected_pos, closing_bracket));
 		}
 	};

@@ -1,12 +1,17 @@
-#include "source.hpp"
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/message.hpp>
+#include "source.hpp"
 
 #include <base/misc/convert.hpp>
 #include <base/misc/int_conv.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 #include <filesystem/encoding.hpp>
 #include <lexer/char.hpp>
@@ -15,8 +20,8 @@
 
 namespace tokenizer {
 
-	class AsciiByteError final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class AsciiByteError final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -25,17 +30,17 @@ namespace tokenizer {
 
 	public:
 		AsciiByteError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte) {
-			dia_int::CodeLocationArgument::FileLocation loc{
+			dia::CodeLocationArgument::FileLocation loc{
 				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
 			};
-			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
-			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
-			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
+			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
 		}
 	};
 
-	class Utf8UnexpectedContinuationError final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class Utf8UnexpectedContinuationError final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -46,17 +51,17 @@ namespace tokenizer {
 		Utf8UnexpectedContinuationError(
 			Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte
 		) {
-			dia_int::CodeLocationArgument::FileLocation loc{
+			dia::CodeLocationArgument::FileLocation loc{
 				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
 			};
-			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
-			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
-			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
+			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
 		}
 	};
 
-	class Utf8BadByteStartError final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class Utf8BadByteStartError final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -65,17 +70,17 @@ namespace tokenizer {
 
 	public:
 		Utf8BadByteStartError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte) {
-			dia_int::CodeLocationArgument::FileLocation loc{
+			dia::CodeLocationArgument::FileLocation loc{
 				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
 			};
-			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
-			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
-			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
+			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
 		}
 	};
 
-	class Utf8BadNonContinuationError final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class Utf8BadNonContinuationError final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -86,18 +91,18 @@ namespace tokenizer {
 		Utf8BadNonContinuationError(
 			Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte, usize code_point_start
 		) {
-			dia_int::CodeLocationArgument::FileLocation loc{
+			dia::CodeLocationArgument::FileLocation loc{
 				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
 			};
-			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
-			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
-			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
-			addArgument<dia_int::TextArgument>("code_point_start", std::to_string(code_point_start));
+			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
+			addArgument<dia::TextArgument>("code_point_start", std::to_string(code_point_start));
 		}
 	};
 
-	class Utf8BadEofError final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class Utf8BadEofError final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -106,17 +111,17 @@ namespace tokenizer {
 
 	public:
 		Utf8BadEofError(Ref<tokenizer::TokenSource> file, usize byte, usize code_point_start) {
-			dia_int::CodeLocationArgument::FileLocation loc{
+			dia::CodeLocationArgument::FileLocation loc{
 				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
 			};
-			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
-			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
-			addArgument<dia_int::TextArgument>("code_point_start", std::to_string(code_point_start));
+			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia::TextArgument>("code_point_start", std::to_string(code_point_start));
 		}
 	};
 
-	class Utf8UndefinedCodepointError final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class Utf8UndefinedCodepointError final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "lexer",
@@ -125,12 +130,12 @@ namespace tokenizer {
 
 	public:
 		Utf8UndefinedCodepointError(Ref<tokenizer::TokenSource> file, usize byte, UChar32 value) {
-			dia_int::CodeLocationArgument::FileLocation loc{
+			dia::CodeLocationArgument::FileLocation loc{
 				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
 			};
-			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
-			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
-			addArgument<dia_int::TextArgument>(
+			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia::TextArgument>(
 				"value", base::toHexString(base::safeIntConv<usize>(value))
 			);
 		}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/hout/hout.hpp>
@@ -12,20 +18,11 @@ namespace compiler::helios::defgen {
 	 */
 	SymID toStringSymForType(query::Context& ctx, tsh::AbstractType type);
 
-
 	/**
 	 * @brief Get the symbol of the generated toString method for a type.
 	 * Note that this symbol should not be used if the user implemented it's own type.
 	 */
 	SymID generatedToStringSymForType(query::Context& ctx, tsh::AbstractType type);
-
-	/**
-	 * @brief Internal utility function to get a String HOUT expression
-	 * from a string literal value.
-	 * @param ctx The query context.
-	 * @param value The string literal value.
-	 */
-	Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value);
 
 	/**
 	 * @brief Utility function to get the append String method symbol on String class.

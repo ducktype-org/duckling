@@ -1,7 +1,13 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import sys
 from dap_client import DAPTestClient
 
-client = DAPTestClient(program_name="../examples/while_true.dbc")
+client = DAPTestClient()
 
 try:
     # Startup phase
@@ -22,14 +28,20 @@ try:
     sys.stderr.write("--> SUCCESS: VM successfully paused (interleaving handled)!\n")
     sys.stderr.flush()
 
+    frames = client.get_frames()
+    f0 = frames[0]
+    line = f0.get("line")
+
     # Try 'next' while paused (expecting successful response acknowledgment)
     next_seq = client.send_next()
     client.wait_for(responses=[next_seq])
     sys.stderr.write("--> SUCCESS: Step 'next' successfully acknowledged!\n")
     sys.stderr.flush()
 
-    # @TODO: #2558 Add check if the step was really done by stackTrace request
-    # Implemented when handling DAP memory requests
+    frames = client.get_frames()
+    f0 = frames[0]
+    line2 = f0.get("line")
+    assert(line2 == line + 1 or (line == 6 and line2 == 5))
 
 finally:
     client.close()

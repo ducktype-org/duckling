@@ -1,8 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "context.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/logger.hpp>
-
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/logger.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_state.hpp>
 
@@ -23,31 +28,31 @@ namespace query {
 
 	void Context::setAreWeInsideQuery(bool value) { current_thread_inside_query = value; }
 
-	void Context::logInt(Box<dia_int::MessageBase> diagnostic) {
+	void Context::logInt(Box<dia::MessageBase> diagnostic) {
 		assertActive();
 		main_query_state.logDiagnosticForNode(my_node, std::move(diagnostic));
 	}
 
-	void Context::moveDiagnosticsFrom(dia_int::Logger& logger) {
+	void Context::moveDiagnosticsFrom(dia::Logger& logger) {
 		assertActive();
 		main_query_state.logDiagnosticFromLoggerForNode(my_node, logger);
 	}
 
-	void Context::collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output) {
+	void Context::collectAllDiagnostic(std::vector<CRef<dia::dia_args::Diagnostic>>& output) {
 		for (auto& [_, logger]: *main_query_state.getDiagnosticLoggers())
 			logger->collectDiagnostics(output);
 	}
 
 	void Context::collectAndUpdateAllDiagnostic(
-		std::vector<CRef<dia_int::dia_args::Diagnostic>>& output,
-		const dia_int::UpdatePositionFunc&                update_func
+		std::vector<CRef<dia::dia_args::Diagnostic>>& output,
+		const dia::UpdatePositionFunc&                update_func
 	) {
 		for (auto& [_, logger]: *main_query_state.getDiagnosticLoggers())
 			logger->collectAndUpdatePositionDiagnostics(output, update_func);
 	}
 
-	Box<dia_int::Logger> Context::dumpToOneLoggerAndClear() {
-		Box<dia_int::Logger>          combined_logger = makeBox<dia_int::Logger>();
+	Box<dia::Logger> Context::dumpToOneLoggerAndClear() {
+		Box<dia::Logger>              combined_logger = makeBox<dia::Logger>();
 		std::vector<internal::NodeID> node_ids;
 		for (auto& [node, logger]: *main_query_state.getDiagnosticLoggers()) {
 			combined_logger->logFromLogger(*logger);

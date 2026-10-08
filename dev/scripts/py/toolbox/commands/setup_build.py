@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from ..impl.setup_build import (setup_build_impl, LLVM_TOOLS)
 from .helpers import (
     build_system,
@@ -6,6 +12,7 @@ from .helpers import (
     cc_compiler,
 )
 from ..impl.helpers import (
+    JIT_options,
     PromptForCoverageIfBuildNotOptimised,
     default_compiler_from_ctx,
     default_linker_from_ctx,
@@ -82,12 +89,14 @@ def configure_presets(ctx, param, value):
     ),
 )
 @option(
-    "--enable-jit/--no-enable-jit",
-    prompt="Enable JIT",
+    "--jit",
     help="Whether or not to enable JIT compilation.",
-    type=bool,
-    default=False,
-    is_flag=True,
+    default="No",
+    callback=lambda ctx, param, value: JIT_options[value.replace('-', '_').upper()],
+    type=Choice(
+        ["No", "LLVM-only", "Yes"],
+        case_sensitive=False,
+    )
 )
 # @TODO check if it is necessary to get compiler path from context
 @cxx_compiler(

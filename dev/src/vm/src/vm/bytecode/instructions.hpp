@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @brief This file contains structures representing VM instructions.
  * Each instruction has a corresponding structure with name `Op_{instruction_name}`.
@@ -41,13 +47,13 @@
 namespace vm::code {
 	constexpr usize INSTR_COUNT = 1  // `instructions::Comment` treated separately
 #define HANDLE_INSTR(name) +1
-#include "instruction_definitions.hpp"
+#include "instruction_definitions.def.hpp"
 #undef HANDLE_INSTR
 		;
 
 	enum class OpCode : u64 {
 #define HANDLE_INSTR(name) Op_##name,
-#include "instruction_definitions.hpp"
+#include "instruction_definitions.def.hpp"
 #undef HANDLE_INSTR
 		Comment
 	};
@@ -107,7 +113,7 @@ namespace vm::code {
 		}                                                                                           \
 	};
 
-#include <vm/bytecode/instruction_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.def.hpp>
 
 #undef HANDLE_INSTR_ARGS
 
@@ -150,7 +156,7 @@ namespace vm::code {
 	// Be careful when editing: notice that many things have to be separately defined
 	// for `Comment` as it's not an instruction defined in the definition file.
 	// Per-instruction member definitions live in `instructions.cpp` — keeping them
-	// (and the repeated `instruction_definitions.hpp` expansions) out of this header
+	// (and the repeated `instruction_definitions.def.hpp` expansions) out of this header
 	// saves a lot of compilation memory and time in every including TU.
 	class Instruction final {
 	public:
@@ -202,7 +208,7 @@ namespace vm::code {
 	case VM_OPCODE_FROM_NAME(name): \
 		return std::invoke(std::forward<V>(visitor), self.template get<VM_INSTR_FROM_NAME(name)>());
 				break;
-#include "instruction_definitions.hpp"
+#include "instruction_definitions.def.hpp"
 #undef HANDLE_INSTR
 			case OpCode::Comment:
 				return std::invoke(
@@ -225,7 +231,7 @@ namespace vm::code {
 			Alts() {}
 
 #define HANDLE_INSTR(name) VM_INSTR_FROM_NAME(name) op_##name;
-#include "instruction_definitions.hpp"
+#include "instruction_definitions.def.hpp"
 #undef HANDLE_INSTR
 			instructions::Comment comment;
 		} alts;

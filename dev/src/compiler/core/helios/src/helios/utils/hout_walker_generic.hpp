@@ -1,9 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/symbol_id.hpp>
+
+#include <base/collections/optional.hpp>
 
 #include <vector>
 
@@ -142,19 +150,31 @@ namespace compiler::helios::code {
 			for (const auto& comparison: e.comparisons) walk(*comparison);
 		}
 
-		void visitParenthesisExpr(const ParenthesisExpr& e) override {
-			handler(e);
-			walk(*e.inner);
-		}
-
 		void visitTupleExpr(const TupleExpr& e) override {
 			handler(e);
 			for (const auto& element: e.elements) walk(*element);
 		}
 
+		void visitCreateAggregateExpr(const CreateAggregateExpr& e) override {
+			handler(e);
+			for (const auto& value: e.values) walk(*value);
+			if_opt_some(e.per_element_body, body) walkBlock(*body);
+		}
+
 		void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr& e) override {
 			handler(e);
 			for (const auto& subtype: e.subtypes) walk(*subtype);
+		}
+
+		void visitVariantConstructExpr(const VariantConstructExpr& e) override {
+			handler(e);
+			walk(*e.inner);
+		}
+
+		void visitMatchExpr(const MatchExpr& e) override {
+			handler(e);
+			walk(*e.subject);
+			for (const auto& match_case: e.cases) walk(*match_case.result);
 		}
 
 		void visitCallExpr(const CallExpr& e) override {
@@ -184,6 +204,11 @@ namespace compiler::helios::code {
 			walk(*e.inner);
 		}
 
+		void visitPtrOfExpr(const PtrOfExpr& e) override {
+			handler(e);
+			walk(*e.inner);
+		}
+
 		void visitDerefExpr(const DerefExpr& e) override {
 			handler(e);
 			walk(*e.inner);
@@ -199,16 +224,9 @@ namespace compiler::helios::code {
 			walk(*e.value_expr);
 		}
 
-		void visitListPushExpr(const ListPushExpr& e) override {
+		void visitBlockExpr(const BlockExpr& e) override {
 			handler(e);
-			walk(*e.list);
-			walk(*e.element);
-		}
-
-		void visitListPopExpr(const ListPopExpr& e) override {
-			handler(e);
-			walk(*e.list);
-			walk(*e.count);
+			walk(*e.block);
 		}
 
 		void visitMoveExpr(const MoveExpr& e) override {

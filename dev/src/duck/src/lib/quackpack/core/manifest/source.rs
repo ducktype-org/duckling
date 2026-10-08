@@ -1,4 +1,11 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Dependencies' sources and interning.
+use std::fmt;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -18,21 +25,21 @@ pub enum SourceKind {
 }
 
 impl SourceKind {
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         matches!(self, SourceKind::Registry)
     }
 
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         matches!(self, SourceKind::Local)
     }
 
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         matches!(self, SourceKind::Git(..))
     }
 
-    pub fn maybe_reference(&self) -> Option<GitReference> {
+    pub fn maybe_reference(self) -> Option<GitReference> {
         if let SourceKind::Git(reference) = self {
-            Some(*reference)
+            Some(reference)
         } else {
             None
         }
@@ -77,32 +84,32 @@ impl Source {
     }
 
     /// Get an [`InternedUrl`] of this [`Source`].
-    pub fn url(&self) -> InternedUrl {
+    pub fn url(self) -> InternedUrl {
         self.url
     }
 
     /// Get a [`SourceKind`] of this [`Source`].
-    pub fn kind(&self) -> &SourceKind {
-        &self.kind
+    pub fn kind(self) -> SourceKind {
+        self.kind
     }
 
     /// Helper for `source.kind().is_registry()`.
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         self.kind.is_registry()
     }
 
     /// Helper for `source.kind().is_git()`.
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         self.kind.is_git()
     }
 
     /// Helper for `source.kind().is_local()`.
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         self.kind.is_local()
     }
 
     /// Helper for `source.kind().maybe_reference()`.
-    pub fn maybe_reference(&self) -> Option<GitReference> {
+    pub fn maybe_reference(self) -> Option<GitReference> {
         self.kind.maybe_reference()
     }
 
@@ -133,22 +140,22 @@ pub enum GitReference {
 
 impl GitReference {
     /// Helper around `matches!(self, GitReference::Default)`.
-    pub fn is_default(&self) -> bool {
+    pub fn is_default(self) -> bool {
         matches!(self, GitReference::Default)
     }
 
     /// Helper around `matches!(self, GitReference::Tag(..))`.
-    pub fn is_tag(&self) -> bool {
+    pub fn is_tag(self) -> bool {
         matches!(self, GitReference::Tag(..))
     }
 
     /// Helper around `matches!(self, GitReference::Branch(..))`.
-    pub fn is_branch(&self) -> bool {
+    pub fn is_branch(self) -> bool {
         matches!(self, GitReference::Branch(..))
     }
 
     /// Helper around `matches!(self, GitReference::Rev(..))`.
-    pub fn is_rev(&self) -> bool {
+    pub fn is_rev(self) -> bool {
         matches!(self, GitReference::Rev(..))
     }
 }
@@ -211,5 +218,21 @@ impl TryFrom<Source> for registry::DependencySource {
             }
         };
         Ok(Self { inner })
+    }
+}
+
+impl fmt::Display for Source {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let url = self.url;
+        match self.kind {
+            SourceKind::Registry => write!(f, "registry+{url}"),
+            SourceKind::Local => write!(f, "local+{url}"),
+            SourceKind::Git(git_reference) => match git_reference {
+                GitReference::Default => write!(f, "git+{url}"),
+                GitReference::Tag(tag) => write!(f, "git+tag:{tag}+{url}"),
+                GitReference::Branch(branch) => write!(f, "git+branch:{branch}+{url}"),
+                GitReference::Rev(rev) => write!(f, "git+sha:{rev}+{url}"),
+            },
+        }
     }
 }

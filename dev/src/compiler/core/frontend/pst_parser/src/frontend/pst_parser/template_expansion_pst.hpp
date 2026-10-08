@@ -14,20 +14,32 @@ namespace pst {
 	private:
 		TemplateExpansionPST(Box<Element>&& el, hashing::ComponentHash&& hash_ctx):
 			  PST<Element>(std::move(hash_ctx)) {
-			assignRoot(std::move(el));
+			PST<Element>::assignRoot(std::move(el));
 
 			PST<Element>::finishGeneratedPST();
 		}
 
 	public:
+		/**
+		 * @brief A custom makeBox with extended visibility.
+		 */
+		template<typename... Args>
+		static auto makeTemplateExpansionPstBox(Args&&... args) {
+			return Box<TemplateExpansionPST>::fromPointer(new TemplateExpansionPST(
+				std::forward<Args>(args)...
+			));
+		}
+
 		static Box<TemplateExpansionPST> fromElement(
 			Box<Element>&& el, hashing::ComponentHash&& hash_ctx = {}
 		) {
-			auto out = makeBox<TemplateExpansionPST>(std::move(el), std::move(hash_ctx));
+			auto out = makeTemplateExpansionPstBox(std::move(el), std::move(hash_ctx));
 
 			return out;
 		}
 
 		[[nodiscard]] bool hasErrors() const override { return false; }
+
+		~TemplateExpansionPST() final = default;
 	};
 }

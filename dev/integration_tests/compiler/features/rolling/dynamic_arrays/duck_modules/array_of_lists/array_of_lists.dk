@@ -1,0 +1,53 @@
+class Point {
+    x: i64 = 1;
+    y: i64 = 2;
+}
+
+fun printPointList(l: ref List[Point]) -> () = {
+    var i = 0;
+    while (i < l.length()) {
+        builtin_output_i64(l.at(i).x);
+        builtin_output_i64(l.at(i).y);
+        i = i + 1;
+    }
+}
+
+fun arrayOfListsTest() -> () = {
+    # @TODO: #3349 Write `List[Point][2]` directly once a bake can be indexed.
+    const PointList = List[Point];
+    var arrayOfLists: PointList[2];
+
+    arrayOfLists[0].push(Point(1, 2));
+    arrayOfLists[0].push(Point(3, 4));
+    arrayOfLists[1].push(Point(5, 6));
+    arrayOfLists[1].push(Point(7, 8));
+    arrayOfLists[1].push(Point(9, 10));
+
+    builtin_output_i64(arrayOfLists[0].length()); # 2
+    builtin_output_i64(arrayOfLists[1].length()); # 3
+
+    var p1 = arrayOfLists[0].at(1);
+    builtin_output_i64(p1.x); # 3
+    builtin_output_i64(p1.y); # 4
+
+    var p2 = arrayOfLists[1].at(2);
+    builtin_output_i64(p2.x); # 9
+    builtin_output_i64(p2.y); # 10
+
+    arrayOfLists[0].at(0).x = 100;
+    builtin_output_i64(arrayOfLists[0].at(0).x); # 100
+
+    var i = 0;
+    while (i < 2) {
+        builtin_output_i64(i as i64);
+        printPointList(&arrayOfLists[i]);
+        i = i + 1;
+    }
+}
+
+fun main() -> i64 = {
+    arrayOfListsTest();
+
+    return 0;
+}
+

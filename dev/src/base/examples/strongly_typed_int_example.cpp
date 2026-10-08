@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <iostream>
@@ -16,7 +22,7 @@ int main() {
 	// weight *= weight; // error
 
 	int raw_value = int(weight);  // ok, explicit
-	(void) raw_value;             // Read for the cpp-linter
-	raw_value = int(value);       // ok, explicit
+	std::ignore   = raw_value;    // Read for the cpp-linter
+	raw_value     = int(value);   // ok, explicit
 	std::cout << raw_value << '\n';
 }

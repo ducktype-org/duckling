@@ -1,6 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
-#include <vm/core/vmvalue/vmvalueref.hpp>
+#include <vm/core/vmvalue/ivmvalueref.hpp>
 #include <vm/debugger/debugger.hpp>
 #include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
@@ -52,18 +58,18 @@ namespace vm::debugger::debug_adapter {
 
 		u64 total_frames = 0;
 
-		struct VarInfo {
-			VMValueRef var;
+		struct VarInfo final {
+			SharedBox<IVMValueRef> var;
 			// reference to childs, 0 if not necessary
 			u64 var_ref{};
 		};
 
 		using VariablesReferenceState
-			= std::variant<u64, VMValueRef, std::map<std::string, VarInfo>>;
+			= std::variant<u64, SharedBox<IVMValueRef>, std::map<std::string, VarInfo>>;
 		// vector of variables references
 		std::vector<VariablesReferenceState> variables;
 
-		struct SourcePositionInfo {
+		struct SourcePositionInfo final {
 			std::string file_path;
 			u64         start_line   = 0;
 			u64         start_column = 0;
@@ -71,7 +77,7 @@ namespace vm::debugger::debug_adapter {
 			u64         end_column   = 0;
 		};
 
-		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo();
+		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo(usize frame_idx);
 
 		/**
 		 * @brief Retrieves the variables map and function identifier for a specific stack frame.
@@ -84,7 +90,7 @@ namespace vm::debugger::debug_adapter {
 		 * @note **Thread Safety:** Must be called only by functions holding `variables_mutex`.
 		 */
 		std::expected<std::map<std::string, VarInfo>, std::string> varRefFromVMValueRef(
-			VMValueRef& value
+			SharedBox<IVMValueRef>& value
 		);
 
 		// DAP I/O

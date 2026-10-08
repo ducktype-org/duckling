@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/pointers/box.hpp>
 #include <base/pointers/box_or_ref.hpp>
 #include <base/pointers/ref.hpp>
@@ -533,7 +539,7 @@ private:
 	struct FromStatefulDeleterByMove final {
 		FromStatefulDeleterByMove() = default;
 
-		FromStatefulDeleterByMove(StatefulDeleter<T>&& a) { (void) std::move(a); }
+		FromStatefulDeleterByMove(StatefulDeleter<T>&& a) { std::ignore = std::move(a); }
 
 		void del(T* ptr) { delete ptr; }
 	};
@@ -626,7 +632,7 @@ private:
 			ASSERT_EQUAL(from_box.getBox()->value, 11);
 
 			assertThrows<base::Panic>(
-				[&]() { (void) from_box.getRef(); }, "getRef() on Box variant should throw"
+				[&]() { std::ignore = from_box.getRef(); }, "getRef() on Box variant should throw"
 			);
 		}
 		ASSERT_EQUAL(BoxOrRefCounterBase::ctor_count, 1);
@@ -652,7 +658,7 @@ private:
 			ASSERT_EQUAL(from_ref.getRef().get(), static_cast<const BoxOrRefCounterBase*>(&obj));
 
 			assertThrows<base::Panic>(
-				[&]() { (void) from_ref.getBox(); }, "getBox() on Ref variant should throw"
+				[&]() { std::ignore = from_ref.getBox(); }, "getBox() on Ref variant should throw"
 			);
 		}
 		ASSERT_EQUAL(BoxOrRefCounterBase::ctor_count, 1);

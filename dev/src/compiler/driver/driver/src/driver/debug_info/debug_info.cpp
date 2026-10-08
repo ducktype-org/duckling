@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debug_info.hpp"
 
 #include <debug_info/debug_info_io.hpp>
@@ -58,8 +64,15 @@ namespace compiler::driver {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
+		/**
+		 * @brief The on-disk artifact name a DebugInfoForModule produces for a given stable hash.
+		 */
+		static std::string artifactName(query::QueryStableHash hash) {
+			return hash.toStringHex() + std::string(DEBUG_INFO_FINAL_EXTENSION);
+		}
+
 		static std::string outputArtifactName(const QKey& key) {
-			return key.queryStablePerfectHash().toStringHex().append(DEBUG_INFO_FINAL_EXTENSION);
+			return artifactName(key.queryStablePerfectHash());
 		}
 
 		static auto provide([[maybe_unused]] query::Context& ctx, const QKey& key) -> PResult {
@@ -96,7 +109,7 @@ namespace compiler::driver {
 			return output;
 		}
 
-		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
+		static auto loadFromDisk(const QKey& key) -> base::Optional<PResult> {
 			auto artifact_name = outputArtifactName(key);
 			auto collection    = getQueryArtifactsCollection();
 
@@ -106,10 +119,12 @@ namespace compiler::driver {
 			return *output_maybe.value();
 		}
 
-		static auto deleteFromDisc(const QKey& key) -> bool {
-			auto artifact_name = outputArtifactName(key);
+		/**
+		 * Deletes the on-disk debug-info artifact identified by its stable key hash.
+		 */
+		static auto deleteFromDisk(query::QueryStableHash hash) -> bool {
 			return getQueryArtifactsCollection()->deleteFileArtifact(
-				base::StrID(artifact_name.c_str())
+				base::StrID(artifactName(hash).c_str())
 			);
 		}
 	};

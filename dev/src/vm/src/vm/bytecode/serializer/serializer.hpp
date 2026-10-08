@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
@@ -23,6 +29,21 @@ namespace vm::code {
 	 * text representation.
 	 */
 	void serializeGlobal(const GlobalData& type, std::ostream& out);
+
+	/**
+	 * @brief Serializes an FFI function declaration into a parse-able by the DVM
+	 * text representation.
+	 * @note The resolved native symbol is runtime-only state and is not serialized.
+	 */
+	void serializeFFIFunction(const FFIFunction& function, std::ostream& out);
+
+	/**
+	 * @brief Serializes an FFI shared object declaration into a parse-able by the DVM
+	 * text representation.
+	 * @param object_file The exact string handed to `dlopen` - an absolute path or a bare
+	 * library name.
+	 */
+	void serializeObjectFile(const std::string& object_file, std::ostream& out);
 
 	/**
 	 * @brief Serializes code collection into a parse-able by the DVM

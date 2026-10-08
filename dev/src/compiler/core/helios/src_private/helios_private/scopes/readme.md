@@ -15,18 +15,7 @@ Note: This is mostly to list operations, see docs for details.
   Uses `QuerySymbolsInScope`.
 
 * `QueryLookupInScopeAndParents` -- Special REPL handling: at root scope, checks if module is a REPL module with a parent.
-  If yes, continues lookup in parent module's root scope, enabling symbol visibility across REPL statement history.
-
-# HELIOS Internal scope operations
-
-* `QueryLinkedScope` -- Returns a scope associated with given HELIOS Symbol in terms of lookup.
-  For example: 
-
-  * For namespaces it returns namespace body-scope
-  * For wildcard usings it returns `QueryLinkedScope` of the symbol using is pointing to.
-
-  HELIOS uses it as an auxiliary query, in lookup implementation. 
-  Note: this query will likely be deleted in the future, after the Scope Refactor.
+  If yes, continues lookup in parent module's root scope, enabling symbol visibility across REPL statement history
 
 
 # Future todos

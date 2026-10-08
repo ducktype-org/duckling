@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file bits_and_bytes.hpp
  *
@@ -32,6 +38,10 @@ namespace base {
 	}
 
 	constexpr Bytes bits2bytesRoundUp(Bits bits) { return Bytes((usize(bits) + 7) / 8); }
+
+	constexpr Bytes bytesRoundTo(Bytes size, Bytes round_to) {
+		return ((size + round_to - Bytes(1)) / round_to.asInt()) * round_to.asInt();
+	}
 }
 
 namespace base::internal {

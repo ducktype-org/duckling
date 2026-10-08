@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "get_expr_symid.hpp"
 
 #include <helios/hout/visitors.hpp>
@@ -11,10 +17,6 @@ namespace compiler::helios {
 		base::Optional<SymID> symbol;
 
 		void visitIdentifierExpr(const code::IdentifierExpr& val) override { symbol = val.symbol; }
-
-		void visitParenthesisExpr(const code::ParenthesisExpr& val) override {
-			val.inner->acceptVisitor(*this);
-		}
 	};
 
 	/**

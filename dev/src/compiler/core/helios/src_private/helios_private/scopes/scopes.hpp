@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file scopes.hpp
  * @brief This file defines Queries responsible for creation of Scopes and operations on them.
@@ -155,6 +161,9 @@ namespace compiler::helios {
 	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
 	 *
 	 * \query_thread_safe_if_cache
+	 *
+	 * @TODO: #3080 consider making it internal helper of query module hout. This query is no longer
+	 * a trivial walk-over-PST to get all of the scopes in the module.
 	 */
 	DECLARE_QUERY(
 		QueryScopesInModule,

@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from pathlib import Path
 import re
 from typing import Any, Optional
@@ -31,6 +37,7 @@ GENERAL_VARIABLES = {
     EXIT_CODE,
     CONFIG_DIR,
     ENABLED,
+    NEEDED_THREADS,
 }
 
 """
@@ -197,8 +204,10 @@ def config_get_name_path(config: dict) -> str:
     Builds a string representing of the test tree up to `config`'s node.
     An example would be "/tests/a/b/c".
     """
+    # Cases carry their name under `CaseName`; every other node uses `Name`.
+    name: str = config.get(NAME) or config.get(CASE_NAME, "<unnamed>")
     return (
         (config_get_name_path(parent) if (parent := config[PARENT]) else "")
         + "/"
-        + config[NAME]
+        + name
     )

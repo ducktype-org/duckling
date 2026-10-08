@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
@@ -30,13 +36,17 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).with_context(|| {
             HintMessage::new("to display the venvs in the global storage use `global-storage` flag")
         })?;
-        pcx.storage_path()?
+        pcx.storage_path().to_path_buf()
     };
-    let output_ordering = match matches.get_one::<String>("sort-by").unwrap().as_str() {
+    let output_ordering = match matches
+        .get_one::<String>("sort-by")
+        .expect("defaulted in cli")
+        .as_str()
+    {
         "name" => VenvOrderings::Name,
         "previous-access" => VenvOrderings::Access,
         "last-modification" => VenvOrderings::Modification,
-        _ => panic!("guarded by the parser"),
+        ordering => panic!("guarded by the parser; unknown output ordering `{ordering}`"),
     };
     let reverse_order = matches.get_flag("sort-reverse");
     let options = ListOptions {

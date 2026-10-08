@@ -1,16 +1,11 @@
-PostCase: python3 check.py && @{cleanup_tmp_env}
+PostCase: python3 check.py @{check-arg} && @{cleanup_tmp_env}
 
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo --expose-freezefile
   @{duck-exe} init bar
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar
-      features: [b]
-
-  features:
+  @{duck-exe} -C foo add --features b --local ../bar @{alias-bar} bar
+  echo "features:
     f: []" >> foo/quackconfig.yaml
 
   echo "features:
@@ -20,8 +15,32 @@ Tests:
   exposed-freezefile-and-deps:
     Description: can sync a project with deps which exposes a freezefile
     Cases:
-      sync:
+      basic:
         test-cmd: duck -C foo sync
+        alias-bar: ""
+        check-arg: no_alias
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting loading 2 packages
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`"
+      alias:
+        test-cmd: duck -C foo sync
+        alias-bar: --alias alias
+        check-arg: alias
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting loading 2 packages
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`"
         

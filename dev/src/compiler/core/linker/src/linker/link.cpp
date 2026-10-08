@@ -1,11 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "link.hpp"
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <system_command/system_command.hpp>
@@ -30,13 +35,11 @@ namespace compiler::linker {
 		for (const auto& object_file_path: inputs)
 			command.addArg(object_file_path.file.getFilePath().native());
 
-		command.addArg(options.additional_link_options);
-
-		if_opt_some(options.stdlib_link_options, stdlib_link_options)
-			command.addArg(stdlib_link_options);  // Link the Duckling standard library.
+		command.addArgs(options.additional_link_options);
+		command.addArgs(options.stdlib_link_options);  // Link the Duckling standard library.
 		if (options.link_c_standard_library) {
-			command.addArg("-lc");                // Link the C standard library.
-			command.addArg("-lm");                // Link the C math library.
+			command.addArg("-lc");                     // Link the C standard library.
+			command.addArg("-lm");                     // Link the C math library.
 		}
 
 		command.addArg("-o");
@@ -49,7 +52,7 @@ namespace compiler::linker {
 
 		if (linking_result.isBad()) {
 			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+				global_state::getGlobalLogger()->log(makeBox<dia::PlaceholderError>(
 					"Linking of the final executable failed. See the linker output above. ",
 					"The common reasons for this error may include missing main function "
 					"(temporary "

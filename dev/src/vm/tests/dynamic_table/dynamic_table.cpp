@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
@@ -16,6 +22,7 @@ public:
 		TESTER_ADD_TEST(tooLarge);
 		TESTER_ADD_TEST(stringOutput);
 		TESTER_ADD_TEST(reallocZero);
+		TESTER_ADD_TEST(reallocShrink);
 		TESTER_ADD_TEST(fstToDyn);
 		TESTER_ADD_TEST(reallocOnFst);
 	}
@@ -32,7 +39,7 @@ private:
 	}
 
 	void tooLarge() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("too_large.dbc", "", "9223372036854775808"),
 			vm::exceptions::VMMemoryAllocationError::ERR_MSG
 		);
@@ -42,16 +49,18 @@ private:
 
 	void reallocZero() { runTestOnVm("realloc_zero.dbc", "", "42", {}); }
 
+	void reallocShrink() { runTestOnVm("realloc_shrink.dbc", "", "42", {}); }
+
 	void fstToDyn() {
 		runTestOnVm("fst_to_dyn.dbc", "0", "42", {});
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("fst_to_dyn.dbc", "1"),
 			vm::exceptions::VMOutOfBlockBoundsException::ERR_MSG
 		);
 	}
 
 	void reallocOnFst() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("realloc_on_fst.dbc", ""),
 			vm::exceptions::VMDynTableReAllocTypeMismatch::ERR_MSG
 		);

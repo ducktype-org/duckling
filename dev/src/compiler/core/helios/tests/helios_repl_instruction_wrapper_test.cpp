@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
@@ -55,16 +62,21 @@ private:
 		return stmt_opt.value();
 	}
 
+	static CRef<query::QResult<helios::HOUTFunction>> instructionWrapper(
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
+	) {
+		return ctx.query<helios::QueryCodeOfFun>(
+			repl::queryReplInstructionWrapperSymbol(ctx, stmt, counter)
+		);
+	}
+
 	void testWrapperShapeForWhileInstruction() {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "while (1 == 1) {}");
 
-			auto wrapper_result = ctx.query<repl::QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = 17,
-			});
-			ASSERT_HAS_VALUE(wrapper_result);
-			auto& wrapper = wrapper_result.valueOrPanic();
+			auto wrapper_result = instructionWrapper(ctx, stmt, 17);
+			ASSERT_HAS_VALUE(*wrapper_result);
+			auto& wrapper = wrapper_result->valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
 			ASSERT_EQUAL(wrapper.body->statements.size(), 2u);
@@ -76,16 +88,13 @@ private:
 			ASSERT_EQUAL(counter.void_return_count, 1u);
 
 			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
-			assertTrue(
-				std::holds_alternative<helios::defgen::ReplInstructionWrapper>(sym_ref->other),
-				"Expected ReplInstructionWrapper generated symbol kind"
-			);
+			ASSERT_MATCHES(sym_ref->other, helios::defgen::ReplInputWrapper);
 
 			auto mangled
 				= helios::mangler::getSimpleMangledName(ctx, wrapper.declaration->original_symbol);
 			auto mangled_str = std::string(mangled.strView());
 			assertTrue(
-				mangled_str.find("__repl_instr_wrapper_17") != std::string::npos,
+				mangled_str.find("__repl_input_wrapper_17") != std::string::npos,
 				"Mangled name should include instruction-wrapper counter"
 			);
 		});
@@ -95,18 +104,12 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper_result_a = ctx.query<repl::QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = 21,
-			});
-			auto wrapper_result_b = ctx.query<repl::QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = 22,
-			});
-			ASSERT_HAS_VALUE(wrapper_result_a);
-			ASSERT_HAS_VALUE(wrapper_result_b);
-			auto& wrapper_a = wrapper_result_a.valueOrPanic();
-			auto& wrapper_b = wrapper_result_b.valueOrPanic();
+			auto wrapper_result_a = instructionWrapper(ctx, stmt, 21);
+			auto wrapper_result_b = instructionWrapper(ctx, stmt, 22);
+			ASSERT_HAS_VALUE(*wrapper_result_a);
+			ASSERT_HAS_VALUE(*wrapper_result_b);
+			auto& wrapper_a = wrapper_result_a->valueOrPanic();
+			auto& wrapper_b = wrapper_result_b->valueOrPanic();
 
 			auto mangled_a
 				= helios::mangler::getSimpleMangledName(ctx, wrapper_a.declaration->original_symbol)
@@ -119,11 +122,11 @@ private:
 				mangled_a != mangled_b, "Different counters should produce different symbols"
 			);
 			assertTrue(
-				std::string(mangled_a).find("__repl_instr_wrapper_21") != std::string::npos,
+				std::string(mangled_a).find("__repl_input_wrapper_21") != std::string::npos,
 				"First wrapper mangled name should include its counter"
 			);
 			assertTrue(
-				std::string(mangled_b).find("__repl_instr_wrapper_22") != std::string::npos,
+				std::string(mangled_b).find("__repl_input_wrapper_22") != std::string::npos,
 				"Second wrapper mangled name should include its counter"
 			);
 		});
@@ -133,12 +136,9 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "while (1 == 1) {}");
 
-			auto wrapper_result = ctx.query<repl::QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = 31,
-			});
-			ASSERT_HAS_VALUE(wrapper_result);
-			auto& wrapper = wrapper_result.valueOrPanic();
+			auto wrapper_result = instructionWrapper(ctx, stmt, 31);
+			ASSERT_HAS_VALUE(*wrapper_result);
+			auto& wrapper = wrapper_result->valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
 			assertTrue(
@@ -151,9 +151,13 @@ private:
 
 			auto sym_ref = helios::getSymRef(sym);
 
-			auto repl_data = std::get_if<helios::defgen::ReplInstructionWrapper>(&sym_ref->other);
-			assertTrue(repl_data != nullptr, "Expected ReplInstructionWrapper generated symbol");
+			auto repl_data = std::get_if<helios::defgen::ReplInputWrapper>(&sym_ref->other);
+			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
 			ASSERT_EQUAL(repl_data->counter, 31u);
+			assertTrue(
+				repl_data->type == helios::defgen::ReplInputWrapper::Type::Instruction,
+				"Expected an instruction wrapper"
+			);
 		});
 	}
 
@@ -161,12 +165,9 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper_result = ctx.query<repl::QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = 41,
-			});
-			ASSERT_HAS_VALUE(wrapper_result);
-			auto& wrapper = wrapper_result.valueOrPanic();
+			auto wrapper_result = instructionWrapper(ctx, stmt, 41);
+			ASSERT_HAS_VALUE(*wrapper_result);
+			auto& wrapper = wrapper_result->valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.body->statements.size(), 2u);
 
@@ -182,18 +183,12 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper_result_a = ctx.query<repl::QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = 55,
-			});
-			auto wrapper_result_b = ctx.query<repl::QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = 55,
-			});
-			ASSERT_HAS_VALUE(wrapper_result_a);
-			ASSERT_HAS_VALUE(wrapper_result_b);
-			auto& wrapper_a = wrapper_result_a.valueOrPanic();
-			auto& wrapper_b = wrapper_result_b.valueOrPanic();
+			auto wrapper_result_a = instructionWrapper(ctx, stmt, 55);
+			auto wrapper_result_b = instructionWrapper(ctx, stmt, 55);
+			ASSERT_HAS_VALUE(*wrapper_result_a);
+			ASSERT_HAS_VALUE(*wrapper_result_b);
+			auto& wrapper_a = wrapper_result_a->valueOrPanic();
+			auto& wrapper_b = wrapper_result_b->valueOrPanic();
 
 			ASSERT_EQUAL(
 				wrapper_a.declaration->original_symbol, wrapper_b.declaration->original_symbol

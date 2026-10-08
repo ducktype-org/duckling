@@ -1,13 +1,19 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "access.hpp"
 #include "elements/hierarchy/declarations/top_level.hpp"
 #include "elements/includes/basic.hpp"  // IWYU pragma: keep
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <token_source/source.hpp>
 
 namespace pst {
@@ -46,6 +52,26 @@ namespace pst {
 			CORE_ASSERT(!element.internal(), "Tried to overwrite root element.");
 			element = std::move(box);
 		}
+
+		// @TODO: decide
+		// /**
+		 // * @TODO: #3110 this constructor is totally hacked, change it.
+		 // * We should somehow be able to share token_source between the original and cloned PST.
+		 // *
+		 // * Also: add clone dummy parameter here, to make it more explicit.
+		 // */
+		// explicit PST(
+			// Box<Element>                cloned_element,
+			// Box<tokenizer::TokenSource> token_source,
+			// hashing::ComponentHash      hash_ctx = {}
+		// ):
+			  // file(std::move(token_source)),
+			  // element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
+			  // hash_ctx_info(std::move(hash_ctx)) {
+			// calcElementPathHash();
+			// calcHashes();
+			// putInPSTHashHashMap();
+		// }
 
 		/**
 		 * @brief Performs the element path calculation for all of the elements of the tree.
@@ -127,5 +153,7 @@ namespace pst {
 		}
 
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
+
+		virtual ~PST() = default;
 	};
 }

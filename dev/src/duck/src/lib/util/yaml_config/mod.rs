@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Implementation of traversing YAML documents, and getting/setting values at dotted keys.
 use std::path::{Path, PathBuf};
 use std::{fmt, io};
@@ -93,7 +99,7 @@ impl fmt::Debug for YamlConfig {
 impl YamlConfig {
     /// Create a new [`YamlConfig`] from the YAML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
-        debug!("parsing YAML config at `{}`", path.display());
+        debug!(path = %path.display(), "parsing YAML config");
         let content = match path.as_path().read_to_string() {
             Ok(string) => string,
             Err(e) => {
@@ -101,8 +107,8 @@ impl YamlConfig {
                     && err.kind() == io::ErrorKind::NotFound
                 {
                     debug!(
-                        "there is no config at `{}`, falling back to defaults...",
-                        path.display()
+                        path = %path.display(),
+                        "missing config",
                     );
                     return Ok(Self::default());
                 } else {
@@ -154,7 +160,7 @@ impl YamlConfig {
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(%key, where = %self.get_location_description());
         if key.is_empty() {
-            qp_bail_internal!("empty key")
+            qp_bail_internal!("empty key in `_get`")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
@@ -169,8 +175,9 @@ impl YamlConfig {
             }
             let Some(next) = current.get(part) else {
                 debug!(
-                    "there is no table `[{part}]` in the chain `{}`",
-                    parts[0..=i].join("."),
+                    table = %part,
+                    chain = ?parts[0..=i],
+                    "there is no table in chain",
                 );
                 return Ok(None);
             };
@@ -196,7 +203,7 @@ impl YamlConfig {
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         debug!(%key, ?value, where = %self.get_location_description());
         if key.is_empty() {
-            qp_bail_internal!("empty key")
+            qp_bail_internal!("empty key in `_set`")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
@@ -368,6 +375,15 @@ impl YamlConfig {
         key: &str,
     ) -> QuackResult<Option<T>> {
         self.deserialize::<Option<T>>(key)
+    }
+
+    /// Deserialize an optional value at the dotted key, or return the default.
+    pub fn deserialize_optional_or_default<'de, T: Deserialize<'de> + Default>(
+        &'de self,
+        key: &str,
+    ) -> QuackResult<T> {
+        self.deserialize::<Option<T>>(key)
+            .map(|value| value.unwrap_or_default())
     }
 }
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * Implementation of high-level operations of the compiler.
  * It is possible to use core compiler directly, but all standard high-level operations
@@ -62,7 +68,7 @@ namespace compiler::driver {
 	};
 
 	/**
-	 * @brief Compile a Duckling script (.ds file) into a single artifact.
+	 * @brief Compile a Duckling script (.dks file) into a single artifact.
 	 *
 	 * Reads the script source from global_state::ScriptContext, splits it into individual
 	 * statements, creates a chain of REPL-style modules (each with a parent link to the previous),

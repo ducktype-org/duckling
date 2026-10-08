@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/extend_cpp/flag.hpp>
 
 #include <tester/tester.hpp>
@@ -52,6 +58,10 @@ public:
 
 		ASSERT_TRUE(flag_23.contains(Opt2 | Opt3));
 		ASSERT_TRUE((flag_23 & (Opt1 | Opt4 | Opt5)) == TestFlag());
+
+		flag_23 -= Opt2 | Opt3;
+		ASSERT_TRUE(not flag_23.contains(Opt2));
+		ASSERT_TRUE(not flag_23.contains(Opt3));
 	}
 };
 

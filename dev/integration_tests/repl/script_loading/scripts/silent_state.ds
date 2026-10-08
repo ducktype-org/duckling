@@ -1,4 +1,0 @@
-import core.builtins.*;
-
-var sx: i32 = 7;
-sx = sx + 5;

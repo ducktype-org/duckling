@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -16,7 +22,9 @@ namespace base {
 	template<class T>
 	class Ref final {
 	private:
-		T* ptr;
+		// note: it shouldn't be possible to get an uninitialized Ref
+		// the default helps analyzers avoid false-positive warnings
+		T* ptr = nullptr;
 
 		template<class U>
 		friend class Ref;
@@ -36,7 +44,7 @@ namespace base {
 
 		Ref(std::nullptr_t) = delete;
 
-		// @TODO: I would be preferred to assertNotNull during copy, but then the type is not
+		// It would be preferred to assertNotNull during copy, but then the type is not
 		// trivially copyable.
 
 		// Copy:
@@ -212,7 +220,7 @@ namespace base {
 
 	// Deduction guide for constructing a MRef from a Ref:
 	template<class U>
-	MRef(const Ref<U>&) noexcept -> MRef<U>;
+	MRef(const Ref<U>&) -> MRef<U>;
 
 	template<class T>
 	using CRef = Ref<const T>;

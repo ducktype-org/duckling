@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "active_graph.hpp"
@@ -5,8 +11,6 @@
 #include "query_graph.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
-#include <diagnostic_interactive/logger_fwd.hpp>
-#include <diagnostic_interactive/message_fwd.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
@@ -14,6 +18,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/logger_fwd.hpp>
+#include <diagnostic/message_fwd.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 #include <query_framework/internal/task_pool/task_pool.hpp>
 
@@ -231,6 +237,18 @@ namespace query::internal {
 		\***************************/
 
 		/**
+		 * @brief Deletes on-disk cache artifacts of previous-graph nodes that were not merged into
+		 * the current graph.
+		 * @note Nodes merged during incremental compilation are erased from the previous graph, so
+		 * whatever disk-cacheable nodes remain in it were never reused (e.g. their query hash
+		 * changed). They are absent from the serialized graph, so their disk cache would be orphaned
+		 * — this removes it. A node whose hash is still present in the current graph is kept.
+		 * @note Must be called at the end of compilation, when no queries are executing.
+		 * @return The number of orphaned query caches removed.
+		 */
+		u64 cleanupOrphanedDiskCaches();
+
+		/**
 		 * @brief Builds a reduced adjacency list without mutating the original graph.
 		 * @note The returned ReducedGraphData should generally be passed directly to
 		 * QueryGraph::serializeReducedGraph without further mutation. This function already
@@ -312,7 +330,7 @@ namespace query::internal {
 		 * @brief Logs a diagnostic message for a specific node.
 		 * It creates a logger for the node if it doesn't exist and logs the message to it.
 		 */
-		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
+		void logDiagnosticForNode(NodeID node_id, Box<dia::MessageBase> diagnostic);
 
 		/**
 		 * @brief Logs diagnostic messages from a Logger for a specific node.
@@ -321,7 +339,7 @@ namespace query::internal {
 		 * moves all diagnostics from the provided Logger into the node's logger,
 		 * leaving the provided Logger empty.
 		 */
-		void logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger);
+		void logDiagnosticFromLoggerForNode(NodeID node_id, dia::Logger& src_logger);
 
 		/**
 		 * @brief Clears all diagnostics for a specific node.
@@ -334,12 +352,12 @@ namespace query::internal {
 		 *
 		 * Not thread safe.
 		 */
-		base::Optional<CRef<dia_int::Logger>> getDiagnosticForNode(NodeID node_id) const;
+		base::Optional<CRef<dia::Logger>> getDiagnosticForNode(NodeID node_id) const;
 
 		/**
 		 * @brief Get the entire map of diagnostic loggers for direct access.
 		 */
-		CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> getDiagnosticLoggers() const;
+		CRef<concurrent::ConHashMap<NodeID, Box<dia::Logger>>> getDiagnosticLoggers() const;
 
 	private:
 		friend struct ::query::Context;
@@ -420,6 +438,6 @@ namespace query::internal {
 		/**
 		 * @brief Storage for the diagnostic loggers for each noe.
 		 */
-		concurrent::ConHashMap<NodeID, Box<dia_int::Logger>> diagnostic_loggers;
+		concurrent::ConHashMap<NodeID, Box<dia::Logger>> diagnostic_loggers;
 	};
 }

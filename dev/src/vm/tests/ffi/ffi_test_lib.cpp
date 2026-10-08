@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <cstdint>
 #include <cstdlib>
 
@@ -21,6 +27,14 @@ extern "C" {
 
 	// Pointer (cptr) round-trip helpers.
 	void* ffi_alloc8() { return std::malloc(8); }
+
+	// Sized allocation, for the typed cpointer instructions (malloc workflow).
+	void* ffi_alloc(int64_t n) {
+		if (n <= 0) return nullptr;
+		return std::malloc(static_cast<size_t>(n));
+	}
+
+	void ffi_free(void* p) { std::free(p); }
 
 	void ffi_fill8(void* p, int64_t v) { *static_cast<int64_t*>(p) = v; }
 

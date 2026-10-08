@@ -1,6 +1,10 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <archiver/archive.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -18,6 +22,8 @@
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
 
@@ -35,14 +41,16 @@
 using namespace compiler;
 
 namespace {
-	std::string rewriteBuildPaths(std::string_view options, const fs::FilePath& artifacts_path) {
-		const std::string build_prefix = "build/";
-		const std::string replacement  = artifacts_path.getPath().string() + "/";
-		std::string       result(options);
-		size_t            pos = 0;
-		while ((pos = result.find(build_prefix, pos)) != std::string::npos) {
-			result.replace(pos, build_prefix.size(), replacement);
-			pos += replacement.size();
+	std::vector<std::string> rewriteBuildPaths(
+		const std::vector<std::string>& options, const fs::FilePath& artifacts_path
+	) {
+		const std::string        build_prefix = "build/";
+		const std::string        replacement  = artifacts_path.getPath().string() + "/";
+		std::vector<std::string> result{};
+		for (auto path: options) {
+			size_t pos = 0;
+			if ((pos = path.find(build_prefix)) != std::string::npos)
+				result.push_back(path.replace(pos, build_prefix.size(), replacement));
 		}
 		return result;
 	}
@@ -66,8 +74,8 @@ public:
 
 protected:
 	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-		dia_int::configureImmediatePrint(&std::cerr);
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
+		dia::configureImmediatePrint(&std::cerr);
 
 		manifest = loadManifest();
 
@@ -105,7 +113,7 @@ private:
 		auto           manifest_opt  = driver::PackageCompilationManifest::fromJson(
             manifest_json, compiler::driver::diagnostics::makeGlobalLoggerReporter()
         );
-		assertTrue(manifest_opt.has_value(), "Failed to parse packages manifest");
+		ASSERT_HAS_VALUE(manifest_opt, "Failed to parse packages manifest");
 		assertTrue(
 			manifest_opt->verify(compiler::driver::diagnostics::makeGlobalLoggerReporter()).isOk(),
 			"Manifest verification failed"
@@ -227,7 +235,7 @@ private:
 		ASSERT_NO_VALUE(missing);
 
 		assertThrows<base::Panic>(
-			[&]() { (void) global_state::getPackageRef(base::StrID("definitely_missing")); },
+			[&]() { std::ignore = global_state::getPackageRef(base::StrID("definitely_missing")); },
 			"Expected panic for missing package"
 		);
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/comptime/type_traits.hpp>
@@ -32,8 +38,10 @@ namespace base {
 			"redefinition."
 		);
 
-		T*                            ptr;
-		[[no_unique_address]] Deleter deleter;
+		// note: it shouldn't be possible to get uninitialized members
+		// the defaults help analyzers avoid false-positive warnings
+		T*                            ptr = nullptr;
+		[[no_unique_address]] Deleter deleter{};
 
 		template<class U, class UDeleter>
 		friend class Box;
@@ -185,8 +193,10 @@ namespace base {
 			"redefinition."
 		);
 
+		// note: it shouldn't be possible to get uninitialized members
+		// the defaults help analyzers avoid false-positive warnings
 		T*                            ptr = nullptr;
-		[[no_unique_address]] Deleter deleter;
+		[[no_unique_address]] Deleter deleter{};
 
 		template<class U, class UDeleter>
 		friend class MBox;
@@ -378,7 +388,7 @@ namespace base {
 
 	// Deduction guide for constructing a MBox from a Box:
 	template<class U, class UDeleter>
-	MBox(Box<U, UDeleter>&&) noexcept -> MBox<U, UDeleter>;
+	MBox(Box<U, UDeleter>&&) -> MBox<U, UDeleter>;
 
 	/**
 	 * @brief Constructs a Box by forwarding the arguments to T constructor

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <base/misc/int_conv.hpp>
@@ -7,7 +13,7 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/safe/exceptions.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <limits>
@@ -37,14 +43,14 @@ private:
 	void simpleVariant0() { runTestOnVm("simple_variant.dbc", "0", "13"); }
 
 	void simpleVariant1() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("simple_variant.dbc", "1", "13"),
-			vm::exceptions::VMNullPointerCopyException::ERR_MSG
+			vm::exceptions::VMNullPointerAccessException::ERR_MSG
 		);
 	}
 
 	void simpleVariant2() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("simple_variant.dbc", "2", "13"),
 			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
@@ -54,7 +60,7 @@ private:
 
 	void nestedVariantTest() {
 		runTestOnVm("nested.dbc", "15", "15");
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("nested_failing.dbc", "15", "15"),
 			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
@@ -74,10 +80,10 @@ private:
 
 	void variantTypeTagTest() {
 		/**
-		 * @brief Create an owned VmValue containing a specified value.
+		 * @brief Create an owned VMValue containing a specified value.
 		 */
-		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::VmValue> {
-			auto response = vm::api::getVmValue(pid, "i64");
+		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::IVMValue> {
+			auto response = vm::api::getVMValue(pid, "i64");
 			ASSERT_HAS_VALUE(response);
 			auto vm_value = std::move(response->vm_value);
 			vm_value->writeBytes<u64>(value);
@@ -85,31 +91,28 @@ private:
 		};
 
 		auto pid = initProcess();
-		ASSERT_TRUE(
-			vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }).has_value()
-		);
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }));
 
 		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
 
-		const auto assert_type_tag = [&](usize type_tag_bits, usize wanted_type_tag_value) {
-			std::string function_name = base::strConcat(
-				"getCustomVariant", type_tag_bits, "TypeTag", wanted_type_tag_value
-			);
+		const auto assert_type_tag = [&](usize type_tag_bits, usize alternative_index) {
+			const usize wanted_type_tag_value = alternative_index + 1;
+			std::string function_name         = base::strConcat(
+                "getCustomVariant", type_tag_bits, "Alternative", alternative_index
+            );
 
-			ASSERT_TRUE(
-				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }));
 			ASSERT_HAS_VALUE(vm::api::join(pid));
 			auto value = vm::api::getExitValue(pid);
 			if (!value.has_value()) {
 				fail(
-					"Could not load VmValue for: " + function_name
+					"Could not load VMValue for: " + function_name
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(value.value()));
-			auto& value_vec = std::get<std::vector<Ref<vm::VmValue>>>(value.value());
+			ASSERT_MATCHES(value.value(), std::vector<Ref<vm::IVMValue>>);
+			auto& value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(value.value());
 			ASSERT_EQUAL(value_vec.size(), 1);
 			const auto vm_value = value_vec.at(0);
 			switch (type_tag_bits) {
@@ -130,16 +133,47 @@ private:
 			ASSERT_EQUAL_PRINT(
 				vm::safeReadPointerBytes<u64>(vm_value->getBytes(), type_tag_bits / 8), wanted_value
 			);
+
+			auto decoded_variant = vm_value->readData<vm::interpreted_data_variant::Variant>();
+			ASSERT_HAS_VALUE(decoded_variant);
+			ASSERT_EQUAL_PRINT(decoded_variant->alternative_index, alternative_index);
+
+			if (type_tag_bits == 8)
+				vm_value->writeBytes<uint8_t>(0);
+			else
+				vm_value->writeBytes<u16>(0);
+			ASSERT_NO_VALUE(vm_value->readData<vm::interpreted_data_variant::Variant>());
 		};
 
 
+		auto empty_variant_response = vm::api::getVMValue(pid, "CustomVariant8");
+		ASSERT_HAS_VALUE(empty_variant_response);
+		auto empty_variant = std::move(empty_variant_response->vm_value);
+		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
+		empty_variant->freeData();
+
 		assert_type_tag(8, 0);
 		assert_type_tag(8, 1);
+		assert_type_tag(8, 254);
 		assert_type_tag(16, 0);
 		assert_type_tag(16, 1);
-		assert_type_tag(16, 256);
+		assert_type_tag(16, 255);
+
+		auto invalid_variant_response = vm::api::getVMValue(pid, "CustomVariant16");
+		ASSERT_HAS_VALUE(invalid_variant_response);
+		auto invalid_variant = std::move(invalid_variant_response->vm_value);
+		invalid_variant->writeBytes<u16>(257);
+		assertThrows<std::out_of_range>(
+			[&] {
+				static_cast<void>(invalid_variant->readData<vm::interpreted_data_variant::Variant>()
+			    );
+			},
+			"An out-of-range variant tag must not be treated as an empty variant."
+		);
+		invalid_variant->freeData();
+
 		vm_value_max64->freeData();
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 };
 

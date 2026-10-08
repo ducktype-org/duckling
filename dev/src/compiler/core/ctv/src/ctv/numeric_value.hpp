@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/tsh/symbol_type.hpp>
@@ -20,6 +26,7 @@ namespace compiler::numeric_value {
 	 * @TODO: #1498 Add support for f16, f128, i128.
 	 */
 	class NumericValue final {
+	public:
 		// @note: std::uint8_t and std::int8_t are used here instead of our `STRONG_TYPEDEF_INT` u8
 		// and i8 so the generic code operating on numeric value won't get too complicated (we would
 		// have to implement basically every numeric trait from the std to include our u8 and i8).
@@ -27,6 +34,8 @@ namespace compiler::numeric_value {
 		// numeric value it's valid to drop the "strongly typed" requirement.
 		using Storage
 			= std::variant<std::int8_t, i16, i32, i64, std::uint8_t, u16, u32, u64, f32, f64>;
+
+	private:
 		Storage value;
 
 	public:

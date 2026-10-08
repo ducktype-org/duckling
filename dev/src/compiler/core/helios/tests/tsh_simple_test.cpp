@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
@@ -42,14 +48,12 @@ public:
 		TESTER_ADD_TEST(simpleInts);
 		TESTER_ADD_TEST(simpleFloats);
 		TESTER_ADD_TEST(simplePointer);
-		TESTER_ADD_TEST(simpleDynamicArray);
 		TESTER_ADD_TEST(simpleStaticArray);
 		TESTER_ADD_TEST(simpleTuple);
 		TESTER_ADD_TEST(simpleVariant);
 		TESTER_ADD_TEST(simpleFunction);
 		TESTER_ADD_TEST(simpleLanguageElements);
 		TESTER_ADD_TEST(simpleMeta);
-		TESTER_ADD_TEST(simpleTypeTemplate);
 		TESTER_ADD_TEST(simpleExpressionType);
 		TESTER_ADD_TEST(simpleValueCategory);
 		TESTER_ADD_TEST(simpleImplicitCoercibility);
@@ -117,8 +121,12 @@ private:
 		assertTrue(unit_3.getKind() == Unit, "Unit should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(void_1.hasNoOpDestructor(ctx), "Void should have no op destructor.");
-			assertTrue(unit_1.hasNoOpDestructor(ctx), "Unit should have no op destructor.");
+			assertTrue(
+				void_1.isTriviallyDestructible(ctx), "Void should be trivially destructible."
+			);
+			assertTrue(
+				unit_1.isTriviallyDestructible(ctx), "Unit should be trivially destructible."
+			);
 
 			const auto unit_st = st(unit_1);
 			assertTrue(unit_st.isDefaultConstructible(ctx), "Unit should be default constructible.");
@@ -248,8 +256,8 @@ private:
 
 			query::utils::withContextDo([&](query::Context& ctx) {
 				assertTrue(
-					int_1.hasNoOpDestructor(ctx) && int_u.hasNoOpDestructor(ctx),
-					"Ints should have no op destructor."
+					int_1.isTriviallyDestructible(ctx) && int_u.isTriviallyDestructible(ctx),
+					"Ints should be trivially destructible."
 				);
 			});
 		}
@@ -320,7 +328,9 @@ private:
 			assertTrue(float_3.getKind() == Float, "Float should survive casting.");
 
 			query::utils::withContextDo([&](query::Context& ctx) {
-				assertTrue(float_1.hasNoOpDestructor(ctx), "Floats should have no op destructor.");
+				assertTrue(
+					float_1.isTriviallyDestructible(ctx), "Floats should be trivially destructible."
+				);
 			});
 		}
 
@@ -410,74 +420,6 @@ private:
 		});
 	}
 
-	/**
-	 * Test that dynamic array with different elements are different types
-	 * and that they are correctly cast.
-	 */
-	void simpleDynamicArray() {
-		using enum IntegralAbstractType::Signedness;
-
-		const auto int_16 = getIntegralTypeNoContext(16, Signed);
-		const auto int_32 = getIntegralTypeNoContext(32, Signed);
-
-		const auto arr_1 = query::entryPoint<QueryDynamicArrayType>(st(int_16));
-		assertTrue(arr_1.getKind() == DynamicArray, "DynamicArray should have kind DynamicArray.");
-		assertTrue(arr_1.getElementType() == st(int_16), "Element type should be as constructed.");
-
-		const AbstractType             type_arr = arr_1;
-		const DynamicArrayAbstractType arr_2    = type_arr;
-		assertTrue(arr_2.getKind() == DynamicArray, "DynamicArray should survive casting.");
-
-		const auto arr_3 = query::entryPoint<QueryDynamicArrayType>(st(int_16));
-		assertTrue(arr_1 == arr_3, "DynamicArrays with the same element types should be equal.");
-
-		const auto arr_4 = query::entryPoint<QueryDynamicArrayType>(st(int_32));
-		assertTrue(
-			arr_1 != arr_4, "DynamicArrays with different element types should be different."
-		);
-
-		const auto arr_5 = query::entryPoint<QueryDynamicArrayType>(st(int_16, true));
-		assertTrue(
-			arr_1 != arr_5,
-			"DynamicArrays with element with different mutability should be different."
-		);
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			assertFalse(
-				arr_1.hasNoOpDestructor(ctx) && arr_4.hasNoOpDestructor(ctx),
-				"DynamicArrays should not have no op destructors."
-			);
-
-			const auto arr_st = st(arr_1);
-			assertTrue(
-				arr_st.isDefaultConstructible(ctx), "DynamicArray should be default constructible."
-			);
-			assertTrue(
-				arr_st.isTriviallyZeroInitializable(ctx),
-				"DynamicArray should be trivially zero-initializable."
-			);
-			assertTrue(arr_st.isCopyable(ctx), "DynamicArray should be copyable.");
-			assertFalse(
-				arr_st.isTriviallyCopyable(ctx), "DynamicArray should not be trivially copyable."
-			);
-
-			// Test with non-copyable element.
-			const auto void_type        = getVoidType();
-			const auto non_copyable_arr = ctx.query<QueryDynamicArrayType>(st(void_type));
-			assertFalse(
-				st(non_copyable_arr).isCopyable(ctx), "Array of void should not be copyable."
-			);
-			assertTrue(
-				st(non_copyable_arr).isDefaultConstructible(ctx),
-				"Array of void should be default constructible."
-			);
-		});
-	}
-
-	/**
-	 * Test that static arrays with different properties are treated as different types
-	 * and that they are correctly cast and handled.
-	 */
 	void simpleStaticArray() {
 		const auto int_16
 			= getIntegralTypeNoContext(16, compiler::tsh::IntegralAbstractType::Signedness::Signed);
@@ -518,18 +460,12 @@ private:
 			"StaticArrays with element with different mutability should be different."
 		);
 
-		const auto list_elem = query::entryPoint<QueryDynamicArrayType>({ st(int_16) });
-		const auto arr_list  = query::entryPoint<QueryStaticArrayType>({ st(list_elem), 5 });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
-				arr_1.hasNoOpDestructor(ctx), "StaticArray of Ints should have a no-op destructor."
+				arr_1.isTriviallyDestructible(ctx),
+				"StaticArray of Ints should be trivially destructible."
 			);
-			assertFalse(
-				arr_list.hasNoOpDestructor(ctx),
-				"StaticArray of Lists should not have a no-op destructor."
-			);
-
 			assertTrue(arr_1.carriesInformation(ctx), "Array of ints should carry information");
 			const auto unit = getUnitType();
 
@@ -556,22 +492,6 @@ private:
 			assertTrue(
 				arr_st_trivial.isTriviallyCopyable(ctx),
 				"StaticArray of Ints should be trivially copyable."
-			);
-
-			const auto arr_st_complex
-				= ctx.query<QueryStaticArrayType>({ .element_type = st(list_elem), .size = 2 });
-			assertTrue(
-				arr_st_complex.isDefaultConstructible(ctx),
-				"StaticArray of Lists should be default constructible."
-			);
-			assertTrue(
-				arr_st_complex.isTriviallyZeroInitializable(ctx),
-				"StaticArray of Lists should be trivially zero-initializable."
-			);
-			assertTrue(arr_st_complex.isCopyable(ctx), "StaticArray of Lists should be copyable.");
-			assertFalse(
-				arr_st_complex.isTriviallyCopyable(ctx),
-				"StaticArray of Lists should not be trivially copyable."
 			);
 
 			// Test non-default-constructible static array with ref element)
@@ -618,19 +538,13 @@ private:
 		const auto tup_5 = query::entryPoint<QueryTupleType>({ { st(int_16, true), st(int_32) } });
 		assertTrue(tup_1 != tup_5, "Tuples with different mutability should be different.");
 
-		const auto list_elem = query::entryPoint<QueryDynamicArrayType>({ st(int_16) });
-		const auto tup_6     = query::entryPoint<QueryTupleType>({ { st(int_16), st(list_elem) } });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
-				tup_1.hasNoOpDestructor(ctx) && tup_4.hasNoOpDestructor(ctx)
-					&& tup_5.hasNoOpDestructor(ctx),
-				"Tuples of Ints should have no op destructors."
+				tup_1.isTriviallyDestructible(ctx) && tup_4.isTriviallyDestructible(ctx)
+					&& tup_5.isTriviallyDestructible(ctx),
+				"Tuples of Ints should be trivially destructible."
 			);
-			assertFalse(
-				tup_6.hasNoOpDestructor(ctx), "Tuple with List should not have no op destructor."
-			);
-
 			const auto tup_st_trivial = st(tup_1);
 			assertTrue(
 				tup_st_trivial.isDefaultConstructible(ctx),
@@ -644,22 +558,6 @@ private:
 			assertTrue(
 				tup_st_trivial.isTriviallyCopyable(ctx),
 				"Tuple of Ints should be trivially copyable."
-			);
-
-			const auto list_type      = ctx.query<QueryDynamicArrayType>({ st(int_32) });
-			const auto tup_st_complex = ctx.query<QueryTupleType>({ { st(list_type) } });
-			assertTrue(
-				tup_st_complex.isDefaultConstructible(ctx),
-				"Tuple with List should be default constructible."
-			);
-			assertTrue(
-				tup_st_complex.isTriviallyZeroInitializable(ctx),
-				"Tuple with List should be trivially zero-initializable."
-			);
-			assertTrue(tup_st_complex.isCopyable(ctx), "Tuple with List should be copyable.");
-			assertFalse(
-				tup_st_complex.isTriviallyCopyable(ctx),
-				"Tuple with List should not be trivially copyable."
 			);
 
 			// Test non-default-constructible tuple with Ref element.
@@ -703,18 +601,16 @@ private:
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
-		const auto list_elem = query::entryPoint<QueryDynamicArrayType>({ st(int_16) });
-		const auto var_5 = query::entryPoint<QueryVariantType>({ { st(int_16), st(list_elem) } });
+		const auto var_boxed = query::entryPoint<QueryVariantType>({
+			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
+		});
+
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
-				var_1.hasNoOpDestructor(ctx) && var_4.hasNoOpDestructor(ctx),
-				"Variants of Ints should have no op destructors."
+				var_1.isTriviallyDestructible(ctx) && var_4.isTriviallyDestructible(ctx),
+				"Variants of Ints should be trivially destructible."
 			);
-			assertFalse(
-				var_5.hasNoOpDestructor(ctx), "Variant with List should not have no op destructor."
-			);
-
 			const auto var_st = st(var_1);
 			assertFalse(
 				var_st.isDefaultConstructible(ctx),
@@ -728,6 +624,15 @@ private:
 			assertTrue(
 				var_st.isTriviallyCopyable(ctx),
 				"Variant of Ints should be trivially copyable (if all components are)."
+			);
+
+			assertFalse(
+				var_boxed.isTriviallyDestructible(ctx),
+				"Variant with a boxed alternative should NOT be trivially destructible."
+			);
+			assertFalse(
+				st(var_boxed).isTriviallyCopyable(ctx),
+				"Variant with a boxed alternative should NOT be trivially copyable."
 			);
 		});
 	}
@@ -822,9 +727,13 @@ private:
 		assertTrue(module_3.getKind() == Module, "ModuleType should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(nspace.hasNoOpDestructor(ctx), "NamespaceType should have no op destructor.");
+			assertTrue(
+				nspace.isTriviallyDestructible(ctx),
+				"NamespaceType should be trivially destructible."
+			);
 			assertFalse(
-				module.hasNoOpDestructor(ctx), "ModuleType should not have no op destructor."
+				module.isTriviallyDestructible(ctx),
+				"ModuleType should not be trivially destructible."
 			);
 
 			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
@@ -853,7 +762,9 @@ private:
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(meta.hasNoOpDestructor(ctx), "MetaType should have no op destructor.");
+			assertTrue(
+				meta.isTriviallyDestructible(ctx), "MetaType should be trivially destructible."
+			);
 			assertTrue(
 				st(meta).isDefaultConstructible(ctx),
 				"Meta type should be default constructible (e.g. to void)."
@@ -864,75 +775,6 @@ private:
 				"Meta type should not be trivially zero initializable."
 			);
 			assertTrue(st(meta).isTriviallyCopyable(ctx), "Meta type should be trivially copyable.");
-		});
-	}
-
-	void simpleTypeTemplate() {
-		query::utils::withContextDo([&](query::Context& ctx) -> void {
-			const auto list_template_type
-				= ctx.query<QueryTypeTemplateType>({ TypeTemplateAbstractType::BuiltinKind::List });
-
-			assertTrue(
-				list_template_type.getKind() == TypeTemplate,
-				"Type template for List should have kind TypeTemplate."
-			);
-
-			assertTrue(
-				list_template_type.carriesInformation(ctx),
-				"Type templates should not carry information."
-			);
-
-			assertTrue(
-				list_template_type.hasNoOpDestructor(ctx),
-				"Type templates should have a no-op destructor."
-			);
-
-			assertFalse(
-				st(list_template_type).isCopyable(ctx), "TypeTemplate should not be copyable."
-			);
-			assertFalse(
-				st(list_template_type).isDefaultConstructible(ctx),
-				"TypeTemplate should not be default constructible."
-			);
-
-			const auto list_template_type_2
-				= ctx.query<QueryTypeTemplateType>({ TypeTemplateAbstractType::BuiltinKind::List });
-			assertTrue(
-				list_template_type == list_template_type_2,
-				"Queries for the same type template should return the same type object."
-			);
-
-
-			const auto i64_type
-				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
-			const auto i32_type
-				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
-			const auto i64_st             = st(i64_type);
-			const auto i32_st             = st(i32_type);
-			const auto instantiated_abs   = list_template_type.instantiate(ctx, i64_st);
-			const auto instantiated_abs_2 = list_template_type_2.instantiate(ctx, i64_st);
-			const auto instantiated_abs_3 = list_template_type_2.instantiate(ctx, i32_st);
-			const auto expected           = ctx.query<QueryDynamicArrayType>({ i64_st });
-			const auto expected_2         = ctx.query<QueryDynamicArrayType>({ i32_st });
-			assertTrue(
-				expected == instantiated_abs,
-				"Instantiating list type template should produce a dynamic array of i64"
-			);
-			assertTrue(
-				expected_2 == instantiated_abs_3,
-				"Instantiating list type template should produce a dynamic array of i32"
-			);
-			assertTrue(
-				instantiated_abs_2 == instantiated_abs,
-				"Two same type templates instantiated with the same type should produce the same "
-				"type"
-			);
-			assertFalse(
-				instantiated_abs_3 == instantiated_abs,
-				"Two same type templates instantiated with different types should produce a "
-				"different "
-				"type"
-			);
 		});
 	}
 
@@ -1006,31 +848,32 @@ private:
 		const auto literal      = ValueCategory(PrimaryCategory::Literal);
 		const auto dereferenced = ValueCategory(PrimaryCategory::Dereferenced);
 
-		// Local and Global are assignable, Temporary and Literal are not assignable.
+		// Local, Global, Dereferenced are assignable, Temporary and Literal are not.
 		assertTrue(
-			local.canBeAssignedTo() && global.canBeAssignedTo(),
-			"Local and Global should be assignable."
+			local.canBeAssignedTo() && global.canBeAssignedTo() && dereferenced.canBeAssignedTo(),
+			"Local, Global, Dereferenced should be assignable."
 		);
 		assertTrue(
 			!temporary.canBeAssignedTo() && !literal.canBeAssignedTo(),
 			"Temporary and Literal should be not assignable."
 		);
 
-		// Local, Global and Dereferenced are addressable, Temporary and Literal are not.
+		// Local, Global, Dereferenced are addressable, Temporary and Literal are not.
 		assertTrue(
 			local.addressable() && global.addressable() && dereferenced.addressable(),
-			"Local, Global and Dereferenced should be addressable."
+			"Local, Global, Dereferenced should be addressable."
 		);
 		assertTrue(
 			!temporary.addressable() && !literal.addressable(),
 			"Temporary and Literal should not be addressable."
 		);
 
-		// Only a Local is a valid operand of the explicit `move` operator.
+		// Only values that own themselves - a Local and a Temporary - may be moved out of.
 		assertTrue(local.isMovableFrom(), "Local should be a valid `move` operand.");
+		assertTrue(temporary.isMovableFrom(), "Temporary should be a valid `move` operand.");
 		assertTrue(
-			!temporary.isMovableFrom() && !global.isMovableFrom() && !literal.isMovableFrom(),
-			"Only a Local should be a valid `move` operand."
+			!global.isMovableFrom() && !literal.isMovableFrom() && !dereferenced.isMovableFrom(),
+			"A non-owned value should not be a valid `move` operand."
 		);
 
 		// `move` is not forced unless it's requested.
@@ -1106,8 +949,12 @@ private:
 
 		const auto void_type = getVoidType();
 		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
-			"Void should not be coercible to anything."
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
+			"Void has no values, so it should be coercible to anything."
+		);
+		assertTrue(
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, void_type }),
+			"Nothing should be coercible to Void."
 		);
 
 		const auto i2_const

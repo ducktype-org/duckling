@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/pst_parser/elements/elements_common.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
@@ -114,9 +119,6 @@ class PSTErrorTests: public tester::TestSuite {
 		assertTrue(example(), example.message());
 	}
 
-	Example<pst::Alias, true>  simple_alias{ "alias sqrt=std.math.sqrt" };
-	Example<pst::Alias, false> alias_star{ "alias math=std.math.*" };
-
 	Example<pst::Attribute, true> simple_attr{ "@pretty(5)" };
 
 	Example<pst::Block, true>  simple_block{ "block {}" };
@@ -162,6 +164,11 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::DottedName, true>  simple_dotted{ "std.a.b.*" };
 	Example<pst::DottedName, false> bad_dotted{ "std.a.b. .*" };
 
+	Example<pst::Stmt, true> export_using{ "export using a.b.*;" };
+	Example<pst::Stmt, true> export_block{ "export { using a.b; fun f() = {} }" };
+	Example<pst::Stmt, true> nested_using_stmt{ "using a.b.{c, d};" };
+	Example<pst::Stmt, true> hides_group_import_stmt{ "import a.* hides {x, y};" };
+
 	Example<pst::Const, false> bad_stmt_choice{ "block {}" };
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>           simple_expr{ "x + y" };
@@ -201,17 +208,39 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::If, true>  simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
 	Example<pst::If, true>  simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
 	Example<pst::If, false> empty_if_condition{ "if () {}" };
+	Example<pst::If, true>  simple_const_if{ "if const (a == b) {c = d;}" };
+	Example<pst::If, true>  const_if_else{ "if const (a == b) {c = d;} else {c = e;}" };
+	Example<pst::If, true>  const_if_else_const_if{
+        "if const (a == b) {c = d;} else if const (a == c) {c = e;}"
+	};
+	Example<pst::If, false> const_if_no_condition{ "if const {}" };
 
 	Example<pst::Import, true>  simple_import{ "import std.math.sqrt as sqrt" };
 	Example<pst::Import, false> empty_import{ "import" };
-	Example<pst::Import, false> empty_nested_import{ "import ()" };
+	Example<pst::Import, false> empty_nested_import{ "import {}" };
+	Example<pst::Import, false> empty_braces_import{ "import A.{}" };
 	Example<pst::Import, false> empty_star_import{ "import .*" };
-	Example<pst::Import, true>  nested_import{ "import A.B.(C,)" };
-	Example<pst::Import, true>  nested_import2{ "import A.B.(C,(D, E),)" };
-	Example<pst::Import, false> missing_period_import{ "import A.B(C,(D, E),)" };
-	Example<pst::Import, false> empty_nested_ard_import{ "import A.B.(C,(D, E),,)" };
+	Example<pst::Import, true>  nested_import{ "import A.B.{C,}" };
+	Example<pst::Import, true>  nested_import2{ "import A.B.{C, D.{E, F},}" };
+	Example<pst::Import, false> round_nested_import{ "import A.B.(C, D)" };
+	Example<pst::Import, false> missing_period_import{ "import A.B{C, D}" };
+	Example<pst::Import, false> prefixless_nested_import{ "import A.B.{C, {D, E}}" };
+	Example<pst::Import, false> empty_nested_ard_import{ "import A.B.{C, D.{E, F},,}" };
 	Example<pst::Import, true>  as_import{ "import A.B.C as D" };
-	Example<pst::Import, true>  hides_import{ "import A.B.* hides D , G, C" };
+	Example<pst::Import, true>  hides_import{ "import A.B.* hides D" };
+	Example<pst::Import, true>  hides_group_import{ "import A.B.* hides {D, G, C,}" };
+	// Two selectors, `A.B.* hides D` and `G`: several hidden names need `{}`.
+	Example<pst::Import, true>  hides_then_selector_import{ "import A.B.* hides D, G" };
+	Example<pst::Import, false> empty_hides_import{ "import A.B.* hides {}" };
+	Example<pst::Import, true>  nested_as_import{ "import A.B.{C as D, E}" };
+	Example<pst::Import, true>  multiple_import{ "import A.A, B.B" };
+	Example<pst::Import, false> trailing_comma_import{ "import A.A, B.B," };
+	Example<pst::Stmt, false>   trailing_comma_import_stmt{ "import A.A, B.B,;" };
+	Example<pst::Class, false>  trailing_comma_implements{ "class x implements y, " };
+	Example<pst::Import, false> star_as_import{ "import A.* as D" };
+	Example<pst::Import, false> nested_as_whole_import{ "import A.{B, C} as D" };
+	Example<pst::Import, false> dangling_period_import{ "import A.B." };
+	Example<pst::Import, false> as_twice_import{ "import A as B as C" };
 
 	Example<pst::Namespace, true> simple_namespace{ "namespace name {}" };
 
@@ -224,7 +253,21 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 
-	Example<pst::Using, true> simple_using{ "using std.math" };
+	Example<pst::Using, true>  simple_using{ "using std.math" };
+	Example<pst::Using, true>  star_using{ "using a.b.*" };
+	Example<pst::Using, true>  nested_using{ "using a.b.{c, d}" };
+	Example<pst::Using, true>  as_using{ "using a.b.c as d" };
+	Example<pst::Using, true>  short_as_using{ "using a as d" };
+	Example<pst::Using, true>  nested_as_using{ "using a.b.{c as d, e}" };
+	Example<pst::Using, true>  hides_using{ "using a.* hides x" };
+	Example<pst::Using, true>  hides_group_using{ "using a.* hides {x,y,z}" };
+	Example<pst::Using, true>  multiple_using{ "using a.a, b.b" };
+	Example<pst::Using, false> empty_using{ "using" };
+	Example<pst::Using, false> star_as_using{ "using a.* as d" };
+	Example<pst::Using, false> nested_as_whole_using{ "using a.{b, c} as d" };
+
+	Example<pst::Selector, true>  simple_selector{ "std.a.b.*" };
+	Example<pst::Selector, false> bad_selector{ "std.a.b. .*" };
 
 	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\"" };
 	Example<pst::Stmt, true>  private_specifier{ "private fun foo() = {}" };
@@ -247,9 +290,11 @@ class PSTErrorTests: public tester::TestSuite {
 		"@if_system(Windows,) print(\"windows\");"
 	};
 	Example<pst::Stmt, true> trailing_comma_call_list{ "print(\"windows\",);" };
-	Example<pst::Stmt, true> trailing_comma_nested_import{ "import A.B.(C,)" };
+	Example<pst::Stmt, true> trailing_comma_nested_import{ "import A.B.{C,}" };
 	Example<pst::Stmt, true> trailing_comma_parameter_list{ "fun foo(a: A,) = {}" };
-	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y:{1,};" };
+	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y[1,];" };
+	// The old `:{}` template bake syntax is gone, `x.y[1]` replaced it.
+	Example<pst::Stmt, false> old_template_bake_syntax{ "x.y:{1};" };
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };
@@ -257,7 +302,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::For, false> no_in_for{ "for(a a + c) {}" };
 
 	Example<pst::Class, true> simple_class{ "class x{}" };
-	Example<pst::Class, true> complicated_class{ "class x extends y implements z:{}, d:{T} {}" };
+	Example<pst::Class, true> complicated_class{ "class x extends y implements z[], d[T] {}" };
 	Example<pst::Class, true> nested_class{
 		"class outer { class inner { x: i32 = 0; } x: i32 = 0;}"
 	};
@@ -279,13 +324,13 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::TemplateStmt, false> no_statement{ "template ()" };
 
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
-	ClassStmtExample<pst::Stmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
+	ClassStmtExample<pst::Stmt, true> class_using_as{ "using std.math.sqrt as sqrt;" };
 
 	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
 	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
 	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
 	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public static x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public global x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
 	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
@@ -302,14 +347,15 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Constructor, true> named_constructor{
 		"name.from_pair(p: (i32, i32)) = {}", "name"
 	};
-	ClassStmtExample<pst::Constructor, true> init_constructor{
-		"name.init(x: i32, y: i32): z(x, y) = {}", "name"
-	};
 	ClassStmtExample<pst::Constructor, false> bad_constructor1{
 		"name.(x: i32, y: i32): z(x, y) = {}", "name"
 	};
 	ClassStmtExample<pst::Constructor, false> bad_constructor2{ "name.(x: i32, y: i32) -> i32 = {}",
 		                                                        "name" };
+
+	ClassStmtExample<pst::CopyConstructor, true> simple_copy_ctor{ "name.copy() = {}", "name" };
+
+	ClassStmtExample<pst::MoveConstructor, true> simple_move_ctor{ "name.move() = {}", "name" };
 
 	ClassStmtExample<pst::Destructor, true>  simple_destructor{ "name.destroy() = {}", "name" };
 	ClassStmtExample<pst::Destructor, false> non_empty_destructor{ "name.destroy(x: i32) = {}",
@@ -355,9 +401,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::UniversalExprHolder, true> simple_chain_expr{ "(x * t).y.z(4)[3]" };
 
-	Example<pst::UniversalExprHolder, true> simple_template_expr{
-		"(x * t).y:{x, y}::z:{abc}(4)[3]"
-	};
+	Example<pst::UniversalExprHolder, true> simple_template_expr{ "(x * t).y[x, y]::z[abc](4)[3]" };
 
 	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };
 	Example<pst::FlowPattern, true> flow_tuple_nested{ "(1, (x, _))" };
@@ -440,14 +484,14 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 	void diagnosticTests() {
-		using dia_int::testDiagnosticMessage;
+		using dia::testDiagnosticMessage;
 		std::stringstream ss;
 
 		testDiagnosticMessage<pst::error::BlockStartError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::error::DuplicateSemicolon>(
 			ss, dia::SourcePosition::fakePosition()
 		);
-		testDiagnosticMessage<pst::BadStatementChoice<pst::Alias>>(
+		testDiagnosticMessage<pst::BadStatementChoice<pst::Using>>(
 			ss, dia::SourcePosition::fakePosition()
 		);
 		testDiagnosticMessage<pst::NonEmptyError>(ss, dia::SourcePosition::fakePosition());
@@ -466,7 +510,6 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::MultipleTernaryError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::PartialTernaryError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::ImproperTernaryError>(ss, dia::SourcePosition::fakePosition());
-		testDiagnosticMessage<pst::BadTemplateError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadStrValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::MoreThanStrValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadRoundExprError>(ss, dia::SourcePosition::fakePosition());
@@ -498,7 +541,7 @@ class PSTErrorTests: public tester::TestSuite {
 		);
 		testDiagnosticMessage<pst::AttrStarError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::EmptyExprError>(ss, dia::SourcePosition::fakePosition());
-		testDiagnosticMessage<pst::AliasStarError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadSelectorError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadSpecifierCallError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::InvalidExternContentWarning>(
 			ss, dia::SourcePosition::fakePosition()

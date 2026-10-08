@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file kind.hpp
  * @brief Type kind definition
@@ -29,9 +35,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	ManyPointer,
 	CPointer,
 	Slice,
-	String,
 	Function,
-	DynamicArray,
 	StaticArray,
 	Tuple,
 	Variant,
@@ -50,6 +54,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 namespace compiler::tsh {
 	inline bool isPointerKind(const Kind kind) {
 		return kind == Kind::RawPointer || kind == Kind::Pointer || kind == Kind::ManyPointer
+		    || kind == Kind::CPointer;
+	}
+
+	inline bool isIndexable(Kind kind) {
+		return kind == Kind::Slice || kind == Kind::StaticArray || kind == Kind::ManyPointer
 		    || kind == Kind::CPointer;
 	}
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/types/ints.hpp>
@@ -27,21 +33,29 @@ namespace compiler::backend_vm {
 			return extra_bytecode_function_count;
 		}
 
+		[[nodiscard]] usize loweredFFIFunctionCount() const { return lowered_ffi_function_count; }
+
 	private:
 		friend class internal::ProgramLoweringContext;
 		friend class ReplDVMCodeBuilder;
 
 		LoweredEntitiesSnapshot(
-			usize type_count, usize global_count, usize function_count, usize extra_function_count
+			usize type_count,
+			usize global_count,
+			usize function_count,
+			usize extra_function_count,
+			usize ffi_function_count
 		):
 			  lowered_type_count(type_count),
 			  lowered_global_count(global_count),
 			  lowered_function_count(function_count),
-			  extra_bytecode_function_count(extra_function_count) {}
+			  extra_bytecode_function_count(extra_function_count),
+			  lowered_ffi_function_count(ffi_function_count) {}
 
 		usize lowered_type_count            = 0;
 		usize lowered_global_count          = 0;
 		usize lowered_function_count        = 0;
 		usize extra_bytecode_function_count = 0;
+		usize lowered_ffi_function_count    = 0;
 	};
 }

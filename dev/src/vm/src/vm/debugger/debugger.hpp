@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <events/emitter.hpp>
@@ -5,8 +11,10 @@
 #include <vm/api/vm.hpp>
 #include <vm/debugger/mapper.hpp>
 
+#include <optional>
+
 namespace vm::debugger {
-	struct CodePosition: public api::response::CodePosition {
+	struct CodePosition final: public api::response::CodePosition {
 		base::Optional<dia::SourcePosition> mapped_position;
 	};
 
@@ -26,6 +34,8 @@ namespace vm::debugger {
 		PID                 pid;
 		ProgramRunArguments main_args;
 		Mapper              mapper;
+
+		std::set<fs::File> loaded_files;
 
 		events::Listener<api::ProcStatus> updater;
 		events::Listener<std::string>     vm_output;
@@ -88,11 +98,23 @@ namespace vm::debugger {
 		[[nodiscard]] api::ProcStatus getStatus();
 
 		/**
+		 * @brief Returns the files successfully loaded through `loadFiles`
+		 */
+		[[nodiscard]] const std::set<fs::File>& getLoadedFiles() const;
+
+		/**
+		 * @brief Checks if the file was loaded or is a source file of the loaded mapping
+		 */
+		[[nodiscard]] bool isFileAvailable(const fs::File& file) const;
+
+		/**
 		 * @brief Loads files into debugger
 		 */
 		std::expected<void, api::ApiError> loadFiles(const std::vector<fs::File>& files);
 
-		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault();
+		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault(
+			base::Optional<fs::FilePath> prefix = std::nullopt
+		);
 
 		void setProgramArguments(const ProgramRunArguments& args);
 
@@ -119,9 +141,15 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> resume();
 
 		/**
-		 * @brief Returns current position
-		 */
-		std::expected<CodePosition, api::ApiError> getCurrentPosition();
+		 * @brief Returns the code position in the specified stack frame.
+		 *
+		 * @param frame_idx Index of the target frame.
+		 *                  The active/current function has the highest frame index.
+		 *                  If not provided (std::nullopt), defaults to the current (top-most) frame.
+		 **/
+		std::expected<CodePosition, api::ApiError> getCurrentPosition(
+			base::Optional<usize> frame_idx = std::nullopt
+		);
 
 		/**
 		 * @brief Sets breakpoint
@@ -147,14 +175,20 @@ namespace vm::debugger {
 
 		/**
 		 * @brief Execute one FatByteCode step in the VM
+		 *
+		 * @return The position the VM stopped at, or nothing when the step ended the program, or an
+		 * API error.
 		 */
-		std::expected<CodePosition, api::ApiError> step();
+		std::expected<base::Optional<CodePosition>, api::ApiError> step();
 
 		/**
 		 * @brief Execute multiple FatByteCode steps in the VM until next position in source file is
-		 * reached (or just steps if there is no mapping avaliable)
+		 * reached (or just steps if there is no mapping available)
+		 *
+		 * @return The position the VM stopped at, or nothing when the steps ended the program, or
+		 * an API error.
 		 */
-		std::expected<CodePosition, api::ApiError> mappedStep();
+		std::expected<base::Optional<CodePosition>, api::ApiError> mappedStep();
 
 		/**
 		 * @brief Send input to the VM

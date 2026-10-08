@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file hout.hpp
  * @note This file is a placeholder for HOUT structures
@@ -22,12 +28,6 @@
 #include <ostream>
 #include <variant>
 #include <vector>
-
-namespace compiler::repl {
-	// for friend:
-	struct ImplementationOf_QueryReplExpressionWrapper;
-	struct ImplementationOf_QueryReplInstructionWrapper;
-}
 
 namespace compiler::helios {
 
@@ -100,8 +100,6 @@ namespace compiler::helios {
 			code::ElementOrigin          origin
 		);
 		friend ImplementationOf_QueryDeclOfFun;
-		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
-		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 	};
 
 	/**

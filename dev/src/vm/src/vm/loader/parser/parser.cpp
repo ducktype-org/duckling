@@ -1,5 +1,10 @@
-#include <diagnostic_interactive/logger.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <diagnostic/logger.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <token_source/source.hpp>
 
@@ -15,7 +20,7 @@ namespace vm::loader::parser {
 		return source;
 	}
 
-	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> int_log) {
+	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> int_log) {
 		const lexer::TokenData& td = file->getTokenData();
 
 		F8ParserState state(
@@ -25,12 +30,11 @@ namespace vm::loader::parser {
 		return ParsedFile::parse(state);
 	}
 
-	std::expected<std::vector<ParsedFile>, dia_int::Logger> parse(const std::vector<fs::File>& files
-	) {
+	std::expected<std::vector<ParsedFile>, dia::Logger> parse(const std::vector<fs::File>& files) {
 		// @TODO: Decide on a better position
 		// So that they dont't die
 		static std::vector<Box<tokenizer::TokenSource>> tokenized_files;
-		auto                                            int_log = dia_int::Logger();
+		auto                                            int_log = dia::Logger();
 		std::vector<ParsedFile>                         parsed_files;
 
 		for (const auto& file: files) {

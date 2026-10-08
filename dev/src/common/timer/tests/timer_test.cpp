@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <timer/timer.hpp>
 
 #include <tester/tester.hpp>
+
+#include <sstream>
 
 class TimerTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -27,7 +34,8 @@ private:
 	void timeMeasurementTest() {
 		timer::TimeMeasurement tm;
 		tm.startMeasurement();
-		for (volatile int i = 0; i < 10'000; (i = i + 1, (void) 0));  // just burn some time
+		volatile int sink = 0;
+		for (int i = 0; i < 10'000; ++i) sink += i;  // just burn some time
 		tm.endMeasurement();
 
 		auto duration = tm.duration();
@@ -119,7 +127,8 @@ private:
 
 		{
 			timer::AddToTime add_to_time(&total_duration);
-			for (volatile int i = 0; i < 10'000; (i = i + 1, (void) 0));  // just burn some time
+			volatile int     sink = 0;
+			for (int i = 0; i < 10'000; ++i) sink += i;  // just burn some time
 		}
 
 		assertTrue(total_duration.count() > 0, "AddToTime should add some positive amount of time");

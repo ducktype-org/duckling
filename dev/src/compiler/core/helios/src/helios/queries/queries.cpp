@@ -1,6 +1,11 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "queries.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
@@ -8,8 +13,8 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/attributes.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -21,16 +26,74 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
 
 namespace compiler::helios {
+
+	/**
+	 * @brief This function collects all used symbols from the hout unit module
+	 * that should be appended to the module, for example some compiler generated symbols
+	 * or template instantiations in the future.
+	 */
+	base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
+		// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
+		std::unordered_set<SymID> added_symbols;
+		std::vector<SymID>        symbol_stack;
+		base::OkBad               result = base::OK;
+
+		for (auto f: out_unit.functions) {
+			added_symbols.insert(f->declaration->original_symbol);
+			symbol_stack.push_back(f->declaration->original_symbol);
+		}
+		for (auto g: out_unit.glob_data) {
+			added_symbols.insert(g->helios_symbol);
+			symbol_stack.push_back(g->helios_symbol);
+		}
+
+		while (not symbol_stack.empty()) {
+			auto current_sym = symbol_stack.back();
+			symbol_stack.pop_back();
+
+			auto qresult = ctx.query<QueryDirectUsedSymbols>(current_sym);
+			if (qresult->hasFailed()) {
+				result = base::BAD;
+				continue;
+			}
+			auto& used_symbols = qresult->valueOrPanic();
+
+			for (auto used_fun: used_symbols.used_functions) {
+				if (added_symbols.contains(used_fun)) continue;
+				if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
+
+				added_symbols.insert(used_fun);
+				if (implementsQueryCodeOfFun(used_fun))
+					out_unit.functions.emplace_back(
+						&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
+					);
+				symbol_stack.push_back(used_fun);
+			}
+			for (auto used_global: used_symbols.used_globals) {
+				if (added_symbols.contains(used_global)) continue;
+				if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
+
+				added_symbols.insert(used_global);
+				out_unit.glob_data.emplace_back(
+					&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
+				);
+				symbol_stack.push_back(used_global);
+			}
+		}
+		return result;
+	}
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -124,6 +187,7 @@ namespace compiler::helios {
 			}
 
 			if (duplicatesCheck(ctx, out, class_symbols).isBad()) is_failed = true;
+			if (duplicatedFieldsCheck(ctx, class_symbols).isBad()) is_failed = true;
 			if (collectReplicatedSymbols(ctx, out).isBad()) is_failed = true;
 
 
@@ -137,62 +201,6 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief This function collects all used symbols from the hout unit module
-		 * that should be appended to the module, for example some compiler generated symbols
-		 * or template instantiations in the future.
-		 */
-		static base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
-			// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
-			std::unordered_set<SymID> added_symbols;
-			std::vector<SymID>        symbol_stack;
-			base::OkBad               result = base::OK;
-
-			for (auto f: out_unit.functions) {
-				added_symbols.insert(f->declaration->original_symbol);
-				symbol_stack.push_back(f->declaration->original_symbol);
-			}
-			for (auto g: out_unit.glob_data) {
-				added_symbols.insert(g->helios_symbol);
-				symbol_stack.push_back(g->helios_symbol);
-			}
-
-			while (not symbol_stack.empty()) {
-				auto current_sym = symbol_stack.back();
-				symbol_stack.pop_back();
-
-				auto qresult = ctx.query<QueryDirectUsedSymbols>(current_sym);
-				if (qresult->hasFailed()) {
-					result = base::BAD;
-					continue;
-				}
-				auto& used_symbols = qresult->valueOrPanic();
-
-				for (auto used_fun: used_symbols.used_functions) {
-					if (added_symbols.contains(used_fun)) continue;
-					if (emissionPolicy(used_fun) != EmissionPolicy::Replicated) continue;
-
-					added_symbols.insert(used_fun);
-					if (implementsQueryCodeOfFun(used_fun))
-						out_unit.functions.emplace_back(
-							&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
-						);
-					symbol_stack.push_back(used_fun);
-				}
-				for (auto used_global: used_symbols.used_globals) {
-					if (added_symbols.contains(used_global)) continue;
-					if (emissionPolicy(used_global) != EmissionPolicy::Replicated) continue;
-
-					added_symbols.insert(used_global);
-					out_unit.glob_data.emplace_back(
-						&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
-					);
-					symbol_stack.push_back(used_global);
-				}
-			}
-			return result;
-		}
-
-		/**
 		 * @brief Reports a duplicated definition diagnostic if a `SymID`s mangled name collides
 		 * with a previously seen definition.
 		 *
@@ -203,11 +211,11 @@ namespace compiler::helios {
 		 * @return `true` if `sym_id` duplicates an earlier definition.
 		 */
 		static bool reportIfDuplicate(
-			query::Context&                                           ctx,
-			std::unordered_map<base::StrID, dia_int::StablePosition>& seen_declarations,
-			SymID                                                     sym_id,
-			base::StrID                                               original_name,
-			dia_int::StablePosition                                   stable_pos
+			query::Context&                                  ctx,
+			base::HashMap<base::StrID, dia::StablePosition>& seen_declarations,
+			SymID                                            sym_id,
+			base::StrID                                      original_name,
+			dia::StablePosition                              stable_pos
 		) {
 			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
 			if (mangled_name.isBad()) return false;
@@ -218,20 +226,81 @@ namespace compiler::helios {
 				return false;
 			}
 
-			auto [entry, inserted] = seen_declarations.try_emplace(mangled_name, stable_pos);
+			return reportIfNameTaken(
+				ctx, seen_declarations, mangled_name, original_name, stable_pos
+			);
+		}
+
+		/**
+		 * @brief Reports a duplicated definition diagnostic if @p key_name was already registered
+		 * in @p seen_declarations, and registers it otherwise.
+		 *
+		 * @param seen_declarations Names seen so far, mapped to the source position of the first
+		 * definition that used them.
+		 * @param key_name Name the definition is registered under (mangled for module level
+		 * symbols, the plain name for class fields).
+		 * @param original_name Name of the definition as written in the source code.
+		 * @param stable_pos Source position of the definition.
+		 * @return `true` if an earlier definition already used @p key_name.
+		 */
+		static bool reportIfNameTaken(
+			query::Context&                                  ctx,
+			base::HashMap<base::StrID, dia::StablePosition>& seen_declarations,
+			base::StrID                                      key_name,
+			base::StrID                                      original_name,
+			dia::StablePosition                              stable_pos
+		) {
+			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
 			if (inserted) return false;
 
-			auto error
-				= makeBox<dia_int::DuplicatedDefinitionError>(original_name.str(), stable_pos);
+			auto error = makeBox<dia::DuplicatedDefinitionError>(original_name.str(), stable_pos);
 
 			// Point the user at the previous declaration.
 			error->addAttachedMessage(
-				makeBox<dia_int::PlaceholderNote>("Previous declaration here.", entry->second)
+				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
 			);
 
 			ctx.logInt(std::move(error));
 
 			return true;
+		}
+
+		/**
+		 * @brief Reports fields declared more than once inside the same class.
+		 *
+		 * @param class_symbols Class symbols of the unit.
+		 * @return `base::BAD` if at least one class declares the same field name twice. The caller
+		 * is responsible for failing the query gracefully; this must not throw, as
+		 * `QueryModuleHOUT` does not catch query-failure exceptions thrown from `provide`.
+		 */
+		static base::OkBad duplicatedFieldsCheck(
+			query::Context& ctx, const std::vector<SymID>& class_symbols
+		) {
+			bool found_duplicate = false;
+
+			for (SymID class_sym: class_symbols) {
+				Ref class_data = ctx.query<QueryClassSymbolData>(class_sym);
+				// A class we could not resolve is already diagnosed elsewhere.
+				if (class_data->hasFailed()) continue;
+
+				base::HashMap<base::StrID, dia::StablePosition> seen_fields;
+
+				for (const auto& field:
+				     class_data->valueOrPanic().declared_interface.getAnyFieldsView()) {
+					const SymID field_sym = field.getSymbol();
+					if_opt_some(maybeSymbolPst(field_sym), pst) {
+						if (reportIfNameTaken(
+								ctx,
+								seen_fields,
+								name(field_sym),
+								name(field_sym),
+								pst.unlock(ctx)->getStablePosition()
+							))
+							found_duplicate = true;
+					}
+				}
+			}
+			return found_duplicate ? base::BAD : base::OK;
 		}
 
 		/**
@@ -246,8 +315,8 @@ namespace compiler::helios {
 		static base::OkBad duplicatesCheck(
 			query::Context& ctx, const HOUTUnit& unit, const std::vector<SymID>& class_symbols
 		) {
-			std::unordered_map<base::StrID, dia_int::StablePosition> seen_declarations;
-			bool                                                     found_duplicate = false;
+			base::HashMap<base::StrID, dia::StablePosition> seen_declarations;
+			bool                                            found_duplicate = false;
 
 			for (const auto& func: unit.functions) {
 				if_opt_some(func->origin.getStablePosition(), stable_pos) {
@@ -291,33 +360,35 @@ namespace compiler::helios {
 		 * Append the methods and static variables of a class.
 		 */
 		static base::OkBad appendClassTasks(
-			std::vector<query::TaskHandle>&                  out_function_code_tasks,
-			[[maybe_unused]] std::vector<query::TaskHandle>& out_global_data_tasks,
-			const SymID                                      class_sym,
-			Context&                                         ctx
+			std::vector<query::TaskHandle>& out_function_code_tasks,
+			std::vector<query::TaskHandle>& out_global_data_tasks,
+			const SymID                     class_sym,
+			Context&                        ctx
 		) {
 			CORE_ASSERT(
 				kind(class_sym) == SymbolKind::Class,
 				"Invalid argument exception: expected class symbol"
 			);
 
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
+			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
+			// The interface of a class we could not resolve is already diagnosed by the query
+			// that builds it, and `provide` must not let its failure escape as an exception.
+			Ref interface_result = class_type.getInterfaceResult(ctx);
+			if (interface_result->hasFailed()) return base::BAD;
+			Ref interface = &interface_result->valueOrPanic();
 
 
-			auto methods = class_type.getInterface(ctx)->getMethodsView();
-
-			for (const auto& method: methods) {
+			for (const auto& method: interface->getAnyMethodsView()) {
 				auto method_sym = method.getSymbol();
+				// We only here add the methods that are owner only.
+				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
 				// llvm panics. This check is put inside the for, to only check it if the methods
 				// are actually present, and to provide a more specific error location.
 				if (not class_type.carriesInformation(ctx)) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
 						"being properly supported yet.",
 						maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
@@ -326,10 +397,13 @@ namespace compiler::helios {
 					));
 					return base::BAD;
 				}
-				// We only here add the methods that are owner only.
-				if (emissionPolicy(method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
+			}
+
+			for (const auto& field: interface->getStaticFieldsView()) {
+				auto sym = field.getSymbol();
+				out_global_data_tasks.push_back(ctx.schedule<QueryHOUTGlobalData>(sym));
 			}
 			return base::OK;
 		}

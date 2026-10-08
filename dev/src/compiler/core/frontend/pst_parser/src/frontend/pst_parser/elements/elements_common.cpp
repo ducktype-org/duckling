@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "elements_common.hpp"
 
 #include <token_parser_core/token_stream.hpp>
@@ -9,6 +15,10 @@ namespace pst::internal {
 
 	bool Conditions::isSemicolon(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(lang_def::Special::Semicolon);
+	}
+
+	bool Conditions::isSemicolonOrSentinel(const TokenStream& state, i64 fwd) {
+		return isSemicolon(state, fwd) || isSentinel(state, fwd);
 	}
 
 	bool Conditions::isSentinel(const TokenStream& state, i64 fwd) {
@@ -29,10 +39,6 @@ namespace pst::internal {
 		    || st[fwd].is(lang_def::NamedOperator::Assign) || st[fwd].is(lang_def::Special::Comma);
 	}
 
-	bool Conditions::isAssign(const TokenStream& st, i64 fwd) {
-		return st[fwd].is(lang_def::NamedOperator::Assign);
-	}
-
 	bool Conditions::isBlockGroup(const TokenStream& st, i64 fwd) {
 		return st[fwd].isBracketGroup(lexer::Token::Curly)
 		    && not st[fwd - 1].is(lang_def::NamedOperator::Colon);
@@ -42,6 +48,12 @@ namespace pst::internal {
 		return st[fwd].is(lang_def::Keyword::Implements)
 		    || (st[fwd].isBracketGroup(lexer::Token::Curly)
 		        && not st[fwd - 1].is(lang_def::NamedOperator::Colon));
+	}
+
+	bool Conditions::isMatchBodyBlock(const TokenStream& st, i64 fwd) {
+		return fwd >= 2 && st[fwd].isBracketGroup(lexer::Token::Curly)
+		    && st[fwd - 1].isBracketGroup(lexer::Token::Round)
+		    && st[fwd - 2].is(lang_def::Keyword::Match);
 	}
 
 	bool Conditions::isKeyword(const TokenStream& st, i64 fwd, lang_def::Keyword key) {

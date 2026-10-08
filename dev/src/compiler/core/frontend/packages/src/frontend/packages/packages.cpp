@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "packages.hpp"
 
 #include "access.hpp"
@@ -188,13 +194,16 @@ namespace compiler::frontend::packages {
 	}
 
 	base::Optional<PackageInfo> createPackageInfo(
-		const RawPackageInfo&              package_info,
-		const std::vector<RawPackageInfo>& all_packages,
-		const DiagnosticReporter&          report
+		const RawPackageInfo&                        package_info,
+		const std::vector<RawPackageInfo>&           all_packages,
+		const DiagnosticReporter&                    report,
+		base::Optional<compiler::frontend::ModuleID> override_root_module
 	) {
-		auto root_module = compiler::frontend::createModuleTree(
-			package_info.package_path, package_info.package_id
-		);
+		auto root_module = override_root_module.has_value()
+		                     ? *override_root_module
+		                     : compiler::frontend::createModuleTree(
+								   package_info.package_path, package_info.package_id
+							   );
 
 		if (!getModuleRef(root_module)->hasMainSourceFile()) {
 			auto module_name = getModuleRef(root_module)->getName();
@@ -205,7 +214,8 @@ namespace compiler::frontend::packages {
 					module_name,
 					". Please add a ",
 					module_name,
-					".dmf file to the package module directory."
+					LANG_MODULE_FILE,
+					" file to the package module directory."
 				),
 				true
 			);

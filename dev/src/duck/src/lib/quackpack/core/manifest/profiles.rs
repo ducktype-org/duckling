@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::compile::profiles::PREDEFINED_PROFILES;
@@ -128,7 +134,9 @@ impl Profiles {
         counter: usize,
     ) -> QuackResult<()> {
         let Some(profile) = self.0.get(&profile_name) else {
-            qp_bail_internal!("Already checked parents exist");
+            qp_bail_internal!(
+                "no profile `{profile_name}`, but already checked, that it exists? {self:#?}"
+            );
         };
         if let Some(previous_occurrence) = current_visit.get(&profile_name) {
             return Err(create_cycle_error_msg(

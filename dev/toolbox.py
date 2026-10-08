@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 import pathlib
 import sys
@@ -8,6 +13,7 @@ import click
 from scripts.py.toolbox.impl.helpers import exit_with_error
 
 from scripts.py.toolbox.commands.clean_init import clean_init
+from scripts.py.toolbox.commands.cloc import cloc
 from scripts.py.toolbox.commands.coverage import coverage
 from scripts.py.toolbox.commands.cpp_linter import cpp_linter
 from scripts.py.toolbox.commands.docs import docs
@@ -27,12 +33,7 @@ from scripts.py.toolbox.commands.setup_venv import setup_venv
 from scripts.py.toolbox.commands.test import test
 from scripts.py.toolbox.commands.todo_counter import todo_counter
 from scripts.py.toolbox.commands.todo_validate import todo_validate
-
-
-DATA_USER = "dev"
-# @FUTURE: change this password and hide it:
-DATA_PASS = "7ocwXWOAwg="
-
+from scripts.py.toolbox.commands.workflows_lint import workflows_lint
 
 @click.group()
 def cli():
@@ -40,6 +41,7 @@ def cli():
 
 
 cli.add_command(clean_init)
+cli.add_command(cloc)
 cli.add_command(coverage)
 cli.add_command(cpp_linter)
 cli.add_command(docs)
@@ -59,6 +61,7 @@ cli.add_command(setup_venv)
 cli.add_command(test)
 cli.add_command(todo_counter)
 cli.add_command(todo_validate)
+cli.add_command(workflows_lint)
 
 
 if __name__ == "__main__":

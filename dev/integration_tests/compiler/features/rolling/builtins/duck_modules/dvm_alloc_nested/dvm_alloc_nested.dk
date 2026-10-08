@@ -1,0 +1,21 @@
+import core.builtins.*;
+
+#{
+	Tests whether VM correctly counts references in nested blocks while
+	allocating and freeing memory.
+#}
+
+class Labelled {
+	name: str = "";
+	tag: i64 = 0;
+}
+
+fun main() -> i64 = {
+	var q = dvm_alloc_arr[Labelled](2i64);
+	q[0] = Labelled("wxyz", 1i64);
+	q[1] = Labelled("v", 2i64);
+	builtin_output_i64(q[0].name.length() + q[1].name.length());
+	dvm_free_arr[Labelled](q);
+
+	return 0i64;
+}

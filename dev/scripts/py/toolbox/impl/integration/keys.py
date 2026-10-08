@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 NAME = "Name"
 CASE_NAME = "CaseName"
 DESCRIPTION = "Description"
@@ -12,6 +18,7 @@ PRE_TEST = "PreTest"
 POST_TEST = "PostTest"
 PRE_CASE = "PreCase"
 POST_CASE = "PostCase"
+NEEDED_THREADS = "NeededThreads"
 CLEAN = "Clean"
 ENV = "Env"
 TIME_OUT = "TimeOut"
@@ -26,3 +33,4 @@ ERR = "Err"
 FILE = "File"
 STRING = "String"
 FAIL_FAST = "FailFast"
+NO_PARALLEL = "NoParallel"

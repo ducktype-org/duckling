@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "fast_vmthread.hpp"
@@ -17,13 +23,9 @@ namespace vm::fast {
 		explicit FastVMProcess(PID pid);
 		~FastVMProcess() override = default;
 
-		Ref<VmValue> createVmValue(vm::TypeCRef type) override;
+		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		Ref<VmValue> createVmValue(vm::TypeCRef type, Pointer src) override;
-
-		Box<VmValue> createOwnedVmValue(vm::TypeCRef type) override;
-
-		Box<VmValue> createOwnedVmValue(vm::TypeCRef type, Pointer src) override;
+		Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) override;
 
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request
 		) override;
@@ -36,6 +38,10 @@ namespace vm::fast {
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		) override;
+
+		[[nodiscard]] std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const override;
 
 		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
@@ -63,13 +69,16 @@ namespace vm::fast {
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
-		base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> requestPauseOfVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
+
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id, base::Optional<usize> frame_idx
 		) override;
 
 		std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
@@ -80,9 +89,13 @@ namespace vm::fast {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		void notifyPausedVMThread(api::ThreadID thread_id) override;
+		void notifyVMThreadWaiters(api::ThreadID thread_id) override;
 
-		void waitForBreakpoint() override;
+		void requestStopAllThreads() noexcept override;
+
+		std::expected<api::Response, api::ApiError> waitForBreakpointAndReportPosition(
+			api::ThreadID thread_id
+		) override;
 
 		std::expected<api::Response, api::ApiError> setExecutionConfig(
 			const api::ExecutionConfig& config
@@ -94,13 +107,13 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllThreadIDs() override;
+		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
+
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
 
 		FastVMThread& getMainVMThread();
 
 		base::Optional<Ref<FastVMThread>> getVMThreadByID(api::ThreadID thread_id);
-
-		api::ThreadID getMainThreadID() override;
 
 	private:
 		base::StableObjectPool<FastVMThread, api::ThreadID, false, true> vm_threads;

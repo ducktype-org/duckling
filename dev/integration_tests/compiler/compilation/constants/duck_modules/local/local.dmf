@@ -1,7 +1,0 @@
-import core.builtins.*;
-
-fun main() -> i64 = {
-    const a = 2;
-    builtin_output_i64(a);
-    return 0;
-}

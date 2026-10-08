@@ -1,29 +1,46 @@
 #!/usr/bin/env python3
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 """
 Helpers for running DIT test cases inside a temporary directory.
 
 The directory is taken from $DIT_TMP_DIR, which tests define with the
 `Env` config key (see `new_tmp_dir` in the root testconfig.yaml).
 
+All scratch space lives under a per-user root, `/tmp/dit-<user>` by
+default and $DIT_TMP_ROOT when that is set. This script is the ONLY
+place that rule is written down: the root testconfig.yaml asks it
+(`new_tmp_dir` is `tmp_env.py new`, `tmp_root` is `$(tmp_env.py root)`)
+rather than computing the same path a second time in shell.
+
 Subcommands:
+    new              -- create a fresh case directory under the root and
+                        print it; this is what `new_tmp_dir` calls
     make [FILES...]  -- copy FILES (relative to the test's directory)
                         into the temporary directory, mirroring their
                         relative paths, and sweep stale directories
                         left over from past runs
-    exec -- CMD...   -- run CMD inside the temporary directory
+    exec -- CMD...   -- run CMD (bash syntax) inside the temporary directory
     clean            -- remove the temporary directory
+    sweep            -- only sweep stale directories of past runs
+    root [--resolved]
+                     -- print the root all temporary directories live
+                        under; --resolved follows symlinks, which is the
+                        form a case directory actually has
 """
 import os
+import pwd
 import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 
-TMP_ROOT = Path("/tmp/dit")
-# MacOS has a lot of weird symlinks.
-# F.e. `/tmp` is a symlink to `/private/tmp`, and duck resolves paths, so I get a lot of mismatches on my local machine.
-MACOS_WEIRD_TMP_ROOT = Path("/private/tmp/dit")
-ALLOWED_TMP_ROOTS = [TMP_ROOT, MACOS_WEIRD_TMP_ROOT]
+DEFAULT_TMP_ROOT_PREFIX = "/tmp/dit-"
 STALE_AGE_SECONDS = 24 * 60 * 60
 
 
@@ -32,11 +49,39 @@ def fail(msg: str):
     sys.exit(1)
 
 
+def current_user_name() -> str:
+    """The current user's login name, the same answer `id -un` gives."""
+    try:
+        return pwd.getpwuid(os.getuid()).pw_name
+    except (KeyError, OSError):
+        # No passwd entry for us: the numeric id is still unique per user.
+        return str(os.getuid())
+
+
+def tmp_root() -> Path:
+    """
+    The root every scratch directory lives under. It is per-user, so two
+    accounts on one machine never fight over the same directory: the first
+    one to run the suite would own it and lock everybody else out.
+    """
+    override = os.environ.get("DIT_TMP_ROOT", "")
+    if override:
+        return Path(override)
+    return Path(DEFAULT_TMP_ROOT_PREFIX + current_user_name())
+
+
+TMP_ROOT = tmp_root()
+# MacOS has a lot of weird symlinks.
+# F.e. `/tmp` is a symlink to `/private/tmp`, and duck resolves paths, so I get a lot of mismatches on my local machine.
+# Accepting the resolved root as well keeps those paths valid.
+ALLOWED_TMP_ROOTS = list(dict.fromkeys([TMP_ROOT, TMP_ROOT.resolve()]))
+
+
 def tmp_dir() -> Path:
     value = os.environ.get("DIT_TMP_DIR", "")
     if not value:
         fail("DIT_TMP_DIR is not set; define it with the `Env` config key")
-    path = Path(value)
+    path = Path(value).resolve()
     is_under_valid_dir = any(root in path.parents for root in ALLOWED_TMP_ROOTS)
     if not is_under_valid_dir:
         valid_roots_string = " or ".join(str(x) for x in ALLOWED_TMP_ROOTS)
@@ -58,6 +103,18 @@ def sweep_stale():
                 shutil.rmtree(entry, ignore_errors=True)
         except OSError:
             pass
+
+
+def cmd_new():
+    """
+    Creates a fresh directory for one case and prints it. `new_tmp_dir` in
+    the root testconfig.yaml is nothing but a call to this, so the root is
+    resolved here and nowhere else. Symlinks are followed in the printed
+    path: duck resolves the paths it is given, and on macOS `/tmp` is a
+    symlink to `/private/tmp`.
+    """
+    TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    print(Path(tempfile.mkdtemp(prefix="case-", dir=TMP_ROOT)).resolve())
 
 
 def cmd_make(files: list[str]):
@@ -85,6 +142,8 @@ def cmd_exec(argv: list[str]):
     if not path.is_dir():
         fail(f"{path} does not exist; run `make` first")
     os.chdir(path)
+    # The arguments are joined into one bash command line and re-parsed
+    # by bash: `exec` forwards shell syntax, it does not exec an argv.
     os.execvp("/bin/bash", ["/bin/bash", "-c", " ".join(argv)])
 
 
@@ -92,10 +151,32 @@ def cmd_clean():
     shutil.rmtree(tmp_dir(), ignore_errors=True)
 
 
+def cmd_root(argv: list[str]):
+    """
+    Plain `root` prints the configured root, exactly as `$DIT_TMP_ROOT`
+    or the default spells it. `root --resolved` follows symlinks first:
+    that is the form a case directory really has, because `new` resolves
+    it and on macOS `/tmp` is a symlink to `/private/tmp`. Compare a case
+    directory against this one.
+    """
+    match argv:
+        case []:
+            print(TMP_ROOT)
+        case ["--resolved"]:
+            print(TMP_ROOT.resolve())
+        case _:
+            fail("usage: tmp_env.py root [--resolved]")
+
+
 def main():
     if len(sys.argv) < 2:
-        fail("usage: tmp_env.py make [FILES...] | exec -- CMD... | clean")
+        fail(
+            "usage: tmp_env.py new | make [FILES...] | exec -- CMD..."
+            " | clean | sweep | root [--resolved]"
+        )
     match sys.argv[1]:
+        case "new":
+            cmd_new()
         case "make":
             cmd_make(sys.argv[2:])
         case "exec":
@@ -105,6 +186,10 @@ def main():
             cmd_exec(args)
         case "clean":
             cmd_clean()
+        case "sweep":
+            sweep_stale()
+        case "root":
+            cmd_root(sys.argv[2:])
         case unknown:
             fail(f"unknown subcommand: {unknown}")
 

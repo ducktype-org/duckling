@@ -1,5 +1,10 @@
-#include <diagnostic_interactive/placeholder.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/external/api.hpp>
 #include <query_framework/input_query/query_input.hpp>
@@ -36,7 +41,7 @@ DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 
 struct IMPLEMENT_QUERY(DummyQuery1, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		ctx.logInt(makeBox<dia_int::PlaceholderError>("...", ""));
+		ctx.logInt(makeBox<dia::PlaceholderError>("...", ""));
 
 		if (key.value == 1) {
 			ctx.query<DummyQuery2>({ 1 });

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file vm.hpp
  * @brief Main API for the VM clients (CLI, Server, etc.)
@@ -9,9 +15,10 @@
 #include <vm/api/data/execution_config.hpp>
 #include <vm/api/data/process_options.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 namespace vm::api {
 	/**
@@ -66,6 +73,13 @@ namespace vm::api {
 	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 
 	/**
+	 * @brief Same as `run`, but executes the program synchronously on the caller's thread and
+	 * returns its exit value.
+	 * @return The return value of the program if it was ran successfully or an API error otherwise.
+	 */
+	std::expected<ExitValue, ApiError> runAwait(PID pid, const ProgramRunArguments& args = {});
+
+	/**
 	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
@@ -85,10 +99,10 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Get a VmValue containing the return value of the last ran function on DVM.
-	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
+	 * @brief Get a VMValue containing the return value of the last ran function on DVM.
+	 * @note The returned VMValue is owned by the process and shouldn't be freed by the caller. It
 	 * will be automatically freed when the process is destroyed.
-	 * @return The VmValue containing the return value of the last called function or an API error
+	 * @return The VMValue containing the return value of the last called function or an API error
 	 * if no function was run or the execution didn't complete yet.
 	 */
 	std::expected<ExitValue, ApiError> getExitValue(PID pid);
@@ -98,8 +112,7 @@ namespace vm::api {
 	 * @return Nothing if the thread successfully stopped or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> join(PID pid, ThreadID thread_id);
-	std::expected<void, ApiError> join(PID pid);
+	std::expected<void, ApiError> join(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
 	/**
 	 * @brief Request the main execution thread of the given process to stop running, kill the
@@ -110,11 +123,26 @@ namespace vm::api {
 
 	/**
 	 * @brief Deinitialize and validate processes memory state.
-	 * Also, remove the process from the internal structures.
-	 * @TODO: #1354 After 1354 it should be required that the process is stopped/finished
-	 * when this endpoint is called.
+	 *
+	 * @note Legal only when a process never started or completed successfully without being stopped
+	 * or panicked. Still executing process or one that was stopped or panicked will be refused with
+	 * a `StateError`. Such process should be killed.
+	 *
+	 * @note The process is removed from the internal structures whenever the deinitialization
+	 * actually ran. This includes a successful deinit and when a global destructor panicked during
+	 * execution.
 	 */
 	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
+
+	/**
+	 * @brief Tears down the process. If it's possible, we tear it down gracefully with
+	 * `deinitAndValidate`, otherwise (still running, stopped or panicked) we force `kill` it. In
+	 * both cases, the process is gone.
+	 *
+	 * @return The validation result if the process was deinitialized, an empty optional if it had
+	 * to be killed, or an API error if neither could be done.
+	 */
+	std::expected<base::Optional<response::Boolean>, ApiError> deinitOrKill(PID pid);
 
 	/// DEBUGGER REQUESTS ///
 	/**
@@ -124,23 +152,37 @@ namespace vm::api {
 	 * @return Code position of the next instruction to execute after the program is paused or an
 	 * error in which case the state is undefined.
 	 */
-	std::expected<response::CodePosition, ApiError> pause(PID pid, ThreadID thread_id);
-	std::expected<response::CodePosition, ApiError> pause(PID pid);
+	std::expected<response::CodePosition, ApiError> pause(
+		PID pid, ThreadID thread_id = api::MAIN_THREAD_ID
+	);
+
+	/**
+	 * @brief Asks every running thread to pause and waits for them to be paused.
+	 *
+	 * Blocks until every asked thread parked. A thread sleeping on IO pauses once it wakes up
+	 * from the IO.
+	 *
+	 * A thread is skipped when another control request is still in progress, or when it
+	 * finishes first. Skipped threads are not included in the result.
+	 *
+	 * @return The threads that are actually paused.
+	 */
+	std::expected<response::ThreadIDs, ApiError> pauseAll(PID pid);
 
 	/**
 	 * @brief Resume the execution of the program.
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id);
-	std::expected<void, ApiError> resume(PID pid);
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
 	/**
-	 * @brief Perform one instruction of the program and pause.
-	 * @return Nothing if the program successfully stepped and paused or an API error otherwise, in
-	 * which case the state is undefined.
+	 * @brief Perform one instruction of the given (paused) thread and pause again.
+	 *
+	 * @return Nothing if the thread successfully stepped (and paused again or terminated) or an API
+	 * error otherwise.
 	 */
-	std::expected<void, ApiError> step(PID pid);
+	std::expected<void, ApiError> step(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
 	/**
 	 * @brief Force the main execution thread of the given process to stop running and kill the
@@ -153,14 +195,21 @@ namespace vm::api {
 	/**
 	 * @brief Wait for breakpoint hit. Used by tests.
 	 */
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(
+		PID pid, ThreadID thread_id = api::MAIN_THREAD_ID
+	);
 
 	/**
-	 * @brief Get the code position of the next line of bytecode to be executed on the specified
-	 * process of the DVM.
+	 * @brief Returns the code position in the specified stack frame.
+	 *
+	 * @param frame_idx Index of the target frame.
+	 *                  The active/current function has the highest frame index.
+	 *                  If not provided (std::nullopt), defaults to the current (top-most) frame.
 	 * @return The response containing code position or an API error.
 	 */
-	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid);
+	std::expected<response::CodePosition, ApiError> getCurrentPosition(
+		PID pid, base::Optional<usize> frame_idx = {}
+	);
 
 	/// IO REQUESTS ///
 	/**
@@ -195,13 +244,13 @@ namespace vm::api {
 	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name);
 
 	/**
-	 * @brief Get an empty VmValue (initialized by zero bytes) of the given type.
-	 * @note This endpoint returns a VmValue which is owned by the caller. It's the callers
-	 * responsibility to call `VmValue::freeData()` on the VmValue. For more information
-	 * on why this is necessary, see documentation of `vm::VmValue::freeData()`.
-	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
+	 * @brief Get an empty VMValue (initialized by zero bytes) of the given type.
+	 * @note This endpoint returns a VMValue which is owned by the caller. It's the callers
+	 * responsibility to call `VMValue::freeData()` on the VMValue. For more information
+	 * on why this is necessary, see documentation of `vm::IVMValue::freeData()`.
+	 * @return Response containing a Box containing the newly allocated VMValue of the specified type.
 	 */
-	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
+	std::expected<response::VMValue, ApiError> getVMValue(PID pid, const std::string& type_name);
 
 	/**
 	 * @brief Get the number of current stack frames.

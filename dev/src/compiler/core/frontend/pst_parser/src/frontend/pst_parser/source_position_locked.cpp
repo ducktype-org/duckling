@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "source_position_locked.hpp"
 
@@ -42,8 +47,8 @@ namespace pst {
 	}
 
 	dia::SourcePosition ResolvesToPosition::resolve(query::Context& ctx) const {
-		if (std::holds_alternative<dia_int::StablePosition>(data))
-			return std::get<dia_int::StablePosition>(data).getActiveSourcePosition(ctx);
+		if (std::holds_alternative<dia::StablePosition>(data))
+			return std::get<dia::StablePosition>(data).getActiveSourcePosition(ctx);
 		else
 			return std::get<std::function<dia::SourcePosition(query::Context&)>>(data)(ctx);
 	}

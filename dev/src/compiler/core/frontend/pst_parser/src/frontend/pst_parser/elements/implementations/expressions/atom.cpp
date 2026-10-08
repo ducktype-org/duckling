@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/expressions/atom.hpp"
 
 #include "../../hierarchy/expressions/block_expr.hpp"
@@ -5,6 +11,7 @@
 #include "../../hierarchy/expressions/format_string_value.hpp"
 #include "../../hierarchy/expressions/identifier_literal.hpp"
 #include "../../hierarchy/expressions/keyword_literal.hpp"
+#include "../../hierarchy/expressions/match_expr.hpp"
 #include "../../hierarchy/expressions/numeric_value.hpp"
 #include "../../hierarchy/expressions/round_expr.hpp"
 #include "../../hierarchy/expressions/string_value.hpp"
@@ -15,7 +22,9 @@ namespace pst::expr {
 	MBox<ExprElement> Atom::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
-		if (state[0].isKeyword()) {
+		if (state[0].is(Keyword::Match)) {
+			return MatchExpr::parse(state);
+		} else if (state[0].isKeyword()) {
 			return KeywordLiteral::parse(state);
 		} else if (state[0].isIdentifier()) {
 			return IdentifierLiteral::parse(state);

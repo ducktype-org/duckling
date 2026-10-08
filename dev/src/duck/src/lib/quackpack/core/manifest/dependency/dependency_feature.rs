@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Required features of a dependency.
+use std::collections::HashSet;
+
 use super::Conditions;
-use crate::QuackError;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::{OneEntryMap, registry};
 
@@ -25,23 +32,26 @@ impl DependencyFeature {
     }
 
     /// Check, if this feature is enabled for the given features.
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: &HashSet<FeatureName>) -> bool {
         self.conditions
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
     }
+
+    /// Get the [`Conditions`] of this feature.
+    pub fn conditions(&self) -> Option<&Conditions> {
+        self.conditions.as_ref()
+    }
 }
 
-impl TryFrom<registry::DependencyFeature> for DependencyFeature {
-    type Error = QuackError;
-
-    fn try_from(value: registry::DependencyFeature) -> Result<Self, Self::Error> {
+impl From<registry::DependencyFeature> for DependencyFeature {
+    fn from(value: registry::DependencyFeature) -> Self {
         match value {
-            registry::DependencyFeature::Simple(name) => Ok(Self::new(name.into(), None)),
+            registry::DependencyFeature::Simple(name) => Self::new(name.into(), None),
             registry::DependencyFeature::Detailed(OneEntryMap {
                 key: name,
                 value: conditions,
-            }) => Ok(Self::new(name.into(), Some(conditions.try_into()?))),
+            }) => Self::new(name.into(), Some(conditions.into())),
         }
     }
 }

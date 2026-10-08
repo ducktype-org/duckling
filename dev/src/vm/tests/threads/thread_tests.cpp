@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <vm_tester_utils.hpp>
 
@@ -28,28 +33,28 @@ private:
 
 	void multithreadZeroDiv() {
 		// Spawn a thread that performs division by zero on i32 and verify VM panicked
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("multithread_zero_div.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
 		// Spawn a thread that performs division by zero on i64 and verify VM panicked
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("multithread_zero_div_i64.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
 		// Start a worker thread, let it run, then verify the main thread panics.
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("main_thread_zero_div.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
 		// Two threads in active zero-division with workers still alive
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("kill_threads_zero_division.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
 		// Two threads deadlock and main divides by zero. To be removed after introducing
 		// deadlock detection.
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("deadlock_then_panic.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
@@ -62,7 +67,7 @@ private:
 
 	void destroyLockedMutexTest() {
 		// Destroying a mutex that is still held is a program error the VM must report.
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("destroy_locked_mutex.dbc"),
 			vm::exceptions::VMDestroyLockedMutexException::ERR_MSG
 		);

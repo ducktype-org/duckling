@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::PathBuf;
 
 use tempfile::{TempDir, tempdir};
@@ -15,7 +21,8 @@ fn create_sample_metadata() -> registry::Manifest {
         "version": "1.2.3",
         "name": "quackpack",
         "license": "GPS",
-        "description": ""
+        "description": "",
+        "links": null
     },
     "dependencies": [
         {
@@ -27,6 +34,7 @@ fn create_sample_metadata() -> registry::Manifest {
                     "registry-url": "xd"
                 }
             },
+            "kind": "normal",
             "features": [],
             "pinned": false,
             "conditions": {
@@ -34,7 +42,6 @@ fn create_sample_metadata() -> registry::Manifest {
             }
         }
     ],
-    "dev-dependencies": [],
     "features": {},
     "profiles": {}
 }
@@ -75,10 +82,10 @@ fn make_test_db() -> ManifestCache {
 fn add_and_fetch_metadata() {
     let cache = make_test_db();
     cache
-        .add_or_replace_manifest(&create_example_package(), create_sample_metadata())
+        .add_or_replace_manifest(create_example_package(), create_sample_metadata())
         .unwrap();
     let metadata = cache
-        .get_manifest(&create_example_package())
+        .get_manifest(create_example_package())
         .unwrap()
         .unwrap();
     assert_eq!(metadata, create_sample_metadata());
@@ -87,6 +94,6 @@ fn add_and_fetch_metadata() {
 #[test]
 fn not_found_metadata() {
     let cache = make_test_db();
-    let metadata = cache.get_manifest(&create_example_package()).unwrap();
+    let metadata = cache.get_manifest(create_example_package()).unwrap();
     assert_eq!(metadata, None);
 }

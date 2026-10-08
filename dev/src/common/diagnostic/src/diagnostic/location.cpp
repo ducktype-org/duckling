@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "location.hpp"
 
 #include <lang_definitions/key_spec_op.hpp>
@@ -10,7 +16,7 @@ namespace dia {
 	fs::File FileLocation::getSourceFile() const { return path; }
 
 	MacroLocation::MacroLocation(
-		const dia_int::StablePosition& parent, Ref<tokenizer::TokenSource> source
+		const dia::StablePosition& parent, Ref<tokenizer::TokenSource> source
 	):
 		  parent(parent),
 		  source(source),
@@ -20,7 +26,7 @@ namespace dia {
 
 	fs::File MacroLocation::getSourceFile() const { return path; }
 
-	dia_int::StablePosition MacroLocation::getMacroParentNode() const { return parent; }
+	dia::StablePosition MacroLocation::getMacroParentNode() const { return parent; }
 
 	Ref<tokenizer::TokenSource> FakeLocation::getSource() const { return source.refMut(); }
 

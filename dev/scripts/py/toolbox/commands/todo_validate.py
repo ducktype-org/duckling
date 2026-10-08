@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from ..impl.todo_validate import todo_validate_impl
 from .helpers import (
     branch,
@@ -19,7 +25,6 @@ from click import command, option
     "--exclude-files",
     multiple=True,
     type=str,
-    default=["todo_validate.py", "todo_counter.py", "CLAUDE.md"],
     help="Files to exclude from checking (e.g., --exclude-files todo_validate.py). "
     "ALL file paths that end with any given value will be excluded."
     "Note that by default [todo_validate.py, todo_counter.py] patterns are excluded.",

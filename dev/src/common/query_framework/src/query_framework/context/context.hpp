@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * Definition of query Context type.
  */
@@ -6,12 +12,11 @@
 
 #include "context_fd.hpp"  // IWYU pragma: keep
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/logger_fwd.hpp>
-#include <diagnostic_interactive/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
-
 #include <base/extend_cpp/defer.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/logger_fwd.hpp>
+#include <diagnostic/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
 #include <query_framework/internal/cycle_handling/cycle_exception.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
@@ -137,7 +142,7 @@ namespace query {
 						// Log cyclic diagnostic with cycle information.
 						// @TODO: #2615 move and improve this diagnostic.
 
-						this_context.logInt(makeBox<dia_int::PlaceholderError>(
+						this_context.logInt(makeBox<dia::PlaceholderError>(
 							base::strConcat(
 								"Query cycle detected involving query node:",
 								caller.q_id.asInt(),
@@ -337,20 +342,25 @@ namespace query {
 		 * @brief Logs a diagnostic message for the current query node.
 		 * Is thread safe.
 		 */
-		void logInt(Box<dia_int::MessageBase> diagnostic);
+		void logInt(Box<dia::MessageBase> diagnostic);
+
+		template<std::derived_from<dia::MessageBase> Msg, typename... Args>
+		void log(Args&&... args) {
+			logInt(makeBox<Msg>(std::forward<Args>(args)...));
+		}
 
 		/**
 		 * @brief Logs and moves all messages from a provided logger
 		 * into current query node logger.
 		 */
-		void moveDiagnosticsFrom(dia_int::Logger& logger);
+		void moveDiagnosticsFrom(dia::Logger& logger);
 
 		/**
 		 * @brief Collect all diagnostics from the main query state into the provided output vector.
 		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
-		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
+		static void collectAllDiagnostic(std::vector<CRef<dia::dia_args::Diagnostic>>& output);
 
 		/**
 		 * @brief Collect all diagnostics from the main query state into the provided output vector,
@@ -359,8 +369,8 @@ namespace query {
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
 		static void collectAndUpdateAllDiagnostic(
-			std::vector<CRef<dia_int::dia_args::Diagnostic>>& output,
-			const dia_int::UpdatePositionFunc&                update_func
+			std::vector<CRef<dia::dia_args::Diagnostic>>& output,
+			const dia::UpdatePositionFunc&                update_func
 		);
 
 		/**
@@ -368,7 +378,7 @@ namespace query {
 		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
-		static Box<dia_int::Logger> dumpToOneLoggerAndClear();
+		static Box<dia::Logger> dumpToOneLoggerAndClear();
 
 		/**
 		 * @brief Returns a const reference to the main query state.

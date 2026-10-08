@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file value_category.hpp
  * @brief Value category definition.
@@ -56,12 +62,14 @@ namespace compiler::tsh {
  * - **USE**     The value may be read. Currently set for every category.
  * - **DESTROY** The value's destructor runs at the end of the current scope. Currently set for
  * owned values and literals.
+ * - **REFERENCE** The value can be taken address of (MIR), meaning reference of or pointer of (HOUT).
  */
 MAKE_FLAG_TYPE(compiler::tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,
 	COPY,
 	REINIT,
 	USE,
+	REFERENCE,
 	DESTROY
 )
 
@@ -108,6 +116,20 @@ namespace compiler::tsh {
 			ValueSemantics  force_semantic
 		);
 
+		[[nodiscard]]
+		ValueCategory withForceSemantics(const ValueSemantics new_force_semantic) const {
+			return { category, is_pure, allows_semantic, new_force_semantic };
+		}
+
+		[[nodiscard]]
+		ValueCategory withDisabled(ValueSemantics disabled) const {
+			auto allows_semantic_copy = allows_semantic;
+			allows_semantic_copy -= disabled;
+			auto force_semantic_copy = force_semantic;
+			force_semantic_copy -= disabled;
+			return { category, is_pure, allows_semantic_copy, force_semantic_copy };
+		}
+
 		/**
 		 * A simple getter for category.
 		 */
@@ -147,16 +169,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool canBeAssignedTo() const {
-			switch (category) {
-			case PrimaryCategory::Local:
-			case PrimaryCategory::Global:
-			case PrimaryCategory::Dereferenced:
-				return true;
-			case PrimaryCategory::Temporary:
-			case PrimaryCategory::Literal:
-				return false;
-			}
-			CORE_UNREACHABLE();
+			return allows_semantic.contains(REINIT);
 		}
 
 		/**
@@ -166,16 +179,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool addressable() const {
-			switch (category) {
-			case PrimaryCategory::Local:
-			case PrimaryCategory::Global:
-			case PrimaryCategory::Dereferenced:
-				return true;
-			case PrimaryCategory::Temporary:
-			case PrimaryCategory::Literal:
-				return false;
-			}
-			CORE_UNREACHABLE();
+			return allows_semantic.contains(REFERENCE);
 		}
 
 		/**
@@ -185,7 +189,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool isMovableFrom() const {
-			return category == PrimaryCategory::Local;
+			return allows_semantic.contains(MOVE);
 		}
 
 		/**

@@ -1,6 +1,11 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
-#include "../lists/initializer_list.hpp"
 #include "../lists/parameter_list.hpp"
 #include "class_special.hpp"
 #include "preamble.hpp"
@@ -16,7 +21,6 @@ namespace pst {
 	protected:
 		NAMED_CHILD_OPT(ident, IdentifierWrapper);  ///< If no value it's "create" is implied
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlock);
 
 	public:

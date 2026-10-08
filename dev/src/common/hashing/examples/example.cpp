@@ -1,11 +1,20 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/types/ints.hpp>
+#include <base/types/monostate.hpp>
 
 #include <hashing/add_to_hash.hpp>
+#include <hashing/by_address.hpp>
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
 
 #include <iostream>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -55,6 +64,20 @@ struct type_with_bases: type1, type2 {
 	}
 };
 
+// types with a unique representation in memory can simply opt in to being hashed as bytes
+// (note: these have to live at namespace scope - a local class cannot have static data members)
+struct type3 {
+	int x{ 123 }, y{ 456 };
+
+	static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+};
+
+struct type4 {
+	std::array<int, 2> a{ 123, 456 };
+
+	static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+};
+
 // example implementation of a (very poor) hash algorithm
 struct ExampleHash {
 	u64 state{ 0 };
@@ -93,14 +116,6 @@ int main() {
 	constexpr auto H = Hash<SHA256>{}(type2{});
 	std::cout << H << '\n';  // some 256-bit number
 
-	struct type3 {
-		int x{ 123 }, y{ 456 };
-	};
-
-	struct type4 {
-		std::array<int, 2> a{ 123, 456 };
-	};
-
 	// we can also visualize the bytes that were hashed
 	std::cout << Hash<DebugHash>{}(type3{}) << '\n' << Hash<DebugHash>{}(type4{}) << '\n';
 	// there is also a stateful hash that can be used to Hash multiple objects together
@@ -124,10 +139,20 @@ int main() {
 
 
 	// debug hash with tuple
+	// note the explicit string_view: `std::tuple{ 42, 3.14, "hello" }` would deduce a
+	// `const char*` member, and raw pointers are not hashable - see below
 	std::cout << "hashing tuple-like types:\n"
 			  << hashing::StatefulHash<hashing::DebugHash>{}(
-					 std::tuple{ 42, 3.14, "hello" }, std::pair<std::string, char>{ "abc", 'x' }
+					 std::tuple{ 42, 3.14, std::string_view{ "hello" } },
+					 std::pair<std::string, char>{ "abc", 'x' }
 				 )
 					 .finalize()
 			  << '\n';
+
+	// pointers are never hashed implicitly - either hash the pointee, or say explicitly that
+	// the address (i.e. the identity of the pointee) is what should be hashed
+	const type1        t1;
+	const type1* const ptr = &t1;
+	std::cout << "hash of the pointee: " << hashing::Hash{}(*ptr) << '\n'
+			  << "hash of the address: " << hashing::Hash{}(hashing::HashByAddress{ ptr }) << '\n';
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "builtin_functions.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -15,7 +21,6 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
 #include <cstdio>
@@ -26,8 +31,8 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<SafeVMValue>>
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, SafeVMProcess& process, SafeVMThread& thread, const std::vector<Box<SafeVMValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -41,7 +46,7 @@ namespace vm::builtins {
 					"Type sizes do not match"
 				);
 
-				auto vm_value = process.createOwnedVmValue(vm_return_types.at(0));
+				auto vm_value = process.createOwnedVMValue(vm_return_types.at(0));
 
 				vm_value->writeBytes<Ret>(value);
 				return vm_value;
@@ -66,12 +71,12 @@ namespace vm::builtins {
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		base::Optional<Box<VmValue>> callUnpackArgs(
+		base::Optional<Box<SafeVMValue>> callUnpackArgs(
 			Ret (*function)(SafeVMThread&, FunArgs...),
-			const std::vector<TypeCRef>&     vm_return_types,
-			IVMProcess&                      process,
-			SafeVMThread&                    thread,
-			const std::vector<Box<VmValue>>& args
+			const std::vector<TypeCRef>&         vm_return_types,
+			SafeVMProcess&                       process,
+			SafeVMThread&                        thread,
+			const std::vector<Box<SafeVMValue>>& args
 		) {
 			CORE_ASSERT(
 				sizeof...(FunArgs) == args.size(),
@@ -118,17 +123,13 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
-		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
-		thread.setProcessStatus(api::Running{});
-		return return_value;
+		const SafeVMThread::ScopedBlockingWait io_wait(thread);
+		return thread.safe_process.getIO().getInput<i64>(thread);
 	}
 
 	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
-		const int c = thread.safe_process.getIO().getRawChar(thread);
-		thread.setProcessStatus(api::Running{});
-		return static_cast<i32>(c);
+		const SafeVMThread::ScopedBlockingWait io_wait(thread);
+		return static_cast<i32>(thread.safe_process.getIO().getRawChar(thread));
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
@@ -200,7 +201,10 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
-		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
+		// @note: Don't call `api::runFunction` here as it takes `api_lock` (which is held by
+		// `pause`, `step` etc.). Doing that deadlocks when stepping over `call_builtinfunc
+		// builtin_start_thread` as it would take `api_lock` again.
+		auto result = thread.safe_process.startNewThreadFromExecutionThread(thread.getThreadCtx());
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return static_cast<i64>(result.value().asInt());
@@ -236,21 +240,24 @@ namespace vm::builtins {
 			return;
 		}
 
-		// Slow path: mutex is contended. Mark ourselves as waiting, then release the GIL so
-		// other DVM threads can run while we block.
+		// Slow path: mutex is contended. Mark ourselves as waiting, then report the thread as
+		// sleeping and release the GIL so other DVM threads can run while we block.
 		if_opt_some(detector, d) d.markThreadWaitingForMutex(thread_id, mutex_id);
-		thread.releaseGil();
-		while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
-			if (thread.isTerminateRequested()) {
-				// Acquire GIL before throwing: exception handlers and destructors need exclusive
-				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
-				thread.acquireGil();
-				if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
-				throw vm::KillProcessException{};
+		bool terminate_requested = false;
+		{
+			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
+			while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
+				if (thread.isTerminateRequested()) {
+					terminate_requested = true;
+					break;
+				}
 			}
 		}
-		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
-		thread.acquireGil();
+		// The guard reacquired the GIL and reported the thread as running again.
+		if (terminate_requested) {
+			if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
+			throw vm::KillProcessException{};
+		}
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
@@ -289,42 +296,32 @@ namespace vm::builtins {
 		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
 		// so we mirror that in the detector: release ownership now, reacquire after the wait.
 		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
-		thread.releaseGil();
 		try {
+			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
+
 			const bool interrupted
 				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state during cleanup and propagation of VM runtime exceptions.
-			thread.acquireGil();
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const vm::KillProcessException&) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state.
-			thread.acquireGil();
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const std::exception& e) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state. Then wrap the exception so the VM can report ExecutionPanicked.
-			thread.acquireGil();
+			// Wrap the exception so the VM can report ExecutionPanicked.
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
 		} catch (...) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state. Then convert unknown exceptions into a VMRuntimeException.
-			thread.acquireGil();
+			// Convert unknown exceptions into a VMRuntimeException.
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
 			);
 		}
-		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
-		thread.acquireGil();
+		// The guard reacquired the GIL: bytecode execution requires holding it.
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
@@ -342,38 +339,12 @@ namespace vm::builtins {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
-	namespace {
-		// The VM side of the copy must stay within the pointed-to block.
-		void assertCopyWithinBlock(
-			const Pointer& ptr, u64 size, usize block_size, const char* builtin_name
-		) {
-			if (ptr.getOffset() > block_size || size > block_size - ptr.getOffset())
-				throw vm::exceptions::VMRuntimeException(
-					base::strConcat(builtin_name, ": copy region exceeds the pointed-to block")
-				);
-		}
-	}
-
-	void FunctionHandlers::builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst, u64 size) {
-		auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
-		assertCopyWithinBlock(dst, size, view.size(), "builtin_cptr_read");
-		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
-	}
-
-	void FunctionHandlers::builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src, u64 size) {
-		auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
-		assertCopyWithinBlock(src, size, view.size(), "builtin_cptr_write");
-		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
-	}
-
-	base::Optional<Box<VmValue>> callBuiltinFunction(
-		BuiltinFunctionID                id,
-		const std::vector<TypeCRef>&     result_types,
-		IVMProcess&                      process,
-		SafeVMThread&                    thread,
-		const std::vector<Box<VmValue>>& arguments
+	base::Optional<Box<SafeVMValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVMValue>>& arguments
 	) {
 		switch (id) {
 #define CASE_FUNC(ID_NAME)                                                               \
@@ -407,31 +378,12 @@ namespace vm::builtins {
 				WaitCV,
 				NotifyCV,
 				NotifyAllCV,
-				DestroyCV,
-				CptrRead,
-				CptrWrite
+				DestroyCV
 			)
 
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
-		}
-	}
-
-	namespace {
-		// Shared verifier for the `cptr` copy builtins: (cptr, pointer-to-any-type, byte count).
-		base::Optional<std::string> verifyCptrCopyArgs(
-			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
-		) {
-			if (arg_types.size() != 3) return "expected exactly three arguments";
-			if (!arg_types[0]->isKind<code::valid_type::finalized::CPointer>())
-				return "first argument must be a C pointer";
-			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
-				return "second argument must be a pointer";
-			auto size_type = arg_types[2]->maybeGetKindAs<code::valid_type::finalized::Primitive>();
-			if (!size_type.has_value() || usize(size_type.value()->size) != 8)
-				return "third argument (byte count) must be an 8-byte primitive";
-			return {};
 		}
 	}
 
@@ -554,33 +506,9 @@ namespace vm::builtins {
 				{ base::StrID("builtin_destroy_cv"),
 			      code::FuncSignature({}, { base::StrID("condition_variable") }) },
 			},
-			{
-				BuiltinFunctionID::CptrRead,
-				{ base::StrID("builtin_cptr_read_pptr"),
-			      code::FuncSignature(
-					  {},
-					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
-				  ),
-			      &verifyCptrCopyArgs },
-			},
-			{
-				BuiltinFunctionID::CptrWrite,
-				{ base::StrID("builtin_cptr_write_pptr"),
-			      code::FuncSignature(
-					  {},
-					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
-				  ),
-			      &verifyCptrCopyArgs },
-			},
 		};
 
 		return &map;
-	}
-
-	base::Optional<BuiltinArgVerifier> getBuiltinArgVerifier(base::StrID name) {
-		auto id = getBuiltinFunctionID(name);
-		if (!id.has_value()) return {};
-		return getBuiltinFunctions()->at(id.value()).arg_verifier;
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {

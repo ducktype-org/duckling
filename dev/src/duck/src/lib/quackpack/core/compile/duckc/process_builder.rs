@@ -1,17 +1,23 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! [`Command`]-based backend communicating with the compiler.
 
 use std::convert::Infallible;
-use std::fmt;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
+use std::{fmt, io};
 
-use tracing::{error, trace};
+use tracing::{debug, info, trace, warn};
 
 use super::Duckc;
 use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::profiles::OptLevel;
 use crate::util::command_ext::CommandExt;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -24,7 +30,7 @@ pub enum DuckcSubcommand {
 }
 
 impl DuckcSubcommand {
-    fn as_argument(&self) -> &'static str {
+    fn as_argument(self) -> &'static str {
         match self {
             Self::CompilePackage => "compile_package",
             Self::CompileScript => "compile_script",
@@ -43,6 +49,7 @@ pub struct DuckcProcessBuilder {
 impl DuckcProcessBuilder {
     /// Create new [`DuckcProcessBuilder`] from the data in [`Duckc`].
     pub fn new(duckc: &Duckc) -> Self {
+        debug!(%duckc.program_name, "creating new duckc process wrapper");
         Self {
             inner: Command::new(duckc.program_name),
         }
@@ -50,18 +57,21 @@ impl DuckcProcessBuilder {
 
     /// Set [`DuckcSubcommand`] as a main subcommand.
     pub fn set_subcommand(&mut self, subcmd: DuckcSubcommand) -> &mut Self {
+        trace!(?subcmd, "setting subcommand");
         self.inner.arg(subcmd.as_argument());
         self
     }
 
     /// Set path to the manifest.
     pub fn set_manifest_path(&mut self, path: &Path) -> &mut Self {
+        trace!(?path, "setting manifest path");
         self.inner.arg(path);
         self
     }
 
     /// Set path to the script to compile.
     pub fn set_script_path(&mut self, path: &Path) -> &mut Self {
+        trace!(?path, "setting script path");
         self.inner.arg(path);
         self
     }
@@ -69,15 +79,17 @@ impl DuckcProcessBuilder {
     /// Set package name of the currently compiling package.
     pub fn set_package_name(&mut self, package: &Package) -> &mut Self {
         let name = package.manifest().name();
+        trace!(?name, "setting package name");
         self.inner.arg("-n").arg(name);
         self
     }
 
     /// Set source directory of the currently compiling package.
     pub fn set_src_dir(&mut self, package: &Package) -> QuackResult<&mut Self> {
-        let source_directory = package.source_directory().context_internal(
-            "asked for src directory of the global package or a script with frontmatter",
-        )?;
+        let Some(source_directory) = package.source_directory() else {
+            qp_bail_internal!("asked for src directory of the global package: {package:#?}")
+        };
+        trace!(?source_directory, "setting source directory");
         self.inner.arg(source_directory);
         Ok(self)
     }
@@ -85,14 +97,15 @@ impl DuckcProcessBuilder {
     /// Set the number of workers to be used by duckc.
     pub fn set_workers_count(&mut self, workers: usize) -> &mut Self {
         if workers == 0 {
-            error!("attempted to set the worker count to 0, ignoring");
+            warn!("attempted to set the worker count to 0, ignoring");
             return self;
         }
 
         if workers == 1 {
-            trace!("attempted to set the worker count to 1, ignoring");
+            debug!("attempted to set the worker count to 1, ignoring");
             return self;
         }
+        trace!(?workers, "setting workers count");
         self.inner.arg("--workers").arg(workers.to_string());
         self
     }
@@ -100,23 +113,26 @@ impl DuckcProcessBuilder {
     /// Set artifacts directory of the currently compiling package.
     pub fn set_package_artifacts_dir(&mut self, package: &Package) -> &mut Self {
         let dir = package.artifacts_directory();
-        self.set_artifacts_dir(dir.root_directory())
+        self.set_artifacts_dir(dir)
     }
 
     /// Set artifacts directory of the currently compiling package.
     pub fn set_artifacts_dir(&mut self, dir: &Path) -> &mut Self {
+        trace!(?dir, "setting artifacts directory");
         self.inner.arg("-a").arg(dir);
         self
     }
 
     /// Set LLVM optimization level.
     pub fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
+        trace!(?opt_level, "setting opt level");
         self.inner.arg("-O").arg(opt_level.to_string());
         self
     }
 
     /// Set to use DVM as the backend.
     pub fn set_dvm_backend(&mut self, value: bool) -> &mut Self {
+        trace!(will_use_dvm = %value, "setting dvm");
         if value {
             self.inner.arg("--dvm-backend");
         }
@@ -125,6 +141,7 @@ impl DuckcProcessBuilder {
 
     /// Set not to use cached compilation artifacts.
     pub fn set_incremental(&mut self, value: bool) -> &mut Self {
+        trace!(will_use_incremental = %value, "setting incremental");
         if !value {
             self.inner.arg("--no-incremental");
         }
@@ -133,6 +150,7 @@ impl DuckcProcessBuilder {
 
     /// Set not to link c standard library.
     pub fn set_c_std(&mut self, value: bool) -> &mut Self {
+        trace!(will_use_c_std = %value, "setting libc");
         if !value {
             self.inner.arg("--no-c-standard-library");
         }
@@ -141,17 +159,35 @@ impl DuckcProcessBuilder {
 
     /// Execute the built command.
     pub fn execute(&mut self) -> QuackResult<ExitStatus> {
-        self.inner.status().context("failed to spawn duckc")
+        info!(duckc = ?self, "executing duckc");
+        self.inner
+            .status()
+            .context("failed to spawn duckc")
+            .map_err(add_path_hint_to_missing_duckc)
     }
 
     /// Execute the built command by replacing current process.
     pub fn execute_and_replace(&mut self) -> QuackResult<Infallible> {
-        self.inner.exec_replace().context("failed to spawn duckc")
+        info!(duckc = ?self, "replacing with duckc");
+        self.inner
+            .exec_replace()
+            .context("failed to spawn duckc")
+            .map_err(add_path_hint_to_missing_duckc)
     }
 }
 
 impl fmt::Display for DuckcProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.display().fmt(f)
+    }
+}
+
+fn add_path_hint_to_missing_duckc(error: QuackError) -> QuackError {
+    if let Some(io_err) = error.downcast_ref_in_chain::<io::Error>()
+        && io_err.kind() == io::ErrorKind::NotFound
+    {
+        error.add_hint("try adding duckc to the $PATH")
+    } else {
+        error
     }
 }

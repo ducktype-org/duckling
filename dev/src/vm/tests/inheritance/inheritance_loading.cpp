@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <base/collections/optional.hpp>
@@ -16,12 +22,12 @@ public:
 private:
 	vm::TypeCRef getType(vm::PID pid, const std::string& name) {
 		auto response = vm::api::getType(pid, name);
-		assertTrue(response.has_value(), "Type query failed for: " + name);
+		ASSERT_HAS_VALUE(response, "Type query failed for: " + name);
 		return response->type;
 	}
 
 	void checkPod(vm::TypeCRef type) {
-		assertFalse(type->getInheritanceMetadata().has_value(), "Plain data should be plain");
+		ASSERT_NO_VALUE(type->getInheritanceMetadata(), "Plain data should be plain");
 	}
 
 	void checkI1(
@@ -29,9 +35,8 @@ private:
 	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
-			assertTrue(
-				std::holds_alternative<vm::InheritanceMetadata::Interface>(imd->kind),
-				"I1 should be an interface"
+			ASSERT_MATCHES_MSG(
+				imd->kind, "I1 should be an interface", vm::InheritanceMetadata::Interface
 			);
 
 			assertTrue(imd->implements.empty(), "I1 should not implement anything");
@@ -54,9 +59,8 @@ private:
 	void checkI2(vm::TypeCRef type) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
-			assertTrue(
-				std::holds_alternative<vm::InheritanceMetadata::Interface>(imd->kind),
-				"I2 should be an interface"
+			ASSERT_MATCHES_MSG(
+				imd->kind, "I2 should be an interface", vm::InheritanceMetadata::Interface
 			);
 			assertTrue(imd->implements.empty(), "I2 should not implement anything");
 			assertTrue(imd->available_methods.empty(), "I2 should not have any virtual methods");
@@ -75,7 +79,7 @@ private:
 			variant_match(imd->kind) {
 				variant_case(vm::InheritanceMetadata::Class, clazz) {
 					assertFalse(clazz.is_abstract, "Parent should be a concrete class");
-					assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
+					ASSERT_NO_VALUE(clazz.extends, "Parent should not extend anything");
 				}
 				variant_default { fail("Parent should be a class"); }
 			}
@@ -112,7 +116,7 @@ private:
 			variant_match(imd->kind) {
 				variant_case(vm::InheritanceMetadata::Class, clazz) {
 					assertFalse(clazz.is_abstract, "Child should be a concrete class");
-					assertTrue(clazz.extends.has_value(), "Child should have a superclass");
+					ASSERT_HAS_VALUE(clazz.extends, "Child should have a superclass");
 					assertTrue(*clazz.extends == super_type, "Child should be a Parent's child");
 				}
 				variant_default { fail("Child should be a class"); }
@@ -156,9 +160,7 @@ private:
 			variant_match(imd->kind) {
 				variant_case(vm::InheritanceMetadata::Class, clazz) {
 					assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
-					assertFalse(
-						clazz.extends.has_value(), "PietMondrian should not extend anything"
-					);
+					ASSERT_NO_VALUE(clazz.extends, "PietMondrian should not extend anything");
 				}
 				variant_default { fail("PietMondrian should be a class"); }
 			}
@@ -177,17 +179,17 @@ private:
 
 	void metadataLoading() {
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
+		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (1)");
 		auto pid = process_pid_response.value().pid;
 
 		fs::File file(path("inheritance_metadata.dbc"));
-		assertTrue(vm::api::loadFiles(pid, { file }).has_value(), "Load failed (1)");
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }), "Load failed (1)");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
 
 		auto join_response = vm::api::join(pid);
-		assertTrue(join_response.has_value(), "Join failed (1)");
+		ASSERT_HAS_VALUE(join_response, "Join failed (1)");
 
 		auto               pod           = getType(pid, "POD");
 		auto               i1            = getType(pid, "I1");

@@ -1,15 +1,21 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "preamble.hpp"  // IWYU pragma: keep
 
-#include <diagnostic_interactive/message.hpp>
+#include <diagnostic/message.hpp>
 
 #include <unicode/unistr.h>
 
 namespace pst {
 	template<GetName type>
-	class OpeningBracketMissingError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class OpeningBracketMissingError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -18,17 +24,17 @@ namespace pst {
 
 	public:
 		OpeningBracketMissingError(dia::SourcePosition pos, lexer::Token::BracketType bracket):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {
+			  dia::MessageWithCodeFragmentAndCause(pos) {
 			std::string s;
 			icu::UnicodeString(bracket).toUTF8String(s);
-			addArgument<dia_int::TextArgument>("bracket", s);
-			addArgument<dia_int::TextArgument>("list_type", type());
+			addArgument<dia::TextArgument>("bracket", s);
+			addArgument<dia::TextArgument>("list_type", type());
 		}
 	};
 
 	template<GetName type>
-	class EmptyListError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class EmptyListError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -36,14 +42,14 @@ namespace pst {
 		}
 
 	public:
-		EmptyListError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("list_type", type());
+		EmptyListError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("list_type", type());
 		}
 	};
 
 	template<GetName type>
-	class EmptyListElementError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class EmptyListElementError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -51,15 +57,14 @@ namespace pst {
 		}
 
 	public:
-		EmptyListElementError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("list_type", type());
+		EmptyListElementError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("list_type", type());
 		}
 	};
 
 	template<GetName type>
-	class EmptyFieldError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class EmptyFieldError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -67,14 +72,14 @@ namespace pst {
 		}
 
 	public:
-		EmptyFieldError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("list_type", type());
+		EmptyFieldError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("list_type", type());
 		}
 	};
 
 	template<GetName type>
-	class NoSeparatorError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoSeparatorError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -82,8 +87,8 @@ namespace pst {
 		}
 
 	public:
-		NoSeparatorError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("list_type", type());
+		NoSeparatorError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("list_type", type());
 		}
 	};
 
@@ -156,7 +161,10 @@ namespace pst {
 						// Handle empty field errors with sensible ranges
 						if (state.empty() || isEnding(state.ctokens(), 0)) {
 							auto pos = state.getPosition(-1);
-							if (!state.isEOF()) {
+							// Stretch the range to the ending token only if there is one. With
+							// nothing left (e.g. `import a,` at the end of the file) the next
+							// token is a sentinel past the end of the file.
+							if (state.notEmpty()) {
 								auto other = state.getPosition();
 								pos        = dia::SourcePosition(pos, other.getStart());
 							}

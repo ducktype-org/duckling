@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * This file contains the queries and functions that create types.
  * Some of those functions are queries and some are simple getters,
@@ -131,17 +137,6 @@ namespace compiler::tsh {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QuerySliceType, SymbolType<>, SliceAbstractType, ({ .uses_qresult = false }))
-
-
-	/**
-	 * @brief Query to get the DynamicArray type.
-	 * The AbstractType of the elements of the array is given as a key.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType, ({ .uses_qresult = false })
-	)
 
 	/**
 	 * @brief Key for QueryStaticArrayType.
@@ -317,8 +312,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher{};
-			addToHash(hasher, source.index());
-			VISIT(source, value, addToHash(hasher, value));
+			addToHash(hasher, source);
 			return hasher.finalize();
 		}
 	};
@@ -326,6 +320,8 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get the TypeTemplate.
+	 *
+	 * @TODO: #3177 revisit this query
 	 *
 	 * \query_thread_safe_if_cache
 	 */

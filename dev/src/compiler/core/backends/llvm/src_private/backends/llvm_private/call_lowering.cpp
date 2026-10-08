@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "call_lowering.hpp"
 
 #include "abi_converter.hpp"
@@ -12,6 +18,17 @@
 namespace compiler::backend_llvm {
 
 	namespace {
+		constexpr u64 MAX_DIRECT_AGGREGATE_WORDS = 2;
+
+		bool shouldPassDefaultAbiIndirectly(
+			const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout
+		) {
+			llvm::Type* type = typeFromLayout(module, layout);
+			return type->isAggregateType()
+			    && module->getDataLayout().getTypeAllocSize(type).getFixedValue()
+			           > module->getDataLayout().getPointerSize() * MAX_DIRECT_AGGREGATE_WORDS;
+		}
+
 		/**
 		 * @brief The result of lowering a C-ABI function signature: the LLVM function type together
 		 * with the call-site/prototype parameter attributes (sret / byval), keyed by the LLVM
@@ -94,7 +111,11 @@ namespace compiler::backend_llvm {
 				return_type = llvm::Type::getVoidTy(ctx);
 			}
 
-			for (usize i = 0; i < function_info.param_info.size(); i++) {
+			const usize declared_params = function_info.num_fixed_params.has_value()
+			                                ? usize(function_info.num_fixed_params.value())
+			                                : function_info.param_info.size();
+
+			for (usize i = 0; i < declared_params; i++) {
 				const auto& param = function_info.param_info.at(i);
 				variant_match(param.info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
@@ -121,32 +142,62 @@ namespace compiler::backend_llvm {
 			}
 
 			return LoweredCAbiSignature{
-				.type              = llvm::FunctionType::get(return_type, llvm_parameters, false),
+				.type = llvm::FunctionType::get(
+					return_type, llvm_parameters, function_info.num_fixed_params.has_value()
+				),
 				.attributes        = std::move(attributes),
 				.return_attributes = std::move(return_attributes)
 			};
 		}
 	}
 
-	llvm::FunctionType* getFunType(
+	LoweredDefaultAbiSignature lowerDefaultAbiSignature(
 		const Ref<llvm::Module>                   module,
 		const std::vector<CRef<tsl::TypeLayout>>& parameters,
-		const CRef<tsl::TypeLayout>               return_type,
-		const lir::LIRAbi&                        abi
+		const CRef<tsl::TypeLayout>               return_type
 	) {
-		// The C ABI signature is fully driven by the calling-convention library.
-		if (const auto c_abi = std::get_if<lir::LIRAbi::CAbi>(&abi.value))
-			return lowerCAbiSignature(module, c_abi->function_info, parameters, return_type).type;
+		auto& ctx = module->getContext();
 
-		std::vector<llvm::Type*> llvm_parameters;
-		llvm_parameters.reserve(parameters.size());
+		std::vector<llvm::Type*>                     llvm_parameters;
+		std::vector<bool>                            parameter_is_indirect;
+		std::vector<std::pair<u32, llvm::Attribute>> parameter_attributes;
 
-		// Prepare parameter types.
-		for (const auto& param: parameters)
-			llvm_parameters.push_back(typeFromLayout(module, param));
+		const bool  return_indirect  = shouldPassDefaultAbiIndirectly(module, return_type);
+		llvm::Type* llvm_return_type = typeFromLayout(module, return_type);
 
-		// Prepare function type, including return type.
-		return llvm::FunctionType::get(typeFromLayout(module, return_type), llvm_parameters, false);
+		if (return_indirect) {
+			parameter_attributes.emplace_back(
+				0, llvm::Attribute::getWithStructRetType(ctx, llvm_return_type)
+			);
+			llvm_parameters.push_back(llvm::PointerType::getUnqual(ctx));
+			llvm_return_type = llvm::Type::getVoidTy(ctx);
+		}
+
+		parameter_is_indirect.reserve(parameters.size());
+		llvm_parameters.reserve(llvm_parameters.size() + parameters.size());
+
+		for (const auto& parameter: parameters) {
+			llvm::Type* parameter_type = typeFromLayout(module, parameter);
+			const bool  indirect       = shouldPassDefaultAbiIndirectly(module, parameter);
+
+			parameter_is_indirect.push_back(indirect);
+			if (indirect) {
+				const auto llvm_index = base::safeIntConv<u32>(llvm_parameters.size());
+				parameter_attributes.emplace_back(
+					llvm_index, llvm::Attribute::getWithByValType(ctx, parameter_type)
+				);
+				llvm_parameters.push_back(llvm::PointerType::getUnqual(ctx));
+			} else {
+				llvm_parameters.push_back(parameter_type);
+			}
+		}
+
+		return LoweredDefaultAbiSignature{
+			.type            = llvm::FunctionType::get(llvm_return_type, llvm_parameters, false),
+			.return_indirect = return_indirect,
+			.parameter_is_indirect = std::move(parameter_is_indirect),
+			.attributes            = std::move(parameter_attributes)
+		};
 	}
 
 	llvm::CallingConv::ID getCallingConvFromABI(const lir::LIRAbi& abi) {
@@ -179,12 +230,11 @@ namespace compiler::backend_llvm {
 			attributes        = std::move(lowered.attributes);
 			return_attributes = std::move(lowered.return_attributes);
 		} else {
-			fun_type = getFunType(
-				module,
-				*function_literal.parameter_layouts,
-				function_literal.return_type_layout,
-				function_literal.abi
+			auto lowered = lowerDefaultAbiSignature(
+				module, *function_literal.parameter_layouts, function_literal.return_type_layout
 			);
+			fun_type   = lowered.type;
+			attributes = std::move(lowered.attributes);
 		}
 
 		llvm::FunctionCallee callee = module->getOrInsertFunction(mangled_name.strView(), fun_type);

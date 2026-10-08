@@ -1,0 +1,13 @@
+global_data g i64 {
+    constructor: g_ctor
+}
+
+function g_ctor { i64 } -> { i64 } {
+    mov_p64_imm ret0, 5;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    mov_p64_imm ret0, 0;
+    ret;
+}

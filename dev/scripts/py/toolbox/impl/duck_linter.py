@@ -1,9 +1,16 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from typing import Callable, List
 import re
 from pathlib import Path
 
 from .cpp_linter import get_files_for_linter
 from .helpers import (
+    log_good,
     log_info,
     log_warning,
     log_new_line,
@@ -55,7 +62,7 @@ def duck_linter_impl(
         if apply:
             for f in failed_files:
                 f.applyFixes()
-            log_info("Fixes applied!")
+            log_good("Fixes applied!")
 
             fixed_files: set[SourceFile] = set()
             for f in failed_files:
@@ -65,7 +72,11 @@ def duck_linter_impl(
                     fixed_files.add(f)
             failed_files.difference_update(fixed_files)
 
-    return len(failed_files) == 0
+    if failed_files:
+        return False
+
+    log_good("All checked files passed the duck linter")
+    return True
 
 
 class SourceFile:
@@ -132,7 +143,7 @@ class SourceFile:
             return False
         else:
             if verbose:
-                log_info(f"{self.path}: OK")
+                log_good(f"{self.path}: OK")
             return True
 
 

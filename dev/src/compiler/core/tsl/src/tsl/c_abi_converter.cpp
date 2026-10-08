@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <abi/type_system/type.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -143,10 +149,6 @@ namespace compiler::tsl {
 				return ok(ats::boolType());
 			case Kind::Char:
 				return ok(ats::charType());
-			case Kind::String:
-				return fail("`string` is not C-compatible");
-			case Kind::DynamicArray:
-				return fail("dynamic arrays are not C-compatible");
 			case Kind::Function:
 				return fail("function types are not C-compatible");
 			case Kind::Unit:

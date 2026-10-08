@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file exceptions.hpp
  *
@@ -12,6 +18,7 @@
 #pragma once
 
 #include <base/preproc/cat.hpp>
+#include <base/preproc/diagnostics.hpp>
 #include <base/preproc/stringify.hpp>
 #include <base/str/str_utils.hpp>  // IWYU pragma: export
 
@@ -76,6 +83,10 @@ namespace base {
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
+
+	namespace internal {
+		constinit inline bool is_unit_test = false;
+	}
 }
 
 /**
@@ -99,7 +110,8 @@ namespace base {
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
-	#define CORE_ASSERT(cond, what, ...) [[assume(cond)]]
+	#define CORE_ASSERT(cond, what, ...) \
+		PUSH_DIAGNOSTIC IGNORE_ASSUME [[assume(cond)]] POP_DIAGNOSTIC
 #endif
 
 #if defined(BUILD_TYPE_DEV)
@@ -148,3 +160,12 @@ namespace base {
 		}                                                                         \
 		if (CAT(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); } \
 	}
+
+
+/**
+ * @brief Panics if execution flow reaches this statement outside of a unit test.
+ * Can be used to mark e.g. helper functions designed purely for testing.
+ *
+ * In test binaries this is a no-op, elsewhere throws a panic.
+ */
+#define PANIC_IF_NOT_TEST() CORE_ASSERT(base::internal::is_unit_test, "Not unit test binary")

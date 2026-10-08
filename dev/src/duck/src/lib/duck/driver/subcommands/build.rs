@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
@@ -36,6 +42,10 @@ pub fn get_parser() -> Command {
             "external-errors",
             "Halt computation after encountering errors in foreign manifests",
         ))
+        .arg(flag(
+            "shared-artifacts",
+            "Compile dependencies where their code is located",
+        ))
 }
 
 /// Logic for executing the `build` subcommand.
@@ -49,6 +59,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         pcx,
         used_features: features,
         profile,
+        shared: matches.get_flag("shared-artifacts"),
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
         strict_errors: matches.get_flag("external-errors"),

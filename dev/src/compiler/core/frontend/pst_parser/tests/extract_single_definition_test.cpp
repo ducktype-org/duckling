@@ -1,3 +1,11 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
@@ -19,6 +27,7 @@ public:
 		TESTER_ADD_TEST(testSingleUsingStatement);
 		TESTER_ADD_TEST(testSingleAliasDefinition);
 		TESTER_ADD_TEST(testMultipleStatements);
+		TESTER_ADD_TEST(testSelectorDeclarationKind);
 	}
 
 private:
@@ -32,102 +41,131 @@ private:
 		return result;
 	}
 
-	void testEmptyInput() {
-		assertFalse(extract("").has_value(), "Expected empty for empty input");
+	/**
+	 * @brief Parses a single `using`/`import` and checks its `DeclKind` and declared name.
+	 */
+	void checkSelectorDecl(
+		std::string_view code, pst::DeclKind expected_kind, std::string_view expected_name = ""
+	) {
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+		assertFalse(pst->hasErrors(), base::strConcat("Unexpected parse error in: ", code));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto stmt_opt = pst::extractSingleStatement(ctx, pst->getRootElement());
+			ASSERT_HAS_VALUE(stmt_opt, base::strConcat("Expected one statement in: ", code));
+			auto stmt = stmt_opt.value().unlock(ctx);
+
+			assertTrue(
+				stmt->isDeclaration() == expected_kind,
+				base::strConcat("Unexpected declaration kind of: ", code)
+			);
+
+			auto name = stmt->getDeclSymbolIdentifier();
+			if (expected_name.empty()) {
+				ASSERT_NO_VALUE(name, base::strConcat("Expected no declared name in: ", code));
+			} else {
+				ASSERT_HAS_VALUE(name, base::strConcat("Expected a declared name in: ", code));
+				ASSERT_EQUAL(std::string(expected_name), name.value().unlock(ctx)->unwrap().str());
+			}
+		});
 	}
 
+	void testSelectorDeclarationKind() {
+		using pst::DeclKind;
+		// One bound name: indexed by that name.
+		checkSelectorDecl("using a.b;", DeclKind::Symbol, "b");
+		checkSelectorDecl("using a.b as c;", DeclKind::Symbol, "c");
+		checkSelectorDecl("using a as c;", DeclKind::Symbol, "c");
+		checkSelectorDecl("import a.b;", DeclKind::Symbol, "b");
+		checkSelectorDecl("import a.b as c;", DeclKind::Symbol, "c");
+		// Anything else is transparent and declares no single name.
+		checkSelectorDecl("using a.b.*;", DeclKind::Transparent);
+		checkSelectorDecl("using a.* hides {x, y};", DeclKind::Transparent);
+		checkSelectorDecl("using a.{b};", DeclKind::Transparent);
+		checkSelectorDecl("using a.b.{c as d, e};", DeclKind::Transparent);
+		checkSelectorDecl("using a.a, b.b;", DeclKind::Transparent);
+		checkSelectorDecl("import a.b.*;", DeclKind::Transparent);
+		checkSelectorDecl("import a.b.{c, d};", DeclKind::Transparent);
+		checkSelectorDecl("import a.a, b.b;", DeclKind::Transparent);
+	}
+
+	void testEmptyInput() { ASSERT_NO_VALUE(extract(""), "Expected empty for empty input"); }
+
 	void testSingleVariableDefinition() {
-		assertTrue(
-			extract("var x: i32 = 5;").has_value(), "Variable declaration should be returned"
+		ASSERT_HAS_VALUE(extract("var x: i32 = 5;"), "Variable declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("var foo: String = \"hello\";"), "Variable with string should be returned"
 		);
-		assertTrue(
-			extract("var foo: String = \"hello\";").has_value(),
-			"Variable with string should be returned"
-		);
-		assertTrue(
-			extract("var data: Array<i32> = [];").has_value(),
-			"Variable with complex type should be returned"
+		ASSERT_HAS_VALUE(
+			extract("var data: Array<i32> = [];"), "Variable with complex type should be returned"
 		);
 	}
 
 	void testSingleConstDefinition() {
-		assertTrue(extract("const X: W = 5;").has_value(), "Const declaration should be returned");
-		assertTrue(
-			extract("const MAX: i32 = 100;").has_value(), "Const with value should be returned"
-		);
+		ASSERT_HAS_VALUE(extract("const X: W = 5;"), "Const declaration should be returned");
+		ASSERT_HAS_VALUE(extract("const MAX: i32 = 100;"), "Const with value should be returned");
 	}
 
 	void testSingleFunctionDefinition() {
-		assertTrue(extract("fun foo() = {}").has_value(), "Function declaration should be returned");
-		assertTrue(
-			extract("fun bar(x: i32): i32 = { x + 1 }").has_value(),
+		ASSERT_HAS_VALUE(extract("fun foo() = {}"), "Function declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("fun bar(x: i32): i32 = { x + 1 }"),
 			"Function with parameters and body should be returned"
 		);
-		assertTrue(
-			extract("fun baz(a: i32, b: String) = {}").has_value(),
+		ASSERT_HAS_VALUE(
+			extract("fun baz(a: i32, b: String) = {}"),
 			"Function with multiple parameters should be returned"
 		);
 	}
 
 	void testSingleClassDefinition() {
-		assertTrue(extract("class Foo {}").has_value(), "Class declaration should be returned");
-		assertTrue(
-			extract("class Bar { var x: i32; }").has_value(), "Class with members should be returned"
+		ASSERT_HAS_VALUE(extract("class Foo {}"), "Class declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("class Bar { var x: i32; }"), "Class with members should be returned"
 		);
-		assertTrue(
-			extract("class Baz<T> { fun method() = {} }").has_value(),
-			"Generic class should be returned"
+		ASSERT_HAS_VALUE(
+			extract("class Baz<T> { fun method() = {} }"), "Generic class should be returned"
 		);
 	}
 
 	void testSingleNamespaceDefinition() {
-		assertTrue(
-			extract("namespace Foo {}").has_value(), "Namespace declaration should be returned"
-		);
-		assertTrue(
-			extract("namespace Bar { var x: i32 = 1; }").has_value(),
-			"Namespace with content should be returned"
+		ASSERT_HAS_VALUE(extract("namespace Foo {}"), "Namespace declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("namespace Bar { var x: i32 = 1; }"), "Namespace with content should be returned"
 		);
 	}
 
 	void testSingleUsingStatement() {
-		assertTrue(extract("using X;").has_value(), "Using statement should be returned");
-		assertTrue(
-			extract("using MyNamespace;").has_value(), "Using with namespace should be returned"
-		);
+		ASSERT_HAS_VALUE(extract("using X;"), "Using statement should be returned");
+		ASSERT_HAS_VALUE(extract("using MyNamespace;"), "Using with namespace should be returned");
 	}
 
 	void testSingleAliasDefinition() {
-		assertTrue(extract("alias y = x;").has_value(), "Simple alias to symbol should be returned");
-		assertTrue(
-			extract("alias foo = obj.member;").has_value(), "Alias to dotted name should be returned"
+		ASSERT_HAS_VALUE(extract("using x as y;"), "Simple alias to symbol should be returned");
+		ASSERT_HAS_VALUE(
+			extract("using obj.member as foo;"), "Alias to dotted name should be returned"
 		);
-		assertTrue(
-			extract("alias nested = outer.inner.core.foo;").has_value(),
+		ASSERT_HAS_VALUE(
+			extract("using outer.inner.core.foo as nested;"),
 			"Alias to nested dotted name should be returned"
 		);
 	}
 
 	void testMultipleStatements() {
-		assertFalse(
-			extract("var x: i32 = 5; var y: i32 = 10;").has_value(),
+		ASSERT_NO_VALUE(
+			extract("var x: i32 = 5; var y: i32 = 10;"),
 			"Expected empty for two variable declarations"
 		);
-		assertFalse(
-			extract("fun foo() = {}; fun bar() = {}").has_value(),
-			"Expected empty for two function declarations"
+		ASSERT_NO_VALUE(
+			extract("fun foo() = {}; fun bar() = {}"), "Expected empty for two function declarations"
 		);
-		assertFalse(
-			extract("class Foo {}; class Bar {}").has_value(),
-			"Expected empty for two class declarations"
+		ASSERT_NO_VALUE(
+			extract("class Foo {}; class Bar {}"), "Expected empty for two class declarations"
 		);
-		assertFalse(
-			extract("var x: i32 = 5; fun foo() = {}").has_value(),
-			"Expected empty for variable and function"
+		ASSERT_NO_VALUE(
+			extract("var x: i32 = 5; fun foo() = {}"), "Expected empty for variable and function"
 		);
-		assertFalse(
-			extract("const X: i32 = 1; using Y;").has_value(), "Expected empty for const and using"
-		);
+		ASSERT_NO_VALUE(extract("const X: i32 = 1; using Y;"), "Expected empty for const and using");
 	}
 
 public:

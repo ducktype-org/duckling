@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file clah_class.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
 #include "clah.hpp"
+#include "exceptions.hpp"
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -61,9 +68,11 @@ namespace clah {
 		return std::move(*this);
 	}
 
-	Clah&& Clah::addPositional(Box<ValueParser> parser) {
-		if (!subcommands.empty()) throw clah::exceptions::CoexistingPositionalAndSubcommand(name);
-		positional_parameters.push_back(std::move(parser));
+	Clah&& Clah::addPositional(Box<ValueParser> parser, std::string description) {
+		if (!subcommands.empty()) throw exceptions::CoexistingPositionalAndSubcommand(name);
+
+		positional_parameters.emplace_back(std::move(parser), std::move(description));
+
 		return std::move(*this);
 	}
 
@@ -121,7 +130,7 @@ namespace clah {
 
 	const std::vector<Parameter>& Clah::getParameters() const { return parameters; }
 
-	const std::vector<Box<ValueParser>>& Clah::getPositionalParameters() const {
+	const std::vector<PositionalParameter>& Clah::getPositionalParameters() const {
 		return positional_parameters;
 	}
 
@@ -174,14 +183,16 @@ namespace clah {
 
 				subcmd->parse(st);
 				return;
+			} else if (not subcommands.empty()) {
+				throw exceptions::InvalidCommandName(token);
 			} else {
 				// If not found a "-" parse using default value parser.
 				// Check if value is positional or extra.
 				usize positional_count = st.result.getPositionalParameterCount();
 				if (positional_count < getPositionalParameters().size()) {
-					const auto& value_parser = getPositionalParameters()[positional_count];
-					st.parsePositional(*value_parser);
-				} else {                    // To many positional arguments.
+					const auto& positional = getPositionalParameters()[positional_count];
+					st.parsePositional(positional.getValueParser());
+				} else {                    // Too many positional arguments.
 					auto parser = getDefaultValueParser();
 					if (parser == nullptr)  // Extra arguments and no default value parser.
 						throw exceptions::NoDefaultValueParser(
@@ -273,9 +284,10 @@ namespace clah {
 		};
 
 		if (num_positional_args < command->getPositionalParameters().size()) {
-			const auto& param = command->getPositionalParameters()[num_positional_args];
+			const auto& positional = command->getPositionalParameters()[num_positional_args];
+
 			throw exceptions::PositionalParameterExpected(
-				result.getPositionalParameterCount(), param->getTypeName()
+				num_positional_args, positional.getValueParser().getTypeName()
 			);
 		}
 

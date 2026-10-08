@@ -1,16 +1,20 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Entrypoints for creating a new [`EarlyGraph`] and friends.
 
+use itertools::Itertools;
 use tracing::debug;
 
 use super::*;
+use crate::qp_bail;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::compiler_package::PackageType;
-use crate::quackpack::core::full_identity::FullKind;
-use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
-use crate::quackpack::core::storage::paths::Storage;
-use crate::quackpack::core::{Manifest, PackageLoader};
-use crate::quackpack::util::to_path_buf::ToPathBuf;
-use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::{AnyPackage, PackageId};
 
 impl DependencyGraph {
     /// Create new [`DependencyGraph`] from the given freeze.
@@ -18,47 +22,21 @@ impl DependencyGraph {
     /// This method checks that the graph is complete (all edge targets have their neighbours lists),
     /// as well as checking that only local dependencies possibly form cycles.
     #[tracing::instrument(skip_all)]
-    fn new(freeze: &VenvFreeze, root_identity: Identity) -> QuackResult<Self> {
-        let root = freeze.root();
+    fn new(freeze: &SolverFreeze) -> QuackResult<Self> {
         let mut graph = HashMap::new();
-        graph.insert(
-            root_identity,
-            DependencyNode::new(root.dependencies().iter().copied()),
-        );
-        for dep in freeze.dependencies() {
-            graph.insert(
-                dep.as_identity(),
-                DependencyNode::new(dep.dependencies().iter().copied()),
-            );
+        for (pkg_id, pkg_freeze) in freeze.package_freezes.iter() {
+            let pkg_deps = pkg_freeze
+                .dependencies_realization
+                .values()
+                .map(|x| x.identity().into());
+            graph.insert(pkg_id.identity().into(), DependencyNode::new(pkg_deps));
         }
-        Self::check_is_complete_graph(root_identity, &graph)?;
+        let root_identity = freeze.main_pkg.identity().into();
         Self::check_cycles_only_on_local_deps(root_identity, &graph)?;
         Ok(Self {
             root: root_identity,
             graph,
         })
-    }
-
-    /// Checks, whether `graph` rooted at `root` is complete.
-    #[tracing::instrument(skip_all)]
-    fn check_is_complete_graph(
-        root: Identity,
-        graph: &HashMap<Identity, DependencyNode>,
-    ) -> QuackResult<()> {
-        debug!(%root, ?graph, "checking completeness");
-        for (k, v) in graph {
-            for dep in v.dependencies() {
-                if !graph.contains_key(dep) {
-                    let dep_type = if *k == root {
-                        PackageType::DirectDependency
-                    } else {
-                        PackageType::TransitiveDependency
-                    };
-                    qp_bail_internal!("malformed freezefile: missing {dep_type} `{dep}`")
-                }
-            }
-        }
-        Ok(())
     }
 
     /// Checks that only cycles of dependencies are of local dependencies.
@@ -94,47 +72,12 @@ impl DependencyNode {
     /// Creates a new [`DependencyNode`] with the given dependencies.
     pub(super) fn new(dependencies: impl IntoIterator<Item = Identity>) -> Self {
         Self {
-            dependencies: dependencies.into_iter().collect(),
+            dependencies: dependencies
+                .into_iter()
+                .sorted_by(|l, r| Identity::stable_compare(*l, *r))
+                .collect(),
         }
     }
-}
-
-/// Parses the dependency from the freezefile using data in the storage.
-#[tracing::instrument(skip_all)]
-fn parse_dependency(
-    dep: &FreezePackage,
-    storage: &Storage,
-    ctx: &DuckContext,
-    pkg_type: PackageType,
-) -> QuackResult<CompilerPackage> {
-    debug!(?dep, type = %pkg_type, "parsing dep");
-    let pkg_id = dep.to_package_id();
-    let directory = match pkg_id.kind() {
-        FullKind::Local => pkg_id.url().to_path_buf()?,
-        _ => storage.pkg_dir(pkg_id),
-    };
-    let ctx =
-        PackageLoader::find_at_exact_directory(&directory, ctx).with_context(|| {
-            match pkg_id.kind() {
-                FullKind::Registry => format!(
-                    "downloaded malformed dependency `{}` from `{}`",
-                    dep.as_identity(),
-                    pkg_id.url()
-                ),
-                FullKind::Git { commit: _ } => format!(
-                    "cloned malformed dependency `{}` from `{}`",
-                    dep.as_identity(),
-                    pkg_id.url()
-                ),
-                FullKind::Local => format!(
-                    "malformed local dependency `{}` at `{}`",
-                    dep.as_identity(),
-                    directory.display(),
-                ),
-            }
-        })?;
-    let package = ctx.into_package();
-    Ok(CompilerPackage::new(package, pkg_type))
 }
 
 impl EarlyGraph {
@@ -144,14 +87,13 @@ impl EarlyGraph {
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
     #[tracing::instrument(skip_all)]
-    pub(super) fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
+    pub(super) fn new_early(
+        bcx: &BuildContext<'_, '_>,
+        pkgs: Vec<(PackageId, AnyPackage)>,
+    ) -> QuackResult<Self> {
         // `new` checks for cycles.
-        let graph = DependencyGraph::new(&bcx.freeze, bcx.root_identity)?;
+        let graph = DependencyGraph::new(&bcx.freeze)?;
         let mut packages = HashMap::new();
-        packages.insert(
-            bcx.root_identity,
-            CompilerPackage::new(bcx.pcx.package().clone(), PackageType::RootPackage),
-        );
         let direct_dependencies_names = bcx
             .pcx
             .package()
@@ -161,59 +103,21 @@ impl EarlyGraph {
             .iter()
             .map(|dep| dep.name())
             .collect::<HashSet<_>>();
-        for dep in bcx.freeze.dependencies() {
-            let pkg_type = if direct_dependencies_names.contains(&dep.name()) {
+        for (pkg_id, pkg) in pkgs {
+            let pkg_type = if Into::<Identity>::into(pkg_id.identity()) == bcx.root_identity {
+                PackageType::RootPackage
+            } else if direct_dependencies_names.contains(&pkg.name()) {
                 PackageType::DirectDependency
             } else {
                 PackageType::TransitiveDependency
             };
-            let package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
-            let manifest = package.package().manifest();
-            if manifest.name() != dep.name() || manifest.version() != dep.version() {
-                return Err(error_for_metadata_mismtach(manifest, dep)?);
-            }
-            let overwritten_entry = packages.insert(dep.as_identity(), package).is_some();
-            if overwritten_entry {
-                qp_bail!(
-                    "malformed freezefile: duplicated dependency `{}`",
-                    dep.as_identity()
-                )
-            }
+            let compiler_package = CompilerPackage::new(pkg, pkg_type);
+            packages.insert(pkg_id.identity().into(), compiler_package);
         }
         Ok(Self {
             graph,
             packages: PackagesSet { inner: packages },
         })
-    }
-}
-
-/// Get the error message emitted when parsed package has different version (or name), than in the freeze.
-fn error_for_metadata_mismtach(
-    manifest: &Manifest,
-    dep: &FreezePackage,
-) -> QuackResult<QuackError> {
-    let display_expected = format!("{} {}", dep.name(), dep.version());
-    let display_found = format!("{} {}", manifest.name(), manifest.version());
-    let dep_pkg_id = dep.to_package_id();
-    match dep_pkg_id.kind() {
-        FullKind::Registry => Ok(qp_err!(
-            "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
-            dep_pkg_id.url(),
-            display_found,
-            display_expected
-        )),
-        FullKind::Git { commit: _ } => Ok(qp_err!(
-            "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
-            dep_pkg_id.url(),
-            display_found,
-            display_expected
-        )),
-        FullKind::Local => Ok(qp_err!(
-            "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-            dep_pkg_id.url().to_path_buf()?.display(),
-            display_found,
-            display_expected
-        )),
     }
 }
 
@@ -314,9 +218,12 @@ fn reverse_graph(graph: &HashMap<Identity, DependencyNode>) -> HashMap<Identity,
     reversed
 }
 
-/// Create a fully-ready [`EarlyGraph`] form the [`BuildContext`].
-pub fn create_early_graph_from_bcx(bcx: &BuildContext<'_, '_>) -> QuackResult<EarlyGraph> {
-    let mut graph = EarlyGraph::new_early(bcx)?;
+/// Create a fully-ready [`EarlyGraph`] from the [`BuildContext`].
+pub fn create_early_graph_from_bcx(
+    bcx: &BuildContext<'_, '_>,
+    pkgs: Vec<(PackageId, AnyPackage)>,
+) -> QuackResult<EarlyGraph> {
+    let mut graph = EarlyGraph::new_early(bcx, pkgs)?;
     graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies();
     Ok(graph)

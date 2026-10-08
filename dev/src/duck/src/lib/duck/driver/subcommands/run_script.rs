@@ -1,15 +1,22 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use clap::builder::ValueParser;
-use clap::{Arg, ArgMatches, Command, value_parser};
+use clap::{Arg, ArgMatches, Command, ValueHint, value_parser};
 
 use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::error::MessageError;
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
 
-pub const DUCKLING_SCRIPT_EXT: &str = "ds";
+pub const DUCKLING_SCRIPT_EXT: &str = "dks";
 
 /// Creates parser for the `run_script` subcommand.
 pub fn get_parser() -> Command {
@@ -38,6 +45,7 @@ pub fn get_parser() -> Command {
             Arg::new("path")
                 .help("Path to the Duckling script to run")
                 .value_parser(ValueParser::path_buf())
+                .value_hint(ValueHint::FilePath)
                 .required(true),
         )
         .arg(
@@ -54,7 +62,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
         .get_one::<PathBuf>("path")
         .expect("guarded by the parser");
-    let path = ctx.cwd().join(path);
+    let path = path.resolve_with_tilde(ctx);
     check_is_script(&path)?;
     run_script(RunScriptOptions::from_path_and_matches(
         ctx, &path, matches,
@@ -84,16 +92,6 @@ pub fn check_is_script(path: &Path) -> QuackResult<()> {
         );
     }
     Ok(())
-}
-
-/// Guess whether the user meant to provide a path to a script to run.
-pub fn possible_script_path_subcmd(args: &ArgMatches) -> Option<&str> {
-    let sub_cmd = args.subcommand_name()?;
-    if is_name_possible_script_path_subcmd(sub_cmd) {
-        Some(sub_cmd)
-    } else {
-        None
-    }
 }
 
 /// Guess whether name could be a path to a script to run.

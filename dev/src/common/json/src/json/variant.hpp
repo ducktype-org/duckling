@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "empty_struct.hpp"
@@ -17,7 +23,7 @@ struct nlohmann::adl_serializer<std::variant<Args...>> {
 		std::visit(
 			[&]<typename VT>(const VT& value) {
 				using T   = std::decay_t<VT>;
-				j["type"] = std::string(TypeParseTraits<T>::NAME.data());
+				j["type"] = std::string(js::typeName<T>());
 				if constexpr (!std::is_empty_v<T>) j["data"] = value;
 			},
 			v

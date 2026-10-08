@@ -1,15 +1,24 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
+use chrono::Utc;
 use tempfile::TempDir;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::storage::freeze::{
+    DepIdWithAlias, FreezePackage, RootPackage, VenvFreeze,
+};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
@@ -96,8 +105,8 @@ fn setup_mock_venv(
         basic_freeze,
         false,
         PathBuf::default(),
-        SystemTime::now(),
-        SystemTime::now(),
+        Utc::now(),
+        Utc::now(),
     );
     data_mutator(&mut basic_data);
     let venv = Venv::new(name.to_venv_id(), basic_data);
@@ -118,9 +127,10 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
 
     let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
     let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_simple_identity = |name: &str| Identity::new(name.into(), simple_origin);
+    let mock_simple_dep_identity =
+        |name: &str| DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin));
     let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
-    let dep = mock_simple_identity("bar");
+    let dep = mock_simple_dep_identity("bar");
     let package = FreezePackage::new(
         mock_identity(dep.name().as_str()),
         Version::new(1, 0, 0),
@@ -136,12 +146,12 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         },
         |data| {
             data.set_ephemeral(true);
-            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_synchronization(Utc::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
         ctx,
     );
 
-    let dep = mock_simple_identity("baz");
+    let dep = mock_simple_dep_identity("baz");
     let package = FreezePackage::new(
         mock_identity(dep.name().as_str()),
         Version::new(1, 0, 0),
@@ -157,7 +167,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
             freeze.dependencies_mut().push(package);
         },
         |data| {
-            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_synchronization(Utc::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
         ctx,
     );
@@ -231,10 +241,10 @@ fn create_mock_package_at_tmpdir<'duck>(
 
 fn create_mock_package_with_dependencies<'duck>(
     root: &Path,
-    ctx: &'duck DuckContext,
+    ctx: &'duck mut DuckContext,
     name: &str,
 ) -> PackageContext<'duck> {
-    let opts = InitOptions {
+    let init_opts = InitOptions {
         ctx,
         at: root.join("dep"),
         explicit_name: Some("dep"),
@@ -245,9 +255,9 @@ fn create_mock_package_with_dependencies<'duck>(
         git: false,
         full: false,
     };
-    init::init(opts).unwrap();
+    init::init(init_opts).unwrap();
 
-    let opts = InitOptions {
+    let init_opts = InitOptions {
         ctx,
         at: root.join("root"),
         explicit_name: Some(name),
@@ -258,8 +268,9 @@ fn create_mock_package_with_dependencies<'duck>(
         git: false,
         full: false,
     };
-    init::init(opts).unwrap();
-    // !TODO: Use `duck add`.
+    init::init(init_opts).unwrap();
+    // IMPORTANT: Do NOT use `duck add` here. It requires messing with cwd, which interacts poorly
+    // with concurrent rust's tests.
     let mut file = {
         let mut opts = OpenOptions::new();
         opts.append(true)
@@ -282,7 +293,7 @@ dependencies:
 }
 
 fn create_mock_package_with_deps_at_tmpdir<'duck>(
-    ctx: &'duck DuckContext,
+    ctx: &'duck mut DuckContext,
     name: &str,
 ) -> (TempDir, PackageContext<'duck>) {
     let root = TempDir::new().unwrap();

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <ctv/numeric_value.hpp>
@@ -19,6 +25,14 @@ namespace compiler::ctv {
 	class CompileTimeValue final {
 	public:
 		struct UnitCTV {};
+
+		struct CharSliceValue {
+			base::StrID value;
+		};
+
+		struct StringClassValue {
+			base::StrID value;
+		};
 
 		struct TupleCTV {
 			explicit TupleCTV(std::vector<CompileTimeValue> elements):
@@ -43,8 +57,15 @@ namespace compiler::ctv {
 		};
 
 	private:
-		using Storage
-			= std::variant<bool, NumericValue, char, base::StrID, UnitCTV, TupleCTV, tsh::SymbolType<>>;
+		using Storage = std::variant<
+			bool,
+			NumericValue,
+			char,
+			CharSliceValue,
+			StringClassValue,
+			UnitCTV,
+			TupleCTV,
+			tsh::SymbolType<>>;
 		Storage value;
 
 	public:

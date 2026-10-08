@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <query_framework/internal/query_graph/active_graph.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/standard_query/query_impl.hpp>

@@ -1,0 +1,10 @@
+var g: i64 = 4;
+var glob: i32 = 2;
+
+fun foo() = {
+  g = 4;
+	var a: i32 = 0;
+  a = glob;
+  glob = a;
+  return;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file exceptions.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
@@ -68,6 +74,9 @@ namespace clah::exceptions {
 	InvalidParameterName::InvalidParameterName(const std::string& name):
 		  ClahException("There is no parameter named \'" + name + '\'') {}
 
+	InvalidCommandName::InvalidCommandName(const std::string& name):
+		  ClahException("Command \"" + name + "\" is invalid.") {}
+
 	ParameterRequiresValue::ParameterRequiresValue(
 		const std::string& name, const std::string& value_type
 	):
@@ -105,6 +114,12 @@ namespace clah::exceptions {
 
 	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
 		  ClahException("File at \"" + absolute(path).string() + "\" does not exist.") {}
+
+	NotARegularFile::NotARegularFile(const std::filesystem::path& path, bool directory_accepted):
+		  ClahException(
+			  "Path at \"" + absolute(path).string() + "\" is not a regular file"
+			  + (directory_accepted ? " nor a directory." : ".")
+		  ) {}
 
 	NoDefaultValueParser::NoDefaultValueParser(u64 at, std::string_view values):
 		  ClahException(base::strConcat(

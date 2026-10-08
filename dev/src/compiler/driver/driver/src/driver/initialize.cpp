@@ -1,17 +1,22 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "initialize.hpp"
 
 #include "options.hpp"
 
 #include <concurrent/module_flags/worker_count.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
@@ -21,13 +26,18 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/module_flags/module_flags.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
+#include <algorithm>
 #include <iostream>
 
 namespace compiler::driver {
@@ -44,10 +54,12 @@ namespace compiler::driver {
 
 			driver::dump_ir_options.dump_asm  = debug_options.dump_asm;
 			driver::dump_ir_options.dump_llvm = debug_options.dump_llvm;
+			driver::dump_ir_options.dump_dbc  = debug_options.dump_dbc;
 			driver::dump_ir_options.dump_lir  = debug_options.dump_lir;
 			driver::dump_ir_options.dump_mir  = debug_options.dump_mir;
 			driver::dump_ir_options.dump_hir  = debug_options.dump_hir;
 
+			driver::print_ir_options.print_dbc = debug_options.print_dbc;
 			driver::print_ir_options.print_lir = debug_options.print_lir;
 			driver::print_ir_options.print_mir = debug_options.print_mir;
 			driver::print_ir_options.print_hir = debug_options.print_hir;
@@ -89,8 +101,27 @@ namespace compiler::driver {
 
 			// Adding standard library packages
 			if (auto path = resolveStdPath(stdlib_options)) {
-				if (addStandardLibraryPackages(packages_info, *path, report).isBad())
-					return base::BAD;
+				for (auto& package_info: packages_info)
+					if (addDependenciesOnStandardLibraryForPackage(package_info, report).isBad())
+						return base::BAD;
+
+				for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
+					if (std::ranges::any_of(packages_info, [&](const auto& package_info) {
+							return package_info.package_id == std_id
+						        or package_info.package_name == std_id;
+						})) {
+						report(
+							base::strConcat("Package with name `", std_id, "` already exist."),
+							"",
+							true
+						);
+						return base::BAD;
+					}
+				}
+
+				auto std_packages = getStandardLibraryPackages(*path, report);
+				if (not std_packages) return base::BAD;
+				base::appendToVector(packages_info, *std_packages);
 			}
 
 			for (const auto& package_info: packages_info) {
@@ -222,7 +253,8 @@ namespace compiler::driver {
 	 * @TODO: #2762 probably remove this
 	 */
 	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
-		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
+		auto package_root_file
+			= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
 		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
 			compiler::frontend::packages::RawPackageInfo{
 				.package_id   = base::StrID("repl_session"),
@@ -297,6 +329,15 @@ namespace compiler::driver {
 				handleBackendOptions(script_options.backend_options);
 				handleScriptContext(script_options.script_file);
 			}
+			variant_case(CompilerModeOfOperationAndOptions::LanguageServerMode, ls_options) {
+				handleDebugOptions(ls_options.debug_options);
+				handleExecutionOptions(ls_options.execution_options);
+
+				std::vector<compiler::frontend::packages::RawPackageInfo> no_packages_info;
+				auto                                                      package_success
+					= handlePackageOptions(no_packages_info, ls_options.stdlib_options);
+				if (package_success.isBad()) return base::BAD;
+			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
 		return base::OK;
@@ -304,9 +345,9 @@ namespace compiler::driver {
 
 	void initializeGlobalLogger() {
 		// We might want to configure it differently in the future:
-		dia_int::configureImmediatePrint(&std::cerr);
-		dia_int::configureTerminalPrinterColors(true);
+		dia::configureImmediatePrint(&std::cerr);
+		dia::configureTerminalPrinterColors(true);
 
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
 	}
 }

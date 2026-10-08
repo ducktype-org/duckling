@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -83,7 +89,6 @@ namespace vm::code::valid_type {
 		 */
 		void finalize(ValidTypeMap& types);
 
-
 		/**********************/
 		/* General operations */
 		/**********************/
@@ -143,7 +148,11 @@ namespace vm::code::valid_type {
 		bool operator==(const ValidTypeID& other_id) const;
 
 		/**
-		 * @brief For more information read docs of `is_trivially_copyable`.
+		 * @brief Whether this type is trivially copyable/POD(plain old data). This is true for
+		 * types that can be copied with a simple memory copy, like primitives, opaques and
+		 * fixed-size tables of trivially copyable types.
+		 * This also means, that if a type requires maintaining block structure in the "Safe"
+		 * mode, it is not trivially copyable.
 		 */
 		[[nodiscard]] bool isTriviallyCopyable() const;
 
@@ -152,8 +161,21 @@ namespace vm::code::valid_type {
 		 * of size 1, 2, 4 or 8 (`f32`/`f64` must have their exact C sizes), C pointers,
 		 * fixed-size tables of FFI-compliant types, and non-packed plain data structures (no
 		 * classes or interfaces) whose every field is FFI-compliant.
+		 * @note FFICompliant != TriviallyCopyable
 		 */
 		[[nodiscard]] bool isFFICompliant() const;
+
+		/**
+		 * @brief Whether an object of this type holds a pointer, directly or through a field or a
+		 * table element, and so has references to drop when it leaves scope. This is what decides
+		 * whether a scope exit is lowered to `deinit` or to `deinitDtor`.
+		 *
+		 * @note A variant reports `false`: it delegates its cleanup to its nested block, which
+		 * `Memory::runObjectDestructor` relies on. A dynamic table also reports `false` - it is
+		 * uninstantiable, so it can never be a local, and is only ever reached through a pointer.
+		 * @note HoldsPointerReferences != TriviallyCopyable != FFICompliant
+		 */
+		[[nodiscard]] bool holdsPointerReferences() const;
 
 	private:
 		/**
@@ -177,11 +199,7 @@ namespace vm::code::valid_type {
 		bool is_instantiable = true;
 
 		/**
-		 * @brief Whether this type is trivially copyable/POD(plain old data). This is true for
-		 * types that can be copied with a simple memory copy, like primitives, opaques and
-		 * fixed-size tables of trivially copyable types.
-		 * This also means, that if a type requires maintaining block structure in the "Safe"
-		 * mode, it is not trivially copyable.
+		 * @brief For more information read docs of `isTriviallyCopyable`.
 		 */
 		bool is_trivially_copyable = true;
 
@@ -189,6 +207,11 @@ namespace vm::code::valid_type {
 		 * @brief For more information read docs of `isFFICompliant`.
 		 */
 		bool is_ffi_compliant = false;
+
+		/**
+		 * @brief For more information read docs of `holdsPointerReferences`.
+		 */
+		bool holds_pointer_references = false;
 
 		TypeSize size = TypeSize(Bytes(0), 0);
 
@@ -199,17 +222,17 @@ namespace vm::code::valid_type {
 		base::StrID name;
 		ValidTypeID id;
 
-		struct Declared {};
+		struct Declared final {};
 
-		struct Defined {
+		struct Defined final {
 			DefinedTypeVariant kind;
 		};
 
-		struct Finalizing {
+		struct Finalizing final {
 			DefinedTypeVariant kind;
 		};
 
-		struct Finalized {
+		struct Finalized final {
 			FinalizedTypeVariant kind;
 		};
 

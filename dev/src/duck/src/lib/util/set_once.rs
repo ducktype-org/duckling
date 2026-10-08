@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! A value which can only be set once.
 //!
 //! Precisely, this looks like a [`bool`], but with a major difference: initially it is always `false`,
@@ -27,7 +33,7 @@ impl SetOnce {
     }
 
     /// Check, if this value was set (equivalently, was [`set`](Self::set) called on this value).
-    pub fn was_set(&self) -> bool {
+    pub fn was_set(self) -> bool {
         self.was_set
     }
 }

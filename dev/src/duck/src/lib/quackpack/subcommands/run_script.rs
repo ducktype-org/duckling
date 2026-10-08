@@ -1,16 +1,22 @@
-use std::ffi::OsString;
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use clap::ArgMatches;
 use tracing::debug;
 
 use crate::duck::driver::cli_ext::jobs_from_matches;
+use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
-use crate::quackpack::core::storage::{StorageSyncOptions, sync};
-use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, PackageNotFound};
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
+use crate::quackpack::core::storage::{StorageSyncOptions, SyncOutput, sync};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
-pub struct RunScriptOptions<'duck> {
+pub struct RunScriptOptions<'duck, 'matches> {
     /// Current [`DuckContext`].
     pub ctx: &'duck DuckContext,
     /// Path the script to run.
@@ -26,27 +32,28 @@ pub struct RunScriptOptions<'duck> {
     /// Artefact from [`StorageSyncOptions`].
     pub strict_errors: bool,
     /// Arguments to the script.
-    pub args: Vec<OsString>,
+    pub args: Vec<&'matches OsStr>,
     /// Number of threads to use.
     pub jobs: usize,
 }
 
-impl<'duck> RunScriptOptions<'duck> {
+impl<'duck, 'matches> RunScriptOptions<'duck, 'matches> {
     /// Create [`RunScriptOptions`] from a given [`Path`] and [`ArgMatches`].
     pub fn from_path_and_matches(
         ctx: &'duck DuckContext,
         path: &'duck Path,
-        matches: &ArgMatches,
+        matches: &'matches ArgMatches,
     ) -> QuackResult<Self> {
         let profile = matches
             .get_one::<String>("profile")
             .map(String::as_str)
             .unwrap_or(DEFAULT_SCRIPT_PROFILE_NAME)
             .into();
-        let args: Vec<OsString> = matches
+        let args: Vec<&OsStr> = matches
             .get_many::<OsString>("args")
-            .map(|values| values.cloned().collect())
-            .unwrap_or_default();
+            .unwrap_or_default()
+            .map(OsString::as_os_str)
+            .collect();
         debug!(?args);
         Ok(Self {
             ctx,
@@ -66,7 +73,7 @@ impl<'duck> RunScriptOptions<'duck> {
     pub fn from_path_and_args_with_defaults(
         ctx: &'duck DuckContext,
         path: &'duck Path,
-        args: Vec<OsString>,
+        args: Vec<&'matches OsStr>,
     ) -> QuackResult<Self> {
         let profile = DEFAULT_SCRIPT_PROFILE_NAME.into();
         debug!(?args);
@@ -86,7 +93,9 @@ impl<'duck> RunScriptOptions<'duck> {
 
 /// Run script given options.
 #[expect(unreachable_code, unused_variables)]
-pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()> {
+pub fn run_script<'duck, 'matches>(
+    rs_options: RunScriptOptions<'duck, 'matches>,
+) -> QuackResult<()> {
     // @TODO: #2900 Unmock this.
     qp_bail_internal!("@TODO: #2900 Pass scripts through `Unit`s");
     let RunScriptOptions {
@@ -100,15 +109,22 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
         args,
         jobs: _,
     } = rs_options;
-    let script_name = path
-        .file_name()
-        .context_internal("we assured that the path points to a file")?;
-    let folder_path = path
-        .parent()
-        .context_internal("we assured that the path points to a file")?;
-    let package = get_package(ctx, path, folder_path, global)?;
+    let script_name = path.file_name().with_context_internal(|| {
+        format!("path `{path:?}` does not have a filename, but we checked that earlier?")
+    })?;
+    let folder_path = path.parent().with_context_internal(|| {
+        format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
+    })?;
+
+    let package = PackageLoader::load_script(ctx, path, folder_path, global)?;
     let root_identity = package.package().as_a_local_identity()?;
-    let (lock, venv, storage) = sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: lock,
+        new_venv: _,
+        storage,
+    } = sync(
         &package,
         StorageSyncOptions {
             overwrite,
@@ -118,40 +134,4 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     )?;
     let compile_lock = lock.into_compile_lock();
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
-}
-
-/// Loads the appropriate venv of the script.
-fn get_package<'duck>(
-    ctx: &'duck DuckContext,
-    path: &Path,
-    folder_path: &Path,
-    global: bool,
-) -> QuackResult<PackageContext<'duck>> {
-    // If this is `Some(_)` then the script has a frontmatter.
-    let possible_frontmatter = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)?;
-    // If this is `Ok(_)` then the script lies inside a package.
-    let possible_package =
-        PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::No);
-    // If possible_package is `Err` but it does steem from `PackageNotFound` then return the error.
-    // After this, possible_package is `Err` if and only if script does not belong to a package.
-    if let Err(ref err) = possible_package
-        && !err.has_in_chain::<PackageNotFound>()
-    {
-        return possible_package;
-    }
-    match (possible_frontmatter, possible_package, global) {
-        // Scripts with frontmatters cannot be inside packages nor be run with `global` flag.
-        (Some(_), Ok(_), _) => qp_bail!("scripts inside packages cannot have frontmatters"),
-        (Some(_), _, true) => {
-            qp_bail!("script with a frontmatter cannot be run with `global` flag")
-        }
-        (Some(frontmatter), Err(_), false) => Ok(frontmatter),
-
-        // `global` forces the script to be run in the global venv, even if it is inside a package.
-        (None, _, true) => PackageLoader::global_package(ctx),
-        // If script does not belong to a package, default to global venv.
-        (None, Err(_), false) => PackageLoader::global_package(ctx),
-
-        (None, Ok(pcx), false) => Ok(pcx),
-    }
 }

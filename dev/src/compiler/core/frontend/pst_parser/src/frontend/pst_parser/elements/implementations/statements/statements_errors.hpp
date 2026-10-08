@@ -1,22 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
+#include <diagnostic/message.hpp>
 
 namespace pst {
-	class AliasStarError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "alias_star_error" };
-		}
-
-	public:
-		AliasStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class BadSpecifierCallError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadSpecifierCallError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -24,12 +18,11 @@ namespace pst {
 		}
 
 	public:
-		BadSpecifierCallError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadSpecifierCallError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class InvalidExternContentWarning final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class InvalidExternContentWarning final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "warning",
 				     .family        = "parser",
@@ -38,6 +31,6 @@ namespace pst {
 
 	public:
 		InvalidExternContentWarning(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 }

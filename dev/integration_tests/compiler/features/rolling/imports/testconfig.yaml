@@ -1,0 +1,24 @@
+# Tests for imports
+
+Tests:
+  named_simple_imports:
+    Cases:
+      all:
+        Output:
+          String: "1\n"
+        ExitCode: 0
+
+  unnamed_simple_imports:
+    Cases:
+      all:
+        Output:
+          String: "1\n"
+        ExitCode: 0
+
+  module_namespace_imports:
+    Cases:
+      all:
+        Output:
+          String: "500\n600\n500\n500\n600\n"
+        ExitCode: 0
+
