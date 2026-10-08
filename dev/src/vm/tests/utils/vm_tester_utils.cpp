@@ -204,7 +204,7 @@ void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code)
 	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
 	const auto validation_result = vm::api::deinitAndValidate(test_result.pid);
 	ASSERT_HAS_VALUE(validation_result);
-	ASSERT_TRUE(validation_result.value());
+	ASSERT_TRUE(validation_result.value().valid());
 }
 
 void VmTestSuite::runFunctionSynchronouslyAsTest(

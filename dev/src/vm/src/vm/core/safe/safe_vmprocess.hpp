@@ -107,9 +107,13 @@ namespace vm {
 		/**
 		 * @brief Helper used by `runFunction` and `startNewThreadFromExecutionThread`. Takes no
 		 * `api_lock`, only `threads_pool_mutex`.
+		 *
+		 * @param owner Who spawned/has to join the thread we're spawning.
 		 */
 		std::expected<api::Response, api::ApiError> spawnThread(
-			const std::string& func_name, const RunArguments& run_arguments
+			IVMThread::ThreadOwner owner,
+			const std::string&     func_name,
+			const RunArguments&    run_arguments
 		);
 
 		std::expected<void, api::ApiError> assertProcessCanRespond();
@@ -172,9 +176,11 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
+		[[nodiscard]] std::vector<api::ThreadID> getAllActiveThreadIDs() const override;
 
-		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedApiThreadIds() const override;
+
+		std::vector<api::ThreadID> joinFinishedThreads() override;
 
 		void requestStopAllThreads() noexcept override;
 

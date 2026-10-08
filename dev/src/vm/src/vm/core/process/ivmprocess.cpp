@@ -31,31 +31,48 @@ namespace vm {
 		const ProcessState          state = state_manager.aggregate();
 		base::Optional<std::string> invalid_reason;
 
-		// Every VMThread of the previous run must be joined before the process may be reused or
-		// torn down. Describes the ones which were not, if there are any.
-		const auto unjoined_reason = [this]() -> base::Optional<std::string> {
-			const std::vector<api::ThreadID> unjoined = unjoinedThreadIds();
-			if (unjoined.empty()) return std::nullopt;
-
-			std::string ids = base::strJoin(
-				unjoined | std::views::transform([](const api::ThreadID id) {
+		const auto format_ids = [](const std::vector<api::ThreadID>& thread_ids) {
+			return base::strJoin(
+				thread_ids | std::views::transform([](const api::ThreadID id) {
 					return base::toString(id.asInt());
 				}),
 				", "
 			);
+		};
+
+		// Every VMThread the API caller started must be joined before the process may be reused or
+		// torn down. Describes the ones which were not, if there are any. Threads started by the
+		// program are joined by `joinFinishedThreads`, so they never refuse a request.
+		const auto unjoined_reason = [&]() -> base::Optional<std::string> {
+			const std::vector<api::ThreadID> unjoined = unjoinedApiThreadIds();
+			if (unjoined.empty()) return std::nullopt;
+
 			return base::strConcat(
 				unjoined.size() == 1 ? "thread " : "threads ",
-				ids,
+				format_ids(unjoined),
 				unjoined.size() == 1 ? " of the previous run was never joined"
 									 : " of the previous run were never joined"
 			);
 		};
 
+		// Names the threads which did not finish, so a refusal points at what the caller (or their
+		// program) still has to wait for. Those are the only threads a request may be refused over
+		// no matter who started them.
+		const auto executing_reason = [&]() -> std::string {
+			const std::vector<api::ThreadID> active = getAllActiveThreadIDs();
+			if (active.empty()) return "the process is still executing";
+			return base::strConcat(
+				"the process is still executing, active threads: ", format_ids(active)
+			);
+		};
+
 		variant_match(event) {
 			variant_case_novalue(pe::Run) {
-				// Run can be performed only if the previous run was completed successfully. `Stopper`
+				// Run can be performed only if the previous run was completed successfully. `Stopped`
 				// or `Panicked` means the DVM was left in an undefined state and can't be reused.
-				if (!v_matches(state, ps::NotStarted, ps::Completed))
+				if (ps::isExecuting(state))
+					invalid_reason = executing_reason();
+				else if (!v_matches(state, ps::NotStarted, ps::Completed))
 					invalid_reason
 						= "the process must be freshly loaded or completed successfully in the "
 						  "previous run";
@@ -68,8 +85,9 @@ namespace vm {
 				if (not ps::canDeinit(state)) {
 					invalid_reason
 						= ps::isExecuting(state)
-					        ? "the process is still executing"
-					        : "the previous run did not complete cleanly. Use `api::kill` instead";
+					        ? executing_reason()
+					        : "the previous run did not complete cleanly. Use `api::kill` "
+					          "instead";
 				}
 				// Deinitializing a process whose execution threads are still alive would destroy
 				// them from under the OS threads, so they have to be joined first.
@@ -93,6 +111,9 @@ namespace vm {
 
 	std::expected<void, api::ApiError> IVMProcess::prepareRun() {
 		if (not ps::isTerminal(state_manager.aggregate())) return {};
+		// Reusing a VMThread whose execution thread was never joined would overwrite a joinable
+		// handle, so remove whatever the previous run left behind before resetting the states.
+		joinFinishedThreads();
 		if (auto reset = state_manager.resetForRun(); !reset.has_value())
 			return std::unexpected(api::ApiError{ api::StateError{ reset.error() } });
 		return {};

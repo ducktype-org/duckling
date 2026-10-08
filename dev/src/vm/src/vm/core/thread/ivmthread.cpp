@@ -77,7 +77,7 @@ namespace vm {
 		{
 			std::lock_guard lock(exec_thread_mutex);
 			// Only the caller which takes the handle away commits the `Join`, so the event is
-			// applied exactly once even when two threads reap this VMThread at the same time.
+			// applied exactly once even when two callers join this VMThread at the same time.
 			if (!exec_thread.has_value()) return;
 			if (exec_thread->joinable()) exec_thread->join();
 			exec_thread.reset();
@@ -246,11 +246,6 @@ namespace vm {
 	void IVMThread::requestStop() noexcept {
 		if (!validateThreadRequest(ThreadSignal::Request::Stop).has_value()) return;
 		(void) signal.post(ThreadSignal::Request::Stop);
-	}
-
-	bool IVMThread::hasActiveThread() const {
-		std::lock_guard lock(exec_thread_mutex);
-		return exec_thread.has_value() && exec_thread->joinable();
 	}
 
 	/**

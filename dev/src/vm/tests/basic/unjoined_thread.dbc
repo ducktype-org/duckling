@@ -1,0 +1,23 @@
+global_data worker_runs i64 {}
+
+function worker {} -> {} {
+	init_pany_type			local_runs, i64;
+	mov_p64_p64				local_runs, worker_runs;
+	add_p64_imm				local_runs, 1;
+	mov_p64_p64				worker_runs, local_runs;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	mov_p64_imm				worker_runs, 0;
+
+	init_pany_type			worker_id, i64;
+	set_threadctx			worker;
+	call_builtinfunc		builtin_start_thread;
+
+	# The started thread is deliberately never joined by the program - it belongs to the DVM,
+	# which has to reap it. The API caller does not even know that this thread exists.
+
+	ret;
+}

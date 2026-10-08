@@ -153,7 +153,9 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `setBreakpoint` is not implemented.");
 	}
 
-	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return true; }
+	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() {
+		return api::response::ValidationResult{};
+	}
 
 	std::expected<void, api::ApiError> FastVMProcess::requestPauseOfVMThread(
 		[[maybe_unused]] api::ThreadID thread_id
@@ -240,7 +242,7 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `getVMValueForType` is not implemented.");
 	}
 
-	std::vector<api::ThreadID> FastVMProcess::unjoinedThreadIds() const {
+	std::vector<api::ThreadID> FastVMProcess::unjoinedApiThreadIds() const {
 		std::vector<api::ThreadID> ids;
 		for (const auto& thread: vm_threads) {
 			const thread_state::ThreadState state = thread.getThreadState();
@@ -250,7 +252,7 @@ namespace vm::fast {
 		return ids;
 	}
 
-	std::vector<api::ThreadID> FastVMProcess::getAllActiveThreadIDs() {
+	std::vector<api::ThreadID> FastVMProcess::getAllActiveThreadIDs() const {
 		std::vector<api::ThreadID> thread_ids;
 		for (const auto& thread: vm_threads)
 			if (thread_state::isActive(thread.getThreadState()))

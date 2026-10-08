@@ -186,7 +186,7 @@ private:
 		// Memory state should be intact.
 		auto validation_result = vm::api::deinitAndValidate(pid);
 		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value());
+		ASSERT_TRUE(validation_result.value().valid());
 	}
 
 	u64 stepAndGetLine(vm::PID pid) {

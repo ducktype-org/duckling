@@ -99,9 +99,9 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
+		[[nodiscard]] std::vector<api::ThreadID> getAllActiveThreadIDs() const override;
 
-		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedApiThreadIds() const override;
 
 		FastVMThread& getMainVMThread();
 

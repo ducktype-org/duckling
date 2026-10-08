@@ -97,9 +97,11 @@ namespace vm::api {
 	 * value.
 	 * @note When the exit value holds VMValues, they are owned by the process and shouldn't be
 	 * freed by the caller. They are automatically freed when the process is destroyed.
+	 * @note Every result other than `JoinError` means the execution thread was joined by this
+	 * call. `JoinError` means the thread was either already joined, never started or not found.
+	 *
 	 * @return The exit value of the thread if it completed normally, or an API error otherwise
-	 * (the thread was never started, it panicked or it was stopped before completing), in which
-	 * case the state is undefined.
+	 * (the thread was never started, it panicked or it was stopped before completing).
 	 */
 	std::expected<ExitValue, ApiError> join(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
@@ -117,14 +119,20 @@ namespace vm::api {
 	 * or panicked. Still executing process or one that was stopped or panicked will be refused with
 	 * a `StateError`. Such process should be killed.
 	 *
-	 * @note Every thread which ran must also be joined first (`api::join`). A process which still
-	 * owns an unjoined execution thread is refused with a `StateError` naming those threads.
+	 * @note Every thread started through the API (`run`, `runFunction`) must be joined before
+	 * executing `deinitAndValidate`. A process which still owns an unjoined execution thread
+	 * is refused with a `StateError`. Threads the user program started itself
+	 * (`builtin_start_thread`) are joined by the DVM, they never refuse the deinit.
 	 *
 	 * @note The process is removed from the internal structures whenever the deinitialization
 	 * actually ran. This includes a successful deinit and when a global destructor panicked during
 	 * execution.
+	 *
+	 * @return What errors the deinit found (either memory leaks or unjoined program threads). The
+	 * program threads that where left unjoined are joined by this endpoint. Returns an `ApiError`
+	 * if the deinit was refused (`StateError`) or a global destructor panicked (`Panicked`).
 	 */
-	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
+	std::expected<response::ValidationResult, ApiError> deinitAndValidate(PID pid);
 
 	/**
 	 * @brief Tears down the process. If it's possible, we tear it down gracefully with
@@ -134,7 +142,7 @@ namespace vm::api {
 	 * @return The validation result if the process was deinitialized, an empty optional if it had
 	 * to be killed, or an API error if neither could be done.
 	 */
-	std::expected<base::Optional<response::Boolean>, ApiError> deinitOrKill(PID pid);
+	std::expected<base::Optional<response::ValidationResult>, ApiError> deinitOrKill(PID pid);
 
 	/// DEBUGGER REQUESTS ///
 	/**

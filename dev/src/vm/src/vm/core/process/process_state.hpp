@@ -6,8 +6,8 @@
  * `ProcessStateManager`. Every thread state change goes through the table, which recomputes the
  * aggregate.
  *
- * `ProcessEvent` covers only the two process operations (which actually cause a process state
- * change) -  `Run`, `Stop`. Pause/Resume/Step are per-thread operations.
+ * `ProcessEvent` covers only the process-wide operations (which actually cause a process state
+ * change) - `Run`, `Stop` and `DeinitAndValidate`. Pause/Resume/Step are per-thread operations.
  */
 #pragma once
 
@@ -176,7 +176,7 @@ namespace vm {
 		 *   	5. Any VMThread is Sleeping                  			-> VMProcess Sleeping
 		 *   	6. Any VMThread is Paused 								-> VMProcess Paused
 		 *   	7. Every VMThread is either NotStarted or terminal:
-		 *   		- Main VMThread Completed, or Joined after it completed	-> Completed{exit}
+		 *   		- Main VMThread Completed (joined or not) 				-> Completed{exit}
 		 *   		- Otherwise 										-> VMProcess Stopped
 		 */
 		[[nodiscard]] process_state::ProcessState aggregateState() const {
@@ -221,18 +221,18 @@ namespace vm {
 					);
 			});
 
-			// Nothing is active, so every thread is either NotStarted or terminal.
-			for (const auto& [tid, entry]: threads) {
-				// If Main thread completed, VMProcess does as well.
-				if (tid != main_tid) continue;
-				v_if_matches(
-					entry.state, ts::Completed, completed
-				) return Completed{ completed->exit_value };
-				// A joined main thread keeps the exit value of the run it completed.
-				v_if_matches(entry.state, ts::Joined, joined) {
-					if (joined->exit_value.has_value()) return Completed{ *joined->exit_value };
-				}
-			}
+			// Nothing is active, so every thread is either NotStarted or terminal. The process
+			// completed iff the main thread completed.
+			const auto main_entry = threads.atMaybe(main_tid);
+			if (!main_entry.has_value()) return Stopped{};
+
+			const base::Optional<ts::TerminalOutcome> main_outcome
+				= ts::terminalOutcome(main_entry.value()->state);
+			if (!main_outcome.has_value()) return Stopped{};
+
+			v_if_matches(
+				*main_outcome, ts::Completed, completed
+			) return Completed{ completed->exit_value };
 			return Stopped{};
 		}
 	};

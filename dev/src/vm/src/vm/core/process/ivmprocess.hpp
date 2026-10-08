@@ -94,8 +94,13 @@ namespace vm {
 		) const;
 
 		/**
-		 * @brief Prepares a run (or a rerun). Called when the process is terminal, moves all
-		 * threads back to `NotStarted` and clears the stop-all-threads flag.
+		 * @brief Prepares a run (or a rerun). Called when the process is terminal, joins the
+		 * leftover execution threads of the previous run, moves all threads back to `NotStarted`
+		 * and clears the stop-all-threads flag.
+		 *
+		 * @note A rerun is legal only for a process which completed and whose API threads are all
+		 * joined.
+		 *
 		 * @return Nothing when the process is ready to run. An `ApiError` when the
 		 * previous run did not complete normally (the process was stopped, killed or panicked,
 		 * which may have left the VM in an undefined state).
@@ -260,17 +265,36 @@ namespace vm {
 		/**
 		 * @brief IDs of the threads which are currently active (started and not terminal).
 		 */
-		virtual std::vector<api::ThreadID> getAllActiveThreadIDs() = 0;
+		[[nodiscard]] virtual std::vector<api::ThreadID> getAllActiveThreadIDs() const = 0;
 
 		/**
-		 * @brief The threads which started but are not in the `Joined` state yet.
+		 * @brief The threads spawned by the user via the API which started but are not in the
+		 * `Joined` state yet.
 		 *
-		 * An `api::run()` must always be followed by a `join()`. Until that happens the VMThread
-		 * cannot be reused and the process cannot be deinitialized.
+		 * An `api::run()`/`api::runFunction()` must always be followed by a `join()`. Until that
+		 * happens the VMThread cannot be reused and the process cannot be deinitialized.
+		 *
+		 * @note Threads the user program itself started are never returned here.
 		 *
 		 * @return The IDs of every such thread, empty when the previous run was fully joined.
 		 */
-		[[nodiscard]] virtual std::vector<api::ThreadID> unjoinedThreadIds() const = 0;
+		[[nodiscard]] virtual std::vector<api::ThreadID> unjoinedApiThreadIds() const = 0;
+
+		/**
+		 * @brief Joins the execution threads of every VMThread which finished but was never
+		 * joined, so the process may be reused or destroyed.
+		 *
+		 * Called before a re-run and before a deinit. API threads are already joined by then
+		 * (`unjoinedApiThreadIds` guards that), so in practice this joins the threads the program
+		 * started itself.
+		 *
+		 * @note Must be called with no process lock held - joining blocks until the execution
+		 * thread exits and that thread may still need those locks.
+		 *
+		 * @return The IDs of the threads the user program started and never joined itself.
+		 * Empty when the program cleaned up after itself.
+		 */
+		virtual std::vector<api::ThreadID> joinFinishedThreads() { return {}; }
 
 		/**
 		 * @brief Posts Stop to all threads. Non blocking.

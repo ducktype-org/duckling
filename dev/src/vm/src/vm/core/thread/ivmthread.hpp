@@ -31,6 +31,16 @@ namespace vm {
 		using ThreadState = thread_state::ThreadState;
 		using ThreadEvent = thread_event::ThreadEvent;
 
+		/**
+		 * @brief Who is responsible for joining a VMThread/who spawned it.
+		 */
+		enum class ThreadOwner {
+			/// Started by `api::run`/`api::runFunction`, should be `api::join`ed.
+			API,
+			/// Started by the used program (`builtin_start_thread`). Should be joined by the program.
+			Program,
+		};
+
 		IVMThread(api::ThreadID thread_id, IVMProcess& my_process);
 
 		virtual ~IVMThread() = default;
@@ -118,10 +128,11 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> join();
 
 		/**
-		 * @brief Check if thread has an active execution thread handle.
-		 * @return true if exec_thread is active and joinable.
+		 * @brief Sets the owner of this thread.
 		 */
-		[[nodiscard]] bool hasActiveThread() const;
+		void setOwner(ThreadOwner owner) { thread_owner = owner; }
+
+		[[nodiscard]] ThreadOwner getOwner() const { return thread_owner; }
 
 		/**
 		 * @brief Decides whether an API control request can be performed in current thread state.
@@ -210,6 +221,11 @@ namespace vm {
 		 * @brief The process this VMThread belongs to.
 		 */
 		IVMProcess& my_process;
+
+		/**
+		 * @brief Who spawned/has to `join` this VMThread.
+		 */
+		ThreadOwner thread_owner{ ThreadOwner::API };
 
 		/**
 		 * @brief Run a single function with given parameters.

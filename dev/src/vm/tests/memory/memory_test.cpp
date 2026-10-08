@@ -37,7 +37,7 @@ private:
 		ASSERT_HAS_VALUE(result.run_result);
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
 		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value() == false);
+		ASSERT_TRUE(validation_result.value().memory_valid == false);
 	}
 
 	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc", "", ""); }
@@ -77,7 +77,7 @@ private:
 		const auto clean_teardown = vm::api::deinitOrKill(completed.pid);
 		ASSERT_HAS_VALUE(clean_teardown);
 		ASSERT_TRUE(clean_teardown.value().has_value());
-		ASSERT_TRUE(clean_teardown.value().value());
+		ASSERT_TRUE(clean_teardown.value().value().memory_valid);
 
 		const auto panicked = runTestOnVmGetResult("local_leak.dbc", "", "");
 		ASSERT_NO_VALUE(panicked.run_result);
@@ -143,7 +143,7 @@ private:
 
 		const auto deinit = vm::api::deinitAndValidate(pid);
 		ASSERT_HAS_VALUE(deinit);
-		ASSERT_TRUE(deinit.value());
+		ASSERT_TRUE(deinit.value().memory_valid);
 		ASSERT_EQUAL_PRINT(std::string(""), captured.str());
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(pid));
 	}

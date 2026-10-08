@@ -712,6 +712,8 @@ namespace compiler::driver {
 								  const auto res = vm::api::deinitOrKill(pid);
 								  if (not res)
 									  std::cerr << vm::api::errorToString(res.error()) << '\n';
+								  else if (res->has_value())
+									  std::cerr << vm::api::validationToString(res->value());
 							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
