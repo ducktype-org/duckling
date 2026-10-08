@@ -78,7 +78,9 @@ impl UnitGraph {
 
     /// Get the [`PackageData`] for a package specified by an [`Identity`].
     pub fn package_data(&self, identity: Identity) -> &PackageData {
-        self.packages.get(&identity).expect("todo")
+        self.packages
+            .get(&identity)
+            .unwrap_or_else(|| panic!("no package data for {identity}"))
     }
 
     /// Get the compilation order (topological order of the nodes of the graph).
@@ -437,7 +439,7 @@ fn construct_package_data(
                 .manifest()
                 .dependencies()
                 .get_by_name(dep.name())
-                .expect("todo")
+                .unwrap_or_else(|| panic!("{identity} has no dependency named {}", dep.name()))
                 .alias()
                 .map(|alias| normalise_package_name(&alias).into());
             (*dep, alias)
