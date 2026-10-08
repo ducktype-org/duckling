@@ -1,7 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file coercion_error.hpp
- * @brief Why a coercion may not be performed abd in which place it went wrong. A failed coercion is
- * a tree- like structure for more complex coercions, which allows for better error messages.
+ * @brief Why a coercion may not be performed and in which place it went wrong. A failed coercion is
+ * a tree-like structure for more complex coercions, which allows for better error messages.
  *
  * @TODO: #3691 Generalize it into a type error tree to use it to provide constructability and
  * copyability errors.
@@ -51,7 +57,7 @@ namespace compiler::tsh::coercions {
 		 * @TODO: #3656 Make this error be returned by ambiguous user conversions.
 		 */
 		struct AmbiguousCoercion final {
-			/// The indicies of variant alternatives that the type may be wrapped as.
+			/// The indices of variant alternatives that the type may be wrapped as.
 			std::vector<usize> candidates;
 		};
 

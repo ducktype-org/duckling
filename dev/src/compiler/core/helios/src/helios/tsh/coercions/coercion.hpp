@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file coercion.hpp
  *
@@ -9,8 +15,9 @@
  * - `SymbolTypeCoercion` is decided from the types alone, so it knows nothing about ownership.
  *   This is what `QuerySymbolTypeCoercion` caches.
  * - `Coercion` is the same tree decided for one particular value, which is the `ExpressionType`.
- *   Every `HandOver` is decided: it is gone, or it is an `ImplicitMove`. This is used by the rest
- *   of the compiler.
+ *   Every `HandOver` is decided: it is gone, it became an `ImplicitMove`, or it became an
+ *   `Elementwise`. Otherwise the coercion is refused (@see `coercion_step::HandOver`). This is used
+ * 	 by the rest of the compiler.
  *
  * A successful coercion is represented by a `CoercionNode` (@see `coercion_node.hpp`).
  * A refusal is represented by a `CoercionError` (@see coercion_error.hpp).
@@ -118,7 +125,7 @@ namespace compiler::tsh::coercions {
 		 */
 		[[nodiscard]]
 		bool isNoOp() const {
-			return isValid() && getRoot().isNoOp();
+			return getRoot().isNoOp();
 		}
 
 		/**
@@ -126,7 +133,7 @@ namespace compiler::tsh::coercions {
 		 */
 		[[nodiscard]]
 		bool implicitlyMoves() const requires std::same_as<Source, ExpressionType<>> {
-			return isValid() && getRoot().implicitlyMoves();
+			return getRoot().implicitlyMoves();
 		}
 
 		/**

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file coercion_tester.hpp
  * @brief A small framework for testing coercions.
@@ -20,7 +26,6 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 
-#include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/pointers/shared_box.hpp>
@@ -32,6 +37,7 @@
 #include <tester/tester.hpp>
 
 #include <algorithm>
+#include <any>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -51,9 +57,10 @@ namespace coercion_testing {
 	 */
 	template<typename Action>
 	[[nodiscard]] auto inContext(const Action& action) {
-		base::Optional<decltype(action(std::declval<query::Context&>()))> result;
-		query::utils::withContextDo([&](query::Context& ctx) { result.emplace(action(ctx)); });
-		return std::move(result.value());
+		using Result = decltype(action(std::declval<query::Context&>()));
+		return std::any_cast<Result>(query::utils::withContextCompute(
+			[&](query::Context& ctx) -> std::any { return action(ctx); }
+		));
 	}
 
 	/// @p type as a mutable value of its own, for a type Duckling cannot write, like `byte`.
@@ -341,6 +348,8 @@ var global_pair: (box i32, i32) = (new 1, 2);
     var r: ref (box i32, i32) = &t;
     var c: (box i32, const i32) = (new 1, 2);
     var o: Owner;
+    let lb: box i32 = new 1;
+    let lr: ref i32 = &x;
 )";
 
 		CoercionTestSuite(tester::TestConfig config, const std::string_view name):

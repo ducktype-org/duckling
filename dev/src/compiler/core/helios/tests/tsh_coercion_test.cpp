@@ -402,6 +402,14 @@ private:
 		coerce("global_pair", "(box i32, i32)").refuses().because<RequiresExplicitCopyMove>();
 		coerce("x", "i8").refuses().because<IncompatibleTypes>();
 
+		// A field of a temporary may not be moved out of on its own.
+		coerce("makeOwner().b", "box i32").refuses().because<RequiresExplicitCopyMove>();
+
+		// A literal is copied by its bytes.
+		coerce(ExpressionType<>{ type("box i32"), ValueCategory(Literal) }, type("box i32"))
+			.succeeds()
+			.steps({});
+
 		// A move the user wrote is not the coercion's to add.
 		coerce("move t", "(box i32, i32)").succeeds().steps({});
 		coerce("move o", "Owner").succeeds().steps({});

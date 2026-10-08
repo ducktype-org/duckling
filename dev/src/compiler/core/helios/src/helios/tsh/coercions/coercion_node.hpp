@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file coercion_node.hpp
  * @brief One node of a coercion tree.
@@ -43,19 +49,26 @@ namespace compiler::tsh::coercions {
 
 	namespace coercion_step {
 		/**
-		 * @brief The pointee is read out of a `ref`/`box`.
-		 */
-		struct Deref final {
-			static constexpr Rank             RANK = Rank::Deref;
-			static constexpr std::string_view NAME = "deref";
-		};
-
-		/**
 		 * @brief The value is handed over to the location it is coerced into, which is where it may
 		 * be copied, moved or refused.
 		 *
-		 * @note Only a `SymbolTypeCoercion` contains this node. The `Coercion` layer later
-		 * replaces it with either nothing, `ImplicitMove` or by an error.
+		 * @note Deciding WHERE the value has to be passed is decided on the `SymbolType` level.
+		 * This node is added every time when a value is passed into a new location. The fact HOW
+		 * the value should be passed is decided on the `ExpressionType` level based on the
+		 * ValueCategories.
+		 *
+		 * Thus, this node is inserted only in the `SymbolTypeCoercion` tree and `coercionOf` remaps
+		 * it when ValueCategories are taken into account. The `HandOver` node can be remapped to:
+		 * - Nothing:
+		 * 		When copying by bytes is enough (i.e. user wrote a `move`, for a
+		 * 		literal, an lvalue of a trivially copyable type)
+		 * - `ImplicitMove`:
+		 * 		When the value is a temporary
+		 * - `ElementWise`:
+		 * 		When the value is built out of parts (i.e. a tuple literal). Each part
+		 * 		is then handed over separately.
+		 * - Error:
+		 * 		When a user was supposed to write `copy` or `move` explicitly.
 		 */
 		struct HandOver final {
 			static constexpr Rank             RANK = Rank::Identity;
@@ -64,7 +77,8 @@ namespace compiler::tsh::coercions {
 
 		/**
 		 * @brief The value is implicitly moved since it's owned by the expression that produced it.
-		 * @note Only a `Coercion` contains this node, after `HandOver` was replaced with it.
+		 * @note Only a `Coercion` contains this step, after `HandOver` was replaced with it.
+		 * @see HandOver docs
 		 */
 		struct ImplicitMove final {
 			static constexpr Rank             RANK = Rank::Identity;
@@ -81,11 +95,48 @@ namespace compiler::tsh::coercions {
 		};
 
 		/**
+		 * @brief The pointee is read out of a `ref`/`box`.
+		 */
+		struct Deref final {
+			static constexpr Rank             RANK = Rank::Deref;
+			static constexpr std::string_view NAME = "deref";
+		};
+
+		/**
 		 * @brief The value is widened into a wider numeric type.
 		 */
 		struct Numeric final {
 			static constexpr Rank             RANK = Rank::Numeric;
 			static constexpr std::string_view NAME = "numeric";
+		};
+
+		/**
+		 * @brief The value is packed into the variant as the alternative at the given index.
+		 */
+		struct VariantPack final {
+			static constexpr Rank             RANK = Rank::VariantPack;
+			static constexpr std::string_view NAME = "pack as alternative";
+
+			usize alternative{ 0 };
+		};
+
+		/**
+		 * @brief The value is lifted into the `type` type.
+		 */
+		struct LiftToType final {
+			static constexpr Rank             RANK = Rank::LiftToType;
+			static constexpr std::string_view NAME = "lift to type";
+		};
+
+		/**
+		 * @brief An implicit user conversion that builds the new value out of the old one.
+		 * @TODO: #3656 Make use of this.
+		 */
+		struct UserConversion final {
+			static constexpr Rank             RANK = Rank::UserConversion;
+			static constexpr std::string_view NAME = "user conversion";
+
+			helios::SymID function;
 		};
 
 		/**
@@ -95,14 +146,6 @@ namespace compiler::tsh::coercions {
 		struct ZeroCheck final {
 			static constexpr Rank             RANK = Rank::ZeroCheck;
 			static constexpr std::string_view NAME = "zero check";
-		};
-
-		/**
-		 * @brief The value is lifted into the `type` type.
-		 */
-		struct LiftToType final {
-			static constexpr Rank             RANK = Rank::LiftToType;
-			static constexpr std::string_view NAME = "lift to type";
 		};
 
 		/**
@@ -122,27 +165,6 @@ namespace compiler::tsh::coercions {
 
 			std::vector<CoercionNode> parts;
 		};
-
-		/**
-		 * @brief The value is packed into the variant as the alternative at the given index.
-		 */
-		struct VariantPack final {
-			static constexpr Rank             RANK = Rank::VariantPack;
-			static constexpr std::string_view NAME = "pack as alternative";
-
-			usize alternative{ 0 };
-		};
-
-		/**
-		 * @brief An implicit user conversion that builds the new value out of the old one.
-		 * @TODO: #3656 Make use of this.
-		 */
-		struct UserConversion final {
-			static constexpr Rank             RANK = Rank::UserConversion;
-			static constexpr std::string_view NAME = "user conversion";
-
-			helios::SymID function;
-		};
 	}
 
 	/**
@@ -150,17 +172,17 @@ namespace compiler::tsh::coercions {
 	 */
 	struct CoercionStep final {
 		using Kind = std::variant<
-			coercion_step::Deref,
 			coercion_step::HandOver,
 			coercion_step::ImplicitMove,
 			coercion_step::MutabilityChange,
+			coercion_step::Deref,
 			coercion_step::Numeric,
-			coercion_step::ZeroCheck,
-			coercion_step::LiftToType,
-			coercion_step::RetypeVoid,
-			coercion_step::Elementwise,
 			coercion_step::VariantPack,
-			coercion_step::UserConversion>;
+			coercion_step::LiftToType,
+			coercion_step::UserConversion,
+			coercion_step::ZeroCheck,
+			coercion_step::RetypeVoid,
+			coercion_step::Elementwise>;
 
 		/// What the step does.
 		Kind kind;
@@ -220,14 +242,17 @@ namespace compiler::tsh::coercions {
 		}
 
 		/**
-		 * @brief Whether nothing at all happens to the value at runtime, so that it may be used as
+		 * @brief Whether nothing at all happens to the value at runtime, so it can be used as
 		 * it is, i.e. a coercion that only relaxes mutability.
+		 *
+		 * @note `HandOver` and `ImplicitMove` are not no-ops, because the value still has to be
+		 * copied or moved into its new place.
 		 */
 		[[nodiscard]]
 		bool isNoOp() const noexcept {
-			return std::ranges::all_of(steps, [](const CoercionStep& step) {
-				return v_matches(step.kind, coercion_step::MutabilityChange);
-			});
+			return steps.empty()
+			    || (steps.size() == 1
+			        && v_matches(steps.front().kind, coercion_step::MutabilityChange));
 		}
 
 		/**

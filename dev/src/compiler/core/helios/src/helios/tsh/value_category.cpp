@@ -26,25 +26,8 @@ namespace compiler::tsh {
 		return PrimaryCategory::Global;
 	}
 
-	std::string_view toString(const PrimaryCategory category) {
-		switch (category) {
-		case PrimaryCategory::Temporary:
-			return "temporary";
-		case PrimaryCategory::Local:
-			return "local";
-		case PrimaryCategory::Global:
-			return "global";
-		case PrimaryCategory::Literal:
-			return "literal";
-		case PrimaryCategory::Dereferenced:
-			return "dereferenced";
-		default:
-			CORE_UNREACHABLE();
-		}
-	}
-
 	std::string ValueCategory::toString() const {
-		std::string out{ tsh::toString(category) };
+		std::string out{ base::enumToStr(category) };
 
 		if (is_pure) out += ", pure";
 		if (not allows_semantic.toString().empty())
@@ -92,6 +75,8 @@ namespace compiler::tsh {
 			is_pure         = true;
 			allows_semantic = COPY | USE | DESTROY;  // All but MOVE and REINIT
 			break;
+		default:
+			CORE_UNREACHABLE();
 		}
 	}
 
