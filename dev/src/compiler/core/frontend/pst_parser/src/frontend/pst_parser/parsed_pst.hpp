@@ -5,10 +5,10 @@
 #include "pst_state_forward.hpp"
 #include "pst_type.hpp"
 
-#include <diagnostic/logger.hpp>
-#include <diagnostic/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <token_source/source.hpp>
 
 namespace pst {
@@ -151,10 +151,10 @@ namespace pst {
 		template<typename Parser, typename... Args>
 		explicit ParsedPST(
 			internal::ConstructorTemplateInference<Parser>,
-			dia::StablePosition pos,
-			std::string_view        content,
-			Box<LangParserContext>  parsing_ctx,
-			hashing::ComponentHash  hash_ctx = {},
+			dia::StablePosition    pos,
+			std::string_view       content,
+			Box<LangParserContext> parsing_ctx,
+			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Parser, Args...>
 			  : PST<Element>(std::move(hash_ctx)), file(tokenizer::makeTokenSource(pos, content)) {
@@ -218,10 +218,10 @@ namespace pst {
 
 		template<typename Parser = Element, typename... Args>
 		static Box<ParsedPST> fromExpand(
-			dia::StablePosition pos,
-			std::string_view        contents,
-			Box<LangParserContext>  parsing_ctx,
-			hashing::ComponentHash  hash_ctx = {},
+			dia::StablePosition    pos,
+			std::string_view       contents,
+			Box<LangParserContext> parsing_ctx,
+			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Parser, Args...> {
 			auto out = makeParsedPstBox<Parser>(

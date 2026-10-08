@@ -55,22 +55,22 @@ namespace pst {
 
 		// @TODO: decide
 		// /**
-		 // * @TODO: #3110 this constructor is totally hacked, change it.
-		 // * We should somehow be able to share token_source between the original and cloned PST.
-		 // *
-		 // * Also: add clone dummy parameter here, to make it more explicit.
-		 // */
+		// * @TODO: #3110 this constructor is totally hacked, change it.
+		// * We should somehow be able to share token_source between the original and cloned PST.
+		// *
+		// * Also: add clone dummy parameter here, to make it more explicit.
+		// */
 		// explicit PST(
-			// Box<Element>                cloned_element,
-			// Box<tokenizer::TokenSource> token_source,
-			// hashing::ComponentHash      hash_ctx = {}
+		// Box<Element>                cloned_element,
+		// Box<tokenizer::TokenSource> token_source,
+		// hashing::ComponentHash      hash_ctx = {}
 		// ):
-			  // file(std::move(token_source)),
-			  // element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
-			  // hash_ctx_info(std::move(hash_ctx)) {
-			// calcElementPathHash();
-			// calcHashes();
-			// putInPSTHashHashMap();
+		// file(std::move(token_source)),
+		// element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
+		// hash_ctx_info(std::move(hash_ctx)) {
+		// calcElementPathHash();
+		// calcHashes();
+		// putInPSTHashHashMap();
 		// }
 
 		/**

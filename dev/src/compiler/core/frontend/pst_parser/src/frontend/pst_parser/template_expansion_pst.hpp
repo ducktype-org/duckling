@@ -25,9 +25,9 @@ namespace pst {
 		 */
 		template<typename... Args>
 		static auto makeTemplateExpansionPstBox(Args&&... args) {
-			return Box<TemplateExpansionPST>::fromPointer(new TemplateExpansionPST(
-				std::forward<Args>(args)...
-			));
+			return Box<TemplateExpansionPST>::fromPointer(
+				new TemplateExpansionPST(std::forward<Args>(args)...)
+			);
 		}
 
 		static Box<TemplateExpansionPST> fromElement(

@@ -58,19 +58,19 @@ namespace compiler::helios {
 			};
 			if (auto expand_str_opt = get_ctv_string_content(expand_ctv)) {
 				auto expand_str = expand_str_opt.value();
-				auto pst = pst::ParsedPST<pst::Stmt>::fromExpand(
-					expand->getStablePosition(),
-					// @TODO: #2471 change to strView, once it is fixed
-					expand_str.strView(),
-					makeBox<pst::LangParserContext>(expand->getContext()),
+				auto pst        = pst::ParsedPST<pst::Stmt>::fromExpand(
+                    expand->getStablePosition(),
+                    // @TODO: #2471 change to strView, once it is fixed
+                    expand_str.strView(),
+                    makeBox<pst::LangParserContext>(expand->getContext()),
 
-					// This is a little weird, we create a path context hash by hashing the string
-				    // representation of the expand argument bit256 hash.
-				    // Note that this is generally correct since hash(hash) keeps all the necessary
-				    // properties we need, and the expand argument hash includes the bits related to
-				    // the expand path.
-					hashing::ComponentHash({}, expand->getHash().toStringHex())
-				);
+                    // This is a little weird, we create a path context hash by hashing the string
+                    // representation of the expand argument bit256 hash.
+                    // Note that this is generally correct since hash(hash) keeps all the necessary
+                    // properties we need, and the expand argument hash includes the bits related to
+                    // the expand path.
+                    hashing::ComponentHash({}, expand->getHash().toStringHex())
+                );
 				bool parse_errors = pst->hasErrors();
 
 				ctx.moveDiagnosticsFrom(*pst->getLoggerMut());
