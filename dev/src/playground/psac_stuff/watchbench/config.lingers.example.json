@@ -1,0 +1,29 @@
+{
+  "project": "/tmp/watchbench/proj",
+  "reset_cmd": ["cp", "/tmp/watchbench/pristine.dmf", "/tmp/watchbench/proj/prog.dmf"],
+  "compilers": [
+    {
+      "name": "querylinger-j6",
+      "cmd": ["/path/to/build-release/bin/querylinger", "prog.dmf", "-o", "out/ql.out", "-j", "6", "-i"],
+      "cpus": "0,1,3,6,8,10",
+      "trigger": "stdin",
+      "done_regex": "^(recompiled \\d+/\\d+ functions|compilation failed:)",
+      "error_regex": "^compilation failed:",
+      "stats_regex": "recompiled (?P<recompiled>\\d+)/(?P<total>\\d+)"
+    },
+    {
+      "name": "psacklinger-j6",
+      "cmd": ["/path/to/build-release/bin/psacklinger", "prog.dmf", "-o", "out/pl.out", "-j", "6", "-i"],
+      "cpus": "0,1,3,6,8,10",
+      "trigger": "stdin",
+      "done_regex": "^(recompiled \\d+/\\d+ functions|compilation failed:)",
+      "error_regex": "^compilation failed:",
+      "stats_regex": "recompiled (?P<recompiled>\\d+)/(?P<total>\\d+)"
+    }
+  ],
+  "edits": [
+    {"name": "body_leaf", "file": "prog.dmf", "find": "PdOl6ukV / 536i64 /", "replace": "PdOl6ukV / 1{n}i64 /"},
+    {"name": "comment", "file": "prog.dmf", "find": "fun dbQXesIl(", "replace": "# wb {n}\nfun dbQXesIl("},
+    {"name": "error", "file": "prog.dmf", "find": "return GhwSycfv;", "replace": "return GhwSycfv + undefined_{n};"}
+  ]
+}
