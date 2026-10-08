@@ -1,0 +1,12 @@
+# Tests for variant types
+Tests:
+  variant_match:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm_valgrind:
+        Output:
+          String: ""
+        ExitCode: 0

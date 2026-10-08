@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! An abstraction over implementation details of storage.
 //!
 //! Layout:
@@ -42,7 +48,7 @@ const METADATA_FILENAME: &str = "metadata";
 const BACKUP_METADATA_FILENAME: &str = "metadata.old";
 const PKGS_DIR_NAME: &str = "pkg";
 
-const OK_FILENAME: &str = ".ok";
+pub const OK_FILENAME: &str = ".ok";
 
 #[derive(Debug, Clone)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
@@ -227,6 +233,17 @@ impl Storage {
         let dir = self.registry_dir(name, version, url);
         dir.join(OK_FILENAME).touch()?;
         Ok(())
+    }
+
+    /// Attempts to remove a package from the storage,
+    /// does not fail if such package is not stored.
+    pub fn try_remove_pkg(&self, pkg_id: PackageId) -> QuackResult<()> {
+        let pkg_dir = match pkg_id.kind() {
+            FullKind::Git { commit } => self.git_dir(pkg_id.url(), &commit),
+            FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
+            FullKind::Local => return Ok(()),
+        };
+        pkg_dir.rmtree()
     }
 }
 

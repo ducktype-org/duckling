@@ -1,7 +1,7 @@
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
-  # @TODO: #2920 This shouldn't be needed (manually fixup return type).
+  # Override the generated source so individual cases can select the exit code.
   echo @{default-src} > foo/src/src.dk
   echo "profiles:
     dvm:

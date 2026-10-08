@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "incremental_metadata_test_common.hpp"  // IWYU pragma: keep
 #include "test_utils.hpp"
 
@@ -114,8 +120,8 @@ private:
 
 		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
-		assertTrue(
-			output_maybe.has_value(), "Output file should be present in artifacts before compilation"
+		ASSERT_HAS_VALUE(
+			output_maybe, "Output file should be present in artifacts before compilation"
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -152,9 +158,8 @@ private:
 
 		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
-		assertFalse(
-			output_maybe2.has_value(),
-			"Output file should be deleted from artifacts after failed compilation"
+		ASSERT_NO_VALUE(
+			output_maybe2, "Output file should be deleted from artifacts after failed compilation"
 		);
 		driver::exit();
 

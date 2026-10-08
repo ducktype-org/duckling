@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/extend_cpp/vector_utils.hpp>
 
 #include <tester/tester.hpp>
@@ -11,6 +17,7 @@ public:
 		TESTER_ADD_TEST(appendToVectorTest);
 		TESTER_ADD_TEST(filterVectorInPlaceTest);
 		TESTER_ADD_TEST(deduplicateByTest);
+		TESTER_ADD_TEST(containsAllOfTest);
 	}
 
 	void appendToVectorTest() {
@@ -47,6 +54,23 @@ public:
 		std::vector<int> expected = { 1, 2, 3 };
 		ASSERT_EQUAL_PRINT(vec.size(), expected.size());
 		assertTrue(vec == expected, "Incorrect result");
+	}
+
+	void containsAllOfTest() {
+		std::vector<int> vec = { 1, 2, 3, 4, 5, 6, 2, 3 };
+
+		assertTrue(base::containsAllOf(vec, { 2, 4, 6 }), "Expected a subset to be contained");
+		assertTrue(base::containsAllOf(vec, vec), "Expected the same vector to be contained");
+		assertTrue(base::containsAllOf(vec, {}), "Expected no elements to always be contained");
+		assertTrue(
+			base::containsAllOf(vec, { 3, 3, 3 }), "Expected repeated elements to be contained"
+		);
+
+		assertTrue(!base::containsAllOf(vec, { 5, 7 }), "Expected a missing element to be reported");
+		assertTrue(
+			!base::containsAllOf(std::vector<int>{}, { 1 }),
+			"Expected an empty vector to contain no elements"
+		);
 	}
 };
 

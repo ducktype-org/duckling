@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
@@ -31,8 +37,9 @@ namespace vm {
 		// not synchronize usage of each of the processes. Each process synchronizes its resources
 		// by itself
 		std::expected<PID, api::ApiError> newProcess(const api::ProcessConfig& options = {});
-		std::expected<api::response::Boolean, api::ApiError> deinitAndValidate(PID pid);
-		std::expected<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
+		std::expected<api::Response, api::ApiError> doRequest(
+			PID pid, const api::RequestVariant& request
+		);
 		std::expected<void, api::ApiError> killProcess(PID pid);
 	};
 }

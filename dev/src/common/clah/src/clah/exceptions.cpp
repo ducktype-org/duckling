@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file exceptions.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
@@ -67,6 +73,9 @@ namespace clah::exceptions {
 
 	InvalidParameterName::InvalidParameterName(const std::string& name):
 		  ClahException("There is no parameter named \'" + name + '\'') {}
+
+	InvalidCommandName::InvalidCommandName(const std::string& name):
+		  ClahException("Command \"" + name + "\" is invalid.") {}
 
 	ParameterRequiresValue::ParameterRequiresValue(
 		const std::string& name, const std::string& value_type

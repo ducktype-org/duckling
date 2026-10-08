@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "supervisor.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -36,7 +42,7 @@ namespace vm {
 			switch (options.mode) {
 			case api::ProcessMode::Safe:
 				return Box<IVMProcess>::fromPointer(
-					new SafeVMProcess(pid, options.enable_deadlock_detection)
+					new SafeVMProcess(pid, options.enable_deadlock_detection, options.enable_jit)
 				);
 			case api::ProcessMode::Fast:
 				return Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid));
@@ -52,30 +58,24 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> Supervisor::doRequest(
-		const api::SupervisorRequest& request
+		const PID pid, const api::RequestVariant& request
 	) {
-		variant_match(request.request) {
+		variant_match(request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				auto res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
+				auto res = getProcess(pid).and_then([](Ref<IVMProcess> process) {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
-				// Don't erase the process iff the process didn't exist or it's still running.
-				const bool still_executing
-					= getProcess(request.pid)
-				          .and_then([](Ref<IVMProcess> process) {
-							  return process->doRequest(api::request::StatusRequest{});
-						  })
-				          .transform([](const api::Response& response) {
-							  return isExecuting(v_get(response, api::ProcStatus));
-						  })
-				          .value_or(false);
 
-				if (!still_executing) (void) killProcess(request.pid);
+				// If the deinit was successful or it ran but a global destructor panicked, we
+				// destroy the process here. Otherwise, if it was refused because the process is
+				// still executing, we leave it and let someone kill by hand.
+				if (res.has_value() || v_matches(res.error(), api::Panicked))
+					(void) killProcess(pid);
 				return res;
 			}
 			variant_default {
-				return getProcess(request.pid).and_then([&request](Ref<IVMProcess> process) {
-					return process->doRequest(request.request).transform_error([](const auto& x) {
+				return getProcess(pid).and_then([&request](Ref<IVMProcess> process) {
+					return process->doRequest(request).transform_error([](const auto& x) {
 						return api::ApiError{ x };
 					});
 				});
@@ -103,17 +103,15 @@ namespace vm {
 	}
 
 	Supervisor::~Supervisor() {
+		// Every process left here is force killed.
 		for (auto& [pid, proc]: process_table) {
-			// Every process must be stopped or finished before the Supervisor is destroyed.
 			auto status = proc->doRequest(api::request::StatusRequest{});
-			if (status && isExecuting(v_get(*status, api::ProcStatus)))
+			if (status)
 				std::cerr << "Supervisor destroyed while process " << pid
-						  << " is still executing. Processes must be stopped or finished before "
+						  << " still exists. Processes should be deinitialized before "
 							 "the Supervisor is destroyed.\n";
-			const auto deinit = proc->doRequest(api::request::DeinitAndValidate{});
-			if (deinit && v_matches(*deinit, bool) && !v_get(*deinit, bool))
-				std::cerr << "Process " << pid
-						  << " failed validation during Supervisor teardown.\n";
+			(void) proc->doRequest(api::request::Stop{});
 		}
+		process_table.clear();
 	}
 }

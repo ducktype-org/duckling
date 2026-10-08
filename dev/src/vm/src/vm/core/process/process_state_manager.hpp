@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -26,9 +32,9 @@ namespace vm {
 	 */
 	class ProcessStateManager final {
 	public:
-		using ThreadState  = thread_sm::thread_state::ThreadState;
-		using ThreadEvent  = thread_sm::thread_event::ThreadEvent;
-		using ProcessState = process_sm::process_state::ProcessState;
+		using ThreadState  = thread_state::ThreadState;
+		using ThreadEvent  = thread_event::ThreadEvent;
+		using ProcessState = process_state::ProcessState;
 
 		/**
 		 * @brief Callback called whenever the aggregate process state changes.
@@ -59,7 +65,7 @@ namespace vm {
 			const ProcessStateManager& table;
 		};
 
-		struct ApplyResult {
+		struct ApplyResult final {
 			/**
 			 * @brief true when this thread state change put the process into `Panicked` for the
 			 * first time. The caller must send a Stop request out to all threads.
@@ -148,7 +154,7 @@ namespace vm {
 		ProcessState waitForProcessState(Pred pred) const {
 			std::unique_lock lock(table_mutex);
 			const Snapshot   snapshot(*this);
-			state_changed.wait(lock, [&] { return pred(snapshot); });
+			state_changed.wait(lock, [&] { return !emitting_status_change && pred(snapshot); });
 			return agg_state.aggregateState();
 		}
 
@@ -161,7 +167,9 @@ namespace vm {
 		ThreadState waitForThreadState(api::ThreadID tid, Pred pred) const {
 			std::unique_lock lock(table_mutex);
 			const Snapshot   snapshot(*this);
-			state_changed.wait(lock, [&] { return pred(snapshot.threadState(tid)); });
+			state_changed.wait(lock, [&] {
+				return !emitting_status_change && pred(snapshot.threadState(tid));
+			});
 			return snapshot.threadState(tid);
 		}
 
@@ -175,7 +183,7 @@ namespace vm {
 			std::unique_lock lock(table_mutex);
 			const Snapshot   snapshot(*this);
 			state_changed.wait(lock, [&] {
-				return snapshot.threadStateChangeCounter(tid) > since
+				return !emitting_status_change && snapshot.threadStateChangeCounter(tid) > since
 				    && pred(snapshot.threadState(tid));
 			});
 			return snapshot.threadState(tid);
@@ -213,7 +221,12 @@ namespace vm {
 		mutable std::mutex table_mutex;  ///< Guards all fields below. Inner.
 		mutable std::condition_variable state_changed;
 
-		process_sm::ProcessStateAggregation agg_state;
+		ProcessStateAggregation agg_state;
+
+		/// Set while `on_status_changed` is running for a change that was already written to
+		/// `agg_state`. So `waitFor{Process/Thread}State` doesn't return until the
+		/// `on_status_changed` callback has ended.
+		bool emitting_status_change{ false };
 
 		OnStatusChangedCallback on_status_changed;  ///< Accessed under `emit_mutex` only.
 	};

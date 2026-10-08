@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../function_lowering_context.hpp"
 #include "../program_lowering_context.hpp"
 #include "dvm_operation.hpp"
@@ -76,27 +82,6 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::free, ptr.asArgument() });
 			break;
 		}
-		case lir::BuiltinFunctionKind::BoxAlloc: {
-			// `box_alloc(value: T) -> box T`. Allocate memory of size `T` and move the value into it.
-			CORE_ASSERT(op.args.size() == 1, "box_alloc expects 1 argument (value)");
-			CORE_ASSERT(dest.has_value(), "box_alloc must have a destination");
-
-			auto& value = op.args.at(0);
-			ctx->pushInstruction(
-				{ OpKind::alloc, dest->asArgument(), vm::opargs::Type(typeName(value.getType())) }
-			);
-			auto value_place = ctx->forceToPlace(value, "box_value");
-			ctx->pushInstruction({ OpKind::store, dest->asArgument(), value_place.asAnyArgument() });
-			break;
-		}
-		case lir::BuiltinFunctionKind::BoxFree: {
-			// `box_free(b: box T)`. Free the memory owned by the box.
-			CORE_ASSERT(op.args.size() == 1, "box_free expects 1 argument (ptr)");
-
-			auto box_ptr = ctx->forceToPlace(op.args.front(), "box_ptr");
-			ctx->pushInstruction({ OpKind::free, box_ptr.asArgument() });
-			break;
-		}
 		case lir::BuiltinFunctionKind::DvmPtrParts: {
 			// `dvm_ptr_parts(p: ptr T) -> u64[2]`. A DVM pointer is a (block, offset) pair, so
 			// both halves are written into the destination array: the id of the block `p`
@@ -111,7 +96,8 @@ namespace compiler::backend_vm::internal {
 			const DVMPlace offset_tmp = ctx->pushTempLocal(u64_type, "ptr_parts_offset");
 			ctx->pushInstruction({ OpKind::ptrParts, id_tmp, offset_tmp, ptr.asArgument() });
 
-			const auto& ptr_to_u64_type = ctx->program_context.getOrInsertPointerType(u64_type);
+			const auto& ptr_to_u64_type
+				= ctx->program_context.getOrInsertPointerType(typeName(u64_type));
 
 			// We store the results in a two-element array.
 			const std::array<DVMPlace, 2> halves{ id_tmp, offset_tmp };

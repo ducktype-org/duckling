@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file keywords.hpp
  * @brief
@@ -37,7 +43,6 @@ namespace lang_def {
 		Import,
 		Hides,
 		Using,
-		Alias,
 		In,
 		Lambda,
 
@@ -155,13 +160,14 @@ namespace lang_def {
 		Public,
 		Private,
 		Protected,
-		Static,
+		Global,
 		Self,
 		Extends,
 		Implements,
 
 		// Stmt specifiers:
 		Extern,
+		Export,
 
 		// Misc:
 
@@ -230,6 +236,7 @@ namespace lang_def {
 
 		Pipe,       // | for variants and bitwise or.
 		Ampersand,  // & for references and bitwise and.
+		BitNot,
 		BitXor,
 
 		LeftShift,
@@ -250,6 +257,19 @@ namespace lang_def {
 		Divide,
 		Remainder,
 		Exponentiate,
+
+		EqPlus,
+		EqMinus,
+		EqMultiply,
+		EqDivide,
+		EqRemainder,
+		EqExponentiate,
+
+		EqPipe,       // | for variants and bitwise or.
+		EqAmpersand,  // & for references and bitwise and.
+		EqBitXor,
+		EqLeftShift,
+		EqRightShift,
 	};
 
 	enum class NumericLiteralTypeSpecifier {

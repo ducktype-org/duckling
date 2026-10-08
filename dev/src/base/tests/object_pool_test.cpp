@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/collections/object_pool.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -48,11 +54,11 @@ private:
 
 		// maybeGet should also work.
 		auto opt1 = pool.maybeGet(id1);
-		ASSERT_TRUE(opt1.has_value());
+		ASSERT_HAS_VALUE(opt1);
 		ASSERT_EQUAL(opt1.value()->value, 42);
 
 		auto opt2 = pool.maybeGet(id2);
-		ASSERT_TRUE(opt2.has_value());
+		ASSERT_HAS_VALUE(opt2);
 		ASSERT_EQUAL(opt2.value()->value, 99);
 	}
 
@@ -99,7 +105,7 @@ private:
 
 		// maybeGet should return empty after removal.
 		auto opt = pool.maybeGet(id);
-		ASSERT_TRUE(!opt.has_value());
+		ASSERT_NO_VALUE(opt);
 
 		// Re-add should recycle the id.
 		auto new_id = pool.add(42);
@@ -144,7 +150,7 @@ private:
 
 		// maybeGet on an ID that was never added should return empty.
 		auto opt = pool.maybeGet(999);
-		ASSERT_TRUE(!opt.has_value());
+		ASSERT_NO_VALUE(opt);
 	}
 
 	void maybeGetAfterRemoveTest() {
@@ -154,7 +160,7 @@ private:
 		pool.remove(id);
 
 		auto opt = pool.maybeGet(id);
-		ASSERT_TRUE(!opt.has_value());
+		ASSERT_NO_VALUE(opt);
 	}
 };
 

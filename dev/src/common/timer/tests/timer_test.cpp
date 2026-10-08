@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <timer/timer.hpp>
 
 #include <tester/tester.hpp>
+
+#include <sstream>
 
 class TimerTest final: public tester::TestSuite {
 #undef TESTER_CLASS

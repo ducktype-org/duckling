@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
@@ -14,10 +20,10 @@ namespace pst {
 		TopLevel,
 		Import,
 
-		// Import Chains
-		ImportIdentifierAs,
-		ImportStarHides,
-		ImportNested,
+		// Selectors of `using`/`import`:
+		Selector,
+		SelectorList,
+		NestedSelectorList,
 
 		StmtSpecifier,
 
@@ -36,7 +42,6 @@ namespace pst {
 		TemplateStmt,
 
 		Using,
-		Alias,
 
 		Const,
 
@@ -60,7 +65,6 @@ namespace pst {
 		// Expression wrappers:
 		RoundGroupExpr,
 		CallList,
-		TemplateList,
 
 		// for all expression elements:
 		ExprElement,
@@ -84,7 +88,6 @@ namespace pst {
 		FlowPatternList,
 		DottedName,
 		CallArgument,
-		NestedImportList,
 		AtrArgList,
 
 		TemplateDecl,

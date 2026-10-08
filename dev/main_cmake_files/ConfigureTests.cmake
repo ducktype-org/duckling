@@ -116,6 +116,10 @@ function(add_custom_test_pack NAME)
 	add_custom_target("${BUILD_PACK_TARGET}")
 	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET} -j ${CMAKE_BUILD_PARALLEL_LEVEL})
 	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY LABELS "${NAME}")
+	# Every build pack drives the build tool in ${CMAKE_BINARY_DIR}. Two build
+	# tools in one build tree race on the generated files and on the dependency
+	# log, so ask ctest to run at most one build pack at a time.
+	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY RESOURCE_LOCK "duckling_build_tree")
 
 	add_dependencies(build_all_tests ${BUILD_PACK_TARGET})
 endfunction()

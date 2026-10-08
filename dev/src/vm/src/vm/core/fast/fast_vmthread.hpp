@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <vm/core/fast/program/instructions/executable.hpp>
@@ -13,6 +19,7 @@ namespace vm::fast {
 
 	class FastVMThread: public vm::IVMThread {
 		friend class FastExecutor;
+		friend class FastVMProcess;
 
 	public:
 		FastVMThread(
@@ -30,6 +37,8 @@ namespace vm::fast {
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
 		void executeOneStep() override;
+
+		[[nodiscard]] bool isAtExecutionEnd() const override;
 
 		void execGlobalDestructors() override;
 

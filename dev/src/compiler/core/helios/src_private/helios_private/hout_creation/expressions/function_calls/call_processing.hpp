@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
@@ -58,6 +64,8 @@ namespace compiler::helios::code {
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
+	 * @param method_candidates The subset of candidates that require the left-hand side to be
+	 * prepared as a method's `self` argument.
 	 * @param lhs The preprocessed left-hand side argument of the operator call.
 	 * @param rhs The preprocessed right-hand side argument of the operator call.
 	 * @param op_origin Operator origin used for callee origin.
@@ -65,6 +73,7 @@ namespace compiler::helios::code {
 	query::QResult<Box<Expr>> processBinaryOperatorCall(
 		query::Context&           ctx,
 		const std::vector<SymID>& candidates,
+		const std::vector<SymID>& method_candidates,
 		Box<Expr>                 lhs,
 		Box<Expr>                 rhs,
 		ElementOrigin             op_origin
@@ -79,6 +88,8 @@ namespace compiler::helios::code {
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
+	 * @param method_candidates The subset of candidates that require the operand to be prepared as
+	 * a method's `self` argument.
 	 * @param inner The preprocessed argument of the operator call.
 	 * @param op_origin Operator origin used for callee origin.
 	 * @param operatoriness Whether we're dealing with a prefix or suffix operator.
@@ -86,6 +97,7 @@ namespace compiler::helios::code {
 	query::QResult<Box<Expr>> processUnaryOperatorCall(
 		query::Context&                        ctx,
 		const std::vector<SymID>&              candidates,
+		const std::vector<SymID>&              method_candidates,
 		Box<Expr>                              inner,
 		ElementOrigin                          op_origin,
 		HOUTFunctionDeclaration::Operatoriness operatoriness

@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/pst_config.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
@@ -80,34 +87,24 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated builtin function templated on a single type argument, for a
-	 * specific `box` pointee type. The concrete builtin is distinguished by `kind`.
+	 * Represents a compiler-generated builtin function templated on a single type argument. The
+	 * concrete builtin is distinguished by `kind`.
 	 *
-	 * These are declaration-only functions. Implementation is provided by the backends.
+	 * `MoveIn` is declaration-only, its call is replaced by an instruction while lowering to LIR.
 	 * @note This is not related with language template implementation.
 	 */
 	class BuiltinTemplatedSymbol final {
 	public:
 		enum class Kind {
-			BoxAlloc,       //< `box_alloc(value: T) -> box T` - allocates memory for the Box.
-			BoxFree,        //< `box_free(b: ref T)` - release the storage owned by the box.
-			BoxDestructor,  //< `box_destructor(b: ref T)` - destroys the pointee, then calls BoxFree.
-			MoveIn          //< `move_in(ptr T, T)` - in place construct T by bytecopy
+			MoveIn  //< `move_in(ptr T, T)` - in place construct T by bytecopy
 		};
 
-		// The type argument the builtin is templated on: the `T` in `box T` for
-		// `BoxAlloc`/`BoxFree`.
+		// The type argument the builtin is templated on.
 		tsh::SymbolType<>            type;
 		BuiltinTemplatedSymbol::Kind kind;
 
 		[[nodiscard]] BuiltinKind getBuiltinKind() const {
 			switch (kind) {
-			case Kind::BoxAlloc:
-				return BuiltinKind::BoxAlloc;
-			case Kind::BoxFree:
-				return BuiltinKind::BoxFree;
-			case Kind::BoxDestructor:
-				return BuiltinKind::BoxDestructor;
 			case Kind::MoveIn:
 				return BuiltinKind::MoveIn;
 			default:
@@ -302,11 +299,24 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * @brief The symbol representing real module from the module tree.
+	 * @note The module is not generated, only the symbol is. It's purpose is
+	 * to unify the Namespace and Module handling by the chain processing `a.b.c`.
+	 */
+	struct Module final {
+		frontend::ModuleID module_id;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
 	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
 		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplInputWrapper,    \
-		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant
+		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant,          \
+		defgen::Module
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

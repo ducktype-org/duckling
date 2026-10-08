@@ -40,8 +40,8 @@ class FinalBoss {
     flag: bool;
 
     # Boxes
-    boxed_prim: box i32;                # Trivial pointee   -> just box_free
-    boxed_class: box HasBox;            # Non-trivial pointee -> destroy pointee, then box_free
+    boxed_prim: box i32;                # Trivial pointee   -> just boxFree
+    boxed_class: box HasBox;            # Non-trivial pointee -> boxFree destroys the pointee too
 
     # Static arrays
     trivial_arr: i32[4];                # Trivial element   -> no work

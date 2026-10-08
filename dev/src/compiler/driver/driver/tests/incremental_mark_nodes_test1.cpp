@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "incremental_metadata_test_common.hpp"
 #include "test_utils.hpp"
 
@@ -75,7 +81,7 @@ private:
 		                             .illegalAccess();
 
 		// First check is sumbodule exists
-		assertTrue(sub_module_locked.has_value(), "Submodule should exist");
+		ASSERT_HAS_VALUE(sub_module_locked, "Submodule should exist");
 
 		auto submodule_id = sub_module_locked.value().illegalAccess().getID();
 

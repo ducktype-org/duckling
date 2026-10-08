@@ -1,9 +1,14 @@
-//! Parsing of the {dev-,}dependencies fields in a manifest.
-use std::path::Path;
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! Parsing of the {dev-,}dependencies fields in a manifest.
 use tracing::debug;
 
-use super::{ScopeGuard, source};
+use super::{ParseMode, ScopeGuard, source};
+use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, DependencyKind};
 use crate::quackpack::schemas::OneEntryMap;
@@ -20,9 +25,10 @@ use crate::{DuckContext, QuackResult, StrId};
 #[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
-    package_root: &Path,
+    mode: ParseMode<'_>,
     kind: DependencyKind,
     dependencies: &mut Vec<Dependency>,
+    warnings: &mut Warnings,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<()> {
@@ -34,8 +40,9 @@ pub(crate) fn parse(
         dependencies.push(parse_single_dependency(
             name.into(),
             dep_schema,
-            package_root,
+            mode,
             kind,
+            warnings,
             ctx,
             guard,
         )?);
@@ -48,8 +55,9 @@ pub(crate) fn parse(
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
-    package_root: &Path,
+    mode: ParseMode<'_>,
     kind: DependencyKind,
+    warnings: &mut Warnings,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
@@ -75,7 +83,7 @@ fn parse_single_dependency(
             .with_context(|| scope.make_context_string())?;
     }
     let guard = scope.push("source".into());
-    let source = source::parse(schema, package_root, ctx, guard)?;
+    let source = source::parse(schema, mode, warnings, ctx, guard)?;
 
     let versions = schema
         .version
@@ -83,17 +91,11 @@ fn parse_single_dependency(
         .map(|ored| ored.0.clone())
         .unwrap_or_default();
 
-    let guard = scope.push("features".into());
-    let features = parse_features(schema.features.as_ref(), guard)?;
+    let features = parse_features(schema.features.as_ref());
     let pinned = schema.pinned.unwrap_or(false);
     let name = parse_name(schema).unwrap_or(manifest_name);
 
-    let guard = scope.push("conditions".into());
-    let conditions = schema
-        .conditions
-        .as_ref()
-        .map(|conditions| parse_conditions(conditions, guard))
-        .transpose()?;
+    let conditions = schema.conditions.as_ref().map(parse_conditions);
     Dependency::new(
         name, versions, source, features, pinned, conditions, alias, kind,
     )
@@ -102,12 +104,9 @@ fn parse_single_dependency(
 
 /// Parse dependency's features
 #[tracing::instrument(skip_all)]
-fn parse_features(
-    schema: Option<&Vec<FeatureSchema>>,
-    mut scope: ScopeGuard<'_>,
-) -> QuackResult<Vec<DependencyFeature>> {
+fn parse_features(schema: Option<&Vec<FeatureSchema>>) -> Vec<DependencyFeature> {
     let Some(schema) = schema else {
-        return Ok(vec![]);
+        return vec![];
     };
     debug!(?schema);
     let mut result = vec![];
@@ -122,27 +121,24 @@ fn parse_features(
                     key: ref name,
                     value: ref conditions,
                 } = detailed_feature.0;
-                let mut name_guard = scope.push(name.into());
-                let guard = name_guard.push("conditions".into());
                 result.push(DependencyFeature::new(
                     name.into(),
-                    Some(parse_conditions(conditions, guard)?),
+                    Some(parse_conditions(conditions)),
                 ));
             }
         }
     }
-    Ok(result)
+    result
 }
 
 /// Parse [`Conditions`] from [`ConditionSchema`]
-fn parse_conditions(schema: &ConditionSchema, scope: ScopeGuard<'_>) -> QuackResult<Conditions> {
+fn parse_conditions(schema: &ConditionSchema) -> Conditions {
     Conditions::new(
         schema
             .package_features
             .as_ref()
             .map(|vec| vec_string_to_vec_str_id(vec)),
     )
-    .with_context(|| scope.make_context_string())
 }
 
 /// Helper for transforming slice of `&T: Into<StrId>` into `Vec<StrId>`

@@ -13,7 +13,6 @@ RUN apt-get update -y && \
     xz-utils \
     make \
     pkg-config \
-    xxd \
     ssh \
     gh \
     less \
@@ -93,7 +92,7 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /duckling
 
 ENV LLVM_DIR=/usr/lib/llvm-19
-ENV PATH=/root/.cargo/bin:/usr/lib/llvm-19/bin:$PATH
+ENV PATH=/home/ubuntu/.local/bin:/root/.cargo/bin:/usr/lib/llvm-19/bin:$PATH
 ENV HOME=/home/ubuntu
 
 ARG UID=1000

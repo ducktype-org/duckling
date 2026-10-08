@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
@@ -11,13 +17,19 @@ namespace abi {
 	// NOLINTNEXTLINE(readability-identifier-naming) — "X86_64" is the canonical arch name.
 	enum class Arch : uint8_t { X86_64, AArch64 };
 
+	/**
+	 * @brief The operating system of a target.
+	 */
+	enum class OperatingSystem : uint8_t { Linux, Darwin };
+
 	enum class Endianness : uint8_t { Little, Big };
 
 	/**
-	 * @brief Identifies a target architecture.
+	 * @brief Identifies a target architecture and operating system.
 	 */
 	struct TargetTriple final {
-		Arch arch;
+		Arch            arch;
+		OperatingSystem os;
 	};
 
 	/**
@@ -74,6 +86,9 @@ namespace abi {
 
 	/** @brief Preset describing the aarch64-linux AAPCS64 ABI. */
 	const TargetABI& aarch64Linux();
+
+	/** @brief Preset describing the arm64-darwin ABI (AAPCS64 with Apple's deviations). */
+	const TargetABI& aarch64Darwin();
 
 	/**
 	 * @brief The ABI of the architecture this binary was built for, selected at

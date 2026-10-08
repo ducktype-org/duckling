@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_queries.hpp"
 
 #include <frontend/module_tree/queries.hpp>
@@ -10,7 +16,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>

@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "default_destructors.hpp"
 
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -19,7 +26,18 @@
 namespace compiler::helios::defgen {
 	using namespace code::shorthands;
 
-	SymID destructSymForType(query::Context& ctx, const tsh::AbstractType type) {
+	namespace {
+		/**
+		 * @brief The `boxFree` language primitive baked for the pointee type of a `box T`.
+		 */
+		SymID boxFreeSymFor(query::Context& ctx, const tsh::AbstractType pointee_type) {
+			return bakeLanguagePrimitiveWithTypes(
+				ctx, LanguagePrimitive::BoxFree, { tsh::SymbolType<>::withDefaults(pointee_type) }
+			);
+		}
+	}
+
+	SymID generatedDestructSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("__destruct"),
 			.generated_symbol_data
@@ -29,18 +47,15 @@ namespace compiler::helios::defgen {
 
 	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type) {
 		if (type.isTriviallyDestructible(ctx)) return {};
-		if (type.getRefKind() == tsh::ReferenceKind::Box)
-			return boxDestructorSymForType(ctx, type.getType());
-		return destructSymForType(ctx, type.getType());
+		// A `box T` is released by the `boxFree` primitive of `core.containers`, which destroys
+		// the pointee and frees the storage. It takes a `ptr T`, which is what a box is
+		// underneath, so it can stand in as the box destructor directly.
+		if (type.getRefKind() == tsh::ReferenceKind::Box) return boxFreeSymFor(ctx, type.getType());
+		return generatedDestructSymForType(ctx, type.getType());
 	}
 
 	bool isUserDefinedDestructor(query::Context&, const SymID sym) {
 		return kind(sym) == SymbolKind::Destructor;
-	}
-
-	base::Optional<SymID> userDestructorOf(query::Context& ctx, const SymID class_sym) {
-		if (kind(class_sym) != SymbolKind::Class) return {};
-		return ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow().destructor;
 	}
 
 	namespace {
@@ -48,8 +63,8 @@ namespace compiler::helios::defgen {
 		 * @brief Append the statements that destroy the `location` value.
 		 *
 		 * - Trivially-destructible values do nothing.
-		 * - A `box T` is destroyed by calling its `box_destructor` builtin (which destroys the
-		 *   pointee and then frees the heap storage).
+		 * - A `box T` is destroyed by calling the `boxFree` primitive (which destroys the pointee
+		 *   and then frees the heap storage).
 		 * - Non-trivially-destructible class, static-array and tuple members are destroyed by
 		 *   calling their own destructor with a reference to `location`.
 		 */
@@ -62,25 +77,17 @@ namespace compiler::helios::defgen {
 
 			const Shorthand s{ ctx };
 
-			// A `box T` owns its pointee and its heap storage. Its `box_destructor` builtin destroys
-			// the pointee and then frees the memory, so we just call it with the box by value.
+			// A `box T` owns its pointee and its heap storage. `boxFree` destroys the pointee and
+			// then frees the memory, so the box itself is all it needs.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
-				const auto pointee_type = type.getType();
+				const auto pointee_type = tsh::SymbolType<>::withDefaults(type.getType());
+				const auto storage_type = tsh::SymbolType<>::withDefaults(
+					ctx.query<tsh::QueryPointerType>({ pointee_type })
+				);
 
-				appendDestruction(ctx, body, s.deref(location->clone()));
-
-				// `box_destructor` takes a `ref T`, so the box is passed by reference.
-				// For
-				// ```
-				// class HasBox {
-				// 	boxed: box i32;
-				// }
-				// ```
-				// The argument built here is `refof (*self).boxed`, and `(*self).boxed` on its own
-				// is a projection of a non-owned lvalue. Moving out of it is neither allowed by its
-				// value category nor expressible as a whole-local `Move` flag.
 				body.emplace_back(s.expr(s.call(
-					s.ident(boxDestructorSymForType(ctx, pointee_type)), s.refOf(std::move(location))
+					s.ident(boxFreeSymFor(ctx, type.getType())),
+					s.cast(std::move(location), storage_type)
 				)));
 				return;
 			}
@@ -95,7 +102,7 @@ namespace compiler::helios::defgen {
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);
 
-			const SymID dtor_sym = destructSymForType(ctx, abstract_type);
+			const SymID dtor_sym = generatedDestructSymForType(ctx, abstract_type);
 			body.emplace_back(s.expr(s.call(s.ident(dtor_sym), s.refOf(std::move(location)))));
 		}
 
@@ -121,11 +128,12 @@ namespace compiler::helios::defgen {
 
 			// For a class that declares its own destructor, run the user code before destroying the
 			// members.
-			if (owner_type.getKind() == tsh::Kind::Class) {
-				if (const auto user
-				    = userDestructorOf(ctx, owner_type.as<tsh::ClassAbstractType>().getSymbol())) {
-					body.emplace_back(s.expr(s.call(s.ident(user.value()), s.ident(self_symbol))));
-				}
+			if (const auto user = owner_type.getInterface(ctx)->getSpecialElement(
+					tsh::MemberSpecialKind::UserDestructor
+				)) {
+				body.emplace_back(
+					s.expr(s.call(s.ident(user.value()->getSymbol()), s.ident(self_symbol)))
+				);
 			}
 
 			const std::vector<tsh::InterfaceElement> fields
@@ -186,7 +194,10 @@ namespace compiler::helios::defgen {
 					= destructSymForSymbolType(ctx, alternatives[i]).value();
 
 				cases.emplace_back(Shorthand::matchCase(
-					i, payload_sym, s.call(s.ident(alternative_dtor), s.ident(payload_sym))
+					i,
+					payload_type,
+					payload_sym,
+					s.call(s.ident(alternative_dtor), s.ident(payload_sym))
 				));
 			}
 
@@ -197,7 +208,7 @@ namespace compiler::helios::defgen {
 			// Only the alternatives that own something are listed, so the match needs a wildcard
 			// to stay exhaustive. Without it the lowering would enter the last case
 			// unconditionally and destroy a payload that is not there.
-			cases.emplace_back(Shorthand::matchCase({}, {}, s.litUnit()));
+			cases.emplace_back(Shorthand::matchCase({}, {}, {}, s.litUnit()));
 
 			// `self` is already a reference to the variant, which is what the match wants. The
 			// destructor calls are unit-valued, so the match is used as a plain statement.
@@ -284,7 +295,7 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryDefaultDestructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const SymID dtor_sym    = destructSymForType(ctx, owner_type);
+			const SymID dtor_sym    = generatedDestructSymForType(ctx, owner_type);
 			const auto& dtor_decl   = ctx.query<QueryDeclOfFun>(dtor_sym)->valueOrThrow();
 			const SymID self_symbol = dtor_decl.parameters.at(0).helios_symbol;
 
@@ -321,29 +332,4 @@ namespace compiler::helios::defgen {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultDestructor);
-
-	HOUTFunction buildBoxDestructor(query::Context& ctx, const tsh::AbstractType pointee_type) {
-		const SymID box_dtor_sym = boxDestructorSymForType(ctx, pointee_type);
-		const auto& dtor_decl    = ctx.query<QueryDeclOfFun>(box_dtor_sym)->valueOrThrow();
-		const SymID self_symbol  = dtor_decl.parameters.at(0).helios_symbol;
-
-		const Shorthand s{ ctx };
-
-		std::vector<Box<code::Stmt>> body;
-
-		// Destroy the pointee: `appendDestruction(*self)`.
-		appendDestruction(ctx, body, s.deref(s.ident(self_symbol)));
-
-		body.emplace_back(s.expr(
-			s.call(s.ident(boxFreeSymForType(ctx, pointee_type)), s.move(s.ident(self_symbol)))
-		));
-
-		return HOUTFunction(
-			code::generatedOrigin(),
-			&dtor_decl,
-			std::make_shared<const code::CodeBlock>(code::CodeBlock{
-				.statements = std::move(body),
-			})
-		);
-	}
 }

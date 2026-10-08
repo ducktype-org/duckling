@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <string>
@@ -23,7 +29,7 @@ private:
 	// The offsets of the struct and of its second field, the two ids being equal, and then the
 	// null pointer failing to decompose the way a dereference does.
 	void ptrPartsTest() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("ptr_parts.dbc", "", "080"), "Accessing null pointer"
 		);
 	}

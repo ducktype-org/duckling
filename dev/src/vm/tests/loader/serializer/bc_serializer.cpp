@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <base/types/floats.hpp>
@@ -115,18 +121,13 @@ private:
 		fs::File vfile  = fs::FileManager::createRandomVirtualFile(serialized, ".dbc");
 		auto     result = Loader::parseCodeCollectionFromFiles({ vfile });
 
-		assertTrue(result.has_value(), "Parsing round-trip should succeed");
+		ASSERT_HAS_VALUE(result, "Parsing round-trip should succeed");
 		const CodeCollection& parsed = result.value();
 
 		// Check types
 		assertEqual(parsed.types.size(), original.types.size(), "Type count should match");
-		assertTrue(
-			std::holds_alternative<PrimitiveType>(parsed.types[0]),
-			"First type should be PrimitiveType"
-		);
-		assertTrue(
-			std::holds_alternative<DataType>(parsed.types[1]), "Second type should be DataType"
-		);
+		ASSERT_MATCHES(parsed.types[0], PrimitiveType);
+		ASSERT_MATCHES(parsed.types[1], DataType);
 
 		const auto& prim = std::get<PrimitiveType>(parsed.types[0]);
 		assertEqual(prim.name, base::StrID("i32"), "Primitive type name should be i32");
@@ -149,9 +150,7 @@ private:
 		);
 		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
 		assertEqual(void_cptr.name, base::StrID("raw_ptr"), "C pointer name should survive");
-		assertTrue(
-			!void_cptr.inner.has_value(), "An absent C pointer inner should survive round-trip"
-		);
+		ASSERT_NO_VALUE(void_cptr.inner, "An absent C pointer inner should survive round-trip");
 
 		// Check global data
 		assertEqual(
@@ -161,7 +160,7 @@ private:
 		assertEqual(g.name.str, base::StrID("answers"), "Global name should be answer");
 		assertEqual(g.type.str, base::StrID("points"), "Global type should be i64");
 		assertTrue(g.is_constant, "Global should be constant");
-		assertTrue(g.initial_value.has_value(), "Global should have initial_value");
+		ASSERT_HAS_VALUE(g.initial_value, "Global should have initial_value");
 		auto initial_value = *g.initial_value;
 		auto cfst = dynamic_cast<vm::code::ConstantFixedSizeTable*>(initial_value.data.get());
 		assertTrue(cfst, "Pointer has null value");
@@ -246,7 +245,7 @@ function main { i64, ptr_argv } -> { i64 } {
 		fs::File vfile  = fs::FileManager::createRandomVirtualFile(content, ".dbc");
 		auto     result = Loader::parseCodeCollectionFromFiles({ vfile });
 
-		assertTrue(result.has_value(), "Parsing round-trip should succeed");
+		ASSERT_HAS_VALUE(result, "Parsing round-trip should succeed");
 		const CodeCollection& parsed = result.value();
 
 		std::ostringstream oss;

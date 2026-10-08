@@ -1,7 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "archive.hpp"
 
 #include <global_state/global_logger.hpp>
 #include <time_stats/time_stats.hpp>
+
+#include <base/config/target_info.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/placeholder.hpp>
@@ -45,6 +53,14 @@ namespace compiler::archiver {
 		system_command::SystemCommand command(options.archiver_path.copyValueOr("ar"));
 		command.addArg("rcs");
 		command.addArg(output.file.getFilePath().native());
+
+#if BASE_TARGET_OS_MACOS
+		// Apple's cctools `ar` stamps each member with its mtime and the current uid/gid, so
+		// re-archiving the same objects yields different bytes and every consumer of the archive
+		// hash sees a spurious change. It has no deterministic flag (`-D` is rejected); the
+		// cctools mechanism is this environment variable, which zeroes all three.
+		command.addEnv("ZERO_AR_DATE", "1");
+#endif
 
 		for (const auto& object_file_path: inputs)
 			command.addArg(object_file_path.file.getFilePath().native());

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file standard_library.hpp
  * @brief The private header for the standard library handling in the Duckling compiler,
@@ -9,6 +15,7 @@
 #pragma once
 
 #include <driver/options.hpp>
+#include <driver/standard_library/standard_library.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -17,33 +24,10 @@
 
 namespace compiler::driver {
 	/**
-	 * @brief Based on the `StdLibOptions` returns the path to the standard library, if it is
-	 * used. If `DefaultStd` is used, it resolves the path to the standard library based on the
-	 * executable path or if `STD_FIXED_PATH` is defined it uses that path.
-	 */
-	base::Optional<fs::FilePath> resolveStdPath(
-		const options_types::StdLibOptions& standard_library_options
-	);
-
-	/**
-	 * @brief Adds the standard library packages to the vector and adds std dependencies for
-	 * all the packages in a vector.
-	 * @param packages_info[out] The input vector is modified.
-	 * @param std_path Path to the standard library.
-	 * @param report Diagnostic reporter to report any issues with the standard library packages
-	 * (like a missing package).
-	 */
-	base::OkBad addStandardLibraryPackages(
-		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-		const fs::FilePath&                                        std_path,
-		frontend::packages::DiagnosticReporter&                    report
-	);
-
-	/**
 	 * @brief Based on the `StdLibOptions` returns the string with the arguments needed to
 	 * link the standard library. Can be empty if the standard library is not used.
 	 */
-	base::Optional<std::string> getNativeStdLibLinkingArgs(
+	std::vector<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	);
 
@@ -53,14 +37,17 @@ namespace compiler::driver {
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
 
 	/**
+	 * @brief Based on the `StdLibOptions` returns the paths of the standard library DVM
+	 * artifacts, to be linked as dependencies. Empty if the standard library is not used.
+	 */
+	std::vector<fs::FilePath> getStdLibDVMLinkingDependencies(
+		const options_types::StdLibOptions& standard_library_options
+	);
+
+	/**
 	 * @brief The existing compiled standard library DVM artifacts.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
-
-	/**
-	 * @brief The existing compiled standard library DVM debug info artifacts.
-	 */
-	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts();
 
 	/**
 	 * @brief Returns whether all the standard library artifact files are present.

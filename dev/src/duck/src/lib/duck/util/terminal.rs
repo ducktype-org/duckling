@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::fmt::{self, Display};
 use std::io::{Read, Write};
 use std::str::FromStr;
@@ -24,7 +30,7 @@ impl fmt::Debug for Terminal {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 /// A verbosity of a [`Terminal`].
 pub enum Verbosity {
     Quiet,
@@ -65,13 +71,13 @@ macro_rules! delegate_styles {
 impl Verbosity {
     #[inline]
     /// Check, if this verbosity is quiet.
-    pub fn is_quiet(&self) -> bool {
+    pub fn is_quiet(self) -> bool {
         matches!(self, Verbosity::Quiet)
     }
 
     #[inline]
     /// Check, if this verbosity is verbose.
-    pub fn is_verbose(&self) -> bool {
+    pub fn is_verbose(self) -> bool {
         matches!(self, Verbosity::Verbose)
     }
 }
@@ -176,8 +182,8 @@ impl Terminal {
     }
 
     /// Get the [`Verbosity`] of this [`Terminal`].
-    pub fn verbosity(&self) -> &Verbosity {
-        &self.verbosity
+    pub fn verbosity(&self) -> Verbosity {
+        self.verbosity
     }
 
     /// Get the underlying [`Term`] used for printing.

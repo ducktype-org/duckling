@@ -38,9 +38,9 @@ fun main() = {
     let point_ptr = &point as ptr Point;
     let cptr_string = (point_ptr as cptr Point).toString();
 
-    var buffer = allocation:{i32}.alloc(2);
+    var buffer = allocation[i32].many_alloc(2);
     let manyptr_string = buffer.toString();
-    let int_slice_string = builtins.slice_from_ptr_len:{i32}(buffer, 2).toString();
+    let int_slice_string = builtins.slice_from_ptr_len[i32](buffer, 2).toString();
 
     var array: i32[3];
     let array_string = array.toString();
@@ -52,6 +52,6 @@ fun main() = {
     var variant: (i32 | bool) = 1;
     let variant_string = variant.toString();
 
-    var int_list: List:{i32};
+    var int_list: List[i32];
     let list_string = int_list.toString();
 }

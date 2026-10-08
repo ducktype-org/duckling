@@ -1,35 +1,70 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
-#include <frontend/module_tree/module_tree.hpp>
-#include <helios/queries/queries.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
-#include <base/except/exceptions.hpp>
-
 #include <query_framework/context/context.hpp>
-#include <query_framework/entry/with_context_do.hpp>
+
+#include <functional>
+#include <set>
+#include <string_view>
+#include <vector>
 
 namespace compiler::mir::test_utils {
-	inline CRef<mir::Function> getMIRFunctionByName(
-		frontend::ModuleID module_id, std::string_view name
-	) {
-		auto result = query::utils::withContextCompute([&](query::Context& ctx) {
-			auto& unit
-				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
-			for (const auto& function: unit.functions) {
-				if (function->declaration->original_name.strView() == name) {
-					CRef<mir::Function> foo_mir
-						= &ctx.query<compiler::mir::LowerToMIRFunction>({ function })->valueOrPanic();
-					return foo_mir;
-				}
-			}
-			CORE_PANIC(base::strConcat("Function with name '", name, "' not found in module "));
-		});
-		return std::any_cast<CRef<mir::Function>>(result);
-	}
+	CRef<mir::Function> getMIRFunctionByName(frontend::ModuleID module_id, std::string_view name);
+
+	/**
+	 * @brief The set of blocks reachable from the entry block by following the terminators.
+	 *
+	 * `LowerToMIRFunction` already drops unreachable blocks, so a block of a lowered function
+	 * that this does not return means the CFG lost an edge somewhere.
+	 */
+	std::set<BlockID> reachableBlocks(const mir::Function& function);
+
+	/**
+	 * @brief Enumerates the control-flow paths from the entry block to the blocks that end the
+	 * function.
+	 *
+	 * A block is never visited twice on the same path, so a loop contributes the paths that go
+	 * around it at most once. Used instead of hardcoded block ids, which change whenever the
+	 * lowering emits blocks in a different order.
+	 */
+	std::vector<std::vector<BlockID>> pathsFromEntry(const mir::Function& function);
+
+	/**
+	 * @brief The blocks whose instructions (terminator excluded) contain the given operation.
+	 */
+	std::set<BlockID> blocksWithOperation(const mir::Function& function, Operation operation);
+
+	/**
+	 * @brief Counts the blocks terminated by the given operation.
+	 */
+	u64 countTerminators(const mir::Function& function, Operation operation);
+
+	/**
+	 * @brief Positive counterpart of @ref checkForErrorOnCompileModule: lowers a module built
+	 * from `module_content` to a MIR unit, asserts that nothing logged an error and hands the
+	 * unit to `check`.
+	 *
+	 * @param module_content The content of the module main source file.
+	 * @param check Called with the query context and the lowered unit.
+	 */
+	void checkLoweredModule(
+		std::string_view                                            module_content,
+		const std::function<void(query::Context&, const MIRUnit&)>& check
+	);
+
+	/**
+	 * @brief The MIR function of the given name in an already lowered unit.
+	 */
+	CRef<mir::Function> functionOfUnit(const mir::MIRUnit& unit, std::string_view name);
 
 	/**
 	 * @brief Helper function that check for MIR compilation
@@ -42,47 +77,9 @@ namespace compiler::mir::test_utils {
 	 * @param present_phrases List of phrases that should be present in the logged errors.
 	 * @param logged_msg_count Expected number of logged error messages.
 	 */
-	inline void checkForErrorOnCompileModule(
+	void checkForErrorOnCompileModule(
 		std::string_view                     module_content,
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
-	) {
-		frontend::ModuleID module_id
-			= frontend::createModuleTreeFromContents(module_content, "test_package");
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto hout_result = ctx.query<helios::QueryTopLevelEntities>(module_id);
-			CORE_ASSERT(
-				hout_result->hasValue(),
-				"Expected top-level entities query to succeed for module content."
-			);
-			auto logger = query::Context::dumpToOneLoggerAndClear();
-			CORE_ASSERT(!logger->hasErrors(), "Expected no errors to be logged by HELIOS.");
-
-			auto mir_result = mir::lowerToMIRUnit(ctx, &hout_result->valueOrPanic());
-			CORE_ASSERT(
-				mir_result.hasFailed(), "Expected some MIR query to fail for module lowering."
-			);
-			logger = query::Context::dumpToOneLoggerAndClear();
-			CORE_ASSERT(logger->hasErrors(), "Expected errors to be logged by MIR.");
-
-			std::stringstream logged_messages;
-			logger->terminalPrint(logged_messages);
-			std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
-			auto msg_count = logger->messageCount();
-			CORE_ASSERT(
-				msg_count,
-				logged_msg_count,
-				"Expected logged message count to be " + std::to_string(logged_msg_count)
-					+ ", but got " + std::to_string(msg_count)
-			);
-			for (const auto& phrase: present_phrases) {
-				std::string logged_str = logged_messages.str();
-				CORE_ASSERT(
-					logged_str.find(phrase.data()) != std::string::npos,
-					"Expected logged messages to contain phrase: " + std::string(phrase)
-				);
-			}
-		});
-	}
+	);
 }

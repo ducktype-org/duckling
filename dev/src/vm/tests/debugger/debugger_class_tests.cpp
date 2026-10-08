@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/comptime/type_traits.hpp>
 
 #include <tester/tester.hpp>
@@ -5,6 +11,7 @@
 #include <vm/debugger/debugger.hpp>
 
 #include <condition_variable>
+#include <fstream>
 #include <mutex>
 #include <variant>
 
@@ -16,10 +23,8 @@ class VmDebuggerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO: #1222 Re-enable the tests after fixing the API.
-		// TESTER_ADD_TEST(getStatusWait);
-		// TESTER_ADD_TEST(continuePauseTest);
-
+		TESTER_ADD_TEST(getStatusWait);
+		TESTER_ADD_TEST(continuePauseTest);
 		TESTER_ADD_TEST(noRunTest);
 		TESTER_ADD_TEST(runAndGetStatus);
 		TESTER_ADD_TEST(getStatusBreakpoint);
@@ -28,13 +33,64 @@ public:
 		TESTER_ADD_TEST(outputTest);
 		TESTER_ADD_TEST(memoryTest);
 		TESTER_ADD_TEST(inputTest);
+		TESTER_ADD_TEST(loadedFilesTest);
+		TESTER_ADD_TEST(loadDefaultTest);
 	}
 
 private:
+	void loadedFilesTest() {
+		vm::debugger::Debugger debugger;
+		auto                   loaded = fs::File(path("debugger_test.dbc"));
+		auto                   other  = fs::File(path("while_true.dbc"));
+
+		ASSERT_TRUE(debugger.getLoadedFiles().empty());
+		ASSERT_TRUE(!debugger.isFileAvailable(loaded));
+
+		ASSERT_HAS_VALUE(debugger.loadFiles({ loaded }));
+
+		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
+		ASSERT_TRUE(debugger.getLoadedFiles().contains(loaded));
+		ASSERT_TRUE(debugger.isFileAvailable(loaded));
+		ASSERT_TRUE(!debugger.isFileAvailable(other));
+	}
+
+	void loadDefaultTest() {
+		fs::FilePath package = fs::FileManager::createRandomTempDirectory().getFilePath();
+		fs::FilePath build   = package / "duck_build";
+
+		vm::debugger::Debugger debugger;
+		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
+
+		std::filesystem::create_directories(build.getPath());
+		std::filesystem::copy_file(path("debugger_test.dbc"), (build / "package_dvm.dbc").getPath());
+		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
+		ASSERT_TRUE(debugger.getLoadedFiles().empty());
+
+		// Real mappings contain absolute paths, the fixture has relative ones
+		auto             source = fs::File(path("simple.dk"));
+		std::ifstream    fixture(path("package_dvm.di.json"));
+		std::string      mapping((std::istreambuf_iterator<char>(fixture)), {});
+		std::string_view relative    = "\"simple.dk\"";
+		std::string      replacement = "\"" + source.getFilePath().string() + "\"";
+		for (usize pos = 0; (pos = mapping.find(relative, pos)) != std::string::npos;) {
+			mapping.replace(pos, relative.size(), replacement);
+			pos += replacement.size();
+		}
+		std::ofstream(build.getPath() / "package_dvm.di.json") << mapping;
+
+		ASSERT_HAS_VALUE(debugger.loadDefault(package));
+
+		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
+		ASSERT_TRUE(debugger.isFileAvailable(source));
+		ASSERT_TRUE(!debugger.isFileAvailable(fs::File(path("while_true.dbc"))));
+
+		fs::FileManager::deleteFolder(package, true);
+	}
+
 	void noRunTest() {
 		vm::debugger::Debugger debugger;
 		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
-		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::NotStarted);
 	}
 
 	/**
@@ -50,9 +106,9 @@ private:
 		const std::vector<usize>& expected_statuses,
 		const std::vector<usize>& breakpoints = {}
 	) {
-		std::atomic<size_t>     status_counter   = 0;
-		std::atomic<size_t>     ret_val_counter  = 0;
-		std::atomic<size_t>     position_counter = 0;
+		std::atomic<usize>      status_counter   = 0;
+		std::atomic<usize>      ret_val_counter  = 0;
+		std::atomic<usize>      position_counter = 0;
 		std::mutex              m;
 		std::condition_variable cv;
 
@@ -69,11 +125,8 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
-							exit_value_variant
-						));
-						auto exit_value
-							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
+						ASSERT_MATCHES(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
+						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
@@ -104,8 +157,9 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 		for (u64 breakpoint: breakpoints)
-			ASSERT_TRUE(debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
-			                .has_value());
+			ASSERT_HAS_VALUE(
+				debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
+			);
 		ASSERT_HAS_VALUE(debugger.runMain());
 		std::unique_lock lk(m);
 		// timeout for the test
@@ -129,7 +183,7 @@ private:
 
 	void getStatusWait() {
 		testTemplate(
-			"vm_api_tests.dbc",
+			"io_hang.dbc",
 			{},
 			{
 				altIndex(vm::api::Running),
@@ -146,12 +200,12 @@ private:
 				altIndex(vm::api::Running),
 				altIndex(vm::api::Paused),
 			},
-			{ 13, 18 }
+			{ 13, 19 }
 		);
 	}
 
 	void continuePauseTest() {
-		std::atomic<size_t> status_counter = 0;
+		std::atomic<usize> status_counter = 0;
 
 		std::mutex              m;
 		std::condition_variable cv;
@@ -190,7 +244,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Paused);
 			}));
 		}
 
@@ -198,7 +252,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Running>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Running);
 			}));
 		}
 
@@ -206,7 +260,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Paused);
 			}));
 		}
 
@@ -214,7 +268,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Running>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Running);
 			}));
 		}
 
@@ -224,23 +278,28 @@ private:
 			return status_counter == expected_statuses.size();
 		}));
 
-		ASSERT_TRUE(std::holds_alternative<vm::api::Paused>(debugger.getStatus()));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::Paused);
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 	}
 
 	void rerunTest() {
-		std::atomic<size_t> status_counter  = 0;
-		std::atomic<size_t> ret_val_counter = 0;
+		std::atomic<usize> status_counter  = 0;
+		std::atomic<usize> ret_val_counter = 0;
 
 		std::mutex              m;
 		std::condition_variable cv;
 
-		const std::vector<usize> expected_statuses = {
+		// A re-run of a terminal process first resets it, which is a real, emitted state
+		// change - so from the second run on the sequence starts with `NotStarted`.
+		// `expected_statuses` is modified by the main thread and should be read under `m`.
+		std::vector<usize> expected_statuses = {
 			altIndex(vm::api::Running),
 			altIndex(vm::api::ExecutionCompleted),
 		};
 
-		const std::vector<int> expected_values = { 0, 0, 0 };
+		const std::vector<i32> expected_values = { 0, 0, 0 };
+
+		std::atomic<bool> all_expected_seen = false;
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
@@ -251,11 +310,8 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
-							exit_value_variant
-						));
-						auto exit_value
-							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
+						ASSERT_MATCHES(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
+						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
@@ -267,8 +323,9 @@ private:
 					}
 				}
 				status_counter++;
+				all_expected_seen = status_counter == expected_statuses.size();
 			}
-			if (status_counter == expected_statuses.size()) cv.notify_one();
+			if (all_expected_seen) cv.notify_one();
 		});
 
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
@@ -279,10 +336,20 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
-		int loop = 3;
+		i32  loop      = 3;
+		bool first_run = true;
 
 		while (loop-- > 0) {
-			status_counter = 0;
+			{
+				std::lock_guard lk(m);
+				status_counter    = 0;
+				all_expected_seen = false;
+				if (!first_run)
+					expected_statuses = { altIndex(vm::api::NotStarted),
+						                  altIndex(vm::api::Running),
+						                  altIndex(vm::api::ExecutionCompleted) };
+				first_run = false;
+			}
 			ASSERT_HAS_VALUE(debugger.runMain());
 			std::unique_lock lk(m);
 			// Test timeout
@@ -291,7 +358,7 @@ private:
 			}));
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 		}
-		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus()));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::ExecutionCompleted);
 		std::lock_guard lk(m);
 		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter.load());
 	}
@@ -313,7 +380,7 @@ private:
 
 		ASSERT_HAS_VALUE(debugger.resume());
 
-		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::Running);
 	}
 
 	/**
@@ -358,7 +425,7 @@ private:
 		ASSERT_HAS_VALUE(debugger.runMain());
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+			return v_matches(debugger.getStatus(), vm::api::Paused);
 		}));
 
 		{
@@ -409,7 +476,7 @@ private:
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
-			if (status.index() == altIndex(vm::api::ExecutionCompleted)) cv.notify_one();
+			if (v_matches(status, vm::api::ExecutionCompleted)) cv.notify_one();
 		});
 		debugger.attachOnStatusChangedListener(status_listener);
 
@@ -419,7 +486,7 @@ private:
 
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-			return std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus());
+			return v_matches(debugger.getStatus(), vm::api::ExecutionCompleted);
 		}));
 
 		auto  status         = debugger.getStatus();

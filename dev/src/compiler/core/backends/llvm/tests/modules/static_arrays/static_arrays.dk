@@ -4,7 +4,7 @@ class Point {
 }
 
 fun array_test() -> i32 = {
-    var arr: i32[10];
+    var arr: i32[11];
     arr[3] = 42;
     return arr[3];
 }
@@ -19,4 +19,26 @@ fun struct_array_test() -> i32 = {
     var points: Point[5];
     points[1].y = 50;
     return points[1].y;
+}
+
+fun large_array_test() -> i64 = {
+    var arr: i64[99000];
+    return arr[98999];
+}
+
+fun large_array_copy_test(source: i64[99000]) -> i64 = {
+    var duplicate = source;
+    return duplicate[98999];
+}
+
+fun large_array_sink(source: i64[99000]) -> i64 = {
+    return source[98999];
+}
+
+fun large_array_identity(source: i64[99000]) -> i64[99000] = {
+    return source;
+}
+
+fun large_array_forward(source: i64[99000]) -> i64[99000] = {
+    return large_array_identity(source);
 }

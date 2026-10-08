@@ -1,8 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! `build` subcommand execution logic.
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit_compiler::CompilationOutput;
+use crate::quackpack::core::compile::unit_runner::CompilationOutput;
 use crate::quackpack::core::compile::{self, BuildContext};
-use crate::quackpack::core::storage::{StorageSyncOptions, sync};
+use crate::quackpack::core::storage::{StorageSyncOptions, SyncOutput, sync};
 use crate::quackpack::core::{FeatureName, PackageContext};
 use crate::{QuackResult, StrId};
 
@@ -40,7 +46,13 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<CompilationOutput> {
         jobs,
     } = options;
     let root_identity = pcx.package().as_a_local_identity()?;
-    let (lock, venv, storage) = sync(
+    let SyncOutput {
+        new_freeze,
+        loaded_packages,
+        sync_lock: lock,
+        new_venv: _,
+        storage,
+    } = sync(
         &pcx,
         StorageSyncOptions {
             overwrite,
@@ -53,12 +65,12 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<CompilationOutput> {
     let bcx = BuildContext {
         pcx: &pcx,
         root_identity,
-        freeze: venv.into(),
+        freeze: new_freeze,
         storage,
         used_features,
         profile,
         shared,
         jobs,
     };
-    compile::compile(bcx)
+    compile::compile(bcx, loaded_packages)
 }

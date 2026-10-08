@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "function_validator.hpp"
 
 #include "errors.hpp"
@@ -99,7 +105,7 @@ namespace {
 /**
  * @brief Represents a local stack variable.
  */
-struct LocalStackEntry {
+struct LocalStackEntry final {
 	base::StrID                 local_name;
 	CRef<valid_type::ValidType> type;
 
@@ -1251,8 +1257,90 @@ class FunctionValidator {
 			}
 			instr_case_novalue(Op_log_xor_p8_imm) {}
 			instr_case_novalue(Op_log_not_p8) {}
-
-
+			instr_case_novalue(Op_bit_and_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p64_imm) {}
+			instr_case_novalue(Op_bit_or_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p64_imm) {}
+			instr_case_novalue(Op_bit_xor_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p64_imm) {}
+			instr_case_novalue(Op_shl_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p64_imm) {}
+			instr_case_novalue(Op_shr_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p64_imm) {}
+			instr_case_novalue(Op_bit_not_p64) {}
+			instr_case_novalue(Op_bit_and_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p32_imm) {}
+			instr_case_novalue(Op_bit_or_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p32_imm) {}
+			instr_case_novalue(Op_bit_xor_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p32_imm) {}
+			instr_case_novalue(Op_shl_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p32_imm) {}
+			instr_case_novalue(Op_shr_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p32_imm) {}
+			instr_case_novalue(Op_bit_not_p32) {}
+			instr_case_novalue(Op_bit_and_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p16_imm) {}
+			instr_case_novalue(Op_bit_or_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p16_imm) {}
+			instr_case_novalue(Op_bit_xor_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p16_imm) {}
+			instr_case_novalue(Op_shl_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p16_imm) {}
+			instr_case_novalue(Op_shr_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p16_imm) {}
+			instr_case_novalue(Op_bit_not_p16) {}
+			instr_case_novalue(Op_bit_and_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p8_imm) {}
+			instr_case_novalue(Op_bit_or_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p8_imm) {}
+			instr_case_novalue(Op_bit_xor_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p8_imm) {}
+			instr_case_novalue(Op_shl_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p8_imm) {}
+			instr_case_novalue(Op_shr_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p8_imm) {}
+			instr_case_novalue(Op_bit_not_p8) {}
 			instr_case(Op_variantSetInner_pvnt_type, instr) {
 				const auto variant_type = getPlaceType(instr.variant, current_stack)
 				                              ->getKindAs<valid_type::finalized::Variant>();

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "dia_interactive_elements.hpp"
 
 #include <frontend/pst_parser/access.hpp>
@@ -5,8 +11,9 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
@@ -72,37 +79,37 @@ namespace compiler::helios {
 		if (lookup_qresult->hasFailed()) return;
 		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 
-		std::function<void(const LookupResult&, const std::string&)> emit_alias_note
-			= [&](const LookupResult& current, const std::string& alias_name) {
-				  if (current.children.size() != 1) return;
+		std::function<void(const LookupResult&, const std::string&)> emit_alias_note =
+			[&](const LookupResult& current, const std::string& alias_name) {
+				if (current.children.size() != 1) return;
 
-				  auto nested = current.children[0];
-				  if (kind(nested.node) == SymbolKind::Alias) {
-					  auto alias_stmt = getSymRef(nested.node)
-				                            ->maybePstElement()
-				                            .value()
-				                            .unlock(ctx)
-				                            .dynamicCast<pst::Alias>()
-				                            .value();
-					  auto underlying_chain
-						  = alias_stmt->getPointed()
-				                .unlock(ctx)
-				                ->getSourcePosition()
-				                .illegalAccess(
-								)  // Here we should use illegalAccess, maybe serialize the PST
-				                .content();
+				auto nested = current.children[0];
+				if (kind(nested.node) == SymbolKind::Using) {
+					// `using a.b as c;`: the underlying chain is the `a.b` part.
+					auto alias_stmt = getSymRef(nested.node)
+				                          ->maybePstElement()
+				                          .value()
+				                          .unlock(ctx)
+				                          .dynamicCast<pst::Using>()
+				                          .value();
+					auto selector = (*alias_stmt->getSelectors().unlock(ctx)->begin()).unlock(ctx);
+					std::string underlying_chain;
+					for (usize i = 0; i < selector->numberOfNames(); i++) {
+						if (i > 0) underlying_chain += ".";
+						underlying_chain += selector->getNameByIndex(i).unlock(ctx)->unwrap().str();
+					}
 
-					  auto id = MessageBase::getUniqueID();
-					  linked_messages.put(
-						  id,
-						  makeBox<IsAliasCodeNote>(
-							  alias_stmt->getStablePosition(), alias_name, underlying_chain
-						  )
-					  );
+					auto id = MessageBase::getUniqueID();
+					linked_messages.put(
+						id,
+						makeBox<IsAliasCodeNote>(
+							alias_stmt->getStablePosition(), alias_name, underlying_chain
+						)
+					);
 
-					  emit_alias_note(nested.inner, underlying_chain);
-				  };
-			  };
+					emit_alias_note(nested.inner, underlying_chain);
+				};
+			};
 
 		emit_alias_note(*lookup_result, ident->getName().unlock(ctx)->unwrap().str());
 	}
@@ -189,9 +196,11 @@ namespace compiler::helios {
 	):
 		  function_symbol(function_symbol),
 		  pst_expr(std::move(pst_expr)) {
-		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstImplementedSemantics>(), pst_data) {
-			auto position = getFunctionLikeSourcePosition(ctx, pst_data->getElement().unlock(ctx));
-			auto id       = MessageBase::getUniqueID();
+		if (getSymRef(function_symbol)->isPstImplemented()) {
+			auto position = getFunctionLikeSourcePosition(
+				ctx, getSymRef(function_symbol)->maybePstElement().value().unlock(ctx)
+			);
+			auto id = MessageBase::getUniqueID();
 			this->linked_messages.put(std::move(id), makeBox<FunctionDeclaredHereNote>(position));
 		}
 		this->displayed_name = name(function_symbol).str();

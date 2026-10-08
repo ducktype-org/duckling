@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <events/emitter.hpp>
@@ -7,6 +13,7 @@
 #include <condition_variable>
 #include <functional>
 #include <iostream>
+#include <sstream>
 
 namespace vm {
 	// Decisions made are based on this great article:
@@ -36,9 +43,8 @@ namespace vm {
 			// Also, in case of any other redirected input, all the data is usually in the buffer
 			// beforehand, but it's not always true so this design is not perfect.
 			if (!attached) {
-				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
-					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail()
-					    || attached;
+				thread.waitInterruptible(lck, [this] {
+					return hasPendingInput() || attached.load();
 				});
 			}
 
@@ -57,9 +63,8 @@ namespace vm {
 			auto lck = lock();
 
 			if (!attached) {
-				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
-					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail()
-					    || attached;
+				thread.waitInterruptible(lck, [this] {
+					return hasPendingInput() || attached.load();
 				});
 			}
 
@@ -93,6 +98,23 @@ namespace vm {
 		std::condition_variable output_empty_cv;
 
 	private:
+		/**
+		 * @brief Whether the internal input buffer holds data that has not been read yet.
+		 *
+		 * @note `in_avail()` cannot be used for this. It reports `egptr() - gptr()` and otherwise
+		 * falls back to `showmanyc()`, which defaults to 0, and libc++'s `stringbuf` extends the
+		 * get area only inside `underflow()`. Freshly written input therefore reads as "nothing
+		 * available" under libc++, while libstdc++ syncs the get area eagerly and reports it.
+		 * `sgetc()` goes through `underflow()`, so it sees the data on both implementations.
+		 *
+		 * @warning Only valid while not `attached`, i.e. while `input_stream` still owns its own
+		 * buffer - on an attached buffer (`std::cin`) `sgetc()` would block.
+		 */
+		bool hasPendingInput() {
+			if (!input_stream.good()) input_stream.clear();
+			return input_stream.rdbuf()->sgetc() != std::char_traits<char>::eof();
+		}
+
 		std::atomic_bool attached = false;
 
 		std::mutex iomutex;

@@ -1,10 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
+use crate::quackpack::core::editable_manifest::{DependencyAdded, EditableManifest};
 use crate::quackpack::core::{AllowGlobalPackage, DependencyKind, PackageLoader};
-use crate::quackpack::schemas::manifest::{
-    Dependency, DependencyAdded, Manifest as ManifestSchema,
-};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::quackpack::schemas::manifest::Dependency;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
 
 mod dependency_construction;
@@ -38,37 +42,24 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     };
     let (effective_name, dep) = construct_dependency(dep_spec, &pcx)?;
 
-    let pkg = pcx.into_package().unwrap_package();
+    let pkg = pcx.package().get_package();
 
     // Only necessary for diagnostic messages.
     let pkg_name = pkg.name();
     let pkg_root = pkg.root_directory().to_path_buf();
 
-    // @TODO: #1394 We would like to use a better mechanism than modify deserialized schema -> blindly serialize it,
-    // since this won't preserve comments and formatting choices in the manifest.
-    let manifest_path = pkg.manifest_path().to_path_buf();
-    let mut schema = pkg.into_original_schema();
+    let editable_manifest = EditableManifest::new(&pcx)?;
     add_dep(
-        &mut schema,
-        effective_name.clone(),
+        &editable_manifest,
+        &effective_name,
         dep,
         kind,
         pkg_name,
         &pkg_root,
     )?;
-    let deserialized_schema = serde_yaml_ng::to_string(&schema)
-        .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
-    manifest_path.write(&deserialized_schema).with_context(|| {
+    editable_manifest.save()?;
+    ctx.info(
         format!(
-            "failed to write the new manifest into file at `{}`",
-            manifest_path.display()
-        )
-    })?;
-    ctx.console().info(format!(
-        "written new manifest to `{}`",
-        manifest_path.display()
-    ))?;
-    ctx.console().info(format!(
         "successfully added {kind} dependency `{effective_name}` to the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
@@ -77,17 +68,17 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
 
 /// Add a dependency or provide a meaningful error.
 fn add_dep(
-    schema: &mut ManifestSchema,
-    name: String,
+    editable_manifest: &EditableManifest,
+    name: &str,
     dep: Dependency,
     kind: DependencyKind,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
-    match schema.add_dependency(name.clone(), dep, kind) {
+    match editable_manifest.add_dependency(name, dep, kind)? {
         DependencyAdded::Yes => Ok(()),
         DependencyAdded::AlreadyExists => {
-            let err = Err(QuackError::hint(
+            let err: Result<(), QuackError> = Err(QuackError::hint(
                 "use aliases to have multiple dependencies with the same name",
             ));
             err.with_context(|| {

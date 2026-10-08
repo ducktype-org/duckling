@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "logger.hpp"
 
 #include "message.hpp"
@@ -9,6 +15,8 @@
 #include <diagnostic/core/template_registry.hpp>
 #include <diagnostic/core/view_constructors.hpp>
 #include <diagnostic/term_ui/printers.hpp>
+
+#include <sstream>
 
 namespace dia {
 

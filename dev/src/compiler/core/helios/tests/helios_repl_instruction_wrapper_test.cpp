@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/utility.hpp>
@@ -82,10 +88,7 @@ private:
 			ASSERT_EQUAL(counter.void_return_count, 1u);
 
 			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
-			assertTrue(
-				std::holds_alternative<helios::defgen::ReplInputWrapper>(sym_ref->other),
-				"Expected ReplInputWrapper generated symbol kind"
-			);
+			ASSERT_MATCHES(sym_ref->other, helios::defgen::ReplInputWrapper);
 
 			auto mangled
 				= helios::mangler::getSimpleMangledName(ctx, wrapper.declaration->original_symbol);

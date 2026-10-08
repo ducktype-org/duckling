@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file optional.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
@@ -80,17 +86,24 @@
  *		opt_err(err) { assert(err == 1.5f); }
  *	}
  *
+ * // `std::expected<void, K>` has no value to bind, so `opt_some` is used without a name:
+ *	std::expected<void, std::string> v = std::unexpected("a");
+ *	match_optional(v) {
+ *		opt_some() { CORE_PANIC("No value!") }
+ *		opt_err(err) { assert(err == "a"); }
+ *	}
+ *
  */
 #define match_optional(optional) \
 	PUSH_DIAGNOSTIC              \
 	NO_SHADOW                    \
 	if (auto&& _internal_optional = (optional); true) POP_DIAGNOSTIC
 
-#define opt_some(_value_name)           \
+#define opt_some(...)                   \
 	PUSH_DIAGNOSTIC                     \
 	NO_SHADOW                           \
 	if (_internal_optional.has_value()) \
-		if (auto&& _value_name = *_internal_optional; true) POP_DIAGNOSTIC
+	__VA_OPT__(if (auto&& __VA_ARGS__ = *_internal_optional; true)) POP_DIAGNOSTIC
 
 #define opt_some_move(_value_name)      \
 	PUSH_DIAGNOSTIC                     \

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "module_impl_fd.hpp"
@@ -114,9 +120,19 @@ namespace compiler::backend_llvm {
 		[[nodiscard]]
 		base::OkBad verify() const;
 
+		/**
+		 * @brief Creates a clone of the current LLVM module.
+		 *
+		 * @return A new Module instance that is a copy of the current module.
+		 */
+		[[nodiscard]]
+		Module clone() const;
 
 		/**
 		 * @brief Compile the module to binary object file or assembly file.
+		 *
+		 * @note This can modify the module in place: the optimization passes are run on it before
+		 * emitting. Use clone() if you want to preserve the original module.
 		 *
 		 * @param output_file Path where the output file will be saved.
 		 * @param output_type Type of the output file.

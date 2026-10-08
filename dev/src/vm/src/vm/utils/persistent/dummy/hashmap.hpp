@@ -1,20 +1,29 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/types/ints.hpp>
+
+#include <functional>
+#include <vector>
 
 namespace vm::persistent {
 
 	/**
-	 * @brief A persistent data strcture simulating STL unordered_map but with the ability to access
-	 * and modify any of it's previous states.
-	 * @note can be thought of Hashmap<MapStateID, HashMap<Key, Val> >
-	 * @warning THIS IS A NAIVE IMPLEMENTATION IN O(N^2), USE FOR TESTING OR SMALL NUMBER OF
-	 * OPERATIONS
+	 * @brief A simple persistent hash map implementation for testing.
+	 *
+	 * Each operation creates a new state while preserving all previous states.
+	 * @warning This implementation is O(N^2) and should only be used for testing or small inputs.
 	 */
 	template<typename Key, typename Val, typename Hasher = std::hash<Key>>
-	class DummyHashMap {
+	class DummyHashMap final {
 		std::vector<base::HashMap<Key, Val, Hasher>> copies;
 
 		[[nodiscard]]
@@ -27,23 +36,41 @@ namespace vm::persistent {
 		static constexpr usize EMPTY = 0;
 
 		/**
-		 * @brief creates a new state from the pevious one, by inserting new value at new key
-		 * @throws when key was previously present in the hashmap at given state
+		 * @brief Returns a new state with a key-value pair inserted or replaced.
 		 */
 		[[nodiscard]]
 		usize insert(usize state, const Key& k, const Val& v) {
 			auto copy = validateState(state);
-
-			if (copy.contains(k)) throw std::invalid_argument("overriding a present value");
-			copy.put(k, v);
-
+			copy.insertOrAssign(k, v);
 			copies.emplace_back(copy);
-
 			return copies.size() - 1;
 		}
 
 		/**
-		 * @brief accessor to elements at given state by key
+		 * @brief Returns a new state with the entry for a key removed.
+		 */
+		[[nodiscard]]
+		usize erase(usize state, const Key& k) {
+			auto copy = validateState(state);
+			copy.erase(k);
+			copies.emplace_back(copy);
+			return copies.size() - 1;
+		}
+
+		/**
+		 * @brief Returns whether a key-value pair was inserted and the resulting state.
+		 */
+		[[nodiscard]]
+		std::pair<bool, usize> emplace(usize state, const Key& k, const Val& v) {
+			auto copy = validateState(state);
+			if (copy.contains(k)) return { false, state };
+			copy.put(k, v);
+			copies.emplace_back(copy);
+			return { true, copies.size() - 1 };
+		}
+
+		/**
+		 * @brief Returns the value associated with a key in a hash map state.
 		 */
 		[[nodiscard]]
 		const Val& at(usize state, const Key& k) const {
@@ -51,7 +78,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief checks if the certain key is present at given instance of a hashmap
+		 * @brief Returns whether a key is present in a hash map state.
 		 */
 		[[nodiscard]]
 		bool contains(usize state, const Key& k) const {
@@ -59,9 +86,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief comapre two states of the hashmap
-		 * @return true if the instances are equal
-		 * @warning THIS TAKES O(N)
+		 * @brief Returns whether two hash map states are equal.
+		 * @warning This operation is O(N).
 		 */
 		[[nodiscard]]
 		bool eq(usize state_1, usize state_2) const {

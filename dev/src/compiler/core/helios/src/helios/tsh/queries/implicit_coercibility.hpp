@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file implicit_coercibility.hpp
  * @brief Interface to deducing whether an implicit coercion of two values is allowed.
@@ -42,20 +48,6 @@
 // @TODO: Consider the above and add tests
 
 namespace compiler::tsh {
-	/**
-	 * @brief Whether a value of reference kind @p from may be coerced into one of kind @p to.
-	 *
-	 * The current coercion logic regarding reference kinds is:
-	 * ```
-	 * 						  FROM
-	 * 			    | Direct | Ref | Box
-	 *	 	Direct 	|  Yes	 | Yes | Yes
-	 * TO 	Ref		|   No   | Yes | No
-	 *	 	Box		|   No   | No  | Yes
-	 * ```
-	 */
-	bool isRefKindCoercible(ReferenceKind from, ReferenceKind to);
-
 	/**
 	 * @brief Key for QueryImplicitCoercibilityOnInfo.
 	 */

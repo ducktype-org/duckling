@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 use std::env::home_dir;
 use std::path::PathBuf;
@@ -65,7 +71,7 @@ metadata:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.name(), "xd");
     assert!(summary.dependencies().all_dependencies().is_empty());
@@ -92,7 +98,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
     assert!(summary.dependencies().has_by_name(StrId::new("a")));
@@ -118,7 +124,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
     assert!(summary.dependencies().has_by_name(StrId::new("a")));
@@ -169,7 +175,7 @@ dependencies:
     );
     let ctx = DuckContext::default();
 
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
@@ -197,7 +203,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
@@ -420,7 +426,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 11);
 
@@ -585,7 +591,7 @@ features:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 1);
     let a_feature = summary
@@ -613,7 +619,7 @@ features:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 4);
 
@@ -678,7 +684,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     let dep = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
 
@@ -691,7 +697,7 @@ dependencies:
     assert!(feature_names.contains(&"a".to_string()));
     assert!(feature_names.contains(&"b".to_string()));
 
-    let enabled = dep.enabled_features(vec![]);
+    let enabled = dep.enabled_features(&[].into());
     assert_eq!(enabled.len(), 2);
 }
 
@@ -717,7 +723,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     let dep = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
 
@@ -731,40 +737,9 @@ dependencies:
     assert!(feature_names.contains(&"b".to_string()));
     assert!(feature_names.contains(&"c".to_string()));
 
-    let enabled_features = dep.enabled_features(vec![]);
+    let enabled_features = dep.enabled_features(&[].into());
 
     assert!(enabled_features.contains(&StrId::new("a")));
-}
-
-#[test]
-fn empty_conditions_features() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.1'
-
-dependencies:
-  a:
-    version: '0.1'
-    conditions:
-      package-features: []
-"#,
-    );
-    let ctx = DuckContext::default();
-    let result = parse_manifest(&manifest_path, &ctx);
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            [
-                "when parsing the field `dependencies.a.conditions`",
-                "the field `package-features` is present but empty, if you don't want to specify it, remove it from the manifest"
-            ]
-        )
-    );
 }
 
 #[test]
@@ -954,7 +929,7 @@ metadata:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.version(), Version::new(0, 10, 0));
 }
@@ -976,7 +951,7 @@ profiles:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     let profiles = summary.profiles();
     assert!(
@@ -1249,7 +1224,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let frontmatter = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
+    let frontmatter = parse_frontmatter(&frontmatter_path, &ctx).unwrap().0;
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
@@ -1309,7 +1284,7 @@ dependencies:
         )
         .unwrap();
     let ctx = DuckContext::default();
-    let frontmatter = parse_frontmatter(&importing, &ctx).unwrap();
+    let frontmatter = parse_frontmatter(&importing, &ctx).unwrap().0;
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
@@ -1359,7 +1334,7 @@ import: y
     assert!(!Script::has_frontmatter(&script).unwrap());
     assert!(capture_frontmatter(contents).unwrap().is_none());
     // ...but parsing returns a default.
-    let frontmatter = parse_frontmatter(&script, &ctx).unwrap();
+    let frontmatter = parse_frontmatter(&script, &ctx).unwrap().0;
     assert!(frontmatter.dependencies().all_dependencies().is_empty());
 }
 
@@ -1429,7 +1404,7 @@ venv:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert!(summary.venv().ephemeral());
     assert!(!summary.venv().expose_freezefile());
@@ -1452,7 +1427,7 @@ venv:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     #[cfg(windows)]
     let desired_path = PathBuf::from("C:\\storage");
@@ -1474,7 +1449,7 @@ venv:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
 
     let home_dir = home_dir().unwrap();
@@ -1803,7 +1778,7 @@ dev-dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let package = parse_manifest(&manifest_path, &ctx).unwrap();
+    let package = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let deps = package.manifest().dependencies();
     assert_eq!(deps.all_dependencies().len(), 2);
     let a = deps.filter_by_kind(DependencyKind::Normal).next().unwrap();

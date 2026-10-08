@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "coercions.hpp"
 
 #include "errors.hpp"
@@ -7,6 +13,7 @@
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/tsh/coercions/reference_coercion.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -175,7 +182,8 @@ namespace compiler::helios {
 			const auto alternatives
 				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
 			for (usize i = 0; i < alternatives.size(); i++)
-				if (tsh::isRefKindCoercible(from.getRefKind(), alternatives[i].getRefKind())
+				if (tsh::referenceCoercionRule(from.getRefKind(), alternatives[i].getRefKind())
+				        .isLegal()
 				    && alternatives[i].getType() == from.getType())
 					return std::pair{ i, alternatives[i] };
 
@@ -217,35 +225,31 @@ namespace compiler::helios {
 		bool is_source_bool = source_type.getKind() == tsh::Kind::Bool;
 		bool is_target_bool = to.getType().getKind() == tsh::Kind::Bool;
 
+		auto generated_origin = current_expr->origin.generatedFrom();
 		if (source_type == to.getType()) {
 			// No coercion
 			return current_expr;
 		} else if (source_type.getKind() == tsh::Kind::Void) {
 			// We have to wrap the expression in CastExpr to change the inner type,
 			// the cast itself is lowered to no-op.
-			return makeBox<code::CastExpr>(
-				ctx, current_expr->origin.generatedFrom(), std::move(current_expr), to
-			);
+			return makeBox<code::CastExpr>(ctx, generated_origin, std::move(current_expr), to);
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion
-			return makeBox<code::CastExpr>(
-				ctx, current_expr->origin.generatedFrom(), std::move(current_expr), to
-			);
+			return makeBox<code::CastExpr>(ctx, generated_origin, std::move(current_expr), to);
 		} else if (is_source_numeric and is_target_bool) {
 			// Numeric zero-check to bool
 			auto comparison = makeBox<code::BinaryOperatorExpr>(
 				ctx,
-				current_expr->origin.generatedFrom(),
+				generated_origin,
 				code::BuiltinBinary::IntegerNeq,
 				std::move(current_expr),
 				makeBox<code::LiteralNumericExpr>(
 					ctx,
 					code::generatedOrigin(),
-					numeric_value::NumericValue::createOfType(current_expr->expression_type.getType(
-															  ))
-						.expect("Failed to create a NumericLiteral with 0 value. This should never "
-			                    "happen.")
+					numeric_value::NumericValue::createOfType(source_type)
+						.expect("Failed to create a NumericLiteral with 0 value. "
+			                    "This should never happen.")
 				)
 			);
 			return comparison;
@@ -272,6 +276,11 @@ namespace compiler::helios {
 			= ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from_type, to });
 		if (!coercible)
 			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
+
+		// A `void` value never comes into existence, so there is nothing to copy or hand over:
+		// the coercion only reconciles the types and lowers to nothing at all.
+		if (from_type.getType().getKind() == tsh::Kind::Void)
+			return Coercion::valid(from_type, to, false);
 
 		// Wrapping into a variant copies the value into one alternative, so that alternative is
 		// what the copy is analysed against.
@@ -317,7 +326,7 @@ namespace compiler::helios {
 		return coerce(ctx, std::move(from_box));
 	}
 
-	base::Optional<Box<code::Expr>> coerceFromBox(
+	query::QResult<Box<code::Expr>> coerceFromBox(
 		query::Context&                     ctx,
 		Box<code::Expr>                     expr,
 		const tsh::SymbolType<>             expected_type,
@@ -325,14 +334,12 @@ namespace compiler::helios {
 		base::Optional<dia::StablePosition> coercion_expects_pos,
 		CoercionErrorOverrides              error_overrides
 	) {
-		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
-		if (coercion_qresult.hasFailed()) return {};
-		const Coercion& coercion_result = coercion_qresult.valueOrPanic();
-		if (coercion_result.isValid()) return coercion_result.coerce(ctx, std::move(expr));
+		UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr->expression_type, expected_type));
+		if (coercion.isValid()) return coercion.coerce(ctx, std::move(expr));
 
 		logCoercionFailure(
-			ctx, coercion_result, source_position, coercion_expects_pos, std::move(error_overrides)
+			ctx, coercion, source_position, coercion_expects_pos, std::move(error_overrides)
 		);
-		return {};
+		return query::Failed();
 	}
 }

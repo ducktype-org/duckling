@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file strongly_typed_int.hpp
  *
@@ -58,8 +64,30 @@
 		return *this;                                                      \
 	}
 
+/**
+ * @brief This is helper macro, do not use directly
+ */
+#define STRONG_TYPEDEF_INT_MAKE_BINARY_OPERATIONS_AUX             \
+	inline constexpr SELF_T operator~() const noexcept {          \
+		return SELF_T(static_cast<BASE_T>(~value));               \
+	}                                                             \
+	STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(&, SELF_T)              \
+	STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(|, SELF_T)              \
+	STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(^, SELF_T)              \
+	STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(<<, SELF_T)             \
+	STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>>, SELF_T)             \
+	STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(&=, &)          \
+	STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(|=, |)          \
+	STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(^=, ^)          \
+	STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(<<=, <<)        \
+	STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(>>=, >>)        \
+	STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(<<, SELF_T)      \
+	STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(>>, SELF_T)      \
+	STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(<<=, <<) \
+	STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(>>=, >>)
 
-#define STRONG_TYPEDEF_INT_AUX(NAME, BASE, EXPLICIT_BASE, DIMENSIONAL)                             \
+
+#define STRONG_TYPEDEF_INT_AUX(NAME, BASE, EXPLICIT_BASE, DIMENSIONAL, BINARY)                     \
 	class NAME final {                                                                             \
 	private:                                                                                       \
 		using BASE_T = BASE;                                                                       \
@@ -127,7 +155,7 @@
 						STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=, *)                       \
 							STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=, /)                   \
 								STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(%=, %)               \
-		)                                                                                          \
+		) WHEN(BINARY)(STRONG_TYPEDEF_INT_MAKE_BINARY_OPERATIONS_AUX)                              \
 	};                                                                                             \
                                                                                                    \
 	static_assert(                                                                                 \
@@ -144,7 +172,7 @@
  *
  * Allows for operations like 2kg * 2, but not for 2kg*2kg.
  */
-#define STRONG_TYPEDEF_INT_DIMENSIONAL(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 1)
+#define STRONG_TYPEDEF_INT_DIMENSIONAL(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 1, 0)
 
 /**
  * @brief This macro is intended to create strongly typed
@@ -154,7 +182,7 @@
  *
  * Allows for operations like MyOwnI32 * MyOwnI32
  */
-#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 0)
+#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 0, 1)
 
 #define STRONGLY_TYPED_INT_STD_HASH(TYPE)                                                  \
 	template<>                                                                             \

@@ -1,0 +1,24 @@
+# A template is baked with square brackets: `Wrap[i64]`.
+
+template(T: type)
+class Wrap {
+    v: T;
+}
+
+namespace NS {
+    template(n: i64)
+    fun times(x: i64) -> i64 = { return x * n; }
+}
+
+template(T: type)
+fun ident(x: T) -> T = { return x; }
+
+fun main() -> i64 = {
+    var w = Wrap[i64](5);           # bake, then call the constructor
+    var arr: Wrap[i64][2];          # bake, then make an array type of it
+    arr[1] = Wrap[i64](7);
+    builtin_output_i64(w.v + arr[1].v);
+    builtin_output_i64(NS.times[3](4));   # bake reached through a namespace
+    builtin_output_i64(ident[i64](9));
+    return 0;
+}

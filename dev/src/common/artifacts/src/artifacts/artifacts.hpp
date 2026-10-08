@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <concurrent/base/locks/atomic_flag_spinlock.hpp>
@@ -10,6 +16,7 @@
 #include <string_id/string_id.hpp>
 
 #include <cstring>
+#include <sstream>
 #include <type_traits>
 
 namespace artifacts {

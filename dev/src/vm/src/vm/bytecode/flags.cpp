@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "flags.hpp"
 
 #include "validator/errors.hpp"
@@ -265,6 +271,59 @@ namespace vm::code {
 			FLAGS_RW(log_or_p8_imm)
 			FLAGS_RW_R(log_xor_p8_p8)
 			FLAGS_RW(log_xor_p8_imm)
+
+			// ===== Bitwise (and / or / xor / shl / shr / not) =====
+			// 64-bit
+			FLAGS_RW_R(bit_and_p64_p64)
+			FLAGS_RW(bit_and_p64_imm)
+			FLAGS_RW_R(bit_or_p64_p64)
+			FLAGS_RW(bit_or_p64_imm)
+			FLAGS_RW_R(bit_xor_p64_p64)
+			FLAGS_RW(bit_xor_p64_imm)
+			FLAGS_RW_R(shl_p64_p64)
+			FLAGS_RW(shl_p64_imm)
+			FLAGS_RW_R(shr_p64_p64)
+			FLAGS_RW(shr_p64_imm)
+			FLAGS_RW(bit_not_p64)
+
+			// 32-bit
+			FLAGS_RW_R(bit_and_p32_p32)
+			FLAGS_RW(bit_and_p32_imm)
+			FLAGS_RW_R(bit_or_p32_p32)
+			FLAGS_RW(bit_or_p32_imm)
+			FLAGS_RW_R(bit_xor_p32_p32)
+			FLAGS_RW(bit_xor_p32_imm)
+			FLAGS_RW_R(shl_p32_p32)
+			FLAGS_RW(shl_p32_imm)
+			FLAGS_RW_R(shr_p32_p32)
+			FLAGS_RW(shr_p32_imm)
+			FLAGS_RW(bit_not_p32)
+
+			// 16-bit
+			FLAGS_RW_R(bit_and_p16_p16)
+			FLAGS_RW(bit_and_p16_imm)
+			FLAGS_RW_R(bit_or_p16_p16)
+			FLAGS_RW(bit_or_p16_imm)
+			FLAGS_RW_R(bit_xor_p16_p16)
+			FLAGS_RW(bit_xor_p16_imm)
+			FLAGS_RW_R(shl_p16_p16)
+			FLAGS_RW(shl_p16_imm)
+			FLAGS_RW_R(shr_p16_p16)
+			FLAGS_RW(shr_p16_imm)
+			FLAGS_RW(bit_not_p16)
+
+			// 8-bit
+			FLAGS_RW_R(bit_and_p8_p8)
+			FLAGS_RW(bit_and_p8_imm)
+			FLAGS_RW_R(bit_or_p8_p8)
+			FLAGS_RW(bit_or_p8_imm)
+			FLAGS_RW_R(bit_xor_p8_p8)
+			FLAGS_RW(bit_xor_p8_imm)
+			FLAGS_RW_R(shl_p8_p8)
+			FLAGS_RW(shl_p8_imm)
+			FLAGS_RW_R(shr_p8_p8)
+			FLAGS_RW(shr_p8_imm)
+			FLAGS_RW(bit_not_p8)
 
 			// ===== Comparisons: lhs/rhs are read =====
 			FLAGS_CMP(cmpEq_p64_p64)

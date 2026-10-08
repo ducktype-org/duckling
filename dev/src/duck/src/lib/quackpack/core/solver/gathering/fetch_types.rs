@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
@@ -60,6 +66,13 @@ impl ManifestsRequest {
             versions,
             features,
         })
+    }
+
+    pub fn request_identifier(&self) -> RequestIdentifier {
+        match self {
+            Self::Pinned(pinned_request) => pinned_request.id,
+            Self::NotPinned(not_pinned_request) => not_pinned_request.id,
+        }
     }
 }
 

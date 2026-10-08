@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/pst_parser/pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
@@ -30,106 +36,89 @@ private:
 		return result;
 	}
 
-	void testEmptyInput() {
-		assertFalse(extract("").has_value(), "Expected empty for empty input");
-	}
+	void testEmptyInput() { ASSERT_NO_VALUE(extract(""), "Expected empty for empty input"); }
 
 	void testSingleIfInstruction() {
-		assertTrue(extract("if (a) {}").has_value(), "Simple if should be an instruction");
-		assertTrue(
-			extract("if (a == b) { c = d; }").has_value(), "If with body should be an instruction"
+		ASSERT_HAS_VALUE(extract("if (a) {}"), "Simple if should be an instruction");
+		ASSERT_HAS_VALUE(extract("if (a == b) { c = d; }"), "If with body should be an instruction");
+		ASSERT_HAS_VALUE(
+			extract("if (a == b) { c = d; } else { c = e; }"), "If-else should be an instruction"
 		);
-		assertTrue(
-			extract("if (a == b) { c = d; } else { c = e; }").has_value(),
-			"If-else should be an instruction"
-		);
-		assertTrue(
-			extract("if (a == b) c = d; else c = e;").has_value(),
+		ASSERT_HAS_VALUE(
+			extract("if (a == b) c = d; else c = e;"),
 			"If-else without blocks should be an instruction"
 		);
-		assertTrue(
-			extract("if AAA (x + y < 6) {}").has_value(), "Named if should be an instruction"
-		);
-		assertTrue(
-			extract("if AAA (a == b) { c = d; } else { c = e; }").has_value(),
+		ASSERT_HAS_VALUE(extract("if AAA (x + y < 6) {}"), "Named if should be an instruction");
+		ASSERT_HAS_VALUE(
+			extract("if AAA (a == b) { c = d; } else { c = e; }"),
 			"Named if-else should be an instruction"
 		);
 	}
 
 	void testSingleWhileInstruction() {
-		assertTrue(extract("while (a) {}").has_value(), "Simple while should be an instruction");
-		assertTrue(
-			extract("while (x < 5) {}").has_value(), "While with condition should be an instruction"
+		ASSERT_HAS_VALUE(extract("while (a) {}"), "Simple while should be an instruction");
+		ASSERT_HAS_VALUE(
+			extract("while (x < 5) {}"), "While with condition should be an instruction"
 		);
-		assertTrue(
-			extract("while (a) { foo(); }").has_value(), "While with body should be an instruction"
+		ASSERT_HAS_VALUE(
+			extract("while (a) { foo(); }"), "While with body should be an instruction"
 		);
-		assertTrue(
-			extract("while AAA (x + y < 6) {}").has_value(), "Named while should be an instruction"
+		ASSERT_HAS_VALUE(
+			extract("while AAA (x + y < 6) {}"), "Named while should be an instruction"
 		);
-		assertTrue(
-			extract("while MyLoop (a) { foo(); }").has_value(),
-			"Named while with body should be an instruction"
+		ASSERT_HAS_VALUE(
+			extract("while MyLoop (a) { foo(); }"), "Named while with body should be an instruction"
 		);
 	}
 
 	void testSingleForInstruction() {
-		assertTrue(extract("for (a: T in x) {}").has_value(), "Simple for should be an instruction");
-		assertTrue(
-			extract("for (a: T in x) { foo(); }").has_value(),
-			"For with body should be an instruction"
+		ASSERT_HAS_VALUE(extract("for (a: T in x) {}"), "Simple for should be an instruction");
+		ASSERT_HAS_VALUE(
+			extract("for (a: T in x) { foo(); }"), "For with body should be an instruction"
 		);
 	}
 
 	void testSingleBlockInstruction() {
-		assertTrue(extract("block {}").has_value(), "Anonymous block should be an instruction");
-		assertTrue(extract("block B {}").has_value(), "Named block should be an instruction");
-		assertTrue(
-			extract("block B { a++; }").has_value(), "Named block with body should be an instruction"
+		ASSERT_HAS_VALUE(extract("block {}"), "Anonymous block should be an instruction");
+		ASSERT_HAS_VALUE(extract("block B {}"), "Named block should be an instruction");
+		ASSERT_HAS_VALUE(
+			extract("block B { a++; }"), "Named block with body should be an instruction"
 		);
 	}
 
 	void testSingleNonInstruction() {
 		// Expression statements are not instructions
-		assertFalse(extract("1 + 5;").has_value(), "Expected empty for arithmetic expression");
-		assertFalse(extract("foo();").has_value(), "Expected empty for function call");
-		assertFalse(extract("x = 42;").has_value(), "Expected empty for assignment");
+		ASSERT_NO_VALUE(extract("1 + 5;"), "Expected empty for arithmetic expression");
+		ASSERT_NO_VALUE(extract("foo();"), "Expected empty for function call");
+		ASSERT_NO_VALUE(extract("x = 42;"), "Expected empty for assignment");
 
 		// Declarations/definitions are not instructions
-		assertFalse(extract("var x: i32 = 5;").has_value(), "Expected empty for var declaration");
-		assertFalse(extract("const X: W = 5;").has_value(), "Expected empty for const declaration");
-		assertFalse(
-			extract("fun foo() = {}").has_value(), "Expected empty for function declaration"
-		);
-		assertFalse(extract("class Foo {}").has_value(), "Expected empty for class declaration");
-		assertFalse(
-			extract("namespace Foo {}").has_value(), "Expected empty for namespace declaration"
-		);
-		assertFalse(extract("import X as x;").has_value(), "Expected empty for import statement");
-		assertFalse(extract("using X;").has_value(), "Expected empty for using statement");
-		assertFalse(extract("alias X = X;").has_value(), "Expected empty for alias declaration");
+		ASSERT_NO_VALUE(extract("var x: i32 = 5;"), "Expected empty for var declaration");
+		ASSERT_NO_VALUE(extract("const X: W = 5;"), "Expected empty for const declaration");
+		ASSERT_NO_VALUE(extract("fun foo() = {}"), "Expected empty for function declaration");
+		ASSERT_NO_VALUE(extract("class Foo {}"), "Expected empty for class declaration");
+		ASSERT_NO_VALUE(extract("namespace Foo {}"), "Expected empty for namespace declaration");
+		ASSERT_NO_VALUE(extract("import X as x;"), "Expected empty for import statement");
+		ASSERT_NO_VALUE(extract("using X;"), "Expected empty for using statement");
+		ASSERT_NO_VALUE(extract("using X as Y;"), "Expected empty for `using ... as` declaration");
 
 		// Actions (return, break, continue, throw, etc.) are not instructions
-		assertFalse(extract("return 2;").has_value(), "Expected empty for return action");
-		assertFalse(extract("break;").has_value(), "Expected empty for break action");
-		assertFalse(extract("throw 123;").has_value(), "Expected empty for throw action");
-		assertFalse(extract("redo;").has_value(), "Expected empty for redo action");
+		ASSERT_NO_VALUE(extract("return 2;"), "Expected empty for return action");
+		ASSERT_NO_VALUE(extract("break;"), "Expected empty for break action");
+		ASSERT_NO_VALUE(extract("throw 123;"), "Expected empty for throw action");
+		ASSERT_NO_VALUE(extract("redo;"), "Expected empty for redo action");
 	}
 
 	void testMultipleStatements() {
-		assertFalse(
-			extract("if (a) {}; while (a) {}").has_value(), "Expected empty for two instructions"
+		ASSERT_NO_VALUE(extract("if (a) {}; while (a) {}"), "Expected empty for two instructions");
+		ASSERT_NO_VALUE(
+			extract("if (a) {}; foo();"), "Expected empty for instruction followed by expression"
 		);
-		assertFalse(
-			extract("if (a) {}; foo();").has_value(),
-			"Expected empty for instruction followed by expression"
+		ASSERT_NO_VALUE(
+			extract("foo(); if (a) {}"), "Expected empty for expression followed by instruction"
 		);
-		assertFalse(
-			extract("foo(); if (a) {}").has_value(),
-			"Expected empty for expression followed by instruction"
-		);
-		assertFalse(
-			extract("if (a) {}; fun bar() = {}").has_value(),
+		ASSERT_NO_VALUE(
+			extract("if (a) {}; fun bar() = {}"),
 			"Expected empty for instruction followed by definition"
 		);
 	}

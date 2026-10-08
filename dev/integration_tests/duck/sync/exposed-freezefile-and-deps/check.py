@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import sys
 from pathlib import Path
 
@@ -44,7 +50,11 @@ bar = {
 
 exposed_freeze = get_exposed_freeze(expected_last_location)
 
-bar_loc = f"bar local+file://{str(project_root("bar"))}"
+is_bar_aliased = (sys.argv[1] == "alias")
+if is_bar_aliased:
+    bar_loc = f"bar#alias local+file://{str(project_root("bar"))}"
+else:
+    bar_loc = f"bar local+file://{str(project_root("bar"))}"
 assert_eq(freeze["root"]["name"], "foo")
 assert_eq(freeze["root"]["version"], "1.0.0")
 assert_eq(freeze["root"]["features"], ["f"])

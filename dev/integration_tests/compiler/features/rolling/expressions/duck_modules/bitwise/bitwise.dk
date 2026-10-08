@@ -1,0 +1,177 @@
+fun main() -> i64 = {
+    ### I64 ###
+    let a_64: i64 = 12; # 0b1100
+    let b_64: i64 = 10; # 0b1010
+    let s_64: i64 = 2;
+
+    if ((a_64 & b_64) != 8) {
+        builtin_output_i64(1);
+    }
+    if ((a_64 & 10) != 8) {
+        builtin_output_i64(2);
+    }
+    if ((a_64 | b_64) != 14) {
+        builtin_output_i64(3);
+    }
+    if ((a_64 | 10) != 14) {
+        builtin_output_i64(4);
+    }
+    if ((a_64 ^ b_64) != 6) {
+        builtin_output_i64(5);
+    }
+    if ((a_64 ^ 10) != 6) {
+        builtin_output_i64(6);
+    }
+    if ((a_64 ^ a_64) != 0) {
+        builtin_output_i64(7);
+    }
+    if ((a_64 << s_64) != 48) {
+        builtin_output_i64(8);
+    }
+    if ((a_64 << 2) != 48) {
+        builtin_output_i64(9);
+    }
+    if ((a_64 >> s_64) != 3) {
+        builtin_output_i64(10);
+    }
+    if ((a_64 >> 2) != 3) {
+        builtin_output_i64(11);
+    }
+    if (~a_64 != -13) {
+        builtin_output_i64(12);
+    }
+    if (~(~a_64) != 12) {
+        builtin_output_i64(13);
+    }
+    if (~(a_64 & b_64) != ((~a_64) | (~b_64))) {
+        builtin_output_i64(14);
+    }
+
+    ### I32 ###
+    let a_32: i32 = 12i32;
+    let b_32: i32 = 10i32;
+    let s_32: i32 = 2i32;
+
+    if ((a_32 & b_32) != 8i32) {
+        builtin_output_i64(15);
+    }
+    if ((a_32 & 10i32) != 8i32) {
+        builtin_output_i64(16);
+    }
+    if ((a_32 | b_32) != 14i32) {
+        builtin_output_i64(17);
+    }
+    if ((a_32 | 10i32) != 14i32) {
+        builtin_output_i64(18);
+    }
+    if ((a_32 ^ b_32) != 6i32) {
+        builtin_output_i64(19);
+    }
+    if ((a_32 ^ 10i32) != 6i32) {
+        builtin_output_i64(20);
+    }
+    if ((a_32 ^ a_32) != 0i32) {
+        builtin_output_i64(21);
+    }
+    if ((a_32 << s_32) != 48i32) {
+        builtin_output_i64(22);
+    }
+    if ((a_32 << 2i32) != 48i32) {
+        builtin_output_i64(23);
+    }
+    if ((a_32 >> s_32) != 3i32) {
+        builtin_output_i64(24);
+    }
+    if ((a_32 >> 2i32) != 3i32) {
+        builtin_output_i64(25);
+    }
+    if (~a_32 != -13i32) {
+        builtin_output_i64(26);
+    }
+
+    ### I16 ###
+    let a_16: i16 = 12i16;
+    let b_16: i16 = 10i16;
+    let s_16: i16 = 2i16;
+
+    if ((a_16 & b_16) != 8i16) {
+        builtin_output_i64(27);
+    }
+    if ((a_16 & 10i16) != 8i16) {
+        builtin_output_i64(28);
+    }
+    if ((a_16 | b_16) != 14i16) {
+        builtin_output_i64(29);
+    }
+    if ((a_16 | 10i16) != 14i16) {
+        builtin_output_i64(30);
+    }
+    if ((a_16 ^ b_16) != 6i16) {
+        builtin_output_i64(31);
+    }
+    if ((a_16 ^ 10i16) != 6i16) {
+        builtin_output_i64(32);
+    }
+    if ((a_16 ^ a_16) != 0i16) {
+        builtin_output_i64(33);
+    }
+    if ((a_16 << s_16) != 48i16) {
+        builtin_output_i64(34);
+    }
+    if ((a_16 << 2i16) != 48i16) {
+        builtin_output_i64(35);
+    }
+    if ((a_16 >> s_16) != 3i16) {
+        builtin_output_i64(36);
+    }
+    if ((a_16 >> 2i16) != 3i16) {
+        builtin_output_i64(37);
+    }
+    if (~a_16 != -13i16) {
+        builtin_output_i64(38);
+    }
+
+    ### I8 ###
+    let a_8: i8 = 12i8;
+    let b_8: i8 = 10i8;
+    let s_8: i8 = 2i8;
+
+    if ((a_8 & b_8) != 8i8) {
+        builtin_output_i64(39);
+    }
+    if ((a_8 & 10i8) != 8i8) {
+        builtin_output_i64(40);
+    }
+    if ((a_8 | b_8) != 14i8) {
+        builtin_output_i64(41);
+    }
+    if ((a_8 | 10i8) != 14i8) {
+        builtin_output_i64(42);
+    }
+    if ((a_8 ^ b_8) != 6i8) {
+        builtin_output_i64(43);
+    }
+    if ((a_8 ^ 10i8) != 6i8) {
+        builtin_output_i64(44);
+    }
+    if ((a_8 ^ a_8) != 0i8) {
+        builtin_output_i64(45);
+    }
+    if ((a_8 << s_8) != 48i8) {
+        builtin_output_i64(46);
+    }
+    if ((a_8 << 2i8) != 48i8) {
+        builtin_output_i64(47);
+    }
+    if ((a_8 >> s_8) != 3i8) {
+        builtin_output_i64(48);
+    }
+    if ((a_8 >> 2i8) != 3i8) {
+        builtin_output_i64(49);
+    }
+    if (~a_8 != -13i8) {
+        builtin_output_i64(50);
+    }
+
+    return 0i64;
+}

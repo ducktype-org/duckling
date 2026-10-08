@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <yaml-cpp/yaml.h>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
@@ -269,7 +275,7 @@ content:
 		);
 
 		// Verify description (code block)
-		ASSERT_EQUAL(true, diagnostic.messages[0].description.ref().toOpt().has_value());
+		ASSERT_HAS_VALUE(diagnostic.messages[0].description.ref().toOpt());
 		auto desc_result
 			= constructTextView(diagnostic.messages[0].description.ref().toOpt().value());
 		// constructTextView for CodeBlockComponent visits its content
@@ -287,7 +293,7 @@ content:
 		auto* code_block
 			= dynamic_cast<const state::CodeBlockComponent*>(concat->components[0].get());
 		ASSERT_EQUAL(false, code_block == nullptr);
-		ASSERT_EQUAL(true, code_block->location.has_value());
+		ASSERT_HAS_VALUE(code_block->location);
 		ASSERT_EQUAL("example.dk", code_block->location.value().file);
 		ASSERT_EQUAL(1, code_block->location.value().line);
 		ASSERT_EQUAL(1, code_block->location.value().column);
@@ -521,7 +527,7 @@ pointer_messages:
 		ASSERT_EQUAL("Candidate function:", candidate_header);
 
 		// Verify Candidate Description (code block)
-		ASSERT_EQUAL(true, diagnostic.messages[1].description.ref().toOpt().has_value());
+		ASSERT_HAS_VALUE(diagnostic.messages[1].description.ref().toOpt());
 
 		// Verify pointer message content in Candidate Message
 		auto* concat = dynamic_cast<const state::ConcatComponent*>(

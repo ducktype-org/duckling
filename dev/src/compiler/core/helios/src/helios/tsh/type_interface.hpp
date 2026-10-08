@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file type_interface.hpp
  * @brief The interface provided by a type consists of
@@ -14,12 +20,29 @@
 
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <ranges>
 
 namespace compiler::tsh {
-	enum class ClassMemberVisibility { Public, Protected, Private };
+	enum class MemberVisibility { Public, Protected, Private };
+
+
+	/**
+	 * These are methods that are special and there should be only
+	 * one instance of this special method in the interface.
+	 */
+	enum class MemberSpecialKind {
+		ParameterlessConstructor,
+		Constructor,
+		Destructor,
+		UserDestructor,
+		CopyConstructor,
+		ToString,
+		None
+	};
 
 	/**
 	 * @brief A single element of a type interface, defined by its symbol (not name).
@@ -34,7 +57,8 @@ namespace compiler::tsh {
 		enum class InterfaceElementKind {
 			Field,
 			Method,
-
+			StaticMethod,
+			StaticField,
 			/**
 			 * Other elements are symbols that are not "part of" a type
 			 * in a direct way, but are declared within the class body.
@@ -42,12 +66,6 @@ namespace compiler::tsh {
 			 */
 			Other,
 		};
-
-		/**
-		 * These are methods that are special and there should be only
-		 * one instance of this special method in the interface.
-		 */
-		enum class SpecialKind { ToString, None };
 
 	private:
 		/**
@@ -80,12 +98,12 @@ namespace compiler::tsh {
 		 * It's better to say "this element is present, but it is private and you cannot use it"
 		 * rather than "this element is not recognised, go figure out why".
 		 */
-		ClassMemberVisibility visibility;
+		MemberVisibility visibility;
 
 		/**
 		 * This makes special method more visible to the lookup and generating code.
 		 */
-		SpecialKind special_kind;
+		MemberSpecialKind special_kind;
 
 	public:
 		/**
@@ -102,8 +120,8 @@ namespace compiler::tsh {
 			const AbstractType            source,
 			const u32                     declaration_order,
 			const InterfaceElementKind    kind,
-			const ClassMemberVisibility   visibility,
-			const SpecialKind             special = SpecialKind::None
+			const MemberVisibility        visibility,
+			const MemberSpecialKind       special = MemberSpecialKind::None
 		):
 			  symbol(symbol),
 			  source(source),
@@ -131,12 +149,11 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Checks if this element of the interface is a field.
+		 * @brief Checks if this element of the interface is a (non-static) field.
 		 *
 		 * An element is a field if it cannot be called (unlike a method).
 		 * Equivalently, its value is stored in memory instead of being computed every time.
 		 *
-		 * This is always equal to `!isMethod()`.
 		 * @return Whether this element of the interface is a field.
 		 */
 		[[nodiscard]]
@@ -145,17 +162,48 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Checks if this element of the interface is a method.
+		 * @brief Checks if this element of the interface is a static field.
+		 */
+		[[nodiscard]]
+		bool isStaticField() const {
+			return kind == InterfaceElementKind::StaticField;
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a field, static or not.
+		 */
+		[[nodiscard]]
+		bool isAnyField() const {
+			return isField() or isStaticField();
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a (non-static) method.
 		 *
 		 * An element is a method if it must be called to get its value (unlike a field).
 		 * Equivalently, its value is computed anew every time instead of being stored in memory.
-		 *
-		 * This is always equal to `!isField()`.
+		 *.
 		 * @return Whether this element of the interface is a method.
 		 */
 		[[nodiscard]]
 		bool isMethod() const {
 			return kind == InterfaceElementKind::Method;
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a static method.
+		 */
+		[[nodiscard]]
+		bool isStaticMethod() const {
+			return kind == InterfaceElementKind::StaticMethod;
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a method, static or not.
+		 */
+		[[nodiscard]]
+		bool isAnyMethod() const {
+			return isMethod() or isStaticMethod();
 		}
 
 		/**
@@ -176,7 +224,7 @@ namespace compiler::tsh {
 		 * @return The visibility of this element.
 		 */
 		[[nodiscard]]
-		ClassMemberVisibility getVisibility() const {
+		MemberVisibility getVisibility() const {
 			return visibility;
 		}
 
@@ -184,7 +232,7 @@ namespace compiler::tsh {
 		 * @brief Get special kind.
 		 */
 		[[nodiscard]]
-		SpecialKind specialKind() const {
+		MemberSpecialKind specialKind() const {
 			return special_kind;
 		}
 
@@ -233,7 +281,9 @@ namespace compiler::tsh {
 		 * \parallel Accessed when building and querying a \ref TypeInterface; should be safe if
 		 * \ref TypeInterface instances are shared across threads.
 		 */
-		base::Map<base::StrID, std::vector<InterfaceElement>> elements_by_name;
+		base::HashMap<base::StrID, std::vector<InterfaceElement>> elements_by_name;
+
+		base::HashMap<MemberSpecialKind, InterfaceElement> element_by_special_kind;
 
 		/**
 		 * Check if the element list of the interface contains duplicates.
@@ -266,19 +316,34 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Gets all the elements of an interface, grouped by name.
-		 * @return The elements of an interface, grouped by name.
-		 */
-		[[nodiscard]]
-		const base::Map<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
-
-		/**
 		 * @brief Gets all the elements of an interface with a given name.
 		 * @param name The requested name.
 		 * @return The elements of an interface with the requested name.
 		 */
 		[[nodiscard]]
 		const std::vector<InterfaceElement>& getElementsWithName(base::StrID name) const;
+
+		/**
+		 * @brief Gets all the elements of an interface, grouped by name.
+		 * @return The elements of an interface, grouped by name.
+		 */
+		[[nodiscard]]
+		const base::HashMap<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
+
+		/**
+		 * @brief Gets the element of this interface with the given special kind, if it has one.
+		 * @note `MemberSpecialKind::None` is not a special kind, so it never has an element.
+		 */
+		[[nodiscard]]
+		base::Optional<CRef<InterfaceElement>> getSpecialElement(MemberSpecialKind special) const;
+
+		/**
+		 * @brief Gets the element of this interface declared by the given symbol, if it has one.
+		 * @param sym The symbol of the requested element.
+		 * @return The element of this interface with the requested symbol.
+		 */
+		[[nodiscard]]
+		base::Optional<CRef<InterfaceElement>> getElementBySym(compiler::helios::SymID sym) const;
 
 		/**
 		 * @brief Gets a view of all the fields of this interface.
@@ -291,6 +356,26 @@ namespace compiler::tsh {
 		}
 
 		/**
+		 * @brief Gets a view of all the static fields of this interface.
+		 * @return A view of all the static fields of this interface.
+		 */
+		[[nodiscard]]
+		auto getStaticFieldsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isStaticField(); });
+		}
+
+		/**
+		 * @brief Gets a view of all the fields of this interface, static and non-static.
+		 * @return A view of all the fields of this interface.
+		 */
+		[[nodiscard]]
+		auto getAnyFieldsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isAnyField(); });
+		}
+
+		/**
 		 * @brief Gets a view of all the methods of this interface.
 		 * @return A view of all the methods of this interface.
 		 */
@@ -299,5 +384,44 @@ namespace compiler::tsh {
 			return elements
 			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
 		}
+
+		/**
+		 * @brief Gets a view of all the static methods of this interface.
+		 * @return A view of all the static methods of this interface.
+		 */
+		[[nodiscard]]
+		auto getStaticMethodsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isStaticMethod(); });
+		}
+
+		/**
+		 * @brief Gets a view of all the methods of this interface, static and non-static.
+		 * @return A view of all the methods of this interface.
+		 */
+		[[nodiscard]]
+		auto getAnyMethodsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isAnyMethod(); });
+		}
+	};
+
+	class TypeInterfaceBuilder final {
+	private:
+		std::vector<tsh::InterfaceElement> interface_elements{};
+		u32                                declaration_order{};
+		tsh::AbstractType                  owner;
+
+	public:
+		explicit TypeInterfaceBuilder(tsh::AbstractType owner): owner(owner) {}
+
+		void push(
+			compiler::helios::SymID                symbol,
+			InterfaceElement::InterfaceElementKind kind,
+			MemberVisibility                       visibility,
+			MemberSpecialKind                      special = MemberSpecialKind::None
+		);
+
+		[[nodiscard]] TypeInterface build() const;
 	};
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Required informations (+ informations for better errors) for compiling a single package.
 //!
 //! In general, this is [`Package`] + enabled features.
@@ -120,5 +126,10 @@ impl CompilerPackage {
     /// Get the [`PackageType`] of this package.
     pub fn package_type(&self) -> PackageType {
         self.pkg_type
+    }
+
+    /// Decompose this [`CompilerPackage`] into parts.
+    pub fn decompose(self) -> (AnyPackage, HashSet<FeatureName>, PackageType) {
+        (self.package, self.enabled_features, self.pkg_type)
     }
 }

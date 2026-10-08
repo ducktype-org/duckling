@@ -1,4 +1,4 @@
-# Entry point for quacker-bot: one workflow handling all four triggers.
+# Entry point for quacker-bot: one workflow handling all five triggers.
 # The `setup` job runs on a GitHub-hosted runner and decides whether and in which
 # mode the bot should run. The `agent` job then mints a GitHub App token (tokens
 # cannot be passed between jobs — Actions drops outputs that contain secrets)
@@ -12,6 +12,8 @@ on:
     types: [created]                    # "@quacker-bot" mentioned on a PR gets a reply
   pull_request_review_comment:
     types: [created]                     # "@quacker-bot" mentioned in an inline PR review comment
+  pull_request:
+    types: [opened, ready_for_review]   # PR becomes ready for review -> automatic review
   workflow_run:
     workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
     types: [completed]
@@ -24,7 +26,9 @@ on:
 #   2. issue_comment on an ISSUE + '@quacker-bot'           -> quacker-issue-<issue#>  (shares the issue's branch -> serialize with #1)
 #   3. issue_comment on a PR + '@quacker-bot'               -> quacker-mention-<PR#>   (issue.number == PR number here)
 #   4. pull_request_review_comment + '@quacker-bot'         -> quacker-mention-<PR#>
-#   5. anything else (non-mention comment / non-quacker label / workflow_run) -> run_id (unique -> skips, never cancels a real run)
+#   5. pull_request, non-draft, not from a fork, not a bot  -> quacker-mention-<PR#>   (serialize with @quacker-bot on the same PR;
+#      the org-membership check can't run in an expression, but only org members can push same-repo branches anyway)
+#   6. anything else (non-mention comment / non-quacker label / draft PR / workflow_run) -> run_id (unique -> skips, never cancels a real run)
 concurrency:
   group: >-
     ${{
@@ -38,6 +42,10 @@ concurrency:
         && format('quacker-mention-{0}', github.event.issue.number)
       || github.event_name == 'pull_request_review_comment'
         && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-mention-{0}', github.event.pull_request.number)
+      || github.event_name == 'pull_request' && !github.event.pull_request.draft
+        && github.event.pull_request.head.repo.full_name == github.repository
+        && github.event.sender.type != 'Bot'
         && format('quacker-mention-{0}', github.event.pull_request.number)
       || github.run_id
     }}
@@ -62,6 +70,11 @@ jobs:
         github.event.comment.user.type != 'Bot' &&
         (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER') &&
         contains(github.event.comment.body, '@quacker-bot')
+      ) || (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.draft == false &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.sender.type != 'Bot'
       ) || (
         github.event_name == 'workflow_run' &&
         github.event.workflow_run.conclusion == 'failure' &&
@@ -88,7 +101,7 @@ jobs:
         env:  # untrusted event data is passed via env vars, never interpolated into the script
           GH_TOKEN: ${{ steps.app.outputs.token }}
           ORG: ${{ github.repository_owner }}
-          CORE_DEV_TEAM: core-dev
+          DEV_TEAM: dev
           EVENT: ${{ github.event_name }}
           LABEL: ${{ github.event.label.name }}
           SENDER: ${{ github.event.sender.login }}
@@ -98,6 +111,9 @@ jobs:
           COMMENT_USER: ${{ github.event.comment.user.login }}
           COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
           PR_NUM: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
           WR_ID: ${{ github.event.workflow_run.id }}
@@ -106,36 +122,52 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           run=false; mode=; a1=; a2=
-          # Returns 0 (true) iff the given GitHub user is an active member of the core-dev team.
+          # Returns 0 (true) iff the given GitHub user is an active member of the dev team.
           # Requires the Quacker App to hold the organization "Members: read" permission; if it
           # does not, this fails closed (no one can trigger the bot) rather than open.
-          is_core_dev() {
+          is_dev() {
             [ -n "$1" ] || return 1
             local state
-            state="$(gh api "orgs/$ORG/teams/$CORE_DEV_TEAM/memberships/$1" --jq '.state' 2>/dev/null || true)"
+            state="$(gh api "orgs/$ORG/teams/$DEV_TEAM/memberships/$1" --jq '.state' 2>/dev/null || true)"
+            [ "$state" = "active" ]
+          }
+          # Returns 0 (true) iff the given GitHub user is an active member of the organization
+          # (any team, e.g. zpp/interns). Same "Members: read" requirement and fail-closed behavior.
+          is_member() {
+            [ -n "$1" ] || return 1
+            local state
+            state="$(gh api "orgs/$ORG/memberships/$1" --jq '.state' 2>/dev/null || true)"
             [ "$state" = "active" ]
           }
           case "$EVENT" in
             issues)
-              # Only core-dev members may start a task by adding the "quacker" label.
-              [ "$LABEL" = "quacker" ] && is_core_dev "$SENDER" && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
+              # Only dev members may start a task by adding the "quacker" label.
+              [ "$LABEL" = "quacker" ] && is_dev "$SENDER" && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
             issue_comment)
-              # Only core-dev members may invoke the bot via @quacker-bot — it runs with the App
+              # Only dev members may invoke the bot via @quacker-bot — it runs with the App
               # token's write access and can push commits. Bot comments are skipped (including
               # quacker's own) so the bot can't trigger itself. On a PR -> `comment` mode (works on
               # the PR branch); on an issue -> `issue-comment` mode (works on quacker-bot/issue-N).
               if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
                  printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
-                 is_core_dev "$COMMENT_USER"; then
+                 is_dev "$COMMENT_USER"; then
                 if [ -n "$IS_PR" ]; then run=true; mode=comment;       a1="$ISSUE_NUM"
                 else                     run=true; mode=issue-comment; a1="$ISSUE_NUM"; fi
               fi ;;
             pull_request_review_comment)
-              # Inline/review-comment mention of @quacker-bot — same core-dev gate as above.
+              # Inline/review-comment mention of @quacker-bot — same dev gate as above.
               if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
                  printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
-                 is_core_dev "$COMMENT_USER"; then
+                 is_dev "$COMMENT_USER"; then
                 run=true; mode=comment; a1="$PR_NUM"
+              fi ;;
+            pull_request)
+              # PR entered the "ready for review" state (opened as non-draft, or converted from
+              # draft): run the same review as "@quacker-bot review". Fork PRs are skipped (their
+              # runs get no secrets anyway). Any org member's PR is reviewed, not only dev's; bot
+              # authors (Dependabot, quacker-bot's own PRs) are never org members, so they skip.
+              if [ "$PR_DRAFT" = "false" ] && [ "$PR_HEAD_REPO" = "$REPO" ] && is_member "$PR_AUTHOR"; then
+                run=true; mode=review; a1="$PR_NUM"
               fi ;;
             workflow_run)
               # Self-heal only the bot's own failed CI. Require all of:

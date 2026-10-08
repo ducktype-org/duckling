@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "to_string_methods.hpp"
 
 #include <helios/hout/elements/expr.hpp>
@@ -34,10 +40,10 @@ namespace compiler::helios::defgen {
 	 * @brief Get the symbol of the `toString` method for a given type.
 	 */
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
-		for (auto& elem: type.getInterface(ctx)->getElementsWithName(base::StrID("toString")))
-			if (elem.specialKind() == tsh::InterfaceElement::SpecialKind::ToString)
-				return elem.getSymbol();
-		CORE_PANIC("Every symbol should have toString.");
+		const auto to_string
+			= type.getInterface(ctx)->getSpecialElement(tsh::MemberSpecialKind::ToString);
+		CORE_ASSERT(to_string.has_value(), "Every symbol should have toString.");
+		return to_string.value()->getSymbol();
 	}
 
 	SymID generatedToStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
@@ -278,6 +284,7 @@ namespace compiler::helios::defgen {
 
 				cases.emplace_back(Shorthand::matchCase(
 					i,
+					payload_type,
 					payload_sym,
 					s.call(s.ident(payload_to_string), s.prepToPassSelf(s.ident(payload_sym)))
 				));

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file raw_view.hpp
  * @brief Provides byte array views.
@@ -85,6 +91,125 @@ namespace base {
 		byte* getBegin() const {
 			return begin;
 		}
+	};
+
+	/**
+	 * @brief Non owning mutable typed array view
+	 */
+	template<typename T>
+	class TypedModRawView final {
+	private:
+		T*    begin    = nullptr;
+		usize arr_size = 0;
+
+	public:
+		TypedModRawView()                       = default;
+		TypedModRawView(const TypedModRawView&) = default;
+		TypedModRawView(TypedModRawView&&)      = default;
+
+		TypedModRawView(T* begin, usize size): begin{ begin }, arr_size{ size } {}
+
+		TypedModRawView& operator=(const TypedModRawView&) = default;
+
+		[[nodiscard]]
+		usize size() const {
+			return arr_size;
+		}
+
+		[[nodiscard]]
+		T* getBegin() const {
+			return begin;
+		}
+
+		[[nodiscard]]
+		T& operator[](usize index) {
+			return begin[index];
+		}
+
+		[[nodiscard]]
+		const T& operator[](usize index) const {
+			return begin[index];
+		}
+
+		[[nodiscard]]
+		TypedModRawView subview(usize from, usize count) const {
+			return { begin + from, count };
+		}
+
+		[[nodiscard]]
+		std::string_view stringView() const {
+			return { reinterpret_cast<const char*>(begin), arr_size * sizeof(T) };
+		}
+
+		[[nodiscard]]
+		std::string stdString() const {
+			return std::string(stringView());
+		}
+
+		[[nodiscard]]
+		ModRawView modRawView() const {
+			return { reinterpret_cast<byte*>(begin), arr_size * sizeof(T) };
+		}
+
+		operator ModRawView() const requires std::same_as<T, std::byte> {
+			return { begin, arr_size };
+		}
+	};
+
+	/**
+	 * @brief Owning typed array view
+	 */
+	template<typename T>
+	class TypedOwningView final {
+		T*    begin{ nullptr };
+		usize arr_size{ 0 };
+
+	public:
+		TypedOwningView() = default;
+
+		explicit TypedOwningView(std::nullptr_t) {}
+
+		/**
+		 * @note Takes ownership, begin should be on heap.
+		 */
+		TypedOwningView(T* begin, usize size): begin{ begin }, arr_size{ size } {}
+
+		TypedOwningView(const TypedOwningView&) = delete;
+
+		TypedOwningView(TypedOwningView&& view) noexcept { *this = std::move(view); }
+
+		TypedOwningView& operator=(TypedOwningView&& view) noexcept {
+			if (this != &view) {
+				delete[] begin;
+				begin         = view.begin;
+				arr_size      = view.arr_size;
+				view.begin    = nullptr;
+				view.arr_size = 0;
+			}
+			return *this;
+		}
+
+		[[nodiscard]]
+		T* getBegin() const {
+			return begin;
+		}
+
+		[[nodiscard]]
+		usize size() const {
+			return arr_size;
+		}
+
+		[[nodiscard]]
+		TypedModRawView<T> modView() {
+			return { begin, arr_size };
+		}
+
+		[[nodiscard]]
+		TypedModRawView<const T> view() const {
+			return { begin, arr_size };
+		}
+
+		~TypedOwningView() { delete[] begin; }
 	};
 
 	class StrID;

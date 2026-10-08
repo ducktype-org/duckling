@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "serializer.hpp"
 
 #include <base/misc/int_conv.hpp>
@@ -15,6 +21,7 @@
 #include <bit>
 #include <iomanip>
 #include <ranges>
+#include <sstream>
 
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }

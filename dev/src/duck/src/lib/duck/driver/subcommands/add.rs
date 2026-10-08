@@ -1,7 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 use std::str::FromStr;
 
-use clap::{Arg, ArgGroup, ArgMatches, Command};
+use clap::{Arg, ArgGroup, ArgMatches, Command, ValueHint};
 
 use crate::duck::driver::cli_ext::{flag, multi, optional, subcommand};
 use crate::quackpack::core::{DependencyKind, Version};
@@ -19,12 +25,12 @@ pub fn get_parser() -> Command {
         .arg(flag("dev", "Add a dev dependency instead"))
         .arg(flag("pinned", "Pin the dependency's version"))
         .arg(optional("alias", "How to alias the dependency"))
-        .arg(optional("local", "Add a local dependency, specified by path"))
-        .arg(optional("git", "Add a git dependency, on a repository under a URL"))
+        .arg(optional("local", "Add a local dependency, specified by path").value_hint(ValueHint::DirPath))
+        .arg(optional("git", "Add a git dependency, on a repository under a URL").value_hint(ValueHint::Url))
         .arg(optional("branch", "Specify a git branch of the dependency"))
         .arg(optional("tag", "Specify a git tag of the dependency"))
         .arg(optional("commit", "Specify a git commit of the dependency. Can be either short or long commit id"))
-        .arg(optional("registry", "Specify a registry from which this dependency should be taken"))
+        .arg(optional("registry", "Specify a registry from which this dependency should be taken").value_hint(ValueHint::Url))
         .group(ArgGroup::new("dependency-source").args(["local", "git", "registry"]))
         .group(ArgGroup::new("git-references").args(["branch", "tag", "commit"]).requires("git"))
         .group(ArgGroup::new("not-pinned-sources").args(["local", "git"]).conflicts_with("pinned"))

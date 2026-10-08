@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Removing files from a storage.
 use std::collections::HashSet;
 use std::fs::DirEntry;
@@ -51,8 +57,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
     storage.sync_locks_path().join(venv_id).rm()?;
     data_lock.path().rm()?;
     info!("deleted venv");
-    ctx.console()
-        .info(format!("successfully removed venv `{venv_id}`"))?;
+    ctx.info(format!("successfully removed venv `{venv_id}`"))?;
     Ok(())
 }
 
@@ -114,7 +119,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         let _ = logger.log_result(pkg.rmtree());
     }
     info!(?packages_to_remove, "cleaned packages");
-    ctx.console().info("successfully cleaned the storage")?;
+    ctx.info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
         removed_packages: packages_to_remove,

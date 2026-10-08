@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file exceptions.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
@@ -84,6 +90,13 @@ namespace clah::exceptions {
 	 */
 	struct InvalidParameterName: public ClahException {
 		explicit InvalidParameterName(const std::string& name);
+	};
+
+	/**
+	 * @brief Raised when user passes an unknown command.
+	 */
+	struct InvalidCommandName: public ClahException {
+		explicit InvalidCommandName(const std::string& name);
 	};
 
 	/**

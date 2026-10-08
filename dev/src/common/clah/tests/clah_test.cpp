@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <clah/clah.hpp>
 #include <tester/tester.hpp>
 
@@ -18,10 +24,13 @@ public:
 		TESTER_ADD_TEST(weirdCases);
 		TESTER_ADD_TEST(noDefaultValueParser);
 		TESTER_ADD_TEST(escapingTest);
+		TESTER_ADD_TEST(helpMessageLongEntryWrappingTest);
+		TESTER_ADD_TEST(positionalHelpDocumentationTest);
 
 		// Subcommands tests.
 		TESTER_ADD_TEST(subcommandBasicTest);
 		TESTER_ADD_TEST(subcommandNestedTest);
+		TESTER_ADD_TEST(invalidCommandNameTest);
 		TESTER_ADD_TEST(globalOptionsTest);
 		TESTER_ADD_TEST(preHandlerAndHandlerExecutionOrder);
 		TESTER_ADD_TEST(requiredParameterValidation);
@@ -207,6 +216,87 @@ private:
 		correctly_parses_argument({ "./prog", "--file=abc" }, "abc");
 	}
 
+	void helpMessageLongEntryWrappingTest() {
+		auto clah = clah::Clah("prog")
+		                .add(clah::ParamBuilder::ofFlag()
+		                         .addLongName("option-name-that-exceeds-padding")
+		                         .addShortDesc("Option description.")
+		                         .build())
+		                .addSubcommand(
+							clah::Clah("command-name-that-exceeds-padding", "Command description.")
+						)
+		                .addSubcommand(clah::Clah("short", "Short command description."));
+
+		std::array argv{ "./prog" };
+		auto       result       = clah.parse(argv.size(), argv.data());
+		auto       help_message = clah::HelpMessageGenerator::generate(clah, result);
+		auto       indentation  = std::string(27, ' ');
+
+		ASSERT_TRUE(
+			help_message.find(
+				"  --option-name-that-exceeds-padding\n" + indentation + "Option description."
+			)
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find(
+				" command-name-that-exceeds-padding\n" + indentation + "Command description."
+			)
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find(" short                     Short command description.")
+			!= std::string::npos
+		);
+	}
+
+	void positionalHelpDocumentationTest() {
+		auto clah
+			= clah::Clah("prog")
+		          .addPositional(
+					  clah::CategoryParser::make("option", std::vector<std::string>{ "set", "del" }),
+					  "Breakpoint operation. Possible values are: set, del."
+				  )
+		          .addPositional(clah::IntParser::make("line"), "Source line number.")
+		          .addPositional(
+					  clah::StringParser::make("argument-name-that-exceeds-padding"),
+					  "Long argument description."
+				  );
+
+		std::array argv{ "./prog", "set", "42", "value" };
+		auto       result       = clah.parse(argv.size(), argv.data());
+		auto       help_message = clah::HelpMessageGenerator::generate(clah, result);
+
+		ASSERT_TRUE(
+			help_message.find(
+				"Command arguments:\n- <option>" + std::string(17, ' ')
+				+ "Breakpoint operation. Possible values are: set, del."
+			)
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find("- <line>" + std::string(19, ' ') + "Source line number.")
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find(
+				"- <argument-name-that-exceeds-padding>\n" + std::string(27, ' ')
+				+ "Long argument description."
+			)
+			!= std::string::npos
+		);
+
+		auto undocumented
+			= clah::Clah("undocumented").addPositional(clah::StringParser::make("value"));
+		std::array undocumented_argv{ "./undocumented", "value" };
+		auto       undocumented_result
+			= undocumented.parse(undocumented_argv.size(), undocumented_argv.data());
+		auto undocumented_help
+			= clah::HelpMessageGenerator::generate(undocumented, undocumented_result);
+
+		ASSERT_TRUE(undocumented_help.find("Command arguments:") == std::string::npos);
+	}
+
 	void subcommandBasicTest() {
 		auto clah = clah::Clah("prog").addSubcommand(
 			clah::Clah("test", "A test command")
@@ -247,6 +337,22 @@ private:
 		ASSERT_EQUAL("git", path[0]->getName());
 		ASSERT_EQUAL("remote", path[1]->getName());
 		ASSERT_EQUAL("add", path[2]->getName());
+	}
+
+	void invalidCommandNameTest() {
+		auto clah = clah::Clah("prog").addSubcommand(
+			clah::Clah("compile_package", "Compile a package")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make())
+		                 .addShortName('n')
+		                 .addShortDesc("Package name")
+		                 .build())
+		);
+
+		std::array argv{ "./prog", "comple_package", "-n", "main" };
+		assertThrows<clah::exceptions::InvalidCommandName>(
+			[&]() { clah.parse(argv.size(), argv.data()); },
+			"Clah did not reject an invalid command name."
+		);
 	}
 
 	void globalOptionsTest() {
@@ -492,9 +598,9 @@ private:
 	}
 
 	void categoryListParserTest() {
-		auto clah = clah::Clah("prog").addPositional(
-			clah::CategoryListParser::make(std::vector<std::string>{ "cpu", "memory", "disk" })
-		);
+		auto clah = clah::Clah("prog").addPositional(clah::CategoryListParser::make(
+			clah::CategoryParser::make(std::vector<std::string>{ "cpu", "memory", "disk" })
+		));
 
 		std::array argv_ok{ "./prog", "cpu, memory,disk" };
 		auto       res_ok = clah.parse(argv_ok.size(), argv_ok.data());

@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <helios/hout/hout.hpp>
@@ -61,9 +68,7 @@ private:
 		auto module2  = createReplModule("var y: i32 = x + 10;", module1);
 		auto mod2_ref = frontend::GetModuleID_Functor::get(module2);
 		assertTrue(mod2_ref->isReplModule(), "Statement 2 should be REPL module");
-		assertTrue(
-			mod2_ref->getReplModuleParent().has_value(), "Statement 2 should have parent linkage"
-		);
+		ASSERT_HAS_VALUE(mod2_ref->getReplModuleParent(), "Statement 2 should have parent linkage");
 
 		// Verify parent is module1
 		const auto parent_hash = mod2_ref->getReplModuleParent().value().queryUnstablePerfectHash();
@@ -102,9 +107,8 @@ private:
 		// Query module 3 to verify it's properly set up for lookup propagation
 		auto mod3_queried    = frontend::GetModuleID_Functor::get(module3);
 		auto mod3_parent_opt = mod3_queried->getReplModuleParent();
-		assertTrue(
-			mod3_parent_opt.has_value(),
-			"Queried module 3 should have parent linkage for lookup propagation"
+		ASSERT_HAS_VALUE(
+			mod3_parent_opt, "Queried module 3 should have parent linkage for lookup propagation"
 		);
 
 		if (mod3_parent_opt.has_value()) {
@@ -115,8 +119,8 @@ private:
 			);
 
 			// Verify module 2's parent exists for further chain traversal
-			assertTrue(
-				mod2_from_parent->getReplModuleParent().has_value(),
+			ASSERT_HAS_VALUE(
+				mod2_from_parent->getReplModuleParent(),
 				"Module 2 should have module 1 as parent for full lookup chain"
 			);
 		}

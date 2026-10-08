@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/comptime/type_traits.hpp>
@@ -80,17 +86,17 @@ namespace vm::low::opargs {
 	 * The encoding uses the highest bit of the value to distinguish
 	 * between local (0) or global (1) block reference.
 	 */
-	/** @brief Stores index of type-erased local data in the frame local block reference stack or
+	/** @brief Stores index of type-erased local data in the frame local slot stack or
 	 * the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockAny, "bany", vm::opargs::PlaceAny, vm::opargs::PlaceVnt);
-	/** @brief Stores index of local struct storage in Frame::block_ref_stack (not a byte offset) or
-	 * the global blocks buffer. */
-	DEFINE_MICRO_ARG_TYPE(PlaceBlockStructure, "bste", vm::opargs::PlaceStructure);
-	/** @brief Stores index of local fixed sized table storage in Frame::block_ref_stack (not a byte
+	/** @brief Stores index of local struct storage in the frame local slot stack (not a byte
 	 * offset) or the global blocks buffer. */
+	DEFINE_MICRO_ARG_TYPE(PlaceBlockStructure, "bste", vm::opargs::PlaceStructure);
+	/** @brief Stores index of local fixed sized table storage in the frame local slot stack (not a
+	 * byte offset) or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockFSTable, "barr", vm::opargs::PlaceFSTable);
-	/** @brief Stores index of local variant storage in Frame::block_ref_stack (not a byte offset)
-	 * or the global blocks buffer. */
+	/** @brief Stores index of local variant storage in the frame local slot stack (not a byte
+	 * offset) or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt);
 
 #define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES \
@@ -112,6 +118,13 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);
 	/** @brief Stores relative instruction jump offset after label linking. */
 	DEFINE_MICRO_ARG_TYPE(Label, "label", vm::opargs::Label);
+	/**
+	 * @brief Stores a byte offset in the local stack, or a distance between two frames' stacks.
+	 *
+	 * Computed by the lowering rather than spelled in the bytecode, hence the plain `u64` source:
+	 * it keeps an offset apart from `Immediate`, which only accepts an `opargs::Immediate`.
+	 */
+	DEFINE_MICRO_ARG_TYPE(Offset, "off", u64);
 
 	/**
 	 * @brief Storage class for any kind of micro instruction argument.
@@ -127,7 +140,8 @@ namespace vm::low::opargs {
 		ExtCFunction,
 		FFIFunction,
 		MethodName,
-		Label>;
+		Label,
+		Offset>;
 	using InstructionArgCRef = base::CRefifyParams<InstructionArg>;
 
 	using InstructionPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES>;

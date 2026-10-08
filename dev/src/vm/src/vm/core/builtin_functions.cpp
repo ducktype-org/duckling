@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "builtin_functions.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -117,17 +123,13 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
-		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
-		thread.setProcessStatus(api::Running{});
-		return return_value;
+		const SafeVMThread::ScopedBlockingWait io_wait(thread);
+		return thread.safe_process.getIO().getInput<i64>(thread);
 	}
 
 	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
-		const int c = thread.safe_process.getIO().getRawChar(thread);
-		thread.setProcessStatus(api::Running{});
-		return static_cast<i32>(c);
+		const SafeVMThread::ScopedBlockingWait io_wait(thread);
+		return static_cast<i32>(thread.safe_process.getIO().getRawChar(thread));
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
@@ -199,7 +201,10 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
-		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
+		// @note: Don't call `api::runFunction` here as it takes `api_lock` (which is held by
+		// `pause`, `step` etc.). Doing that deadlocks when stepping over `call_builtinfunc
+		// builtin_start_thread` as it would take `api_lock` again.
+		auto result = thread.safe_process.startNewThreadFromExecutionThread(thread.getThreadCtx());
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return static_cast<i64>(result.value().asInt());
@@ -235,21 +240,24 @@ namespace vm::builtins {
 			return;
 		}
 
-		// Slow path: mutex is contended. Mark ourselves as waiting, then release the GIL so
-		// other DVM threads can run while we block.
+		// Slow path: mutex is contended. Mark ourselves as waiting, then report the thread as
+		// sleeping and release the GIL so other DVM threads can run while we block.
 		if_opt_some(detector, d) d.markThreadWaitingForMutex(thread_id, mutex_id);
-		thread.releaseGil();
-		while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
-			if (thread.isTerminateRequested()) {
-				// Acquire GIL before throwing: exception handlers and destructors need exclusive
-				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
-				thread.acquireGil();
-				if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
-				throw vm::KillProcessException{};
+		bool terminate_requested = false;
+		{
+			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
+			while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
+				if (thread.isTerminateRequested()) {
+					terminate_requested = true;
+					break;
+				}
 			}
 		}
-		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
-		thread.acquireGil();
+		// The guard reacquired the GIL and reported the thread as running again.
+		if (terminate_requested) {
+			if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
+			throw vm::KillProcessException{};
+		}
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
@@ -288,42 +296,32 @@ namespace vm::builtins {
 		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
 		// so we mirror that in the detector: release ownership now, reacquire after the wait.
 		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
-		thread.releaseGil();
 		try {
+			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
+
 			const bool interrupted
 				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state during cleanup and propagation of VM runtime exceptions.
-			thread.acquireGil();
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const vm::KillProcessException&) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state.
-			thread.acquireGil();
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const std::exception& e) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state. Then wrap the exception so the VM can report ExecutionPanicked.
-			thread.acquireGil();
+			// Wrap the exception so the VM can report ExecutionPanicked.
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
 		} catch (...) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state. Then convert unknown exceptions into a VMRuntimeException.
-			thread.acquireGil();
+			// Convert unknown exceptions into a VMRuntimeException.
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
 			);
 		}
-		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
-		thread.acquireGil();
+		// The guard reacquired the GIL: bytecode execution requires holding it.
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 

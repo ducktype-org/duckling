@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Layout of the QuackPack's artifacts directory.
 //!
 //! For main package:
@@ -123,8 +129,7 @@ impl ProfileLayout for SharedProfileLayout {
             self.root_directory().join(unit.unique_name())
         } else {
             let hash = hash_subgraph_and_profile(unit, graph, self.profile)?;
-            unit.root_package()
-                .package()
+            unit.package()
                 .artifacts_directory()
                 .join(format!("shared-{hash}"))
         };

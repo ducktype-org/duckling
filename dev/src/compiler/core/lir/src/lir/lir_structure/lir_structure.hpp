@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
@@ -52,6 +58,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerSDiv,
 	IntegerUMod,
 	IntegerSMod,
+	
+	/** Integer bitwise operations. */
+	IntegerBitAnd,
+	IntegerBitOr,
+	IntegerBitXor,
+	IntegerBitNot,
+	IntegerShl,
+	IntegerShr,
 
 	/** Floating point arithmetic. */
 	FloatAdd,
@@ -186,8 +200,6 @@ namespace compiler::lir {
 		DvmFreeArr,
 		DvmAlloc,
 		DvmFree,
-		BoxAlloc,
-		BoxFree,
 		DvmPtrParts,
 		DvmIsNullptr,
 		DvmNullptr
@@ -452,7 +464,19 @@ namespace compiler::lir {
 		std::vector<Projection> projection_chain;
 
 
-		LIRPlace(BaseVariant base, std::vector<Projection> access_chain);
+		/**
+		 * @brief Construct a place and compute the layout it ends at.
+		 * @param ctx The query::Context used to look up the layouts of dereferenced pointees.
+		 * @param base The base variable of the place.
+		 * @param access_chain The projections applied to the base.
+		 */
+		LIRPlace(query::Context& ctx, BaseVariant base, std::vector<Projection> access_chain);
+
+		/**
+		 * @brief Construct a place without projections, which ends at the layout of its base.
+		 * @param base The base variable of the place.
+		 */
+		explicit LIRPlace(BaseVariant base);
 
 		[[nodiscard]]
 		bool isLocal() const {

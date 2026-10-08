@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "incremental_metadata_test_common.hpp"
 #include "test_utils.hpp"
 
@@ -59,7 +65,7 @@ private:
 
 		// After initialization the previous graph (if present) should be loaded
 		auto prev_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
-		assertTrue(prev_opt.has_value(), "Previous graph should be present after initialization");
+		ASSERT_HAS_VALUE(prev_opt, "Previous graph should be present after initialization");
 		auto prev = prev_opt.value();
 
 		// Verify node colors: previously-leaf nodes are green and dependency count checks hold

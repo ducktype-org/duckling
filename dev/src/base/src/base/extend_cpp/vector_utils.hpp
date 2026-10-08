@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <unordered_set>
 #include <vector>
@@ -40,6 +47,19 @@ namespace base {
 		base::filterVectorInPlace(vec, [&](auto& val) {
 			auto key = std::invoke(key_func, val);
 			return seen.insert(key).second;
+		});
+	}
+
+	/**
+	 * @brief Checks whether a vector contains all the elements of another one.
+	 * @param vec The vector that is expected to contain the elements.
+	 * @param elements The elements that have to be present in `vec`.
+	 * @tparam T The type of elements in the vectors.
+	 */
+	template<typename T>
+	bool containsAllOf(const std::vector<T>& vec, const std::vector<T>& elements) {
+		return std::ranges::all_of(elements, [&vec](const T& element) {
+			return std::ranges::find(vec, element) != vec.end();
 		});
 	}
 

@@ -1,12 +1,21 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .context import RunContext
+from .keys import NEEDED_THREADS
 from .reporting import CompletionOutput, OrderedOutput, print_success
-from .scheduler import run_groups, sweep
+from .resource_manager import ResourceManager
+from .scheduler import TestGroup, run_groups, sweep
 from .test_loader import load_tests
+from ...commands.helpers import get_cpu_count
 from ..helpers import (
     exit_with_error,
     get_dev_directory,
@@ -28,7 +37,8 @@ def tester_impl(
     build_dir: str,
     determinism_check: bool | None = None,
     custom_values: str = "{}",
-    jobs: int = 1,
+    jobs: int = get_cpu_count(),
+    sequential: bool = False,
     deterministic_output: bool = False,
     core_dumps: bool = False,
     timeout_scale: float = 1.0,
@@ -55,8 +65,16 @@ def tester_impl(
 
     # `--dry` and `--clean` keep the deterministic, sequential order.
     if dry or clean:
-        jobs = 1
+        sequential = True
     jobs = max(1, jobs)
+
+    if jobs == 1 and not sequential:
+        log_warning(
+            "`-j 1` is a budget of one thread, not a sequential run: cases still go"
+            " through the scheduler, their output is buffered into per-test sections,"
+            " and any case needing more than one thread is rejected."
+            " Did you mean `--sequential`?"
+        )
 
     ctx = RunContext(
         pattern=pattern,
@@ -66,6 +84,7 @@ def tester_impl(
         verbose=verbose,
         log_file=log_file,
         jobs=jobs,
+        sequential=sequential,
         core_dumps=core_dumps,
         timeout_scale=timeout_scale,
         output=CompletionOutput(),
@@ -73,14 +92,16 @@ def tester_impl(
 
     normal, deferred = sweep(test_set, ctx)
 
-    # At `jobs == 1` the completion order is the tree order already.
+    # When sequential, the completion order is the tree order already.
     if ctx.parallel and deterministic_output:
         output = OrderedOutput()
         for group in normal + deferred:
             output.register(group.path)
         ctx.output = output
     if ctx.parallel:
+        _check_thread_budget(normal, ctx)
         ctx.pool = ThreadPoolExecutor(max_workers=jobs, thread_name_prefix="dit-case")
+        ctx.threads = ResourceManager(max_resources=jobs)
 
     try:
         stats = run_groups(normal, deferred, ctx)
@@ -107,6 +128,31 @@ def tester_impl(
         )
     elif not clean:
         print_success(f"All tests have run successfully!")
+
+
+def _check_thread_budget(groups: list[TestGroup], ctx: RunContext):
+    """
+    Rejects cases asking for more threads than the whole run was given.
+    Such a request can never be granted, and the scheduler must not
+    silently run the case on fewer threads than it declared.
+
+    Only the concurrently scheduled groups are checked; `NoParallel`
+    ones run one case at a time anyway, as does the `--sequential` mode
+    (which skips this check entirely).
+    """
+    too_wide = [
+        f"{group.path}/{case.name} needs {case.needed_threads}"
+        for group in groups
+        for _, case in group.cases
+        if case.needed_threads > ctx.jobs
+    ]
+    if too_wide:
+        listing = "\n".join(f" - {entry}" for entry in too_wide)
+        exit_with_error(
+            f"`{NEEDED_THREADS}` of {len(too_wide)} case(s) exceeds the"
+            f" `-j {ctx.jobs}` thread budget:\n{listing}\n"
+            f"Raise `-j`, or pass `--sequential` to run one case at a time."
+        )
 
 
 def _prepare_log_file(log_file: Path) -> Path:

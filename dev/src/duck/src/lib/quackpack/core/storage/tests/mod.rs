@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -10,7 +16,9 @@ use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::storage::freeze::{
+    DepIdWithAlias, FreezePackage, RootPackage, VenvFreeze,
+};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
@@ -119,9 +127,10 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
 
     let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
     let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_simple_identity = |name: &str| Identity::new(name.into(), simple_origin);
+    let mock_simple_dep_identity =
+        |name: &str| DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin));
     let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
-    let dep = mock_simple_identity("bar");
+    let dep = mock_simple_dep_identity("bar");
     let package = FreezePackage::new(
         mock_identity(dep.name().as_str()),
         Version::new(1, 0, 0),
@@ -142,7 +151,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         ctx,
     );
 
-    let dep = mock_simple_identity("baz");
+    let dep = mock_simple_dep_identity("baz");
     let package = FreezePackage::new(
         mock_identity(dep.name().as_str()),
         Version::new(1, 0, 0),

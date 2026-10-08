@@ -1,3 +1,37 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+//! Module responsible for finding a correct subfreeze inside a [`SolverFreeze`].
+//! Namely, given a newly deserialized [`SolverFreeze`] this module keeps as much information from it as possible,
+//! but discards things that are no longer correct.
+//!
+//! State of the freeze after diagnosis
+//! -----------------------------------
+//! What do we want:
+//! 1. For any package from the freeze, the features from its freeze are present in the manifest and expansion-closed.
+//! 2. For any package `pkg` from the freeze, if it has a dependency realization `(dep, realization)`, then:
+//!     - `realization` is present in the freeze,
+//!     - `pkg` has a dependency `dep` enabled by its features, such that `realization` realizes that dependency
+//!       and enforced features are present in `realization`'s freeze.
+//! 3. Any package which is not the main package has all its dependencies realized.
+//! 4. Main package's freeze has the right features.
+//!
+//! How it is achieved
+//! ------------------
+//! 1. Right features are substituted into main package's freeze (pt. 4 is satisfied).
+//! 2. All packages without manifest or not satisfying pt. 1 are removed (pt. 1 is satisfied).
+//! 3. All disabled or no longer working realizations are removed (pt. 2 is satisfied).
+//! 4. We find out which packages have all enabled dependencies realized.
+//! 5. We apply DFS, recursively removing from the set above packages with realization outside of that set.
+//! 6. We remove:
+//!     - not-main packages outside the set constructed in steps 4-5;
+//!     - realizations of the main package outside that set.
+//!
+//! The last step does not break property 2, and makes property 3 satisfied.
+
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
@@ -8,9 +42,9 @@ use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, Fetc
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId};
+use crate::quackpack::core::{FeatureName, Manifest, PackageId, Selector};
 use crate::util::error::ErrorsLogger;
-use crate::{QuackResult, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
@@ -49,152 +83,217 @@ impl SolverFreeze {
         Ok(manifests)
     }
 
-    /// Finds the maximal subset of the freeze which is a correct dependency resolution,
-    /// with a relaxation that main package dependencies may not be realised.
-    ///
-    /// This is done by firstly finding which freeze entries are not immediately flawed
-    /// (manifest matches the package and each realization from the freeze really realizes its manifest counterpart).
-    /// Then the information about being flawed is propagated upwards (if child is flawed then so is parent who depends on it).
-    ///
-    /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
-    #[tracing::instrument(skip_all)]
+    /// Main entry point.
+    /// Removes all the unnecessary or false information from the freeze, as described in the module documentation.
+    /// Returns a pair consisting of the modified freeze and whether all enabled deps of main package are satisfied.
     pub async fn find_maximal_correct_dep_solution(
         mut self,
+        main_features: HashSet<FeatureName>,
         manifests: &HashMap<PackageId, Box<Manifest>>,
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<(Self, bool)> {
-        self.retain_not_flawed_pkgs(manifests, fetcher).await?;
-        self.substitute_root_pkg(manifests, fetcher).await
+        self.substitute_root_features(main_features)?;
+        self.remove_immediatelly_flawed_packages(manifests);
+        self.remove_bad_realizations(manifests, fetcher).await?;
+        let mut not_immediatelly_flawed = self.pkgs_with_all_deps_satisfied(manifests)?;
+        self.retain_not_flawed_pkgs(&mut not_immediatelly_flawed)?;
+        let root_satisfied = not_immediatelly_flawed.contains(&self.main_pkg);
+        Ok((self, root_satisfied))
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`]
-    /// Retains freezes of the old root package (it is later substituted anyway)
-    /// and all the packages which have dependencies transitively satisfied.
-    async fn retain_not_flawed_pkgs(
-        &mut self,
-        manifests: &HashMap<PackageId, Box<Manifest>>,
-        fetcher: &Fetcher<'_>,
-    ) -> QuackResult<()> {
-        let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests, fetcher).await?;
-        let reversed_graph = self.reversed_dependency_graph();
-        let mut visited = HashSet::new();
-        for pkg in reversed_graph.keys() {
-            if !still_satisfied_pkgs.contains(pkg) {
-                Self::flawed_pkgs_dfs(
-                    *pkg,
-                    &reversed_graph,
-                    &mut visited,
-                    &mut still_satisfied_pkgs,
-                );
-            }
-        }
-        self.package_freezes.retain(|pkg, _| {
-            let is_root_package = *pkg == self.main_pkg;
-            let is_satisfied = still_satisfied_pkgs.contains(pkg);
-            debug!(?pkg, %is_root_package, %is_satisfied);
-            is_satisfied || is_root_package
-        });
+    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Change main package features to `main_features`.
+    fn substitute_root_features(&mut self, main_features: HashSet<FeatureName>) -> QuackResult<()> {
+        let Some(main_freeze) = self.package_freezes.get_mut(&self.main_pkg) else {
+            qp_bail_internal!("main package was not put into package freezes: {self:#?}")
+        };
+        main_freeze.features = main_features;
         Ok(())
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
-    /// Finds which packages from the freeze are not immediately flawed:
-    ///     * we were able to obtain their manifests and the manifests agrees with the package,
-    ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
-    async fn still_satisfied_pkgs(
-        &self,
+    /// Removes packages for which manifest is not consistent with the freeze.
+    fn remove_immediatelly_flawed_packages(
+        &mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
-        fetcher: &Fetcher<'_>,
-    ) -> QuackResult<HashSet<PackageId>> {
-        let mut still_satisfied_pkgs = HashSet::new();
-        for (pkg, freeze) in self.package_freezes.iter() {
-            let Some(manifest) = Self::get_and_check_manifest(*pkg, manifests, &freeze.features)
-            else {
-                continue;
-            };
-            let mut is_every_dep_satisfied = true;
-            for dep in manifest.dependencies().all_dependencies().iter() {
-                let Some(realization) = freeze.dependencies_realization.get(&dep.effective_name())
-                else {
-                    is_every_dep_satisfied = false;
-                    break;
-                };
-                let Some(realization_freeze) = self.package_freezes.get(realization) else {
-                    is_every_dep_satisfied = false;
-                    break;
-                };
-                is_every_dep_satisfied &= Self::check_if_dep_is_satisfied(
-                    freeze,
-                    *realization,
-                    realization_freeze,
-                    dep,
-                    fetcher,
-                )
-                .await?;
-            }
-            if is_every_dep_satisfied {
-                still_satisfied_pkgs.insert(*pkg);
-            }
-        }
-        Ok(still_satisfied_pkgs)
+    ) {
+        self.package_freezes
+            .retain(|pkg, freeze| Self::has_coherent_manifest(*pkg, manifests, &freeze.features));
     }
 
-    /// Helper for [`Self::still_satisfied_pkgs`].
-    /// Checks if we have a manifest for a package and whether its coherent with the freeze, meaning:
+    /// Helper for [`Self::remove_immediatelly_flawed_packages`].
+    /// Checks if we have a manifest for the package and whether its coherent with the freeze, meaning:
     ///     * name in the manifest agrees with the name in the freeze,
     ///     * all its freeze-present features still appear in the manifest,
     ///     * freeze-present features are expansion-closed,
     ///     * freeze-present version equals manifest version.
-    fn get_and_check_manifest<'a>(
+    fn has_coherent_manifest(
         pkg: PackageId,
-        manifests: &'a HashMap<PackageId, Box<Manifest>>,
+        manifests: &HashMap<PackageId, Box<Manifest>>,
         features: &HashSet<FeatureName>,
-    ) -> Option<&'a Manifest> {
-        let manifest = manifests.get(&pkg)?;
-        if manifest.name() != pkg.name() {
-            return None;
-        }
-        if features
-            .iter()
-            .any(|f| !manifest.features().has_feature(*f))
-        {
-            return None;
-        }
-        if manifest
-            .features()
-            .expand_features(features.iter().copied())
-            .expect("We checked that freeze features occur in manifest")
-            != *features
-        {
-            return None;
-        }
-        if manifest.version() == pkg.version() {
-            Some(manifest)
-        } else {
-            None
-        }
+    ) -> bool {
+        let Some(manifest) = manifests.get(&pkg) else {
+            return false;
+        };
+        manifest.name() == pkg.name()
+            && manifest.version() == pkg.version()
+            && manifest
+                .features()
+                .expand_features(features.iter().copied())
+                .is_ok_and(|expanded| {
+                    // Checks that all of `features` occur in the manifest.
+                    expanded == *features // Checks that `features` are expansion closed.
+                })
     }
 
-    /// Helper for [`Self::still_satisfied_pkgs`].
-    /// Checks if a particular dependency is satisfied.
-    async fn check_if_dep_is_satisfied(
-        freeze: &SolverPackageFreeze,
+    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Removes from the freeze all dependecy realizations that:
+    /// - no longer realize any dependency,
+    /// - the dependency is disabled with freeze-present features,
+    /// - the dependency is not satisfied by the realization in the sense of [`PackageId::still_satisfies_dep`],
+    /// - the dependency forces features not present in the realization's freeze.
+    async fn remove_bad_realizations(
+        &mut self,
+        manifests: &HashMap<PackageId, Box<Manifest>>,
+        fetcher: &Fetcher<'_>,
+    ) -> QuackResult<()> {
+        // Mapping `package` -> `dependencies_realization` keys to keep.
+        // We do it this way instead of using `retain`, because of the borrow checker.
+        let mut good_realizations = HashMap::new();
+        for (pkg, freeze) in self.package_freezes.iter() {
+            let manifest = manifests
+                .get(pkg)
+                .with_context_internal(|| format!("package {pkg:?} without manifest"))?;
+            let mut good_realizations_for_pkg = HashSet::new();
+            for (name, realization) in freeze.dependencies_realization.iter() {
+                let Some(realization_freeze) = self.package_freezes.get(realization) else {
+                    continue;
+                };
+                if Self::still_satisfies_enabled_dep(
+                    &freeze.features,
+                    manifest,
+                    *name,
+                    *realization,
+                    realization_freeze,
+                    fetcher,
+                )
+                .await?
+                {
+                    good_realizations_for_pkg.insert(*name);
+                }
+            }
+            good_realizations.insert(*pkg, good_realizations_for_pkg);
+        }
+        for (pkg, freeze) in self.package_freezes.iter_mut() {
+            let good_realizations_for_pkg = good_realizations
+                .remove(pkg)
+                .expect("we added a map for all packages");
+            freeze
+                .dependencies_realization
+                .retain(|name, _| good_realizations_for_pkg.contains(name));
+        }
+        Ok(())
+    }
+
+    /// Helper for [`Self::remove_bad_realizations`].
+    /// Checks that:
+    /// - the dependency is satisfied by the realization in the sense of [`PackageId::still_satisfies_dep`],
+    /// - all dependency-forced features are present in the realization's freeze.
+    async fn still_satisfies_enabled_dep(
+        pkg_features: &HashSet<FeatureName>,
+        pkg_manifest: &Manifest,
+        dep_name: StrId,
         realization: PackageId,
         realization_freeze: &SolverPackageFreeze,
-        dep: &Dependency,
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
-        if !realization.still_satisfies_dep(dep, fetcher).await? {
+        // Dependency on this name exists and is enabled.
+        let Some(manifest_dependency) = pkg_manifest
+            .dependencies()
+            .select(&Selector::All(vec![
+                Selector::EffectiveName(dep_name),
+                Selector::EnabledBy(pkg_features),
+            ]))
+            .next()
+        else {
+            return Ok(false);
+        };
+        if !realization
+            .still_satisfies_dep(manifest_dependency, fetcher)
+            .await?
+        {
+            debug!("was satisfied before, but now is not");
             return Ok(false);
         }
-        let forced_child_features =
-            dep.enabled_features(Vec::from_iter(freeze.features.iter().copied()));
+        let forced_child_features = manifest_dependency.enabled_features(pkg_features);
         // Check whether features forced by the dependency on the realisation are all present in its freeze.
         // We do not have to expand them, since we have already checked in `get_manifest_and_check_features_exist`,
         // that freeze-present features are closed under expansion.
         Ok(realization_freeze
             .features
             .is_superset(&HashSet::from_iter(forced_child_features)))
+    }
+
+    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Finds which packages have all of their enabled dependencies correctly realized.
+    /// Note:
+    /// -----
+    /// This should be run only after [`Self::remove_bad_realizations`].
+    /// Here we assume that all realizations are correct.
+    fn pkgs_with_all_deps_satisfied(
+        &self,
+        manifests: &HashMap<PackageId, Box<Manifest>>,
+    ) -> QuackResult<HashSet<PackageId>> {
+        let mut result = HashSet::new();
+        for (pkg, freeze) in self.package_freezes.iter() {
+            let manifest = manifests
+                .get(pkg)
+                .with_context_internal(|| format!("package {pkg:?} without manifest"))?;
+            let mut all_satisfied = true;
+            for dep in manifest
+                .dependencies()
+                .select(&Selector::EnabledBy(&freeze.features))
+            {
+                if !freeze
+                    .dependencies_realization
+                    .contains_key(&dep.effective_name())
+                {
+                    all_satisfied = false;
+                    break;
+                }
+            }
+            if all_satisfied {
+                result.insert(*pkg);
+            }
+        }
+        Ok(result)
+    }
+
+    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Removes flawed non-main packages and flawed realizations of the main package.
+    fn retain_not_flawed_pkgs(
+        &mut self,
+        still_satisfied_pkgs: &mut HashSet<PackageId>,
+    ) -> QuackResult<()> {
+        let reversed_graph = self.reversed_dependency_graph();
+        let mut visited = HashSet::new();
+        for pkg in reversed_graph.keys() {
+            if !still_satisfied_pkgs.contains(pkg) {
+                Self::flawed_pkgs_dfs(*pkg, &reversed_graph, &mut visited, still_satisfied_pkgs);
+            }
+        }
+        self.package_freezes.retain(|pkg, freeze| {
+            let is_root_package = *pkg == self.main_pkg;
+            if is_root_package {
+                freeze
+                    .dependencies_realization
+                    .retain(|_, realization| still_satisfied_pkgs.contains(realization));
+            }
+            let is_satisfied = still_satisfied_pkgs.contains(pkg);
+            debug!(?pkg, %is_root_package, %is_satisfied);
+            is_satisfied || is_root_package
+        });
+        Ok(())
     }
 
     /// Helper for [`Self::retain_not_flawed_pkgs`].
@@ -228,61 +327,6 @@ impl SolverFreeze {
             }
         }
         reversed_graph
-    }
-
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
-    /// In the freeze, removes the old root and substitutes its package freeze as the new root's package freeze.
-    /// Keeps only still satisfied realizations from the old root's package freeze.
-    async fn substitute_root_pkg(
-        mut self,
-        manifests: &HashMap<PackageId, Box<Manifest>>,
-        fetcher: &Fetcher<'_>,
-    ) -> QuackResult<(Self, bool)> {
-        let Some(main_pkg_freeze) = self.package_freezes.get(&self.main_pkg) else {
-            qp_bail_internal!("main package was not put into package freezes: {self:#?}")
-        };
-        let Some(main_manifest) = manifests.get(&self.main_pkg) else {
-            qp_bail_internal!("main package manifest not provided: {self:#?} {manifests:#?}")
-        };
-        // Check which main package dependencies are still satisfied.
-        let mut still_satisfied_root_deps = HashSet::new();
-        for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
-            if let Some(dependency) = main_manifest.dependencies().get_by_effective_name(*alias)
-                && let Some(realization_freeze) = self.package_freezes.get(realization)
-                && Self::check_if_dep_is_satisfied(
-                    main_pkg_freeze,
-                    *realization,
-                    realization_freeze,
-                    dependency,
-                    fetcher,
-                )
-                .await?
-            {
-                still_satisfied_root_deps.insert(*alias);
-            }
-        }
-        // Leave only still satisfied dependencies.
-        let Some(main_pkg_freeze) = self.package_freezes.get_mut(&self.main_pkg) else {
-            qp_bail_internal!("main package manifest not provided: {self:#?}")
-        };
-        main_pkg_freeze
-            .dependencies_realization
-            .retain(|alias, _| still_satisfied_root_deps.contains(alias));
-        let all_main_pkg_deps_satisfied = main_manifest
-            .dependencies()
-            .all_dependencies()
-            .iter()
-            .all(|dep| {
-                main_pkg_freeze
-                    .dependencies_realization
-                    .contains_key(&dep.effective_name())
-            });
-        // Change the previous main package to the new root package.
-        let Some(main_pkg_freeze) = self.package_freezes.remove(&self.main_pkg) else {
-            qp_bail_internal!("main package manifest not provided: {self:#?}")
-        };
-        self.package_freezes.insert(self.main_pkg, main_pkg_freeze);
-        Ok((self, all_main_pkg_deps_satisfied))
     }
 }
 
@@ -342,16 +386,16 @@ features:
         );
         let ctx = DuckContext::default();
         let fetcher = Fetcher::new(&ctx).unwrap();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -365,11 +409,11 @@ features:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(
-            prev_freeze
-                .clone()
-                .find_maximal_correct_dep_solution(&manifests, &fetcher),
-        )
+        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+            ["foo".into()].into(),
+            &manifests,
+            &fetcher,
+        ))
         .unwrap();
         assert_eq!(new_freeze, prev_freeze);
     }
@@ -402,16 +446,16 @@ metadata:
         );
         let ctx = DuckContext::default();
         let fetcher = Fetcher::new(&ctx).unwrap();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -425,11 +469,11 @@ metadata:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(
-            prev_freeze
-                .clone()
-                .find_maximal_correct_dep_solution(&manifests, &fetcher),
-        )
+        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+            ["foo".into()].into(),
+            &manifests,
+            &fetcher,
+        ))
         .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 1);
@@ -470,9 +514,9 @@ metadata:
         );
         let ctx = DuckContext::default();
         let fetcher = Fetcher::new(&ctx).unwrap();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
@@ -481,9 +525,9 @@ metadata:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
-            (pkg_c, Box::new(manifest_c.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
+            (pkg_c, manifest_c.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -502,8 +546,12 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) =
-            block_on(prev_freeze.find_maximal_correct_dep_solution(&manifests, &fetcher)).unwrap();
+        let (new_freeze, _) = block_on(prev_freeze.find_maximal_correct_dep_solution(
+            [].into(),
+            &manifests,
+            &fetcher,
+        ))
+        .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -555,10 +603,10 @@ metadata:
         );
         let ctx = DuckContext::default();
         let fetcher = Fetcher::new(&ctx).unwrap();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
-        let manifest_d = parse_manifest(&path_d, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0;
+        let manifest_d = parse_manifest(&path_d, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
@@ -569,10 +617,10 @@ metadata:
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let pkg_d = PackageId::new(identity_d, Version::new(4, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
-            (pkg_c, Box::new(manifest_c.into_manifest())),
-            (pkg_d, Box::new(manifest_d.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
+            (pkg_c, manifest_c.into_manifest()),
+            (pkg_d, manifest_d.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -596,8 +644,12 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) =
-            block_on(prev_freeze.find_maximal_correct_dep_solution(&manifests, &fetcher)).unwrap();
+        let (new_freeze, _) = block_on(prev_freeze.find_maximal_correct_dep_solution(
+            [].into(),
+            &manifests,
+            &fetcher,
+        ))
+        .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&pkg_d).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -627,21 +679,18 @@ features:
         );
         let ctx = DuckContext::default();
         let fetcher = Fetcher::new(&ctx).unwrap();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
         ]);
-        let prev_a_freeze = SolverPackageFreeze {
-            dependencies_realization: [].into(),
-            features: HashSet::from([]),
-        };
+        let prev_a_freeze = SolverPackageFreeze::default();
         let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::from([FeatureName::new("expandable")]),
@@ -653,16 +702,106 @@ features:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(
-            prev_freeze
-                .clone()
-                .find_maximal_correct_dep_solution(&manifests, &fetcher),
-        )
+        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+            [].into(),
+            &manifests,
+            &fetcher,
+        ))
         .unwrap();
         assert_eq!(
             new_freeze,
             SolverFreeze {
                 package_freezes: [(pkg_a, prev_a_freeze)].into(),
+                main_pkg: pkg_a,
+            }
+        )
+    }
+
+    #[test]
+    fn disabled_dep() {
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '2'
+
+dependencies:
+  c:
+    version: '3'
+    conditions:
+      package-features: [foo]
+
+features:
+  foo: []
+"#,
+        );
+        let (_dir_c, path_c) = prepare_manifest(
+            r#"
+metadata:
+  name: c
+  version: '3'
+"#,
+        );
+        let ctx = DuckContext::default();
+        let fetcher = Fetcher::new(&ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0;
+        let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let identity_c = FullIdentity::new("c".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
+        let manifests = HashMap::from([
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
+            (pkg_c, manifest_c.into_manifest()),
+        ]);
+        let prev_a_freeze = SolverPackageFreeze {
+            dependencies_realization: [("b".into(), pkg_b)].into(),
+            features: [].into(),
+        };
+        let prev_b_freeze = SolverPackageFreeze {
+            dependencies_realization: [("c".into(), pkg_c)].into(),
+            features: [].into(),
+        };
+        let prev_c_freeze = SolverPackageFreeze::default();
+        let prev_freeze = SolverFreeze {
+            package_freezes: HashMap::from([
+                (pkg_a, prev_a_freeze.clone()),
+                (pkg_b, prev_b_freeze),
+                (pkg_c, prev_c_freeze),
+            ]),
+            main_pkg: pkg_a,
+        };
+        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+            [].into(),
+            &manifests,
+            &fetcher,
+        ))
+        .unwrap();
+        assert_eq!(
+            new_freeze,
+            SolverFreeze {
+                package_freezes: [
+                    (pkg_a, prev_a_freeze),
+                    (pkg_b, SolverPackageFreeze::default()),
+                    (pkg_c, SolverPackageFreeze::default())
+                ]
+                .into(),
                 main_pkg: pkg_a,
             }
         )

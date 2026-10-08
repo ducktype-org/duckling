@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "queries.hpp"
 
 #include "abstract_type_impl.hpp"
@@ -8,7 +14,6 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
-#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -18,81 +23,10 @@
 
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, query::QResult<TypeInterface>) {
-		static InterfaceElement::SpecialKind getMethodSpecialKind(Context& ctx, helios::SymID sym) {
-			auto name = helios::name(sym);
-			if (name == base::StrID("toString")) {
-				const auto method_type
-					= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
-				if (method_type.getKind() == tsh::Kind::Function) {
-					const auto fn_type = method_type.as<tsh::FunctionAbstractType>();
-					// parameterTypes.size() == 1 means method has not params except self.
-					if (fn_type.getParameterTypes().size() == 1
-					    && fn_type.getResultType() == SymbolType<>::withDefaults(getStringType(ctx)))
-						return InterfaceElement::SpecialKind::ToString;
-				}
-			}
-			return InterfaceElement::SpecialKind::None;
-		}
-
 		static auto provide(Context& ctx, const QKey key) -> PResult {
-			const compiler::helios::SymID symbol = key.value->getSymbol();
-
-			const auto& class_data
-				= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow();
-
-			std::vector<InterfaceElement> elements;
-			elements.reserve(class_data.members.size() + class_data.methods.size());
-
-			u32 declaration_order = 0;
-			for (const compiler::helios::SymID field_sym: class_data.members) {
-				elements.push_back(InterfaceElement(
-					field_sym,
-					key.value->toAbstractType(),
-					declaration_order,
-					InterfaceElement::InterfaceElementKind::Field,
-					{}
-				));
-				declaration_order++;
-			}
-
-			for (const compiler::helios::SymID method_sym: class_data.methods) {
-				elements.push_back(InterfaceElement(
-					method_sym,
-					key.value->toAbstractType(),
-					declaration_order,
-					InterfaceElement::InterfaceElementKind::Method,
-					{},
-					getMethodSpecialKind(ctx, method_sym)
-				));
-				declaration_order++;
-			}
-
-			if_opt_some(class_data.destructor, destructor) {
-				elements.push_back(InterfaceElement(
-					destructor,
-					key.value->toAbstractType(),
-					declaration_order,
-					InterfaceElement::InterfaceElementKind::Method,
-					{}
-				));
-				declaration_order++;
-			}
-
-			for (const compiler::helios::SymID ctor_sym: class_data.constructors) {
-				// For now we just handle copy constructors.
-				if (!compiler::helios::defgen::isUserDefinedCopyConstructor(ctx, ctor_sym))
-					continue;
-				elements.push_back(InterfaceElement(
-					ctor_sym,
-					key.value->toAbstractType(),
-					declaration_order,
-					InterfaceElement::InterfaceElementKind::Method,
-					{}
-				));
-				declaration_order++;
-			}
-
-			return TypeInterface(elements);
+			return ctx.query<compiler::helios::QueryClassSymbolData>(key.value->getSymbol())
+			    ->valueOrThrow()
+			    .declared_interface;
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -115,7 +49,7 @@ namespace compiler::tsh {
 					ctx.query<helios::QueryTypeOfSymbol>(component)->valueOrThrow().getType(),
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Field,
-					ClassMemberVisibility::Public
+					MemberVisibility::Public
 				);
 				declaration_order++;
 			}
@@ -141,7 +75,7 @@ namespace compiler::tsh {
 				key,
 				0,
 				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
+				MemberVisibility::Public
 			);
 
 			return TypeInterface(elements);
@@ -167,7 +101,7 @@ namespace compiler::tsh {
 					key,
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Field,
-					ClassMemberVisibility::Private
+					MemberVisibility::Private
 				);
 				declaration_order++;
 			}
@@ -178,7 +112,7 @@ namespace compiler::tsh {
 				key,
 				declaration_order,
 				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
+				MemberVisibility::Public
 			);
 
 			return TypeInterface(elements);

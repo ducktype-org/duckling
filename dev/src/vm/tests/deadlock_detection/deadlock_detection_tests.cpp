@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <vm_tester_utils.hpp>
 
@@ -28,7 +33,7 @@ private:
 	void deadlockTest() {
 		// Two threads wait on a barrier and when released they deadlock. Main waits for them by joining.
 		for (int i = 0; i < 5; ++i) {
-			assertExecutionPanickedWith(
+			assertExecutionPanickedWithAndKill(
 				runWithDetection("deterministic_deadlock.dbc"),
 				vm::exceptions::VMDeadlockException::ERR_MSG
 			);
@@ -37,14 +42,14 @@ private:
 
 	void deadlockWakingFromCv() {
 		// One thread sleeps on CV while main and other thread deadlock
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runWithDetection("cv_deadlock.dbc"), vm::exceptions::VMDeadlockException::ERR_MSG
 		);
 	}
 
 	void deadlockWakingFromCvMain() {
 		// Two threads deadlock and wake main that will finish execution
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runWithDetection("cv_main_deadlock.dbc"), vm::exceptions::VMDeadlockException::ERR_MSG
 		);
 	}

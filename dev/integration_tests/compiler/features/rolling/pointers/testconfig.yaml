@@ -1,0 +1,87 @@
+# Pointer type tests (ptr, manyptr, cptr)
+
+Tests:
+  manyptr:
+    Cases:
+      all:
+        Output:
+          String: "1\n3\n7\n42\n43\n30\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3
+        Output:
+          String: "1\n3\n7\n42\n43\n30\n"
+        ExitCode: 0
+
+  nested_pointers:
+    Cases:
+      all:
+        Output:
+          String: "100\n999\n10\n3\n"
+        ExitCode: 0
+
+  ptr_deref_ref:
+    Cases:
+      all:
+        Output:
+          String: "30\n"
+        ExitCode: 0
+
+  ref_to_index:
+    Cases:
+      all:
+        Output:
+          String: "10\n99\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3
+        Output:
+          String: "10\n99\n"
+        ExitCode: 0
+
+  # The DVM panic stderr carries a volatile `BlockID=N`, so these cases match
+  # only the stable message via `stderr_regex` (see compilation/testconfig.yaml).
+  dvm_use_after_free_local:
+    Cases:
+      dvm:
+        stderr_regex: "VMThread has panicked: Data was freed"
+  dvm_use_after_free_box:
+    Cases:
+      dvm:
+        stderr_regex: "VMThread has panicked: Data was freed"
+  dvm_uninitialized_access:
+    Cases:
+      dvm:
+        stderr_regex: "VMThread has panicked: Accessing null pointer"
+  slices:
+    Cases:
+      all:
+        Output:
+          String: "Hello from VM!\nl\n15\nHello from Duckling!\n"
+        ExitCode: 0
+  # The llvm cases abort (SIGABRT). DIT disables core dumps, so the abort
+  # exits promptly; these still run exclusively out of caution.
+  slices_out_of_bounds:
+    NoParallel: true
+    Cases:
+      llvm:
+        ExitCode: 134
+      dvm:
+        stderr_regex: "VMThread has panicked: Program panicked"
+        Output:
+          String: "Program panicked!\n"
+  slices_negative_index:
+    NoParallel: true
+    Cases:
+      llvm:
+        ExitCode: 134
+      dvm:
+        ExitCode: 1
+
+  # Classes which refer to their own type through a pointer or an optional reference.
+  self_referential_class:
+    Cases:
+      all:
+        Output:
+          String: "7\n5\n321\n"
+        ExitCode: 0

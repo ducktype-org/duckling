@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "task.hpp"
 
 #include <driver/diagnostics/log_helpers.hpp>
@@ -10,10 +16,13 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <json/diagnostics.hpp>
 #include <nlohmann/json.hpp>
+
+#include <utility>
 
 namespace compiler::driver {
 
@@ -32,6 +41,67 @@ namespace compiler::driver {
 					std::string{},
 					true
 				);
+			}
+
+			/**
+			 * @brief Parses the optional "dvm_linking_options" field of a DVM task.
+			 * @param had_error set to true when the field is present but malformed.
+			 */
+			DVMLinkingOptions parseDVMLinkingOptions(
+				const nlohmann::json& json, const DiagnosticReporter& report, bool& had_error
+			) {
+				DVMLinkingOptions dvm_linking_options{};
+
+				if (!json.contains("dvm_linking_options")) return dvm_linking_options;
+
+				auto options_obj = js::getObjectIfPresent(
+					json, "dvm_linking_options", "dvm_linking_options must be an object", report
+				);
+				if (!options_obj) {
+					had_error = true;
+					return dvm_linking_options;
+				}
+
+				js::checkForUnknownFields(
+					*options_obj,
+					{},
+					{ "shared_libraries", "link_libraries" },
+					"dvm_linking_options",
+					report
+				);
+
+				auto parse_string_array = [&]<typename T>(
+											  std::string_view key, std::vector<T>& target
+										  ) {
+					if (!options_obj->contains(key)) return;
+
+					auto array = js::getArray(
+						*options_obj,
+						key,
+						base::strConcat("dvm_linking_options.", key, " must be an array of strings"),
+						report
+					);
+					if (!array) {
+						had_error = true;
+						return;
+					}
+
+					target.reserve(array->size());
+					for (const auto& elem: *array) {
+						auto value = js::getStringFromArray(
+							elem, base::strConcat("dvm_linking_options.", key), report
+						);
+						if (value)
+							target.emplace_back(value->str());
+						else
+							had_error = true;
+					}
+				};
+
+				parse_string_array("shared_libraries", dvm_linking_options.shared_libraries);
+				parse_string_array("link_libraries", dvm_linking_options.link_libraries);
+
+				return dvm_linking_options;
 			}
 		}
 
@@ -55,7 +125,7 @@ namespace compiler::driver {
 		js::checkForUnknownFields(
 			json,
 			{ "package", "strategy" },
-			{ "name", "output_file", "linking_options", "archive_options" },
+			{ "name", "output_file", "linking_options", "archive_options", "dvm_linking_options" },
 			"task",
 			report
 		);
@@ -77,7 +147,8 @@ namespace compiler::driver {
 			if (!output) had_error = true;
 
 			build_target = BuildTargetDVMLibrary{
-				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
+				.output_file_name    = output.copyValueOr(base::StrID("package_dvm.dbc")),
+				.dvm_linking_options = task::parseDVMLinkingOptions(json, report, had_error),
 			};
 		} else if (strategy && strategy->view() == "dvm_exe") {
 			auto output = js::getString(
@@ -86,7 +157,8 @@ namespace compiler::driver {
 			if (!output) had_error = true;
 
 			build_target = BuildTargetDVMExecutable{
-				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
+				.output_file_name    = output.copyValueOr(base::StrID("package_dvm.dbc")),
+				.dvm_linking_options = task::parseDVMLinkingOptions(json, report, had_error),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output
@@ -101,12 +173,12 @@ namespace compiler::driver {
 			};
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
-				if (linking_json.is_string()) {
-					auto options_value = js::getStringValue(
-						linking_json, "linking_options", "linking_options must be a string", report
+				if (linking_json.is_array()) {
+					auto options_value = js::extractListOfStringsFromJsonArray(
+						linking_json, "linking_options", report
 					);
 					if (options_value)
-						linking_options.additional_link_options = options_value->str();
+						linking_options.additional_link_options = std::move(*options_value);
 					else
 						had_error = true;
 				} else {
@@ -141,16 +213,18 @@ namespace compiler::driver {
 						}
 
 						if (linking_obj->contains("additional_link_options")) {
-							auto additional_options = js::getStringIfPresent(
+							auto additional_linking_options = js::getArrayOfStrings(
 								*linking_obj,
 								"additional_link_options",
-								"linking_options.additional_link_options must be a string",
+								"additional_link_options must be an array of strings",
 								report
 							);
-							if (additional_options)
-								linking_options.additional_link_options = additional_options->str();
-							else
+							if (additional_linking_options) {
+								linking_options.additional_link_options
+									= std::move(*additional_linking_options);
+							} else {
 								had_error = true;
+							}
 						}
 
 						if (linking_obj->contains("link_c_standard_library")) {
@@ -273,9 +347,14 @@ namespace compiler::driver {
 				};
 			}
 			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
+				auto dvm_linking_options = dvm_exec_target.dvm_linking_options;
+				base::appendToVector(
+					dvm_linking_options.link_libraries,
+					getStdLibDVMLinkingDependencies(stdlib_options)
+				);
 				return BuildTargetDVMExecutable{
-					.output_file_name  = dvm_exec_target.output_file_name,
-					.link_std_packages = stdlib_options.stdActive(),
+					.output_file_name    = dvm_exec_target.output_file_name,
+					.dvm_linking_options = std::move(dvm_linking_options),
 				};
 			}
 			variant_default { return raw_target; }
@@ -316,16 +395,23 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options
 	) {
 		return {
-			.linker_path = linking_options.native_linker_path,
-			.additional_link_options
-			= linking_options.native_additional_link_options.copyValueOr(""),
+			.linker_path             = linking_options.native_linker_path,
+			.additional_link_options = linking_options.native_additional_link_options,
 			.link_c_standard_library = linking_options.native_link_c_standard_lib,
 			.stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
 		};
 	}
 
-	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options
+	DVMLinkingOptions constructDVMLinkingOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options,
+		bool                                 is_static_lib
 	) {
-		return { .shared_libraries = linking_options.dvm_shared_libraries };
+		auto link_libraries = linking_options.dvm_link_libraries;
+		if (not is_static_lib)
+			base::appendToVector(link_libraries, getStdLibDVMLinkingDependencies(stdlib_options));
+
+		return { .shared_libraries = linking_options.dvm_shared_libraries,
+			     .link_libraries   = std::move(link_libraries) };
 	}
 }  // namespace compiler::driver

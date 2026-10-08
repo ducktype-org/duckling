@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from dataclasses import dataclass
 from typing import NoReturn
 import click
@@ -9,7 +15,18 @@ import shutil
 import signal
 import subprocess as sp
 import sys
+import enum
 
+@enum.unique
+class JIT_options(enum.Enum):
+    NO = enum.auto()
+    LLVM_ONLY = enum.auto()
+    YES = enum.auto()
+    
+    def is_jit_enabled(self) -> bool:
+        return self != JIT_options.NO
+    def is_cnp_enabled(self) -> bool:
+        return self == JIT_options.YES
 
 # Regex patterns for compiler version detection
 CLANG_VERSION_PATTERN = re.compile(r"(?:^|/)clang\+\+-(\d+)$")
@@ -278,11 +295,16 @@ def default_compiler_from_ctx(default_name: str):
     return OptionDefaultFromCtx
 
 
+def _jit_enabled_from_ctx(ctx: click.Context) -> bool:
+    jit_option = ctx.params.get("jit")
+    return jit_option.is_jit_enabled() if jit_option else False
+
+
 def infer_cc_compiler(ctx: click.Context):
     """Infer the default C compiler from the C++ compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("enable_jit")
+    enable_jit = _jit_enabled_from_ctx(ctx)
 
     if not cc_compiler and cxx_compiler:
         if "clang++" in cxx_compiler:
@@ -307,7 +329,7 @@ def infer_cxx_compiler(ctx: click.Context):
     """Infer the default C++ compiler from the C compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("enable_jit")
+    enable_jit = _jit_enabled_from_ctx(ctx)
 
     if not cxx_compiler and cc_compiler:
         if "clang" in cc_compiler:
@@ -399,11 +421,9 @@ def should_add_linker_flags(linker: str):
 
 def detect_available_linker():
     """Detect and return the best available linker (mold > lld > default)"""
-    # macOS links Mach-O objects, which mold and lld do not support; only the system linker
-    # (ld64, selected by "default") works there.
-    if platform.system() == "Darwin":
-        return "default"
-    if shutil.which("mold") is not None:
+    # mold has no Mach-O backend, so it is never a candidate on macOS. lld does (ld64.lld) and is
+    # both faster and quieter than Apple's ld.
+    if platform.system() != "Darwin" and shutil.which("mold") is not None:
         return "mold"
     # Check for LLD (can be named 'lld' or 'ld.lld' depending on the system)
     if shutil.which("lld") is not None or shutil.which("ld.lld") is not None:

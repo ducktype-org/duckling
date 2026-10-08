@@ -1,4 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
+
+#include <os_utils/system_libraries.hpp>
 
 #include <vm/api/vm.hpp>
 
@@ -16,11 +24,7 @@ namespace {
 	std::string ffiObjectHeader() { return "ffi object \"" + SO_PATH + "\";\n"; }
 
 	// Bare soname of the system math library, resolved via the platform's dynamic loader search.
-#ifdef __APPLE__
-	const std::string SYSTEM_MATH_LIB = "libm.dylib";
-#else
-	const std::string SYSTEM_MATH_LIB = "libm.so.6";
-#endif
+	const std::string SYSTEM_MATH_LIB = os_utils::systemSharedLibM();
 }
 
 class VmFfiTest: public VmTestSuite {
@@ -119,7 +123,7 @@ private:
 		auto file = writeTempDbc(name, bytecode);
 		auto load = vm::api::loadFiles(initProcess(), { file });
 		ASSERT_NO_VALUE(load);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(load.error()));
+		ASSERT_MATCHES(load.error(), vm::api::LoadProgramError);
 		auto why = std::get<vm::api::LoadProgramError>(load.error()).why;
 		std::cerr << why << '\n';
 		for (auto keyword: keywords)
@@ -300,7 +304,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessed null CPointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// The same for the raw byte copy.
@@ -320,7 +324,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessed null CPointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// `cmpNull_pcptr` sets the flag on a null cpointer (default-initialized here) and clears it
@@ -1386,7 +1390,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 
 	void duplicateFfiFunctionFails() {
@@ -1399,7 +1403,7 @@ private:
 
 		auto second = vm::api::loadFiles(pid, { file });
 		ASSERT_NO_VALUE(second);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(second.error()));
+		ASSERT_MATCHES(second.error(), vm::api::LoadProgramError);
 		auto why = std::get<vm::api::LoadProgramError>(second.error()).why;
 		std::cerr << why << '\n';
 		assertTrue(

@@ -14,7 +14,7 @@ fun main() -> i64 = {
     # A `manyptr T` is lowered to a pointer to a dynamic table of `T`, so narrowing it to a `ptr T`
     # must take the address of the table's first element (`dynTableLea` on index 0), not reuse the
     # table pointer as-is.
-    var table = dvm_alloc_arr:{i32}(3i64);
+    var table = dvm_alloc_arr[i32](3i64);
     table[0] = 11i32;
     table[1] = 22i32;
     table[2] = 33i32;
@@ -31,12 +31,12 @@ fun main() -> i64 = {
     # A pointer is a `(block, offset)` pair here, so it does not fit into one integer and is
     # taken apart instead. `dvm_ptr_parts` fails on a null pointer, which points into no block,
     # hence the null check next to it.
-    let parts = dvm_ptr_parts:{i32}(first);
+    let parts = dvm_ptr_parts[i32](first);
     builtin_output_i64(parts[1i64] as i64);                                # 0
-    builtin_output_i64(dvm_is_nullptr:{i32}(first) as i64);                # 0
-    builtin_output_i64(dvm_is_nullptr:{i32}(dvm_nullptr:{i32}()) as i64);  # 1
+    builtin_output_i64(dvm_is_nullptr[i32](first) as i64);                # 0
+    builtin_output_i64(dvm_is_nullptr[i32](dvm_nullptr[i32]()) as i64);  # 1
 
-    dvm_free_arr:{i32}(table);
+    dvm_free_arr[i32](table);
 
     var mp1 : manyptr i32;
     mp1[0] = 30;

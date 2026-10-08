@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from ..impl.integration.tester import (
     DEFAULT_LOG_FILE_PATH,
     tester_impl,
@@ -53,7 +59,18 @@ from click import command, option
     "--jobs",
     type=int,
     default=get_cpu_count(),
-    help="Maximal number of concurrently running test cases. 1 means sequential execution.",
+    help="Budget of machine threads the run may use at once. A case occupies its "
+    "`NeededThreads` (1 by default) for as long as it runs, so this is an upper "
+    "bound on the threads in flight, not on the number of cases. A case needing "
+    "more than the budget is rejected; use --sequential to run such tests.",
+)
+@option(
+    "-s",
+    "--sequential",
+    is_flag=True,
+    default=False,
+    help="Run one case at a time, ignoring the -j thread budget and every "
+    "`NeededThreads`. Output is printed live instead of in per-test sections.",
 )
 @option(
     "-t",
@@ -68,8 +85,8 @@ from click import command, option
     "--deterministic-output",
     is_flag=True,
     default=False,
-    help="With -j > 1, print test outputs in the definition (tree) order instead of "
-    "the completion order.",
+    help="Print test outputs in the definition (tree) order instead of the "
+    "completion order. Has no effect with --sequential.",
 )
 @option(
     "--core-dumps",

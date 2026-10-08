@@ -1,12 +1,20 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "access.hpp"
 #include "file_id.hpp"
 #include "module_id.hpp"
 
+#include <frontend/packages/access.hpp>
 #include <frontend/pst_parser/pst.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 
@@ -27,6 +35,15 @@ namespace compiler::frontend {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false }))
+
+	/**
+	 * @brief Query parent package of a module.
+	 * @return AccesLocked of a parent package.
+	 * On unlock PackageAccessLocked registers QueryPackageSideInput dependency on the owning package.
+	 */
+	DECLARE_QUERY(
+		QueryPackageOfModule, ModuleID, packages::PackageAccessLocked, ({ .uses_qresult = false })
+	);
 
 	/**
 	 * @brief Query whether the module was produced by the REPL pipeline.

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "dvm_operation.hpp"
 #include "instruction_lowerer.hpp"
 
@@ -35,6 +41,7 @@ namespace {
                     "Comparison between different numeric types is not supported"
                 );
                 auto rhs_num = rhs_num_opt.value();
+                // clang-format off
                 switch (operation) {
                 case OpKind::cmpEq:
                 case OpKind::fcmpEq:
@@ -59,8 +66,9 @@ namespace {
                 case OpKind::ucmpLe:
                     return lhs_num <= rhs_num;
                 default:
-                    CORE_PANIC("Unhandled comparison operation");
+                    CORE_PANIC("Unhandled comparison operation in compTimeEvaluateComparison");
                 }
+                // clang-format on
             },
             lhs_numeric.getStorage()
         );
@@ -89,7 +97,7 @@ namespace {
 		case OpKind::fcmpGe: 	return OpKind::fcmpLe;
 		case OpKind::fcmpLt: 	return OpKind::fcmpGt;
 		case OpKind::fcmpLe: 	return OpKind::fcmpGe;
-		default: 				CORE_PANIC("Unhandled comparison operation");
+		default: 				CORE_PANIC("Unhandled comparison operation in getComparisonOppositeDirection");
 		}
 		// clang-format on
 	}

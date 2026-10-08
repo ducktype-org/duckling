@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "process_state_manager.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -10,12 +16,12 @@
 #endif
 
 namespace vm {
-	namespace ts = thread_sm::thread_state;
-	namespace te = thread_sm::thread_event;
-	namespace ps = process_sm::process_state;
+	namespace ts = thread_state;
+	namespace te = thread_event;
+	namespace ps = process_state;
 
 	namespace {
-		using ThreadEntry = process_sm::ProcessStateAggregation::ThreadEntry;
+		using ThreadEntry = ProcessStateAggregation::ThreadEntry;
 
 		[[noreturn]] void fatalStateError(const std::string& message) {
 #if defined(BUILD_TYPE_DEV)
@@ -28,7 +34,7 @@ namespace vm {
 		}
 
 		const ThreadEntry& threadEntryOrAbort(
-			const process_sm::ProcessStateAggregation& agg_state, api::ThreadID tid
+			const ProcessStateAggregation& agg_state, api::ThreadID tid
 		) {
 			const base::Optional<CRef<ThreadEntry>> entry = agg_state.threads.atMaybe(tid);
 			if (!entry.has_value())
@@ -69,10 +75,23 @@ namespace vm {
 	void ProcessStateManager::finalizeStateChangeLocked(
 		std::unique_lock<std::mutex>& table_lock, const ProcessState& prev, const ProcessState& next
 	) {
+		const bool emits = prev.index() != next.index() && on_status_changed;
+
+		// Ensure a someone waiting for the status change, sees it after the `on_status_changed`
+		// callback runs. Releasing the `table_lock` may cause a thread waiting in
+		// `waitFor{Process/Thread}State` to wake up and return from the API call, but the callback
+		// wasn't invoked yet.
+		emitting_status_change = emits;
+
 		table_lock.unlock();
-		// Notify waiters when the state changed.
+
+		if (emits) {
+			on_status_changed(next);
+			std::lock_guard emitted_lock(table_mutex);
+			emitting_status_change = false;
+		}
+
 		state_changed.notify_all();
-		if (prev.index() != next.index() && on_status_changed) on_status_changed(next);
 	}
 
 	void ProcessStateManager::registerThread(api::ThreadID tid) {
@@ -99,7 +118,7 @@ namespace vm {
 			return std::unexpected(base::strConcat("Unknown ThreadID: ", tid.asInt()));
 
 		const ThreadState&                state     = entry.value()->state;
-		const base::Optional<ThreadState> new_state = thread_sm::applyThreadEvent(state, event);
+		const base::Optional<ThreadState> new_state = thread_event::applyThreadEvent(state, event);
 		if (!new_state.has_value())
 			return std::unexpected(base::strConcat(
 				"No transition for thread event '",

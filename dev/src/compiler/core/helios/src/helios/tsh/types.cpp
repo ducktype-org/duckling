@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file types.cpp
  * @brief Implementation of the simpler kinds of types.
@@ -169,12 +175,6 @@ namespace compiler::tsh {
 		query::Context& ctx
 	) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
-	}
-
-	SymbolType<> ClassAbstractType::getMemberType(
-		const compiler::helios::SymID sym, query::Context& ctx
-	) const {
-		return toCPimpl(pimpl)->getMemberType(sym, ctx);
 	}
 
 	template<std::derived_from<AbstractType> TYPE_AbstractType>

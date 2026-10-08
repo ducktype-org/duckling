@@ -1,0 +1,52 @@
+class T { fld: i32 = 111; }
+class U { fld: i32 = 222; }
+class Z { fld: i32 = 333; }
+
+fun simple(a: type) = ref a;
+fun getType(a: type) = a;
+
+fun conditional(a: type, b: type) -> type = {
+    if (a == b) {
+        return ref U; 
+    } else {
+        return ref Z; 
+    }
+}
+
+fun tuple(a: type, b: type) -> type = {
+    if (a == b) {
+        return (a); 
+    } else {
+        return (a, b); 
+    }
+}
+
+fun main() -> i64 = {
+    var t: T = T(1);
+    var u: U = U(2);
+    var z: Z = Z(3);
+    
+    var a: simple(T) = &t;
+    var b: conditional(T, T) = &u;
+    var c: conditional(T, Z) = &z;
+    builtin_output_i64(a.fld); # 1
+    builtin_output_i64(b.fld); # 2
+    builtin_output_i64(c.fld); # 3
+
+    var d: tuple(T, Z) = (t, z);
+    builtin_output_i64(d._1.fld); # 1
+    builtin_output_i64(d._2.fld); # 3
+
+    var e: tuple(T, T) = T(4);
+    builtin_output_i64(e.fld); # 4
+
+    var f: getType(T)[2];
+    builtin_output_i64(f[0].fld); # 111
+    builtin_output_i64(f[1].fld); # 111
+    
+    var g: List[getType(T)];
+    g.push(t);
+    builtin_output_i64(g.at(0).fld); # 1
+
+    return 0;
+}

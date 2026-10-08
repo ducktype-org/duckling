@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "stmt_lowering.hpp"
 
 #include "expr_lowering.hpp"
@@ -43,7 +49,7 @@ namespace compiler::mir {
 		}
 
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
-			auto return_block = function.newBlock();
+			auto return_block = function.newBlock("return");
 			auto return_scope = function.newScope(parent_scope);
 
 			auto retrieve_value = return_block->addHole();
@@ -88,7 +94,7 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
-			auto return_block = function.newBlock();
+			auto return_block = function.newBlock("return.void");
 			auto return_scope = function.newScope(parent_scope);
 			return_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, return_scope, {}, { stmt.getPosition() } }
@@ -113,17 +119,17 @@ namespace compiler::mir {
 			auto then_scope = function.newScope(parent_scope);
 			auto else_scope = function.newScope(parent_scope);
 
-			auto else_block = function.newBlock();
+			auto else_block = function.newBlock("if.else");
 			else_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
 			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
 
-			auto then_block = function.newBlock();
+			auto then_block = function.newBlock("if.then");
 			then_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
 			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
 
-			auto condition_block = function.newBlock();
+			auto condition_block = function.newBlock("if.cond");
 
 			auto get_condition_return = condition_block->addHole();
 
@@ -173,7 +179,7 @@ namespace compiler::mir {
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
 			auto condition_scope = function.newScope(parent_scope);
 
-			auto condition_continuation_block = function.newBlock();
+			auto condition_continuation_block = function.newBlock("while.cond");
 
 			auto get_condition_return = condition_continuation_block->addHole();
 
@@ -183,7 +189,7 @@ namespace compiler::mir {
 
 			auto loop_scope = function.newScope(parent_scope);
 
-			auto loop_continuation_block = function.newBlock();
+			auto loop_continuation_block = function.newBlock("while.body.end");
 
 			loop_continuation_block->setTerminator(
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
@@ -192,7 +198,7 @@ namespace compiler::mir {
 			auto loop_body
 				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
 
-			auto entry_block = function.newBlock();
+			auto entry_block = function.newBlock("while.entry");
 
 			entry_block->setTerminator(
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }

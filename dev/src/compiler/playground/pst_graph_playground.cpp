@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/pst_parser/pst.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -8,6 +14,7 @@
 #include <graphviz/gvc.h>
 
 #include <iostream>
+#include <sstream>
 
 // Linting is turned off because the graph api uses c-style pointers for text.
 // NOLINTBEGIN(-avoid-c-arrays)

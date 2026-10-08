@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <base/collections/optional.hpp>
@@ -103,12 +109,12 @@ private:
 	) {
 		match_optional(func_name) {
 			opt_some(func_name) {
-				ASSERT_TRUE(std::holds_alternative<vm::FunctionRunArguments>(args));
+				ASSERT_MATCHES(args, vm::FunctionRunArguments);
 				const auto& function_args = std::get<vm::FunctionRunArguments>(args);
 				ASSERT_HAS_VALUE(vm::api::runFunction(pid, func_name, function_args));
 			}
 			opt_none {
-				ASSERT_TRUE(std::holds_alternative<std::vector<std::string>>(args));
+				ASSERT_MATCHES(args, std::vector<std::string>);
 				auto program_args = std::get<std::vector<std::string>>(args);
 				ASSERT_HAS_VALUE(vm::api::run(pid, program_args));
 			}
@@ -127,7 +133,7 @@ private:
 		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_HAS_VALUE(exit_code_response);
 		const auto& exit_value = exit_code_response.value();
-		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value));
+		ASSERT_MATCHES(exit_value, std::vector<Ref<vm::IVMValue>>);
 		auto& exit_value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
 
 		match_optional(expected_return_values) {
@@ -206,7 +212,7 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1, file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void injectCode() {
@@ -217,7 +223,7 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void runNoArgFunction() {
@@ -226,7 +232,7 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		runAndCheckReturnValue(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void runVoidFunction() {
@@ -237,7 +243,7 @@ private:
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
 		freeArguments(owned_arguments);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void runNonVoidFunction() {
@@ -248,7 +254,7 @@ private:
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
 		freeArguments(owned_arguments);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void runMultipleReturnValuesFunction() {
@@ -276,7 +282,7 @@ private:
 			base::Optional<std::vector<i64>>{ { 17, 15 } }
 		);
 		freeArguments(owned_arguments);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void doubleRunFunction() {
@@ -290,7 +296,7 @@ private:
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 24);
 		freeArguments(owned_arguments);
 		freeArguments(owned_arguments2);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void manyRunFunctions() {
@@ -305,7 +311,7 @@ private:
 			);
 			freeArguments(owned_arguments);
 		}
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void repl() {
@@ -322,7 +328,7 @@ private:
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
 		freeArguments(owned_arguments2);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void replWithGlobals() {
@@ -334,7 +340,7 @@ private:
 		fs::File file2(path("repl_with_globals_2.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void incrementalGlobalVariantPersistsValue() {
@@ -352,7 +358,7 @@ private:
 		runAndCheckReturnValue(
 			pid, "read_global_variant_value", vm::FunctionRunArguments{}, {}, "735", {}
 		);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void cyclicRepl() {
@@ -369,7 +375,7 @@ private:
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
 		freeArguments(owned_arguments2);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void separateGlobals() {
@@ -380,7 +386,7 @@ private:
 		fs::File file2(path("separate_globals_2.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "12", "12", {});
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void injectExistingFunction() {
@@ -388,7 +394,7 @@ private:
 		fs::File file(path("inject_code_1.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		ASSERT_NO_VALUE(vm::api::loadFiles(pid, { file }));
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
 	void runFunctionArgumentValidation() {
@@ -401,9 +407,8 @@ private:
 			arguments.push_back(getIntVMValue(pid, 10));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
-				"expects 2 arguments, but 1 were provided"
+			assertRunFunctionRefusedWith(
+				pid, "summer", func_args, "expects 2 arguments, but 1 were provided"
 			);
 
 			freeArguments(arguments);
@@ -416,9 +421,8 @@ private:
 			arguments.push_back(getIntVMValue(pid, 30));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
-				"expects 2 arguments, but 3 were provided"
+			assertRunFunctionRefusedWith(
+				pid, "summer", func_args, "expects 2 arguments, but 3 were provided"
 			);
 
 			freeArguments(arguments);
@@ -435,8 +439,10 @@ private:
 
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
+			assertRunFunctionRefusedWith(
+				pid,
+				"summer",
+				func_args,
 				"Type mismatch for argument 1 of function 'summer': expected i64, got i32"
 			);
 
@@ -450,8 +456,10 @@ private:
 			arguments.push_back(Box<vm::IVMValue>::fromPointer(new ForeignVMValue(pid)));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
+			assertRunFunctionRefusedWith(
+				pid,
+				"summer",
+				func_args,
 				"VMValue for argument 1 is invalid: it does not belong to the safe VM "
 				"implementation"
 			);
@@ -468,16 +476,15 @@ private:
 			arguments.push_back(getIntVMValue(other_pid, 99));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
-				"VMValue for argument 1 comes from a different process"
+			assertRunFunctionRefusedWith(
+				pid, "summer", func_args, "VMValue for argument 1 comes from a different process"
 			);
 
 			freeArguments(arguments);
-			vm::api::deinitAndValidate(other_pid);
+			ASSERT_HAS_VALUE(vm::api::deinitAndValidate(other_pid));
 		}
 
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 };
 
