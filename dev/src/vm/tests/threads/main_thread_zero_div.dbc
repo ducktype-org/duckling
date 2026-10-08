@@ -59,7 +59,7 @@ function main { i64, ptr_argv } -> { i64 } {
     mov_p64_imm counter, 0;
 
     init_pany_type t_id, i64;
-    set_threadctx worker;
+    setThreadCtx_func worker;
     call_builtinfunc builtin_start_thread;
 
     init_pany_type lock_wait, mutex;

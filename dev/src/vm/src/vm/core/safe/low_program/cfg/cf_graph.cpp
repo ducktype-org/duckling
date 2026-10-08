@@ -161,7 +161,7 @@ namespace vm::low::cf {
 				break;
 			}
 			case low::MicroOpcode::ret:
-			case low::MicroOpcode::ret_tailcall_func: {
+			case low::MicroOpcode::retTailcall_func: {
 				// No outgoing edges from return blocks
 				break;
 			}

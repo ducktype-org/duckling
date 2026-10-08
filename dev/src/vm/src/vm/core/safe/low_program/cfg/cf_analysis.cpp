@@ -44,7 +44,7 @@ namespace vm::low::cf {
 				break;
 			}
 			case low::MicroOpcode::ret:
-			case low::MicroOpcode::ret_tailcall_func: {
+			case low::MicroOpcode::retTailcall_func: {
 				block_beginnings.push_back(index + 1);  // Next block starts after ret
 				break;
 			}
