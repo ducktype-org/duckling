@@ -66,7 +66,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(DefaultValueExpr)
 	EXPR_VISITOR(CreateAggregateExpr)
 	EXPR_VISITOR(CastExpr)
-	EXPR_VISITOR(LiftToTypeExpr)
 	EXPR_VISITOR(BlockExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
@@ -1416,34 +1415,6 @@ namespace compiler::helios::code {
 		return makeBox<CreateAggregateExpr>(
 			expression_type, origin, type, std::move(cloned), per_element_body
 		);
-	}
-
-	LiftToTypeExpr::LiftToTypeExpr(query::Context&, ElementOrigin origin, Box<Expr> value_expr):
-		  Expr(
-			  tsh::ExpressionType(
-				  tsh::SymbolType<>(
-					  tsh::getMetaType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-				  ),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  value_expr(std::move(value_expr)) {}
-
-	LiftToTypeExpr::LiftToTypeExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
-	):
-		  Expr(expression_type, origin),
-		  value_expr(std::move(value_expr)) {}
-
-	void LiftToTypeExpr::debugPrint(std::ostream& out) const {
-		out << "lift[to=type](";
-		value_expr->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> LiftToTypeExpr::clone() const {
-		return makeBox<LiftToTypeExpr>(expression_type, origin, value_expr->clone());
 	}
 
 	BlockExpr::BlockExpr(query::Context&, ElementOrigin origin, Box<Stmt> block):

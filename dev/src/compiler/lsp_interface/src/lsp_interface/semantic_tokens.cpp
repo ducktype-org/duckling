@@ -450,10 +450,6 @@ namespace lsp {
 		void visitCastExpr(const code::CastExpr& elem) override {
 			elem.source_expr->acceptVisitor(*this);
 		}
-
-		void visitLiftToTypeExpr(const code::LiftToTypeExpr& elem) override {
-			elem.value_expr->acceptVisitor(*this);
-		}
 	};
 
 	/**

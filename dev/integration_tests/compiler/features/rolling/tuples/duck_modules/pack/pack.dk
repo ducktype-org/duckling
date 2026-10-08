@@ -2,8 +2,7 @@
 var a = ();
 var b = (1, -2, 3, 4);
 var c = (false, 1, 2., "3");
-# @TODO: #2509 Uncomment when done
-# var d = ((1, 0.), (3.5, 4));
+var d = ((1, 0.), (3.5, 4));
 var e = (0, 0);
 var f = ("Hello");
 
@@ -11,7 +10,7 @@ var f = ("Hello");
 var aa: () = a;
 var bb: (i64, i32, i64, i32) = b;
 var cc: (bool, i32, f32, str) = c;
-# @TODO: #2509 Uncomment when done
+# @TODO: #1922 Uncomment when done
 # var dd: ((i64, f32), (f64, i32)) = d;
 var ee: (i32, i32) = e;
 var ff: (str) = f;
@@ -19,15 +18,13 @@ var ff: (str) = f;
 var aaa = a;
 var bbb = b;
 var ccc = c;
-# @TODO: #2509 Uncomment when done
-# var ddd = d;
+var ddd = d;
 var eee = e;
 var fff = f;
 
 # Packing expressions
 var x = (1+2, 3-4, 1+2-3*4, 2.5/5.*100.-1.333);
-# @TODO: #2510 Uncomment when done
-# var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
+var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
 var z = (
     12345 as i16,
     if true then 67 else 76,

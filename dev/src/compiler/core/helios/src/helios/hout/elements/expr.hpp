@@ -959,30 +959,6 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents a compile-time cast of a value to a type.
-	 *
-	 * This is meant to be added by coercions when a value of type `type` is expected,
-	 * but the actual type is unit or tuple.
-	 */
-	struct LiftToTypeExpr final: public Expr {
-		Box<Expr> value_expr;
-
-		LiftToTypeExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> value_expr);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		LiftToTypeExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
-		);
-	};
-
-	/**
 	 * @brief Represents a block of statements that evaluates to a single value.
 	 */
 	struct BlockExpr final: public Expr {

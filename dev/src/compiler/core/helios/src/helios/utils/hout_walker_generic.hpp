@@ -219,11 +219,6 @@ namespace compiler::helios::code {
 			walk(*e.source_expr);
 		}
 
-		void visitLiftToTypeExpr(const LiftToTypeExpr& e) override {
-			handler(e);
-			walk(*e.value_expr);
-		}
-
 		void visitBlockExpr(const BlockExpr& e) override {
 			handler(e);
 			walk(*e.block);

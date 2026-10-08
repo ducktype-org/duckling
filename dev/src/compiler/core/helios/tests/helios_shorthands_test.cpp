@@ -308,11 +308,6 @@ public:
 			ASSERT_EQUAL(dprint(zero), std::string("default_value(const i64)"));
 			ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(zero.get()) != nullptr);
 
-			// Lifting a value to a type produces a `meta` value.
-			const auto lifted = s.liftToType(s.litUnit());
-			ASSERT_EQUAL(dprint(lifted), std::string("lift[to=type](())"));
-			ASSERT_EQUAL(lifted->expression_type.getType().getKind(), tsh::Kind::Meta);
-
 			// A block expression wraps a BlockStmt and yields unit.
 			const auto block_expr = s.blockExpr({ s.ret(s.litNum(1)), s.expr(s.litNum(2)) });
 

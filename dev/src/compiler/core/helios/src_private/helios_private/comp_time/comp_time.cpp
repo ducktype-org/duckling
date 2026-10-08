@@ -889,18 +889,6 @@ namespace compiler::helios {
 				CORE_UNREACHABLE();
 			}
 
-			void visitLiftToTypeExpr(const code::LiftToTypeExpr& lift) final {
-				auto ctv_to_lift = evalHoutExpr(ctx, lift.value_expr.ref());
-				if (ctv_to_lift.hasFailed()) {
-					result = query::Failed();
-					return;
-				}
-				// Panics if the CTV cannot be lifted to a type.
-				// This is fine, because we assume that this has been checked beforehand by HOUT.
-				result
-					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
-			}
-
 			void visitReusableExpr(const code::ReusableExpr& reusable) override {
 				evaluateSubExpr(reusable.inner.ref());
 			}

@@ -2192,14 +2192,7 @@ private:
 	}
 
 	/**
-	 * @brief Checks that tuples are coerced element by element, and that tuple literals are coerced
-	 * in place.
-	 *
-	 * A tuple written as a literal keeps the shape of its element expressions, so the coercion is
-	 * applied directly to them and the resulting `TupleExpr` holds no `ReusableExpr`. That matters
-	 * for elements lifted to a `type`: lifting only works on the original expression, not on a
-	 * field read out of a materialised tuple. A tuple that is already a value has to be
-	 * materialised, so its elements are read back out of a `ReusableExpr` instead.
+	 * @brief Checks that tuples are coerced element by element.
 	 */
 	void testTupleCoercion() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/tuple_coercion")));
@@ -2258,8 +2251,9 @@ private:
 				assertEqual(1, casts_found, "Only the widened element should be cast.");
 
 				assertTrue(
-					!uses_reusable_source(tuple_expr),
-					"A tuple literal should be coerced in place, without being materialised."
+					uses_reusable_source(tuple_expr),
+					"A tuple literal should be coerced element by element via a reusable "
+					"expression."
 				);
 
 				(name == base::StrID("literal") ? literal_checked : parenthesised_checked) = true;
@@ -2267,10 +2261,10 @@ private:
 				auto* tuple_expr = returned_tuple(function);
 				ASSERT_EQUAL(tuple_expr->elements.size(), 2u);
 
-				auto* lift = dynamic_cast<const compiler::helios::code::LiftToTypeExpr*>(
+				auto* type_literal = dynamic_cast<const compiler::helios::code::LiteralTypeExpr*>(
 					&*tuple_expr->elements[0]
 				);
-				assertTrue(lift != nullptr, "The unit element should be lifted to a type.");
+				assertTrue(type_literal != nullptr, "The unit element should be lifted to a type.");
 
 				lift_checked = true;
 			} else if (name == base::StrID("to_bool")) {
