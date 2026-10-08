@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "passing.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -27,9 +33,9 @@ namespace compiler::tsh::coercions {
 			if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
 			                                   : PassingMethod::NotCopyable;
+		default:
+			CORE_UNREACHABLE();
 		}
-
-		CORE_UNREACHABLE();
 	}
 
 	bool isCopiedByBytes(query::Context& ctx, const SymbolType<>& type) {

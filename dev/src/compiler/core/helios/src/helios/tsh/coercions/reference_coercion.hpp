@@ -25,7 +25,7 @@ namespace compiler::tsh::coercions {
 		None,
 		/// `ref`/`box` -> `direct`. Deref.
 		Deref,
-		/// `direct` -> `ref`/`box`, Needs `&` or `new`.
+		/// `direct` -> `ref`/`box`, `ref` -> `box`, `box`-> `ref`. Needs `&` or `new`.
 		Illegal,
 	};
 

@@ -1,11 +1,19 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file ownership.cpp
- * @brief The value layer, `coercionOf`, which decides every `HandOver` of a plan for one value.
+ * @brief The value layer of a coercion. The `SymbolType` level coercion includes the information on
+ * "where the value has to be passed", but based on the types alone it doesn't know HOW to exactly
+ * perform the passing. `coercionOf` is what decides HOW to perform the passing of each `HandOver`
+ * based on the `ValueSource`(the `ExpressionType`s of the value). This file contains the logic
+ * which decides how to change the `HandOver` node.
  *
- * The plan already says what happens to the value and where it is taken, so this layer never asks
- * what a step does. It only follows which value each step is about: a `Deref` reads the pointee
- * out, an `Elementwise` hands each part the value it is about, and every other step builds a new
- * value that belongs to the coercion.
+ * @note A `HandOver` node can be changed in four ways - nothing, `ImplicitMove`, `ElementWise`, an
+ * error. For more information on which is done when @see `coercion_step::HandOver` docs.
  */
 
 #include "../types.hpp"

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file coercion_rank.hpp
  * @brief How good of a match a coercion is.
@@ -25,8 +31,7 @@ namespace compiler::tsh::coercions {
 		Deref,
 		/// A widening conversion(i.e. `i32` -> `i64`)
 		Numeric,
-		/// The value is packed into a variant. TODOP: Think where to place it. Maybe it should be
-		/// just a little worse then mutability relax?
+		/// The value is packed into a variant.
 		VariantPack,
 		/// The value is interpreted as a type.
 		LiftToType,
