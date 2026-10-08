@@ -193,7 +193,7 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			return VariantAbstractTypeImpl(key.underlying_types);
+			return { key.underlying_types, key.represents_optional_type };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF

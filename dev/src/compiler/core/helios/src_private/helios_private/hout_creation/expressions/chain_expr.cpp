@@ -52,15 +52,6 @@
 
 namespace compiler::helios::code {
 
-	namespace {
-		/**
-		 * @brief Helper to get the interface element of a symbol that is a type member.
-		 */
-		CRef<tsh::InterfaceElement> getInterfaceElementOfMemberSym(query::Context& ctx, SymID sym) {
-			return typeMemberOwner(sym).getInterface(ctx)->getElementBySym(sym).value();
-		}
-	}
-
 	/**
 	 * @brief Bakes a template with the arguments of a square call, as in `List[i64]`.
 	 *
@@ -816,19 +807,12 @@ namespace compiler::helios::code {
 
 				base::Optional<base::Box<Expr>> expr{};
 				if (callees.size() > 0
-				    and getInterfaceElementOfMemberSym(query_ctx, callees.at(0))->isMethod()) {
-					// The self expression may be passed by copy or by reference,
-					// depending on whether the type is simple or composite, respectively.
-					auto self_expr = current_expr->expression_type.getType().isSimple()
-					                   ? std::move(current_expr)
-					                   : Box<Expr>(makeBox<RefOfExpr>(
-											 query_ctx,
-											 current_expr->origin.generatedFrom(),
-											 std::move(current_expr)
-										 ));
-
+				    and current_expr_type.getInterface(query_ctx)
+				            ->getElementBySym(callees.at(0))
+				            .value()
+				            ->isMethod()) {
 					auto res = processMethodCall(
-						query_ctx, callees, expr_access, call_expr, std::move(self_expr)
+						query_ctx, callees, expr_access, call_expr, std::move(current_expr)
 					);
 					UNPACK_QRESULT_MOVE(expr =, res);
 				} else {

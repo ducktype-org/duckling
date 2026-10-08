@@ -13,6 +13,7 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
@@ -856,7 +857,8 @@ namespace compiler::tsh {
 	 * Sort variant types, so that var(A, B) = var(B, A)?
 	 */
 	class VariantAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<SymbolType<>> underlying_types;
+		std::vector<SymbolType<>>    underlying_types;
+		base::Optional<SymbolType<>> optional_value_type;
 
 	public:
 		[[nodiscard]]
@@ -869,11 +871,28 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Variant;
 
-		explicit VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types);
+		/**
+		 * @brief Creates a variant of the given alternatives.
+		 * @param represents_optional_type Marks the variant as the optional `?T`, in which case
+		 * the first of @p variant_types has to be the held value type `T`.
+		 */
+		VariantAbstractTypeImpl(
+			const std::vector<SymbolType<>>& variant_types, bool represents_optional_type
+		);
 
 		[[nodiscard]]
 		const std::vector<SymbolType<>>& getUnderlyingTypes() const {
 			return underlying_types;
+		}
+
+		[[nodiscard]]
+		bool representsOptionalType() const {
+			return optional_value_type.has_value();
+		}
+
+		[[nodiscard]]
+		const SymbolType<>& getOptionalValueType() const {
+			return optional_value_type.value();
 		}
 
 		[[nodiscard]]

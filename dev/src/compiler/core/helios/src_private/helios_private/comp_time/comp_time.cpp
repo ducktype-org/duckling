@@ -747,7 +747,10 @@ namespace compiler::helios {
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
-					ctx.query<tsh::QueryVariantType>({ subtypes }),
+					ctx.query<tsh::QueryVariantType>({
+						.underlying_types         = subtypes,
+						.represents_optional_type = expr.represents_optional_type,
+					}),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };
@@ -781,7 +784,11 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				const auto& ctv     = expr_to_cast.valueOrThrow();
+				const auto& ctv = expr_to_cast.valueOrThrow();
+				if (cast.source_expr->expression_type.getType() == cast.target_type.getType()) {
+					result = ctv;
+					return;
+				}
 				const auto& numeric = ctv.get<NumericValue>();
 				if (!numeric) {
 					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(

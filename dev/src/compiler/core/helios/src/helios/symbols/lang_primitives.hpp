@@ -9,6 +9,7 @@
 #include <ctv/ctv.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
@@ -36,8 +37,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	StringifyCPtr,
 	StringifySlice,
 	StringifyStaticArray,
+	
 	BoxAlloc,
-	BoxFree
+	BoxFree,
+
+	OptionalNone,
+	OptionalValue,
+	OptionalValueRef,
+	OptionalValueOr,
+	OptionalValueOrRef,
+	OptionalFull,
+	OptionalEmpty,
+	OptionalReset
 	// List
 	// PanicOutOfBounds
 )
@@ -98,4 +109,14 @@ namespace compiler::helios {
 		LanguagePrimitive              primitive,
 		std::vector<tsh::SymbolType<>> type_arguments
 	);
+
+	/**
+	 * @brief The `None` class type, which is the empty alternative of every optional.
+	 */
+	tsh::SymbolType<> getOptionalNoneType(query::Context& ctx);
+
+	/**
+	 * @brief The optional type `?T`, i.e. the variant `T | None` marked as an optional.
+	 */
+	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type);
 }

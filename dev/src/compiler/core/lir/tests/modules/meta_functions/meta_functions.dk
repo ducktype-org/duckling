@@ -4,6 +4,7 @@ fun createPtr(t: type) -> type = ptr t;
 fun createCPtr(t: type) -> type = cptr t;
 fun createManyPtr(t: type) -> type = manyptr t;
 fun createSlice(t: type) -> type = slice t;
+fun createOptional(t: type) -> type = ?t;
 # @TODO: #1727 Change the following, when this gets fixed.
 fun createConst(t: type) -> type = (const t);
 fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;

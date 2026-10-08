@@ -6,6 +6,7 @@
 
 #include "expr_lowering.hpp"
 
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -664,6 +665,28 @@ namespace compiler::mir {
 			std::vector<MIRValue> subtype_values;
 			subtype_values.reserve(expr.subtypes.size());
 
+			if (expr.represents_optional_type) {
+				auto value_type_lowered = lowerSubExpr(*expr.subtypes.front(), current);
+				subtype_values.push_back(value_type_lowered.getResult(function));
+				current = value_type_lowered.begin;
+
+				noValueOutput(
+					current,
+					hole,
+					Instruction(
+						Operation::MetaTypeOperation,
+						{},
+						subtype_values,
+						{},
+						expr_scope,
+						MetaParameters{ MetaKind::CreateOptional },
+						{ expr.getPosition() }
+					),
+					result_type
+				);
+				return;
+			}
+
 			for (const auto& element: expr.subtypes | std::views::reverse) {
 				auto elem_lowered = lowerSubExpr(*element, current);
 				subtype_values.push_back(elem_lowered.getResult(function));
@@ -1187,29 +1210,6 @@ namespace compiler::mir {
 				output(std::move(result));
 		}
 
-		bool isEmptyCast(const hc::CastExpr& expr) {
-			if (expr.source_expr->expression_type.getSymbolType() == expr.target_type) return true;
-
-			// If cast is from ref T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Ref
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
-			}
-
-			// If cast is from box T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Box
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
-			}
-
-			if (expr.source_expr->expression_type.getType().getKind() == tsh::Kind::Void)
-				return true;
-
-			return false;
-		}
-
 		/**
 		 * @brief Whether the cast hands a `ptr T` over to a `box T`.
 		 *
@@ -1239,9 +1239,8 @@ namespace compiler::mir {
 		}
 
 		void visitCastExpr(const hc::CastExpr& expr) override {
-			// Maybe in the future the cast expr can be converted into more specific instructions.
-			if (isEmptyCast(expr)) {
-				// If the cast doesn't change the representation, simply ignore it.
+			// If the cast doesn't involves temporaries, it's safe to just lower the source.
+			if (not expr.createsTemporary()) {
 				output(lowerSubExpr(*expr.source_expr, continuation));
 				return;
 			}

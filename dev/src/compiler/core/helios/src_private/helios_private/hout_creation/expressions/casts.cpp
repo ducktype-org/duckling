@@ -53,7 +53,12 @@ namespace compiler::helios::code {
 		// We first check if we can cover the case by the coercion logic (from bool or to bool for
 		// example).
 		auto coercion = canCoerce(ctx, value->expression_type, to).valueOrThrow();
-		if (coercion.isValid()) return coercion.coerce(ctx, std::move(value));
+		if (coercion.isValid()) {
+			auto coerced = coercion.coerce(ctx, std::move(value));
+			if (coerced->expression_type.getSymbolType() != to)
+				return cast_expr(std::move(coerced));
+			return coerced;
+		}
 
 		// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
 		// Casting to bool needs custom handling.

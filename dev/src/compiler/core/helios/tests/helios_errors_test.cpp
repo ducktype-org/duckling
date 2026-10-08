@@ -46,6 +46,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testOptionalErrors);
 		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
@@ -564,7 +565,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `const slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -1081,7 +1082,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `const slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -1702,6 +1703,50 @@ private:
 			} )",
 			{ "Cannot implicitly copy a value of non-trivially-copyable type "
 		      "`Tuple(i32, Class L)`" },
+			1
+		);
+	}
+
+	/**
+	 * Errors of the `?T` interface on a non-trivially-copyable value type.
+	 */
+	void testOptionalErrors() {
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var o: ?L = L(1i32);
+				var b: L = o.value();
+				return 0;
+			} )",
+			{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
+		      "`ref Class L`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun goo() -> ?L = L(1i32);
+			fun main() -> i64 = {
+				var b: L = goo().value();
+				return 0;
+			} )",
+			{ "Call failed due to ambiguous overload resolution",
+		      "Found coercible candidate",
+		      "Found coercible candidate" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var o: ?L = L(1i32);
+				var b = o.valueOr(L(2i32));
+				return 0;
+			} )",
+			{ "Call failed due to ambiguous overload resolution",
+		      "Cannot implicitly copy a value of non-trivially-copyable type `?Class L`",
+		      "The given argument type `Class L` cannot be converted to the expected type `ref "
+		      "Class L`" },
 			1
 		);
 	}

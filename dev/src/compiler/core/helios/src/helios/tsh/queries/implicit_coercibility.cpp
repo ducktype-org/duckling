@@ -49,6 +49,8 @@ namespace compiler::tsh {
 			const auto from_ref_kind = key.source.getRefKind();
 			const auto to_ref_kind   = key.target.getRefKind();
 
+			if (key.source.getType().getKind() == Kind::Void) return true;
+
 			if (!referenceCoercionRule(from_ref_kind, to_ref_kind).isLegal()) return false;
 
 			// For pointer-like symbol types (ex. ref/box) the element types must match exactly.
@@ -57,8 +59,7 @@ namespace compiler::tsh {
 
 			// A value coerces into a variant only when its type is exactly equal to one of the
 			// variant's alternatives (no chained coercions).
-			if (key.target.getType().getKind() == Kind::Variant
-			    && key.source.getType().getKind() != Kind::Variant) {
+			if (key.target.getType().getKind() == Kind::Variant) {
 				const VariantAbstractType target_variant = key.target.getType();
 				for (const auto& alternative: target_variant.getUnderlyingTypes())
 					if (referenceCoercionRule(from_ref_kind, alternative.getRefKind()).isLegal()

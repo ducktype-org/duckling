@@ -161,7 +161,6 @@ namespace lang_def {
 			{ Keyword::Dict, "Dict", KeywordFlags() },
 			{ Keyword::Array, "Array", KeywordFlags() },
 
-			{ Keyword::None, "none", KeywordFlags() },
 			{ Keyword::True, "true", KeywordFlags() },
 			{ Keyword::False, "false", KeywordFlags() },
 

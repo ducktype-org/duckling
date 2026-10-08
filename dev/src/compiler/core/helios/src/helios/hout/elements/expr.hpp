@@ -469,12 +469,19 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Variant constructor inside an expression.
+	 *
+	 * When @p represents_optional_type is set, it constructs the optional `?T`, and @p subtypes
+	 * are exactly the value type `T` followed by the `None` type.
 	 */
 	struct VariantTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
+		bool                         represents_optional_type;
 
 		VariantTypeConstructorExpr(
-			query::Context& ctx, ElementOrigin origin, std::vector<base::Box<Expr>> subtypes
+			query::Context&              ctx,
+			ElementOrigin                origin,
+			std::vector<base::Box<Expr>> subtypes,
+			bool                         represents_optional_type = false
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -488,7 +495,8 @@ namespace compiler::helios::code {
 		VariantTypeConstructorExpr(
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> subtypes
+			std::vector<base::Box<Expr>> subtypes,
+			bool                         represents_optional_type
 		);
 	};
 
@@ -759,10 +767,14 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
+		[[nodiscard]] bool createsTemporary() const;
+
 		[[nodiscard]] Box<Expr> clone() const final;
 
 	private:
 		FRIEND_MAKEBOX
+
+		static bool createsTemporary(tsh::SymbolType<> source, tsh::SymbolType<> dst);
 
 		CastExpr(
 			tsh::ExpressionType<> expression_type,
@@ -780,6 +792,12 @@ namespace compiler::helios::code {
 		Box<Expr> inner;
 
 		RefOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+
+		/**
+		 * @brief The type of a `RefOfExpr` taking a reference to a value of type @p inner_type.
+		 */
+		static tsh::ExpressionType<> typeOfRefTo(const tsh::ExpressionType<>& inner_type);
+
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
