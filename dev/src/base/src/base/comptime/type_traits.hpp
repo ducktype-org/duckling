@@ -112,6 +112,21 @@ namespace base {
 	}
 
 	/**
+	 * @brief Always false, but only once a template is instantiated.
+	 * @details The way to write a `static_assert` in the `else` of an `if constexpr` chain that
+	 * fires for the types that reach it and not while the template is merely parsed.
+	 */
+	template<typename... Ts>
+	inline constexpr bool DEPENDENT_FALSE_V = internal::DEPENDENT_FALSE_V<Ts...>;
+
+	/**
+	 * @brief Carries a type as a value, for passing one to a function or through overload
+	 * resolution without ever instantiating it.
+	 */
+	template<typename T>
+	using Tag = internal::Tag<T>;
+
+	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
 	 * @note This concept works only for templates that have only type template parameters.
 	 *       Works for move-only and non-default-constructible `T`

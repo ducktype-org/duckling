@@ -47,7 +47,11 @@ duck_add_test(base box_ref tests/box_ref_test.cpp USES Base)
 
 duck_add_test(base bits_and_bytes tests/bits_and_bytes_test.cpp USES Base)
 
+duck_add_test(base aggregate_arity tests/aggregate_arity_test.cpp USES Base)
+
 duck_add_test(base is_complete tests/is_complete_test.cpp USES Base)
+
+duck_add_test(base no_unique_address tests/no_unique_address_test.cpp USES Base)
 
 duck_add_test(base type_name tests/type_name_test.cpp USES Base)
 

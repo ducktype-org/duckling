@@ -1,0 +1,116 @@
+#pragma once
+
+/**
+ * @file
+ * @brief std::array<T, N> and T[N]
+ * @details The elements in order, nothing else: the extent is part of the type, so no length goes
+ * in the stream. Each element goes through full dispatch rather than a bulk copy - an element may
+ * have its own hook, and the stream has neither padding nor the platform's alignment.
+ *
+ * Only write and read. An array of elements that cannot be filled in place is built through
+ * aggregate initialization instead, one clause per element, which is the same bytes.
+ */
+
+#include <ser/concepts.hpp>
+#include <ser/errc.hpp>
+#include <ser/hash.hpp>
+#include <ser/internal/dispatch_fwd.hpp>
+#include <ser/serializer.hpp>
+#include <ser/traits.hpp>
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
+
+namespace ser {
+
+	namespace internal {
+
+		/**
+		 * @brief Base of the two array serializers, so a C array field can tell them from a
+		 * serializer a user wrote for that array type.
+		 */
+		struct ElementwiseArray {};
+
+		template<class E, class A>
+		constexpr Errc writeArray(Writer auto& ar, const A& a) {
+			for (const auto& e: a)
+				if (const auto c = dispatchWrite<E>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+
+		template<class E, class A>
+		constexpr Errc readArray(Reader auto& ar, A& a) {
+			for (auto& e: a)
+				if (const auto c = dispatchRead<E>(ar, e); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+
+		/**
+		 * @brief The extent then the element. The same for both kinds of array, because they
+		 * are the same bytes.
+		 */
+		template<class E, ::std::size_t N, class Mode, class Seen>
+		[[nodiscard]] consteval ::std::uint64_t schemaArray(::std::uint64_t h) {
+			return schemaOf<::std::remove_cv_t<E>, Mode, Seen>(
+				schemaNumber(schemaText(h, "array"), N)
+			);
+		}
+
+	}  // namespace internal
+
+	template<class T, ::std::size_t N>
+	struct MinSerializedSize<::std::array<T, N>> {
+		static constexpr ::std::size_t VALUE = N * MIN_SERIALIZED_SIZE_V<T>;
+	};
+
+	template<class T, ::std::size_t N>
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+	struct MinSerializedSize<T[N]> {
+		static constexpr ::std::size_t VALUE = N * MIN_SERIALIZED_SIZE_V<T>;
+	};
+
+	template<class T, ::std::size_t N>
+	struct Schema<::std::array<T, N>> {
+		template<class Mode, class Seen>
+		static consteval ::std::uint64_t mix(::std::uint64_t h) {
+			return internal::schemaArray<T, N, Mode, Seen>(h);
+		}
+	};
+
+	template<class T, ::std::size_t N>
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+	struct Schema<T[N]> {
+		template<class Mode, class Seen>
+		static consteval ::std::uint64_t mix(::std::uint64_t h) {
+			return internal::schemaArray<T, N, Mode, Seen>(h);
+		}
+	};
+
+	template<class T, ::std::size_t N>
+	struct Serializer<::std::array<T, N>>: internal::ElementwiseArray {
+		static constexpr Errc write(Writer auto& ar, const ::std::array<T, N>& a) {
+			return internal::writeArray<T>(ar, a);
+		}
+
+		static constexpr Errc read(Reader auto& ar, ::std::array<T, N>& a) {
+			return internal::readArray<T>(ar, a);
+		}
+	};
+
+	template<class T, ::std::size_t N>
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+	struct Serializer<T[N]>: internal::ElementwiseArray {
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+		static constexpr Errc write(Writer auto& ar, const T (&a)[N]) {
+			return internal::writeArray<T>(ar, a);
+		}
+
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+		static constexpr Errc read(Reader auto& ar, T (&a)[N]) {
+			return internal::readArray<T>(ar, a);
+		}
+	};
+
+}  // namespace ser

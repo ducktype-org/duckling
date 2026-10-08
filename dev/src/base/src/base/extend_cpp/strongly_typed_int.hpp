@@ -27,6 +27,7 @@
 #pragma once
 
 #include <base/preproc/macro_base.hpp>
+#include <base/preproc/stringify.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 
@@ -144,6 +145,11 @@
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                           \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=, +)                                       \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=, -)                                       \
+		/* `ser`: the wrapped integer is all that is serialized, and the tag is what tells */      \
+		/* two typedefs over one integer apart in schemaHash.                              */      \
+		using ser_serialize_as                      = BASE;                                        \
+		static constexpr const char* ser_schema_tag = "strong." STRINGIFY_2(NAME);                 \
+		static constexpr auto        serVisit(auto& ar, auto& self) { return ar(self.value); }     \
 		IF(DIMENSIONAL)(                                                                           \
 			STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                \
 				STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                            \

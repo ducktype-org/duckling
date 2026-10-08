@@ -26,21 +26,36 @@
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
+#include <ser/archive/in.hpp>
+#include <ser/archive/out.hpp>
 #include <string_id/string_id.hpp>
 
+#include <concepts>
 #include <cstddef>
-#include <cstring>
 #include <span>
+#include <type_traits>
 #include <vector>
 
 namespace query::internal {
 
 	/**
+	 * @brief The one archive pair the whole metadata format goes through.
+	 *
+	 * A metadata instance writes itself through a virtual, and a virtual cannot be a
+	 * template - so the archive it writes into has to be one concrete type. Pinning it here
+	 * is what makes the format a SINGLE stream: no instance ever gets a buffer of its own,
+	 * and a nested blob with its own length prefix does not exist.
+	 */
+	using MetadataOut = ::ser::Out<std::vector<std::byte>>;
+	using MetadataIn  = ::ser::In<>;
+
+	/**
 	 * @brief Abstract base class for all metadata types.
 	 *
-	 * All metadata types must inherit from this class and implement
-	 * the serialize() method. The deserialize() method should be
-	 * implemented as a static method in the derived class.
+	 * All metadata types must inherit from this class and write themselves through
+	 * serWrite(). Reading is the mirror image and cannot be virtual - there is no object
+	 * yet - so a derived type registers a factory with the MetadataRegistry instead; the
+	 * DECLARE_METADATA macro does both.
 	 *
 	 * @note Use the DECLARE_METADATA macro to create new metadata types,
 	 * which handles the boilerplate automatically.
@@ -54,11 +69,13 @@ namespace query::internal {
 		virtual ~BaseMetadata() = default;
 
 		/**
-		 * @brief Serialize the metadata to a byte vector.
-		 * @return std::vector<std::byte> The serialized data.
+		 * @brief Writes the metadata's value into the metadata stream.
+		 * @note Named after the `ser` hook it plays the part of, with the archive pinned for
+		 * the reason given on MetadataOut.
+		 * @return ser::Errc::Ok, or the code of the first field that failed.
 		 */
 		[[nodiscard]]
-		virtual std::vector<std::byte> serialize() const
+		virtual ::ser::Errc serWrite(MetadataOut& ar) const
 			= 0;
 
 		/**
@@ -71,7 +88,7 @@ namespace query::internal {
 			= 0;
 
 		/**
-		 * @brief Check if this metadata type uses StrID table for optimized serialization.
+		 * @brief Check if this metadata type uses the StrID table for optimized serialization.
 		 *
 		 * When true, the metadata value is a StrID that will be serialized as an index
 		 * into a global string table, saving space for repeated strings.
@@ -406,46 +423,42 @@ namespace query::internal {
 		bool empty() const;
 
 		/**
-		 * @brief Serialize all metadata to a byte vector.
-		 * \parallel This method should not race, but might behave weirdly if metadata is being
-		 * concurrently modified during serialization, as there is no large lock in place. It should
-		 * be used in a context where we can guarantee no concurrent modifications.
+		 * @brief `ser` hook: writes the type table, the StrID table, and then every node.
 		 *
-		 * Format (optimized with type name table and StrID table):
 		 *
-		 * [type_table_size: u64]                    // Number of unique type names
-		 * For each unique type (index = type_id):
-		 *   [type_name_len: u64][type_name: bytes]
+		 * A hand-written pair rather than the automatic field walk, because the format is not
+		 * this class's fields
 		 *
-		 * [strid_table_size: u64]                   // Number of unique StrID values
-		 * For each unique StrID (index = strid_idx):
-		 *   [str_len: u64][str: bytes]
+		 * The two tables are what keeps the format compact: a type name and a repeated StrID
+		 * value are written once and referenced by index afterwards.
 		 *
-		 * [node_count: u64]
-		 * For each node:
-		 *   [NodeID: q_id (u64) + hash (Bit256)]
-		 *   [type_count: u64]
-		 *   For each type:
-		 *     [type_id: u64]                        // Index in type table
-		 *     [metadata_count: u64]
-		 *     For each metadata:
-		 *       If StrID type: [strid_idx: u64]     // Index in StrID table
-		 *       Else: [data_size: u64][data: bytes]
-		 *
-		 * @return std::vector<std::byte> The serialized metadata storage.
+		 * \parallel Writing should not race, but might behave weirdly if metadata is being
+		 * concurrently modified, as there is no large lock in place. It should be used in a
+		 * context where we can guarantee no concurrent modifications.
 		 */
-		[[nodiscard]]
-		std::vector<std::byte> serialize() const;
+		static ::ser::Errc serWrite(::ser::Writer auto& ar, const MetadataStorage& self) {
+			static_assert(
+				std::same_as<std::remove_cvref_t<decltype(ar)>, MetadataOut>,
+				"query: a MetadataStorage can only be written through "
+				"ser::Out<std::vector<std::byte>>, because every metadata instance writes itself "
+				"through a virtual and a virtual cannot be a template. Serialize into a "
+				"std::vector<std::byte>."
+			);
+			return writeInto(ar, self);
+		}
 
 		/**
-		 * @brief Deserialize metadata storage from a byte span.
-		 *
-		 * Uses MetadataRegistry to reconstruct concrete metadata types.
-		 *
-		 * @param data The serialized data
-		 * @return MetadataStorage The deserialized storage
+		 * @brief `ser` hook: reads back what serWrite wrote, one instance at a time through
+		 * the MetadataRegistry.
 		 */
-		static MetadataStorage deserialize(std::span<const std::byte> data);
+		static ::ser::Errc serRead(::ser::Reader auto& ar, MetadataStorage& self) {
+			static_assert(
+				std::same_as<std::remove_cvref_t<decltype(ar)>, MetadataIn>,
+				"query: a MetadataStorage can only be read through ser::In<> - see the note on "
+				"serWrite."
+			);
+			return readFrom(ar, self);
+		}
 
 		/**
 		 * @brief Pretty print the metadata storage for debugging.
@@ -455,6 +468,17 @@ namespace query::internal {
 		 * @param os The output stream to print to.
 		 */
 		void prettyPrint(std::ostream& os) const;
+
+	private:
+		/**
+		 * @brief The body of the serWrite hook, with the archive at its concrete type.
+		 * @note The hook above is a template only so that `ser` can see it from both
+		 * directions
+		 */
+		static ::ser::Errc writeInto(MetadataOut& ar, const MetadataStorage& self);
+
+		/** @brief The body of the serRead hook, with the archive at its concrete type. */
+		static ::ser::Errc readFrom(MetadataIn& ar, MetadataStorage& self);
 	};
 
 }  // namespace query

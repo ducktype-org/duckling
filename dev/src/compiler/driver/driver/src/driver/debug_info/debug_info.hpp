@@ -22,7 +22,7 @@
 
 namespace compiler::driver {
 
-	constexpr std::string_view DEBUG_INFO_STABLE_EXTENSION = ".stable.di.json";
+	constexpr std::string_view DEBUG_INFO_STABLE_EXTENSION = ".stable.di";
 
 	/**
 	 * The key for the DebugInfoForModule query.

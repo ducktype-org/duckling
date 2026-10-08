@@ -13,31 +13,55 @@
 #include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
+#include <ser/base/all.hpp>
+#include <ser/ser.hpp>
+#include <ser/std/all.hpp>
 #include <string_id/string_id.hpp>
 
-#include <cstring>
+#include <span>
 #include <sstream>
 #include <type_traits>
+#include <vector>
 
 namespace artifacts {
 	/**
-	 * @brief Represents a type, that is trivially interpretable as simple bytes.
-	 * @note In the future this might be improved to feature custom serialization and
-	 * deserialization as well.
+	 * @brief What a blob may hold is whatever the `ser` module can put in the stream: an
+	 * aggregate needs no code at all, and anything else declares one of the `ser` hooks. A
+	 * raw pointer is refused rather than copied, which is what the trivially-copyable
+	 * requirement this replaced could not say.
+	 *
+	 * These two are the byte plumbing around `ser` - the buffer on the way out, the RawView
+	 * on the way in - and nothing else.
+	 *
+	 *   out  a blob is written from an object we are already holding, so a failure is a bug
+	 *        rather than a state to recover from - `ser::writeOrPanic` says so itself.
+	 *   in   a blob is read back from a `.artc` file on disk, which is allowed to be
+	 *        truncated, stale or damaged..
 	 */
 	template<class T>
-	concept SerdeType
-		= std::is_standard_layout_v<T> && std::is_trivial_v<T> && std::is_trivially_copyable_v<T>;
+	std::vector<byte> toBytes(const T& data) {
+		std::vector<byte> bytes;
+		::ser::writeOrPanic(bytes, data);
+		return bytes;
+	}
 
 	/**
-	 * @brief Constructs type `T` from bytes.
+	 * @brief Constructs type `T` from the bytes of a blob, or nothing if they are not a `T`.
+	 * @note Read as the unqualified `T`: a caller asking for `getData<decltype(SOME_CONST)>()`
+	 * names a `const` type, and an object is built before it can be const - so the Optional
+	 * carries the unqualified type too.
+	 * @note The Optional costs one move of `T` and requires `T` to be movable, which the
+	 * by-value read did not. That is the price of a damaged blob being an answer instead of a
+	 * crash; a type that cannot be moved has to read through `ser` directly.
+	 * @param view The blob's bytes.
+	 * @return The object, or an empty Optional when the bytes do not decode.
 	 */
-	template<SerdeType T>
-	T deserialize(base::RawView view) {
-		CORE_ASSERT(view.size() == sizeof(T), "View\'s size does not match T\'s size");
-		alignas(T) std::array<std::byte, sizeof(T)> buffer;
-		std::memcpy(buffer.data(), view.getBegin(), sizeof(T));
-		return *std::launder(reinterpret_cast<T*>(buffer.data()));
+	template<class T>
+	base::Optional<std::remove_cv_t<T>> fromBytes(base::RawView view) {
+		auto value = ::ser::read<std::remove_cv_t<T>>(std::span<const std::byte>{ view.getBegin(),
+		                                                                          view.size() });
+		if (!value) return {};
+		return std::move(*value).take();
 	}
 
 	/**
@@ -98,9 +122,10 @@ namespace artifacts {
 		 * @brief Sets blob's data from serializable type `T`.
 		 * @note Invalidates current blob's data pointers.
 		 */
-		template<SerdeType T>
+		template<class T>
 		void setData(const T& data) {
-			setData(reinterpret_cast<const byte*>(&data), sizeof(data));
+			const std::vector<byte> bytes = toBytes(data);
+			setData(bytes.data(), bytes.size());
 		}
 
 		/**
@@ -112,10 +137,12 @@ namespace artifacts {
 		/**
 		 * @brief Gets blob's data and interprets them as a `T` object.
 		 * @note Data pointers can be invalidated by calls to `setData`.
+		 * @return The object, or an empty Optional when the blob does not decode as a `T` -
+		 * a damaged or stale `.artc` on disk, which is a cache to drop rather than a crash.
 		 */
-		template<SerdeType T>
-		const T getData() const {
-			return deserialize<T>(getDataView());
+		template<class T>
+		base::Optional<std::remove_cv_t<T>> getData() const {
+			return fromBytes<T>(getDataView());
 		}
 	};
 
@@ -189,18 +216,20 @@ namespace artifacts {
 
 		void setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
 
-		template<SerdeType T>
+		template<class T>
 		void setBlobData(const BlobArtifact& blob, const T& data) {
 			// lock will happen in the call bellow:
-			setBlobData(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
+			const std::vector<byte> bytes = toBytes(data);
+			setBlobData(blob, bytes.data(), bytes.size());
 		}
 
 		base::RawView getBlobDataView(const BlobArtifact& blob) const;
 
-		template<SerdeType T>
-		const T getBlobData(const BlobArtifact& blob) const {
+		/** @brief As BlobArtifact::getData, and empty for the same reasons. */
+		template<class T>
+		base::Optional<std::remove_cv_t<T>> getBlobData(const BlobArtifact& blob) const {
 			// lock will happen in the call bellow:
-			return deserialize<T>(getBlobDataView(blob));
+			return fromBytes<T>(getBlobDataView(blob));
 		}
 
 		/////////////////////////// PRIVATE /////////////////////////
@@ -244,16 +273,18 @@ namespace artifacts {
 
 		void setBlobDataNoLock(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
 
-		template<SerdeType T>
+		template<class T>
 		void setBlobDataNoLock(const BlobArtifact& blob, const T& data) {
-			setBlobDataNoLock(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
+			const std::vector<byte> bytes = toBytes(data);
+			setBlobDataNoLock(blob, bytes.data(), bytes.size());
 		}
 
 		base::RawView getBlobDataViewNoLock(const BlobArtifact& blob) const;
 
-		template<SerdeType T>
-		const T getBlobDataNoLock(const BlobArtifact& blob) const {
-			return deserialize<T>(getBlobDataViewNoLock(blob));
+		/** @brief As getBlobData, without taking the lock. */
+		template<class T>
+		base::Optional<std::remove_cv_t<T>> getBlobDataNoLock(const BlobArtifact& blob) const {
+			return fromBytes<T>(getBlobDataViewNoLock(blob));
 		}
 
 		///////////////////////// OBJECT STATE //////////////////////

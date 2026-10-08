@@ -21,7 +21,7 @@
 namespace metadata_persistence_test {
 
 	// Simple u64 metadata
-	DECLARE_METADATA_SIMPLE(TestCounter, u64);
+	DECLARE_METADATA(TestCounter, u64);
 
 	// StrID metadata (uses string table optimization)
 	DECLARE_METADATA_STRID(TestSourceFile);

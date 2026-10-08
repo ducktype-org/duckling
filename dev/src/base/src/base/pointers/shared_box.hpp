@@ -8,6 +8,7 @@
 
 #include <base/comptime/is_complete.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/misc/no_unique_address.hpp>
 #include <base/misc/noexcept.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/default_deleter.hpp>
@@ -68,7 +69,7 @@ namespace base {
 			);
 			static_assert(requires(Deleter d, T* p) { d.del(p); }, "Deleter must support d.del(T*)");
 
-			[[no_unique_address]] Deleter deleter;
+			NO_UNIQUE_ADDRESS Deleter deleter;
 
 			void del(void* ptr) noexcept override { deleter.del(static_cast<T*>(ptr)); }
 

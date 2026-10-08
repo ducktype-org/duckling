@@ -67,8 +67,11 @@
 #include <base/misc/raw_view.hpp>
 
 #include <hashing/add_to_hash.hpp>
+#include <ser/concepts.hpp>
+#include <ser/errc.hpp>
 
 #include <charconv>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 
@@ -187,6 +190,33 @@ namespace base {
 		void addToHash(hashing::hash_algorithm auto& hash_alg) const {
 			hashing::addToHash(hash_alg, strView().size());
 			hashing::addToHash(hash_alg, strView());
+		}
+
+		// ser
+		// A StrID is a std::string in the stream, so `ser_serialize_as` gives it that type's
+		// schema and its MinSerializedSize for free - no ser::Schema or ser::MinSerializedSize
+		// specialization needed.
+
+		/** @brief The serialized type: a StrID travels as the string it interns. */
+		using ser_serialize_as = std::string;
+
+		/**
+		 * @brief Writes the interned string.
+		 * @note A default-constructed StrID holds a bad id and has no string to write;
+		 * refusing it here is the only place that can, because the read side cannot
+		 * represent it - interning "" yields a GOOD id, so isBad() never round-trips.
+		 */
+		static ser::Errc serWrite(ser::Writer auto& ar, const StrID& s) {
+			if (s.isBad()) return ser::Errc::InvalidValue;
+			return ar(s.str());
+		}
+
+		/** @brief Reads a string and interns it. */
+		static ser::Errc serRead(ser::Reader auto& ar, StrID& s) {
+			std::string str;
+			if (const auto c = ar(str); c != ser::Errc::Ok) return c;
+			s = StrID{ str };
+			return ser::Errc::Ok;
 		}
 
 		friend struct std::hash<StrID>;

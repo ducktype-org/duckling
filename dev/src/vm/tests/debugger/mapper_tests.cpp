@@ -4,18 +4,44 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include "simple_debug_info.hpp"
+
+#include <debug_info/debug_info_io.hpp>
+
 #include <base/misc/int_conv.hpp>
 
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
 #include <vm/debugger/mapper.hpp>
 
 #include <chrono>
 #include <condition_variable>
+#include <fstream>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #define ASSERT_FALSE(actual) ASSERT_TRUE(!(actual))
+
+namespace {
+	/**
+	 * @brief Writes the mapping above to a fresh temporary directory and returns the file.
+	 * @note Binary mode, because the payload is bytes and a `\n` in it is not a line ending.
+	 */
+	fs::File writeMappingFile() {
+		const fs::File temp_dir = fs::FileManager::createRandomTempDirectory();
+		const auto     di_path  = temp_dir.getFilePath().getPath() / "package_dvm.di";
+
+		std::ofstream out(di_path, std::ios::binary);
+		debug_info::saveToStream(debugger_test_data::simpleDebugInfo(), out);
+		out.close();
+
+		return { fs::FilePath(di_path) };
+	}
+}
 
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -40,7 +66,9 @@ private:
 		ASSERT_NO_VALUE(mapper.mainFile());
 		ASSERT_FALSE(mapper.containsFile("abc"));
 
-		ASSERT_HAS_VALUE(mapper.loadMapping(fs::File(path("package_dvm.di.json"))));
+		// The mapping is produced by this test and read back through the same format the
+		// compiler writes.
+		ASSERT_HAS_VALUE(mapper.loadMapping(writeMappingFile()));
 
 		auto simple = fs::FilePath("simple.dk");
 		ASSERT_TRUE(mapper.containsFile(simple));

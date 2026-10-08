@@ -178,7 +178,21 @@ namespace query::internal {
 		return true;
 	}
 
-	std::vector<byte> QueryGraph::serialize() const {
+	bool QueryGraph::ReducedGraphData::isConsistent() const {
+		if (nodes.size() != adjacency.size()) return false;
+		for (const auto& deps: adjacency)
+			for (usize dep_idx: deps)
+				if (dep_idx >= nodes.size()) return false;
+
+		base::HashMap<NodeID, usize> seen;
+		seen.reserve(nodes.size());
+		for (const NodeID& node: nodes)
+			if (!seen.put(node, seen.size()).second) return false;
+
+		return true;
+	}
+
+	QueryGraph::ReducedGraphData QueryGraph::toReducedGraphData() const {
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_deps->size());
 		base::HashMap<NodeID, usize> node_to_index;
@@ -208,137 +222,41 @@ namespace query::internal {
 			}
 		}
 
-		return serializeReducedGraph(ReducedGraphData{ .nodes     = std::move(nodes),
-		                                               .adjacency = std::move(adjacency) });
+		return ReducedGraphData{ .nodes = std::move(nodes), .adjacency = std::move(adjacency) };
 	}
 
-	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {
-		using HVType  = decltype(NodeID::hash.val.data);
-		using QIDType = decltype(QueryID::val);
-
-		constexpr usize NODE_ID_SIZE
-			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
-
-		auto& nodes     = reduced_graph.nodes;
-		auto& adjacency = reduced_graph.adjacency;
-		CORE_ASSERT(nodes.size() == adjacency.size(), "Reduced graph data is inconsistent");
-
-		const usize node_count  = nodes.size();
-		usize       total_edges = 0;
-		for (const auto& deps: adjacency) total_edges += deps.size();
-
-		std::vector<byte> buffer;
-
-		// Calculate the total size of the serialized data
-		usize total_size = sizeof(usize);  // node_count
-		total_size += node_count * NODE_ID_SIZE;
-		total_size += node_count * sizeof(usize);
-		total_size += total_edges * sizeof(usize);
-		buffer.reserve(total_size);
-
-		auto write = [&](const auto& value) -> void {
-			using T               = std::decay_t<decltype(value)>;
-			auto serialized_value = std::bit_cast<std::array<byte, sizeof(T)>>(value);
-			buffer.insert(buffer.end(), serialized_value.begin(), serialized_value.end());
-		};
-
-		auto write_node_id = [&](const NodeID& node) -> void {
-			write(node.q_id.val);
-			write(node.hash.val.data);
-		};
-
-		// Serialize the size of the node list
-		write(node_count);
-		for (const auto& node: nodes) write_node_id(node);
-
-		for (usize idx = 0; idx < node_count; ++idx) {
-			const auto& deps = adjacency.at(idx);
-			write(deps.size());
-			for (usize dep_idx: deps) {
-				CORE_ASSERT(dep_idx < node_count, "Dependency index out of range in reduced graph");
-				write(dep_idx);
-			}
-		}
-
-		return buffer;
-	}
-
-	QueryGraph QueryGraph::deserialize(
-		std::span<const byte> data, std::function<NodeID(NodeID)> node_mapper
+	base::Optional<QueryGraph> QueryGraph::fromReducedGraphData(
+		ReducedGraphData reduced_graph, std::function<NodeID(NodeID)> node_mapper
 	) {
 		if (!node_mapper) node_mapper = [](NodeID node) { return node; };
-		using HType   = decltype(NodeID::hash.val);
-		using HVType  = decltype(NodeID::hash.val.data);
-		using QIDType = decltype(QueryID::val);
-		// Compile-time check to ensure HVType and QIDType are trivial
-		static_assert(std::is_trivial_v<HVType>, "HVType must be a trivial type.");
-		static_assert(std::is_trivial_v<QIDType>, "QIDType must be a trivial type.");
 
-		QueryGraph  graph;
-		usize       offset    = 0;
-		const usize data_size = data.size();
+		if (!reduced_graph.isConsistent()) return {};
 
-
-		auto read = [&](auto& dest) -> void {
-			using T = std::decay_t<decltype(dest)>;
-
-			if (offset + sizeof(T) > data_size)
-				throw std::out_of_range("Buffer size exceeded during deserialization");
-
-			std::memcpy(&dest, data.data() + offset, sizeof(T));
-
-			offset += sizeof(T);
-		};
-
-		auto read_node_id = [&]() -> NodeID {
-			QIDType q_id = 0;
-			read(q_id);
-
-			HVType hash;
-			read(hash);
-
-			return NodeID(QueryID(q_id), { HType(hash) });
-		};
-
-		// Deserialize the size of the node list
-		usize map_size = 0;
-		read(map_size);
+		QueryGraph graph;
 
 		std::vector<NodeID> nodes;
-		nodes.reserve(map_size);
-		// Deserialize each node entry
-		for (usize i = 0; i < map_size; ++i) {
-			NodeID raw_node = read_node_id();
-			nodes.emplace_back(node_mapper(raw_node));
-		}
+		nodes.reserve(reduced_graph.nodes.size());
+		for (const NodeID& raw_node: reduced_graph.nodes) nodes.emplace_back(node_mapper(raw_node));
 
-		// Deserialize the adjacency lists
-		for (usize node_index = 0; node_index < map_size; ++node_index) {
-			usize deps_size = 0;
-			read(deps_size);
+		for (usize node_index = 0; node_index < nodes.size(); ++node_index) {
+			const auto& deps = reduced_graph.adjacency.at(node_index);
 
 			std::vector<NodeID> children;
-			children.reserve(deps_size);
+			children.reserve(deps.size());
 
-			// Deserialize each dependency index
-			for (usize j = 0; j < deps_size; ++j) {
-				usize dep_index = 0;
-				read(dep_index);
-				if (dep_index >= nodes.size())
-					throw std::out_of_range("Dependency index out of range during deserialization");
-				children.emplace_back(nodes.at(dep_index));
-			}
+			for (usize dep_index: deps) children.emplace_back(nodes.at(dep_index));
 
 			auto key_value_pair
 				= graph.node_deps->maybePut(nodes.at(node_index), std::move(children));
+
 			if (key_value_pair == nullptr)
-				CORE_PANIC("Duplicate node detected during deserialization");
+				CORE_PANIC(
+					"node_mapper mapped two distinct nodes onto the same NodeID. This should be "
+					"checked by isConsistent() before calling fromReducedGraphData()."
+				);
 		}
 
-		// Ensure that the entire buffer was consumed
-		CORE_ASSERT(offset == data_size, "Deserialization did not consume the entire buffer");
-
-		return graph;
+		return base::Optional<QueryGraph>{ std::move(graph) };
 	}
 
 	std::vector<NodeID> QueryGraph::getAllNodes() const {

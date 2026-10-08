@@ -23,10 +23,31 @@
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/simple_keys.hpp>
+#include <ser/macros.hpp>
+#include <ser/ser.hpp>
 #include <tester/tester.hpp>
 
+#include <span>
 #include <sstream>
 #include <type_traits>
+#include <vector>
+
+/**
+ * @brief The graph on its way to bytes: its serialized form is plain data, so `ser::write` is the
+ * whole of it.
+ */
+std::vector<std::byte> writeGraph(const query::internal::QueryGraph& graph) {
+	std::vector<std::byte> bytes;
+	ser::orThrow(ser::write(bytes, graph.toReducedGraphData()));
+	return bytes;
+}
+
+/** @brief And back: `ser::read`, then the graph rebuilt from what it read. */
+query::internal::QueryGraph readGraph(std::span<const std::byte> bytes) {
+	auto reduced = ser::readOrPanicForce<query::internal::QueryGraph::ReducedGraphData>(bytes);
+	return query::internal::QueryGraph::fromReducedGraphData(std::move(reduced))
+	    .expect("A graph written by writeGraph has to read back");
+}
 
 struct Key1 {
 	u64            v;
@@ -540,6 +561,8 @@ namespace metadata_tests {
 
 	/**
 	 * @brief Simple serializable type for testing DECLARE_METADATA macro.
+	 * @note SER_DESCRIBE rather than nothing at all: the constructors make this a
+	 * non-aggregate, so the automatic member walk cannot reach the fields.
 	 */
 	struct SerializableData {
 		u64         value1 = 0;
@@ -549,42 +572,11 @@ namespace metadata_tests {
 
 		SerializableData(u64 v1, std::string v2): value1(v1), value2(std::move(v2)) {}
 
-		[[nodiscard]]
-		std::vector<std::byte> serialize() const {
-			std::vector<std::byte> result;
-			// Simple serialization: value1 (8 bytes) + string length (8 bytes) + string data
-			auto* v1_ptr = reinterpret_cast<const std::byte*>(&value1);
-			result.insert(result.end(), v1_ptr, v1_ptr + sizeof(u64));
-
-			u64   str_len = value2.size();
-			auto* len_ptr = reinterpret_cast<const std::byte*>(&str_len);
-			result.insert(result.end(), len_ptr, len_ptr + sizeof(u64));
-
-			auto* str_ptr = reinterpret_cast<const std::byte*>(value2.data());
-			result.insert(result.end(), str_ptr, str_ptr + value2.size());
-
-			return result;
-		}
-
-		[[nodiscard]]
-		static SerializableData deserialize(std::span<const std::byte> data) {
-			SerializableData result;
-
-			auto* v1_ptr  = reinterpret_cast<const u64*>(data.data());
-			result.value1 = *v1_ptr;
-
-			auto* len_ptr = reinterpret_cast<const u64*>(data.data() + sizeof(u64));
-			u64   str_len = *len_ptr;
-
-			result.value2
-				= std::string(reinterpret_cast<const char*>(data.data() + 2 * sizeof(u64)), str_len);
-
-			return result;
-		}
-
 		bool operator==(const SerializableData& other) const {
 			return value1 == other.value1 && value2 == other.value2;
 		}
+
+		SER_DESCRIBE(value1, value2)
 	};
 
 	/**
@@ -597,34 +589,14 @@ namespace metadata_tests {
 
 		explicit StringWrapper(std::string v): value(std::move(v)) {}
 
-		[[nodiscard]]
-		std::vector<std::byte> serialize() const {
-			std::vector<std::byte> result;
-			u64                    str_len = value.size();
-			auto*                  len_ptr = reinterpret_cast<const std::byte*>(&str_len);
-			result.insert(result.end(), len_ptr, len_ptr + sizeof(u64));
-
-			auto* str_ptr = reinterpret_cast<const std::byte*>(value.data());
-			result.insert(result.end(), str_ptr, str_ptr + value.size());
-			return result;
-		}
-
-		[[nodiscard]]
-		static StringWrapper deserialize(std::span<const std::byte> data) {
-			StringWrapper result;
-			auto*         len_ptr = reinterpret_cast<const u64*>(data.data());
-			u64           str_len = *len_ptr;
-			result.value
-				= std::string(reinterpret_cast<const char*>(data.data() + sizeof(u64)), str_len);
-			return result;
-		}
+		SER_DESCRIBE(value)
 	};
 
 	// Declare metadata types using the macro
 	DECLARE_METADATA(TestMeta, SerializableData);
 
-	// SimpleMeta wraps u64 - trivially copyable, use DECLARE_METADATA_SIMPLE
-	DECLARE_METADATA_SIMPLE(SimpleMeta, u64);
+	// SimpleMeta wraps a u64: a scalar needs no more from the macro than a struct does
+	DECLARE_METADATA(SimpleMeta, u64);
 
 	// AnotherMeta wraps a string with serialization
 	DECLARE_METADATA(AnotherMeta, StringWrapper);
@@ -1009,14 +981,14 @@ private:
 		query::entryPoint<Fibonacci>(Key1{ 10 });
 
 		const auto& graph = query::Context::getState().getGraph();
-		// Serialize the graph
-		auto serialized_data = graph.serialize();
+		// Serialize the graph - the serialized form is plain data, so `ser` needs nothing else
+		auto serialized_data = writeGraph(graph);
 
-		auto deserialized_graph = query::internal::QueryGraph::deserialize(serialized_data);
+		auto deserialized_graph = readGraph(serialized_data);
 
-		auto serialized_data2 = deserialized_graph.serialize();
+		auto serialized_data2 = writeGraph(deserialized_graph);
 
-		auto deserialized_graph2 = query::internal::QueryGraph::deserialize(serialized_data2);
+		auto deserialized_graph2 = readGraph(serialized_data2);
 
 		ASSERT_EQUAL(serialized_data.size(), serialized_data2.size());
 
@@ -1027,8 +999,8 @@ private:
 
 		const auto& graph2 = query::Context::getState().getGraph();
 
-		auto serialized_data3    = graph2.serialize();
-		auto deserialized_graph3 = query::internal::QueryGraph::deserialize(serialized_data3);
+		auto serialized_data3    = writeGraph(graph2);
+		auto deserialized_graph3 = readGraph(serialized_data3);
 
 		ASSERT_TRUE(serialized_data3.size() != serialized_data2.size());
 		ASSERT_TRUE(graph2.compare(deserialized_graph3));
@@ -1219,17 +1191,25 @@ private:
 		using namespace metadata_tests;
 
 		// Test SerializableData serialization/deserialization
-		SerializableData original{ 123, "hello world" };
-		auto             serialized   = original.serialize();
-		auto             deserialized = SerializableData::deserialize(serialized);
+		SerializableData       original{ 123, "hello world" };
+		std::vector<std::byte> serialized;
+		ASSERT_TRUE(ser::write(serialized, original).has_value());
+		auto deserialized = ser::read<SerializableData>(serialized);
+		ASSERT_TRUE(deserialized.has_value());
 
-		ASSERT_EQUAL(original.value1, deserialized.value1);
-		ASSERT_EQUAL(original.value2, deserialized.value2);
+		ASSERT_EQUAL(original.value1, deserialized->value.value1);
+		ASSERT_EQUAL(original.value2, deserialized->value.value2);
 
-		// Test metadata_TestMeta serialization
-		metadata_TestMeta meta{ original };
-		auto              meta_serialized   = meta.serialize();
-		auto              meta_deserialized = metadata_TestMeta::deserialize(meta_serialized);
+		// Test metadata_TestMeta, which writes and reads through the metadata archive pair
+		metadata_TestMeta      meta{ original };
+		std::vector<std::byte> meta_serialized;
+		{
+			query::internal::MetadataOut out{ meta_serialized };
+			ASSERT_TRUE(meta.serWrite(out) == ser::Errc::Ok);
+			ASSERT_TRUE(out.finish() == ser::Errc::Ok);
+		}
+		query::internal::MetadataIn in{ meta_serialized };
+		const metadata_TestMeta     meta_deserialized = metadata_TestMeta::serMake(in);
 
 		ASSERT_EQUAL(meta.value.value1, meta_deserialized.value.value1);
 		ASSERT_EQUAL(meta.value.value2, meta_deserialized.value.value2);
@@ -1288,11 +1268,14 @@ private:
 		);
 
 		// Serialize the entire storage
-		auto serialized_storage = storage2.serialize();
+		std::vector<std::byte> serialized_storage;
+		ASSERT_TRUE(ser::write(serialized_storage, storage2).has_value());
 		ASSERT_TRUE(serialized_storage.size() > 0);
 
 		// Deserialize into a new storage
-		auto restored = query::internal::MetadataStorage::deserialize(serialized_storage);
+		auto restored_result = ser::read<query::internal::MetadataStorage>(serialized_storage);
+		ASSERT_TRUE(restored_result.has_value());
+		auto restored = std::move(*restored_result).take();
 
 		// Verify SimpleMeta on node1
 		auto restored_simple1 = restored.getMetadata<metadata_SimpleMeta>(node1);

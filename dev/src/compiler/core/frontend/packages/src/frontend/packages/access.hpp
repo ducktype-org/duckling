@@ -39,7 +39,8 @@ namespace compiler::frontend::packages {
 	 * inside @c package_hash. The @c found / @c target_package_id fields are part of the key
 	 * so that distinct outcomes (alias missing / present-pointing-to-X / present-pointing-to-Y)
 	 * are tracked as independent dependencies.
-	 * Stored as metadata so it can be re-created during driver initialization.
+	 * Stored as metadata so it can be re-created during driver initialization, which is what
+	 * puts it in the stream.
 	 */
 	struct KeyOf_PackageDependencyAliasSideInput final {
 		hashing::ComponentHash::HashType package_hash;       //< owner package hash
@@ -49,9 +50,6 @@ namespace compiler::frontend::packages {
 
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
 		bool operator==(const KeyOf_PackageDependencyAliasSideInput&) const = default;
-
-		[[nodiscard]] std::vector<std::byte>         serialize() const;
-		static KeyOf_PackageDependencyAliasSideInput deserialize(std::span<const std::byte> data);
 
 		void prettyPrint(std::ostream& os) const;
 	};

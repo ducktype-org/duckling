@@ -4,6 +4,10 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include "simple_debug_info.hpp"
+
+#include <debug_info/debug_info_io.hpp>
+
 #include <base/comptime/type_traits.hpp>
 
 #include <tester/tester.hpp>
@@ -66,17 +70,13 @@ private:
 		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
 		ASSERT_TRUE(debugger.getLoadedFiles().empty());
 
-		// Real mappings contain absolute paths, the fixture has relative ones
-		auto             source = fs::File(path("simple.dk"));
-		std::ifstream    fixture(path("package_dvm.di.json"));
-		std::string      mapping((std::istreambuf_iterator<char>(fixture)), {});
-		std::string_view relative    = "\"simple.dk\"";
-		std::string      replacement = "\"" + source.getFilePath().string() + "\"";
-		for (usize pos = 0; (pos = mapping.find(relative, pos)) != std::string::npos;) {
-			mapping.replace(pos, relative.size(), replacement);
-			pos += replacement.size();
-		}
-		std::ofstream(build.getPath() / "package_dvm.di.json") << mapping;
+		// Real mappings contain absolute paths
+		auto          source = fs::File(path("simple.dk"));
+		std::ofstream out(build.getPath() / "package_dvm.di", std::ios::binary);
+		debug_info::saveToStream(
+			debugger_test_data::simpleDebugInfo(source.getFilePath().string()), out
+		);
+		out.close();
 
 		ASSERT_HAS_VALUE(debugger.loadDefault(package));
 

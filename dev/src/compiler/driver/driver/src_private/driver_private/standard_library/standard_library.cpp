@@ -250,7 +250,7 @@ namespace compiler::driver {
 	bool allStdlibArtifactsPresent() {
 		bool native = getStdLibArtifacts(".a").all_present;
 		bool dvm    = getStdLibArtifacts(".dbc").all_present;
-		bool di     = getStdLibArtifacts(".di.json").all_present;
+		bool di     = getStdLibArtifacts(".di").all_present;
 		return native && dvm && di;
 	}
 }

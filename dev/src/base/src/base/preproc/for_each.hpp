@@ -30,6 +30,25 @@
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
 /**
+ * @brief For each macro, but separates the results with commas, so the expansion is usable as an
+ * argument list.
+ *
+ * @example:
+ * ```cpp
+ * #define STRINGIFY_ARG(x) #x
+ * const char* names[] = { FOR_EACH_COMMA(STRINGIFY_ARG, a, b, c) };
+ * ```
+ * expands the initializer to:
+ * ```cpp
+ * { "a", "b", "c" }
+ * ```
+ */
+#define FOR_EACH_COMMA(macro, ...) __VA_OPT__(EVAL(FOR_EACH_COMMA_HELPER(macro, __VA_ARGS__)))
+#define FOR_EACH_COMMA_HELPER(macro, a1, ...) \
+	macro(a1) __VA_OPT__(COMMA FOR_EACH_COMMA_AGAIN PARENS(macro, __VA_ARGS__))
+#define FOR_EACH_COMMA_AGAIN() FOR_EACH_COMMA_HELPER
+
+/**
  * @brief For each macro, but gives the called macro an `arg` argument + iterates over the rest.
  */
 #define FOR_EACH_ARG(macro, arg, ...) __VA_OPT__(EVAL(FOR_EACH_HELPER_ARG(macro, arg, __VA_ARGS__)))

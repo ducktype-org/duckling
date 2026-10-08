@@ -14,6 +14,8 @@
 
 #include <base/types/ints.hpp>
 
+#include <ser/macros.hpp>
+
 #include <vector>
 
 namespace query::external {
@@ -79,6 +81,11 @@ namespace query::internal {
 		explicit constexpr operator usize() const {
 			return static_cast<usize>(val);
 		}
+
+		/**
+		 * @brief `ser` hooks: the query id as its underlying integer.
+		 */
+		SER_DESCRIBE_MAKE(QueryID, val)
 	};
 
 	/**
