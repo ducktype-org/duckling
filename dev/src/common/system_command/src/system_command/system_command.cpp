@@ -6,8 +6,6 @@
 
 #include "system_command.hpp"
 
-#include <sys/wait.h>
-
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
