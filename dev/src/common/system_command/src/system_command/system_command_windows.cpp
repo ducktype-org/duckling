@@ -119,7 +119,7 @@ namespace system_command {
 
 			return static_cast<int>(result);
 		}
-		const auto environment = this->osEnviron();
+		const auto environment = this->createEnvpWithEnviron();
 		const auto env_cstyle
 			= SystemCommand::convertToCStyle(environment, SystemCommand::AppendNullptr::Yes);
 		intptr_t result = _spawnvpe(_P_WAIT, args_cstyle[0], args_cstyle.data(), env_cstyle.data());
