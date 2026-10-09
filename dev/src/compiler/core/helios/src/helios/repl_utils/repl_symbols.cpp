@@ -32,6 +32,8 @@ namespace compiler::repl {
 				return "namespace";
 			case helios::SymbolKind::Function:
 				return "function";
+			case helios::SymbolKind::Module:
+				return "module";
 			case helios::SymbolKind::FunctionDeclaration:
 				return "function-decl";
 			case helios::SymbolKind::Const:

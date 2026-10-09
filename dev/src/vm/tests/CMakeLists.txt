@@ -123,6 +123,8 @@ duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_
         USES LibVM Tester)
 duck_add_test_custom(vm persistent_structures_test utils/persistent_structures_test.cpp
         USES LibVM Tester)
+duck_add_test_custom(vm vm_instruction_naming_test utils/instruction_naming_test.cpp
+        USES LibVM_sc Tester)
 duck_add_test_custom(vm vm_memory_test memory/memory_test.cpp
         USES LibVM_sc Tester VmTester_sc)
 

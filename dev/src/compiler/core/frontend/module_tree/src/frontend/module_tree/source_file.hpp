@@ -44,11 +44,11 @@ namespace compiler::frontend {
 		mutable base::Box<std::recursive_mutex> state_lock;
 		fs::File                                file;
 		base::StrID                             lang_file_name;
-		ModuleID                                linked_module;
+		Ref<ModuleTree>                         linked_module;
 		base::Optional<pst::PST<>>              parse_tree;
 		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
-		base::Optional<FileID> file_id;
+		base::Optional<Ref<SourceFile>> self;
 		mutable base::Optional<hashing::ComponentHash>
 			component_hash;  //< Logical path hash for this file (module path + file name)
 		//< Any functions that actually modifies it like invalidateComponentHash should not be
@@ -60,7 +60,7 @@ namespace compiler::frontend {
 		 * @param linked_module The module this file belongs to.
 		 * @note The file content is cached on construction.
 		 */
-		SourceFile(fs::File file, ModuleID linked_module);
+		SourceFile(fs::File file, Ref<ModuleTree> linked_module);
 
 		/**
 		 * @brief Reloads the file content and resets the parse tree.
@@ -86,6 +86,14 @@ namespace compiler::frontend {
 		 */
 		static void checkDanglingReference(const base::Ref<SourceFile>& candidate);
 
+		/**
+		 * @brief Returns the file registered under the given component hash.
+		 * A file is registered every time its component hash is computed; entries are never
+		 * removed, so a hash of a removed file that was not recreated resolves to a dangling
+		 * reference.
+		 */
+		static Ref<SourceFile> getRegisteredFile(const base::Bit256& hash);
+
 		bool operator==(const SourceFile& other) const {
 			CORE_ASSERT(
 				file != other.file || linked_module != other.linked_module
@@ -103,11 +111,12 @@ namespace compiler::frontend {
 		 * @return Reference to the created or existing SourceFile.
 		 * @note If a SourceFile for the given file already exists, and the content matches,
 		 *       the new SourceFile is returned. If the content differs, an assertion fails.
-		 *       A new FileID is always assigned for a new SourceFile.
 		 *       The file content is always hashed and cached.
-		 *       Each fileID has a unique UnstableHash even if it is pointing to the same fs::File
+		 *       The FileID is derived from the module path and the file name, so two SourceFiles
+		 *       with the same name in the same module share it.
+		 *       The module may still be under construction; its hash is not computed here.
 		 */
-		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
+		static Ref<SourceFile> create(fs::File file, Ref<ModuleTree> linked_module);
 
 		/**
 		 * @brief Retrieves all SourceFile instances registered under the given path.
@@ -125,7 +134,7 @@ namespace compiler::frontend {
 		/**
 		 * @brief Returns the FileID associated with this SourceFile.
 		 */
-		[[nodiscard]] FileID getFileID() const { return file_id.value(); }
+		[[nodiscard]] FileID getFileID() const { return { self.value() }; }
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.
@@ -136,9 +145,7 @@ namespace compiler::frontend {
 		/**
 		 * @brief Returns the module this SourceFile is linked to.
 		 */
-		[[nodiscard]] ModuleAccessLocked getModule() const {
-			return ModuleAccessLocked(linked_module);
-		}
+		[[nodiscard]] ModuleAccessLocked getModule() const;
 
 		/**
 		 * @brief Returns the language-level file name (stem).

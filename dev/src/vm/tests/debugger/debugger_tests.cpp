@@ -593,7 +593,7 @@ private:
 						auto variant = getStructField<idv::Variant>(
 							struct_data, base::StrID("simple_variant"), base::StrID("var_variant")
 						);
-						ASSERT_EQUAL_PRINT(variant.type_tag, 0);
+						ASSERT_EQUAL_PRINT(variant.alternative_index, 0);
 						auto primitive_value
 							= getVMValueRefData<idv::Primitive>(variant.referenced);
 						ASSERT_EQUAL_PRINT(primitive_value.value, 42);

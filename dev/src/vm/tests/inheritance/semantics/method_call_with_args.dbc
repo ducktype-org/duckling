@@ -36,7 +36,7 @@ function main { i64, ptr_argv } -> { i64 } {
     input_p64 a0;
     input_p64 a1;
 
-    virtual_call_pptr_method a_obj, foo;
+    virtualCall_pptr_method a_obj, foo;
 
     output_p64 ret;
 

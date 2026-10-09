@@ -172,15 +172,15 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_p64_imm			phase, 0;
 
 	init_pany_type		tw, i64;
-	set_threadctx		threadWaiter;
+	setThreadCtx_func		threadWaiter;
 	call_builtinfunc	builtin_start_thread;
 
 	init_pany_type		ta, i64;
-	set_threadctx		threadA;
+	setThreadCtx_func		threadA;
 	call_builtinfunc	builtin_start_thread;
 
 	init_pany_type		tb, i64;
-	set_threadctx		threadB;
+	setThreadCtx_func		threadB;
 	call_builtinfunc	builtin_start_thread;
 
 	# Lock gate and wait until both threads have their first mutex.
