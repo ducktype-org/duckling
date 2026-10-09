@@ -771,6 +771,7 @@ DEF_INSTR(exit)
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * Initializes a new local variable with a copy of the data held by a VMValue of the same process.
+ * @TODO: #899 Think of this.
  * @arg0 - the initialized local variable.
  * @arg1 - type of the local variable.
  * @arg2 - address of the source `vm::IVMValue`.

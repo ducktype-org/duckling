@@ -197,12 +197,6 @@ namespace {
 					string_value.value, /*is_string_class=*/true, llvm_type, llvm_module
 				);
 			}
-			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
-				// @TODO: #2506 Implement this
-				throw base::NotYetImplemented(base::strConcat(
-					"Conversion from CTV to LLVM constant for tuples is not implemented yet"
-				));
-			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
 					"Conversion from CTV to LLVM constant for this type. Index in CTV "

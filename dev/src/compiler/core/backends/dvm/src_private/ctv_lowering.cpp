@@ -18,6 +18,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include "diagnostic/placeholder.hpp"
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
@@ -125,7 +126,10 @@ namespace compiler::backend_vm::internal {
 					global_data.ctor_name = ctor.ctor.name;
 					pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 				} else {
-					CORE_PANIC("Lowering of the comp time value is not yet supported.");
+					pctx.query_ctx.value()->log<dia::NotYetImplementedCodeError>(
+						"VMValue based comp-time values to file lowering."
+					);
+					query::throwFailed();
 				}
 			}
 		}

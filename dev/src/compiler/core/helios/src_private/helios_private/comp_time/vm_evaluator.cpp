@@ -236,7 +236,7 @@ namespace {
 	 * @brief Converts a given `ctv` to VMValue.
 	 * @return The converted VMValue or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<std::variant<Box<vm::IVMValue>, Ref<vm::IVMValue>>, VmEvaluationError> ctvToVMValue(
+	std::expected<std::variant<Box<vm::IVMValue>, CRef<vm::IVMValue>>, VmEvaluationError> ctvToVMValue(
 		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
@@ -316,7 +316,7 @@ namespace {
 				);
 			}
 			variant_case(CompileTimeValue::VMValue, vm_value) {
-				return Ref<vm::IVMValue>(const_cast<vm::IVMValue*>(vm_value.val.get()));
+				return CRef<vm::IVMValue>(vm_value.val.get());
 			}
 			variant_default {
 				throw base::NotYetImplemented(
@@ -442,7 +442,7 @@ namespace {
 		}
 	}
 
-	using VmArguments = std::vector<std::variant<Box<vm::IVMValue>, Ref<vm::IVMValue>>>;
+	using VmArguments = std::vector<std::variant<Box<vm::IVMValue>, CRef<vm::IVMValue>>>;
 
 	std::expected<VmArguments, VmEvaluationError> prepareArguments(
 		query::Context&                                     ctx,
@@ -494,8 +494,8 @@ namespace {
 
 		auto to_ref = [&](auto& value) {
 			variant_match(value) {
-				variant_case(Box<vm::IVMValue>, val) { return val.refMut(); }
-				variant_case(Ref<vm::IVMValue>, val) { return val; }
+				variant_case(Box<vm::IVMValue>, val) { return val.ref(); }
+				variant_case(CRef<vm::IVMValue>, val) { return val; }
 			}
 			CORE_UNREACHABLE();
 		};

@@ -45,28 +45,6 @@ namespace compiler::ctv {
 			tsh::SymbolType<>        type;
 		};
 
-		struct TupleCTV {
-			explicit TupleCTV(std::vector<CompileTimeValue> elements):
-				  elements(std::move(elements)) {
-				// We require at least two elements to distinguish it from:
-				// - UnitCTV, which has zero elements, and
-				// - a single CTV that happens to appear in parentheses.
-				CORE_ASSERT(this->elements.size() >= 2, "TupleCTV must have at least two elements");
-			}
-
-			/**
-			 * @brief Get the elements of the tuple CTV.
-			 * @return The vector of the tuple CTV's elements.
-			 */
-			[[nodiscard]]
-			const std::vector<CompileTimeValue>& getElements() const {
-				return elements;
-			}
-
-		private:
-			std::vector<CompileTimeValue> elements;
-		};
-
 	private:
 		using Storage = std::variant<
 			bool,
@@ -75,7 +53,6 @@ namespace compiler::ctv {
 			CharSliceValue,
 			StringClassValue,
 			UnitCTV,
-			TupleCTV,
 			tsh::SymbolType<>,
 			VMValue>;
 		Storage value;

@@ -23,20 +23,6 @@
 #include <sstream>
 #include <string>
 
-namespace {
-	/**
-	 * @brief Builds a representation of the VM value as its type name and raw bytes in hex.
-	 */
-	std::string vmValueToString(const vm::IVMValue& value, const std::string& type_name) {
-		std::stringstream ss;
-		ss << type_name << "{0x" << std::hex << std::setfill('0');
-		for (usize i = 0; i < static_cast<usize>(value.getDataSize().asInt()); i++)
-			ss << std::setw(2) << static_cast<int>(value.getBytes()[i]);
-		ss << "}";
-		return ss.str();
-	}
-}
-
 namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
@@ -55,11 +41,6 @@ namespace compiler::ctv {
 			variant_case(StringClassValue, val) { hashing::addToHash(hasher, val.value); }
 			variant_case_novalue(UnitCTV) {
 				// nothing to add to hash
-			}
-			variant_case(TupleCTV, tuple) {
-				throw base::NotYetImplemented(
-					"Tuples are not supported yet in CTV::queryUnstablePerfectHash"
-				);
 			}
 			variant_case(tsh::SymbolType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
@@ -92,17 +73,12 @@ namespace compiler::ctv {
 				return "\"" + base::escapeString(val.value.str()) + "\".toString()";
 			}
 			variant_case_novalue(UnitCTV) { return "()"; }
-			variant_case(TupleCTV, tuple) {
-				std::stringstream ss;
-				ss << "(" << tuple.getElements().at(0).toString();
-				for (usize i = 1; i < tuple.getElements().size(); i++)
-					ss << ", " << tuple.getElements().at(i).toString();
-				ss << ")";
-				return ss.str();
-			}
 			variant_case(tsh::SymbolType<>, val) { return val.toString(); }
 			variant_case(VMValue, vm_value) {
-				return vmValueToString(*vm_value.val, vm_value.type.toString());
+				std::stringstream ss;
+				ss << "type: `" << vm_value.type.toString() << "`\n";
+				vm_value.val->dprint(ss);
+				return ss.str();
 			}
 			variant_default {
 				throw base::NotYetImplemented("Converting other CTV types to string");
@@ -153,19 +129,6 @@ namespace compiler::ctv {
 					tsh::Mutability::Mutable,
 				};
 			}
-			variant_case(TupleCTV, tuple) {
-				std::vector<tsh::SymbolType<>> component_types;
-				component_types.reserve(tuple.getElements().size());
-				for (const auto& element: tuple.getElements())
-					component_types.push_back(element.getTypeOfStoredValue(ctx));
-
-				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryTupleType>({ std::move(component_types) }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-			}
-
 			variant_case(tsh::SymbolType<>, val) {
 				return tsh::SymbolType<>{
 					tsh::getMetaType(),
