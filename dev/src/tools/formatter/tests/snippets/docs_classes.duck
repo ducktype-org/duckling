@@ -1,0 +1,59 @@
+# Examples from docs: writing_code/declarations/classes.html
+class Rectangle implements Shape {
+	height: i32;
+	width: i32;
+
+	override fun getArea() -> i32 = height * width;
+
+	fun withHeight(newHeight: i32) -> Rectangle = Rectangle(newHeight, width);
+
+	fun withWidth(newWidth: i32) -> Rectangle = Rectangle(height, newWidth);
+}
+
+class Square extends Rectangle {
+	Square.create(sideLength: i32) = {
+		super(sideLength, sideLength);
+	}
+}
+
+interface Greeter {
+	fun greet() -> ();
+}
+
+var greeters: (box Greeter)[2] = [new A(), new B()];
+
+for (greeter in greeters) {
+	greeter.greet();
+}
+
+class IDGenerator {
+	private nextID: u32 = 0;
+
+	protected fun addToID(amount: u32) -> () = {
+		nextID += amount;
+	}
+
+	fun getNextID() -> u32 = {
+		let id: u32 = nextID;
+		addToID(1);
+		return id;
+	}
+}
+
+class MyClass {
+	x: i32;
+
+	create() = {
+		x = 1;
+	}
+
+	create fromString(s: String) = {
+		x = 10 * parseInt(s);
+	}
+
+	destroy() = {
+		println(f"MyClass object with x = {x} is being destroyed.");
+	}
+}
+
+let obj4 = MyClass.fromString("3");

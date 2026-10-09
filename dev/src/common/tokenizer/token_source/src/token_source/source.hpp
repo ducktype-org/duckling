@@ -15,6 +15,7 @@
 #include <filesystem/file.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/char.hpp>
+#include <lexer/lex_options.hpp>
 #include <lexer/token.hpp>
 #include <token_source/forward.hpp>  // IWYU pragma: keep
 
@@ -124,7 +125,7 @@ namespace tokenizer {
 
 		void countLines();
 
-		void runLexer();
+		void runLexer(const lexer::LexOptions& options = {});
 
 		/**
 		 * @brief Run the whole lexer and change the keyword mode
@@ -132,17 +133,18 @@ namespace tokenizer {
 		 * call to this function, because we need the same keyword mode
 		 * for tokenizing and parsing.
 		 *
+		 * @param options Options forwarded to the lexer; by default comments are discarded.
 		 * @return If tokenizing process run without errors.
 		 */
 		template<
 			lang_def::KeywordMode keyword_mode = lang_def::KeywordMode::DucklingSource,
 			fs::Encoding          encoding     = fs::Encoding::UTF8>
-		bool tokenize() {
+		bool tokenize(const lexer::LexOptions& options = {}) {
 			lang_def::setKeywordMode(keyword_mode);
 			decode<encoding>();
 			if (int_log.hasErrors()) return false;
 			countLines();
-			runLexer();
+			runLexer(options);
 			return not int_log.hasErrors();
 		}
 	};

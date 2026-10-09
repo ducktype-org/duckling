@@ -206,7 +206,7 @@ namespace lexer {
 		}
 	}
 
-	void Lexer::commentHandler([[maybe_unused]] Tokens& output) {
+	void Lexer::commentHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
 		auto  source_start = currentPosition();
@@ -228,9 +228,12 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "line comment");
+		if (options.keep_comments)
+			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
+			);
 	}
 
-	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
+	void Lexer::blockCommentHandler(Tokens& output) {
 		usize               begin = where;
 		usize               end{};
 		auto                source_start = currentPosition();
@@ -253,6 +256,9 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 		addTokenMsg(begin, end, "block comment");
+		if (options.keep_comments)
+			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
+			);
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
@@ -390,8 +396,8 @@ namespace lexer {
 				if (!peek().isDigit()) {
 					if (!was_dot && peek().is('.')) {  // Only one dot can appear.
 						was_dot = true;
-					} else if (!was_e
-					           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
+					} else if (!was_e && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can
+						                                                        // appear.
 						was_e   = true;
 						was_dot = true;
 						next();  // 'e'
@@ -438,7 +444,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(Token::makeString(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
+			file->getCharRange(begin + 1, end + 1 - static_cast<usize>(closed)), source_position
 		));
 	}
 

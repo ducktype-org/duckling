@@ -75,6 +75,7 @@ add_subdirectory(src/common)
 add_subdirectory(src/compiler)
 add_subdirectory(src/vm)
 add_subdirectory(src/playground)
+add_subdirectory(src/tools)
 
 # Scripts:
 add_subdirectory(scripts/cmake)

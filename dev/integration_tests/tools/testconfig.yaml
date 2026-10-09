@@ -1,0 +1,6 @@
+# Integration tests of the standalone developer tools (src/tools/).
+# Each tool builds its own binary in its PreNode; do not inherit the root one.
+PreNode: ""
+
+SubDirs:
+  - formatter

@@ -1,0 +1,9 @@
+
+fun foo(a: i32, b: f32) = {}
+
+fun foo(a: i32, b: f32 = 0) = {}
+
+fun foo(a: f32, b: i32 = 42) = {}
+
+fun foo(a: A) = {}
+
