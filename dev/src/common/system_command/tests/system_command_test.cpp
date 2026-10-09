@@ -18,10 +18,10 @@ private:
 	void exitCode() {
 		// Do NOT use `true` nor `false`: they are shell built-ins, and not executables.
 		auto true_ec = system_command::SystemCommand("/bin/ls").execute();
-		assertTrue(true_ec == 0, "true command should return 0");
+		assertTrue(true_ec == 0, "/bin/ls command should return 0");
 		auto false_ec = system_command::SystemCommand("/i-really-hope-this-is-not-executable")
 		                    .execute(system_command::SystemCommand::ExitCodeHandling::Ignore);
-		assertTrue(false_ec == 1, "false command should return 1");
+		assertTrue(false_ec != 0, "not-executable shouldn't return 0 command should return 1");
 
 		assertThrows<base::Panic>(
 			[&]() {

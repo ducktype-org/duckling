@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#pragma once
 #include <base/config/target_info.hpp>
 
 #if BASE_TARGET_PLATFORM_POSIX

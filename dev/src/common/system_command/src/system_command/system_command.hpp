@@ -38,6 +38,36 @@ namespace system_command {
 		std::vector<std::string>                         arguments;
 		std::vector<std::pair<std::string, std::string>> environment;
 
+		/**
+		 * @brief Create an escaped string for debug logs.
+		 */
+		[[nodiscard]] std::string escapedDisplay() const;
+		/**
+		 * @brief Create a vector of program name + arguments.
+		 */
+		[[nodiscard]] std::vector<std::string> createArgv() const;
+		/**
+		 * @brief Create a vector of environments; each entry is formatted as `{key}={value}`.
+		 */
+		[[nodiscard]] std::vector<std::string> createEnvp() const;
+
+		enum class AppendNullptr {
+			Yes,
+			No,
+		};
+
+		/**
+		 * @brief Convert a vector of `std::string`s into a vector of `const char*`.
+		 * @note Inner `const char *` live as long as `input` strings. You can control whether or
+		 * not append `nullptr` via `append_nullptr`.
+		 *
+		 * @param input
+		 * @param append_nullptr
+		 */
+		[[nodiscard]] static std::vector<const char*> convertToCStyle(
+			const std::vector<std::string>& input, AppendNullptr append_nullptr
+		);
+
 	public:
 		SystemCommand(std::string program_name): program_name(std::move(program_name)) {}
 
