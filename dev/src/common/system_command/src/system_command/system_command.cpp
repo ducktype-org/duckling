@@ -16,7 +16,9 @@
 
 #include <cstddef>
 #include <cstring>
+#include <string>
 #include <string_view>
+#include <vector>
 
 using std::literals::operator""sv;
 
@@ -49,9 +51,8 @@ namespace system_command {
 		return result;
 	}
 
-	std::vector<std::string> SystemCommand::createEnvp() const {
-		std::vector<std::string> environment;
-		environment.reserve(this->environment.size());
+	std::vector<std::string> SystemCommand::createEnvpWithEnviron() const {
+		std::vector<std::string> environment = SystemCommand::osEnviron();
 		for (const auto& env: this->environment)
 			environment.push_back(env.first + "=" + env.second);
 		return environment;
@@ -66,6 +67,13 @@ namespace system_command {
 		result.reserve(total_size);
 		for (const auto& part: input) result.push_back(part.c_str());
 		if (append_nullptr == AppendNullptr::Yes) result.push_back(nullptr);
+		return result;
+	}
+
+	std::vector<std::string> SystemCommand::osEnviron() {
+		char**                   ptr = SystemCommand::getOsEnvironPointer();
+		std::vector<std::string> result{};
+		for (std::size_t i = 0; ptr[i] != nullptr; i++) result.emplace_back(ptr[i]);
 		return result;
 	}
 }

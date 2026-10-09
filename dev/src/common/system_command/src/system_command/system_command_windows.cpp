@@ -96,16 +96,13 @@ static void handleRc(
 	return;
 }
 
-static void appendEnviron(std::vector<std::string>& output) {
-	for (std::size_t i = 0; _environ[i] && *_environ[i]; i++) output.push_back(_environ[i]);
-}
-
 namespace system_command {
+
+	char** SystemCommand::getOsEnvironPointer() { return _environ; }
 
 	i32 SystemCommand::execute(ExitCodeHandling on_exit_code) const {
 		// @TODO: #3746 Use `CommandLineToArgvW`: we have to quote args manually on windows.
-		const auto args        = this->createArgv();
-		auto       environment = this->createEnvp();
+		const auto args = this->createArgv();
 
 		const auto args_cstyle
 			= SystemCommand::convertToCStyle(args, SystemCommand::AppendNullptr::Yes);
@@ -115,13 +112,14 @@ namespace system_command {
 		std::cerr.flush();
 		std::cout.flush();
 
-		if (environment.empty()) {
+		// Fast-path: on Windows we can pass `nullptr` to reuse parent process's environment.
+		if (this->environment.empty()) {
 			intptr_t result = _spawnvpe(_P_WAIT, args_cstyle[0], args_cstyle.data(), nullptr);
 			handleRc(on_exit_code, result, WhyHandleError::SpawnFailed, command_display);
 
 			return static_cast<int>(result);
 		}
-		appendEnviron(environment);
+		const auto environment = this->osEnviron();
 		const auto env_cstyle
 			= SystemCommand::convertToCStyle(environment, SystemCommand::AppendNullptr::Yes);
 		intptr_t result = _spawnvpe(_P_WAIT, args_cstyle[0], args_cstyle.data(), env_cstyle.data());

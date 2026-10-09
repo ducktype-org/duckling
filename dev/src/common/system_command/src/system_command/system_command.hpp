@@ -42,14 +42,17 @@ namespace system_command {
 		 * @brief Create an escaped string for debug logs.
 		 */
 		[[nodiscard]] std::string escapedDisplay() const;
+
 		/**
 		 * @brief Create a vector of program name + arguments.
 		 */
 		[[nodiscard]] std::vector<std::string> createArgv() const;
+
 		/**
-		 * @brief Create a vector of environments; each entry is formatted as `{key}={value}`.
+		 * @brief Create a vector of environments; entries are appended to `osEnviron` vector.
+		 * Each entry is formatted as `{key}={value}`.
 		 */
-		[[nodiscard]] std::vector<std::string> createEnvp() const;
+		[[nodiscard]] std::vector<std::string> createEnvpWithEnviron() const;
 
 		enum class AppendNullptr {
 			Yes,
@@ -67,6 +70,19 @@ namespace system_command {
 		[[nodiscard]] static std::vector<const char*> convertToCStyle(
 			const std::vector<std::string>& input, AppendNullptr append_nullptr
 		);
+
+		/**
+		 * @brief Get an implementation defined pointer to the environment.
+		 *
+		 * SAFETY: Pointer is readable, and the last entry is determined by `nullptr`.
+		 *		   Each nonnull element is a readable C-string.
+		 */
+		static char** getOsEnvironPointer();
+
+		/**
+		 * @brief Convert `getOsEnvironPointer` into a vector of strings.
+		 */
+		static std::vector<std::string> osEnviron();
 
 	public:
 		SystemCommand(std::string program_name): program_name(std::move(program_name)) {}
@@ -116,7 +132,7 @@ namespace system_command {
 		 * @brief Executes the command.
 		 * @warning Is not thread safe.
 		 *
-		 * @return i32 exit code of the command.
+		 * @return i32 exit code of the command, or -1 if spawning failed.
 		 */
 		[[nodiscard]] i32 execute(ExitCodeHandling on_exit_code = ExitCodeHandling::Panic) const;
 

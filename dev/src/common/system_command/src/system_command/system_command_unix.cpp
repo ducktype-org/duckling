@@ -130,14 +130,13 @@ static int handleWaitpidStatus(
 	return rc;
 }
 
-static void appendEnvironment(std::vector<std::string>& output) {
-	for (std::size_t i = 0; environ[i]; i++) output.emplace_back(environ[i]);
-}
-
 namespace system_command {
+
+	char** SystemCommand::getOsEnvironPointer() { return environ; }
+
 	i32 SystemCommand::execute(ExitCodeHandling on_exit_code) const {
 		const auto args        = this->createArgv();
-		auto       environment = this->createEnvp();
+		auto       environment = this->createEnvpWithEnviron();
 
 		const auto args_cstyle
 			= SystemCommand::convertToCStyle(args, SystemCommand::AppendNullptr::Yes);
@@ -147,7 +146,6 @@ namespace system_command {
 		std::cerr.flush();
 		std::cout.flush();
 
-		appendEnvironment(environment);
 		const auto environment_cstyle
 			= SystemCommand::convertToCStyle(environment, SystemCommand::AppendNullptr::Yes);
 
