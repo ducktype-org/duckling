@@ -25,6 +25,9 @@ use crate::{QuackResult, StrId, qp_bail_internal};
 pub mod graph;
 pub mod graph_visitor;
 
+#[cfg(test)]
+mod tests;
+
 // Missing constants from [`std::env::consts`].
 const STATIC_LIB_SUFFIX: &str = ".a";
 
@@ -93,11 +96,7 @@ impl Unit {
     /// Get a unique (in terms of the current compilation graph) name of the underlying package.
     /// It can be used as a directory name for storing artifacts.
     pub fn pkg_unique_name(&self) -> String {
-        // Can we trim this hash?
-        let id = sha256_string(self.identity().origin().to_string());
-        let name = self.package().name();
-        let version = self.package().version();
-        format!("{}-{}-{}", name, version, id)
+        self.package_data().unique_name()
     }
 
     /// Get a descriptive name of the underlying package.

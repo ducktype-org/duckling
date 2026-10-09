@@ -38,8 +38,10 @@ use std::path::PathBuf;
 
 use super::{ArtifactsLayout, DependencyLayout, ProfileLayout};
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit;
-use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph, UnitGraphNode};
+use crate::quackpack::core::compile::unit::graph::{
+    CompilationInput, GraphNodeId, UnitGraph, UnitGraphNode,
+};
+use crate::quackpack::core::compile::unit::graph_visitor::TryGraphVisitor;
 use crate::util::file_locks::FileLockManager;
 use crate::util::hash::Sha256Hasher;
 use crate::{QuackError, QuackResult, qp_bail_internal};
@@ -51,11 +53,11 @@ fn hash_subgraph_and_profile(
     profile: Profile,
 ) -> QuackResult<String> {
     struct SubgraphHasher<'graph> {
-        graph: &'graph unit::graph::UnitGraph,
+        graph: &'graph UnitGraph,
         hasher: Sha256Hasher,
     }
 
-    impl unit::graph_visitor::TryGraphVisitor for SubgraphHasher<'_> {
+    impl TryGraphVisitor for SubgraphHasher<'_> {
         type Err = QuackError;
 
         type Break = Infallible;
@@ -64,11 +66,12 @@ fn hash_subgraph_and_profile(
             &mut self,
             node: &UnitGraphNode,
         ) -> Result<ControlFlow<Self::Break>, Self::Err> {
-            let Some(unit) = node.as_unit() else {
+            let Some(CompilationInput::PackageSourceCode(identity)) = node.as_input() else {
                 return Ok(ControlFlow::Continue(()));
             };
-            let package = unit
-                .package_data()
+            let package = self
+                .graph
+                .package_data(*identity)
                 .multipackage_schema_package(self.graph)?;
             self.hasher.update(serde_json::to_string(&package)?);
             Ok(ControlFlow::Continue(()))

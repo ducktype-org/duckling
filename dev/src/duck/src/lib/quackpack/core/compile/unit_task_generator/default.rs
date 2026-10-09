@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! An implementation of [`UnitTaskGenerator`], which creates a single task per package.
+
 use tracing::instrument;
 
 use crate::QuackResult;
@@ -22,6 +24,8 @@ use crate::quackpack::core::compile::unit_task_generator::UnitTaskGenerator;
 pub struct DefaultTaskGenerator;
 
 impl UnitTaskGenerator for DefaultTaskGenerator {
+    #[instrument(skip_all)]
+    #[track_caller]
     fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> QuackResult<()> {
         let root = graph.root_unit();
         assert_eq!(
@@ -34,6 +38,7 @@ impl UnitTaskGenerator for DefaultTaskGenerator {
         Ok(())
     }
 
+    #[instrument(skip_all)]
     fn create_tasks(
         &self,
         unit: &Unit,

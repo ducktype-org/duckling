@@ -33,6 +33,9 @@ use crate::{QuackResult, QuackResultContext, qp_bail};
 pub mod external_libs;
 pub mod outputs;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug)]
 /// A runner of [`Unit`]s.
 pub struct UnitRunner<'duck, 'ctx> {

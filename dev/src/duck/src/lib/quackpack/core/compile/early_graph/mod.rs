@@ -86,6 +86,7 @@ impl DependencyGraph {
             .unwrap_or_else(|| missing_depenendcy_in_graph(*package, self))
     }
 
+    /// All packages reachable from package (including the package itself).
     pub fn reachable_subgraph_nodes(&self, package: Identity) -> HashSet<Identity> {
         let mut result = HashSet::new();
         self.reachable_subgraph_nodes_inner(package, &mut result);

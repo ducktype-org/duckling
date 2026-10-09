@@ -109,7 +109,7 @@ pub enum UnitGraphNodeInner {
 pub type GraphNodeId = u32;
 
 /// Input on which [`Unit`] can depend.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CompilationInput {
     /// Source code of a package.
     PackageSourceCode(Identity),
@@ -305,9 +305,9 @@ impl UnitGraphBuilder {
     }
 
     /// Ads to the graph a unit for compiling a package to dependency artifacts.
-    /// Panics:
+    /// Errors:
     /// -------
-    /// Panics if any of this unit's dependencies (namely source-code inputs) were not added to the graph beforehand.
+    /// Returns internal error if any of this unit's dependencies (namely source-code inputs) were not added to the graph beforehand.
     pub fn add_compile_dependency_unit(
         &mut self,
         identity: Identity,
@@ -331,9 +331,9 @@ impl UnitGraphBuilder {
     }
 
     /// Add to the graph a unit for compiling a package to binary artifacts.
-    /// Panics:
+    /// Errors:
     /// -------
-    /// Panics if any of this unit's dependencies (namely source-code inputs and compilation to dependency artifacts units)
+    /// Returns internal error if any of this unit's dependencies (namely source-code inputs and compilation to dependency artifacts units)
     /// were not added to the graph beforehand.
     pub fn add_compile_binary_unit(
         &mut self,
@@ -401,7 +401,8 @@ pub fn lower_early_graph(graph: EarlyGraph) -> QuackResult<UnitGraph> {
     let mut builder = UnitGraphBuilder::new();
     let (pkgs, graph) = graph.into_inner();
     let mut pkgs = pkgs.into_inner();
-    let mut sorted_identities: Vec<Identity> = graph.keys().copied().collect();
+    // Note: `graph` can potentially contain unnecessary packages as keys, but `pkgs` should at this moment be trimmed from those.
+    let mut sorted_identities: Vec<Identity> = pkgs.keys().copied().collect();
     sorted_identities.sort();
 
     for identity in sorted_identities.iter() {
