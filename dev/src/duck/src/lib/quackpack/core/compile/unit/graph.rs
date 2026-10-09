@@ -4,317 +4,462 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! [`UnitGraph`] is a lowered version of [`EarlyGraph`].
+use std::cell::OnceCell;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::convert::Infallible;
+use std::ops::ControlFlow;
+use std::sync::Arc;
 
-use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
-
-use tracing::instrument;
-
-use super::{BuildKind, Unit, UnitId, UnitType};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
-use crate::quackpack::core::compile::early_graph::{DependencyGraph, DependencyNode, EarlyGraph};
-use crate::quackpack::core::compile::missing_depenendcy_in_graph;
+use crate::quackpack::core::compile::early_graph::{DependencyGraph, EarlyGraph};
+use crate::quackpack::core::compile::unit::graph_visitor::{GraphVisitor, TryGraphVisitor};
+use crate::quackpack::core::compile::unit::{PackageData, Unit, UnitType};
 use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::valid_package_name::normalise_package_name;
+use crate::{QuackResult, QuackResultContext};
 
-#[derive(Debug)]
-/// A lowered version of the [`EarlyGraph`].
+/// Graph encapsulating dependencies between different tasks to be done in the compilation workflow.
+/// It has two types of nodes:
+/// - [`Unit`]s, which are tasks to be done;
+/// - [`CompilationInput`]s, which abstract over the inputs of the compilation workflow, namely source codes of packages.
+///
+/// Units can depend on both other units and inputs, while inputs have no dependencies.
+///
+/// The idea is for the [`UnitGraph`] to be a direct and truthful representation of the compilation workflow.
+/// Edges directly reflect dependence at the level of units, not packages.
+/// In particular [`UnitGraph`] is always acyclic.
+///
+/// Note:
+/// -----
+/// For [`UnitGraph`]s built with [`UnitGraphBuilder`], the identifiers constituate a topological order.
+#[derive(Clone, Debug)]
 pub struct UnitGraph {
-    root_id: UnitId,
-    /// All known [`Unit`]s.
+    /// Identifier of the root unit, which is the main compilation goal.
+    root_id: GraphNodeId,
+    /// Nodes of the graph, ordered by [`GraphNodeId`].
+    nodes: Vec<UnitGraphNode>,
+    /// Dependencies of the nodes of the graph, ordered by [`GraphNodeId`].
+    /// At index `i` we have dependencies of the [`UnitGraphNode`] with [`GraphNodeId`] == i.
+    /// Recall that only units can have dependencies, so for inputs the relevant vector is empty.
     ///
-    /// Unit with [`UnitId`] == `i` is at i-th index in the vector.
-    units: Vec<Unit>,
-    /// All dependencies of [`Unit`]s.
+    /// The whole vector has the same length as [`nodes`], which is guaranteed by [`UnitGraphBuilder`].
     ///
-    /// At index `i` we have dependencies of the [`Unit`] with [`UnitId`] == i.
-    ///
-    /// It has the same length as [`units`], which is guaranteed by [`new`] (we take vector of pairs
-    /// and decompose it).
-    ///
-    /// [`units`]: Self::units
-    /// [`new`]: Self::new
-    dependencies: Vec<Vec<UnitId>>,
+    /// [`nodes`]: Self::nodes
+    dependencies: Vec<Vec<GraphNodeId>>,
+    /// Information about packages used in this compilation workflow.
+    packages: HashMap<Identity, Arc<PackageData>>,
 }
 
 impl UnitGraph {
-    /// Create a new [`UnitGraph`].
-    pub fn new(root_id: UnitId, units: Vec<(Unit, Vec<UnitId>)>) -> Self {
-        if cfg!(debug_assertions) {
-            assert_valid_units_order(&units);
-        }
-        debug_assert_eq!(root_id, 0, "invalid root unit id");
-        let (units, dependencies) = decompose_units(units);
-        Self {
-            root_id,
-            units,
-            dependencies,
-        }
+    /// Get the [`UnitGraphNode`] for the given [`GraphNodeId`].
+    pub fn node_for(&self, id: GraphNodeId) -> &UnitGraphNode {
+        &self.nodes[id as usize]
     }
 
-    /// Get the dependency for the given id.
-    pub fn unit_for(&self, id: UnitId) -> &Unit {
-        &self.units[id as usize]
-    }
-
-    /// Get the dependency for the given id.
-    pub fn deps_for(&self, id: UnitId) -> &[UnitId] {
+    /// Get the dependencies of the node specified by [`GraphNodeId`].
+    pub fn deps_for(&self, id: GraphNodeId) -> &[GraphNodeId] {
         &self.dependencies[id as usize]
     }
 
-    /// Get the root [`Unit`].
+    /// Get the root [`Unit`] of this graph.
+    /// Panics:
+    /// -------
+    /// Panics when root node is not a unit.
+    /// This cannot be reached through the [`UnitGraphBuilder`] interface.
     pub fn root_unit(&self) -> &Unit {
-        self.unit_for(self.root_id)
+        self.node_for(self.root_id)
+            .as_unit()
+            .expect("root node is always a unit")
     }
 
-    /// Get [`Unit`]s sorted by their IDs.
-    pub fn units_sorted_by_id(&self) -> &[Unit] {
-        &self.units
+    /// Get the [`GraphNodeId`] of the root node of this graph.
+    pub fn root_id(&self) -> GraphNodeId {
+        self.root_id
     }
 
-    /// Get the compilation order.
-    pub fn compilation_order(&self) -> core::iter::Rev<core::slice::Iter<'_, Unit>> {
-        self.units_sorted_by_id().iter().rev()
-    }
-
-    /// Check if the given [`Unit`] is the root [`Unit`].
+    /// Check if a given [`Unit`] is the root node of this graph.
     pub fn is_root(&self, unit: &Unit) -> bool {
-        unit == self.root_unit()
+        self.root_unit() == unit
+    }
+
+    /// Get the [`PackageData`] for a package specified by an [`Identity`].
+    pub fn package_data(&self, identity: Identity) -> &PackageData {
+        self.packages
+            .get(&identity)
+            .unwrap_or_else(|| panic!("no package data for {identity}"))
+    }
+
+    /// Get the compilation order (topological order of the nodes of the graph).
+    /// We assume that the order given by [`GraphNodeId`]s is a topological order.
+    /// This is true for [`UnitGraph`]s constructed by the [`UnitGraphBuilder`] API.
+    pub fn compilation_order(&self) -> &[UnitGraphNode] {
+        &self.nodes
     }
 }
 
-/// Check that the input to [`UnitGraph::new`] is valid.
+/// A node in [`UnitGraph`].
+#[derive(Clone, Debug)]
+pub struct UnitGraphNode {
+    /// Unique identifier of the node in the graph.
+    id: GraphNodeId,
+    node: UnitGraphNodeData,
+}
+
+#[derive(Clone, Debug)]
+enum UnitGraphNodeData {
+    Unit(Unit),
+    Input(CompilationInput),
+}
+
+/// Unique identificator of [`UnitGraph`] nodes.
+pub type GraphNodeId = u32;
+
+/// Input on which [`Unit`] can depend.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CompilationInput {
+    /// Source code of a package.
+    PackageSourceCode(Identity),
+}
+
+impl UnitGraphNode {
+    /// Create a new [`UnitGraphNode`] which is a [`Unit`].
+    fn new_unit(unit: Unit, id: GraphNodeId) -> Self {
+        Self {
+            id,
+            node: UnitGraphNodeData::Unit(unit),
+        }
+    }
+
+    /// Create a new [`UnitGraphNode`] which is a [`CompilationInput`].
+    fn new_input(input: CompilationInput, id: GraphNodeId) -> Self {
+        Self {
+            id,
+            node: UnitGraphNodeData::Input(input),
+        }
+    }
+
+    /// Get the identifier of this node in the graph.
+    pub fn id(&self) -> GraphNodeId {
+        self.id
+    }
+
+    /// Unpack this [`UnitGraphNode`] if it is a [`Unit`].
+    pub fn as_unit(&self) -> Option<&Unit> {
+        if let UnitGraphNodeData::Unit(unit) = &self.node {
+            Some(unit)
+        } else {
+            None
+        }
+    }
+
+    /// Unpack this [`UnitGraphNode`] if it is a [`CompilationInput`].
+    pub fn as_input(&self) -> Option<&CompilationInput> {
+        if let UnitGraphNodeData::Input(input) = &self.node {
+            Some(input)
+        } else {
+            None
+        }
+    }
+
+    /// Accept a [`GraphVisitor`].
+    ///
+    /// This method should only drive the visitor through dependencies of this [`Unit`].
+    ///
+    /// If visitor returns `ControlFlow::Break(b)`, we short circuit to `Some(b)`.
+    ///
+    /// Otherwise (no breaks), we return `None`.
+    pub fn accept<V: GraphVisitor + ?Sized>(
+        &self,
+        visitor: &mut V,
+        graph: &UnitGraph,
+    ) -> Option<V::Break> {
+        struct VisitorAsTryVisitor<'a, U: ?Sized> {
+            visitor: &'a mut U,
+        }
+        impl<U: GraphVisitor + ?Sized> TryGraphVisitor for VisitorAsTryVisitor<'_, U> {
+            type Err = Infallible;
+
+            type Break = U::Break;
+
+            fn try_visit(
+                &mut self,
+                node: &UnitGraphNode,
+            ) -> Result<ControlFlow<Self::Break>, Self::Err> {
+                Ok(self.visitor.visit(node))
+            }
+        }
+        let result = self.try_accept(&mut VisitorAsTryVisitor { visitor }, graph);
+        let Ok(result) = result;
+        result
+    }
+
+    /// Accept a [`TryGraphVisitor`].
+    ///
+    /// This method should only drive the visitor through dependencies of this [`Unit`].
+    ///
+    /// If visitor returns an `Err(e)`, we short circuit to `Err(e)`
+    ///
+    /// If it returns `Ok(ControlFlow::Break(b))`, we short circuit to `Ok(Some(b))`.
+    ///
+    /// Otherwise (no errors + no breaks), we return `Ok(None)`.
+    pub fn try_accept<V: TryGraphVisitor + ?Sized>(
+        &self,
+        visitor: &mut V,
+        graph: &UnitGraph,
+    ) -> Result<Option<V::Break>, V::Err> {
+        let mut stack = VecDeque::from([self.id()]);
+        let mut visited = HashSet::new();
+        while let Some(id) = stack.pop_front() {
+            if visited.contains(&id) {
+                continue;
+            }
+            visited.insert(id);
+            let node = graph.node_for(id);
+            if let ControlFlow::Break(b) = visitor.try_visit(node)? {
+                return Ok(Some(b));
+            }
+            stack.extend(graph.deps_for(node.id()));
+        }
+        Ok(None)
+    }
+}
+
+/// A struct which should be used for creating instances of [`UnitGraph`].
 ///
-/// This should be executed only under `cfg!(debug_assertions)`.
-fn assert_valid_units_order(units: &[(Unit, Vec<UnitId>)]) {
-    for (index, (unit, deps)) in units.iter().enumerate() {
-        assert_eq!(
-            index as UnitId,
-            unit.unit_id(),
-            "{index}-th Unit({}) should have ID == {index}, but has {}",
-            unit.identity(),
-            unit.unit_id(),
-        );
-        assert!(
-            deps.is_sorted(),
-            "unit `{unit:?}` deps are not sorted {deps:#?}"
-        );
-        let has_dups = deps.windows(2).any(|window| window[0] == window[1]);
-        assert!(!has_dups, "unit `{unit:?}` deps have duplicates {deps:#?}");
-    }
-}
-
-fn decompose_units(units: Vec<(Unit, Vec<UnitId>)>) -> (Vec<Unit>, Vec<Vec<UnitId>>) {
-    units.into_iter().unzip()
-}
-
-/// Lower an [`EarlyGraph`] to the [`UnitGraph`].
-#[instrument(skip_all)]
-pub fn lower_early_graph(graph: EarlyGraph) -> UnitGraph {
-    let builder = UnitGraphBuilder::new(graph);
-    builder.lower()
-}
-
-#[derive(Debug)]
-/// Helper for lowering an [`EarlyGraph`] to the [`UnitGraph`].
-/// NOTE: `pub(crate)` indicates API to be used in [`lower_early_graph`], other functions are helpers.
+/// Note:
+/// -----
+/// This struct currently has an API which throws an internal error if someone tries to add a [`Unit`] and some of its dependencies is not yet present.
+/// The other solution would be to add those dependencies units on the fly.
+/// The issue with that approach is cycle-detection.
+/// Adding build-scritps could introduce erronous situations (like two packages with build scripts depending on one another).
+/// In such case it is impossible to construct the [`UnitGraph`] and
+/// while it would be possible to detect such situations with the second aproach, it would be challenging to provide the user with proper diagnosis.
+///
+/// Thus it is the callers responsibility to deal with such situations as described above and create all the nodes in the right order.
+///
+/// API:
+/// ----
+/// `pub(crate)` indicates API to be used in [`lower_early_graph`], other functions are helpers.
 pub(crate) struct UnitGraphBuilder {
-    /// Map [`Identity`] -> unique id.
-    /// It's guaranteed that ids are from range `(0..identities.len())`.
-    /// For the order of ids and more details, see [`build_ids_map`].
-    identity_to_id: HashMap<Identity, u64>,
-    /// Map unique id -> [`Identity`].
-    /// Because ids are from contiguous range, we store them in a vector.
-    id_to_identity: Vec<Identity>,
-    /// Map [`Identity`] -> [`CompilerPackage`].
-    packages: RefCell<HashMap<Identity, CompilerPackage>>,
-    graph: DependencyGraph,
-    /// Created [`Unit`]s with their dependencies up to some point.
-    /// The key-value pair is [`Unit`] -> ids of its dependencies.
-    ///
-    /// Some details about populating dependencies:
-    /// * ids can be put in any order,
-    /// * you can duplicate ids.
-    ///
-    /// In [`finish_lowering`] we sort everything + deduplicate.
-    /// Note, that we __don't__ deduplicate [`Unit`]s.
-    /// Each call to [`create_single_unit`] _always_ creates a new [`Unit`].
-    ///
-    /// [`finish_lowering`]: Self::finish_lowering
-    /// [`create_single_unit`]: Self::create_single_unit
-    created_units_with_deps: RefCell<HashMap<Unit, Vec<UnitId>>>,
+    root: OnceCell<GraphNodeId>,
+    identity_to_nodes: HashMap<Identity, NodesForIdentity>,
+    identity_to_pkg_data: HashMap<Identity, Arc<PackageData>>,
+    next_free_id: u32,
+    nodes: Vec<UnitGraphNode>,
+    dependencies: Vec<Vec<GraphNodeId>>,
+}
+
+/// A struct storing information of all units associated with a given package.
+#[derive(Default)]
+struct NodesForIdentity {
+    source_code_input: Option<GraphNodeId>,
+    compile_dependency: Option<GraphNodeId>,
+    compile_binary: Option<GraphNodeId>,
 }
 
 impl UnitGraphBuilder {
-    /// Create a new [`UnitGraphBuilder`] from the [`EarlyGraph`].
-    pub(crate) fn new(graph: EarlyGraph) -> Self {
-        let (identity_to_id, id_to_identity) = build_ids_map(&graph);
-        let (packages, graph) = graph.into_inner();
-        let packages = packages.into_inner();
+    /// Create a new empty [`UnitGraphBuilder`].
+    pub(crate) fn new() -> Self {
         Self {
-            identity_to_id,
-            id_to_identity,
-            packages: RefCell::new(packages),
-            graph,
-            created_units_with_deps: RefCell::default(),
+            root: OnceCell::new(),
+            identity_to_nodes: HashMap::new(),
+            identity_to_pkg_data: HashMap::new(),
+            next_free_id: 0,
+            nodes: vec![],
+            dependencies: vec![],
         }
     }
 
-    /// Lower (essentially) decomposed [`EarlyGraph`] (from [`new`]) to the [`UnitGraph`].
-    ///
-    /// [`new`]: Self::new
-    pub(crate) fn lower(self) -> UnitGraph {
-        self.populate_units();
-        self.finish_lowering()
+    /// Add a new [`CompilationInput`] node to the graph.
+    fn add_new_input(&mut self, input: CompilationInput) -> GraphNodeId {
+        let id = self.next_free_id;
+        self.next_free_id += 1;
+        self.nodes.push(UnitGraphNode::new_input(input, id));
+        // Inputs do not have any dependencies.
+        self.dependencies.push(vec![]);
+        id
     }
 
-    /// Get the next free for the next [`Unit`].
-    fn next_available_id(&self) -> UnitId {
-        self.created_units_with_deps.borrow().len() as UnitId
+    /// Add a new [`Unit`] node to the graph.
+    fn add_new_unit(&mut self, unit: Unit, deps: Vec<GraphNodeId>) -> GraphNodeId {
+        let id = self.next_free_id;
+        self.next_free_id += 1;
+        self.nodes.push(UnitGraphNode::new_unit(unit, id));
+        self.dependencies.push(deps);
+        id
     }
 
-    /// We have fully populated all fields (i.e. created all [`Unit`]s and added their
-    /// dependencies).
-    ///
-    /// Transform this information into a [`UnitGraph`].
-    ///
-    /// This function will, additionally:
-    /// * convert [`created_units_with_deps`] from a `HashMap` into a vector of pairs,
-    /// * sort that vector by the key/first element of pair ([`Unit`]) by [`UnitId`],
-    /// * sort and deduplicate every second element of tuple (dependencies of a [`Unit`]).
-    ///
-    /// [`created_units_with_deps`]: Self::created_units_with_deps
-    fn finish_lowering(self) -> UnitGraph {
-        let units = self.created_units_with_deps.take();
-        let mut units = units.into_iter().collect::<Vec<_>>();
-        units.iter_mut().for_each(|(_, deps)| {
-            deps.sort();
-            deps.dedup();
-        });
-        let root_id = units
+    /// Get a mutable access to the [`NodesForIdentity`] associated with the given [`Identity`].
+    fn nodes_for_identity_mut(&mut self, identity: Identity) -> &mut NodesForIdentity {
+        self.identity_to_nodes.entry(identity).or_default()
+    }
+
+    /// Get [`PackageData`] assocatied with a given [`Identity`].
+    fn get_package_data(&self, identity: Identity) -> Arc<PackageData> {
+        self.identity_to_pkg_data
+            .get(&identity)
+            .expect("no data for package")
+            .clone()
+    }
+
+    /// Add [`PackageData`] of a package to the graph.
+    pub(crate) fn add_package(&mut self, identity: Identity, package: Arc<PackageData>) {
+        self.identity_to_pkg_data.insert(identity, package);
+    }
+
+    /// Add to the graph an input of package's source code.
+    pub(crate) fn add_source_code_input(&mut self, identity: Identity) -> GraphNodeId {
+        let new_node = self.add_new_input(CompilationInput::PackageSourceCode(identity));
+        self.nodes_for_identity_mut(identity).source_code_input = Some(new_node);
+        new_node
+    }
+
+    /// Ads to the graph a unit for compiling a package to dependency artifacts.
+    /// Errors:
+    /// -------
+    /// Returns internal error if any of this unit's dependencies (namely source-code inputs) were not added to the graph beforehand.
+    pub(crate) fn add_compile_dependency_unit(
+        &mut self,
+        identity: Identity,
+        all_deps: HashSet<Identity>,
+    ) -> QuackResult<GraphNodeId> {
+        let mut src_deps = all_deps
+            .into_iter()
+            .map(|dep| {
+                self.nodes_for_identity_mut(dep)
+                    .source_code_input
+                    .with_context_internal(|| format!("no source code input for {dep}"))
+            })
+            .collect::<QuackResult<Vec<GraphNodeId>>>()?;
+        src_deps.sort();
+        let new_node = self.add_new_unit(
+            Unit::new(self.get_package_data(identity), UnitType::Dependency),
+            src_deps,
+        );
+        self.nodes_for_identity_mut(identity).compile_dependency = Some(new_node);
+        Ok(new_node)
+    }
+
+    /// Add to the graph a unit for compiling a package to binary artifacts.
+    /// Errors:
+    /// -------
+    /// Returns internal error if any of this unit's dependencies (namely source-code inputs and compilation to dependency artifacts units)
+    /// were not added to the graph beforehand.
+    pub(crate) fn add_compile_binary_unit(
+        &mut self,
+        identity: Identity,
+        all_deps: HashSet<Identity>,
+    ) -> QuackResult<GraphNodeId> {
+        let src_deps: Vec<GraphNodeId> = all_deps
             .iter()
-            .find_map(|(unit, _)| (unit.identity() == self.root_identity()).then(|| unit.unit_id()))
-            .expect("missing root");
-        units.sort_by_key(|(unit, _)| unit.unit_id());
-        UnitGraph::new(root_id, units)
+            .map(|dep| {
+                self.nodes_for_identity_mut(*dep)
+                    .source_code_input
+                    .with_context_internal(|| format!("no source code input for {dep}"))
+            })
+            .collect::<QuackResult<Vec<GraphNodeId>>>()?;
+        let compilation_deps: Vec<GraphNodeId> = all_deps
+            .into_iter()
+            .filter_map(|dep| {
+                if dep != identity {
+                    Some(
+                        self.nodes_for_identity_mut(dep)
+                            .compile_dependency
+                            .with_context_internal(|| {
+                                format!("no compile dependency unit for {dep}")
+                            }),
+                    )
+                } else {
+                    None
+                }
+            })
+            .collect::<QuackResult<Vec<GraphNodeId>>>()?;
+        let mut all_deps = [&src_deps[..], &compilation_deps[..]].concat();
+        all_deps.sort();
+        let root_id = self.add_new_unit(
+            Unit::new(self.get_package_data(identity), UnitType::Binary),
+            all_deps,
+        );
+        self.root
+            .set(root_id)
+            .expect("UnitGraphBuilder supports only one root package");
+        self.nodes_for_identity_mut(identity).compile_binary = Some(root_id);
+        Ok(root_id)
     }
 
-    /// Get the [`Identity`] of the root of the graph.
-    fn root_identity(&self) -> Identity {
-        self.graph.root()
-    }
-
-    /// Populate [`created_units_with_deps`] with [`Unit`]s and their dependencies.
-    ///
-    /// [`created_units_with_deps`]: Self::created_units_with_deps
-    fn populate_units(&self) {
-        for identity in self.id_to_identity.iter().copied() {
-            let package = self
-                .packages
-                .borrow_mut()
-                .remove(&identity)
-                .unwrap_or_else(|| missing_depenendcy_in_graph(identity, &self.identity_to_id));
-            let node = self.graph.dependencies_for_package(&identity);
-            let unit = self.create_single_unit(identity, package);
-            self.populate_unit_deps(&unit, node);
+    /// Finish constructing the [`UnitGraph`].
+    pub(crate) fn build(self) -> UnitGraph {
+        let Self {
+            mut root,
+            identity_to_nodes: _,
+            identity_to_pkg_data,
+            next_free_id: _,
+            nodes,
+            dependencies,
+        } = self;
+        UnitGraph {
+            root_id: root.take().expect("no root unit added to the graph"),
+            nodes,
+            dependencies,
+            packages: identity_to_pkg_data,
         }
     }
-
-    /// Create a new [`Unit`].
-    ///
-    /// This will use [`next_available_id`] as the [`UnitId`] of this [`Unit`].
-    ///
-    /// This function will:
-    /// * _always_ create a new [`Unit`],
-    /// * put that new [`Unit`] into [`created_units_with_deps`] with an empty vector as
-    ///   dependencies.
-    ///
-    /// [`next_available_id`]: Self::next_available_id
-    /// [`created_units_with_deps`]: Self::created_units_with_deps
-    fn create_single_unit(&self, unit_identity: Identity, package: CompilerPackage) -> Unit {
-        let unit_type = infer_unit_type(unit_identity, self.root_identity());
-        let unit_id = self.next_available_id();
-        let unit = Unit::new(
-            unit_id,
-            package,
-            unit_identity,
-            unit_type,
-            BuildKind::Compile,
-        );
-        let previous = self
-            .created_units_with_deps
-            .borrow_mut()
-            .insert(unit.clone(), vec![]);
-        debug_assert_eq!(
-            previous, None,
-            "we've inserted a new Unit, it shouldn't overwrite anything"
-        );
-        unit
-    }
-
-    /// Populate [`created_units_with_deps`] of the `unit` with its direct dependencies from `node`.
-    ///
-    /// [`created_units_with_deps`]: Self::created_units_with_deps
-    fn populate_unit_deps(&self, unit: &Unit, node: &DependencyNode) {
-        let mut map = self.created_units_with_deps.borrow_mut();
-        let deps = map
-            .get_mut(unit)
-            .expect("`create_single_unit` always inserts unit in the map; we don't create units any other way");
-        node.dependencies().iter().for_each(|dep| {
-            deps.push(
-                *self
-                    .identity_to_id
-                    .get(dep)
-                    .unwrap_or_else(|| missing_depenendcy_in_graph(*dep, &self.identity_to_id)),
-            );
-        });
-    }
 }
 
-/// Create a map of [`Identity`] -> [`UnitId`].
-/// We have to do it __before__ creating any [`Unit`], since:
-/// * we allow cycles, therefore we must obtain all ID's before.
-///
-/// IDs are assigned in the following order:
-/// * root gets ID 0,
-/// * next IDs are assigned in the “sorted” BFS orders; i.e.: dependency with the smallest
-///   lexicographical name gets ID 1, next gets ID 2, and so on; then we assign IDs to the
-///   dependencies of “1”, then “2”, and so on.
-fn build_ids_map(graph: &EarlyGraph) -> (HashMap<Identity, u64>, Vec<Identity>) {
-    let root = graph.graph().root();
-    let mut next_available_id = 0;
-    let mut result = HashMap::new();
-    let mut sorted_identities = vec![];
-    let mut queue = VecDeque::from([root]);
-    while let Some(current) = queue.pop_front() {
-        if result.contains_key(&current) {
-            continue;
+/// Create a [`UnitGraph`] from [`EarlyGraph`], using the [`UnitGraphBuilder`] API.
+pub fn lower_early_graph(graph: EarlyGraph) -> QuackResult<UnitGraph> {
+    let mut builder = UnitGraphBuilder::new();
+    let (pkgs, graph) = graph.into_inner();
+    let mut pkgs = pkgs.into_inner();
+    let mut sorted_identities: Vec<Identity> = graph
+        .reachable_subgraph_nodes(graph.root())
+        .into_iter()
+        .collect();
+    sorted_identities.sort();
+
+    for identity in sorted_identities.iter() {
+        let package = pkgs.remove(identity).expect("impossible");
+        let pkg_data = Arc::new(construct_package_data(*identity, package, &graph));
+        builder.add_package(*identity, pkg_data);
+        builder.add_source_code_input(*identity);
+    }
+
+    for identity in sorted_identities {
+        if identity != graph.root() {
+            let all_package_deps = graph.reachable_subgraph_nodes(identity);
+            builder.add_compile_dependency_unit(identity, all_package_deps)?;
         }
-        result.insert(current, next_available_id);
-        next_available_id += 1;
-        sorted_identities.push(current);
-        let deps = graph
-            .graph()
-            .dependencies_for_package(&current)
-            .dependencies()
-            .to_vec();
-        let deps = stable_sort_identities(deps);
-        queue.extend(deps);
     }
-    (result, sorted_identities)
+    let root_deps = graph.reachable_subgraph_nodes(graph.root());
+    builder.add_compile_binary_unit(graph.root(), root_deps)?;
+    Ok(builder.build())
 }
 
-/// Stable sort identities.
-fn stable_sort_identities(mut identities: Vec<Identity>) -> Vec<Identity> {
-    identities.sort_by(|lhs, rhs| Identity::stable_compare(*lhs, *rhs));
-    identities
-}
-
-/// Infer an appropriate [`UnitType`].
-fn infer_unit_type(unit_identity: Identity, root_identity: Identity) -> UnitType {
-    let is_root = unit_identity == root_identity;
-    if is_root {
-        return UnitType::Binary;
+/// Construct [`PackageData`] from [`CompilerPackage`].
+fn construct_package_data(
+    identity: Identity,
+    package: CompilerPackage,
+    graph: &DependencyGraph,
+) -> PackageData {
+    let (package, features, _) = package.decompose();
+    let direct_pkg_deps = graph.dependencies_for_package(&identity).dependencies();
+    let direct_pkg_deps = direct_pkg_deps
+        .iter()
+        .map(|dep| {
+            let alias = package
+                .manifest()
+                .dependencies()
+                .get_by_name(dep.name())
+                .unwrap_or_else(|| panic!("{identity} has no dependency named {}", dep.name()))
+                .alias()
+                .map(|alias| normalise_package_name(&alias).into());
+            (*dep, alias)
+        })
+        .collect();
+    PackageData {
+        package,
+        deps_realization: direct_pkg_deps,
+        enabled_features: features,
+        identity,
     }
-    UnitType::Dependency
 }

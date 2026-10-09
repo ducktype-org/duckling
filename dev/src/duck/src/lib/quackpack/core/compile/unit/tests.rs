@@ -6,9 +6,8 @@
 
 use std::ops::ControlFlow;
 
-use super::graph::lower_early_graph;
-use super::unit_visitor::UnitVisitor;
-use super::{Unit, UnitId, UnitType};
+use super::UnitType;
+use super::graph::{CompilationInput, lower_early_graph};
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
@@ -17,6 +16,8 @@ use crate::quackpack::core::compile::early_graph::tests::{
     mock_local_identity, mock_local_pkg, mock_registry_identity, mock_registry_pkg,
 };
 use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraphNode};
+use crate::quackpack::core::compile::unit::graph_visitor::GraphVisitor;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::storage::load_deps::load_packages_in_freeze as load_packages;
 use crate::quackpack::core::storage::paths::Storage;
@@ -30,12 +31,12 @@ use crate::quackpack::core::storage::paths::Storage;
 // To de-duplicate some code, we reuse setup from early_graph/ tests.
 
 #[derive(Default)]
-struct IdOrder(Vec<UnitId>);
+struct IdOrder(Vec<GraphNodeId>);
 
-impl UnitVisitor for IdOrder {
+impl GraphVisitor for IdOrder {
     type Break = ();
-    fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
-        self.0.push(unit.unit_id());
+    fn visit(&mut self, node: &UnitGraphNode) -> ControlFlow<Self::Break> {
+        self.0.push(node.id());
         ControlFlow::Continue(())
     }
 }
@@ -73,43 +74,77 @@ fn lowers_early_graph() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph);
+    let unit_graph = lower_early_graph(graph).unwrap();
 
-    let root_id = 0;
-    let foo_id = 2;
-    let bar_id = 1;
-    let baz_id = 3;
-    assert_eq!(unit_graph.units_sorted_by_id().len(), 4);
+    // src - source code input
+    // dep - compile to dependency artifacts unit
+    // exe - compile to executable unit
+    let bar_src_id = 0;
+    let baz_src_id = 1;
+    let foo_src_id = 2;
+    let root_src_id = 3;
+    let bar_dep_id = 4;
+    let baz_dep_id = 5;
+    let foo_dep_id = 6;
+    let root_exe_id = 7;
+    assert_eq!(unit_graph.compilation_order().len(), 8);
 
-    let deps_for = |unit: &Unit| unit_graph.deps_for(unit.unit_id());
+    assert!(unit_graph.root_id() == root_exe_id);
 
-    let root_unit = unit_graph.unit_for(root_id);
-    assert_eq!(root_unit, unit_graph.root_unit());
-    assert_eq!(root_unit.unit_type(), UnitType::Binary);
-    assert_eq!(root_unit.unit_id(), root_id);
-    assert_eq!(deps_for(root_unit), [bar_id, foo_id]);
+    let root_exe_unit = unit_graph.node_for(root_exe_id).as_unit().unwrap();
     assert_eq!(
-        root_unit.identity(),
-        mock_local_identity(root.path(), "root")
+        unit_graph.deps_for(root_exe_id),
+        [
+            bar_src_id,
+            baz_src_id,
+            foo_src_id,
+            root_src_id,
+            bar_dep_id,
+            baz_dep_id,
+            foo_dep_id
+        ]
+    );
+    assert_eq!(root_exe_unit.identity(), root_identity);
+    assert_eq!(root_exe_unit.unit_type(), UnitType::Binary);
+
+    let foo_dep_unit = unit_graph.node_for(foo_dep_id).as_unit().unwrap();
+    assert_eq!(unit_graph.deps_for(foo_dep_id), [baz_src_id, foo_src_id]);
+    assert_eq!(foo_dep_unit.identity(), mock_registry_identity("foo"));
+    assert_eq!(foo_dep_unit.unit_type(), UnitType::Dependency);
+
+    let baz_dep_unit = unit_graph.node_for(baz_dep_id).as_unit().unwrap();
+    assert_eq!(unit_graph.deps_for(baz_dep_id), [baz_src_id]);
+    assert_eq!(baz_dep_unit.identity(), mock_registry_identity("baz"));
+    assert_eq!(baz_dep_unit.unit_type(), UnitType::Dependency);
+
+    let bar_dep_unit = unit_graph.node_for(bar_dep_id).as_unit().unwrap();
+    assert_eq!(unit_graph.deps_for(bar_dep_id), [bar_src_id, baz_src_id]);
+    assert_eq!(bar_dep_unit.identity(), mock_registry_identity("bar"));
+    assert_eq!(bar_dep_unit.unit_type(), UnitType::Dependency);
+
+    let root_src_input = unit_graph.node_for(root_src_id).as_input().unwrap();
+    assert_eq!(
+        *root_src_input,
+        CompilationInput::PackageSourceCode(root_identity)
     );
 
-    let foo = unit_graph.unit_for(foo_id);
-    assert_eq!(foo.unit_type(), UnitType::Dependency);
-    assert_eq!(foo.unit_id(), foo_id);
-    assert_eq!(deps_for(foo), [baz_id]);
-    assert_eq!(foo.identity(), mock_registry_identity("foo"));
+    let foo_src_input = unit_graph.node_for(foo_src_id).as_input().unwrap();
+    assert_eq!(
+        *foo_src_input,
+        CompilationInput::PackageSourceCode(mock_registry_identity("foo").as_identity())
+    );
 
-    let bar = unit_graph.unit_for(bar_id);
-    assert_eq!(bar.unit_type(), UnitType::Dependency);
-    assert_eq!(bar.unit_id(), bar_id);
-    assert_eq!(deps_for(bar), [baz_id]);
-    assert_eq!(bar.identity(), mock_registry_identity("bar"));
+    let baz_src_input = unit_graph.node_for(baz_src_id).as_input().unwrap();
+    assert_eq!(
+        *baz_src_input,
+        CompilationInput::PackageSourceCode(mock_registry_identity("baz").as_identity())
+    );
 
-    let baz = unit_graph.unit_for(baz_id);
-    assert_eq!(baz.unit_type(), UnitType::Dependency);
-    assert_eq!(baz.unit_id(), baz_id);
-    assert_eq!(deps_for(baz), [0u64; 0]);
-    assert_eq!(baz.identity(), mock_registry_identity("baz"));
+    let bar_src_input = unit_graph.node_for(bar_src_id).as_input().unwrap();
+    assert_eq!(
+        *bar_src_input,
+        CompilationInput::PackageSourceCode(mock_registry_identity("bar").as_identity())
+    );
 }
 
 #[test]
@@ -134,6 +169,7 @@ fn lowers_early_graph_with_cycle() {
     let profile =
         Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
     let root_identity = mock_local_identity(root.path(), "root").into();
+    let cycle_identity = mock_local_identity(root.path(), "cycle").as_identity();
     let bcx = BuildContext {
         pcx: &root_pkg,
         root_identity,
@@ -145,107 +181,80 @@ fn lowers_early_graph_with_cycle() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph);
+    let unit_graph = lower_early_graph(graph).unwrap();
 
-    let root_id = 0;
-    let foo_id = 3;
-    let bar_id = 1;
-    let cycle_id = 2;
-    assert_eq!(unit_graph.units_sorted_by_id().len(), 4);
+    // src - source code input
+    // dep - compile to dependency artifacts unit
+    // exe - compile to executable unit
+    let bar_src_id = 0;
+    let cycle_src_id = 1;
+    let foo_src_id = 2;
+    let root_src_id = 3;
+    let bar_dep_id = 4;
+    let cycle_dep_id = 5;
+    let foo_dep_id = 6;
+    let root_exe_id = 7;
+    assert_eq!(unit_graph.compilation_order().len(), 8);
 
-    let root_unit = unit_graph.unit_for(root_id);
-    assert_eq!(root_unit, unit_graph.root_unit());
-    assert_eq!(root_unit.unit_type(), UnitType::Binary);
-    assert_eq!(root_unit.unit_id(), root_id);
+    assert!(unit_graph.root_id() == root_exe_id);
+
+    let root_exe_unit = unit_graph.node_for(root_exe_id).as_unit().unwrap();
     assert_eq!(
-        root_unit.identity(),
-        mock_local_identity(root.path(), "root")
+        unit_graph.deps_for(root_exe_id),
+        [
+            bar_src_id,
+            cycle_src_id,
+            foo_src_id,
+            root_src_id,
+            bar_dep_id,
+            cycle_dep_id,
+            foo_dep_id
+        ]
+    );
+    assert_eq!(root_exe_unit.identity(), root_identity);
+    assert_eq!(root_exe_unit.unit_type(), UnitType::Binary);
+
+    let foo_dep_unit = unit_graph.node_for(foo_dep_id).as_unit().unwrap();
+    assert_eq!(unit_graph.deps_for(foo_dep_id), [foo_src_id]);
+    assert_eq!(foo_dep_unit.identity(), mock_registry_identity("foo"));
+    assert_eq!(foo_dep_unit.unit_type(), UnitType::Dependency);
+
+    let cycle_dep_unit = unit_graph.node_for(cycle_dep_id).as_unit().unwrap();
+    assert_eq!(
+        unit_graph.deps_for(cycle_dep_id),
+        [bar_src_id, cycle_src_id, foo_src_id, root_src_id]
+    );
+    assert_eq!(cycle_dep_unit.identity(), cycle_identity);
+    assert_eq!(cycle_dep_unit.unit_type(), UnitType::Dependency);
+
+    let bar_dep_unit = unit_graph.node_for(bar_dep_id).as_unit().unwrap();
+    assert_eq!(unit_graph.deps_for(bar_dep_id), [bar_src_id]);
+    assert_eq!(bar_dep_unit.identity(), mock_registry_identity("bar"));
+    assert_eq!(bar_dep_unit.unit_type(), UnitType::Dependency);
+
+    let root_src_input = unit_graph.node_for(root_src_id).as_input().unwrap();
+    assert_eq!(
+        *root_src_input,
+        CompilationInput::PackageSourceCode(root_identity)
     );
 
-    let deps_for = |unit: &Unit| unit_graph.deps_for(unit.unit_id());
-    assert_eq!(deps_for(root_unit), [bar_id, cycle_id, foo_id]);
+    let foo_src_input = unit_graph.node_for(foo_src_id).as_input().unwrap();
+    assert_eq!(
+        *foo_src_input,
+        CompilationInput::PackageSourceCode(mock_registry_identity("foo").as_identity())
+    );
 
-    let foo = unit_graph.unit_for(foo_id);
-    assert_eq!(foo.unit_type(), UnitType::Dependency);
-    assert_eq!(foo.unit_id(), foo_id);
-    assert_eq!(deps_for(foo), [0u64; 0]);
-    assert_eq!(foo.identity(), mock_registry_identity("foo"));
+    let cycle_src_input = unit_graph.node_for(cycle_src_id).as_input().unwrap();
+    assert_eq!(
+        *cycle_src_input,
+        CompilationInput::PackageSourceCode(cycle_identity)
+    );
 
-    let bar = unit_graph.unit_for(bar_id);
-    assert_eq!(bar.unit_type(), UnitType::Dependency);
-    assert_eq!(bar.unit_id(), bar_id);
-    assert_eq!(deps_for(bar), [0u64; 0]);
-    assert_eq!(bar.identity(), mock_registry_identity("bar"));
-
-    let cycle = unit_graph.unit_for(cycle_id);
-    assert_eq!(cycle.unit_type(), UnitType::Dependency);
-    assert_eq!(cycle.unit_id(), cycle_id);
-    assert_eq!(deps_for(cycle), [root_id]);
-    assert_eq!(cycle.identity(), mock_local_identity(root.path(), "cycle"));
-}
-
-#[test]
-fn basic_visitor_order_cycle() {
-    let (ctx, root) = setup_mock_storage();
-    let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx).unwrap();
-
-    let packages = load_packages(
-        &storage,
-        &fetcher,
-        vec![
-            mock_local_pkg(root.path(), "root"),
-            mock_local_pkg(root.path(), "cycle"),
-            mock_registry_pkg("foo"),
-            mock_registry_pkg("bar"),
-            mock_registry_pkg("baz"),
-        ],
-    )
-    .unwrap();
-    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let profile =
-        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
-    let root_identity = mock_local_identity(root.path(), "root").into();
-    let bcx = BuildContext {
-        pcx: &root_pkg,
-        root_identity,
-        freeze: freeze(root.path()),
-        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
-        used_features: vec!["cycle".into()],
-        profile,
-        shared: false,
-        jobs: 1,
-    };
-    let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph);
-    let root_id = 0;
-    let foo_id = 3;
-    let bar_id = 1;
-    let cycle_id = 2;
-    {
-        let mut visitor = IdOrder::default();
-
-        unit_graph.root_unit().accept(&mut visitor, &unit_graph);
-
-        assert_eq!(visitor.0, [root_id, bar_id, cycle_id, foo_id]);
-    }
-    {
-        let mut visitor = IdOrder::default();
-
-        unit_graph
-            .unit_for(cycle_id)
-            .accept(&mut visitor, &unit_graph);
-
-        assert_eq!(visitor.0, [cycle_id, root_id, bar_id, foo_id]);
-    }
-    {
-        let mut visitor = IdOrder::default();
-        unit_graph
-            .unit_for(foo_id)
-            .accept(&mut visitor, &unit_graph);
-
-        assert_eq!(visitor.0, [foo_id]);
-    }
+    let bar_src_input = unit_graph.node_for(bar_src_id).as_input().unwrap();
+    assert_eq!(
+        *bar_src_input,
+        CompilationInput::PackageSourceCode(mock_registry_identity("bar").as_identity())
+    );
 }
 
 #[test]
@@ -281,46 +290,39 @@ fn basic_visitor_order() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph);
+    let unit_graph = lower_early_graph(graph).unwrap();
 
-    let root_id = 0;
-    let foo_id = 2;
-    let bar_id = 1;
-    let baz_id = 3;
-
-    {
-        let mut visitor = IdOrder::default();
-
-        unit_graph.root_unit().accept(&mut visitor, &unit_graph);
-
-        assert_eq!(visitor.0, [root_id, bar_id, foo_id, baz_id]);
-    }
-    {
-        let mut visitor = IdOrder::default();
-
-        unit_graph
-            .unit_for(foo_id)
-            .accept(&mut visitor, &unit_graph);
-
-        assert_eq!(visitor.0, [foo_id, baz_id]);
-    }
+    // src - source code input
+    // dep - compile to dependency artifacts unit
+    // exe - compile to executable unit
+    let bar_src_id = 0;
+    let baz_src_id = 1;
+    let foo_src_id = 2;
+    let root_src_id = 3;
+    let bar_dep_id = 4;
+    let baz_dep_id = 5;
+    let foo_dep_id = 6;
+    let root_exe_id = 7;
+    // Root depends on everything so the order is not that interesting...
     {
         let mut visitor = IdOrder::default();
 
         unit_graph
-            .unit_for(bar_id)
+            .node_for(root_exe_id)
             .accept(&mut visitor, &unit_graph);
 
-        assert_eq!(visitor.0, [bar_id, baz_id]);
-    }
-
-    {
-        let mut visitor = IdOrder::default();
-
-        unit_graph
-            .unit_for(baz_id)
-            .accept(&mut visitor, &unit_graph);
-
-        assert_eq!(visitor.0, [baz_id]);
+        assert_eq!(
+            visitor.0,
+            [
+                root_exe_id,
+                bar_src_id,
+                baz_src_id,
+                foo_src_id,
+                root_src_id,
+                bar_dep_id,
+                baz_dep_id,
+                foo_dep_id
+            ]
+        );
     }
 }

@@ -90,7 +90,7 @@ pub fn compile(
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
-    let unit_graph = lower_early_graph(graph);
+    let unit_graph = lower_early_graph(graph)?;
     let runner = UnitRunner::new(unit_graph, &bcx);
     runner.run()
 }
