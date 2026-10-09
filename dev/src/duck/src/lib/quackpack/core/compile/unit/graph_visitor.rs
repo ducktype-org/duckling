@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! A [`UnitVisitor`], a visitor for [`Unit`]s of compilation.
+//! A [`GraphVisitor`], a visitor for [`UnitGraphNode`]s of the compilation process graph.
 
 use std::ops::ControlFlow;
 
