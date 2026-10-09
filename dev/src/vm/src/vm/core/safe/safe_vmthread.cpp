@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "safe_vmthread.hpp"
 
 #include "opcode_functions/opcodes_functions.hpp"
@@ -180,7 +186,7 @@ namespace vm {
 
 		// Argument validity was already checked when validating the API call.
 		for (const auto& [i, arg_value]: std::views::enumerate(func_args)) {
-			const auto& arg_type = func.parameters[i];
+			const auto& arg_type = func.parameters[static_cast<u64>(i)];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
 				initFromVMValue,
@@ -199,7 +205,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				// The start function's whole local stack is the space shared with the callee,
 		        // so the callee's local stack starts at the very same address.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
+				MAKE_BYTECODE_INSTRUCTION(call_func_off, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need
 		        // for any deinits. It's being deinitialized by the thread after obtaining the
 		        // return value/exit_code.
@@ -379,7 +385,7 @@ namespace vm {
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				// `main`'s frame begins at its return value, which the layout above puts at 40.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40),  // call main
+				MAKE_BYTECODE_INSTRUCTION(call_func_off, called_function_id, 40),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
@@ -397,7 +403,9 @@ namespace vm {
 						anyArrayLoad_bany_pptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
 					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(
+						free_pptr_type, 48, str_type_arg
+					),                                              // free ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
 				}
 			);
@@ -407,7 +415,7 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),   // free *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(free_pptr_type, 8, argv_type_arg),  // free *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit ix

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file helios_with_std_test.cpp
  * @brief HELIOS tests that need the standard library available (e.g. to resolve
@@ -48,6 +54,7 @@
 #include <any>
 #include <array>
 #include <iostream>
+#include <regex>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -76,6 +83,7 @@ public:
 		TESTER_ADD_TEST(testReferenceKindCollapsing);
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testDestructors);
+		TESTER_ADD_TEST(testOperatorsWithPrimitives);
 	}
 
 protected:
@@ -154,7 +162,7 @@ private:
 	/**
 	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
 	 *
-	 * `new v` becomes `boxAlloc:{T}(v) as box T`: the primitive of `core.containers` hands the
+	 * `new v` becomes `boxAlloc[T](v) as box T`: the primitive of `core.containers` hands the
 	 * storage back as a `ptr T`, and the cast is what turns it into the box.
 	 */
 	static const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr
@@ -396,7 +404,7 @@ private:
 	// The `@builtin(...)` fundecls in core.builtins are templated, so their synthesized
 	// implementations are emitted once per element type they are baked for. The `builtins` module
 	// runs the alloc -> slice_from_ptr_len -> ptr_from_slice -> free chain for `str` and `i32`
-	// (and uses `ptr_from_slice:{char}` on a string literal).
+	// (and uses `ptr_from_slice[char]` on a string literal).
 	void testTemplatedBuiltinDefinitionsInModuleHOUT() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 
@@ -504,7 +512,6 @@ private:
 		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
 		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
 		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
 		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
@@ -1925,6 +1932,22 @@ private:
 			);
 			ASSERT_TRUE(boxAllocArg(box_copy.get()) != nullptr);
 		});
+	}
+
+	void testOperatorsWithPrimitives() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/std_operators")));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
+
+		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
+
+		auto              sym_v256 = getChain("V256", root_scope).back();
+		std::stringstream out_v256;
+		auto              tree_v256 = getExprOfConst(sym_v256);
+		tree_v256->debugPrint(out_v256);
+		ASSERT_TRUE(std::regex_match(
+			out_v256.str(),
+			std::regex{ R"(\(Symbol powi \((\d+)\)\)\(3 \+ 4 - 4 \* 16 / 5 % 7, 8\))" }
+		));
 	}
 };
 

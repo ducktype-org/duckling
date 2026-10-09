@@ -35,11 +35,11 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_popq_popq			lock, lock1;
 
 	init_pany_type			thread_inc1_id, i64;
-	set_threadctx			inc;
+	setThreadCtx_func			inc;
     call_builtinfunc		builtin_start_thread;
 
 	init_pany_type			thread_inc2_id, i64;
-	set_threadctx			inc;
+	setThreadCtx_func			inc;
     call_builtinfunc		builtin_start_thread;
 
 	init_pany_type			join_inc1_ret, i64;

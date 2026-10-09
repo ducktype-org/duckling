@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "attributes.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/attribute_arg_list.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -13,6 +20,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_errors.hpp>
 
+#include <algorithm>
 #include <functional>
 
 namespace compiler::helios {
@@ -81,6 +89,72 @@ namespace compiler::helios {
 			}
 			return base::safeIntConv<u64>(value.value());
 		}
+
+		/**
+		 * @brief Whether `name` is a valid C identifier: `[A-Za-z_][A-Za-z0-9_]*`.
+		 */
+		bool isCIdentifier(std::string_view name) {
+			auto is_alpha = [](char c) {
+				return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or c == '_';
+			};
+			auto is_alnum = [&](char c) { return is_alpha(c) or (c >= '0' and c <= '9'); };
+
+			if (name.empty() or not is_alpha(name.front())) return false;
+			return std::ranges::all_of(name, is_alnum);
+		}
+
+		/**
+		 * @brief Parses the single string-literal argument of `@c_symbol_name("<name>")`.
+		 * On invalid arguments it logs a diagnostic and fails the current query.
+		 */
+		base::StrID parseCSymbolName(query::Context& ctx, AttrArgs args) {
+			constexpr std::string_view ERROR_MSG
+				= "Attribute 'c_symbol_name' expects exactly one string literal argument.";
+
+			if_opt_none(args) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					std::string(ERROR_MSG), base::Optional<dia::StablePosition>{}
+				));
+				query::throwFailed();
+			}
+
+			auto arg_list = args.value().unlock(ctx);
+			std::vector<pst::AccessLocked<pst::UniversalExprHolder>> holders{ arg_list->begin(),
+				                                                              arg_list->end() };
+
+			if (holders.size() != 1) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					std::string(ERROR_MSG), arg_list->getStablePosition()
+				));
+				query::throwFailed();
+			}
+
+			auto holder  = holders.front().unlock(ctx);
+			auto str_lit = holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
+			if_opt_none(str_lit) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					std::string(ERROR_MSG), holder->getStablePosition()
+				));
+				query::throwFailed();
+			}
+
+			// The name is written to the object file and to the `.dbc` as-is, so it must be a C
+			// identifier. Only that syntax is checked: a C name that is a `.dbc` keyword (e.g.
+			// `variant`) still links with LLVM but is rejected by the DVM backend.
+			auto name = str_lit.value()->getValue().value;
+			if (not isCIdentifier(name.strView())) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"Attribute 'c_symbol_name' expects a valid C identifier, got '",
+						name.str(),
+						"'."
+					),
+					holder->getStablePosition()
+				));
+				query::throwFailed();
+			}
+			return name;
+		}
 	}
 
 	base::Optional<Attribute> attrFromStr(query::Context& ctx, base::StrID name, AttrArgs args) {
@@ -102,6 +176,10 @@ namespace compiler::helios {
 					  = parseU64(c, a, "Attribute requires one, non-negative integer argument.")
 				  };
 			  } },
+			{ "c_symbol_name",
+			  [](query::Context& c, AttrArgs a) -> Attribute {
+				  return CSymbolName{ .name = parseCSymbolName(c, a) };
+			  } },
 		};
 
 		auto parser = mapping.atMaybeCopy(name.strView());
@@ -118,6 +196,7 @@ namespace compiler::helios {
 			variant_case_novalue(CFFIVariadicFunction) {
 				return base::StrID("cffi_variadic_fixed_params");
 			}
+			variant_case_novalue(CSymbolName) { return base::StrID("c_symbol_name"); }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -128,6 +207,7 @@ namespace compiler::helios {
 			variant_case_novalue(BackendDependent) { return kind == pst::StmtKind::FunDecl; }
 			variant_case_novalue(Builtin) { return kind == pst::StmtKind::FunDecl; }
 			variant_case_novalue(CFFIVariadicFunction) { return kind == pst::StmtKind::FunDecl; }
+			variant_case_novalue(CSymbolName) { return kind == pst::StmtKind::FunDecl; }
 		}
 		CORE_UNREACHABLE();
 	}

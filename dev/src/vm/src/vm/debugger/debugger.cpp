@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debugger.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -96,8 +102,18 @@ namespace vm::debugger {
 		    .value();
 	}
 
+	const std::set<fs::File>& Debugger::getLoadedFiles() const { return loaded_files; }
+
+	bool Debugger::isFileAvailable(const fs::File& file) const {
+		return loaded_files.contains(file) || mapper.containsFile(file.getFilePath());
+	}
+
 	std::expected<void, api::ApiError> Debugger::loadFiles(const std::vector<fs::File>& files) {
-		return api::loadFiles(pid, files);
+		auto response = api::loadFiles(pid, files);
+
+		if (response) loaded_files.insert(files.begin(), files.end());
+
+		return response;
 	}
 
 	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault(

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <vm_tester_utils.hpp>
 
 #include <base/misc/int_conv.hpp>
@@ -587,7 +593,7 @@ private:
 						auto variant = getStructField<idv::Variant>(
 							struct_data, base::StrID("simple_variant"), base::StrID("var_variant")
 						);
-						ASSERT_EQUAL_PRINT(variant.type_tag, 0);
+						ASSERT_EQUAL_PRINT(variant.alternative_index, 0);
 						auto primitive_value
 							= getVMValueRefData<idv::Primitive>(variant.referenced);
 						ASSERT_EQUAL_PRINT(primitive_value.value, 42);

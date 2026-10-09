@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "flag_context.hpp"
 
 #include <vm/bytecode/validator/errors.hpp>
@@ -27,12 +33,12 @@ namespace vm::code {
 					}
 					// A tail-call is a direct call to a named function, so its callee's flags must
 					// propagate to the caller just like a regular call.
-					instr_case(instructions::Op_ret_tailcall_func, tailcall) {
+					instr_case(instructions::Op_retTailcall_func, tailcall) {
 						called_funcs.push_back(tailcall.function.function_name);
 					}
-					// set_threadctx names the function a spawned thread will run; its effects are
-					// caused by the spawner, so it is an edge for flag propagation too.
-					instr_case(instructions::Op_set_threadctx, threadctx) {
+					// setThreadCtx_func names the function a spawned thread will run; its effects
+					// are caused by the spawner, so it is an edge for flag propagation too.
+					instr_case(instructions::Op_setThreadCtx_func, threadctx) {
 						called_funcs.push_back(threadctx.function.function_name);
 					}
 					instr_default {

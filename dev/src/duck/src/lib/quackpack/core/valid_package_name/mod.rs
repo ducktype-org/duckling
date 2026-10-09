@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Utilities for validating a package name.
 
 use thiserror::Error;
@@ -41,6 +47,7 @@ const DUCKLING_KEYWORDS: &[&str] = &[
     "for",
     "fun",
     "fundecl",
+    "global",
     "hides",
     "i128",
     "i16",
@@ -75,7 +82,6 @@ const DUCKLING_KEYWORDS: &[&str] = &[
     "self",
     "sizeof",
     "slice",
-    "static",
     "str",
     "switch",
     "template",

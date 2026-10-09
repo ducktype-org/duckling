@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file opcodes.hpp
  * @brief Defines enum for all opcodes in the VM.
@@ -7,22 +13,30 @@
 #include <vm/bytecode/instructions.hpp>
 
 /**
- * Opcodes names conventions:
+ * Instruction naming convention (high and micro instructions alike):
  *
- * Name is: name_[first arg description]_[optional second arg description]
- * Each name is:
- * imm      - immediate value
- * l[size]  - position of primitive local with given size
- * lptr     - position of local pointer
- * func     - function id
- * r[nr]    - primitive register with number [nr]
- * rprt[nr] - pointer register with number [nr]
- * type     - type name
- * label    - label name
+ *   baseName[_operand1[_operand2[_operand3]]]
  *
- * Most two argument operation store result in first argument
+ * `baseName` is camelCase (`add`, `cmpEq`, `bitAnd`, `virtualCall`). It is followed by the short
+ * name of each operand, in order: `OP_SHORT` in `vm/bytecode/opcode_args.hpp` for high
+ * instructions, `ARG_SHORT` in `micro_instruction_args.hpp` for micro ones. For example:
+ * imm          - immediate value
+ * p8..p64      - place of a primitive of the given size
+ * pptr, pcptr  - place of a VM pointer / of a C pointer
+ * pany, popq   - place of any type / of an opaque value
+ * pste, pfst   - place of a structure / of a fixed-size table
+ * pvnt         - place of a variant
+ * bany, bste,
+ * bfst, bvnt   - (micro only) block place of any type / structure / fixed-size table / variant
+ * off          - (micro only) local stack offset computed by the lowering
+ * type, field  - type name / field name
+ * func, method - function name / method name
+ * label        - label name
  *
- * Opcodes not following this convention have additional description
+ * `vm_instruction_naming_test` enforces it. Its only exceptions are the `label` pseudo-instruction
+ * and `ptrParts_p64_p64_pptr`, whose micro form reads its third operand from an `ext_pptr`.
+ *
+ * Most two argument operations store the result in the first argument.
  */
 
 namespace vm::low {
@@ -99,5 +113,5 @@ namespace vm::low {
 
 	template<vm::low::MicroOpcode opcode>
 	constexpr bool IS_OPCODE_RETURNING
-		= opcode == MicroOpcode::ret || opcode == MicroOpcode::ret_tailcall_func;
+		= opcode == MicroOpcode::ret || opcode == MicroOpcode::retTailcall_func;
 }

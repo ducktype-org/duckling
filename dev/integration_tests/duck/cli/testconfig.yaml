@@ -4,3 +4,4 @@ SubDirs:
   - builtin-subcommands
   - errors
   - external-subcommands
+  - version

@@ -2,16 +2,19 @@ duckc_dir: "@{build_dir}/bin"
 dvm_dir: "@{duckc_dir}"
 duckc_path: "@{duckc_dir}/duckc"
 dvm_path: "@{dvm_dir}/VM"
+duck_ls_path: "@{duckc_dir}/duck_ls"
 
 compile_duckc: "cmake --build @{build_dir} -j -- duckc"
 compile_dvm: "cmake --build @{build_dir} -j -- VM"
+compile_duck_ls: "cmake --build @{build_dir} -j -- duck_ls"
 
 # The toolchain is built once, before any subtree runs. Subtree PreNodes
 # must not invoke cmake themselves: with -j > 1 subtrees run concurrently
 # and concurrent builds of the same build dir race. NOTE: PreNode is
 # INHERITED - every direct subtree must define its own (possibly empty)
 # PreNode, otherwise this one reruns concurrently for each of its nodes.
-PreNode: "@{tmp_env_tool} sweep && @{compile_duckc} && @{compile_dvm} && @{warmup_std_artifacts}"
+PreNode: "@{tmp_env_tool} sweep && @{compile_duckc} && @{compile_dvm} && @{compile_duck_ls}
+  && @{warmup_std_artifacts}"
 
 expect_output: "python3 @{dev_dir}/integration_tests/helpers/expect_output.py"
 

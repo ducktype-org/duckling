@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <events/emitter.hpp>
@@ -28,6 +34,8 @@ namespace vm::debugger {
 		PID                 pid;
 		ProgramRunArguments main_args;
 		Mapper              mapper;
+
+		std::set<fs::File> loaded_files;
 
 		events::Listener<api::ProcStatus> updater;
 		events::Listener<std::string>     vm_output;
@@ -88,6 +96,16 @@ namespace vm::debugger {
 		 * @return The current status of the VM.
 		 */
 		[[nodiscard]] api::ProcStatus getStatus();
+
+		/**
+		 * @brief Returns the files successfully loaded through `loadFiles`
+		 */
+		[[nodiscard]] const std::set<fs::File>& getLoadedFiles() const;
+
+		/**
+		 * @brief Checks if the file was loaded or is a source file of the loaded mapping
+		 */
+		[[nodiscard]] bool isFileAvailable(const fs::File& file) const;
 
 		/**
 		 * @brief Loads files into debugger

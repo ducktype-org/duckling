@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "duck"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "clap",
@@ -538,7 +538,6 @@ dependencies = [
  "itertools 0.15.0",
  "libc",
  "libgit2-sys",
- "libssh2-sys",
  "openssl",
  "openssl-sys",
  "percent-encoding",

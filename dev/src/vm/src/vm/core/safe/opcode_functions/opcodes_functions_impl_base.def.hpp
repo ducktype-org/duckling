@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file opcodes_functions_impl_base.def.hpp
  * @brief The opcodes functions implementations.
@@ -95,7 +101,7 @@ namespace vm {
 	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(checkStrategy)(FUNCTION_ARGS) {
 		{
 			++instr;
 			if (thread.isBreakRequested())
@@ -196,13 +202,13 @@ namespace vm {
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
-#define DEFINE_INT_N_BITWISE(SIZE)              \
-	DEFINE_BINARY_OP(bit_and, SIZE, u##SIZE, &) \
-	DEFINE_BINARY_OP(bit_or, SIZE, u##SIZE, |)  \
-	DEFINE_BINARY_OP(bit_xor, SIZE, u##SIZE, ^) \
-	DEFINE_BINARY_OP(shl, SIZE, u##SIZE, <<)    \
-	DEFINE_BINARY_OP(shr, SIZE, u##SIZE, >>)    \
-	DEFINE_UNARY_OP(bit_not, SIZE, u##SIZE, ~)
+#define DEFINE_INT_N_BITWISE(SIZE)             \
+	DEFINE_BINARY_OP(bitAnd, SIZE, u##SIZE, &) \
+	DEFINE_BINARY_OP(bitOr, SIZE, u##SIZE, |)  \
+	DEFINE_BINARY_OP(bitXor, SIZE, u##SIZE, ^) \
+	DEFINE_BINARY_OP(shl, SIZE, u##SIZE, <<)   \
+	DEFINE_BINARY_OP(shr, SIZE, u##SIZE, >>)   \
+	DEFINE_UNARY_OP(bitNot, SIZE, u##SIZE, ~)
 
 	FOR_EACH(DEFINE_INT_N_BITWISE, 64, 32, 16, 8)
 
@@ -234,11 +240,11 @@ namespace vm {
 		FUNCTION_CONT(1);                                                        \
 	}
 
-	DEFINE_BOOLEAN_OP(log_and, &&)
-	DEFINE_BOOLEAN_OP(log_or, ||)
-	DEFINE_BOOLEAN_OP(log_xor, !=)
+	DEFINE_BOOLEAN_OP(logAnd, &&)
+	DEFINE_BOOLEAN_OP(logOr, ||)
+	DEFINE_BOOLEAN_OP(logXor, !=)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_p8)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(logNot_p8)(FUNCTION_ARGS) {
 		{
 			bool result = (READ_FROM_PLACE_ARG(u8, instr->arg0) == u8{ 0 });
 			WRITE_TO_PLACE_ARG(u8, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
@@ -313,7 +319,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_off)(FUNCTION_ARGS) {
 		{
 			auto function_id = static_cast<usize>(instr->arg0);
 			CORE_ASSERT(
@@ -570,7 +576,7 @@ namespace vm {
 			}
 			for (auto& vm_value: args) vm_value->freeData();
 
-			// Similar as in call_func, but we deinit the arguments blocks as well,
+			// Similar as in call_func_off, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
@@ -667,7 +673,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setThreadCtx_func)(FUNCTION_ARGS) {
 		{
 			auto& called_func = thread.process_program->getFunctions()[instr->arg0];
 			thread.setThreadCtx(called_func.name.str());
@@ -675,7 +681,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_pptr_method)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(virtualCall_pptr_method)(FUNCTION_ARGS) {
 		{
 			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 
@@ -704,7 +710,7 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(retTailcall_func)(FUNCTION_ARGS) {
 		{
 			auto function_id = static_cast<usize>(instr->arg0);
 			CORE_ASSERT(
@@ -746,7 +752,7 @@ namespace vm {
 			instr       = frame->instr;  // This is already a pointer to next instr.
 			local_stack = frame->local_stack;
 		}
-		// Here the argument is `0` because of the convention defined in the op_call_func.
+		// Here the argument is `0` because of the convention defined in the op_call_func_off.
 		FUNCTION_CONT(0);
 	}
 
@@ -895,12 +901,13 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr_type)(FUNCTION_ARGS) {
 		{
 			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
-				if (Memory::isBlockDeallocated(ptr.getBlock()))
-					throw exceptions::VMDoubleFreeException();
-				thread.process_memory.freeBlockData(ptr.getBlock());
+				const auto expected_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+				if (thread.process_memory.getBlockType(ptr.getBlock()) != expected_type)
+					throw exceptions::VMInvalidFreeException();
+				thread.process_memory.guardedFreeBlockData(ptr);
 			}
 		}
 		FUNCTION_CONT(1);
@@ -1370,48 +1377,17 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			const auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 
-			if (new_elem_count == 0) {
-				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
-				// null. This is one of two possible approaches:
-				// 1. Current approach: treat 0-sized arrays as non-existent, and set the pointer to
-				// null-pointer (what we do here)
-				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
-				// C-nullptr as their data, but on DVM level we would still allow pointer
-				// [0-sized-block, nullptr] to exist. Any access to such block would simply
-				// be out-of-bound access.
-				//
-				// It might be desired to switch to second approach in the future, depending on the
-				// semantics of Duckling arrays.
-				if (!tbl_pointer.isNull()) {
-					auto tbl_block = tbl_pointer.getBlock();
-					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
-						throw exceptions::VMDynTableReAllocTypeMismatch();
-					if (Memory::isBlockDeallocated(tbl_block))
-						throw exceptions::VMUseAfterFreeException();
-					thread.process_memory.freeBlockData(tbl_block);
-					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-						tbl_pointer, Pointer::null()
-					);
-					WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-				}
-			} else if (tbl_pointer.isNull()) {
-				auto new_block
-					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
-				const Pointer new_dst
-					= thread.process_memory.updatePointerAssignment(tbl_pointer, { new_block, 0 });
-				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-			} else {
-				auto tbl_block = tbl_pointer.getBlock();
-				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
-					throw exceptions::VMDynTableReAllocTypeMismatch();
-				if (Memory::isBlockDeallocated(tbl_block))
-					throw exceptions::VMUseAfterFreeException();
-				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
-			}
+			WRITE_TO_PLACE_ARG(
+				Pointer,
+				instr->arg0,
+				thread.process_memory.dynTableReallocateBlockDataN(
+					tbl_pointer, pointed_type, new_elem_count
+				)
+			);
 		}
 		FUNCTION_CONT(2);
 	}

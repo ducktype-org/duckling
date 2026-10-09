@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <tester/tester.hpp>
 
 #include <vm/core/safe/low_program/instruction.hpp>
@@ -17,7 +23,7 @@ public:
 private:
 	/**
 	 * @brief The index of the `stepGil` the builder puts at the very start of a function.
-	 * With the JIT enabled the function opens with a `check_strategy`, so everything shifts by one.
+	 * With the JIT enabled the function opens with a `checkStrategy`, so everything shifts by one.
 	 */
 #ifdef ENABLE_JIT
 	static constexpr usize FUNCTION_ENTRY_STEP_GIL_INDEX = 1;
@@ -39,11 +45,11 @@ private:
 		case vm::low::MicroOpcode::jmp_label:
 		case vm::low::MicroOpcode::jmpIf_label:
 		case vm::low::MicroOpcode::jmpIfNot_label:
-		case vm::low::MicroOpcode::call_func:
+		case vm::low::MicroOpcode::call_func_off:
 		case vm::low::MicroOpcode::call_builtinfunc:
 		case vm::low::MicroOpcode::call_cfunc:
 		case vm::low::MicroOpcode::call_ffifunc:
-		case vm::low::MicroOpcode::virtual_call_pptr_method:
+		case vm::low::MicroOpcode::virtualCall_pptr_method:
 			return true;
 		default:
 			return false;

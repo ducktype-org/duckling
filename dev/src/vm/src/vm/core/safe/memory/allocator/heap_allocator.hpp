@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 #include "allocator.hpp"
 #include "block_data.hpp"
@@ -11,9 +17,8 @@
 #include <vm/core/safe/type_metadata/type.hpp>
 
 namespace vm {
-
 	template<typename EntryT>
-	inline EntryT* heapAllocOrThrow(u64 size) {
+	EntryT* heapAllocOrThrow(u64 size) {
 		try {
 			return new EntryT[size];
 		} catch (const std::bad_alloc&) { throw exceptions::VMMemoryAllocationError(); }
@@ -49,9 +54,9 @@ namespace vm {
 		 *  to assign the correct type to the new `BlockData` object.
 		 * @note Same byte-count/element-count aliasing as `allocate()` above, see its note.
 		 */
-		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
+		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, u64 n) {
 			static_assert(sizeof(EntryT) == 1);
-			usize   size = inner_type->getSize().asInt() * n;
+			usize   size = table_type->getInnerType().value()->getSize().asInt() * n;
 			EntryT* ptr  = heapAllocOrThrow<EntryT>(size);
 			return BlockData<EntryT>{ table_type,
 				                      base::TypedModRawView<EntryT>{ ptr, size },
