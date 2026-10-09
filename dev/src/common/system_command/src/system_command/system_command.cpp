@@ -69,11 +69,3 @@ namespace system_command {
 		return result;
 	}
 }
-
-#if BASE_TARGET_OS_WINDOWS
-	#include "system_command_windows.cpp"
-#elif BASE_TARGET_PLATFORM_POSIX
-	#include "system_command_unix.cpp"
-#else
-	#error "unsupported platform"
-#endif
