@@ -103,6 +103,7 @@ static void appendEnviron(std::vector<std::string>& output) {
 namespace system_command {
 
 	i32 SystemCommand::execute(ExitCodeHandling on_exit_code) const {
+		// @TODO: #3746 Use `CommandLineToArgvW`: we have to quote args manually on windows.
 		const auto args        = this->createArgv();
 		auto       environment = this->createEnvp();
 
