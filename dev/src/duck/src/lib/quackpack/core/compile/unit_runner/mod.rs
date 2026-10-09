@@ -4,6 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! [`UnitRunner`] takes a [`UnitGraph`] and a [`UnitTaskGenerator`] and drives the compilation
+//! process using them.
+
 use core::fmt;
 use std::cell::RefCell;
 use std::collections::HashMap;

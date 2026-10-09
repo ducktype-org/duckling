@@ -39,6 +39,12 @@ pub struct UnitGraph {
     /// Nodes of the graph, ordered by [`GraphNodeId`].
     nodes: Vec<UnitGraphNode>,
     /// Dependencies of the nodes of the graph, ordered by [`GraphNodeId`].
+    /// At index `i` we have dependencies of the [`UnitGraphNode`] with [`GraphNodeId`] == i.
+    /// Recall that only units can have dependencies, so for inputs the relevant vector is empty.
+    ///
+    /// The whole vector has the same length as [`nodes`], which is guaranteed by [`UnitGraphBuilder`].
+    ///
+    /// [`nodes`]: Self::nodes
     dependencies: Vec<Vec<GraphNodeId>>,
     /// Information about packages used in this compilation workflow.
     packages: HashMap<Identity, Arc<PackageData>>,
@@ -96,11 +102,11 @@ impl UnitGraph {
 pub struct UnitGraphNode {
     /// Unique identifier of the node in the graph.
     id: GraphNodeId,
-    node: UnitGraphNodeInner,
+    node: UnitGraphNodeData,
 }
 
 #[derive(Clone, Debug)]
-pub enum UnitGraphNodeInner {
+enum UnitGraphNodeData {
     Unit(Unit),
     Input(CompilationInput),
 }
@@ -120,7 +126,7 @@ impl UnitGraphNode {
     fn new_unit(unit: Unit, id: GraphNodeId) -> Self {
         Self {
             id,
-            node: UnitGraphNodeInner::Unit(unit),
+            node: UnitGraphNodeData::Unit(unit),
         }
     }
 
@@ -128,7 +134,7 @@ impl UnitGraphNode {
     fn new_input(input: CompilationInput, id: GraphNodeId) -> Self {
         Self {
             id,
-            node: UnitGraphNodeInner::Input(input),
+            node: UnitGraphNodeData::Input(input),
         }
     }
 
@@ -139,7 +145,7 @@ impl UnitGraphNode {
 
     /// Unpack this [`UnitGraphNode`] if it is a [`Unit`].
     pub fn as_unit(&self) -> Option<&Unit> {
-        if let UnitGraphNodeInner::Unit(unit) = &self.node {
+        if let UnitGraphNodeData::Unit(unit) = &self.node {
             Some(unit)
         } else {
             None
@@ -148,7 +154,7 @@ impl UnitGraphNode {
 
     /// Unpack this [`UnitGraphNode`] if it is a [`CompilationInput`].
     pub fn as_input(&self) -> Option<&CompilationInput> {
-        if let UnitGraphNodeInner::Input(input) = &self.node {
+        if let UnitGraphNodeData::Input(input) = &self.node {
             Some(input)
         } else {
             None
@@ -222,7 +228,7 @@ impl UnitGraphNode {
 ///
 /// Note:
 /// -----
-/// This struct currently has an API which panics if someone tries to add a [`Unit`] and some of its dependencies is not yet present.
+/// This struct currently has an API which throws an internal error if someone tries to add a [`Unit`] and some of its dependencies is not yet present.
 /// The other solution would be to add those dependencies units on the fly.
 /// The issue with that approach is cycle-detection.
 /// Adding build-scritps could introduce erronous situations (like two packages with build scripts depending on one another).
@@ -230,6 +236,10 @@ impl UnitGraphNode {
 /// while it would be possible to detect such situations with the second aproach, it would be challenging to provide the user with proper diagnosis.
 ///
 /// Thus it is the callers responsibility to deal with such situations as described above and create all the nodes in the right order.
+///
+/// API:
+/// ----
+/// `pub(crate)` indicates API to be used in [`lower_early_graph`], other functions are helpers.
 pub(crate) struct UnitGraphBuilder {
     root: OnceCell<GraphNodeId>,
     identity_to_nodes: HashMap<Identity, NodesForIdentity>,
@@ -249,7 +259,7 @@ struct NodesForIdentity {
 
 impl UnitGraphBuilder {
     /// Create a new empty [`UnitGraphBuilder`].
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             root: OnceCell::new(),
             identity_to_nodes: HashMap::new(),
@@ -293,12 +303,12 @@ impl UnitGraphBuilder {
     }
 
     /// Add [`PackageData`] of a package to the graph.
-    pub fn add_package(&mut self, identity: Identity, package: Arc<PackageData>) {
+    pub(crate) fn add_package(&mut self, identity: Identity, package: Arc<PackageData>) {
         self.identity_to_pkg_data.insert(identity, package);
     }
 
     /// Add to the graph an input of package's source code.
-    pub fn add_source_code_input(&mut self, identity: Identity) -> GraphNodeId {
+    pub(crate) fn add_source_code_input(&mut self, identity: Identity) -> GraphNodeId {
         let new_node = self.add_new_input(CompilationInput::PackageSourceCode(identity));
         self.nodes_for_identity_mut(identity).source_code_input = Some(new_node);
         new_node
@@ -308,7 +318,7 @@ impl UnitGraphBuilder {
     /// Errors:
     /// -------
     /// Returns internal error if any of this unit's dependencies (namely source-code inputs) were not added to the graph beforehand.
-    pub fn add_compile_dependency_unit(
+    pub(crate) fn add_compile_dependency_unit(
         &mut self,
         identity: Identity,
         all_deps: HashSet<Identity>,
@@ -335,7 +345,7 @@ impl UnitGraphBuilder {
     /// -------
     /// Returns internal error if any of this unit's dependencies (namely source-code inputs and compilation to dependency artifacts units)
     /// were not added to the graph beforehand.
-    pub fn add_compile_binary_unit(
+    pub(crate) fn add_compile_binary_unit(
         &mut self,
         identity: Identity,
         all_deps: HashSet<Identity>,
@@ -378,7 +388,7 @@ impl UnitGraphBuilder {
     }
 
     /// Finish constructing the [`UnitGraph`].
-    pub fn build(self) -> UnitGraph {
+    pub(crate) fn build(self) -> UnitGraph {
         let Self {
             mut root,
             identity_to_nodes: _,
@@ -401,8 +411,10 @@ pub fn lower_early_graph(graph: EarlyGraph) -> QuackResult<UnitGraph> {
     let mut builder = UnitGraphBuilder::new();
     let (pkgs, graph) = graph.into_inner();
     let mut pkgs = pkgs.into_inner();
-    // Note: `graph` can potentially contain unnecessary packages as keys, but `pkgs` should at this moment be trimmed from those.
-    let mut sorted_identities: Vec<Identity> = pkgs.keys().copied().collect();
+    let mut sorted_identities: Vec<Identity> = graph
+        .reachable_subgraph_nodes(graph.root())
+        .into_iter()
+        .collect();
     sorted_identities.sort();
 
     for identity in sorted_identities.iter() {
@@ -412,15 +424,13 @@ pub fn lower_early_graph(graph: EarlyGraph) -> QuackResult<UnitGraph> {
         builder.add_source_code_input(*identity);
     }
 
-    let mut root_deps = HashSet::new();
     for identity in sorted_identities {
-        let all_package_deps = graph.reachable_subgraph_nodes(identity);
-        if identity == graph.root() {
-            root_deps = all_package_deps;
-        } else {
+        if identity != graph.root() {
+            let all_package_deps = graph.reachable_subgraph_nodes(identity);
             builder.add_compile_dependency_unit(identity, all_package_deps)?;
         }
     }
+    let root_deps = graph.reachable_subgraph_nodes(graph.root());
     builder.add_compile_binary_unit(graph.root(), root_deps)?;
     Ok(builder.build())
 }

@@ -44,16 +44,21 @@ pub struct Unit {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-/// What type of artifacts a given [`Unit`] produces.
+/// What task to perform this [`Unit`] represents.
+///
+/// Note: Mapping to the [`Strategy`] is done by [`UnitTaskGenerator`].
+///
+/// [`Strategy`]: super::duckc::multipackage_schema::PackageCompilationStrategy
+/// [`UnitTaskGenerator`]: super::unit_task_generator::UnitTaskGenerator
 pub enum UnitType {
-    /// Compile to a binary
-    /// Maps to the `Native` strategy
+    /// Compile to a binary.
+    /// Maps to the `Native` or `DvmExe` strategy.
     Binary,
-    /// Compile to a library (`.dll`, `.so`, `.a`, etc)
-    /// Maps to the `Native` strategy
+    /// Compile to a library (`.dll`, `.so`, `.a`, etc).
+    /// This type is (still) unsupported.
     Library,
-    /// This [`Unit`] is a dependency and can produce only minimal artifacts
-    /// Maps to the `Lib` compilation strategy, and we'll produce only minimal archives:
+    /// This [`Unit`] is a dependency and can produce only minimal artifacts.
+    /// Maps to the `Lib` or `DvmLib` compilation strategy, and will produce only minimal archives:
     /// they might be incomplete, but linker will take care of this (when compiling the root package
     /// with [`Binary`](Self::Binary) or [`Library`](Self::Library) types).
     Dependency,

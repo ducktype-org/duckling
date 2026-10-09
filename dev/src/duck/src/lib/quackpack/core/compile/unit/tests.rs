@@ -76,6 +76,9 @@ fn lowers_early_graph() {
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph).unwrap();
 
+    // src - source code input
+    // dep - compile to dependency artifacts unit
+    // exe - compile to executable unit
     let bar_src_id = 0;
     let baz_src_id = 1;
     let foo_src_id = 2;
@@ -180,6 +183,9 @@ fn lowers_early_graph_with_cycle() {
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph).unwrap();
 
+    // src - source code input
+    // dep - compile to dependency artifacts unit
+    // exe - compile to executable unit
     let bar_src_id = 0;
     let cycle_src_id = 1;
     let foo_src_id = 2;
@@ -286,6 +292,9 @@ fn basic_visitor_order() {
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph).unwrap();
 
+    // src - source code input
+    // dep - compile to dependency artifacts unit
+    // exe - compile to executable unit
     let bar_src_id = 0;
     let baz_src_id = 1;
     let foo_src_id = 2;
