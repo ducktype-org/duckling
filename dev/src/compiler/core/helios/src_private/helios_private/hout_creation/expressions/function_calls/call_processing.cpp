@@ -14,6 +14,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
@@ -748,6 +749,17 @@ namespace compiler::helios::code {
 			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+
+		if (const auto method = getSymRef(callee_sym)->getDataOpt<defgen::Method>();
+		    method.has_value() && method.value()->kind == defgen::Method::Kind::ToString) {
+			CORE_ASSERT(
+				call_arguments.positional_arguments.size() == 1,
+				"A generated toString method only takes self"
+			);
+			return defgen::toStringExpr(
+				ctx, std::move(call_arguments.positional_arguments.front()), pst_origin.callee_origin
+			);
+		}
 
 		return constructCallExpr(
 			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions

@@ -11,6 +11,44 @@ fun getCharSlice() -> str = "fun fromSlice() -> i64 = 2;";
 const a = getString();
 const b = getCharSlice();
 
+class TypeNamePerson {}
+
+namespace TypeNames {
+	class Inner {}
+
+	template(T: type)
+	class Boxed {
+		value: T
+	}
+}
+
+template(T: type)
+class TypeNameBoxed {
+	value: T
+}
+
+fun tupleType() -> type = (i64, bool);
+fun singleTupleType() -> type = (i64,);
+
+# Exercise the source-level type-name printer during unit-test coverage collection.
+const type_name_primitive = i64.toString();
+const type_name_string = str.toString();
+const type_name_const_slice = (slice const char).toString();
+const type_name_pointer = (ptr TypeNames.Inner).toString();
+const type_name_many_pointer = (manyptr i64).toString();
+const type_name_c_pointer = (cptr i64).toString();
+const type_name_pointer_array = ((ptr i64)[3]).toString();
+const type_name_array_pointer = (ptr (i64[3])).toString();
+const type_name_nested_array = (i64[3][2]).toString();
+const type_name_qualified_nested_array = ((const i64)[3][2]).toString();
+const type_name_variant_array = ((i64 | bool)[3]).toString();
+const type_name_tuple = tupleType().toString();
+const type_name_single_tuple = singleTupleType().toString();
+const type_name_variant = (i64 | bool).toString();
+const type_name_class = TypeNamePerson.toString();
+const type_name_template = TypeNameBoxed[i64].toString();
+const type_name_namespaced_template = TypeNames.Boxed[TypeNamePerson].toString();
+
 # `expand` injects the strings produced above as source, defining `fromString`/`fromSlice`.
 namespace expanded {
 	expand getString();
