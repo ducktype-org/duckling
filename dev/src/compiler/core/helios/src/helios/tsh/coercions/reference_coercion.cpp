@@ -8,7 +8,7 @@
 
 #include <base/except/exceptions.hpp>
 
-namespace compiler::tsh {
+namespace compiler::tsh::coercions {
 	ReferenceCoercion referenceCoercionRule(const ReferenceKind from, const ReferenceKind to) {
 		using enum ReferenceKind;
 		using enum ReferenceAdjustment;

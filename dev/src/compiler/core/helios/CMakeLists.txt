@@ -77,7 +77,12 @@ add_library(HELIOS STATIC
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp
+	src/helios/tsh/coercions/ownership.cpp
+	src/helios/tsh/coercions/passing.cpp
+	src/helios/tsh/coercions/printing.cpp
 	src/helios/tsh/coercions/reference_coercion.cpp
+	src/helios/tsh/coercions/rules.cpp
+	src/helios/tsh/coercions/value_source.cpp
 	src/helios/tsh/symbol_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp

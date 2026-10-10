@@ -40,8 +40,9 @@ namespace compiler::helios {
 			if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
 			                                   : PassingMethod::NotCopyable;
+		default:
+			CORE_UNREACHABLE();
 		}
-		CORE_UNREACHABLE();
 	}
 
 	Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value) {
