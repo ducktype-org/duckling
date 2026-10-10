@@ -190,7 +190,7 @@ private:
 			std::mt19937_64 rng(seed);
 			Watchdog        watchdog(base::strConcat("stressInfiniteProgram seed=", seed));
 
-			const vm::PID   pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID   pid = spawnAndLoad("../common/programs/while_true.dbc");
 			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
@@ -224,7 +224,7 @@ private:
 			const u64 seed = MASTER_SEED + iter;
 			Watchdog  watchdog(base::strConcat("stressConcurrentClients seed=", seed));
 
-			const vm::PID   pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID   pid = spawnAndLoad("../common/programs/while_true.dbc");
 			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
@@ -268,7 +268,7 @@ private:
 			const u64 seed = MASTER_SEED + iter;
 			Watchdog  watchdog(base::strConcat("stressConcurrentPerThreadClients seed=", seed));
 
-			const vm::PID   pid = spawnAndLoad("../debugger/spin_threads.dbc");
+			const vm::PID   pid = spawnAndLoad("../common/programs/spin_threads.dbc");
 			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
