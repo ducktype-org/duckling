@@ -673,7 +673,11 @@ namespace compiler::helios::mangler {
 						return base::strConcat(
 							compiler::helios::name(symbol_id),
 							"_",
-							repl_wrapper.queryUnstablePerfectHash().toStringHex()
+							repl_wrapper.getUniqueId(),
+							"_",
+							ctx.query<QueryMangledType>({ repl_wrapper.getReturnType() })
+								->valueOrThrow()
+								.strView()
 						);
 					}
 					// Other cases of generated symbols cannot be functions.

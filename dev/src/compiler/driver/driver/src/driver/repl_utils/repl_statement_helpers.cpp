@@ -146,10 +146,10 @@ namespace compiler::repl {
 		auto symbol_result = [&] -> query::QResult<helios::SymID> {
 			variant_match(statement_info) {
 				variant_case(repl::ExpressionSingleStatementInfo, val) {
-					return queryReplExpressionWrapperSymbol(ctx, val.expr_stmt);
+					return queryReplExpressionWrapperSymbol(ctx, val.expr_stmt, counter);
 				}
 				variant_case(repl::InstructionSingleStatementInfo, val) {
-					return queryReplInstructionWrapperSymbol(ctx, val.instruction_stmt);
+					return queryReplInstructionWrapperSymbol(ctx, val.instruction_stmt, counter);
 				}
 				variant_default { CORE_PANIC("Invalid usage."); }
 			}
@@ -179,7 +179,7 @@ namespace compiler::repl {
 		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
 	) {
 		auto initializer_symbol
-			= queryReplGlobalInitializerWrapperSymbol(ctx, statement_info.variable_stmt);
+			= queryReplGlobalInitializerWrapperSymbol(ctx, statement_info.variable_stmt, counter);
 		const auto& function_result = ctx.query<helios::QueryCodeOfFun>(initializer_symbol);
 		if (function_result->hasFailed())
 			return std::unexpected("Failed to build REPL variable wrapper.");

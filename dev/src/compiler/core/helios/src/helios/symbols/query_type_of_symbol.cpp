@@ -461,20 +461,9 @@ namespace compiler::helios {
 					    ->valueOrThrow();
 				}
 				variant_case(defgen::ReplInputWrapper, repl) {
-					const auto return_type = [&] {
-						variant_match(repl.element) {
-							variant_case_novalue(defgen::ReplInputWrapper::Instruction) {
-								return tsh::SymbolType<>::withDefaults(tsh::getUnitType());
-							}
-							variant_case(defgen::ReplInputWrapper::Expression, expr) {
-								return expr.expr->expression_type.getSymbolType();
-							}
-						}
-						CORE_UNREACHABLE();
-					}();
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = {},
-						.result_type     = return_type,
+						.result_type     = repl.getReturnType(),
 					});
 					return tsh::SymbolType<>{
 						function_abstract_type,

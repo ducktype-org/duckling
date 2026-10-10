@@ -66,14 +66,39 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
+		tsh::SymbolType<> ReplInputWrapper::getReturnType() const {
+			variant_match(element) {
+				variant_case_novalue(Instruction) {
+					return tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+				}
+				variant_case(Expression, expr) { return expr.expr->expression_type.getSymbolType(); }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		std::string ReplInputWrapper::getUniqueId() const {
+			if_opt_some(counter, value) return base::toString(value);
+			variant_match(element) {
+				variant_case(Instruction, instr) { return instr.stmt.toStringHex(); }
+				variant_case(Expression, expr) { return base::toString(expr.expr->getID().asInt()); }
+			}
+			CORE_UNREACHABLE();
+		}
+
 		base::Bit256 ReplInputWrapper::queryUnstablePerfectHash() const {
+			const u64 counter_value = counter.copyValueOr(0);
 			variant_match(element) {
 				variant_case(Instruction, instr) {
-					return hashing::justHash<hashing::SHA256>(element.index(), instr.stmt);
+					return hashing::justHash<hashing::SHA256>(
+						element.index(), counter.has_value(), counter_value, instr.stmt
+					);
 				}
 				variant_case(Expression, expr) {
 					return hashing::justHash<hashing::SHA256>(
-						element.index(), expr.expr->getID().asInt()
+						element.index(),
+						counter.has_value(),
+						counter_value,
+						expr.expr->getID().asInt()
 					);
 				}
 			}

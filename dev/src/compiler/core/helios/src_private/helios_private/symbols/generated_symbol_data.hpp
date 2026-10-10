@@ -16,6 +16,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -232,7 +233,28 @@ namespace compiler::helios::defgen {
 		using ElementVariant = std::variant<Instruction, Expression>;
 		ElementVariant element;
 
-		ReplInputWrapper(ElementVariant element): element(std::move(element)) {}
+		/**
+		 * @brief An optional unique counter to distinguish different wrappers in the mangled name.
+		 */
+		base::Optional<u64> counter;
+
+		ReplInputWrapper(ElementVariant element, base::Optional<u64> counter = {}):
+			  element(std::move(element)),
+			  counter(counter) {}
+
+		/**
+		 * @brief Get the return type of the wrapper function.
+		 */
+		[[nodiscard]]
+		tsh::SymbolType<> getReturnType() const;
+
+		/**
+		 * @brief Get the identifier distinguishing the wrapper in its mangled name.
+		 * @return The counter if present, otherwise the ID of the wrapped HOUT expression or the
+		 * hash of the wrapped statement.
+		 */
+		[[nodiscard]]
+		std::string getUniqueId() const;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

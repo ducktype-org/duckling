@@ -13,6 +13,8 @@
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -48,23 +50,30 @@ namespace compiler::repl {
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the instruction.
+	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
 	helios::SymID queryReplInstructionWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, base::Optional<u64> counter = {}
 	);
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the expression.
+	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
 	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt
+		query::Context& ctx,
+		pst::AccessLocked<pst::ExprStmt> expr_stmt,
+		base::Optional<u64> counter = {}
 	);
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the variable initializer expression.
+	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
 	helios::SymID queryReplGlobalInitializerWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt
+		query::Context& ctx,
+		pst::AccessLocked<pst::Variable> var_stmt,
+		base::Optional<u64> counter = {}
 	);
 
 	/**
@@ -78,9 +87,13 @@ namespace compiler::repl {
 	 * expression.
 	 * @param sym_name Name of the generated symbol.
 	 * @param expr The expression to be returned by the wrapper, the wrapper takes its ownership.
+	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
 	helios::SymID queryHoutExpressionWrapperSymbol(
-		query::Context& ctx, base::StrID sym_name, Box<helios::code::Expr> expr
+		query::Context& ctx,
+		base::StrID sym_name,
+		Box<helios::code::Expr> expr,
+		base::Optional<u64> counter = {}
 	);
 
 }  // namespace compiler::repl
