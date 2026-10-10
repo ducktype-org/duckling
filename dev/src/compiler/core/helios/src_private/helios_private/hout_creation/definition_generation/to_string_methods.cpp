@@ -17,6 +17,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -51,6 +52,26 @@ namespace compiler::helios::defgen {
 			.name                  = base::StrID("toString"),
 			.generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::ToString },
 		});
+	}
+
+	query::QResult<Box<code::Expr>> toStringExpr(query::Context& ctx, Box<code::Expr> value) {
+		const auto      value_type = value->expression_type.getType();
+		const Shorthand s{ ctx };
+
+		if (value_type.getKind() == tsh::Kind::Meta) {
+			UNPACK_QRESULT(
+				auto compile_time_value =, ctx.query<QueryEvaluateHOUTExpression>({ value.ref() })
+			);
+			const auto represented_type = compile_time_value.get<tsh::SymbolType<>>();
+			CORE_ASSERT(
+				represented_type.has_value(),
+				"An expression of the meta type must evaluate to a symbol type"
+			);
+			return s.litStrObj(base::StrID(represented_type->toString()));
+		}
+
+		const auto to_string_sym = toStringSymForType(ctx, value_type);
+		return s.call(s.ident(to_string_sym), s.prepToPassSelf(std::move(value)));
 	}
 
 #define STRING_TYPE tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))

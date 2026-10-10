@@ -29,7 +29,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)ptr()"
+          String: "123.14dtruei64booli32()(John Smith,42,1.69)Person(John Smith,42,1.69)ptr()"
   format_strings:
     Cases:
       all:

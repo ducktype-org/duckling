@@ -4,6 +4,11 @@ class Person {
 	height: f64
 }
 
+fun selectType(select_first: bool) -> type = {
+	if (select_first) return i64;
+	return bool;
+}
+
 fun main() -> i64 = {
 	print((1).toString());
 	var a = 2;
@@ -14,6 +19,9 @@ fun main() -> i64 = {
 	print('d'.toString());
 
 	print(true.toString());
+	print(i64.toString());
+	print(selectType(false).toString());
+	print(f"{i32}");
 
 	print(().toString());
 
