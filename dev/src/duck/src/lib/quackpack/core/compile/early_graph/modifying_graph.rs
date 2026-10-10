@@ -16,7 +16,7 @@ use crate::quackpack::core::compile::missing_depenendcy_in_manifest;
 use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
-    /// Same as [`EarlyGraph::remove_disabled_dependencies`], but return enabled dependencies.
+    /// Same as [`EarlyGraph::remove_disabled_dependencies`].
     #[tracing::instrument(skip_all)]
     fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) -> HashSet<Identity> {
         let mut enabled_deps = HashSet::from([self.root]);
@@ -49,6 +49,30 @@ impl DependencyGraph {
         }
         self.graph.retain(|dep, _| enabled_deps.contains(dep));
         enabled_deps
+    }
+
+    /// Remove unreachable dependencies.
+    ///
+    /// When removing disabled dependencies, we might leave some unreachable ones. Get rid of them too.
+    #[tracing::instrument(skip_all)]
+    fn remove_unreachable_dependencies(&mut self) {
+        let mut reachable_deps = HashSet::new();
+        let mut bfs_stack = VecDeque::from([self.root]);
+        while let Some(current) = bfs_stack.pop_front() {
+            let inserted_new_node = reachable_deps.insert(current);
+            if !inserted_new_node {
+                continue;
+            }
+            let deps = self.dependencies_for_package(&current).dependencies();
+            bfs_stack.extend(deps);
+        }
+        self.graph.retain(|dep, _| {
+            if reachable_deps.contains(dep) {
+                return true;
+            }
+            debug!(?dep, "removing from the graph as it's unreachable");
+            false
+        });
     }
 }
 
@@ -116,10 +140,18 @@ impl EarlyGraph {
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
     #[tracing::instrument(skip_all)]
     pub(super) fn remove_disabled_dependencies(&mut self) {
-        let enabled_deps = self.graph.remove_disabled_dependencies(&self.packages);
+        self.graph.remove_disabled_dependencies(&self.packages);
+        self.graph.remove_unreachable_dependencies();
         // Also clear identity cache.
-        self.packages
-            .inner
-            .retain(|dep, _| enabled_deps.contains(dep));
+        self.packages.inner.retain(|dep, _| {
+            if self.graph.graph.contains_key(dep) {
+                return true;
+            }
+            debug!(
+                ?dep,
+                "removing from the PackagesSet, as it's unreachable or disabled"
+            );
+            false
+        });
     }
 }
