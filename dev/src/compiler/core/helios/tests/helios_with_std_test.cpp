@@ -481,8 +481,9 @@ private:
 	}
 
 	void testCompTimeStrings() {
-		auto module     = compiler::driver::test_utils::getModuleIdFromPath("comp_time_strings");
-		auto root_scope = getModuleScope(module);
+		auto module       = compiler::driver::test_utils::getModuleIdFromPath("comp_time_strings");
+		auto root_scope   = getModuleScope(module);
+		using StringValue = compiler::ctv::CompileTimeValue::StringClassValue;
 
 		// `const a = getString();` should materialize a `String` CTV holding the source string.
 		auto a_value
@@ -493,6 +494,34 @@ private:
 		auto b_value
 			= getConstValueAs<compiler::ctv::CompileTimeValue::CharSliceValue>("b", root_scope);
 		ASSERT_EQUAL(base::StrID("fun fromSlice() -> i64 = 2;"), b_value.value);
+
+		const auto assert_type_name = [&](std::string_view constant, std::string_view expected) {
+			const auto value = getConstValueAs<StringValue>(constant, root_scope);
+			assertEqual(
+				base::StrID(expected),
+				value.value,
+				base::strConcat(
+					"Incorrect source type name for `", constant, "`: ", value.value.str()
+				)
+			);
+		};
+		assert_type_name("type_name_primitive", "i64");
+		assert_type_name("type_name_string", "str");
+		assert_type_name("type_name_const_slice", "slice const char");
+		assert_type_name("type_name_pointer", "ptr TypeNames.Inner");
+		assert_type_name("type_name_many_pointer", "manyptr i64");
+		assert_type_name("type_name_c_pointer", "cptr i64");
+		assert_type_name("type_name_pointer_array", "(ptr i64)[3]");
+		assert_type_name("type_name_array_pointer", "ptr i64[3]");
+		assert_type_name("type_name_nested_array", "i64[3][2]");
+		assert_type_name("type_name_qualified_nested_array", "const i64[2][3]");
+		assert_type_name("type_name_variant_array", "(bool | i64)[3]");
+		assert_type_name("type_name_tuple", "(i64, bool)");
+		assert_type_name("type_name_single_tuple", "(i64,)");
+		assert_type_name("type_name_variant", "bool | i64");
+		assert_type_name("type_name_class", "TypeNamePerson");
+		assert_type_name("type_name_template", "TypeNameBoxed[i64]");
+		assert_type_name("type_name_namespaced_template", "TypeNames.Boxed[TypeNamePerson]");
 
 		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
 		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());

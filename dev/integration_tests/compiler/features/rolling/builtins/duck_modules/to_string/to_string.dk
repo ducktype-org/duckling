@@ -4,6 +4,13 @@ class Person {
 	height: f64
 }
 
+class Holder {
+	t: type;
+	x: i64;
+
+	fun toString() -> String = { return f"holder"; }
+}
+
 namespace Types {
 	class Inner {}
 
@@ -22,6 +29,8 @@ fun selectType(select_first: bool) -> type = {
 	if (select_first) return i64;
 	return bool;
 }
+
+fun singleTupleType() -> type = (i64,);
 
 fun main() -> i64 = {
 	print((1).toString());
@@ -47,6 +56,8 @@ fun main() -> i64 = {
 	print((slice const char).toString());
 	print(Boxed[i64].toString());
 	print(Types.Boxed[Person].toString());
+	print((i64[3][2]).toString());
+	print(singleTupleType().toString());
 
 	print(().toString());
 
@@ -55,6 +66,8 @@ fun main() -> i64 = {
 
 	var p = Person("John Smith", 42, 1.69);
 	print(p.toString());
+	var h = Holder(i64, 3);
+	print((h, 1).toString());
 
 	# Print only the "ptr()" part, without the insides, as the inside is different on DVM and LLVM.
 	var pointer_text = (&p as ptr Person).toString();

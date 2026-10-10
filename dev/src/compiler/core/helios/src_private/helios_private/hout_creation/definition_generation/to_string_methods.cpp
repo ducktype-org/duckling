@@ -54,7 +54,7 @@ namespace compiler::helios::defgen {
 			std::string        text;
 			TypeNamePrecedence precedence;
 
-			std::string nestedIn(const TypeNamePrecedence parent_precedence) const {
+			[[nodiscard]] std::string nestedIn(const TypeNamePrecedence parent_precedence) const {
 				return precedence < parent_precedence ? "(" + text + ")" : text;
 			}
 		};
@@ -146,73 +146,76 @@ namespace compiler::helios::defgen {
 			switch (type.getKind()) {
 			case tsh::Kind::Pointer:
 				return {
-					"ptr "
-						+ sourceTypeName(ctx, type.as<tsh::PointerAbstractType>().getPointee())
-							  .nestedIn(TypeNamePrecedence::Prefix),
-					TypeNamePrecedence::Prefix,
+					.text = "ptr "
+					      + sourceTypeName(ctx, type.as<tsh::PointerAbstractType>().getPointee())
+					            .nestedIn(TypeNamePrecedence::Prefix),
+					.precedence = TypeNamePrecedence::Prefix,
 				};
 			case tsh::Kind::ManyPointer:
 				return {
-					"manyptr "
-						+ sourceTypeName(ctx, type.as<tsh::ManyPointerAbstractType>().getPointee())
-							  .nestedIn(TypeNamePrecedence::Prefix),
-					TypeNamePrecedence::Prefix,
+					.text = "manyptr "
+					      + sourceTypeName(ctx, type.as<tsh::ManyPointerAbstractType>().getPointee())
+					            .nestedIn(TypeNamePrecedence::Prefix),
+					.precedence = TypeNamePrecedence::Prefix,
 				};
 			case tsh::Kind::CPointer:
 				return {
-					"cptr "
-						+ sourceTypeName(ctx, type.as<tsh::CPointerAbstractType>().getPointee())
-							  .nestedIn(TypeNamePrecedence::Prefix),
-					TypeNamePrecedence::Prefix,
+					.text = "cptr "
+					      + sourceTypeName(ctx, type.as<tsh::CPointerAbstractType>().getPointee())
+					            .nestedIn(TypeNamePrecedence::Prefix),
+					.precedence = TypeNamePrecedence::Prefix,
 				};
 			case tsh::Kind::Slice: {
 				const auto element = type.as<tsh::SliceAbstractType>().getElementType();
 				if (element == tsh::SymbolType<>::withDefaults(tsh::getCharType()))
-					return { "str", TypeNamePrecedence::Atomic };
+					return { .text = "str", .precedence = TypeNamePrecedence::Atomic };
 				return {
-					"slice " + sourceTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
-					TypeNamePrecedence::Prefix,
+					.text
+					= "slice " + sourceTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
+					.precedence = TypeNamePrecedence::Prefix,
 				};
 			}
 			case tsh::Kind::StaticArray: {
-				const auto array = type.as<tsh::StaticArrayAbstractType>();
+				auto        array   = type.as<tsh::StaticArrayAbstractType>();
+				std::string extents = base::strConcat("[", array.getSize(), "]");
+				auto        element = array.getElementType();
+				while (element == tsh::SymbolType<>::withDefaults(element.getType())
+				       && element.getType().getKind() == tsh::Kind::StaticArray) {
+					array = element.getType().as<tsh::StaticArrayAbstractType>();
+					extents += base::strConcat("[", array.getSize(), "]");
+					element = array.getElementType();
+				}
 				return {
-					base::strConcat(
-						sourceTypeName(ctx, array.getElementType())
-							.nestedIn(TypeNamePrecedence::Postfix),
-						"[",
-						array.getSize(),
-						"]"
-					),
-					TypeNamePrecedence::Postfix,
+					.text
+					= sourceTypeName(ctx, element).nestedIn(TypeNamePrecedence::Postfix) + extents,
+					.precedence = TypeNamePrecedence::Postfix,
 				};
 			}
-			case tsh::Kind::Tuple:
+			case tsh::Kind::Tuple: {
+				const auto components = type.as<tsh::TupleAbstractType>().getComponents();
 				return {
-					"("
-						+ joinSourceTypeNames(
-							ctx, type.as<tsh::TupleAbstractType>().getComponents(), ", "
-						)
-						+ ")",
-					TypeNamePrecedence::Atomic,
+					.text = "(" + joinSourceTypeNames(ctx, components, ", ")
+					      + (components.size() == 1 ? ",)" : ")"),
+					.precedence = TypeNamePrecedence::Atomic,
 				};
+			}
 			case tsh::Kind::Variant:
 				return {
-					joinSourceTypeNames(
+					.text = joinSourceTypeNames(
 						ctx,
 						type.as<tsh::VariantAbstractType>().getUnderlyingTypes(),
 						" | ",
 						TypeNamePrecedence::Prefix
 					),
-					TypeNamePrecedence::Variant,
+					.precedence = TypeNamePrecedence::Variant,
 				};
 			case tsh::Kind::Class:
 				return {
-					sourceClassName(ctx, type.as<tsh::ClassAbstractType>().getSymbol()),
-					TypeNamePrecedence::Atomic,
+					.text = sourceClassName(ctx, type.as<tsh::ClassAbstractType>().getSymbol()),
+					.precedence = TypeNamePrecedence::Atomic,
 				};
 			default:
-				return { type.toString(), TypeNamePrecedence::Atomic };
+				return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
 			}
 		}
 
@@ -228,8 +231,10 @@ namespace compiler::helios::defgen {
 			);
 			auto inner = sourceAbstractTypeName(ctx, type.getType());
 			if (prefix.empty()) return inner;
-			return { prefix + inner.nestedIn(TypeNamePrecedence::Prefix),
-				     TypeNamePrecedence::Prefix };
+			return {
+				.text       = prefix + inner.nestedIn(TypeNamePrecedence::Prefix),
+				.precedence = TypeNamePrecedence::Prefix,
+			};
 		}
 
 		bool containsRuntimeMeta(
@@ -242,7 +247,13 @@ namespace compiler::helios::defgen {
 			visited.emplace_back(type);
 
 			auto symbol_type_contains_meta = [&](const tsh::SymbolType<> component) {
-				return containsRuntimeMeta(ctx, component.getType(), visited);
+				const auto component_type = component.getType();
+				if (component_type.getKind() == tsh::Kind::Meta) return true;
+
+				const auto method
+					= getSymRef(toStringSymForType(ctx, component_type))->getDataOpt<Method>();
+				return method.has_value() && method.value()->kind == Method::Kind::ToString
+				    && containsRuntimeMeta(ctx, component_type, visited);
 			};
 
 			switch (type.getKind()) {

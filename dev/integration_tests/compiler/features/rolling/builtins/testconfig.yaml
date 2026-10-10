@@ -29,7 +29,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "123.14dtruei64booli32PersonPersonstrbool | i64ptr Types.Inner(ptr i64)[3]ptr (bool | i64)ptr i64[3]slice const charBoxed[i64]Types.Boxed[Person]()(John Smith,42,1.69)Person(John Smith,42,1.69)ptr()"
+          String: "123.14dtruei64booli32PersonPersonstrbool | i64ptr Types.Inner(ptr i64)[3]ptr (bool | i64)ptr i64[3]slice const charBoxed[i64]Types.Boxed[Person]i64[3][2](i64,)()(John Smith,42,1.69)Person(John Smith,42,1.69)(holder,1)ptr()"
   format_strings:
     Cases:
       all:
