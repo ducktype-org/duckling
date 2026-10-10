@@ -84,6 +84,7 @@ metadata:
 dependencies:
   baz:
     version: 1.0.0
+    features: [baz-feature]
 ",
         ),
         (
@@ -92,6 +93,9 @@ dependencies:
 metadata:
   name: baz
   version: 1.0.0
+
+features:
+  baz-feature: []
 ",
         ),
     ]
@@ -144,7 +148,13 @@ pub fn freeze(root: &Path) -> SolverFreeze {
                     dependencies_realization: [("baz".into(), mock_registry_pkg("baz"))].into(),
                 },
             ),
-            (mock_registry_pkg("baz"), SolverPackageFreeze::new()),
+            (
+                mock_registry_pkg("baz"),
+                SolverPackageFreeze {
+                    features: ["baz-feature".into()].into(),
+                    dependencies_realization: [].into(),
+                },
+            ),
         ]
         .into(),
     }

@@ -84,6 +84,7 @@ impl EarlyGraph {
             root_package.features_that_would_be_added(root_features.iter().copied())?;
         debug!(?root_features, "starting to expand features");
         let mut added_features = HashMap::from([(self.graph.root, root_features)]);
+        let mut enabled_deps = HashSet::from([self.graph.root]);
         let mut stack = VecDeque::from([self.graph().root]);
 
         // This is an iterative DFS.
@@ -99,7 +100,7 @@ impl EarlyGraph {
                 .expect("we've verified that there are dependencies");
             for dep in &node.dependencies {
                 let this_features = added_features.entry(current).or_default();
-                let enabled_features = {
+                let (enabled_features, is_enabled) = {
                     let entry_in_dep_manifest = this
                         .package()
                         .manifest()
@@ -112,13 +113,31 @@ impl EarlyGraph {
                                 this,
                             )
                         });
-                    entry_in_dep_manifest.enabled_features(this_features)
+                    (
+                        entry_in_dep_manifest.enabled_features(this_features),
+                        entry_in_dep_manifest.is_enabled_for(this_features),
+                    )
                 };
-                debug!(node = %dep, features = ?enabled_features, "adding features to node");
+                let became_available = if is_enabled {
+                    enabled_deps.insert(*dep)
+                } else {
+                    false
+                };
+                debug!(node = %dep, features = ?enabled_features, was_enabled = %is_enabled, %became_available, "adding features to node");
+                // We shouldn't modify feature flags of disabled dependencies.
+                if !is_enabled {
+                    continue;
+                }
+
                 let entry = self.packages.package(dep);
                 let expanded_features = entry.features_that_would_be_added(enabled_features)?;
                 let dep_features = added_features.entry(*dep).or_default();
-                if dep_features.extend_and_get_diff_size(expanded_features) > 0 {
+                let new_features_count = dep_features.extend_and_get_diff_size(expanded_features);
+                // We should visit dependency if it is enabled and either of two things have happened:
+                // * it just became enabled or,
+                // * its feature flags have changed.
+                let should_visit = became_available || new_features_count > 0;
+                if should_visit {
                     stack.push_back(*dep);
                 }
             }
