@@ -60,7 +60,7 @@ namespace compiler::tsh::coercions {
 		 * Thus, this node is inserted only in the `SymbolTypeCoercion` tree and `coercionOf` remaps
 		 * it when ValueCategories are taken into account. The `HandOver` node can be remapped to:
 		 * - Nothing:
-		 * 		When copying by bytes is enough (i.e. user wrote a `move`, for a
+		 * 		When copying by bytes is enough (e.g. user wrote a `move`, for a
 		 * 		literal, an lvalue of a trivially copyable type)
 		 * - `ImplicitMove`:
 		 * 		When the value is a temporary

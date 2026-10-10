@@ -9,10 +9,6 @@
  * @brief The main entry point given by HELIoS to TSH when performing a coercion. Contains the
  * information about the `ExpressionType` of the value and all of the `ExpressionType`s of the
  * values it's built out of (i.e. tuple/array literals).
- *
- * For example when coercing `(123, foo(), move some_box)` to properly create a fully built coercion
- * tree we need the `ExpressionType`s of all the tuple elements, not just the outer `Literal`
- * `ExpressionType`, this is exactly what `ValueSource` stores.
  */
 
 #pragma once
@@ -30,7 +26,22 @@
 namespace compiler::tsh::coercions {
 
 	/**
-	 * @brief The value a coercion is asked about and the parts it is built out of.
+	 * @brief Represents the value a coercion is asked about of it. This is used to provide the
+	 * coercion tree with the information needed to perform ownership decisions on top of the
+	 * `SymbolType` plan.
+	 *
+	 * In most coercion cases the `ValueSource`	is a single node with a single `ExpressionType` of
+	 * the coerced value. For more complex cases like coercing tuple literals it creates a tree
+	 * structure representing the `ExpressionType` of the outer tuple and the `ExpressionType`s of
+	 * all sub-components.
+	 *
+	 * @example When coercing `(123, foo(), move some_box)` the `ValueSource` will contain:
+	 * [ValueCategory == Temporary] (123, foo(), move some_box)
+	 *		[ValueCategory == Literal] (123)
+	 *		[ValueCategory == Temporary] (foo())
+	 *		[ValueCategory == local, Forces Move] (move some_box)
+	 * @example When coercing `var a: (i32, T, box T) = (123, foo(), move some_box)` the
+	 *`ValueSource` will contain just one node: [ValueCategory == Local] (123, foo(), move some_box)
 	 */
 	class ValueSource final {
 	public:
