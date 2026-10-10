@@ -45,6 +45,50 @@ namespace compiler::ctv {
 			tsh::SymbolType<>        type;
 		};
 
+		/**
+		 * @brief A tuple whose type is compatible with the meta type, i.e. it can be lifted to a
+		 * type. Its elements are types, units or nested type tuples.
+		 * @note This is an optimization: such tuples are kept structured, so they can be lifted to
+		 * a type without the VM. Every other tuple value is represented as a VMValue.
+		 */
+		struct TypeTuple {
+			using Element = std::variant<TypeTuple, tsh::SymbolType<>, UnitCTV>;
+
+			explicit TypeTuple(std::vector<Element> elements);
+
+			/**
+			 * @brief Checks if a value of `tuple_type` can be represented as a TypeTuple.
+			 * @note Only direct (not referenced) tuples are accepted.
+			 */
+			[[nodiscard]]
+			static bool isValid(query::Context& ctx, const tsh::SymbolType<>& tuple_type);
+
+			/**
+			 * @brief Converts `ctv` to an Element.
+			 * @note Panics if `ctv` is not a type, a unit or a type tuple.
+			 */
+			[[nodiscard]]
+			static Element elementFromCtv(const CompileTimeValue& ctv);
+
+			/**
+			 * @brief Converts `element` to a CTV.
+			 */
+			[[nodiscard]]
+			static CompileTimeValue elementToCtv(const Element& element);
+
+			/**
+			 * @brief Get the elements of the tuple CTV.
+			 * @return The vector of the tuple CTV's elements.
+			 */
+			[[nodiscard]]
+			const std::vector<Element>& getElements() const {
+				return elements;
+			}
+
+		private:
+			std::vector<Element> elements;
+		};
+
 	private:
 		using Storage = std::variant<
 			bool,
@@ -53,6 +97,7 @@ namespace compiler::ctv {
 			CharSliceValue,
 			StringClassValue,
 			UnitCTV,
+			TypeTuple,
 			tsh::SymbolType<>,
 			VMValue>;
 		Storage value;

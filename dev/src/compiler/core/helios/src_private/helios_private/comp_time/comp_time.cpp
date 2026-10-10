@@ -639,7 +639,14 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
-				std::vector<CompileTimeValue> ctv_elements;
+				if (not CompileTimeValue::TypeTuple::isValid(
+						ctx, expr.expression_type.getSymbolType()
+					)) {
+					result = CouldNotShortPath{};
+					return;
+				}
+
+				std::vector<CompileTimeValue::TypeTuple::Element> elements;
 
 				for (auto& sub_expr: expr.elements) {
 					const auto ctv_element_result = evalHoutExpr(ctx, sub_expr.ref());
@@ -647,10 +654,13 @@ namespace compiler::helios {
 						result = query::Failed();
 						return;
 					}
-					ctv_elements.emplace_back(ctv_element_result.valueOrThrow());
+					elements.emplace_back(CompileTimeValue::TypeTuple::elementFromCtv(
+						ctv_element_result.valueOrThrow()
+					));
 				}
 
-				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
+				result = CompileTimeValue{ CompileTimeValue::TypeTuple{
+					std::move(elements) } };
 			}
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
@@ -806,11 +816,13 @@ namespace compiler::helios {
 							tsh::Mutability::Mutable,
 						};
 					}
-					variant_case(CompileTimeValue::TupleCTV, tuple) {
+					variant_case(CompileTimeValue::TypeTuple, tuple) {
 						std::vector<tsh::SymbolType<>> element_types;
 						element_types.reserve(tuple.getElements().size());
-						for (const auto& sub_ctv: tuple.getElements())
-							element_types.emplace_back(liftCTVToTypeRecursively(ctx, sub_ctv));
+						for (const auto& element: tuple.getElements())
+							element_types.emplace_back(liftCTVToTypeRecursively(
+								ctx, CompileTimeValue::TypeTuple::elementToCtv(element)
+							));
 						return tsh::SymbolType<>{
 							ctx.query<tsh::QueryTupleType>({ std::move(element_types) }),
 							tsh::ReferenceKind::Direct,

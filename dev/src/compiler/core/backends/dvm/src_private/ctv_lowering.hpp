@@ -107,5 +107,17 @@ namespace compiler::backend_vm::internal {
 			const vm::code::DataType&    structure_type,
 			const std::vector<DVMValue>& values
 		);
+
+		/**
+		 * @brief Builds the constant initial value of a type convertible `tuple` laid out as
+		 * `data_type`.
+		 * @note Unit elements have no field in the DVM structure, the remaining elements map to its
+		 * fields in order.
+		 */
+		static Box<vm::code::ConstantClass> lowerTypeTupleToConstant(
+			ProgramLoweringContext&                 pctx,
+			const ctv::CompileTimeValue::TypeTuple& tuple,
+			const vm::code::DataType&               data_type
+		);
 	};
 }

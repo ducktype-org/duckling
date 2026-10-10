@@ -863,9 +863,11 @@ namespace compiler::helios::mangler {
 				return base::strConcat("s", internal::mangleString(sc.value.strView()));
 			}
 			variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
-			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+			variant_case(compiler::ctv::CompileTimeValue::TypeTuple, tuple) {
 				std::string ret = "T";
-				for (auto&& elem: tuple.getElements()) ret += mangleCTV(ctx, elem);
+				using TypeTuple = compiler::ctv::CompileTimeValue::TypeTuple;
+				for (auto&& elem: tuple.getElements())
+					ret += mangleCTV(ctx, TypeTuple::elementToCtv(elem));
 				return ret += "E";
 			}
 			variant_case(tsh::SymbolType<>, sym) {

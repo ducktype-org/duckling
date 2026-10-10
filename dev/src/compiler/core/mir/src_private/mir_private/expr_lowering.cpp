@@ -1409,7 +1409,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
-			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
+			auto result = lowerAndLiftToType(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));
 		}
 
@@ -1424,82 +1424,101 @@ namespace compiler::mir {
 
 
 	private:
+		static MIRValue unitTypeConstant() {
+			return MIRValue{ MIRConstant{ tsh::SymbolType<>::withDefaults(tsh::getUnitType()) } };
+		}
+
 		/**
-		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
-		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
-		 * Unit). Other nodes are delegated back to the standard expression lowerer.
+		 * @brief My idea behind this function is - if this needs to be lowered then this is
+		 * comp-time context and the content of the type can't be determined. For example:
+		 * ``` fun foo() == { var x: type = i64; var y = (x, i32); } ```
+		 * So we just do a type construction per element dynamically, without assuming what the
+		 * inner expression is.
 		 */
-		ExprLowerRes lowerAndLiftToTypeRecursively(
-			const hc::Expr& expr, BlockBuilderRef continuation
-		) {
-			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
-				tsh::SymbolType<> unit_sym_type{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+		ExprLowerRes lowerAndLiftToType(const hc::Expr& expr, BlockBuilderRef continuation) {
+			const auto value_type = expr.expression_type.getSymbolType();
 
-				return ExprLowerRes(continuation, MIRValue{ MIRConstant{ unit_sym_type } });
-			} else if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
-				auto                  hole    = continuation->addHole();
-				BlockBuilderRef       current = continuation;
-				std::vector<MIRValue> element_types;
-				element_types.reserve(tuple_expr->elements.size());
-
-				for (const auto& element: tuple_expr->elements | std::views::reverse) {
-					auto elem_result = lowerAndLiftToTypeRecursively(*element, current);
-					element_types.push_back(elem_result.getResult(function));
-					current = elem_result.begin;
-				}
-				std::ranges::reverse(element_types);
-
-				tsh::SymbolType<> result_type{
-					tsh::getMetaType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-
-				return ExprLowerRes(
-					current,
-					ExprLowerRes::Finalizer{
-						.hole  = hole,
-						.instr = Instruction(
-							Operation::MetaTypeOperation,
-							{},
-							element_types,
-							{},
-							expr_scope,
-							MetaParameters{ MetaKind::CreateTuple }
-						),
-						.type = result_type,
-					}
-				);
-			} else if (const auto* reusable_expr
-			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
-			} else if (const auto* move_expr = dynamic_cast<const hc::MoveExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*move_expr->inner, continuation);
-			}
-
-			// Any other expression of unit type (a tuple element, a call, ...) is still lowered
-			// because it may have side effects, but the unit type has a single value, so what it
-			// lifts to is always the unit type itself.
-			if (expr.expression_type.getType().getKind() == tsh::Kind::Unit) {
-				auto lowered = lowerSubExpr(expr, continuation);
-				// Materialise the result so the lowered instructions stay well formed, then drop
-				// it - only its type is of interest here.
+			switch (value_type.getType().getKind()) {
+			case tsh::Kind::Meta:
+				return lowerSubExpr(expr, continuation);
+			case tsh::Kind::Unit: {
+				auto                        lowered    = lowerSubExpr(expr, continuation);
 				[[maybe_unused]] const auto unit_value = lowered.getResult(function);
+				return { lowered.begin, unitTypeConstant() };
+			}
+			case tsh::Kind::Tuple: {
+				auto tuple_tmp = function.addTmp(value_type, expr_scope);
+				auto result    = function.addTmp(
+                    tsh::SymbolType<>::withDefaults(tsh::getMetaType()), expr_scope
+                );
 
-				tsh::SymbolType<> unit_sym_type{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				CORE_ASSERT(
+					value_type.getRefKind() == tsh::ReferenceKind::Direct,
+					"A lifted tuple is dereferenced by its coercion."
+				);
+				emitTupleLiftToType(MIRPlace(tuple_tmp), result, continuation);
 
-				return ExprLowerRes(lowered.begin, MIRValue{ MIRConstant{ unit_sym_type } });
+				auto store_hole = continuation->addHole();
+				auto lowered    = lowerSubExpr(expr, continuation);
+				lowered.storeResultInGivenPlace(
+					MIRPlace(tuple_tmp), store_hole, { flagConstruct(tuple_tmp) }, expr_scope, {}
+				);
+				return {lowered.begin, MIRValue{ result }};
+			}
+			default:
+				CORE_PANIC("Only meta-types, units and tuples of those can be lifted.");
+			}
+		}
+
+		/**
+		 * @brief Adds to `block` the instructions lifting the tuple stored in `tuple_place` to a
+		 * meta-type, written to `result`.
+		 * @note Instructions are added from last to first, so the nested tuples are lifted after
+		 * the `CreateTuple` instruction consuming them is added.
+		 */
+		void emitTupleLiftToType(
+			const MIRPlace& tuple_place, MIRLocalRef result, BlockBuilderRef block
+		) {
+			auto& ctx       = function.getContext();
+			auto  interface = tuple_place.type.getType().getInterface(ctx);
+
+			std::vector<MIRValue>                         element_types;
+			std::vector<std::pair<MIRPlace, MIRLocalRef>> nested_tuples;
+
+			for (const auto& field: interface->getFieldsView()) {
+				const auto field_place = tuple_place.withField(ctx, field.getSymbol());
+
+				switch (field_place.type.getType().getKind()) {
+				case tsh::Kind::Meta:
+					element_types.emplace_back(field_place);
+					break;
+				case tsh::Kind::Unit:
+					element_types.push_back(unitTypeConstant());
+					break;
+				case tsh::Kind::Tuple: {
+					auto nested_result = function.addTmp(
+						tsh::SymbolType<>::withDefaults(tsh::getMetaType()), expr_scope
+					);
+					element_types.emplace_back(nested_result);
+					nested_tuples.emplace_back(field_place, nested_result);
+					break;
+				}
+				default:
+					CORE_PANIC("Only meta-types, units and tuples of those can be lifted.");
+				}
 			}
 
-			return lowerSubExpr(expr, continuation);
+			block->addInstruction(Instruction(
+				Operation::MetaTypeOperation,
+				MIRPlace(result),
+				std::move(element_types),
+				{ flagConstruct(result) },
+				expr_scope,
+				MetaParameters{ MetaKind::CreateTuple }
+			));
+
+			for (const auto& [nested_place, nested_result]: nested_tuples | std::views::reverse)
+				emitTupleLiftToType(nested_place, nested_result, block);
 		}
 
 		static OperationWithParams builtinBinaryToOperation(const hc::BuiltinBinary builtin) {

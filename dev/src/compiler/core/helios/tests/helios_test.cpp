@@ -2504,8 +2504,8 @@ private:
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
 			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
 				base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
-			const auto tuple
-				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
+			const auto tuple = CompileTimeValue::TypeTuple{
+				std::vector<CompileTimeValue::TypeTuple::Element>{ UNIT, symbol_1 } };
 
 			const std::vector<CompileTimeValue> ctvs
 				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,          I16_N42,
@@ -2519,7 +2519,7 @@ private:
 		constexpr std::string_view EXPECTED
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
-			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
+			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u TutNidE tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
 		ASSERT_EQUAL(EXPECTED, result);

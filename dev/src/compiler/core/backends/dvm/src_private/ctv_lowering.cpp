@@ -36,6 +36,16 @@ namespace compiler::backend_vm::internal {
 			);
 		}
 
+		/**
+		 * @brief Represents a meta type as the DVM opaque pointer value: a pointer to the symbol
+		 * type in the comp-time lowering, zero otherwise.
+		 */
+		u64 metaTypeToU64(
+			ProgramLoweringContext& pctx, const compiler::tsh::SymbolType<>& type_val
+		) {
+			return pctx.isCompTimeLowering() ? std::bit_cast<u64>(&type_val) : 0;
+		}
+
 	}  // namespace
 
 	DVMValue CTVLowering::lowerValue(
@@ -102,9 +112,13 @@ namespace compiler::backend_vm::internal {
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1709 RTTI when the is_comp_time_lowering == false
 				// Representation of a meta type in DVM is a pointer to the symbol type.
-				u64 type_val_u64 = pctx.isCompTimeLowering() ? std::bit_cast<u64>(&type_val) : 0;
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					type_val_u64, std::get<vm::code::OpaqueType>(type).size
+					metaTypeToU64(pctx, type_val), v_get(type, vm::code::OpaqueType).size
+				);
+			}
+			variant_case(ctv::CompileTimeValue::TypeTuple, tuple) {
+				global_data.initial_value = vm::code::ConstantValue::fromData(
+					lowerTypeTupleToConstant(pctx, tuple, v_get(type, vm::code::DataType))
 				);
 			}
 			variant_case(ctv::CompileTimeValue::CharSliceValue, str) {
@@ -276,5 +290,48 @@ namespace compiler::backend_vm::internal {
 				field_ptr.withAccessKind(DVMPlace::AccessKind::Pointer), field_value
 			);
 		}
+	}
+
+	Box<vm::code::ConstantClass> CTVLowering::lowerTypeTupleToConstant(
+		ProgramLoweringContext&                 pctx,
+		const ctv::CompileTimeValue::TypeTuple& tuple,
+		const vm::code::DataType&               data_type
+	) {
+		auto result = makeBox<vm::code::ConstantClass>();
+		auto field  = data_type.fields.begin();
+
+		for (const auto& element: tuple.getElements()) {
+			variant_match(element) {
+				variant_case_novalue(ctv::CompileTimeValue::UnitCTV) {}
+				variant_case(compiler::tsh::SymbolType<>, type_val) {
+					CORE_ASSERT(field != data_type.fields.end(), "Too few tuple fields.");
+					const auto& field_type = pctx.type_storage.dvm_types.at(field->type);
+					result->fields.emplace_back(
+						field->name,
+						makeBox<vm::code::ConstantImmediate>(
+							vm::code::ConstantImmediate::fromU64AndSize(
+								metaTypeToU64(pctx, type_val),
+								v_get(field_type, vm::code::OpaqueType).size
+							)
+						)
+					);
+					++field;
+				}
+				variant_case(ctv::CompileTimeValue::TypeTuple, nested) {
+					CORE_ASSERT(field != data_type.fields.end(), "Too few tuple fields.");
+					const auto& field_type = pctx.type_storage.dvm_types.at(field->type);
+					result->fields.emplace_back(
+						field->name,
+						lowerTypeTupleToConstant(
+							pctx, nested, v_get(field_type, vm::code::DataType)
+						)
+					);
+					++field;
+				}
+			}
+		}
+
+		CORE_ASSERT(field == data_type.fields.end(), "Too many tuple fields.");
+		return result;
 	}
 }  // namespace compiler::backend_vm::internal

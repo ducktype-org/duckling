@@ -13,10 +13,12 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/queries.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
@@ -28,6 +30,7 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <algorithm>
+#include <cstring>
 #include <expected>
 #include <iostream>
 #include <mutex>
@@ -346,6 +349,45 @@ namespace {
 	}
 
 	/**
+	 * @brief Reads a type tuple of `tuple_type` laid out at `data`.
+	 */
+	CompileTimeValue::TypeTuple typeTupleFromBytes(
+		query::Context& ctx, const tsh::AbstractType tuple_type, const byte* data
+	) {
+		const auto& layout = ctx.query<tsl::QueryAbstractTypeLayout>(tuple_type)
+		                         ->valueOrThrow()
+		                         .as<tsl::ClassTypeLayout>();
+
+		std::vector<CompileTimeValue::TypeTuple::Element> elements;
+		for (const auto& field: tuple_type.getInterface(ctx)->getFieldsView()) {
+			const auto field_type = field.getType(ctx);
+
+			switch (field_type.getType().getKind()) {
+			case tsh::Kind::Unit:
+				elements.emplace_back(CompileTimeValue::UnitCTV{});
+				break;
+			case tsh::Kind::Meta: {
+				const auto offset = layout.getOffsetOfFieldSymbol(field.getSymbol()).value();
+				const tsh::SymbolType<>* meta_ptr = nullptr;
+				std::memcpy(&meta_ptr, data + offset.asInt(), sizeof(meta_ptr));
+				elements.emplace_back(*meta_ptr);
+				break;
+			}
+			case tsh::Kind::Tuple: {
+				const auto offset = layout.getOffsetOfFieldSymbol(field.getSymbol()).value();
+				elements.emplace_back(typeTupleFromBytes(
+					ctx, field_type.getType(), data + offset.asInt()
+				));
+				break;
+			}
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
+		return CompileTimeValue::TypeTuple{ std::move(elements) };
+	}
+
+	/**
 	 * @brief Converts a given `vm_value` to CTV representing a specified `type`.
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
@@ -434,6 +476,15 @@ namespace {
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{
 						base::StrID(charBackedVMValueToCtv(vm_value)) } };
 			}
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
+		}
+		case compiler::tsh::Kind::Unit:
+			return CompileTimeValue{ CompileTimeValue::UnitCTV{} };
+		case compiler::tsh::Kind::Tuple: {
+			if (CompileTimeValue::TypeTuple::isValid(ctx, type))
+				return CompileTimeValue{
+					typeTupleFromBytes(ctx, type.getType(), vm_value->getBytes())
+				};
 			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
 		}
 		default: {
