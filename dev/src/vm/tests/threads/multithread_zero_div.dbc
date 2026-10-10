@@ -10,7 +10,7 @@ function bad {} -> {} {
 
 function main { i64, ptr_argv } -> { i64 } {
     init_pany_type thread_bad_id, i64;
-    set_threadctx bad;
+    setThreadCtx_func bad;
     call_builtinfunc builtin_start_thread;
 
     init_pany_type join_bad_ret, i64;

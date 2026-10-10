@@ -22,11 +22,11 @@ function worker {} -> {} {
 
 function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type		worker1_id, i64;
-	set_threadctx		worker;
+	setThreadCtx_func		worker;
 	call_builtinfunc	builtin_start_thread;
 
 	init_pany_type		worker2_id, i64;
-	set_threadctx		worker;
+	setThreadCtx_func		worker;
 	call_builtinfunc	builtin_start_thread;
 
 	init_pany_type		a, i32;
