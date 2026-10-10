@@ -4,6 +4,10 @@ class Person {
 	height: f64
 }
 
+namespace Types {
+	class Inner {}
+}
+
 fun selectType(select_first: bool) -> type = {
 	if (select_first) return i64;
 	return bool;
@@ -22,6 +26,11 @@ fun main() -> i64 = {
 	print(i64.toString());
 	print(selectType(false).toString());
 	print(f"{i32}");
+	print(Person.toString());
+	print(f"{Person}");
+	print(str.toString());
+	print((i64 | bool).toString());
+	print((ptr Types.Inner).toString());
 
 	print(().toString());
 

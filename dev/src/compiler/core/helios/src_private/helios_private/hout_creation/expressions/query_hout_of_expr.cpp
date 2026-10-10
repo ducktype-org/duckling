@@ -246,7 +246,9 @@ namespace compiler::helios::code {
 							continue;
 						}
 						auto sub_expr_hout = std::move(sub_expr_hout_qresult).valueOrThrow();
-						auto stringified   = defgen::toStringExpr(ctx, std::move(sub_expr_hout));
+						auto stringified   = defgen::toStringExpr(
+                            ctx, std::move(sub_expr_hout), pstOrigin(sub).generatedFrom()
+                        );
 						if (stringified.hasFailed()) {
 							failed = true;
 							continue;

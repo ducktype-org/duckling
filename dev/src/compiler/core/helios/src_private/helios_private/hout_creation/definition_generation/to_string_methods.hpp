@@ -30,7 +30,9 @@ namespace compiler::helios::defgen {
 	 * Values of the meta type exist only at compile time. For them, evaluate the value and turn the
 	 * represented type into a String literal instead of emitting a runtime method call.
 	 */
-	query::QResult<Box<code::Expr>> toStringExpr(query::Context& ctx, Box<code::Expr> value);
+	query::QResult<Box<code::Expr>> toStringExpr(
+		query::Context& ctx, Box<code::Expr> value, code::ElementOrigin callee_origin
+	);
 
 	/**
 	 * @brief Utility function to get the append String method symbol on String class.

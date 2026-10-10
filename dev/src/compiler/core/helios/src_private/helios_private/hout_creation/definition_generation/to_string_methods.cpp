@@ -6,6 +6,7 @@
 
 #include "to_string_methods.hpp"
 
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
@@ -37,6 +38,102 @@
 namespace compiler::helios::defgen {
 	using namespace code::shorthands;
 
+	namespace {
+		std::string sourceTypeName(query::Context& ctx, tsh::SymbolType<> type);
+
+		std::string sourceClassName(query::Context& ctx, const SymID symbol) {
+			std::vector<std::string> path;
+			auto                     element = maybeSymbolPst(symbol);
+			while (element.has_value()) {
+				auto unlocked = element.value().unlock(ctx);
+				if (unlocked->getElementKind() == pst::ElementKind::Namespace
+				    || unlocked->getElementKind() == pst::ElementKind::Class) {
+					if (auto statement = unlocked.dynamicCast<pst::Stmt>(); statement.has_value()) {
+						if (auto identifier = statement.value()->getDeclSymbolIdentifier();
+						    identifier.has_value())
+							path.emplace_back(identifier.value().unlock(ctx)->unwrap().str());
+					}
+				}
+				element = unlocked->getParent();
+			}
+
+			std::ranges::reverse(path);
+			std::string result;
+			for (const auto& part: path) {
+				if (!result.empty()) result += ".";
+				result += part;
+			}
+			return result.empty() ? name(symbol).str() : result;
+		}
+
+		std::string joinSourceTypeNames(
+			query::Context&                       ctx,
+			const std::vector<tsh::SymbolType<>>& types,
+			std::string_view                      separator
+		) {
+			std::string result;
+			for (usize i = 0; i < types.size(); i++) {
+				if (i != 0) result += separator;
+				result += sourceTypeName(ctx, types[i]);
+			}
+			return result;
+		}
+
+		std::string sourceAbstractTypeName(query::Context& ctx, const tsh::AbstractType type) {
+			switch (type.getKind()) {
+			case tsh::Kind::Pointer:
+				return "ptr "
+				     + sourceTypeName(ctx, type.as<tsh::PointerAbstractType>().getPointee());
+			case tsh::Kind::ManyPointer:
+				return "manyptr "
+				     + sourceTypeName(ctx, type.as<tsh::ManyPointerAbstractType>().getPointee());
+			case tsh::Kind::CPointer:
+				return "cptr "
+				     + sourceTypeName(ctx, type.as<tsh::CPointerAbstractType>().getPointee());
+			case tsh::Kind::Slice: {
+				const auto element = type.as<tsh::SliceAbstractType>().getElementType();
+				if (element.getType().getKind() == tsh::Kind::Char
+				    && element.getRefKind() == tsh::ReferenceKind::Direct)
+					return "str";
+				return "slice " + sourceTypeName(ctx, element);
+			}
+			case tsh::Kind::StaticArray: {
+				const auto array = type.as<tsh::StaticArrayAbstractType>();
+				return base::strConcat(
+					sourceTypeName(ctx, array.getElementType()), "[", array.getSize(), "]"
+				);
+			}
+			case tsh::Kind::Tuple:
+				return "("
+				     + joinSourceTypeNames(
+						   ctx, type.as<tsh::TupleAbstractType>().getComponents(), ", "
+					 )
+				     + ")";
+			case tsh::Kind::Variant:
+				return joinSourceTypeNames(
+					ctx, type.as<tsh::VariantAbstractType>().getUnderlyingTypes(), " | "
+				);
+			case tsh::Kind::Class:
+				return sourceClassName(ctx, type.as<tsh::ClassAbstractType>().getSymbol());
+			default:
+				return type.toString();
+			}
+		}
+
+		std::string sourceTypeName(query::Context& ctx, const tsh::SymbolType<> type) {
+			using enum tsh::ReferenceKind;
+			return base::strConcat(
+				type.getUniqueness() == tsh::Uniqueness::Unique ? "unique " : "",
+				type.getLeakage() == tsh::Leakage::Leaking ? "leaking " : "",
+				type.getMutability() == tsh::Mutability::Immutable ? "const " : "",
+				type.getRefKind() == Direct ? ""
+				: type.getRefKind() == Box  ? "box "
+											: "ref ",
+				sourceAbstractTypeName(ctx, type.getType())
+			);
+		}
+	}
+
 	/**
 	 * @brief Get the symbol of the `toString` method for a given type.
 	 */
@@ -54,7 +151,9 @@ namespace compiler::helios::defgen {
 		});
 	}
 
-	query::QResult<Box<code::Expr>> toStringExpr(query::Context& ctx, Box<code::Expr> value) {
+	query::QResult<Box<code::Expr>> toStringExpr(
+		query::Context& ctx, Box<code::Expr> value, code::ElementOrigin callee_origin
+	) {
 		const auto      value_type = value->expression_type.getType();
 		const Shorthand s{ ctx };
 
@@ -67,11 +166,13 @@ namespace compiler::helios::defgen {
 				represented_type.has_value(),
 				"An expression of the meta type must evaluate to a symbol type"
 			);
-			return s.litStrObj(base::StrID(represented_type->toString()));
+			return s.litStrObj(base::StrID(sourceTypeName(ctx, represented_type.value())));
 		}
 
 		const auto to_string_sym = toStringSymForType(ctx, value_type);
-		return s.call(s.ident(to_string_sym), s.prepToPassSelf(std::move(value)));
+		return s.call(
+			withOrigin(callee_origin, s.ident(to_string_sym)), s.prepToPassSelf(std::move(value))
+		);
 	}
 
 #define STRING_TYPE tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
@@ -466,6 +567,14 @@ namespace compiler::helios::defgen {
 			}
 			case tsh::Kind::Class: {
 				stringifyClass(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::Meta: {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"A `type` value cannot be stringified at runtime."
+				));
+				const Shorthand s{ ctx };
+				body.emplace_back(s.ret(s.litStrObj(base::StrID(""))));
 				break;
 			}
 			default: {

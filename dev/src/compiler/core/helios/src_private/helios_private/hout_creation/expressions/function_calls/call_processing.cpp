@@ -757,7 +757,9 @@ namespace compiler::helios::code {
 				call_arguments.positional_arguments.size() == 1,
 				"The generated meta toString method only takes self"
 			);
-			return defgen::toStringExpr(ctx, std::move(call_arguments.positional_arguments.front()));
+			return defgen::toStringExpr(
+				ctx, std::move(call_arguments.positional_arguments.front()), pst_origin.callee_origin
+			);
 		}
 
 		return constructCallExpr(
