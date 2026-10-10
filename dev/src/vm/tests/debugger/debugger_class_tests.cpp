@@ -41,7 +41,7 @@ private:
 	void loadedFilesTest() {
 		vm::debugger::Debugger debugger;
 		auto                   loaded = fs::File(path("debugger_test.dbc"));
-		auto                   other  = fs::File(path("while_true.dbc"));
+		auto                   other  = fs::File(path("../common/programs/while_true.dbc"));
 
 		ASSERT_TRUE(debugger.getLoadedFiles().empty());
 		ASSERT_TRUE(!debugger.isFileAvailable(loaded));
@@ -82,7 +82,7 @@ private:
 
 		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
 		ASSERT_TRUE(debugger.isFileAvailable(source));
-		ASSERT_TRUE(!debugger.isFileAvailable(fs::File(path("while_true.dbc"))));
+		ASSERT_TRUE(!debugger.isFileAvailable(fs::File(path("../common/programs/while_true.dbc"))));
 
 		fs::FileManager::deleteFolder(package, true);
 	}
@@ -183,7 +183,7 @@ private:
 
 	void getStatusWait() {
 		testTemplate(
-			"io_hang.dbc",
+			"../common/programs/io_hang.dbc",
 			{},
 			{
 				altIndex(vm::api::Running),
@@ -194,7 +194,7 @@ private:
 
 	void getStatusBreakpoint() {
 		testTemplate(
-			"breakpoint.dbc",
+			"../common/programs/breakpoint.dbc",
 			{},
 			{
 				altIndex(vm::api::Running),
@@ -233,7 +233,8 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("while_true.dbc")) }));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("../common/programs/while_true.dbc")) })
+		);
 		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 0));
 
 		debugger.attachOnStatusChangedListener(status_listener);
@@ -392,7 +393,9 @@ private:
 		std::mutex              m;
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("vm_api_tests.dbc")) }));
+		ASSERT_HAS_VALUE(
+			debugger.loadFiles({ fs::File(path("../common/programs/vm_api_tests.dbc")) })
+		);
 
 		events::Listener<std::string> output_listener([&](const std::string& str) {
 			ASSERT_EQUAL_PRINT("7", str);
@@ -411,7 +414,9 @@ private:
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("breakpoint_all_types.dbc")) }));
+		ASSERT_HAS_VALUE(
+			debugger.loadFiles({ fs::File(path("../common/programs/breakpoint_all_types.dbc")) })
+		);
 		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 20));
 		std::mutex m;
 

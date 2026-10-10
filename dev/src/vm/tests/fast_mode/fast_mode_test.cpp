@@ -56,9 +56,11 @@ private:
 
 	void testFunctionCallWithArgs() { runTestOnFast("function_with_args.dbc", "5 7", "12"); }
 
-	void testFibIter() { runTestOnFast("../correctness/fib_iter.dbc", "1000000 10000", "6875"); }
+	void testFibIter() {
+		runTestOnFast("../common/programs/fib_iter.dbc", "1000000 10000", "6875");
+	}
 
-	void testFibRec() { runTestOnFast("../correctness/fib_rec.dbc", "28", "317811"); }
+	void testFibRec() { runTestOnFast("../common/programs/fib_rec.dbc", "28", "317811"); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fast_mode/");

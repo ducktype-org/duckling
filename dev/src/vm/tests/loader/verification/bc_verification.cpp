@@ -26,6 +26,10 @@ public:
 		TESTER_ADD_TEST(useArgumentAfterCall);
 		TESTER_ADD_TEST(mainVerification);
 		TESTER_ADD_TEST(multipleRetVals);
+		TESTER_ADD_TEST(deinitMainRetVal);
+		TESTER_ADD_TEST(invalidBuiltinFunction);
+		TESTER_ADD_TEST(pathWithoutEnd);
+		TESTER_ADD_TEST(invalidSignatures);
 
 		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
@@ -61,6 +65,13 @@ public:
 		TESTER_ADD_TEST(variantWrongType);
 		TESTER_ADD_TEST(fixedSizeTableWrongType);
 		TESTER_ADD_TEST(inplaceCasts);
+		TESTER_ADD_TEST(sizeZeroPrimitive);
+		TESTER_ADD_TEST(emptyVariant);
+		TESTER_ADD_TEST(nonInstantiableVariant);
+		TESTER_ADD_TEST(nonInstantiableDynamicTable);
+
+		// Literal verification
+		TESTER_ADD_TEST(invalidLiterals);
 
 		// Execution verification
 		TESTER_ADD_TEST(incorrectUsesIO);
@@ -75,6 +86,9 @@ public:
 		TESTER_ADD_TEST(wrongGlobalImmSize);
 		TESTER_ADD_TEST(wrongGlobalField);
 		TESTER_ADD_TEST(wrongGlobalTblSize);
+		TESTER_ADD_TEST(globalNoConstructor);
+		TESTER_ADD_TEST(globalNoDestructor);
+		TESTER_ADD_TEST(invalidGlobalConstructorSignature);
 	}
 
 private:
@@ -495,6 +509,100 @@ private:
 			"wrong/globals/wrong_table_size.dbc",
 			{
 				vm::code::InitialValueTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void globalNoConstructor() {
+		loadInvalidDbc(
+			"wrong/globals/global_no_constructor.dbc",
+			{ vm::code::MissingGlobalCtorDtorError::ERR_MSG }
+		);
+	}
+
+	void globalNoDestructor() {
+		loadInvalidDbc(
+			"wrong/globals/global_no_destructor.dbc",
+			{ vm::code::MissingGlobalCtorDtorError::ERR_MSG }
+		);
+	}
+
+	void invalidGlobalConstructorSignature() {
+		loadInvalidDbc(
+			"wrong/globals/global_invalid_constructor_signature.dbc",
+			{ vm::code::InvalidConstructorDestructorSignature::ERR_MSG }
+		);
+	}
+
+	void deinitMainRetVal() {
+		loadInvalidDbc(
+			"wrong/functions/deinit_main_ret_val.dbc", { vm::code::RetValDeinitError::ERR_MSG }
+		);
+	}
+
+	void invalidBuiltinFunction() {
+		loadInvalidDbc(
+			"wrong/functions/invalid_builtin_function.dbc",
+			{ vm::code::InvalidBuiltinFunctionError::ERR_MSG }
+		);
+	}
+
+	void pathWithoutEnd() {
+		for (auto filename: { "wrong/functions/no_ret.dbc", "wrong/functions/empty_function.dbc" })
+			loadInvalidDbc(filename, { vm::code::PathWithoutEndError::ERR_MSG });
+
+		// A path that never returns because it loops forever or panics is fine.
+		for (auto filename: { "right/infinite_loop.dbc", "right/dead_end.dbc" })
+			loadValidDbc(filename);
+	}
+
+	void invalidSignatures() {
+		loadInvalidDbc(
+			"wrong/functions/invalid_ret_type.dbc", { vm::code::UnknownTypeError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"wrong/functions/invalid_param_type.dbc", { vm::code::UnknownTypeError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"wrong/functions/casting_invalid_ret.dbc", { vm::code::InvalidRetError::ERR_MSG }
+		);
+	}
+
+	void sizeZeroPrimitive() {
+		loadInvalidDbc(
+			"wrong/types/size_zero_primitive.dbc", { vm::code::InvalidPrimitiveSizeError::ERR_MSG }
+		);
+	}
+
+	void emptyVariant() {
+		loadInvalidDbc(
+			"wrong/types/empty_variant.dbc", { vm::code::TooFewVariantAlternativesError::ERR_MSG }
+		);
+	}
+
+	void nonInstantiableVariant() {
+		loadInvalidDbc(
+			"wrong/types/non_instantiable_variant.dbc",
+			{ vm::code::UninstantiableValueError::ERR_MSG }
+		);
+	}
+
+	void nonInstantiableDynamicTable() {
+		loadInvalidDbc(
+			"wrong/types/non_instantiable_dynamic_table.dbc",
+			{ vm::code::UninstantiableValueError::ERR_MSG }
+		);
+	}
+
+	void invalidLiterals() {
+		loadInvalidDbc(
+			"wrong/literals/invalid_literal.dbc",
+			{
+				"Numeric literal overflows a 32-bit signed integer",
+				"Numeric literal underflows a 32-bit signed integer",
+				"Numeric literal overflows a 32-bit unsigned integer",
+				"Numeric literal overflows a 64-bit signed integer",
+				"Floating-point literals must be in decimal base for",
 			}
 		);
 	}
