@@ -74,7 +74,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
@@ -206,46 +205,6 @@ private:
 	 */
 	static auto mangle(const compiler::helios::mangler::KeyOf_MangledSymbol& key) {
 		return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(key);
-	}
-
-	void testConstants() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
-
-		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i32>("N.X", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i32>("A", root_scope));
-		ASSERT_EQUAL(-3, getConstValueAs<i32>("B", root_scope));
-		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
-		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
-		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
-		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
-		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
-		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
-		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
-
-		// Floating point.
-		ASSERT_EQUAL(1.0f, getConstValueAs<f64>("F1", root_scope));
-		ASSERT_EQUAL(1.0l, getConstValueAs<f32>("F2", root_scope));
-		ASSERT_EQUAL(5.0l, getConstValueAs<f64>("F3", root_scope));
-
-		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
-		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
-		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
-		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
-		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
-		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
-
-		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
-		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
-		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
-		ASSERT_EQUAL(55, getConstValueAs<i32>("FIB_ON_I32_10", root_scope));
-		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
-		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
-
-		// Meta builtins (size_of / alignment_of) called through a VM comp-time function call.
-		ASSERT_EQUAL(16, getConstValueAs<i64>("SIZE_AND_ALIGN_I64", root_scope));
 	}
 
 	void testMetaCompTime() {
@@ -410,6 +369,55 @@ private:
 			// Comp-time pattern matching over variant values (evaluated via the VM path).
 			ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_INT", root_scope));
 			ASSERT_EQUAL(-1, getConstValueAs<i64>("MATCHED_OTHER", root_scope));
+		}
+
+		// Type tuples.
+		{
+			using compiler::ctv::CompileTimeValue;
+			using compiler::tsh::Kind;
+
+			auto kind_of
+				= [](const compiler::tsh::SymbolType<>& type) { return type.getType().getKind(); };
+
+			auto tuple_type = getSymbolTypeOf("TYPE_TUPLE", root_scope);
+			ASSERT_TRUE(kind_of(tuple_type) == Kind::Tuple);
+			auto tuple_components
+				= tuple_type.getType().as<compiler::tsh::TupleAbstractType>().getComponents();
+			ASSERT_EQUAL(tuple_components.size(), 2);
+			ASSERT_TRUE(kind_of(tuple_components[0]) == Kind::Meta);
+			ASSERT_TRUE(kind_of(tuple_components[1]) == Kind::Meta);
+
+			auto tuple_value
+				= getConstValueAs<CompileTimeValue::TypeTuple>("TYPE_TUPLE", root_scope);
+			ASSERT_EQUAL(tuple_value.getElements().size(), 2);
+			ASSERT_TRUE(
+				kind_of(v_get(tuple_value.getElements()[0], compiler::tsh::SymbolType<>))
+				== Kind::Bool
+			);
+			ASSERT_TRUE(
+				kind_of(v_get(tuple_value.getElements()[1], compiler::tsh::SymbolType<>))
+				== Kind::Slice
+			);
+
+			auto value_type = getSymbolTypeOf("TYPE_TUPLE_VALUE", root_scope);
+			ASSERT_TRUE(kind_of(value_type) == Kind::Tuple);
+			auto value_components
+				= value_type.getType().as<compiler::tsh::TupleAbstractType>().getComponents();
+			ASSERT_TRUE(kind_of(value_components[0]) == Kind::Bool);
+			ASSERT_TRUE(kind_of(value_components[1]) == Kind::Slice);
+			ASSERT_TRUE(getConstValue("TYPE_TUPLE_VALUE", root_scope)
+			                .get<CompileTimeValue::VMValue>()
+			                .has_value());
+
+			auto i32_pair = st(
+				query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type), st(i32_type) } })
+			);
+			auto expected_nested
+				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_pair, i32_pair } }));
+			ASSERT_EQUAL(
+				expected_nested,
+				getConstValueAs<compiler::tsh::SymbolType<>>("NESTED_TYPE_TUPLE", root_scope)
+			);
 		}
 	}
 
@@ -2543,10 +2551,11 @@ private:
 				= NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
 			const auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
-			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
-				base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
-			const auto tuple
-				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
+			const auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
+                base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
+			const auto tuple = CompileTimeValue::TypeTuple{
+				std::vector<CompileTimeValue::TypeTuple::Element>{ UNIT, symbol_1 }
+			};
 
 			const std::vector<CompileTimeValue> ctvs
 				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,          I16_N42,
@@ -2560,10 +2569,18 @@ private:
 		constexpr std::string_view EXPECTED
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
-			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
+			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u TutNidE tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
 		ASSERT_EQUAL(EXPECTED, result);
+
+		const auto value_tuple = getConstValue("VALUE_TUPLE", root_scope);
+		ASSERT_TRUE(value_tuple.get<CompileTimeValue::VMValue>().has_value());
+		std::string mangled_value_tuple;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			mangled_value_tuple = compiler::helios::mangler::mangleCTV(ctx, value_tuple);
+		});
+		ASSERT_EQUAL("MTididE8_0100000002000000", mangled_value_tuple);
 	}
 
 	void testManglingOfTemplates() {

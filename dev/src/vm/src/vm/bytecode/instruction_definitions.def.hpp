@@ -770,11 +770,18 @@ DEF_INSTR(exit)
 
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
- * It is a helper for start functions.
- * @arg0 - pointer to a VMValue.
- * @arg1 - n/a.
+ * Initializes a new local variable with a copy of the data held by a VMValue of the same process.
+ * @TODO: #899 Think of this.
+ * @arg0 - the initialized local variable.
+ * @arg1 - type of the local variable.
+ * @arg2 - address of the source `vm::IVMValue`.
  */
-DEF_INSTR(initFromVMValue)
+DEF_INSTR(
+	initFromVMValue_pany_type_imm,
+	(vm::opargs::PlaceAny, var),
+	(vm::opargs::Type, type),
+	(vm::opargs::Immediate, vm_value)
+)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

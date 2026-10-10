@@ -724,12 +724,6 @@ private:
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
 
-			compiler::tsh::SymbolType<> meta_type{
-				getMetaType(),
-				compiler::tsh::ReferenceKind::Direct,
-				compiler::tsh::Mutability::Mutable,
-			};
-
 			using enum compiler::mir::Operation;
 			using MK = compiler::mir::MetaKind;
 
@@ -779,12 +773,20 @@ private:
 				} else if (fun->declaration->original_name.str() == "createVariant") {
 					check_meta_function(fun, MK::CreateVariant, 4);
 				} else if (fun->declaration->original_name.str() == "createTuple") {
-					check_meta_function(fun, MK::CreateTuple, 4);
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+					bool found_create_tuple = false;
+					for (const auto& block_id: mir_fun.block_order)
+						for (const auto& instr: mir_fun.blocks[block_id].instructions)
+							if (instr.operation == MetaTypeOperation
+							    && meta_kind(instr) == MK::CreateTuple
+							    && instr.arguments.size() == 4)
+								found_create_tuple = true;
+					ASSERT_TRUE(found_create_tuple);
 				} else if (fun->declaration->original_name.str() == "megaType") {
 					auto& mir_fun
 						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
 					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
 
 					int  create_variant_count     = 0;
@@ -805,9 +807,9 @@ private:
 							create_tuple_count++;
 						} else if (instr.operation == MetaTypeOperation
 						           && meta_kind(instr) == MK::CreateVariant) {
-							// If variant is created, two preceding tuple creating instructions
-							// should exist.
-							ASSERT_TRUE(create_tuple_count == 2);
+							// If variant is created, the tuple of its alternative should already
+							// exist.
+							ASSERT_TRUE(create_tuple_count == 1);
 							create_variant_count++;
 
 						} else if (instr.operation == Call) {

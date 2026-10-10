@@ -463,7 +463,7 @@ namespace compiler::helios {
 				variant_case(defgen::ReplInputWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = {},
-						.result_type     = repl.return_type,
+						.result_type     = repl.getReturnType(),
 					});
 					return tsh::SymbolType<>{
 						function_abstract_type,

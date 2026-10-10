@@ -479,7 +479,7 @@ class FunctionValidator {
 					bool is_global = globals.contains(place->var_name);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
-						instr_case_novalue(Op_init_pany_type) {
+						instr_case_novalue(Op_init_pany_type, Op_initFromVMValue_pany_type_imm) {
 							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
@@ -639,6 +639,9 @@ class FunctionValidator {
 		UNHANDLED_ENUM
 		instr_match(instruction) {
 			instr_case(Op_init_pany_type, instr) { validateArgInstantiable(instr.type); }
+			instr_case(Op_initFromVMValue_pany_type_imm, instr) {
+				validateArgInstantiable(instr.type);
+			}
 			instr_case(Op_alloc_pptr_type, instr) {
 				validateArgInstantiable(instr.type);
 				CRef<valid_type::ValidType> variable = getPlaceType(instr.ptr, current_stack);
@@ -1669,7 +1672,7 @@ class FunctionValidator {
 				if (src_table->inner != dst_table->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_initFromVMValue) {}
+			instr_case_novalue(Op_nop, Op_exit) {}
 		}
 		POP_DIAGNOSTIC
 	}
@@ -1800,6 +1803,11 @@ class FunctionValidator {
 				instr_case(Op_init_pany_type, instr) {
 					// this is the only exception from the rule "save stack state before instruction"
 					// it is needed to properly lower the name of the variable for the compilation
+					local_stack.push(instr.var, instr.type);
+					stack_before_instr[index] = local_stack.getStateID();
+					index++;
+				}
+				instr_case(Op_initFromVMValue_pany_type_imm, instr) {
 					local_stack.push(instr.var, instr.type);
 					stack_before_instr[index] = local_stack.getStateID();
 					index++;

@@ -14,6 +14,8 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/core/vmvalue/ivmvalue_fd.hpp>
+
 #include <string>
 
 namespace compiler::ctv {
@@ -34,26 +36,57 @@ namespace compiler::ctv {
 			base::StrID value;
 		};
 
-		struct TupleCTV {
-			explicit TupleCTV(std::vector<CompileTimeValue> elements):
-				  elements(std::move(elements)) {
-				// We require at least two elements to distinguish it from:
-				// - UnitCTV, which has zero elements, and
-				// - a single CTV that happens to appear in parentheses.
-				CORE_ASSERT(this->elements.size() >= 2, "TupleCTV must have at least two elements");
-			}
+		/**
+		 * @brief A value living in the compile-time DVM process, together with its compiler type.
+		 * @note Valid only as long as the compile-time DVM process that owns the value lives.
+		 */
+		struct VMValue {
+			base::CRef<vm::IVMValue> val;
+			tsh::SymbolType<>        type;
+		};
+
+		/**
+		 * @brief A tuple whose type is compatible with the meta type, i.e. it can be lifted to a
+		 * type. Its elements are types, units or nested type tuples.
+		 * @note This is an optimization: such tuples are kept structured, so they can be lifted to
+		 * a type without the VM. Every other tuple value is represented as a VMValue.
+		 */
+		struct TypeTuple {
+			using Element = std::variant<TypeTuple, tsh::SymbolType<>, UnitCTV>;
+
+			explicit TypeTuple(std::vector<Element> elements);
+
+			/**
+			 * @brief Checks if a value of `tuple_type` can be represented as a TypeTuple.
+			 * @note Only direct (not referenced) tuples are accepted.
+			 */
+			[[nodiscard]]
+			static bool isValid(query::Context& ctx, const tsh::SymbolType<>& tuple_type);
+
+			/**
+			 * @brief Converts `ctv` to an Element.
+			 * @note Panics if `ctv` is not a type, a unit or a type tuple.
+			 */
+			[[nodiscard]]
+			static Element elementFromCtv(const CompileTimeValue& ctv);
+
+			/**
+			 * @brief Converts `element` to a CTV.
+			 */
+			[[nodiscard]]
+			static CompileTimeValue elementToCtv(const Element& element);
 
 			/**
 			 * @brief Get the elements of the tuple CTV.
 			 * @return The vector of the tuple CTV's elements.
 			 */
 			[[nodiscard]]
-			const std::vector<CompileTimeValue>& getElements() const {
+			const std::vector<Element>& getElements() const {
 				return elements;
 			}
 
 		private:
-			std::vector<CompileTimeValue> elements;
+			std::vector<Element> elements;
 		};
 
 	private:
@@ -64,8 +97,9 @@ namespace compiler::ctv {
 			CharSliceValue,
 			StringClassValue,
 			UnitCTV,
-			TupleCTV,
-			tsh::SymbolType<>>;
+			TypeTuple,
+			tsh::SymbolType<>,
+			VMValue>;
 		Storage value;
 
 	public:
@@ -123,8 +157,9 @@ namespace compiler::ctv {
 		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
 
 		/**
-		 * @note: This might be a subject of change in the future, especially, when VMValue CTVs
-		 * will be introduced.
+		 * @brief Computes a hash identifying the stored value within a single compilation.
+		 * @note VMValue CTVs are hashed by their type and raw bytes, pointers inside are hashed as
+		 * they are, without following them.
 		 */
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
