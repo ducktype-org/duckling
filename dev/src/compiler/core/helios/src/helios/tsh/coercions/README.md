@@ -85,7 +85,7 @@ They are declared in the order of their ranks:
 | `Numeric`          | `numeric`               | `Numeric`             | `convertValue`: a wider integer or float, `bool` into an integer                   |
 | `VariantPack`      | `pack as alternative N` | `VariantPack`         | `packIntoVariant`                                                                  |
 | `LiftToType`       | `lift to type`          | `LiftToType`          | `convertValue`: `()` or a tuple of types into `type`                               |
-| `UserConversion`   | `user conversion`       | `UserConversion`      | nothing yet (@TODO: #3656)                                                                |
+| `UserConversion`   | `user conversion`       | `UserConversion`      | nothing yet                                                                |
 | `ZeroCheck`        | `zero check`            | `ZeroCheck`           | `convertValue`: `byte`, `char` or a raw pointer into `bool`                        |
 | `RetypeVoid`       | `retype void`           | `RetypeVoid`          | `retypeVoid`                                                                       |
 | `Elementwise`      | `elementwise`           | the worst of its parts | `coerceElementwise`, and `ownership.cpp` for a value built out of parts           |
@@ -235,7 +235,7 @@ like the alternatives of a variant or the overloads of a function.
 | `Numeric`          | a widening numeric conversion                                                           |
 | `VariantPack`      | the value is packed into a variant                                                      |
 | `LiftToType`       | the value is read as a type                                                             |
-| `UserConversion`   | a user defined conversion (@TODO: #3656)                                                |
+| `UserConversion`   | a user defined conversion                                                               |
 | `ZeroCheck`        | the value is compared against zero, which turns it into a `bool`                        |
 | `RetypeVoid`       | a `void` value is seen as a value of another type                                       |
 
@@ -301,9 +301,6 @@ plan  i32  ->  Variant (Variant (bool, i32), i64)
 
 `u8 -> u16 | u32` ranks `Numeric` for both alternatives, so it is `ambiguous, alternatives 0, 1`.
 
-Ranks come from plans only. Layer two never changes them, see
-[Why does a decision never change the rank?](#why-does-a-decision-never-change-the-rank).
-
 ### Layer one: planning from types (`rules.cpp`)
 
 `planCoercion` is a short ladder of cases, tried in order:
@@ -357,7 +354,7 @@ when a test fails.
 
 ### A worked example
 
-The cases below use the declarations of the test framework: # TODOP: Add coercion tester link
+The cases below use the declarations of the test framework (`coercion_tester.hpp`):
 
 ```
 fun makeBox() -> box i32
