@@ -33,20 +33,17 @@ namespace compiler::ctv {
 		// We require at least two elements to distinguish it from:
 		// - UnitCTV, which has zero elements, and
 		// - a single CTV that happens to appear in parentheses.
-		CORE_ASSERT(
-			this->elements.size() >= 2, "TypeTuple must have at least two elements"
-		);
+		CORE_ASSERT(this->elements.size() >= 2, "TypeTuple must have at least two elements");
 	}
 
-	CompileTimeValue::TypeTuple::Element
-	CompileTimeValue::TypeTuple::elementFromCtv(const CompileTimeValue& ctv) {
+	CompileTimeValue::TypeTuple::Element CompileTimeValue::TypeTuple::elementFromCtv(
+		const CompileTimeValue& ctv
+	) {
 		variant_match(ctv.getStorage()) {
 			variant_case(tsh::SymbolType<>, type) { return type; }
 			variant_case_novalue(UnitCTV) { return UnitCTV{}; }
 			variant_case(TypeTuple, tuple) { return tuple; }
-			variant_default {
-				CORE_PANIC("Only types, units and type tuples are tuple elements.");
-			}
+			variant_default { CORE_PANIC("Only types, units and type tuples are tuple elements."); }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -65,9 +62,8 @@ namespace compiler::ctv {
 	) {
 		return tuple_type.getRefKind() == tsh::ReferenceKind::Direct
 		    && tuple_type.getType().getKind() == tsh::Kind::Tuple
-		    && ctx.query<tsh::QueryImplicitCoercibilityOnAbstractType>(
-				   { tuple_type.getType(), tsh::getMetaType() }
-			   );
+		    && ctx.query<tsh::QueryImplicitCoercibilityOnAbstractType>({ tuple_type.getType(),
+		                                                                 tsh::getMetaType() });
 	}
 
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
@@ -126,7 +122,7 @@ namespace compiler::ctv {
 			variant_case_novalue(UnitCTV) { return "()"; }
 			variant_case(TypeTuple, tuple) {
 				std::stringstream ss;
-				const auto& elements = tuple.getElements();
+				const auto&       elements = tuple.getElements();
 				ss << "(" << TypeTuple::elementToCtv(elements.at(0)).toString();
 				for (usize i = 1; i < elements.size(); i++)
 					ss << ", " << TypeTuple::elementToCtv(elements.at(i)).toString();

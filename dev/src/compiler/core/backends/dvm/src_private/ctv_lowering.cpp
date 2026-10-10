@@ -40,9 +40,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Represents a meta type as the DVM opaque pointer value: a pointer to the symbol
 		 * type in the comp-time lowering, zero otherwise.
 		 */
-		u64 metaTypeToU64(
-			ProgramLoweringContext& pctx, const compiler::tsh::SymbolType<>& type_val
-		) {
+		u64 metaTypeToU64(ProgramLoweringContext& pctx, const compiler::tsh::SymbolType<>& type_val) {
 			return pctx.isCompTimeLowering() ? std::bit_cast<u64>(&type_val) : 0;
 		}
 
@@ -322,9 +320,7 @@ namespace compiler::backend_vm::internal {
 					const auto& field_type = pctx.type_storage.dvm_types.at(field->type);
 					result->fields.emplace_back(
 						field->name,
-						lowerTypeTupleToConstant(
-							pctx, nested, v_get(field_type, vm::code::DataType)
-						)
+						lowerTypeTupleToConstant(pctx, nested, v_get(field_type, vm::code::DataType))
 					);
 					++field;
 				}

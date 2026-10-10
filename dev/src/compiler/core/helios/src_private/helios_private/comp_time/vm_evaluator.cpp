@@ -291,6 +291,12 @@ namespace {
 				(*maybe_vm_value)->writeBytes<bool>(val);
 				return maybe_vm_value;
 			}
+			variant_case(char, val) {
+				auto maybe_vm_value = get_vm_value(base::StrID("i8"));
+				if (!maybe_vm_value) return maybe_vm_value;
+				(*maybe_vm_value)->writeBytes<char>(val);
+				return maybe_vm_value;
+			}
 			variant_case(compiler::tsh::SymbolType<>, type) {
 				auto maybe_vm_value = get_vm_value(base::StrID("opaque_ptr"));
 				if (!maybe_vm_value) return maybe_vm_value;
@@ -375,9 +381,9 @@ namespace {
 			}
 			case tsh::Kind::Tuple: {
 				const auto offset = layout.getOffsetOfFieldSymbol(field.getSymbol()).value();
-				elements.emplace_back(typeTupleFromBytes(
-					ctx, field_type.getType(), data + offset.asInt()
-				));
+				elements.emplace_back(
+					typeTupleFromBytes(ctx, field_type.getType(), data + offset.asInt())
+				);
 				break;
 			}
 			default:
@@ -403,13 +409,17 @@ namespace {
 
 			if (int_type.getSignedness()
 			    == compiler::tsh::IntegralAbstractType::Signedness::Signed) {
-				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
+				if (bit_size <= Bits{ 8 } && vm_type_name == "i8")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<std::int8_t>() } };
+				else if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i16>() } };
 				else if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i32>() } };
 				else if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i64>() } };
 			} else {
+				if (bit_size <= Bits{ 8 } && vm_type_name == "i8")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<std::uint8_t>() } };
 				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u16>() } };
 				if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
@@ -420,7 +430,7 @@ namespace {
 
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ReturnConversionFailed,
-				"Expected an integer VM value (i16/i32/i64), but received: " + vm_type_name.str()
+				"Expected an integer VM value (i8/i16/i32/i64), but received: " + vm_type_name.str()
 			));
 		}
 		case compiler::tsh::Kind::Float: {
@@ -449,6 +459,15 @@ namespace {
 						+ vm_value->getType()->getName().str()
 				));
 			return CompileTimeValue{ vm_value->readBytes<bool>() };
+		}
+		case compiler::tsh::Kind::Char: {
+			if (vm_value->getType()->getName() != base::StrID("i8"))
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ReturnConversionFailed,
+					"Expected i8 (char) VM value but received type: "
+						+ vm_value->getType()->getName().str()
+				));
+			return CompileTimeValue{ vm_value->readBytes<char>() };
 		}
 		case compiler::tsh::Kind::Meta: {
 			if (vm_value->getType()->getName() != base::StrID("opaque_ptr"))

@@ -376,9 +376,8 @@ private:
 			using compiler::ctv::CompileTimeValue;
 			using compiler::tsh::Kind;
 
-			auto kind_of = [](const compiler::tsh::SymbolType<>& type) {
-				return type.getType().getKind();
-			};
+			auto kind_of
+				= [](const compiler::tsh::SymbolType<>& type) { return type.getType().getKind(); };
 
 			auto tuple_type = getSymbolTypeOf("TYPE_TUPLE", root_scope);
 			ASSERT_TRUE(kind_of(tuple_type) == Kind::Tuple);
@@ -410,12 +409,11 @@ private:
 			                .get<CompileTimeValue::VMValue>()
 			                .has_value());
 
-			auto i32_pair
-				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type),
-			                                                              st(i32_type) } }));
-			auto expected_nested = st(
-				query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_pair, i32_pair } })
+			auto i32_pair = st(
+				query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type), st(i32_type) } })
 			);
+			auto expected_nested
+				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_pair, i32_pair } }));
 			ASSERT_EQUAL(
 				expected_nested,
 				getConstValueAs<compiler::tsh::SymbolType<>>("NESTED_TYPE_TUPLE", root_scope)
@@ -2553,10 +2551,11 @@ private:
 				= NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
 			const auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
-			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
-				base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
+			const auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
+                base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
 			const auto tuple = CompileTimeValue::TypeTuple{
-				std::vector<CompileTimeValue::TypeTuple::Element>{ UNIT, symbol_1 } };
+				std::vector<CompileTimeValue::TypeTuple::Element>{ UNIT, symbol_1 }
+			};
 
 			const std::vector<CompileTimeValue> ctvs
 				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,          I16_N42,

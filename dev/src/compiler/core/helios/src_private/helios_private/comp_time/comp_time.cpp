@@ -411,12 +411,7 @@ namespace compiler::helios {
 											set_num_result(std::fmod(lhs_val, rhs_val));
 										break;
 									default:
-										ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-											"Evaluation of this binary operator at compile "
-											"time",
-											expr.origin.getStablePosition()
-										));
-										return query::Failed();
+										return CouldNotShortPath{};
 									}
 
 									return result;
@@ -436,12 +431,7 @@ namespace compiler::helios {
 							case IntegerNeq:
 								return CompileTimeValue{ lhs != rhs };
 							default:
-								ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-									"Evaluation of this binary operator at compile "
-									"time",
-									expr.origin.getStablePosition()
-								));
-								return query::Failed();
+								return CouldNotShortPath{};
 							}
 						} else if constexpr (std::is_same_v<LhsT, tsh::SymbolType<>>
 					                         && std::is_same_v<RhsT, tsh::SymbolType<>>) {
@@ -455,8 +445,7 @@ namespace compiler::helios {
 								CORE_UNREACHABLE();
 							}
 						} else {
-							// Unsupported type for binary operator.
-							return query::Failed();
+							return CouldNotShortPath{};
 						}
 					},
 					lhs_ctv.getStorage(),
@@ -487,7 +476,7 @@ namespace compiler::helios {
 									[&](auto&& num_val) -> TreeEvalResult {
 										using NumT = std::decay_t<decltype(num_val)>;
 										if constexpr (std::is_unsigned_v<NumT>)
-											return query::Failed();
+											return CouldNotShortPath{};
 										else {
 											// @note: static cast is needed here. Since cpp
 									        // automatically promotes small int types to i32 if any
@@ -512,19 +501,14 @@ namespace compiler::helios {
 									val.getStorage()
 								);
 							default:
-								ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-									"Evaluation of this unary operator at compile "
-									"time",
-									expr.origin.getStablePosition()
-								));
-								return query::Failed();
+								return CouldNotShortPath{};
 							}
 						} else if constexpr (std::is_same_v<T, bool>) {
 							switch (expr.operation) {
 							case code::BuiltinUnary::BooleanNot:
 								return CompileTimeValue{ not val };
 							default:
-								return query::Failed();
+								return CouldNotShortPath{};
 							}
 
 						} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
@@ -558,20 +542,10 @@ namespace compiler::helios {
 									ctx.query<tsh::QuerySliceType>({ val })
 								) };
 							default:
-								ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-									"Evaluation of this unary operator at compile "
-									"time",
-									expr.origin.getStablePosition()
-								));
-								return query::Failed();
+								return CouldNotShortPath{};
 							}
 						} else {
-							ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-								"Evaluation of this unary operator at compile "
-								"time",
-								expr.origin.getStablePosition()
-							));
-							return query::Failed();
+							return CouldNotShortPath{};
 						}
 					},
 					ctv.getStorage()
@@ -659,8 +633,7 @@ namespace compiler::helios {
 					));
 				}
 
-				result = CompileTimeValue{ CompileTimeValue::TypeTuple{
-					std::move(elements) } };
+				result = CompileTimeValue{ CompileTimeValue::TypeTuple{ std::move(elements) } };
 			}
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
@@ -732,27 +705,13 @@ namespace compiler::helios {
 				const auto& ctv     = expr_to_cast.valueOrThrow();
 				const auto& numeric = ctv.get<NumericValue>();
 				if (!numeric) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-						"Casts of non-numeric compile-time values are not yet implemented.",
-						cast.origin.getStablePosition()
-					));
-					result = query::Failed();
+					result = CouldNotShortPath{};
 					return;
 				}
 
-
 				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
-
 				if (!maybe_new_numeric.has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"Value cannot be converted to type `",
-							cast.target_type.toString(),
-							"` at compile-time."
-						),
-						cast.origin.getStablePosition().value()
-					));
-					result = query::Failed();
+					result = CouldNotShortPath{};
 					return;
 				}
 
@@ -785,16 +744,12 @@ namespace compiler::helios {
 					result = ctv::CompileTimeValue(false);
 					break;
 				}
+				case tsh::Kind::Char: {
+					result = ctv::CompileTimeValue('\0');
+					break;
+				}
 				default:
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Default value evaluation at compile time for type: '",
-							expr.type.toString(),
-							"'."
-						),
-						expr.origin.getStablePosition()
-					));
-					result = query::Failed();
+					result = CouldNotShortPath{};
 				}
 			}
 
@@ -957,7 +912,7 @@ namespace compiler::helios {
 		) {
 			const auto* callee_ident
 				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
-			if (!callee_ident) return query::Failed();
+			if (!callee_ident) return evaluateExprWithVm(ctx, call_expr);
 
 			const SymID function_sym_id = callee_ident->symbol;
 

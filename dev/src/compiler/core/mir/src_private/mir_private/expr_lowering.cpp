@@ -1463,7 +1463,7 @@ namespace compiler::mir {
 				lowered.storeResultInGivenPlace(
 					MIRPlace(tuple_tmp), store_hole, { flagConstruct(tuple_tmp) }, expr_scope, {}
 				);
-				return {lowered.begin, MIRValue{ result }};
+				return { lowered.begin, MIRValue{ result } };
 			}
 			default:
 				CORE_PANIC("Only meta-types, units and tuples of those can be lifted.");
