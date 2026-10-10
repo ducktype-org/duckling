@@ -78,40 +78,33 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout>                     return_type,
 		const std::vector<CRef<tsl::TypeLayout>>& parameter_types
 	) {
-		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
-			"Handling errors in MIR is not supported yet"
-		);
+		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)
+		                   ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
+		                   .withoutValidation();
 		if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
 			return { LIRAbi::DefaultAbi{} };
 
-		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
-		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
+		CORE_ASSERT(
+			v_matches(sym_abi, helios::CAbi, helios::MainAbi), "There are more than 4 abis."
+		);
+		base::Optional<u64> fixed_params;
+		v_if_matches(sym_abi, helios::CAbi, c_abi_info) { fixed_params = c_abi_info->fixed_params; }
 
-		auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
-			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
-			                   ->valueOrPanicMsg("Query failure.");
-			if (not result.has_value())
-				CORE_PANIC(base::strConcat(
-					"Function type is not compatible with CABI: `",
-					result.error(),
-					"` in symbol `",
-					helios::name(sym),
-					"`."
-				));
-			return &result.value();
+		auto abi_type_of = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
+			return &ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())->valueOrPanic().value();
 		};
 
 		auto return_abi_or_empty
 			= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
 			if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
-			return abi_type_or_panic(type);
+			return abi_type_of(type);
 		};
 
 		abi::calling_conv::FunctionType abi_fun_type{
 			.return_type = return_abi_or_empty(return_type),
-			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
-			             | std::ranges::to<std::vector>(),
-			.num_fixed_params = c_abi_info.fixed_params,
+			.param_types
+			= parameter_types | std::views::transform(abi_type_of) | std::ranges::to<std::vector>(),
+			.num_fixed_params = fixed_params,
 		};
 		return { LIRAbi::CAbi{
 			.function_info

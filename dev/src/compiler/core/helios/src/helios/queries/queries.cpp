@@ -377,7 +377,6 @@ namespace compiler::helios {
 			if (interface_result->hasFailed()) return base::BAD;
 			Ref interface = &interface_result->valueOrPanic();
 
-
 			for (const auto& method: interface->getAnyMethodsView()) {
 				auto method_sym = method.getSymbol();
 				// We only here add the methods that are owner only.

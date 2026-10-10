@@ -47,6 +47,7 @@ public:
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testClassErrors);
+		TESTER_ADD_TEST(testExternCErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -1579,6 +1580,60 @@ private:
 				1
 			);
 		}
+	}
+
+	/**
+	 * @brief Errors reported for an `extern("C")` class whose fields have no
+	 * representation in the C ABI.
+	 */
+	void testExternCErrors() {
+		checkForErrorOnCompileModule(
+			R"( extern("C") fundecl sliceParam(a: slice char) -> i64;
+				fun main() -> i64 = {
+					return sliceParam("abc");
+				} )",
+			{ "CABI function parameter is invalid", "`slice` is not C-compatible" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") fundecl tupleReturn(a: i32) -> (i32, i32);
+				fun main() -> i64 = {
+					tupleReturn(1i32);
+					return 0;
+				} )",
+			{ "CABI function return type is invalid", "tuples are not C-compatible" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class Inner { a: i8 = 0i8; }
+				extern("C") fundecl takesInner(v: Inner) -> i32;
+				fun main() -> i64 = {
+					takesInner(Inner());
+					return 0;
+				} )",
+			{ "CABI function parameter is invalid", "nested non-extern(\"C\") class" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") @cffi_variadic_fixed_params(0) fundecl zeroFixed(a: i64) -> i64;
+				fun main() -> i64 = {
+					return zeroFixed(1);
+				} )",
+			{ "at least one fixed parameter" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") @cffi_variadic_fixed_params(1) fundecl unpromoted(a: i64, b: u16) -> i64;
+				fun main() -> i64 = {
+					return unpromoted(1, 2u16);
+				} )",
+			{ "Variadic function parameter has to be promoted", "u16" },
+			1
+		);
 	}
 
 	void testMainReturnErrors() {

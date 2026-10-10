@@ -33,11 +33,13 @@ namespace compiler::helios {
 		const Operatoriness          operatoriness,
 		const tsh::SymbolType<>      ret_type,
 		std::vector<code::Parameter> parameters,
+		SymbolABI                    abi,
 		code::ElementOrigin          origin
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  operatoriness(operatoriness),
+		  abi(abi),
 		  return_type(ret_type),
 		  parameters(std::move(parameters)),
 		  origin(origin) {

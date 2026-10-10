@@ -55,9 +55,39 @@ namespace compiler::helios {
 	 */
 	struct DVMAbi final {};
 
-	using SymbolABI = std::variant<DefaultAbi, CAbi, DVMAbi>;
+	/**
+	 * @brief ABI of the global `main` function.
+	 *
+	 * Like `CAbi`, the name is not mangled and the function is lowered with the C calling
+	 * convention, so the C runtime can call it. Unlike `CAbi`, the declaration is not
+	 * validated against the C ABI.
+	 */
+	struct MainAbi final {};
 
-	using QuerySymbolABI_Result = query::QResult<SymbolABI>;
+	using SymbolABI = std::variant<DefaultAbi, CAbi, DVMAbi, MainAbi>;
+
+	/**
+	 * @brief Simple wrapper on a SymbolABI.
+	 */
+	struct ABIWrapper final {
+	private:
+		SymbolABI value;
+
+	public:
+		/**
+		 * @brief Get the ABI without checking that the symbol is representable in it.
+		 */
+		[[nodiscard]] const SymbolABI& withoutValidation() const { return value; }
+
+		ABIWrapper(SymbolABI val): value(val) {}
+
+		[[nodiscard]] query::QResult<CRef<SymbolABI>> withValidation(
+			query::Context&                                                           ctx,
+			std::variant<CRef<HOUTFunctionDeclaration>, CRef<tsh::ClassAbstractType>> val
+		) const;
+	};
+
+	using QuerySymbolABI_Result = query::QResult<ABIWrapper>;
 
 	/**
 	 * @brief Get the ABI of the HELIOS symbol ID.

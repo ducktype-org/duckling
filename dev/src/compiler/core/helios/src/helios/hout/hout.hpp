@@ -17,6 +17,7 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/hout/origin.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/pointers/box.hpp>
@@ -80,6 +81,8 @@ namespace compiler::helios {
 
 		Operatoriness operatoriness;
 
+		SymbolABI abi;
+
 		tsh::SymbolType<> return_type;
 
 		std::vector<code::Parameter> parameters;
@@ -97,6 +100,7 @@ namespace compiler::helios {
 			Operatoriness                operatoriness,
 			tsh::SymbolType<>            ret_type,
 			std::vector<code::Parameter> parameters,
+			SymbolABI                    abi,
 			code::ElementOrigin          origin
 		);
 		friend ImplementationOf_QueryDeclOfFun;
