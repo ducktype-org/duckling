@@ -9,12 +9,12 @@
 #include <vm/api/api.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
-class VmSettingVtableCorrectness: public VmTestSuite {
+class VmSettingVtableCorrectness: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmSettingVtableCorrectness
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(settingVtableCorrectness); }
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(settingVtableCorrectness); }
 
 private:
 	void settingVtableCorrectness() {

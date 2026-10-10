@@ -18,12 +18,12 @@
 
 #include <limits>
 
-class VmVariantTest: public VmTestSuite {
+class VmVariantTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmVariantTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(verySimpleVariant);
 		TESTER_ADD_TEST(simpleVariant0);
 		TESTER_ADD_TEST(simpleVariant1);
@@ -32,8 +32,6 @@ public:
 		TESTER_ADD_TEST(nestedVariantTest);
 		TESTER_ADD_TEST(nestedCopy);
 		TESTER_ADD_TEST(variantInsideStruct);
-		TESTER_ADD_TEST(emptyVariant);
-		TESTER_ADD_TEST(nonInstantiableVariant);
 		TESTER_ADD_TEST(variantTypeTagTest);
 	}
 
@@ -69,14 +67,6 @@ private:
 	void nestedCopy() { runTestOnVm("nested_copy.dbc", "3", "3"); }
 
 	void variantInsideStruct() { runTestOnVm("inside_struct.dbc"); }
-
-	void nonInstantiableVariant() {
-		loadInvalidDbc("non_instantiable.dbc", { vm::code::UninstantiableValueError::ERR_MSG });
-	}
-
-	void emptyVariant() {
-		loadInvalidDbc("empty_variant.dbc", { vm::code::TooFewVariantAlternativesError::ERR_MSG });
-	}
 
 	void variantTypeTagTest() {
 		/**

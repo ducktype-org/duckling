@@ -64,12 +64,12 @@ namespace global_opaque {
 	}
 }
 
-class VmExternCppTest: public VmTestSuite {
+class VmExternCppTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmExternCppTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simple);
 		TESTER_ADD_TEST(cppVectorInVm);
 		TESTER_ADD_TEST(globalOpaques);

@@ -10,12 +10,12 @@
 
 #include <vm/core/safe/exceptions.hpp>
 
-class VmMemoryTest: public VmTestSuite {
+class VmMemoryTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmMemoryTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(localLeakTest);
 		TESTER_ADD_TEST(globalLeakTest);
 		TESTER_ADD_TEST(noDoubleDestructorCalls);

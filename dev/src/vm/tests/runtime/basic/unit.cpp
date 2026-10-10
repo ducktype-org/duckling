@@ -12,12 +12,12 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/interface_types.hpp>
 
-class VmUnitTest: public VmTestSuite {
+class VmUnitTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmUnitTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsTest);
 		TESTER_ADD_TEST(commandLineArguments);
@@ -36,15 +36,10 @@ public:
 		TESTER_ADD_TEST(localSlotAddressingInCalleeTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
-		TESTER_ADD_TEST(globalNoConstructorTest);
-		TESTER_ADD_TEST(globalNoDestructorTest);
-		TESTER_ADD_TEST(invalidGlobalConstructorSignatureTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(literalsTest);
-		TESTER_ADD_TEST(checkLiteralErrorHandling);
 		TESTER_ADD_TEST(checkZeroDivision);
-		TESTER_ADD_TEST(invalidPrimitiveTypes);
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
 		TESTER_ADD_TEST(structureOperations);
@@ -106,31 +101,6 @@ private:
 
 	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5); }
 
-	void globalNoConstructorTest() {
-		loadInvalidDbc(
-			"global_no_constructor.dbc",
-			{
-				vm::code::MissingGlobalCtorDtorError::ERR_MSG,
-			}
-		);
-	}
-
-	void globalNoDestructorTest() {
-		loadInvalidDbc(
-			"global_no_destructor.dbc",
-			{
-				vm::code::MissingGlobalCtorDtorError::ERR_MSG,
-			}
-		);
-	}
-
-	void invalidGlobalConstructorSignatureTest() {
-		loadInvalidDbc(
-			"global_invalid_constructor_signature.dbc",
-			{ vm::code::InvalidConstructorDestructorSignature::ERR_MSG }
-		);
-	}
-
 	void literalsTest() {
 		runTestOnVm("literals_test_32.dbc", "", "1", {});
 		runTestOnVm("literals_test_64.dbc", "", "1", {});
@@ -148,28 +118,6 @@ private:
 		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
-		);
-	}
-
-	void checkLiteralErrorHandling() {
-		loadInvalidDbc(
-			"invalid_literal.dbc",
-			{
-				"Numeric literal overflows a 32-bit signed integer",
-				"Numeric literal underflows a 32-bit signed integer",
-				"Numeric literal overflows a 32-bit unsigned integer",
-				"Numeric literal overflows a 64-bit signed integer",
-				"Floating-point literals must be in decimal base for",
-			}
-		);
-	}
-
-	void invalidPrimitiveTypes() {
-		loadInvalidDbc(
-			"size_zero_primitive.dbc",
-			{
-				vm::code::InvalidPrimitiveSizeError::ERR_MSG,
-			}
 		);
 	}
 

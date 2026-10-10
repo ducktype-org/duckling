@@ -6,12 +6,12 @@
 
 #include <vm_tester_utils.hpp>
 
-class VmCorrectnessTests: public VmTestSuite {
+class VmCorrectnessTests: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmCorrectnessTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testAckermannOld);
 		TESTER_ADD_TEST(testAckermannNew);
 		TESTER_ADD_TEST(testCollatz);

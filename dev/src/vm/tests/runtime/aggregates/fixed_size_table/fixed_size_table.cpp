@@ -6,12 +6,12 @@
 
 #include <vm_tester_utils.hpp>
 
-class FixedSizeTableVmTest: public VmTestSuite {
+class FixedSizeTableVmTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS FixedSizeTableVmTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(oneValue);
 		TESTER_ADD_TEST(arrSum);
 		TESTER_ADD_TEST(initWithZero);

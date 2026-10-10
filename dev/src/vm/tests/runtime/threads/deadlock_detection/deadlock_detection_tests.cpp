@@ -11,12 +11,12 @@
 #include <vm/api/vm.hpp>
 #include <vm/core/safe/exceptions.hpp>
 
-class VmThreadTest: public VmTestSuite {
+class VmThreadTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmThreadTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(deadlockTest);
 		TESTER_ADD_TEST(deadlockWakingFromCv);
 		TESTER_ADD_TEST(deadlockWakingFromCvMain);

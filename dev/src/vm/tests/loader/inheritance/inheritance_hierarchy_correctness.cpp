@@ -19,6 +19,9 @@ public:
 		TESTER_ADD_TEST(hierarchyCorrectness);
 		TESTER_ADD_TEST(virtualMethodImplementationCorrectness);
 		TESTER_ADD_TEST(duplicateCorrectness);
+		TESTER_ADD_TEST(invalidUpcast);
+		TESTER_ADD_TEST(invalidVirtualCall);
+		TESTER_ADD_TEST(invalidInstantiation);
 	}
 
 private:
@@ -148,6 +151,31 @@ private:
 		});
 		for (auto& [filename, error]: invalid_filename_and_error)
 			loadInvalidDbc(filename, { error });
+	}
+
+	void invalidUpcast() {
+		loadInvalidDbc(
+			"semantics/invalid_upcast_primary.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
+		);
+		loadInvalidDbc("semantics/invalid_upcast.dbc", { vm::code::InvalidUpcastError::ERR_MSG });
+	}
+
+	void invalidVirtualCall() {
+		loadInvalidDbc(
+			"semantics/invalid_virtual_call_1.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"semantics/invalid_virtual_call_2.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"semantics/invalid_vtable_type.dbc", { vm::code::VTableTypeMismatchError::ERR_MSG }
+		);
+	}
+
+	void invalidInstantiation() {
+		loadInvalidDbc(
+			"semantics/invalid_instantiation.dbc", { vm::code::UninstantiableValueError::ERR_MSG }
+		);
 	}
 };
 

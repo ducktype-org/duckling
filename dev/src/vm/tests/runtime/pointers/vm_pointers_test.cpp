@@ -8,12 +8,12 @@
 
 #include <string>
 
-class VmPointersTest: public VmTestSuite {
+class VmPointersTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmPointersTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(linkedListTest);
 		TESTER_ADD_TEST(linkedListNoStructLoadStoreTest);
 		TESTER_ADD_TEST(ptrPartsTest);

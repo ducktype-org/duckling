@@ -30,6 +30,10 @@
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
 		  VmTestSuite(std::move(config), TESTER_SUITE_NAME)
 
+#define VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                    \
+	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
+		  VmRuntimeTestSuite(std::move(config), TESTER_SUITE_NAME)
+
 class VmTestSuite: public tester::TestSuite {
 public:
 	VmTestSuite(tester::TestConfig&& config, std::string_view name):
@@ -353,4 +357,31 @@ protected:
 	 * (see #3612).
 	 */
 	vm::api::ProcessConfig process_config{};
+};
+
+/**
+ * @brief Base of the suites under `runtime/`. They check what a program does when it runs, so the
+ * helpers that only check whether a program loads are deleted here. A test that expects a load
+ * error belongs in a `loader/` suite, which runs once instead of once per VM flavour.
+ */
+class VmRuntimeTestSuite: public VmTestSuite {
+public:
+	VmRuntimeTestSuite(tester::TestConfig&& config, std::string_view name):
+		  VmTestSuite(std::move(config), name) {}
+
+	void loadInvalidDbc(
+		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	) = delete;
+
+	void loadThenLoadInvalidDbc(
+		const std::string&                   first_dbc,
+		const std::string&                   second_dbc,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	) = delete;
+
+	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {})
+		= delete;
 };
