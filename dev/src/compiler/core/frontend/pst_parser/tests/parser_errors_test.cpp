@@ -28,6 +28,7 @@
 #include <tester/tester.hpp>
 
 #include <sstream>
+#include <string>
 #include <utility>
 
 class PSTErrorTests: public tester::TestSuite {
@@ -613,10 +614,120 @@ class PSTErrorTests: public tester::TestSuite {
 		std::cerr << ss.str();
 	}
 
+	/**
+	 * @brief Renders every diagnostic @p parsed logged into a string, so a test can assert on the
+	 * text a user would read. The renderer emits no colour escapes here, so the text is plain.
+	 */
+	template<class Element>
+	static std::string renderedDiagnostics(const pst::PST<Element>& parsed) {
+		std::stringstream raw;
+		parsed.getLogger()->terminalPrint(raw);
+		return raw.str();
+	}
+
+	/**
+	 * @brief The exact text a user reads when the parser runs into a synthetic sentinel, and the
+	 * guard that ordinary tokens keep their rendering. A sentinel marks a boundary and carries no
+	 * source text, so the message must describe the boundary rather than leak
+	 * `Sentinel '<payload>'`, including the by-construction empty payload of the sentinel that
+	 * closes a statement's fallback window. See issue #2151.
+	 */
+	void sentinelMessageTests() {
+		// The end-of-window sentinel. `var` is followed by a keyword the statement-length heuristic
+		// reads as the start of a new statement, so the window holds only the first `var` and the
+		// identifier slot that must follow it reads the window's boundary instead of a real token.
+		{
+			auto parsed = pst::PST<>::fromContents(
+				"fun main() = {\n    var var = 10;\n}\n", pst::PSTType::Program
+			);
+			const std::string text = renderedDiagnostics(parsed);
+
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("the end of the statement") != std::string::npos,
+				base::strConcat("`var var = 10;` should describe the boundary, got:\n", text)
+			);
+			assertTrue(
+				text.find("''") == std::string::npos,
+				base::strConcat("an empty quoted payload was printed, got:\n", text)
+			);
+			// The next token is real, so its diagnostic must keep its informative rendering.
+			assertTrue(
+				text.find("Operator '='") != std::string::npos,
+				base::strConcat("the second diagnostic lost its token text, got:\n", text)
+			);
+			// The caret must keep pointing at the offending token: line 2, column 9.
+			assertTrue(
+				text.find(":2:9") != std::string::npos,
+				base::strConcat("the caret moved away from the offending token, got:\n", text)
+			);
+		}
+
+		// The end-of-file sentinel, reached when the parsed fragment simply stops. A whole module
+		// never gets here, because the lexer reports the unbalanced braces first, so this has to be
+		// a fragment parse.
+		{
+			auto parsed
+				= pst::PST<pst::FlowPattern>::fromContents("(a, b) as", pst::PSTType::Program);
+			const std::string text = renderedDiagnostics(parsed);
+
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("but got: EOF.") != std::string::npos,
+				base::strConcat("a truncated pattern should report EOF, got:\n", text)
+			);
+		}
+
+		// The bracket sentinel, reached when the construct is cut by a closing bracket.
+		{
+			auto parsed = pst::PST<>::fromContents(
+				"fun main() = {\n    match (x) {\n        case (a, b) as\n    }\n}\n",
+				pst::PSTType::Program
+			);
+			const std::string text = renderedDiagnostics(parsed);
+
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("the end of the '}' group") != std::string::npos,
+				base::strConcat(
+					"a pattern cut by a closing brace should name the group, got:\n", text
+				)
+			);
+		}
+
+		// Control: a keyword that really is in the source is not a sentinel and must keep the
+		// ordinary rendering, or the fix did more than describe boundaries.
+		{
+			auto parsed = pst::PST<>::fromContents(
+				"fun main() = {\n    var if = 10;\n}\n", pst::PSTType::Program
+			);
+			const std::string text = renderedDiagnostics(parsed);
+
+			assertTrue(
+				text.find("Keyword 'if'") != std::string::npos,
+				base::strConcat("a real keyword lost its rendering, got:\n", text)
+			);
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("a real keyword was reported as a sentinel, got:\n", text)
+			);
+		}
+	}
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(exampleTests);
 		TESTER_ADD_TEST(diagnosticTests);
+		TESTER_ADD_TEST(sentinelMessageTests);
 	}
 
 public:
