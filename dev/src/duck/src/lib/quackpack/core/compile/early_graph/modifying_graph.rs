@@ -18,7 +18,7 @@ use crate::util::extend::QpExtend;
 impl DependencyGraph {
     /// Same as [`EarlyGraph::remove_disabled_dependencies`].
     #[tracing::instrument(skip_all)]
-    fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) -> HashSet<Identity> {
+    fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
         let mut enabled_deps = HashSet::from([self.root]);
         for (k, v) in self.graph.iter_mut() {
             let mut to_remove = HashSet::new();
@@ -48,7 +48,6 @@ impl DependencyGraph {
             v.dependencies.retain(|dep| !to_remove.contains(dep));
         }
         self.graph.retain(|dep, _| enabled_deps.contains(dep));
-        enabled_deps
     }
 
     /// Remove unreachable dependencies.
@@ -133,9 +132,6 @@ impl EarlyGraph {
     }
 
     /// Removes disabled dependency from the graph.
-    ///
-    /// Note that currently they stay as keys in [`DependencyGraph`], although no [`DependencyNode`]
-    /// should point at them.
     ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
     #[tracing::instrument(skip_all)]
