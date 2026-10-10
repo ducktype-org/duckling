@@ -6,6 +6,7 @@
 
 #include "to_string_methods.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -23,10 +24,13 @@
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/misc/anycast.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/query_int.hpp>
@@ -39,7 +43,43 @@ namespace compiler::helios::defgen {
 	using namespace code::shorthands;
 
 	namespace {
-		std::string sourceTypeName(query::Context& ctx, tsh::SymbolType<> type);
+		enum class TypeNamePrecedence {
+			Variant,
+			Prefix,
+			Postfix,
+			Atomic,
+		};
+
+		struct SourceTypeName final {
+			std::string        text;
+			TypeNamePrecedence precedence;
+
+			std::string nestedIn(const TypeNamePrecedence parent_precedence) const {
+				return precedence < parent_precedence ? "(" + text + ")" : text;
+			}
+		};
+
+		SourceTypeName sourceTypeName(query::Context& ctx, tsh::SymbolType<> type);
+
+		std::string templateArgumentsSuffix(
+			query::Context& ctx, const templates::TemplateBakePSTLinkedData& bake_data
+		) {
+			const auto postponed = bake_data.postponed_data->load(std::memory_order_acquire);
+			CORE_ASSERT(postponed != nullptr, "Baked template data must be initialized");
+
+			std::string result = "[";
+			for (usize i = 0; i < postponed->template_arguments_symbols.size(); i++) {
+				if (i != 0) result += ", ";
+				const auto value
+					= ctx.query<QueryConstValueOf>(postponed->template_arguments_symbols[i])
+				          .valueOrThrow();
+				if (const auto type = value.get<tsh::SymbolType<>>(); type.has_value())
+					result += sourceTypeName(ctx, type.value()).text;
+				else
+					result += value.toString();
+			}
+			return result + "]";
+		}
 
 		std::string sourceClassName(query::Context& ctx, const SymID symbol) {
 			std::vector<std::string> path;
@@ -54,7 +94,29 @@ namespace compiler::helios::defgen {
 							path.emplace_back(identifier.value().unlock(ctx)->unwrap().str());
 					}
 				}
-				element = unlocked->getParent();
+
+				if (unlocked->getElementKind() == pst::ElementKind::TemplateStmt
+				    && unlocked->hasAdditionalRootData()
+				    && std::holds_alternative<pst::AdditionalRootData::BakedTemplateParent>(
+						unlocked->getAdditionalRootData().pst_parent
+					)) {
+					const auto& baked_parent
+						= std::get<pst::AdditionalRootData::BakedTemplateParent>(
+							unlocked->getAdditionalRootData().pst_parent
+						);
+					const auto bake_data = base::anyCast<templates::TemplateBakePSTLinkedData>(
+						baked_parent.template_bake_data
+					);
+					CORE_ASSERT(!path.empty(), "A baked class template must have a class name");
+					path.back() += templateArgumentsSuffix(ctx, bake_data);
+					element = bake_data.pst_parent_element;
+					continue;
+				}
+
+				auto parent = getPSTElementParent(ctx, unlocked);
+				element     = parent.isLangElement()
+				                ? base::Optional(parent.getAsLangElement())
+				                : base::Optional<pst::AccessLocked<pst::LangElement>>{};
 			}
 
 			std::ranges::reverse(path);
@@ -69,68 +131,151 @@ namespace compiler::helios::defgen {
 		std::string joinSourceTypeNames(
 			query::Context&                       ctx,
 			const std::vector<tsh::SymbolType<>>& types,
-			std::string_view                      separator
+			std::string_view                      separator,
+			const TypeNamePrecedence              child_precedence = TypeNamePrecedence::Variant
 		) {
 			std::string result;
 			for (usize i = 0; i < types.size(); i++) {
 				if (i != 0) result += separator;
-				result += sourceTypeName(ctx, types[i]);
+				result += sourceTypeName(ctx, types[i]).nestedIn(child_precedence);
 			}
 			return result;
 		}
 
-		std::string sourceAbstractTypeName(query::Context& ctx, const tsh::AbstractType type) {
+		SourceTypeName sourceAbstractTypeName(query::Context& ctx, const tsh::AbstractType type) {
 			switch (type.getKind()) {
 			case tsh::Kind::Pointer:
-				return "ptr "
-				     + sourceTypeName(ctx, type.as<tsh::PointerAbstractType>().getPointee());
+				return {
+					"ptr "
+						+ sourceTypeName(ctx, type.as<tsh::PointerAbstractType>().getPointee())
+							  .nestedIn(TypeNamePrecedence::Prefix),
+					TypeNamePrecedence::Prefix,
+				};
 			case tsh::Kind::ManyPointer:
-				return "manyptr "
-				     + sourceTypeName(ctx, type.as<tsh::ManyPointerAbstractType>().getPointee());
+				return {
+					"manyptr "
+						+ sourceTypeName(ctx, type.as<tsh::ManyPointerAbstractType>().getPointee())
+							  .nestedIn(TypeNamePrecedence::Prefix),
+					TypeNamePrecedence::Prefix,
+				};
 			case tsh::Kind::CPointer:
-				return "cptr "
-				     + sourceTypeName(ctx, type.as<tsh::CPointerAbstractType>().getPointee());
+				return {
+					"cptr "
+						+ sourceTypeName(ctx, type.as<tsh::CPointerAbstractType>().getPointee())
+							  .nestedIn(TypeNamePrecedence::Prefix),
+					TypeNamePrecedence::Prefix,
+				};
 			case tsh::Kind::Slice: {
 				const auto element = type.as<tsh::SliceAbstractType>().getElementType();
-				if (element.getType().getKind() == tsh::Kind::Char
-				    && element.getRefKind() == tsh::ReferenceKind::Direct)
-					return "str";
-				return "slice " + sourceTypeName(ctx, element);
+				if (element == tsh::SymbolType<>::withDefaults(tsh::getCharType()))
+					return { "str", TypeNamePrecedence::Atomic };
+				return {
+					"slice " + sourceTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
+					TypeNamePrecedence::Prefix,
+				};
 			}
 			case tsh::Kind::StaticArray: {
 				const auto array = type.as<tsh::StaticArrayAbstractType>();
-				return base::strConcat(
-					sourceTypeName(ctx, array.getElementType()), "[", array.getSize(), "]"
-				);
+				return {
+					base::strConcat(
+						sourceTypeName(ctx, array.getElementType())
+							.nestedIn(TypeNamePrecedence::Postfix),
+						"[",
+						array.getSize(),
+						"]"
+					),
+					TypeNamePrecedence::Postfix,
+				};
 			}
 			case tsh::Kind::Tuple:
-				return "("
-				     + joinSourceTypeNames(
-						   ctx, type.as<tsh::TupleAbstractType>().getComponents(), ", "
-					 )
-				     + ")";
+				return {
+					"("
+						+ joinSourceTypeNames(
+							ctx, type.as<tsh::TupleAbstractType>().getComponents(), ", "
+						)
+						+ ")",
+					TypeNamePrecedence::Atomic,
+				};
 			case tsh::Kind::Variant:
-				return joinSourceTypeNames(
-					ctx, type.as<tsh::VariantAbstractType>().getUnderlyingTypes(), " | "
-				);
+				return {
+					joinSourceTypeNames(
+						ctx,
+						type.as<tsh::VariantAbstractType>().getUnderlyingTypes(),
+						" | ",
+						TypeNamePrecedence::Prefix
+					),
+					TypeNamePrecedence::Variant,
+				};
 			case tsh::Kind::Class:
-				return sourceClassName(ctx, type.as<tsh::ClassAbstractType>().getSymbol());
+				return {
+					sourceClassName(ctx, type.as<tsh::ClassAbstractType>().getSymbol()),
+					TypeNamePrecedence::Atomic,
+				};
 			default:
-				return type.toString();
+				return { type.toString(), TypeNamePrecedence::Atomic };
 			}
 		}
 
-		std::string sourceTypeName(query::Context& ctx, const tsh::SymbolType<> type) {
+		SourceTypeName sourceTypeName(query::Context& ctx, const tsh::SymbolType<> type) {
 			using enum tsh::ReferenceKind;
-			return base::strConcat(
+			const std::string prefix = base::strConcat(
 				type.getUniqueness() == tsh::Uniqueness::Unique ? "unique " : "",
 				type.getLeakage() == tsh::Leakage::Leaking ? "leaking " : "",
 				type.getMutability() == tsh::Mutability::Immutable ? "const " : "",
 				type.getRefKind() == Direct ? ""
 				: type.getRefKind() == Box  ? "box "
-											: "ref ",
-				sourceAbstractTypeName(ctx, type.getType())
+											: "ref "
 			);
+			auto inner = sourceAbstractTypeName(ctx, type.getType());
+			if (prefix.empty()) return inner;
+			return { prefix + inner.nestedIn(TypeNamePrecedence::Prefix),
+				     TypeNamePrecedence::Prefix };
+		}
+
+		bool containsRuntimeMeta(
+			query::Context&                 ctx,
+			const tsh::AbstractType         type,
+			std::vector<tsh::AbstractType>& visited
+		) {
+			if (type.getKind() == tsh::Kind::Meta) return true;
+			if (std::ranges::find(visited, type) != visited.end()) return false;
+			visited.emplace_back(type);
+
+			auto symbol_type_contains_meta = [&](const tsh::SymbolType<> component) {
+				return containsRuntimeMeta(ctx, component.getType(), visited);
+			};
+
+			switch (type.getKind()) {
+			case tsh::Kind::Slice:
+				return symbol_type_contains_meta(type.as<tsh::SliceAbstractType>().getElementType());
+			case tsh::Kind::StaticArray:
+				return symbol_type_contains_meta(
+					type.as<tsh::StaticArrayAbstractType>().getElementType()
+				);
+			case tsh::Kind::Tuple:
+				return std::ranges::any_of(
+					type.as<tsh::TupleAbstractType>().getComponents(), symbol_type_contains_meta
+				);
+			case tsh::Kind::Variant:
+				return std::ranges::any_of(
+					type.as<tsh::VariantAbstractType>().getUnderlyingTypes(),
+					symbol_type_contains_meta
+				);
+			case tsh::Kind::Class:
+				return std::ranges::any_of(
+					type.getInterface(ctx)->getFieldsView(),
+					[&](const tsh::InterfaceElement& field) {
+						return symbol_type_contains_meta(field.getType(ctx));
+					}
+				);
+			default:
+				return false;
+			}
+		}
+
+		bool containsRuntimeMeta(query::Context& ctx, const tsh::AbstractType type) {
+			std::vector<tsh::AbstractType> visited;
+			return containsRuntimeMeta(ctx, type, visited);
 		}
 	}
 
@@ -166,10 +311,18 @@ namespace compiler::helios::defgen {
 				represented_type.has_value(),
 				"An expression of the meta type must evaluate to a symbol type"
 			);
-			return s.litStrObj(base::StrID(sourceTypeName(ctx, represented_type.value())));
+			return s.litStrObj(base::StrID(sourceTypeName(ctx, represented_type.value()).text));
 		}
 
 		const auto to_string_sym = toStringSymForType(ctx, value_type);
+		if (const auto method = getSymRef(to_string_sym)->getDataOpt<Method>();
+		    method.has_value() && method.value()->kind == Method::Kind::ToString
+		    && containsRuntimeMeta(ctx, value_type)) {
+			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				"A `type` value cannot be stringified at runtime.", callee_origin.getStablePosition()
+			));
+			return query::Failed();
+		}
 		return s.call(
 			withOrigin(callee_origin, s.ident(to_string_sym)), s.prepToPassSelf(std::move(value))
 		);

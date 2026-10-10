@@ -6,6 +6,16 @@ class Person {
 
 namespace Types {
 	class Inner {}
+
+	template(T: type)
+	class Boxed {
+		value: T
+	}
+}
+
+template(T: type)
+class Boxed {
+	value: T
 }
 
 fun selectType(select_first: bool) -> type = {
@@ -31,6 +41,12 @@ fun main() -> i64 = {
 	print(str.toString());
 	print((i64 | bool).toString());
 	print((ptr Types.Inner).toString());
+	print(((ptr i64)[3]).toString());
+	print((ptr (i64 | bool)).toString());
+	print((ptr (i64[3])).toString());
+	print((slice const char).toString());
+	print(Boxed[i64].toString());
+	print(Types.Boxed[Person].toString());
 
 	print(().toString());
 

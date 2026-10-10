@@ -751,11 +751,10 @@ namespace compiler::helios::code {
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
 
 		if (const auto method = getSymRef(callee_sym)->getDataOpt<defgen::Method>();
-		    method.has_value() && method.value()->kind == defgen::Method::Kind::ToString
-		    && method.value()->owner_type.getKind() == tsh::Kind::Meta) {
+		    method.has_value() && method.value()->kind == defgen::Method::Kind::ToString) {
 			CORE_ASSERT(
 				call_arguments.positional_arguments.size() == 1,
-				"The generated meta toString method only takes self"
+				"A generated toString method only takes self"
 			);
 			return defgen::toStringExpr(
 				ctx, std::move(call_arguments.positional_arguments.front()), pst_origin.callee_origin
