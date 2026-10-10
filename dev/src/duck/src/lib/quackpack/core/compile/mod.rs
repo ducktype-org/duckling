@@ -12,7 +12,7 @@
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use std::fmt;
 
-use tracing::info;
+use tracing::{info, trace};
 
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
 use self::profiles::Profile;
@@ -90,7 +90,9 @@ pub fn compile(
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
+    trace!(early_graph = ?graph, "created EarlyGraph");
     let unit_graph = lower_early_graph(graph);
+    trace!(?unit_graph, "created UnitGraph");
     let runner = UnitRunner::new(unit_graph, &bcx);
     runner.run()
 }
