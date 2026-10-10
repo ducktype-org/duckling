@@ -10,8 +10,15 @@
 #include <base/str/str_utils.hpp>
 
 #include <logger/logger.hpp>
+#include <os_utils/thread_safe_wrappers.hpp>
 
-#include <iostream>
+#include <cstddef>
+#include <cstring>
+#include <string>
+#include <string_view>
+#include <vector>
+
+using std::literals::operator""sv;
 
 namespace system_command {
 
@@ -25,50 +32,46 @@ namespace system_command {
 		return *this;
 	}
 
-	i32 SystemCommand::execute(ExitCodeHandling on_exit_code) {
-		std::string out;
+	std::string SystemCommand::escapedDisplay() const {
+		std::string command_display{};
+		for (const auto& env: this->environment)
+			command_display += '"' + env.first + "=" + env.second + "\" ";
+		command_display += '"' + this->program_name + '"';
+		for (const auto& arg: this->arguments) command_display += " \"" + arg + '"';
+		return command_display;
+	}
 
-		for (const auto& [name, value]: environment) {
-			out += name;
-			out += "=";
-			out += value;
-			out += " ";
-		}
+	std::vector<std::string> SystemCommand::createArgv() const {
+		std::vector<std::string> result{};
+		result.reserve(this->arguments.size() + 1);
+		result.push_back(this->program_name);
+		for (const auto& arg: this->arguments) result.push_back(arg);
+		return result;
+	}
 
-		out += program_name;
-		out += " ";
+	std::vector<std::string> SystemCommand::createEnvpWithEnviron() const {
+		std::vector<std::string> environment = SystemCommand::osEnviron();
+		for (const auto& env: this->environment)
+			environment.push_back(env.first + "=" + env.second);
+		return environment;
+	}
 
-		for (const auto& arg: arguments) {
-			out += arg;
-			out += " ";
-		}
+	std::vector<const char*> SystemCommand::convertToCStyle(
+		const std::vector<std::string>& input, SystemCommand::AppendNullptr append_nullptr
+	) {
+		std::vector<const char*> result{};
+		std::size_t              total_size = input.size();
+		if (append_nullptr == SystemCommand::AppendNullptr::Yes) total_size += 1;
+		result.reserve(total_size);
+		for (const auto& part: input) result.push_back(part.c_str());
+		if (append_nullptr == AppendNullptr::Yes) result.push_back(nullptr);
+		return result;
+	}
 
-		CORE_DEV_LOG(Command, "[CMD]", out, "\n");
-
-		std::cerr.flush();
-		std::cout.flush();
-
-		// Only on POSIX systems
-		i32 exit_code = std::system(out.c_str());  // NOLINT(concurrency-mt-unsafe)
-		if (WIFSIGNALED(exit_code)) {
-			CORE_PANIC(
-				base::strConcat("Command ", out, " was terminated by signal ", WTERMSIG(exit_code))
-			);
-		}
-		exit_code = WEXITSTATUS(exit_code);
-
-		if (exit_code != 0) {
-			switch (on_exit_code) {
-			case ExitCodeHandling::Panic:
-				CORE_PANIC(base::strConcat("Command ", out, " exited with code ", exit_code));
-			case ExitCodeHandling::Warn:
-				CORE_USER_LOG("Warning: Command ", out, " exited with code ", exit_code, "\n");
-				break;
-			case ExitCodeHandling::Ignore:
-				break;
-			}
-		}
-
-		return exit_code;
+	std::vector<std::string> SystemCommand::osEnviron() {
+		char**                   ptr = SystemCommand::getOsEnvironPointer();
+		std::vector<std::string> result{};
+		for (std::size_t i = 0; ptr[i] != nullptr; i++) result.emplace_back(ptr[i]);
+		return result;
 	}
 }
