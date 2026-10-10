@@ -179,8 +179,8 @@ namespace compiler::helios::defgen {
 				auto        array   = type.as<tsh::StaticArrayAbstractType>();
 				std::string extents = base::strConcat("[", array.getSize(), "]");
 				auto        element = array.getElementType();
-				while (element == tsh::SymbolType<>::withDefaults(element.getType())
-				       && element.getType().getKind() == tsh::Kind::StaticArray) {
+				while (element.getType().getKind() == tsh::Kind::StaticArray
+				       && element.getRefKind() == tsh::ReferenceKind::Direct) {
 					array = element.getType().as<tsh::StaticArrayAbstractType>();
 					extents += base::strConcat("[", array.getSize(), "]");
 					element = array.getElementType();

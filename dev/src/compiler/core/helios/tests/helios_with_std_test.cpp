@@ -514,7 +514,7 @@ private:
 		assert_type_name("type_name_pointer_array", "(ptr i64)[3]");
 		assert_type_name("type_name_array_pointer", "ptr i64[3]");
 		assert_type_name("type_name_nested_array", "i64[3][2]");
-		assert_type_name("type_name_qualified_nested_array", "const i64[2][3]");
+		assert_type_name("type_name_qualified_nested_array", "const (const i64)[3][2]");
 		assert_type_name("type_name_variant_array", "(bool | i64)[3]");
 		assert_type_name("type_name_tuple", "(i64, bool)");
 		assert_type_name("type_name_single_tuple", "(i64,)");
