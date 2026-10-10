@@ -34,9 +34,11 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <algorithm>
 #include <concepts>
 #include <iosfwd>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -56,6 +58,11 @@ namespace compiler::tsh::coercions {
 		 */
 		[[nodiscard]]
 		static CoercionTree successfulCoercion(const Source& source, CoercionNode root) {
+			CORE_ASSERT(
+				not containsIllegalStep(root),
+				"A SymbolTypeCoercion should never contain `ImplicitMove`, and a Coercion should "
+				"never contain `HandOver`"
+			);
 			return { source, std::move(root) };
 		}
 
@@ -148,6 +155,26 @@ namespace compiler::tsh::coercions {
 		 * @brief A coercion either is everything it is made of, or the reason it is nothing.
 		 */
 		using Storage = std::variant<CoercionNode, CoercionError>;
+
+		using IllegalStep = std::conditional_t<
+			std::same_as<Source, SymbolType<>>,
+			coercion_step::ImplicitMove,
+			coercion_step::HandOver>;
+
+		/**
+		 * @brief Whether @p node or any of its parts contains an `IllegalStep` (`HandOver` in
+		 * `Coercion` or a `ImplicitMove` in `SymbolTypeCoercion`).
+		 */
+		[[nodiscard]]
+		static bool containsIllegalStep(const CoercionNode& node) {
+			return std::ranges::any_of(node.steps, [](const CoercionStep& step) {
+				if (v_matches(step.kind, IllegalStep)) return true;
+				v_if_matches(step.kind, coercion_step::Elementwise, elementwise) {
+					return std::ranges::any_of(elementwise->parts, containsIllegalStep);
+				}
+				return false;
+			});
+		}
 
 		CoercionTree(const Source& source, Storage outcome):
 			  source(source),
