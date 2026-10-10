@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+// @TODO: #3746 cpp-linter fails on Windows (I think because it runs on Ubuntu).
+// NOLINTBEGIN
 #include <base/config/target_info.hpp>
 #if !BASE_TARGET_OS_WINDOWS
 	#error "this file is Windows specific"
@@ -128,3 +130,4 @@ namespace system_command {
 		return static_cast<int>(result);
 	}
 }
+// NOLINTEND
