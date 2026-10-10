@@ -285,14 +285,15 @@ auto VmTestSuite::runTestOnVmGetResult(
 
 	if_opt_some(optional_input, input) { EXPECT_VOID(vm::api::input(pid, input)); }
 
-	EXPECT_VOID(vm::api::join(pid));
+	auto join_result = vm::api::join(pid);
+	EXPECT_VOID(join_result);
 
 	if_opt_some(optional_output, wanted_output) {
 		auto program_output = vm::api::output(pid);
 		EXPECT_VOID(program_output);
 		ASSERT_EQUAL_PRINT(wanted_output, program_output->output);
 	}
-	const auto exit_value = vm::api::getExitValue(pid).transform([&](vm::api::ExitValue values) {
+	const auto exit_value = join_result.transform([&](vm::api::ExitValue values) {
 		variant_match(values) {
 			variant_case(i64, exit_code) return exit_code;
 			variant_case(std::vector<Ref<vm::IVMValue>>, values) {
@@ -341,7 +342,7 @@ void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code)
 	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
 	const auto validation_result = vm::api::deinitAndValidate(test_result.pid);
 	ASSERT_HAS_VALUE(validation_result);
-	ASSERT_TRUE(validation_result.value());
+	ASSERT_TRUE(validation_result.value().valid());
 }
 
 void VmTestSuite::runFunctionSynchronouslyAsTest(

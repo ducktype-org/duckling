@@ -29,9 +29,10 @@
  *  Paused     ->	Finish    	-> 	Completed
  *  Paused     ->	Panic     	-> 	Panicked
  *  Paused     ->	Kill      	-> 	Stopped
- *  Completed  ->	Spawn     	-> 	Running     (reuse)
- *  Stopped    ->	Spawn     	-> 	Running     (reuse)
- *  Panicked   ->	Spawn     	-> 	Running     (reuse)
+ *  Completed  ->	Join      	-> 	Joined
+ *  Stopped    ->	Join      	-> 	Joined
+ *  Panicked   ->	Join      	-> 	Joined
+ *  Joined     ->	Spawn     	-> 	Running     (reuse)
  *
  * All other state transitions are not allowed.
  */
@@ -39,6 +40,7 @@
 #pragma once
 
 
+#include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/api/data/status.hpp>
@@ -72,11 +74,45 @@ namespace vm {
 			std::string err;
 		};
 
+		/// How a finished run ended. Used by the `Joined` state.
+		using TerminalOutcome = std::variant<Completed, Stopped, Panicked>;
+
+		/**
+		 * @brief The thread finished and its execution thread was already joined.
+		 *
+		 * This is the only state a VMThread may be deinitialized from, and the only state a reused
+		 * VMThread may be spawned from.
+		 */
+		struct Joined {
+			/// The terminal state at the moment `join` was called.
+			TerminalOutcome outcome;
+		};
+
 		using ThreadState
-			= std::variant<NotStarted, Running, Sleeping, Paused, Stopped, Completed, Panicked>;
+			= std::variant<NotStarted, Running, Sleeping, Paused, Stopped, Completed, Panicked, Joined>;
 
 		[[nodiscard]] inline bool isTerminal(const ThreadState& state) {
-			return v_matches(state, Completed, Stopped, Panicked);
+			return v_matches(state, Completed, Stopped, Panicked, Joined);
+		}
+
+		[[nodiscard]] inline bool isJoined(const ThreadState& state) {
+			return v_matches(state, Joined);
+		}
+
+		/**
+		 * @brief How a finished thread ended.
+		 * @return The terminal outcome, or nothing when the thread has not finished yet.
+		 */
+		[[nodiscard]] inline base::Optional<TerminalOutcome> terminalOutcome(const ThreadState& state
+		) {
+			variant_match(state) {
+				variant_case(Completed, completed) return TerminalOutcome{ completed };
+				variant_case(Stopped, stopped) return TerminalOutcome{ stopped };
+				variant_case(Panicked, panicked) return TerminalOutcome{ panicked };
+				variant_case(Joined, joined) return joined.outcome;
+				variant_default {}
+			}
+			return std::nullopt;
 		}
 
 		[[nodiscard]] inline bool hasStarted(const ThreadState& state) {
@@ -109,8 +145,11 @@ namespace vm {
 
 		struct Kill final {};
 
+		/// The execution thread of a finished VMThread was joined, see `IVMThread::join`.
+		struct Join {};
+
 		using ThreadEvent
-			= std::variant<Spawn, Pause, Resume, EnterSleep, WakeUp, Finish, Kill, Panic>;
+			= std::variant<Spawn, Pause, Resume, EnterSleep, WakeUp, Finish, Kill, Panic, Join>;
 
 		/**
 		 * @brief The transition function of the VMThread state machine.
@@ -127,8 +166,9 @@ namespace vm {
 
 			variant_match(event) {
 				variant_case_novalue(te::Spawn) {
-					if (v_matches(state, ts::NotStarted, ts::Completed, ts::Stopped, ts::Panicked))
-						return R{ ts::Running{} };
+					// A VMThread may only be re-spawned when a thread doesn't have an execution
+					// thread (i.e. it never started or was joined).
+					if (v_matches(state, ts::NotStarted, ts::Joined)) return R{ ts::Running{} };
 				}
 				variant_case_novalue(te::Pause) {
 					if (v_matches(state, ts::Running)) return R{ ts::Paused{} };
@@ -154,6 +194,12 @@ namespace vm {
 					if (v_matches(state, ts::NotStarted, ts::Running, ts::Sleeping, ts::Paused))
 						return R{ ts::Stopped{} };
 				}
+				variant_case_novalue(te::Join) {
+					// Only a finished and not yet `joined` thread can be joined.
+					if (!ts::isJoined(state))
+						if_opt_some(ts::terminalOutcome(state), outcome) return R{ ts::Joined{
+							outcome } };
+				}
 			}
 			return std::nullopt;
 		}
@@ -168,6 +214,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Paused, "Paused")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Stopped, "Stopped")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Completed, "Completed")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Panicked, "Panicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Joined, "Joined")
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Spawn, "Spawn")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Pause, "Pause")
@@ -177,6 +224,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::WakeUp, "WakeUp")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Finish, "Finish")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Kill, "Kill")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Panic, "Panic")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Join, "Join")
 
 namespace vm {
 	namespace thread_state {

@@ -37,6 +37,16 @@ namespace vm {
 		using ThreadState = thread_state::ThreadState;
 		using ThreadEvent = thread_event::ThreadEvent;
 
+		/**
+		 * @brief Who is responsible for joining a VMThread/who spawned it.
+		 */
+		enum class ThreadOwner {
+			/// Started by `api::run`/`api::runFunction`, should be `api::join`ed.
+			API,
+			/// Started by the used program (`builtin_start_thread`). Should be joined by the program.
+			Program,
+		};
+
 		IVMThread(api::ThreadID thread_id, IVMProcess& my_process);
 
 		virtual ~IVMThread() = default;
@@ -113,15 +123,22 @@ namespace vm {
 		void requestStop() noexcept;
 
 		/**
-		 * @brief Waits for the exec thread to finish and returns the final response.
+		 * @brief Waits for the exec thread to finish, joins it and returns its exit value.
+		 *
+		 * A successful join moves the VMThread into `thread_state::Joined`, which is what makes it
+		 * reusable by a next run and what allows the process to be deinitialized.
+		 *
+		 * @return The exit value of the thread if it completed normally, an API error otherwise
+		 * (the thread was never started, it panicked or it was stopped before completing).
 		 */
 		std::expected<api::Response, api::ApiError> join();
 
 		/**
-		 * @brief Check if thread has an active execution thread handle.
-		 * @return true if exec_thread is active and joinable.
+		 * @brief Sets the owner of this thread.
 		 */
-		[[nodiscard]] bool hasActiveThread() const;
+		void setOwner(ThreadOwner owner) { thread_owner = owner; }
+
+		[[nodiscard]] ThreadOwner getOwner() const { return thread_owner; }
 
 		/**
 		 * @brief Decides whether an API control request can be performed in current thread state.
@@ -200,7 +217,6 @@ namespace vm {
 
 		[[nodiscard]] const IVMProcess& getMyProcess() const { return my_process; }
 
-	protected:
 		/**
 		 * @brief Execution thread handle shared by IVMThread implementations.
 		 */
@@ -211,6 +227,11 @@ namespace vm {
 		 * @brief The process this VMThread belongs to.
 		 */
 		IVMProcess& my_process;
+
+		/**
+		 * @brief Who spawned/has to `join` this VMThread.
+		 */
+		ThreadOwner thread_owner{ ThreadOwner::API };
 
 		/**
 		 * @brief Run a single function with given parameters.
@@ -253,7 +274,9 @@ namespace vm {
 		void handleBreakpoint();
 
 		/**
-		 * @brief Joins the OS execution thread if there is one, then clears the handle.
+		 * @brief Joins the OS execution thread if there is one, clears the handle and commits the
+		 * `Join` event, which moves the VMThread into `thread_state::Joined`.
+		 * @note A no-op when there is no `exec_thread` handle left to join.
 		 */
 		void joinExecutionThread();
 

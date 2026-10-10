@@ -81,7 +81,9 @@ namespace vm::debugger {
 		return api::getExecutionStatus(pid)
 		    .and_then([&](const api::ProcStatus& status) -> std::expected<void, api::ApiError> {
 				variant_match(status) {
-					variant_case_novalue(api::ExecutionCompleted) { return api::join(pid); }
+					variant_case_novalue(api::ExecutionCompleted) {
+						return api::join(pid).transform([](const api::ExitValue&) {});
+					}
 					variant_case_novalue(api::NotStarted) { return {}; }
 					variant_default {
 						return std::unexpected(api::ApiError{ api::OtherError{

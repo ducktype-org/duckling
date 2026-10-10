@@ -103,8 +103,6 @@ namespace vm::api {
 
 		struct Detach final {};
 
-		struct ExitCodeRequest final {};
-
 		struct DeinitAndValidate final {};
 
 		struct DebuggerGetNumberOfCurrentStackFrames final {
@@ -164,7 +162,6 @@ namespace vm::api {
 		request::Output,
 		request::Attach,
 		request::Detach,
-		request::ExitCodeRequest,
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
 		request::SetExecutionConfig,

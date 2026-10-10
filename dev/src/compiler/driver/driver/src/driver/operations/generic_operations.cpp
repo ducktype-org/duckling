@@ -750,6 +750,8 @@ namespace compiler::driver {
 								  const auto res = vm::api::deinitOrKill(pid);
 								  if (not res)
 									  std::cerr << vm::api::errorToString(res.error()) << '\n';
+								  else if (res->has_value())
+									  std::cerr << vm::api::validationToString(res->value());
 							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
@@ -758,7 +760,6 @@ namespace compiler::driver {
 								  })
 				                  .and_then([&] { return vm::api::run(pid); })
 				                  .and_then([&] { return vm::api::join(pid); })
-				                  .and_then([&] { return vm::api::getExitValue(pid); })
 				                  .transform([](vm::api::ExitValue exit_values) {
 									  CORE_ASSERT(
 										  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),

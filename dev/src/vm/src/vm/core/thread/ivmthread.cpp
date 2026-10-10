@@ -63,11 +63,16 @@ namespace vm {
 		joinExecutionThread();
 
 		variant_match(terminal) {
-			variant_case_novalue(ts::Completed, ts::Stopped) {
-				return api::Response(api::response::Empty());
+			variant_case(ts::Completed, completed) { return api::Response(completed.exit_value); }
+			variant_case_novalue(ts::Stopped) {
+				return std::unexpected(api::ApiError(api::StateError("Execution was stopped")));
 			}
 			variant_case(ts::Panicked, panicked) {
 				return std::unexpected(api::ApiError(api::Panicked(panicked.err)));
+			}
+			// Another caller joined the execution thread first, so there is nothing left to join.
+			variant_case_novalue(ts::Joined) {
+				return std::unexpected(api::ApiError{ api::JoinError{} });
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
@@ -75,9 +80,17 @@ namespace vm {
 	}
 
 	void IVMThread::joinExecutionThread() {
-		std::lock_guard lock(exec_thread_mutex);
-		if (exec_thread && exec_thread->joinable()) exec_thread->join();
-		exec_thread.reset();
+		{
+			std::lock_guard lock(exec_thread_mutex);
+			// Only the caller which takes the handle away commits the `Join`, so the event is
+			// applied exactly once even when two callers join this VMThread at the same time.
+			if (!exec_thread.has_value()) return;
+			if (exec_thread->joinable()) exec_thread->join();
+			exec_thread.reset();
+		}
+		// Committed outside `exec_thread_mutex` since a state change can runs the listeners, and a
+		// listener may call back into `vm::api` and try to take this `exec_thread_mutex`.
+		applyEvent(te::Join{});
 	}
 
 	void IVMThread::safeRun(const std::string& func_name, const RunArguments& run_arguments) {
@@ -133,6 +146,9 @@ namespace vm {
 			if (!prepareSpawnLocked()) return false;
 		}
 		safeRun(func_name, run_arguments);
+		// The function ran on the calling thread, so no OS thread handle was ever created. There
+		// is nothing left to join, so the VMThread goes straight to `Joined`.
+		applyEvent(te::Join{});
 		return true;
 	}
 
@@ -236,11 +252,6 @@ namespace vm {
 	void IVMThread::requestStop() noexcept {
 		if (!validateThreadRequest(ThreadSignal::Request::Stop).has_value()) return;
 		(void) signal.post(ThreadSignal::Request::Stop);
-	}
-
-	bool IVMThread::hasActiveThread() const {
-		std::lock_guard lock(exec_thread_mutex);
-		return exec_thread.has_value() && exec_thread->joinable();
 	}
 
 	/**

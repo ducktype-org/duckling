@@ -66,7 +66,7 @@ namespace vm::api {
 	/**
 	 * @brief Run a program on DVM. It is expected that a 'main' function was loaded into the
 	 * process before this endpoint is called.
-	 * @note The exit value of the program can be retrieved by the `getExitValue` endpoint.
+	 * @note The exit value of the program is returned by the `join` endpoint.
 	 *
 	 * @return Nothing if the program was run successfully or an API error otherwise.
 	 */
@@ -81,7 +81,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Run a function with a given name on DVM.
-	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
+	 * @note The exit value of the called function is returned by the `join` endpoint.
 	 *
 	 * @return ThreadID if the function was run successfully or an API error otherwise.
 	 */
@@ -99,20 +99,17 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Get a VMValue containing the return value of the last ran function on DVM.
-	 * @note The returned VMValue is owned by the process and shouldn't be freed by the caller. It
-	 * will be automatically freed when the process is destroyed.
-	 * @return The VMValue containing the return value of the last called function or an API error
-	 * if no function was run or the execution didn't complete yet.
+	 * @brief Wait for the given execution thread of the given process to stop and get its exit
+	 * value.
+	 * @note When the exit value holds VMValues, they are owned by the process and shouldn't be
+	 * freed by the caller. They are automatically freed when the process is destroyed.
+	 * @note Every result other than `JoinError` means the execution thread was joined by this
+	 * call. `JoinError` means the thread was either already joined, never started or not found.
+	 *
+	 * @return The exit value of the thread if it completed normally, or an API error otherwise
+	 * (the thread was never started, it panicked or it was stopped before completing).
 	 */
-	std::expected<ExitValue, ApiError> getExitValue(PID pid);
-
-	/**
-	 * @brief Wait for the execution thread of the given process to stop.
-	 * @return Nothing if the thread successfully stopped or an API error otherwise, in which case
-	 * the state is undefined.
-	 */
-	std::expected<void, ApiError> join(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
+	std::expected<ExitValue, ApiError> join(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
 	/**
 	 * @brief Request the main execution thread of the given process to stop running, kill the
@@ -128,11 +125,20 @@ namespace vm::api {
 	 * or panicked. Still executing process or one that was stopped or panicked will be refused with
 	 * a `StateError`. Such process should be killed.
 	 *
+	 * @note Every thread started through the API (`run`, `runFunction`) must be joined before
+	 * executing `deinitAndValidate`. A process which still owns an unjoined execution thread
+	 * is refused with a `StateError`. Threads the user program started itself
+	 * (`builtin_start_thread`) are joined by the DVM, they never refuse the deinit.
+	 *
 	 * @note The process is removed from the internal structures whenever the deinitialization
 	 * actually ran. This includes a successful deinit and when a global destructor panicked during
 	 * execution.
+	 *
+	 * @return What errors the deinit found (either memory leaks or unjoined program threads). The
+	 * program threads that where left unjoined are joined by this endpoint. Returns an `ApiError`
+	 * if the deinit was refused (`StateError`) or a global destructor panicked (`Panicked`).
 	 */
-	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
+	std::expected<response::ValidationResult, ApiError> deinitAndValidate(PID pid);
 
 	/**
 	 * @brief Tears down the process. If it's possible, we tear it down gracefully with
@@ -142,7 +148,7 @@ namespace vm::api {
 	 * @return The validation result if the process was deinitialized, an empty optional if it had
 	 * to be killed, or an API error if neither could be done.
 	 */
-	std::expected<base::Optional<response::Boolean>, ApiError> deinitOrKill(PID pid);
+	std::expected<base::Optional<response::ValidationResult>, ApiError> deinitOrKill(PID pid);
 
 	/// DEBUGGER REQUESTS ///
 	/**

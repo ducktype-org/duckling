@@ -45,7 +45,10 @@ int cli(
 		          // cleanly or force kill it otherwise.
 				  defer({
 					  const auto res = vm::api::deinitOrKill(pid);
-					  if (not res) std::cerr << convertError(res.error()) << '\n';
+					  if (not res)
+						  std::cerr << convertError(res.error()) << '\n';
+					  else if (res->has_value())
+						  std::cerr << vm::api::validationToString(res->value());
 				  });
 
 				  return std::expected<void, vm::api::ApiError>{}

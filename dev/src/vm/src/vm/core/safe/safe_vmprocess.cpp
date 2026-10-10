@@ -12,6 +12,8 @@
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <logger/logger.hpp>
+
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -146,7 +148,7 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(api_lock);
-		return spawnThread(func_name, run_arguments);
+		return spawnThread(IVMThread::ThreadOwner::API, func_name, run_arguments);
 	}
 
 	std::expected<api::ThreadID, api::ApiError> SafeVMProcess::startNewThreadFromExecutionThread(
@@ -159,18 +161,21 @@ namespace vm {
 			return std::unexpected(api::ApiError{
 				api::StateError{ "Cannot start a thread while the process is stopping" } });
 
-		return spawnThread(func_name, {}).transform([](const api::Response& response) {
-			return v_get(response, api::ThreadID);
-		});
+		return spawnThread(IVMThread::ThreadOwner::Program, func_name, {})
+		    .transform([](const api::Response& response) { return v_get(response, api::ThreadID); });
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::spawnThread(
-		const std::string& func_name, const RunArguments& run_arguments
+		const IVMThread::ThreadOwner owner,
+		const std::string&           func_name,
+		const RunArguments&          run_arguments
 	) {
 		std::lock_guard lock(threads_pool_mutex);
 
 		SafeVMThread& thread = getEmptyThreadLocked();
 		thread.setThreadCtx(func_name);
+		// Overwrite the previous owned if we recycle the thread.
+		thread.setOwner(owner);
 
 		if (!thread.spawnThreadAndRun(func_name, run_arguments)) {
 			thread.setThreadCtx("");
@@ -322,30 +327,22 @@ namespace vm {
 
 	SafeVMThread& SafeVMProcess::getEmptyThreadLocked() {
 		for (auto& thread: vm_threads) {
-			// Thread must not be executing AND must not have an active exec_thread handle
-			if (!ts::isActive(thread.getThreadState()) && !thread.hasActiveThread()) return thread;
+			// Thread may only be reused if it never started or was joined.
+			if (v_matches(thread.getThreadState(), ts::NotStarted, ts::Joined)) return thread;
 		}
 		return *vm_threads.get(vm_threads.add(*this));
 	}
 
-	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
-		// `api_lock` is not needed here, since the only shared read here is the process state which
-		// is being synchronized by `ProcessStateManager`.
-		const ProcessState state = getProcessState();
-		variant_match(state) {
-			variant_case(ps::Completed, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(api::StateError(
-				v_matches(state, ps::NotStarted) ? "Execution did not start"
-												 : "Execution did not complete"
-			));
-		}
-		CORE_UNREACHABLE();
-	}
-
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
-		// We just `joinAllExecutionThreads` here as this endpoint assumes that the process is
-		// stopped already.
-		joinAllExecutionThreads();
+		// Join all Program-spawned threads if it's needed.
+		// Done before taking `api_lock`, since a thread winding down may still need it.
+		const std::vector<api::ThreadID> unjoined_by_program = joinFinishedThreads();
+
+		const auto validation_result = [&](const bool memory_valid) {
+			return api::response::ValidationResult{ .memory_valid = memory_valid,
+				                                    .unjoined_program_threads
+				                                    = unjoined_by_program };
+		};
 
 		std::unique_lock lock(api_lock);
 		try {
@@ -355,7 +352,7 @@ namespace vm {
 
 			memory.deinitGlobals();
 		} catch (const exceptions::VMFoundMemoryLeakException&) {
-			return false;
+			return validation_result(false);
 		} catch (const KillProcessException& e) {
 			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("A global destructor was interrupted: ", e.what()) } });
@@ -363,7 +360,7 @@ namespace vm {
 			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("The process could not be deinitialized: ", e.what()) } });
 		}
-		return memory.validateMemoryState();
+		return validation_result(memory.validateMemoryState());
 	}
 
 	std::expected<void, api::ApiError> SafeVMProcess::requestPauseOfVMThread(api::ThreadID thread_id
@@ -660,15 +657,37 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::vector<api::ThreadID> SafeVMProcess::unjoinedThreadIds() const {
+	std::vector<api::ThreadID> SafeVMProcess::unjoinedApiThreadIds() const {
 		std::lock_guard            lock(threads_pool_mutex);
 		std::vector<api::ThreadID> ids;
-		for (const auto& thread: vm_threads)
-			if (thread.hasActiveThread()) ids.push_back(thread.getThreadID());
+		for (const auto& thread: vm_threads) {
+			if (thread.getOwner() != IVMThread::ThreadOwner::API) continue;
+			const ts::ThreadState state = thread.getThreadState();
+			if (ts::hasStarted(state) && !ts::isJoined(state)) ids.push_back(thread.getThreadID());
+		}
 		return ids;
 	}
 
-	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() {
+	std::vector<api::ThreadID> SafeVMProcess::joinFinishedThreads() {
+		std::vector<api::ThreadID> unjoined_program_threads;
+		{
+			std::lock_guard lock(threads_pool_mutex);
+			// A thread the program started and never joined is a bug in that program, but not one
+			// the API caller can do anything about, so it is reported instead of refusing the
+			// request.
+			for (const auto& thread: vm_threads) {
+				if (thread.getOwner() != IVMThread::ThreadOwner::Program) continue;
+				const ts::ThreadState state = thread.getThreadState();
+				if (!ts::hasStarted(state) || ts::isJoined(state)) continue;
+
+				unjoined_program_threads.push_back(thread.getThreadID());
+			}
+		}
+		joinAllExecutionThreads();
+		return unjoined_program_threads;
+	}
+
+	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() const {
 		std::lock_guard            lock(threads_pool_mutex);
 		std::vector<api::ThreadID> thread_ids;
 		for (const auto& thread: vm_threads)

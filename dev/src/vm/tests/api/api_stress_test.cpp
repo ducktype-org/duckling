@@ -160,7 +160,7 @@ private:
 			// The program may be parked by racing pauses or breakpoints - release it fully so the
 			// join can finish.
 			releaseUntilTerminal(pid);
-			(void) api::join(pid);
+			auto exit_value = api::join(pid);
 
 			auto final_status = api::getExecutionStatus(pid);
 			assertSucceeded(final_status, base::strConcat("the final status, seed=", seed));
@@ -168,16 +168,14 @@ private:
 				v_matches(final_status.value(), api::ExecutionCompleted),
 				base::strConcat("the program must complete, not stop, seed=", seed)
 			);
-			assertSucceeded(
-				api::getExitValue(pid), base::strConcat("getExitValue after completion, seed=", seed)
-			);
+			assertSucceeded(exit_value, base::strConcat("join after completion, seed=", seed));
 
 			validateTransitions(scoped.log, base::strConcat("seed=", seed));
 
 			// The program completed cleanly, so a leak here is a regression.
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, base::strConcat("deinitAndValidate, seed=", seed));
-			ASSERT_TRUE(valid.value());
+			ASSERT_TRUE(valid.value().valid());
 		}
 	}
 
@@ -335,7 +333,7 @@ private:
 		const auto                              rand_type
 			= [&] { return type_names.at(std::uniform_int_distribution<usize>(0, 2)(rng)); };
 
-		const int max_op = allow_lifecycle ? 13 : 12;
+		const int max_op = allow_lifecycle ? 12 : 11;
 		switch (std::uniform_int_distribution<int>(0, max_op)(rng)) {
 		case 0:
 			if (!api::getExecutionStatus(pid).has_value()) status_ok = false;
@@ -369,25 +367,22 @@ private:
 			);
 			break;
 		case 8:
-			(void) api::getExitValue(pid);
-			break;
-		case 9:
 			(void) api::getType(pid, rand_type());
 			break;
-		case 10: {
+		case 9: {
 			auto value = api::getVMValue(pid, rand_type());
 			// The caller owns the value, so free it right away to keep the scenario leak-free.
 			if (value.has_value()) value->vm_value->freeData();
 			break;
 		}
-		case 11:
+		case 10:
 			(void) api::input(pid, "0 ");
 			break;
-		case 12:
+		case 11:
 			(void) api::pauseAll(pid);
 			std::this_thread::yield();
 			break;
-		case 13:
+		case 12:
 			(void) api::stop(pid);
 			break;
 		default:
