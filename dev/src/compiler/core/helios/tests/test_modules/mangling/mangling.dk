@@ -56,3 +56,5 @@ namespace Nmspc2 {
         return S.inSub.subFun() * S.inSub.subConst;
     }
 }
+
+const VALUE_TUPLE = (1i32, 2i32);

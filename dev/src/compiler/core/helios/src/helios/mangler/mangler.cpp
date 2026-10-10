@@ -38,6 +38,8 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <unicode_classification/classifications.hpp>
 
+#include <vm/core/vmvalue/ivmvalue.hpp>
+
 #include <algorithm>
 #include <sstream>
 #include <string_view>
@@ -872,6 +874,18 @@ namespace compiler::helios::mangler {
 			}
 			variant_case(tsh::SymbolType<>, sym) {
 				return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
+			}
+			variant_case(compiler::ctv::CompileTimeValue::VMValue, vm_value) {
+				// @TODO: #2990 Mangle the pointers smartly, by the data they point to.
+				const std::string_view bytes(
+					reinterpret_cast<const char*>(vm_value.val->getBytes()),
+					static_cast<usize>(vm_value.val->getDataSize().asInt())
+				);
+				return base::strConcat(
+					"M",
+					ctx.query<QueryMangledType>({ vm_value.type })->valueOrThrow().strView(),
+					internal::mangleString(bytes)
+				);
 			}
 			variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
 		}

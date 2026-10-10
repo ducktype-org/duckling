@@ -2232,9 +2232,13 @@ private:
 			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: i32 = (1i32 << 32);)", { invalid_shift }, 1);
 
-			// Tuple element.
-			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
-			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", { invalid_shift }, 1);
+			// Tuple element. A tuple of values is evaluated by the VM, not by the tree evaluation.
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", {}, 0, false);
+			checkForErrorOnCompileModule(
+				R"(const A = (1 / 0, 2);)",
+				{ "Compile time evaluation of this expression failed", "Tried dividing by zero" },
+				1
+			);
 
 			// Cast source expression.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
