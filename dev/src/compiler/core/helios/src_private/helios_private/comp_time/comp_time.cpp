@@ -62,9 +62,9 @@ namespace compiler::helios {
 		/**
 		 * @brief A HOUT visitor for compile-time expression evaluation.
 		 */
-		struct TreeEvalVisitor final: public code::HoutExprVisitorEmpty {
+		struct TreeEvalVisitor final: public code::HoutExprVisitorPanicky {
 			query::Context& ctx;
-			TreeEvalResult  result = CouldNotShortPath{};
+			TreeEvalResult  result;
 
 			TreeEvalVisitor(query::Context& ctx): ctx(ctx) {}
 
@@ -213,26 +213,27 @@ namespace compiler::helios {
 			}
 
 			void visitIndexExpr(const code::IndexExpr& expr) final {
+				if (expr.base->expression_type.getType().getKind() != tsh::Kind::Meta) {
+					result = CouldNotShortPath{};
+					return;
+				}
+
 				auto base_res = evalHoutExpr(ctx, expr.base.ref());
 				if (base_res.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
 
-				const auto& base_ctv = base_res.valueOrThrow();
-
 				// Index expr on meta is evaluated to a static array type or a list type.
-				if (auto maybe_type = base_ctv.get<tsh::SymbolType<>>()) {
-					auto index_res = evalHoutExpr(ctx, expr.index.ref());
-					if (index_res.hasFailed()) {
-						result = query::Failed();
-						return;
-					}
-
-					auto indexing_res = evaluateTypeIndexing(*maybe_type, index_res.valueOrThrow());
-					result            = indexing_res.valueOrThrow();
+				const auto base_type = base_res.valueOrThrow().get<tsh::SymbolType<>>().value();
+				auto       index_res = evalHoutExpr(ctx, expr.index.ref());
+				if (index_res.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
+
+				auto indexing_res = evaluateTypeIndexing(base_type, index_res.valueOrThrow());
+				result            = indexing_res.valueOrThrow();
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
@@ -245,6 +246,8 @@ namespace compiler::helios {
 					result = tsh::SymbolType<>::withDefaults(
 						ctx.query<tsh::QueryClassType>({ expr.symbol })
 					);
+				} else {
+					result = CouldNotShortPath{};
 				}
 			}
 
@@ -800,9 +803,29 @@ namespace compiler::helios {
 					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
 			}
 
-			void visitReusableExpr(const code::ReusableExpr& reusable) override {
+			void visitReusableExpr(const code::ReusableExpr& reusable) final {
 				result = evaluateSubExpr(reusable.inner.ref());
 			}
+
+			void visitVariantConstructExpr(const code::VariantConstructExpr&) final {
+				result = CouldNotShortPath{};
+			}
+
+			void visitMatchExpr(const code::MatchExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitAccessExpr(const code::AccessExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitPtrOfExpr(const code::PtrOfExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitCreateAggregateExpr(const code::CreateAggregateExpr&) final {
+				result = CouldNotShortPath{};
+			}
+
+			void visitBlockExpr(const code::BlockExpr&) final { result = CouldNotShortPath{}; }
 		};
 
 		/**
