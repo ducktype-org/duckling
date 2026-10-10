@@ -594,6 +594,8 @@ namespace {
 
 		variant_match(maybe_exit_value.value()) {
 			variant_case(std::vector<Ref<vm::IVMValue>>, values) {
+				if (return_type.getType().getKind() == tsh::Kind::Unit)
+					return CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 				CORE_ASSERT(
 					values.size() == 1, "Compiler support for multiple values not implemented"
 				);

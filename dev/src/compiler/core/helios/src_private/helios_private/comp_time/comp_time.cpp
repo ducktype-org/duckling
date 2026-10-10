@@ -955,8 +955,19 @@ namespace compiler::helios {
 			);
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
+			const auto& parameter_types = func_type.getParameterTypes();
+			CORE_ASSERT(
+				parameter_types.size() == ctv_arguments.size(),
+				"Argument count does not match the parameter count of the called function."
+			);
+			std::vector<CompileTimeValue> lir_arguments;
+			for (const auto& [argument, parameter_type]:
+			     std::views::zip(ctv_arguments, parameter_types))
+				if (parameter_type.getType().carriesInformation(ctx))
+					lir_arguments.push_back(argument);
+
 			auto vm_eval_result = executeInVm(
-				ctx, func_to_call_name, lir_unit, ctv_arguments, func_type.getResultType()
+				ctx, func_to_call_name, lir_unit, lir_arguments, func_type.getResultType()
 			);
 
 			if (!vm_eval_result) {
