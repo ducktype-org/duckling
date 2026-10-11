@@ -411,10 +411,7 @@ pub fn lower_early_graph(graph: EarlyGraph) -> QuackResult<UnitGraph> {
     let mut builder = UnitGraphBuilder::new();
     let (pkgs, graph) = graph.into_inner();
     let mut pkgs = pkgs.into_inner();
-    let mut sorted_identities: Vec<Identity> = graph
-        .reachable_subgraph_nodes(graph.root())
-        .into_iter()
-        .collect();
+    let mut sorted_identities: Vec<Identity> = graph.keys().copied().collect();
     sorted_identities.sort();
 
     for identity in sorted_identities.iter() {
