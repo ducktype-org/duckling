@@ -91,7 +91,7 @@ pub fn compile(
     }
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
     trace!(early_graph = ?graph, "created EarlyGraph");
-    let unit_graph = lower_early_graph(graph);
+    let unit_graph = lower_early_graph(graph)?;
     trace!(?unit_graph, "created UnitGraph");
     let runner = UnitRunner::new(unit_graph, &bcx);
     runner.run()
