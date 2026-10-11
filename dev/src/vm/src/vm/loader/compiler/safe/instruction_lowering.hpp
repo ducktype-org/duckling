@@ -879,7 +879,7 @@ namespace vm::loader::compiler::safe::detail {
 					std::bit_cast<const IVMValue*>(i.vm_value.value)
 				);
 				CORE_ASSERT(safe_vm_value != nullptr, "Expected a VMValue of the safe VM.");
-				addLow<Op_initFromVMValue>(
+				addLow<Op_initFromVMValue_imm_off>(
 					vm::opargs::Immediate{ std::bit_cast<u64>(safe_vm_value) }, byteOffsetOf(i.var)
 				);
 			}
