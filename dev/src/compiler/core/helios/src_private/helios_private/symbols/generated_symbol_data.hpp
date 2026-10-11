@@ -212,8 +212,9 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated function wrapper for REPL expressions,
-	 * instructions and global initializers. It's a synthetic function wrapper around them.
+	 * Represents a compiler-generated function wrapper for REPL expressions, instructions, global
+	 * initializers and comp-time expression evaluation. It's a synthetic function wrapper around
+	 * them.
 	 */
 	struct ReplInputWrapper final {
 		/**

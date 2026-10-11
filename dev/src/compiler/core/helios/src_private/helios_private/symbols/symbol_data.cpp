@@ -71,7 +71,9 @@ namespace compiler::helios {
 				variant_case_novalue(Instruction) {
 					return tsh::SymbolType<>::withDefaults(tsh::getUnitType());
 				}
-				variant_case(Expression, expr) { return expr.expr->expression_type.getSymbolType(); }
+				variant_case(Expression, expr) {
+					return expr.expr->expression_type.getSymbolType();
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -80,7 +82,9 @@ namespace compiler::helios {
 			if_opt_some(counter, value) return base::toString(value);
 			variant_match(element) {
 				variant_case(Instruction, instr) { return instr.stmt.toStringHex(); }
-				variant_case(Expression, expr) { return base::toString(expr.expr->getID().asInt()); }
+				variant_case(Expression, expr) {
+					return base::toString(expr.expr->getID().asInt());
+				}
 			}
 			CORE_UNREACHABLE();
 		}

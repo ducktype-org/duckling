@@ -150,8 +150,10 @@ namespace {
 	};
 
 	/**
-	 * @brief Materializes an aggregate CTV (e.g. a char-slice or String) as an owned VMValue by
-	 * letting the DVM backend lower it.
+	 * @brief Materializes an aggregate CTV (e.g. a char-slice, a String or a type tuple) as a
+	 * VMValue by letting the DVM backend lower it.
+	 * @note The returned VMValue is owned by the comp-time DVM process and is valid as long as the
+	 * process lives.
 	 *
 	 * We synthesize a function like `fun anon() -> T = {return ctv;}`
 	 * in LIR and hand it to the incremental code builder. Lowering the `return` of a `LIRConstant`

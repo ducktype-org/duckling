@@ -61,19 +61,19 @@ namespace compiler::repl {
 	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
 	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
-		query::Context& ctx,
+		query::Context&                  ctx,
 		pst::AccessLocked<pst::ExprStmt> expr_stmt,
-		base::Optional<u64> counter = {}
+		base::Optional<u64>              counter = {}
 	);
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the variable initializer expression.
 	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
-	helios::SymID queryReplGlobalInitializerWrapperSymbol(
-		query::Context& ctx,
+	query::QResult<helios::SymID> queryReplGlobalInitializerWrapperSymbol(
+		query::Context&                  ctx,
 		pst::AccessLocked<pst::Variable> var_stmt,
-		base::Optional<u64> counter = {}
+		base::Optional<u64>              counter = {}
 	);
 
 	/**
@@ -90,10 +90,10 @@ namespace compiler::repl {
 	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
 	helios::SymID queryHoutExpressionWrapperSymbol(
-		query::Context& ctx,
-		base::StrID sym_name,
+		query::Context&         ctx,
+		base::StrID             sym_name,
 		Box<helios::code::Expr> expr,
-		base::Optional<u64> counter = {}
+		base::Optional<u64>     counter = {}
 	);
 
 }  // namespace compiler::repl

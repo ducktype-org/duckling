@@ -2290,8 +2290,7 @@ private:
 				fun f(x: i64) -> i64 = x / 0;
 				const A: i64 = f(10);
 			)",
-				{ "Feature not implemented",
-			      "Compile time evaluation of this function call failed or returned unsupported "
+				{ "Compile time evaluation of this function call failed or returned unsupported "
 			      "result." },
 				1
 			);

@@ -110,18 +110,18 @@ namespace compiler::repl {
 		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
 			.name                  = base::StrID("__repl_input_wrapper"),
 			.generated_symbol_data = helios::defgen::ReplInputWrapper(
-				helios::defgen::ReplInputWrapper::Instruction{ stmt.unlock(ctx)->getHash() },
-				counter
+				helios::defgen::ReplInputWrapper::Instruction{ stmt.unlock(ctx)->getHash() }, counter
 			),
 		});
 	}
 
-	helios::SymID queryReplGlobalInitializerWrapperSymbol(
+	query::QResult<helios::SymID> queryReplGlobalInitializerWrapperSymbol(
 		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt, base::Optional<u64> counter
 	) {
-		auto symbol = ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }).valueOrThrow();
-
-		const auto& global_data = ctx.query<helios::QueryHOUTGlobalData>(symbol)->valueOrThrow();
+		UNPACK_QRESULT(auto symbol =, ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }));
+		UNPACK_QRESULT_CREF(
+			const auto& global_data =, ctx.query<helios::QueryHOUTGlobalData>(symbol)
+		);
 
 		CORE_ASSERT(
 			global_data.data_type == helios::HOUTGlobalDataType::Variable,
@@ -147,10 +147,10 @@ namespace compiler::repl {
 	}
 
 	helios::SymID queryHoutExpressionWrapperSymbol(
-		query::Context& ctx,
-		base::StrID sym_name,
+		query::Context&         ctx,
+		base::StrID             sym_name,
 		Box<helios::code::Expr> expr,
-		base::Optional<u64> counter
+		base::Optional<u64>     counter
 	) {
 		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
 			.name                  = sym_name,

@@ -141,6 +141,7 @@ const TUPLE_ELEM: i64 = (1, 5)._2; # 5
 const INT_VARIANT: i32 | f32 = 17 as i32;
 const MATCHED_VARIANT = match (INT_VARIANT) { case x : i32 = x as i64; case _ = 0 as i64; }; # 17
 
+# @TODO: #1920 Build the array with a normal array literal.
 fun makeArray() -> i64[3] = {
     var arr: i64[3];
     arr[0] = 10;

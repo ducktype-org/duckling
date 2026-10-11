@@ -971,11 +971,11 @@ namespace compiler::helios {
 			);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Compile time evaluation of this function call failed or "
 					"returned unsupported result.",
 					call_expr->origin.getStablePosition(),
-					base::strConcat("Detailed reason: ", vm_eval_result.error().message, "\n")
+					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
 				));
 				return query::Failed();
 			}
@@ -1017,6 +1017,11 @@ namespace compiler::helios {
 			return result;
 		}
 
+		/**
+		 * @brief Evaluates any HOUT expression using DVM Eval, by wrapping it into a generated
+		 * function returning it.
+		 * @return The calculated result represented by CompileTimeValue or a Failed error.
+		 */
 		static CompTimeEvalResult evaluateExprWithVm(query::Context& ctx, CRef<code::Expr> expr) {
 			if (reportVariablesInConstExpr(ctx, *expr).isBad()) return query::Failed();
 
@@ -1029,10 +1034,10 @@ namespace compiler::helios {
 			auto vm_eval_result = executeInVm(ctx, func_to_call_name, lir_unit, {}, return_type);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Compile time evaluation of this expression failed.",
 					expr->origin.getStablePosition(),
-					base::strConcat("Detailed reason: ", vm_eval_result.error().message, "\n")
+					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
 				));
 				return query::Failed();
 			}
