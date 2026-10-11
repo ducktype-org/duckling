@@ -18,7 +18,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
-#include "diagnostic/placeholder.hpp"
+#include <diagnostic/placeholder.hpp>
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
