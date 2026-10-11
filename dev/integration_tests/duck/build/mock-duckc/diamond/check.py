@@ -119,6 +119,14 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
+      "id": "{baz_name}",
+      "name": "baz",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(baz_path)}/src",
+      "dependencies": []
+    }},
+    {{
       "id": "{foo_name}",
       "name": "foo",
       "version": "1.0.0",
@@ -129,14 +137,6 @@ expected = f"""{{
           "id": "{baz_name}"
         }}
       ]
-    }},
-    {{
-      "id": "{baz_name}",
-      "name": "baz",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(baz_path)}/src",
-      "dependencies": []
     }}
   ],
   "tasks": [
@@ -161,21 +161,6 @@ text = root_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{root_name}",
-      "name": "root",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(root_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{bar_name}"
-        }},
-        {{
-          "id": "{foo_name}"
-        }}
-      ]
-    }},
-    {{
       "id": "{bar_name}",
       "name": "bar",
       "version": "1.0.0",
@@ -186,6 +171,14 @@ expected = f"""{{
           "id": "{baz_name}"
         }}
       ]
+    }},
+    {{
+      "id": "{baz_name}",
+      "name": "baz",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(baz_path)}/src",
+      "dependencies": []
     }},
     {{
       "id": "{foo_name}",
@@ -200,12 +193,19 @@ expected = f"""{{
       ]
     }},
     {{
-      "id": "{baz_name}",
-      "name": "baz",
+      "id": "{root_name}",
+      "name": "root",
       "version": "1.0.0",
       "features": [],
-      "path": "{str(baz_path)}/src",
-      "dependencies": []
+      "path": "{str(root_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{bar_name}"
+        }},
+        {{
+          "id": "{foo_name}"
+        }}
+      ]
     }}
   ],
   "tasks": [
@@ -215,8 +215,8 @@ expected = f"""{{
       "output_file": "{str(layout / "root")}",
       "linking_options": [
         "{str(bar_artifacts / bar_name)}.a",
-        "{str(foo_artifacts / foo_name)}.a",
-        "{str(baz_artifacts / baz_name)}.a"
+        "{str(baz_artifacts / baz_name)}.a",
+        "{str(foo_artifacts / foo_name)}.a"
       ]
     }}
   ]
