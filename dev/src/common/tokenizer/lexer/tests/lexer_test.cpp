@@ -5,8 +5,12 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <filesystem/file.hpp>
+#include <lexer/token.hpp>
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
+
+#include <string>
+#include <string_view>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -29,6 +33,7 @@ public:
 		TESTER_ADD_TEST(testGroup9);
 		TESTER_ADD_TEST(testSourcePosition);
 		TESTER_ADD_TEST(testLiteralTextIsNotKeyword);
+		TESTER_ADD_TEST(testDescribeSentinelsDoNotLeakInternalNames);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -163,6 +168,40 @@ private:
 		ASSERT_TRUE(
 			td->getTokenData().tokens[4].getRecursive().at(0).is(lang_def::Special::Semicolon)
 		);
+	}
+
+	/**
+	 * @brief `Token::describe()` is what parser diagnostics print after `but got: `. A sentinel
+	 * should not be printed as such, but as a boundary description.
+	 */
+	void testDescribeSentinelsDoNotLeakInternalNames() {
+		const auto pos = dia::SourcePosition::fakePosition();
+
+		const auto check = [&](std::string_view what, const lexer::Token& token) {
+			const std::string described = token.describe();
+
+			assertTrue(
+				described.find("Sentinel") == std::string::npos,
+				base::strConcat(what, ": `", described, "` leaks the internal token kind")
+			);
+			assertTrue(
+				described.find("''") == std::string::npos,
+				base::strConcat(what, ": `", described, "` contains an empty quoted payload")
+			);
+			assertTrue(
+				not described.empty(), base::strConcat(what, ": rendered an empty description")
+			);
+		};
+
+		check("end of the fallback window", lexer::Token::makeIdentifier("x", pos).asSentinel());
+		check("end of file", lexer::Token::makeSentinelEof(pos));
+		check("beginning of file", lexer::Token::makeSentinelBof(pos));
+
+		for (const char* bracket: { "(", ")", "[", "]", "{", "}" })
+			check(
+				base::strConcat("bracket `", bracket, "`"),
+				lexer::Token::makeSentinel(base::RawView(bracket), pos)
+			);
 	}
 
 	void testSourcePosition() {

@@ -151,11 +151,11 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_p64_imm			phase, 0;
 
 	init_pany_type		ta, i64;
-	set_threadctx		workerA;
+	setThreadCtx_func		workerA;
 	call_builtinfunc	builtin_start_thread;
 
 	init_pany_type		tb, i64;
-	set_threadctx		workerB;
+	setThreadCtx_func		workerB;
 	call_builtinfunc	builtin_start_thread;
 
 	# Wait until both workers hold their first mutex, then release them.

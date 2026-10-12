@@ -153,11 +153,11 @@ function main { i64, ptr_argv } -> { i64 } {
     mov_p64_imm         phase, 0;
 
     init_pany_type      t1_id, i64;
-    set_threadctx       threadA;
+    setThreadCtx_func       threadA;
     call_builtinfunc    builtin_start_thread;
 
     init_pany_type      t2_id, i64;
-    set_threadctx       threadB;
+    setThreadCtx_func       threadB;
     call_builtinfunc    builtin_start_thread;
 
     init_pany_type      main_gate_lock, mutex;

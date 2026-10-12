@@ -103,22 +103,6 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{root_name}",
-      "name": "my_cool_root",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(root_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{dep_name}"
-        }},
-        {{
-          "id": "{dep2_name}",
-          "alias": "my_cool_dep_but_aliased"
-        }}
-      ]
-    }},
-    {{
       "id": "{dep_name}",
       "name": "my_cool_dep",
       "version": "1.0.0",
@@ -133,6 +117,22 @@ expected = f"""{{
       "features": [],
       "path": "{str(dep2_path)}/src",
       "dependencies": []
+    }},
+    {{
+      "id": "{root_name}",
+      "name": "my_cool_root",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(root_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{dep_name}"
+        }},
+        {{
+          "id": "{dep2_name}",
+          "alias": "my_cool_dep_but_aliased"
+        }}
+      ]
     }}
   ],
   "tasks": [

@@ -113,6 +113,19 @@ namespace {
 
 		g_argv = std::move(new_args);
 	}
+
+	/**
+	 * @brief Infer a package name from the path given to `compile_package`.
+	 *
+	 * Uses the same rule the module tree uses to name the root module: the directory name for a
+	 * package directory, the file stem for a single root module file.
+	 *
+	 * @param path Package directory or root module file.
+	 * @return The inferred name; empty when the path has no usable name (e.g. the filesystem root).
+	 */
+	std::string inferPackageName(const fs::File& path) {
+		return path.isDirectory() ? path.name() : path.stem();
+	}
 }
 
 /**
@@ -805,8 +818,11 @@ clah::Clah getClahForMain() {
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
-	                     .addShortDesc("Name of the package the module belongs to.")
-	                     .required()
+	                     .addShortDesc(
+							 "Name of the package. Defaults to the name of the package directory "
+							 "or the root module file."
+						 )
+	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
@@ -875,8 +891,17 @@ clah::Clah getClahForMain() {
 					}
 
 					auto path_to_compile = options.getPositional<fs::File>(0);
-					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
-					CORE_ASSERT(package_name != "", "Package name must be specified");
+					auto package_name    = options.getValue<std::string>("name").copyValueOr(
+                        inferPackageName(path_to_compile)
+                    );
+					if (package_name.empty()) {
+						CORE_USER_LOG(
+							"Error: Cannot infer the package name from '",
+							path_to_compile.getFilePath().string(),
+							"'. Pass it with -n/--name.\n"
+						);
+						return 1;
+					}
 
 					auto worker_count   = options.getValue<i64>("workers").copyValueOr(1);
 					auto stdlib_options = getStdLibOptionsFromClah(options);
