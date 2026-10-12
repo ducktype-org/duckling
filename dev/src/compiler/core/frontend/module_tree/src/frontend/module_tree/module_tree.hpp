@@ -76,8 +76,8 @@ namespace compiler::frontend {
 	 * synthetic REPL chain module (one statement of a REPL session or script).
 	 *
 	 * @note This is an abstract class, the instances include:
-	 * - ModuleModuleTree: Represents a standard module.
-	 * - script related nodes
+	 * - ModuleModuleTreeNode: Represents a standard module.
+	 * - ScriptModuleTreeNode / SyntheticReplChainModuleTreeNode: script and REPL nodes.
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
 	 * including its main source file, submodules, and other files.
@@ -287,11 +287,12 @@ namespace compiler::frontend {
 		 * structure (i.e. whose parent is this module).
 		 */
 		[[nodiscard]]
-		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const = 0;
+		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const
+			= 0;
 
 		/**
-		 * @brief Collects all owned source files modules of this module.
-		 * @return A vector containing references to all child modules.
+		 * @brief Collects all source files owned by this module.
+		 * @return A vector containing references to the owned source files.
 		 *
 		 * @note as of now, its always 0 or 1 owned source file per module,
 		 * but the interface returns a vector for ease of use and future extensibility.

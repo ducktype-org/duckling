@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "module_module_tree.hpp"
 
 namespace compiler::frontend {
@@ -17,7 +23,8 @@ namespace compiler::frontend {
 		return &m_submodules;
 	}
 
-	CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot() const {
+	CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot(
+	) const {
 		return &m_submodules;
 	}
 
@@ -25,11 +32,13 @@ namespace compiler::frontend {
 		return &m_other_files;
 	}
 
-	CRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot() const {
+	CRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot(
+	) const {
 		return &m_other_files;
 	}
 
-	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleModuleTreeNode::getOtherFiles() const {
+	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleModuleTreeNode::getOtherFiles(
+	) const {
 		return m_other_files;
 	}
 
@@ -37,6 +46,12 @@ namespace compiler::frontend {
 		std::vector<base::Ref<ModuleTree>> children;
 		for (auto& [_, submodule]: m_submodules) children.push_back(submodule);
 		return children;
+	}
+
+	std::vector<base::Ref<SourceFile>> ModuleModuleTreeNode::collectOwnedSourceFiles() const {
+		std::vector<base::Ref<SourceFile>> source_files;
+		if (m_main_source_file.has_value()) source_files.push_back(m_main_source_file.value());
+		return source_files;
 	}
 
 	ModuleModuleTreeNode::ModuleModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }

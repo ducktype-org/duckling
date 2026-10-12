@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "module_tree.hpp"
@@ -30,6 +36,7 @@ namespace compiler::frontend {
 
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
+		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
 	public:
 		explicit SyntheticReplChainModuleTreeNode();
@@ -50,14 +57,18 @@ namespace compiler::frontend {
 		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
 		void makeAbstract() final;
-	
+
 	protected:
 		[[nodiscard]]
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
+		/**
+		 * @brief A script owns no source file itself, its synthetic chain modules own them.
+		 */
+		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
+
 	public:
 		ScriptModuleTreeNode();
-
 	};
 
 

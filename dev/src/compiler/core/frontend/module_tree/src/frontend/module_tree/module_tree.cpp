@@ -27,12 +27,9 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
-// #include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-// #include <ranges>
-// #include <regex>
 #include <sstream>
 #include <string_view>
 
@@ -40,15 +37,10 @@ namespace {
 	/**
 	 * StableHashMap that stores all ModuleTree instances.
 	 */
-<<<<<<< HEAD
 	base::StableHashMap<usize, Box<compiler::frontend::ModuleTree>> modules;
 	usize                                                           next_module_storage_key = 0;
-=======
-	base::StableHashMap<usize, compiler::frontend::ModuleTree> modules;
-	usize                                                      next_module_storage_key = 0;
 
 	concurrent::ConHashMap<base::Bit256, base::Ref<compiler::frontend::ModuleTree>> module_registry;
->>>>>>> origin/main
 }
 
 namespace compiler::frontend {
@@ -210,7 +202,7 @@ namespace compiler::frontend {
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
-		
+
 		for (const auto& source_file: collectOwnedSourceFiles())
 			source_file->invalidateComponentHash();
 
@@ -351,10 +343,10 @@ namespace compiler::frontend {
             if (module_tree->hasMainSourceFile())
                 files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
 
-				// PR: this should use child modules insted of getSubmodules
-				// but collectChildrenModules is private, figure this out
-            for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
-                self(submodule.illegalAccess().getID());
+			// PR: this should use child modules insted of getSubmodules
+			// but collectChildrenModules is private, figure this out
+			for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
+				self(submodule.illegalAccess().getID());
 		};
 		collect_files(module_id);
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "module_tree.hpp"
@@ -14,7 +20,7 @@ namespace compiler::frontend {
 		 */
 		base::Optional<base::Ref<SourceFile>> m_main_source_file;
 
-		/** 
+		/**
 		 * Submodules of the current module, indexed by their names
 		 */
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
@@ -45,10 +51,12 @@ namespace compiler::frontend {
 
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
-		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const override;
+		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
 	public:
 		ModuleModuleTreeNode();
+
+		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const override;
 
 		SubmodulesAccessLocked getSubmodules() const override;
 

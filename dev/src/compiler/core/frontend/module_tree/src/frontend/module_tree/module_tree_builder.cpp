@@ -259,11 +259,13 @@ namespace compiler::frontend {
 			case ModuleKind::ReplChain:
 				return makeBox<SyntheticReplChainModuleTreeNode>();
 			default:
-				CORE_ASSERT(false, "Unknown module kind");
+				CORE_PANIC("Unknown module kind");
 			}
 		};
 
 		Ref<ModuleTree> module_ref = ModuleTree::addModuleToStorage(create_node());
+
+		module_ref->m_self = module_ref;
 
 		CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
 		CORE_ASSERT(
