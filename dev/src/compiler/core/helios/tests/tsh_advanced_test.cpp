@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(classConstructabilityTest);
 		TESTER_ADD_TEST(typeTemplateTest);
 		TESTER_ADD_TEST(staticInterfaceTest);
+		TESTER_ADD_TEST(sourceTypeNameTest);
 	}
 
 private:
@@ -276,6 +277,74 @@ private:
 			ASSERT_EQUAL(derived_type, derived_field.front().getSource());
 			ASSERT_TRUE(derived_interface->getElementsWithName(base::StrID("pub_field")).empty());
 			ASSERT_NO_VALUE(interface->getElementBySym(derived_field.front().getSymbol()));
+		});
+	}
+
+	void sourceTypeNameTest() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/tsh/source_type_names")));
+
+		struct TypeNameCase final {
+			std::string_view        symbol_name;
+			std::string_view        expected;
+			compiler::helios::SymID symbol;
+		};
+
+		const auto make_case = [&](std::string_view symbol_name, std::string_view expected) {
+			return TypeNameCase{
+				.symbol_name = symbol_name,
+				.expected    = expected,
+				.symbol      = getChain(symbol_name, root_scope).back(),
+			};
+		};
+		const std::vector cases{
+			make_case("primitive", "i64"),
+			make_case("string", "str"),
+			make_case("const_slice", "slice const char"),
+			make_case("pointer", "ptr Types.Inner"),
+			make_case("many_pointer", "manyptr i64"),
+			make_case("c_pointer", "cptr i64"),
+			make_case("pointer_array", "(ptr i64)[3]"),
+			make_case("array_pointer", "ptr i64[3]"),
+			make_case("nested_array", "i64[3][2]"),
+			make_case("qualified_nested_array", "(const i64)[3][2]"),
+			make_case("variant_array", "(bool | i64)[3]"),
+			make_case("tuple", "(i64, bool)"),
+			make_case("variant", "bool | i64"),
+			make_case("class_value", "Person"),
+			make_case("template_value", "Boxed[i64]"),
+			make_case("namespaced_template", "Types.Boxed[Person]"),
+		};
+
+		withContextDo([&](query::Context& ctx) {
+			const auto i64_type
+				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
+			const KeyFor_QueryTupleType single_tuple_key{
+				.components = { SymbolType<>::withDefaults(i64_type) },
+			};
+			const auto single_tuple = ctx.query<QueryTupleType>(single_tuple_key);
+			assertEqual(
+				std::string("(i64,)"),
+				single_tuple.sourceTypeName(ctx),
+				"Incorrect source type name for a single-element tuple"
+			);
+			for (const auto& test_case: cases) {
+				const auto type = ctx.query<compiler::helios::QueryTypeOfSymbol>(test_case.symbol)
+				                      ->valueOrThrow();
+				assertEqual(
+					std::string(test_case.expected),
+					type.sourceTypeName(ctx),
+					base::strConcat("Incorrect source type name for `", test_case.symbol_name, "`")
+				);
+			}
+
+			const auto primitive_type
+				= ctx.query<compiler::helios::QueryTypeOfSymbol>(cases.front().symbol)
+			          ->valueOrThrow();
+			assertEqual(
+				std::string("i64"),
+				primitive_type.getType().sourceTypeName(ctx),
+				"AbstractType should expose the source-level type name too"
+			);
 		});
 	}
 

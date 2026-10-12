@@ -278,6 +278,18 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		const std::string& toString() const;
 
+		/**
+		 * @brief Get a canonical source-level name of this type.
+		 *
+		 * Unlike @ref toString, this method produces Duckling syntax intended for user-facing
+		 * diagnostics. The query context is needed to resolve class paths and baked template
+		 * arguments.
+		 * @param ctx Query context used to resolve source-level type information.
+		 * @return A canonical Duckling spelling of this type.
+		 */
+		[[nodiscard]]
+		std::string sourceTypeName(query::Context& ctx) const;
+
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 

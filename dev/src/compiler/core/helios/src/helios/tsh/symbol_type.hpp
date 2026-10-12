@@ -13,6 +13,13 @@
 #include <hashing/hashing_algorithms.hpp>
 
 namespace compiler::tsh {
+	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
+	class SymbolType;
+
+	namespace detail {
+		std::string sourceTypeName(query::Context& ctx, const SymbolType<AbstractType>& type);
+	}
+
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
 	 */
@@ -376,6 +383,19 @@ namespace compiler::tsh {
 										 : "ref ",
 				abstract_type.toString()
 			);
+		}
+
+		/**
+		 * @brief Get a canonical source-level name of this symbol type.
+		 *
+		 * The result includes symbol qualifiers such as `const`, `ref`, `box`, `unique` and
+		 * `leaking`. Unlike @ref toString, it is suitable for user-facing diagnostics.
+		 * @param ctx Query context used to resolve source-level type information.
+		 * @return A canonical Duckling spelling of this symbol type.
+		 */
+		[[nodiscard]]
+		std::string sourceTypeName(query::Context& ctx) const {
+			return detail::sourceTypeName(ctx, SymbolType<AbstractType>(*this));
 		}
 
 	private:
