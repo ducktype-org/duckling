@@ -461,6 +461,12 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 			if (class_layout.getSourceType().getType().getKind() != tsh::Kind::Tuple)
 				return class_layout.getMangledName();
 
+			// Tuple types are mangled by types alone. Mangler distinguishes type mutability and
+			// would provide two different mangled names for `(const i32, i32)` and `(i32, i32)`
+			// even though they have the same layouts. This would make them impossible to manipulate
+			// tuples which only differ in mutability, thus we create it manually.
+			// @note: Including the field count in the name is also important. If not for that `((a,
+			// b), c)`/`((a), b, c)`/`((a, b, c))` would all get the same name.
 			const usize num_fields      = class_layout.getNumSubLayouts();
 			std::string tuple_type_name = base::strConcat("tup", num_fields);
 			for (usize i{ 0 }; i < num_fields; i++) {
