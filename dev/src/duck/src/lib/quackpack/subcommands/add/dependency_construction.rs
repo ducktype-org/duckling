@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 
 use futures::executor::block_on;
 
-use crate::quackpack::core::fetcher::{self, Fetcher};
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchFailure, FetchResponse, ManifestsRequest, NotPinnedRequest, PinnedRequest,
     RequestIdentifier,
@@ -130,7 +130,7 @@ pub fn construct_dependency(
         // Adding registry dependency without versions is treated as adding the dependency in the latest version.
         versions = vec![latest_version];
     }
-    let source = construct_source_schema(source, local_path, &name_spec)?;
+    let source = construct_source_schema(source, local_path, &name_spec, pcx.ctx())?;
     let dep = Dependency {
         version: if versions.is_empty() {
             None
@@ -191,7 +191,7 @@ fn construct_source(
         Ok((Source::for_registry(registry_url), None))
     } else {
         // Registry dependency from default registry.
-        let default_registry_url = fetcher::DEFAULT_REGISTRY_URL.clone();
+        let default_registry_url = ctx.duck_cfg().registry_url()?;
         Ok((Source::for_registry(default_registry_url), None))
     }
 }
@@ -306,6 +306,7 @@ fn construct_source_schema(
     source: Source,
     local_path: Option<PathBuf>,
     name_spec: &NameSpecification,
+    ctx: &DuckContext,
 ) -> QuackResult<Option<SourceSchema>> {
     let name = name_spec.source_name();
     match source.kind() {
@@ -329,7 +330,7 @@ fn construct_source_schema(
         SourceKind::Registry => {
             let registry_url = source.url();
             if name.is_none() {
-                if registry_url == *fetcher::DEFAULT_REGISTRY_URL {
+                if registry_url == ctx.duck_cfg().registry_url()? {
                     Ok(None)
                 } else {
                     Ok(Some(SourceSchema::Simple(registry_url.to_string())))
