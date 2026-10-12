@@ -6,10 +6,8 @@
 
 use std::path::Path;
 
-use crate::quackpack::core::PackageId;
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-use crate::quackpack::util::to_url::ToUrl;
+use crate::quackpack::core::{PackageId, fetcher};
 
 pub mod cycling;
 pub mod tree;
@@ -26,7 +24,7 @@ pub fn mock_local_identity(root: &Path, name: &str) -> FullIdentity {
 pub fn mock_registry_identity(name: &str) -> FullIdentity {
     FullIdentity::new(
         name.into(),
-        FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap()),
+        FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone()),
     )
 }
 
