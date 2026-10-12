@@ -78,12 +78,12 @@ function main { i64, ptr_argv } -> { i64 } {
 
 	# Spawn thread1
 	init_pany_type		t1_id, i64;
-	set_threadctx		thread1;
+	setThreadCtx_func		thread1;
 	call_builtinfunc	builtin_start_thread;
 
 	# Spawn thread2
 	init_pany_type		t2_id, i64;
-	set_threadctx		thread2;
+	setThreadCtx_func		thread2;
 	call_builtinfunc	builtin_start_thread;
 
 	# Wait to allow threads to deadlock

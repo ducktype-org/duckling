@@ -49,7 +49,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
     # dog_ptr->toHumanYears
     setVTable_pptr_type dog_ptr, Dog; # vtable only to first element
-    virtual_call_pptr_method dog_ptr, toHumanYears;
+    virtualCall_pptr_method dog_ptr, toHumanYears;
 
     free_pptr array;
 

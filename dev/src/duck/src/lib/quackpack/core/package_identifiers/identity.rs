@@ -82,6 +82,18 @@ impl Display for Identity {
     }
 }
 
+impl PartialOrd for Identity {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(Self::cmp(self, other))
+    }
+}
+
+impl Ord for Identity {
+    fn cmp(&self, other: &Self) -> Ordering {
+        Self::stable_compare(*self, *other)
+    }
+}
+
 impl FromStr for Identity {
     type Err = QuackError;
 

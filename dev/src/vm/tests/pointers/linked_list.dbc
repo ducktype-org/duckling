@@ -47,7 +47,7 @@ label non_empty;
     deinit;  # curr
     call_func tail;
 
-    ret_tailcall_func print_list;
+    retTailcall_func print_list;
 }
 
 function free_list {LinkedList} -> {} {

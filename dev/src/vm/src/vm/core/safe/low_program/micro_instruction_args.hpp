@@ -94,7 +94,7 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockStructure, "bste", vm::opargs::PlaceStructure);
 	/** @brief Stores index of local fixed sized table storage in the frame local slot stack (not a
 	 * byte offset) or the global blocks buffer. */
-	DEFINE_MICRO_ARG_TYPE(PlaceBlockFSTable, "barr", vm::opargs::PlaceFSTable);
+	DEFINE_MICRO_ARG_TYPE(PlaceBlockFSTable, "bfst", vm::opargs::PlaceFSTable);
 	/** @brief Stores index of local variant storage in the frame local slot stack (not a byte
 	 * offset) or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt);

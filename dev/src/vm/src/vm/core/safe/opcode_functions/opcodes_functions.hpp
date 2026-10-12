@@ -89,7 +89,7 @@ namespace vm {
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_MICRO_INSTR(opcode) \
-	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_nop : op_debug_##opcode,
+	low::MicroOpcode::opcode == low::MicroOpcode::checkStrategy ? op_debug_nop : op_debug_##opcode,
 #include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 
 
@@ -180,8 +180,8 @@ namespace vm {
 		 * `local_stack` should be pointer to the local stack of the new function.
 		 * Old values of `instr` nad `local_stack` should be saved on the frame of the caller.
 		 *
-		 * @note The function has to be inlined since it's used by the `call_func` and
-		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
+		 * @note The function has to be inlined since it's used by the `call_func_off` and
+		 * `virtualCall_pptr_method` opcodes and breaks tailcalling of opcode function otherwise.
 		 */
 		static VM_OPFUN_INLINE void performFunctionCall(
 			const MicroInstruction*& instr,

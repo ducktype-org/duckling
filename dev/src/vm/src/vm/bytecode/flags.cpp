@@ -262,68 +262,68 @@ namespace vm::code {
 			FLAGS_RW(neg_p8)
 			FLAGS_RW(fneg_p64)
 			FLAGS_RW(fneg_p32)
-			FLAGS_RW(log_not_p8)
+			FLAGS_RW(logNot_p8)
 
 			// Logical (and/or/xor)
-			FLAGS_RW_R(log_and_p8_p8)
-			FLAGS_RW(log_and_p8_imm)
-			FLAGS_RW_R(log_or_p8_p8)
-			FLAGS_RW(log_or_p8_imm)
-			FLAGS_RW_R(log_xor_p8_p8)
-			FLAGS_RW(log_xor_p8_imm)
+			FLAGS_RW_R(logAnd_p8_p8)
+			FLAGS_RW(logAnd_p8_imm)
+			FLAGS_RW_R(logOr_p8_p8)
+			FLAGS_RW(logOr_p8_imm)
+			FLAGS_RW_R(logXor_p8_p8)
+			FLAGS_RW(logXor_p8_imm)
 
 			// ===== Bitwise (and / or / xor / shl / shr / not) =====
 			// 64-bit
-			FLAGS_RW_R(bit_and_p64_p64)
-			FLAGS_RW(bit_and_p64_imm)
-			FLAGS_RW_R(bit_or_p64_p64)
-			FLAGS_RW(bit_or_p64_imm)
-			FLAGS_RW_R(bit_xor_p64_p64)
-			FLAGS_RW(bit_xor_p64_imm)
+			FLAGS_RW_R(bitAnd_p64_p64)
+			FLAGS_RW(bitAnd_p64_imm)
+			FLAGS_RW_R(bitOr_p64_p64)
+			FLAGS_RW(bitOr_p64_imm)
+			FLAGS_RW_R(bitXor_p64_p64)
+			FLAGS_RW(bitXor_p64_imm)
 			FLAGS_RW_R(shl_p64_p64)
 			FLAGS_RW(shl_p64_imm)
 			FLAGS_RW_R(shr_p64_p64)
 			FLAGS_RW(shr_p64_imm)
-			FLAGS_RW(bit_not_p64)
+			FLAGS_RW(bitNot_p64)
 
 			// 32-bit
-			FLAGS_RW_R(bit_and_p32_p32)
-			FLAGS_RW(bit_and_p32_imm)
-			FLAGS_RW_R(bit_or_p32_p32)
-			FLAGS_RW(bit_or_p32_imm)
-			FLAGS_RW_R(bit_xor_p32_p32)
-			FLAGS_RW(bit_xor_p32_imm)
+			FLAGS_RW_R(bitAnd_p32_p32)
+			FLAGS_RW(bitAnd_p32_imm)
+			FLAGS_RW_R(bitOr_p32_p32)
+			FLAGS_RW(bitOr_p32_imm)
+			FLAGS_RW_R(bitXor_p32_p32)
+			FLAGS_RW(bitXor_p32_imm)
 			FLAGS_RW_R(shl_p32_p32)
 			FLAGS_RW(shl_p32_imm)
 			FLAGS_RW_R(shr_p32_p32)
 			FLAGS_RW(shr_p32_imm)
-			FLAGS_RW(bit_not_p32)
+			FLAGS_RW(bitNot_p32)
 
 			// 16-bit
-			FLAGS_RW_R(bit_and_p16_p16)
-			FLAGS_RW(bit_and_p16_imm)
-			FLAGS_RW_R(bit_or_p16_p16)
-			FLAGS_RW(bit_or_p16_imm)
-			FLAGS_RW_R(bit_xor_p16_p16)
-			FLAGS_RW(bit_xor_p16_imm)
+			FLAGS_RW_R(bitAnd_p16_p16)
+			FLAGS_RW(bitAnd_p16_imm)
+			FLAGS_RW_R(bitOr_p16_p16)
+			FLAGS_RW(bitOr_p16_imm)
+			FLAGS_RW_R(bitXor_p16_p16)
+			FLAGS_RW(bitXor_p16_imm)
 			FLAGS_RW_R(shl_p16_p16)
 			FLAGS_RW(shl_p16_imm)
 			FLAGS_RW_R(shr_p16_p16)
 			FLAGS_RW(shr_p16_imm)
-			FLAGS_RW(bit_not_p16)
+			FLAGS_RW(bitNot_p16)
 
 			// 8-bit
-			FLAGS_RW_R(bit_and_p8_p8)
-			FLAGS_RW(bit_and_p8_imm)
-			FLAGS_RW_R(bit_or_p8_p8)
-			FLAGS_RW(bit_or_p8_imm)
-			FLAGS_RW_R(bit_xor_p8_p8)
-			FLAGS_RW(bit_xor_p8_imm)
+			FLAGS_RW_R(bitAnd_p8_p8)
+			FLAGS_RW(bitAnd_p8_imm)
+			FLAGS_RW_R(bitOr_p8_p8)
+			FLAGS_RW(bitOr_p8_imm)
+			FLAGS_RW_R(bitXor_p8_p8)
+			FLAGS_RW(bitXor_p8_imm)
 			FLAGS_RW_R(shl_p8_p8)
 			FLAGS_RW(shl_p8_imm)
 			FLAGS_RW_R(shr_p8_p8)
 			FLAGS_RW(shr_p8_imm)
-			FLAGS_RW(bit_not_p8)
+			FLAGS_RW(bitNot_p8)
 
 			// ===== Comparisons: lhs/rhs are read =====
 			FLAGS_CMP(cmpEq_p64_p64)
@@ -481,11 +481,11 @@ namespace vm::code {
 				       | InstructionFlag(IORead) | InstructionFlag(IOWrite)
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
 			}
-			instr_case(ins::Op_set_threadctx, i) {
+			instr_case(ins::Op_setThreadCtx_func, i) {
 				flags
 					|= Call | InstructionFlag(Multithread) | InstructionFlag(ControlFlowModifying);
 			}
-			instr_case(ins::Op_ret_tailcall_func, i) {
+			instr_case(ins::Op_retTailcall_func, i) {
 				flags |= Call | InstructionFlag(ControlFlowModifying);
 			}
 			instr_case(ins::Op_ret, i) { flags |= ControlFlowModifying; }
@@ -537,7 +537,7 @@ namespace vm::code {
 				rd(i.src);
 				deref_read();
 			}
-			instr_case(ins::Op_virtual_call_pptr_method, i) {
+			instr_case(ins::Op_virtualCall_pptr_method, i) {
 				// Known limitation: a virtual call is opaque, so we conservatively raise every
 				// flag. As a result no execution config (no_io / read_only / single_thread) can
 				// admit code that performs a dynamic dispatch. Lifting this needs per-callsite

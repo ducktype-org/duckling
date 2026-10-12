@@ -37,7 +37,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type temp_child, pointer_Child;
     mov_pptr_pptr temp_child, actual_child;
-    virtual_call_pptr_method actual_child, getAge; # Calling getAge, which is a parent method.
+    virtualCall_pptr_method actual_child, getAge; # Calling getAge, which is a parent method.
 
     deinit;
     deinit;
