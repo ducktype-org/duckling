@@ -2,12 +2,12 @@ set(SOURCES
     src/system_command/system_command.cpp
 )
 
-if(WIN32)
-    list(APPEND SOURCES src/system_command/system_command_windows.cpp)
-elseif(UNIX)
+# @TODO: #3746 Look at the history of https://github.com/ducktype-org/duckling/pull/3735 for the PoC Windows implementation.
+#        Although cpp-linter fails on it (I think it runs on Ubuntu, that's why).
+if(UNIX)
     list(APPEND SOURCES src/system_command/system_command_unix.cpp)
 else()
-    message(FATAL_ERROR "Unsupported operating system: ${CMAKE_SYSTEM_NAME}")
+    message(FATAL_ERROR "System Command: Unsupported operating system: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 add_library(SystemCommand
