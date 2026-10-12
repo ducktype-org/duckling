@@ -11,7 +11,7 @@
 //! [`GitClient`](git::GitClient).
 use std::cell::RefCell;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use tempfile::TempDir;
 use tracing::{debug, error, info};
@@ -51,15 +51,19 @@ pub struct Fetcher<'duck> {
     artifacts_cache_path: FileLockManager,
 }
 
+/// URL of the default Ducknest instance.
+pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
+    "http://localhost:9001"
+        .parse()
+        .expect("compile time known value")
+});
+
 impl<'duck> Fetcher<'duck> {
     /// Filename of the default package's compressed source.
     const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
 
     /// Filename of the per-package lock.
     const PER_PACKAGE_LOCK: &'static str = ".duck.package.lock";
-
-    /// URL of the default Ducknest instance.
-    pub const DEFAULT_REGISTRY_URL: &'static str = "http://localhost:9001";
 
     /// Create a new [`Fetcher`].
     ///

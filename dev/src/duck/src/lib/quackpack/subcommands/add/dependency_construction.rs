@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 
 use futures::executor::block_on;
 
-use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::fetcher::{self, Fetcher};
 use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchFailure, FetchResponse, ManifestsRequest, NotPinnedRequest, PinnedRequest,
     RequestIdentifier,
@@ -191,9 +191,7 @@ fn construct_source(
         Ok((Source::for_registry(registry_url), None))
     } else {
         // Registry dependency from default registry.
-        let default_registry_url = Fetcher::DEFAULT_REGISTRY_URL
-            .to_url()
-            .context_internal("default registry url is invalid")?;
+        let default_registry_url = fetcher::DEFAULT_REGISTRY_URL.clone();
         Ok((Source::for_registry(default_registry_url), None))
     }
 }
@@ -331,7 +329,7 @@ fn construct_source_schema(
         SourceKind::Registry => {
             let registry_url = source.url().to_string();
             if name.is_none() {
-                if registry_url == Fetcher::DEFAULT_REGISTRY_URL {
+                if registry_url == fetcher::DEFAULT_REGISTRY_URL.as_str() {
                     Ok(None)
                 } else {
                     Ok(Some(SourceSchema::Simple(registry_url)))
