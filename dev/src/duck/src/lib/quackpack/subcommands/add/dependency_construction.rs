@@ -327,16 +327,16 @@ fn construct_source_schema(
             })))
         }
         SourceKind::Registry => {
-            let registry_url = source.url().to_string();
+            let registry_url = source.url();
             if name.is_none() {
-                if registry_url == fetcher::DEFAULT_REGISTRY_URL.as_str() {
+                if registry_url == *fetcher::DEFAULT_REGISTRY_URL {
                     Ok(None)
                 } else {
-                    Ok(Some(SourceSchema::Simple(registry_url)))
+                    Ok(Some(SourceSchema::Simple(registry_url.to_string())))
                 }
             } else {
                 Ok(Some(SourceSchema::Detailed(DetailedSource {
-                    registry_url: Some(registry_url),
+                    registry_url: Some(registry_url.to_string()),
                     name,
                     path: None,
                     git_url: None,
