@@ -37,7 +37,7 @@ function main { i64, ptr_argv } -> { i64 } {
     alloc_pptr_type dog_ptr, Dog;
 
     # vtable unset: setVTable_pptr_type  dog_ptr, Dog;
-    virtual_call_pptr_method  dog_ptr, toHumanYears;
+    virtualCall_pptr_method  dog_ptr, toHumanYears;
 
     ret;
 }

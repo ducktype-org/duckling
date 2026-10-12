@@ -53,13 +53,13 @@ function Child_getAge_impl_type {pointer_Child} -> { } {
 function to_jit { pointer_Parent } -> { } {
     init_pany_type           sub_arg, pointer_I1;
     upcast_pptr_pptr         sub_arg, arg0;
-    virtual_call_pptr_method sub_arg, foo;
+    virtualCall_pptr_method sub_arg, foo;
 
     init_pany_type           sub_arg, pointer_I1;
     upcast_pptr_pptr         sub_arg, arg0;
-    virtual_call_pptr_method sub_arg, bar;
+    virtualCall_pptr_method sub_arg, bar;
 
-    virtual_call_pptr_method arg0, getAge;
+    virtualCall_pptr_method arg0, getAge;
     ret;
 }
 

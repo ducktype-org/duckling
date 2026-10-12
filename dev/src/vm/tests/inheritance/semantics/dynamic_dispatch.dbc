@@ -107,18 +107,18 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type temp_c_1, pointer_Cat;
     mov_pptr_pptr temp_c_1, ptr_c;
-    virtual_call_pptr_method ptr_c, makeSound; # Expected output: 4.
+    virtualCall_pptr_method ptr_c, makeSound; # Expected output: 4.
 
     # ---------------------- Cat object, Feline* pointer ------------------
     upcast_pptr_pptr ptr_f, actual_cat_obj;                     # ptr_f = (Feline*)actual_cat_obj;
     
     init_pany_type temp_f_1, pointer_Feline;
     mov_pptr_pptr temp_f_1, ptr_f;
-    virtual_call_pptr_method ptr_f, makeSound;   # Expected output: 4
+    virtualCall_pptr_method ptr_f, makeSound;   # Expected output: 4
 
     init_pany_type temp_f_2, pointer_Feline;
     mov_pptr_pptr temp_f_2, ptr_f;
-    virtual_call_pptr_method ptr_f, hunt;         # Expected output: 5
+    virtualCall_pptr_method ptr_f, hunt;         # Expected output: 5
 
     free_pptr actual_cat_obj;
 
@@ -129,7 +129,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type temp_a_1, pointer_Animal;
     mov_pptr_pptr temp_a_1, ptr_a;
-    virtual_call_pptr_method ptr_a, makeSound; # Expected output: 4.
+    virtualCall_pptr_method ptr_a, makeSound; # Expected output: 4.
 
     free_pptr actual_cat_obj;
 
@@ -140,18 +140,18 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type temp_f_3, pointer_Feline;
     mov_pptr_pptr temp_f_3, ptr_f;
-    virtual_call_pptr_method ptr_f, makeSound;   # Expected output: 2
+    virtualCall_pptr_method ptr_f, makeSound;   # Expected output: 2
 
     init_pany_type temp_f_4, pointer_Feline;
     mov_pptr_pptr temp_f_4, ptr_f;
-    virtual_call_pptr_method ptr_f, hunt;   # Expected output: 3
+    virtualCall_pptr_method ptr_f, hunt;   # Expected output: 3
 
     # ---------------------- Feline object, Animal* pointer ------------------
     upcast_pptr_pptr ptr_a, actual_feline_obj;      # ptr_a = (Animal*)actual_feline_obj;
 
     init_pany_type temp_a_2, pointer_Animal;
     mov_pptr_pptr temp_a_2, ptr_a;
-    virtual_call_pptr_method ptr_a, makeSound;   # Expected output: 2
+    virtualCall_pptr_method ptr_a, makeSound;   # Expected output: 2
 
     free_pptr actual_feline_obj;
 
@@ -162,7 +162,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type temp_a_3, pointer_Animal;
     mov_pptr_pptr temp_a_3, ptr_a;
-    virtual_call_pptr_method ptr_a, makeSound; # Expected output: 1
+    virtualCall_pptr_method ptr_a, makeSound; # Expected output: 1
 
     free_pptr actual_animal_obj;
 

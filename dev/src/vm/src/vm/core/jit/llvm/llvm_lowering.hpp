@@ -191,8 +191,8 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::jitLoopEntrypoint:
 					CORE_PANIC("We should always compile the original code, without entrypoints.");
 					continue;
-				case vm::low::MicroOpcode::call_func:
-				case vm::low::MicroOpcode::virtual_call_pptr_method: {
+				case vm::low::MicroOpcode::call_func_off:
+				case vm::low::MicroOpcode::virtualCall_pptr_method: {
 					// Trampoline uses VM functions, instructions have to have correct type.
 #ifdef USE_SWITCH_CASE
 					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);

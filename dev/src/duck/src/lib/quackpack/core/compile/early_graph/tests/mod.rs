@@ -13,6 +13,7 @@ use crate::quackpack::util::to_url::ToUrl;
 
 pub mod cycling;
 pub mod tree;
+pub mod unreachable_deps;
 
 pub fn mock_local_origin(root: &Path, name: &str) -> FullOrigin {
     FullOrigin::for_local(&root.join(name)).unwrap()
