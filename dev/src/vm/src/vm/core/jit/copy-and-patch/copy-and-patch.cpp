@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../jit_compiler.hpp"
 #include "../jit_helper.hpp"
 #include "memory/memory.hpp"
@@ -120,8 +126,8 @@ namespace vm::jit {
 					case HoleValue::ContinueFn:
 						return std::bit_cast<u64>(next);
 					case HoleValue::CallFn:
-						if (opcode == low::MicroOpcode::call_func
-						    || opcode == low::MicroOpcode::virtual_call_pptr_method) {
+						if (opcode == low::MicroOpcode::call_func_off
+						    || opcode == low::MicroOpcode::virtualCall_pptr_method) {
 							return std::bit_cast<u64>(&jit::helpers::trampoline);
 						} else {
 							return std::bit_cast<u64>(

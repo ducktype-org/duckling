@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/queries/queries.hpp>
@@ -207,12 +213,13 @@ private:
 				ctx, base::StrID("variant_unit_alternative_test"), false, false
 			);
 			const auto dvm_type = program_ctx.lowerAndKeepTslType(layout);
-			ASSERT_HAS_VALUE(dvm_type);
 
-			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(**dvm_type);
+			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(*dvm_type);
 			ASSERT_HAS_VALUE(dvm_variant);
 
-			const auto& unit_dvm_type = program_ctx.getUnitType();
+			const auto& unit_dvm_type = *program_ctx.lowerAndKeepTslType(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(unit_type.getType())->valueOrThrow()
+			);
 			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
 				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)

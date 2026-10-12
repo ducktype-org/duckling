@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file cf_analysis.cpp
  * @brief Implementation of basic-block boundary analysis.
@@ -38,7 +44,7 @@ namespace vm::low::cf {
 				break;
 			}
 			case low::MicroOpcode::ret:
-			case low::MicroOpcode::ret_tailcall_func: {
+			case low::MicroOpcode::retTailcall_func: {
 				block_beginnings.push_back(index + 1);  // Next block starts after ret
 				break;
 			}

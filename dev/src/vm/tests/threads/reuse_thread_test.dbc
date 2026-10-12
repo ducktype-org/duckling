@@ -16,7 +16,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_p64_imm				reused_count, 0;
 
 	init_pany_type			t1_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 
 	init_pany_type			j1_ret, i64;
@@ -25,7 +25,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t2_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t2_id, t1_id;
 	jmpIf_label				Inc2;
@@ -39,7 +39,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t3_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t3_id, t1_id;
 	jmpIf_label				Inc3;
@@ -53,7 +53,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t4_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t4_id, t1_id;
 	jmpIf_label				Inc4;
@@ -67,7 +67,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t5_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t5_id, t1_id;
 	jmpIf_label				Inc5;
@@ -81,7 +81,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t6_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t6_id, t1_id;
 	jmpIf_label				Inc6;
@@ -95,7 +95,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t7_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t7_id, t1_id;
 	jmpIf_label				Inc7;
@@ -109,7 +109,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t8_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t8_id, t1_id;
 	jmpIf_label				Inc8;
@@ -123,7 +123,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t9_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t9_id, t1_id;
 	jmpIf_label				Inc9;
@@ -137,7 +137,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t10_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t10_id, t1_id;
 	jmpIf_label				Inc10;
@@ -151,7 +151,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t11_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t11_id, t1_id;
 	jmpIf_label				Inc11;
@@ -165,7 +165,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t12_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t12_id, t1_id;
 	jmpIf_label				Inc12;
@@ -179,7 +179,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t13_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t13_id, t1_id;
 	jmpIf_label				Inc13;
@@ -193,7 +193,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t14_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t14_id, t1_id;
 	jmpIf_label				Inc14;
@@ -207,7 +207,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t15_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t15_id, t1_id;
 	jmpIf_label				Inc15;
@@ -221,7 +221,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t16_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t16_id, t1_id;
 	jmpIf_label				Inc16;
@@ -235,7 +235,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t17_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t17_id, t1_id;
 	jmpIf_label				Inc17;
@@ -249,7 +249,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t18_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t18_id, t1_id;
 	jmpIf_label				Inc18;
@@ -263,7 +263,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t19_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t19_id, t1_id;
 	jmpIf_label				Inc19;
@@ -277,7 +277,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t20_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t20_id, t1_id;
 	jmpIf_label				Inc20;
@@ -291,7 +291,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t21_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t21_id, t1_id;
 	jmpIf_label				Inc21;
@@ -305,7 +305,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t22_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t22_id, t1_id;
 	jmpIf_label				Inc22;
@@ -319,7 +319,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t23_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t23_id, t1_id;
 	jmpIf_label				Inc23;
@@ -333,7 +333,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t24_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t24_id, t1_id;
 	jmpIf_label				Inc24;
@@ -347,7 +347,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t25_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t25_id, t1_id;
 	jmpIf_label				Inc25;
@@ -361,7 +361,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t26_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t26_id, t1_id;
 	jmpIf_label				Inc26;
@@ -375,7 +375,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t27_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t27_id, t1_id;
 	jmpIf_label				Inc27;
@@ -389,7 +389,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t28_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t28_id, t1_id;
 	jmpIf_label				Inc28;
@@ -403,7 +403,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t29_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t29_id, t1_id;
 	jmpIf_label				Inc29;
@@ -417,7 +417,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t30_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t30_id, t1_id;
 	jmpIf_label				Inc30;
@@ -431,7 +431,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t31_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t31_id, t1_id;
 	jmpIf_label				Inc31;
@@ -445,7 +445,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t32_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t32_id, t1_id;
 	jmpIf_label				Inc32;
@@ -459,7 +459,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t33_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t33_id, t1_id;
 	jmpIf_label				Inc33;
@@ -473,7 +473,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t34_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t34_id, t1_id;
 	jmpIf_label				Inc34;
@@ -487,7 +487,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t35_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t35_id, t1_id;
 	jmpIf_label				Inc35;
@@ -501,7 +501,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t36_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t36_id, t1_id;
 	jmpIf_label				Inc36;
@@ -515,7 +515,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t37_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t37_id, t1_id;
 	jmpIf_label				Inc37;
@@ -529,7 +529,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t38_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t38_id, t1_id;
 	jmpIf_label				Inc38;
@@ -543,7 +543,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t39_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t39_id, t1_id;
 	jmpIf_label				Inc39;
@@ -557,7 +557,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t40_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t40_id, t1_id;
 	jmpIf_label				Inc40;
@@ -571,7 +571,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t41_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t41_id, t1_id;
 	jmpIf_label				Inc41;
@@ -585,7 +585,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t42_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t42_id, t1_id;
 	jmpIf_label				Inc42;
@@ -599,7 +599,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t43_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t43_id, t1_id;
 	jmpIf_label				Inc43;
@@ -613,7 +613,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t44_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t44_id, t1_id;
 	jmpIf_label				Inc44;
@@ -627,7 +627,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t45_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t45_id, t1_id;
 	jmpIf_label				Inc45;
@@ -641,7 +641,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t46_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t46_id, t1_id;
 	jmpIf_label				Inc46;
@@ -655,7 +655,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t47_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t47_id, t1_id;
 	jmpIf_label				Inc47;
@@ -669,7 +669,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t48_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t48_id, t1_id;
 	jmpIf_label				Inc48;
@@ -683,7 +683,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t49_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t49_id, t1_id;
 	jmpIf_label				Inc49;
@@ -697,7 +697,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	call_builtinfunc		builtin_join_thread;
 
 	init_pany_type			t50_id, i64;
-	set_threadctx			worker;
+	setThreadCtx_func			worker;
 	call_builtinfunc		builtin_start_thread;
 	cmpEq_p64_p64			t50_id, t1_id;
 	jmpIf_label				Inc50;

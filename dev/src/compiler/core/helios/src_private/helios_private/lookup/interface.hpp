@@ -1,9 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "lookup_result.hpp"
 
+#include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/scope_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 
 #include <base/collections/optional.hpp>
@@ -61,7 +69,7 @@ namespace compiler::helios {
 		 * @brief The interface of the scope.
 		 * It lookups from the set of all the symbols in the scope.
 		 */
-		struct ScopeInterface {
+		struct ScopeInterface final {
 			helios::ScopeID scope;
 		};
 
@@ -69,16 +77,35 @@ namespace compiler::helios {
 		 * @brief The interface of the scope and all its parents.
 		 * It lookups from the set of all the symbols in the scope and all the scopes parents.
 		 */
-		struct ScopeWithParentsInterface {
+		struct ScopeWithParentsInterface final {
 			helios::ScopeID scope;
 		};
 
 		/**
-		 * @brief The interface of the symbol.
-		 * The behavior depends on the symbol type, but usually it
-		 * represents what `symbol.abc` would do.
+		 * @brief Interface of a module.
 		 */
-		struct SymbolInterface {
+		struct ModuleInterface final {
+			helios::SymID id;
+		};
+
+		/**
+		 * @brief Interface of a namespace.
+		 */
+		struct NamespaceInterface final {
+			helios::SymID id;
+		};
+
+		/**
+		 * @brief Interface of an import.
+		 */
+		struct ImportInterface final {
+			helios::SymID symbol;
+		};
+
+		/**
+		 * @brief Interface of a using.
+		 */
+		struct UsingInterface final {
 			helios::SymID symbol;
 		};
 
@@ -87,7 +114,7 @@ namespace compiler::helios {
 		 * The behavior depends on the type, but in general it
 		 * represents what `symbol-of-given-type.abc` would do.
 		 */
-		struct TypeInstanceInterface {
+		struct TypeInstanceInterface final {
 			tsh::AbstractType type;
 		};
 
@@ -96,21 +123,24 @@ namespace compiler::helios {
 		 * The behavior depends on the type, but in general it
 		 * represents what `given-type.abc` would do.
 		 */
-		struct TypeMetaInterface {
+		struct TypeMetaInterface final {
 			tsh::AbstractType type;
 		};
 
 		/**
 		 * @brief A custom interface — anyone can create their own interface.
 		 */
-		struct CustomInterface {
+		struct CustomInterface final {
 			Box<CustomInterfaceABC> custom;
 		};
 
 		using VariantT = std::variant<
 			ScopeInterface,
 			ScopeWithParentsInterface,
-			SymbolInterface,
+			ModuleInterface,
+			NamespaceInterface,
+			ImportInterface,
+			UsingInterface,
 			TypeInstanceInterface,
 			TypeMetaInterface,
 			CustomInterface>;
@@ -136,8 +166,7 @@ namespace compiler::helios {
 		 * hiding a lot of boilerplate associated with it. It performs the following steps:
 		 * 1. It looks-ups the interface.
 		 * 2. It reports error if more than one symbol is found.
-		 * 3. It performs dealiasing if needed.
-		 * 4. Return dealiased symbol list.
+		 * 3. Return the symbol list. Aliases are already resolved by the lookup itself.
 		 *
 		 * It some error occurs, it will report it in @p error_position.
 		 *
@@ -151,6 +180,17 @@ namespace compiler::helios {
 			AdditionalLookupParameters = {}
 		) const;
 
+		/**
+		 * @brief The interface of a symbol, i.e. what `sym.something` looks into.
+		 *
+		 * Namespace-like symbols (modules, namespaces, usings, imports) look into their own
+		 * contents, a class looks into its statics (`MyClass.CONST`) and a symbol that holds a
+		 * value looks into the members of its type (`my_var.field`).
+		 *
+		 * @note Fails, with a logged error, for symbol kinds that have no interface.
+		 */
+		static HInterface ofSymbol(query::Context& ctx, SymID symbol);
+
 		static HInterface ofScope(const ScopeID scope) {
 			return HInterface{ ScopeInterface{ scope } };
 		}
@@ -159,9 +199,15 @@ namespace compiler::helios {
 			return HInterface{ ScopeWithParentsInterface{ scope } };
 		}
 
-		static HInterface ofSymbol(const SymID symbol) {
-			return HInterface{ SymbolInterface{ symbol } };
+		static HInterface ofModule(SymID symbol) { return HInterface{ ModuleInterface{ symbol } }; }
+
+		static HInterface ofNamespace(SymID symbol) {
+			return HInterface{ NamespaceInterface{ symbol } };
 		}
+
+		static HInterface ofImport(SymID symbol) { return HInterface{ ImportInterface{ symbol } }; }
+
+		static HInterface ofUsing(SymID symbol) { return HInterface{ UsingInterface{ symbol } }; }
 
 		static HInterface ofTypeInstance(const tsh::AbstractType type) {
 			return HInterface{ TypeInstanceInterface{ type } };

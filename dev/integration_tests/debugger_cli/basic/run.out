@@ -1,6 +1,4 @@
-++++++++++++++++++++++++++++
-+   Debugger has started   +
-++++++++++++++++++++++++++++
+Welcome to BeRD - an interactive in-DVM debugger! (now with replxx support!)
 New status: Running
 New status: Paused
 New status: Running

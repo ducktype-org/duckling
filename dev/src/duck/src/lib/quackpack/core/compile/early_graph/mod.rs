@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Dependency DAG and dictionary with all parsed [`CompilerPackage`]s.
 
 use std::collections::{HashMap, HashSet};
@@ -78,6 +84,22 @@ impl DependencyGraph {
         self.graph
             .get(package)
             .unwrap_or_else(|| missing_depenendcy_in_graph(*package, self))
+    }
+
+    /// All packages reachable from package (including the package itself).
+    pub fn reachable_subgraph_nodes(&self, package: Identity) -> HashSet<Identity> {
+        let mut result = HashSet::new();
+        self.reachable_subgraph_nodes_inner(package, &mut result);
+        result
+    }
+
+    fn reachable_subgraph_nodes_inner(&self, package: Identity, visited: &mut HashSet<Identity>) {
+        if !visited.contains(&package) {
+            visited.insert(package);
+            for pkg_dep in self.dependencies_for_package(&package).dependencies() {
+                self.reachable_subgraph_nodes_inner(*pkg_dep, visited);
+            }
+        }
     }
 
     /// Get the iterator over all entries in this graph.

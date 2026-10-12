@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../function_lowering_context.hpp"
 #include "../program_lowering_context.hpp"
 #include "dvm_operation.hpp"
@@ -90,7 +96,8 @@ namespace compiler::backend_vm::internal {
 			const DVMPlace offset_tmp = ctx->pushTempLocal(u64_type, "ptr_parts_offset");
 			ctx->pushInstruction({ OpKind::ptrParts, id_tmp, offset_tmp, ptr.asArgument() });
 
-			const auto& ptr_to_u64_type = ctx->program_context.getOrInsertPointerType(u64_type);
+			const auto& ptr_to_u64_type
+				= ctx->program_context.getOrInsertPointerType(typeName(u64_type));
 
 			// We store the results in a two-element array.
 			const std::array<DVMPlace, 2> halves{ id_tmp, offset_tmp };

@@ -1,20 +1,27 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! An implementation of [`UnitTaskGenerator`], which invokes duckc only once, for a root package with
 //! `dvm` task.
 
 use tracing::instrument;
 
-use super::UnitTaskGenerator;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
-use crate::quackpack::core::compile::unit::graph::UnitGraph;
-use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
+use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
+use crate::quackpack::core::compile::unit::{Unit, UnitType};
 use crate::quackpack::core::compile::unit_runner::external_libs::{
     ExternalLibrariesFound, has_external_libraries,
 };
 use crate::quackpack::core::compile::unit_runner::outputs;
+use crate::quackpack::core::compile::unit_task_generator::UnitTaskGenerator;
 use crate::{QuackResult, qp_bail};
 
+/// Task generator for DVM.
 #[derive(Debug, Clone, Copy)]
 pub struct DvmTaskGenerator;
 
@@ -24,15 +31,17 @@ impl UnitTaskGenerator for DvmTaskGenerator {
     fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> QuackResult<()> {
         let root = graph.root_unit();
         assert_eq!(
-            root.artifacts_type(),
-            ArtifactsType::Dvm,
-            "dvm executor should only compile DVM packages; got {:?}",
-            root.artifacts_type()
+            root.unit_type(),
+            UnitType::Binary,
+            "dvm executor should only compile binary packages; got {:?}",
+            root.unit_type()
         );
-        if let Some(ExternalLibrariesFound { unit, links }) = has_external_libraries(root, graph) {
+        if let Some(ExternalLibrariesFound { unit, links }) =
+            has_external_libraries(graph.root_id(), graph)
+        {
             qp_bail!(
                 "package {} links against `{links}`, which is not supported on the DVM",
-                unit.descriptive_name()
+                unit.pkg_descriptive_name()
             )
         }
         Ok(())
@@ -42,11 +51,12 @@ impl UnitTaskGenerator for DvmTaskGenerator {
     fn create_tasks(
         &self,
         unit: &Unit,
+        unit_id_in_graph: GraphNodeId,
         graph: &UnitGraph,
         layout: &dyn ProfileLayout,
-        _bcx: &BuildContext<'_, '_>,
+        bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<Vec<multipackage_schema::Task>> {
-        let task = create_task(unit, graph, layout)?;
+        let task = create_task(unit, unit_id_in_graph, graph, layout, bcx)?;
         Ok(vec![task])
     }
 
@@ -59,25 +69,27 @@ impl UnitTaskGenerator for DvmTaskGenerator {
 #[instrument(skip_all)]
 fn create_task(
     unit: &Unit,
+    unit_id_in_graph: GraphNodeId,
     graph: &UnitGraph,
     layout: &dyn ProfileLayout,
+    bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<multipackage_schema::Task> {
     assert!(
         graph.is_root(unit),
         "`DvmExecutor` should create task only for the root `Unit`"
     );
-    let strategy = match unit.artifacts_type() {
+    let strategy = match unit.unit_type() {
         // QuackPack only emits DVM executables; `DvmLib` is produced solely by the
         // C++ std library path, so it is intentionally unreachable here.
-        ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::DvmExe {
-            output_file: outputs::unit_output(unit, graph, layout)?,
+        UnitType::Binary => multipackage_schema::PackageCompilationStrategy::DvmExe {
+            output_file: outputs::unit_output(unit, unit_id_in_graph, graph, layout, bcx)?,
         },
         task => unreachable!(
             "should create only DVM task for the root (attempted to create for `{task:?}`)"
         ),
     };
     Ok(multipackage_schema::Task {
-        package_id: unit.unique_name().into(),
+        package_id: unit.pkg_unique_name().into(),
         strategy,
     })
 }

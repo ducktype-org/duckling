@@ -22,7 +22,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type temp_child, pointer_Child;
     mov_pptr_pptr temp_child, actual_child;
-    virtual_call_pptr_method fake_child, cry; # fake_child is fakeing to be a child.
+    virtualCall_pptr_method fake_child, cry; # fake_child is fakeing to be a child.
 
     deinit;
     deinit;

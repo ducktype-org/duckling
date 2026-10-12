@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "access.hpp"               // IWYU pragma: export
@@ -25,6 +31,5 @@
 #include "round_expr.hpp"           // IWYU pragma: export
 #include "string_value.hpp"         // IWYU pragma: export
 #include "suffix_operator.hpp"      // IWYU pragma: export
-#include "template_specifier.hpp"   // IWYU pragma: export
 #include "ternary.hpp"              // IWYU pragma: export
 #include "unit_expr.hpp"            // IWYU pragma: export

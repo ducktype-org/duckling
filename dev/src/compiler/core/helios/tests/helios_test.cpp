@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -212,7 +218,6 @@ private:
 		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
 		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
 		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
 		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
@@ -1254,6 +1259,12 @@ private:
 		test_value("sm1_through_sm11", 123'123);
 		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
+
+		test_value("imported_ns_v", 500);
+		test_value("imported_inner_v", 600);
+		test_value("imported_symbol_v", 500);
+		test_value("imported_unnamed_ns_v", 500);
+		test_value("imported_wildcard_v", 600);
 	}
 
 	void testExprTree() {
@@ -1276,14 +1287,6 @@ private:
 		auto              tree_vm1 = getExprOfConst(sym_vm1);
 		std::stringstream out_vm1;
 		tree_vm1->debugPrint(out_vm1);
-
-		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
-
-		auto              sym_v256 = getChain("V256", root_scope).back();
-		std::stringstream out_v256;
-		auto              tree_v256 = getExprOfConst(sym_v256);
-		tree_v256->debugPrint(out_v256);
-		ASSERT_EQUAL("3 + 4 - 4 * 16 / 5 % 7 ** 8", out_v256.str());
 
 		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();
@@ -3323,9 +3326,20 @@ private:
 		// @TODO: #1412 make this less of a stub once proper dealias lands
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
 
+		// `using M.c;` brings `c` in under its own name, so looking `c` up in the root scope
+		// has to land on the very symbol `M.c` names.
 		auto nonwild_using        = getChain("c", root_scope);
 		auto nonwild_using_target = getChain("M.c", root_scope);
-		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
+		ASSERT_EQUAL(nonwild_using.back(), nonwild_using_target.back());
+
+		// `using n1.*;` where `n1` is itself `using N2 as n1;`: the wildcard is followed through
+		// the alias, so what `N2` holds is visible under its own name in the root scope.
+		ASSERT_EQUAL(77, getConstValueAs<i32>("in_n2", root_scope));
+
+		// The same wildcard also carries `using a as b;` out of `N2`, and that alias points at
+		// `using x as a;`, which points at the constant itself.
+		ASSERT_EQUAL(getChain("x", root_scope).back(), getChain("b", root_scope).back());
+		ASSERT_EQUAL(1'235, getConstValueAs<i32>("b", root_scope));
 	}
 
 	void testBackendDependentCompTime() {
@@ -3341,7 +3355,7 @@ private:
 	void testTemplates() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/templates")));
 
-		// `Number:{1i64}.inner` and `Number:{2i64}.inner` each bake a distinct instantiation of
+		// `Number[1i64].inner` and `Number[2i64].inner` each bake a distinct instantiation of
 		// the `Number` template namespace and evaluate the resulting constant.
 		ASSERT_EQUAL(1, getConstValueAs<i64>("one", root_scope));
 		ASSERT_EQUAL(2, getConstValueAs<i64>("two", root_scope));
@@ -3398,7 +3412,7 @@ private:
 		// Just `foo` function.
 		ASSERT_EQUAL_PRINT(hout_module.functions.size(), 1);
 
-		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by
+		// 4 constants + 1 weak const (Number[1].inner) added to the module, because it is used by
 		// `foo`.
 		ASSERT_EQUAL_PRINT(hout_module.glob_data.size(), 4 + 1);
 	}

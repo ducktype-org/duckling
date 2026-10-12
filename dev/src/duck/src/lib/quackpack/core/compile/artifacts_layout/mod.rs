@@ -1,8 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::{Path, PathBuf};
 
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit::Unit;
-use crate::quackpack::core::compile::unit::graph::UnitGraph;
+use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
 use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult};
 
@@ -39,7 +44,7 @@ pub trait ProfileLayout {
     /// Get the layout for a specific dependency.
     fn for_dependency(
         &self,
-        unit: &Unit,
+        unit_id_in_graph: GraphNodeId,
         graph: &UnitGraph,
     ) -> QuackResult<Box<dyn DependencyLayout>>;
 

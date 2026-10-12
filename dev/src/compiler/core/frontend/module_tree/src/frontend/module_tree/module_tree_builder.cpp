@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "module_tree_builder.hpp"
 
 #include "module_module_tree.hpp"
@@ -258,7 +264,6 @@ namespace compiler::frontend {
 		};
 
 		Ref<ModuleTree> module_ref = ModuleTree::addModuleToStorage(create_node());
-		ModuleID        mod_id(module_ref);
 
 		CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
 		CORE_ASSERT(
@@ -266,7 +271,6 @@ namespace compiler::frontend {
 		);
 		CORE_ASSERT(module_ref->getKind() == kind.value(), "Module kind mismatch");
 
-		module_ref->m_id         = mod_id;
 		module_ref->m_name       = m_name;
 		module_ref->m_package_id = m_package_id;
 
@@ -281,7 +285,7 @@ namespace compiler::frontend {
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value())
 			*module_ref->mainSourceFileSlot()
-				= SourceFile::create(m_main_source_file_path.value(), mod_id);
+				= SourceFile::create(m_main_source_file_path.value(), module_ref);
 
 		for (const auto& [name, submodule]: m_submodules)
 			ModuleTreeModifier::addSubmodule(module_ref, submodule);

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
 use crate::quackpack::core::PackageId;
@@ -7,6 +13,7 @@ use crate::quackpack::util::to_url::ToUrl;
 
 pub mod cycling;
 pub mod tree;
+pub mod unreachable_deps;
 
 pub fn mock_local_origin(root: &Path, name: &str) -> FullOrigin {
     FullOrigin::for_local(&root.join(name)).unwrap()

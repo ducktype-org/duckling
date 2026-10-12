@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../instructions.hpp"
@@ -30,15 +36,15 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	udiv,
 	umod,
 	neg,
-  	log_and,
-	log_or,
-	log_xor,
-	log_not,
+  	logAnd,
+	logOr,
+	logXor,
+	logNot,
 
-	bit_and,
-    bit_or,
-    bit_xor,
-    bit_not,
+	bitAnd,
+    bitOr,
+    bitXor,
+    bitNot,
     shl,
     shr,
 
@@ -83,7 +89,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	jmpIfNot,
 	call,
 	ret,
-	ret_tailcall,
+	retTailcall,
 	input,
 	output,
 	strOutput,
@@ -108,7 +114,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	ref,
 	upcast,
 	downcast,
-	virtual_call,
+	virtualCall,
 	variantGetInner,
 	variantSetInner,
 

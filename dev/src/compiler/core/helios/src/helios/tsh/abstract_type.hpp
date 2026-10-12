@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file abstract_type.hpp
  * @brief Interface of the AbstractType class.
@@ -164,6 +170,14 @@ namespace compiler::tsh {
 		 */
 		bool isTriviallyCopyable(query::Context& ctx) const;
 
+		/**
+		 * @brief Check if the type is a numeric type.
+		 * @return Whether the type is numeric.
+		 */
+		[[nodiscard]]
+		bool isNumeric() const {
+			return getKind() == tsh::Kind::Integral or getKind() == tsh::Kind::Float;
+		}
 
 		/**
 		 * @brief The default constructor is deleted.

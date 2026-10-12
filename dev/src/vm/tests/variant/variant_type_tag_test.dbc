@@ -512,8 +512,7 @@ type variant: CustomVariant8 {
     CustomInt251,
     CustomInt252,
     CustomInt253,
-    CustomInt254,
-    CustomInt255
+    CustomInt254
 }
 
 type variant: CustomVariant16 {
@@ -772,15 +771,15 @@ type variant: CustomVariant16 {
     CustomInt252,
     CustomInt253,
     CustomInt254,
-    CustomInt255,
-    CustomInt256
+    CustomInt255
 }
 
 type pointer: ptr_CustomInt0 CustomInt0
 type pointer: ptr_CustomInt1 CustomInt1
-type pointer: ptr_CustomInt256 CustomInt256
+type pointer: ptr_CustomInt254 CustomInt254
+type pointer: ptr_CustomInt255 CustomInt255
 
-function getCustomVariant8TypeTag0 { i64 } -> { CustomVariant8 } {
+function getCustomVariant8Alternative0 { i64 } -> { CustomVariant8 } {
     variantSetInner_pvnt_type ret0, CustomInt0;
 
     init_pany_type ptr, ptr_CustomInt0;
@@ -792,7 +791,7 @@ function getCustomVariant8TypeTag0 { i64 } -> { CustomVariant8 } {
     ret;
 }
 
-function getCustomVariant8TypeTag1 { i64 } -> { CustomVariant8 } {
+function getCustomVariant8Alternative1 { i64 } -> { CustomVariant8 } {
     variantSetInner_pvnt_type ret0, CustomInt1;
 
     init_pany_type ptr, ptr_CustomInt1;
@@ -803,7 +802,19 @@ function getCustomVariant8TypeTag1 { i64 } -> { CustomVariant8 } {
     ret;
 }
 
-function getCustomVariant16TypeTag0 { i64 } -> { CustomVariant16 } {
+function getCustomVariant8Alternative254 { i64 } -> { CustomVariant8 } {
+    variantSetInner_pvnt_type ret0, CustomInt254;
+
+    init_pany_type ptr, ptr_CustomInt254;
+    variantGetInner_pptr_pvnt_type ptr, ret0, CustomInt254;
+
+    cast_p64_type arg0, CustomInt254;
+    store_pptr_pany ptr, arg0;
+
+    ret;
+}
+
+function getCustomVariant16Alternative0 { i64 } -> { CustomVariant16 } {
     variantSetInner_pvnt_type ret0, CustomInt0;
 
     init_pany_type ptr, ptr_CustomInt0;
@@ -816,7 +827,7 @@ function getCustomVariant16TypeTag0 { i64 } -> { CustomVariant16 } {
 }
 
 
-function getCustomVariant16TypeTag1 { i64 } -> { CustomVariant16 } {
+function getCustomVariant16Alternative1 { i64 } -> { CustomVariant16 } {
     variantSetInner_pvnt_type ret0, CustomInt1;
 
     init_pany_type ptr, ptr_CustomInt1;
@@ -828,13 +839,13 @@ function getCustomVariant16TypeTag1 { i64 } -> { CustomVariant16 } {
     ret;
 }
 
-function getCustomVariant16TypeTag256 { i64 } -> { CustomVariant16 } {
-    variantSetInner_pvnt_type ret0, CustomInt256;
+function getCustomVariant16Alternative255 { i64 } -> { CustomVariant16 } {
+    variantSetInner_pvnt_type ret0, CustomInt255;
 
-    init_pany_type ptr, ptr_CustomInt256;
-    variantGetInner_pptr_pvnt_type ptr, ret0, CustomInt256;
+    init_pany_type ptr, ptr_CustomInt255;
+    variantGetInner_pptr_pvnt_type ptr, ret0, CustomInt255;
 
-    cast_p64_type arg0, CustomInt256;
+    cast_p64_type arg0, CustomInt255;
     store_pptr_pany ptr, arg0;
 
     ret;

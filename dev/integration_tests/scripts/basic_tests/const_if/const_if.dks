@@ -15,5 +15,5 @@ if const (1 == 2) {
 	builtin_output_i64(this_function_does_not_exist());
 }
 
-builtin_output_i64(pick:{char}());
-builtin_output_i64(pick:{str}());
+builtin_output_i64(pick[char]());
+builtin_output_i64(pick[str]());

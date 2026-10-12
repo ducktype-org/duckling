@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -280,8 +286,8 @@ namespace compiler::repl {
 				"/symbols should list regular variables"
 			);
 			assertTrue(
-				output.find("[history #2] alias symbol_alias") != std::string::npos,
-				"/symbols should list aliases"
+				output.find("[history #2] using symbol_alias") != std::string::npos,
+				"/symbols should list `using ... as` declarations"
 			);
 			assertTrue(
 				output.find("[history #3] const symbol_const : const i64") != std::string::npos,

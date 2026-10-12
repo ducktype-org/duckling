@@ -20,6 +20,8 @@ FetchContent_Declare(lsp-framework
 )
 FetchContent_MakeAvailable(lsp-framework)
 
+target_compile_definitions(lsp PRIVATE LSP_MESSAGE_DEBUG_LOG=0)
+
 # Suppress warnings in lsp-framework sources that conflict with our strict -Werror flags.
 foreach(target lspgen lsp)
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

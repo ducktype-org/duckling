@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "module_tree_modifier.hpp"
 
 #include "module_flags/module_flags.hpp"
@@ -29,7 +35,8 @@ namespace compiler::frontend {
 		CORE_ASSERT(
 			!main_source_file_slot->has_value(), "Main source file is already set, remove it first"
 		);
-		*main_source_file_slot = SourceFile::create(file, ModuleID(module));
+		*main_source_file_slot = SourceFile::create(file, module);
+		module->invalidateHash();
 		module->updateModuleHashFromRootToThis();
 	}
 
@@ -131,6 +138,7 @@ namespace compiler::frontend {
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(main_source_file_slot->value());
 		*main_source_file_slot = {};
+		module->invalidateHash();
 		module->updateModuleHashFromRootToThis();
 	}
 
@@ -256,7 +264,7 @@ namespace compiler::frontend {
 					"Submodule with Name ",
 					module->getName(),
 					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash(),
+					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
 					" does not exist in parent module ",
 					parent.value()->getName().strView()
 				)
@@ -308,7 +316,7 @@ namespace compiler::frontend {
 					"Submodule with Name ",
 					module->getName(),
 					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash(),
+					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
 					" does not exist in parent module ",
 					parent.value()->getName().strView()
 				)

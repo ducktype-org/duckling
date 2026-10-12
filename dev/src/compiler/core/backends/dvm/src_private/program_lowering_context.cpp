@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "program_lowering_context.hpp"
 
 #include "ctv_lowering.hpp"
@@ -29,7 +35,7 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 	bool            build_debug_info,
 	bool            is_comp_time_lowering
 ):
-	  query_ctx_for_errors(&query_ctx),
+	  query_ctx(&query_ctx),
 	  is_comp_time_lowering(is_comp_time_lowering),
 	  module_id(module_id),
 	  debug_info_builder(
@@ -46,17 +52,30 @@ CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfDa
 	return &it->second;
 }
 
-base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepTslType(
-	CRef<tsl::TypeLayout> layout
-) {
+base::StrID ProgramLoweringContext::keepTslType(CRef<tsl::TypeLayout> layout) {
 	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout))
-		return CRef(&type_storage.dvm_types.at(**maybe_name));
+		return **maybe_name;
+	return vm::code::typeName(*lowerAndKeepTslType(layout));
+}
 
-	auto maybe_dvm_type = lowerTslTypeInternal(layout);
-	if (!maybe_dvm_type.has_value()) return {};
+CRef<vm::code::TypeOfData> ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+) {
+	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout)) {
+		auto maybe_type = type_storage.dvm_types.atMaybe(**maybe_name);
+		CORE_ASSERT(
+			maybe_type.has_value(),
+			"Type '",
+			**maybe_name,
+			"' is declared, but its lowering has not finished yet. Use keepTslType instead."
+		);
+		return *maybe_type;
+	}
 
-	vm::code::TypeOfData dvm_type  = *maybe_dvm_type;
-	base::StrID          type_name = vm::code::typeName(dvm_type);
+	const base::StrID type_name = getTslNameInternal(layout);
+	type_storage.tsl_type_to_dvm_type_name.put(layout, type_name);
+
+	vm::code::TypeOfData dvm_type = lowerTslTypeInternal(layout);
+	CORE_ASSERT(vm::code::typeName(dvm_type) == type_name, "Declared and lowered type names differ");
 
 	IF_BUILD_TYPE_DEV({
 		auto maybe_type = type_storage.dvm_types.atMaybe(type_name);
@@ -65,9 +84,8 @@ base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepT
 		);
 	});
 
-	type_storage.tsl_type_to_dvm_type_name.put(layout, type_name);
-	type_storage.dvm_types.put(type_name, std::move(dvm_type));
-	lowered_type_order.push_back(type_name);
+	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
+	if (inserted) lowered_type_order.push_back(type_name);
 
 	CORE_DEV_LOG(REPL, "[DEBUG] lowered_type_order size=", lowered_type_order.size(), "\n");
 	for (const auto& lowered_type: lowered_type_order)
@@ -78,7 +96,14 @@ base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepT
 		builder.addType(type_name.str(), layout->getSourceType().toString());
 	}
 
-	return CRef(&type_storage.dvm_types.at(type_name));
+	return { &it->second };
+}
+
+base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepReturnTslType(
+	CRef<tsl::TypeLayout> layout
+) {
+	if (layout->is<tsl::EmptyTypeLayout>()) return {};
+	return lowerAndKeepTslType(layout);
 }
 
 compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLoweredEntitiesSnapshot(
@@ -91,9 +116,8 @@ compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLow
 }
 
 const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
-	const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
+	const base::StrID pointee_name, tsl::PointerTypeLayout::PointerKind kind
 ) {
-	auto pointee_name = typeName(pointee_type);
 	switch (kind) {
 	case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
 		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
@@ -116,9 +140,9 @@ const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
-	const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
+	const base::StrID pointee_name, tsl::PointerTypeLayout::PointerKind kind
 ) {
-	auto lowered_pointer = lowerPointerType(pointee_type, kind);
+	auto lowered_pointer = lowerPointerType(pointee_name, kind);
 	auto name            = typeName(lowered_pointer);
 
 	auto result = type_storage.dvm_types.put(name, std::move(lowered_pointer));
@@ -127,7 +151,7 @@ const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
-	static const base::StrID void_cpointer_name{ "cptr" };
+	const base::StrID& void_cpointer_name = base::StrID("cptr");
 
 	if (auto maybe_type = type_storage.dvm_types.atMaybe(void_cpointer_name)) return **maybe_type;
 
@@ -136,19 +160,11 @@ const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
 	return *keepVMType(vm::code::getBuiltinTypeByName(void_cpointer_name).value());
 }
 
-const vm::code::TypeOfData& ProgramLoweringContext::getUnitType() {
-	static const base::StrID unit_name{ "unit" };
-
-	if (auto maybe_type = type_storage.dvm_types.atMaybe(unit_name)) return **maybe_type;
-
-	return *keepVMType(vm::code::OpaqueType(unit_name, Bytes{ 1 }));
-}
-
 const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
 	if (auto maybe_global = global_name_to_dvm.atMaybe(lir_global->mangled_name))
 		return **maybe_global;
 	else {
-		const vm::code::TypeOfData& global_type = **lowerAndKeepTslType(lir_global->layout);
+		const vm::code::TypeOfData& global_type = *lowerAndKeepTslType(lir_global->layout);
 
 		global_name_to_dvm.put(
 			lir_global->mangled_name,
@@ -320,7 +336,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.global.mangled_name))
 		return **maybe_global;
 
-	auto& global_type = **lowerAndKeepTslType(lir_global.global.layout);
+	auto& global_type = *lowerAndKeepTslType(lir_global.global.layout);
 
 	using vm::code::Identifier;
 
@@ -415,37 +431,88 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 	extern_c_functions.put(extern_func.name.str, extern_func);
 }
 
-base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInternal(
-	CRef<tsl::TypeLayout> layout
-) {
+base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
-		variant_case_novalue(tsl::EmptyTypeLayout) { return {}; }
+		variant_case_novalue(tsl::EmptyTypeLayout) { return base::StrID("unit"); }
+		variant_case_novalue(tsl::IntegralTypeLayout) {
+			Bits bits = layout->getSize();
+			if (bits == Bits{ 1 }) bits = Bits{ 8 };
+			return base::StrID(base::strConcat("i", bits.asInt()));
+		}
+		variant_case_novalue(tsl::FloatTypeLayout) {
+			return base::StrID(base::strConcat("f", layout->getSize().asInt()));
+		}
+		variant_case_novalue(tsl::MetaTypeLayout) { return base::StrID("opaque_ptr"); }
+		variant_case(tsl::PointerTypeLayout, pointer_layout) {
+			using enum tsl::PointerTypeLayout::PointerKind;
+			const base::StrID pointee_name
+				= getTslNameInternal(pointer_layout.getPointee(**query_ctx));
+			switch (pointer_layout.getPointerKind()) {
+			case SinglePointer:
+				return base::StrID(base::strConcat("ptr_", pointee_name));
+			case ManyPointer:
+				return base::StrID(base::strConcat("ptr_dyntable_", pointee_name));
+			case CPointer:
+				return base::StrID(base::strConcat("cptr_", pointee_name));
+			}
+			CORE_UNREACHABLE();
+		}
+		variant_case(tsl::ClassTypeLayout, class_layout) { return class_layout.getMangledName(); }
+		variant_case(tsl::VariantTypeLayout, variant_layout) {
+			std::string variant_type_name = "vnt";
+			for (usize i{ 0 }; i < variant_layout.getNumAlternatives(); i++) {
+				const base::StrID alternative_name
+					= getTslNameInternal(variant_layout.getLayoutOfIndex(i));
+				variant_type_name = base::strConcat(variant_type_name, "_", alternative_name);
+			}
+			return base::StrID(variant_type_name);
+		}
+		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
+			const base::StrID element_name = getTslNameInternal(array_layout.getElementLayout());
+			return base::StrID(
+				base::strConcat("arr_", element_name, "_", array_layout.getElementCount())
+			);
+		}
+		variant_default {
+			CORE_ASSERT(query_ctx.has_value(), "Query context must be set for error reporting");
+			query_ctx.value()->logInt(makeBox<dia::NotYetImplementedCodeError>(
+				base::strConcat(
+					"During TypeLayout lowering in DVM code generation - type not handled "
+					"yet: ",
+					layout->toStringDefinition(*query_ctx.value())
+				),
+				""
+			));
+			query::throwFailed();
+		}
+	}
+	CORE_UNREACHABLE();
+}
+
+vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
+	const base::StrID name = getTslNameInternal(layout);
+
+	variant_match(layout->getVariant()) {
+		variant_case_novalue(tsl::EmptyTypeLayout) {
+			return vm::code::OpaqueType(name, Bytes{ 1 });
+		}
 		variant_case_novalue(tsl::IntegralTypeLayout) {
 			Bits bits = layout->getSize();
 			if (bits == Bits{ 1 }) bits = Bits{ 8 };  // Boolean edge-case.
-			Bytes       bytes = base::bits2bytes(bits);
-			std::string name  = "i" + base::toString(bits.asInt());
-			return vm::code::PrimitiveType(base::StrID(name), bytes);
+			return vm::code::PrimitiveType(name, base::bits2bytes(bits));
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
-			Bits        bits  = layout->getSize();
-			Bytes       bytes = base::bits2bytes(bits);
-			std::string name  = "f" + base::toString(bits.asInt());
-			return vm::code::PrimitiveType(base::StrID(name), bytes);
+			return vm::code::PrimitiveType(name, base::bits2bytes(layout->getSize()));
 		}
-		variant_case_novalue(tsl::MetaTypeLayout) {
-			return vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 });
-		}
+		variant_case_novalue(tsl::MetaTypeLayout) { return vm::code::OpaqueType(name, Bytes{ 8 }); }
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			if (pointer_layout.getPointerKind() == tsl::PointerTypeLayout::PointerKind::CPointer
 			    and not pointer_layout.hasPointee())
 				return getVoidCPointerType();
 
-			// A pointer to an information-less type (e.g. the payload of a `()` variant
-			// alternative) still needs a named pointee type.
-			const vm::code::TypeOfData& pointee_type
-				= *lowerAndKeepTslType(pointer_layout.getPointee()).copyValueOr(&getUnitType());
-			return lowerPointerType(pointee_type, pointer_layout.getPointerKind());
+			return lowerPointerType(
+				keepTslType(pointer_layout.getPointee(**query_ctx)), pointer_layout.getPointerKind()
+			);
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
 			std::vector<vm::code::Field> fields;
@@ -463,12 +530,11 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			// @TODO: #2100 Change that to indexes.
 			for (usize i{ 0 }; i < num_fields; i++) {
 				const auto field_layout = class_layout.getFieldLayoutOfLayoutIndex(i);
-				const vm::code::TypeOfData& vm_field_type = **lowerAndKeepTslType(field_layout);
-				fields.emplace_back(base::StrID(base::strConcat("_", i)), typeName(vm_field_type));
+				fields.emplace_back(base::StrID(base::strConcat("_", i)), keepTslType(field_layout));
 			}
 
 			return vm::code::DataType{
-				base::StrID(class_layout.getMangledName()),
+				name,
 				std::move(fields),
 			};
 		}
@@ -477,48 +543,22 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 
 			std::vector<base::StrID> alternatives;
 			alternatives.reserve(num_alternatives);
-			std::string variant_type_name = "vnt";
-			for (usize i{ 0 }; i < num_alternatives; i++) {
-				const auto                  alternative_layout = variant_layout.getLayoutOfIndex(i);
-				const vm::code::TypeOfData& vm_alternative_type
-					= *lowerAndKeepTslType(alternative_layout).copyValueOr(&getUnitType());
-				alternatives.emplace_back(typeName(vm_alternative_type));
-				variant_type_name
-					= base::strConcat(variant_type_name, "_", typeName(vm_alternative_type));
-			}
+			for (usize i{ 0 }; i < num_alternatives; i++)
+				alternatives.emplace_back(keepTslType(variant_layout.getLayoutOfIndex(i)));
 
 			return vm::code::VariantType{
-				base::StrID(variant_type_name),
+				name,
 				std::move(alternatives),
 			};
 		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
-			const auto                  element_layout  = array_layout.getElementLayout();
-			const vm::code::TypeOfData& vm_element_type = **lowerAndKeepTslType(element_layout);
-			const usize                 num_elements    = array_layout.getElementCount();
-			auto                        array_type_name
-				= base::strConcat("arr_", typeName(vm_element_type), "_", num_elements);
-
 			return vm::code::FixedSizeTableType{
-				base::StrID(array_type_name),
-				typeName(vm_element_type),
-				num_elements,
+				name,
+				keepTslType(array_layout.getElementLayout()),
+				array_layout.getElementCount(),
 			};
 		}
-		variant_default {
-			CORE_ASSERT(
-				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
-			);
-			query_ctx_for_errors.value()->logInt(makeBox<dia::NotYetImplementedCodeError>(
-				base::strConcat(
-					"During TypeLayout lowering in DVM code generation - type not handled "
-					"yet: ",
-					layout->toStringDefinition(*query_ctx_for_errors.value())
-				),
-				""
-			));
-			query::throwFailed();
-		}
+		variant_default { CORE_UNREACHABLE(); }
 	}
 	CORE_UNREACHABLE();
 }

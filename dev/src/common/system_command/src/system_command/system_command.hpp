@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file system_command.hpp
  * @brief Contains SystemCommand class.
@@ -43,6 +49,18 @@ namespace system_command {
 		 * @param arg
 		 */
 		SystemCommand& addArg(std::string arg);
+
+		/**
+		 * @brief Adds multiple arguments to the command.
+		 * @note The strings are passed as-is, the caller has to wrap them in the parenthesis
+		 * if they contains spaces.
+		 *
+		 * @param args
+		 */
+		SystemCommand& addArgs(const std::vector<std::string>& args) {
+			for (const auto& arg: args) this->addArg(arg);
+			return *this;
+		}
 
 		/**
 		 * @brief Adds an environment variable to the command's environment.

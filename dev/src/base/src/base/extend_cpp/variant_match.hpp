@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file variant.hpp
  *
@@ -154,9 +160,10 @@ namespace base {
  * @brief Use instead of `std::visit` with multiple choices.
  */
 #define VARIANT_VISIT(value, /*cases*/...) \
-	{ std::visit(::base::internal::VisitOverloaded{ __VA_ARGS__ }, (value)); }
+	std::visit(::base::internal::VisitOverloaded{ __VA_ARGS__ }, (value));
 
-#define VISIT_CASE(type, name, code) [&](type name) { code; }
+#define VISIT_CASE_VAL(type, name, ...) [&](type name) { return __VA_ARGS__; }
+#define VISIT_CASE(type, name, ...)     [&](type name) { __VA_ARGS__; }
 
 
 /**

@@ -14,12 +14,13 @@ add_library(HELIOS STATIC
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_in_type_interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
+	src_private/helios_private/lookup/lookup.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/call_processing.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/square_call_processing.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/errors.cpp
 	src_private/helios_private/hout_creation/expressions/chain_expr.cpp
 	src_private/helios_private/hout_creation/expressions/query_hout_of_expr.cpp
-	src_private/helios_private/hout_creation/expressions/builtin_operators.cpp
+	src_private/helios_private/hout_creation/expressions/operators.cpp
 	src_private/helios_private/hout_creation/expressions/numeric_literals.cpp
 	src_private/helios_private/hout_creation/expressions/coercions/coercions.cpp
 	src_private/helios_private/hout_creation/expressions/coercions/errors.cpp

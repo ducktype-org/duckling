@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "safe_vmvalueref.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -115,32 +121,35 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVMValueRef::readData() const 
 		}
 
 		variant_case(vm::kind::Variant, variant_kind) {
-			u64  alternative_index  = 0;
-			auto type_tag_data_view = memory->getPointerData(
-				pointed_data, static_cast<usize>(variant_kind.type_tag_size)
-			);
+			u64  alternative_type_tag = 0;
+			auto type_tag_data_view   = memory->getPointerData(
+                pointed_data, static_cast<usize>(variant_kind.type_tag_size)
+            );
 			switch (static_cast<usize>(variant_kind.type_tag_size)) {
 			case 1:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u8>(type_tag_data_view.getBegin(), 0));
 				break;
 			case 2:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u16>(type_tag_data_view.getBegin(), 0));
 				break;
 			case 4:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u32>(type_tag_data_view.getBegin(), 0));
 				break;
 			case 8:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u64>(type_tag_data_view.getBegin(), 0));
 				break;
 			default:
 				throw "Invalid variant type tag size!";
 			}
 
-			TypeCRef inner_type = variant_kind.alternatives.at(alternative_index);
+			if (alternative_type_tag == 0) return std::nullopt;
+
+			const u64 alternative_index = alternative_type_tag - 1;
+			TypeCRef  inner_type        = variant_kind.alternatives.at(alternative_index);
 
 			auto view_block_ref = memory->getNestedViewBlock(
 				pointed_data.getBlock(),
@@ -151,7 +160,7 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVMValueRef::readData() const 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {
 					return vm::interpreted_data_variant::Variant{
-						.type_tag = alternative_index,
+						.alternative_index = alternative_index,
 						.referenced
 						= makeShared(*my_process.get(), inner_type, Pointer(view_block, 0)),
 					};

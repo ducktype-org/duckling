@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <lang_definitions/key_spec_op.hpp>
 #include <lang_definitions/operator_precedence.hpp>
 #include <tester/tester.hpp>
@@ -92,7 +98,7 @@ private:
 	void exportsForLSPTest() {
 		ASSERT_EQUAL_PRINT(lang_def::getKeywords().size(), 91);
 		ASSERT_EQUAL_PRINT(lang_def::getSpecials().size(), 7);
-		ASSERT_EQUAL_PRINT(lang_def::getOperators().size(), 32);
+		ASSERT_EQUAL_PRINT(lang_def::getOperators().size(), 43);
 		ASSERT_EQUAL_PRINT(lang_def::getNumericTypeSpecifiers().size(), 15);
 	}
 };

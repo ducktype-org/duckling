@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file types.hpp
  * @brief Interfaces of the simpler kinds of types.
@@ -571,7 +577,7 @@ namespace compiler::tsh {
 	 *
 	 * This is a compile-time concept used primarily to implement generics.
 	 * A type template cannot hold values or exist in the final program's memory on its own,
-	 * baking it with template arguments (e.g., `List:{i64}`) results in a concrete type.
+	 * baking it with template arguments (e.g., `List[i64]`) results in a concrete type.
 	 *
 	 * @TODO: #717 This may come in handy when implementing generics/templates. This implementation
 	 * may change then.

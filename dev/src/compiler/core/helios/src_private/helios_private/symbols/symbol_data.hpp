@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "generated_symbol_data.hpp"
@@ -46,21 +52,6 @@ namespace compiler::helios {
 		 * Symbol kind, determines what kind of symbol it is.
 		 */
 		SymbolKind kind;
-
-		/**
-		 * Whether the symbol is a wildcard symbol.
-		 * When lookup encounter a wildcard symbol it
-		 * looks-up into that symbol instead of considering the symbol itself.
-		 * e.g.: `using a.*`
-		 */
-		bool is_wildcard = false;
-
-		/**
-		 * Whether the symbol is an alias.
-		 * Aliases are symbols that are not "real" symbols, but are just a reference to another
-		 * symbol. e.g.: `using a = b;`
-		 */
-		bool is_alias = false;
 
 		/** Whether the symbol is a dependent symbol.
 		 * Dependent symbols are symbols that can't be used in actual execution without some

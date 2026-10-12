@@ -60,6 +60,9 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_debugger_class_test debugger/debugger_class_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
+        duck_add_test_custom(vm ${test_set}_debugger_cli_common debugger/debugger_cli_common.cpp
+                USES ${libvm} Tester ${vmtester})
+
         duck_add_test_custom(vm ${test_set}_debugger_infinite_test debugger/debugger_infinite_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
@@ -120,6 +123,8 @@ duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_
         USES LibVM Tester)
 duck_add_test_custom(vm persistent_structures_test utils/persistent_structures_test.cpp
         USES LibVM Tester)
+duck_add_test_custom(vm vm_instruction_naming_test utils/instruction_naming_test.cpp
+        USES LibVM_sc Tester)
 duck_add_test_custom(vm vm_memory_test memory/memory_test.cpp
         USES LibVM_sc Tester VmTester_sc)
 

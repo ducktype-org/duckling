@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "dia_interactive_elements.hpp"
 
 #include <frontend/pst_parser/access.hpp>
@@ -78,7 +84,7 @@ namespace compiler::helios {
 				if (current.children.size() != 1) return;
 
 				auto nested = current.children[0];
-				if (kind(nested.node) == SymbolKind::Alias) {
+				if (kind(nested.node) == SymbolKind::Using) {
 					// `using a.b as c;`: the underlying chain is the `a.b` part.
 					auto alias_stmt = getSymRef(nested.node)
 				                          ->maybePstElement()

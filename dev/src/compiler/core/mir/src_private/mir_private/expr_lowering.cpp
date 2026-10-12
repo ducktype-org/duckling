@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "expr_lowering.hpp"
 
 #include <helios/hout/elements/expr.hpp>
@@ -1510,9 +1516,6 @@ namespace compiler::mir {
 				return { Operation::IntegerDiv };
 			case IntegerMod:
 				return { Operation::IntegerMod };
-			case IntegerPow:
-				// @TODO: #1610 Implement exponentiation as a function call.
-				throw base::NotYetImplemented("Exponentiation on variables");
 
 			case IntegerBitAnd:
 				return { Operation::IntegerBitAnd };
@@ -1547,9 +1550,6 @@ namespace compiler::mir {
 				return { Operation::FloatMul };
 			case FloatDiv:
 				return { Operation::FloatDiv };
-			case FloatPow:
-				// @TODO: #1610 Implement exponentiation as a function call.
-				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Floating point comparisons ///
 			case FloatLt:

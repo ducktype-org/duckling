@@ -20,7 +20,7 @@ label continue;
     deinit;               # sub_res1
 
     add_p64_imm             arg0, -2;
-    ret_tailcall_func       fibonacci;
+    retTailcall_func       fibonacci;
 
     init_pany_type          trol, i64;
     mov_p64_imm             trol, 9;

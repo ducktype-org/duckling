@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "lir_structure.hpp"
 
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -68,7 +74,11 @@ namespace compiler::lir {
 		};
 	}
 
-	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
+	LIRPlace::LIRPlace(BaseVariant base): base(base), layout(getBaseLayout()) {}
+
+	LIRPlace::LIRPlace(
+		query::Context& ctx, BaseVariant base, std::vector<Projection> projection_chain
+	):
 		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
 			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
@@ -90,7 +100,7 @@ namespace compiler::lir {
 								  current_layout = static_array_layout.getElementLayout();
 							  }
 							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
-								  current_layout = many_pointer_layout.getPointee();
+								  current_layout = many_pointer_layout.getPointee(ctx);
 							  }
 							  variant_default {
 								  CORE_PANIC(
@@ -103,7 +113,7 @@ namespace compiler::lir {
 					  variant_case_novalue(DerefProjection) {
 						  const auto& pointer_layout
 							  = std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-						  current_layout = pointer_layout.getPointee();
+						  current_layout = pointer_layout.getPointee(ctx);
 					  }
 				  }
 			  }

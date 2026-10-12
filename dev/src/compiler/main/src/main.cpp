@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file main.cpp
  * @brief This file implements logic and main procedure that can be used to
@@ -36,6 +42,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <clah/value_parser.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
@@ -105,6 +112,19 @@ namespace {
 		if (silent) new_args.emplace_back("--silent");
 
 		g_argv = std::move(new_args);
+	}
+
+	/**
+	 * @brief Infer a package name from the path given to `compile_package`.
+	 *
+	 * Uses the same rule the module tree uses to name the root module: the directory name for a
+	 * package directory, the file stem for a single root module file.
+	 *
+	 * @param path Package directory or root module file.
+	 * @return The inferred name; empty when the path has no usable name (e.g. the filesystem root).
+	 */
+	std::string inferPackageName(const fs::File& path) {
+		return path.isDirectory() ? path.name() : path.stem();
 	}
 }
 
@@ -273,7 +293,9 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Path to the linker to use when creating executables.")
 			.optional()
 			.build(),
-		clah::ParamBuilder::ofValue(clah::StringParser::make("options"))
+		clah::ParamBuilder::ofValue(
+			clah::StringListParser::make("options", clah::StringParser::make())
+		)
 			.addLongName("additional-link-options")
 			.addShortDesc("Additional options to pass to the linker.")
 			.optional()
@@ -305,7 +327,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	linking_options.native_linker_path = parsing_result.getValue<std::string>("linker");
 
-	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
+	if (auto lib_path = parsing_result.getValue<std::vector<std::string>>("additional-link-options"))
 		linking_options.native_additional_link_options = lib_path.value();
 
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
@@ -762,13 +784,8 @@ clah::Clah getClahForMain() {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_llvm.exe");
 						auto linking_options = getLinkingOptionsFromClah(options);
-						linking_options.native_additional_link_options = base::strConcat(
-							linking_options.native_additional_link_options.copyValueOr(""),
-							libraries_to_link | std::views::transform([](fs::FilePath& path) {
-								return path.native();
-							}) | base::rangesIntersperse(std::string(", "))
-								| std::views::join | std::ranges::to<std::string>()
-						);
+						for (const auto& lib: libraries_to_link)
+							linking_options.native_additional_link_options.push_back(lib.native());
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetLLVMExecutable{
@@ -801,8 +818,11 @@ clah::Clah getClahForMain() {
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
-	                     .addShortDesc("Name of the package the module belongs to.")
-	                     .required()
+	                     .addShortDesc(
+							 "Name of the package. Defaults to the name of the package directory "
+							 "or the root module file."
+						 )
+	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
@@ -871,8 +891,17 @@ clah::Clah getClahForMain() {
 					}
 
 					auto path_to_compile = options.getPositional<fs::File>(0);
-					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
-					CORE_ASSERT(package_name != "", "Package name must be specified");
+					auto package_name    = options.getValue<std::string>("name").copyValueOr(
+                        inferPackageName(path_to_compile)
+                    );
+					if (package_name.empty()) {
+						CORE_USER_LOG(
+							"Error: Cannot infer the package name from '",
+							path_to_compile.getFilePath().string(),
+							"'. Pass it with -n/--name.\n"
+						);
+						return 1;
+					}
 
 					auto worker_count   = options.getValue<i64>("workers").copyValueOr(1);
 					auto stdlib_options = getStdLibOptionsFromClah(options);

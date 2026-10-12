@@ -160,14 +160,21 @@
             "package": "app1",
             "strategy": "native",
             "output_file": "app1.exe",
-            "linking_options": "build/lib_a.a build/lib_c.a build/lib_b.a"
+            "linking_options": [
+                "build/lib_a.a",
+                "build/lib_c.a",
+                "build/lib_b.a"
+            ]
         },
         {
             "package": "app2",
             "strategy": "native",
             "output_file": "app2.exe",
             "linking_options": {
-                "additional_link_options": "build/lib_a.a build_c/c_helper.o",
+                "additional_link_options": [
+                    "build/lib_a.a",
+                    "build_c/c_helper.o"
+                ],
                 "link_c_standard_library": true
             }
         },
@@ -176,7 +183,11 @@
             "strategy": "native",
             "output_file": "app3.exe",
             "linking_options": {
-                "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+                "additional_link_options": [
+                    "build/lib_a.a",
+                    "build/lib_b.a",
+                    "build/lib_c.a"
+                ],
                 "link_c_standard_library": true
             }
         },
@@ -185,7 +196,11 @@
             "strategy": "native",
             "output_file": "app3_alias.exe",
             "linking_options": {
-                "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+                "additional_link_options": [
+                    "build/lib_a.a",
+                    "build/lib_b.a",
+                    "build/lib_c.a"
+                ],
                 "link_c_standard_library": true
             }
         },
@@ -194,7 +209,11 @@
             "strategy": "native",
             "output_file": "app4.exe",
             "linking_options": {
-                "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+                "additional_link_options": [
+                    "build/lib_a.a",
+                    "build/lib_b.a",
+                    "build/lib_c.a"
+                ],
                 "link_c_standard_library": true
             }
         }

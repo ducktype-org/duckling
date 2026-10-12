@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "type_layout.hpp"
 
 #include "c_abi_converter.hpp"
@@ -389,15 +395,24 @@ namespace compiler::tsl {
 
 	struct VariantTypeLayoutConstructionHelper {
 		tsh::VariantAbstractType variant_type;
+		Bits                     tag_size;
 		Bits                     max_component_size;
 		std::vector<Bytes>       offsets;
+
+		static Bits requiredTagSize(usize number_of_alternatives) {
+			// Zero denotes no active alternative, so the largest tag equals the count.
+			const usize needed_bits  = std::bit_width(number_of_alternatives);
+			const usize needed_bytes = (needed_bits + 7) / 8;
+			return Bits(8 * std::bit_ceil(needed_bytes));
+		}
 
 		VariantTypeLayoutConstructionHelper(
 			const tsh::VariantAbstractType variant_type, query::Context& ctx
 		):
 			  variant_type(variant_type),
+			  tag_size(requiredTagSize(variant_type.getUnderlyingTypes().size())),
 			  max_component_size(maxTypeSizeInVector(variant_type.getUnderlyingTypes(), ctx)),
-			  offsets(alignOffsetsForSizeVector({ Bits(8), max_component_size })) {}
+			  offsets(alignOffsetsForSizeVector({ tag_size, max_component_size })) {}
 	};
 
 	VariantTypeLayout::VariantTypeLayout(
@@ -413,9 +428,9 @@ namespace compiler::tsl {
 			  tsh::SymbolType<>::withDefaults(helper.variant_type),
 			  ctx
 		  ),
-		  tag_offset{ 0 },                   // 0 bytes
-		  tag_size{ 8 },                     // 8 bits
-		  data_offset{ helper.offsets[1] },  // up to 8 bytes
+		  tag_offset{ 0 },  // 0 bytes
+		  tag_size{ helper.tag_size },
+		  data_offset{ helper.offsets[1] },
 		  data_size{ helper.max_component_size } {
 		u32 i = 0;
 		for (auto type: helper.variant_type.getUnderlyingTypes()) {
@@ -627,21 +642,21 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::CPointer) {
 		auto& pointee_cabi_type
 			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
@@ -655,13 +670,18 @@ namespace compiler::tsl {
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee(&ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()),
+		  pointee_type(tsh::SymbolType<>::withDefaults(symbol_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "
 			"without reference indirection is forbidden."
 		);
+	}
+
+	CRef<TypeLayout> PointerTypeLayout::getPointee(query::Context& ctx) const {
+		CORE_ASSERT(pointee_type.has_value(), "Untyped pointer layout has no pointee.");
+		return &ctx.query<QuerySymbolTypeLayout>(*pointee_type)->valueOrThrow();
 	}
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }
