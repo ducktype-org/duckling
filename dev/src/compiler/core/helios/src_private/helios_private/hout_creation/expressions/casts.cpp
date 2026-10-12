@@ -59,7 +59,7 @@ namespace compiler::helios::code {
 		// Casting to bool needs custom handling.
 		//
 		// We use coercion logic here because it's surprisingly complex and handles references
-		// (e.g. ref i64 -> bool). @TODO: #3625 we might want to abstract it to a common
+		// (e.g. ref i64 -> bool).
 		if (auto value_type = value->expression_type.getType();
 		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
 		    && to.getType().getKind() == Kind::Bool) {

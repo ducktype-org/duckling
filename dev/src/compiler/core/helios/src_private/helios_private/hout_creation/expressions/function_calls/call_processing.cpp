@@ -82,9 +82,9 @@ namespace compiler::helios::code {
 	using ArgumentCoercions = std::vector<base::Optional<Coercion>>;
 
 	/**
-	 * @brief Whether @p rank means that the argument is passed as it with no runtime effects, which
+	 * @brief Whether @p rank means that the argument is passed as is with no runtime effects, which
 	 * at most relaxes the mutability it is seen with.
-	 * @TODO: @1488 Revisit this.
+	 * @TODO: #1488 Revisit this.
 	 */
 	bool isExactRank(const CoercionRank rank) { return rank.getRank() <= Rank::MutabilityChange; }
 

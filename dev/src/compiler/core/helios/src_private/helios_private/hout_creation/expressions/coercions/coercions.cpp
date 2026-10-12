@@ -106,7 +106,7 @@ namespace compiler::helios::coercions {
 				return makeBox<TupleExpr>(ctx, origin, std::move(elements));
 			}
 
-			// Case 2: We have a tuple value. We have to extract all of it's components and create a
+			// Case 2: We have a tuple value. We have to extract all of its components and create a
 			// new tuple. The first read of a component evaluates the tuple, every read after it
 			// reuses the stored value.
 			for (const CoercionNode& part: parts)

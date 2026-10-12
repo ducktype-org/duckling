@@ -72,7 +72,7 @@ namespace compiler::helios::coercions {
 	/**
 	 * @brief Builds the expression that performs the @p coercion on @p from.
 	 *
-	 * The coercion has to valid and created for the value @p from produces.
+	 * The coercion has to be valid and created for the value @p from produces.
 	 */
 	[[nodiscard]] Box<code::Expr> applyCoercion(
 		query::Context& ctx, const Coercion& coercion, Box<code::Expr> from
