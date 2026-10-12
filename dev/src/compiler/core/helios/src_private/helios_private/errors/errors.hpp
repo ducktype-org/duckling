@@ -76,7 +76,7 @@ namespace compiler::helios {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
-				     .family        = "type_check",
+				     .family        = "parser",
 				     .name          = "missing_unary_operator_fixity" };
 		}
 
@@ -89,7 +89,7 @@ namespace compiler::helios {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
-				     .family        = "type_check",
+				     .family        = "parser",
 				     .name          = "invalid_operator_fixity" };
 		}
 

@@ -244,6 +244,26 @@ private:
 				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
 			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun -() -> i64 = 0;
+					}
+				)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun suffix +(rhs: i64) -> i64 = rhs;
+					}
+				)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
+				1
+			);
 		}
 
 		// ============================ Function calls ============================
