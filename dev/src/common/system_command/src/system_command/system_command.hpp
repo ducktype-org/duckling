@@ -32,7 +32,7 @@ namespace system_command {
 	 * @todo Add support for getting the output of the command.
 	 * @todo Add proper error handling.
 	 */
-	class SystemCommand {
+	class SystemCommand final {
 	private:
 		std::string                                      program_name;
 		std::vector<std::string>                         arguments;
@@ -111,7 +111,7 @@ namespace system_command {
 		/**
 		 * @brief Adds an environment variable to the command's environment.
 		 *
-		 * The variable should be set for the spawned command only, so this should not touch the
+		 * The variable is set for the spawned command only, so this does not touch the
 		 * environment of the compiler itself (which several threads may be reading).
 		 *
 		 * @param name

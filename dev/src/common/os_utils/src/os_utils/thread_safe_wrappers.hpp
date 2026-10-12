@@ -10,30 +10,15 @@
 #if BASE_TARGET_PLATFORM_POSIX
 	#include <cstdlib>
 	#include <cstring>
+	#include <string>
 #endif
 
-#include <mutex>
-#include <string>
-
-using std::literals::operator""s;
 
 namespace os_utils {
 
 #if BASE_TARGET_PLATFORM_POSIX
-	inline int threadSafeSetenv(const char* name, const char* value, int overwrite) {
-		static std::mutex      mutex{};
-		const std::scoped_lock guard(mutex);
-		// NOLINTNEXTLINE(concurrency-mt-unsafe),
-		return setenv(name, value, overwrite);
-	}
+	int threadSafeSetenv(const char* name, const char* value, int overwrite);
 
-	inline std::string threadSafeStrsignal(int signum) {
-		static std::mutex      mutex{};
-		const std::scoped_lock guard(mutex);
-		// NOLINTNEXTLINE(concurrency-mt-unsafe),
-		const char* result = strsignal(signum);
-		if (result == nullptr) return "invalid signal number"s;
-		return result;
-	}
+	std::string threadSafeStrsignal(int signum);
 #endif
 };

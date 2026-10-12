@@ -10,7 +10,6 @@
 #include <base/str/str_utils.hpp>
 
 #include <logger/logger.hpp>
-#include <os_utils/thread_safe_wrappers.hpp>
 
 #include <cstddef>
 #include <cstring>
