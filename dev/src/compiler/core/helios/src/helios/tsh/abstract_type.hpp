@@ -279,13 +279,15 @@ namespace compiler::tsh {
 		const std::string& toString() const;
 
 		/**
-		 * @brief Get a canonical source-level name of this type.
+		 * @brief Returns the canonical Duckling source representation of this abstract type.
 		 *
-		 * Unlike @ref toString, this method produces Duckling syntax intended for user-facing
-		 * diagnostics. The query context is needed to resolve class paths and baked template
+		 * Unlike @ref toString, whose output may contain internal type-system terminology, the
+		 * returned representation follows Duckling source syntax and is suitable for user-facing
+		 * output, including diagnostics.
+		 *
+		 * @param ctx Query context used to resolve qualified class names and baked template
 		 * arguments.
-		 * @param ctx Query context used to resolve source-level type information.
-		 * @return A canonical Duckling spelling of this type.
+		 * @return A string containing the source-level representation of this type.
 		 */
 		[[nodiscard]]
 		std::string sourceTypeName(query::Context& ctx) const;
