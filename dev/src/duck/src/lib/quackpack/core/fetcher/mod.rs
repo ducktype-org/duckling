@@ -52,6 +52,10 @@ pub struct Fetcher<'duck> {
 }
 
 /// URL of the default Ducknest instance.
+/// It should be used only by [`DuckCfg::registry_url`] or tests (as it's the case during writing
+/// this comment; we don't (yet) have any fast paths for the _real_ default registry).
+///
+/// [`DuckCfg::registry_url`]: crate::duck::util::duck_cfg::DuckCfg::registry_url
 pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
     "http://localhost:9001"
         .parse()
