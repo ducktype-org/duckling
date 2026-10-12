@@ -24,7 +24,6 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/expressions/numeric_literals.cpp
 	src_private/helios_private/hout_creation/expressions/coercions/coercions.cpp
 	src_private/helios_private/hout_creation/expressions/coercions/errors.cpp
-	src_private/helios_private/hout_creation/expressions/coercions/passing.cpp
 	src_private/helios_private/hout_creation/expressions/casts.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
 	src_private/helios_private/comp_time/vm_evaluator.cpp
@@ -73,7 +72,6 @@ add_library(HELIOS STATIC
 	src/helios/repl_utils/repl_symbols.cpp
 	src/helios/ls_utils/ls_utils.cpp
 	src/helios/utils/go_to_definition.cpp
-	src/helios/tsh/queries/implicit_coercibility.cpp
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp

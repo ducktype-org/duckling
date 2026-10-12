@@ -117,7 +117,7 @@ namespace compiler::helios::code {
 			auto arg_expr = std::move(arg_expr_result).valueOrPanic();
 			UNPACK_QRESULT_MOVE(
 				auto coerced_arg_expr =,
-				coerceFromBox(
+				coercions::coerceFromBox(
 					query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition()
 				)
 			);

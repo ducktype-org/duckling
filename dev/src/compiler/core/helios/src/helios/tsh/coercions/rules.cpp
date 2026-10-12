@@ -129,10 +129,11 @@ namespace compiler::tsh::coercions {
 			if (source.getType() != target.getType())
 				return refused(source, target, coercion_error::IncompatibleTypes{});
 
-			// @TODO: #1488 Take `points_to_source` into consideration.
-			if (source.getMutability() == Mutability::Immutable
-			    && target.getMutability() == Mutability::Mutable)
-				return refused(source, target, coercion_error::MutabilityMismatch{});
+			// @TODO: #1488 Take `points_to_source` into consideration and enable this check when
+			// the compiler will be const-safe everywhere.
+			// if (source.getMutability() == Mutability::Immutable
+			//     && target.getMutability() == Mutability::Mutable)
+			// 	return refused(source, target, coercion_error::MutabilityMismatch{});
 
 			// A `box` is copied or moved, a `ref` is only rebound.
 			CoercionNode node = startNode(source, target);

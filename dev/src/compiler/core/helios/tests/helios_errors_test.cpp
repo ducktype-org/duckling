@@ -202,9 +202,10 @@ private:
                     return Number(lhs.val + rhs.val);
                 }
 
+				# @TODO: #1488 Revisit this test.
                 fun main() -> i64 = {
-                    let a = Number(10);
-                    let b = Number(20);
+                    var a = Number(10);
+                    var b = Number(20);
                     let c = a + b;
                     return c.val;
                 }
@@ -225,8 +226,9 @@ private:
                     return Number(-n.val);
                 }
 
+				# @TODO: #1488 Revisit this test.
                 fun main() -> i64 = {
-                    let a = Number(10);
+                    var a = Number(10);
                     let c = -a;
                     return c.val;
                 }

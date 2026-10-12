@@ -40,4 +40,10 @@ namespace compiler::tsh::coercions {
 	 * category.
 	 */
 	[[nodiscard]] bool isCopiedByBytes(query::Context& ctx, const SymbolType<>& type);
+
+	/**
+	 * @brief The ValueCategory of the value after it has been handed over (i.e. implicitly moved by
+	 * a return).
+	 */
+	[[nodiscard]] ExpressionType<> consumed(const ExpressionType<>& value);
 }

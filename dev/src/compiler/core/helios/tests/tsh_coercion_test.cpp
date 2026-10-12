@@ -290,6 +290,14 @@ private:
 			.succeeds()
 			.doesNothing()
 			.steps({ MUTABILITY_CHANGE });
+		// @TODO: #1488 Change it into an error test.
+		plan(immutable(type("ref i32")), type("ref i32"))
+			.succeeds()
+			.doesNothing()
+			.steps({ MUTABILITY_CHANGE });
+		plan("(const box i32, i32)", "(box i32, i32)")
+			.succeeds()
+			.steps({ HAND_OVER, MUTABILITY_CHANGE });
 		plan("box i32", "box i32").succeeds().steps({ HAND_OVER });
 		plan("Owner", "Owner").succeeds().steps({ HAND_OVER });
 
@@ -353,12 +361,6 @@ private:
 		plan("box i32", "ref i32").refuses().because<IncompatibleTypes>();
 		plan("ref i32", "ref i64").refuses().because<IncompatibleTypes>();
 		plan("ref (i32, i32)", "ref (const i32, i32)").refuses().because<IncompatibleTypes>();
-		plan(immutable(type("ref i32")), type("ref i32")).refuses().because<MutabilityMismatch>();
-		plan("(const box i32, i32)", "(box i32, i32)")
-			.refuses()
-			.because<SubPartRefused>()
-			.component(0)
-			.because<MutabilityMismatch>();
 
 		// Every component that refuses is a cause, as deep as the types go.
 		plan("(i32, i32)", "(i64, f64)")

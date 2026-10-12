@@ -46,6 +46,6 @@ namespace compiler::helios::code {
 		pst::AccessLocked<pst::ExprElement> element,
 		tsh::SymbolType<>                   expected_type,
 		base::Optional<dia::StablePosition> coercion_expects_pos = {},
-		CoercionErrorOverrides              error_overrides      = {}
+		coercions::CoercionErrorOverrides   error_overrides      = {}
 	);
 }

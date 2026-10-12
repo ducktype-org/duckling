@@ -41,4 +41,25 @@ namespace compiler::tsh::coercions {
 	bool isCopiedByBytes(query::Context& ctx, const SymbolType<>& type) {
 		return type.isTriviallyCopyable(ctx) && type.isTriviallyDestructible(ctx);
 	}
+
+	ExpressionType<> consumed(const ExpressionType<>& value) {
+		using enum ValueSemanticsOptions;
+
+		const ValueCategory category = value.getValueCategory();
+
+		// If we're not a local or are a projection we can't implicitly move.
+		if (category.getCategory() != PrimaryCategory::Local || not category.isMovableFrom())
+			return value;
+
+		// Now we know we're implicitly-moving a local, thus it changes into a temporary.
+		ValueSemantics allows = category.getAllowsSemantic();
+		allows -= REINIT | REFERENCE;
+
+		return {
+			value.getSymbolType(),
+			ValueCategory(
+				PrimaryCategory::Temporary, category.isPure(), allows, category.getForceSemantic()
+			),
+		};
+	}
 }
