@@ -49,7 +49,7 @@ namespace compiler::helios {
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		tsh::SymbolType<>                                expected_type,
 		base::Optional<dia::StablePosition>              coercion_expects_pos = {},
-		coercions::CoercionErrorOverrides                error_overrides      = {}
+		const coercions::CoercionErrorOverrides&         error_overrides      = {}
 	);
 
 	/**

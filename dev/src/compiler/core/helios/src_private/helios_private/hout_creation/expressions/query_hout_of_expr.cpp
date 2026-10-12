@@ -848,7 +848,7 @@ namespace compiler::helios {
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		const tsh::SymbolType<>                          expected_type,
 		base::Optional<dia::StablePosition>              coercion_expects_pos,
-		coercions::CoercionErrorOverrides                error_overrides
+		const coercions::CoercionErrorOverrides&         error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
@@ -900,11 +900,11 @@ namespace compiler::helios {
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                     ctx,
-		pst::AccessLocked<pst::ExprElement> element,
-		tsh::SymbolType<>                   expected_type,
-		base::Optional<dia::StablePosition> coercion_expects_pos,
-		coercions::CoercionErrorOverrides   error_overrides
+		query::Context&                          ctx,
+		pst::AccessLocked<pst::ExprElement>      element,
+		tsh::SymbolType<>                        expected_type,
+		base::Optional<dia::StablePosition>      coercion_expects_pos,
+		const coercions::CoercionErrorOverrides& error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
@@ -916,7 +916,7 @@ namespace compiler::helios {
 			expected_type,
 			source_position,
 			coercion_expects_pos,
-			std::move(error_overrides)
+			error_overrides
 		);
 	}
 }
