@@ -46,6 +46,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testCoercionErrors);
 		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
@@ -1736,6 +1737,157 @@ private:
 		      "`Tuple(i32, Class L)`" },
 			1
 		);
+	}
+
+	void testCoercionErrors() {
+		constexpr std::string_view CLASS_L
+			= "class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }";
+
+		// ============================ Explicit copy or move ============================
+		{
+			constexpr std::string_view BY_VALUE
+				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`. Use "
+				  "`copy` to copy it or `move` to move it.";
+			constexpr std::string_view OUT_OF_REF
+				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
+				  "`ref Class L`. Use `copy` to copy it out, `move` cannot move a value out of a "
+				  "reference.";
+			constexpr std::string_view OUT_OF_BOX
+				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
+				  "`box Class L`. Use `copy` to copy it out, `move` cannot move a value out of a "
+				  "reference.";
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(r: ref L) -> L = {
+					return r;
+				} )"),
+				{ OUT_OF_REF },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(bl: box L) -> L = {
+					return bl;
+				} )"),
+				{ OUT_OF_BOX },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun take(l: L) -> i64 = 0;
+				fun f(r: ref L) -> i64 = take(r);
+			)"),
+				{ OUT_OF_REF },
+				1
+			);
+
+			// A tuple literal hands over each of its elements on its own, so the error names the
+			// element and not the whole tuple.
+			// @TODO: #3732 This error underlines the whole tuple, not the `a`. Fix it.
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun main() -> i64 = {
+					var a: L;
+					var t: (L, i64) = (a, 1i64);
+					return 0;
+				} )"),
+				{ BY_VALUE },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun main() -> i64 = {
+					var a: L;
+					var t: (L, i64) = (a, 1i32);
+					return 0;
+				} )"),
+				{ BY_VALUE },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun take(t: (L, i64)) -> i64 = 0;
+				fun main() -> i64 = {
+					var a: L;
+					return take((a, 1i64));
+				} )"),
+				{ BY_VALUE },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(r: ref L) -> i32 = {
+					var t: (L, i64) = (r, 1i64);
+					return 0;
+				} )"),
+				{ OUT_OF_REF },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(bl: box L) -> i32 = {
+					var t: (L, i64) = (bl, 1i64);
+					return 0;
+				} )"),
+				{ OUT_OF_BOX },
+				1
+			);
+		}
+
+		// ============================ Ambiguous variant packing ============================
+		{
+			constexpr std::string_view AMBIGUOUS
+				= "A value of type `u8` fits equally well into many alternatives of `Variant (u16, "
+				  "u32)`: `u16`, `u32`.";
+
+			checkForErrorOnCompileModule(
+				R"( fun main() -> i64 = {
+					var v: u16 | u32 = 1u8;
+					return 0;
+				} )",
+				{ AMBIGUOUS },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"( fun f(v: u16 | u32) -> i64 = 0;
+				fun main() -> i64 = f(1u8);
+			)",
+				{ AMBIGUOUS },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"( fun main() -> i64 = {
+					var t: (u16 | u32, i64) = (1u8, 1i64);
+					return 0;
+				} )",
+				{ AMBIGUOUS },
+				1
+			);
+		}
+
+		// ============================ Overload resolution ============================
+		{
+			// Each candidate is better for a different argument, so none of them wins.
+			checkForErrorOnCompileModule(
+				R"( fun g(a: i32, b: i64) -> i64 = 1;
+				fun g(a: i64, b: i32) -> i64 = 2;
+				fun main() -> i64 = g(1i32, 1i32);
+			)",
+				{ "Call failed due to ambiguous overload resolution",
+			      "Found coercible candidate",
+			      "Found coercible candidate" },
+				1
+			);
+		}
 	}
 
 	/**
