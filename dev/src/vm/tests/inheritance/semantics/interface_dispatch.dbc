@@ -70,24 +70,24 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_pany_type temp_this_i1_foo, pointer_I1;
     mov_pptr_pptr temp_this_i1_foo, ptr_i1;
-    virtual_call_pptr_method ptr_i1, foo; # Expected: 11
+    virtualCall_pptr_method ptr_i1, foo; # Expected: 11
 
     init_pany_type temp_this_i1_bar, pointer_I1;
     mov_pptr_pptr temp_this_i1_bar, ptr_i1;
-    virtual_call_pptr_method ptr_i1, bar; # Expected: 22
+    virtualCall_pptr_method ptr_i1, bar; # Expected: 22
 
     # --- Same Child object, pointer Parent* ---
     upcast_pptr_pptr ptr_parent, actual_child;
 
     init_pany_type temp_ptr_parent, pointer_Parent;
     mov_pptr_pptr temp_ptr_parent, ptr_parent ;
-    virtual_call_pptr_method ptr_parent, getAge; # Expected: 44
+    virtualCall_pptr_method ptr_parent, getAge; # Expected: 44
 
     # --- Same Child object, pointer Child* ---
     mov_pptr_pptr ptr_child, actual_child;
     init_pany_type temp_this_child_cry, pointer_Child;
     mov_pptr_pptr temp_this_child_cry, ptr_child;
-    virtual_call_pptr_method ptr_child, cry; # Expected: 55
+    virtualCall_pptr_method ptr_child, cry; # Expected: 55
 
     free_pptr actual_child;
 

@@ -207,70 +207,70 @@ DEF_MICRO_INSTR(fneg_p32, vm::low::opargs::Place32)
 // Evaluate logical operations (AND, OR, etc.) on operands as booleans (non-zero = true)
 // Result is 0 or 1 stored in the first argument
 
-DEF_MICRO_INSTR(log_and_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
-DEF_MICRO_INSTR(log_and_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(logAnd_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(logAnd_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
 
-DEF_MICRO_INSTR(log_or_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
-DEF_MICRO_INSTR(log_or_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(logOr_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(logOr_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
 
-DEF_MICRO_INSTR(log_xor_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
-DEF_MICRO_INSTR(log_xor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(logXor_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(logXor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
 
-DEF_MICRO_INSTR(log_not_p8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(logNot_p8, vm::low::opargs::Place8)
 
 // ======== BITWISE OPERATIONS ========
 
 // 64-bit
-DEF_MICRO_INSTR(bit_and_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
-DEF_MICRO_INSTR(bit_and_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_or_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
-DEF_MICRO_INSTR(bit_or_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_xor_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
-DEF_MICRO_INSTR(bit_xor_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitAnd_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bitAnd_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitOr_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bitOr_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitXor_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bitXor_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shl_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(shl_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shr_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(shr_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_not_p64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bitNot_p64, vm::low::opargs::Place64)
 
 // 32-bit
-DEF_MICRO_INSTR(bit_and_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
-DEF_MICRO_INSTR(bit_and_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_or_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
-DEF_MICRO_INSTR(bit_or_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_xor_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
-DEF_MICRO_INSTR(bit_xor_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitAnd_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bitAnd_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitOr_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bitOr_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitXor_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bitXor_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shl_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
 DEF_MICRO_INSTR(shl_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shr_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
 DEF_MICRO_INSTR(shr_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_not_p32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bitNot_p32, vm::low::opargs::Place32)
 
 // 16-bit
-DEF_MICRO_INSTR(bit_and_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
-DEF_MICRO_INSTR(bit_and_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_or_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
-DEF_MICRO_INSTR(bit_or_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_xor_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
-DEF_MICRO_INSTR(bit_xor_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitAnd_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bitAnd_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitOr_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bitOr_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitXor_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bitXor_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shl_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
 DEF_MICRO_INSTR(shl_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shr_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
 DEF_MICRO_INSTR(shr_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_not_p16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bitNot_p16, vm::low::opargs::Place16)
 
 // 8-bit
-DEF_MICRO_INSTR(bit_and_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
-DEF_MICRO_INSTR(bit_and_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_or_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
-DEF_MICRO_INSTR(bit_or_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_xor_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
-DEF_MICRO_INSTR(bit_xor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitAnd_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bitAnd_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitOr_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bitOr_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bitXor_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bitXor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shl_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
 DEF_MICRO_INSTR(shl_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(shr_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
 DEF_MICRO_INSTR(shr_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(bit_not_p8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bitNot_p8, vm::low::opargs::Place8)
 
 // ========= LOGICAL OPERATIONS ========
 
@@ -457,7 +457,7 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
  * The second argument is the distance between the caller's local stack base and the callee's
  * one, i.e. the caller's stack size at this point minus the space shared with the callee.
  */
-DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID, vm::low::opargs::Offset)
+DEF_MICRO_INSTR(call_func_off, vm::low::opargs::FunctionID, vm::low::opargs::Offset)
 #ifdef ENABLE_JIT
 
 /**
@@ -488,10 +488,10 @@ DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
  */
 DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
-DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(setThreadCtx_func, vm::low::opargs::FunctionID)
 
 // return while performing a tail call
-DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(retTailcall_func, vm::low::opargs::FunctionID)
 /**
  * @brief Returns from the function.
  * @note Does no cleanup of its own: the function's own `deinit`s already ran, so the only
@@ -547,10 +547,10 @@ DEF_MICRO_INSTR(resetVTable_pptr, vm::low::opargs::PlacePtr)
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 /**
  * @brief Calls a method of specified name on an a pointer. Performs the dynamic dispatch.
- * Requires `ext_imm` holding the local stack distance, see `call_func`.
+ * Requires `ext_imm` holding the local stack distance, see `call_func_off`.
  * @note Unoptimizable by JIT, listed in non_jittable.def.hpp.
  */
-DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::PlacePtr, vm::low::opargs::MethodName)
+DEF_MICRO_INSTR(virtualCall_pptr_method, vm::low::opargs::PlacePtr, vm::low::opargs::MethodName)
 
 // ========= GENERAL POINTER OPERATIONS ========
 
@@ -808,7 +808,7 @@ DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 /**
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
  */
-DEF_MICRO_INSTR(check_strategy)
+DEF_MICRO_INSTR(checkStrategy)
 DEF_MICRO_INSTR(nop)
 
 // terminates execution

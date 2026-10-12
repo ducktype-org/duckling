@@ -117,11 +117,11 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_p64_imm             phase, 0;
 
 	init_pany_type          t1_id, i64;
-	set_threadctx           worker;
+	setThreadCtx_func           worker;
 	call_builtinfunc        builtin_start_thread;
 
 	init_pany_type          t2_id, i64;
-	set_threadctx           worker;
+	setThreadCtx_func           worker;
 	call_builtinfunc        builtin_start_thread;
 
 	init_pany_type          lockm1, mutex;

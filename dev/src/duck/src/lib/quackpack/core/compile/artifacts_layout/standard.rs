@@ -23,11 +23,10 @@
 use std::path::PathBuf;
 
 use super::{ArtifactsLayout, DependencyLayout, ProfileLayout};
-use crate::QuackResult;
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit::Unit;
-use crate::quackpack::core::compile::unit::graph::UnitGraph;
+use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
 use crate::util::file_locks::FileLockManager;
+use crate::{QuackResult, qp_bail_internal};
 
 #[derive(Clone, Debug)]
 /// Standard layout of the artifacts directory. See the [module](super::standard_artifacts_layout) documentation.
@@ -69,11 +68,17 @@ impl ProfileLayout for StandardProfileLayout {
 
     fn for_dependency(
         &self,
-        unit: &Unit,
-        _graph: &UnitGraph,
+        unit_id_in_graph: GraphNodeId,
+        graph: &UnitGraph,
     ) -> QuackResult<Box<dyn DependencyLayout>> {
+        let node = graph.node_for(unit_id_in_graph);
+        let Some(unit) = node.as_unit() else {
+            qp_bail_internal!(
+                "node {node:?} is not a unit, but called for dependency layout for it"
+            )
+        };
         Ok(Box::new(StandardDependencyLayout {
-            root: self.root.join(unit.unique_name()),
+            root: self.root.join(unit.pkg_unique_name()),
         }))
     }
 }

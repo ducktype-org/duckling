@@ -195,19 +195,19 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_p64_imm                 finished_consumers, 0;
 
 	init_pany_type              producer1_id, i64;
-	set_threadctx               producer;
+	setThreadCtx_func               producer;
 	call_builtinfunc            builtin_start_thread;
 
 	init_pany_type              producer2_id, i64;
-	set_threadctx               producer;
+	setThreadCtx_func               producer;
 	call_builtinfunc            builtin_start_thread;
 
 	init_pany_type              consumer1_id, i64;
-	set_threadctx               consumer;
+	setThreadCtx_func               consumer;
 	call_builtinfunc            builtin_start_thread;
 
 	init_pany_type              consumer2_id, i64;
-	set_threadctx               consumer;
+	setThreadCtx_func               consumer;
 	call_builtinfunc            builtin_start_thread;
 
 	init_pany_type              producer1_ret, i64;

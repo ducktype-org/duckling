@@ -205,7 +205,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				// The start function's whole local stack is the space shared with the callee,
 		        // so the callee's local stack starts at the very same address.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
+				MAKE_BYTECODE_INSTRUCTION(call_func_off, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need
 		        // for any deinits. It's being deinitialized by the thread after obtaining the
 		        // return value/exit_code.
@@ -385,7 +385,7 @@ namespace vm {
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				// `main`'s frame begins at its return value, which the layout above puts at 40.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40),  // call main
+				MAKE_BYTECODE_INSTRUCTION(call_func_off, called_function_id, 40),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
