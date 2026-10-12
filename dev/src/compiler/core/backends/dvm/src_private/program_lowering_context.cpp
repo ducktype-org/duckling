@@ -457,7 +457,19 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 			}
 			CORE_UNREACHABLE();
 		}
-		variant_case(tsl::ClassTypeLayout, class_layout) { return class_layout.getMangledName(); }
+		variant_case(tsl::ClassTypeLayout, class_layout) {
+			if (class_layout.getSourceType().getType().getKind() != tsh::Kind::Tuple)
+				return class_layout.getMangledName();
+
+			const usize num_fields      = class_layout.getNumSubLayouts();
+			std::string tuple_type_name = base::strConcat("tup", num_fields);
+			for (usize i{ 0 }; i < num_fields; i++) {
+				const base::StrID field_name
+					= getTslNameInternal(class_layout.getFieldLayoutOfLayoutIndex(i));
+				tuple_type_name = base::strConcat(tuple_type_name, "_", field_name);
+			}
+			return base::StrID(tuple_type_name);
+		}
 		variant_case(tsl::VariantTypeLayout, variant_layout) {
 			std::string variant_type_name = "vnt";
 			for (usize i{ 0 }; i < variant_layout.getNumAlternatives(); i++) {
