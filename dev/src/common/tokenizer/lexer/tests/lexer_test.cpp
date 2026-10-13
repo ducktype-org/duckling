@@ -242,8 +242,8 @@ private:
 		checkTokenTexts("1...2", { "1", "...", "2" });
 
 		checkTokenTexts("1.", { "1." });
-		checkTokenTexts("1.+2", { "1.", "+", "2" });
-		checkTokenTexts("5.*100.", { "5.", "*", "100." });
+		checkTokenTexts("1.+2", { "1", ".+", "2" });
+		checkTokenTexts("5.*100.", { "5", ".*", "100." });
 		checkTokenTexts("1. .2", { "1.", ".2" });
 
 		auto source = tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile("1..2"));

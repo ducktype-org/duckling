@@ -388,9 +388,9 @@ namespace lexer {
 			next();  // first char - digit
 			while (!isEOF()) {
 				if (!peek().isDigit()) {
-					// A dot followed by another dot starts an operator (`1..2` is a range), so
+					//  Only one dot can appear. A dot followed by operator char starts an operator (`1..2` is a range), so
 					// it does not belong to the number.
-					if (!was_dot && peek().is('.') && !peek(1).is('.')) {  // Only one dot.
+					if (!was_dot && peek().is('.') && !peek(1).is(Class::operator_continue)) {
 						was_dot = true;
 					} else if (!was_e
 					           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
