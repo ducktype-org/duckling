@@ -424,8 +424,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
 	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
 	Example<pst::UniversalExprHolder, true> range_operator_from{ "x[1 ..]" };
-	// This is because it's lexed as two floats 1. and .10, not necessarily desired behaviour
-	Example<pst::UniversalExprHolder, false> range_operator_bad{ "x[1..10]" };
+	// `1..10` is lexed as `1`, `..`, `10`, not as the two floats `1.` and `.10` (#3759)
+	Example<pst::UniversalExprHolder, true> range_operator_no_spaces{ "x[1..10]" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
 	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };
