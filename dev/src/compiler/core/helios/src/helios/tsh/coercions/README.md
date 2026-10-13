@@ -1,6 +1,6 @@
 # Coercions
 
-This directory contains the information about how the Higher Type System (TSH) decides **coercions**, the implicit
+This directory contains information about how the Higher Type System (TSH) decides **coercions**, the implicit
 conversions that happen when a value is handed to a location of a possibly different type (an
 argument, a variable, a variant, a tuple element).
 
@@ -76,19 +76,19 @@ A `CoercionNode` (`coercion_node.hpp`) describes **one value**. It holds the val
 carries a `static constexpr` `RANK` and `NAME`, which is what the printer and the ranking read.
 They are declared in the order of their ranks:
 
-| Step               | Printed as              | Rank                  | Produced by                                                                        |
-|--------------------|-------------------------|-----------------------|------------------------------------------------------------------------------------|
-| `HandOver`         | `hand over`             | `Identity`            | `SymbolType` coercions only, `handOver()` in `rules.cpp`                                            |
-| `ImplicitMove`     | `implicit move`         | `Identity`            | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`                           |
-| `MutabilityChange` | `mutability change`     | `MutabilityChange`    | `keepReference`, raw pointers, and a tuple whose parts only change mutability      |
-| `Deref`            | `deref`                 | `Deref`               | `readThroughReference`                                                             |
-| `Numeric`          | `numeric`               | `Numeric`             | `convertValue`: a wider integer or float, `bool` into an integer                   |
-| `VariantPack`      | `pack as alternative N` | `VariantPack`         | `packIntoVariant`                                                                  |
-| `LiftToType`       | `lift to type`          | `LiftToType`          | `convertValue`: `()` or a tuple of types into `type`                               |
-| `UserConversion`   | `user conversion`       | `UserConversion`      | nothing yet                                                                |
-| `ZeroCheck`        | `zero check`            | `ZeroCheck`           | `convertValue`: `byte`, `char` or a raw pointer into `bool`                        |
-| `RetypeVoid`       | `retype void`           | `RetypeVoid`          | `retypeVoid`                                                                       |
-| `Elementwise`      | `elementwise`           | the worst of its parts | `coerceElementwise`, and `ownership.cpp` for a value built out of parts           |
+| Step               | Printed as              | Rank                   | Produced by                                                                   |
+| ------------------ | ----------------------- | ---------------------- | ----------------------------------------------------------------------------- |
+| `HandOver`         | `hand over`             | `Identity`             | `SymbolType` coercions only, `handOver()` in `rules.cpp`                      |
+| `ImplicitMove`     | `implicit move`         | `Identity`             | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`     |
+| `MutabilityChange` | `mutability change`     | `MutabilityChange`     | `keepReference`, raw pointers, and a tuple whose parts only change mutability |
+| `Deref`            | `deref`                 | `Deref`                | `readThroughReference`                                                        |
+| `Numeric`          | `numeric`               | `Numeric`              | `convertValue`: a wider integer or float, `bool` into an integer              |
+| `VariantPack`      | `pack as alternative N` | `VariantPack`          | `packIntoVariant`                                                             |
+| `LiftToType`       | `lift to type`          | `LiftToType`           | `convertValue`: `()` or a tuple of types into `type`                          |
+| `UserConversion`   | `user conversion`       | `UserConversion`       | nothing yet                                                                   |
+| `ZeroCheck`        | `zero check`            | `ZeroCheck`            | `convertValue`: `byte`, `char` or a raw pointer into `bool`                   |
+| `RetypeVoid`       | `retype void`           | `RetypeVoid`           | `retypeVoid`                                                                  |
+| `Elementwise`      | `elementwise`           | the worst of its parts | `coerceElementwise`, and `ownership.cpp` for a value built out of parts       |
 
 `HandOver` and `ImplicitMove` never meet in one tree. `CoercionTree::successfulCoercion` asserts
 that a plan has no `ImplicitMove` and a coercion has no `HandOver`, in its parts too.
@@ -148,7 +148,7 @@ How to read it:
 - Variant alternatives are kept in a canonical order, so `i64 | bool` prints as
   `Variant (bool, i64)` and `i64` is alternative 1.
 - The only difference between the two trees is component 0. The plan says the box is handed over
-  there, and the coercion knows that `makeBox()` is a temporary, so the box is moved.
+  there, and the coercion knows that `makeBox()` is a temporary, so the box is moved implicitly.
 - There is no `hand over` for the `i32`s. `handOver()` skips a value that `isCopiedByBytes`
   (trivially copyable *and* trivially destructible, see `passing.hpp`), because there is nothing
   to decide for it.
@@ -158,15 +158,15 @@ How to read it:
 A refusal has the same tree shape. A `CoercionError` (`coercion_error.hpp`) holds a `reason`, the
 `source`/`target` at its level, and a list of `causes`:
 
-| Reason                     | Printed as                       | When                                                                             |
-|----------------------------|----------------------------------|----------------------------------------------------------------------------------|
-| `IncompatibleTypes`        | `incompatible types`             | no rule fits, or no variant alternative fits                                     |
-| `MutabilityMismatch`       | `mutability mismatch`            | an immutable value into a mutable location behind a `ref`/`box`                 |
-| `SubPartRefused`           | `a part does not fit`            | this level would fit, but some of its components do not                          |
-| `NotImplemented`           | `not implemented`                | meant to work one day, like function subtyping                                   |
-| `AmbiguousCoercion`        | `ambiguous, alternatives 0, 1`   | several variant alternatives fit equally well                                    |
-| `RequiresExplicitCopyMove` | `requires explicit copy or move` | layer two: the user has to write `copy` or `move`                                |
-| `TypeNotCopyable`          | `type not copyable`              | layer two: the value would have to be copied, but its type cannot be             |
+| Reason                     | Printed as                       | When                                                                 |
+| -------------------------- | -------------------------------- | -------------------------------------------------------------------- |
+| `IncompatibleTypes`        | `incompatible types`             | no rule fits, or no variant alternative fits                         |
+| `MutabilityMismatch`       | `mutability mismatch`            | an immutable value into a mutable location behind a `ref`/`box`      |
+| `SubPartRefused`           | `a part does not fit`            | this level would fit, but some of its components do not              |
+| `NotImplemented`           | `not implemented`                | meant to work one day, like function subtyping                       |
+| `AmbiguousCoercion`        | `ambiguous, alternatives 0, 1`   | several variant alternatives fit equally well                        |
+| `RequiresExplicitCopyMove` | `requires explicit copy or move` | layer two: the user has to write `copy` or `move`                    |
+| `TypeNotCopyable`          | `type not copyable`              | layer two: the value would have to be copied, but its type cannot be |
 
 A cause is a child error together with a `CoercionPath` (`coercion_path.hpp`) that says where the
 child sits: which component, which variant alternative, and so on. The path is stored on the edge
@@ -227,17 +227,17 @@ like the alternatives of a variant or the overloads of a function.
 
 `Rank` (`coercion_rank.hpp`) is an enum ordered from the best to the worst:
 
-| `Rank`             | Meaning                                                                                 |
-|--------------------|-----------------------------------------------------------------------------------------|
-| `Identity`         | nothing happens to the value (`HandOver` and `ImplicitMove` have this rank)            |
-| `MutabilityChange` | only the mutability the value is seen with changes                                      |
-| `Deref`            | the pointee is read out of a `ref`/`box`                                                |
-| `Numeric`          | a widening numeric conversion                                                           |
-| `VariantPack`      | the value is packed into a variant                                                      |
-| `LiftToType`       | the value is read as a type                                                             |
-| `UserConversion`   | a user defined conversion                                                               |
-| `ZeroCheck`        | the value is compared against zero, which turns it into a `bool`                        |
-| `RetypeVoid`       | a `void` value is seen as a value of another type                                       |
+| `Rank`             | Meaning                                                                     |
+| ------------------ | --------------------------------------------------------------------------- |
+| `Identity`         | nothing happens to the value (`HandOver` and `ImplicitMove` have this rank) |
+| `MutabilityChange` | only the mutability the value is seen with changes                          |
+| `Deref`            | the pointee is read out of a `ref`/`box`                                    |
+| `Numeric`          | a widening numeric conversion                                               |
+| `VariantPack`      | the value is packed into a variant                                          |
+| `LiftToType`       | the value is read as a type                                                 |
+| `UserConversion`   | a user defined conversion                                                   |
+| `ZeroCheck`        | the value is compared against zero, which turns it into a `bool`            |
+| `RetypeVoid`       | a `void` value is seen as a value of another type                           |
 
 Every rank except `Identity` belongs to exactly one step of the same name.
 
@@ -333,12 +333,12 @@ value* the next step operates on, and keeps that value as a `ValueSource` (`valu
 At each `HandOver`, `passingMethod` (`passing.cpp`) looks at that value's category and gives one
 of these answers:
 
-| `PassingMethod`      | when                                                                                                       | effect on the tree                  |
-|----------------------|------------------------------------------------------------------------------------------------------------|-------------------------------------|
-| `ByteCopy`           | trivially copyable, a literal, or already `move`d by the user                                              | the `HandOver` is dropped           |
-| `ImplicitMove`       | an owned temporary that is not trivial                                                                     | replaced by `ImplicitMove`          |
+| `PassingMethod`      | when                                                                                                                                            | effect on the tree                  |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `ByteCopy`           | trivially copyable, a literal, or already `move`d by the user                                                                                   | the `HandOver` is dropped           |
+| `ImplicitMove`       | an owned temporary that is not trivial                                                                                                          | replaced by `ImplicitMove`          |
 | `ExplicitCopyOrMove` | a local, global or dereferenced value that is not trivially copyable, or a temporary that may not be moved out of (like a field of a temporary) | refused: `RequiresExplicitCopyMove` |
-| `NotCopyable`        | a local, global or dereferenced value whose type cannot be copied at all                                   | refused: `TypeNotCopyable`          |
+| `NotCopyable`        | a local, global or dereferenced value whose type cannot be copied at all                                                                        | refused: `TypeNotCopyable`          |
 
 A value built out of parts, like a tuple literal, never gets to `passingMethod` as a whole. Its
 `HandOver` is expanded into an `Elementwise`, and each part is handed over on its own, see
@@ -438,30 +438,35 @@ plan  Tuple(Tuple(box i32, i32), Tuple(box i32, i32), Tuple(box i32, i64), ref i
 Now we know how to perform the coercion and where the value is passed to another location (it's handed over). We don't know HOW exactly the hand over should be performed. Thats what the second layer decides.
 
 #### Step 3: layer two walks the plan with the value
-Now for the more complex part. After `coercionOf` gets the `SymbolType` plan, it uses the plan together with `ValueSource` and enriches it with ownership information. This "essentially" means each `HandOver` node is replaced with the correct way to pass the value. The `HandOver` node can be replaced in four different ways:
-- by nothing - when copying by bytes is enough (e.g. user wrote a `move`, for a
+Now for the more complex part. After `coercionOf` gets the `SymbolType` plan, it uses the plan together with `ValueSource` and enriches it with ownership information. This essentially means each `HandOver` node is replaced with the correct way to pass the value. The `HandOver` node can be replaced in four different ways:
+- by nothing — when copying by bytes is enough (e.g. user wrote a `move`, for a
 literal, an lvalue of a trivially copyable type and without a destructor)
-- by an `ImplicitMove` - when the value is a temporary
-- by an `ElementWise` - when the value is built out of parts (i.e. a tuple literal). Each part
+- by an `ImplicitMove` — when the value is a temporary
+- by an `ElementWise` — when the value is built out of parts (i.e. a tuple literal). Each part
 is then handed over separately.
-- by an error - when a user was supposed to write `copy` or `move` explicitly.
+- by an error — when a user was supposed to write `copy` or `move` explicitly.
 
-`coercionOf` walks the plan and calls `decideNode` on every node of the tree together with a `ValueSource` cursor, which says which
-value the next step is about. It starts at the root with the whole literal:
+`decideParts` walks the plan and calls `decideNode` on every node of the tree so each node is decided.
+Each call gets a `ValueSource` cursor, which says which value the next step is about. The `ValueSource` 
+always exists even when the caller gave no parts for that place. If the caller described the parts of a
+literal, `partAt` returns them. Everywhere else the current node `ExpressionType` (cursor) is derived from
+the value above it: `partAt` gives a component the category of the whole, `dereferenced()` gives the pointee, and
+`producedBy` gives a fresh temporary after a step.
+It starts at the root with the whole literal:
 
-| Plan node        | Cursor when the node starts                                    | What happens                                                                                                                                                                            |
-|------------------|----------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| root             | the whole literal, `nested`                                    | `elementwise`: `decideParts` gives part `i` the cursor `partAt(i)`, which is the given part of the literal                                                                              |
-| 0                | `makeBoxAndInt()`, a single `Temporary` tuple                  | `elementwise`: the value has no given sub-parts (so the `ExpressionType` of `makeBoxAndInt()` is the only one we care about. Inner values of the `(box i32, i32)` tuple have the same value category as `makeBoxAndInt()`). `partAt` derives them from the type. Each component inherits the category of the whole, so both are `Temporary`                         |
-| 0.0              | `box i32 [Temporary]`, derived from (`makeBoxAndInt()`)                                 | `hand over`: `passingMethod` says `ImplicitMove`, since a temporary may be moved                                                                                                        |
-| 0.1              | `i32 [Temporary]`, derived from `makeBoxAndInt()`                                     | `numeric` is copied as it is                                                                                                                                                            |
-| 1                | `(move b, x)`, `nested`                                        | `elementwise`: `partAt` gives the two parts of the inner literal                                                                                                                        |
-| 1.0              | `move b [Temporary, forces MOVE]`                              | `hand over`: the user already wrote `move`, so `passingMethod` says `ByteCopy` and the step is dropped                                                                                  |
-| 1.1              | `x [Local]`                                                    | `numeric` and `pack as alternative 1` are copied. After each of them the cursor becomes `producedBy(step)`, a fresh temporary                                                           |
-| 2                | `(makeBox(), 1i64)`, `nested`                                  | `hand over` of a value **built out of parts**: `decideHandOver` does not ask `passingMethod` about the whole tuple since it contains more than one `ExpressionType` inside. It plans each component into its own place (`planPartsInPlace`) and decides those plans against the parts. The `hand over` becomes an `elementwise` |
-| 2.0 (new)        | `makeBox() [Temporary]`                                        | `hand over`: `ImplicitMove`                                                                                                                                                             |
-| 2.1 (new)        | `1i64 [Literal]`                                               | the identity plan of an `i64` has no steps                                                                                                                                              |
-| 3                | `&x [Temporary]`                                               | `deref`: the cursor becomes `dereferenced()`, an `i32 [Dereferenced]`. Then `numeric` is copied. Had there been a `hand over` after the `deref`, it would have been decided for the `Dereferenced` pointee |
+| Plan node | Cursor when the node starts                             | What happens                                                                                                                                                                                                                                                                                                                                |
+| --------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| root      | the whole literal, `nested`                             | `elementwise`: `decideParts` gives part `i` the cursor `partAt(i)`, which is the given part of the literal                                                                                                                                                                                                                                  |
+| 0         | `makeBoxAndInt()`, a single `Temporary` tuple           | `elementwise`: the value has no given sub-parts (so the `ExpressionType` of `makeBoxAndInt()` is the only one we care about. Inner values of the `(box i32, i32)` tuple have the same value category as `makeBoxAndInt()`). `partAt` derives them from the type. Each component inherits the category of the whole, so both are `Temporary` |
+| 0.0       | `box i32 [Temporary]`, derived from (`makeBoxAndInt()`) | `hand over`: `passingMethod` says `ImplicitMove`, since a temporary may be moved                                                                                                                                                                                                                                                            |
+| 0.1       | `i32 [Temporary]`, derived from `makeBoxAndInt()`       | `numeric` is copied as it is                                                                                                                                                                                                                                                                                                                |
+| 1         | `(move b, x)`, `nested`                                 | `elementwise`: `partAt` gives the two parts of the inner literal                                                                                                                                                                                                                                                                            |
+| 1.0       | `move b [Temporary, forces MOVE]`                       | `hand over`: the user already wrote `move`, so `passingMethod` says `ByteCopy` and the step is dropped                                                                                                                                                                                                                                      |
+| 1.1       | `x [Local]`                                             | `numeric` and `pack as alternative 1` are copied. After each of them the cursor becomes `producedBy(step)`, a fresh temporary                                                                                                                                                                                                               |
+| 2         | `(makeBox(), 1i64)`, `nested`                           | `hand over` of a value **built out of parts**: `decideHandOver` does not ask `passingMethod` about the whole tuple since it contains more than one `ExpressionType` inside. It plans each component into its own place (`planPartsInPlace`) and decides those plans against the parts. The `hand over` becomes an `elementwise`             |
+| 2.0 (new) | `makeBox() [Temporary]`                                 | `hand over`: `ImplicitMove`                                                                                                                                                                                                                                                                                                                 |
+| 2.1 (new) | `1i64 [Literal]`                                        | the identity plan of an `i64` has no steps                                                                                                                                                                                                                                                                                                  |
+| 3         | `&x [Temporary]`                                        | `deref`: the cursor becomes `dereferenced()`, an `i32 [Dereferenced]`. Then `numeric` is copied. Had there been a `hand over` after the `deref`, it would have been decided for the `Dereferenced` pointee                                                                                                                                  |
 
 The result:
 

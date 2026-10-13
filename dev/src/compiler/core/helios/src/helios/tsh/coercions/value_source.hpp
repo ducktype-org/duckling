@@ -26,7 +26,7 @@
 namespace compiler::tsh::coercions {
 
 	/**
-	 * @brief Represents the value a coercion is asked about of it. This is used to provide the
+	 * @brief Represents the value a coercion is asked about. This is used to provide the
 	 * coercion tree with the information needed to perform ownership decisions on top of the
 	 * `SymbolType` plan.
 	 *
