@@ -35,3 +35,10 @@ Tests:
         Output:
           String: "42\n"
         ExitCode: 0
+
+  operator_range_after_number:
+    Cases:
+      all:
+        Output:
+          String: "7\n7\n10\n"
+        ExitCode: 0

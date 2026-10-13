@@ -1,0 +1,14 @@
+# `1..2` must lex as `1`, `..`, `2`, not as the float `1.` followed by `.2`.
+fun ..(a: i64, b: i64) -> i64 = {
+    return b - a;
+}
+
+fun main() -> i64 = {
+    let x = 2..9;
+    builtin_output_i64(x);
+    let y = 2 .. 9;
+    builtin_output_i64(y);
+    let z = 0..10;
+    builtin_output_i64(z);
+    return 0;
+}

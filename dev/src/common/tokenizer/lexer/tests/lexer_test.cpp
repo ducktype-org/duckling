@@ -9,8 +9,10 @@
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
 
+#include <algorithm>
 #include <string>
 #include <string_view>
+#include <vector>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -34,6 +36,7 @@ public:
 		TESTER_ADD_TEST(testSourcePosition);
 		TESTER_ADD_TEST(testLiteralTextIsNotKeyword);
 		TESTER_ADD_TEST(testDescribeSentinelsDoNotLeakInternalNames);
+		TESTER_ADD_TEST(testNumberFollowedByRange);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -202,6 +205,54 @@ private:
 				base::strConcat("bracket `", bracket, "`"),
 				lexer::Token::makeSentinel(base::RawView(bracket), pos)
 			);
+	}
+
+	/**
+	 * @brief Lexes `code` and checks that its top-level tokens are exactly `expected`, as text.
+	 */
+	void checkTokenTexts(std::string_view code, std::initializer_list<std::string_view> expected) {
+		auto source
+			= tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(std::string(code))
+		    );
+		ASSERT_TRUE(source->tokenize());
+
+		std::vector<std::string_view> got;
+		for (const auto& token: source->getTokenData().tokens) got.push_back(token.getStrValue());
+
+		std::string got_joined;
+		for (auto text: got) got_joined += base::strConcat("`", text, "` ");
+		assertTrue(
+			std::ranges::equal(got, expected),
+			base::strConcat("Unexpected tokens for `", code, "`: ", got_joined)
+		);
+	}
+
+	/**
+	 * @brief A number directly followed by `..` is an integer and a range operator, not the
+	 * float `1.` followed by a lone `.`; a single trailing dot still makes a float.
+	 */
+	void testNumberFollowedByRange() {
+		checkTokenTexts("1..2", { "1", "..", "2" });
+		checkTokenTexts("1 .. 2", { "1", "..", "2" });
+		checkTokenTexts("0..10", { "0", "..", "10" });
+		checkTokenTexts("1..", { "1", ".." });
+		checkTokenTexts("1.5..2.5", { "1.5", "..", "2.5" });
+		checkTokenTexts("1e3..2", { "1e3", "..", "2" });
+		checkTokenTexts("1u32..2u32", { "1u32", "..", "2u32" });
+		checkTokenTexts("1...2", { "1", "...", "2" });
+
+		checkTokenTexts("1.", { "1." });
+		checkTokenTexts("1.+2", { "1.", "+", "2" });
+		checkTokenTexts("5.*100.", { "5.", "*", "100." });
+		checkTokenTexts("1. .2", { "1.", ".2" });
+
+		auto source = tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile("1..2"));
+		ASSERT_TRUE(source->tokenize());
+		const auto& tokens = source->getTokenData().tokens;
+		ASSERT_TRUE(tokens.at(0).isNumLiteralGroup());
+		ASSERT_TRUE(tokens.at(1).isOperatorSymbol());
+		ASSERT_TRUE(tokens.at(1).asNamedOperator() == lang_def::NamedOperator::Range);
+		ASSERT_TRUE(tokens.at(2).isNumLiteralGroup());
 	}
 
 	void testSourcePosition() {
