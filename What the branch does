@@ -1,0 +1,38 @@
+What the branch does
+
+1. The PST class is split up. PST<Element> (pst.hpp) is now an abstract base holding the root, hashes and signing, with a pure-virtual hasErrors(). Parsing moved to the new ParsedPST<Element> (parsed_pst.hpp), which picks the parser per call (fromContents<Parser>). There is also a new TemplateExpansionPST (template_expansion_pst.hpp) for subtrees built without parsing. PSTs are now heap-allocated and returned as Box<…>. Most of the diff is call sites switching from . to ->.
+2. Element constructors no longer need the parser state. They take LangParserElementConstructionData (source position plus context hash) instead of const LangParserState&. This is the one-line change in ~70 hierarchy headers.
+3. Synthetic elements: two new element types, TemplateTopLevel and TemplateExpansionAssignment, built by ElementSynthesizer. The child-assignment logic moved out of PSTAutomatic into a new FreeAutomatic so the synthesizer can use it too.
+
+Files that need more attention
+
+1. lang_parser_element.hpp:101: clones lose their context hash. The copy constructor now sets context_hash() instead of copying other.context_hash. calcHash() (lang_parser_element.cpp:99) feeds context_hash into every element's hash. So every clone, not just template bakes, now hashes differently from its original, and two clones that differ only by context will hash the same. This came in with the commit titled just "changes" (1cd0cab51), with no explanation. Confirm it's intended; if so, it deserves a comment.
+
+2. helios_private/templates/templates.cpp:~168-182: baked templates behave differently.
+- Hash change: the old fromClone only computed hashes and registered them. TemplateExpansionPST::fromElement now also calls signGenerated(), so every baked template element gets a different hash. That's probably the right direction, mpilation and query-cache keys, so it should be a conscious change.
+- Dead code: token_source_hack and its #3110 TODO comment are still there but the value is no longer used. Delete both.
+
+3. The synthetic elements (synthetic_elements/*.hpp) would hit an assert as soon as the compiler's later stages (Helios) see them.                                         - element_kind is never set. Neither constructor nor the synthesizer so entries for these types. getElementKind() asserts on KindNotSet, sothese elements will trip it the moment Helios builds scopes for them.                                                                                                    - Nothing uses or tests them. Nothing calls ElementSynthesizer, and Tet TemplateTopLevel is never instantiated. The new code, including thevector clone in CLONE_SUB_ELEMENTS_DEF(TemplateTopLevel, assignments, stmt), is exercised only if some other file happens to instantiate it. Add at least a                build-and-clone test, like the existing testElementCloning.
+- Wrong include: template_top_level.cpp:10 includes template_expansion_assignment.hpp instead of its own header. It compiles only because synthesizer.hpp pulls the right    one in.
+- Unresolved TODO: template_expansion_assignment.hpp:66 has the comment "Not sure if the type can be deductible" on an optional child.                                     
+4. access.hpp:189-190: stale friend. It declares friend class GeneratedSubPST, a class that no longer exists (it was renamed to TemplateExpansionPST). Remove it, or point it at the new class if it actually needs friend access.
+
+5. parsed_pst.hpp
+- Constness weakened: getFile() const now returns a mutable Ref<TokenSource>; it used to return a read-only CRef.
+- Hash registration moved: for macro expansion, the hash registration re and after signing now happens only after. This resolves the #2404TODO. Check that nothing relied on the earlier registration during parsing.
+- Inconsistent signatures: the content constructor takes Box<LangParseconstructor takes it by value. fromFile takes Box<TokenSource>&& but its constructor takes it by value.
+
+6. pst.hpp: leftovers. The class doc ("Parses on construction if possible", @tparam … to parse) now describes ParsedPST. The PROTECTED METHODS banner box is misaligned.
+The time_stats, token_source and logger includes are probably no longe
+
+7. source_file.hpp/.cpp and box.hpp
+- New MBox::reset(): it was added so parse_tree (now MBox instead of Optional) can be reset. It calls deleter.del(nullptr) when the box is empty, so check that
+  DefaultBoxPtrDeleter handles null; operator= already relies on that, also has no doc comment, unlike its neighbours.
+- Awkward accessor: parse_tree.ref().toOpt().value() is a roundabout way to get a CRef.
+
+8. tests/parser_errors_test.cpp: dropped specializations. The CodeBlock and CodeBlockOrStmt specializations were removed in favour of the generic fromContents<Parser>.
+That's fine if they now compile and pass through the generic path. Runmples still run rather than silently dropping out.
+
+Minor: the FreeAutomatic::assign docs (pst_automatic.hpp) still say @ptree, and the same doc block is copied five times.
+
+I'd start with points 1–3: the clone hash change, the signing change it element_kind.
