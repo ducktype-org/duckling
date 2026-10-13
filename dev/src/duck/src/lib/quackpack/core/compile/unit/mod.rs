@@ -13,6 +13,8 @@ use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 use std::hash::Hash;
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
 use super::duckc::multipackage_schema;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
@@ -43,7 +45,7 @@ pub struct Unit {
     unit_type: UnitType,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 /// What task to perform this [`Unit`] represents.
 ///
 /// Note: Mapping to the [`Strategy`] is done by [`UnitTaskGenerator`].
@@ -75,7 +77,7 @@ impl Unit {
 
     /// Get the package of this [`Unit`].
     pub fn package(&self) -> &AnyPackage {
-        &self.package_data.package
+        self.package_data().package()
     }
 
     /// Get the [`PackageData`] of the package of this [`Unit`].
@@ -85,7 +87,7 @@ impl Unit {
 
     /// Get the enabled features of this [`Unit`].
     pub fn enabled_features(&self) -> &HashSet<FeatureName> {
-        &self.package_data.enabled_features
+        self.package_data().enabled_features()
     }
 
     /// Get the type of produced artifacts by this [`Unit`].
@@ -95,7 +97,7 @@ impl Unit {
 
     /// Get the [`Identity`] of this [`Unit`].
     pub fn identity(&self) -> Identity {
-        self.package_data.identity
+        self.package_data().identity()
     }
 
     /// Get a unique (in terms of the current compilation graph) name of the underlying package.
@@ -148,6 +150,26 @@ pub struct PackageData {
 }
 
 impl PackageData {
+    /// Get the underlying [`AnyPackage`].
+    pub fn package(&self) -> &AnyPackage {
+        &self.package
+    }
+
+    /// Get the underlying mapping for dependencies' realizations.
+    pub fn deps_realization(&self) -> &Vec<(Identity, Option<StrId>)> {
+        &self.deps_realization
+    }
+
+    /// Get the underlying enabled features.
+    pub fn enabled_features(&self) -> &HashSet<FeatureName> {
+        &self.enabled_features
+    }
+
+    /// Get the underlying [`Identity`].
+    pub fn identity(&self) -> Identity {
+        self.identity
+    }
+
     /// Get a unique (in terms of the current compilation graph) name of the package.
     /// It can be used as a directory name for storing artifacts.
     pub fn unique_name(&self) -> String {

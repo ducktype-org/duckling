@@ -27,6 +27,7 @@ use crate::quackpack::core::compile::duckc::{Duckc, multipackage_schema};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
 use crate::quackpack::core::compile::unit::{Unit, UnitType};
+use crate::quackpack::core::compile::unit_runner::incremental::{BuildData, IncrementalData};
 use crate::quackpack::core::compile::unit_task_generator::UnitTaskGenerator;
 use crate::quackpack::core::compile::unit_task_generator::default::DefaultTaskGenerator;
 use crate::quackpack::core::compile::unit_task_generator::dvm::DvmTaskGenerator;
@@ -34,6 +35,7 @@ use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
 pub mod external_libs;
+pub mod incremental;
 pub mod outputs;
 
 #[cfg(test)]
@@ -64,11 +66,30 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     #[instrument(skip_all)]
     /// Drive the compilation with [`UnitRunner`].
     pub fn run(self) -> QuackResult<CompilationOutput> {
-        self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
+        self.manage_fingerprint(&*profile_layout)?;
+        self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         self.run_all_needed_units(&*profile_layout)?;
         outputs::get_compiler_output(&self.graph, &*profile_layout, self.bcx)
+    }
+
+    #[instrument(skip_all)]
+    /// Write a new fingerprint to the disk and get [`IncrementalData`] from the previous fingerprint.
+    /// Note:
+    /// -----
+    /// Returns empty [`IncrementalData`] if there was no previous fingerprint found or profile prohibits incremental.
+    fn manage_fingerprint(&self, layout: &dyn ProfileLayout) -> QuackResult<IncrementalData> {
+        let fingerprint = layout.fingerprint(self.bcx.pcx.ctx())?;
+        let cur_build_data = BuildData::for_current_build(&self.graph, self.bcx.profile);
+        let result = if fingerprint.path().exists() && self.bcx.profile.incremental {
+            let prev_build_data = BuildData::from_fingerprint(&fingerprint)?;
+            cur_build_data.get_incremental_data(&prev_build_data)?
+        } else {
+            IncrementalData::default()
+        };
+        cur_build_data.write_fingerprint(&fingerprint)?;
+        Ok(result)
     }
 
     #[instrument(skip_all)]
