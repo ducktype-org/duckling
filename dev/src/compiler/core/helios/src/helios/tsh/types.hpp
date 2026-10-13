@@ -455,6 +455,20 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		SymbolType<> getMember(usize index) const;
 
+		/**
+		 * @brief Whether this variant is the optional `?T`, i.e. `T | None` printed and exposing
+		 * its interface as an optional.
+		 */
+		[[nodiscard]]
+		bool representsOptionalType() const;
+
+		/**
+		 * @brief The type `T` held by the optional `?T`.
+		 * @pre representsOptionalType()
+		 */
+		[[nodiscard]]
+		SymbolType<> getOptionalValueType() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(VariantAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(VariantAbstractType)

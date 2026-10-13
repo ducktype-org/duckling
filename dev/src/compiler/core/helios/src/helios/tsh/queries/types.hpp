@@ -204,9 +204,14 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Key for QueryVariantType.
+	 *
+	 * When @p represents_optional_type is set, the variant is the optional `?T`: its first
+	 * underlying type has to be the held value type `T`, and the second one the `None` type.
+	 * An optional is a distinct type from the plain variant `T | None`.
 	 */
 	struct KeyFor_QueryVariantType final {
 		std::vector<SymbolType<>> underlying_types;
+		bool                      represents_optional_type = false;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryVariantType&) const
@@ -224,6 +229,7 @@ namespace compiler::tsh {
 
 			hashing::SHA256 hasher{};
 			for (const auto& hash: hashes) addToHash(hasher, hash);
+			addToHash(hasher, represents_optional_type);
 			return hasher.finalize();
 		}
 	};

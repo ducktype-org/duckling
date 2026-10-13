@@ -34,6 +34,30 @@ namespace compiler::helios {
 		);
 	}
 
+	class Coercion;
+
+	/**
+	 * @brief How the coerced value is allowed to be handed over.
+	 */
+	enum class CoercionMode {
+		Default,        ///< Only the regular implicit coercions.
+		ImplicitRefOf,  ///< Additionally, a non-`ref` value may be implicitly taken by `ref`.
+	};
+
+	/**
+	 * @brief Checks if a coercion of value described by from `from` to `to` is possible and returns
+	 * a function performing the coercion if it is.
+	 *
+	 * In the CoercionMode::ImplicitRefOf mode a direct or boxed value may also be passed where a
+	 * `ref` is expected, which is how the receiver of a method call is passed as its `self`.
+	 */
+	query::QResult<Coercion> canCoerce(
+		query::Context&              ctx,
+		const tsh::ExpressionType<>& from,
+		const tsh::SymbolType<>&     to,
+		CoercionMode                 mode = CoercionMode::Default
+	);
+
 	/**
 	 * @brief This struct represents a function that performs a coercion from one expression to
 	 * another. It was added to make sure that the coercion is always valid (by calling
@@ -60,6 +84,12 @@ namespace compiler::helios {
 		 */
 		const bool transfers_ownership;
 
+		/**
+		 * Whether the source value is implicitly taken by reference first. This has to be wrapped
+		 * by an implicit `RefOfExpr`.
+		 */
+		const bool implicit_ref_of;
+
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
 			return invalid_reason.empty();
@@ -80,6 +110,7 @@ namespace compiler::helios {
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
 			// The implicit `MoveExpr` still has to be inserted, even when the types match.
 			if (transfers_ownership) return false;
+			if (implicit_ref_of) return false;
 			return validated_from == to
 			    || validated_from.withMutability(tsh::Mutability::Immutable) == to;
 		}
@@ -107,7 +138,7 @@ namespace compiler::helios {
 		) const;
 
 		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
-			return { from_and_to, from_and_to, {}, false };
+			return { from_and_to, from_and_to, {}, false, false };
 		}
 
 	private:
@@ -115,31 +146,32 @@ namespace compiler::helios {
 			tsh::SymbolType<>                     validated_from,
 			tsh::SymbolType<>                     to,
 			base::Optional<InvalidCoercionReason> invalid,
-			bool                                  transfers_ownership
+			bool                                  transfers_ownership,
+			bool                                  implicit_ref_of
 		):
 			  validated_from(validated_from),
 			  to(to),
 			  invalid_reason(invalid),
-			  transfers_ownership(transfers_ownership) {}
-
-		friend query::QResult<Coercion> canCoerce(
-			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
-		);
+			  transfers_ownership(transfers_ownership),
+			  implicit_ref_of(implicit_ref_of) {}
 
 		static Coercion invalid(
 			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
 		) {
-			return { validated_from, to, invalid, false };
+			return { validated_from, to, invalid, false, false };
 		}
 
 		static Coercion valid(
 			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, bool transfers_ownership
 		) {
-			return { validated_from, to, {}, transfers_ownership };
+			return { validated_from, to, {}, transfers_ownership, false };
 		}
 
 		friend query::QResult<Coercion> canCoerce(
-			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+			query::Context&              ctx,
+			const tsh::ExpressionType<>& from,
+			const tsh::SymbolType<>&     to,
+			CoercionMode                 mode
 		);
 
 		// @TODO: #3631 Remove the friend
@@ -150,14 +182,6 @@ namespace compiler::helios {
 			pst::Access<pst::expr::BinaryOperator> stmt
 		);
 	};
-
-	/**
-	 * @brief Checks if a coercion of value described by from `from` to `to` is possible and returns
-	 * a function performing the coercion if it is.
-	 */
-	query::QResult<Coercion> canCoerce(
-		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
-	);
 
 	/**
 	 * @brief Checks if a coercion of the value described by `from` to the meta type is possible and

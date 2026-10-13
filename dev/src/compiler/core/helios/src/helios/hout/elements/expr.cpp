@@ -173,7 +173,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  tsh::getCharSliceType(ctx),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
@@ -636,7 +636,10 @@ namespace compiler::helios::code {
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
-		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> subtypes
+		query::Context&,
+		ElementOrigin          origin,
+		std::vector<Box<Expr>> subtypes,
+		const bool             represents_optional_type
 	):
 		  Expr(
 
@@ -650,17 +653,30 @@ namespace compiler::helios::code {
 			  },
 			  origin
 		  ),
-		  subtypes(std::move(subtypes)) {}
+		  subtypes(std::move(subtypes)),
+		  represents_optional_type(represents_optional_type) {
+		CORE_ASSERT(
+			not represents_optional_type or this->subtypes.size() == 2,
+			"An optional type constructor needs exactly the value type and the None type."
+		);
+	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
 		tsh::ExpressionType<>        expression_type,
 		ElementOrigin                origin,
-		std::vector<base::Box<Expr>> subtypes
+		std::vector<base::Box<Expr>> subtypes,
+		const bool                   represents_optional_type
 	):
 		  Expr(expression_type, origin),
-		  subtypes(std::move(subtypes)) {}
+		  subtypes(std::move(subtypes)),
+		  represents_optional_type(represents_optional_type) {}
 
 	void VariantTypeConstructorExpr::debugPrint(std::ostream& out) const {
+		if (represents_optional_type) {
+			out << "?";
+			subtypes.front()->debugPrint(out);
+			return;
+		}
 		out << "(";
 		for (bool add_pipe = false; auto&& subtype: subtypes) {
 			if (add_pipe) out << " | ";
@@ -675,7 +691,7 @@ namespace compiler::helios::code {
 		cloned_subtypes.reserve(subtypes.size());
 		for (const auto& subtype: subtypes) cloned_subtypes.push_back(subtype->clone());
 		return makeBox<VariantTypeConstructorExpr>(
-			expression_type, origin, std::move(cloned_subtypes)
+			expression_type, origin, std::move(cloned_subtypes), represents_optional_type
 		);
 	}
 
@@ -1176,9 +1192,13 @@ namespace compiler::helios::code {
 		query::Context&, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type
 	):
 		  Expr(
-			  tsh::ExpressionType<>(
-				  target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
+			  CastExpr::createsTemporary(source_expr->expression_type.getSymbolType(), target_type)
+				  ? tsh::ExpressionType<>(
+						target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+					)
+				  : tsh::ExpressionType<>(
+						target_type, source_expr->expression_type.getValueCategory()
+					),
 			  origin
 		  ),
 		  source_expr(std::move(source_expr)),
@@ -1204,26 +1224,55 @@ namespace compiler::helios::code {
 		return makeBox<CastExpr>(expression_type, origin, source_expr->clone(), target_type);
 	}
 
-	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  [](const tsh::ExpressionType<>& inner_type) -> tsh::ValueCategory {
-					  switch (inner_type.getSymbolType().getRefKind()) {
-					  case tsh::ReferenceKind::Direct:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
-					  case tsh::ReferenceKind::Ref:
-						  return inner_type.getValueCategory();
-					  case tsh::ReferenceKind::Box:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
-					  }
-					  CORE_UNREACHABLE();
-				  }(inner->expression_type)
+	bool CastExpr::createsTemporary(tsh::SymbolType<> source, tsh::SymbolType<> target) {
+		auto is_direct = [](const tsh::SymbolType<>& type) -> bool {
+			return type.getRefKind() == tsh::ReferenceKind::Direct;
+		};
 
-			  ),
-			  origin
-		  ),
+		if (source == target) return false;
+
+		// If cast is from ref T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Ref
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		// If cast is from box T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Box
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		if (source.getType().getKind() == tsh::Kind::Void) return false;
+
+		if (is_direct(source) && is_direct(target)) {
+			if (source.getType() == target.getType()) return false;  // const drop
+		}
+		return true;
+	}
+
+	bool CastExpr::createsTemporary() const {
+		return CastExpr::createsTemporary(source_expr->expression_type.getSymbolType(), target_type);
+	}
+
+	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+		  Expr(typeOfRefTo(inner->expression_type), origin),
 		  inner(std::move(inner)) {}
+
+	tsh::ExpressionType<> RefOfExpr::typeOfRefTo(const tsh::ExpressionType<>& inner_type) {
+		return { inner_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
+			     [&]() -> tsh::ValueCategory {
+					 switch (inner_type.getSymbolType().getRefKind()) {
+					 case tsh::ReferenceKind::Direct:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+					 case tsh::ReferenceKind::Ref:
+						 return inner_type.getValueCategory();
+					 case tsh::ReferenceKind::Box:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+					 }
+					 CORE_UNREACHABLE();
+				 }() };
+	}
 
 	RefOfExpr::RefOfExpr(
 		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner

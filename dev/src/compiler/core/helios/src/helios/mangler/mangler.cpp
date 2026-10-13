@@ -1017,6 +1017,14 @@ namespace compiler::helios::mangler {
 
 		static std::string mangle(query::Context& ctx, tsh::VariantAbstractType type) {
 			std::stringstream res;
+			if (type.representsOptionalType()) {
+				res << "Q"
+					<< ctx.query<QueryMangledType>({ type.getOptionalValueType() })
+						   ->valueOrThrow()
+						   .str()
+					<< "E";
+				return res.str();
+			}
 			res << "V";
 			for (auto& elem: type.getUnderlyingTypes())
 				res << ctx.query<QueryMangledType>({ elem })->valueOrThrow().str();

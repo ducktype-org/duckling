@@ -785,7 +785,7 @@ private:
 		auto f32 = st(getFloatTypeNoContext(32));
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
-			auto str = stConst(compiler::tsh::getCharSliceType(ctx));
+			auto str = st(compiler::tsh::getCharSliceType(ctx));
 
 			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
@@ -2743,9 +2743,8 @@ private:
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
 		);
-		const auto tuple_si_type = query::entryPoint<compiler::tsh::QueryTupleType>(
-			{ { stConst(str_type), st(int32_type) } }
-		);
+		const auto tuple_si_type
+			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);

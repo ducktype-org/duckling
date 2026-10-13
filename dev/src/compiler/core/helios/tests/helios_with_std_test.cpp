@@ -83,6 +83,7 @@ public:
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testDestructors);
 		TESTER_ADD_TEST(testOperatorsWithPrimitives);
+		TESTER_ADD_TEST(testOptionalType);
 	}
 
 protected:
@@ -1894,6 +1895,36 @@ private:
 			out_v256.str(),
 			std::regex{ R"(\(Symbol powi \((\d+)\)\)\(3 \+ 4 - 4 \* 16 / 5 % 7, 8\))" }
 		));
+	}
+
+	/**
+	 * `?T` creates the optional type, distinct from the equivalent `T | None` variant, which
+	 * exposes the optional interface.
+	 */
+	void testOptionalType() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/optional_type")));
+		const auto i64_type  = getIntegralTypeNoContext(64, Signed);
+
+		const auto optional_type = getTypeOf("OPTIONAL", root_scope);
+		const auto variant_type  = getTypeOf("VARIANT", root_scope);
+
+		ASSERT_EQUAL(optional_type.getKind(), compiler::tsh::Kind::Variant);
+		const auto optional_variant = compiler::tsh::VariantAbstractType(optional_type);
+		ASSERT_TRUE(optional_variant.representsOptionalType());
+		ASSERT_EQUAL(optional_variant.getOptionalValueType(), st(i64_type));
+
+		ASSERT_EQUAL(variant_type.getKind(), compiler::tsh::Kind::Variant);
+		ASSERT_TRUE(not compiler::tsh::VariantAbstractType(variant_type).representsOptionalType());
+		ASSERT_TRUE(optional_type != variant_type);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto& interface = optional_type.getInterface(ctx);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("value")).size(), 2);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("valueOr")).size(), 2);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("full")).size(), 1);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("empty")).size(), 1);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("reset")).size(), 1);
+		});
 	}
 };
 

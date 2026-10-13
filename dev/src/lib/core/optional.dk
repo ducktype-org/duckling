@@ -1,0 +1,83 @@
+import core.panicking as panicking;
+
+let none: optional_primitives.None = optional_primitives.None();
+
+#{
+    Language primitives backing the interface of `?T`. The compiler bakes them for the held type
+    and exposes them as the methods of the optional.
+#}
+namespace optional_primitives {
+    class None {
+        #{
+            We ideally want this class as empty, but for now the compiler doesn't support 
+            empty classes.
+        #}
+        private _placeholder: u32 = 0u32;
+    }
+
+    namespace by_value {
+        template(T: type)
+        fun value(o: ?T) -> T = {
+            return match (move o) {
+                case v: T = move v;
+                case _: None = panicking.panic();
+            };
+        }
+
+        template(T: type)
+        fun valueOr(o: ?T, oth: T) -> T = {
+            return match (move o) {
+                case v: T = move v;
+                case _: None = move oth;
+            };
+        }
+    }
+
+    namespace by_ref {
+        template(T: type)
+        fun value(o: ref ?T) -> ref T = {
+            return match (o) {
+                case v: ref T = &v;
+                case _: None = panicking.panic();
+            };
+        }
+
+        template(T: type)
+        fun valueOr(o: ref ?T, oth: ref T) -> ref T = {
+            return match (o) {
+                case v: ref T = v;
+                case _: None = oth;
+            };
+        }
+    }
+
+    #{
+        Whether the optional holds a value.
+    #}
+    template(T: type)
+    fun full(o: const ref ?T) -> bool = {
+        return match (o) {
+            case _: const ref T = true;
+            case _: None = false;
+        };
+    }
+
+    #{
+        Whether the optional holds no value.
+    #}
+    template(T: type)
+    fun empty(o: const ref ?T) -> bool = {
+        return match (o) {
+            case _: const ref T = false;
+            case _: None = true;
+        };
+    }
+
+    #{
+        Destroys the held value, if any, leaving the optional empty.
+    #}
+    template(T: type)
+    fun reset(o: ref ?T) -> () = {
+        o = none;
+    }
+}

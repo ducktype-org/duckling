@@ -301,6 +301,8 @@ namespace compiler::lir {
 			return lir::MetaKind::CreateTuple;
 		case CreateVariant:
 			return lir::MetaKind::CreateVariant;
+		case CreateOptional:
+			return lir::MetaKind::CreateOptional;
 		case Eq:
 			return lir::MetaKind::Eq;
 		case Neq:
