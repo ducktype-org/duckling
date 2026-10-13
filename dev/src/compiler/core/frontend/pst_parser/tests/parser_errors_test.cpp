@@ -226,15 +226,23 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
+	Example<pst::Fun, true>      contextual_fixity_names{
+        "fun prefix(suffix: i64) -> i64 = { return suffix; }"
+	};
+	Example<pst::Fun, false> fixity_on_plain_name{ "fun prefix ordinary(n: i64) -> i64 = n;" };
 
-	Example<pst::Fun, true>      operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
-	Example<pst::FunDecl, true>  operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
-	Example<pst::Class, true>    operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
-	Example<pst::Fun, false>     assignment_operator_function1{ "fun +*=(a: i64) = {}" };
-	Example<pst::Fun, false>     bare_assign_operator_function{ "fun =(a: i64) = {}" };
-	Example<pst::Fun, false>     comparison_operator_function1{ "fun <(a: i64) = {}" };
-	Example<pst::Fun, false>     special_operator_function1{ "fun ->(a: i64) = {}" };
-	Example<pst::Fun, false>     special_operator_function2{ "fun .?(a: i64) = {}" };
+	Example<pst::Fun, true>     operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
+	Example<pst::Fun, true>     prefix_operator_function{ "fun prefix +*(a: i64) -> i64 = {}" };
+	Example<pst::Fun, true>     suffix_operator_function{ "fun suffix +*(a: i64) -> i64 = {}" };
+	Example<pst::FunDecl, true> operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
+	Example<pst::FunDecl, true> suffix_operator_fundecl{ "fundecl suffix +*(a: i64) -> i64" };
+	Example<pst::Class, true>   operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
+	Example<pst::Class, true> suffix_operator_method{ "class Foo { fun suffix +*() -> Foo = {} }" };
+	Example<pst::Fun, false>  assignment_operator_function1{ "fun +*=(a: i64) = {}" };
+	Example<pst::Fun, false>  bare_assign_operator_function{ "fun =(a: i64) = {}" };
+	Example<pst::Fun, false>  comparison_operator_function1{ "fun <(a: i64) = {}" };
+	Example<pst::Fun, false>  special_operator_function1{ "fun ->(a: i64) = {}" };
+	Example<pst::Fun, false>  special_operator_function2{ "fun .?(a: i64) = {}" };
 	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
 
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
