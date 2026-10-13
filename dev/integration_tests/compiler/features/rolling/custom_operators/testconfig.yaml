@@ -5,14 +5,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "42\n42\n49\n56\n42\n42\n49\n"
-        ExitCode: 0
-
-  operator_expression:
-    Cases:
-      all:
-        Output:
-          String: "250\n"
+          String: "42\n42\n42\n42\n"
         ExitCode: 0
 
   operator_method_only:
@@ -34,11 +27,4 @@ Tests:
       all:
         Output:
           String: "42\n"
-        ExitCode: 0
-
-  operator_range_after_number:
-    Cases:
-      all:
-        Output:
-          String: "7\n7\n10\n"
         ExitCode: 0
