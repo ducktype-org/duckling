@@ -156,7 +156,7 @@ impl PackageData {
     }
 
     /// Get the underlying mapping for dependencies' realizations.
-    pub fn deps_realization(&self) -> &Vec<(Identity, Option<StrId>)> {
+    pub fn deps_realization(&self) -> &[(Identity, Option<StrId>)] {
         &self.deps_realization
     }
 
