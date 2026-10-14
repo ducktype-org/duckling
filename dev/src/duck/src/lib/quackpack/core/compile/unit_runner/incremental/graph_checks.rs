@@ -5,7 +5,6 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use std::collections::{HashMap, HashSet};
-use std::debug_assert;
 
 use crate::quackpack::core::compile::unit::graph::GraphNodeId;
 use crate::quackpack::core::compile::unit_runner::incremental::IncrementalData;
@@ -40,6 +39,7 @@ impl SerializableUnitGraph {
                 qp_bail!("no dependencies for node {node_id} in the previous build unit graph");
             };
             // Secondly that they are sorted.
+            // This also checks that there are no duplicates, in contrast to `Vec::is_sorted` :).
             if !node_deps.is_sorted_by(|a, b| a < b) {
                 qp_bail!(
                     "dependencies of the node {node_id} are not sorted in the previous build unit graph"
@@ -61,22 +61,56 @@ impl SerializableUnitGraph {
     /// This allows us to not rerun such nodes.
     pub fn get_incremental_data(&self, other: &Self) -> IncrementalData {
         let common_packages = self.get_common_packages(other);
+        let common_nodes = self.get_common_nodes(other, &common_packages);
+        IncrementalData {
+            common_packages,
+            common_nodes,
+        }
+    }
 
-        let mut common_nodes = HashSet::new();
+    /// Helper for [`Self::get_incremental_data`].
+    /// Checks which packages are the same (have the same [`Identity`] and [`SerializablePackageData`]) as in the previous build.
+    /// This in fact checks that:
+    /// - identities and versions are the same,
+    /// - package localizations on the disk are the same,
+    /// - features of the package are the same.
+    fn get_common_packages(&self, other: &Self) -> HashSet<Identity> {
+        let mut result = HashSet::new();
+        for (identity, pkg_data) in self.packages.iter() {
+            let Some(other_pkg_data) = other.packages.get(identity) else {
+                continue;
+            };
+            if pkg_data == other_pkg_data {
+                result.insert(*identity);
+                continue;
+            }
+        }
+        result
+    }
+
+    /// Helper for [`Self::get_incremental_data`].
+    /// After [`Self::get_common_packages`] is run, checks which nodes are the same as in the previous graph.
+    /// This not only means that they describe the same tasks on the same package, but that the dependencies are the same in both graphs.
+    ///
+    /// We achieve this, by iterating over the current graph in the topological order and maintaining the result.
+    /// We add a node to the result if the tasks are the same and all the dependencies describe the same tasks and are already in the result.
+    fn get_common_nodes(
+        &self,
+        other: &Self,
+        common_packages: &HashSet<Identity>,
+    ) -> HashSet<GraphNodeId> {
+        let mut result = HashSet::new();
         let other_nodes: HashMap<&SerializableGraphNodeData, &SerializableGraphNode> =
             other.nodes.iter().map(|node| (&node.node, node)).collect();
         for node in self.nodes.iter() {
             let Some(other_node) = other_nodes.get(&node.node) else {
                 continue;
             };
-            if self.nodes_are_the_same(other, node, other_node, &common_nodes, &common_packages) {
-                common_nodes.insert(node.id);
+            if self.nodes_are_the_same(other, node, other_node, &result, common_packages) {
+                result.insert(node.id);
             }
         }
-        IncrementalData {
-            common_packages,
-            common_nodes,
-        }
+        result
     }
 
     /// Given two seemingly equal graph nodes, checks that they are truly equal, meaning:
@@ -112,47 +146,20 @@ impl SerializableUnitGraph {
         }
         // Since the way `UnitGraphs` are built does not generally change,
         // if two nodes have the same dependencies, those dependencies should follow the same order.
-        let mut deps_agree = true;
-        let mut self_node_deps = self.dependencies[self_node.id as usize].iter();
-        let mut other_node_deps = other.dependencies[other_node.id as usize].iter();
-        loop {
-            match (self_node_deps.next(), other_node_deps.next()) {
-                (Some(self_dep), Some(other_dep)) => {
-                    if self.nodes[*self_dep as usize].node != other.nodes[*other_dep as usize].node
-                        || !current_common_nodes.contains(self_dep)
-                    {
-                        deps_agree = false;
-                        break;
-                    }
-                }
-                (None, None) => break,
-                _ => {
-                    deps_agree = false;
-                    break;
-                }
-            }
+        // So we check that the number of dependencies agree and that dependency at index `i` in the current graph
+        // is the same as the dependency at index `i` in the previous graph.
+        let self_node_deps = &self.dependencies[self_node.id as usize];
+        let other_node_deps = &other.dependencies[other_node.id as usize];
+        if self_node_deps.len() != other_node_deps.len() {
+            return false;
         }
-        deps_agree
-    }
-
-    /// Helper for [`Self::get_incremental_data`].
-    /// Checks which packages are the same (have the same [`Identity`] and [`SerializablePackageData`]) as in the previous build.
-    /// This in fact checks that:
-    /// - identities and versions are the same,
-    /// - package localizations on the disk are the same,
-    /// - features of the package are the same.
-    fn get_common_packages(&self, other: &Self) -> HashSet<Identity> {
-        let mut result = HashSet::new();
-        for (identity, pkg_data) in self.packages.iter() {
-            let Some(other_pkg_data) = other.packages.get(identity) else {
-                continue;
-            };
-            if pkg_data == other_pkg_data {
-                result.insert(*identity);
-                continue;
-            }
-        }
-        result
+        self_node_deps
+            .iter()
+            .zip(other_node_deps)
+            .all(|(self_dep, other_dep)| {
+                self.nodes[*self_dep as usize].node == other.nodes[*other_dep as usize].node
+                    && current_common_nodes.contains(self_dep)
+            })
     }
 }
 
@@ -166,56 +173,56 @@ mod test {
 
     /// Serialized graph for scenario "foo depends on both bar and baz".
     const LARGE_GRAPH: &'static str = r#"{
-    "root_id": 5,
+    "root-id": 5,
     "nodes": [
       {
         "id": 0,
         "node": {
-          "Input": {
-            "PackageSourceCode": "bar local+file:///home/bar"
+          "input": {
+            "package-source-code": "bar local+file:///home/bar"
           }
         }
       },
       {
         "id": 1,
         "node": {
-          "Input": {
-            "PackageSourceCode": "baz local+file:///home/baz"
+          "input": {
+            "package-source-code": "baz local+file:///home/baz"
           }
         }
       },
       {
         "id": 2,
         "node": {
-          "Input": {
-            "PackageSourceCode": "foo local+file:///home/foo"
+          "input": {
+            "package-source-code": "foo local+file:///home/foo"
           }
         }
       },
       {
         "id": 3,
         "node": {
-          "Unit": {
+          "unit": {
             "identity": "bar local+file:///home/bar",
-            "unit_type": "Dependency"
+            "unit-type": "Dependency"
           }
         }
       },
       {
         "id": 4,
         "node": {
-          "Unit": {
+          "unit": {
             "identity": "baz local+file:///home/baz",
-            "unit_type": "Dependency"
+            "unit-type": "Dependency"
           }
         }
       },
       {
         "id": 5,
         "node": {
-          "Unit": {
+          "unit": {
             "identity": "foo local+file:///home/foo",
-            "unit_type": "Binary"
+            "unit-type": "Binary"
           }
         }
       }
@@ -230,8 +237,8 @@ mod test {
     ],
     "packages": {
       "foo local+file:///home/foo": {
-        "root_path": "/home/foo",
-        "deps_realization": [
+        "root-path": "/home/foo",
+        "deps-realization": [
           [
             "bar local+file:///home/bar",
             null
@@ -241,21 +248,21 @@ mod test {
             null
           ]
         ],
-        "enabled_features": [],
+        "enabled-features": [],
         "identity": "foo local+file:///home/foo",
         "version": "1.0.0"
       },
       "bar local+file:///home/bar": {
-        "root_path": "/home/bar",
-        "deps_realization": [],
-        "enabled_features": [],
+        "root-path": "/home/bar",
+        "deps-realization": [],
+        "enabled-features": [],
         "identity": "bar local+file:///home/bar",
         "version": "1.0.0"
       },
       "baz local+file:///home/baz": {
-        "root_path": "/home/baz",
-        "deps_realization": [],
-        "enabled_features": [],
+        "root-path": "/home/baz",
+        "deps-realization": [],
+        "enabled-features": [],
         "identity": "baz local+file:///home/baz",
         "version": "1.0.0"
       }
@@ -264,39 +271,39 @@ mod test {
 
     /// Serialized graph for scenario "foo depends on bar".
     const SMALL_GRAPH: &'static str = r#"{
-    "root_id": 3,
+    "root-id": 3,
     "nodes": [
       {
         "id": 0,
         "node": {
-          "Input": {
-            "PackageSourceCode": "bar local+file:///home/bar"
+          "input": {
+            "package-source-code": "bar local+file:///home/bar"
           }
         }
       },
       {
         "id": 1,
         "node": {
-          "Input": {
-            "PackageSourceCode": "foo local+file:///home/foo"
+          "input": {
+            "package-source-code": "foo local+file:///home/foo"
           }
         }
       },
       {
         "id": 2,
         "node": {
-          "Unit": {
+          "unit": {
             "identity": "bar local+file:///home/bar",
-            "unit_type": "Dependency"
+            "unit-type": "Dependency"
           }
         }
       },
       {
         "id": 3,
         "node": {
-          "Unit": {
+          "unit": {
             "identity": "foo local+file:///home/foo",
-            "unit_type": "Binary"
+            "unit-type": "Binary"
           }
         }
       }
@@ -309,21 +316,21 @@ mod test {
     ],
     "packages": {
       "foo local+file:///home/foo": {
-        "root_path": "/home/foo",
-        "deps_realization": [
+        "root-path": "/home/foo",
+        "deps-realization": [
           [
             "bar local+file:///home/bar",
             null
           ]
         ],
-        "enabled_features": [],
+        "enabled-features": [],
         "identity": "foo local+file:///home/foo",
         "version": "1.0.0"
       },
       "bar local+file:///home/bar": {
-        "root_path": "/home/bar",
-        "deps_realization": [],
-        "enabled_features": [],
+        "root-path": "/home/bar",
+        "deps-realization": [],
+        "enabled-features": [],
         "identity": "bar local+file:///home/bar",
         "version": "1.0.0"
       }
@@ -332,39 +339,39 @@ mod test {
 
     /// As [`SMALL_GRAPH`], but dependencies are not sorted.
     const MALFORMED_GRAPH: &'static str = r#"{
-    "root_id": 3,
+    "root-id": 3,
     "nodes": [
       {
         "id": 0,
         "node": {
-          "Input": {
-            "PackageSourceCode": "bar local+file:///home/bar"
+          "input": {
+            "package-source-code": "bar local+file:///home/bar"
           }
         }
       },
       {
         "id": 1,
         "node": {
-          "Input": {
-            "PackageSourceCode": "foo local+file:///home/foo"
+          "input": {
+            "package-source-code": "foo local+file:///home/foo"
           }
         }
       },
       {
         "id": 2,
         "node": {
-          "Unit": {
+          "unit": {
             "identity": "bar local+file:///home/bar",
-            "unit_type": "Dependency"
+            "unit-type": "Dependency"
           }
         }
       },
       {
         "id": 3,
         "node": {
-          "Unit": {
+          "unit": {
             "identity": "foo local+file:///home/foo",
-            "unit_type": "Binary"
+            "unit-type": "Binary"
           }
         }
       }
@@ -377,21 +384,21 @@ mod test {
     ],
     "packages": {
       "foo local+file:///home/foo": {
-        "root_path": "/home/foo",
-        "deps_realization": [
+        "root-path": "/home/foo",
+        "deps-realization": [
           [
             "bar local+file:///home/bar",
             null
           ]
         ],
-        "enabled_features": [],
+        "enabled-features": [],
         "identity": "foo local+file:///home/foo",
         "version": "1.0.0"
       },
       "bar local+file:///home/bar": {
-        "root_path": "/home/bar",
-        "deps_realization": [],
-        "enabled_features": [],
+        "root-path": "/home/bar",
+        "deps-realization": [],
+        "enabled-features": [],
         "identity": "bar local+file:///home/bar",
         "version": "1.0.0"
       }

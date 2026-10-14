@@ -20,6 +20,7 @@ use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::{FeatureName, Version};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// A simplified, easily serializable version of [`UnitGraph`].
 pub struct SerializableUnitGraph {
     pub root_id: GraphNodeId,
@@ -28,28 +29,32 @@ pub struct SerializableUnitGraph {
     pub packages: HashMap<Identity, SerializablePackageData>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[serde(rename_all = "kebab-case")]
 /// A simplified, easily serializable version of [`UnitGraphNode`].
 pub struct SerializableGraphNode {
     pub id: GraphNodeId,
     pub node: SerializableGraphNodeData,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[serde(rename_all = "kebab-case")]
 /// A simplified, easily serializable version of [`UnitGraphNodeData`].
 pub enum SerializableGraphNodeData {
     Unit(SerializableUnit),
     Input(SerializableCompilationInput),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[serde(rename_all = "kebab-case")]
 /// A simplified, easily serializable version of [`Unit`].
 pub struct SerializableUnit {
     pub identity: Identity,
     pub unit_type: UnitType,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[serde(rename_all = "kebab-case")]
 /// A simplified, easily serializable version of [`CompilationInput`].
 pub enum SerializableCompilationInput {
     /// Source code of a package.
@@ -57,6 +62,7 @@ pub enum SerializableCompilationInput {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// A simplified, easily serializable version of [`PackageData`].
 pub struct SerializablePackageData {
     pub root_path: PathBuf,
@@ -132,7 +138,7 @@ impl From<&PackageData> for SerializablePackageData {
     fn from(value: &PackageData) -> Self {
         Self {
             root_path: value.package().root().to_path_buf(),
-            deps_realization: value.deps_realization().clone(),
+            deps_realization: value.deps_realization().to_vec(),
             enabled_features: value.enabled_features().clone(),
             identity: value.identity(),
             version: value.package().version(),

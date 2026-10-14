@@ -68,32 +68,38 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     pub fn run(self) -> QuackResult<CompilationOutput> {
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
-        self.manage_fingerprint(&*profile_layout)?;
+        let (fingerprint, build_data, _) = self.manage_fingerprint(&*profile_layout)?;
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         self.run_all_needed_units(&*profile_layout)?;
+        build_data.write_fingerprint(&fingerprint)?;
         outputs::get_compiler_output(&self.graph, &*profile_layout, self.bcx)
     }
 
     #[instrument(skip_all)]
-    /// Write a new fingerprint to the disk and get [`IncrementalData`] from the previous fingerprint.
+    /// Read the previous build fingerprint, generating [`IncrementalData`] from it.
+    /// Saving the new fingerprint is postponed to the end of the whole builds, so this function returns a triple,
+    /// consisting of:
+    /// - [`LockedFile`] --- the fingerprint file;
+    /// - [`BuildData`] --- the new fingerprint, yet to be written;
+    /// - [`IncrementalData`].
+    ///
     /// Note:
     /// -----
     /// Returns empty [`IncrementalData`] if there was no previous fingerprint found,
     /// parsing it returned an error or profile prohibits incremental.
-    fn manage_fingerprint(&self, layout: &dyn ProfileLayout) -> QuackResult<IncrementalData> {
+    fn manage_fingerprint(
+        &self,
+        layout: &dyn ProfileLayout,
+    ) -> QuackResult<(LockedFile, BuildData, IncrementalData)> {
         let prev_fingerprint_exists = layout.fingerprint_path().exists();
         let fingerprint = layout.fingerprint(self.bcx.pcx.ctx())?;
         let cur_build_data = BuildData::for_current_build(&self.graph, self.bcx.profile);
-        let attempt_incremental = prev_fingerprint_exists && self.bcx.profile.incremental;
-        let incremental_data = match (
-            attempt_incremental,
-            BuildData::from_fingerprint(&fingerprint),
-        ) {
-            (false, _) => {
-                // No incremental, so return empty result.
-                IncrementalData::default()
-            }
-            (true, Ok(prev_build_data)) => {
+        if !prev_fingerprint_exists || !self.bcx.profile.incremental {
+            // It makes no sense to attempt incremental.
+            return Ok((fingerprint, cur_build_data, IncrementalData::default()));
+        }
+        let incremental_data = match BuildData::from_fingerprint(&fingerprint) {
+            Ok(prev_build_data) => {
                 // Previous fingerprint is well-formed, we can use it.
                 self.bcx
                     .pcx
@@ -101,7 +107,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                     .info("succesfully loaded previous build fingerprint")?;
                 cur_build_data.get_incremental_data(&prev_build_data)
             }
-            (true, Err(e)) => {
+            Err(e) => {
                 // Previous fingerprint was malformed, so return empty result.
                 self.bcx.pcx.ctx().warning(format!(
                     "previous fingerprint at {} is malformed: {e}",
@@ -110,8 +116,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                 IncrementalData::default()
             }
         };
-        cur_build_data.write_fingerprint(&fingerprint)?;
-        Ok(incremental_data)
+        Ok((fingerprint, cur_build_data, incremental_data))
     }
 
     #[instrument(skip_all)]

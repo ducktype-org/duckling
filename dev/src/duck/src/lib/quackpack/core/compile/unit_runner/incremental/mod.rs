@@ -13,7 +13,6 @@
 
 use std::collections::HashSet;
 use std::io::{Read, Seek, Write};
-use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
@@ -22,18 +21,19 @@ use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
 use crate::quackpack::core::identity::Identity;
 use crate::util::file_locks::LockedFile;
-use crate::util::hash::Sha256Hasher;
+use crate::util::hash::sha256_string;
 use crate::{QuackResult, QuackResultContext};
 
 mod graph_checks;
 mod serializable_types;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Struct containing information about the current build that is stored on the disk,
 /// to be used for incremental compilation in the future builds.
 pub struct BuildData {
     /// Time of the build.
-    time: SystemTime,
+    time: chrono::DateTime<chrono::Utc>,
     /// Unit graph of the build (in an easily serializable version).
     unit_graph: SerializableUnitGraph,
     /// Hash of the profile of the build.
@@ -44,13 +44,12 @@ impl BuildData {
     /// Get a [`BuildData`] from [`UnitGraph`] and [`Profile`].
     /// Should be used for getting [`BuildData`] for the current build process.
     pub fn for_current_build(graph: &UnitGraph, profile: Profile) -> Self {
-        let now = SystemTime::now();
-        let mut hasher = Sha256Hasher::new(None);
-        hasher.update(profile.serialize_raw());
+        let now = chrono::offset::Utc::now();
+        let profile_hash = sha256_string(profile.serialize_raw());
         Self {
             time: now,
             unit_graph: graph.into(),
-            profile_hash: hasher.into_string(),
+            profile_hash,
         }
     }
 
