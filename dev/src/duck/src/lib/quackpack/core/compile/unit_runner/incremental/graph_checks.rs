@@ -104,7 +104,7 @@ impl SerializableUnitGraph {
         common_packages: &HashSet<Identity>,
     ) -> bool {
         // The tasks and packages should be equal at this point.
-        debug_assert!(self_node.node == other_node.node);
+        debug_assert_eq!(self_node.node, other_node.node);
 
         // If the package's data changed between compilations, return false.
         if !common_packages.contains(&self_node.node.identity()) {
