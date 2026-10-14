@@ -10,6 +10,15 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 
+/**
+ * @brief What belongs here: every inheritance error the loader must reject. That covers invalid
+ * hierarchies (cycles, extending the wrong kind of type), virtual methods that are missing or
+ * have the wrong signature, duplicates, invalid upcasts, invalid virtual calls and instantiating
+ * an abstract type.
+ *
+ * What a valid hierarchy is lowered to goes to `loader/lowering/`; how it behaves when it runs
+ * goes to `runtime/inheritance/`.
+ */
 class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceHierarchyCorrectnessTest
@@ -26,7 +35,7 @@ public:
 
 private:
 	void hierarchyCorrectness() {
-		runTestOnVm("inheritance_metadata.dbc", {}, {}, {}, 0);
+		runTestOnVm("../../common/programs/inheritance_metadata.dbc", {}, {}, {}, 0);
 
 		using namespace vm::code;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({

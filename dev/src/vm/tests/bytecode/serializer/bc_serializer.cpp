@@ -25,6 +25,10 @@ using namespace vm::code;
 using namespace vm::loader;
 using namespace vm;
 
+/**
+ * @brief What belongs here: the bytecode serializer. A program is serialized back to text and
+ * parsed again, and the result must be the same program.
+ */
 class SerializeParseRoundtripTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SerializeParseRoundtripTest

@@ -27,6 +27,12 @@ namespace {
 	const std::string SYSTEM_MATH_LIB = os_utils::systemSharedLibM();
 }
 
+/**
+ * @brief What belongs here: calling functions from a shared library through the FFI, and working
+ * with C pointers (`cptr`). It also checks the FFI errors, both at load time (bad native
+ * signatures) and at run time (bad `cptr` accesses), because they need the test library built
+ * next to this suite.
+ */
 class VmFfiTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmFfiTest

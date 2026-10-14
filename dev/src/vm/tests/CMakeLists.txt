@@ -25,13 +25,21 @@ function(duck_add_vm_tests suffix)
 
         set(test_set "vm_${suffix}")
 
-        duck_add_test_custom(vm ${test_set}_micro_test api/smoke_test.cpp
-                USES ${libvm} Tester)
-        duck_add_test_custom(vm ${test_set}_fixed_size_table_test runtime/aggregates/fixed_size_table/fixed_size_table.cpp
+        duck_add_test_custom(vm ${test_set}_primitives_test runtime/primitives/primitives.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_dynamic_table_test runtime/aggregates/dynamic_table/dynamic_table.cpp
+        duck_add_test_custom(vm ${test_set}_control_flow_test runtime/control_flow/control_flow.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_unit_test runtime/basic/unit.cpp
+        duck_add_test_custom(vm ${test_set}_globals_test runtime/globals/globals.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_structures_test runtime/structures/structures.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_fixed_size_table_test runtime/arrays/fixed_size_table/fixed_size_table.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_dynamic_table_test runtime/arrays/dynamic_table/dynamic_table.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_memory_test runtime/memory/memory_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_runtime_errors_test runtime/errors/runtime_errors.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_api_test api/api_test.cpp
                 USES ${libvm} Tester ${vmtester})
@@ -81,7 +89,7 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_pointers_test runtime/pointers/vm_pointers_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_variant_test runtime/variant/variant_tests.cpp
+        duck_add_test_custom(vm ${test_set}_variant_test runtime/variants/variant_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_extern_c_func_test runtime/native/extern_c/vm_extern_c_func_test.cpp
@@ -96,9 +104,11 @@ function(duck_add_vm_tests suffix)
                         USES ${libvm} Tester ${vmtester})
         endif()
 
-        duck_add_test_custom(vm ${test_set}_deadlock_detection_test runtime/threads/deadlock_detection/deadlock_detection_tests.cpp
+        # Runtime errors that need several threads. A separate binary from runtime_errors_test, so
+        # only these are skipped on TC when the build is not optimised.
+        duck_add_test_custom(vm ${test_set}_thread_errors_test runtime/errors/threads/thread_errors.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_disable_tc_when_not_opt("deadlock_detection_test" ${test_set})
+        duck_disable_tc_when_not_opt("thread_errors_test" ${test_set})
 
 
         duck_add_test_custom(vm ${test_set}_jit_test jit/jit.cpp
@@ -128,21 +138,17 @@ duck_add_test_custom(vm vm_instruction_naming_test bytecode/instruction_naming_t
         USES LibVM_sc Tester)
 duck_add_test_custom(vm program_builders_test bytecode/builders/program_builders_test.cpp
         USES LibVM)
-duck_add_test_custom(vm vm_bc_building bytecode/assembly/bc_building.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_parsing bytecode/assembly/bc_parsing.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_serializer bytecode/serializer/bc_serializer.cpp USES LibVM_sc Tester VmTester_sc)
 
-# loader/ — static verification, lowering and the inheritance metadata built at load time.
+# loader/ — static verification, lowering (incl. the inheritance metadata) and hierarchy checks.
 duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_step_gil_placement loader/lowering/step_gil_placement.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_local_initialization loader/lowering/local_initialization.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_inheritance_loading_test loader/inheritance/inheritance_loading.cpp
+duck_add_test_custom(vm vm_inheritance_loading_test loader/lowering/inheritance_loading.cpp
         USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_inheritance_hierarchy_correctness_test
         loader/inheritance/inheritance_hierarchy_correctness.cpp
         USES LibVM_sc Tester VmTester_sc)
 
-# runtime/ suites that only need one VM flavour.
-duck_add_test_custom(vm vm_memory_test runtime/memory/memory_test.cpp
-        USES LibVM_sc Tester VmTester_sc)
 add_subdirectory(runtime/native/ffi)

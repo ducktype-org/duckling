@@ -6,6 +6,12 @@
 
 #include <vm_tester_utils.hpp>
 
+/**
+ * @brief What belongs here: whole algorithms (Ackermann, Collatz, Fibonacci, deep tail calls)
+ * whose result is known. They check that many features work together on a longer run.
+ *
+ * A test of one feature goes to that feature's folder under `runtime/`.
+ */
 class VmCorrectnessTests: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmCorrectnessTests

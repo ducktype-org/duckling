@@ -13,6 +13,11 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief What belongs here: adding code to a process that already has code loaded, through
+ * `vm::api`. That covers loading several files, injecting new functions and globals, running a
+ * single function with arguments, and the REPL-style flow built on top of it.
+ */
 class VmCodeInjectionTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmCodeInjectionTest

@@ -11,13 +11,18 @@
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
 
-#include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/safe/exceptions.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <limits>
 
+/**
+ * @brief What belongs here: variants while a program runs. That covers setting and reading an
+ * alternative, nested variants, copying them, variants inside structures, and how the type tag is
+ * laid out in memory.
+ *
+ * A variant access the VM must refuse (null or freed payload) goes to `runtime/errors/`.
+ */
 class VmVariantTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmVariantTest
@@ -26,8 +31,6 @@ public:
 	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(verySimpleVariant);
 		TESTER_ADD_TEST(simpleVariant0);
-		TESTER_ADD_TEST(simpleVariant1);
-		TESTER_ADD_TEST(simpleVariant2);
 		TESTER_ADD_TEST(blocksDontDisappearTest);
 		TESTER_ADD_TEST(nestedVariantTest);
 		TESTER_ADD_TEST(nestedCopy);
@@ -38,31 +41,11 @@ public:
 private:
 	void verySimpleVariant() { runTestOnVm("very_simple_variant.dbc", "42", "42"); }
 
-	void simpleVariant0() { runTestOnVm("simple_variant.dbc", "0", "13"); }
-
-	void simpleVariant1() {
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("simple_variant.dbc", "1", "13"),
-			vm::exceptions::VMNullPointerAccessException::ERR_MSG
-		);
-	}
-
-	void simpleVariant2() {
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("simple_variant.dbc", "2", "13"),
-			vm::exceptions::VMUseAfterFreeException::ERR_MSG
-		);
-	}
+	void simpleVariant0() { runTestOnVm("../../common/programs/simple_variant.dbc", "0", "13"); }
 
 	void blocksDontDisappearTest() { runTestOnVm("variant_blocks_dont_disappear.dbc", "5", "5"); }
 
-	void nestedVariantTest() {
-		runTestOnVm("nested.dbc", "15", "15");
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("nested_failing.dbc", "15", "15"),
-			vm::exceptions::VMUseAfterFreeException::ERR_MSG
-		);
-	}
+	void nestedVariantTest() { runTestOnVm("nested.dbc", "15", "15"); }
 
 	void nestedCopy() { runTestOnVm("nested_copy.dbc", "3", "3"); }
 
@@ -167,4 +150,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/runtime/variant/");
+TESTER_COMMON_MAIN("/src/vm/tests/runtime/variants/");

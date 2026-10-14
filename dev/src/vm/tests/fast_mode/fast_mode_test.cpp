@@ -13,6 +13,10 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
+/**
+ * @brief What belongs here: programs run in the VM's fast execution mode. They must give the same
+ * results as in the normal mode.
+ */
 class VmFunctionsTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmFunctionsTests

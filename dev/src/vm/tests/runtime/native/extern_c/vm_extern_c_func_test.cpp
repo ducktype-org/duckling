@@ -64,6 +64,12 @@ namespace global_opaque {
 	}
 }
 
+/**
+ * @brief What belongs here: calling C++ functions registered in the VM (`DEF_VM_EXT_C_FUNC`) from
+ * a program, including void functions and opaque pointers to C++ objects.
+ *
+ * Calling functions from a shared library goes to `runtime/native/ffi/`.
+ */
 class VmExternCppTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmExternCppTest

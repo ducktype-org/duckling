@@ -8,8 +8,15 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/bytecode/validator/errors.hpp>
+#include <vm/api/vm.hpp>
 
+/**
+ * @brief What belongs here: functions while a program runs. That covers calls, arguments and
+ * return values, recursion, builtin functions, and `main` itself (its exit code, its command-line
+ * arguments). Running one function directly through the API is checked here too.
+ *
+ * A call the loader must reject goes to `loader/verification/wrong/functions/`.
+ */
 class VmFunctionsTests: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmFunctionsTests
@@ -25,8 +32,11 @@ public:
 		TESTER_ADD_TEST(testRecursion);
 		TESTER_ADD_TEST(testManyFunctions);
 		TESTER_ADD_TEST(testPreservedFlag);
-		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testMainWithNoArguments);
+		TESTER_ADD_TEST(return1337);
+		TESTER_ADD_TEST(commandLineArguments);
+		TESTER_ADD_TEST(checkMultipleRetVals);
+		TESTER_ADD_TEST(testSyncRun);
 	}
 
 private:
@@ -74,7 +84,20 @@ private:
 		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {}, 0);
 	}
 
-	void testGraphJumps() { runTestOnVm("graph_jumps.dbc", "", "42", {}); }
+	void return1337() { runTestOnVm("return_1337.dbc", {}, {}, {}, 1'337); }
+
+	void commandLineArguments() {
+		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);
+	}
+
+	void checkMultipleRetVals() { runTestOnVm("multiple_retvals.dbc", "", "21373315", {}); }
+
+	void testSyncRun() {
+		vm::PID pid = initProcess();
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
+		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/runtime/functions/");

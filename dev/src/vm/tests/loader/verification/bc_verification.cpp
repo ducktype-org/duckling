@@ -6,8 +6,19 @@
 
 #include <vm_tester_utils.hpp>
 
+#include <base/str/str_utils.hpp>
+
 #include <vm/bytecode/validator/errors.hpp>
 
+/**
+ * @brief What belongs here: the loader's static verification. A test loads a program that parses
+ * fine and checks that the loader accepts it (`right/`) or rejects it with the right error
+ * (`wrong/<area>/`). Every semantic error found before a program runs belongs here: unknown names,
+ * labels, jumps, locals, types, globals, literals, function signatures and calls, and the
+ * execution config (IO, single thread, read-only globals).
+ *
+ * Inheritance errors have their own suite in `loader/inheritance/`.
+ */
 class BCVerificationTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCVerificationTests
@@ -30,6 +41,9 @@ public:
 		TESTER_ADD_TEST(invalidBuiltinFunction);
 		TESTER_ADD_TEST(pathWithoutEnd);
 		TESTER_ADD_TEST(invalidSignatures);
+		TESTER_ADD_TEST(unknownFunction);
+		TESTER_ADD_TEST(invalidFunctionCall);
+		TESTER_ADD_TEST(invalidRetTypeInCall);
 
 		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
@@ -39,6 +53,10 @@ public:
 		TESTER_ADD_TEST(unknownMethod);
 		TESTER_ADD_TEST(jumpWithInplaceCast);
 		TESTER_ADD_TEST(validJumpOutOfBlock);
+
+		// Label verification
+		TESTER_ADD_TEST(multipleLabels);
+		TESTER_ADD_TEST(labelNotFound);
 
 		// Local variable verification
 		TESTER_ADD_TEST(noInit);
@@ -55,6 +73,7 @@ public:
 
 		// Type verification
 		TESTER_ADD_TEST(correctDefinitions);
+		TESTER_ADD_TEST(unknownType);
 		TESTER_ADD_TEST(incorrectDefinitions);
 		TESTER_ADD_TEST(duplicatedVariantAlternatives);
 		TESTER_ADD_TEST(wrongTypeMov);
@@ -603,6 +622,63 @@ private:
 				"Numeric literal overflows a 32-bit unsigned integer",
 				"Numeric literal overflows a 64-bit signed integer",
 				"Floating-point literals must be in decimal base for",
+			}
+		);
+	}
+
+	// Label verification
+	void multipleLabels() {
+		loadInvalidDbc(
+			"wrong/labels/multiple_labels.dbc",
+			{
+				vm::code::DuplicatedLabelError::ERR_MSG,
+			}
+		);
+	}
+
+	void labelNotFound() {
+		loadInvalidDbc(
+			"wrong/labels/label_not_found.dbc",
+			{
+				vm::code::UnknownLabelError::ERR_MSG,
+				"LB",
+			}
+		);
+	}
+
+	// Name resolution
+	void unknownType() {
+		loadInvalidDbc(
+			"wrong/types/unknown_type.dbc",
+			{
+				base::strConcat(vm::code::UnknownTypeError::ERR_MSG, "in64"),
+			}
+		);
+	}
+
+	void unknownFunction() {
+		loadInvalidDbc(
+			"wrong/functions/unknown_function.dbc",
+			{
+				base::strConcat(vm::code::UnknownFunctionError::ERR_MSG, "foo"),
+			}
+		);
+	}
+
+	void invalidFunctionCall() {
+		loadInvalidDbc(
+			"wrong/functions/invalid_function_call.dbc",
+			{
+				vm::code::InvalidFunctionCallArgumentsError::ERR_MSG,
+			}
+		);
+	}
+
+	void invalidRetTypeInCall() {
+		loadInvalidDbc(
+			"wrong/functions/invalid_ret_type_in_call.dbc",
+			{
+				vm::code::InvalidFunctionCallArgumentsError::ERR_MSG,
 			}
 		);
 	}

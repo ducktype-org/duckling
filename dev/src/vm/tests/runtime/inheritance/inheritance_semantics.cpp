@@ -8,8 +8,12 @@
 
 #include <base/collections/optional.hpp>
 
-#include <vm/bytecode/validator/errors.hpp>
-
+/**
+ * @brief What belongs here: classes and interfaces while a program runs. That covers virtual
+ * calls being dispatched to the right method, upcasts and downcasts.
+ *
+ * An inheritance error the loader must reject goes to `loader/inheritance/`.
+ */
 class VmInheritanceSemanticsTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceSemanticsTest

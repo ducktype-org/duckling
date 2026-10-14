@@ -19,6 +19,10 @@ using namespace vm::code::builders;
 using namespace vm::code::instructions;
 using vm::code::Instruction;
 
+/**
+ * @brief What belongs here: the C++ builders that create bytecode instructions and programs
+ * in memory, without any text assembly.
+ */
 class DVMBackendUnitTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DVMBackendUnitTest

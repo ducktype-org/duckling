@@ -6,9 +6,14 @@
 
 #include <vm_tester_utils.hpp>
 
-#include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/safe/exceptions.hpp>
-
+/**
+ * @brief What belongs here: dynamic tables (arrays sized at run time) while a program runs. That
+ * covers allocation, reallocation (growing, shrinking, to zero), element access, nested tables,
+ * and turning a fixed-size table into a dynamic one.
+ *
+ * A dynamic-table operation the VM must refuse (too large, wrong type, out of bounds) goes to
+ * `runtime/errors/`.
+ */
 class DynamicTableVmTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DynamicTableVmTest
@@ -18,12 +23,10 @@ public:
 		TESTER_ADD_TEST(twoDim);
 		TESTER_ADD_TEST(dynArrSum);
 		TESTER_ADD_TEST(lea);
-		TESTER_ADD_TEST(tooLarge);
 		TESTER_ADD_TEST(stringOutput);
 		TESTER_ADD_TEST(reallocZero);
 		TESTER_ADD_TEST(reallocShrink);
 		TESTER_ADD_TEST(fstToDyn);
-		TESTER_ADD_TEST(reallocOnFst);
 	}
 
 private:
@@ -33,33 +36,13 @@ private:
 
 	void twoDim() { runTestOnVm("two_dim.dbc", "", "1235", {}); }
 
-	void tooLarge() {
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("too_large.dbc", "", "9223372036854775808"),
-			vm::exceptions::VMMemoryAllocationError::ERR_MSG
-		);
-	}
-
 	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test\ntest", { "test" }, 0); }
 
 	void reallocZero() { runTestOnVm("realloc_zero.dbc", "", "42", {}); }
 
 	void reallocShrink() { runTestOnVm("realloc_shrink.dbc", "", "42", {}); }
 
-	void fstToDyn() {
-		runTestOnVm("fst_to_dyn.dbc", "0", "42", {});
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("fst_to_dyn.dbc", "1"),
-			vm::exceptions::VMOutOfBlockBoundsException::ERR_MSG
-		);
-	}
-
-	void reallocOnFst() {
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("realloc_on_fst.dbc", ""),
-			vm::exceptions::VMDynTableReAllocTypeMismatch::ERR_MSG
-		);
-	}
+	void fstToDyn() { runTestOnVm("../../../common/programs/fst_to_dyn.dbc", "0", "42", {}); }
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/runtime/aggregates/dynamic_table/");
+TESTER_COMMON_MAIN("/src/vm/tests/runtime/arrays/dynamic_table/");

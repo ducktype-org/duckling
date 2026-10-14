@@ -17,6 +17,13 @@
 
 #define altIndex(t) base::variantTypeIndex<vm::api::ProcStatus, t>()
 
+/**
+ * @brief What belongs here: the `vm::debugger::Debugger` class of the debugger tool. That covers
+ * running, pausing and resuming a program, breakpoints, and reading its output, input, memory and
+ * loaded files through the tool.
+ *
+ * The `vm::api` debug endpoints the tool is built on are tested in `api/debug/`.
+ */
 class VmDebuggerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmDebuggerTest

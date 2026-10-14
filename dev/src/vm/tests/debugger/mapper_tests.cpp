@@ -17,6 +17,10 @@
 
 #define ASSERT_FALSE(actual) ASSERT_TRUE(!(actual))
 
+/**
+ * @brief What belongs here: the debugger's mapper, which maps positions in the source to
+ * instructions in the loaded program and back.
+ */
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmDebugTest

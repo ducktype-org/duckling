@@ -6,6 +6,12 @@
 
 #include <vm_tester_utils.hpp>
 
+/**
+ * @brief What belongs here: fixed-size tables (arrays with a size known at load time) while a
+ * program runs. That covers initialisation, element access and `lea` into an element.
+ *
+ * An out-of-bounds access goes to `runtime/errors/`.
+ */
 class FixedSizeTableVmTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS FixedSizeTableVmTest
@@ -16,6 +22,7 @@ public:
 		TESTER_ADD_TEST(arrSum);
 		TESTER_ADD_TEST(initWithZero);
 		TESTER_ADD_TEST(lea);
+		TESTER_ADD_TEST(fixedSizeTableOperations);
 	}
 
 private:
@@ -26,6 +33,10 @@ private:
 	void initWithZero() { runTestOnVm("init_with_zero.dbc", "", "0", {}); }
 
 	void lea() { runTestOnVm("lea.dbc", "", "42", {}); }
+
+	void fixedSizeTableOperations() {
+		runTestOnVm("fixed_size_table_operations.dbc", "", "123", {});
+	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/runtime/aggregates/fixed_size_table/");
+TESTER_COMMON_MAIN("/src/vm/tests/runtime/arrays/fixed_size_table/");

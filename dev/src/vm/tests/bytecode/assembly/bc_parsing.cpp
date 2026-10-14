@@ -12,6 +12,14 @@
 
 using namespace vm::loader;
 
+/**
+ * @brief What belongs here: the text assembly parser ONLY. A test feeds it a `.dbc` file with a
+ * syntax error and checks the parse error, or checks what the parser produced (e.g. source
+ * positions).
+ *
+ * A file that parses but is semantically wrong (unknown name, bad types, bad jumps) is the
+ * loader's business and goes to `loader/verification/`.
+ */
 class BCParsingTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCParsingTests

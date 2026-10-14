@@ -11,6 +11,12 @@
 
 #include <string_id/string_id.hpp>
 
+/**
+ * @brief What belongs here: the inheritance metadata the loader builds for a valid program, i.e.
+ * the class and interface hierarchy and the vtables it lowers the bytecode types to.
+ *
+ * A hierarchy the loader must reject goes to `loader/inheritance/`.
+ */
 class VmInheritanceLoadingTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceLoadingTest
@@ -182,7 +188,7 @@ private:
 		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (1)");
 		auto pid = process_pid_response.value().pid;
 
-		fs::File file(path("inheritance_metadata.dbc"));
+		fs::File file(path("../../common/programs/inheritance_metadata.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }), "Load failed (1)");
 
 		auto run_response = vm::api::run(pid);
@@ -226,4 +232,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/loader/inheritance/");
+TESTER_COMMON_MAIN("/src/vm/tests/loader/lowering/");

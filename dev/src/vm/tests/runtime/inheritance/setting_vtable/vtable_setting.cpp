@@ -6,9 +6,12 @@
 
 #include <vm_tester_utils.hpp>
 
-#include <vm/api/api.hpp>
-#include <vm/bytecode/validator/errors.hpp>
-
+/**
+ * @brief What belongs here: setting the vtable of an object while a program runs, including
+ * objects stored in tables and variants, and changing a vtable that was already set.
+ *
+ * Using an object whose vtable was never set goes to `runtime/errors/`.
+ */
 class VmSettingVtableCorrectness: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmSettingVtableCorrectness
@@ -21,29 +24,6 @@ private:
 		runTestOnVm("setting_vtable/table_of_virtual.dbc", {}, { "0\n" }, {}, 0);
 		runTestOnVm("setting_vtable/changing_vtable.dbc", {}, { "1\n0\n" }, {}, 0);
 		runTestOnVm("setting_vtable/variant_of_virtual.dbc", {}, { "0\n" }, {}, 0);
-
-		using namespace vm::exceptions;
-		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
-			{
-				"setting_vtable/unset_vtable.dbc",
-				VMVtableUnset::ERR_MSG,
-			},
-			{
-				"setting_vtable/unset_variant_of_virtual.dbc",
-				VMVtableUnset::ERR_MSG,
-			},
-			{
-				"setting_vtable/unset_table_of_virtual.dbc",
-				VMVtableUnset::ERR_MSG,
-			},
-			{
-				"setting_vtable/resetting_vtable.dbc",
-				VMVtableUnset::ERR_MSG,
-			},
-		});
-
-		for (auto& [filename, error]: invalid_filename_and_error)
-			assertExecutionPanickedWithAndKill(runTestOnVmGetResult(filename, "", ""), error);
 	}
 };
 
