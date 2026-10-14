@@ -10,6 +10,7 @@
 - **CMake** and **Ninja** are used for building the project.
 - **g++** with version 14 or higher is required for building the project.
 - [alternatively to g++] **clang++** with version 19 or higher is required for building the project.
+  CMake stops with an error when it finds an older compiler. If you are sure your compiler works, `-DIGNORE_COMPILER_VERSION_CHECK=ON` turns that error into a warning.
 - **lcov** is used for generating coverage reports.
 - **LLVM** with version 19 is required for building the project.
 - **pkg-config** and **libffi** (development headers) are required for the dynamic foreign function interface.

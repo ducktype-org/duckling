@@ -9,14 +9,42 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # require compiler to support C++ standard it is asked for
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(IGNORE_COMPILER_VERSION_CHECK
+	"Configure even if the C++ compiler is older than the oldest supported version" OFF)
+
+# Stops the configuration when the C++ compiler is older than the oldest version we know builds the
+# project. Without this check, an old compiler fails much later, deep inside some header, with an
+# error that never mentions the compiler version. `how_to_fix` is a hint shown to the user.
+function(check_minimum_compiler_version compiler_name minimum_version how_to_fix)
+	if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS minimum_version)
+		return()
+	endif()
+
+	string(CONCAT version_message
+		"Your C++ compiler is too old to build Duckling.\n"
+		"  Compiler path: ${CMAKE_CXX_COMPILER}\n"
+		"  Found:         ${compiler_name} ${CMAKE_CXX_COMPILER_VERSION}\n"
+		"  Required:      ${compiler_name} ${minimum_version} or newer\n"
+		"How to fix: ${how_to_fix}\n"
+		"Calling CMake by hand? Pass the newer compiler with "
+		"-DCMAKE_CXX_COMPILER=<c++ compiler> -DCMAKE_C_COMPILER=<c compiler>.\n"
+		"CMake remembers the compiler of a build directory, so use a fresh build directory "
+		"(or delete its CMakeCache.txt) after switching.\n"
+		"If you are sure this compiler works, configure with "
+		"-DIGNORE_COMPILER_VERSION_CHECK=ON to turn this error into a warning.")
+
+	if (IGNORE_COMPILER_VERSION_CHECK)
+		message(WARNING "${version_message}")
+	else()
+		message(FATAL_ERROR "${version_message}")
+	endif()
+endfunction()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 
-	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
-        message(WARNING
-				"We know the project won't compile on versions lower than 14. "
-				"If it is a mistake feel free to ignore this.")
-    endif()
+	check_minimum_compiler_version("GCC" 14
+		"install GCC 14+ and run `python3 toolbox.py setup-build -x g++-14 -c gcc-14`.")
 
 
 	string(CONCAT ADDITIONAL_GNU_FLAGS
@@ -48,14 +76,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	message("-- ${CMAKE_CXX_COMPILER_ID} compiler")
 
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
-		message(WARNING
-				"We know the project won't compile on versions lower than 19. "
-				"If it is a mistake feel free to ignore this.")
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.3)
-		message(WARNING
-				"We know this project won't compile on apple clang lower than 16.3. "
-				"If it is a mistake feel free to ignore this.")
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		check_minimum_compiler_version("Clang" 19
+			"install Clang 19+ and run `python3 toolbox.py setup-build -x clang++-19 -c clang-19`.")
+	else()
+		check_minimum_compiler_version("Apple Clang" 16.3
+			"update Xcode, or build with Homebrew GCC (see building-the-repo.md, macOS).")
 	endif()
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
