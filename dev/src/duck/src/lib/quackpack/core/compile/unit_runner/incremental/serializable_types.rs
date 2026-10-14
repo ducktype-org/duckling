@@ -12,12 +12,12 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::StrId;
-use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::compile::unit::graph::{
     CompilationInput, GraphNodeId, UnitGraph, UnitGraphNode, UnitGraphNodeData,
 };
 use crate::quackpack::core::compile::unit::{PackageData, Unit, UnitType};
 use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::{FeatureName, Version};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 /// A simplified, easily serializable version of [`UnitGraph`].
@@ -28,28 +28,28 @@ pub struct SerializableUnitGraph {
     pub packages: HashMap<Identity, SerializablePackageData>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 /// A simplified, easily serializable version of [`UnitGraphNode`].
 pub struct SerializableGraphNode {
     pub id: GraphNodeId,
     pub node: SerializableGraphNodeData,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 /// A simplified, easily serializable version of [`UnitGraphNodeData`].
 pub enum SerializableGraphNodeData {
     Unit(SerializableUnit),
     Input(SerializableCompilationInput),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 /// A simplified, easily serializable version of [`Unit`].
 pub struct SerializableUnit {
     pub identity: Identity,
     pub unit_type: UnitType,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 /// A simplified, easily serializable version of [`CompilationInput`].
 pub enum SerializableCompilationInput {
     /// Source code of a package.
@@ -63,6 +63,7 @@ pub struct SerializablePackageData {
     pub deps_realization: Vec<(Identity, Option<StrId>)>,
     pub enabled_features: HashSet<FeatureName>,
     pub identity: Identity,
+    pub version: Version,
 }
 
 impl SerializableGraphNodeData {
@@ -134,6 +135,7 @@ impl From<&PackageData> for SerializablePackageData {
             deps_realization: value.deps_realization().clone(),
             enabled_features: value.enabled_features().clone(),
             identity: value.identity(),
+            version: value.package().version(),
         }
     }
 }

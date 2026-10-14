@@ -12,7 +12,7 @@
 //! The information written onto the disk is called a fingerprint and is stored in a struct [`BuildData`].
 
 use std::collections::HashSet;
-use std::io::{Read, Write};
+use std::io::{Read, Seek, Write};
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
@@ -45,12 +45,12 @@ impl BuildData {
     /// Should be used for getting [`BuildData`] for the current build process.
     pub fn for_current_build(graph: &UnitGraph, profile: Profile) -> Self {
         let now = SystemTime::now();
-        let mut hashser = Sha256Hasher::new(None);
-        hashser.update(profile.serialize_raw());
+        let mut hasher = Sha256Hasher::new(None);
+        hasher.update(profile.serialize_raw());
         Self {
             time: now,
             unit_graph: graph.into(),
-            profile_hash: hashser.into_string(),
+            profile_hash: hasher.into_string(),
         }
     }
 
@@ -67,12 +67,14 @@ impl BuildData {
                     fingerprint.path().display()
                 )
             })?;
-        serde_json::from_slice::<BuildData>(&buffer).with_context(|| {
+        let result = serde_json::from_slice::<BuildData>(&buffer).with_context(|| {
             format!(
-                "failed to serialize the previous fingerprint at `{}`",
+                "failed to parse the previous fingerprint at `{}`",
                 fingerprint.path().display()
             )
-        })
+        })?;
+        result.unit_graph.check_correctness()?;
+        Ok(result)
     }
 
     /// Store a fingerprint with [`BuildData`] on the disk.
@@ -87,6 +89,10 @@ impl BuildData {
             .with_context(|| format!("failed to truncate `{}`", fingerprint.path().display()))?;
         fingerprint
             .file()
+            .rewind()
+            .with_context(|| format!("failed to rewind `{}`", fingerprint.path().display()))?;
+        fingerprint
+            .file()
             .write_all(fingerprint_json.as_bytes())
             .with_context(|| {
                 format!(
@@ -98,18 +104,16 @@ impl BuildData {
 
     /// Get [`IncrementalData`] (information about which graph nodes are common and their artifacts can be reused)
     /// generated from the current [`BuildData`] and previous build's [`BuildData`].
-    pub fn get_incremental_data(&self, other: &Self) -> QuackResult<IncrementalData> {
-        // Check if previous build's unit graph is well-formed.
-        other.unit_graph.check_correctness()?;
+    pub fn get_incremental_data(&self, other: &Self) -> IncrementalData {
         // Different profile, we can't reuse anything.
         if self.profile_hash != other.profile_hash {
-            return Ok(IncrementalData::default());
+            return IncrementalData::default();
         }
         // Something went wrong with build times, be conservative and say that we can't reuse anything.
         if self.time < other.time {
-            return Ok(IncrementalData::default());
+            return IncrementalData::default();
         }
-        Ok(self.unit_graph.get_incremental_data(&other.unit_graph))
+        self.unit_graph.get_incremental_data(&other.unit_graph)
     }
 }
 

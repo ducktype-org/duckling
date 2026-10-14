@@ -78,19 +78,40 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// Write a new fingerprint to the disk and get [`IncrementalData`] from the previous fingerprint.
     /// Note:
     /// -----
-    /// Returns empty [`IncrementalData`] if there was no previous fingerprint found or profile prohibits incremental.
+    /// Returns empty [`IncrementalData`] if there was no previous fingerprint found,
+    /// parsing it returned an error or profile prohibits incremental.
     fn manage_fingerprint(&self, layout: &dyn ProfileLayout) -> QuackResult<IncrementalData> {
         let prev_fingerprint_exists = layout.fingerprint_path().exists();
         let fingerprint = layout.fingerprint(self.bcx.pcx.ctx())?;
         let cur_build_data = BuildData::for_current_build(&self.graph, self.bcx.profile);
-        let result = if prev_fingerprint_exists && self.bcx.profile.incremental {
-            let prev_build_data = BuildData::from_fingerprint(&fingerprint)?;
-            cur_build_data.get_incremental_data(&prev_build_data)?
-        } else {
-            IncrementalData::default()
+        let attempt_incremental = prev_fingerprint_exists && self.bcx.profile.incremental;
+        let incremental_data = match (
+            attempt_incremental,
+            BuildData::from_fingerprint(&fingerprint),
+        ) {
+            (false, _) => {
+                // No incremental, so return empty result.
+                IncrementalData::default()
+            }
+            (true, Ok(prev_build_data)) => {
+                // Previous fingerprint is well-formed, we can use it.
+                self.bcx
+                    .pcx
+                    .ctx()
+                    .info("succesfully loaded previous build fingerprint")?;
+                cur_build_data.get_incremental_data(&prev_build_data)
+            }
+            (true, Err(e)) => {
+                // Previous fingerprint was malformed, so return empty result.
+                self.bcx.pcx.ctx().warning(format!(
+                    "previous fingerprint at {} is malformed: {e}",
+                    fingerprint.path().display()
+                ))?;
+                IncrementalData::default()
+            }
         };
         cur_build_data.write_fingerprint(&fingerprint)?;
-        Ok(result)
+        Ok(incremental_data)
     }
 
     #[instrument(skip_all)]

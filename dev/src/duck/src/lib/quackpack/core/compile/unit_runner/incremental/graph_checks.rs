@@ -4,12 +4,13 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::debug_assert;
 
 use crate::quackpack::core::compile::unit::graph::GraphNodeId;
 use crate::quackpack::core::compile::unit_runner::incremental::IncrementalData;
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::{
-    SerializableGraphNode, SerializableUnitGraph,
+    SerializableGraphNode, SerializableGraphNodeData, SerializableUnitGraph,
 };
 use crate::quackpack::core::identity::Identity;
 use crate::{QuackResult, qp_bail};
@@ -36,7 +37,7 @@ impl SerializableUnitGraph {
             // Check node dependencies.
             // Firstly that they exist.
             let Some(node_deps) = self.dependencies.get(node_id) else {
-                qp_bail!("no dependencies for node {node_id} in the previus build unit graph");
+                qp_bail!("no dependencies for node {node_id} in the previous build unit graph");
             };
             // Secondly that they are sorted.
             if !node_deps.is_sorted_by(|a, b| a < b) {
@@ -62,12 +63,14 @@ impl SerializableUnitGraph {
         let common_packages = self.get_common_packages(other);
 
         let mut common_nodes = HashSet::new();
+        let other_nodes: HashMap<&SerializableGraphNodeData, &SerializableGraphNode> =
+            other.nodes.iter().map(|node| (&node.node, node)).collect();
         for node in self.nodes.iter() {
-            for other_node in other.nodes.iter() {
-                if self.nodes_are_the_same(other, node, other_node, &common_nodes, &common_packages)
-                {
-                    common_nodes.insert(node.id);
-                }
+            let Some(other_node) = other_nodes.get(&node.node) else {
+                continue;
+            };
+            if self.nodes_are_the_same(other, node, other_node, &common_nodes, &common_packages) {
+                common_nodes.insert(node.id);
             }
         }
         IncrementalData {
@@ -76,10 +79,14 @@ impl SerializableUnitGraph {
         }
     }
 
-    /// Check if two nodes (one from the current graph and one from the previous graph) are the same, meaning:
-    /// - the tasks to be done are equal,
-    /// - both nodes refer to the same package, which has not changed in the meantime,
-    /// - the dependencies are the same.
+    /// Given two seemingly equal graph nodes, checks that they are truly equal, meaning:
+    /// - the package they both refer to has not changed in the meantime,
+    /// - the dependencies of both nodes are the same.
+    ///
+    /// This function assumes that:
+    /// ```rust,ignore (illustrative)
+    /// self_node.node == other_node.node
+    /// ```
     ///
     /// Important:
     /// ----------
@@ -96,10 +103,9 @@ impl SerializableUnitGraph {
         current_common_nodes: &HashSet<GraphNodeId>,
         common_packages: &HashSet<Identity>,
     ) -> bool {
-        // If the tasks or packages are different, return false.
-        if self_node.node != other_node.node {
-            return false;
-        }
+        // The tasks and packages should be equal at this point.
+        debug_assert!(self_node.node == other_node.node);
+
         // If the package's data changed between compilations, return false.
         if !common_packages.contains(&self_node.node.identity()) {
             return false;
@@ -132,18 +138,18 @@ impl SerializableUnitGraph {
     /// Helper for [`Self::get_incremental_data`].
     /// Checks which packages are the same (have the same [`Identity`] and [`SerializablePackageData`]) as in the previous build.
     /// This in fact checks that:
-    /// - identities are the same,
-    /// - names and versions are the same,
-    /// - package localizations on the dist are the same,
+    /// - identities and versions are the same,
+    /// - package localizations on the disk are the same,
     /// - features of the package are the same.
     fn get_common_packages(&self, other: &Self) -> HashSet<Identity> {
         let mut result = HashSet::new();
-        for (id, pkg_data) in self.packages.iter() {
-            for (other_id, other_pkg_data) in other.packages.iter() {
-                if id == other_id && pkg_data == other_pkg_data {
-                    result.insert(*id);
-                    break;
-                }
+        for (identity, pkg_data) in self.packages.iter() {
+            let Some(other_pkg_data) = other.packages.get(identity) else {
+                continue;
+            };
+            if pkg_data == other_pkg_data {
+                result.insert(*identity);
+                continue;
             }
         }
         result
@@ -236,19 +242,22 @@ mod test {
           ]
         ],
         "enabled_features": [],
-        "identity": "foo local+file:///home/foo"
+        "identity": "foo local+file:///home/foo",
+        "version": "1.0.0"
       },
       "bar local+file:///home/bar": {
         "root_path": "/home/bar",
         "deps_realization": [],
         "enabled_features": [],
-        "identity": "bar local+file:///home/bar"
+        "identity": "bar local+file:///home/bar",
+        "version": "1.0.0"
       },
       "baz local+file:///home/baz": {
         "root_path": "/home/baz",
         "deps_realization": [],
         "enabled_features": [],
-        "identity": "baz local+file:///home/baz"
+        "identity": "baz local+file:///home/baz",
+        "version": "1.0.0"
       }
     }
   }"#;
@@ -308,13 +317,15 @@ mod test {
           ]
         ],
         "enabled_features": [],
-        "identity": "foo local+file:///home/foo"
+        "identity": "foo local+file:///home/foo",
+        "version": "1.0.0"
       },
       "bar local+file:///home/bar": {
         "root_path": "/home/bar",
         "deps_realization": [],
         "enabled_features": [],
-        "identity": "bar local+file:///home/bar"
+        "identity": "bar local+file:///home/bar",
+        "version": "1.0.0"
       }
     }
   }"#;
@@ -374,13 +385,15 @@ mod test {
           ]
         ],
         "enabled_features": [],
-        "identity": "foo local+file:///home/foo"
+        "identity": "foo local+file:///home/foo",
+        "version": "1.0.0"
       },
       "bar local+file:///home/bar": {
         "root_path": "/home/bar",
         "deps_realization": [],
         "enabled_features": [],
-        "identity": "bar local+file:///home/bar"
+        "identity": "bar local+file:///home/bar",
+        "version": "1.0.0"
       }
     }
   }"#;
