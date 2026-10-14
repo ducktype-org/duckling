@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <string>
 
-namespace compiler::tsh {
+namespace compiler::tsh::coercions {
 	/**
 	 * @brief What has to happen to the reference part of a value to reach the target kind.
 	 */
@@ -25,7 +25,7 @@ namespace compiler::tsh {
 		None,
 		/// `ref`/`box` -> `direct`. Deref.
 		Deref,
-		/// `direct` -> `ref`/`box`, Needs `&` or `new`.
+		/// `direct` -> `ref`/`box`, `ref` -> `box`, `box`-> `ref`. Needs `&` or `new`.
 		Illegal,
 	};
 
@@ -33,6 +33,15 @@ namespace compiler::tsh {
 	 * @brief Everything a coercion needs to know about a reference-kind coercion.
 	 */
 	struct ReferenceCoercion final {
+		[[nodiscard]]
+		static ReferenceCoercion illegal() {
+			return ReferenceCoercion{
+				.adjustment        = ReferenceAdjustment::Illegal,
+				.creates_new_value = false,
+				.points_to_source  = false,
+			};
+		}
+
 		ReferenceAdjustment adjustment;
 
 		/**

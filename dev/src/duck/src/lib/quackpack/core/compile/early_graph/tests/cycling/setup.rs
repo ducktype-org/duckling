@@ -10,12 +10,10 @@ use tempfile::TempDir;
 
 use crate::DuckContext;
 use crate::quackpack::core::compile::early_graph::tests::{mock_local_pkg, mock_registry_pkg};
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::storage::paths;
-use crate::quackpack::core::{PackageId, PackageLoader, Version};
-use crate::quackpack::util::to_url::ToUrl;
+use crate::quackpack::core::{PackageId, PackageLoader, Version, fetcher};
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -45,7 +43,7 @@ pub fn setup_mock_packages(root: &Path) {
         let mock_registry_pkg = PackageId::new(
             FullIdentity::new(
                 (*name).into(),
-                FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap()),
+                FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone()),
             ),
             Version::new(1, 0, 0),
         );

@@ -2480,6 +2480,7 @@ private:
 
 		const auto infix_free   = mangle({ .symbol_key = getChain("+*", root_scope).back() });
 		const auto prefix_free  = mangle({ .symbol_key = getChain("-*", root_scope).back() });
+		const auto suffix_free  = mangle({ .symbol_key = getChain("++", root_scope).back() });
 		const auto unicode_free = mangle({ .symbol_key = getChain("+×", root_scope).back() });
 
 		const auto foo_class = getChain("Foo", root_scope).back();
@@ -2489,7 +2490,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(2, foo_methods.size());
+		ASSERT_EQUAL(3, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -2500,9 +2501,11 @@ private:
 
 		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
 		const auto prefix_method = mangle({ .symbol_key = find_method("-*") });
+		const auto suffix_method = mangle({ .symbol_key = find_method("++") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOs4plplFiqiqE1aE", suffix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_FiqiqiqE1a1bE", unicode_free.str());
 		ASSERT_EQUAL(
 			"_Q_M18mangling_operatorsN3FooOi4plmlEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
@@ -2512,10 +2515,10 @@ private:
 			"_Q_M18mangling_operatorsN3FooOp4mimlEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
 			prefix_method.str()
 		);
-
-		// @todo: #3131 Suffix has no declaration syntax yet (see testOperatoriness)
-		// nothing to mangle here until fixity keywords exist. Once they do, add e.g.:
-		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOs4plplEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
+			suffix_method.str()
+		);
 	}
 
 	void testManglerCTV() {
@@ -3437,17 +3440,28 @@ private:
 				.operatoriness
 		);
 
-		// Free operator function, 1 param: prefix (fixity keywords don't exist yet, so a
-		// single-parameter operator name is assumed prefix).
+		// Free unary operator functions use their declared fixity.
 		ASSERT_EQUAL(
 			Operatoriness::Prefix,
 			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("-*", root_scope).back())
 				->valueOrThrow()
 				.operatoriness
 		);
+		ASSERT_EQUAL(
+			Operatoriness::Suffix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("++", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+		ASSERT_EQUAL(
+			Operatoriness::Suffix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("**", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
 
 		// Operator methods: 1 explicit param + implicit `self` = infix; 0 explicit params +
-		// implicit `self` = prefix.
+		// implicit `self` = unary with its declared fixity.
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
@@ -3455,7 +3469,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(2, foo_methods.size());
+		ASSERT_EQUAL(3, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -3476,8 +3490,12 @@ private:
 				->valueOrThrow()
 				.operatoriness
 		);
-
-		// @TODO: #3131 Add cases for suffix operators.
+		ASSERT_EQUAL(
+			Operatoriness::Suffix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("++"))
+				->valueOrThrow()
+				.operatoriness
+		);
 	}
 
 	void testMethodOperatorResolution() {
@@ -3491,7 +3509,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(2, foo_methods.size());
+		ASSERT_EQUAL(3, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -3501,6 +3519,7 @@ private:
 		};
 		auto infix_method_sym  = find_method("+*");
 		auto prefix_method_sym = find_method("-*");
+		auto suffix_method_sym = find_method("++");
 
 		auto get_return_call = [&](compiler::helios::SymID fn_sym) -> const CallExpr& {
 			const auto& fn_hout
@@ -3533,7 +3552,13 @@ private:
 		ASSERT_EQUAL(1, prefix_call.arguments.size());
 		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(prefix_call.arguments.at(0).get()) != nullptr);
 
-		// @TODO: #3131 Add case for suffix operator.
+		// `foo++` inside useSuffix must resolve to Foo's suffix `++` method.
+		const auto& suffix_call   = get_return_call(getChain("useSuffix", root_scope).back());
+		const auto* suffix_callee = dynamic_cast<const IdentifierExpr*>(suffix_call.callee.get());
+		ASSERT_TRUE(suffix_callee != nullptr);
+		ASSERT_EQUAL(suffix_method_sym, suffix_callee->symbol);
+		ASSERT_EQUAL(1, suffix_call.arguments.size());
+		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(suffix_call.arguments.at(0).get()) != nullptr);
 	}
 
 	void testScopeParentsAndDepth() {
