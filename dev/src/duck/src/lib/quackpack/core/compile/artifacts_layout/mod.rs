@@ -63,6 +63,13 @@ pub trait ProfileLayout {
         self.file_lock_manager()
             .open_exclusive(self.fingerprint_name(), ctx)
     }
+
+    /// Get the [`PathBuf`] to the fingerprint.
+    fn fingerprint_path(&self) -> PathBuf {
+        self.file_lock_manager()
+            .not_locked_path()
+            .join(self.fingerprint_name())
+    }
 }
 
 pub trait DependencyLayout {

@@ -108,7 +108,7 @@ impl SerializableUnitGraph {
         // if two nodes have the same dependencies, those dependencies should follow the same order.
         let mut deps_agree = true;
         let mut self_node_deps = self.dependencies[self_node.id as usize].iter();
-        let mut other_node_deps = self.dependencies[other_node.id as usize].iter();
+        let mut other_node_deps = other.dependencies[other_node.id as usize].iter();
         loop {
             match (self_node_deps.next(), other_node_deps.next()) {
                 (Some(self_dep), Some(other_dep)) => {
@@ -116,6 +116,7 @@ impl SerializableUnitGraph {
                         || !current_common_nodes.contains(self_dep)
                     {
                         deps_agree = false;
+                        break;
                     }
                 }
                 (None, None) => break,
@@ -146,5 +147,284 @@ impl SerializableUnitGraph {
             }
         }
         result
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use crate::quackpack::core::compile::unit_runner::IncrementalData;
+    use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
+    use crate::quackpack::core::identity::Identity;
+
+    /// Serialized graph for scenario "foo depends on both bar and baz".
+    const LARGE_GRAPH: &'static str = r#"{
+    "root_id": 5,
+    "nodes": [
+      {
+        "id": 0,
+        "node": {
+          "Input": {
+            "PackageSourceCode": "bar local+file:///home/bar"
+          }
+        }
+      },
+      {
+        "id": 1,
+        "node": {
+          "Input": {
+            "PackageSourceCode": "baz local+file:///home/baz"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "node": {
+          "Input": {
+            "PackageSourceCode": "foo local+file:///home/foo"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "node": {
+          "Unit": {
+            "identity": "bar local+file:///home/bar",
+            "unit_type": "Dependency"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "node": {
+          "Unit": {
+            "identity": "baz local+file:///home/baz",
+            "unit_type": "Dependency"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "node": {
+          "Unit": {
+            "identity": "foo local+file:///home/foo",
+            "unit_type": "Binary"
+          }
+        }
+      }
+    ],
+    "dependencies": [
+      [],
+      [],
+      [],
+      [0],
+      [1],
+      [0,1,2,3,4]
+    ],
+    "packages": {
+      "foo local+file:///home/foo": {
+        "root_path": "/home/foo",
+        "deps_realization": [
+          [
+            "bar local+file:///home/bar",
+            null
+          ],
+          [
+            "baz local+file:///home/baz",
+            null
+          ]
+        ],
+        "enabled_features": [],
+        "identity": "foo local+file:///home/foo"
+      },
+      "bar local+file:///home/bar": {
+        "root_path": "/home/bar",
+        "deps_realization": [],
+        "enabled_features": [],
+        "identity": "bar local+file:///home/bar"
+      },
+      "baz local+file:///home/baz": {
+        "root_path": "/home/baz",
+        "deps_realization": [],
+        "enabled_features": [],
+        "identity": "baz local+file:///home/baz"
+      }
+    }
+  }"#;
+
+    /// Serialized graph for scenario "foo depends on bar".
+    const SMALL_GRAPH: &'static str = r#"{
+    "root_id": 3,
+    "nodes": [
+      {
+        "id": 0,
+        "node": {
+          "Input": {
+            "PackageSourceCode": "bar local+file:///home/bar"
+          }
+        }
+      },
+      {
+        "id": 1,
+        "node": {
+          "Input": {
+            "PackageSourceCode": "foo local+file:///home/foo"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "node": {
+          "Unit": {
+            "identity": "bar local+file:///home/bar",
+            "unit_type": "Dependency"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "node": {
+          "Unit": {
+            "identity": "foo local+file:///home/foo",
+            "unit_type": "Binary"
+          }
+        }
+      }
+    ],
+    "dependencies": [
+      [],
+      [],
+      [0],
+      [0,1,2]
+    ],
+    "packages": {
+      "foo local+file:///home/foo": {
+        "root_path": "/home/foo",
+        "deps_realization": [
+          [
+            "bar local+file:///home/bar",
+            null
+          ]
+        ],
+        "enabled_features": [],
+        "identity": "foo local+file:///home/foo"
+      },
+      "bar local+file:///home/bar": {
+        "root_path": "/home/bar",
+        "deps_realization": [],
+        "enabled_features": [],
+        "identity": "bar local+file:///home/bar"
+      }
+    }
+  }"#;
+
+    /// As [`SMALL_GRAPH`], but dependencies are not sorted.
+    const MALFORMED_GRAPH: &'static str = r#"{
+    "root_id": 3,
+    "nodes": [
+      {
+        "id": 0,
+        "node": {
+          "Input": {
+            "PackageSourceCode": "bar local+file:///home/bar"
+          }
+        }
+      },
+      {
+        "id": 1,
+        "node": {
+          "Input": {
+            "PackageSourceCode": "foo local+file:///home/foo"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "node": {
+          "Unit": {
+            "identity": "bar local+file:///home/bar",
+            "unit_type": "Dependency"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "node": {
+          "Unit": {
+            "identity": "foo local+file:///home/foo",
+            "unit_type": "Binary"
+          }
+        }
+      }
+    ],
+    "dependencies": [
+      [],
+      [],
+      [0],
+      [2,1,0]
+    ],
+    "packages": {
+      "foo local+file:///home/foo": {
+        "root_path": "/home/foo",
+        "deps_realization": [
+          [
+            "bar local+file:///home/bar",
+            null
+          ]
+        ],
+        "enabled_features": [],
+        "identity": "foo local+file:///home/foo"
+      },
+      "bar local+file:///home/bar": {
+        "root_path": "/home/bar",
+        "deps_realization": [],
+        "enabled_features": [],
+        "identity": "bar local+file:///home/bar"
+      }
+    }
+  }"#;
+
+    #[test]
+    fn get_incremental_data_check() {
+        let without_baz = serde_json::from_str::<SerializableUnitGraph>(SMALL_GRAPH).unwrap();
+        let with_baz = serde_json::from_str::<SerializableUnitGraph>(LARGE_GRAPH).unwrap();
+        let identity_bar = Identity::from_str("bar local+file:///home/bar").unwrap();
+        let identity_baz = Identity::from_str("baz local+file:///home/baz").unwrap();
+        let identity_foo = Identity::from_str("foo local+file:///home/foo").unwrap();
+        let without_to_with = with_baz.get_incremental_data(&without_baz);
+        let with_to_without = without_baz.get_incremental_data(&with_baz);
+        let with_to_with = with_baz.get_incremental_data(&with_baz);
+        assert_eq!(
+            without_to_with,
+            IncrementalData {
+                common_packages: [identity_bar].into(),
+                common_nodes: [0, 3].into(),
+            }
+        );
+        assert_eq!(
+            with_to_without,
+            IncrementalData {
+                common_packages: [identity_bar].into(),
+                common_nodes: [0, 2].into(),
+            }
+        );
+        assert_eq!(
+            with_to_with,
+            IncrementalData {
+                common_packages: [identity_bar, identity_baz, identity_foo].into(),
+                common_nodes: [0, 1, 2, 3, 4, 5].into(),
+            }
+        );
+    }
+
+    #[test]
+    fn errors_on_malformed_graph() {
+        let graph = serde_json::from_str::<SerializableUnitGraph>(MALFORMED_GRAPH).unwrap();
+        let err = graph.check_correctness().unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "dependencies of the node 3 are not sorted in the previous build unit graph"
+        )
     }
 }

@@ -80,9 +80,10 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// -----
     /// Returns empty [`IncrementalData`] if there was no previous fingerprint found or profile prohibits incremental.
     fn manage_fingerprint(&self, layout: &dyn ProfileLayout) -> QuackResult<IncrementalData> {
+        let prev_fingerprint_exists = layout.fingerprint_path().exists();
         let fingerprint = layout.fingerprint(self.bcx.pcx.ctx())?;
         let cur_build_data = BuildData::for_current_build(&self.graph, self.bcx.profile);
-        let result = if fingerprint.path().exists() && self.bcx.profile.incremental {
+        let result = if prev_fingerprint_exists && self.bcx.profile.incremental {
             let prev_build_data = BuildData::from_fingerprint(&fingerprint)?;
             cur_build_data.get_incremental_data(&prev_build_data)?
         } else {

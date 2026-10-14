@@ -8,7 +8,7 @@
 //! It serializes onto the disk information about the build process (most significantly a representation of the [`UnitGraph`])
 //! and uses that information to determine the common subgraph between current and previous [`UnitGraph`]s.
 //! Nodes from that subgraph are precisely the nodes for which we can try to do incremental compilation.
-//! 
+//!
 //! The information written onto the disk is called a fingerprint and is stored in a struct [`BuildData`].
 
 use std::collections::HashSet;
@@ -79,7 +79,7 @@ impl BuildData {
     /// Should be called on [`BuildData`] generated for the current build.
     pub fn write_fingerprint(&self, fingerprint: &LockedFile) -> QuackResult<()> {
         let fingerprint_json = serde_json::to_string_pretty(&self).with_context_internal(|| {
-            format!("failed to convert manifest into a JSON string: {self:#?}")
+            format!("failed to convert fingerprint into a JSON string: {self:#?}")
         })?;
         fingerprint
             .file()
@@ -90,7 +90,7 @@ impl BuildData {
             .write_all(fingerprint_json.as_bytes())
             .with_context(|| {
                 format!(
-                    "failed to write manifest to `{}`",
+                    "failed to write fingerprint to `{}`",
                     fingerprint.path().display()
                 )
             })
@@ -113,7 +113,7 @@ impl BuildData {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 /// Common part between current and previous build [`UnitGraph`]s.
 pub struct IncrementalData {
     /// Which packages are the same between builds (in the sense of [`Identity`] and other build-specific information).
