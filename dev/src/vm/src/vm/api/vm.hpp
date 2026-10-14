@@ -105,9 +105,12 @@ namespace vm::api {
 	 * freed by the caller. They are automatically freed when the process is destroyed.
 	 * @note Every result other than `JoinError` means the execution thread was joined by this
 	 * call. `JoinError` means the thread was either already joined, never started or not found.
+	 * @note `api::stop` already joins every execution thread, so a `join` after a `stop` answers
+	 * `JoinError`. A `StateError` only comes back when the `join` races a `stop`.
 	 *
 	 * @return The exit value of the thread if it completed normally, or an API error otherwise
-	 * (the thread was never started, it panicked or it was stopped before completing).
+	 * (`JoinError` as described above, `Panicked` when the thread panicked, or `StateError` when it
+	 * was stopped while this call was waiting for it).
 	 */
 	std::expected<ExitValue, ApiError> join(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
@@ -135,7 +138,7 @@ namespace vm::api {
 	 * execution.
 	 *
 	 * @return What errors the deinit found (either memory leaks or unjoined program threads). The
-	 * program threads that where left unjoined are joined by this endpoint. Returns an `ApiError`
+	 * program threads that were left unjoined are joined by this endpoint. Returns an `ApiError`
 	 * if the deinit was refused (`StateError`) or a global destructor panicked (`Panicked`).
 	 */
 	std::expected<response::ValidationResult, ApiError> deinitAndValidate(PID pid);

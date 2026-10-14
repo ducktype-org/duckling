@@ -80,10 +80,10 @@ namespace vm {
 		/**
 		 * @brief The thread finished and its execution thread was already joined.
 		 *
-		 * This is the only state a VMThread may be deinitialized from, and the only state a reused
-		 * VMThread may be spawned from.
+		 * This is the only finished state a VMThread may be deinitialized from, and the only
+		 * finished state a reused VMThread may be spawned from.
 		 */
-		struct Joined {
+		struct Joined final {
 			/// The terminal state at the moment `join` was called.
 			TerminalOutcome outcome;
 		};
@@ -146,7 +146,7 @@ namespace vm {
 		struct Kill final {};
 
 		/// The execution thread of a finished VMThread was joined, see `IVMThread::join`.
-		struct Join {};
+		struct Join final {};
 
 		using ThreadEvent
 			= std::variant<Spawn, Pause, Resume, EnterSleep, WakeUp, Finish, Kill, Panic, Join>;

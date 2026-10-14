@@ -31,6 +31,7 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <algorithm>
 #include <expected>
 #include <iostream>
 #include <mutex>
@@ -174,7 +175,7 @@ namespace vm {
 
 		SafeVMThread& thread = getEmptyThreadLocked();
 		thread.setThreadCtx(func_name);
-		// Overwrite the previous owned if we recycle the thread.
+		// Overwrite the previous owner if we recycle the thread.
 		thread.setOwner(owner);
 
 		if (!thread.spawnThreadAndRun(func_name, run_arguments)) {
@@ -669,7 +670,7 @@ namespace vm {
 	}
 
 	std::vector<api::ThreadID> SafeVMProcess::joinFinishedThreads() {
-		std::vector<api::ThreadID> unjoined_program_threads;
+		std::vector<api::ThreadID> unjoined;
 		{
 			std::lock_guard lock(threads_pool_mutex);
 			// A thread the program started and never joined is a bug in that program, but not one
@@ -680,11 +681,14 @@ namespace vm {
 				const ts::ThreadState state = thread.getThreadState();
 				if (!ts::hasStarted(state) || ts::isJoined(state)) continue;
 
-				unjoined_program_threads.push_back(thread.getThreadID());
+				// VMThreads are reused by the next run, so the same ID may leak more than once.
+				if (!std::ranges::contains(unjoined_program_threads, thread.getThreadID()))
+					unjoined_program_threads.push_back(thread.getThreadID());
 			}
+			unjoined = unjoined_program_threads;
 		}
 		joinAllExecutionThreads();
-		return unjoined_program_threads;
+		return unjoined;
 	}
 
 	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() const {

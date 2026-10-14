@@ -18,6 +18,8 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/core/vmvalue/ivmvalueref.hpp>
 
+#include <ranges>
+
 namespace vm::api {
 	namespace response {
 		struct Empty final {};
@@ -68,7 +70,7 @@ namespace vm::api {
 		/**
 		 * @brief Information about errors found by `api::deinitAndValidate`.
 		 */
-		struct ValidationResult {
+		struct ValidationResult final {
 			/// False when a memory leak was found.
 			bool memory_valid{ true };
 
@@ -79,32 +81,33 @@ namespace vm::api {
 				return memory_valid && unjoined_program_threads.empty();
 			}
 
+			/**
+			 * @brief Human readable report of what a teardown found, for a caller which just
+			 * wants to print it.
+			 *
+			 * @return The report, empty when the program left nothing behind.
+			 */
+			[[nodiscard]] std::string toString() const {
+				std::string report;
+				if (!memory_valid) report += "The program leaked memory.\n";
+
+				if (!unjoined_program_threads.empty()) {
+					const bool single = unjoined_program_threads.size() == 1;
+					report
+						+= single ? "The program started thread " : "The program started threads ";
+					report += base::strJoin(
+						unjoined_program_threads | std::views::transform([](const ThreadID id) {
+							return base::toString(id.asInt());
+						}),
+						", "
+					);
+					report += single ? " and never joined it.\n" : " and never joined them.\n";
+				}
+				return report;
+			}
+
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ValidationResult, memory_valid, unjoined_program_threads);
 		};
-	}
-
-	/**
-	 * @brief Human readable report of what a teardown found, for a caller which just wants to
-	 * print it.
-	 *
-	 * @return The report, empty when the program left nothing behind.
-	 */
-	[[nodiscard]] inline std::string validationToString(const response::ValidationResult& validation
-	) {
-		std::string report;
-		if (!validation.memory_valid) report += "The program leaked memory.\n";
-
-		const std::vector<ThreadID>& unjoined = validation.unjoined_program_threads;
-		if (!unjoined.empty()) {
-			const bool single = unjoined.size() == 1;
-			report += single ? "The program started thread " : "The program started threads ";
-			for (usize i = 0; i < unjoined.size(); i++) {
-				if (i != 0) report += ", ";
-				report += base::toString(unjoined.at(i).asInt());
-			}
-			report += single ? " and never joined it.\n" : " and never joined them.\n";
-		}
-		return report;
 	}
 
 	using Response = std::variant<

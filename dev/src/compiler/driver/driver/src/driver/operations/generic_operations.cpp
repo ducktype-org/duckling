@@ -751,7 +751,7 @@ namespace compiler::driver {
 								  if (not res)
 									  std::cerr << vm::api::errorToString(res.error()) << '\n';
 								  else if (res->has_value())
-									  std::cerr << vm::api::validationToString(res->value());
+									  std::cerr << res->value().toString();
 							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)

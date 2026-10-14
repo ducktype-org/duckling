@@ -297,8 +297,9 @@ namespace vm {
 		 * @note Must be called with no process lock held - joining blocks until the execution
 		 * thread exits and that thread may still need those locks.
 		 *
-		 * @return The IDs of the threads the user program started and never joined itself.
-		 * Empty when the program cleaned up after itself.
+		 * @return The IDs of the threads the user program started and never joined itself, in
+		 * this run and in every earlier run of the process. Empty when the program always cleaned
+		 * up after itself.
 		 */
 		virtual std::vector<api::ThreadID> joinFinishedThreads() { return {}; }
 

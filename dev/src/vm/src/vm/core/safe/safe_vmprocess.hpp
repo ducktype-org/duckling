@@ -83,6 +83,13 @@ namespace vm {
 		 * Not recycling, because SafeVMThread is not move-constructible.
 		 */
 		base::StableObjectPool<SafeVMThread, api::ThreadID, false, true> vm_threads;
+		/**
+		 * @brief Every thread the user program started and never joined, over all runs of this
+		 * process. Kept here because a rerun resets the thread states, and the final
+		 * `deinitAndValidate` still has to report what the earlier runs left behind.
+		 * @note Guarded by `threads_pool_mutex`.
+		 */
+		std::vector<api::ThreadID> unjoined_program_threads;
 
 		/**
 		 * @brief Returns first thread in thread queue.

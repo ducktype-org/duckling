@@ -43,7 +43,7 @@ namespace vm {
 		enum class ThreadOwner {
 			/// Started by `api::run`/`api::runFunction`, should be `api::join`ed.
 			API,
-			/// Started by the used program (`builtin_start_thread`). Should be joined by the program.
+			/// Started by the user program (`builtin_start_thread`). The program should join it.
 			Program,
 		};
 
@@ -129,7 +129,8 @@ namespace vm {
 		 * reusable by a next run and what allows the process to be deinitialized.
 		 *
 		 * @return The exit value of the thread if it completed normally, an API error otherwise
-		 * (the thread was never started, it panicked or it was stopped before completing).
+		 * (the thread was never started, it panicked, it was stopped before completing, or another
+		 * caller joined it first).
 		 */
 		std::expected<api::Response, api::ApiError> join();
 
@@ -277,8 +278,11 @@ namespace vm {
 		 * @brief Joins the OS execution thread if there is one, clears the handle and commits the
 		 * `Join` event, which moves the VMThread into `thread_state::Joined`.
 		 * @note A no-op when there is no `exec_thread` handle left to join.
+		 *
+		 * @return True if this call took the handle and joined it, false if there was nothing left
+		 * to join (another caller was first, or the thread never had an execution thread).
 		 */
-		void joinExecutionThread();
+		bool joinExecutionThread();
 
 	private:
 		/**

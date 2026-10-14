@@ -48,7 +48,7 @@ int cli(
 					  if (not res)
 						  std::cerr << convertError(res.error()) << '\n';
 					  else if (res->has_value())
-						  std::cerr << vm::api::validationToString(res->value());
+						  std::cerr << res->value().toString();
 				  });
 
 				  return std::expected<void, vm::api::ApiError>{}

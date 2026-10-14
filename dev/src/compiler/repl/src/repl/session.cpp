@@ -457,7 +457,7 @@ namespace compiler::repl {
 			std::cerr << "Failed to teardown the DVM process: "
 					  << vm::api::errorToString(teardown.error()) << "\n";
 		else if (teardown->has_value())
-			std::cerr << vm::api::validationToString(teardown->value());
+			std::cerr << teardown->value().toString();
 	}
 
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
