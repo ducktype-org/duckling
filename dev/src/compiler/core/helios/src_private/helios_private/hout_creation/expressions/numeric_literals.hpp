@@ -11,6 +11,22 @@
 
 namespace compiler::helios::code {
 	/**
+	 * @brief Whether `-` was written right before a numeric literal.
+	 */
+	enum class LiteralSign : uint8_t {
+		Positive,
+		Negative,
+	};
+
+	/**
+	 * @brief Whether the literal may be parsed as a negative number.
+	 * @return false for unsigned types.
+	 */
+	bool canBeNegative(
+		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr
+	);
+
+	/**
 	 * @brief Parses a PST numeric literal expression into a compile-time numeric value.
 	 * Handles different bases (decimal, hex, binary, octal), type specifiers (e.g., i32,
 	 * f64), and type deduction for literals without an explicit type.
@@ -23,10 +39,13 @@ namespace compiler::helios::code {
 	 *
 	 * @param ctx The query context for logging errors.
 	 * @param literal_expr An PST expression representing the numeric literal.
+	 * @param sign Whether the literal is negative. Only a literal that `canBeNegative` may be.
 	 * @return An optional containing the parsed numeric value, or an empty optional if parsing
 	 * failed. Errors are logged to the context.
 	 */
 	base::Optional<numeric_value::NumericValue> fromExprNumericValue(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr
+		query::Context&                                ctx,
+		pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr,
+		LiteralSign                                    sign = LiteralSign::Positive
 	);
 }
