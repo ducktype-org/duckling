@@ -154,14 +154,15 @@ namespace compiler::helios::code {
 
 			/**
 			 * @brief Creates the numeric @p literal, which may be negative if @p sign says so.
-			 * The @p origin of a negative literal with the `-` too.
+			 * For a negative literal, @p origin and @p position also cover the `-`.
 			 */
 			void numericLiteral(
 				pst::Access<pst::expr::ExprNumericValue> literal,
 				const ElementOrigin&                     origin,
+				const dia::StablePosition&               position,
 				const LiteralSign                        sign
 			) {
-				auto parsed_numeric_value = fromExprNumericValue(ctx, literal, sign);
+				auto parsed_numeric_value = fromExprNumericValue(ctx, literal, position, sign);
 
 				// Error was logged in fromExprNumericValue.
 				if (not parsed_numeric_value.has_value()) return;
@@ -170,7 +171,9 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
-				numericLiteral(stmt, pstOrigin(stmt), LiteralSign::Positive);
+				numericLiteral(
+					stmt, pstOrigin(stmt), stmt->getStablePosition(), LiteralSign::Positive
+				);
 			}
 
 			void visitExprCharValue(pst::Access<pst::expr::ExprCharValue> stmt) override {
@@ -334,7 +337,12 @@ namespace compiler::helios::code {
 					const auto literal
 						= stmt->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprNumericValue>();
 					if (literal.has_value() && canBeNegative(ctx, literal.value())) {
-						numericLiteral(literal.value(), pstOrigin(stmt), LiteralSign::Negative);
+						numericLiteral(
+							literal.value(),
+							pstOrigin(stmt),
+							stmt->getStablePosition(),
+							LiteralSign::Negative
+						);
 						return;
 					}
 				}

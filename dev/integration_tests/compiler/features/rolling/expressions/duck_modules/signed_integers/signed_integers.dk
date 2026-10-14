@@ -111,7 +111,7 @@ fun main() -> i64 = {
         builtin_output_i64(20);
     }
 
-    # A negative literal without a type is the smallest signed type it fits into.
+    # A negative literal without a type is an `i32`, or an `i64` if it does not fit into `i32`.
     let negative = -2147483648;
     let negative_i32: i32 = negative;
     if (negative_i32 + 1i32 != -2147483647i32) {

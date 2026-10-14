@@ -148,12 +148,12 @@ namespace compiler::helios::code {
 	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(
 		query::Context&                                ctx,
 		pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr_locked,
+		const dia::StablePosition&                     position,
 		const LiteralSign                              sign
 	) {
 		auto literal_expr   = literal_expr_locked.unlock(ctx);
 		auto value          = literal_expr->getValue().value.strView();
 		auto type_specifier = literal_expr->getTypeSpecifier();
-		auto position       = literal_expr->getStablePosition();
 
 		int base = 10;
 		if (value.starts_with("0b") || value.starts_with("0B")) {
