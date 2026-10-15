@@ -1,0 +1,29 @@
+import exp.io.*;
+
+fun printBracketed(s: String) -> () = {
+    print("[");
+    print(&s);
+    print("]\n");
+}
+
+fun main() -> i64 = {
+    print(readI64()); # -42
+    print(readU64()); # 17
+    print(readF64()); # 3.5
+    print(readF32()); # 2.25
+
+    printBracketed(readWord()); # [duck]
+    printBracketed(readWord()); # [ling]
+
+    # The newline after "ling" was consumed by `readWord`, so `x` comes first.
+    var c = readChar();
+    print(c); # x
+    printBracketed(readLine()); # [ rest of the line]
+    printBracketed(readLine()); # [hello world]
+    printBracketed(readLine()); # []
+
+    # A word or a line at the end of the input is empty.
+    printBracketed(readWord()); # []
+    printBracketed(readLine()); # []
+    return 0;
+}

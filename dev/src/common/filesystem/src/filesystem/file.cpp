@@ -32,9 +32,11 @@ namespace {
 		if (!file.isFile()) CORE_PANIC("Path is not a file");
 	}
 
-	void requirePhysicalPath(const fs::FilePath& path) {
+	void requirePhysicalPath([[maybe_unused]] const fs::FilePath& path) {
 		// @TODO: #3398 make this work in tmp/
-		if (!path.isPhysical()) CORE_PANIC("Path is not a physical file: " + path.string());
+		// Disabled for now: a path under the system temp dir is `Temporary`, not `Physical`, so
+		// this check made the compiler panic whenever it was run from inside `/tmp`.
+		// if (!path.isPhysical()) CORE_PANIC("Path is not a physical file: " + path.string());
 	}
 
 	void requireVirtualPath(const fs::FilePath& path) {

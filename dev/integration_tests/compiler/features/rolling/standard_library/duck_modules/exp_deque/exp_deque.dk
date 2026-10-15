@@ -1,0 +1,119 @@
+import exp.containers.*;
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun printSeparator() -> () = {
+    print("888\n");
+}
+
+fun printDeque(deque: ref Deque[i64]) -> () = {
+    var i = 0i64;
+    while (i < deque.length()) {
+        builtin_output_i64(deque.at(i));
+        i = i + 1i64;
+    }
+    print("--\n");
+}
+
+fun intsTest() -> () = {
+    var deque: Deque[i64];
+    printBool(deque.isEmpty()); # true
+
+    deque.pushBack(2);
+    deque.pushBack(3);
+    deque.pushFront(1);
+    deque.pushFront(0);
+    printDeque(&deque); # 0 1 2 3
+    builtin_output_i64(deque.length()); # 4
+    builtin_output_i64(deque.front());  # 0
+    builtin_output_i64(deque.back());   # 3
+
+    deque.front() = 10;
+    deque.back()  = 30;
+    builtin_output_i64(deque.popFront()); # 10
+    builtin_output_i64(deque.popBack());  # 30
+    builtin_output_i64(deque.popBack());  # 2
+    builtin_output_i64(deque.popBack());  # 1
+    printBool(deque.isEmpty()); # true
+    printSeparator();
+}
+
+fun oneSidedTest() -> () = {
+    # Everything is pushed at the back and taken from the front, and the other way around,
+    # so each pop has to move elements over from the other side.
+    var deque: Deque[i64];
+    var i = 0i64;
+    while (i < 5i64) {
+        deque.pushBack(i);
+        i = i + 1i64;
+    }
+    builtin_output_i64(deque.popFront()); # 0
+    builtin_output_i64(deque.front());    # 1
+    builtin_output_i64(deque.back());     # 4
+    printDeque(&deque); # 1 2 3 4
+    builtin_output_i64(deque.popBack());  # 4
+    builtin_output_i64(deque.popFront()); # 1
+    builtin_output_i64(deque.popFront()); # 2
+    builtin_output_i64(deque.popFront()); # 3
+    printBool(deque.isEmpty()); # true
+
+    i = 0i64;
+    while (i < 5i64) {
+        deque.pushFront(i);
+        i = i + 1i64;
+    }
+    printDeque(&deque); # 4 3 2 1 0
+    builtin_output_i64(deque.popBack());  # 0
+    builtin_output_i64(deque.popBack());  # 1
+    builtin_output_i64(deque.popFront()); # 4
+    printDeque(&deque); # 3 2
+    printSeparator();
+}
+
+fun manyTest() -> () = {
+    var deque: Deque[i64];
+    var i = 0i64;
+    while (i < 100i64) {
+        deque.pushBack(i);
+        i = i + 1i64;
+    }
+
+    # Take from both ends in turn: 0, 99, 1, 98, ...
+    var in_order = true;
+    i            = 0i64;
+    while (i < 50i64) {
+        if (deque.popFront() != i) in_order = false;
+        if (deque.popBack() != 99i64 - i) in_order = false;
+        i = i + 1i64;
+    }
+    printBool(in_order); # true
+    printBool(deque.isEmpty()); # true
+
+    deque.pushFront(7);
+    deque.clear();
+    builtin_output_i64(deque.length()); # 0
+    printSeparator();
+}
+
+fun stringsTest() -> () = {
+    var deque: Deque[String];
+    deque.pushBack(f"ling");
+    deque.pushFront(f"duck");
+    deque.pushBack(f"!");
+    print(deque.popFront());
+    print(deque.popFront());
+    print(deque.popFront());
+    print("\n");
+    printSeparator();
+}
+
+fun main() -> i64 = {
+    intsTest();
+    oneSidedTest();
+    manyTest();
+    stringsTest();
+    return 0;
+}

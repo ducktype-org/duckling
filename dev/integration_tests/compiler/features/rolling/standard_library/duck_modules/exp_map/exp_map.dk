@@ -1,0 +1,220 @@
+import exp.containers.*;
+
+#{
+    A point ordered by `x`, then by `y`, through its own `cmp` method.
+#}
+class Point {
+    x: i64;
+    y: i64;
+
+    fun cmp(other: const ref Point) -> bool = {
+        if (x != other.x) return x < other.x;
+        return y < other.y;
+    }
+}
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun printSeparator() -> () = {
+    print("888\n");
+}
+
+fun intsTest() -> () = {
+    var map: Map[i64, i64];
+    printBool(map.isEmpty()); # true
+    printBool(map.contains(1)); # false
+    printBool(map.remove(1));   # false
+
+    map.insert(5, 50);
+    map.insert(1, 10);
+    map.insert(3, 30);
+    builtin_output_i64(map.length()); # 3
+    builtin_output_i64(map.at(3));    # 30
+    printBool(map.contains(1));       # true
+    printBool(map.contains(2));       # false
+
+    # Inserting an existing key replaces its value.
+    map.insert(3, 33);
+    builtin_output_i64(map.length()); # 3
+    builtin_output_i64(map.at(3));    # 33
+
+    map.at(5) = 55;
+    builtin_output_i64(map.at(5)); # 55
+
+    print(map.keys().toString());   # [1,3,5]
+    print("\n");
+    print(map.values().toString()); # [10,33,55]
+    print("\n");
+
+    printBool(map.remove(3)); # true
+    printBool(map.remove(3)); # false
+    printBool(map.contains(3)); # false
+    print(map.keys().toString()); # [1,5]
+    print("\n");
+
+    map.clear();
+    printBool(map.isEmpty()); # true
+    printSeparator();
+}
+
+#{
+    True when the keys come out sorted, and every key maps to ten times itself.
+#}
+fun isConsistent(map: ref Map[i64, i64]) -> bool = {
+    let keys = map.keys();
+    var i = 0i64;
+    while (i < keys.length()) {
+        if (i > 0i64 and keys.at(i - 1i64) >= keys.at(i)) return false;
+        if (map.at(keys.at(i)) != keys.at(i) * 10i64) return false;
+        i = i + 1i64;
+    }
+    return true;
+}
+
+fun manyTest() -> () = {
+    var map: Map[i64, i64];
+
+    # 37 and 200 share no divisor, so this visits every key in 0..200 once, out of order.
+    var i = 0i64;
+    while (i < 200i64) {
+        let key = (i * 37i64) % 200i64;
+        map.insert(key, key * 10i64);
+        i = i + 1i64;
+    }
+    builtin_output_i64(map.length()); # 200
+    printBool(isConsistent(&map));    # true
+
+    # A balanced tree of 200 nodes is at most 10 levels high. A sorted insert would give 200.
+    printBool(map.height() <= 10i64); # true
+
+    # Remove every even key.
+    i = 0i64;
+    while (i < 200i64) {
+        map.remove(i);
+        i = i + 2i64;
+    }
+    builtin_output_i64(map.length()); # 100
+    printBool(isConsistent(&map));    # true
+    printBool(map.contains(42));      # false
+    printBool(map.contains(43));      # true
+
+    var sum = 0i64;
+    let keys = map.keys();
+    i = 0i64;
+    while (i < keys.length()) {
+        sum = sum + keys.at(i);
+        i = i + 1i64;
+    }
+    builtin_output_i64(sum); # 1 + 3 + ... + 199 = 10000
+
+    # Remove the rest, from the largest key down.
+    i = 199i64;
+    while (i > 0i64) {
+        map.remove(i);
+        i = i - 2i64;
+    }
+    printBool(map.isEmpty()); # true
+    printSeparator();
+}
+
+fun stringsTest() -> () = {
+    var map: Map[String, String];
+    map.insert(f"duck", f"quack");
+    map.insert(f"cat", f"meow");
+    map.insert(f"cow", f"moo");
+    map.insert(f"duckling", f"peep");
+    map.insert(f"cat", f"purr");
+
+    builtin_output_i64(map.length()); # 4
+    print(map.at(f"cat"));            # purr
+    print("\n");
+
+    printBool(map.remove(f"duck")); # true
+    printBool(map.contains(f"duck")); # false
+    printBool(map.contains(f"duckling")); # true
+
+    let keys = map.keys();
+    var i = 0i64;
+    while (i < keys.length()) {
+        print(keys.at(i));
+        print(" ");
+        i = i + 1i64;
+    }
+    print("\n"); # cat cow duckling
+    printSeparator();
+}
+
+fun customKeysTest() -> () = {
+    var map: Map[Point, String];
+    map.insert(Point(2, 1), f"c");
+    map.insert(Point(1, 5), f"b");
+    map.insert(Point(1, 2), f"a");
+
+    let values = map.values();
+    var i = 0i64;
+    while (i < values.length()) {
+        print(values.at(i));
+        i = i + 1i64;
+    }
+    print("\n"); # abc
+    printBool(map.contains(Point(1, 5))); # true
+    printBool(map.contains(Point(5, 1))); # false
+    printSeparator();
+}
+
+#{
+    `fifty` points into `map`. Every node has its own allocation, so the reference survives
+    other inserts and removes.
+#}
+fun churnAndAppend(map: ref Map[i64, String], fifty: ref String) -> () = {
+    var i = 0i64;
+    while (i < 100i64) {
+        if (i != 50i64) map.insert(i, f"x");
+        i = i + 1i64;
+    }
+    i = 0i64;
+    while (i < 100i64) {
+        if (i != 50i64) map.remove(i);
+        i = i + 1i64;
+    }
+    fifty.append('!');
+}
+
+fun referencesTest() -> () = {
+    var map: Map[i64, String];
+    map.insert(50, f"fifty");
+    churnAndAppend(&map, map.at(50));
+    print(map.at(50)); # fifty!
+    print("\n");
+    printSeparator();
+}
+
+fun copyTest() -> () = {
+    var map: Map[i64, String];
+    map.insert(1, f"one");
+    map.insert(2, f"two");
+
+    # A copy owns its own nodes: changing one map leaves the other alone.
+    var other = copy map;
+    other.at(1).append('!');
+    other.remove(2);
+    other.insert(3, f"three");
+    print(map.values().toString());   # [one,two]
+    print("\n");
+    print(other.values().toString()); # [one!,three]
+    print("\n");
+    printSeparator();
+}
+
+fun main() -> i64 = {
+    intsTest();
+    manyTest();
+    stringsTest();
+    customKeysTest();
+    referencesTest();
+    copyTest();
+    return 0;
+}

@@ -17,6 +17,8 @@ namespace compiler::helios::code {
 		ExprStmt,
 		IfStmt,
 		WhileStmt,
+		BreakStmt,
+		ContinueStmt,
 		VariableStmt,
 		AssignmentStmt,
 		BlockStmt

@@ -45,6 +45,16 @@ namespace pst {
 		}
 		state.parse(out.toOpt().value()).eatOne();
 
+		if ((keyword == Keyword::Break || keyword == Keyword::Continue)
+		    && state.ctokens().size() >= 2 && state[0].isKeyword()
+		    && state[1].is(Special::Semicolon)) {
+			auto candidate = state[0].asKeyword();
+			if (isControlFlowTargetKeyword(candidate)) {
+				out->target_keyword = candidate;
+				state.parse(out.toOpt().value()).eatOne();
+			}
+		}
+
 		// @TODO: for now we assume if there is no expression there is a semicolon
 		// @TODO: #1535 Change to not parsing expression when no tokens are left
 		if (!state[0].is(Special::Semicolon)) state.parse(out.toOpt().value()).one(&out->expr);
@@ -61,7 +71,8 @@ namespace pst {
 		void simpleActionDprint(
 			std::ostream&                                                out,
 			const std::string&                                           kind,
-			const base::Optional<AccessInternal<CommaExprHolder, name>>* expr
+			const base::Optional<AccessInternal<CommaExprHolder, name>>* expr,
+			base::Optional<lang_def::Keyword>                            target_keyword = {}
 		) {
 			out << "{";
 			out << R"("kind": ")" << kind << "\"";
@@ -70,12 +81,17 @@ namespace pst {
 				out << R"(, "value":)";
 				nullAwareDprint(expr->value(), out);
 			}
+			if (target_keyword.has_value())
+				out << R"(, "target_keyword": ")"
+					<< lang_def::keywordToStr(target_keyword.value()).strView() << '"';
 			out << "}";
 		}
 	}
 
 	HashAlg& Action::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, expr.has_value());
+		addToHash(partial_hash, target_keyword.has_value());
+		if (target_keyword.has_value()) addToHash(partial_hash, target_keyword.value());
 		return partial_hash;
 	}
 
@@ -84,11 +100,11 @@ namespace pst {
 	}
 
 	void Break::dprint(std::ostream& out) const {
-		internal::simpleActionDprint(out, "Break", &expr);
+		internal::simpleActionDprint(out, "Break", &expr, target_keyword);
 	}
 
 	void Continue::dprint(std::ostream& out) const {
-		internal::simpleActionDprint(out, "Continue", &expr);
+		internal::simpleActionDprint(out, "Continue", &expr, target_keyword);
 	}
 
 	void Redo::dprint(std::ostream& out) const { internal::simpleActionDprint(out, "Redo", &expr); }

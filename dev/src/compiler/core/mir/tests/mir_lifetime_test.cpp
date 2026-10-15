@@ -108,8 +108,8 @@ private:
 			.expectDestruct("b")
 			.expectScopeEnd("b")
 
-			.expectConstruct("c")
 			.expectScopeStart("c")
+			.expectConstruct("c")
 			.expectDestruct("c")
 			.expectScopeEnd("c")
 
@@ -369,6 +369,10 @@ private:
 			.expectScopeStart("r")
 			.expectMove("v")
 			.expectConstruct("r")
+			.validate(match_out);
+		// The shared exit can be visited before the case binding by the checker's DFS traversal.
+		// Check its conditional destruction separately; the count below still requires exactly one.
+		LifetimeChecker{}
 			.expectInstruction(Operation::DestructIf)
 			.expectDestruct("r")
 			.expectScopeEnd("r")

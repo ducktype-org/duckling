@@ -1,0 +1,133 @@
+import exp.containers.*;
+
+#{
+    A task ordered by `priority` only, through its own `cmp` method.
+#}
+class Task {
+    priority: i64;
+    name: String;
+
+    fun cmp(other: const ref Task) -> bool = priority < other.priority;
+}
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun printSeparator() -> () = {
+    print("888\n");
+}
+
+fun intsTest() -> () = {
+    var queue: PriorityQueue[i64];
+    printBool(queue.isEmpty()); # true
+
+    queue.push(5);
+    queue.push(1);
+    queue.push(4);
+    queue.push(1);
+    queue.push(3);
+    builtin_output_i64(queue.length()); # 5
+    builtin_output_i64(queue.top());    # 1
+
+    builtin_output_i64(queue.pop()); # 1
+    builtin_output_i64(queue.pop()); # 1
+    builtin_output_i64(queue.pop()); # 3
+
+    # A new smallest element goes straight to the top.
+    queue.push(2);
+    builtin_output_i64(queue.top()); # 2
+    builtin_output_i64(queue.pop()); # 2
+    builtin_output_i64(queue.pop()); # 4
+    builtin_output_i64(queue.pop()); # 5
+    printBool(queue.isEmpty()); # true
+    printSeparator();
+}
+
+fun manyTest() -> () = {
+    var queue: PriorityQueue[i64];
+
+    # 37 and 200 share no divisor, so this pushes every number in 0..200 once, out of order.
+    var i = 0i64;
+    while (i < 200i64) {
+        queue.push((i * 37i64) % 200i64);
+        i = i + 1i64;
+    }
+    builtin_output_i64(queue.length()); # 200
+
+    var sorted = true;
+    i = 0i64;
+    while (i < 200i64) {
+        if (queue.pop() != i) sorted = false;
+        i = i + 1i64;
+    }
+    printBool(sorted);          # true
+    printBool(queue.isEmpty()); # true
+    printSeparator();
+}
+
+fun stringsTest() -> () = {
+    var queue: PriorityQueue[String];
+    queue.push(f"duck");
+    queue.push(f"cat");
+    queue.push(f"duckling");
+    queue.push(f"cow");
+
+    while (not queue.isEmpty()) {
+        print(queue.pop());
+        print(" ");
+    }
+    print("\n"); # cat cow duck duckling
+
+    # Clearing destroys the strings that are still inside.
+    queue.push(f"left");
+    queue.push(f"over");
+    queue.clear();
+    printBool(queue.isEmpty()); # true
+    printSeparator();
+}
+
+fun customTest() -> () = {
+    var queue: PriorityQueue[Task];
+    queue.push(Task(3, f"swim"));
+    queue.push(Task(1, f"wake up"));
+    queue.push(Task(2, f"eat"));
+
+    print(queue.top().name.asSlice()); # wake up
+    print("\n");
+    while (not queue.isEmpty()) {
+        let task = queue.pop();
+        print(task.name.asSlice());
+        print(";");
+    }
+    print("\n"); # wake up;eat;swim;
+    printSeparator();
+}
+
+fun copyTest() -> () = {
+    var queue: PriorityQueue[String];
+    queue.push(f"b");
+    queue.push(f"a");
+
+    # A copy owns its own elements: popping from it leaves the original alone.
+    var other = copy queue;
+    other.pop();
+    other.push(f"c");
+    builtin_output_i64(queue.length()); # 2
+    print(queue.top());                 # a
+    print(other.top());                 # b
+    print("\n");
+
+    # Still owned by both queues here, so leaving the function has to free them all.
+    printSeparator();
+}
+
+fun main() -> i64 = {
+    intsTest();
+    manyTest();
+    stringsTest();
+    customTest();
+    copyTest();
+    return 0;
+}

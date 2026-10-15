@@ -1,0 +1,41 @@
+import core.containers as containers;
+
+#{
+    The ordering convention of the `exp` library. `cmp[T](&a, &b)` is true when `a` comes
+    strictly before `b`, i.e. it is a "less than". Two values are equal when neither comes before
+    the other. Ordered containers such as `Map` only use this function to compare keys.
+
+    - Numbers and `char` use the built-in `<`.
+    - `bool`: `false` comes before `true`.
+    - `str` and `String` are compared character by character. A prefix comes first, so `"ab"`
+      comes before `"abc"`.
+    - Every other type must have a method `fun cmp(other: const ref T) -> bool` with the same
+      meaning: true when `self` comes strictly before `other`.
+#}
+template(T: type)
+fun cmp(lhs: const ref T, rhs: const ref T) -> bool = {
+    if const (T == i8 or T == i16 or T == i32 or T == i64 or T == u8 or T == u16 or T == u32
+              or T == u64 or T == f32 or T == f64 or T == char) {
+        return lhs < rhs;
+    } else if const (T == bool) {
+        return not lhs and rhs;
+    } else if const (T == str) {
+        return cmpStr(lhs, rhs);
+    } else if const (T == containers.String) {
+        return cmpStr(lhs.asSlice(), rhs.asSlice());
+    } else {
+        return lhs.cmp(&rhs);
+    }
+}
+
+#{
+    True when `lhs` comes strictly before `rhs`, comparing character by character.
+#}
+fun cmpStr(lhs: str, rhs: str) -> bool = {
+    var i = 0i64;
+    while (i < lhs.length() and i < rhs.length()) {
+        if (lhs[i] != rhs[i]) return lhs[i] < rhs[i];
+        i = i + 1i64;
+    }
+    return lhs.length() < rhs.length();
+}

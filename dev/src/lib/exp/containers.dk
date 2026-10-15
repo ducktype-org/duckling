@@ -1,0 +1,674 @@
+import core.builtins as builtins;
+import core.containers as containers;
+import core.panicking as panicking;
+import exp.compare as compare;
+
+#{
+    Experimental containers. `Stack`, `Queue` and `Deque` only use `List`'s own `push`, `pop`,
+    `at`, `length` and `clear`, so they never touch a raw buffer. `Map` and `PriorityQueue` keep
+    every element in its own allocation, the same storage a `box` uses.
+#}
+
+#{
+    Null pointers, which the two backends spell differently.
+#}
+template(T: type)
+namespace pointers {
+    @backend_dependent
+    fundecl null() -> ptr T;
+
+    @dvm_only_impl
+    fun null() -> ptr T = builtins.dvm_nullptr[T]();
+
+    #{
+        There is no cast from an integer to a pointer, but a pointer starts out null.
+    #}
+    @native_only_impl
+    fun null() -> ptr T = {
+        var nowhere: ptr T;
+        return nowhere;
+    }
+
+    @backend_dependent
+    fundecl isNull(p: ptr T) -> bool;
+
+    @dvm_only_impl
+    fun isNull(p: ptr T) -> bool = builtins.dvm_is_nullptr[T](p);
+
+    @native_only_impl
+    fun isNull(p: ptr T) -> bool = p as u64 == 0u64;
+}
+
+#{
+    Moves the value out of storage taken with `containers.boxAlloc` and frees the storage, so
+    the value lives on instead of being destroyed like in `containers.boxFree`.
+#}
+template(T: type)
+fun unbox(p: ptr T) -> T = {
+    let value = builtins.move_out[T](p);
+    containers.allocation[T].free(p);
+    return value;
+}
+
+#{
+    Last in, first out. The top of the stack is the end of the list, so every operation is
+    amortized O(1).
+#}
+template(T: type)
+class Stack {
+    items: containers.List[T];
+
+    fun push(value: T) -> () = {
+        items.push(move value);
+    }
+
+    #{
+        Removes and returns the top element. Panics when the stack is empty.
+    #}
+    fun pop() -> T = {
+        return items.pop();
+    }
+
+    #{
+        The top element, the one `pop` returns next. Panics when the stack is empty.
+    #}
+    fun top() -> ref T = {
+        return items.at(items.length() - 1i64);
+    }
+
+    fun length() -> i64 = items.length();
+
+    fun isEmpty() -> bool = items.length() == 0i64;
+
+    fun clear() -> () = {
+        items.clear();
+    }
+}
+
+#{
+    First in, first out, made of two lists. `incoming` takes new elements at its end.
+    `outgoing` holds the oldest elements in reverse, so the front of the queue is its end.
+    When `outgoing` runs empty, all of `incoming` is moved over, which reverses it. Every
+    element is moved at most once, so every operation is amortized O(1).
+#}
+template(T: type)
+class Queue {
+    incoming: containers.List[T];
+    outgoing: containers.List[T];
+
+    #{
+        Moves `incoming` into `outgoing` when `outgoing` is empty, so the front is at its end.
+    #}
+    fun refill() -> () = {
+        if (outgoing.length() == 0i64) {
+            while (incoming.length() > 0i64) outgoing.push(incoming.pop());
+        }
+    }
+
+    fun push(value: T) -> () = {
+        incoming.push(move value);
+    }
+
+    #{
+        Removes and returns the oldest element. Panics when the queue is empty.
+    #}
+    fun pop() -> T = {
+        refill();
+        return outgoing.pop();
+    }
+
+    #{
+        The oldest element, the one `pop` returns next. Panics when the queue is empty.
+    #}
+    fun front() -> ref T = {
+        refill();
+        return outgoing.at(outgoing.length() - 1i64);
+    }
+
+    #{
+        The newest element. Panics when the queue is empty.
+    #}
+    fun back() -> ref T = {
+        if (incoming.length() > 0i64) return incoming.at(incoming.length() - 1i64);
+        return outgoing.at(0i64);
+    }
+
+    #{
+        The `i`-th element counted from the front. Panics when `i` is out of range.
+    #}
+    fun at(i: i64) -> ref T = {
+        let outgoing_len = outgoing.length();
+        if (i < outgoing_len) return outgoing.at(outgoing_len - 1i64 - i);
+        return incoming.at(i - outgoing_len);
+    }
+
+    fun length() -> i64 = incoming.length() + outgoing.length();
+
+    fun isEmpty() -> bool = length() == 0i64;
+
+    fun clear() -> () = {
+        incoming.clear();
+        outgoing.clear();
+    }
+}
+
+#{
+    Double-ended queue, made of two lists back to back. `front_items` holds the front half in
+    reverse, so the first element is its end. `back_items` holds the back half in order, so the
+    last element is its end. When one side runs empty, half of the other side is moved over.
+    That keeps every operation amortized O(1).
+#}
+template(T: type)
+class Deque {
+    front_items: containers.List[T];
+    back_items: containers.List[T];
+
+    #{
+        Moves the first half of `from` (rounded up) to `to`, reversed, keeping the rest of `from`
+        in order. Used when `to` is empty: afterwards the element at the start of `from` is at
+        the end of `to`.
+    #}
+    fun rebalance(from: ref containers.List[T], to: ref containers.List[T]) -> () = {
+        let moved = (from.length() + 1i64) / 2i64;
+
+        # Park the part that stays, reversed, so the part that moves ends up on top.
+        var kept: containers.List[T];
+        while (from.length() > moved) kept.push(from.pop());
+        while (from.length() > 0i64) to.push(from.pop());
+        while (kept.length() > 0i64) from.push(kept.pop());
+    }
+
+    fun pushFront(value: T) -> () = {
+        front_items.push(move value);
+    }
+
+    fun pushBack(value: T) -> () = {
+        back_items.push(move value);
+    }
+
+    #{
+        Removes and returns the first element. Panics when the deque is empty.
+    #}
+    fun popFront() -> T = {
+        if (front_items.length() == 0i64) rebalance(&back_items, &front_items);
+        return front_items.pop();
+    }
+
+    #{
+        Removes and returns the last element. Panics when the deque is empty.
+    #}
+    fun popBack() -> T = {
+        if (back_items.length() == 0i64) rebalance(&front_items, &back_items);
+        return back_items.pop();
+    }
+
+    #{
+        The first element. Panics when the deque is empty.
+    #}
+    fun front() -> ref T = {
+        if (front_items.length() > 0i64) return front_items.at(front_items.length() - 1i64);
+        return back_items.at(0i64);
+    }
+
+    #{
+        The last element. Panics when the deque is empty.
+    #}
+    fun back() -> ref T = {
+        if (back_items.length() > 0i64) return back_items.at(back_items.length() - 1i64);
+        return front_items.at(0i64);
+    }
+
+    #{
+        The `i`-th element counted from the front. Panics when `i` is out of range.
+    #}
+    fun at(i: i64) -> ref T = {
+        let front_len = front_items.length();
+        if (i < front_len) return front_items.at(front_len - 1i64 - i);
+        return back_items.at(i - front_len);
+    }
+
+    fun length() -> i64 = front_items.length() + back_items.length();
+
+    fun isEmpty() -> bool = length() == 0i64;
+
+    fun clear() -> () = {
+        front_items.clear();
+        back_items.clear();
+    }
+}
+
+#{
+    One entry of a `Map`. `left` and `right` point at the children, null when there is none.
+    `height` is the height of the subtree rooted here, a leaf has height 1.
+
+    The children are `ptr`s that the `Map` allocates and frees itself, with the same storage
+    functions a `box` uses.
+    @TODO: #1949 Make the children `box`es once a class can hold a `box` of its own type.
+#}
+template(K: type, V: type)
+class MapNode {
+    key: K;
+    value: V;
+    left: ptr mapNodeType[K, V]();
+    right: ptr mapNodeType[K, V]();
+    height: i64;
+}
+
+#{
+    Spells out `MapNode[K, V]`, which the class body cannot name directly.
+    @TODO: #3350 Use `MapNode[K, V]` inside the class body once it resolves unambiguously.
+#}
+template(K: type, V: type)
+fun mapNodeType() -> type = MapNode[K, V];
+
+#{
+    Ordered map from `K` to `V`, a balanced binary search tree (AVL tree). Keys are ordered with
+    `compare.cmp[K]`, so `K` must follow that convention (see `exp.compare`). `insert`, `at`,
+    `contains` and `remove` are O(log n), `keys` and `values` list everything in key order.
+
+    Every node has its own allocation and stays where it is until its key is removed. So a
+    reference returned by `at` stays valid through other inserts and removes, until its own
+    key is removed or the map is cleared.
+#}
+template(K: type, V: type)
+class Map {
+    # Only read while `len > 0`: a new map never set it, so it is not known to be null.
+    root: ptr MapNode[K, V];
+    len: i64;
+
+    # The node `removeAt` took out of the tree, for `remove` to free. Null when there is none.
+    detached: ptr MapNode[K, V];
+
+    fun isNode(p: ptr MapNode[K, V]) -> bool = not pointers[MapNode[K, V]].isNull(p);
+
+    fun heightOf(p: ptr MapNode[K, V]) -> i64 = {
+        if (not isNode(p)) return 0i64;
+        return (*p).height;
+    }
+
+    fun updateHeight(p: ptr MapNode[K, V]) -> () = {
+        let left_height  = heightOf((*p).left);
+        let right_height = heightOf((*p).right);
+        if (left_height > right_height) (*p).height = left_height + 1i64;
+        else (*p).height = right_height + 1i64;
+    }
+
+    fun rotateRight(p: ptr MapNode[K, V]) -> ptr MapNode[K, V] = {
+        let new_root        = (*p).left;
+        (*p).left           = (*new_root).right;
+        (*new_root).right   = p;
+        updateHeight(p);
+        updateHeight(new_root);
+        return new_root;
+    }
+
+    fun rotateLeft(p: ptr MapNode[K, V]) -> ptr MapNode[K, V] = {
+        let new_root       = (*p).right;
+        (*p).right         = (*new_root).left;
+        (*new_root).left   = p;
+        updateHeight(p);
+        updateHeight(new_root);
+        return new_root;
+    }
+
+    #{
+        Restores the AVL property at `p`, whose subtrees differ in height by at most 2.
+        Returns the new root of this subtree.
+    #}
+    fun rebalance(p: ptr MapNode[K, V]) -> ptr MapNode[K, V] = {
+        updateHeight(p);
+        let left    = (*p).left;
+        let right   = (*p).right;
+        let balance = heightOf(left) - heightOf(right);
+
+        if (balance > 1i64) {
+            if (heightOf((*left).left) < heightOf((*left).right)) (*p).left = rotateLeft(left);
+            return rotateRight(p);
+        }
+        if (balance < -1i64) {
+            if (heightOf((*right).right) < heightOf((*right).left)) (*p).right = rotateRight(right);
+            return rotateLeft(p);
+        }
+        return p;
+    }
+
+    fun insertAt(p: ptr MapNode[K, V], key: K, value: V) -> ptr MapNode[K, V] = {
+        if (not isNode(p)) {
+            len = len + 1i64;
+            let no_child = pointers[MapNode[K, V]].null();
+            return containers.boxAlloc[MapNode[K, V]](
+                MapNode[K, V](move key, move value, no_child, no_child, 1i64));
+        }
+
+        if (compare.cmp[K](&key, &(*p).key)) {
+            (*p).left = insertAt((*p).left, move key, move value);
+        } else if (compare.cmp[K](&(*p).key, &key)) {
+            (*p).right = insertAt((*p).right, move key, move value);
+        } else {
+            (*p).value = move value;
+            return p;
+        }
+        return rebalance(p);
+    }
+
+    #{
+        Takes the node with the smallest key out of the subtree at `p` and stores it in
+        `detached`. Returns the new root of the subtree.
+    #}
+    fun detachMin(p: ptr MapNode[K, V]) -> ptr MapNode[K, V] = {
+        if (not isNode((*p).left)) {
+            detached = p;
+            return (*p).right;
+        }
+        (*p).left = detachMin((*p).left);
+        return rebalance(p);
+    }
+
+    #{
+        Takes the node with `key` out of the subtree at `p` and stores it in `detached` (left
+        null when there is no such key). Returns the new root of the subtree.
+    #}
+    fun removeAt(p: ptr MapNode[K, V], key: const ref K) -> ptr MapNode[K, V] = {
+        if (not isNode(p)) return p;
+
+        if (compare.cmp[K](&key, &(*p).key)) {
+            (*p).left = removeAt((*p).left, &key);
+            return rebalance(p);
+        }
+        if (compare.cmp[K](&(*p).key, &key)) {
+            (*p).right = removeAt((*p).right, &key);
+            return rebalance(p);
+        }
+
+        let left  = (*p).left;
+        let right = (*p).right;
+        if (not isNode(left)) {
+            detached = p;
+            return right;
+        }
+        if (not isNode(right)) {
+            detached = p;
+            return left;
+        }
+
+        # Two children: the smallest node of the right subtree takes this node's place.
+        let right_rest       = detachMin(right);
+        let successor        = detached;
+        (*successor).left    = left;
+        (*successor).right   = right_rest;
+        detached             = p;
+        return rebalance(successor);
+    }
+
+    #{
+        The node with `key`, or null when there is none.
+    #}
+    fun find(key: const ref K) -> ptr MapNode[K, V] = {
+        if (len == 0i64) return pointers[MapNode[K, V]].null();
+        var p = root;
+        while (isNode(p)) {
+            if (compare.cmp[K](&key, &(*p).key)) p = (*p).left;
+            else if (compare.cmp[K](&(*p).key, &key)) p = (*p).right;
+            else return p;
+        }
+        return p;
+    }
+
+    #{
+        Frees every node of the subtree at `p`, destroying its keys and values.
+    #}
+    fun freeSubtree(p: ptr MapNode[K, V]) -> () = {
+        if (isNode(p)) {
+            freeSubtree((*p).left);
+            freeSubtree((*p).right);
+            containers.boxFree[MapNode[K, V]](p);
+        }
+    }
+
+    #{
+        A fresh copy of the subtree at `p`, with every key and value copied.
+    #}
+    fun copySubtree(p: ptr MapNode[K, V]) -> ptr MapNode[K, V] = {
+        if (not isNode(p)) return p;
+        let left  = copySubtree((*p).left);
+        let right = copySubtree((*p).right);
+        return containers.boxAlloc[MapNode[K, V]](
+            MapNode[K, V](copyof ((*p).key), copyof ((*p).value), left, right, (*p).height));
+    }
+
+    #{
+        Puts `value` under `key`. An existing value under the same key is replaced.
+    #}
+    fun insert(key: K, value: V) -> () = {
+        if (len == 0i64) root = pointers[MapNode[K, V]].null();
+        root = insertAt(root, move key, move value);
+    }
+
+    fun contains(key: K) -> bool = isNode(find(&key));
+
+    #{
+        The value under `key`. Panics when there is no such key.
+    #}
+    fun at(key: K) -> ref V = {
+        let p = find(&key);
+        if (not isNode(p)) panicking.panic();
+        return &(*p).value;
+    }
+
+    #{
+        Removes `key` and its value. Returns false when there was no such key.
+    #}
+    fun remove(key: K) -> bool = {
+        if (len == 0i64) return false;
+        detached = pointers[MapNode[K, V]].null();
+        root     = removeAt(root, &key);
+        if (not isNode(detached)) return false;
+        containers.boxFree[MapNode[K, V]](detached);
+        len = len - 1i64;
+        return true;
+    }
+
+    fun length() -> i64 = len;
+
+    fun isEmpty() -> bool = len == 0i64;
+
+    #{
+        The height of the tree, 0 when it is empty. An AVL tree of `n` keys is never higher
+        than about `1.44 * log2(n)`.
+    #}
+    fun height() -> i64 = {
+        if (len == 0i64) return 0i64;
+        return heightOf(root);
+    }
+
+    fun clear() -> () = {
+        if (len > 0i64) freeSubtree(root);
+        root = pointers[MapNode[K, V]].null();
+        len  = 0i64;
+    }
+
+    #{
+        All nodes, in key order.
+    #}
+    fun nodesInOrder() -> containers.List[ptr MapNode[K, V]] = {
+        var result: containers.List[ptr MapNode[K, V]];
+        if (len == 0i64) return result;
+
+        var pending: containers.List[ptr MapNode[K, V]];
+        var p = root;
+        while (isNode(p) or pending.length() > 0i64) {
+            while (isNode(p)) {
+                pending.push(p);
+                p = (*p).left;
+            }
+            p = pending.pop();
+            result.push(p);
+            p = (*p).right;
+        }
+        return result;
+    }
+
+    #{
+        Copies of all keys, smallest first.
+    #}
+    fun keys() -> containers.List[K] = {
+        let nodes = nodesInOrder();
+        var result: containers.List[K];
+        var i = 0i64;
+        while (i < nodes.length()) {
+            let p: ptr MapNode[K, V] = nodes.at(i);
+            result.push(copyof ((*p).key));
+            i = i + 1i64;
+        }
+        return result;
+    }
+
+    #{
+        Copies of all values, in the order of their keys.
+    #}
+    fun values() -> containers.List[V] = {
+        let nodes = nodesInOrder();
+        var result: containers.List[V];
+        var i = 0i64;
+        while (i < nodes.length()) {
+            let p: ptr MapNode[K, V] = nodes.at(i);
+            result.push(copyof ((*p).value));
+            i = i + 1i64;
+        }
+        return result;
+    }
+
+    #{
+        The map owns its nodes, so a copy has to allocate its own and copy every key and value.
+    #}
+    Map.copy(other: const ref mapType[K, V]()) = {
+        var result: mapType[K, V]();
+        if (other.len > 0i64) {
+            result.root = result.copySubtree(other.root);
+            result.len  = other.len;
+        }
+        return result;
+    }
+
+    Map.destroy() = {
+        clear();
+    }
+}
+
+#{
+    Spells out `Map[K, V]`, which the class body cannot name directly.
+    @TODO: #3350 Use `Map[K, V]` inside the class body once it resolves unambiguously.
+#}
+template(K: type, V: type)
+fun mapType() -> type = Map[K, V];
+
+#{
+    Elements come out smallest first, ordered by `compare.cmp[T]` (see `exp.compare`). `push`
+    and `pop` are O(log n), `top` is O(1). Equal elements come out in no particular order.
+
+    It is a binary heap: the element at position `i` comes no later than the ones at
+    `2 * i + 1` and `2 * i + 2`. Each element sits in its own allocation and the heap holds
+    pointers to them, so moving an element up or down only swaps two pointers.
+#}
+template(T: type)
+class PriorityQueue {
+    items: containers.List[ptr T];
+
+    fun before(i: i64, j: i64) -> bool = {
+        let a: ptr T = items.at(i);
+        let b: ptr T = items.at(j);
+        return compare.cmp[T](&(*a), &(*b));
+    }
+
+    fun swap(i: i64, j: i64) -> () = {
+        let a: ptr T       = items.at(i);
+        items.at(i) = items.at(j);
+        items.at(j) = a;
+    }
+
+    fun siftUp(start: i64) -> () = {
+        var i = start;
+        while (i > 0i64) {
+            let parent = (i - 1i64) / 2i64;
+            if (not before(i, parent)) return;
+            swap(i, parent);
+            i = parent;
+        }
+    }
+
+    fun siftDown(start: i64) -> () = {
+        let len = items.length();
+        var i   = start;
+        while (true) {
+            let left  = 2i64 * i + 1i64;
+            let right = left + 1i64;
+            var first = i;
+            if (left < len and before(left, first)) first = left;
+            if (right < len and before(right, first)) first = right;
+            if (first == i) return;
+            swap(i, first);
+            i = first;
+        }
+    }
+
+    fun push(value: T) -> () = {
+        items.push(containers.boxAlloc[T](move value));
+        siftUp(items.length() - 1i64);
+    }
+
+    #{
+        Removes and returns the smallest element. Panics when the queue is empty.
+    #}
+    fun pop() -> T = {
+        let last: ptr T = items.pop();
+        if (items.length() == 0i64) return unbox[T](last);
+
+        let first: ptr T   = items.at(0i64);
+        items.at(0i64) = last;
+        siftDown(0i64);
+        return unbox[T](first);
+    }
+
+    #{
+        The smallest element, the one `pop` returns next. Panics when the queue is empty.
+        Changing it in a way that changes its order breaks the queue.
+    #}
+    fun top() -> ref T = {
+        let first: ptr T = items.at(0i64);
+        return &(*first);
+    }
+
+    fun length() -> i64 = items.length();
+
+    fun isEmpty() -> bool = items.length() == 0i64;
+
+    fun clear() -> () = {
+        while (items.length() > 0i64) containers.boxFree[T](items.pop());
+    }
+
+    #{
+        The queue owns its elements, so a copy has to allocate its own and copy every element.
+        The copy keeps the same heap order.
+    #}
+    PriorityQueue.copy(other: const ref priorityQueueType[T]()) = {
+        var result: priorityQueueType[T]();
+        var i = 0i64;
+        while (i < other.items.length()) {
+            let p: ptr T = other.items.at(i);
+            result.items.push(containers.boxAlloc[T](copyof (*p)));
+            i = i + 1i64;
+        }
+        return result;
+    }
+
+    PriorityQueue.destroy() = {
+        clear();
+    }
+}
+
+#{
+    Spells out `PriorityQueue[T]`, which the class body cannot name directly.
+    @TODO: #3350 Use `PriorityQueue[T]` inside the class body once it resolves unambiguously.
+#}
+template(T: type)
+fun priorityQueueType() -> type = PriorityQueue[T];
