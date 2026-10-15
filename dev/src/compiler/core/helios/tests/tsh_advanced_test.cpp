@@ -310,11 +310,31 @@ private:
 			TypeNameCase{ "template_value", "Boxed[i64]" },
 			TypeNameCase{ "namespaced_template", "Types.Boxed[Person]" },
 			TypeNameCase{ "value_template", "Sized[3, bool]" },
+			TypeNameCase{ "tiny_float", "FloatT[1e-09f64]" },
+			TypeNameCase{ "another_tiny_float", "FloatT[2e-09f64]" },
+			TypeNameCase{ "simple_float", "FloatT[1.5f64]" },
+			TypeNameCase{ "single_precision_float", "Float32T[0.1f32]" },
+			TypeNameCase{ "round_trip_tiny_float", "FloatT[1e-09f64]" },
+			TypeNameCase{ "other_class", "Person" },
+			TypeNameCase{ "other_nested_class", "NS.Deep" },
+			TypeNameCase{ "other_template_argument", "Boxed[Person]" },
+			TypeNameCase{ "Boxed", "Type template: Boxed" },
+			TypeNameCase{ "Types.Boxed", "Type template: Types.Boxed" },
 		};
 		std::vector<SymbolType<>> types;
 		types.reserve(cases.size());
 		for (const auto& test_case: cases)
 			types.push_back(getSymbolTypeOf(test_case.symbol_name, root_scope));
+		const auto person_type = getSymbolTypeOf("class_value", root_scope);
+		ASSERT_TRUE(person_type != getSymbolTypeOf("other_class", root_scope));
+		ASSERT_TRUE(
+			getSymbolTypeOf("tiny_float", root_scope)
+			!= getSymbolTypeOf("another_tiny_float", root_scope)
+		);
+		ASSERT_EQUAL(
+			getSymbolTypeOf("tiny_float", root_scope),
+			getSymbolTypeOf("round_trip_tiny_float", root_scope)
+		);
 
 		withContextDo([&](query::Context& ctx) {
 			const auto i64_type
@@ -353,7 +373,7 @@ private:
 			assertEqual(
 				std::string("unique leaking const ref i64"),
 				qualified_type.sourceTypeName(ctx),
-				"SymbolType qualifiers should be rendered in source order"
+				"SymbolType qualifiers should use the same order as toString"
 			);
 
 			assertEqual(
@@ -372,9 +392,24 @@ private:
 				.result_type     = SymbolType<>::withDefaults(getBoolType()),
 			});
 			assertEqual(
-				function_type.toString(),
+				std::string("Function (i64) -> (bool)"),
 				function_type.sourceTypeName(ctx),
-				"Types without source syntax should retain their human-readable fallback"
+				"Function types should use a human-readable label"
+			);
+			const auto variant_type = ctx.query<QueryVariantType>({
+				.underlying_types = {
+					SymbolType<>::withDefaults(i64_type),
+					SymbolType<>::withDefaults(getBoolType()),
+				},
+			});
+			const auto composite_function_type = ctx.query<QueryFunctionType>({
+				.parameter_types = { person_type },
+				.result_type     = SymbolType<>::withDefaults(variant_type),
+			});
+			assertEqual(
+				std::string("Function (Person) -> (bool | i64)"),
+				composite_function_type.sourceTypeName(ctx),
+				"Function components should use source-oriented names"
 			);
 		});
 	}

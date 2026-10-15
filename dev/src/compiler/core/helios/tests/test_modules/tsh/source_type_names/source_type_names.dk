@@ -19,6 +19,14 @@ class Sized {
 	value: T
 }
 
+template(F: f64)
+class FloatT {}
+
+template(F: f32)
+class Float32T {}
+
+import other_mod as om;
+
 var primitive: i64;
 var string: str;
 var const_slice: slice const char;
@@ -36,3 +44,11 @@ var class_value: Person;
 var template_value: Boxed[i64];
 var namespaced_template: Types.Boxed[Person];
 var value_template: Sized[3i64, bool];
+var tiny_float: FloatT[0.000000001];
+var another_tiny_float: FloatT[0.000000002];
+var simple_float: FloatT[1.5];
+var single_precision_float: Float32T[0.1f32];
+var round_trip_tiny_float: FloatT[1e-09f64];
+var other_class: om.Person;
+var other_nested_class: om.NS.Deep;
+var other_template_argument: Boxed[om.Person];

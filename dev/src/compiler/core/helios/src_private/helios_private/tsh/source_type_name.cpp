@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -21,7 +22,9 @@
 #include <query_framework/context/context.hpp>
 
 #include <algorithm>
+#include <format>
 #include <ranges>
+#include <type_traits>
 
 namespace compiler::tsh {
 	namespace {
@@ -57,6 +60,21 @@ namespace compiler::tsh {
 				          .valueOrThrow();
 				if (const auto type = value.get<SymbolType<>>(); type.has_value())
 					result += renderSymbolTypeName(ctx, type.value()).text;
+				else if (const auto number = value.get<numeric_value::NumericValue>();
+				         number.has_value())
+					result += std::visit(
+						[&](const auto stored) -> std::string {
+							if constexpr (std::is_floating_point_v<decltype(stored)>)
+								return std::format(
+									"{}{}",
+									stored,
+									std::is_same_v<decltype(stored), const f32> ? "f32" : "f64"
+								);
+							else
+								return number->toString();
+						},
+						number->getStorage()
+					);
 				else
 					result += value.toString();
 			}
@@ -66,6 +84,12 @@ namespace compiler::tsh {
 		std::string sourceClassName(query::Context& ctx, const helios::SymID symbol) {
 			std::vector<std::string> path;
 			auto                     element = helios::maybeSymbolPst(symbol);
+			if (element.has_value()) {
+				auto unlocked = element.value().unlock(ctx);
+				if (unlocked->getElementKind() == pst::ElementKind::TemplateStmt)
+					element
+						= unlocked.dynamicCast<pst::TemplateStmt>().value()->getInnerStatement();
+			}
 			while (element.has_value()) {
 				auto unlocked = element.value().unlock(ctx);
 				if (unlocked->getElementKind() == pst::ElementKind::Namespace
@@ -203,9 +227,22 @@ namespace compiler::tsh {
 					.text       = sourceClassName(ctx, type.as<ClassAbstractType>().getSymbol()),
 					.precedence = TypeNamePrecedence::Atomic,
 				};
-			case Kind::RawPointer:
-			case Kind::Function:
+			case Kind::Function: {
+				const auto function = type.as<FunctionAbstractType>();
+				return {
+					.text = "Function ("
+					      + joinSourceTypeNames(ctx, function.getParameterTypes(), ", ") + ") -> ("
+					      + renderSymbolTypeName(ctx, function.getResultType()).text + ")",
+					.precedence = TypeNamePrecedence::Atomic,
+				};
+			}
 			case Kind::TypeTemplate:
+				return {
+					.text = "Type template: "
+					      + sourceClassName(ctx, type.as<TypeTemplateAbstractType>().getSource()),
+					.precedence = TypeNamePrecedence::Atomic,
+				};
+			case Kind::RawPointer:
 			case Kind::Namespace:
 			case Kind::Module:
 			case Kind::Import:
