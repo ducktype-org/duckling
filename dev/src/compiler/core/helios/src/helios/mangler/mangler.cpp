@@ -91,11 +91,12 @@ namespace compiler::helios::mangler {
 
 			const auto sym_id = std::get<SymID>(key.symbol_key);
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-				variant_match(abi->valueOrThrow()) {
+				variant_match(abi->valueOrThrow().withoutValidation()) {
 					variant_case(CAbi, c_abi) {
 						return c_abi.symbol_name.copyValueOr(name(sym_id));
 					}
 					variant_case_novalue(DVMAbi) { return name(sym_id); }
+					variant_case_novalue(MainAbi) { return name(sym_id); }
 					variant_case_novalue(DefaultAbi) { return std::nullopt; }
 					variant_default { CORE_PANIC("Unknown ABI in unmangledName()"); }
 				}
