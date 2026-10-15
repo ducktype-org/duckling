@@ -212,6 +212,8 @@ namespace compiler::tsh {
 				// These compiler-level kinds do not currently have a Duckling type-expression
 				// spelling. Keep their existing human-readable representation until one is defined.
 				return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
+			case Kind::COUNT:
+				CORE_UNREACHABLE();
 			}
 			CORE_UNREACHABLE();
 		}

@@ -284,16 +284,16 @@ private:
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/tsh/source_type_names")));
 
 		struct TypeNameCase final {
-			std::string_view        symbol_name;
-			std::string_view        expected;
-			compiler::helios::SymID symbol;
+			std::string_view symbol_name;
+			std::string_view expected;
+			SymbolType<>     type;
 		};
 
 		const auto make_case = [&](std::string_view symbol_name, std::string_view expected) {
 			return TypeNameCase{
 				.symbol_name = symbol_name,
 				.expected    = expected,
-				.symbol      = getChain(symbol_name, root_scope).back(),
+				.type        = getSymbolTypeOf(symbol_name, root_scope),
 			};
 		};
 		const std::vector cases{
@@ -329,21 +329,16 @@ private:
 				"Incorrect source type name for a single-element tuple"
 			);
 			for (const auto& test_case: cases) {
-				const auto type = ctx.query<compiler::helios::QueryTypeOfSymbol>(test_case.symbol)
-				                      ->valueOrThrow();
 				assertEqual(
 					std::string(test_case.expected),
-					type.sourceTypeName(ctx),
+					test_case.type.sourceTypeName(ctx),
 					base::strConcat("Incorrect source type name for `", test_case.symbol_name, "`")
 				);
 			}
 
-			const auto primitive_type
-				= ctx.query<compiler::helios::QueryTypeOfSymbol>(cases.front().symbol)
-			          ->valueOrThrow();
 			assertEqual(
 				std::string("i64"),
-				primitive_type.getType().sourceTypeName(ctx),
+				cases.front().type.getType().sourceTypeName(ctx),
 				"AbstractType should expose the source-level type name too"
 			);
 
