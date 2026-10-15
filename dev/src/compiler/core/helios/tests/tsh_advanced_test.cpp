@@ -284,37 +284,37 @@ private:
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/tsh/source_type_names")));
 
 		struct TypeNameCase final {
+			TypeNameCase(std::string_view symbol_name, std::string_view expected):
+				  symbol_name(symbol_name),
+				  expected(expected) {}
+
 			std::string_view symbol_name;
 			std::string_view expected;
-			SymbolType<>     type;
 		};
 
-		const auto make_case = [&](std::string_view symbol_name, std::string_view expected) {
-			return TypeNameCase{
-				.symbol_name = symbol_name,
-				.expected    = expected,
-				.type        = getSymbolTypeOf(symbol_name, root_scope),
-			};
-		};
 		const std::vector cases{
-			make_case("primitive", "i64"),
-			make_case("string", "str"),
-			make_case("const_slice", "slice const char"),
-			make_case("pointer", "ptr Types.Inner"),
-			make_case("many_pointer", "manyptr i64"),
-			make_case("c_pointer", "cptr i64"),
-			make_case("pointer_array", "(ptr i64)[3]"),
-			make_case("array_pointer", "ptr i64[3]"),
-			make_case("nested_array", "i64[3][2]"),
-			make_case("qualified_nested_array", "(const i64)[3][2]"),
-			make_case("variant_array", "(bool | i64)[3]"),
-			make_case("tuple", "(i64, bool)"),
-			make_case("variant", "bool | i64"),
-			make_case("class_value", "Person"),
-			make_case("template_value", "Boxed[i64]"),
-			make_case("namespaced_template", "Types.Boxed[Person]"),
-			make_case("value_template", "Sized[3, bool]"),
+			TypeNameCase{ "primitive", "i64" },
+			TypeNameCase{ "string", "str" },
+			TypeNameCase{ "const_slice", "slice const char" },
+			TypeNameCase{ "pointer", "ptr Types.Inner" },
+			TypeNameCase{ "many_pointer", "manyptr i64" },
+			TypeNameCase{ "c_pointer", "cptr i64" },
+			TypeNameCase{ "pointer_array", "(ptr i64)[3]" },
+			TypeNameCase{ "array_pointer", "ptr i64[3]" },
+			TypeNameCase{ "nested_array", "i64[3][2]" },
+			TypeNameCase{ "qualified_nested_array", "(const i64)[3][2]" },
+			TypeNameCase{ "variant_array", "(bool | i64)[3]" },
+			TypeNameCase{ "tuple", "(i64, bool)" },
+			TypeNameCase{ "variant", "bool | i64" },
+			TypeNameCase{ "class_value", "Person" },
+			TypeNameCase{ "template_value", "Boxed[i64]" },
+			TypeNameCase{ "namespaced_template", "Types.Boxed[Person]" },
+			TypeNameCase{ "value_template", "Sized[3, bool]" },
 		};
+		std::vector<SymbolType<>> types;
+		types.reserve(cases.size());
+		for (const auto& test_case: cases)
+			types.push_back(getSymbolTypeOf(test_case.symbol_name, root_scope));
 
 		withContextDo([&](query::Context& ctx) {
 			const auto i64_type
@@ -328,17 +328,18 @@ private:
 				single_tuple.sourceTypeName(ctx),
 				"Incorrect source type name for a single-element tuple"
 			);
-			for (const auto& test_case: cases) {
+			for (usize index = 0; index < cases.size(); ++index) {
+				const auto& test_case = cases[index];
 				assertEqual(
 					std::string(test_case.expected),
-					test_case.type.sourceTypeName(ctx),
+					types[index].sourceTypeName(ctx),
 					base::strConcat("Incorrect source type name for `", test_case.symbol_name, "`")
 				);
 			}
 
 			assertEqual(
 				std::string("i64"),
-				cases.front().type.getType().sourceTypeName(ctx),
+				types.front().getType().sourceTypeName(ctx),
 				"AbstractType should expose the source-level type name too"
 			);
 
