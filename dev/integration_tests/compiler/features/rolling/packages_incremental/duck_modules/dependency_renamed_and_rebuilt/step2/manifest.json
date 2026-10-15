@@ -1,0 +1,39 @@
+{
+    "packages": [
+        {
+            "id": "lib_a",
+            "name": "lib_a_renamed",
+            "version": "0.1.0",
+            "path": "src/lib_a"
+        },
+        {
+            "id": "app",
+            "name": "app",
+            "version": "0.1.0",
+            "path": "src/app",
+            "dependencies": [
+                {
+                    "id": "lib_a",
+                    "alias": "lib"
+                }
+            ]
+        }
+    ],
+    "tasks": [
+        {
+            "package": "lib_a",
+            "strategy": "dvm_lib",
+            "output_file": "lib_a.dbc"
+        },
+        {
+            "package": "app",
+            "strategy": "dvm_exe",
+            "output_file": "app_exe.dbc",
+            "dvm_linking_options": {
+                "link_libraries": [
+                    "build/lib_a.dbc"
+                ]
+            }
+        }
+    ]
+}

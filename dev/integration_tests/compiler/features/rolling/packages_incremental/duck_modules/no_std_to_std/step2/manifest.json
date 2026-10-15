@@ -1,0 +1,20 @@
+{
+    "packages": [
+        {
+            "id": "app",
+            "name": "app",
+            "version": "0.1.0",
+            "path": "src/app"
+        }
+    ],
+    "tasks": [
+        {
+            "package": "app",
+            "strategy": "dvm_exe",
+            "output_file": "app_exe.dbc",
+            "dvm_linking_options": {
+                "link_libraries": []
+            }
+        }
+    ]
+}

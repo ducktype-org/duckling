@@ -1,0 +1,3 @@
+import lib.value.get;
+
+fun main() -> i64 = get();

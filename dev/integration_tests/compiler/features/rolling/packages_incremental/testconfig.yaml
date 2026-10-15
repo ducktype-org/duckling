@@ -1,0 +1,73 @@
+# Incremental compilation of packages.
+#
+# Every test is a scenario in duck_modules/@{Name} with two full workspace states, `step1` and
+# `step2` (manifest + sources). `run_steps.py` compiles `step1`, checks that its program exits
+# with @{step1_exit}, copies `step2` over it and compiles it again on the same artifacts
+# directory. The expected result of a case is what a clean build of `step2` gives - so a stale
+# incremental build (a package input that is not tracked) makes the case fail.
+#
+# The programs are compiled without std (unless the scenario says otherwise) and report their
+# result as the exit code of `main`.
+
+work_dir: "$DIT_TMP_DIR/work"
+step1_flags: "--no-std"
+step2_flags: "--no-std"
+step2_error_regex: ""
+
+run_steps: "python3 run_steps.py --duckc @{duckc_path} --vm @{dvm_path}
+  --scenario duck_modules/@{Name} --work @{work_dir}
+  --step1-flags='@{step1_flags}' --step2-flags='@{step2_flags}' --step1-exit @{step1_exit}"
+
+PreCase: ""
+Run: "if [ -n \"@{step2_error_regex}\" ]; then
+    @{expect_output} --err-regex \"@{step2_error_regex}\" --expect-exit 1 -- @{run_steps};
+  else
+    @{run_steps};
+  fi"
+
+Tests:
+  # The app imports `lib.m.value` with `lib` being an alias of a dependency. Renaming the app's
+  # own package to `lib` makes `lib` mean the package itself (own name wins over aliases).
+  own_name_rebinds_import:
+    step1_exit: 10
+    Cases:
+      dvm:
+        ExitCode: 30
+
+  # The name of a dependency changes and the dependency is rebuilt, while the app is not - the
+  # symbols of the app and of the dependency must still match.
+  dependency_renamed_and_rebuilt:
+    step1_exit: 10
+    Cases:
+      dvm:
+        ExitCode: 11
+
+  # A package with id `core` appears: the prelude (`core.builtins`) of the app has to be looked
+  # up again, and its `seven` now collides with the app's own one.
+  core_package_appears:
+    step1_exit: 100
+    step2_error_regex: "ambiguous overload resolution"
+    Cases:
+      dvm: {}
+
+  # The same as `core_package_appears`, but by switching from `--no-std` to a std.
+  no_std_to_std:
+    step1_exit: 100
+    step2_flags: "--custom-std-path mystd"
+    step2_error_regex: "ambiguous overload resolution"
+    Cases:
+      dvm: {}
+
+  # `import lib.value.get` looks up a dependency aliased `value` inside `lib_a` and does not
+  # find it (`value` is a namespace there). Then `lib_a` gets such a dependency.
+  not_found_alias_becomes_found:
+    step1_exit: 10
+    Cases:
+      dvm:
+        ExitCode: 20
+
+  alias_repointed:
+    step1_exit: 10
+    Cases:
+      dvm:
+        ExitCode: 20

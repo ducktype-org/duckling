@@ -1,0 +1,3 @@
+import lib.m.value;
+
+fun main() -> i64 = value();
