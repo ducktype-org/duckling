@@ -592,7 +592,9 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 	/**
-	 * @brief Tests the error messages that reference `Sentinels` (tokens that act as a boundary like EOF, end of brackets, etc.). These errors shouldn't directly reference `Sentinel` tokens and should describe them properly.
+	 * @brief Tests the error messages that reference `Sentinels` (tokens that act as a boundary
+	 * like EOF, end of brackets, etc.). These errors shouldn't directly reference `Sentinel` tokens
+	 * and should describe them properly.
 	 */
 	void sentinelMessageTests() {
 		// Tests regarding the end of a fallback window.
