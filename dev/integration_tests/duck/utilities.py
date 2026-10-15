@@ -5,6 +5,7 @@
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 import hashlib
+import re
 import os
 import subprocess
 import sys
@@ -189,6 +190,17 @@ def unit_dir_name_for(name: str, version: str, source: Path | str) -> str:
         source = f"local+file://{source}"
     hash = hashlib.sha256(source.encode()).hexdigest()
     return f"{name}-{version}-{hash}"
+
+
+def duckc_package_id(unit_dir_name: str) -> str:
+    """
+    The package id duck passes to duckc for a unit: its directory name restricted to the
+    characters allowed in duckc package ids (mirrors `to_duckc_package_id` in duck).
+    """
+    package_id = re.sub(r"[^A-Za-z0-9_]", "_", unit_dir_name)
+    if not re.match(r"[A-Za-z_]", package_id):
+        package_id = "_" + package_id
+    return package_id
 
 
 def deps_json_path_for_dep(dir: Path) -> Path:

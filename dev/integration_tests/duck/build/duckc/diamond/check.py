@@ -46,19 +46,19 @@ text = bar_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{bar_name}",
+      "id": "{duckc_package_id(bar_name)}",
       "name": "bar",
       "version": "1.0.0",
       "features": [],
       "path": "{str(bar_path)}/src",
       "dependencies": [
         {{
-          "id": "{baz_name}"
+          "id": "{duckc_package_id(baz_name)}"
         }}
       ]
     }},
     {{
-      "id": "{baz_name}",
+      "id": "{duckc_package_id(baz_name)}",
       "name": "baz",
       "version": "1.0.0",
       "features": [],
@@ -68,7 +68,7 @@ expected = f"""{{
   ],
   "tasks": [
     {{
-      "package": "{bar_name}",
+      "package": "{duckc_package_id(bar_name)}",
       "strategy": "lib",
       "output_file": "{str(layout / bar_name / f"{bar_name}.a")}"
     }}
@@ -88,7 +88,7 @@ text = baz_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{baz_name}",
+      "id": "{duckc_package_id(baz_name)}",
       "name": "baz",
       "version": "1.0.0",
       "features": [],
@@ -98,7 +98,7 @@ expected = f"""{{
   ],
   "tasks": [
     {{
-      "package": "{baz_name}",
+      "package": "{duckc_package_id(baz_name)}",
       "strategy": "lib",
       "output_file": "{str(layout / baz_name / f"{baz_name}.a")}"
     }}
@@ -118,7 +118,7 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{baz_name}",
+      "id": "{duckc_package_id(baz_name)}",
       "name": "baz",
       "version": "1.0.0",
       "features": [],
@@ -126,21 +126,21 @@ expected = f"""{{
       "dependencies": []
     }},
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [],
       "path": "{str(foo_path)}/src",
       "dependencies": [
         {{
-          "id": "{baz_name}"
+          "id": "{duckc_package_id(baz_name)}"
         }}
       ]
     }}
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{duckc_package_id(foo_name)}",
       "strategy": "lib",
       "output_file": "{str(layout / foo_name / f"{foo_name}.a")}"
     }}
@@ -160,19 +160,19 @@ text = root_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{bar_name}",
+      "id": "{duckc_package_id(bar_name)}",
       "name": "bar",
       "version": "1.0.0",
       "features": [],
       "path": "{str(bar_path)}/src",
       "dependencies": [
         {{
-          "id": "{baz_name}"
+          "id": "{duckc_package_id(baz_name)}"
         }}
       ]
     }},
     {{
-      "id": "{baz_name}",
+      "id": "{duckc_package_id(baz_name)}",
       "name": "baz",
       "version": "1.0.0",
       "features": [],
@@ -180,36 +180,36 @@ expected = f"""{{
       "dependencies": []
     }},
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [],
       "path": "{str(foo_path)}/src",
       "dependencies": [
         {{
-          "id": "{baz_name}"
+          "id": "{duckc_package_id(baz_name)}"
         }}
       ]
     }},
     {{
-      "id": "{root_name}",
+      "id": "{duckc_package_id(root_name)}",
       "name": "root",
       "version": "1.0.0",
       "features": [],
       "path": "{str(root_path)}/src",
       "dependencies": [
         {{
-          "id": "{bar_name}"
+          "id": "{duckc_package_id(bar_name)}"
         }},
         {{
-          "id": "{foo_name}"
+          "id": "{duckc_package_id(foo_name)}"
         }}
       ]
     }}
   ],
   "tasks": [
     {{
-      "package": "{root_name}",
+      "package": "{duckc_package_id(root_name)}",
       "strategy": "native",
       "output_file": "{str(layout / "root")}",
       "linking_options": [

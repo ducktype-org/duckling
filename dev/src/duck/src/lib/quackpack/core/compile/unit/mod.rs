@@ -106,6 +106,12 @@ impl Unit {
         self.package_data().unique_name()
     }
 
+    /// Get a unique (in terms of the current compilation graph) id of the underlying package,
+    /// passed to duckc. See [`PackageData::unique_id`].
+    pub fn pkg_unique_id(&self) -> String {
+        self.package_data().unique_id()
+    }
+
     /// Get a descriptive name of the underlying package.
     ///
     /// It's a _nice_ name, which can be displayed to the user.
@@ -179,6 +185,16 @@ impl PackageData {
         format!("{}-{}-{}", name, version, id)
     }
 
+    /// Get a unique (in terms of the current compilation graph) id of the package, passed to
+    /// duckc as the package id.
+    ///
+    /// It is [`Self::unique_name`] restricted to the characters allowed in duckc package ids,
+    /// because duckc uses the id in mangled symbol names. It stays unique, as the hash of the
+    /// origin of the package is a part of it.
+    pub fn unique_id(&self) -> String {
+        to_duckc_package_id(&self.unique_name())
+    }
+
     /// Get a single [`multipackage_schema::Package`] for this package.
     pub fn multipackage_schema_package(
         &self,
@@ -196,7 +212,7 @@ impl PackageData {
             .deps_realization
             .iter()
             .map(|(dep, alias)| multipackage_schema::Dependency {
-                id: graph.package_data(*dep).unique_name().into(),
+                id: graph.package_data(*dep).unique_id().into(),
                 alias: alias.map(|alias| alias.to_string()),
             })
             .collect();
@@ -206,7 +222,7 @@ impl PackageData {
             )
         };
         Ok(multipackage_schema::Package {
-            id: self.unique_name().into(),
+            id: self.unique_id().into(),
             import_name,
             version,
             features,
@@ -229,5 +245,25 @@ impl Hash for Unit {
         let ptr = Arc::as_ptr(&self.package_data);
         std::ptr::hash(ptr, state);
         self.unit_type.hash(state);
+    }
+}
+
+/// Turn `name` into a valid duckc package id (`[A-Za-z_][A-Za-z0-9_]*`): every character other
+/// than an ASCII letter, a digit or `_` becomes `_`, and `_` is prepended to a name that would
+/// not start with a letter or `_`.
+pub(crate) fn to_duckc_package_id(name: &str) -> String {
+    let id: String = name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    match id.chars().next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => id,
+        _ => format!("_{id}"),
     }
 }

@@ -86,7 +86,7 @@ fn create_task(
         UnitType::Library => unreachable!("library tasks are unsupported"),
     };
     Ok(multipackage_schema::Task {
-        package_id: unit.pkg_unique_name().into(),
+        package_id: unit.pkg_unique_id().into(),
         strategy,
     })
 }

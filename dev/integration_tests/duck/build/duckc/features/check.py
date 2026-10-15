@@ -45,7 +45,7 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [
@@ -57,7 +57,7 @@ expected = f"""{{
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{duckc_package_id(foo_name)}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}"
     }}

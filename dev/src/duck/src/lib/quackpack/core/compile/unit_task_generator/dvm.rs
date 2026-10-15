@@ -89,7 +89,7 @@ fn create_task(
         ),
     };
     Ok(multipackage_schema::Task {
-        package_id: unit.pkg_unique_name().into(),
+        package_id: unit.pkg_unique_id().into(),
         strategy,
     })
 }
