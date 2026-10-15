@@ -2234,6 +2234,7 @@ private:
 
 			// Tuple element. A tuple of values is evaluated by the VM, not by the tree evaluation,
 			// so the shift follows the run-time semantics and reports no `invalid_shift` error.
+			// @TODO: #3792 Check the arithmetic operations evaluated on the compile-time DVM.
 			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", {}, 0, false);
 			checkForErrorOnCompileModule(
 				R"(const A = (1 / 0, 2);)",
