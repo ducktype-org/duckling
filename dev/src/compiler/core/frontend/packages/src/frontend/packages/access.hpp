@@ -78,6 +78,43 @@ namespace compiler::frontend::packages {
 	};
 
 	/**
+	 * @brief Key for package name side input query.
+	 * Identifies the (package id, name) pair so that queries reading the name of a package are
+	 * invalidated when the name changes while the id stays the same.
+	 */
+	struct KeyOf_PackageNameSideInput final {
+		hashing::ComponentHash::HashType stable_hash;
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
+		bool operator==(const KeyOf_PackageNameSideInput&) const = default;
+
+		/** @brief Compute the stable hash for a package's name side input. */
+		[[nodiscard]] static KeyOf_PackageNameSideInput computeHash(
+			base::StrID package_id, base::StrID name
+		);
+	};
+
+	/**
+	 * @brief Key for package-by-id lookup side input query.
+	 * Identifies a lookup of a package by its id among all loaded packages. The @c found field
+	 * is part of the key so that both outcomes (package missing / present) are tracked as
+	 * independent dependencies - a package appearing later must invalidate a failed lookup.
+	 * Stored as metadata so it can be re-created during driver initialization.
+	 */
+	struct KeyOf_PackageLookupSideInput final {
+		base::StrID package_id;  //< id being looked up
+		bool        found;       //< whether a package with this id is loaded
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
+		bool operator==(const KeyOf_PackageLookupSideInput&) const = default;
+
+		[[nodiscard]] std::vector<std::byte> serialize() const;
+		static KeyOf_PackageLookupSideInput  deserialize(std::span<const std::byte> data);
+
+		void prettyPrint(std::ostream& os) const;
+	};
+
+	/**
 	 * @brief Unlocked access to a package.
 	 * Holds the package id which can be used to fetch the PackageInfo via global state.
 	 */
@@ -198,6 +235,45 @@ namespace compiler::frontend::packages {
 			  m_owner_package_id(owner_package_id),
 			  m_alias(alias),
 			  m_dependency_package_id(dependency_package_id) {}
+
+		[[nodiscard]] base::Optional<PackageAccessLocked> unlock(query::Context& ctx) const;
+		[[nodiscard]] base::Optional<PackageAccessLocked> illegalAccess() const;
+	};
+
+	/**
+	 * @brief AccessLocked for the name of a package.
+	 * Unlocking registers QueryPackageNameSideInput on the (package id, name) pair, so queries
+	 * comparing against the package name are invalidated when it changes.
+	 */
+	class PackageNameAccessLocked final {
+		base::StrID m_package_id;
+		base::StrID m_name;
+
+	public:
+		PackageNameAccessLocked(base::StrID package_id, base::StrID name):
+			  m_package_id(package_id),
+			  m_name(name) {}
+
+		/** @brief Unlock and register QueryPackageNameSideInput dependency. */
+		[[nodiscard]] base::StrID unlock(query::Context& ctx) const;
+
+		/** @brief Access without registering dependency - only outside of queries / debug. */
+		[[nodiscard]] base::StrID illegalAccess() const { return m_name; }
+	};
+
+	/**
+	 * @brief AccessLocked for a lookup of a package by its id among all loaded packages.
+	 * Unlocking registers QueryPackageLookupSideInput recording whether such a package exists.
+	 * Returns an Optional<PackageAccessLocked> - the caller decides whether to unlock further.
+	 */
+	class PackageLookupAccessLocked final {
+		base::StrID m_package_id;
+		bool        m_found;
+
+	public:
+		PackageLookupAccessLocked(base::StrID package_id, bool found):
+			  m_package_id(package_id),
+			  m_found(found) {}
 
 		[[nodiscard]] base::Optional<PackageAccessLocked> unlock(query::Context& ctx) const;
 		[[nodiscard]] base::Optional<PackageAccessLocked> illegalAccess() const;

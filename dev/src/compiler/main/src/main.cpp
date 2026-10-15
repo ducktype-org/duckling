@@ -22,6 +22,7 @@
 #include <driver/task/task.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
@@ -536,7 +537,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
-									.package_id   = base::StrID(package_name),
+									.package_id   = compiler::frontend::packages::sanitizePackageID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = fs::FilePath(path_to_compile.getFilePath()),
@@ -635,7 +636,9 @@ clah::Clah getClahForMain() {
 					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
 					packages_info.reserve(modules_to_compile.size());
 					for (const auto& module: modules_to_compile) {
-						auto package_name = base::StrID(base::generateRandomString(32));
+						auto package_name = compiler::frontend::packages::sanitizePackageID(
+							base::generateRandomString(32)
+						);
 
 						auto inserted
 							= aliases_duplicate_check.emplace(module.getFilePath().stem());
@@ -909,7 +912,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
-									.package_id   = base::StrID(package_name),
+									.package_id   = compiler::frontend::packages::sanitizePackageID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = path_to_compile.getFilePath(),
@@ -1081,7 +1084,11 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					std::ignore         = manifest->verify(report);
+					if (manifest->verify(report).isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
 					auto stdlib_options = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{

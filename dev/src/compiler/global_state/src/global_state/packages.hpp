@@ -40,6 +40,13 @@ namespace global_state {
 	base::CRef<compiler::frontend::packages::PackageInfo> getPackageRef(base::StrID package_id);
 
 	/**
+	 * @brief Looks up a package by its ID among the registered packages.
+	 * Unlike getPackageRefOpt, the result has to be unlocked inside queries, which registers a
+	 * dependency on the lookup outcome - also when no such package exists.
+	 */
+	compiler::frontend::packages::PackageLookupAccessLocked getPackageLookup(base::StrID package_id);
+
+	/**
 	 * @brief Returns the custom artifact collection used for the stdlib binaries, if one is set.
 	 */
 	base::Optional<base::Ref<artifacts::ArtifactCollection>> getStdArtifactsCollection();

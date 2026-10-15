@@ -757,13 +757,13 @@ namespace compiler::helios {
 
 	namespace {
 		/**
-		 * @brief A module implicitly imported (as if by `import <package>.<path>.*;`) into every
+		 * @brief A module implicitly imported (as if by `import <package_id>.<path>.*;`) into every
 		 * module that is not part of the standard library. Re-exports are not supported yet, so the
 		 * prelude is emulated by importing the original source modules directly rather than through
 		 * a dedicated `prelude` module.
 		 */
 		struct PreludeImport final {
-			base::StrID              package;
+			base::StrID              package_id;
 			std::vector<base::StrID> path;
 		};
 
@@ -772,9 +772,9 @@ namespace compiler::helios {
 		 */
 		const std::vector<PreludeImport>& preludeImports() {
 			static const std::vector<PreludeImport> imports{
-				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
-				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
-				{ .package = base::StrID("core"), .path = { base::StrID("prints") } },
+				{ .package_id = base::StrID("core"), .path = { base::StrID("builtins") } },
+				{ .package_id = base::StrID("core"), .path = { base::StrID("containers") } },
+				{ .package_id = base::StrID("core"), .path = { base::StrID("prints") } },
 			};
 			return imports;
 		}
@@ -803,7 +803,7 @@ namespace compiler::helios {
 
 			for (const auto& prelude_import: preludeImports()) {
 				auto module_opt = frontend::getModuleByAbsolutePath(
-					ctx, prelude_import.package, prelude_import.path
+					ctx, prelude_import.package_id, prelude_import.path
 				);
 				if (module_opt.empty()) continue;
 

@@ -152,13 +152,16 @@ namespace compiler::frontend {
 	);
 
 	/**
-	 * @brief Get the module by its absolute path, which includes the package name and the path of
-	 * submodules. It's used to lookup the language primitives.
+	 * @brief Get the module by its absolute path: the id of the package (not its name) and the
+	 * path of submodules. It's used to lookup the language primitives and the prelude.
+	 *
+	 * Registers a dependency on the package lookup also when no package with @p package_id is
+	 * loaded, so the result is invalidated when such a package appears.
 	 *
 	 * @warning Since this ignores the dependencies between modules, maybe it should never be used
 	 * in other cases than standard library packages.
 	 */
 	base::Optional<ModuleID> getModuleByAbsolutePath(
-		query::Context& ctx, base::StrID package_name, const std::vector<base::StrID>& path
+		query::Context& ctx, base::StrID package_id, const std::vector<base::StrID>& path
 	);
 }
