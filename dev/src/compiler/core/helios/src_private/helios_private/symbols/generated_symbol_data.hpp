@@ -226,6 +226,8 @@ namespace compiler::helios::defgen {
 
 		/**
 		 * @brief A HOUT expression, returned from the wrapper.
+		 * @note The expression is stored in a `SharedBox` rather than referenced through its PST
+		 * hash, because the coercions create HOUT expressions with no PST counterpart.
 		 */
 		struct Expression {
 			SharedBox<code::Expr> expr;
@@ -235,7 +237,8 @@ namespace compiler::helios::defgen {
 		ElementVariant element;
 
 		/**
-		 * @brief An optional unique counter to distinguish different wrappers in the mangled name.
+		 * @brief A unique counter to distinguish different wrappers in the mangled name. Present
+		 * for the REPL/script wrappers, empty for the comp-time expression wrappers.
 		 */
 		base::Optional<u64> counter;
 

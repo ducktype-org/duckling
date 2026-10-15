@@ -24,7 +24,8 @@ namespace compiler::helios::defgen {
 
 namespace compiler::repl {
 	/**
-	 * @brief Build the HOUT function wrapping a single REPL/script input or a HOUT expression.
+	 * @brief Build the HOUT function wrapping a single REPL/script input statement or a HOUT
+	 * expression.
 	 *
 	 * `input.element` decides how the function body is built:
 	 * - `Expression`: a single return statement of the stored HOUT expression, moved from if its
@@ -50,30 +51,26 @@ namespace compiler::repl {
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the instruction.
-	 * @param counter Optional unique wrapper counter used in the mangled name.
+	 * @param counter Unique wrapper counter used in the mangled name.
 	 */
 	helios::SymID queryReplInstructionWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, base::Optional<u64> counter = {}
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
 	);
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the expression.
-	 * @param counter Optional unique wrapper counter used in the mangled name.
+	 * @param counter Unique wrapper counter used in the mangled name.
 	 */
 	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
-		query::Context&                  ctx,
-		pst::AccessLocked<pst::ExprStmt> expr_stmt,
-		base::Optional<u64>              counter = {}
+		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt, u64 counter
 	);
 
 	/**
 	 * @brief Get the symbol standing for the wrapper function of the variable initializer expression.
-	 * @param counter Optional unique wrapper counter used in the mangled name.
+	 * @param counter Unique wrapper counter used in the mangled name.
 	 */
 	query::QResult<helios::SymID> queryReplGlobalInitializerWrapperSymbol(
-		query::Context&                  ctx,
-		pst::AccessLocked<pst::Variable> var_stmt,
-		base::Optional<u64>              counter = {}
+		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt, u64 counter
 	);
 
 	/**
@@ -84,16 +81,13 @@ namespace compiler::repl {
 
 	/**
 	 * @brief Get the symbol standing for a function wrapper that returns the given HOUT
-	 * expression.
+	 * expression, for evaluating it at compile time. Unlike the REPL wrappers, it has no counter:
+	 * the wrapper is told apart by the ID of the wrapped expression.
 	 * @param sym_name Name of the generated symbol.
 	 * @param expr The expression to be returned by the wrapper, the wrapper takes its ownership.
-	 * @param counter Optional unique wrapper counter used in the mangled name.
 	 */
-	helios::SymID queryHoutExpressionWrapperSymbol(
-		query::Context&         ctx,
-		base::StrID             sym_name,
-		Box<helios::code::Expr> expr,
-		base::Optional<u64>     counter = {}
+	helios::SymID queryCompTimeExpressionWrapperSymbol(
+		query::Context& ctx, base::StrID sym_name, Box<helios::code::Expr> expr
 	);
 
 }  // namespace compiler::repl

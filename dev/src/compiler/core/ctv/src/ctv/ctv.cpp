@@ -19,8 +19,6 @@
 
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
-#include <algorithm>
-#include <iomanip>
 #include <span>
 #include <sstream>
 #include <string>
@@ -131,6 +129,7 @@ namespace compiler::ctv {
 			}
 			variant_case(tsh::SymbolType<>, val) { return val.toString(); }
 			variant_case(VMValue, vm_value) {
+				// @TODO: #3774 Pretty print the VMValue instead of dumping it.
 				std::stringstream ss;
 				ss << "type: `" << vm_value.type.toString() << "`\n";
 				vm_value.val->dprint(ss);

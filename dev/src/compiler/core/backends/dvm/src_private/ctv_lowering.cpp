@@ -41,6 +41,7 @@ namespace compiler::backend_vm::internal {
 		 * type in the comp-time lowering, zero otherwise.
 		 */
 		u64 metaTypeToU64(ProgramLoweringContext& pctx, const compiler::tsh::SymbolType<>& type_val) {
+			// @TODO: #1709 RTTI when the is_comp_time_lowering == false
 			return pctx.isCompTimeLowering() ? std::bit_cast<u64>(&type_val) : 0;
 		}
 
@@ -108,8 +109,6 @@ namespace compiler::backend_vm::internal {
 				);
 			}
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
-				// @TODO: #1709 RTTI when the is_comp_time_lowering == false
-				// Representation of a meta type in DVM is a pointer to the symbol type.
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
 					metaTypeToU64(pctx, type_val), v_get(type, vm::code::OpaqueType).size
 				);

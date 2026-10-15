@@ -305,14 +305,6 @@ namespace {
 				(*maybe_vm_value)->writeBytes<const compiler::tsh::SymbolType<>*>(&type);
 				return maybe_vm_value;
 			}
-			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, _) {
-				return vmValueFromCtvBackendLowering(
-					ctx,
-					comptime_dvm,
-					ctv,
-					compiler::tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx))
-				);
-			}
 			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, _) {
 				if (!tsh::isStringTypePresent(ctx))
 					return std::unexpected(VmEvaluationError(
@@ -326,14 +318,26 @@ namespace {
 					compiler::tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
 				);
 			}
+			variant_case_novalue(
+				CompileTimeValue::TypeTuple, compiler::ctv::CompileTimeValue::CharSliceValue
+			) {
+				return vmValueFromCtvBackendLowering(
+					ctx, comptime_dvm, ctv, ctv.getTypeOfStoredValue(ctx)
+				);
+			}
 			variant_case(CompileTimeValue::VMValue, vm_value) {
 				return CRef<vm::IVMValue>(vm_value.val.get());
 			}
 			variant_default {
-				throw base::NotYetImplemented(
-					"Conversion from ctv to VMValue for this type is not implemented yet: "
-					+ ctv.getTypeOfStoredValue(ctx).toString() + " " + ctv.toString()
-				);
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ArgConversionFailed,
+					base::strConcat(
+						"Conversion from ctv to VMValue for this type is not implemented yet: ",
+						ctv.getTypeOfStoredValue(ctx).toString(),
+						" ",
+						ctv.toString()
+					)
+				));
 			}
 		}
 		return std::unexpected(VmEvaluationError(

@@ -1431,7 +1431,7 @@ namespace compiler::mir {
 		/**
 		 * @brief My idea behind this function is - if this needs to be lowered then this is
 		 * comp-time context and the content of the type can't be determined. For example:
-		 * ``` fun foo() == { var x: type = i64; var y = (x, i32); } ```
+		 * ``` fun foo() = { var x: type = i64; var y = (x, i32); } ```
 		 * So we just do a type construction per element dynamically, without assuming what the
 		 * inner expression is.
 		 */

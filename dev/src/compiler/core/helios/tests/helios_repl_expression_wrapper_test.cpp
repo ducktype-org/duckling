@@ -96,12 +96,7 @@ private:
 			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
 			ASSERT_EQUAL(repl_data->counter.copyValueOr(0), 13u);
 			ASSERT_EQUAL(repl_data->getReturnType(), wrapper.declaration->return_type);
-			assertTrue(
-				std::holds_alternative<helios::defgen::ReplInputWrapper::Expression>(
-					repl_data->element
-				),
-				"Expected an expression wrapper"
-			);
+			ASSERT_MATCHES(repl_data->element, helios::defgen::ReplInputWrapper::Expression);
 			ASSERT_EQUAL(
 				helios::kind(wrapper.declaration->original_symbol), helios::SymbolKind::Function
 			);

@@ -804,7 +804,17 @@ namespace compiler::helios {
 			}
 
 			void visitReusableExpr(const code::ReusableExpr& reusable) final {
-				result = evaluateSubExpr(reusable.inner.ref());
+				// The uses of a reusable expression can't be evaluated on the VM one by one: only
+				// the first use initializes the temporary that the next uses read. All uses share
+				// the inner expression, so the query evaluates it once and caches the value for
+				// the next uses.
+				auto inner_result
+					= ctx.query<QueryEvaluateHOUTExpression>({ reusable.inner.ref() });
+				if (inner_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = inner_result.valueOrThrow();
 			}
 
 			void visitVariantConstructExpr(const code::VariantConstructExpr&) final {
@@ -1025,7 +1035,7 @@ namespace compiler::helios {
 		static CompTimeEvalResult evaluateExprWithVm(query::Context& ctx, CRef<code::Expr> expr) {
 			if (reportVariablesInConstExpr(ctx, *expr).isBad()) return query::Failed();
 
-			const SymID function_sym_id = repl::queryHoutExpressionWrapperSymbol(
+			const SymID function_sym_id = repl::queryCompTimeExpressionWrapperSymbol(
 				ctx, base::StrID("__comp_time_expr_wrapper"), expr->clone()
 			);
 			UNPACK_QRESULT(auto lir_build =, prepareLIRForDVM(ctx, function_sym_id));
