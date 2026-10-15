@@ -25,6 +25,22 @@ class FloatT {}
 template(F: f32)
 class Float32T {}
 
+template(T: type)
+fun topFn(x: T) -> T = x;
+
+namespace FnNs {
+	template(T: type)
+	fun ident(x: T) -> T = x;
+
+	template(T: type)
+	fun other(x: T) -> T = x;
+
+	template(N: i64)
+	namespace Number {
+		const value = N;
+	}
+}
+
 import other_mod as om;
 
 var primitive: i64;

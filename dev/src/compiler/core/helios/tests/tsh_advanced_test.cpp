@@ -320,6 +320,10 @@ private:
 			TypeNameCase{ "other_template_argument", "Boxed[Person]" },
 			TypeNameCase{ "Boxed", "Type template: Boxed" },
 			TypeNameCase{ "Types.Boxed", "Type template: Types.Boxed" },
+			TypeNameCase{ "topFn", "Type template: topFn" },
+			TypeNameCase{ "FnNs.ident", "Type template: FnNs.ident" },
+			TypeNameCase{ "FnNs.other", "Type template: FnNs.other" },
+			TypeNameCase{ "FnNs.Number", "Type template: FnNs.Number" },
 		};
 		std::vector<SymbolType<>> types;
 		types.reserve(cases.size());

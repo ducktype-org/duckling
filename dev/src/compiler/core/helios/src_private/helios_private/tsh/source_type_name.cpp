@@ -81,14 +81,19 @@ namespace compiler::tsh {
 			return result + "]";
 		}
 
-		std::string sourceClassName(query::Context& ctx, const helios::SymID symbol) {
+		std::string sourceDeclarationName(query::Context& ctx, const helios::SymID symbol) {
 			std::vector<std::string> path;
 			auto                     element = helios::maybeSymbolPst(symbol);
 			if (element.has_value()) {
 				auto unlocked = element.value().unlock(ctx);
-				if (unlocked->getElementKind() == pst::ElementKind::TemplateStmt)
+				if (unlocked->getElementKind() == pst::ElementKind::TemplateStmt) {
 					element
 						= unlocked.dynamicCast<pst::TemplateStmt>().value()->getInnerStatement();
+					const auto inner_kind = element.value().unlock(ctx)->getElementKind();
+					if (inner_kind != pst::ElementKind::Class
+					    && inner_kind != pst::ElementKind::Namespace)
+						path.emplace_back(helios::name(symbol).str());
+				}
 			}
 			while (element.has_value()) {
 				auto unlocked = element.value().unlock(ctx);
@@ -224,7 +229,7 @@ namespace compiler::tsh {
 				};
 			case Kind::Class:
 				return {
-					.text       = sourceClassName(ctx, type.as<ClassAbstractType>().getSymbol()),
+					.text = sourceDeclarationName(ctx, type.as<ClassAbstractType>().getSymbol()),
 					.precedence = TypeNamePrecedence::Atomic,
 				};
 			case Kind::Function: {
@@ -238,8 +243,9 @@ namespace compiler::tsh {
 			}
 			case Kind::TypeTemplate:
 				return {
-					.text = "Type template: "
-					      + sourceClassName(ctx, type.as<TypeTemplateAbstractType>().getSource()),
+					.text
+					= "Type template: "
+					+ sourceDeclarationName(ctx, type.as<TypeTemplateAbstractType>().getSource()),
 					.precedence = TypeNamePrecedence::Atomic,
 				};
 			case Kind::RawPointer:
