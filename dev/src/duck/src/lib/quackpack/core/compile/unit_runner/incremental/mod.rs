@@ -12,7 +12,7 @@
 //! The information written onto the disk is called a fingerprint and is stored in a struct [`BuildData`].
 
 use std::collections::HashSet;
-use std::io::{Read, Seek, Write};
+use std::io::Write;
 
 use serde::{Deserialize, Serialize};
 
@@ -22,6 +22,7 @@ use crate::quackpack::core::compile::unit_runner::incremental::serializable_type
 use crate::quackpack::core::identity::Identity;
 use crate::util::file_locks::LockedFile;
 use crate::util::hash::sha256_string;
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackResult, QuackResultContext};
 
 mod graph_checks;
@@ -56,17 +57,16 @@ impl BuildData {
     /// Get a [`BuildData`] from serialized artifacts.
     /// Should be used for getting [`BuildData`] for the previous build process.
     pub fn from_fingerprint(fingerprint: &LockedFile) -> QuackResult<Self> {
-        let mut buffer = vec![];
-        fingerprint
-            .file()
-            .read_to_end(&mut buffer)
+        let fingerprint_content = fingerprint
+            .path()
+            .read()
             .with_context(|| {
                 format!(
                     "failed to read the previous fingerprint at `{}`",
                     fingerprint.path().display()
                 )
             })?;
-        let result = serde_json::from_slice::<BuildData>(&buffer).with_context(|| {
+        let result = serde_json::from_slice::<BuildData>(&fingerprint_content).with_context(|| {
             format!(
                 "failed to parse the previous fingerprint at `{}`",
                 fingerprint.path().display()
@@ -86,10 +86,6 @@ impl BuildData {
             .file()
             .set_len(0)
             .with_context(|| format!("failed to truncate `{}`", fingerprint.path().display()))?;
-        fingerprint
-            .file()
-            .rewind()
-            .with_context(|| format!("failed to rewind `{}`", fingerprint.path().display()))?;
         fingerprint
             .file()
             .write_all(fingerprint_json.as_bytes())

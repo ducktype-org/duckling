@@ -100,6 +100,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         }
         let incremental_data = match BuildData::from_fingerprint(&fingerprint) {
             Ok(prev_build_data) => {
+                debug!(previous_build_data = ?prev_build_data);
                 // Previous fingerprint is well-formed, we can use it.
                 self.bcx
                     .pcx
@@ -116,6 +117,8 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                 IncrementalData::default()
             }
         };
+        debug!(?incremental_data);
+        debug!(?cur_build_data);
         Ok((fingerprint, cur_build_data, incremental_data))
     }
 
