@@ -1,4 +1,6 @@
 import core.containers as containers;
+import core.panicking as panicking;
+import exp.compare as compare;
 
 #{
     Experimental containers built on top of `List`. They only use `List`'s own `push`, `pop`,
@@ -189,5 +191,298 @@ class Deque {
     fun clear() -> () = {
         front_items.clear();
         back_items.clear();
+    }
+}
+
+#{
+    One entry of a `Map`. `left` and `right` are handles of the children, `0` when there is none.
+    `height` is the height of the subtree rooted here, a leaf has height 1.
+#}
+template(K: type, V: type)
+class MapNode {
+    key: K;
+    value: V;
+    left: i64;
+    right: i64;
+    height: i64;
+}
+
+#{
+    Ordered map from `K` to `V`, a balanced binary search tree (AVL tree). Keys are ordered with
+    `compare.cmp[K]`, so `K` must follow that convention (see `exp.compare`). `insert`, `at`,
+    `contains` and `remove` are O(log n), `keys` and `values` list everything in key order.
+
+    The nodes live in one `List`, and a node points at its children by handle: the handle of
+    `nodes.at(i)` is `i + 1`, and `0` means "no node". `remove` moves the last node into the slot
+    it frees, so the list never has holes.
+
+    A reference returned by `at` is only valid until the next `insert` or `remove`, the same as a
+    reference into a `List` is only valid until the next `push`.
+#}
+template(K: type, V: type)
+class Map {
+    nodes: containers.List[MapNode[K, V]];
+    root: i64;
+
+    # The handle of the node `removeAt` took out of the tree, to be deleted from `nodes`.
+    detached: i64;
+
+    fun node(handle: i64) -> ref MapNode[K, V] = {
+        return nodes.at(handle - 1i64);
+    }
+
+    fun heightOf(handle: i64) -> i64 = {
+        if (handle == 0i64) return 0i64;
+        return node(handle).height;
+    }
+
+    fun updateHeight(handle: i64) -> () = {
+        let left_height  = heightOf(node(handle).left);
+        let right_height = heightOf(node(handle).right);
+        if (left_height > right_height) node(handle).height = left_height + 1i64;
+        else node(handle).height = right_height + 1i64;
+    }
+
+    fun rotateRight(handle: i64) -> i64 = {
+        let new_root       = node(handle).left;
+        node(handle).left  = node(new_root).right;
+        node(new_root).right = handle;
+        updateHeight(handle);
+        updateHeight(new_root);
+        return new_root;
+    }
+
+    fun rotateLeft(handle: i64) -> i64 = {
+        let new_root        = node(handle).right;
+        node(handle).right  = node(new_root).left;
+        node(new_root).left = handle;
+        updateHeight(handle);
+        updateHeight(new_root);
+        return new_root;
+    }
+
+    #{
+        Restores the AVL property at `handle`, whose subtrees differ in height by at most 2.
+        Returns the handle of the new root of this subtree.
+    #}
+    fun rebalance(handle: i64) -> i64 = {
+        updateHeight(handle);
+        let left  = node(handle).left;
+        let right = node(handle).right;
+        let balance = heightOf(left) - heightOf(right);
+
+        if (balance > 1i64) {
+            if (heightOf(node(left).left) < heightOf(node(left).right)) {
+                let new_left = rotateLeft(left);
+                node(handle).left = new_left;
+            }
+            return rotateRight(handle);
+        }
+        if (balance < -1i64) {
+            if (heightOf(node(right).right) < heightOf(node(right).left)) {
+                let new_right = rotateRight(right);
+                node(handle).right = new_right;
+            }
+            return rotateLeft(handle);
+        }
+        return handle;
+    }
+
+    # `insertAt` and `removeAt` may push or pop `nodes`, which can move every node. So their
+    # result is stored in a local first, and only then written into a node.
+
+    fun insertAt(handle: i64, key: K, value: V) -> i64 = {
+        if (handle == 0i64) {
+            nodes.push(MapNode[K, V](move key, move value, 0i64, 0i64, 1i64));
+            return nodes.length();
+        }
+
+        if (compare.cmp[K](&key, &node(handle).key)) {
+            let new_left = insertAt(node(handle).left, move key, move value);
+            node(handle).left = new_left;
+        } else if (compare.cmp[K](&node(handle).key, &key)) {
+            let new_right = insertAt(node(handle).right, move key, move value);
+            node(handle).right = new_right;
+        } else {
+            node(handle).value = move value;
+            return handle;
+        }
+        return rebalance(handle);
+    }
+
+    #{
+        Takes the node with the smallest key out of the subtree at `handle` and stores its handle
+        in `detached`. Returns the new root of the subtree.
+    #}
+    fun detachMin(handle: i64) -> i64 = {
+        if (node(handle).left == 0i64) {
+            detached = handle;
+            return node(handle).right;
+        }
+        let new_left = detachMin(node(handle).left);
+        node(handle).left = new_left;
+        return rebalance(handle);
+    }
+
+    #{
+        Takes the node with `key` out of the subtree at `handle` and stores its handle in
+        `detached` (left at `0` when there is no such key). Returns the new root of the subtree.
+    #}
+    fun removeAt(handle: i64, key: const ref K) -> i64 = {
+        if (handle == 0i64) return 0i64;
+
+        if (compare.cmp[K](&key, &node(handle).key)) {
+            let new_left = removeAt(node(handle).left, &key);
+            node(handle).left = new_left;
+            return rebalance(handle);
+        }
+        if (compare.cmp[K](&node(handle).key, &key)) {
+            let new_right = removeAt(node(handle).right, &key);
+            node(handle).right = new_right;
+            return rebalance(handle);
+        }
+
+        let left  = node(handle).left;
+        let right = node(handle).right;
+        if (left == 0i64) {
+            detached = handle;
+            return right;
+        }
+        if (right == 0i64) {
+            detached = handle;
+            return left;
+        }
+
+        # Two children: the smallest node of the right subtree takes this node's place.
+        let right_rest = detachMin(right);
+        let successor  = detached;
+        node(successor).left  = left;
+        node(successor).right = right_rest;
+        detached = handle;
+        return rebalance(successor);
+    }
+
+    #{
+        Deletes the node `detached`, which is no longer in the tree, from `nodes`. The last node
+        moves into its slot, and the link that pointed at the last node is updated.
+    #}
+    fun deleteDetached() -> () = {
+        let last = nodes.length();
+        if (detached != last) {
+            # Find the link to `last` by searching for its key from the root.
+            if (root == last) root = detached;
+            else {
+                var parent = root;
+                while (node(parent).left != last and node(parent).right != last) {
+                    if (compare.cmp[K](&node(last).key, &node(parent).key)) parent = node(parent).left;
+                    else parent = node(parent).right;
+                }
+                if (node(parent).left == last) node(parent).left = detached;
+                else node(parent).right = detached;
+            }
+            # The assignment destroys the removed entry.
+            node(detached) = nodes.pop();
+        } else {
+            # Dropping the popped entry on the floor destroys it.
+            nodes.pop();
+        }
+        detached = 0i64;
+    }
+
+    #{
+        The handle of the node with `key`, or `0` when there is none.
+    #}
+    fun find(key: const ref K) -> i64 = {
+        var handle = root;
+        while (handle != 0i64) {
+            if (compare.cmp[K](&key, &node(handle).key)) handle = node(handle).left;
+            else if (compare.cmp[K](&node(handle).key, &key)) handle = node(handle).right;
+            else return handle;
+        }
+        return 0i64;
+    }
+
+    #{
+        Puts `value` under `key`. An existing value under the same key is replaced.
+    #}
+    fun insert(key: K, value: V) -> () = {
+        root = insertAt(root, move key, move value);
+    }
+
+    fun contains(key: K) -> bool = find(&key) != 0i64;
+
+    #{
+        The value under `key`. Panics when there is no such key.
+    #}
+    fun at(key: K) -> ref V = {
+        let handle = find(&key);
+        if (handle == 0i64) panicking.panic();
+        return &node(handle).value;
+    }
+
+    #{
+        Removes `key` and its value. Returns false when there was no such key.
+    #}
+    fun remove(key: K) -> bool = {
+        root = removeAt(root, &key);
+        if (detached == 0i64) return false;
+        deleteDetached();
+        return true;
+    }
+
+    fun length() -> i64 = nodes.length();
+
+    fun isEmpty() -> bool = nodes.length() == 0i64;
+
+    fun clear() -> () = {
+        nodes.clear();
+        root = 0i64;
+    }
+
+    #{
+        The handles of all nodes, in key order.
+    #}
+    fun handlesInOrder() -> containers.List[i64] = {
+        var result: containers.List[i64];
+        var pending: containers.List[i64];
+        var handle = root;
+        while (handle != 0i64 or pending.length() > 0i64) {
+            while (handle != 0i64) {
+                pending.push(handle);
+                handle = node(handle).left;
+            }
+            handle = pending.pop();
+            result.push(handle);
+            handle = node(handle).right;
+        }
+        return result;
+    }
+
+    #{
+        Copies of all keys, smallest first.
+    #}
+    fun keys() -> containers.List[K] = {
+        let handles = handlesInOrder();
+        var result: containers.List[K];
+        var i = 0i64;
+        while (i < handles.length()) {
+            result.push(copyof node(handles.at(i)).key);
+            i = i + 1i64;
+        }
+        return result;
+    }
+
+    #{
+        Copies of all values, in the order of their keys.
+    #}
+    fun values() -> containers.List[V] = {
+        let handles = handlesInOrder();
+        var result: containers.List[V];
+        var i = 0i64;
+        while (i < handles.length()) {
+            result.push(copyof node(handles.at(i)).value);
+            i = i + 1i64;
+        }
+        return result;
     }
 }
