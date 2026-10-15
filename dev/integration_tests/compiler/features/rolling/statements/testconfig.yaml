@@ -33,6 +33,24 @@ Tests:
           String: "888\n1\n2\n888\n123\n123\n888\n1\n2\n888\n100\n200\n888\n1\n2\n888\n1\n1\n2\n2\n1\n2\n888\n1\n2\n3\n4\n888\n1\n0\n888\n1\n3\n1\n2\n"
         ExitCode: 0
 
+  for_range: # `for (i in n..m)` over a `TemporaryRange`
+    Cases:
+      all:
+        Output:
+          String: "888\n0\n1\n2\n888\n-1\n0\n1\n888\n50\n60\n5\n7\n888\n888\n0\n1\n11\n888\n0\n1\n3\n888\n10\n"
+        Err:
+          String: ""
+        ExitCode: 0
+
+  for_list: # `for (x in list)`, every element is copied
+    Cases:
+      all:
+        Output:
+          String: "888\n1\n2\n3\n888\n101\n102\n103\n1\n888\n7\n8\n888\n6\n888\n888\nduck!\nling!\nduck\n888\n3\n7\n888\n1\n3\n"
+        Err:
+          String: ""
+        ExitCode: 0
+
   generated_local_names: # user variables named like the desugared `for` locals
     Cases:
       all:

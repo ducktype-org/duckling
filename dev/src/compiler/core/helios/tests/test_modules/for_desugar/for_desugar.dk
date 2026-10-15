@@ -1,0 +1,18 @@
+# Has `length()`, but is not a `List`, so `for` can't iterate over it.
+class NotAList {
+    len: i64;
+
+    fun length() -> i64 = len;
+}
+
+fun overRange() -> i64 = {
+    var sum = 0i64;
+    for (i in 1..4) sum = sum + i;
+    return sum;
+}
+
+fun overList(names: ref List[String]) -> i64 = {
+    var total = 0i64;
+    for (name in names) total = total + name.length();
+    return total;
+}

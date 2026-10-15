@@ -23,6 +23,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/mutability.hpp>
@@ -33,6 +34,7 @@
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -83,6 +85,7 @@ public:
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testDestructors);
 		TESTER_ADD_TEST(testOperatorsWithPrimitives);
+		TESTER_ADD_TEST(testForDesugaring);
 	}
 
 protected:
@@ -449,6 +452,93 @@ private:
 	// `String` is now an ordinary standard-library class (no longer a special compiler type), so
 	// its type properties are only observable with the std available. This checks the properties
 	// the old (removed) `tsh` `simpleString` test used to assert against the compiler builtin.
+	/**
+	 * @brief Returns the iterator declaration of the only `for` loop in @p function_sym's body.
+	 */
+	static const compiler::helios::code::VariableStmt* forIteratorDecl(
+		query::Context& ctx, compiler::helios::SymID function_sym
+	) {
+		using namespace compiler::helios;
+		const auto& body = *ctx.query<QueryCodeOfFun>(function_sym)->valueOrThrow().body;
+		for (const auto& stmt: body.statements) {
+			const auto* block = dynamic_cast<const code::BlockStmt*>(stmt.get());
+			if (block == nullptr) continue;
+			const auto* loop
+				= dynamic_cast<const code::WhileStmt*>(block->body.statements.back().get());
+			if (loop == nullptr) continue;
+			return dynamic_cast<const code::VariableStmt*>(loop->body.statements.front().get());
+		}
+		return nullptr;
+	}
+
+	void testForDesugaring() {
+		using namespace compiler::helios;
+		using compiler::helios::desugaring::ForIterableKind;
+		namespace tsh = compiler::tsh;
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/for_desugar")));
+		const auto not_a_list_sym = getChain("NotAList", root_scope).back();
+		const auto over_range_sym = getChain("overRange", root_scope).back();
+		const auto over_list_sym  = getChain("overList", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto i64_st
+				= st(tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed));
+			const auto string_st = st(tsh::getStringType(ctx));
+
+			// `n..m` creates the `TemporaryRange` language primitive.
+			const auto range_sym
+				= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::TemporaryRange })
+			          ->valueOrThrow();
+			const auto range_type = st(ctx.query<tsh::QueryClassType>(range_sym));
+			const auto range_info = desugaring::getForIterableInfo(ctx, range_type);
+			ASSERT_HAS_VALUE(range_info);
+			ASSERT_TRUE(range_info->kind == ForIterableKind::Range);
+			ASSERT_EQUAL(i64_st, range_info->element_type);
+
+			// `List[T]` is recognized through the bake, and its element type is `T`.
+			const auto list_sym
+				= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::List, { string_st });
+			const auto list_info
+				= desugaring::getForIterableInfo(ctx, st(ctx.query<tsh::QueryClassType>(list_sym)));
+			ASSERT_HAS_VALUE(list_info);
+			ASSERT_TRUE(list_info->kind == ForIterableKind::List);
+			ASSERT_EQUAL(string_st, list_info->element_type);
+
+			// Other classes and primitives are not iterable.
+			const auto not_a_list_info = desugaring::getForIterableInfo(
+				ctx, st(ctx.query<tsh::QueryClassType>(not_a_list_sym))
+			);
+			ASSERT_TRUE(not not_a_list_info.has_value());
+			ASSERT_TRUE(not desugaring::getForIterableInfo(ctx, i64_st).has_value());
+
+			// `for (i in 1..4)`: the iterator is a copy of the `i64` index.
+			const auto* range_iter = forIteratorDecl(ctx, over_range_sym);
+			ASSERT_TRUE(range_iter != nullptr);
+			ASSERT_EQUAL(i64_st, range_iter->type);
+			ASSERT_TRUE(
+				dynamic_cast<const code::IdentifierExpr*>(
+					stripImplicitMove(range_iter->initial_value.get())
+				)
+				!= nullptr
+			);
+
+			// `for (name in names)`: every element is copied out of `at()` with `String`'s copy
+			// constructor.
+			const auto* list_iter = forIteratorDecl(ctx, over_list_sym);
+			ASSERT_TRUE(list_iter != nullptr);
+			ASSERT_EQUAL(string_st, list_iter->type);
+			const auto* copy_call = dynamic_cast<const code::CallExpr*>(
+				stripImplicitMove(list_iter->initial_value.get())
+			);
+			ASSERT_TRUE(copy_call != nullptr);
+			ASSERT_EQUAL(
+				defgen::copyConstructorSymForType(ctx, string_st.getType()),
+				getIdentifierExprSymID(copy_call->callee.ref()).value()
+			);
+		});
+	}
+
 	void testStringClassProperties() {
 		const auto string_type = getStringTypeNoContext();
 

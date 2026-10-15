@@ -11,17 +11,22 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios/tsh/value_category.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/errors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -42,6 +47,7 @@ namespace compiler::helios::desugaring {
 
 			// Iterable info.
 			tsh::SymbolType<> iterable_type;
+			ForIterableInfo   iterable_info;
 			bool              collection_is_l_value;
 			Box<code::Expr>   iterable_hout;
 		};
@@ -59,6 +65,57 @@ namespace compiler::helios::desugaring {
 			    .withMutability(tsh::Mutability::Immutable);
 		}
 
+		/**
+		 * @brief Looks up the single method named @p method_name on @p type. Returns an empty
+		 * optional when there is no such method or when it is overloaded.
+		 */
+		base::Optional<SymID> lookupSingleMethod(
+			query::Context& ctx, tsh::AbstractType type, std::string_view method_name
+		) {
+			const auto& leaves = HInterface::ofTypeInstance(type)
+			                         .lookup(ctx, base::StrID(method_name))
+			                         ->valueOrThrow()
+			                         .leaves;
+			if (leaves.size() != 1) return {};
+			return leaves.front();
+		}
+
+		bool isTemporaryRangeType(query::Context& ctx, tsh::AbstractType type) {
+			if (not isLanguagePrimitivePresent(ctx, LanguagePrimitive::TemporaryRange))
+				return false;
+			const SymID range_sym
+				= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::TemporaryRange })
+			          ->valueOrThrow();
+			return type == tsh::AbstractType(ctx.query<tsh::QueryClassType>(range_sym));
+		}
+
+		/**
+		 * @brief Returns `T` when @p type is `List[T]`. The element type is read from the
+		 * return type of `at()` (`ref T`), then confirmed by baking `List[T]` again.
+		 */
+		base::Optional<tsh::SymbolType<>> listElementType(
+			query::Context& ctx, tsh::AbstractType type
+		) {
+			if (not isLanguagePrimitivePresent(ctx, LanguagePrimitive::List)) return {};
+			// Cheap filter, so other classes with an `at()` method don't bake a `List`.
+			if (name(type.as<tsh::ClassAbstractType>().getSymbol()) != base::StrID("List"))
+				return {};
+
+			auto at_sym = lookupSingleMethod(ctx, type, "at");
+			if_opt_none(at_sym) return {};
+			auto at_type = ctx.query<QueryTypeOfSymbol>(at_sym.value())->valueOrThrow().getType();
+			if (at_type.getKind() != tsh::Kind::Function) return {};
+
+			auto result_type = at_type.as<tsh::FunctionAbstractType>().getResultType();
+			if (result_type.getRefKind() != tsh::ReferenceKind::Ref) return {};
+			auto element_type = result_type.withReferenceKind(tsh::ReferenceKind::Direct);
+
+			const SymID baked_list
+				= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::List, { element_type });
+			if (type != tsh::AbstractType(ctx.query<tsh::QueryClassType>(baked_list))) return {};
+			return element_type;
+		}
+
 		base::Optional<ForDesugarCtx> buildForDesugarCtx(
 			query::Context& ctx, pst::Access<pst::For> stmt
 		) {
@@ -69,14 +126,16 @@ namespace compiler::helios::desugaring {
 
 			Box<code::Expr>   iterable_hout = iterable_hout_res->valueOrThrow()->clone();
 			tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
-			tsh::Kind         kind          = iterable_type.getType().getKind();
 			bool              iterable_is_r_value
 				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
-			if (kind != tsh::Kind::StaticArray) {
+			auto iterable_info = getForIterableInfo(ctx, iterable_type);
+			if_opt_none(iterable_info) {
 				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
-						"`for` statements for non-array type: ", iterable_type.toString()
+						"`for` statements over type: ",
+						iterable_type.toString(),
+						". Only static arrays, ranges (`n..m`) and `List` are supported."
 					),
 					code::pstOrigin(iterable_pst).getSourcePosition(ctx)
 				));
@@ -90,27 +149,46 @@ namespace compiler::helios::desugaring {
 				.iterable_origin       = code::pstOrigin(iterable_pst),
 				.iterator_origin       = code::pstOrigin(stmt->getIteratorIdentifier().unlock(ctx)),
 				.iterable_type         = iterable_type,
+				.iterable_info         = iterable_info.value(),
 				.collection_is_l_value = not iterable_is_r_value,
 				.iterable_hout         = std::move(iterable_hout),
 			};
 		}
 
-		// var __idx: i64 = 0
-		Box<code::Stmt> buildIndexVar(const ForDesugarCtx& ctx, SymID idx_sym) {
+		// If the iterable is an l-value the reusable holds a reference to it, so references are
+		// dereferenced before the collection is accessed.
+		Box<code::Expr> derefCollection(const ForDesugarCtx& ctx, Box<code::Expr> collection) {
+			bool needs_deref = ctx.iterable_type.getRefKind() != tsh::ReferenceKind::Direct
+			                || ctx.collection_is_l_value;
+			if (needs_deref)
+				return makeBox<code::DerefExpr>(
+					ctx.ctx, code::generatedOrigin(), std::move(collection)
+				);
+			return collection;
+		}
+
+		// var __idx: i64 = <start>
+		Box<code::Stmt> buildIndexVar(
+			const ForDesugarCtx& ctx, SymID idx_sym, Box<code::Expr> start
+		) {
 			return makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx.ctx, code::generatedOrigin(), getI64(ctx.ctx).getType()
-				),
-				getI64(ctx.ctx),
-				idx_sym
+				code::generatedOrigin(), std::move(start), getI64(ctx.ctx), idx_sym
 			);
 		}
 
 		// Length is calculated once before the loop.
-		// let __len: i64 = <len __collection> / <constant>
+		// let __len: const i64 = <length>
 		Box<code::Stmt> buildLengthVar(
-			const ForDesugarCtx& ctx, SymID len_sym, Box<code::Expr> iterable_reusable_opt
+			const ForDesugarCtx& ctx, SymID len_sym, Box<code::Expr> length
+		) {
+			return makeBox<code::VariableStmt>(
+				code::generatedOrigin(), std::move(length), getConstI64(ctx.ctx), len_sym
+			);
+		}
+
+		// <len __collection> for static arrays.
+		Box<code::Expr> buildStaticArrayLength(
+			const ForDesugarCtx& ctx, Box<code::Expr> iterable_reusable_opt
 		) {
 			const auto gen = code::generatedOrigin();
 
@@ -124,16 +202,127 @@ namespace compiler::helios::desugaring {
 			std::vector<Box<code::Expr>> length_args;
 			length_args.emplace_back(std::move(length_arg));
 
-			Box<code::Expr> len_expr = makeBox<code::CallExpr>(
+			return makeBox<code::CallExpr>(
 				ctx.ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx.ctx, code::generatedOrigin(), length_method_sym),
+				gen,
+				makeBox<code::IdentifierExpr>(ctx.ctx, gen, length_method_sym),
 				std::move(length_args)
 			);
+		}
 
-			return makeBox<code::VariableStmt>(
-				gen, std::move(len_expr), getConstI64(ctx.ctx), len_sym
-			);
+		// The method of the `List` (or field of the `TemporaryRange`) the desugaring relies on.
+		// Logs an error when the standard library doesn't provide it.
+		base::Optional<SymID> requireMember(
+			const ForDesugarCtx& ctx, std::string_view member_name, bool is_method
+		) {
+			const auto type = ctx.iterable_type.getType();
+
+			base::Optional<SymID> member;
+			if (is_method) {
+				member = lookupSingleMethod(ctx.ctx, type, member_name);
+			} else {
+				const auto& fields
+					= type.getInterface(ctx.ctx)->getElementsWithName(base::StrID(member_name));
+				if (fields.size() == 1) member = fields.front().getSymbol();
+			}
+
+			if_opt_none(member) {
+				ctx.ctx.logInt(makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"`for` over '",
+						ctx.iterable_type.toString(),
+						"' needs exactly one `",
+						member_name,
+						is_method ? "` method." : "` field."
+					),
+					ctx.iterable_origin.getSourcePosition(ctx.ctx)
+				));
+			}
+			return member;
+		}
+
+		/**
+		 * @brief The three per-kind pieces of a desugared `for`: the first index, the length and
+		 * the element at `__index` (before it is coerced to the iterator type).
+		 */
+		struct LoopParts final {
+			Box<code::Expr> index_start;
+			Box<code::Expr> length;
+			Box<code::Expr> raw_element;
+		};
+
+		// The `ReusableExpr` owner has to end up in the statement that runs first, every later
+		// read of the iterable uses `collection_next_use`.
+		base::Optional<LoopParts> buildLoopParts(
+			const ForDesugarCtx& ctx,
+			Box<code::Expr>      iterable_reusable,
+			Box<code::Expr>      collection_next_use,
+			SymID                idx_sym
+		) {
+			code::shorthands::Shorthand s{ ctx.ctx };
+			auto zero = [&] { return s.defaultValue(getI64(ctx.ctx).getType()); };
+
+			switch (ctx.iterable_info.kind) {
+			case ForIterableKind::StaticArray:
+				// __index = 0; __len = len __collection; element = __collection[__index]
+				return LoopParts{
+					.index_start = zero(),
+					.length      = buildStaticArrayLength(ctx, std::move(iterable_reusable)),
+					.raw_element = s.index(
+						derefCollection(ctx, std::move(collection_next_use)), s.ident(idx_sym)
+					),
+				};
+			case ForIterableKind::List: {
+				// __index = 0; __len = __collection.length();
+				// element = copy __collection.at(__index)
+				auto length_sym = requireMember(ctx, "length", true);
+				auto at_sym     = requireMember(ctx, "at", true);
+				if (not length_sym.has_value() or not at_sym.has_value()) return {};
+
+				// `at()` returns `ref T`, and a non-trivial `T` can't be copied out of a
+				// reference implicitly, so the copy is spelled out here.
+				const auto& element_type = ctx.iterable_info.element_type;
+				if (not element_type.isCopyable(ctx.ctx)) {
+					ctx.ctx.logInt(makeBox<dia::PlaceholderError>(
+						base::strConcat(
+							"`for` over a `List` copies every element, but `",
+							element_type.toString(),
+							"` cannot be copied."
+						),
+						ctx.iterable_origin.getSourcePosition(ctx.ctx)
+					));
+					return {};
+				}
+				auto element_ref = s.call(
+					s.ident(at_sym.value()),
+					s.prepToPassSelf(std::move(collection_next_use)),
+					s.ident(idx_sym)
+				);
+				return LoopParts{
+					.index_start = zero(),
+					.length      = s.call(
+                        s.ident(length_sym.value()), s.prepToPassSelf(std::move(iterable_reusable))
+                    ),
+					.raw_element = s.copyValue(s.deref(std::move(element_ref))),
+				};
+			}
+			case ForIterableKind::Range: {
+				// __index = __range.start; __len = __range.end; element = __index
+				auto start_sym = requireMember(ctx, "start", false);
+				auto end_sym   = requireMember(ctx, "end", false);
+				if (not start_sym.has_value() or not end_sym.has_value()) return {};
+				return LoopParts{
+					.index_start = s.access(
+						derefCollection(ctx, std::move(iterable_reusable)), start_sym.value()
+					),
+					.length = s.access(
+						derefCollection(ctx, std::move(collection_next_use)), end_sym.value()
+					),
+					.raw_element = s.ident(idx_sym),
+				};
+			}
+			}
+			CORE_UNREACHABLE();
 		}
 
 		// __idx < __len
@@ -148,34 +337,16 @@ namespace compiler::helios::desugaring {
 			);
 		}
 
-		// let <iter> = <__collection_next_use>[__idx];
+		// let <iter> = <raw_element>;
 		// <body>;
-		// __idx = __idx + 1;
 		base::Optional<code::CodeBlock> buildWhileBody(
 			const ForDesugarCtx& ctx,
-			Box<code::Expr>      collection_next_use,
-			SymID                idx_sym,
+			Box<code::Expr>      raw_element,
 			SymID                iter_sym,
 			tsh::SymbolType<>    iter_type,
 			const BodyProcessor& process_body
 		) {
-			const auto gen = code::generatedOrigin();
-			auto idx_ref   = [&] { return makeBox<code::IdentifierExpr>(ctx.ctx, gen, idx_sym); };
-
-			// If the iterable is not direct, we dereference it first.
-			Box<code::Expr> base_expr = [&]() -> Box<code::Expr> {
-				bool needs_deref = ctx.iterable_type.getRefKind() != tsh::ReferenceKind::Direct
-				                || ctx.collection_is_l_value;
-				if (needs_deref)
-					return makeBox<code::DerefExpr>(ctx.ctx, gen, std::move(collection_next_use));
-				return std::move(collection_next_use);
-			}();
-
-
-			// __collection[__idx]
-			Box<code::Expr> raw_element
-				= makeBox<code::IndexExpr>(ctx.ctx, gen, std::move(base_expr), idx_ref());
-
+			// The iterator is a copy of the element, so changing it doesn't change the iterable.
 			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
 			auto element_sym_type = raw_element->expression_type.getSymbolType();
 			auto element_expr     = coerceFromBox(
@@ -204,7 +375,7 @@ namespace compiler::helios::desugaring {
 
 			code::CodeBlock body{};
 
-			// let <user_var> = __collection[__idx];
+			// let <user_var> = <element>;
 			body.statements.emplace_back(makeBox<code::VariableStmt>(
 				ctx.iterator_origin, std::move(element_expr.valueOrPanic()), iter_type, iter_sym
 			));
@@ -236,6 +407,31 @@ namespace compiler::helios::desugaring {
 					ctx.ctx, gen, code::BuiltinBinary::IntegerAdd, idx_ref(), std::move(one)
 				)
 			);
+		}
+	}
+
+	base::Optional<ForIterableInfo> getForIterableInfo(
+		query::Context& ctx, const tsh::SymbolType<>& iterable_type
+	) {
+		const auto type = iterable_type.getType();
+		switch (type.getKind()) {
+		case tsh::Kind::StaticArray:
+			return ForIterableInfo{
+				.kind         = ForIterableKind::StaticArray,
+				.element_type = type.as<tsh::StaticArrayAbstractType>().getElementType(),
+			};
+		case tsh::Kind::Class:
+			if (isTemporaryRangeType(ctx, type))
+				return ForIterableInfo{ .kind         = ForIterableKind::Range,
+					                    .element_type = getI64(ctx) };
+			if (auto element_type = listElementType(ctx, type))
+				return ForIterableInfo{
+					.kind         = ForIterableKind::List,
+					.element_type = element_type.value(),
+				};
+			return {};
+		default:
+			return {};
 		}
 	}
 
@@ -293,32 +489,31 @@ namespace compiler::helios::desugaring {
 		auto iterable_reusable = makeBox<code::ReusableExpr>(ctx, std::move(reusable_inner), true);
 		auto iterable_next_use = iterable_reusable->nextUse();
 
-		// Build the while body first so we bail out on coercion failure before
-		// consuming the iterable expression into the ReusableExpr.
+		auto loop_parts = buildLoopParts(
+			for_ctx, std::move(iterable_reusable), std::move(iterable_next_use), symbols.index
+		);
+		if (!loop_parts.has_value()) return {};
+
 		auto while_body = buildWhileBody(
-			for_ctx,
-			std::move(iterable_next_use),
-			symbols.index,
-			symbols.iterator,
-			iter_type,
-			process_body
+			for_ctx, std::move(loop_parts->raw_element), symbols.iterator, iter_type, process_body
 		);
 		if (!while_body.has_value()) return {};
 
 		// Desugar the loop.
-		// var __index : i64 = 0i64;
-		// var __len: const i64 = <constant> / len <iterable_reusable>;
+		// var __index : i64 = <index_start>;
+		// var __len: const i64 = <length>;
 		// while(__idx < __len) {
-		// 		let <iter> = <iterable_reusable>[__idx];
+		// 		let <iter> = <raw_element>;
 		// 		<body>;
 		// 		__idx = __idx + 1;
 		// }
 		code::CodeBlock outer{};
-		outer.statements.emplace_back(buildIndexVar(for_ctx, symbols.index));
 		outer.statements.emplace_back(
-			buildLengthVar(for_ctx, symbols.length, std::move(iterable_reusable))
+			buildIndexVar(for_ctx, symbols.index, std::move(loop_parts->index_start))
 		);
-
+		outer.statements.emplace_back(
+			buildLengthVar(for_ctx, symbols.length, std::move(loop_parts->length))
+		);
 
 		outer.statements.emplace_back(makeBox<code::WhileStmt>(
 			for_ctx.loop_origin,

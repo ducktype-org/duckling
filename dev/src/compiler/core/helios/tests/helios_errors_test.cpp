@@ -1202,7 +1202,7 @@ private:
 					for (i in 0) { }
 				}
 			)",
-				{ "Feature not implemented", "for", "for non-array type: i32" },
+				{ "Feature not implemented", "for", "over type: i32" },
 				1
 			);
 

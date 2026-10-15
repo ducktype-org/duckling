@@ -590,3 +590,18 @@ class List {
 #}
 template(T: type)
 fun listType() -> type = List[T];
+
+#{
+    The integers from `start` up to, but not including, `end`. Created by the `..`
+    operator: `0..3` is `0, 1, 2`. `for (i in n..m)` loops over it, copying each value
+    into the loop variable.
+    This is a temporary language item, until ranges get a proper design.
+#}
+class TemporaryRange {
+    start: i64;
+    end: i64;
+}
+
+fun ..(start: i64, end: i64) -> TemporaryRange = {
+    return TemporaryRange(start, end);
+}
