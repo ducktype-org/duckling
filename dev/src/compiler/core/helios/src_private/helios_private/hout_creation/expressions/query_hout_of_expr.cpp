@@ -156,7 +156,7 @@ namespace compiler::helios::code {
 			 * @brief Creates the numeric @p literal, which may be negative if @p sign says so.
 			 * For a negative literal, @p origin and @p position also cover the `-`.
 			 */
-			void numericLiteral(
+			void createNumericLiteral(
 				pst::Access<pst::expr::ExprNumericValue> literal,
 				const ElementOrigin&                     origin,
 				const dia::StablePosition&               position,
@@ -171,7 +171,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
-				numericLiteral(
+				createNumericLiteral(
 					stmt, pstOrigin(stmt), stmt->getStablePosition(), LiteralSign::Positive
 				);
 			}
@@ -337,7 +337,7 @@ namespace compiler::helios::code {
 					const auto literal
 						= stmt->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprNumericValue>();
 					if (literal.has_value() && canBeNegative(ctx, literal.value())) {
-						numericLiteral(
+						createNumericLiteral(
 							literal.value(),
 							pstOrigin(stmt),
 							stmt->getStablePosition(),

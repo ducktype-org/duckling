@@ -1354,6 +1354,17 @@ private:
 				{ "Literal doesn't fit in the declared signed integer type." },
 				1
 			);
+			// A hex or binary literal is a value, not a bit pattern, so it does not wrap around.
+			checkForErrorOnCompileModule(
+				R"(fun a() = 0x80i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -0b10000001i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
 			checkForErrorOnCompileModule(
 				R"(fun a() = 1000i8;)",
 				{ "Literal doesn't fit in the declared signed integer type." },

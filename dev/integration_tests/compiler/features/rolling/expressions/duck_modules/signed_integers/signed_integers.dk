@@ -84,6 +84,33 @@ fun main() -> i64 = {
         builtin_output_i64(19);
     }
     
+    ### SMALLEST VALUES ###
+    let i8_min_literal: i8 = -128i8;
+    if (i8_min_literal != i8_min) {
+        builtin_output_i64(22);
+    }
+
+    let i16_min_literal: i16 = -32768i16;
+    if (i16_min_literal != i16_min) {
+        builtin_output_i64(23);
+    }
+
+    let i32_min_literal: i32 = -2147483648i32;
+    if (i32_min_literal != i32_min) {
+        builtin_output_i64(24);
+    }
+
+    let i64_min_literal: i64 = -9223372036854775808i64;
+    if (i64_min_literal != i64_min) {
+        builtin_output_i64(25);
+    }
+
+    var reassigned: i8 = 0i8;
+    reassigned = -128i8;
+    if (reassigned != i8_min) {
+        builtin_output_i64(26);
+    }
+
     ### NUMERIC LITERALS ###
     let bin = 0b010010101;
     if (bin != 149) {
