@@ -180,10 +180,14 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class FreeAutomatic;
 		friend class CloningUtils;
 
-		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
+		template<std::derived_from<LangElement>>
 		friend class PST;
+
+		template<std::derived_from<LangElement>>
+		friend class GeneratedSubPST;
 
 		template<typename E>
 		AccessInternalAnonymous& operator=(AccessInternalAnonymous<E>&& oth) noexcept {
@@ -240,6 +244,7 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class FreeAutomatic;
 		friend class CloningUtils;
 
 		template<typename E>

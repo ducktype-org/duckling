@@ -16,7 +16,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Throw, Action);
 
 	public:
-		explicit Throw(const LangParserState& state): Action(state) {}
+		explicit Throw(LangElementConstructionArgument state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;

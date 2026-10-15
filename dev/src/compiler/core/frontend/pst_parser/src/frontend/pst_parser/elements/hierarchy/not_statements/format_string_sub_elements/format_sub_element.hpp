@@ -17,7 +17,7 @@ namespace pst {
 		PARENT_CLASS(NotStmt);
 
 	protected:
-		explicit FormatSubElement(const LangParserState& state): NotStmt(state) {}
+		explicit FormatSubElement(LangElementConstructionArgument state): NotStmt(state) {}
 
 	public:
 		ELEMENT_CLONE_DECL(FormatSubElement);

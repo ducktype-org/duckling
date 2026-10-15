@@ -25,7 +25,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit FlowPattern(const LangParserState& state): NotStmt(state) {
+		explicit FlowPattern(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::FlowPattern;
 		}
 

@@ -25,7 +25,7 @@ namespace pst::expr {
 		std::vector<AccessInternalAnonymous<ExprElement>> expressions;
 
 	public:
-		explicit Comma(const LangParserState& state): ExprElement(state, 900) {}
+		explicit Comma(LangElementConstructionArgument state): ExprElement(state, 900) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

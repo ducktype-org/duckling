@@ -26,7 +26,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit CallArgument(const LangParserState& state): NotStmt(state) {
+		explicit CallArgument(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::CallArgument;
 		}
 

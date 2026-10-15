@@ -27,7 +27,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		ClassSpecial(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+		ClassSpecial(StmtKind kind, LangElementConstructionArgument state): Stmt(kind, state) {}
 
 		PARSE_DECL();
 

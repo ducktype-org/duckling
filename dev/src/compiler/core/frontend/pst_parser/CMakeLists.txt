@@ -36,6 +36,7 @@ file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
 	"${PST_SRC}/elements/implementations/expr_holders.cpp"
 	"${PST_SRC}/elements/implementations/meta/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/*.cpp"
+	"${PST_SRC}/elements/implementations/not_statements/synthetic_elements/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/patterns/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/wrapper_elements/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/format_string_sub_elements/*.cpp"
@@ -48,6 +49,7 @@ set_source_files_properties(${OtherElementsImplementationFiles}
 add_library(PstParser
 	${PST_SRC}/lang_parser_element.cpp
 	${PST_SRC}/lang_parser_state.cpp
+	${PST_SRC}/lang_parser_element_construction_data.cpp
 	${PST_SRC}/source_position_locked.cpp
 	${PST_SRC}/test_utils/pst_test_utils.cpp
 	${PST_SRC}/access.cpp

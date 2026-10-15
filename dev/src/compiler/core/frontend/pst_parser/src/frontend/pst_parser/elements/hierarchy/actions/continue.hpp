@@ -13,7 +13,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Continue, Action);
 
 	public:
-		explicit Continue(const LangParserState& state): Action(state) {}
+		explicit Continue(LangElementConstructionArgument state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;

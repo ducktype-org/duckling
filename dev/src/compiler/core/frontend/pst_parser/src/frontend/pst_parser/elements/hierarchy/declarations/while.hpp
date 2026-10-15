@@ -25,7 +25,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit While(const LangParserState& state): CodeDecl(state) {
+		explicit While(LangElementConstructionArgument state): CodeDecl(state) {
 			element_kind = ElementKind::While;
 		}
 

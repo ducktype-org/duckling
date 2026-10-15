@@ -19,7 +19,7 @@ namespace pst {
 	public:
 		ELEMENT_CLONE_DECL(Decl);
 
-		Decl(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+		explicit Decl(StmtKind kind, LangElementConstructionArgument state): Stmt(kind, state) {}
 
 		bool trailingSemicolon() override;
 

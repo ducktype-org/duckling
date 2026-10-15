@@ -18,7 +18,7 @@ namespace pst {
 	public:
 		ELEMENT_CLONE_DECL(AnalysisPattern);
 
-		explicit AnalysisPattern(const LangParserState& state): NotStmt(state) {
+		explicit AnalysisPattern(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::AnalysisPattern;
 		}
 

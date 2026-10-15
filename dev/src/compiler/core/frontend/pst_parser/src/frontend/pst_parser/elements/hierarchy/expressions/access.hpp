@@ -23,7 +23,7 @@ namespace pst::expr {
 		NAMED_CHILD(name, IdentifierWrapper);
 
 	public:
-		Access(const LangParserState& state): ExprElement(state, 300) {}
+		explicit Access(LangElementConstructionArgument state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
