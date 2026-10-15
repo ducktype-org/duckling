@@ -134,6 +134,7 @@ namespace compiler::tsh {
 		case CPointer:
 		case RawPointer:
 		case Slice:
+		case Meta:
 			return true;
 		default:
 			return false;
@@ -428,7 +429,10 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		CORE_PANIC("Meta type interface does not exist yet.");
+		// The meta type declares no members of its own. Its methods, including `toString`, are
+		// supplied by the default type interface.
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getDeclaredInterface(query::Context&) const {

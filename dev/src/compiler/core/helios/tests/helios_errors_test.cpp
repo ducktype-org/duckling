@@ -44,6 +44,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testRuntimeMetaStringificationError);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testClassErrors);
@@ -148,6 +149,23 @@ private:
 		if (expect_failure)
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		checkForError(present_phrases, logged_msg_count);
+	}
+
+	void testRuntimeMetaStringificationError() {
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					let value = (i64, 3);
+					value.toString();
+					return 0;
+				}
+			)",
+			{
+				"A `type` value cannot be stringified at runtime.",
+				"value.toString()",
+			},
+			1
+		);
 	}
 
 	/**

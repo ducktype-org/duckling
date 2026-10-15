@@ -245,21 +245,16 @@ namespace compiler::helios::code {
 							failed = true;
 							continue;
 						}
-						auto       sub_expr_hout = std::move(sub_expr_hout_qresult).valueOrThrow();
-						const auto sub_expr_type = sub_expr_hout->expression_type.getType();
-						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
-
-						// - - Correct for passing by copy or reference depending on type
-						sub_expr_hout = s.prepToPassSelf(std::move(sub_expr_hout));
-
-						// - - Create HOUT Expr. Both the call and its builtin `toString` callee
-						// reference carry the substitution's (generated) origin.
+						auto sub_expr_hout = std::move(sub_expr_hout_qresult).valueOrThrow();
+						auto stringified   = defgen::toStringExpr(
+                            ctx, std::move(sub_expr_hout), pstOrigin(sub).generatedFrom()
+                        );
+						if (stringified.hasFailed()) {
+							failed = true;
+							continue;
+						}
 						next_string = withOrigin(
-							pstOrigin(sub).generatedFrom(),
-							s.call(
-								withOrigin(pstOrigin(sub).generatedFrom(), s.ident(to_string_sym)),
-								std::move(sub_expr_hout)
-							)
+							pstOrigin(sub).generatedFrom(), std::move(stringified).valueOrThrow()
 						);
 					} else {
 						CORE_UNREACHABLE();

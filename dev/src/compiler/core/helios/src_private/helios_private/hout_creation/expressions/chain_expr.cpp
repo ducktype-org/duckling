@@ -929,9 +929,34 @@ namespace compiler::helios::code {
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
+				const auto member_name = expr_access->getName().unlock(query_ctx)->unwrap();
+				if (member_name == base::StrID("toString")
+				    && call_expr->getArgs().unlock(query_ctx)->size() == 0) {
+					auto type_value = makeBox<LiteralTypeExpr>(query_ctx, type.origin, type.type);
+					auto lookup_qresult
+						= HInterface::ofTypeInstance(tsh::getMetaType())
+					          .lookup(
+								  query_ctx,
+								  member_name,
+								  { .accessing_scope
+					                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+							  );
+					UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+					UNPACK_QRESULT_MOVE(
+						const auto& callees =, getCallableCandidates(lookup_result->leaves)
+					);
+					UNPACK_QRESULT_MOVE(
+						auto result =,
+						processMethodCall(
+							query_ctx, callees, expr_access, call_expr, std::move(type_value)
+						)
+					);
+					return ChainState::ofExpr(std::move(result));
+				}
+
 				auto lookup_qresult = HInterface::ofTypeMeta(type.type).lookup(
 					query_ctx,
-					expr_access->getName().unlock(query_ctx)->unwrap(),
+					member_name,
 					{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 				);
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
