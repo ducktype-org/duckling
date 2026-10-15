@@ -57,21 +57,19 @@ impl BuildData {
     /// Get a [`BuildData`] from serialized artifacts.
     /// Should be used for getting [`BuildData`] for the previous build process.
     pub fn from_fingerprint(fingerprint: &LockedFile) -> QuackResult<Self> {
-        let fingerprint_content = fingerprint
-            .path()
-            .read()
-            .with_context(|| {
-                format!(
-                    "failed to read the previous fingerprint at `{}`",
-                    fingerprint.path().display()
-                )
-            })?;
-        let result = serde_json::from_slice::<BuildData>(&fingerprint_content).with_context(|| {
+        let fingerprint_content = fingerprint.path().read().with_context(|| {
             format!(
-                "failed to parse the previous fingerprint at `{}`",
+                "failed to read the previous fingerprint at `{}`",
                 fingerprint.path().display()
             )
         })?;
+        let result =
+            serde_json::from_slice::<BuildData>(&fingerprint_content).with_context(|| {
+                format!(
+                    "failed to parse the previous fingerprint at `{}`",
+                    fingerprint.path().display()
+                )
+            })?;
         result.unit_graph.check_correctness()?;
         Ok(result)
     }
