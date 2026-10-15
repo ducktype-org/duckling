@@ -111,6 +111,23 @@ class C: public Base1, public Base2 {
 }
 ~~~~~
 
+`addToHash()` as a member
+-------------------------
+
+The same hook can be a member instead of a friend:
+
+~~~~~cpp
+void addToHash(hashing::hash_algorithm auto& h) const { /*...*/ }
+~~~~~
+
+Prefer this form. A friend is found only by argument-dependent lookup, which a **qualified**
+call - `hashing::addToHash(h, x)`, and most call sites in the compiler spell it that way - does
+not perform; the hook is then silently skipped and the type takes an automatic path instead. A
+member is found by member lookup, so it is honoured however the call is written.
+
+`base::StrID` is the reason this branch exists: it exposes `begin`/`end`/`data`/`size`, so the
+automatic range path used to claim it and its own hook never ran.
+
 Adding type to `addToHash()` template fallback
 ----------------------------------------------
 
@@ -153,6 +170,111 @@ array-to-pointer decay - `std::tuple{ 42, "hello" }` deduces a `const char*` mem
 so use `std::string_view{ "hello" }` (or `std::string`) when you want the characters hashed.
 
 
+What the byte stream looks like
+==============================
+
+The hash of an object is the hash of a byte stream, so the stream has to be
+**self-delimiting**: no two distinct values may flatten to the same bytes. Two rules keep it
+that way.
+
+**A range carries its element count**, as a `u64` in front of the elements. Without it two
+variable-length fields hashed one after another are indistinguishable from the same bytes split
+differently, and `("ab", "c")` collides with `("a", "bc")`. `u64` rather than `std::size_t` so
+the hash does not depend on the platform's pointer width.
+
+**A composite carries its member count**, as a single byte in front. `hashDecompose` and the
+tuple-like path both add it. Without it `{int, int, float}` and `{float, std::string}` both
+flatten to twelve zero bytes when default constructed. One byte, not eight - the count is a
+compile-time constant and tiny, while a small object is only a handful of bytes of payload.
+
+Note the asymmetry: SHA-256 covers the total stream length, so a **single** unprefixed
+variable-length field is pinned by it - a fixed-size field after a string is safe. It is **two or
+more** that need the prefixes. A presence flag does not help, because the flag is itself a byte a
+string can imitate.
+
+
+What still gives the same hash
+------------------------------
+
+The stream records shapes, not types. These still agree, by design:
+
+* **Same-width integers of different signedness.** `u32(1)` and `i32(1)` are the same four bytes.
+* **A hand-written `addToHash` that flattens differently.** The member count is added by
+  `hashDecompose` and by the tuple-like path, not by a hook you wrote yourself - so a hook
+  hashing two `u32`s produces the same stream as one hashing a `u64`.
+* **Two composites with the same arity and the same field widths.**
+
+`{u32, u32}` and `{u64}` reached through `hashDecompose` now differ, because the arity byte says
+2 against 1 - but that is a side effect, not type awareness. Do not rely on it.
+
+**Why this is not a problem in practice.** A query's cache key has exactly one type, and that
+type is fixed for the whole compilation. The hash only ever has to separate *values of one type*
+from each other, never a value of one key type from a value of another - they never share a hash
+space. Within one type the encoding is unambiguous, which is what the two rules above buy.
+
+It stops being safe the moment one hash space holds keys of more than one type. If you ever key a
+single map by hashes coming from different sources, put a discriminator in the stream yourself.
+
+### Variants
+
+A variant hooked the way `KeyOf_MangledSymbol` does it - hash `index()`, then the active
+alternative - is safe **within one variant type**: the index is a fixed-width field at a fixed
+offset, so two different alternatives can never be confused, whatever their widths.
+
+Across two *different* variant types it is the general case above. Traced by hand, with the index
+as an 8-byte `usize`:
+
+~~~~~
+index=0, u64(1)              [16 B] 00 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
+index=1, u32(1)              [12 B] 01 00 00 00 00 00 00 00  01 00 00 00      -> differ (length)
+
+index=0, u64(0x1_00000000)   [16 B] 00 00 00 00 00 00 00 00  00 00 00 00 01 00 00 00
+index=0, u32(0) + u32(1)     [16 B] 00 00 00 00 00 00 00 00  00 00 00 00 01 00 00 00  -> SAME
+~~~~~
+
+The index never creates a hazard of its own; the collision is entirely in the payloads, and it is
+the same `{u32, u32}` against `{u64}` as above.
+
+**Nesting does not change this.** A variant holding a variant is still safe within one type - the
+outer index sits at a fixed offset 0, so two different outer alternatives can never be confused
+no matter how the widths stack up. Brute-forced over every combination of
+`Var<Var<u32, u64>, u64>`: eleven values, zero collisions.
+
+~~~~~
+Outer[u64=1]         01 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
+Outer[Inner[u32=1]]  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  01 00 00 00
+Outer[Inner[u64=1]]  00 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
+~~~~~
+
+The one shape to watch is an **alternative that hashes no bytes at all**. Then the stream is
+nothing but indices, and an index can occupy the byte positions where another type keeps data:
+
+~~~~~
+Var<u64>            holding u64(3)        00 00 00 00 00 00 00 00  03 00 00 00 00 00 00 00
+Var<Var<E,E,E,E>>   inner index 3         00 00 00 00 00 00 00 00  03 00 00 00 00 00 00 00
+~~~~~
+
+Same bytes - but again two *different* types, so a query cache does not care. If you ever need
+one hash space to hold both, give the empty alternative a byte of its own.
+
+
+Known gaps
+----------
+
+* A **friend** `addToHash` is skipped by a qualified `hashing::addToHash(h, x)` call, because a
+  qualified id performs no argument-dependent lookup. Use the member form.
+* `long double` is 10 bytes of value in 16 on x87, and the floating point branch runs before the
+  unique-representation check - so the same value can hash two ways depending on what was in the
+  padding. Nothing in the compiler hashes one today.
+* `STRONG_TYPEDEF_INT` and `STRONG_TYPEDEF_ID` are **not hashable**: the macros make classes, so
+  `std::is_integral_v` is false and the type is refused outright. `u8`, `i8`, `Bytes`, `Bits` and
+  every strong id are affected. `MAKE_FLAG_TYPE` opts in and works.
+* `HASHING_CAN_HASH_BY_REPRESENTATION` cannot make an unsafe type byte-hashable - it is ANDed
+  with `std::has_unique_object_representations_v` - but it can let through a type the trait calls
+  safe while `operator==` disagrees: a `char buf[16]` with garbage past the terminator, a nested
+  pointer (only a *top-level* pointer is refused), a cached or memoised field.
+
+
 Obtaining hashes
 ================
 
@@ -161,9 +283,11 @@ The module provides two ways of hashing objects: by using either `Hash` or `Stat
 `Hash`
 ------
 
-This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code after the whole object which allows to distinguish hashes of objects with the same binary representations but of different types. 
+This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it.
 
-Note that it is not necessary (and so it is not done) to add hash codes after every subobject, as changing type of any of them will change the top-level type which will change the hash of the whole object.
+It does **not** tag the hash with the type. Two different types whose observable state flattens to the
+same bytes get the same hash - see [What the byte stream looks like](#what-the-byte-stream-looks-like)
+for what that does and does not cover.
 
 The simplest way to use it is without specifying any template parameters.
 With it's defaults it can be used as a drop-in replacement for `std::hash`:
