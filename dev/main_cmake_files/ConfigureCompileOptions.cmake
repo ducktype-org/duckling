@@ -68,13 +68,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	message("-- ${CMAKE_CXX_COMPILER_ID} compiler")
 
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-		check_minimum_compiler_version("Clang" 19)
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-		check_minimum_compiler_version("Apple Clang" 16.3)
-	else()
-		message(FATAL_ERROR "Unsupported Clang compiler: ${CMAKE_CXX_COMPILER_ID}")
-	endif()
+	# Apple Clang has the same minimum as the upstream one.
+	check_minimum_compiler_version("${CMAKE_CXX_COMPILER_ID}" 19)
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	# The "-Werror=shadow" is more strict than "-Werror=shadow=local".
