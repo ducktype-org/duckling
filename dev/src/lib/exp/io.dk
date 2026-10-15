@@ -1,0 +1,56 @@
+import core.containers as containers;
+import core.primitive_io as pio;
+
+#{
+    Experimental short names for reading standard input, on top of `core.primitive_io`.
+
+    The number and word readers skip leading blanks (space, tab, newline, carriage return) and
+    consume the one character that ends the value. So after `readI64()` on "42\n" the newline is
+    gone already, and a following `readLine()` reads the next line.
+#}
+
+fun isBlank(c: i32) -> bool = c == ' ' as i32 or c == '\t' as i32 or c == '\n' as i32
+    or c == '\r' as i32;
+
+#{
+    Reads a signed integer, e.g. `-42`. Returns 0 when the input does not start with a number.
+#}
+fun readI64() -> i64 = pio.readI64();
+
+#{
+    Reads an unsigned integer. Returns 0 when the input does not start with a number.
+#}
+fun readU64() -> u64 = pio.readU64();
+
+#{
+    Reads a floating-point number, e.g. `3.14` or `-6.022e+23`.
+#}
+fun readF64() -> f64 = pio.readF64();
+
+fun readF32() -> f32 = pio.readF64() as f32;
+
+#{
+    Reads the next character as it is, blanks included. At end of input the result is not
+    meaningful.
+#}
+fun readChar() -> char = pio.readChar();
+
+#{
+    Reads the next word: skips leading blanks, then reads up to the next blank or the end of
+    input. Returns an empty string at end of input.
+#}
+fun readWord() -> containers.String = {
+    var result: containers.String;
+    var c = pio.readCharCode();
+    while (c >= 0 and isBlank(c)) c = pio.readCharCode();
+    while (c >= 0 and not isBlank(c)) {
+        result.append(c as char);
+        c = pio.readCharCode();
+    }
+    return result;
+}
+
+#{
+    Reads the rest of the current line, without the newline at its end.
+#}
+fun readLine() -> containers.String = pio.readString();
