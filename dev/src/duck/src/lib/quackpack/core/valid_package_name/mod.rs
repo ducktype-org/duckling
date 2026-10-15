@@ -9,7 +9,7 @@
 use thiserror::Error;
 
 /// __Sorted__ list of std Duckling packages.
-const DUCKLING_STD_PACKAGES: &[&str] = &["core", "std"];
+const DUCKLING_STD_PACKAGES: &[&str] = &["core", "exp", "std"];
 
 /// __Sorted__ list of builtin Duckling keywords.
 const DUCKLING_KEYWORDS: &[&str] = &[

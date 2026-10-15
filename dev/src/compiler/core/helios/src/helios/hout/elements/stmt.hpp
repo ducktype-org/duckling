@@ -292,5 +292,4 @@ namespace compiler::helios::code {
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
 		[[nodiscard]] Box<Stmt> clone() const final;
 	};
-
 }

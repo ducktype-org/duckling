@@ -205,5 +205,4 @@ namespace compiler::helios::code {
 			origin, std::move(*body.clone()), control_flow_id, control_flow_kind
 		);
 	}
-
 }

@@ -186,13 +186,13 @@ private:
 			1
 		);
 		checkForErrorOnCompileModule(
-			R"(fun foo() = { while target (true) { break target:{1}; } })",
-			{ "`break` target cannot have a template specifier." },
+			R"(fun foo() = { while target (true) { break target[1]; } })",
+			{ "`break` target must be a block kind or a name." },
 			1
 		);
 		checkForErrorOnCompileModule(
-			R"(fun foo() = { if (true) { continue true:{1}; } })",
-			{ "`continue` target cannot have a template specifier." },
+			R"(fun foo() = { if (true) { continue true[1]; } })",
+			{ "`continue` target must be a block kind or a name." },
 			1
 		);
 	}

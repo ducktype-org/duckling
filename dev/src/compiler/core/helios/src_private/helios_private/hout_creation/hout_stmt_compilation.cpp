@@ -33,8 +33,8 @@
 #include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -109,27 +109,9 @@ namespace compiler::helios {
 			target_position  = target_expr->getStablePosition();
 
 			if (auto identifier = target_expr.template dynamicCast<pst::expr::IdentifierLiteral>()) {
-				if (identifier.value()->getTemplateSpecifier().has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"`", action_name, "` target cannot have a template specifier."
-						),
-						target_position
-					));
-					query::throwFailed();
-				}
 				requested_target = identifier.value()->getName().unlock(ctx)->unwrap();
 			} else if (auto keyword
 			           = target_expr.template dynamicCast<pst::expr::KeywordLiteral>()) {
-				if (keyword.value()->getTemplateSpecifier().has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"`", action_name, "` target cannot have a template specifier."
-						),
-						target_position
-					));
-					query::throwFailed();
-				}
 				auto kind = controlFlowKind(keyword.value()->getKeyword().unlock(ctx)->unwrap());
 				if (!kind.has_value()) {
 					ctx.logInt(makeBox<dia::PlaceholderError>(
