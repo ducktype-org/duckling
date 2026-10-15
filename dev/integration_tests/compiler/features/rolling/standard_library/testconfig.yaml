@@ -58,3 +58,38 @@ Tests:
       all:
         Output:
           String: "10\n42\n"
+
+  # `exp.containers`: `Stack`, `Queue` and `Deque`, all built on `List`.
+  exp_stack:
+    Cases:
+      all:
+        Output:
+          String: "true\n3\n3\n30\n2\n4\n1\ntrue\n888\n100\n3725\n49\n0\n888\nlingduck\n888\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: "true\n3\n3\n30\n2\n4\n1\ntrue\n888\n100\n3725\n49\n0\n888\nlingduck\n888\n"
+        ExitCode: 0
+  exp_queue:
+    Cases:
+      all:
+        Output:
+          String: "true\n3\n1\n3\n1\n4\n2\n3\n4\n20\n3\n4\ntrue\n888\ntrue\n50\n50\n99\n0\n888\nduckling\n888\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: "true\n3\n1\n3\n1\n4\n2\n3\n4\n20\n3\n4\ntrue\n888\ntrue\n50\n50\n99\n0\n888\nduckling\n888\n"
+        ExitCode: 0
+  exp_deque:
+    Cases:
+      all:
+        Output:
+          String: "true\n0\n1\n2\n3\n--\n4\n0\n3\n10\n30\n2\n1\ntrue\n888\n0\n1\n4\n1\n2\n3\n4\n--\n4\n1\n2\n3\ntrue\n4\n3\n2\n1\n0\n--\n0\n1\n4\n3\n2\n--\n888\ntrue\ntrue\n0\n888\nduckling!\n888\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: "true\n0\n1\n2\n3\n--\n4\n0\n3\n10\n30\n2\n1\ntrue\n888\n0\n1\n4\n1\n2\n3\n4\n--\n4\n1\n2\n3\ntrue\n4\n3\n2\n1\n0\n--\n0\n1\n4\n3\n2\n--\n888\ntrue\ntrue\n0\n888\nduckling!\n888\n"
+        ExitCode: 0

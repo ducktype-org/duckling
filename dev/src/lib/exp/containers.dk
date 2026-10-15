@@ -1,0 +1,193 @@
+import core.containers as containers;
+
+#{
+    Experimental containers built on top of `List`. They only use `List`'s own `push`, `pop`,
+    `at`, `length` and `clear`, so they never touch a raw buffer.
+#}
+
+#{
+    Last in, first out. The top of the stack is the end of the list, so every operation is
+    amortized O(1).
+#}
+template(T: type)
+class Stack {
+    items: containers.List[T];
+
+    fun push(value: T) -> () = {
+        items.push(move value);
+    }
+
+    #{
+        Removes and returns the top element. Panics when the stack is empty.
+    #}
+    fun pop() -> T = {
+        return items.pop();
+    }
+
+    #{
+        The top element, the one `pop` returns next. Panics when the stack is empty.
+    #}
+    fun top() -> ref T = {
+        return items.at(items.length() - 1i64);
+    }
+
+    fun length() -> i64 = items.length();
+
+    fun isEmpty() -> bool = items.length() == 0i64;
+
+    fun clear() -> () = {
+        items.clear();
+    }
+}
+
+#{
+    First in, first out, made of two lists. `incoming` takes new elements at its end.
+    `outgoing` holds the oldest elements in reverse, so the front of the queue is its end.
+    When `outgoing` runs empty, all of `incoming` is moved over, which reverses it. Every
+    element is moved at most once, so every operation is amortized O(1).
+#}
+template(T: type)
+class Queue {
+    incoming: containers.List[T];
+    outgoing: containers.List[T];
+
+    #{
+        Moves `incoming` into `outgoing` when `outgoing` is empty, so the front is at its end.
+    #}
+    fun refill() -> () = {
+        if (outgoing.length() == 0i64) {
+            while (incoming.length() > 0i64) outgoing.push(incoming.pop());
+        }
+    }
+
+    fun push(value: T) -> () = {
+        incoming.push(move value);
+    }
+
+    #{
+        Removes and returns the oldest element. Panics when the queue is empty.
+    #}
+    fun pop() -> T = {
+        refill();
+        return outgoing.pop();
+    }
+
+    #{
+        The oldest element, the one `pop` returns next. Panics when the queue is empty.
+    #}
+    fun front() -> ref T = {
+        refill();
+        return outgoing.at(outgoing.length() - 1i64);
+    }
+
+    #{
+        The newest element. Panics when the queue is empty.
+    #}
+    fun back() -> ref T = {
+        if (incoming.length() > 0i64) return incoming.at(incoming.length() - 1i64);
+        return outgoing.at(0i64);
+    }
+
+    #{
+        The `i`-th element counted from the front. Panics when `i` is out of range.
+    #}
+    fun at(i: i64) -> ref T = {
+        let outgoing_len = outgoing.length();
+        if (i < outgoing_len) return outgoing.at(outgoing_len - 1i64 - i);
+        return incoming.at(i - outgoing_len);
+    }
+
+    fun length() -> i64 = incoming.length() + outgoing.length();
+
+    fun isEmpty() -> bool = length() == 0i64;
+
+    fun clear() -> () = {
+        incoming.clear();
+        outgoing.clear();
+    }
+}
+
+#{
+    Double-ended queue, made of two lists back to back. `front_items` holds the front half in
+    reverse, so the first element is its end. `back_items` holds the back half in order, so the
+    last element is its end. When one side runs empty, half of the other side is moved over.
+    That keeps every operation amortized O(1).
+#}
+template(T: type)
+class Deque {
+    front_items: containers.List[T];
+    back_items: containers.List[T];
+
+    #{
+        Moves the first half of `from` (rounded up) to `to`, reversed, keeping the rest of `from`
+        in order. Used when `to` is empty: afterwards the element at the start of `from` is at
+        the end of `to`.
+    #}
+    fun rebalance(from: ref containers.List[T], to: ref containers.List[T]) -> () = {
+        let moved = (from.length() + 1i64) / 2i64;
+
+        # Park the part that stays, reversed, so the part that moves ends up on top.
+        var kept: containers.List[T];
+        while (from.length() > moved) kept.push(from.pop());
+        while (from.length() > 0i64) to.push(from.pop());
+        while (kept.length() > 0i64) from.push(kept.pop());
+    }
+
+    fun pushFront(value: T) -> () = {
+        front_items.push(move value);
+    }
+
+    fun pushBack(value: T) -> () = {
+        back_items.push(move value);
+    }
+
+    #{
+        Removes and returns the first element. Panics when the deque is empty.
+    #}
+    fun popFront() -> T = {
+        if (front_items.length() == 0i64) rebalance(&back_items, &front_items);
+        return front_items.pop();
+    }
+
+    #{
+        Removes and returns the last element. Panics when the deque is empty.
+    #}
+    fun popBack() -> T = {
+        if (back_items.length() == 0i64) rebalance(&front_items, &back_items);
+        return back_items.pop();
+    }
+
+    #{
+        The first element. Panics when the deque is empty.
+    #}
+    fun front() -> ref T = {
+        if (front_items.length() > 0i64) return front_items.at(front_items.length() - 1i64);
+        return back_items.at(0i64);
+    }
+
+    #{
+        The last element. Panics when the deque is empty.
+    #}
+    fun back() -> ref T = {
+        if (back_items.length() > 0i64) return back_items.at(back_items.length() - 1i64);
+        return front_items.at(0i64);
+    }
+
+    #{
+        The `i`-th element counted from the front. Panics when `i` is out of range.
+    #}
+    fun at(i: i64) -> ref T = {
+        let front_len = front_items.length();
+        if (i < front_len) return front_items.at(front_len - 1i64 - i);
+        return back_items.at(i - front_len);
+    }
+
+    fun length() -> i64 = front_items.length() + back_items.length();
+
+    fun isEmpty() -> bool = length() == 0i64;
+
+    fun clear() -> () = {
+        front_items.clear();
+        back_items.clear();
+    }
+}
