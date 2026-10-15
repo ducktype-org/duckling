@@ -25,6 +25,8 @@ fun printSeparator() -> () = {
 fun intsTest() -> () = {
     var map: Map[i64, i64];
     printBool(map.isEmpty()); # true
+    printBool(map.contains(1)); # false
+    printBool(map.remove(1));   # false
 
     map.insert(5, 50);
     map.insert(1, 10);
@@ -86,7 +88,7 @@ fun manyTest() -> () = {
     printBool(isConsistent(&map));    # true
 
     # A balanced tree of 200 nodes is at most 10 levels high. A sorted insert would give 200.
-    printBool(map.node(map.root).height <= 10i64); # true
+    printBool(map.height() <= 10i64); # true
 
     # Remove every even key.
     i = 0i64;
@@ -163,10 +165,56 @@ fun customKeysTest() -> () = {
     printSeparator();
 }
 
+#{
+    `fifty` points into `map`. Every node has its own allocation, so the reference survives
+    other inserts and removes.
+#}
+fun churnAndAppend(map: ref Map[i64, String], fifty: ref String) -> () = {
+    var i = 0i64;
+    while (i < 100i64) {
+        if (i != 50i64) map.insert(i, f"x");
+        i = i + 1i64;
+    }
+    i = 0i64;
+    while (i < 100i64) {
+        if (i != 50i64) map.remove(i);
+        i = i + 1i64;
+    }
+    fifty.append('!');
+}
+
+fun referencesTest() -> () = {
+    var map: Map[i64, String];
+    map.insert(50, f"fifty");
+    churnAndAppend(&map, map.at(50));
+    print(map.at(50)); # fifty!
+    print("\n");
+    printSeparator();
+}
+
+fun copyTest() -> () = {
+    var map: Map[i64, String];
+    map.insert(1, f"one");
+    map.insert(2, f"two");
+
+    # A copy owns its own nodes: changing one map leaves the other alone.
+    var other = copy map;
+    other.at(1).append('!');
+    other.remove(2);
+    other.insert(3, f"three");
+    print(map.values().toString());   # [one,two]
+    print("\n");
+    print(other.values().toString()); # [one!,three]
+    print("\n");
+    printSeparator();
+}
+
 fun main() -> i64 = {
     intsTest();
     manyTest();
     stringsTest();
     customKeysTest();
+    referencesTest();
+    copyTest();
     return 0;
 }

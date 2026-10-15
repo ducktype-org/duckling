@@ -110,12 +110,25 @@ Tests:
     Cases:
       all:
         Output:
-          String: "true\n3\n30\ntrue\nfalse\n3\n33\n55\n[1,3,5]\n[10,33,55]\ntrue\nfalse\nfalse\n[1,5]\ntrue\n888\n200\ntrue\ntrue\n100\ntrue\nfalse\ntrue\n10000\ntrue\n888\n4\npurr\ntrue\nfalse\ntrue\ncat cow duckling \n888\nabc\ntrue\nfalse\n888\n"
+          String: "true\nfalse\nfalse\n3\n30\ntrue\nfalse\n3\n33\n55\n[1,3,5]\n[10,33,55]\ntrue\nfalse\nfalse\n[1,5]\ntrue\n888\n200\ntrue\ntrue\n100\ntrue\nfalse\ntrue\n10000\ntrue\n888\n4\npurr\ntrue\nfalse\ntrue\ncat cow duckling \n888\nabc\ntrue\nfalse\n888\nfifty!\n888\n[one,two]\n[one!,three]\n888\n"
         ExitCode: 0
       llvm_valgrind:
         TimeOut: 10 # 200-node tree under valgrind, 3 seconds is too tight
         Output:
-          String: "true\n3\n30\ntrue\nfalse\n3\n33\n55\n[1,3,5]\n[10,33,55]\ntrue\nfalse\nfalse\n[1,5]\ntrue\n888\n200\ntrue\ntrue\n100\ntrue\nfalse\ntrue\n10000\ntrue\n888\n4\npurr\ntrue\nfalse\ntrue\ncat cow duckling \n888\nabc\ntrue\nfalse\n888\n"
+          String: "true\nfalse\nfalse\n3\n30\ntrue\nfalse\n3\n33\n55\n[1,3,5]\n[10,33,55]\ntrue\nfalse\nfalse\n[1,5]\ntrue\n888\n200\ntrue\ntrue\n100\ntrue\nfalse\ntrue\n10000\ntrue\n888\n4\npurr\ntrue\nfalse\ntrue\ncat cow duckling \n888\nabc\ntrue\nfalse\n888\nfifty!\n888\n[one,two]\n[one!,three]\n888\n"
+        ExitCode: 0
+
+  # `exp.containers.PriorityQueue`: a binary heap, smallest element first.
+  exp_priority_queue:
+    Cases:
+      all:
+        Output:
+          String: "true\n5\n1\n1\n1\n3\n2\n2\n4\n5\ntrue\n888\n200\ntrue\ntrue\n888\ncat cow duck duckling \ntrue\n888\nwake up\nwake up;eat;swim;\n888\n2\nab\n888\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 10 # 200-element heap under valgrind, 3 seconds is too tight
+        Output:
+          String: "true\n5\n1\n1\n1\n3\n2\n2\n4\n5\ntrue\n888\n200\ntrue\ntrue\n888\ncat cow duck duckling \ntrue\n888\nwake up\nwake up;eat;swim;\n888\n2\nab\n888\n"
         ExitCode: 0
 
   # `exp.io`: short readers for standard input.
