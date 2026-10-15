@@ -14,6 +14,11 @@ class Boxed {
 	value: T
 }
 
+template(N: i64, T: type)
+class Sized {
+	value: T
+}
+
 var primitive: i64;
 var string: str;
 var const_slice: slice const char;
@@ -30,3 +35,4 @@ var variant: i64 | bool;
 var class_value: Person;
 var template_value: Boxed[i64];
 var namespaced_template: Types.Boxed[Person];
+var value_template: Sized[3i64, bool];

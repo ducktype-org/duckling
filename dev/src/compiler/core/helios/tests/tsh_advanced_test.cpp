@@ -313,6 +313,7 @@ private:
 			make_case("class_value", "Person"),
 			make_case("template_value", "Boxed[i64]"),
 			make_case("namespaced_template", "Types.Boxed[Person]"),
+			make_case("value_template", "Sized[3, bool]"),
 		};
 
 		withContextDo([&](query::Context& ctx) {
@@ -344,6 +345,40 @@ private:
 				std::string("i64"),
 				primitive_type.getType().sourceTypeName(ctx),
 				"AbstractType should expose the source-level type name too"
+			);
+
+			const SymbolType qualified_type(
+				i64_type,
+				ReferenceKind::Ref,
+				Mutability::Immutable,
+				Leakage::Leaking,
+				Uniqueness::Unique
+			);
+			assertEqual(
+				std::string("unique leaking const ref i64"),
+				qualified_type.sourceTypeName(ctx),
+				"SymbolType qualifiers should be rendered in source order"
+			);
+
+			assertEqual(
+				std::string("void"),
+				getVoidType().sourceTypeName(ctx),
+				"Void should use its Duckling source spelling"
+			);
+			assertEqual(
+				std::string("type"),
+				getMetaType().sourceTypeName(ctx),
+				"Meta should use its Duckling source spelling"
+			);
+
+			const auto function_type = ctx.query<QueryFunctionType>({
+				.parameter_types = { SymbolType<>::withDefaults(i64_type) },
+				.result_type     = SymbolType<>::withDefaults(getBoolType()),
+			});
+			assertEqual(
+				function_type.toString(),
+				function_type.sourceTypeName(ctx),
+				"Types without source syntax should retain their human-readable fallback"
 			);
 		});
 	}

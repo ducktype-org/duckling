@@ -20,6 +20,7 @@
 
 #include <query_framework/context/context.hpp>
 
+#include <algorithm>
 #include <ranges>
 
 namespace compiler::tsh {
@@ -122,6 +123,15 @@ namespace compiler::tsh {
 
 		SourceTypeName renderAbstractTypeName(query::Context& ctx, const AbstractType type) {
 			switch (type.getKind()) {
+			case Kind::Unit:
+			case Kind::Void:
+			case Kind::Byte:
+			case Kind::Bool:
+			case Kind::Char:
+			case Kind::Integral:
+			case Kind::Float:
+			case Kind::Meta:
+				return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
 			case Kind::Pointer:
 				return {
 					.text = "ptr "
@@ -193,9 +203,17 @@ namespace compiler::tsh {
 					.text       = sourceClassName(ctx, type.as<ClassAbstractType>().getSymbol()),
 					.precedence = TypeNamePrecedence::Atomic,
 				};
-			default:
+			case Kind::RawPointer:
+			case Kind::Function:
+			case Kind::TypeTemplate:
+			case Kind::Namespace:
+			case Kind::Module:
+			case Kind::Import:
+				// These compiler-level kinds do not currently have a Duckling type-expression
+				// spelling. Keep their existing human-readable representation until one is defined.
 				return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
 			}
+			CORE_UNREACHABLE();
 		}
 
 		SourceTypeName renderSymbolTypeName(query::Context& ctx, const SymbolType<> type) {

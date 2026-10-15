@@ -386,15 +386,17 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Returns the canonical Duckling source representation of this symbol type.
+		 * @brief Returns a source-oriented representation of this symbol type.
 		 *
 		 * The returned representation includes all applicable symbol qualifiers, such as `const`,
-		 * `ref`, `box`, `unique` and `leaking`. Unlike @ref toString, it follows Duckling source
-		 * syntax and is suitable for user-facing output, including diagnostics.
+		 * `ref`, `box`, `unique` and `leaking`. The underlying type follows canonical Duckling
+		 * source syntax whenever it has a type-expression spelling and otherwise uses the
+		 * human-readable fallback documented by AbstractType::sourceTypeName. The result is
+		 * suitable for user-facing output, including diagnostics.
 		 *
 		 * @param ctx Query context used to resolve qualified class names and baked template
 		 * arguments.
-		 * @return A string containing the source-level representation of this symbol type.
+		 * @return A string containing the source-oriented representation of this symbol type.
 		 */
 		[[nodiscard]]
 		std::string sourceTypeName(query::Context& ctx) const {
