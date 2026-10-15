@@ -1,0 +1,55 @@
+import core.builtins.*;
+
+class Res {
+    id: i64 = 0;
+
+    Res.destroy() = {
+        builtin_output_i64(id);
+    }
+}
+
+fun breakFromWhile() = {
+    var n: i64 = 0;
+    while (n < 3) {
+        n = n + 1;
+        var outer: Res = Res(10 + n);
+        if (n == 2) {
+            var inner: Res = Res(20 + n);
+            break;
+        }
+    }
+    builtin_output_i64(19);
+}
+
+fun continueNamedBlock() = {
+    var n: i64 = 0;
+    block Retry {
+        n = n + 1;
+        var outer: Res = Res(30 + n);
+        if (n < 3) {
+            var inner: Res = Res(40 + n);
+            continue Retry;
+        }
+    }
+    builtin_output_i64(39);
+}
+
+fun continueFor() = {
+    var arr: i64[3];
+    arr[0] = 1;
+    arr[1] = 2;
+    arr[2] = 3;
+    for (x in arr) {
+        var r: Res = Res(70 + x);
+        if (x == 2) continue for;
+        builtin_output_i64(x);
+    }
+    builtin_output_i64(79);
+}
+
+fun main() -> i64 = {
+    breakFromWhile();
+    continueNamedBlock();
+    continueFor();
+    return 0;
+}

@@ -36,6 +36,11 @@ namespace pst::expr {
 		}
 
 		[[nodiscard]]
+		base::Optional<AccessLocked<ExprElement>> getTemplateSpecifier() const {
+			return template_specifier.map([](const auto& acc) { return acc.give(); });
+		}
+
+		[[nodiscard]]
 		std::string elementType() const override {
 			return "Keyword Expression";
 		}
