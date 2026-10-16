@@ -14,7 +14,7 @@
 /**
  * @brief What belongs here: errors the VM detects while SEVERAL threads run. That covers a panic
  * in one thread taking the whole process down, a locked mutex being destroyed, and the deadlock
- * detector (it must report real deadlocks and stay silent when it is turned off).
+ * detector (it must report real deadlocks).
  *
  * This is a separate binary from `runtime_errors_test` because these programs run long loops in
  * worker threads, which the TC flavour can only run in an optimised build.
@@ -30,7 +30,6 @@ public:
 		TESTER_ADD_TEST(deadlockTest);
 		TESTER_ADD_TEST(deadlockWakingFromCv);
 		TESTER_ADD_TEST(deadlockWakingFromCvMain);
-		TESTER_ADD_TEST(detectionDisabledAllowsNormalMutexUse);
 	}
 
 private:
@@ -100,15 +99,6 @@ private:
 		assertExecutionPanickedWithAndKill(
 			runWithDetection("cv_main_deadlock.dbc"), vm::exceptions::VMDeadlockException::ERR_MSG
 		);
-	}
-
-	void detectionDisabledAllowsNormalMutexUse() {
-		// Spawn a process with deadlock detection disabled (the default) and verify normal mutex
-		// usage still works.
-		auto pid  = initProcess({});
-		auto file = fs::File(path("safe_mutex.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
-		handleTestResult(runTestOnVmGetResult(pid), 0);
 	}
 };
 

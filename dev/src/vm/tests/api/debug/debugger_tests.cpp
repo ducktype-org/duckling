@@ -12,11 +12,7 @@
 
 #include <vm/api/vm.hpp>
 
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
 #include <future>
-#include <mutex>
 #include <thread>
 
 namespace api = vm::api;
@@ -48,7 +44,6 @@ public:
 		TESTER_ADD_TEST(setBreakpointRefusals);
 		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
-		TESTER_ADD_TEST(outputTest);
 	}
 
 private:
@@ -616,32 +611,6 @@ private:
 			ASSERT_EQUAL(exit_value_vec.size(), 1);
 			ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 0);
 		}
-	}
-
-	/**
-	 * @brief test if the output emitter works
-	 */
-	void outputTest() {
-		std::atomic_bool        output = false;
-		std::condition_variable cv;
-		std::mutex              m;
-
-		auto                          pid = spawnAndLoad("../../common/programs/vm_api_tests.dbc");
-		events::Listener<std::string> output_listener([&](const std::string& str) {
-			ASSERT_EQUAL_PRINT("7", str);
-			output.store(true);
-			cv.notify_all();
-		});
-
-		ASSERT_HAS_VALUE(vm::api::attachOutputListener(pid, &output_listener));
-
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-
-		std::unique_lock lk(m);
-		// Test timeout
-		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
-
-		ASSERT_HAS_VALUE(vm::api::stop(pid));
 	}
 };
 

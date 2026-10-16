@@ -336,6 +336,62 @@ protected:
 		std::string_view                expected_reason
 	);
 
+	using OwnedArgumentList = std::vector<Box<vm::IVMValue>>;
+
+	/**
+	 * @brief Executes a function or a program within a VM process and verifies the results.
+	 *
+	 * @param pid The Process ID of the target VM process.
+	 * @param func_name An optional name of the function to execute. If empty, the function assumes
+	 * it's running a whole program (the `main` function).
+	 * @param args A variant holding either `vm::FunctionRunArguments` (for `runFunction`) or
+	 * `vm::ProgramRunArguments` (for `run`). The correct type must be provided based on whether
+	 * `func_name` is set.
+	 * @param optional_input An optional string to be passed as standard input to the process.
+	 * @param optional_output An optional string to which the process's standard output will be
+	 * compared.
+	 * @param expected_exit_code An optional vector of expected exit codes (`i64`). If provided, the
+	 * function's return value is asserted to be equal to it. If not provided, the function asserts
+	 * that the return type was `void`.
+	 */
+	void runAndCheckReturnValues(
+		vm::PID                                 pid,
+		const base::Optional<std::string>&      func_name              = {},
+		const vm::RunArguments&                 args                   = {},
+		const base::Optional<std::string>&      optional_input         = {},
+		const base::Optional<std::string>&      optional_output        = {},
+		const base::Optional<std::vector<i64>>& expected_return_values = {}
+	);
+
+	/**
+	 * @brief Utility for a more generalised runAndCheckReturnValues.
+	 */
+	void runAndCheckReturnValue(
+		vm::PID                            pid,
+		const base::Optional<std::string>& func_name             = {},
+		const vm::RunArguments&            args                  = {},
+		const base::Optional<std::string>& optional_input        = {},
+		const base::Optional<std::string>& optional_output       = {},
+		const base::Optional<i64>&         expected_return_value = {}
+	);
+
+	/**
+	 * @brief Create an owned VMValue containing a specified value.
+	 */
+	Box<vm::IVMValue> getIntVMValue(vm::PID pid, i64 value);
+
+	/**
+	 * @brief Create a list of owned VMValues containing a specified values.
+	 */
+	OwnedArgumentList getOwnedArgumentList(vm::PID pid, std::vector<i64> values);
+
+	/**
+	 * @brief Create a list of references to owned VMValues which can be passed to the VM.
+	 */
+	static vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments);
+
+	static void freeArguments(OwnedArgumentList& arguments);
+
 	/**
 	 * @brief Loads a file containing a program which violates syntactic or static verification
 	 * guidelines. Asserts what error keywords are present in the error message.
@@ -451,5 +507,23 @@ public:
 
 	TestResult runFunctionExpectPanic(
 		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
+	) = delete;
+
+	void runAndCheckReturnValues(
+		vm::PID                                 pid,
+		const base::Optional<std::string>&      func_name              = {},
+		const vm::RunArguments&                 args                   = {},
+		const base::Optional<std::string>&      optional_input         = {},
+		const base::Optional<std::string>&      optional_output        = {},
+		const base::Optional<std::vector<i64>>& expected_return_values = {}
+	) = delete;
+
+	void runAndCheckReturnValue(
+		vm::PID                            pid,
+		const base::Optional<std::string>& func_name             = {},
+		const vm::RunArguments&            args                  = {},
+		const base::Optional<std::string>& optional_input        = {},
+		const base::Optional<std::string>& optional_output       = {},
+		const base::Optional<i64>&         expected_return_value = {}
 	) = delete;
 };

@@ -14,7 +14,10 @@
 #include <vm/api/vm.hpp>
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <variant>
@@ -59,6 +62,7 @@ public:
 		TESTER_ADD_TEST(ioEndpoints);
 		TESTER_ADD_TEST(dataEndpoints);
 		TESTER_ADD_TEST(listenerEndpoints);
+		TESTER_ADD_TEST(outputListenerEndpoint);
 		TESTER_ADD_TEST(deadProcessRejectsEveryEndpoint);
 	}
 
@@ -928,7 +932,8 @@ private:
 
 	void listenerEndpoints() {
 		// A status listener sees every status the process emits. The output listener is covered by
-		// `debugger_tests`, it is only attached here so both endpoints are exercised together.
+		// `outputListenerEndpoint`, it is only attached here so both endpoints are exercised
+		// together.
 
 		const vm::PID pid = spawnAndLoad("../common/programs/io_hang.dbc");
 
@@ -957,6 +962,31 @@ private:
 
 		output_listener.detach();
 		(void) api::kill(pid);
+	}
+
+	void outputListenerEndpoint() {
+		// An output listener receives what the program prints.
+
+		std::atomic_bool        output = false;
+		std::condition_variable cv;
+		std::mutex              m;
+
+		auto                          pid = spawnAndLoad("../common/programs/vm_api_tests.dbc");
+		events::Listener<std::string> output_listener([&](const std::string& str) {
+			ASSERT_EQUAL_PRINT("7", str);
+			output.store(true);
+			cv.notify_all();
+		});
+
+		ASSERT_HAS_VALUE(vm::api::attachOutputListener(pid, &output_listener));
+
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+
+		std::unique_lock lk(m);
+		// Test timeout
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
+
+		ASSERT_HAS_VALUE(vm::api::stop(pid));
 	}
 
 	void deadProcessRejectsEveryEndpoint() {

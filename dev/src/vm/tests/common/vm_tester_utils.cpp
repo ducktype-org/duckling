@@ -14,6 +14,7 @@
 #include <nlohmann/json_fwd.hpp>
 
 #include <chrono>
+#include <ranges>
 #include <thread>
 #include <variant>
 
@@ -418,6 +419,100 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 	auto status = vm::api::getExecutionStatus(pid);
 	ASSERT_HAS_VALUE(status);
 	ASSERT_MATCHES(status.value(), vm::api::NotStarted);
+}
+
+void VmTestSuite::runAndCheckReturnValues(
+	vm::PID                                 pid,
+	const base::Optional<std::string>&      func_name,
+	const vm::RunArguments&                 args,
+	const base::Optional<std::string>&      optional_input,
+	const base::Optional<std::string>&      optional_output,
+	const base::Optional<std::vector<i64>>& expected_return_values
+) {
+	match_optional(func_name) {
+		opt_some(func_name) {
+			ASSERT_MATCHES(args, vm::FunctionRunArguments);
+			const auto& function_args = std::get<vm::FunctionRunArguments>(args);
+			ASSERT_HAS_VALUE(vm::api::runFunction(pid, func_name, function_args));
+		}
+		opt_none {
+			ASSERT_MATCHES(args, std::vector<std::string>);
+			auto program_args = std::get<std::vector<std::string>>(args);
+			ASSERT_HAS_VALUE(vm::api::run(pid, program_args));
+		}
+	}
+
+	if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
+
+	ASSERT_HAS_VALUE(vm::api::join(pid));
+
+	if_opt_some(optional_output, output) {
+		auto output_response = vm::api::output(pid);
+		ASSERT_HAS_VALUE(output_response);
+		ASSERT_EQUAL(output, output_response->output);
+	}
+
+	auto exit_code_response = vm::api::getExitValue(pid);
+	ASSERT_HAS_VALUE(exit_code_response);
+	const auto& exit_value = exit_code_response.value();
+	ASSERT_MATCHES(exit_value, std::vector<Ref<vm::IVMValue>>);
+	auto& exit_value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
+
+	match_optional(expected_return_values) {
+		opt_some(exp) {
+			ASSERT_EQUAL_PRINT(exp.size(), exit_value_vec.size());
+			for (usize i{ 0 }; i < exp.size(); i++)
+				ASSERT_EQUAL_PRINT(exp.at(i), exit_value_vec.at(i)->readBytes<i64>());
+		}
+		opt_none {
+			// @note: If expected_exit_code is an empty optional, it's expected that a called
+			// function is void.
+			ASSERT_TRUE(exit_value_vec.size() == 0);
+		}
+	}
+}
+
+void VmTestSuite::runAndCheckReturnValue(
+	vm::PID                            pid,
+	const base::Optional<std::string>& func_name,
+	const vm::RunArguments&            args,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const base::Optional<i64>&         expected_return_value
+) {
+	runAndCheckReturnValues(
+		pid,
+		func_name,
+		args,
+		optional_input,
+		optional_output,
+		expected_return_value.has_value()
+			? base::Optional<std::vector<i64>>{ { expected_return_value.value() } }
+			: std::nullopt
+	);
+}
+
+Box<vm::IVMValue> VmTestSuite::getIntVMValue(vm::PID pid, i64 value) {
+	auto response = vm::api::getVMValue(pid, "i64");
+	ASSERT_HAS_VALUE(response);
+	auto vm_value = std::move(response->vm_value);
+	vm_value->writeBytes<i64>(value);
+	return vm_value;
+}
+
+auto VmTestSuite::getOwnedArgumentList(vm::PID pid, std::vector<i64> values) -> OwnedArgumentList {
+	return values
+	     | std::views::transform([this, pid](i64 value) { return getIntVMValue(pid, value); })
+	     | std::ranges::to<OwnedArgumentList>();
+}
+
+vm::FunctionRunArguments VmTestSuite::createArgumentList(OwnedArgumentList& arguments) {
+	return arguments | std::views::transform([](auto& value) { return value.refMut(); })
+	     | std::ranges::to<vm::FunctionRunArguments>();
+}
+
+void VmTestSuite::freeArguments(OwnedArgumentList& arguments) {
+	for (auto& arg: arguments) arg->freeData();
 }
 
 auto VmTestSuite::runFunctionExpectPanic(

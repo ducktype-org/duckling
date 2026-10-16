@@ -51,8 +51,6 @@ public:
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
-		TESTER_ADD_TEST(duplicatedDataFields);
-		TESTER_ADD_TEST(unknownMethod);
 		TESTER_ADD_TEST(jumpWithInplaceCast);
 		TESTER_ADD_TEST(validJumpOutOfBlock);
 
@@ -78,6 +76,7 @@ public:
 		TESTER_ADD_TEST(unknownType);
 		TESTER_ADD_TEST(incorrectDefinitions);
 		TESTER_ADD_TEST(duplicatedVariantAlternatives);
+		TESTER_ADD_TEST(duplicatedDataFields);
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
@@ -339,7 +338,7 @@ private:
 
 	void duplicatedDataFields() {
 		loadInvalidDbc(
-			"wrong/data_type/duplicated_fields.dbc",
+			"wrong/types/duplicated_fields.dbc",
 			{
 				vm::code::DuplicatedFieldError::ERR_MSG,
 			}
@@ -351,15 +350,6 @@ private:
 			"wrong/types/variant_wrong_type.dbc",
 			{
 				vm::code::VariantTypeMismatchError::ERR_MSG,
-			}
-		);
-	}
-
-	void unknownMethod() {
-		loadInvalidDbc(
-			"wrong/unknown_method.dbc",
-			{
-				vm::code::InvalidVirtualMethodImplementationError::ERR_MSG,
 			}
 		);
 	}

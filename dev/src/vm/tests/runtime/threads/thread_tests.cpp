@@ -8,6 +8,8 @@
 
 #include <tester/tester.hpp>
 
+#include <vm/api/vm.hpp>
+
 /**
  * @brief What belongs here: threads that run correctly. That covers starting and joining threads,
  * reusing a finished thread, mutexes and condition variables.
@@ -25,6 +27,7 @@ public:
 		TESTER_ADD_TEST(mutexTest);
 		TESTER_ADD_TEST(cvTest);
 		TESTER_ADD_TEST(reuseThreadTest);
+		TESTER_ADD_TEST(detectionDisabledAllowsNormalMutexUse);
 	}
 
 private:
@@ -46,6 +49,15 @@ private:
 	}
 
 	void reuseThreadTest() { runTestOnVm("reuse_thread_test.dbc", "", "149501", {}); }
+
+	void detectionDisabledAllowsNormalMutexUse() {
+		// Spawn a process with deadlock detection disabled (the default) and verify normal mutex
+		// usage still works.
+		auto pid  = initProcess({});
+		auto file = fs::File(path("safe_mutex.dbc"));
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		handleTestResult(runTestOnVmGetResult(pid), 0);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/runtime/threads/");

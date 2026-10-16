@@ -77,6 +77,10 @@ private:
 				InvalidVirtualMethodImplementationError::ERR_MSG,
 			},
 			{
+				"vmethod_implementation/unknown_method.dbc",
+				InvalidVirtualMethodImplementationError::ERR_MSG,
+			},
+			{
 				"vmethod_implementation/method_signature_mismatch_1.dbc",
 				MethodTypeError::ERR_MSG,
 			},

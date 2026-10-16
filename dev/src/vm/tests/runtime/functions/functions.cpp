@@ -8,12 +8,12 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/api/vm.hpp>
-
 /**
  * @brief What belongs here: functions while a program runs. That covers calls, arguments and
  * return values, recursion, builtin functions, and `main` itself (its exit code, its command-line
- * arguments). Running one function directly through the API is checked here too.
+ * arguments).
+ *
+ * Running one function directly through `vm::api` goes to `api/run_function/`.
  *
  * A call the loader must reject goes to `loader/verification/wrong/functions/`.
  */
@@ -36,7 +36,6 @@ public:
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(checkMultipleRetVals);
-		TESTER_ADD_TEST(testSyncRun);
 	}
 
 private:
@@ -91,13 +90,6 @@ private:
 	}
 
 	void checkMultipleRetVals() { runTestOnVm("multiple_retvals.dbc", "", "21373315", {}); }
-
-	void testSyncRun() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
-		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
-	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/runtime/functions/");
