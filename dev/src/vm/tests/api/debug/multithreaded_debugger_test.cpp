@@ -25,7 +25,11 @@
 namespace api = vm::api;
 
 /**
- * @brief Tests of the DVM debugger endpoints on a process with several VMThreads.
+ * @brief What belongs here: the `vm::api` debug endpoints on a process with several VMThreads.
+ * That covers pausing one thread or all of them, the GIL being released while a thread is parked,
+ * and the per-thread endpoints (breakpoints, steps, unknown thread ids).
+ *
+ * The same endpoints on a single-threaded process go to `debugger_test.cpp`.
  */
 class MultithreadedDebuggerTest: public VmTestSuite {
 #undef TESTER_CLASS

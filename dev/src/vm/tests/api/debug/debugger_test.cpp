@@ -18,10 +18,13 @@
 namespace api = vm::api;
 
 /**
- * @brief Tests of the DVM debugger endpoints on a single-threaded process.
+ * @brief What belongs here: the `vm::api` debug endpoints on a single-threaded process. That covers
+ * breakpoints, pausing, resuming and stepping (and when they are refused), the current position,
+ * stack frames and their values, and mapping source lines to instructions.
  *
- * The multi-threaded behaviour of the same endpoints is covered by
- * `multithreaded_debugger_test.cpp`.
+ * The same endpoints on a process with several VMThreads go to `multithreaded_debugger_test.cpp`,
+ * and on a program that never ends to `debugger_infinite_test.cpp`. The `vm::debugger` tool built
+ * on top of them goes to `debugger/`.
  */
 class VmDebugTest: public VmTestSuite {
 #undef TESTER_CLASS

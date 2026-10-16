@@ -26,11 +26,13 @@
 namespace api = vm::api;
 
 /**
- * @brief Single-process tests of the whole DVM API. Multi-threaded programs are used where a state
- * needs several threads.
+ * @brief What belongs here: the contract of every `vm::api` endpoint on a single process. That
+ * covers what each endpoint does in every process state and when it refuses a call.
+ * Multi-threaded programs are used where a state needs several threads.
  *
- * The debugger endpoints are only used as setup here, they are covered in
- * `debug/debugger_test.cpp`.
+ * The debug endpoints are only used as setup here, they go to `api/debug/`. Running one function
+ * with its arguments and return values goes to `api/run_function/`, and loading more code into a
+ * process goes to `api/injection/`.
  */
 class VmApiTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -70,8 +72,6 @@ public:
 	~VmApiTest() override = default;
 
 private:
-	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
-	static constexpr usize SPIN_THREAD_COUNT = 4;
 	/// The exit value of `breakpoint.dbc`.
 	static constexpr i64 BREAKPOINT_EXIT_VALUE = 7;
 

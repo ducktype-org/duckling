@@ -27,7 +27,7 @@
 namespace api = vm::api;
 
 /**
- * @brief Randomized API stress tests for the DVM.
+ * @brief What belongs here: randomized stress of the DVM API.
  *
  * Clients may call ANY endpoint at ANY time, from any number of threads. Individual results are not
  * asserted - racing the program's progress may legally fail - the harness asserts the global
@@ -36,7 +36,7 @@ namespace api = vm::api;
  * memory state. The seed of every scenario is part of the assertion message, so a failure is
  * reproducible.
  *
- * What each endpoint is supposed to do on its own is covered by `api/api_test.cpp` and
+ * What each endpoint is supposed to do on its own goes to `api/api_test.cpp` and
  * `api/debug/debugger_test.cpp`.
  */
 class VmApiStressTest: public VmTestSuite {

@@ -4,7 +4,10 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <vm_tester_utils.hpp>
+#include <base/collections/optional.hpp>
+
+#include <filesystem/file.hpp>
+#include <tester/tester.hpp>
 
 #include <vm/loader/parser/parser.hpp>
 
@@ -20,14 +23,16 @@ using namespace vm::loader;
  * A file that parses but is semantically wrong (unknown name, bad types, bad jumps) is the
  * loader's business and goes to `loader/verification/`.
  */
-class BCParsingTests: public VmTestSuite {
+class BCParsingTests: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCParsingTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(invalidOpcode);
 		TESTER_ADD_TEST(noSemicolon);
+		TESTER_ADD_TEST(invalidTypeSpecifier);
+		TESTER_ADD_TEST(noFunctionSignature);
 		TESTER_ADD_TEST(invalidLocalName);
 		TESTER_ADD_TEST(cpointerBadPointee);
 		TESTER_ADD_TEST(opcodeSourcePositions);
@@ -72,6 +77,26 @@ private:
 			"no_semicolon.dbc",
 			{
 				"Expected `;` after here",
+			}
+		);
+	}
+
+	// A literal with a suffix that is not a type ends the instruction too early.
+	void invalidTypeSpecifier() {
+		parseInvalidDbc(
+			"invalid_type_specifier.dbc",
+			{
+				"Expected `;` after here",
+			}
+		);
+	}
+
+	// A function declared without its signature.
+	void noFunctionSignature() {
+		parseInvalidDbc(
+			"no_func_type.dbc",
+			{
+				"Expected comma or `}` after here",
 			}
 		);
 	}

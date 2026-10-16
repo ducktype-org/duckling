@@ -12,12 +12,12 @@
 #include <vm/core/safe/safe_vmprocess.hpp>
 
 /**
- * @brief Tests here invoke another function multiple times, inducing the
- * necessary threshold, and allowing for it to be jit-compiled.
+ * @brief What belongs here: programs that get JIT-compiled. Each one calls a function enough times
+ * to cross the JIT threshold. The tests are listed in the order of ascending difficulty.
  *
- * @details Tests are listed in the order of ascending difficulty. All other
- * tests should also invoke jit-compilation, as when not build with release
- * every function (including main) gets compiled on first invocation.
+ * The suite only runs in JIT builds. There, in a build that is not optimised, every function
+ * (`main` included) is compiled on its first call, so the other suites exercise the JIT as well. A
+ * feature that does not depend on the JIT goes to its folder under `runtime/`.
  */
 class JitTests: public VmRuntimeTestSuite {
 #undef TESTER_CLASS

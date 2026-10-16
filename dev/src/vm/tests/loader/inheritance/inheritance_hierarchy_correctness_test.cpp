@@ -168,26 +168,31 @@ private:
 
 	void invalidUpcast() {
 		loadInvalidDbc(
-			"semantics/invalid_upcast_primary.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
+			"invalid_usage/invalid_upcast_primary.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
 		);
-		loadInvalidDbc("semantics/invalid_upcast.dbc", { vm::code::InvalidUpcastError::ERR_MSG });
+		loadInvalidDbc(
+			"invalid_usage/invalid_upcast.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
+		);
 	}
 
 	void invalidVirtualCall() {
 		loadInvalidDbc(
-			"semantics/invalid_virtual_call_1.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+			"invalid_usage/invalid_virtual_call_1.dbc",
+			{ vm::code::InvalidVirtualCallError::ERR_MSG }
 		);
 		loadInvalidDbc(
-			"semantics/invalid_virtual_call_2.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+			"invalid_usage/invalid_virtual_call_2.dbc",
+			{ vm::code::InvalidVirtualCallError::ERR_MSG }
 		);
 		loadInvalidDbc(
-			"semantics/invalid_vtable_type.dbc", { vm::code::VTableTypeMismatchError::ERR_MSG }
+			"invalid_usage/invalid_vtable_type.dbc", { vm::code::VTableTypeMismatchError::ERR_MSG }
 		);
 	}
 
 	void invalidInstantiation() {
 		loadInvalidDbc(
-			"semantics/invalid_instantiation.dbc", { vm::code::UninstantiableValueError::ERR_MSG }
+			"invalid_usage/invalid_instantiation.dbc",
+			{ vm::code::UninstantiableValueError::ERR_MSG }
 		);
 	}
 };

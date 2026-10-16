@@ -314,10 +314,6 @@ protected:
 		const base::Optional<i64>          expected_exit_code = {}
 	);
 
-	TestResult runFunctionExpectPanic(
-		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
-	);
-
 	/**
 	 * @brief Asserts the process panicked with @p err_piece in its message and kills it.
 	 */
@@ -503,10 +499,6 @@ public:
 		const base::Optional<std::string>& optional_input     = {},
 		const base::Optional<std::string>& optional_output    = {},
 		const base::Optional<i64>          expected_exit_code = {}
-	) = delete;
-
-	TestResult runFunctionExpectPanic(
-		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
 	) = delete;
 
 	void runAndCheckReturnValues(

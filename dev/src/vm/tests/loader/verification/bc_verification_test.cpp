@@ -27,11 +27,6 @@ class BCVerificationTests: public VmLoaderTestSuite {
 
 public:
 	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(jumpSkipBlock);
-		TESTER_ADD_TEST(manyJumps);
-		TESTER_ADD_TEST(initDeinit);
-		TESTER_ADD_TEST(twoInits);
-
 		// Function verification
 
 		// @TODO: #2895 restore this check when possible
@@ -48,6 +43,8 @@ public:
 		TESTER_ADD_TEST(invalidRetTypeInCall);
 
 		// Jump verification
+		TESTER_ADD_TEST(jumpSkipBlock);
+		TESTER_ADD_TEST(manyJumps);
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
@@ -59,15 +56,17 @@ public:
 		TESTER_ADD_TEST(labelNotFound);
 
 		// Local variable verification
+		TESTER_ADD_TEST(initDeinit);
+		TESTER_ADD_TEST(twoInits);
 		TESTER_ADD_TEST(noInit);
 		TESTER_ADD_TEST(beforeInit);
 		TESTER_ADD_TEST(afterDeinit);
 		TESTER_ADD_TEST(invalidName);
 		TESTER_ADD_TEST(repeatedName);
-		TESTER_ADD_TEST(wrongDowncast);
-		TESTER_ADD_TEST(wrongPtrMov);
 
 		// Pointer verification
+		TESTER_ADD_TEST(wrongDowncast);
+		TESTER_ADD_TEST(wrongPtrMov);
 		TESTER_ADD_TEST(derefWrongType);
 		TESTER_ADD_TEST(refOnPrimitive);
 
@@ -77,6 +76,7 @@ public:
 		TESTER_ADD_TEST(incorrectDefinitions);
 		TESTER_ADD_TEST(duplicatedVariantAlternatives);
 		TESTER_ADD_TEST(duplicatedDataFields);
+		TESTER_ADD_TEST(repeatedTypes);
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
@@ -229,7 +229,7 @@ private:
 	// Deinitialized value verification
 	void noInit() {
 		loadInvalidDbc(
-			"wrong/init_deinit/no_init.dbc",
+			"wrong/locals/no_init.dbc",
 			{
 				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
@@ -238,7 +238,7 @@ private:
 
 	void beforeInit() {
 		loadInvalidDbc(
-			"wrong/init_deinit/before_init.dbc",
+			"wrong/locals/before_init.dbc",
 			{
 				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
@@ -247,7 +247,7 @@ private:
 
 	void afterDeinit() {
 		loadInvalidDbc(
-			"wrong/init_deinit/after_deinit.dbc",
+			"wrong/locals/after_deinit.dbc",
 			{
 				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
@@ -256,7 +256,7 @@ private:
 
 	void invalidName() {
 		loadInvalidDbc(
-			"wrong/init_deinit/invalid_name.dbc",
+			"wrong/locals/invalid_name.dbc",
 			{
 				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
@@ -265,7 +265,7 @@ private:
 
 	void repeatedName() {
 		loadInvalidDbc(
-			"wrong/init_deinit/repeated_name.dbc",
+			"wrong/locals/repeated_name.dbc",
 			{
 				vm::code::DuplicatedLocalNameError::ERR_MSG,
 			}
@@ -341,6 +341,16 @@ private:
 			"wrong/types/duplicated_fields.dbc",
 			{
 				vm::code::DuplicatedFieldError::ERR_MSG,
+			}
+		);
+	}
+
+	// The loader reports a `DuplicatedTypeError` with its own message.
+	void repeatedTypes() {
+		loadInvalidDbc(
+			"wrong/types/repeated_types.dbc",
+			{
+				"Type with this name already exists.",
 			}
 		);
 	}

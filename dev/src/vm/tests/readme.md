@@ -24,7 +24,7 @@ and starts with a comment saying what should be tested in it.
 | `runtime/pointers/` | Pointers to locals, globals and heap blocks, linked lists. |
 | `runtime/structures/` | Structures and nested aggregates. |
 | `runtime/arrays/` | `fixed_size_table/` and `dynamic_table/`. |
-| `runtime/variants/` | Variants and their type tag. |
+| `runtime/variants/` | Variants: alternatives, nesting, copies, variants inside structures. |
 | `runtime/inheritance/` | Virtual dispatch, casts, setting vtables (`setting_vtable/`). |
 | `runtime/memory/` | Memory management that must work: destructors, variant blocks. |
 | `runtime/threads/` | Threads, mutexes, condition variables. |
@@ -45,8 +45,9 @@ and starts with a comment saying what should be tested in it.
 * Suites under `runtime/` derive from `VmRuntimeTestSuite`, which deletes `loadInvalidDbc`,
   `loadThenLoadInvalidDbc` and `loadValidDbc`. A loader check there does not compile.
 * Suites under `loader/` that load through `vm::api` derive from `VmLoaderTestSuite`, which deletes `runTestOnVm`,
-  `runTestOnVmGetResult`, `runFunctionSynchronouslyAsTest` and `runFunctionExpectPanic`. Running
-  a program there does not compile, it belongs in a `runtime/` suite.
+  `runTestOnVmGetResult`, `runFunctionSynchronouslyAsTest`, `runAndCheckReturnValue` and
+  `runAndCheckReturnValues`. Running a program there does not compile, it belongs in a `runtime/`
+  suite.
 * Suites registered in `duck_add_vm_tests` run twice, once per VM flavour (`vm_sc_*` and `vm_tc_*`).
 * A suite lives in `<topic>_test.cpp`, and its binary is named after the file: `vm_<topic>_test` when
   it runs once, `vm_sc_<topic>_test` and `vm_tc_<topic>_test` when it runs per flavour.
