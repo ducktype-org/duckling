@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(literalsTest);
 		TESTER_ADD_TEST(checkCastingInstructions);
+		TESTER_ADD_TEST(checkInplaceCast);
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
 		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
@@ -48,6 +49,10 @@ public:
 
 private:
 	void checkCastingInstructions() { runTestOnVm("casting.dbc", "", "11111111111", {}); }
+
+	void checkInplaceCast() {
+		runTestOnVm("../loader/verification/right/inplace_cast.dbc", "", "42", {});
+	}
 
 	void jump() { runTestOnVm("jump.dbc", "", "5", {}); }
 
