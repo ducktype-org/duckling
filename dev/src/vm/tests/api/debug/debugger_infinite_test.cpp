@@ -9,15 +9,13 @@
 #include <vm/api/vm.hpp>
 
 /**
- * @brief This test set is responsible for testing the debugger when the VM is running endlessly.
- * This can cause stack overflow if the tail-call optimization is not working properly
- * and the test is running slow (e.g. when using Valgrind).
+ * @brief What belongs here: the debug endpoints on a program that never ends (pausing it and
+ * stepping through its endless loop).
  *
- * It is also advised to use "--fair-sched=yes" option in Valgrind,
- * because the code executing thread is running all the time and the "waitingForResponse" thread
- * runs very slowly because of that - mine took 10-70 seconds to finish in Release mode.
- * (but a just a second in "--fair-sched=yes" mode).
- * https://stackoverflow.com/questions/8663148/valgrind-stalls-in-multithreaded-socket-program
+ * The loop overflows the stack without the tail-call optimization, so the TC flavour only runs
+ * this suite in an optimised build. Under Valgrind the thread running the program starves the one
+ * answering the requests, which is why `MEMORYCHECK_COMMAND_OPTIONS` passes `--fair-sched=yes`
+ * (https://stackoverflow.com/questions/8663148/valgrind-stalls-in-multithreaded-socket-program).
  */
 class VmDebugInfiniteTest: public VmTestSuite {
 #undef TESTER_CLASS

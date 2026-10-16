@@ -29,7 +29,8 @@ namespace api = vm::api;
  * @brief Single-process tests of the whole DVM API. Multi-threaded programs are used where a state
  * needs several threads.
  *
- * The debugger endpoints are only used as setup here, they are covered in `debugger_tests.cpp`.
+ * The debugger endpoints are only used as setup here, they are covered in
+ * `debug/debugger_test.cpp`.
  */
 class VmApiTest: public VmTestSuite {
 #undef TESTER_CLASS

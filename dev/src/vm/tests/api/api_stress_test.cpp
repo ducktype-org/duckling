@@ -37,7 +37,7 @@ namespace api = vm::api;
  * reproducible.
  *
  * What each endpoint is supposed to do on its own is covered by `api/api_test.cpp` and
- * `debugger/debugger_tests.cpp`.
+ * `api/debug/debugger_test.cpp`.
  */
 class VmApiStressTest: public VmTestSuite {
 #undef TESTER_CLASS

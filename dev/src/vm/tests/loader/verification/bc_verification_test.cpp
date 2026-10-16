@@ -67,7 +67,7 @@ public:
 		TESTER_ADD_TEST(wrongDowncast);
 		TESTER_ADD_TEST(wrongPtrMov);
 
-		// @note: Not implemented yet
+		// Pointer verification
 		TESTER_ADD_TEST(derefWrongType);
 		TESTER_ADD_TEST(refOnPrimitive);
 

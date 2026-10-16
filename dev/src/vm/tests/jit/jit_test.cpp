@@ -19,12 +19,12 @@
  * tests should also invoke jit-compilation, as when not build with release
  * every function (including main) gets compiled on first invocation.
  */
-class JitTests: public VmTestSuite {
+class JitTests: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS JitTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// No instructions
 		TESTER_ADD_TEST(testEmpty);
 

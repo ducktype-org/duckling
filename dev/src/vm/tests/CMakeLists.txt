@@ -35,21 +35,21 @@ function(duck_add_vm_tests suffix)
 
         set(test_set "vm_${suffix}")
 
-        duck_add_test_custom(vm ${test_set}_primitives_test runtime/primitives/primitives.cpp
+        duck_add_test_custom(vm ${test_set}_primitives_test runtime/primitives/primitives_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_control_flow_test runtime/control_flow/control_flow.cpp
+        duck_add_test_custom(vm ${test_set}_control_flow_test runtime/control_flow/control_flow_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_globals_test runtime/globals/globals.cpp
+        duck_add_test_custom(vm ${test_set}_globals_test runtime/globals/globals_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_structures_test runtime/structures/structures.cpp
+        duck_add_test_custom(vm ${test_set}_structures_test runtime/structures/structures_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_fixed_size_table_test runtime/arrays/fixed_size_table/fixed_size_table.cpp
+        duck_add_test_custom(vm ${test_set}_fixed_size_table_test runtime/arrays/fixed_size_table/fixed_size_table_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_dynamic_table_test runtime/arrays/dynamic_table/dynamic_table.cpp
+        duck_add_test_custom(vm ${test_set}_dynamic_table_test runtime/arrays/dynamic_table/dynamic_table_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_memory_test runtime/memory/memory_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_runtime_errors_test runtime/errors/runtime_errors.cpp
+        duck_add_test_custom(vm ${test_set}_runtime_errors_test runtime/errors/runtime_errors_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_api_test api/api_test.cpp
                 USES ${libvm} Tester ${vmtester})
@@ -60,52 +60,52 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(api_stress_test ${test_set})
         # Same for api_stress_test: it disables the JIT the same way (#3612).
-        duck_add_test_custom(vm ${test_set}_functions_test runtime/functions/functions.cpp
+        duck_add_test_custom(vm ${test_set}_functions_test runtime/functions/functions_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_correctness_test runtime/correctness/correctness.cpp
+        duck_add_test_custom(vm ${test_set}_correctness_test runtime/correctness/correctness_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(correctness_test ${test_set})
 
-        duck_add_test_custom(vm ${test_set}_debugger_test api/debug/debugger_tests.cpp
+        duck_add_test_custom(vm ${test_set}_debugger_test api/debug/debugger_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_when_jit(debugger_test ${test_set})
 
         duck_add_test_custom(vm ${test_set}_multithreaded_debugger_test
-                api/debug/multithreaded_debugger_tests.cpp
+                api/debug/multithreaded_debugger_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(multithreaded_debugger_test ${test_set})
         duck_disable_when_jit(multithreaded_debugger_test ${test_set})
 
-        duck_add_test_custom(vm ${test_set}_debugger_class_test debugger/debugger_class_tests.cpp
+        duck_add_test_custom(vm ${test_set}_debugger_class_test debugger/debugger_class_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_when_jit(debugger_class_test ${test_set})
 
-        duck_add_test_custom(vm ${test_set}_debugger_infinite_test api/debug/debugger_infinite_tests.cpp
+        duck_add_test_custom(vm ${test_set}_debugger_infinite_test api/debug/debugger_infinite_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
         duck_disable_when_jit(debugger_infinite_test ${test_set})
 
-        duck_add_test_custom(vm ${test_set}_inheritance_semantics_test runtime/inheritance/inheritance_semantics.cpp
+        duck_add_test_custom(vm ${test_set}_inheritance_semantics_test runtime/inheritance/inheritance_semantics_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_code_injection_test api/injection/code_injection.cpp
+        duck_add_test_custom(vm ${test_set}_code_injection_test api/injection/code_injection_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_run_function_test api/run_function/run_function.cpp
-                USES ${libvm} Tester ${vmtester})
-
-        duck_add_test_custom(vm ${test_set}_pointers_test runtime/pointers/vm_pointers_test.cpp
+        duck_add_test_custom(vm ${test_set}_run_function_test api/run_function/run_function_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_variant_test runtime/variants/variant_tests.cpp
+        duck_add_test_custom(vm ${test_set}_pointers_test runtime/pointers/pointers_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_extern_c_func_test runtime/native/extern_c/vm_extern_c_func_test.cpp
+        duck_add_test_custom(vm ${test_set}_variants_test runtime/variants/variants_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_ffi_test runtime/native/ffi/vm_ffi_test.cpp
+
+        duck_add_test_custom(vm ${test_set}_extern_c_test runtime/native/extern_c/extern_c_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_ffi_test runtime/native/ffi/ffi_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_use_ffi_test_lib(${test_set}_ffi_test)
-        duck_add_test_custom(vm ${test_set}_threads_test runtime/threads/thread_tests.cpp
+        duck_add_test_custom(vm ${test_set}_threads_test runtime/threads/threads_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
 
@@ -117,12 +117,12 @@ function(duck_add_vm_tests suffix)
 
         # Runtime errors that need several threads. A separate binary from runtime_errors_test, so
         # only these are skipped on TC when the build is not optimised.
-        duck_add_test_custom(vm ${test_set}_thread_errors_test runtime/errors/threads/thread_errors.cpp
+        duck_add_test_custom(vm ${test_set}_thread_errors_test runtime/errors/threads/thread_errors_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("thread_errors_test" ${test_set})
 
 
-        duck_add_test_custom(vm ${test_set}_jit_test jit/jit.cpp
+        duck_add_test_custom(vm ${test_set}_jit_test jit/jit_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
         if (NOT JIT_ENABLED)
@@ -141,34 +141,34 @@ duck_add_vm_tests("sc")
 # utils/ — VM data structures, no program involved.
 duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_map_test.cpp
         USES LibVM Tester)
-duck_add_test_custom(vm persistent_structures_test utils/persistent_structures_test.cpp
+duck_add_test_custom(vm vm_persistent_structures_test utils/persistent_structures_test.cpp
         USES LibVM Tester)
 
 # debugger/ — the parts of the debugger tool that run no program: the CLI text helpers and the
 # source mapper.
-duck_add_test_custom(vm vm_debugger_cli_common_test debugger/debugger_cli_common.cpp
+duck_add_test_custom(vm vm_debugger_cli_common_test debugger/debugger_cli_common_test.cpp
         USES LibVM_sc Tester)
-duck_add_test_custom(vm vm_debugger_mapper_test debugger/mapper_tests.cpp
+duck_add_test_custom(vm vm_mapper_test debugger/mapper_test.cpp
         USES LibVM_sc Tester)
 
 # bytecode/ — instruction set, program builders, the assembly parser and the serializer.
 duck_add_test_custom(vm vm_instruction_naming_test bytecode/instruction_naming_test.cpp
         USES LibVM_sc Tester)
-duck_add_test_custom(vm program_builders_test bytecode/builders/program_builders_test.cpp
+duck_add_test_custom(vm vm_program_builders_test bytecode/builders/program_builders_test.cpp
         USES LibVM)
-duck_add_test_custom(vm vm_bc_parsing bytecode/assembly/bc_parsing.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_bc_serializer bytecode/serializer/bc_serializer.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_bc_parsing_test bytecode/assembly/bc_parsing_test.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_bc_serializer_test bytecode/serializer/bc_serializer_test.cpp USES LibVM_sc Tester VmTester_sc)
 
 # loader/ — static verification, lowering (incl. the inheritance metadata), hierarchy checks and
 # FFI declarations.
-duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_step_gil_placement loader/lowering/step_gil_placement.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_local_initialization loader/lowering/local_initialization.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_inheritance_loading_test loader/lowering/inheritance_loading.cpp
+duck_add_test_custom(vm vm_bc_verification_test loader/verification/bc_verification_test.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_step_gil_placement_test loader/lowering/step_gil_placement_test.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_local_initialization_test loader/lowering/local_initialization_test.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_inheritance_loading_test loader/lowering/inheritance_loading_test.cpp
         USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_inheritance_hierarchy_correctness_test
-        loader/inheritance/inheritance_hierarchy_correctness.cpp
+        loader/inheritance/inheritance_hierarchy_correctness_test.cpp
         USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_ffi_verification_test loader/ffi/ffi_verification.cpp
+duck_add_test_custom(vm vm_ffi_verification_test loader/ffi/ffi_verification_test.cpp
         USES LibVM_sc Tester VmTester_sc)
 duck_use_ffi_test_lib(vm_ffi_verification_test)

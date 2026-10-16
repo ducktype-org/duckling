@@ -50,7 +50,7 @@ if(ENABLE_COVERAGE)
 endif()
 
 # The "--fair-sched=yes" option is used in VM debugger tests to speed up the tests,
-# for more info see dev/src/vm/tests/api/debug/debugger_infinite_tests.cpp
+# for more info see dev/src/vm/tests/api/debug/debugger_infinite_test.cpp
 set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full --fair-sched=yes")
 
 include(CTest)

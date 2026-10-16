@@ -48,6 +48,8 @@ and starts with a comment saying what should be tested in it.
   `runTestOnVmGetResult`, `runFunctionSynchronouslyAsTest` and `runFunctionExpectPanic`. Running
   a program there does not compile, it belongs in a `runtime/` suite.
 * Suites registered in `duck_add_vm_tests` run twice, once per VM flavour (`vm_sc_*` and `vm_tc_*`).
+* A suite lives in `<topic>_test.cpp`, and its binary is named after the file: `vm_<topic>_test` when
+  it runs once, `vm_sc_<topic>_test` and `vm_tc_<topic>_test` when it runs per flavour.
 * A suite that stops or pauses programs cannot run with the JIT (#3612). It either spawns its
   processes with `process_config.enable_jit = false` (like `api_test`), or is disabled in JIT
   builds with `duck_disable_when_jit` in `CMakeLists.txt`.

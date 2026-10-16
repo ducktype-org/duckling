@@ -17,12 +17,12 @@
  * @brief What belongs here: programs run in the VM's fast execution mode. They must give the same
  * results as in the normal mode.
  */
-class VmFunctionsTests: public VmTestSuite {
+class VmFastModeTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS VmFunctionsTests
+#define TESTER_CLASS VmFastModeTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testSimple);
 		TESTER_ADD_TEST(testControlFlow);
 		TESTER_ADD_TEST(testFunctionCallWithArgs);
