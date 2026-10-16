@@ -121,7 +121,7 @@ namespace vm {
 		// handle, so remove whatever the previous run left behind before resetting the states.
 		// What it finds belongs to the run which is ending here, and it is not lost: the process
 		// keeps it and `deinitAndValidate` reports it at the end.
-		joinFinishedThreads(run_number);
+		joinFinishedThreads();
 		run_number++;
 		if (auto reset = state_manager.resetForRun(); !reset.has_value())
 			return std::unexpected(api::ApiError{ api::StateError{ reset.error() } });

@@ -191,7 +191,7 @@ namespace vm {
 
 		[[nodiscard]] std::vector<api::ThreadID> unjoinedApiThreadIds() const override;
 
-		void joinFinishedThreads(usize run_number) override;
+		void joinFinishedThreads() override;
 
 		/**
 		 * @brief A copy of `unjoined_program_threads`, taken under `threads_pool_mutex`.

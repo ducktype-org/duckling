@@ -337,7 +337,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
 		// Join all Program-spawned threads if it's needed.
 		// Done before taking `api_lock`, since a thread winding down may still need it.
-		joinFinishedThreads(run_number);
+		joinFinishedThreads();
 		const std::vector<api::response::UnjoinedThread> unjoined_by_program
 			= unjoinedProgramThreads();
 
@@ -671,7 +671,7 @@ namespace vm {
 		return ids;
 	}
 
-	void SafeVMProcess::joinFinishedThreads(const usize run_number) {
+	void SafeVMProcess::joinFinishedThreads() {
 		const auto to_strid = [](const std::string& thread_ctx) -> base::Optional<base::StrID> {
 			if (thread_ctx.empty()) return std::nullopt;
 			return base::StrID(thread_ctx);

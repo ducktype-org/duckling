@@ -297,11 +297,10 @@ namespace vm {
 		 * @note Must be called with no process lock held - joining blocks until the execution
 		 * thread exits and that thread may still need those locks.
 		 *
-		 * What it finds is remembered by the process, and `deinitAndValidate` reports it.
-		 *
-		 * @param run_number The run the joined threads were started by.
+		 * What it finds is remembered by the process and `deinitAndValidate` reports it.
+		 * what was collected.
 		 */
-		virtual void joinFinishedThreads(usize run_number) = 0;
+		virtual void joinFinishedThreads() = 0;
 
 		/**
 		 * @brief The run in progress, or the last one which ran.

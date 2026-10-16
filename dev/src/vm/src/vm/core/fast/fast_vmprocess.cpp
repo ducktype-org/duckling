@@ -248,7 +248,7 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `getVMValueForType` is not implemented.");
 	}
 
-	void FastVMProcess::joinFinishedThreads([[maybe_unused]] const usize run_number) {
+	void FastVMProcess::joinFinishedThreads() {
 		// Fast mode has no `builtin_start_thread`, so every VMThread here is API owned.
 		for (auto& thread: vm_threads) (void) thread.joinExecutionThread();
 	}
