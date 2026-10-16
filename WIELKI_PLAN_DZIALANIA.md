@@ -22,4 +22,12 @@ Chcemy też ogarnąć wtyczkę do VSCode do łapania sesji programistycznej i ko
 
 Z tym będziemy już skryptować mierzenie.
 
+# Side questy
+
+Rozgarnięcie porządne innych synthetic testy z kodu PSACa. 
+
+
+# Co dalej?
+
+Jak będziemy mieli pewne dwa kompilatory i pierwsze test casy to zabieramy się za faktyczny paper.
 
