@@ -1,7 +1,7 @@
 include(CMakePrintHelpers)
 
 # `ffi_test_lib` and `duck_use_ffi_test_lib`, used by the FFI suites below.
-add_subdirectory(ffi)
+add_subdirectory(runtime/native/ffi)
 
 # When VM runs code for a long time in TC mode, without the "tailcall" optimization
 # enabled, it will run out of stack space.
@@ -35,13 +35,19 @@ function(duck_add_vm_tests suffix)
 
         set(test_set "vm_${suffix}")
 
-        duck_add_test_custom(vm ${test_set}_micro_test basic/working_vm.cpp
-                USES ${libvm} Tester)
-        duck_add_test_custom(vm ${test_set}_fixed_size_table_test fixed_size_table/fixed_size_table.cpp
+        duck_add_test_custom(vm ${test_set}_primitives_test runtime/primitives/primitives_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_dynamic_table_test dynamic_table/dynamic_table.cpp
+        duck_add_test_custom(vm ${test_set}_control_flow_test runtime/control_flow/control_flow_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_unit_test basic/unit.cpp
+        duck_add_test_custom(vm ${test_set}_globals_test runtime/globals/globals_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_structures_test runtime/structures/structures_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_fixed_size_table_test runtime/arrays/fixed_size_table/fixed_size_table_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_dynamic_table_test runtime/arrays/dynamic_table/dynamic_table_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_memory_test runtime/memory/memory_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_runtime_errors_test runtime/errors/runtime_errors_test.cpp
                 USES ${libvm} Tester ${vmtester})
@@ -54,10 +60,10 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(api_stress_test ${test_set})
         # Same for api_stress_test: it disables the JIT the same way (#3612).
-        duck_add_test_custom(vm ${test_set}_functions_test functions/functions.cpp
+        duck_add_test_custom(vm ${test_set}_functions_test runtime/functions/functions_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_correctness_test correctness/correctness.cpp
+        duck_add_test_custom(vm ${test_set}_correctness_test runtime/correctness/correctness_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(correctness_test ${test_set})
 
@@ -80,9 +86,7 @@ function(duck_add_vm_tests suffix)
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
         duck_disable_when_jit(debugger_infinite_test ${test_set})
 
-        duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp
-                USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_vtable_setting_test inheritance/setting_vtable/vtable_setting.cpp
+        duck_add_test_custom(vm ${test_set}_inheritance_semantics_test runtime/inheritance/inheritance_semantics_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_code_injection_test api/injection/code_injection_test.cpp
@@ -90,15 +94,18 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_run_function_test api/run_function/run_function_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_pointers_test pointers/vm_pointers_test.cpp
+        duck_add_test_custom(vm ${test_set}_pointers_test runtime/pointers/pointers_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_variant_test variant/variant_tests.cpp
+        duck_add_test_custom(vm ${test_set}_variants_test runtime/variants/variants_test.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_extern_c_func_test extern_c/vm_extern_c_func_test.cpp
+        duck_add_test_custom(vm ${test_set}_extern_c_test runtime/native/extern_c/extern_c_test.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_threads_test threads/thread_tests.cpp
+        duck_add_test_custom(vm ${test_set}_ffi_test runtime/native/ffi/ffi_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_use_ffi_test_lib(${test_set}_ffi_test)
+        duck_add_test_custom(vm ${test_set}_threads_test runtime/threads/threads_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
 
@@ -107,10 +114,6 @@ function(duck_add_vm_tests suffix)
                 duck_add_test_custom(vm ${test_set}_fast_mode_test fast_mode/fast_mode_test.cpp
                         USES ${libvm} Tester ${vmtester})
         endif()
-
-        duck_add_test_custom(vm ${test_set}_deadlock_detection_test deadlock_detection/deadlock_detection_tests.cpp
-                USES ${libvm} Tester ${vmtester})
-        duck_disable_tc_when_not_opt("deadlock_detection_test" ${test_set})
 
         # Runtime errors that need several threads. A separate binary from runtime_errors_test, so
         # only these are skipped on TC when the build is not optimised.
@@ -155,9 +158,6 @@ duck_add_test_custom(vm vm_program_builders_test bytecode/builders/program_build
         USES LibVM)
 duck_add_test_custom(vm vm_bc_parsing_test bytecode/assembly/bc_parsing_test.cpp USES LibVM_sc Tester)
 duck_add_test_custom(vm vm_bc_serializer_test bytecode/serializer/bc_serializer_test.cpp USES LibVM_sc Tester)
-
-duck_add_test_custom(vm vm_memory_test memory/memory_test.cpp
-        USES LibVM_sc Tester VmTester_sc)
 
 # loader/ — static verification, lowering (incl. the inheritance metadata), hierarchy checks and
 # FFI declarations.
