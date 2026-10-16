@@ -337,7 +337,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
 		// Join all Program-spawned threads if it's needed.
 		// Done before taking `api_lock`, since a thread winding down may still need it.
-		const std::vector<api::ThreadID> unjoined_by_program = joinFinishedThreads();
+		joinFinishedThreads(run_number);
+		const std::vector<api::response::UnjoinedThread> unjoined_by_program
+			= unjoinedProgramThreads();
 
 		const auto validation_result = [&](const bool memory_valid) {
 			return api::response::ValidationResult{ .memory_valid = memory_valid,
@@ -669,26 +671,46 @@ namespace vm {
 		return ids;
 	}
 
-	std::vector<api::ThreadID> SafeVMProcess::joinFinishedThreads() {
-		std::vector<api::ThreadID> unjoined;
+	void SafeVMProcess::joinFinishedThreads(const usize run_number) {
+		const auto to_strid = [](const std::string& thread_ctx) -> base::Optional<base::StrID> {
+			if (thread_ctx.empty()) return std::nullopt;
+			return base::StrID(thread_ctx);
+		};
+
 		{
 			std::lock_guard lock(threads_pool_mutex);
 			// A thread the program started and never joined is a bug in that program, but not one
 			// the API caller can do anything about, so it is reported instead of refusing the
-			// request.
+			// request. The function it ran is what a reader can act on, the ID alone is a slot
+			// number which the next run reuses.
 			for (const auto& thread: vm_threads) {
 				if (thread.getOwner() != IVMThread::ThreadOwner::Program) continue;
 				const ts::ThreadState state = thread.getThreadState();
 				if (!ts::hasStarted(state) || ts::isJoined(state)) continue;
 
-				// VMThreads are reused by the next run, so the same ID may leak more than once.
-				if (!std::ranges::contains(unjoined_program_threads, thread.getThreadID()))
-					unjoined_program_threads.push_back(thread.getThreadID());
+				unjoined_program_threads.push_back(api::response::UnjoinedThread{
+					.function_name = to_strid(thread.getThreadCtx()),
+					.thread_id     = thread.getThreadID(),
+					.run_number    = run_number,
+				});
+				CORE_DEV_LOG(
+					DVM,
+					"Run ",
+					run_number,
+					" started `",
+					thread.getThreadCtx(),
+					"` on VMThread ",
+					thread.getThreadID().asInt(),
+					" and never joined it.\n"
+				);
 			}
-			unjoined = unjoined_program_threads;
 		}
 		joinAllExecutionThreads();
-		return unjoined;
+	}
+
+	std::vector<api::response::UnjoinedThread> SafeVMProcess::unjoinedProgramThreads() const {
+		std::lock_guard lock(threads_pool_mutex);
+		return unjoined_program_threads;
 	}
 
 	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() const {

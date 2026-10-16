@@ -109,6 +109,8 @@ namespace vm::fast {
 
 		[[nodiscard]] std::vector<api::ThreadID> unjoinedApiThreadIds() const override;
 
+		void joinFinishedThreads(usize run_number) override;
+
 		FastVMThread& getMainVMThread();
 
 		base::Optional<Ref<FastVMThread>> getVMThreadByID(api::ThreadID thread_id);

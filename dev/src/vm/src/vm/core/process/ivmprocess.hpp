@@ -297,11 +297,20 @@ namespace vm {
 		 * @note Must be called with no process lock held - joining blocks until the execution
 		 * thread exits and that thread may still need those locks.
 		 *
-		 * @return The IDs of the threads the user program started and never joined itself, in
-		 * this run and in every earlier run of the process. Empty when the program always cleaned
-		 * up after itself.
+		 * What it finds is remembered by the process, and `deinitAndValidate` reports it.
+		 *
+		 * @param run_number The run the joined threads were started by.
 		 */
-		virtual std::vector<api::ThreadID> joinFinishedThreads() { return {}; }
+		virtual void joinFinishedThreads(usize run_number) = 0;
+
+		/**
+		 * @brief The run in progress, or the last one which ran.
+		 *
+		 * @note A process may be run several times, and the VMThreads are recycled between the
+		 * runs, so this is what tells apart a thread leaked by one run from a thread leaked by
+		 * another.
+		 */
+		usize run_number{ 1 };
 
 		/**
 		 * @brief Posts Stop to all threads. Non blocking.

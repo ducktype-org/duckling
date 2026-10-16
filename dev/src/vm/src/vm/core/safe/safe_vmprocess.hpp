@@ -89,7 +89,7 @@ namespace vm {
 		 * `deinitAndValidate` still has to report what the earlier runs left behind.
 		 * @note Guarded by `threads_pool_mutex`.
 		 */
-		std::vector<api::ThreadID> unjoined_program_threads;
+		std::vector<api::response::UnjoinedThread> unjoined_program_threads;
 
 		/**
 		 * @brief Returns first thread in thread queue.
@@ -191,7 +191,12 @@ namespace vm {
 
 		[[nodiscard]] std::vector<api::ThreadID> unjoinedApiThreadIds() const override;
 
-		std::vector<api::ThreadID> joinFinishedThreads() override;
+		void joinFinishedThreads(usize run_number) override;
+
+		/**
+		 * @brief A copy of `unjoined_program_threads`, taken under `threads_pool_mutex`.
+		 */
+		[[nodiscard]] std::vector<api::response::UnjoinedThread> unjoinedProgramThreads() const;
 
 		void requestStopAllThreads() noexcept override;
 

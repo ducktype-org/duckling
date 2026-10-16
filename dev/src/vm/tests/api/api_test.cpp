@@ -298,6 +298,20 @@ private:
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate after three multi-threaded runs");
 			ASSERT_TRUE(valid.value().memory_valid);
+			// Every run leaked both of its workers. The VMThreads are recycled, so the run number
+			// is what tells the six of them apart.
+			ASSERT_EQUAL(valid.value().unjoined_program_threads.size(), 6);
+			ASSERT_EQUAL_PRINT(
+				std::string(
+					"The program started `bump` (thread 1), `bump` (thread 2) in run 1 and never "
+					"joined them.\n"
+					"The program started `bump` (thread 1), `bump` (thread 2) in run 2 and never "
+					"joined them.\n"
+					"The program started `bump` (thread 1), `bump` (thread 2) in run 3 and never "
+					"joined them.\n"
+				),
+				valid.value().toString()
+			);
 		}
 
 		{  // Stopped: refused right away, and still refused after the process was drained.
@@ -722,16 +736,28 @@ private:
 		ASSERT_TRUE(valid.value().memory_valid);
 		assertFalse(valid.value().valid(), "Unjoined program threads must fail the validation");
 
-		std::vector<usize> unjoined;
-		for (const api::ThreadID thread_id: valid.value().unjoined_program_threads)
-			unjoined.push_back(static_cast<usize>(thread_id.asInt()));
-		std::ranges::sort(unjoined);
+		const auto& unjoined = valid.value().unjoined_program_threads;
+		ASSERT_EQUAL(unjoined.size(), 2);
 		assertTrue(
-			unjoined == std::vector<usize>{ 1, 2 },
-			"Both workers must be reported as unjoined, and the main thread must not be"
+			std::ranges::all_of(
+				unjoined,
+				[](const api::response::UnjoinedThread& thread) {
+					return thread.function_name.has_value()
+			            && thread.function_name.value() == "bump";
+				}
+			),
+			"Every reported thread must name the function it ran"
 		);
+		assertTrue(
+			unjoined.at(0).run_number == 1 && unjoined.at(1).run_number == 1,
+			"Both workers were started by the first run"
+		);
+		// The report names the function, the thread IDs are only there to tell two threads of one
+		// run apart. The main thread is API owned, so it is not in the report.
 		ASSERT_EQUAL_PRINT(
-			std::string("The program started threads 1, 2 and never joined them.\n"),
+			std::string(
+				"The program started `bump` (thread 1), `bump` (thread 2) and never joined them.\n"
+			),
 			valid.value().toString()
 		);
 		assertRefusedWith<api::ProcessNotFound>(
@@ -753,8 +779,19 @@ private:
 
 			auto rerun_valid = api::deinitAndValidate(rerun_pid);
 			assertSucceeded(rerun_valid, "deinitAndValidate after a leaking run and a clean one");
+			// Both workers belong to the first run, and the report still says so after the rerun
+			// recycled their VMThreads.
+			const auto& leaked = rerun_valid.value().unjoined_program_threads;
+			ASSERT_EQUAL(leaked.size(), 2);
+			assertTrue(
+				leaked.at(0).run_number == 1 && leaked.at(1).run_number == 1,
+				"The workers of the first run must stay attributed to it"
+			);
 			ASSERT_EQUAL_PRINT(
-				std::string("The program started threads 1, 2 and never joined them.\n"),
+				std::string(
+					"The program started `bump` (thread 1), `bump` (thread 2) and never joined "
+					"them.\n"
+				),
 				rerun_valid.value().toString()
 			);
 		}

@@ -119,9 +119,10 @@ namespace vm {
 		if (not ps::isTerminal(state_manager.aggregate())) return {};
 		// Reusing a VMThread whose execution thread was never joined would overwrite a joinable
 		// handle, so remove whatever the previous run left behind before resetting the states.
-		// The returned IDs are not lost: the process keeps them and `deinitAndValidate` reports
-		// them at the end.
-		joinFinishedThreads();
+		// What it finds belongs to the run which is ending here, and it is not lost: the process
+		// keeps it and `deinitAndValidate` reports it at the end.
+		joinFinishedThreads(run_number);
+		run_number++;
 		if (auto reset = state_manager.resetForRun(); !reset.has_value())
 			return std::unexpected(api::ApiError{ api::StateError{ reset.error() } });
 		return {};

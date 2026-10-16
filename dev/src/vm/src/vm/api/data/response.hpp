@@ -18,6 +18,9 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/core/vmvalue/ivmvalueref.hpp>
 
+#include <json/optional.hpp>
+#include <json/string_id.hpp>
+
 #include <ranges>
 
 namespace vm::api {
@@ -68,6 +71,23 @@ namespace vm::api {
 		};
 
 		/**
+		 * @brief A thread the user program started and never joined.
+		 */
+		struct UnjoinedThread final {
+			/// The function the thread was started with. Empty when the thread had no context.
+			base::Optional<base::StrID> function_name;
+
+			/// The VMThread which ran the thread.
+			ThreadID thread_id;
+
+			/// The run which started it. A process may be re-run several times, and
+			/// every re-run may report its own threads.
+			usize run_number{ 1 };
+
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(UnjoinedThread, function_name, thread_id, run_number);
+		};
+
+		/**
 		 * @brief Information about errors found by `api::deinitAndValidate`.
 		 */
 		struct ValidationResult final {
@@ -75,7 +95,7 @@ namespace vm::api {
 			bool memory_valid{ true };
 
 			/// The threads the user program started and never joined.
-			std::vector<ThreadID> unjoined_program_threads;
+			std::vector<UnjoinedThread> unjoined_program_threads;
 
 			[[nodiscard]] bool valid() const {
 				return memory_valid && unjoined_program_threads.empty();
@@ -87,24 +107,7 @@ namespace vm::api {
 			 *
 			 * @return The report, empty when the program left nothing behind.
 			 */
-			[[nodiscard]] std::string toString() const {
-				std::string report;
-				if (!memory_valid) report += "The program leaked memory.\n";
-
-				if (!unjoined_program_threads.empty()) {
-					const bool single = unjoined_program_threads.size() == 1;
-					report
-						+= single ? "The program started thread " : "The program started threads ";
-					report += base::strJoin(
-						unjoined_program_threads | std::views::transform([](const ThreadID id) {
-							return base::toString(id.asInt());
-						}),
-						", "
-					);
-					report += single ? " and never joined it.\n" : " and never joined them.\n";
-				}
-				return report;
-			}
+			[[nodiscard]] std::string toString() const;
 
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ValidationResult, memory_valid, unjoined_program_threads);
 		};
