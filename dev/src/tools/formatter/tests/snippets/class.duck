@@ -1,0 +1,34 @@
+
+
+class xxx extends aaa implements bbb, cccc {
+	x: i32;
+	private y: i32 = 5;
+
+	fun foo(a: i64, c: yyy) = {
+		goo(a);
+	}
+	private fun goo(z: i64) -> i64 = {
+		x = z;
+		return y;
+	}
+
+	using std.math;
+
+	public {
+		alias sqrt=std.math.sqrt;
+
+		xxx.create(c:i64): aaa(c) = {
+			x = c;
+		} 
+
+		xxx.copy() = {
+			x = 81;
+		}
+
+		xxx.abc() = {
+			x = 81;
+		}
+
+		xxx.destroy() = {}
+	}
+}
