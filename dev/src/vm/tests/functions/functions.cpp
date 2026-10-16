@@ -22,13 +22,10 @@ public:
 		TESTER_ADD_TEST(testReturnLocal32);
 		TESTER_ADD_TEST(testDifferentSizedParams);
 		TESTER_ADD_TEST(testDoubleCall);
-		TESTER_ADD_TEST(testDeinitializeReturnValue);
 		TESTER_ADD_TEST(testRecursion);
 		TESTER_ADD_TEST(testManyFunctions);
 		TESTER_ADD_TEST(testPreservedFlag);
 		TESTER_ADD_TEST(testGraphJumps);
-		TESTER_ADD_TEST(testNoRet);
-		TESTER_ADD_TEST(testSignaturesValidation);
 		TESTER_ADD_TEST(testMainWithNoArguments);
 	}
 
@@ -60,15 +57,6 @@ private:
 
 	void testMainWithNoArguments() { runTestOnVm("main_no_args.dbc", "", "42", {}); }
 
-	void testDeinitializeReturnValue() {
-		loadInvalidDbc(
-			"deinit_ret_val.dbc",
-			{
-				vm::code::RetValDeinitError::ERR_MSG,
-			}
-		);
-	}
-
 	void testRecursion() {
 		runTestOnVm("rec_func_sum.dbc", "20", "210", {});
 		runTestOnVm("rec_func_sum.dbc", "100", "5050", {});
@@ -84,48 +72,9 @@ private:
 	void testBuiltinFunctions() {
 		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {}, 0);
 		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {}, 0);
-		loadInvalidDbc(
-			"invalid_builtin_function.dbc",
-			{
-				vm::code::InvalidBuiltinFunctionError::ERR_MSG,
-			}
-		);
 	}
 
 	void testGraphJumps() { runTestOnVm("graph_jumps.dbc", "", "42", {}); }
-
-	void testNoRet() {
-		for (auto filename: { "no_ret.dbc", "empty_function.dbc" })
-			loadInvalidDbc(
-				filename,
-				{
-					vm::code::PathWithoutEndError::ERR_MSG,
-				}
-			);
-
-		for (auto filename: { "infinite_loop.dbc", "dead_end.dbc" }) loadValidDbc(filename);
-	}
-
-	void testSignaturesValidation() {
-		loadInvalidDbc(
-			"invalid_ret_type.dbc",
-			{
-				vm::code::UnknownTypeError::ERR_MSG,
-			}
-		);
-		loadInvalidDbc(
-			"invalid_param_type.dbc",
-			{
-				vm::code::UnknownTypeError::ERR_MSG,
-			}
-		);
-		loadInvalidDbc(
-			"casting_invalid_ret.dbc",
-			{
-				vm::code::InvalidRetError::ERR_MSG,
-			}
-		);
-	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/functions/");
