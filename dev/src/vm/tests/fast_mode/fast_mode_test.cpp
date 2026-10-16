@@ -13,12 +13,16 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
-class VmFunctionsTests: public VmTestSuite {
+/**
+ * @brief What belongs here: programs run in the VM's fast execution mode. They must give the same
+ * results as in the normal mode.
+ */
+class VmFastModeTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS VmFunctionsTests
+#define TESTER_CLASS VmFastModeTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testSimple);
 		TESTER_ADD_TEST(testControlFlow);
 		TESTER_ADD_TEST(testFunctionCallWithArgs);
@@ -56,9 +60,11 @@ private:
 
 	void testFunctionCallWithArgs() { runTestOnFast("function_with_args.dbc", "5 7", "12"); }
 
-	void testFibIter() { runTestOnFast("../correctness/fib_iter.dbc", "1000000 10000", "6875"); }
+	void testFibIter() {
+		runTestOnFast("../common/programs/fib_iter.dbc", "1000000 10000", "6875");
+	}
 
-	void testFibRec() { runTestOnFast("../correctness/fib_rec.dbc", "28", "317811"); }
+	void testFibRec() { runTestOnFast("../common/programs/fib_rec.dbc", "28", "317811"); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fast_mode/");

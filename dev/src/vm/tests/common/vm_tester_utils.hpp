@@ -9,6 +9,7 @@
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
 #include <vm/api/api.hpp>
@@ -29,6 +30,14 @@
 #define VM_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                            \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
 		  VmTestSuite(std::move(config), TESTER_SUITE_NAME)
+
+#define VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                    \
+	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
+		  VmRuntimeTestSuite(std::move(config), TESTER_SUITE_NAME)
+
+#define VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                     \
+	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
+		  VmLoaderTestSuite(std::move(config), TESTER_SUITE_NAME)
 
 class VmTestSuite: public tester::TestSuite {
 public:
@@ -60,6 +69,14 @@ protected:
 	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.
 	 */
 	vm::PID spawnAndLoad(const std::string& dbc_filename);
+
+	/**
+	 * @brief Wraps bytecode written in the test itself into an in-memory `.dbc` file, for
+	 * programs that depend on values only known at run time (e.g. the path of a library). The
+	 * file never touches the disk, so suites running in parallel cannot clash. @p name is part of
+	 * the file name, so it shows in the positions of the load errors.
+	 */
+	static fs::File inlineDbc(std::string_view name, std::string_view bytecode);
 
 	static bool isRunning(const vm::api::ProcStatus& s) { return v_matches(s, vm::api::Running); }
 
@@ -297,10 +314,6 @@ protected:
 		const base::Optional<i64>          expected_exit_code = {}
 	);
 
-	TestResult runFunctionExpectPanic(
-		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
-	);
-
 	/**
 	 * @brief Asserts the process panicked with @p err_piece in its message and kills it.
 	 */
@@ -319,12 +332,77 @@ protected:
 		std::string_view                expected_reason
 	);
 
+	using OwnedArgumentList = std::vector<Box<vm::IVMValue>>;
+
+	/**
+	 * @brief Executes a function or a program within a VM process and verifies the results.
+	 *
+	 * @param pid The Process ID of the target VM process.
+	 * @param func_name An optional name of the function to execute. If empty, the function assumes
+	 * it's running a whole program (the `main` function).
+	 * @param args A variant holding either `vm::FunctionRunArguments` (for `runFunction`) or
+	 * `vm::ProgramRunArguments` (for `run`). The correct type must be provided based on whether
+	 * `func_name` is set.
+	 * @param optional_input An optional string to be passed as standard input to the process.
+	 * @param optional_output An optional string to which the process's standard output will be
+	 * compared.
+	 * @param expected_exit_code An optional vector of expected exit codes (`i64`). If provided, the
+	 * function's return value is asserted to be equal to it. If not provided, the function asserts
+	 * that the return type was `void`.
+	 */
+	void runAndCheckReturnValues(
+		vm::PID                                 pid,
+		const base::Optional<std::string>&      func_name              = {},
+		const vm::RunArguments&                 args                   = {},
+		const base::Optional<std::string>&      optional_input         = {},
+		const base::Optional<std::string>&      optional_output        = {},
+		const base::Optional<std::vector<i64>>& expected_return_values = {}
+	);
+
+	/**
+	 * @brief Utility for a more generalised runAndCheckReturnValues.
+	 */
+	void runAndCheckReturnValue(
+		vm::PID                            pid,
+		const base::Optional<std::string>& func_name             = {},
+		const vm::RunArguments&            args                  = {},
+		const base::Optional<std::string>& optional_input        = {},
+		const base::Optional<std::string>& optional_output       = {},
+		const base::Optional<i64>&         expected_return_value = {}
+	);
+
+	/**
+	 * @brief Create an owned VMValue containing a specified value.
+	 */
+	Box<vm::IVMValue> getIntVMValue(vm::PID pid, i64 value);
+
+	/**
+	 * @brief Create a list of owned VMValues containing a specified values.
+	 */
+	OwnedArgumentList getOwnedArgumentList(vm::PID pid, std::vector<i64> values);
+
+	/**
+	 * @brief Create a list of references to owned VMValues which can be passed to the VM.
+	 */
+	static vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments);
+
+	static void freeArguments(OwnedArgumentList& arguments);
+
 	/**
 	 * @brief Loads a file containing a program which violates syntactic or static verification
 	 * guidelines. Asserts what error keywords are present in the error message.
 	 */
 	void loadInvalidDbc(
 		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
+	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
+	 */
+	void loadInvalidDbc(
+		const fs::File&                      dbc_file,
 		const std::vector<std::string_view>& error_keywords,
 		vm::api::ExecutionConfig             config = {}
 	);
@@ -348,9 +426,96 @@ protected:
 	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
 
 	/**
+	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
+	 */
+	void loadValidDbc(const fs::File& dbc_file, vm::api::ExecutionConfig config = {});
+
+	/**
 	 * @brief ProcessConfig used by the no-arg `initProcess()` (and therefore by `spawnAndLoad`).
 	 * Suites may override it in their constructor; `VmApiTest` disables the JIT this way
 	 * (see #3612).
 	 */
 	vm::api::ProcessConfig process_config{};
+};
+
+/**
+ * @brief Base of the suites under `runtime/`. They check what a program does when it runs, so the
+ * helpers that only check whether a program loads are deleted here. A test that expects a load
+ * error belongs in a `loader/` suite, which runs once instead of once per VM flavour.
+ */
+class VmRuntimeTestSuite: public VmTestSuite {
+public:
+	VmRuntimeTestSuite(tester::TestConfig&& config, std::string_view name):
+		  VmTestSuite(std::move(config), name) {}
+
+	void loadInvalidDbc(
+		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	) = delete;
+
+	void loadThenLoadInvalidDbc(
+		const std::string&                   first_dbc,
+		const std::string&                   second_dbc,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	) = delete;
+
+	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {})
+		= delete;
+};
+
+/**
+ * @brief Base of the suites under `loader/`. They check whether a program loads and what the loader
+ * builds from it, so the helpers that run a program are deleted here. A test that runs a program
+ * belongs in a `runtime/` suite, which runs it once per VM flavour instead of only on SC.
+ *
+ * Deleting one overload hides every overload of the same name from `VmTestSuite`.
+ */
+class VmLoaderTestSuite: public VmTestSuite {
+public:
+	VmLoaderTestSuite(tester::TestConfig&& config, std::string_view name):
+		  VmTestSuite(std::move(config), name) {}
+
+	void runTestOnVm(
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0
+	) = delete;
+
+	TestResult runTestOnVmGetResult(
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {}
+	) = delete;
+
+	void runFunctionSynchronouslyAsTest(
+		vm::PID                            pid,
+		const std::string&                 func_name          = {},
+		const vm::FunctionRunArguments&    args               = {},
+		const base::Optional<std::string>& optional_input     = {},
+		const base::Optional<std::string>& optional_output    = {},
+		const base::Optional<i64>          expected_exit_code = {}
+	) = delete;
+
+	void runAndCheckReturnValues(
+		vm::PID                                 pid,
+		const base::Optional<std::string>&      func_name              = {},
+		const vm::RunArguments&                 args                   = {},
+		const base::Optional<std::string>&      optional_input         = {},
+		const base::Optional<std::string>&      optional_output        = {},
+		const base::Optional<std::vector<i64>>& expected_return_values = {}
+	) = delete;
+
+	void runAndCheckReturnValue(
+		vm::PID                            pid,
+		const base::Optional<std::string>& func_name             = {},
+		const vm::RunArguments&            args                  = {},
+		const base::Optional<std::string>& optional_input        = {},
+		const base::Optional<std::string>& optional_output       = {},
+		const base::Optional<i64>&         expected_return_value = {}
+	) = delete;
 };

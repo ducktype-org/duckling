@@ -4,11 +4,11 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <vm_tester_utils.hpp>
-
+#include <base/collections/optional.hpp>
 #include <base/types/floats.hpp>
 
 #include <filesystem/file.hpp>
+#include <tester/tester.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
@@ -25,12 +25,16 @@ using namespace vm::code;
 using namespace vm::loader;
 using namespace vm;
 
-class SerializeParseRoundtripTest: public VmTestSuite {
+/**
+ * @brief What belongs here: the bytecode serializer. A program is serialized back to text and
+ * parsed again, and the result must be the same program.
+ */
+class SerializeParseRoundtripTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SerializeParseRoundtripTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(roundtripMinimalProgram);
 		TESTER_ADD_TEST(roundtripFromString);
 	}
@@ -255,4 +259,4 @@ function main { i64, ptr_argv } -> { i64 } {
 	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/loader/roundtrip/");
+TESTER_COMMON_MAIN("/src/vm/tests/bytecode/serializer/");

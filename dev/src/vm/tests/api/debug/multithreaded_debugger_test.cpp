@@ -25,7 +25,11 @@
 namespace api = vm::api;
 
 /**
- * @brief Tests of the DVM debugger endpoints on a process with several VMThreads.
+ * @brief What belongs here: the `vm::api` debug endpoints on a process with several VMThreads.
+ * That covers pausing one thread or all of them, the GIL being released while a thread is parked,
+ * and the per-thread endpoints (breakpoints, steps, unknown thread ids).
+ *
+ * The same endpoints on a single-threaded process go to `debugger_test.cpp`.
  */
 class MultithreadedDebuggerTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -33,12 +37,6 @@ class MultithreadedDebuggerTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO: #3612 JIT-compiled code does not observe stop/pause requests, and the JIT patches
-		// the same bytecode as breakpoints. The JIT-build rule that disables `vm_*_debugger_*`
-		// tests does not match this name, so the suite spawns its processes with the JIT off
-		// instead (ignored in non-JIT builds).
-		process_config.enable_jit = false;
-
 		TESTER_ADD_TEST(pauseOneThreadWhileOthersRun);
 		TESTER_ADD_TEST(pauseAllParksEveryThread);
 		TESTER_ADD_TEST(pauseAllWaitsForASleepingThread);
@@ -400,7 +398,7 @@ private:
 	 * @brief Runs `spin_threads.dbc` and waits until every one of its threads is up.
 	 */
 	vm::PID runSpinThreads() {
-		const vm::PID pid = spawnAndLoad("spin_threads.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/spin_threads.dbc");
 		assertSucceeded(vm::api::run(pid), "run of spin_threads.dbc");
 		waitUntilEveryThreadRuns(pid, SPIN_THREAD_COUNT);
 		return pid;
@@ -460,4 +458,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/debugger/");
+TESTER_COMMON_MAIN("/src/vm/tests/api/debug/");
