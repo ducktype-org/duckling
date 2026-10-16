@@ -85,8 +85,8 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<ThreadID>);
 	}
 
-	std::expected<void, ApiError> join(PID pid, ThreadID thread_id) {
-		return REQUEST(Join{ thread_id }).transform(ignoreResponse);
+	std::expected<ExitValue, ApiError> join(PID pid, ThreadID thread_id) {
+		return REQUEST(Join{ thread_id }).and_then(mapOrWrongResponse<ExitValue>);
 	}
 
 	std::expected<ExitValue, ApiError> runFunctionAwait(
@@ -163,25 +163,22 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<ExitValue, ApiError> getExitValue(PID pid) {
-		return REQUEST(ExitCodeRequest{}).and_then(mapOrWrongResponse<ExitValue>);
+	std::expected<response::ValidationResult, ApiError> deinitAndValidate(PID pid) {
+		return REQUEST(DeinitAndValidate{}).and_then(mapOrWrongResponse<response::ValidationResult>);
 	}
 
-	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid) {
-		return REQUEST(DeinitAndValidate{}).and_then(mapOrWrongResponse<response::Boolean>);
-	}
-
-	std::expected<base::Optional<response::Boolean>, ApiError> deinitOrKill(PID pid) {
+	std::expected<base::Optional<response::ValidationResult>, ApiError> deinitOrKill(PID pid) {
 		// If the process was validated successfully we return the validation result.
 		const auto validated = deinitAndValidate(pid);
-		if (validated) return base::Optional<response::Boolean>{ validated.value() };
+		if (validated) return base::Optional<response::ValidationResult>{ validated.value() };
 
 		// A deinit which panicked in a global destructor already destroyed the process.
-		if (v_matches(validated.error(), Panicked)) return base::Optional<response::Boolean>{};
+		if (v_matches(validated.error(), Panicked))
+			return base::Optional<response::ValidationResult>{};
 
 		// Otherwise the deinit was refused, so we force kill it. The process might have
 		// been still running or finished with Stopped or Panicked.
-		return kill(pid).transform([] { return base::Optional<response::Boolean>{}; });
+		return kill(pid).transform([] { return base::Optional<response::ValidationResult>{}; });
 	}
 
 	std::expected<void, ApiError> attachStatusListener(
