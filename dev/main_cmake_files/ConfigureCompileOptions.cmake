@@ -9,14 +9,34 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # require compiler to support C++ standard it is asked for
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(IGNORE_COMPILER_VERSION_CHECK
+	"Configure even if the C++ compiler is older than the oldest supported version" OFF)
+
+# Stops the configuration when the C++ compiler is older than the oldest version we know builds the project.
+function(check_minimum_compiler_version compiler_name minimum_version)
+	if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS minimum_version)
+		return()
+	endif()
+
+	string(CONCAT version_message
+		"Your C++ compiler is too old to build Duckling.\n"
+		"  Compiler path: ${CMAKE_CXX_COMPILER}\n"
+		"  Found:         ${compiler_name} ${CMAKE_CXX_COMPILER_VERSION}\n"
+		"  Required:      ${compiler_name} ${minimum_version} or newer\n"
+		"If you are sure this compiler works, configure with "
+		"-DIGNORE_COMPILER_VERSION_CHECK=ON to turn this error into a warning.")
+
+	if (IGNORE_COMPILER_VERSION_CHECK)
+		message(WARNING "${version_message}")
+	else()
+		message(FATAL_ERROR "${version_message}")
+	endif()
+endfunction()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 
-	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
-        message(WARNING
-				"We know the project won't compile on versions lower than 14. "
-				"If it is a mistake feel free to ignore this.")
-    endif()
+	check_minimum_compiler_version("GCC" 14)
 
 
 	string(CONCAT ADDITIONAL_GNU_FLAGS
@@ -48,15 +68,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	message("-- ${CMAKE_CXX_COMPILER_ID} compiler")
 
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
-		message(WARNING
-				"We know the project won't compile on versions lower than 19. "
-				"If it is a mistake feel free to ignore this.")
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.3)
-		message(WARNING
-				"We know this project won't compile on apple clang lower than 16.3. "
-				"If it is a mistake feel free to ignore this.")
-	endif()
+	# Apple Clang has the same minimum as the upstream one.
+	check_minimum_compiler_version("${CMAKE_CXX_COMPILER_ID}" 19)
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	# The "-Werror=shadow" is more strict than "-Werror=shadow=local".
