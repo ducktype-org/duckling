@@ -43,6 +43,8 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_unit_test basic/unit.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_runtime_errors_test runtime/errors/runtime_errors_test.cpp
+                USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_api_test api/api_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(api_test ${test_set})
@@ -109,6 +111,12 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_deadlock_detection_test deadlock_detection/deadlock_detection_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("deadlock_detection_test" ${test_set})
+
+        # Runtime errors that need several threads. A separate binary from runtime_errors_test, so
+        # only these are skipped on TC when the build is not optimised.
+        duck_add_test_custom(vm ${test_set}_thread_errors_test runtime/errors/threads/thread_errors_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_disable_tc_when_not_opt("thread_errors_test" ${test_set})
 
 
         duck_add_test_custom(vm ${test_set}_jit_test jit/jit_test.cpp
