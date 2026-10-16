@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(classConstructabilityTest);
 		TESTER_ADD_TEST(typeTemplateTest);
 		TESTER_ADD_TEST(staticInterfaceTest);
+		TESTER_ADD_TEST(sourceTypeNameTest);
 	}
 
 private:
@@ -276,6 +277,144 @@ private:
 			ASSERT_EQUAL(derived_type, derived_field.front().getSource());
 			ASSERT_TRUE(derived_interface->getElementsWithName(base::StrID("pub_field")).empty());
 			ASSERT_NO_VALUE(interface->getElementBySym(derived_field.front().getSymbol()));
+		});
+	}
+
+	void sourceTypeNameTest() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/tsh/source_type_names")));
+
+		struct TypeNameCase final {
+			TypeNameCase(std::string_view symbol_name, std::string_view expected):
+				  symbol_name(symbol_name),
+				  expected(expected) {}
+
+			std::string_view symbol_name;
+			std::string_view expected;
+		};
+
+		const std::vector cases{
+			TypeNameCase{ "primitive", "i64" },
+			TypeNameCase{ "string", "str" },
+			TypeNameCase{ "const_slice", "slice const char" },
+			TypeNameCase{ "pointer", "ptr Types.Inner" },
+			TypeNameCase{ "many_pointer", "manyptr i64" },
+			TypeNameCase{ "c_pointer", "cptr i64" },
+			TypeNameCase{ "pointer_array", "(ptr i64)[3]" },
+			TypeNameCase{ "array_pointer", "ptr i64[3]" },
+			TypeNameCase{ "nested_array", "i64[3][2]" },
+			TypeNameCase{ "qualified_nested_array", "(const i64)[3][2]" },
+			TypeNameCase{ "variant_array", "(bool | i64)[3]" },
+			TypeNameCase{ "tuple", "(i64, bool)" },
+			TypeNameCase{ "variant", "bool | i64" },
+			TypeNameCase{ "class_value", "Person" },
+			TypeNameCase{ "template_value", "Boxed[i64]" },
+			TypeNameCase{ "namespaced_template", "Types.Boxed[Person]" },
+			TypeNameCase{ "value_template", "Sized[3, bool]" },
+			TypeNameCase{ "tiny_float", "FloatT[1e-09f64]" },
+			TypeNameCase{ "another_tiny_float", "FloatT[2e-09f64]" },
+			TypeNameCase{ "simple_float", "FloatT[1.5f64]" },
+			TypeNameCase{ "single_precision_float", "Float32T[0.1f32]" },
+			TypeNameCase{ "round_trip_tiny_float", "FloatT[1e-09f64]" },
+			TypeNameCase{ "other_class", "Person" },
+			TypeNameCase{ "other_nested_class", "NS.Deep" },
+			TypeNameCase{ "other_template_argument", "Boxed[Person]" },
+			TypeNameCase{ "Boxed", "Type template: Boxed" },
+			TypeNameCase{ "Types.Boxed", "Type template: Types.Boxed" },
+			TypeNameCase{ "topFn", "Type template: topFn" },
+			TypeNameCase{ "FnNs.ident", "Type template: FnNs.ident" },
+			TypeNameCase{ "FnNs.other", "Type template: FnNs.other" },
+			TypeNameCase{ "FnNs.Number", "Type template: FnNs.Number" },
+		};
+		std::vector<SymbolType<>> types;
+		types.reserve(cases.size());
+		for (const auto& test_case: cases)
+			types.push_back(getSymbolTypeOf(test_case.symbol_name, root_scope));
+		const auto person_type = getSymbolTypeOf("class_value", root_scope);
+		ASSERT_TRUE(person_type != getSymbolTypeOf("other_class", root_scope));
+		ASSERT_TRUE(
+			getSymbolTypeOf("tiny_float", root_scope)
+			!= getSymbolTypeOf("another_tiny_float", root_scope)
+		);
+		ASSERT_EQUAL(
+			getSymbolTypeOf("tiny_float", root_scope),
+			getSymbolTypeOf("round_trip_tiny_float", root_scope)
+		);
+
+		withContextDo([&](query::Context& ctx) {
+			const auto i64_type
+				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
+			const KeyFor_QueryTupleType single_tuple_key{
+				.components = { SymbolType<>::withDefaults(i64_type) },
+			};
+			const auto single_tuple = ctx.query<QueryTupleType>(single_tuple_key);
+			assertEqual(
+				std::string("(i64,)"),
+				single_tuple.sourceTypeName(ctx),
+				"Incorrect source type name for a single-element tuple"
+			);
+			for (usize index = 0; index < cases.size(); ++index) {
+				const auto& test_case = cases[index];
+				assertEqual(
+					std::string(test_case.expected),
+					types[index].sourceTypeName(ctx),
+					base::strConcat("Incorrect source type name for `", test_case.symbol_name, "`")
+				);
+			}
+
+			assertEqual(
+				std::string("i64"),
+				types.front().getType().sourceTypeName(ctx),
+				"AbstractType should expose the source-level type name too"
+			);
+
+			const SymbolType qualified_type(
+				i64_type,
+				ReferenceKind::Ref,
+				Mutability::Immutable,
+				Leakage::Leaking,
+				Uniqueness::Unique
+			);
+			assertEqual(
+				std::string("unique leaking const ref i64"),
+				qualified_type.sourceTypeName(ctx),
+				"SymbolType qualifiers should use the same order as toString"
+			);
+
+			assertEqual(
+				std::string("void"),
+				getVoidType().sourceTypeName(ctx),
+				"Void should use its Duckling source spelling"
+			);
+			assertEqual(
+				std::string("type"),
+				getMetaType().sourceTypeName(ctx),
+				"Meta should use its Duckling source spelling"
+			);
+
+			const auto function_type = ctx.query<QueryFunctionType>({
+				.parameter_types = { SymbolType<>::withDefaults(i64_type) },
+				.result_type     = SymbolType<>::withDefaults(getBoolType()),
+			});
+			assertEqual(
+				std::string("Function (i64) -> (bool)"),
+				function_type.sourceTypeName(ctx),
+				"Function types should use a human-readable label"
+			);
+			const auto variant_type = ctx.query<QueryVariantType>({
+				.underlying_types = {
+					SymbolType<>::withDefaults(i64_type),
+					SymbolType<>::withDefaults(getBoolType()),
+				},
+			});
+			const auto composite_function_type = ctx.query<QueryFunctionType>({
+				.parameter_types = { person_type },
+				.result_type     = SymbolType<>::withDefaults(variant_type),
+			});
+			assertEqual(
+				std::string("Function (Person) -> (bool | i64)"),
+				composite_function_type.sourceTypeName(ctx),
+				"Function components should use source-oriented names"
+			);
 		});
 	}
 
