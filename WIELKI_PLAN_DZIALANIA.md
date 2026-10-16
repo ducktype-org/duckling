@@ -31,3 +31,15 @@ Rozgarnięcie porządne innych synthetic testy z kodu PSACa.
 
 Jak będziemy mieli pewne dwa kompilatory i pierwsze test casy to zabieramy się za faktyczny paper.
 
+
+
+
+# Odhaczanie
+
+* [ ] Mieć dwa działające kompilatory (QueryLinger i DuckLinger)
+  * [ ] QueryLinger działa poprawnie
+  * [ ] DuckLinger działa poprawnie
+* [ ] Przygotować pierwsze test casy
+* [ ] Ogarnąć wtyczkę do VSCode do łapania sesji programistycznej i konwersji to test casa
+* [ ] Skryptować mierzenie wydajności
+* [ ] Rozgarnięcie porządne innych synthetic testy z kodu PSACa
