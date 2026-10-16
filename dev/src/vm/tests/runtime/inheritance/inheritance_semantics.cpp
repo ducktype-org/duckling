@@ -10,7 +10,9 @@
 
 /**
  * @brief What belongs here: classes and interfaces while a program runs. That covers virtual
- * calls being dispatched to the right method, upcasts and downcasts.
+ * calls being dispatched to the right method, upcasts and downcasts, and setting the vtable of an
+ * object (`setting_vtable/`), including objects stored in tables and variants, and changing a
+ * vtable that was already set.
  *
  * An inheritance error the loader must reject goes to `loader/inheritance/`.
  */
@@ -23,6 +25,7 @@ public:
 		TESTER_ADD_TEST(dynamicDispatch);
 		TESTER_ADD_TEST(upcast);
 		TESTER_ADD_TEST(downcast);
+		TESTER_ADD_TEST(settingVtableCorrectness);
 	}
 
 private:
@@ -35,6 +38,12 @@ private:
 		runTestOnVm("semantics/interface_dispatch.dbc", "", "11224455", {}, 0);
 		runTestOnVm("semantics/dynamic_dispatch.dbc", "", "44542321", {}, 0);
 		runTestOnVm("semantics/method_call_with_args.dbc", "12 13", "25", {}, 0);
+	}
+
+	void settingVtableCorrectness() {
+		runTestOnVm("setting_vtable/table_of_virtual.dbc", {}, { "0\n" }, {}, 0);
+		runTestOnVm("setting_vtable/changing_vtable.dbc", {}, { "1\n0\n" }, {}, 0);
+		runTestOnVm("setting_vtable/variant_of_virtual.dbc", {}, { "0\n" }, {}, 0);
 	}
 };
 

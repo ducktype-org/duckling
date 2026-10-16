@@ -32,7 +32,7 @@ and starts with a comment saying what should be tested in it.
 | `runtime/native/` | `extern_c/` (C++ functions registered in the VM) and `ffi/` (calls into shared libraries, `cptr` to native memory). `ffi/` also builds `ffi_test_lib`. Programs are inline (`inlineDbc`), since they name the library by its build path. |
 | `runtime/errors/` | Every error the VM detects while a program runs (zero division, leaks, double / invalid free, use after free, null pointer or cpointer, out of bounds, unset vtable, ...). Fixtures in one folder per area. `threads/` holds the errors that need several threads (deadlocks included) in a second binary. |
 | `api/` | `vm::api` endpoints: process lifecycle, stress, `debug/` (debug endpoints), `injection/` (code injection) and `run_function/` (running one function: arguments, return values). |
-| `debugger/` | The `vm::debugger` tool itself (debugger class, CLI, mapper). |
+| `debugger/` | The `vm::debugger` tool itself (debugger class, CLI, mapper). The CLI helpers and the mapper run no program, so they run once, against the SC build. |
 | `jit/`, `fast_mode/` | The JIT and the fast execution mode. |
 
 ### Which suite gets a new test?
@@ -48,6 +48,9 @@ and starts with a comment saying what should be tested in it.
   `runTestOnVmGetResult`, `runFunctionSynchronouslyAsTest` and `runFunctionExpectPanic`. Running
   a program there does not compile, it belongs in a `runtime/` suite.
 * Suites registered in `duck_add_vm_tests` run twice, once per VM flavour (`vm_sc_*` and `vm_tc_*`).
+* A suite that stops or pauses programs cannot run with the JIT (#3612). It either spawns its
+  processes with `process_config.enable_jit = false` (like `api_test`), or is disabled in JIT
+  builds with `duck_disable_when_jit` in `CMakeLists.txt`.
 
 ## Unit tests
 

@@ -50,7 +50,7 @@ if(ENABLE_COVERAGE)
 endif()
 
 # The "--fair-sched=yes" option is used in VM debugger tests to speed up the tests,
-# for more info see dev/VM/tests/debugger/debugger_infinite_tests.cpp
+# for more info see dev/src/vm/tests/api/debug/debugger_infinite_tests.cpp
 set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full --fair-sched=yes")
 
 include(CTest)
@@ -89,13 +89,6 @@ function(duck_add_test_custom test_pack test_name test_source)
 
 	set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	add_to_coverage(${test_name})
-
-	if(JIT_ENABLED)
-		string(FIND "${test_name}" "debugger" vm_tc_pos)
-		if (vm_tc_pos EQUAL 6)
-            set_property(TEST ${test_name} PROPERTY DISABLED TRUE)
-		endif()
-	endif()
 endfunction()
 
 function(duck_add_test test_pack test_base_name test_user_source)

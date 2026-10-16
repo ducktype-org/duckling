@@ -13,6 +13,13 @@ function(duck_disable_tc_when_not_opt test_name test_set)
         endif()
 endfunction()
 
+# @TODO: #3612 Remove this function.
+function(duck_disable_when_jit test_name test_set)
+        if(JIT_ENABLED)
+                set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED TRUE)
+        endif()
+endfunction()
+
 function(duck_add_vm_tests suffix)
         set(libvm "LibVM_${suffix}")
 
@@ -62,28 +69,24 @@ function(duck_add_vm_tests suffix)
 
         duck_add_test_custom(vm ${test_set}_debugger_test api/debug/debugger_tests.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_disable_when_jit(debugger_test ${test_set})
 
         duck_add_test_custom(vm ${test_set}_multithreaded_debugger_test
                 api/debug/multithreaded_debugger_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(multithreaded_debugger_test ${test_set})
+        duck_disable_when_jit(multithreaded_debugger_test ${test_set})
 
         duck_add_test_custom(vm ${test_set}_debugger_class_test debugger/debugger_class_tests.cpp
                 USES ${libvm} Tester ${vmtester})
-
-        duck_add_test_custom(vm ${test_set}_debugger_cli_common debugger/debugger_cli_common.cpp
-                USES ${libvm} Tester ${vmtester})
+        duck_disable_when_jit(debugger_class_test ${test_set})
 
         duck_add_test_custom(vm ${test_set}_debugger_infinite_test api/debug/debugger_infinite_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
-
-        duck_add_test_custom(vm ${test_set}_mapper_test debugger/mapper_tests.cpp
-                USES ${libvm} Tester ${vmtester})
+        duck_disable_when_jit(debugger_infinite_test ${test_set})
 
         duck_add_test_custom(vm ${test_set}_inheritance_semantics_test runtime/inheritance/inheritance_semantics.cpp
-                USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_vtable_setting_test runtime/inheritance/setting_vtable/vtable_setting.cpp
                 USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_code_injection_test api/injection/code_injection.cpp
@@ -140,6 +143,13 @@ duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_
         USES LibVM Tester)
 duck_add_test_custom(vm persistent_structures_test utils/persistent_structures_test.cpp
         USES LibVM Tester)
+
+# debugger/ — the parts of the debugger tool that run no program: the CLI text helpers and the
+# source mapper.
+duck_add_test_custom(vm vm_debugger_cli_common_test debugger/debugger_cli_common.cpp
+        USES LibVM_sc Tester)
+duck_add_test_custom(vm vm_debugger_mapper_test debugger/mapper_tests.cpp
+        USES LibVM_sc Tester)
 
 # bytecode/ — instruction set, program builders, the assembly parser and the serializer.
 duck_add_test_custom(vm vm_instruction_naming_test bytecode/instruction_naming_test.cpp

@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <tester/tester.hpp>
+#include <vm_tester_utils.hpp>
 
 #include <vm/api/vm.hpp>
 
@@ -19,45 +19,34 @@
  * (but a just a second in "--fair-sched=yes" mode).
  * https://stackoverflow.com/questions/8663148/valgrind-stalls-in-multithreaded-socket-program
  */
-class VmDebugInfiniteTest: public tester::TestSuite {
+class VmDebugInfiniteTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmDebugInfiniteTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(pausesExecution); }
-
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(pausesExecution); }
 
 private:
-	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (loadProgram)");
-		auto pid = process_pid_response.value().pid;
-
-		fs::File file(path(std::string(path_name)));
-		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
-		ASSERT_HAS_VALUE(loaded_file_response, "Load failed (loadProgram)");
-		return pid;
-	}
-
 	/**
 	 * @brief Checks if the program will pause on user request.
 	 * The program is an infinite loop, so it will never stop.
 	 */
 	void pausesExecution() {
-		auto pid = loadProgram("../../common/programs/while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/while_true.dbc");
 
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 0, true));
-		ASSERT_HAS_VALUE(vm::api::run(pid));  // "Run failed (1)"
+		assertSucceeded(vm::api::setBreakpoint(pid, base::StrID("main"), 0, true), "setBreakpoint");
+		assertSucceeded(vm::api::run(pid), "run");
 
 		// We want to assure that the start function already managed to call main for the test to
 		// work correctly.
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(0, execution_position.instr_number);
+		const auto execution_position = vm::api::waitForBreakpoint(pid);
+		assertSucceeded(execution_position, "waitForBreakpoint");
+		ASSERT_EQUAL_PRINT(0, execution_position->instr_number);
 
-		ASSERT_HAS_VALUE(vm::api::resume(pid));       // "Resume failed (1)"
-		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		ASSERT_EQUAL_PRINT(position.instr_number, 4);
+		assertSucceeded(vm::api::resume(pid), "resume");
+		const auto position = vm::api::pause(pid);
+		assertSucceeded(position, "pause");
+		ASSERT_EQUAL_PRINT(position->instr_number, 4);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
 			if (x == 3) return 4;
@@ -67,7 +56,7 @@ private:
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number), line_number2);
+		ASSERT_EQUAL_PRINT(expected_next_line(position->instr_number), line_number2);
 
 		auto line_number3 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
@@ -84,16 +73,15 @@ private:
 		auto line_number7 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number6), line_number7);
 
-		vm::api::resume(pid).value();  // "Resume failed (1)"
-
-		vm::api::stop(pid).value();    // "Stop failed (1)"
+		assertSucceeded(vm::api::resume(pid), "resume");
+		assertSucceeded(vm::api::stop(pid), "stop");
 	}
 
 	u64 stepAndGetLine(vm::PID pid) {
-		vm::api::step(pid).value();                      // "Step failed"
-		auto execution_position
-			= vm::api::getCurrentPosition(pid).value();  // "Get current position failed"
-		return execution_position.instr_number;
+		assertSucceeded(vm::api::step(pid), "step");
+		const auto execution_position = vm::api::getCurrentPosition(pid);
+		assertSucceeded(execution_position, "getCurrentPosition");
+		return execution_position->instr_number;
 	}
 };
 
