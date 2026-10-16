@@ -30,10 +30,14 @@ public:
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(literalsTest);
 		TESTER_ADD_TEST(checkCastingInstructions);
+		TESTER_ADD_TEST(checkInplaceCast);
 	}
 
 private:
 	void checkCastingInstructions() { runTestOnVm("casting.dbc", "", "11111111111", {}); }
+
+	// A cast that only changes the type of a local, without moving its value.
+	void checkInplaceCast() { runTestOnVm("inplace_cast.dbc", "", "42", {}); }
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0", {}); }
 

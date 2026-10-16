@@ -21,12 +21,12 @@
  * Inheritance errors have their own suite in `loader/inheritance/`. FFI errors need the test
  * library, so they have their own suite in `loader/ffi/`.
  */
-class BCVerificationTests: public VmTestSuite {
+class BCVerificationTests: public VmLoaderTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCVerificationTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(jumpSkipBlock);
 		TESTER_ADD_TEST(manyJumps);
 		TESTER_ADD_TEST(initDeinit);
@@ -373,8 +373,8 @@ private:
 		);
 	}
 
+	// A valid in-place cast is run in `runtime/primitives/`.
 	void inplaceCasts() {
-		runTestOnVm("right/inplace_cast.dbc", {}, "42");
 		loadInvalidDbc(
 			"wrong/types/inplace_cast_size_mismatch.dbc",
 			{

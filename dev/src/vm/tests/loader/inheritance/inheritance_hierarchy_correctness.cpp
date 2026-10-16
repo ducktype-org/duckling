@@ -19,12 +19,12 @@
  * What a valid hierarchy is lowered to goes to `loader/lowering/`; how it behaves when it runs
  * goes to `runtime/inheritance/`.
  */
-class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
+class VmInheritanceHierarchyCorrectnessTest: public VmLoaderTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceHierarchyCorrectnessTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(hierarchyCorrectness);
 		TESTER_ADD_TEST(virtualMethodImplementationCorrectness);
 		TESTER_ADD_TEST(duplicateCorrectness);
@@ -35,7 +35,7 @@ public:
 
 private:
 	void hierarchyCorrectness() {
-		runTestOnVm("../../common/programs/inheritance_metadata.dbc", {}, {}, {}, 0);
+		loadValidDbc("../../common/programs/inheritance_metadata.dbc");
 
 		using namespace vm::code;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({

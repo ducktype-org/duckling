@@ -35,6 +35,10 @@
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
 		  VmRuntimeTestSuite(std::move(config), TESTER_SUITE_NAME)
 
+#define VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                     \
+	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
+		  VmLoaderTestSuite(std::move(config), TESTER_SUITE_NAME)
+
 class VmTestSuite: public tester::TestSuite {
 public:
 	VmTestSuite(tester::TestConfig&& config, std::string_view name):
@@ -407,4 +411,45 @@ public:
 
 	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {})
 		= delete;
+};
+
+/**
+ * @brief Base of the suites under `loader/`. They check whether a program loads and what the loader
+ * builds from it, so the helpers that run a program are deleted here. A test that runs a program
+ * belongs in a `runtime/` suite, which runs it once per VM flavour instead of only on SC.
+ *
+ * Deleting one overload hides every overload of the same name from `VmTestSuite`.
+ */
+class VmLoaderTestSuite: public VmTestSuite {
+public:
+	VmLoaderTestSuite(tester::TestConfig&& config, std::string_view name):
+		  VmTestSuite(std::move(config), name) {}
+
+	void runTestOnVm(
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0
+	) = delete;
+
+	TestResult runTestOnVmGetResult(
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {}
+	) = delete;
+
+	void runFunctionSynchronouslyAsTest(
+		vm::PID                            pid,
+		const std::string&                 func_name          = {},
+		const vm::FunctionRunArguments&    args               = {},
+		const base::Optional<std::string>& optional_input     = {},
+		const base::Optional<std::string>& optional_output    = {},
+		const base::Optional<i64>          expected_exit_code = {}
+	) = delete;
+
+	TestResult runFunctionExpectPanic(
+		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
+	) = delete;
 };

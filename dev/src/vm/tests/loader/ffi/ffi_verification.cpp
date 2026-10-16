@@ -27,12 +27,12 @@ namespace {
  *
  * Calling FFI functions while a program runs goes to `runtime/native/ffi/`.
  */
-class VmFfiVerificationTest: public VmTestSuite {
+class VmFfiVerificationTest: public VmLoaderTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmFfiVerificationTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// Object files and symbols
 		TESTER_ADD_TEST(missingSystemLibraryFails);
 		TESTER_ADD_TEST(missingObjectFileFails);

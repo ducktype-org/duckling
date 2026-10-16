@@ -17,12 +17,12 @@
  *
  * A hierarchy the loader must reject goes to `loader/inheritance/`.
  */
-class VmInheritanceLoadingTest: public VmTestSuite {
+class VmInheritanceLoadingTest: public VmLoaderTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceLoadingTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(metadataLoading); }
+	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(metadataLoading); }
 
 
 private:
@@ -184,18 +184,7 @@ private:
 	}
 
 	void metadataLoading() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (1)");
-		auto pid = process_pid_response.value().pid;
-
-		fs::File file(path("../../common/programs/inheritance_metadata.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }), "Load failed (1)");
-
-		auto run_response = vm::api::run(pid);
-		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
-
-		auto join_response = vm::api::join(pid);
-		ASSERT_HAS_VALUE(join_response, "Join failed (1)");
+		const vm::PID pid = spawnAndLoad("../../common/programs/inheritance_metadata.dbc");
 
 		auto               pod           = getType(pid, "POD");
 		auto               i1            = getType(pid, "I1");

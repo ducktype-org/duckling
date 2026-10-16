@@ -9,7 +9,7 @@ and starts with a comment saying what should be tested in it.
 
 | Directory | What lives there |
 |---|---|
-| `common/` | `VmTestSuite` / `VmRuntimeTestSuite` helpers (`vm_tester_utils.{hpp,cpp}`). |
+| `common/` | `VmTestSuite` / `VmRuntimeTestSuite` / `VmLoaderTestSuite` helpers (`vm_tester_utils.{hpp,cpp}`). |
 | `common/programs/` | Fixtures shared by several suites (`while_true`, `spin_threads`, `breakpoint`, leaks, `fib_*`, ...). |
 | `utils/` | VM data structures that need no program (`persistent_structures`, `stable_obj_id_name_map`). |
 | `bytecode/` | Instruction naming, program builders (`builders/`), the assembly parser (`assembly/`, syntax errors only), the serializer (`serializer/`). |
@@ -44,6 +44,9 @@ and starts with a comment saying what should be tested in it.
   (or `runtime/errors/threads/` if it needs several threads).
 * Suites under `runtime/` derive from `VmRuntimeTestSuite`, which deletes `loadInvalidDbc`,
   `loadThenLoadInvalidDbc` and `loadValidDbc`. A loader check there does not compile.
+* Suites under `loader/` that load through `vm::api` derive from `VmLoaderTestSuite`, which deletes `runTestOnVm`,
+  `runTestOnVmGetResult`, `runFunctionSynchronouslyAsTest` and `runFunctionExpectPanic`. Running
+  a program there does not compile, it belongs in a `runtime/` suite.
 * Suites registered in `duck_add_vm_tests` run twice, once per VM flavour (`vm_sc_*` and `vm_tc_*`).
 
 ## Unit tests
