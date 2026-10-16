@@ -37,9 +37,10 @@ Jak będziemy mieli pewne dwa kompilatory i pierwsze test casy to zabieramy się
 # Odhaczanie
 
 * [ ] Mieć dwa działające kompilatory (QueryLinger i DuckLinger)
-  * [ ] QueryLinger działa poprawnie
-  * [ ] DuckLinger działa poprawnie
-* [ ] Przygotować pierwsze test casy
-* [ ] Ogarnąć wtyczkę do VSCode do łapania sesji programistycznej i konwersji to test casa
+  * [ ] QueryLinger działa poprawnie – TASK TEAM: Ja i PT
+  * [ ] DuckLinger działa poprawnie – TASK TEAM: Kuba i PO
+* [ ] Przygotować pierwsze test casy – Matihope
+* [ ] Ogarnąć wtyczkę do VSCode do łapania sesji programistycznej i konwersji to test casa – Matihope
+
 * [ ] Skryptować mierzenie wydajności
 * [ ] Rozgarnięcie porządne innych synthetic testy z kodu PSACa
