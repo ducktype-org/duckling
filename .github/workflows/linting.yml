@@ -135,41 +135,51 @@ jobs:
 
     needs: determine-runners
     runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[1] }}
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Clean workspace (self-hosted only)
         if: contains(fromJson(needs.determine-runners.outputs.runners)[1].group, 'SelfHostedRunners')
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
-          rm -rf ${{ github.workspace }}
-          mkdir -p ${{ github.workspace }}
+          rm -rf -- "$GITHUB_WORKSPACE"
+          mkdir -p -- "$GITHUB_WORKSPACE"
           echo "Workspace cleaned."
 
       - uses: actions/checkout@v6
 
-      # Fetch origin/main for the following steps, because by default repo on the runners contains just the bare-minimum.
-      - name: Fetch origin/main
+      # we use SHA because branch names can be parsed incorrectly
+      - name: Fetch PR target branch
+        env:
+          PR_BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin main
+          git fetch origin "refs/heads/$PR_BASE_REF"
+          base_sha="$(git rev-parse --verify 'FETCH_HEAD^{commit}')"
+          echo "PR_BASE_SHA=$base_sha" >> "$GITHUB_ENV"
 
       - name: Run duck linter
+        working-directory: dev
         run: |
-          cd dev
-          python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
-        shell: bash
+          python3 toolbox.py duck-linter --branch "$PR_BASE_SHA" --no-merge-base --verbose --no-fix
+
+      - name: Run header checker
+        working-directory: dev
+        run: |
+          python3 toolbox.py header-checker --branch "$PR_BASE_SHA" --no-merge-base
 
       - name: Run issue checker
+        working-directory: dev
         env:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          cd dev
-          python3 toolbox.py issue-checker --branch origin/main --no-merge-base
-        shell: bash
+          python3 toolbox.py issue-checker --branch "$PR_BASE_SHA" --no-merge-base
 
       - name: Run TODO validation
+        working-directory: dev
         env:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
         run: |
-          cd dev
-          python3 toolbox.py todo-validate --branch origin/main --no-merge-base
-        shell: bash
+          python3 toolbox.py todo-validate --branch "$PR_BASE_SHA" --no-merge-base

@@ -12,6 +12,7 @@ from .helpers import (
 )
 from .duck_linter import duck_linter_impl
 from .cpp_linter import cpp_linter_impl
+from .header_checker import header_checker_impl
 from .issue_checker import issue_checker_impl
 from .todo_validate import todo_validate_impl
 from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
@@ -40,15 +41,19 @@ def pr_validate_impl(
     if not duck_linter_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("Duck linter has failed")
 
-    # Step 3 - validate !todos and !fixmes
+    # Step 3 - pragma once check
+    if not header_checker_impl():
+        exit_with_error("Header pragma once check has failed")
+
+    # Step 4 - validate !todos and !fixmes
     if not todo_validate_impl():
         exit_with_error("T" + "ODO validation has failed")
 
-    # Step 4 - issue checker
+    # Step 5 - issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
 
-    # Step 5 - Run formatting checker
+    # Step 6 - Run formatting checker
     _, clang_format_failed = cpp_linter_impl(
         clang_tidy_path=None,
         clang_format_path=clang_format_path,
@@ -63,7 +68,7 @@ def pr_validate_impl(
             f"C++ formatting check failed. Please run `./scripts/formatting/format_repo_cpp.sh {clang_format_path}` or fix the issues manually."
         )
 
-    # Step 6 - build
+    # Step 7 - build
     # `bash_command` raises on a non-zero exit code, so getting past it means
     # everything has been built.
     bash_command(
@@ -71,10 +76,10 @@ def pr_validate_impl(
     )
     log_good("Everything has been built successfully")
 
-    # Step 7 - test
+    # Step 8 - test
     test_impl(build_dir=build_dir, thread_count=thread_count, timeout=60)
 
-    # Step 8 - integration tests
+    # Step 9 - integration tests
     tester_impl(
         clean=False,
         dry=False,
@@ -86,7 +91,7 @@ def pr_validate_impl(
         jobs=thread_count,
     )
 
-    # Step 9 - clang-tidy
+    # Step 10 - clang-tidy
     clang_tidy_failed, _ = cpp_linter_impl(
         clang_tidy_path=clang_tidy_path,
         clang_format_path=None,
