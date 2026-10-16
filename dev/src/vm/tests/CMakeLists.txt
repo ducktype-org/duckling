@@ -1,5 +1,8 @@
 include(CMakePrintHelpers)
 
+# `ffi_test_lib` and `duck_use_ffi_test_lib`, used by the FFI suites below.
+add_subdirectory(runtime/native/ffi)
+
 # When VM runs code for a long time in TC mode, without the "tailcall" optimization
 # enabled, it will run out of stack space.
 function(duck_disable_tc_when_not_opt test_name test_set)
@@ -94,6 +97,9 @@ function(duck_add_vm_tests suffix)
 
         duck_add_test_custom(vm ${test_set}_extern_c_func_test runtime/native/extern_c/vm_extern_c_func_test.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_ffi_test runtime/native/ffi/vm_ffi_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_use_ffi_test_lib(${test_set}_ffi_test)
         duck_add_test_custom(vm ${test_set}_threads_test runtime/threads/thread_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
@@ -141,7 +147,8 @@ duck_add_test_custom(vm program_builders_test bytecode/builders/program_builders
 duck_add_test_custom(vm vm_bc_parsing bytecode/assembly/bc_parsing.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_serializer bytecode/serializer/bc_serializer.cpp USES LibVM_sc Tester VmTester_sc)
 
-# loader/ — static verification, lowering (incl. the inheritance metadata) and hierarchy checks.
+# loader/ — static verification, lowering (incl. the inheritance metadata), hierarchy checks and
+# FFI declarations.
 duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_step_gil_placement loader/lowering/step_gil_placement.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_local_initialization loader/lowering/local_initialization.cpp USES LibVM_sc Tester VmTester_sc)
@@ -150,5 +157,6 @@ duck_add_test_custom(vm vm_inheritance_loading_test loader/lowering/inheritance_
 duck_add_test_custom(vm vm_inheritance_hierarchy_correctness_test
         loader/inheritance/inheritance_hierarchy_correctness.cpp
         USES LibVM_sc Tester VmTester_sc)
-
-add_subdirectory(runtime/native/ffi)
+duck_add_test_custom(vm vm_ffi_verification_test loader/ffi/ffi_verification.cpp
+        USES LibVM_sc Tester VmTester_sc)
+duck_use_ffi_test_lib(vm_ffi_verification_test)

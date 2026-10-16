@@ -101,6 +101,10 @@ vm::PID VmTestSuite::spawnAndLoad(const std::string& dbc_filename) {
 	return pid;
 }
 
+fs::File VmTestSuite::inlineDbc(std::string_view name, std::string_view bytecode) {
+	return fs::FileManager::createRandomVirtualFile(bytecode, base::strConcat("_", name, ".dbc"));
+}
+
 void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_name) {
 	for (u64 instr = 0; instr <= MAX_BREAKPOINT_INDEX; instr++)
 		(void) vm::api::setBreakpoint(pid, base::StrID(function_name), instr, false);
@@ -219,9 +223,16 @@ void VmTestSuite::loadInvalidDbc(
 	const std::vector<std::string_view>& error_keywords,
 	const vm::api::ExecutionConfig       config
 ) {
-	fs::File file(path(dbc_filename));
+	loadInvalidDbc(fs::File(path(dbc_filename)), error_keywords, config);
+}
 
-	auto loaded_file_response = vm::api::loadFiles(initProcess(process_config, config), { file });
+void VmTestSuite::loadInvalidDbc(
+	const fs::File&                      dbc_file,
+	const std::vector<std::string_view>& error_keywords,
+	const vm::api::ExecutionConfig       config
+) {
+	auto loaded_file_response
+		= vm::api::loadFiles(initProcess(process_config, config), { dbc_file });
 	ASSERT_NO_VALUE(loaded_file_response);
 
 	auto err = loaded_file_response.error();
@@ -265,8 +276,11 @@ void VmTestSuite::loadThenLoadInvalidDbc(
 void VmTestSuite::loadValidDbc(
 	const std::string& dbc_filename, const vm::api::ExecutionConfig config
 ) {
-	auto res
-		= vm::api::loadFiles(initProcess(process_config, config), { fs::File(path(dbc_filename)) });
+	loadValidDbc(fs::File(path(dbc_filename)), config);
+}
+
+void VmTestSuite::loadValidDbc(const fs::File& dbc_file, const vm::api::ExecutionConfig config) {
+	auto res = vm::api::loadFiles(initProcess(process_config, config), { dbc_file });
 	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
 	ASSERT_HAS_VALUE(res);
 }

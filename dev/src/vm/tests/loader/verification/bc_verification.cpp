@@ -14,10 +14,12 @@
  * @brief What belongs here: the loader's static verification. A test loads a program that parses
  * fine and checks that the loader accepts it (`right/`) or rejects it with the right error
  * (`wrong/<area>/`). Every semantic error found before a program runs belongs here: unknown names,
- * labels, jumps, locals, types, globals, literals, function signatures and calls, and the
- * execution config (IO, single thread, read-only globals).
+ * labels, jumps, locals, types (and their `assert_size`), C pointer instructions, globals,
+ * literals, function signatures and calls, and the execution config (IO, single thread, read-only
+ * globals).
  *
- * Inheritance errors have their own suite in `loader/inheritance/`.
+ * Inheritance errors have their own suite in `loader/inheritance/`. FFI errors need the test
+ * library, so they have their own suite in `loader/ffi/`.
  */
 class BCVerificationTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -89,6 +91,28 @@ public:
 		TESTER_ADD_TEST(nonInstantiableVariant);
 		TESTER_ADD_TEST(nonInstantiableDynamicTable);
 
+		// Type size assertions
+		TESTER_ADD_TEST(packedStructSize);
+		TESTER_ADD_TEST(assertSizeMatches);
+		TESTER_ADD_TEST(assertSizeMismatchFails);
+		TESTER_ADD_TEST(assertSizeOnPointerTypeFails);
+
+		// C pointer verification
+		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
+		TESTER_ADD_TEST(movPCptrStrictnessFails);
+		TESTER_ADD_TEST(cptrLoadThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrLoadPointeeMismatchFails);
+		TESTER_ADD_TEST(cptrLoadPackedPointeeFails);
+		TESTER_ADD_TEST(cptrStoreThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrStorePointeeMismatchFails);
+		TESTER_ADD_TEST(cptrStorePackedPointeeFails);
+		TESTER_ADD_TEST(cptrReadThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrReadPointeeMismatchFails);
+		TESTER_ADD_TEST(cptrWriteThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrWritePointeeMismatchFails);
+		TESTER_ADD_TEST(cptrReadIntoPointerPointeeFails);
+		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
+
 		// Literal verification
 		TESTER_ADD_TEST(invalidLiterals);
 
@@ -100,6 +124,7 @@ public:
 		TESTER_ADD_TEST(tailCallPropagatesIO);
 		TESTER_ADD_TEST(spawningThreadViolatesSingleThread);
 		TESTER_ADD_TEST(validProgramPassesConfig);
+
 		// Globals verification
 		TESTER_ADD_TEST(wrongGlobalInitializationMethod);
 		TESTER_ADD_TEST(wrongGlobalImmSize);
@@ -680,6 +705,312 @@ private:
 			{
 				vm::code::InvalidFunctionCallArgumentsError::ERR_MSG,
 			}
+		);
+	}
+
+	// Type size assertions
+
+	// `packed` restores the no-padding layout: 1 + 8 bytes.
+	void packedStructSize() {
+		loadValidDbc(inlineDbc(
+			"packed_size",
+			"type data: Mix { a: i8, b: i64 } packed assert_size 9\n"
+			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
+		));
+	}
+
+	void assertSizeMatches() {
+		loadValidDbc(inlineDbc(
+			"assert_ok",
+			"type data: Pair { a: i32, b: i32 } assert_size 8\n"
+			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
+		));
+	}
+
+	void assertSizeMismatchFails() {
+		loadInvalidDbc(
+			inlineDbc("assert_bad", "type data: Pair { a: i32, b: i32 } assert_size 16\n"),
+			{ vm::code::TypeSizeAssertError::ERR_MSG }
+		);
+	}
+
+	// A type whose size depends on the pointer width (8 bytes in C, 16 in the safe interpreter)
+	// has no single size to assert against.
+	void assertSizeOnPointerTypeFails() {
+		loadInvalidDbc(
+			inlineDbc("assert_ptr", "type data: Holder { p: ptr_i64 } assert_size 8\n"),
+			{ vm::code::TypeSizeAssertPointerDependentError::ERR_MSG }
+		);
+	}
+
+	// C pointer verification
+
+	void cpointerToUnknownTypeFails() {
+		loadInvalidDbc(
+			inlineDbc("cpointer_unknown_inner", "type cpointer: BadPtr NoSuchType\n"),
+			{ vm::code::UnknownSubtypeError::ERR_MSG, "NoSuchType" }
+		);
+	}
+
+	// `mov_pcptr_pcptr` requires identical types on both sides: no implicit pointee change, no
+	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
+	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
+	void movPCptrStrictnessFails() {
+		auto expect_mov_error = [&](const std::string& name,
+		                            const std::string& types,
+		                            const std::string& a_type,
+		                            const std::string& b_type,
+		                            std::string_view   keyword) {
+			loadInvalidDbc(
+				inlineDbc(
+					name,
+					types + "function main { i64, ptr_argv } -> { i64 } {\n"
+						+ "    init_pany_type a, " + a_type + ";\n" + "    init_pany_type b, "
+						+ b_type + ";\n"
+						+ "    mov_pcptr_pcptr a, b;\n"
+						  "    ret;\n"
+						  "}\n"
+				),
+				{ keyword }
+			);
+		};
+		expect_mov_error(
+			"mov_pcptr_across_types",
+			"type cpointer: APtr i64\ntype cpointer: BPtr i32\n",
+			"APtr",
+			"BPtr",
+			vm::code::CPointerTypeMismatchError::ERR_MSG
+		);
+		expect_mov_error(
+			"mov_pcptr_cptr_to_typed",
+			"type cpointer: APtr i64\n",
+			"APtr",
+			"cptr",
+			vm::code::CPointerTypeMismatchError::ERR_MSG
+		);
+		expect_mov_error(
+			"mov_pcptr_same_pointee",
+			"type cpointer: APtr i64\ntype cpointer: BPtr i64\n",
+			"APtr",
+			"BPtr",
+			vm::code::CPointerTypeMismatchError::ERR_MSG
+		);
+		expect_mov_error(
+			"mov_pcptr_non_cpointer", "", "i64", "i64", vm::code::InvalidArgumentTypeError::ERR_MSG
+		);
+	}
+
+	// The builtin `cptr` has no pointee, so it cannot be dereferenced with a typed load.
+	void cptrLoadThroughVoidCPtrFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"load_through_void",
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type c, cptr;\n"
+				"    init_pany_type v, i64;\n"
+				"    load_pany_pcptr v, c;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
+		);
+	}
+
+	void cptrLoadPointeeMismatchFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"load_pointee_mismatch",
+				"type cpointer: I64Ptr i64\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type p, I64Ptr;\n"
+				"    init_pany_type v, i32;\n"
+				"    load_pany_pcptr v, p;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrPointeeMismatchError::ERR_MSG }
+		);
+	}
+
+	// A packed pointee is not FFI-compliant, so its native layout cannot be assumed.
+	void cptrLoadPackedPointeeFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"load_packed_pointee",
+				"type data: P { a: i8, b: i64 } packed\n"
+				"type cpointer: PPtr P\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type p, PPtr;\n"
+				"    init_pany_type s, P;\n"
+				"    load_pany_pcptr s, p;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
+		);
+	}
+
+	// The store-side mirror of cptrLoadThroughVoidCPtrFails.
+	void cptrStoreThroughVoidCPtrFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"store_through_void",
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type c, cptr;\n"
+				"    init_pany_type v, i64;\n"
+				"    store_pcptr_pany c, v;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
+		);
+	}
+
+	// The store-side mirror of cptrLoadPointeeMismatchFails.
+	void cptrStorePointeeMismatchFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"store_pointee_mismatch",
+				"type cpointer: I64Ptr i64\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type p, I64Ptr;\n"
+				"    init_pany_type v, i32;\n"
+				"    store_pcptr_pany p, v;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrPointeeMismatchError::ERR_MSG }
+		);
+	}
+
+	// The store-side mirror of cptrLoadPackedPointeeFails.
+	void cptrStorePackedPointeeFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"store_packed_pointee",
+				"type data: P { a: i8, b: i64 } packed\n"
+				"type cpointer: PPtr P\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type p, PPtr;\n"
+				"    init_pany_type s, P;\n"
+				"    store_pcptr_pany p, s;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
+		);
+	}
+
+	// The builtin `cptr` has no pointee, so the byte count of a raw copy is unknown.
+	void cptrReadThroughVoidCPtrFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"read_through_void",
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type c, cptr;\n"
+				"    init_pany_type v, i64;\n"
+				"    init_pany_type vp, ptr_i64;\n"
+				"    ref_pptr_pany vp, v;\n"
+				"    read_pptr_pcptr vp, c;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
+		);
+	}
+
+	// Both sides of a raw copy must agree on the pointee type.
+	void cptrReadPointeeMismatchFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"read_pointee_mismatch",
+				"type cpointer: I64Ptr i64\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type p, I64Ptr;\n"
+				"    init_pany_type v, i32;\n"
+				"    init_pany_type vp, ptr_i32;\n"
+				"    ref_pptr_pany vp, v;\n"
+				"    read_pptr_pcptr vp, p;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrPointeeMismatchError::ERR_MSG }
+		);
+	}
+
+	// The write-side mirror of cptrReadThroughVoidCPtrFails.
+	void cptrWriteThroughVoidCPtrFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"write_through_void",
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type c, cptr;\n"
+				"    init_pany_type v, i64;\n"
+				"    init_pany_type vp, ptr_i64;\n"
+				"    ref_pptr_pany vp, v;\n"
+				"    write_pcptr_pptr c, vp;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
+		);
+	}
+
+	// The write-side mirror of cptrReadPointeeMismatchFails.
+	void cptrWritePointeeMismatchFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"write_pointee_mismatch",
+				"type cpointer: I64Ptr i64\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type p, I64Ptr;\n"
+				"    init_pany_type v, i32;\n"
+				"    init_pany_type vp, ptr_i32;\n"
+				"    ref_pptr_pany vp, v;\n"
+				"    write_pcptr_pptr p, vp;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrPointeeMismatchError::ERR_MSG }
+		);
+	}
+
+	// A raw copy must not overwrite VM-managed data: a struct holding a VM pointer is not
+	// FFI-compliant, so a cpointer to it is not dereferenceable.
+	void cptrReadIntoPointerPointeeFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"read_into_pointer_pointee",
+				"type data: Holder { p: ptr_i64, v: i64 }\n"
+				"type pointer: HolderPtr Holder\n"
+				"type cpointer: HolderCPtr Holder\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type c, HolderCPtr;\n"
+				"    init_pany_type hp, HolderPtr;\n"
+				"    read_pptr_pcptr hp, c;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
+		);
+	}
+
+	// A raw copy must not leak raw block addresses to native memory either.
+	void cptrWriteFromPointerPointeeFails() {
+		loadInvalidDbc(
+			inlineDbc(
+				"write_from_pointer_pointee",
+				"type data: Holder { p: ptr_i64, v: i64 }\n"
+				"type pointer: HolderPtr Holder\n"
+				"type cpointer: HolderCPtr Holder\n"
+				"function main { i64, ptr_argv } -> { i64 } {\n"
+				"    init_pany_type c, HolderCPtr;\n"
+				"    init_pany_type hp, HolderPtr;\n"
+				"    write_pcptr_pptr c, hp;\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::CPtrNotDereferenceableError::ERR_MSG }
 		);
 	}
 };

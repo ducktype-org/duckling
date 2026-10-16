@@ -9,6 +9,7 @@
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
 #include <vm/api/api.hpp>
@@ -64,6 +65,14 @@ protected:
 	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.
 	 */
 	vm::PID spawnAndLoad(const std::string& dbc_filename);
+
+	/**
+	 * @brief Wraps bytecode written in the test itself into an in-memory `.dbc` file, for
+	 * programs that depend on values only known at run time (e.g. the path of a library). The
+	 * file never touches the disk, so suites running in parallel cannot clash. @p name is part of
+	 * the file name, so it shows in the positions of the load errors.
+	 */
+	static fs::File inlineDbc(std::string_view name, std::string_view bytecode);
 
 	static bool isRunning(const vm::api::ProcStatus& s) { return v_matches(s, vm::api::Running); }
 
@@ -334,6 +343,15 @@ protected:
 	);
 
 	/**
+	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
+	 */
+	void loadInvalidDbc(
+		const fs::File&                      dbc_file,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
 	 * @brief Loads @p first_dbc under an unrestricted config, then loads @p second_dbc under
 	 * @p config on the same process, asserting the second load fails verification with the
 	 * given error keywords. Exercises flag propagation from already-loaded ("old") functions
@@ -350,6 +368,11 @@ protected:
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
+
+	/**
+	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
+	 */
+	void loadValidDbc(const fs::File& dbc_file, vm::api::ExecutionConfig config = {});
 
 	/**
 	 * @brief ProcessConfig used by the no-arg `initProcess()` (and therefore by `spawnAndLoad`).

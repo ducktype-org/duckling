@@ -13,9 +13,10 @@ and starts with a comment saying what should be tested in it.
 | `common/programs/` | Fixtures shared by several suites (`while_true`, `spin_threads`, `breakpoint`, leaks, `fib_*`, ...). |
 | `utils/` | VM data structures that need no program (`persistent_structures`, `stable_obj_id_name_map`). |
 | `bytecode/` | Instruction naming, program builders (`builders/`), the assembly parser (`assembly/`, syntax errors only), the serializer (`serializer/`). |
-| `loader/verification/` | Static verification: every semantic error found before a program runs. Programs that must load go in `right/`, programs that must fail go in `wrong/<area>/`. |
+| `loader/verification/` | Static verification: every semantic error found before a program runs, C pointer instructions included (written inline with `inlineDbc`). Programs that must load go in `right/`, programs that must fail go in `wrong/<area>/`. |
 | `loader/lowering/` | Load-time lowering (GIL placement, local initialization, inheritance metadata and vtables). |
 | `loader/inheritance/` | Every hierarchy / virtual-call error found at load time. |
+| `loader/ffi/` | Every FFI error found at load time: `ffi object` files that cannot be loaded, missing symbols, signatures libffi cannot describe. Programs are inline (`inlineDbc`), since they name `ffi_test_lib` by its build path. |
 | `runtime/primitives/` | Integers, booleans, literals, casts, `void`. |
 | `runtime/control_flow/` | Jumps and labels inside one function. |
 | `runtime/functions/` | Calls, arguments, return values, recursion, builtins, `main` (exit code, arguments). |
@@ -28,8 +29,8 @@ and starts with a comment saying what should be tested in it.
 | `runtime/memory/` | Memory management that must work: destructors, variant blocks. |
 | `runtime/threads/` | Threads, mutexes, condition variables. |
 | `runtime/correctness/` | Whole algorithms with a known result. |
-| `runtime/native/` | `extern_c/` (C++ functions registered in the VM) and `ffi/` (shared libraries, `cptr`). |
-| `runtime/errors/` | Every error the VM detects while a program runs (zero division, leaks, double / invalid free, use after free, null pointer, out of bounds, unset vtable, ...). Fixtures in one folder per area. `threads/` holds the errors that need several threads (deadlocks included) in a second binary. |
+| `runtime/native/` | `extern_c/` (C++ functions registered in the VM) and `ffi/` (calls into shared libraries, `cptr` to native memory). `ffi/` also builds `ffi_test_lib`. Programs are inline (`inlineDbc`), since they name the library by its build path. |
+| `runtime/errors/` | Every error the VM detects while a program runs (zero division, leaks, double / invalid free, use after free, null pointer or cpointer, out of bounds, unset vtable, ...). Fixtures in one folder per area. `threads/` holds the errors that need several threads (deadlocks included) in a second binary. |
 | `api/` | `vm::api` endpoints: process lifecycle, stress, `debug/` (debug endpoints) and `injection/` (code injection). |
 | `debugger/` | The `vm::debugger` tool itself (debugger class, CLI, mapper). |
 | `jit/`, `fast_mode/` | The JIT and the fast execution mode. |

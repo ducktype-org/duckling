@@ -10,9 +10,6 @@
 
 #include <vm/api/vm.hpp>
 
-#include <filesystem>
-#include <fstream>
-
 #ifndef FFI_TEST_LIB_PATH
 	#error "FFI_TEST_LIB_PATH must be defined to the built shared object path"
 #endif
@@ -28,114 +25,53 @@ namespace {
 }
 
 /**
- * @brief What belongs here: calling functions from a shared library through the FFI, and working
- * with C pointers (`cptr`). It also checks the FFI errors, both at load time (bad native
- * signatures) and at run time (bad `cptr` accesses), because they need the test library built
- * next to this suite.
+ * @brief What belongs here: calling functions from a shared library through the FFI while a
+ * program runs, and working with C pointers (`cptr`) that point to native memory. The programs are
+ * written inline, because they name the test library by its build-dependent path.
  */
-class VmFfiTest: public VmTestSuite {
+class VmFfiTest: public VmRuntimeTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmFfiTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(addPrimitives);
 		TESTER_ADD_TEST(voidAndStateReadback);
 		TESTER_ADD_TEST(smallIntReturnWidening);
 		TESTER_ADD_TEST(cptrRawReadWrite);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
-		TESTER_ADD_TEST(cptrNullTypedLoadFails);
-		TESTER_ADD_TEST(cptrNullRawReadFails);
 		TESTER_ADD_TEST(cptrNullCompare);
 		TESTER_ADD_TEST(cptrTypedLoadStoreMallocWorkflow);
 		TESTER_ADD_TEST(cptrAddOffsetArrayWalk);
-		TESTER_ADD_TEST(cptrLoadThroughVoidCPtrFails);
-		TESTER_ADD_TEST(cptrLoadPointeeMismatchFails);
-		TESTER_ADD_TEST(cptrLoadPackedPointeeFails);
-		TESTER_ADD_TEST(cptrStoreThroughVoidCPtrFails);
-		TESTER_ADD_TEST(cptrStorePointeeMismatchFails);
-		TESTER_ADD_TEST(cptrStorePackedPointeeFails);
-		TESTER_ADD_TEST(cptrReadThroughVoidCPtrFails);
-		TESTER_ADD_TEST(cptrReadPointeeMismatchFails);
-		TESTER_ADD_TEST(cptrWriteThroughVoidCPtrFails);
-		TESTER_ADD_TEST(cptrWritePointeeMismatchFails);
-		TESTER_ADD_TEST(cptrReadIntoPointerPointeeFails);
-		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
 		TESTER_ADD_TEST(cptrCastFromPointer);
 		TESTER_ADD_TEST(cptrCastKeepsPointerOffset);
-		TESTER_ADD_TEST(cptrCastOfNullPointerFails);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
 		TESTER_ADD_TEST(floatStructByValue);
-		TESTER_ADD_TEST(floatNameWithWrongSizeFails);
 		TESTER_ADD_TEST(systemLibraryViaApi);
 		TESTER_ADD_TEST(bareSonameInBytecode);
-		TESTER_ADD_TEST(missingSystemLibraryFails);
-		TESTER_ADD_TEST(missingSymbolFails);
-		TESTER_ADD_TEST(missingObjectFileFails);
-		TESTER_ADD_TEST(unsupportedTypeFails);
-		TESTER_ADD_TEST(multipleResultsFails);
 		TESTER_ADD_TEST(alignedStructByValue);
 		TESTER_ADD_TEST(structWithNestedTablesByValue);
 		TESTER_ADD_TEST(structWithTableOfStructsByValue);
 		TESTER_ADD_TEST(structWithFloatTableByValue);
 		TESTER_ADD_TEST(structWithTableReturnedFromC);
 		TESTER_ADD_TEST(nestedStructByValue);
-		TESTER_ADD_TEST(tableByValueFails);
-		TESTER_ADD_TEST(nonCompliantStructsFail);
-		TESTER_ADD_TEST(structWithPackedFieldFails);
-		TESTER_ADD_TEST(packedStructInFfiFails);
-		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
-		TESTER_ADD_TEST(packedStructSize);
 		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
 		TESTER_ADD_TEST(forwardDeclaredPointee);
-		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
-		TESTER_ADD_TEST(movPCptrStrictnessFails);
-		TESTER_ADD_TEST(duplicateFfiFunctionFails);
-		TESTER_ADD_TEST(assertSizeMatches);
-		TESTER_ADD_TEST(assertSizeMismatchFails);
-		TESTER_ADD_TEST(assertSizeOnPointerTypeFails);
 	}
 
 private:
-	// Writes bytecode text to a uniquely-named temporary file and returns it as an fs::File.
-	fs::File writeTempDbc(const std::string& name, const std::string& contents) {
-		auto          path = std::filesystem::temp_directory_path() / ("vm_ffi_" + name + ".dbc");
-		std::ofstream out(path);
-		out << contents;
-		out.close();
-		return { fs::FilePath(path.string()) };
-	}
-
 	// Loads a program expected to be valid and runs `main`, asserting the produced output.
 	void runProgram(
 		const std::string& name, const std::string& bytecode, const std::string& expected_output
 	) {
 		auto pid  = initProcess();
-		auto file = writeTempDbc(name, bytecode);
+		auto file = inlineDbc(name, bytecode);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
 		runTestOnVm(pid, {}, expected_output);
-	}
-
-	// Loads a program expected to fail validation, asserting the error mentions each keyword.
-	void expectLoadError(
-		const std::string&                   name,
-		const std::string&                   bytecode,
-		const std::vector<std::string_view>& keywords
-	) {
-		auto file = writeTempDbc(name, bytecode);
-		auto load = vm::api::loadFiles(initProcess(), { file });
-		ASSERT_NO_VALUE(load);
-		ASSERT_MATCHES(load.error(), vm::api::LoadProgramError);
-		auto why = std::get<vm::api::LoadProgramError>(load.error()).why;
-		std::cerr << why << '\n';
-		for (auto keyword: keywords)
-			assertTrue(
-				why.find(keyword) != std::string::npos, base::strConcat("Missing: ", keyword)
-			);
 	}
 
 	void addPrimitives() {
@@ -295,44 +231,6 @@ private:
 		);
 	}
 
-	// A default-initialized cpointer is null; a typed load must fail cleanly, not crash.
-	void cptrNullTypedLoadFails() {
-		auto pid  = initProcess();
-		auto file = writeTempDbc(
-			"null_typed_load",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, I64Ptr;\n"
-			"    init_pany_type v, i64;\n"
-			"    load_pany_pcptr v, p;\n"
-			"    ret;\n"
-			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
-	}
-
-	// The same for the raw byte copy.
-	void cptrNullRawReadFails() {
-		auto pid  = initProcess();
-		auto file = writeTempDbc(
-			"null_raw_read",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, I64Ptr;\n"
-			"    init_pany_type out, i64;\n"
-			"    init_pany_type op, ptr_i64;\n"
-			"    ref_pptr_pany op, out;\n"
-			"    read_pptr_pcptr op, c;\n"
-			"    ret;\n"
-			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
-	}
-
 	// `cmpNull_pcptr` sets the flag on a null cpointer (default-initialized here) and clears it
 	// on a live allocation; `cmov` materializes the flag as 1/0.
 	void cptrNullCompare() {
@@ -467,16 +365,6 @@ private:
 		);
 	}
 
-	void floatNameWithWrongSizeFails() {
-		expectLoadError(
-			"bad_float_size",
-			ffiObjectHeader()
-				+ "type primitive: f32 8\n"
-				  "ffi function ffi_addf { f32, f32 } -> { f32 };\n",
-			{ "FFI function signature" }
-		);
-	}
-
 	// A system library injected through `loadCode` (the path the `--ffi-lib` CLI option uses)
 	// must be visible to `ffi function` declarations from a later `loadFiles` call.
 	void systemLibraryViaApi() {
@@ -486,7 +374,7 @@ private:
 		libs.object_files.emplace_back(SYSTEM_MATH_LIB);
 		ASSERT_HAS_VALUE(vm::api::loadCode(pid, libs));
 
-		auto file = writeTempDbc(
+		auto file = inlineDbc(
 			"system_lib_api",
 			"type primitive: f64 8\n"
 			"ffi function cos { f64 } -> { f64 };\n"
@@ -527,48 +415,6 @@ private:
 			"    ret;\n"
 			"}\n",
 			"1\n"
-		);
-	}
-
-	void missingSystemLibraryFails() {
-		expectLoadError(
-			"missing_system_lib",
-			"ffi object \"libduckling_no_such_lib.so\";\n"
-			"ffi function ffi_add { i64, i64 } -> { i64 };\n",
-			{ "Failed to load" }
-		);
-	}
-
-	void missingSymbolFails() {
-		expectLoadError(
-			"missing_symbol",
-			ffiObjectHeader() + "ffi function ffi_does_not_exist { } -> { };\n",
-			{ "Symbol not found" }
-		);
-	}
-
-	void missingObjectFileFails() {
-		expectLoadError(
-			"missing_object",
-			"ffi object \"/definitely/not/a/real/library.so\";\n"
-			"ffi function ffi_add { i64, i64 } -> { i64 };\n",
-			{ "Failed to load" }
-		);
-	}
-
-	void unsupportedTypeFails() {
-		expectLoadError(
-			"bad_type",
-			ffiObjectHeader() + "ffi function ffi_add { string } -> { };\n",
-			{ "FFI function signature" }
-		);
-	}
-
-	void multipleResultsFails() {
-		expectLoadError(
-			"multi_result",
-			ffiObjectHeader() + "ffi function ffi_add { i64, i64 } -> { i64, i64 };\n",
-			{ "at most one" }
 		);
 	}
 
@@ -797,132 +643,6 @@ private:
 		);
 	}
 
-	// C has no by-value arrays, so a fixed-size table is only allowed as a structure field.
-	void tableByValueFails() {
-		expectLoadError(
-			"table_by_value",
-			ffiObjectHeader()
-				+ "type fixed_size_table: arr4 i32 4\n"
-				  "ffi function ffi_add { arr4 } -> { i64 };\n",
-			{ "by-value arrays", "fixed-size table" }
-		);
-	}
-
-	// Structures whose libffi descriptor would be degenerate are not FFI-compliant: a
-	// zero-length table flattens to no elements, a field-less struct has size 0 (rejected by
-	// libffi), and an oversized flattened element count must fail before it is materialized —
-	// also when the elements hide inside nested structure descriptors.
-	void nonCompliantStructsFail() {
-		expectLoadError(
-			"zero_length_table_struct",
-			ffiObjectHeader()
-				+ "type fixed_size_table: arr0 i32 0\n"
-				  "type data: WithEmpty { v: arr0 }\n"
-				  "ffi function ffi_add { WithEmpty } -> { i64 };\n",
-			{ "WithEmpty", "cannot be used in an FFI function signature" }
-		);
-		expectLoadError(
-			"empty_struct",
-			ffiObjectHeader()
-				+ "type data: Empty { }\n"
-				  "ffi function ffi_add { Empty } -> { i64 };\n",
-			{ "Empty", "cannot be used in an FFI function signature" }
-		);
-		expectLoadError(
-			"huge_table_struct",
-			ffiObjectHeader()
-				+ "type fixed_size_table: huge i32 100000000\n"
-				  "type data: WithHuge { v: huge }\n"
-				  "ffi function ffi_add { WithHuge } -> { i64 };\n",
-			{ "WithHuge", "cannot be used in an FFI function signature" }
-		);
-		// Each nested struct is under the cap on its own; their sum is not.
-		expectLoadError(
-			"nested_struct_cap_bypass",
-			ffiObjectHeader()
-				+ "type fixed_size_table: big i32 40000\n"
-				  "type data: Inner { v: big }\n"
-				  "type data: Outer { a: Inner, b: Inner }\n"
-				  "ffi function ffi_add { Outer } -> { i64 };\n",
-			{ "Outer", "cannot be used in an FFI function signature" }
-		);
-	}
-
-	// A packed struct is not FFI-compliant, so neither is any struct containing one.
-	void structWithPackedFieldFails() {
-		expectLoadError(
-			"packed_field_struct",
-			ffiObjectHeader()
-				+ "type data: PackedInner { a: i8, b: i64 } packed\n"
-				  "type data: Holder { p: PackedInner, v: i64 }\n"
-				  "ffi function ffi_add { Holder } -> { i64 };\n",
-			{ "cannot be used in an FFI function signature", "Holder" }
-		);
-	}
-
-	// libffi can only describe the C ABI layout, so packed structs are rejected in FFI
-	// signatures.
-	void packedStructInFfiFails() {
-		expectLoadError(
-			"packed_struct_ffi",
-			ffiObjectHeader()
-				+ "type data: Mix { a: i8, b: i64 } packed\n"
-				  "ffi function ffi_mix_sum { Mix } -> { i64 };\n",
-			{ "packed", "cannot be used in an FFI function signature" }
-		);
-	}
-
-	// Rejected even when the packed layout coincides with the C ABI layout (all fields naturally
-	// aligned) - such a struct is identical to its non-packed version, so `packed` is dropped
-	// rather than special-cased.
-	void packedStructWithMatchingLayoutStillFails() {
-		expectLoadError(
-			"packed_struct_matching_ffi",
-			ffiObjectHeader()
-				+ "type primitive: f32 4\n"
-				  "type data: FPair { a: f32, b: f32 } packed assert_size 8\n"
-				  "ffi function ffi_fpair_swap { FPair } -> { FPair };\n",
-			{ "packed", "cannot be used in an FFI function signature" }
-		);
-	}
-
-	// `packed` restores the no-padding layout: 1 + 8 bytes.
-	void packedStructSize() {
-		auto file = writeTempDbc(
-			"packed_size",
-			"type data: Mix { a: i8, b: i64 } packed assert_size 9\n"
-			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
-		);
-		ASSERT_HAS_VALUE(vm::api::loadFiles(initProcess(), { file }));
-	}
-
-	void assertSizeMatches() {
-		auto file = writeTempDbc(
-			"assert_ok",
-			"type data: Pair { a: i32, b: i32 } assert_size 8\n"
-			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
-		);
-		ASSERT_HAS_VALUE(vm::api::loadFiles(initProcess(), { file }));
-	}
-
-	void assertSizeMismatchFails() {
-		expectLoadError(
-			"assert_bad",
-			"type data: Pair { a: i32, b: i32 } assert_size 16\n",
-			{ "assert_size` mismatch" }
-		);
-	}
-
-	// A type whose size depends on the pointer width (8 bytes in C, 16 in the safe interpreter)
-	// has no single size to assert against.
-	void assertSizeOnPointerTypeFails() {
-		expectLoadError(
-			"assert_ptr",
-			"type data: Holder { p: ptr_i64 } assert_size 8\n",
-			{ "depends on the pointer width" }
-		);
-	}
-
 	// A typed cpointer crosses the FFI boundary like the builtin `cptr` (the pointee type only
 	// exists on the VM side), both as a bare argument/result and as a by-value struct field; C
 	// writes through the pointer.
@@ -986,60 +706,6 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"1"
-		);
-	}
-
-	void cpointerToUnknownTypeFails() {
-		expectLoadError(
-			"cpointer_unknown_inner",
-			"type cpointer: BadPtr NoSuchType\n",
-			{ "subtype is not defined", "NoSuchType" }
-		);
-	}
-
-	// `mov_pcptr_pcptr` requires identical types on both sides: no implicit pointee change, no
-	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
-	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
-	void movPCptrStrictnessFails() {
-		auto expect_mov_error = [&](const std::string& name,
-		                            const std::string& types,
-		                            const std::string& a_type,
-		                            const std::string& b_type,
-		                            std::string_view   keyword) {
-			expectLoadError(
-				name,
-				types + "function main { i64, ptr_argv } -> { i64 } {\n"
-				      + "    init_pany_type a, " + a_type + ";\n"
-				      + "    init_pany_type b, " + b_type + ";\n"
-				      + "    mov_pcptr_pcptr a, b;\n"
-				        "    ret;\n"
-				        "}\n",
-				{ keyword }
-			);
-		};
-		expect_mov_error(
-			"mov_pcptr_across_types",
-			"type cpointer: APtr i64\ntype cpointer: BPtr i32\n",
-			"APtr",
-			"BPtr",
-			"C pointer type does not match"
-		);
-		expect_mov_error(
-			"mov_pcptr_cptr_to_typed",
-			"type cpointer: APtr i64\n",
-			"APtr",
-			"cptr",
-			"C pointer type does not match"
-		);
-		expect_mov_error(
-			"mov_pcptr_same_pointee",
-			"type cpointer: APtr i64\ntype cpointer: BPtr i64\n",
-			"APtr",
-			"BPtr",
-			"C pointer type does not match"
-		);
-		expect_mov_error(
-			"mov_pcptr_non_cpointer", "", "i64", "i64", "Invalid instruction argument type"
 		);
 	}
 
@@ -1133,196 +799,6 @@ private:
 		);
 	}
 
-	// The builtin `cptr` has no pointee, so it cannot be dereferenced with a typed load.
-	void cptrLoadThroughVoidCPtrFails() {
-		expectLoadError(
-			"load_through_void",
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, cptr;\n"
-			"    init_pany_type v, i64;\n"
-			"    load_pany_pcptr v, c;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	void cptrLoadPointeeMismatchFails() {
-		expectLoadError(
-			"load_pointee_mismatch",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, I64Ptr;\n"
-			"    init_pany_type v, i32;\n"
-			"    load_pany_pcptr v, p;\n"
-			"    ret;\n"
-			"}\n",
-			{ "does not match the C pointer's pointee" }
-		);
-	}
-
-	// A packed pointee is not FFI-compliant, so its native layout cannot be assumed.
-	void cptrLoadPackedPointeeFails() {
-		expectLoadError(
-			"load_packed_pointee",
-			"type data: P { a: i8, b: i64 } packed\n"
-			"type cpointer: PPtr P\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, PPtr;\n"
-			"    init_pany_type s, P;\n"
-			"    load_pany_pcptr s, p;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	// The store-side mirror of cptrLoadThroughVoidCPtrFails.
-	void cptrStoreThroughVoidCPtrFails() {
-		expectLoadError(
-			"store_through_void",
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, cptr;\n"
-			"    init_pany_type v, i64;\n"
-			"    store_pcptr_pany c, v;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	// The store-side mirror of cptrLoadPointeeMismatchFails.
-	void cptrStorePointeeMismatchFails() {
-		expectLoadError(
-			"store_pointee_mismatch",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, I64Ptr;\n"
-			"    init_pany_type v, i32;\n"
-			"    store_pcptr_pany p, v;\n"
-			"    ret;\n"
-			"}\n",
-			{ "does not match the C pointer's pointee" }
-		);
-	}
-
-	// The store-side mirror of cptrLoadPackedPointeeFails.
-	void cptrStorePackedPointeeFails() {
-		expectLoadError(
-			"store_packed_pointee",
-			"type data: P { a: i8, b: i64 } packed\n"
-			"type cpointer: PPtr P\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, PPtr;\n"
-			"    init_pany_type s, P;\n"
-			"    store_pcptr_pany p, s;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	// The builtin `cptr` has no pointee, so the byte count of a raw copy is unknown.
-	void cptrReadThroughVoidCPtrFails() {
-		expectLoadError(
-			"read_through_void",
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, cptr;\n"
-			"    init_pany_type v, i64;\n"
-			"    init_pany_type vp, ptr_i64;\n"
-			"    ref_pptr_pany vp, v;\n"
-			"    read_pptr_pcptr vp, c;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	// Both sides of a raw copy must agree on the pointee type.
-	void cptrReadPointeeMismatchFails() {
-		expectLoadError(
-			"read_pointee_mismatch",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, I64Ptr;\n"
-			"    init_pany_type v, i32;\n"
-			"    init_pany_type vp, ptr_i32;\n"
-			"    ref_pptr_pany vp, v;\n"
-			"    read_pptr_pcptr vp, p;\n"
-			"    ret;\n"
-			"}\n",
-			{ "does not match the C pointer's pointee" }
-		);
-	}
-
-	// The write-side mirror of cptrReadThroughVoidCPtrFails.
-	void cptrWriteThroughVoidCPtrFails() {
-		expectLoadError(
-			"write_through_void",
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, cptr;\n"
-			"    init_pany_type v, i64;\n"
-			"    init_pany_type vp, ptr_i64;\n"
-			"    ref_pptr_pany vp, v;\n"
-			"    write_pcptr_pptr c, vp;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	// The write-side mirror of cptrReadPointeeMismatchFails.
-	void cptrWritePointeeMismatchFails() {
-		expectLoadError(
-			"write_pointee_mismatch",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, I64Ptr;\n"
-			"    init_pany_type v, i32;\n"
-			"    init_pany_type vp, ptr_i32;\n"
-			"    ref_pptr_pany vp, v;\n"
-			"    write_pcptr_pptr p, vp;\n"
-			"    ret;\n"
-			"}\n",
-			{ "does not match the C pointer's pointee" }
-		);
-	}
-
-	// A raw copy must not overwrite VM-managed data: a struct holding a VM pointer is not
-	// FFI-compliant, so a cpointer to it is not dereferenceable.
-	void cptrReadIntoPointerPointeeFails() {
-		expectLoadError(
-			"read_into_pointer_pointee",
-			"type data: Holder { p: ptr_i64, v: i64 }\n"
-			"type pointer: HolderPtr Holder\n"
-			"type cpointer: HolderCPtr Holder\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, HolderCPtr;\n"
-			"    init_pany_type hp, HolderPtr;\n"
-			"    read_pptr_pcptr hp, c;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	// A raw copy must not leak raw block addresses to native memory either.
-	void cptrWriteFromPointerPointeeFails() {
-		expectLoadError(
-			"write_from_pointer_pointee",
-			"type data: Holder { p: ptr_i64, v: i64 }\n"
-			"type pointer: HolderPtr Holder\n"
-			"type cpointer: HolderCPtr Holder\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, HolderCPtr;\n"
-			"    init_pany_type hp, HolderPtr;\n"
-			"    write_pcptr_pptr c, hp;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
 	// Hands the native address of a VM local to C, which writes through it. The VM sees the
 	// updated value because the cpointer addresses the block's data directly.
 	void cptrCastFromPointer() {
@@ -1377,44 +853,6 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"42"
-		);
-	}
-
-	// A null VM pointer has no block, so there is no address to take.
-	void cptrCastOfNullPointerFails() {
-		auto pid  = initProcess();
-		auto file = writeTempDbc(
-			"cptr_cast_null",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, ptr_i64;\n"
-			"    setNull_pptr p;\n"
-			"    init_pany_type c, I64Ptr;\n"
-			"    cast_pcptr_pptr c, p;\n"
-			"    ret;\n"
-			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
-	}
-
-	void duplicateFfiFunctionFails() {
-		// Injecting a declaration into a program that already has it clashes across load calls.
-		auto file = writeTempDbc(
-			"duplicate", ffiObjectHeader() + "ffi function ffi_add { i64, i64 } -> { i64 };\n"
-		);
-		auto pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
-
-		auto second = vm::api::loadFiles(pid, { file });
-		ASSERT_NO_VALUE(second);
-		ASSERT_MATCHES(second.error(), vm::api::LoadProgramError);
-		auto why = std::get<vm::api::LoadProgramError>(second.error()).why;
-		std::cerr << why << '\n';
-		assertTrue(
-			why.find("FFI function with this name already exists") != std::string::npos,
-			base::strConcat("Unexpected error: ", why)
 		);
 	}
 };
