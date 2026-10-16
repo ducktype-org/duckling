@@ -18,6 +18,7 @@ syntax of its language. Only a shebang line (and a UTF-8 BOM) may come before it
 import datetime
 import os
 import re
+from enum import Enum
 
 from .helpers import (
     get_input,
@@ -92,42 +93,61 @@ def _header_patterns(prefix: str) -> list[re.Pattern]:
     return patterns
 
 
+def _starts_with_shebang(text: str) -> bool:
+    """
+    Whether `text` starts with a shebang. Rust's inner attributes, like
+    `#![allow(dead_code)]`, start with `#!` too, but they are code, so the header
+    goes above them. Just like rustc, a `#!` followed by a `[` is not a shebang.
+    """
+    return text.startswith("#!") and not text[2:].lstrip().startswith("[")
+
+
 def _split_preamble(lines: list[str]) -> tuple[list[str], list[str]]:
     """Split off the lines that may precede the header (a shebang), keeping the rest."""
-    if lines and lines[0].startswith("#!"):
+    if lines and _starts_with_shebang(lines[0]):
         return lines[:1], lines[1:]
     return [], lines
 
 
-def has_license_header(path: str) -> bool:
-    """Whether `path` starts with the license header, after an optional shebang."""
-    prefix = get_comment_prefix(path)
-    if prefix is None:
-        return True
+class HeaderStatus(Enum):
+    """The state of the license header in a file, valued with what to report."""
 
-    with open(path, "r", encoding="utf-8-sig") as f:
-        _, lines = _split_preamble(f.read().splitlines())
-
-    patterns = _header_patterns(prefix)
-    if len(lines) < len(patterns):
-        return False
-    return all(
-        pattern.fullmatch(line.rstrip()) for pattern, line in zip(patterns, lines)
+    OK = "has the license header"
+    # Only this one can be fixed automatically, by prepending the header
+    MISSING = "missing license header"
+    # A file that mentions a copyright near its top has a wrong or a foreign
+    # header, which only a human can sort out
+    FOREIGN = (
+        "malformed or foreign license header, "
+        "cannot add the header automatically, fix it by hand"
+    )
+    UNREADABLE = (
+        "cannot be read as UTF-8 text, "
+        "cannot add the header automatically, fix it by hand"
     )
 
 
-def _can_fix(path: str) -> bool:
-    """
-    Whether the header can just be prepended. A file that already mentions a
-    copyright near its top has a wrong or a foreign header, which only a human
-    can sort out.
-    """
+def check_license_header(path: str) -> HeaderStatus:
+    """The state of the header in `path`, which has to start it, after an optional shebang."""
+    prefix = get_comment_prefix(path)
+    if prefix is None:
+        return HeaderStatus.OK
+
     try:
         with open(path, "r", encoding="utf-8-sig") as f:
-            head = [f.readline() for _ in range(_COPYRIGHT_SEARCH_LINES)]
+            lines = f.read().splitlines()
     except (OSError, UnicodeDecodeError):
-        return False
-    return not any("copyright" in line.lower() for line in head)
+        return HeaderStatus.UNREADABLE
+
+    _, body = _split_preamble(lines)
+    patterns = _header_patterns(prefix)
+    if len(body) >= len(patterns) and all(
+        pattern.fullmatch(line.rstrip()) for pattern, line in zip(patterns, body)
+    ):
+        return HeaderStatus.OK
+    if any("copyright" in line.lower() for line in lines[:_COPYRIGHT_SEARCH_LINES]):
+        return HeaderStatus.FOREIGN
+    return HeaderStatus.MISSING
 
 
 def add_license_header(path: str) -> None:
@@ -143,7 +163,7 @@ def add_license_header(path: str) -> None:
     newline = "\r\n" if "\r\n" in content else "\n"
 
     preamble = ""
-    if content.startswith("#!"):
+    if _starts_with_shebang(content):
         end = content.find("\n") + 1 or len(content)
         preamble, content = content[:end], content[end:]
         if not preamble.endswith("\n"):
@@ -199,47 +219,46 @@ def license_checker_impl(
         log_info("No source files to check for the license header. Nothing to check.")
         return True
 
-    failed: list[str] = []
-    for file in files:
-        try:
-            ok = has_license_header(file)
-        except (OSError, UnicodeDecodeError) as error:
-            log_warning(f"{file}: cannot be read as UTF-8 text: {error}")
-            ok = False
-        if not ok:
-            log_warning(f"{file}: missing or malformed license header")
-            failed.append(file)
+    statuses = {file: check_license_header(file) for file in files}
+    failed = [file for file, status in statuses.items() if status != HeaderStatus.OK]
+    for file in failed:
+        log_warning(f"{file}: {statuses[file].value}")
 
-    if failed and not no_fix:
-        fixable = [file for file in failed if _can_fix(file)]
-        for file in failed:
-            if file not in fixable:
-                log_warning(
-                    f"{file}: cannot get the header automatically, fix it by hand"
-                )
+    fixable = [file for file in failed if statuses[file] == HeaderStatus.MISSING]
+    if fixable and not no_fix:
         apply = auto_fix
-        if fixable and not auto_fix:
+        if not auto_fix:
             log_new_line()
             log_info(f"Can add the license header to {len(fixable)} file(s).")
             response = get_input("Do you want to add it? [Y/n]")
             apply = response.lower() in ["y", "yes", ""]
 
-        if fixable and apply:
+        if apply:
             for file in fixable:
                 add_license_header(file)
             log_good(f"License header added to {len(fixable)} file(s)")
-            failed = [file for file in failed if not has_license_header(file)]
+            # Only the fixed files have changed, so only they need a re-check
+            failed = [
+                file
+                for file in failed
+                if file not in fixable or check_license_header(file) != HeaderStatus.OK
+            ]
 
     if failed:
         log_warning(
             f"{len(failed)} of {len(files)} file(s) have no valid license header"
         )
-        log_info("Every source file has to start with (in its own comment syntax):")
-        for line in make_header("//", datetime.date.today().year):
-            log_info(f"    {line}")
+        log_info(
+            "Every source file has to start with the header in its comment syntax:"
+        )
+        year = datetime.date.today().year
+        for prefix in sorted({get_comment_prefix(file) or "" for file in failed}):
+            log_new_line()
+            for line in make_header(prefix, year):
+                log_info(f"    {line}")
+        log_new_line()
         log_info("Only a shebang line may precede it.")
         return False
 
     log_good(f"All {len(files)} checked file(s) have the license header")
     return True
-
