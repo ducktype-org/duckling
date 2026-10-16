@@ -105,7 +105,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                 self.bcx
                     .pcx
                     .ctx()
-                    .info("succesfully loaded previous build fingerprint")?;
+                    .info("successfully loaded previous build fingerprint")?;
                 cur_build_data.get_incremental_data(&prev_build_data)
             }
             Err(e) => {
