@@ -2,7 +2,7 @@
 
 #include "inputs.hpp"
 
-#include <psackling/pipeline.hpp>
+#include <pq_shared/pipeline.hpp>
 #include <querylinger/session_state.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>

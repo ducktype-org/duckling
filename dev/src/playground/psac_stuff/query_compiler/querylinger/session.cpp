@@ -4,7 +4,7 @@
 #include "queries/inputs.hpp"
 #include "session_state.hpp"
 
-#include <psackling/pipeline.hpp>
+#include <pq_shared/pipeline.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>

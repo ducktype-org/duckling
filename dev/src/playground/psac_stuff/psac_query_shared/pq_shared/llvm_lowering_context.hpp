@@ -1,7 +1,7 @@
 #pragma once
 
-#include <psackling/ids.hpp>
-#include <psackling/llvm.hpp>
+#include <pq_shared/ids.hpp>
+#include <pq_shared/llvm.hpp>
 
 #include <base/collections/maps.hpp>
 

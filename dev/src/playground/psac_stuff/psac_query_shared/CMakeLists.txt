@@ -1,30 +1,30 @@
 add_library(pq_shared
-    psackling/compiler.hpp
-    psackling/compiler.cpp
-    psackling/llvm.hpp
-    psackling/llvm.cpp
-    psackling/type.hpp
-    psackling/symbol.hpp
-    psackling/global_pass.hpp
-    psackling/global_pass.cpp
-    psackling/function_pass.hpp
-    psackling/function_pass.cpp
-    psackling/ids.hpp
-    psackling/namespace.hpp
-    psackling/context.hpp
-    psackling/module_loader.hpp
-    psackling/module_loader.cpp
-    psackling/pipeline.hpp
-    psackling/pipeline.cpp
-    psackling/llvm_lowering_context.hpp
-    psackling/llvm_lowering_context.cpp
-    psackling/expr_lowering.hpp
-    psackling/expr_lowering.cpp
-    psackling/const_eval.hpp
-    psackling/const_eval.cpp
-    psackling/char_literal.hpp
-    psackling/type_name_extractor.hpp
-    psackling/type_name_extractor.cpp
+    pq_shared/compiler.hpp
+    pq_shared/compiler.cpp
+    pq_shared/llvm.hpp
+    pq_shared/llvm.cpp
+    pq_shared/type.hpp
+    pq_shared/symbol.hpp
+    pq_shared/global_pass.hpp
+    pq_shared/global_pass.cpp
+    pq_shared/function_pass.hpp
+    pq_shared/function_pass.cpp
+    pq_shared/ids.hpp
+    pq_shared/namespace.hpp
+    pq_shared/context.hpp
+    pq_shared/module_loader.hpp
+    pq_shared/module_loader.cpp
+    pq_shared/pipeline.hpp
+    pq_shared/pipeline.cpp
+    pq_shared/llvm_lowering_context.hpp
+    pq_shared/llvm_lowering_context.cpp
+    pq_shared/expr_lowering.hpp
+    pq_shared/expr_lowering.cpp
+    pq_shared/const_eval.hpp
+    pq_shared/const_eval.cpp
+    pq_shared/char_literal.hpp
+    pq_shared/type_name_extractor.hpp
+    pq_shared/type_name_extractor.cpp
 )
 
 llvm_map_components_to_libnames(psackling_llvm_libs

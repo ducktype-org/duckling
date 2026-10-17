@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psackling/pipeline.hpp>
+#include <pq_shared/pipeline.hpp>
 
 #include <base/collections/maps.hpp>
 

@@ -2,9 +2,9 @@
 
 #include "ids.hpp"
 
-#include <psackling/namespace.hpp>
-#include <psackling/symbol.hpp>
-#include <psackling/type.hpp>
+#include <pq_shared/namespace.hpp>
+#include <pq_shared/symbol.hpp>
+#include <pq_shared/type.hpp>
 
 #include <base/except/exceptions.hpp>
 
