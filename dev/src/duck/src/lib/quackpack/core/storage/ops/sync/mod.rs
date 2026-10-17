@@ -15,7 +15,7 @@ use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
 use tracing::{debug, error, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::lints::emit_warnings_and_run_lint_passes;
+use crate::quackpack::core::lints::emit_diagnostics_and_run_lint_passes;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
@@ -60,7 +60,7 @@ pub struct SyncOutput {
 #[tracing::instrument(skip_all)]
 pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
-    emit_warnings_and_run_lint_passes(pcx)?;
+    emit_diagnostics_and_run_lint_passes(pcx)?;
     pcx.ctx().info_verbose(format!(
         "starting synchronization of the {}",
         pcx.package().display()

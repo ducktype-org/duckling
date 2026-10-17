@@ -5,3 +5,4 @@ SubDirs:
   - nonexistent-dep-feature
   - nonexistent-local-dep
   - overwrite
+  - unused-keys
