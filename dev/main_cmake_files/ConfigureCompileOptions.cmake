@@ -27,7 +27,8 @@ function(check_minimum_compiler_version compiler_name minimum_version)
 		"-DIGNORE_COMPILER_VERSION_CHECK=ON to turn this error into a warning.")
 
 	if (IGNORE_COMPILER_VERSION_CHECK)
-		message(WARNING "${version_message}")
+		message(WARNING "Your C++ compiler might be too old to build Duckling. "
+			"Proceeding, since IGNORE_COMPILER_VERSION_CHECK is ON.")
 	else()
 		message(FATAL_ERROR "${version_message}")
 	endif()
@@ -68,8 +69,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	message("-- ${CMAKE_CXX_COMPILER_ID} compiler")
 
-	# Apple Clang has the same minimum as the upstream one.
-	check_minimum_compiler_version("${CMAKE_CXX_COMPILER_ID}" 19)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		check_minimum_compiler_version("Clang" 19)
+	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+		check_minimum_compiler_version("Apple Clang" 17.0)
+	else()
+		message(FATAL_ERROR "Unsupported Clang compiler: ${CMAKE_CXX_COMPILER_ID}")
+	endif()
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	# The "-Werror=shadow" is more strict than "-Werror=shadow=local".
