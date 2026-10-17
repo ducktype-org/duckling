@@ -651,7 +651,7 @@ fn display_git_fast_path_failure_warning(
     ctx.warning(format!(
         "git fast path for `{name} {source}` failed: {error}"
     ))?;
-    ctx.info_verbose("switching to cloning git repository")?;
+    ctx.info("switching to cloning git repository")?;
     Ok(())
 }
 

@@ -24,6 +24,6 @@ Tests:
       sync:
         test-cmd: duck -C foo sync
         Output:
-         String: |+
+          String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
