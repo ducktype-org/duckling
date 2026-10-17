@@ -89,7 +89,7 @@ impl<'duck> PackageContext<'duck> {
         self.package
     }
 
-    /// Transform into the underlying [`AnyPackage`] and keep the warnings.
+    /// Transform into the underlying [`AnyPackage`] and other fields.
     pub fn into_inner(self) -> (AnyPackage, Warnings, Errors) {
         (self.package, self.warnings, self.errors)
     }
