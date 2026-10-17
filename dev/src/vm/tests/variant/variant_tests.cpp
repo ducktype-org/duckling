@@ -103,8 +103,7 @@ private:
             );
 
 			ASSERT_HAS_VALUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }));
-			ASSERT_HAS_VALUE(vm::api::join(pid));
-			auto value = vm::api::getExitValue(pid);
+			auto value = vm::api::join(pid);
 			if (!value.has_value()) {
 				fail(
 					"Could not load VMValue for: " + function_name
