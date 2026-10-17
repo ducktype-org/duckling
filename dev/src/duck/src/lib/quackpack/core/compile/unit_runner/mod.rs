@@ -178,7 +178,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
             if is_green {
                 info!("skipping compilation of a unit");
                 self.bcx.pcx.ctx().info(format!(
-                    "reusing previous build artifacts for package `{}`",
+                    "reusing previous build artifacts for `{}`",
                     unit.package().name()
                 ))?;
                 continue;
