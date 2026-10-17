@@ -27,6 +27,7 @@ use crate::quackpack::core::compile::duckc::{Duckc, multipackage_schema};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
 use crate::quackpack::core::compile::unit::{Unit, UnitType};
+use crate::quackpack::core::compile::unit_runner::incremental::{BuildData, IncrementalData};
 use crate::quackpack::core::compile::unit_task_generator::UnitTaskGenerator;
 use crate::quackpack::core::compile::unit_task_generator::default::DefaultTaskGenerator;
 use crate::quackpack::core::compile::unit_task_generator::dvm::DvmTaskGenerator;
@@ -34,6 +35,7 @@ use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
 pub mod external_libs;
+pub mod incremental;
 pub mod outputs;
 
 #[cfg(test)]
@@ -64,11 +66,60 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     #[instrument(skip_all)]
     /// Drive the compilation with [`UnitRunner`].
     pub fn run(self) -> QuackResult<CompilationOutput> {
-        self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
+        let (fingerprint, build_data, _) = self.manage_fingerprint(&*profile_layout)?;
+        self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         self.run_all_needed_units(&*profile_layout)?;
+        build_data.write_fingerprint(&fingerprint)?;
         outputs::get_compiler_output(&self.graph, &*profile_layout, self.bcx)
+    }
+
+    #[instrument(skip_all)]
+    /// Read the previous build fingerprint, generating [`IncrementalData`] from it.
+    /// Saving the new fingerprint is postponed to the end of the whole builds, so this function returns a triple,
+    /// consisting of:
+    /// - [`LockedFile`] --- the fingerprint file;
+    /// - [`BuildData`] --- the new fingerprint, yet to be written;
+    /// - [`IncrementalData`].
+    ///
+    /// Note:
+    /// -----
+    /// Returns empty [`IncrementalData`] if there was no previous fingerprint found,
+    /// parsing it returned an error or profile prohibits incremental.
+    fn manage_fingerprint(
+        &self,
+        layout: &dyn ProfileLayout,
+    ) -> QuackResult<(LockedFile, BuildData, IncrementalData)> {
+        let prev_fingerprint_exists = layout.fingerprint_path().exists();
+        let fingerprint = layout.fingerprint(self.bcx.pcx.ctx())?;
+        let cur_build_data = BuildData::for_current_build(&self.graph, self.bcx.profile);
+        if !prev_fingerprint_exists || !self.bcx.profile.incremental {
+            // It makes no sense to attempt incremental.
+            return Ok((fingerprint, cur_build_data, IncrementalData::default()));
+        }
+        let incremental_data = match BuildData::from_fingerprint(&fingerprint) {
+            Ok(prev_build_data) => {
+                debug!(previous_build_data = ?prev_build_data);
+                // Previous fingerprint is well-formed, we can use it.
+                self.bcx
+                    .pcx
+                    .ctx()
+                    .info_verbose("successfully loaded previous build fingerprint")?;
+                cur_build_data.get_incremental_data(&prev_build_data)
+            }
+            Err(e) => {
+                // Previous fingerprint was malformed, so return empty result.
+                self.bcx.pcx.ctx().warning(format!(
+                    "previous fingerprint at {} is malformed: {e}",
+                    fingerprint.path().display()
+                ))?;
+                IncrementalData::default()
+            }
+        };
+        debug!(?incremental_data);
+        debug!(?cur_build_data);
+        Ok((fingerprint, cur_build_data, incremental_data))
     }
 
     #[instrument(skip_all)]
