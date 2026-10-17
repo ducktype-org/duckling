@@ -13,7 +13,10 @@
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 
+#include <algorithm>
+#include <array>
 #include <atomic>
+#include <future>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -51,6 +54,7 @@ public:
 		TESTER_ADD_TEST(stopEndpoint);
 		TESTER_ADD_TEST(killFromEveryState);
 		TESTER_ADD_TEST(deinitAndValidateEndpoint);
+		TESTER_ADD_TEST(deinitReportsUnjoinedProgramThreads);
 		TESTER_ADD_TEST(globalDestructorsRunOnDeinit);
 		TESTER_ADD_TEST(deinitAfterPanicIsRefused);
 		TESTER_ADD_TEST(deinitKillsTheProcessWhenAGlobalDestructorPanics);
@@ -69,6 +73,8 @@ private:
 	static constexpr usize SPIN_THREAD_COUNT = 4;
 	/// The exit value of `breakpoint.dbc`.
 	static constexpr i64 BREAKPOINT_EXIT_VALUE = 7;
+	/// How many times `joinEndpoint` makes two `join`s race for the same thread.
+	static constexpr usize CONCURRENT_JOIN_ATTEMPTS = 20;
 
 	void spawnAndKillEndpoints() {
 		// A freshly spawned process is `NotStarted` and answers status calls. A killed one is gone
@@ -181,7 +187,7 @@ private:
 			waitUntilStatus(pid, isRunning, "Running");
 
 			assertRefusedWith<api::StateError>(
-				api::run(pid), "a second run of a running process", "must be freshly loaded"
+				api::run(pid), "a second run of a running process", "the process is still executing"
 			);
 
 			assertSucceeded(api::stop(pid), "stop");
@@ -203,10 +209,9 @@ private:
 		ASSERT_MATCHES_MSG(
 			status.value(), "runAwait must leave the process completed", api::ExecutionCompleted
 		);
-		// The run is over, so its exit value is readable through the endpoint as well.
-		auto exit_value = api::getExitValue(pid);
-		assertSucceeded(exit_value, "getExitValue after runAwait");
-		assertReturnedI64(exit_value.value(), BREAKPOINT_EXIT_VALUE, "getExitValue after runAwait");
+		// `runAwait` already handed the exit value back, and it never spawned an execution thread,
+		// so a `join` has nothing left to reap.
+		assertRefusedWith<api::JoinError>(api::join(pid), "join after runAwait");
 
 		// `runAwait` joins the thread it ran on, so it may be called again without a `join`.
 		for (usize call = 1; call <= 2; call++) {
@@ -271,46 +276,42 @@ private:
 
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate after two clean runs");
-			ASSERT_TRUE(valid.value());
+			ASSERT_TRUE(valid.value().valid());
 		}
 
-		{  // Every thread has to be joined, not just the main one.
+		{
+			// Only the threads the caller started have to be joined. The two workers were started
+			// by the program itself, and the caller never even learns their IDs, so the DVM reaps
+			// them before the rerun instead of refusing it.
 			const vm::PID   pid = spawnAndLoad("unjoined_threads.dbc");
 			ScopedStatusLog scoped(*this, pid);
 
-			assertSucceeded(api::run(pid), "the first run");
-			waitUntilStatus(pid, isCompleted, "Completed");
-
-			// `main` is joined, its two workers are not.
-			assertSucceeded(api::join(pid), "join of the main thread");
-			assertRefusedWith<api::StateError>(
-				api::run(pid),
-				"a rerun with two unjoined worker threads",
-				"threads 1, 2 of the previous run were never joined"
-			);
-
-			assertSucceeded(api::join(pid, api::ThreadID{ 1 }), "join of worker 1");
-			assertRefusedWith<api::StateError>(
-				api::run(pid),
-				"a rerun with one unjoined worker thread",
-				"thread 2 of the previous run was never joined"
-			);
-
-			assertSucceeded(api::join(pid, api::ThreadID{ 2 }), "join of worker 2");
-			assertSucceeded(api::run(pid), "a rerun once every thread was joined");
-
-			waitUntilStatus(pid, isCompleted, "Completed again");
-			for (usize tid = 0; tid < 3; tid++)
-				assertSucceeded(
-					api::join(pid, api::ThreadID{ tid }),
-					base::strConcat("join of thread ", tid, " of the second run")
-				);
+			for (usize run = 1; run <= 3; run++) {
+				assertSucceeded(api::run(pid), base::strConcat("run number ", run));
+				// The process is `Completed` only once the workers finished as well.
+				waitUntilStatus(pid, isCompleted, "Completed");
+				assertSucceeded(api::join(pid), base::strConcat("join of run number ", run));
+			}
 
 			validateTransitions(scoped.log, "a rerun of a multi-threaded process");
 
 			auto valid = api::deinitAndValidate(pid);
-			assertSucceeded(valid, "deinitAndValidate after two multi-threaded runs");
-			ASSERT_TRUE(valid.value());
+			assertSucceeded(valid, "deinitAndValidate after three multi-threaded runs");
+			ASSERT_TRUE(valid.value().memory_valid);
+			// Every run leaked both of its workers. The VMThreads are recycled, so the run number
+			// is what tells the six of them apart.
+			ASSERT_EQUAL(valid.value().unjoined_program_threads.size(), 6);
+			ASSERT_EQUAL_PRINT(
+				std::string(
+					"The program started `bump` (thread 1), `bump` (thread 2) in run 1 and never "
+					"joined them.\n"
+					"The program started `bump` (thread 1), `bump` (thread 2) in run 2 and never "
+					"joined them.\n"
+					"The program started `bump` (thread 1), `bump` (thread 2) in run 3 and never "
+					"joined them.\n"
+				),
+				valid.value().toString()
+			);
 		}
 
 		{  // Stopped: refused right away, and still refused after the process was drained.
@@ -440,35 +441,28 @@ private:
 	}
 
 	void exitValueEndpoint() {
-		// `getExitValue` answers only once a run completed, and says which of the two reasons it
-		// has for refusing.
+		// `join` is the endpoint that hands back the exit value of a spawned run. A run that did
+		// not complete has none, so `join` refuses it.
 
 		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
-		assertRefusedWith<api::StateError>(
-			api::getExitValue(pid), "getExitValue before a run", "Execution did not start"
-		);
-
 		assertSucceeded(api::run(pid), "run");
 		waitUntilStatus(pid, isCompleted, "Completed");
-		assertSucceeded(api::join(pid), "join");
 
-		auto exit_value = api::getExitValue(pid);
-		assertSucceeded(exit_value, "getExitValue after completion");
-		assertReturnedI64(
-			exit_value.value(), BREAKPOINT_EXIT_VALUE, "getExitValue after completion"
-		);
-		(void) api::kill(pid);
+		auto exit_value = api::join(pid);
+		assertSucceeded(exit_value, "join after completion");
+		assertReturnedI64(exit_value.value(), BREAKPOINT_EXIT_VALUE, "join after completion");
 
-		// A stopped run never completed, so it has no exit value.
+		auto valid = api::deinitAndValidate(pid);
+		assertSucceeded(valid, "deinitAndValidate after the join");
+		ASSERT_TRUE(valid.value().valid());
+
+		// A stopped run never completed, so it has no exit value. `stop` also reaps the execution
+		// thread itself, so the later `join` has nothing left to hand back.
 		const vm::PID stopped_pid = spawnAndLoad("../debugger/while_true.dbc");
 		assertSucceeded(api::run(stopped_pid), "run");
 		waitUntilStatus(stopped_pid, isRunning, "Running");
 		assertSucceeded(api::stop(stopped_pid), "stop");
-		assertRefusedWith<api::StateError>(
-			api::getExitValue(stopped_pid),
-			"getExitValue of a stopped process",
-			"Execution did not complete"
-		);
+		assertRefusedWith<api::JoinError>(api::join(stopped_pid), "join of a stopped process");
 		(void) api::kill(stopped_pid);
 	}
 
@@ -488,7 +482,34 @@ private:
 		assertSucceeded(api::join(pid, api::MAIN_THREAD_ID), "join of a completed run");
 		// The handle is gone now, so a second join has nothing to reap.
 		assertRefusedWith<api::JoinError>(api::join(pid), "a second join");
-		(void) api::kill(pid);
+		// The refused join left the process joined, so it can still be deinitialized.
+		assertSucceeded(api::deinitAndValidate(pid), "deinitAndValidate after a second join");
+
+		{
+			// Two callers join the same finished thread at the same time. Only the one which
+			// reaps the execution thread may get the exit value, the other one gets `JoinError`.
+			const vm::PID racy_pid = spawnAndLoad("breakpoint.dbc");
+			for (usize attempt = 1; attempt <= CONCURRENT_JOIN_ATTEMPTS; attempt++) {
+				assertSucceeded(api::run(racy_pid), base::strConcat("run number ", attempt));
+				waitUntilStatus(racy_pid, isCompleted, "Completed");
+
+				auto first  = std::async(std::launch::async, [&] { return api::join(racy_pid); });
+				auto second = std::async(std::launch::async, [&] { return api::join(racy_pid); });
+				const auto results = std::array{ first.get(), second.get() };
+
+				ASSERT_EQUAL_PRINT(
+					usize{ 1 },
+					static_cast<usize>(
+						std::ranges::count_if(results, [](const auto& r) { return r.has_value(); })
+					)
+				);
+				for (const auto& result: results) {
+					if (result.has_value()) continue;
+					assertRefusedWith<api::JoinError>(result, "the join which lost the race");
+				}
+			}
+			assertSucceeded(api::deinitAndValidate(racy_pid), "deinitAndValidate after the races");
+		}
 	}
 
 	void stopEndpoint() {
@@ -636,9 +657,9 @@ private:
 	}
 
 	void deinitAndValidateEndpoint() {
-		// `deinitAndValidate` accepts only a process that never ran or completed cleanly. It
-		// refuses an executing one and a stopped one, reports `false` for a leaked allocation, and
-		// drops the process once it ran.
+		// `deinitAndValidate` accepts only a process that never ran or completed cleanly and was
+		// joined. It refuses an executing one, a stopped one and an unjoined one, reports a leaked
+		// allocation, and drops the process once it ran.
 
 		{
 			// An executing process must not have its globals torn down under the running program.
@@ -667,10 +688,20 @@ private:
 			const vm::PID pid = spawnAndLoad("breakpoint.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isCompleted, "Completed");
+
+			// The run completed, but nobody joined its execution thread yet.
+			assertRefusedWith<api::StateError>(
+				api::deinitAndValidate(pid),
+				"deinitAndValidate of a completed but unjoined run",
+				"thread 0 of the previous run was never joined"
+			);
+
 			assertSucceeded(api::join(pid), "join");
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate after a clean run");
-			ASSERT_TRUE(valid.value());
+			ASSERT_TRUE(valid.value().memory_valid);
+			// A program which started no threads of its own has nothing to report.
+			ASSERT_TRUE(valid.value().unjoined_program_threads.empty());
 			assertRefusedWith<api::ProcessNotFound>(
 				api::getExecutionStatus(pid), "a status query after deinitAndValidate"
 			);
@@ -683,7 +714,86 @@ private:
 			assertSucceeded(api::join(pid), "join");
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate of a leaking program");
-			assertFalse(valid.value(), "A leaked allocation must be reported as invalid");
+			assertFalse(
+				valid.value().memory_valid, "A leaked allocation must be reported as invalid"
+			);
+		}
+	}
+
+	void deinitReportsUnjoinedProgramThreads() {
+		// The program starts two workers and never joins them. That is not something the caller
+		// can fix, so the deinit does not refuse. It joins the workers itself and reports them.
+
+		const vm::PID pid = spawnAndLoad("unjoined_threads.dbc");
+		assertSucceeded(api::run(pid), "run");
+		// The process is `Completed` only once the workers finished as well.
+		waitUntilStatus(pid, isCompleted, "Completed");
+		// Only the main thread was started through the API, so only it has to be joined.
+		assertSucceeded(api::join(pid), "join of the main thread");
+
+		auto valid = api::deinitAndValidate(pid);
+		assertSucceeded(valid, "deinitAndValidate with two unjoined worker threads");
+		ASSERT_TRUE(valid.value().memory_valid);
+		assertFalse(valid.value().valid(), "Unjoined program threads must fail the validation");
+
+		const auto& unjoined = valid.value().unjoined_program_threads;
+		ASSERT_EQUAL(unjoined.size(), 2);
+		assertTrue(
+			std::ranges::all_of(
+				unjoined,
+				[](const api::response::UnjoinedThread& thread) {
+					return thread.function_name.has_value()
+			            && thread.function_name.value() == "bump";
+				}
+			),
+			"Every reported thread must name the function it ran"
+		);
+		assertTrue(
+			unjoined.at(0).run_number == 1 && unjoined.at(1).run_number == 1,
+			"Both workers were started by the first run"
+		);
+		// The report names the function, the thread IDs are only there to tell two threads of one
+		// run apart. The main thread is API owned, so it is not in the report.
+		ASSERT_EQUAL_PRINT(
+			std::string(
+				"The program started `bump` (thread 1), `bump` (thread 2) and never joined them.\n"
+			),
+			valid.value().toString()
+		);
+		assertRefusedWith<api::ProcessNotFound>(
+			api::getExecutionStatus(pid), "a status query after deinitAndValidate"
+		);
+
+		{
+			// The workers leak in the first run only. The rerun resets every thread, but the final
+			// deinit must still report what the first run left behind.
+			const vm::PID rerun_pid = spawnAndLoad("unjoined_threads.dbc");
+			assertSucceeded(api::run(rerun_pid), "run which leaks two workers");
+			waitUntilStatus(rerun_pid, isCompleted, "Completed");
+			assertSucceeded(api::join(rerun_pid), "join of the leaking run");
+
+			auto bump = api::runFunction(rerun_pid, "bump");
+			assertSucceeded(bump, "a clean rerun of `bump`");
+			waitUntilStatus(rerun_pid, isCompleted, "Completed again");
+			assertSucceeded(api::join(rerun_pid, bump.value()), "join of the clean rerun");
+
+			auto rerun_valid = api::deinitAndValidate(rerun_pid);
+			assertSucceeded(rerun_valid, "deinitAndValidate after a leaking run and a clean one");
+			// Both workers belong to the first run, and the report still says so after the rerun
+			// recycled their VMThreads.
+			const auto& leaked = rerun_valid.value().unjoined_program_threads;
+			ASSERT_EQUAL(leaked.size(), 2);
+			assertTrue(
+				leaked.at(0).run_number == 1 && leaked.at(1).run_number == 1,
+				"The workers of the first run must stay attributed to it"
+			);
+			ASSERT_EQUAL_PRINT(
+				std::string(
+					"The program started `bump` (thread 1), `bump` (thread 2) and never joined "
+					"them.\n"
+				),
+				rerun_valid.value().toString()
+			);
 		}
 	}
 
@@ -702,7 +812,7 @@ private:
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate after a completed run");
 			assertTrue(
-				valid.value(),
+				valid.value().memory_valid,
 				"The global destructor did not run, so what the constructor allocated was leaked"
 			);
 		}
@@ -796,7 +906,7 @@ private:
 
 		auto deinit = api::deinitAndValidate(pid);
 		assertSucceeded(deinit, "deinitAndValidate of a process that never ran");
-		ASSERT_TRUE(deinit.value());
+		ASSERT_TRUE(deinit.value().valid());
 		ASSERT_EQUAL_PRINT(std::string(""), captured.str());
 		assertRefusedWith<api::ProcessNotFound>(
 			api::getExecutionStatus(pid), "getExecutionStatus after the deinit"
@@ -813,7 +923,7 @@ private:
 		ASSERT_HAS_VALUE(
 			clean_teardown.value(), "A completed process must be deinitialized, not killed"
 		);
-		ASSERT_TRUE(clean_teardown->value());
+		ASSERT_TRUE(clean_teardown->value().valid());
 
 		const auto panicked = runTestOnVmGetResult("../memory/local_leak.dbc", "", "");
 		ASSERT_NO_VALUE(panicked.run_result);
@@ -983,7 +1093,6 @@ private:
 		check(api::runAwait(pid), "runAwait");
 		check(api::runFunction(pid, "main"), "runFunction");
 		check(api::runFunctionAwait(pid, "main"), "runFunctionAwait");
-		check(api::getExitValue(pid), "getExitValue");
 		check(api::join(pid), "join");
 		check(api::kill(pid), "kill");
 		check(api::deinitAndValidate(pid), "deinitAndValidate");

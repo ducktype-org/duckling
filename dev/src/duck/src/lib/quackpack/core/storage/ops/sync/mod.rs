@@ -61,7 +61,7 @@ pub struct SyncOutput {
 pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
     emit_warnings_and_run_lint_passes(pcx)?;
-    pcx.ctx().info(format!(
+    pcx.ctx().info_verbose(format!(
         "starting synchronization of the {}",
         pcx.package().display()
     ))?;
