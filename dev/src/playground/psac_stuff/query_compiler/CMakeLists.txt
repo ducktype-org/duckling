@@ -9,7 +9,7 @@ add_library(libquerylinger
 )
 
 target_include_directories(libquerylinger PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(libquerylinger PUBLIC Base QueryFramework Hashing libpsackling)
+target_link_libraries(libquerylinger PUBLIC Base QueryFramework Hashing pq_shared)
 target_link_libraries(libquerylinger PRIVATE Logger Concurrent PstParser)
 
 add_example(querylinger main.cpp USES libquerylinger Base Init Clah Logger)

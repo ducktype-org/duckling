@@ -10,7 +10,7 @@ engine is the production query framework (`src/common/query_framework`). It exis
 > held equal?
 
 To hold everything else equal, querylinger does not have its own front end or
-code generator: it links `libpsackling` and reuses the shared pipeline
+code generator: it links `pq_shared` and reuses the shared pipeline
 (`psac_compiler/psackling/pipeline.{hpp,cpp}`) — the same parser, GlobalPass,
 symbol tables, expression lowering and per-function LLVM object emission that
 psacklinger uses. The two compilers differ only in how they decide *what to
