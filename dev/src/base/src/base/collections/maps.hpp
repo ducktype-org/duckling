@@ -20,6 +20,11 @@
 #include <unordered_map>
 #include <vector>
 
+namespace ser {
+	template<class T>
+	struct Serializer;
+}
+
 namespace base {
 	/**
 	 * @brief Map Wrapper that uses a non-inserting `[] operator`.
@@ -136,6 +141,8 @@ namespace base {
 		usize                         element_count{};
 
 	public:
+		template<class T>
+		friend struct ::ser::Serializer;
 		using SelfType = VectorMap;
 		using IDType   = KEY_T;
 		using DataType = DATA_T;

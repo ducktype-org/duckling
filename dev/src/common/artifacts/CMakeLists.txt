@@ -19,7 +19,7 @@ add_dependencies(Artifacts artifacts_build_id)
 
 target_include_directories(Artifacts PUBLIC ${ARTIFACTS_GEN_DIR})
 
-make_module(Artifacts USES Base Filesystem Hashing Logger Concurrent)
+make_module(Artifacts USES Base Filesystem Hashing Logger Concurrent Ser)
 
 add_example(artifacts_example examples/artifacts_example.cpp
 	USES Artifacts)

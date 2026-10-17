@@ -10,6 +10,7 @@
 #include <concurrent/base/locks/with_lock.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
@@ -18,7 +19,11 @@
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
+#include <ser/base/all.hpp>
+#include <ser/ser.hpp>
+#include <ser/std/all.hpp>
 
+#include <string>
 #include <vector>
 
 namespace query::external {
@@ -29,18 +34,38 @@ namespace query::external {
 
 
 		auto state = ::query::internal::ContextAccess::getState();
-		// Remap NodeIDs while deserializing so the framework keeps all QueryIDs registered and
+
+		// A damaged cache is information, not a failure: the previous graph is dropped and
+		// the build carries on with none, exactly as it does on a first build. Two ways to be
+		// damaged - bytes that are not a graph, and a graph whose adjacency indices do not
+		// match its nodes - and fromReducedGraphData answers the second one itself.
+		const auto drop_previous_graph = [&state](const std::string& why) {
+			CORE_USER_LOG("Previous query graph was damaged, compiling without it.\n");
+			CORE_DEV_LOG(Incremental, "Previous query graph rejected: ", why, "\n");
+			state->setPreviousGraph(::query::internal::QueryGraph{});
+		};
+
+		auto reduced
+			= ::ser::read<::query::internal::QueryGraph::ReducedGraphData>(graph_raw_bytes);
+		if (!reduced) {
+			drop_previous_graph(reduced.error().message());
+			return;
+		}
+
+		// Remap NodeIDs while rebuilding so the framework keeps all QueryIDs registered and
 		// avoids unstable hash collisions.
-
-
-		::query::internal::QueryGraph graph = ::query::internal::QueryGraph::deserialize(
-			graph_raw_bytes,
+		auto graph = ::query::internal::QueryGraph::fromReducedGraphData(
+			std::move(*reduced).take(),
 			[state](::query::internal::NodeID node) {
 				return state->remapUnstableOrUnregisteredNodes(node);
 			}
 		);
+		if (!graph.has_value()) {
+			drop_previous_graph("adjacency index out of range");
+			return;
+		}
 
-		state->setPreviousGraph(std::move(graph));
+		state->setPreviousGraph(std::move(graph).value());
 	}
 
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData>&& inputs) {
@@ -50,7 +75,14 @@ namespace query::external {
 	std::vector<byte> optAndSerializeQueryGraph() {
 		auto state         = ::query::internal::ContextAccess::getState();
 		auto reduced_graph = state->reduceOptimizeGraph(state->getGraph());
-		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
+		CORE_ASSERT(reduced_graph.isConsistent(), "Reduced graph data is inconsistent");
+
+		// Writing a graph we have just built cannot fail on the data - a code here means the
+		// buffer or the format is wrong, which is a bug rather than a state to recover from.
+		std::vector<byte> bytes;
+		if (const auto r = ::ser::write(bytes, reduced_graph); !r)
+			CORE_PANIC("Failed to serialize the query graph: ", r.error().message());
+		return bytes;
 	}
 
 	u64 deleteOrphanedDiskCaches() {
@@ -59,14 +91,36 @@ namespace query::external {
 	}
 
 	void setPreviousMetadataFromRawBytes(std::span<const std::byte> metadata_raw_bytes) {
-		auto state    = ::query::internal::ContextAccess::getState();
-		auto metadata = ::query::internal::MetadataStorage::deserialize(metadata_raw_bytes);
-		state->setPreviousMetadata(std::move(metadata));
+		auto state = ::query::internal::ContextAccess::getState();
+
+		// No bytes is no previous metadata rather than a damaged stream
+		if (metadata_raw_bytes.empty()) {
+			state->setPreviousMetadata(::query::internal::MetadataStorage{});
+			return;
+		}
+
+		// Damaged metadata is dropped, not fatal - same reasoning as the graph above.
+		auto metadata = ::ser::read<::query::internal::MetadataStorage>(metadata_raw_bytes);
+		if (!metadata) {
+			CORE_USER_LOG("Previous metadata was damaged, compiling without it.\n");
+			CORE_DEV_LOG(
+				Incremental, "Previous metadata rejected: ", metadata.error().message(), "\n"
+			);
+			state->setPreviousMetadata(::query::internal::MetadataStorage{});
+			return;
+		}
+
+		state->setPreviousMetadata(std::move(*metadata).take());
 	}
 
 	std::vector<byte> serializeMetadata() {
 		auto state = ::query::internal::ContextAccess::getState();
-		return state->getMetadataStorage()->serialize();
+
+		// As with the graph: a failure to write what we are holding is a bug, not a state.
+		std::vector<byte> bytes;
+		if (const auto r = ::ser::write(bytes, *state->getMetadataStorage()); !r)
+			CORE_PANIC("Failed to serialize the query metadata: ", r.error().message());
+		return bytes;
 	}
 
 	bool prevMetadataExists() {

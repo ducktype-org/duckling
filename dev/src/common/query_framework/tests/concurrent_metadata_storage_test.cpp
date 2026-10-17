@@ -42,9 +42,9 @@ struct IMPLEMENT_QUERY(DummyQuery3, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(DummyQuery3);
 
 
-DECLARE_METADATA_SIMPLE(DummyMetadata1, u64);
-DECLARE_METADATA_SIMPLE(DummyMetadata2, u64);
-DECLARE_METADATA_SIMPLE(DummyMetadata3, u64);
+DECLARE_METADATA(DummyMetadata1, u64);
+DECLARE_METADATA(DummyMetadata2, u64);
+DECLARE_METADATA(DummyMetadata3, u64);
 
 class MetadataStorageTest: public tester::TestSuite {
 #undef TESTER_CLASS

@@ -77,6 +77,15 @@ namespace base {
 #endif
 	constexpr bool IS_TARGET_COMPILER_CLANG = BASE_TARGET_COMPILER_CLANG;
 
+	// clang-cl: Clang in MSVC-compatibility mode, which also follows the MSVC ABI. It is
+	// BASE_TARGET_COMPILER_CLANG as well, so it is not part of the one-compiler check below.
+#if defined(__clang__) && defined(_MSC_VER)
+	#define BASE_TARGET_COMPILER_CLANG_CL 1
+#else
+	#define BASE_TARGET_COMPILER_CLANG_CL 0
+#endif
+	constexpr bool IS_TARGET_COMPILER_CLANG_CL = BASE_TARGET_COMPILER_CLANG_CL;
+
 	// When using Clang on Windows in MSVC-compatibility mode (clang-cl),
 	// Clang defines _MSC_VER in addition to __clang__
 #if defined(_MSC_VER) && !defined(__clang__)
