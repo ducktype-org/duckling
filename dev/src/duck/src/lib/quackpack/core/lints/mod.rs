@@ -7,6 +7,7 @@
 //! This module contains logic for emitting lints and warnings in QuackPack.
 
 mod buffer;
+pub mod errors;
 mod passes;
 pub mod rules;
 pub mod warnings;
@@ -52,8 +53,8 @@ pub struct Lint {
 }
 
 /// A shorthand for emitting warnings and lints.
-pub fn emit_warnings_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
-    pcx.emit_warnings()?;
+pub fn emit_pcx_diags_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
+    pcx.emit_diags()?;
     run_lint_passes(pcx)
 }
 
@@ -133,7 +134,7 @@ pub(crate) mod macros {
     /// As You can see, `self.` is prepend to the arguments to [`Display`].
     ///
     /// [`Display`]: std::fmt::Display
-    /// [`Diagnostic`]: super::Diagnostic
+    /// [`Diagnostic`]: crate::quackpack::core::lints::Diagnostics
     macro_rules! make_diagnostic {
     (
         $struct_vis:vis struct $name:ident {
