@@ -17,5 +17,6 @@ add_example(query_dag dag/query_dag.cpp USES QueryFramework Base Init)
 add_example(full_dag dag/full_dag.cpp USES Base Init)
 
 add_subdirectory(compiler_test_corpus)
+add_subdirectory(psac_query_shared)
 add_subdirectory(psac_compiler)
 add_subdirectory(query_compiler)
