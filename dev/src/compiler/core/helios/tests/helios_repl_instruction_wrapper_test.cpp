@@ -153,11 +153,8 @@ private:
 
 			auto repl_data = std::get_if<helios::defgen::ReplInputWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
-			ASSERT_EQUAL(repl_data->counter, 31u);
-			assertTrue(
-				repl_data->type == helios::defgen::ReplInputWrapper::Type::Instruction,
-				"Expected an instruction wrapper"
-			);
+			ASSERT_EQUAL(repl_data->counter.copyValueOr(0), 31u);
+			ASSERT_MATCHES(repl_data->element, helios::defgen::ReplInputWrapper::Instruction);
 		});
 	}
 

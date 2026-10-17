@@ -141,7 +141,9 @@ either in the scheme or it's implementation, they should be reflected here.
               | "T" <value-arg>* "E"                        // tuple
               | <function-type> <hex-value> "_"             // function
               | <pointer-type> <hex-value> "_"              // pointer
-              | <enum-type> <base-10-number> "_")           // enum
+              | <enum-type> <base-10-number> "_"            // enum
+              | "M" <type> <base-10-number> "_" <hex-value>) // value computed by the compile-time DVM (class, array, ...): its type, its byte size and its raw bytes
+                                                            // @TODO: #2990 pointers inside are mangled by their address, not by the data they point to
               | <back-reference>
 
 <unscoped-name> ::= <identifier>                            // actual name of a (typical) symbol

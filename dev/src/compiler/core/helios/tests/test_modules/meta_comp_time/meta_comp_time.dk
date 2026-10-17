@@ -95,3 +95,14 @@ fun buildAndMatch(use_int: bool) -> i64 = {
 }
 const MATCHED_INT = buildAndMatch(true);
 const MATCHED_OTHER = buildAndMatch(false);
+
+
+### Type tuples.
+const TYPE_TUPLE = (bool, str);
+const TYPE_TUPLE_VALUE: TYPE_TUPLE = (true, "abc");
+
+fun getFromTuple(t: type) -> type = {
+    var a = (t, t);
+    return (a, a);
+}
+const NESTED_TYPE_TUPLE = getFromTuple(i32);
