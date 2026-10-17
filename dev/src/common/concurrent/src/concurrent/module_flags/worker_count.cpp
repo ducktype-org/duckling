@@ -26,11 +26,12 @@ namespace concurrent::worker {
 	}
 
 	u64 getWorkerCount() {
+		if (u64 count = worker_count.load(std::memory_order_relaxed); count != 0) return count;
 		u64 count = 0;
 		// https://en.cppreference.com/c/atomic/atomic_compare_exchange; See `Notes` for a “manual”
 		// implementation.
 		if (worker_count.compare_exchange_strong(
-				count, DEFAULT_WORKER_COUNT, std::memory_order_relaxed, std::memory_order_relaxed
+				count, DEFAULT_WORKER_COUNT, std::memory_order_acq_rel, std::memory_order_acquire
 			)) {
 			count = DEFAULT_WORKER_COUNT;
 
