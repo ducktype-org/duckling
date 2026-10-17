@@ -110,9 +110,9 @@ impl<'duck> PackageContext<'duck> {
     }
 
     /// Emit collected diagnostics.
-    pub fn emit_diags(&self) -> QuackResult<()> {
-        self.errors.emit_errors(self.ctx())?;
-        self.warnings.emit_warnings(self.ctx())
+    pub fn emit_diagnostics(&self) -> QuackResult<()> {
+        self.warnings.emit_warnings(self.ctx())?;
+        self.errors.emit_errors(self.ctx())
     }
 
     /// Returns the [`PackageId`] associated with this package treated as a local one.

@@ -52,13 +52,13 @@ pub struct Lint {
     pub level: LintLevel,
 }
 
-/// A shorthand for emitting warnings and lints.
-pub fn emit_pcx_diags_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
-    pcx.emit_diags()?;
+/// A shorthand for emitting diagnostics and running lints.
+pub fn emit_diagnostics_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
+    pcx.emit_diagnostics()?;
     run_lint_passes(pcx)
 }
 
-/// Emit lints for the given package.
+/// Run lints for the given package.
 pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
     let mut buffer = LintBuffer::new();
 

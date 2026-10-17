@@ -7,7 +7,7 @@ PreCase: |+
 
 Tests:
   unused-keys:
-    Description: emits warnings about unused keys
+    Description: emits errors about unused keys
     Cases:
       sync:
         test-cmd: duck -C foo sync
