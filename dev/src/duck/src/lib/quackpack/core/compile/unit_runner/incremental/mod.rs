@@ -14,6 +14,7 @@
 use std::collections::HashSet;
 use std::io::Write;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::quackpack::core::compile::profiles::Profile;
@@ -26,6 +27,7 @@ use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackResult, QuackResultContext};
 
 mod graph_checks;
+mod red_green_nodes;
 mod serializable_types;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -34,7 +36,7 @@ mod serializable_types;
 /// to be used for incremental compilation in the future builds.
 pub struct BuildData {
     /// Time of the build.
-    time: chrono::DateTime<chrono::Utc>,
+    time: DateTime<Utc>,
     /// Unit graph of the build (in an easily serializable version).
     unit_graph: SerializableUnitGraph,
     /// Hash of the profile of the build.
@@ -45,7 +47,7 @@ impl BuildData {
     /// Get a [`BuildData`] from [`UnitGraph`] and [`Profile`].
     /// Should be used for getting [`BuildData`] for the current build process.
     pub fn for_current_build(graph: &UnitGraph, profile: Profile) -> Self {
-        let now = chrono::offset::Utc::now();
+        let now = Utc::now();
         let profile_hash = sha256_string(profile.serialize_raw());
         Self {
             time: now,
@@ -108,6 +110,16 @@ impl BuildData {
         }
         self.unit_graph.get_incremental_data(&other.unit_graph)
     }
+
+    /// Unpack [`self`] into the timestamp.
+    pub fn into_timestamp(self) -> DateTime<Utc> {
+        self.time
+    }
+
+    /// Update the timestamp to the current time.
+    pub fn update_timestamp(&mut self) {
+        self.time = Utc::now();
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -122,4 +134,7 @@ pub struct IncrementalData {
     /// Which nodes are the same between builds (the nodes are the same and the dependencies are the same).
     /// Those are the nodes for which we potentially can reuse previous build artifacts.
     pub common_nodes: HashSet<GraphNodeId>,
+    /// Subset of [`Self::common_nodes`], for which we have decided that they are green (we can reuse previous build artifacts for them).
+    /// This is empty in the beginning and should be gradually filled up by [`UnitRunner::compile_unit`](crate::quackpack::core::compile::unit_runner::UnitRunner::compile_unit).
+    pub green_nodes: HashSet<GraphNodeId>,
 }

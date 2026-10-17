@@ -65,6 +65,7 @@ impl SerializableUnitGraph {
         IncrementalData {
             common_packages,
             common_nodes,
+            green_nodes: HashSet::new(),
         }
     }
 
@@ -420,6 +421,7 @@ mod test {
             IncrementalData {
                 common_packages: [identity_bar].into(),
                 common_nodes: [0, 3].into(),
+                green_nodes: [].into(),
             }
         );
         assert_eq!(
@@ -427,6 +429,7 @@ mod test {
             IncrementalData {
                 common_packages: [identity_bar].into(),
                 common_nodes: [0, 2].into(),
+                green_nodes: [].into(),
             }
         );
         assert_eq!(
@@ -434,6 +437,7 @@ mod test {
             IncrementalData {
                 common_packages: [identity_bar, identity_baz, identity_foo].into(),
                 common_nodes: [0, 1, 2, 3, 4, 5].into(),
+                green_nodes: [].into(),
             }
         );
     }

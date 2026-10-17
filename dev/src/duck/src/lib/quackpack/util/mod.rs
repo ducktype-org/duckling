@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Various quackpack-only utilities.
+pub mod dir_iterator;
 pub mod guards;
 pub mod interned_url;
 pub mod is_local_file;
