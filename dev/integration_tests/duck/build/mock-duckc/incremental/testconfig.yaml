@@ -1,0 +1,40 @@
+# Use `mock/duckc` instead of the shared `../duckc`: it writes the output files,
+# which incremental builds need to find to reuse a unit.
+before-cmd: export PATH="@{ConfigDir}/mock:$PATH"
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add --local ../bar bar
+  @{before-cmd}
+  @{duck-exe} -C foo build
+
+Tests:
+  basic:
+    Description: can decide to not recompile packages if not needed
+    Cases:
+      nothing-changes:
+        test-cmd: duck -C foo build
+        Output:
+          String: |+
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`
+            info: reusing previous build artifacts for package \`bar\`
+            info: reusing previous build artifacts for package \`foo\`
+      foo-changed:
+        test-cmd: echo "\n" >> foo/src/src.dk && duck -C foo build
+        Output:
+          String: |+
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`
+            info: reusing previous build artifacts for package \`bar\`
+            info: compiling \`foo\`...
+      bar-changed:
+        test-cmd: echo "\n" >> bar/src/src.dk && duck -C foo build
+        Output:
+          String: |+
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`bar\`...
+            info: compiling \`foo\`...

@@ -14,6 +14,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
+use chrono::{DateTime, Utc};
 use tracing::{debug, error, info, instrument, trace};
 
 use crate::quackpack::core::compile::BuildContext;
@@ -68,9 +69,16 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     pub fn run(self) -> QuackResult<CompilationOutput> {
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
-        let (fingerprint, build_data, _) = self.manage_fingerprint(&*profile_layout)?;
+        let (fingerprint, mut build_data, previous_build_timestampt, mut incremental_data) =
+            self.manage_fingerprint(&*profile_layout)?;
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
-        self.run_all_needed_units(&*profile_layout)?;
+        self.run_all_needed_units(
+            &*profile_layout,
+            &mut incremental_data,
+            &previous_build_timestampt,
+        )?;
+        // Update timestamp, so all produced artifacts have earlier modification time that the timestamp.
+        build_data.update_timestamp();
         build_data.write_fingerprint(&fingerprint)?;
         outputs::get_compiler_output(&self.graph, &*profile_layout, self.bcx)
     }
@@ -81,6 +89,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// consisting of:
     /// - [`LockedFile`] --- the fingerprint file;
     /// - [`BuildData`] --- the new fingerprint, yet to be written;
+    /// - [`DateTime`] --- the previous build timestamp (if exists), otherwise UNIX epoch;
     /// - [`IncrementalData`].
     ///
     /// Note:
@@ -90,23 +99,32 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     fn manage_fingerprint(
         &self,
         layout: &dyn ProfileLayout,
-    ) -> QuackResult<(LockedFile, BuildData, IncrementalData)> {
+    ) -> QuackResult<(LockedFile, BuildData, DateTime<Utc>, IncrementalData)> {
         let prev_fingerprint_exists = layout.fingerprint_path().exists();
         let fingerprint = layout.fingerprint(self.bcx.pcx.ctx())?;
         let cur_build_data = BuildData::for_current_build(&self.graph, self.bcx.profile);
         if !prev_fingerprint_exists || !self.bcx.profile.incremental {
             // It makes no sense to attempt incremental.
-            return Ok((fingerprint, cur_build_data, IncrementalData::default()));
+            return Ok((
+                fingerprint,
+                cur_build_data,
+                DateTime::from_timestamp_nanos(0),
+                IncrementalData::default(),
+            ));
         }
-        let incremental_data = match BuildData::from_fingerprint(&fingerprint) {
+        let (incremental_data, previous_timestamp) = match BuildData::from_fingerprint(&fingerprint)
+        {
             Ok(prev_build_data) => {
                 debug!(previous_build_data = ?prev_build_data);
                 // Previous fingerprint is well-formed, we can use it.
                 self.bcx
                     .pcx
                     .ctx()
-                    .info_verbose("successfully loaded previous build fingerprint")?;
-                cur_build_data.get_incremental_data(&prev_build_data)
+                    .info_verbose("succesfully loaded previous build fingerprint")?;
+                (
+                    cur_build_data.get_incremental_data(&prev_build_data),
+                    prev_build_data.into_timestamp(),
+                )
             }
             Err(e) => {
                 // Previous fingerprint was malformed, so return empty result.
@@ -114,25 +132,55 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                     "previous fingerprint at {} is malformed: {e}",
                     fingerprint.path().display()
                 ))?;
-                IncrementalData::default()
+                (
+                    IncrementalData::default(),
+                    DateTime::from_timestamp_nanos(0),
+                )
             }
         };
         debug!(?incremental_data);
         debug!(?cur_build_data);
-        Ok((fingerprint, cur_build_data, incremental_data))
+        Ok((
+            fingerprint,
+            cur_build_data,
+            previous_timestamp,
+            incremental_data,
+        ))
     }
 
     #[instrument(skip_all)]
     /// Compile all needed [`Unit`]s, as determined by [`should_run`].
     ///
     /// [`should_run`]: UnitTaskGenerator::should_run
-    fn run_all_needed_units(&self, layout: &dyn ProfileLayout) -> QuackResult<()> {
+    fn run_all_needed_units(
+        &self,
+        layout: &dyn ProfileLayout,
+        incremental_data: &mut IncrementalData,
+        previous_timestamp: &DateTime<Utc>,
+    ) -> QuackResult<()> {
         for node in self.graph.compilation_order() {
             let node_id = node.id();
+            let is_green = node.is_green(
+                &self.graph,
+                layout,
+                self.bcx,
+                previous_timestamp,
+                incremental_data,
+            )?;
             let Some(unit) = node.as_unit() else {
                 continue;
             };
             if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
+                // Nothing truly depends on this unit, so we can safely make it green, potentially making more units green.
+                incremental_data.green_nodes.insert(node_id);
+                continue;
+            }
+            if is_green {
+                info!("skipping compilation of a unit");
+                self.bcx.pcx.ctx().info(format!(
+                    "reusing previous build artifacts for package `{}`",
+                    unit.package().name()
+                ))?;
                 continue;
             }
             match unit.unit_type() {
