@@ -291,8 +291,8 @@ namespace compiler::backend_llvm {
 	 * @brief Converts a TypeLayout into its corresponding llvm::Type representation.
 	 *
 	 * Simple types usually have direct counterparts, such as integral and empty layouts. Composite
-	 * types may require the creation of LLVM struct types, which are checked against the types
-	 * already cached in the LLVM context.
+	 * types may require the creation of LLVM struct types; one already in the LLVM context under
+	 * the same name is reused only if its body matches the layout.
 	 *
 	 * @param module The LLVM module to get the LLVM Context and Module DataLayout.
 	 * @param layout The TypeLayout to convert.
@@ -326,17 +326,7 @@ namespace compiler::backend_llvm {
 			variant_case(tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
-				// Get the struct from the context, if it has been previously defined.
-				if (llvm::StructType* struct_type
-				    = llvm::StructType::getTypeByName(llvm_context, class_name);
-				    struct_type) {
-					return struct_type;
-				}
-
-				// Otherwise, define the struct in LLVM.
-				// - First, create an opaque type.
-				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
-				// - Then, collect the member types.
+				// Collect the member types.
 				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
 				std::vector<llvm::Type*> member_types;
 				member_types.reserve(num_sub_layouts);
@@ -345,8 +335,21 @@ namespace compiler::backend_llvm {
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					member_types.push_back(typeFromLayout(module, field_layout));
 				}
-				// - Finally, set the body of the struct and return it.
-				struct_type->setBody(member_types, /*is_packed=*/false);
+
+				// The name stays the same when a class changes, so reuse a struct from the
+				// context only if its body matches; a stale one is unnamed for the new one.
+				if (llvm::StructType* cached
+				    = llvm::StructType::getTypeByName(llvm_context, class_name);
+				    cached) {
+					if (!cached->isOpaque() && cached->elements().equals(member_types))
+						return cached;
+					cached->setName("");
+				}
+
+				// Define the struct in LLVM.
+				llvm::StructType* struct_type = llvm::StructType::create(
+					llvm_context, member_types, class_name, /*isPacked=*/false
+				);
 
 				// Now, confirm that the LLVM struct layout matches the TSL type layout.
 				// - First, get the LLVM struct layout.
