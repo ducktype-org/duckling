@@ -40,7 +40,7 @@ text = bar_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{bar_name}",
+      "id": "{duckc_package_id(bar_name)}",
       "name": "bar",
       "version": "1.0.0",
       "features": [],
@@ -50,7 +50,7 @@ expected = f"""{{
   ],
   "tasks": [
     {{
-      "package": "{bar_name}",
+      "package": "{duckc_package_id(bar_name)}",
       "strategy": "lib",
       "output_file": "{str(layout / bar_name / f"{bar_name}.a")}"
     }}
@@ -70,7 +70,7 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{bar_name}",
+      "id": "{duckc_package_id(bar_name)}",
       "name": "bar",
       "version": "1.0.0",
       "features": [],
@@ -78,21 +78,21 @@ expected = f"""{{
       "dependencies": []
     }},
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [],
       "path": "{str(foo_path)}/src",
       "dependencies": [
         {{
-          "id": "{bar_name}"
+          "id": "{duckc_package_id(bar_name)}"
         }}
       ]
     }}
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{duckc_package_id(foo_name)}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}",
       "linking_options": [

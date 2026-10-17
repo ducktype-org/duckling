@@ -41,6 +41,11 @@ namespace global_state {
 		return {};
 	}
 
+	compiler::frontend::packages::PackageLookupAccessLocked getPackageLookup(base::StrID package_id
+	) {
+		return { package_id, getPackageRefOpt(package_id).has_value() };
+	}
+
 	namespace setters {
 		void addPackage(const PackageInfo& package_info) { packages.push_back(package_info); }
 

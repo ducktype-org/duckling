@@ -1,0 +1,51 @@
+{
+    "packages": [
+        {
+            "id": "lib_a",
+            "name": "lib_a",
+            "version": "0.1.0",
+            "path": "src/lib_a"
+        },
+        {
+            "id": "lib_b",
+            "name": "lib_b",
+            "version": "0.1.0",
+            "path": "src/lib_b"
+        },
+        {
+            "id": "app",
+            "name": "app",
+            "version": "0.1.0",
+            "path": "src/app",
+            "dependencies": [
+                {
+                    "id": "lib_a",
+                    "alias": "lib"
+                }
+            ]
+        }
+    ],
+    "tasks": [
+        {
+            "package": "lib_a",
+            "strategy": "dvm_lib",
+            "output_file": "lib_a.dbc"
+        },
+        {
+            "package": "lib_b",
+            "strategy": "dvm_lib",
+            "output_file": "lib_b.dbc"
+        },
+        {
+            "package": "app",
+            "strategy": "dvm_exe",
+            "output_file": "app_exe.dbc",
+            "dvm_linking_options": {
+                "link_libraries": [
+                    "build/lib_a.dbc",
+                    "build/lib_b.dbc"
+                ]
+            }
+        }
+    ]
+}

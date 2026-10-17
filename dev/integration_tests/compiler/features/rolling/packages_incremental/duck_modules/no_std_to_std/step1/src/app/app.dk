@@ -1,0 +1,3 @@
+fun seven() -> i64 = 100;
+
+fun main() -> i64 = seven();

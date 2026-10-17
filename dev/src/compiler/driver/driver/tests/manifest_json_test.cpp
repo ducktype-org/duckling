@@ -12,6 +12,7 @@
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/logger.hpp>
@@ -34,6 +35,7 @@ public:
 		TESTER_ADD_TEST(unknownFieldsWarnNotError);
 		TESTER_ADD_TEST(verifyEmptyPackagesFails);
 		TESTER_ADD_TEST(verifyDuplicateAndUnknownDepsFail);
+		TESTER_ADD_TEST(verifyDuplicateDefaultAliasFails);
 		TESTER_ADD_TEST(dvmStrategyParsed);
 		TESTER_ADD_TEST(dvmStrategyLinkingOptionsParsed);
 		TESTER_ADD_TEST(dvmLibStrategyLinkingOptionsParsed);
@@ -243,6 +245,43 @@ private:
 					.features     = {},
 					.dependencies = {},
 				},
+			},
+			.tasks = {},
+		};
+
+		auto result = manifest.verify(diagnostics::makeGlobalLoggerReporter());
+		ASSERT_TRUE(result.isBad());
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
+	void verifyDuplicateDefaultAliasFails() {
+		clearLogger();
+
+		// Dependencies without explicit aliases are imported under the names of their packages.
+		auto package = [](const char* id, const char* name, auto dependencies) {
+			return compiler::frontend::packages::RawPackageInfo{
+				.package_id   = base::StrID(id),
+				.package_name = base::StrID(name),
+				.version      = base::StrID("1"),
+				.package_path = fs::FilePath(base::strConcat("/tmp/", id)),
+				.features     = {},
+				.dependencies = std::move(dependencies),
+			};
+		};
+		using Deps = std::vector<compiler::frontend::packages::RawDependencyInfo>;
+
+		PackageCompilationManifest manifest{
+			.packages = {
+				package("lib_a", "lib", Deps{}),
+				package("lib_b", "other", Deps{}),
+				package(
+					"app",
+					"app",
+					Deps{
+						{ .package_id = base::StrID("lib_a"), .alias = {} },
+						{ .package_id = base::StrID("lib_b"), .alias = base::StrID("lib") },
+					}
+				),
 			},
 			.tasks = {},
 		};

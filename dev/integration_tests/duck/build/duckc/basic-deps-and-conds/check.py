@@ -52,7 +52,7 @@ if has_bar:
     expected = f"""{{
   "packages": [
     {{
-      "id": "{bar_name}",
+      "id": "{duckc_package_id(bar_name)}",
       "name": "bar",
       "version": "1.0.0",
       "features": [],
@@ -62,7 +62,7 @@ if has_bar:
   ],
   "tasks": [
     {{
-      "package": "{bar_name}",
+      "package": "{duckc_package_id(bar_name)}",
       "strategy": "lib",
       "output_file": "{str(bar_artifacts / f"{bar_name}.a")}"
     }}
@@ -83,7 +83,7 @@ if has_bar:
     expected = f"""{{
   "packages": [
     {{
-      "id": "{bar_name}",
+      "id": "{duckc_package_id(bar_name)}",
       "name": "bar",
       "version": "1.0.0",
       "features": [],
@@ -91,7 +91,7 @@ if has_bar:
       "dependencies": []
     }},
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [
@@ -100,14 +100,14 @@ if has_bar:
       "path": "{str(foo_path)}/src",
       "dependencies": [
         {{
-          "id": "{bar_name}"
+          "id": "{duckc_package_id(bar_name)}"
         }}
       ]
     }}
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{duckc_package_id(foo_name)}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}",
       "linking_options": [
@@ -120,7 +120,7 @@ else:
     expected = f"""{{
   "packages": [
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [],
@@ -130,7 +130,7 @@ else:
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{duckc_package_id(foo_name)}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}"
     }}

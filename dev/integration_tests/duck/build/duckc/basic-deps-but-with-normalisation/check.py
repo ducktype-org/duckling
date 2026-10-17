@@ -43,7 +43,7 @@ text = dep_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{dep_name}",
+      "id": "{duckc_package_id(dep_name)}",
       "name": "my_cool_dep",
       "version": "1.0.0",
       "features": [],
@@ -53,7 +53,7 @@ expected = f"""{{
   ],
   "tasks": [
     {{
-      "package": "{dep_name}",
+      "package": "{duckc_package_id(dep_name)}",
       "strategy": "lib",
       "output_file": "{str(layout / dep_name / f"{dep_name}.a")}"
     }}
@@ -73,7 +73,7 @@ text = dep2_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{dep2_name}",
+      "id": "{duckc_package_id(dep2_name)}",
       "name": "my_cool_dep2",
       "version": "1.0.0",
       "features": [],
@@ -83,7 +83,7 @@ expected = f"""{{
   ],
   "tasks": [
     {{
-      "package": "{dep2_name}",
+      "package": "{duckc_package_id(dep2_name)}",
       "strategy": "lib",
       "output_file": "{str(layout / dep2_name / f"{dep2_name}.a")}"
     }}
@@ -103,7 +103,7 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{dep_name}",
+      "id": "{duckc_package_id(dep_name)}",
       "name": "my_cool_dep",
       "version": "1.0.0",
       "features": [],
@@ -111,7 +111,7 @@ expected = f"""{{
       "dependencies": []
     }},
     {{
-      "id": "{dep2_name}",
+      "id": "{duckc_package_id(dep2_name)}",
       "name": "my_cool_dep2",
       "version": "1.0.0",
       "features": [],
@@ -119,17 +119,17 @@ expected = f"""{{
       "dependencies": []
     }},
     {{
-      "id": "{root_name}",
+      "id": "{duckc_package_id(root_name)}",
       "name": "my_cool_root",
       "version": "1.0.0",
       "features": [],
       "path": "{str(root_path)}/src",
       "dependencies": [
         {{
-          "id": "{dep_name}"
+          "id": "{duckc_package_id(dep_name)}"
         }},
         {{
-          "id": "{dep2_name}",
+          "id": "{duckc_package_id(dep2_name)}",
           "alias": "my_cool_dep_but_aliased"
         }}
       ]
@@ -137,7 +137,7 @@ expected = f"""{{
   ],
   "tasks": [
     {{
-      "package": "{root_name}",
+      "package": "{duckc_package_id(root_name)}",
       "strategy": "native",
       "output_file": "{str(layout / "my-cool-root")}",
       "linking_options": [

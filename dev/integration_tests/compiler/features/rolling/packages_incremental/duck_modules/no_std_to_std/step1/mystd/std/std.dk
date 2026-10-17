@@ -1,0 +1,1 @@
+fun std_root() -> i64 = 1;

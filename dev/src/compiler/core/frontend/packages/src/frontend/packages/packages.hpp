@@ -22,6 +22,7 @@
 #include <json/diagnostics.hpp>
 #include <nlohmann/json_fwd.hpp>
 
+#include <string_view>
 #include <vector>
 
 namespace compiler::frontend::packages {
@@ -64,8 +65,12 @@ namespace compiler::frontend::packages {
 		/** @brief Package ID */
 		[[nodiscard]] base::StrID getPackageID() const;
 
-		/** @brief Package name — the default import name for this package. */
-		[[nodiscard]] base::StrID getName() const;
+		/**
+		 * @brief Package name — the default import name for this package.
+		 * Unlock registers QueryPackageNameSideInput, so queries comparing against the name are
+		 * invalidated when it changes; outside queries use illegalAccess.
+		 */
+		[[nodiscard]] PackageNameAccessLocked getName() const;
 
 		/** @brief Stable hash of the package, used as side-input key. */
 		[[nodiscard]] const hashing::ComponentHash::HashType& getPackageHash() const;
@@ -170,6 +175,20 @@ namespace compiler::frontend::packages {
 			const nlohmann::json& json, const DiagnosticReporter& report
 		);
 	};
+
+	/**
+	 * @brief Whether @p package_id is a valid package id: `[A-Za-z_][A-Za-z0-9_]*`.
+	 * Package ids are a part of mangled symbol names, so they are restricted to identifier
+	 * characters.
+	 */
+	[[nodiscard]] bool isValidPackageID(std::string_view package_id);
+
+	/**
+	 * @brief Make a valid package id out of an arbitrary string (e.g. a file name).
+	 * Every character that is not allowed in a package id is replaced with '_', and '_' is
+	 * prepended when the result would not start with a letter or '_'.
+	 */
+	[[nodiscard]] base::StrID sanitizePackageID(std::string_view raw);
 
 	/**
 	 * @brief Resolve a RawPackageInfo into a PackageInfo by loading its module tree.

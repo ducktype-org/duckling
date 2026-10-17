@@ -143,7 +143,7 @@ namespace duck_ls {
 		id << name << '_' << std::hex << std::setw(16) << std::setfill('0')
 		   << std::hash<std::string>{}(package_root.absolute().genericString());
 
-		return base::StrID(id.str());
+		return packages::sanitizePackageID(id.str());
 	}
 
 	Compiler::Compiler(
