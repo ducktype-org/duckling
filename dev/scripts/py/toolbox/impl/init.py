@@ -5,7 +5,6 @@
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 from .helpers import (
-    bash_command,
     log_info,
     log_new_line,
 )
