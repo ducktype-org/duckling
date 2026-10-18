@@ -170,10 +170,15 @@ impl PackageLoader {
         global: bool,
     ) -> QuackResult<PackageContext<'duck>> {
         let associated_script = |pcx: PackageContext<'_>| {
-            let (package, warnings) = pcx.into_package_and_warnings();
+            let (package, warnings, errors) = pcx.into_inner();
             let package = package.unwrap_package();
             let script = PackageScript::new(package, script_path.to_path_buf())?;
-            Ok(PackageContext::new_script(script.into(), ctx, warnings))
+            Ok(PackageContext::new_script(
+                script.into(),
+                ctx,
+                warnings,
+                errors,
+            ))
         };
         let global_package = PackageLoader::global_package(ctx)
             .context_internal("failed to load the global package")?;

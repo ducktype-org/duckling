@@ -11,7 +11,8 @@ Tests:
     Description: checks "always_false_conditions" lint
     Cases:
       sync:
-        test-cmd: duck -C foo sync
+        # This is verbose to confirm that we don't try to load bar.
+        test-cmd: duck --verbose -C foo sync
         Err:
           String: |+
             warning: dependency \`bar\` is disabled, because it is conditioned on an empty features list [always_false_conditions]
@@ -24,4 +25,3 @@ Tests:
             info: starting loading 1 package
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`"
-        

@@ -156,7 +156,7 @@ duck_add_test_custom(vm vm_instruction_naming_test bytecode/instruction_naming_t
         USES LibVM_sc Tester)
 duck_add_test_custom(vm vm_program_builders_test bytecode/builders/program_builders_test.cpp
         USES LibVM)
-duck_add_test_custom(vm vm_bc_parsing_test bytecode/assembly/bc_parsing_test.cpp USES LibVM_sc Tester)
+duck_add_test_custom(vm vm_bc_parsing_test bytecode/assembly/bc_parsing_test.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_serializer_test bytecode/serializer/bc_serializer_test.cpp USES LibVM_sc Tester)
 
 # loader/ — static verification, lowering (incl. the inheritance metadata), hierarchy checks and
