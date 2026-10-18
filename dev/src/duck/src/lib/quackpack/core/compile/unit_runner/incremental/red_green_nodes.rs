@@ -54,7 +54,7 @@ impl UnitGraphNode {
     ///
     /// Important
     /// ---------
-    /// This function also updates `current_build_data` with the number of Duckling source code files for all packages.
+    /// This function also updates `current_build_data` with the number of Duckling source code files for the appropriate packages.
     pub fn is_green(
         &self,
         graph: &UnitGraph,
@@ -108,7 +108,7 @@ fn basic_checks(
         return false;
     }
 
-    // Check that all dependencies are green first.
+    // Check that all dependencies are green.
     graph
         .deps_for(node_id)
         .iter()
@@ -186,7 +186,7 @@ impl SourceCodeInputLocalCheckResult {
 
 /// Helper for [`CompilationInput::local_check`].
 /// Recursively checks that all Duckling files inside the given directory (or a single file if `path` is a file)
-/// have mtime earlier than `timestamp`.
+/// have mtime and ctime earlier than `timestamp`.
 /// Also returns the number of encountered Duckling source code files.
 fn check_for_updates(
     path: &Path,
