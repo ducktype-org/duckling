@@ -17,6 +17,7 @@ use std::io::Write;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
@@ -41,18 +42,25 @@ pub struct BuildData {
     unit_graph: SerializableUnitGraph,
     /// Hash of the profile of the build.
     profile_hash: String,
+    /// Artifacts type (which implementation of [`ArtifactsLayout`](crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout) this compilation uses).
+    artifacts_type: String,
 }
 
 impl BuildData {
     /// Get a [`BuildData`] from [`UnitGraph`] and [`Profile`].
     /// Should be used for getting [`BuildData`] for the current build process.
-    pub fn for_current_build(graph: &UnitGraph, profile: Profile) -> Self {
+    pub fn for_current_build(
+        graph: &UnitGraph,
+        profile: Profile,
+        layout: &dyn ArtifactsLayout,
+    ) -> Self {
         let now = Utc::now();
         let profile_hash = sha256_string(profile.serialize_raw());
         Self {
             time: now,
             unit_graph: graph.into(),
             profile_hash,
+            artifacts_type: layout.name().to_string(),
         }
     }
 

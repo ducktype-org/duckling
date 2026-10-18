@@ -6,10 +6,8 @@
 
 //! Module for iterating over directory contents.
 
-use std::{
-    fs::{DirEntry, ReadDir},
-    path::Path,
-};
+use std::fs::{DirEntry, ReadDir};
+use std::path::Path;
 
 use crate::QuackResult;
 

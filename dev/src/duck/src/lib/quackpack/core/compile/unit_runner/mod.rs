@@ -70,7 +70,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
         let (fingerprint, mut build_data, previous_build_timestampt, mut incremental_data) =
-            self.manage_fingerprint(&*profile_layout)?;
+            self.manage_fingerprint(&*artifacts_layout, &*profile_layout)?;
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         self.run_all_needed_units(
             &*profile_layout,
@@ -98,11 +98,13 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// parsing it returned an error or profile prohibits incremental.
     fn manage_fingerprint(
         &self,
-        layout: &dyn ProfileLayout,
+        artifacts_layout: &dyn ArtifactsLayout,
+        profile_layout: &dyn ProfileLayout,
     ) -> QuackResult<(LockedFile, BuildData, DateTime<Utc>, IncrementalData)> {
-        let prev_fingerprint_exists = layout.fingerprint_path().exists();
-        let fingerprint = layout.fingerprint(self.bcx.pcx.ctx())?;
-        let cur_build_data = BuildData::for_current_build(&self.graph, self.bcx.profile);
+        let prev_fingerprint_exists = profile_layout.fingerprint_path().exists();
+        let fingerprint = profile_layout.fingerprint(self.bcx.pcx.ctx())?;
+        let cur_build_data =
+            BuildData::for_current_build(&self.graph, self.bcx.profile, artifacts_layout);
         if !prev_fingerprint_exists || !self.bcx.profile.incremental {
             // It makes no sense to attempt incremental.
             return Ok((
