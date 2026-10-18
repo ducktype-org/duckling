@@ -16,6 +16,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
+#include <vm/loader/parser/parser.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -38,6 +39,10 @@
 #define VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                     \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
 		  VmLoaderTestSuite(std::move(config), TESTER_SUITE_NAME)
+
+#define PARSER_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                        \
+	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
+		  ParserTestSuite(std::move(config), TESTER_SUITE_NAME)
 
 class VmTestSuite: public tester::TestSuite {
 public:
@@ -293,28 +298,6 @@ protected:
 	);
 
 	/**
-	 * @brief Runs a function synchronously and checks its exit code, output and input.
-	 * This is an alternative to `runTestOnVm` which allows to run a specific function instead of
-	 * the main function and pass arguments to it.
-	 * @param pid Process ID of the process to run the function on.
-	 * @param func_name Name of the function to run
-	 * @param args Arguments to pass to the function
-	 * @param optional_input If provided, the function will send this string as input to the process
-	 * @param optional_output If provided, the function will check if the process output is equal to
-	 * this string
-	 * @param expected_exit_code If provided, the function will check if the process exit code is
-	 * equal to this value. If not provided, it will check if the exit code is of type void.
-	 */
-	void runFunctionSynchronouslyAsTest(
-		vm::PID                            pid,
-		const std::string&                 func_name          = {},
-		const vm::FunctionRunArguments&    args               = {},
-		const base::Optional<std::string>& optional_input     = {},
-		const base::Optional<std::string>& optional_output    = {},
-		const base::Optional<i64>          expected_exit_code = {}
-	);
-
-	/**
 	 * @brief Asserts the process panicked with @p err_piece in its message and kills it.
 	 */
 	void assertExecutionPanickedWithAndKill(
@@ -492,15 +475,6 @@ public:
 		const std::vector<std::string>&    args            = {}
 	) = delete;
 
-	void runFunctionSynchronouslyAsTest(
-		vm::PID                            pid,
-		const std::string&                 func_name          = {},
-		const vm::FunctionRunArguments&    args               = {},
-		const base::Optional<std::string>& optional_input     = {},
-		const base::Optional<std::string>& optional_output    = {},
-		const base::Optional<i64>          expected_exit_code = {}
-	) = delete;
-
 	void runAndCheckReturnValues(
 		vm::PID                                 pid,
 		const base::Optional<std::string>&      func_name              = {},
@@ -518,4 +492,28 @@ public:
 		const base::Optional<std::string>& optional_output       = {},
 		const base::Optional<i64>&         expected_return_value = {}
 	) = delete;
+};
+
+/**
+ * @brief Base of the suites that test the text assembly parser on its own. They never start a VM
+ * process, so they derive from `tester::TestSuite` directly and only get the parse helpers.
+ */
+class ParserTestSuite: public tester::TestSuite {
+public:
+	ParserTestSuite(tester::TestConfig&& config, std::string_view name):
+		  tester::TestSuite(std::move(config), name) {}
+
+protected:
+	/**
+	 * @brief Parses @p dbc_filename, asserts it parses, and returns what the parser produced.
+	 */
+	std::vector<vm::loader::parser::ParsedFile> parseValidDbc(const std::string& dbc_filename);
+
+	/**
+	 * @brief Parses a syntactically incorrect @p dbc_filename and asserts that every one of
+	 * @p error_keywords is in the parse error.
+	 */
+	void parseInvalidDbc(
+		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+	);
 };
