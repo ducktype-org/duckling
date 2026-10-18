@@ -46,12 +46,16 @@ jobs:
 
       - name: Create build directory
         working-directory: ${{ env.DEV_DIR }}
+        # we use clang here, simply because it is available while GCC with good version
+        # might not be installed, nothing compiles here anyway.
         run: |
           source .venv/bin/activate
           cmake \
            -B ${{ env.BUILD_DIR }} \
            -D BUILD_DOCS=ON \
-           -D CMAKE_BUILD_TYPE=Debug
+           -D CMAKE_BUILD_TYPE=Debug \
+           -D CMAKE_CXX_COMPILER=clang++-19 \
+           -D CMAKE_C_COMPILER=clang-19
 
       - name: Build docs
         working-directory: ${{ env.DEV_DIR }}

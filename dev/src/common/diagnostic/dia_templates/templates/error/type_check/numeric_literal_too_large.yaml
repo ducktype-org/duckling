@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Numeric literal value is too large to be processed."
+  - "Numeric literal value is out of the range that can be processed."
 
 description:
   - codeblock:

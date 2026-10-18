@@ -1,0 +1,19 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "  unused-under-metadata: unused
+  unused-top-level:
+    inner: 1" >> foo/quackconfig.yaml
+
+Tests:
+  unused-keys:
+    Description: emits errors about unused keys
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            error: the key \`metadata.unused-under-metadata\` is unused
+            error: the key \`unused-top-level\` is unused
+            error: emitted 2 errors
