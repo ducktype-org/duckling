@@ -6,6 +6,5 @@ SubDirs:
   - nonexistent-dep-feature
   - nonexistent-local-dep
   - nonexistent_features
-  - nonexistent_features
   - overwrite
   - unused-keys
