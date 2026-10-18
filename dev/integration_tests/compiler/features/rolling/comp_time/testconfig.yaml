@@ -71,5 +71,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "3\n30\n5\n35\n15\n42\n42\n97\n100\n9\n1\n0\n7\n3\n9\n11\n579\n16\n"
+          String: "3\n30\n5\n35\n15\n42\n42\n97\n100\n9\n1\n0\n7\n3\n9\n11\n579\n16\n42\n"
         ExitCode: 0

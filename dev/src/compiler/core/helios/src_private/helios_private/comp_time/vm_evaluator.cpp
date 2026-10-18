@@ -24,6 +24,10 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 
+#include <query_framework/context/context.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
+
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -34,6 +38,73 @@
 #include <expected>
 #include <iostream>
 #include <mutex>
+
+namespace compiler::helios {
+	struct KeyFor_QueryCtvMaterializingFunction {
+		ctv::CompileTimeValue ctv;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return ctv.queryUnstablePerfectHash();
+		}
+	};
+
+	/**
+	 * @brief Builds the LIR function `fun comptime_ctv_<mangled ctv>() -> T = return ctv;`, used to
+	 * materialize the `ctv` as a VMValue in the compile-time DVM, utilizing existing CTV
+	 * DVM-backend lowering.
+	 *
+	 * It has to be a query to keep the LIR function (and the CTV inside of it) in the cache,
+	 * because the CTV may contain symbol types, that are taken address of when comp-time.
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryCtvMaterializingFunction,
+		KeyFor_QueryCtvMaterializingFunction,
+		CRef<lir::Function>,
+		({ .uses_qresult = false })
+	)
+
+	struct IMPLEMENT_QUERY(QueryCtvMaterializingFunction, lir::Function) {
+		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
+			const auto& layout
+				= ctx.query<tsl::QuerySymbolTypeLayout>(key.ctv.getTypeOfStoredValue(ctx))
+			          ->valueOrThrow();
+			auto layout_ref = CRef<tsl::TypeLayout>(&layout);
+
+			lir::Block entry_block;
+			entry_block.terminator = lir::Instruction{
+				lir::Operation::ReturnValue,
+				{},
+				{ lir::LIRValue{ lir::LIRConstant{ .value = key.ctv, .layout = layout_ref } } },
+				{},
+			};
+
+			base::StableVector<lir::Block> blocks;
+			blocks.emplaceBack(std::move(entry_block));
+			lir::BlockRef entry_block_ref = blocks.last();
+
+			return lir::Function{
+				.mangled_name
+				= base::StrID(base::strConcat("comptime_ctv_", mangler::mangleCTV(ctx, key.ctv))),
+				.abi                = { lir::LIRAbi::DefaultAbi{} },
+				.link_once          = false,
+				.ignore_on_dvm      = false,
+				.ignore_on_llvm     = true,
+				.parameter_layouts  = {},
+				.return_type_layout = layout_ref,
+				.blocks             = std::move(blocks),
+				.local_list         = {},
+				.block_order        = { entry_block_ref },
+				.metadata           = { .position = {}, .source_code_name = {} },
+			};
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCtvMaterializingFunction);
+}
 
 namespace {
 	using namespace compiler::helios;
@@ -154,57 +225,16 @@ namespace {
 	 * VMValue by letting the DVM backend lower it.
 	 * @note The returned VMValue is owned by the comp-time DVM process and is valid as long as the
 	 * process lives.
-	 *
-	 * We synthesize a function like `fun anon() -> T = {return ctv;}`
-	 * in LIR and hand it to the incremental code builder. Lowering the `return` of a `LIRConstant`
-	 * runs the exact same `CTVLowering` path used for regular code, which emits the the DVM code
-	 * returning the VMValue with the ctv. The DVM backend may generate new globals in the
-	 * process.
 	 */
 	std::expected<Ref<vm::IVMValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
-		query::Context&                    ctx,
-		CompTimeDVM&                       comptime_dvm,
-		const CompileTimeValue&            ctv,
-		const compiler::tsh::SymbolType<>& value_type
+		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
-		static std::atomic<u64> anon_counter{ 0 };
-
-		vm::PID     pid        = *comptime_dvm.getPID();
-		const auto& layout     = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
-		auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
-
-		// Build `fun anon() -> value_type = return {ctv};`.
-		lir::Block entry_block;
-		entry_block.terminator = lir::Instruction{
-			lir::Operation::ReturnValue,
-			{},
-			{ lir::LIRValue{ lir::LIRConstant{ .value = ctv, .layout = layout_ref } } },
-			{},
-		};
-
-		base::StableVector<lir::Block> blocks;
-		blocks.emplaceBack(std::move(entry_block));
-		lir::BlockRef entry_block_ref = blocks.last();
-
-		base::StrID func_name
-			= base::StrID(base::strConcat("comptime_ctv_arg_", anon_counter.fetch_add(1)));
-
-		lir::Function func{
-			.mangled_name       = func_name,
-			.abi                = { lir::LIRAbi::DefaultAbi{} },
-			.link_once          = false,
-			.ignore_on_dvm      = false,
-			.ignore_on_llvm     = true,
-			.parameter_layouts  = {},
-			.return_type_layout = layout_ref,
-			.blocks             = std::move(blocks),
-			.local_list         = {},
-			.block_order        = { entry_block_ref },
-			.metadata           = { .position = {}, .source_code_name = {} },
-		};
+		vm::PID                   pid       = *comptime_dvm.getPID();
+		const CRef<lir::Function> func      = ctx.query<QueryCtvMaterializingFunction>({ ctv });
+		const base::StrID         func_name = func->mangled_name;
 
 		lir::LIRUnit unit;
-		unit.lir_functions.emplace_back(&func);
+		unit.lir_functions.push_back(func);
 
 		if (auto res = comptime_dvm.loadCode(ctx, unit); !res) return std::unexpected(res.error());
 
@@ -311,19 +341,12 @@ namespace {
 						VmEvaluationError::Kind::ArgConversionFailed,
 						"String class type is not available in this compilation."
 					));
-				return vmValueFromCtvBackendLowering(
-					ctx,
-					comptime_dvm,
-					ctv,
-					compiler::tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
-				);
+				return vmValueFromCtvBackendLowering(ctx, comptime_dvm, ctv);
 			}
 			variant_case_novalue(
 				CompileTimeValue::TypeTuple, compiler::ctv::CompileTimeValue::CharSliceValue
 			) {
-				return vmValueFromCtvBackendLowering(
-					ctx, comptime_dvm, ctv, ctv.getTypeOfStoredValue(ctx)
-				);
+				return vmValueFromCtvBackendLowering(ctx, comptime_dvm, ctv);
 			}
 			variant_case(CompileTimeValue::VMValue, vm_value) {
 				return CRef<vm::IVMValue>(vm_value.val.get());

@@ -36,6 +36,7 @@ fun pickBigger(v: i64 | bool) -> i64 = match (v) {
     case _ = -1i64;
 };
 fun pair(t: type) -> (type, type) = (t, t);
+fun second(t: (type, type)) -> type = t._2;
 
 # Class, array and tuple results read at compile time.
 const POINT_X: i64 = mkPoint(3, 4).x;
@@ -68,6 +69,9 @@ const RES_TERNARY: i64 = (if two() > 1 then Res(11) else Res(12)).id;
 # A type tuple returned from and passed to a function.
 var PAIR_VAR: pair(i32) = (123, 456);
 const PAIR_SIZE: i64 = size_of(pair(i64));
+const SECOND_OF_LITERAL: type = second((i64, i32));
+const SECOND_OF_CALL: type = second(pair(i16));
+const SECOND_SIZES: i64 = size_of(SECOND_OF_LITERAL) * 10 + size_of(SECOND_OF_CALL);
 
 fun main() -> i64 = {
     builtin_output_i64(POINT_X);
@@ -88,5 +92,6 @@ fun main() -> i64 = {
     builtin_output_i64(RES_TERNARY);
     builtin_output_i64((PAIR_VAR._1 + PAIR_VAR._2) as i64);
     builtin_output_i64(PAIR_SIZE);
+    builtin_output_i64(SECOND_SIZES);
     return 0;
 }
