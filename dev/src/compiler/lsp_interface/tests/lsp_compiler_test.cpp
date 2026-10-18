@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(initializeAddsStdPackagesTest);
 		TESTER_ADD_TEST(loadedPackageDependsOnStdTest);
 		TESTER_ADD_TEST(stdTypesDiagnosticsTest);
+		TESTER_ADD_TEST(functionBodyEditUpdatesMIRDiagnosticsTest);
 		TESTER_ADD_TEST(reloadedStdPackageKeepsItsIdTest);
 		TESTER_ADD_TEST(reloadingStdUsedByLoadedPackageTest);
 	}
@@ -131,6 +132,55 @@ private:
 		);
 		compiler.publishDiagnostics(main_uri);
 		assertTrue(session.hasErrors(main_uri), "Calling List.add must report an error");
+
+		assertTrue(
+			compiler.updateDocument(main_uri, 3, { wholeDocument(VALID_CONTENT) }).isOk(),
+			"The change must be applied"
+		);
+		compiler.publishDiagnostics(main_uri);
+		assertTrue(session.noErrors(main_uri), "The fixed file must not report errors");
+	}
+
+	/**
+	 * @brief Edits only the body of a function so that a MIR-level error (a missing return)
+	 * appears and disappears, asserting what is published each time.
+	 */
+	void functionBodyEditUpdatesMIRDiagnosticsTest() {
+		constexpr auto VALID_CONTENT
+			= "fun pick(x: i64) -> i64 = {\n"
+			  "    if (x > 0) {\n"
+			  "        return 1;\n"
+			  "    }\n"
+			  "    return 0;\n"
+			  "}\n"
+			  "fun main() -> i64 = {\n"
+			  "    return pick(1);\n"
+			  "}\n";
+		constexpr auto MISSING_RETURN_CONTENT
+			= "fun pick(x: i64) -> i64 = {\n"
+			  "    if (x > 0) {\n"
+			  "        return 1;\n"
+			  "    }\n"
+			  "}\n"
+			  "fun main() -> i64 = {\n"
+			  "    return pick(1);\n"
+			  "}\n";
+
+		duck_ls_test::VfsWorkspace workspace("lsp_compiler_mir_body_ws");
+		workspace.add("pkg/pkg.dk", VALID_CONTENT);
+		const auto main_uri = workspace.uriOf("pkg/pkg.dk");
+
+		compiler.addWorkspace(workspace.uriOf());
+		compiler.openDocument(main_uri, "duckling", 1, VALID_CONTENT);
+		compiler.publishDiagnostics(main_uri);
+		assertTrue(session.noErrors(main_uri), "The valid file must not report errors");
+
+		assertTrue(
+			compiler.updateDocument(main_uri, 2, { wholeDocument(MISSING_RETURN_CONTENT) }).isOk(),
+			"The change must be applied"
+		);
+		compiler.publishDiagnostics(main_uri);
+		assertTrue(session.hasErrors(main_uri), "The missing return must report an error");
 
 		assertTrue(
 			compiler.updateDocument(main_uri, 3, { wholeDocument(VALID_CONTENT) }).isOk(),

@@ -29,6 +29,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/queries.hpp>
@@ -1216,6 +1217,8 @@ namespace compiler::lir {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			mir::dependOnMIRLowering(ctx, *key.function);
+
 			// LIRFunction is build-inplace here, and for this reason
 			// achieves legal state only at the end.
 			// for this reason additional assertions should be put inplace, to

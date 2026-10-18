@@ -60,7 +60,23 @@ namespace compiler::helios {
 				// Only if implemented in HOUT, then it can be called with code of fun.
 				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT);
 			}
-			variant_case_novalue(GENERATED_SYMBOL_SEMANTICS_LIST) {
+			// Built by the script driver; QueryCodeOfFun has no code for it.
+			variant_case_novalue(defgen::ScriptMainWrapper) { return false; }
+			variant_case_novalue(
+				defgen::Constructor,
+				defgen::Method,
+				defgen::BuiltinOperator,
+				defgen::BuiltinTemplatedSymbol,
+				defgen::Parameter,
+				defgen::SelfParameter,
+				defgen::Field,
+				defgen::GeneratedFunctionVariable,
+				defgen::ControlFlowLocal,
+				defgen::ReplInputWrapper,
+				defgen::ReplEmptyVariable,
+				defgen::GeneratedConstant,
+				defgen::Module
+			) {
 				return kind(id) != SymbolKind::FunctionDeclaration;
 			}
 			variant_default { CORE_PANIC("Not implemented."); }

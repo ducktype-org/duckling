@@ -17,6 +17,7 @@
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/hout_walker_generic.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -37,6 +38,19 @@
 
 namespace compiler::mir {
 	namespace hc = helios::code;
+
+	namespace {
+		// The lowering queries below are keyed by symbol and read the HOUT from the key, so they
+		// depend on the query producing it explicitly.
+		void dependOnHOUT(query::Context& ctx, const helios::HOUTFunction& function) {
+			const helios::SymID symbol = function.declaration->original_symbol;
+			if (helios::implementsQueryCodeOfFun(symbol)) ctx.query<helios::QueryCodeOfFun>(symbol);
+		}
+
+		void dependOnHOUT(query::Context& ctx, const helios::HOUTGlobalData& global_data) {
+			ctx.query<helios::QueryHOUTGlobalData>(global_data.helios_symbol);
+		}
+	}
 
 	u64 KeyOf_LowerToMIRFunction::queryUnstablePerfectHash() const {
 		return function->queryUnstablePerfectHash();
@@ -223,6 +237,8 @@ namespace compiler::mir {
 
 	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			dependOnHOUT(ctx, *key.function);
+
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
 
@@ -343,6 +359,8 @@ namespace compiler::mir {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> query::QResult<CtorDtorResult> {
+			dependOnHOUT(ctx, *key.global_data);
+
 			if (v_matches(key.global_data->value, helios::HOUTGlobalConst))
 				CORE_PANIC(
 					"Creating ctors for constant variables does not work, they should use CTVs "
@@ -372,6 +390,8 @@ namespace compiler::mir {
 
 	struct IMPLEMENT_QUERY(LowerGlobalData, query::QResult<MIRGlobalData>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			dependOnHOUT(ctx, *key.global_data);
+
 			variant_match(key.global_data->value) {
 				variant_case(helios::HOUTGlobalConst, ctv_initial_value) {
 					CORE_ASSERT(
@@ -490,6 +510,23 @@ namespace compiler::mir {
 					);
 				collectUsedSymbolsFromInstruction(
 					block.terminator, result, seen_functions, seen_globals
+				);
+			}
+		}
+	}
+
+	void dependOnMIRLowering(query::Context& ctx, const Function& function) {
+		variant_match(function.helios_id) {
+			variant_case(FunctionSymID, fun_sym) {
+				if (!helios::implementsQueryCodeOfFun(fun_sym.id)) return;
+				ctx.query<LowerToMIRFunction>(
+					{ &ctx.query<helios::QueryCodeOfFun>(fun_sym.id)->valueOrThrow() }
+				);
+			}
+			variant_case(GlobalVariableCtorDtor, global_ctor_dtor) {
+				ctx.query<LowerGlobalData>(
+					{ &ctx.query<helios::QueryHOUTGlobalData>(global_ctor_dtor.global_var_id)
+				           ->valueOrThrow() }
 				);
 			}
 		}

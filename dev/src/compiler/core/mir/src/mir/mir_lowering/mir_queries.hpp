@@ -75,6 +75,15 @@ namespace compiler::mir {
 	MIRUsedSymbols getMIRUsedSymbolsByGlobal(query::Context& ctx, helios::SymID global_id);
 
 	/**
+	 * @brief Makes the running query depend on the query that lowers `function` to MIR.
+	 *
+	 * The lowering queries are keyed by symbol and read their input from the key, so a query
+	 * consuming a lowered function has to record this dependency itself; otherwise it is not
+	 * invalidated when only the function's code changes.
+	 */
+	void dependOnMIRLowering(query::Context& ctx, const Function& function);
+
+	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
 	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
 	 * @note Exposed in the interface mostly for tests
