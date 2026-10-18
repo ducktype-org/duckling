@@ -7,11 +7,12 @@
 use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fs::{
-    File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
+    self, File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
     read_to_string, remove_dir, remove_file, rename, write,
 };
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
+use std::time::SystemTime;
 
 use tracing::warn;
 
@@ -123,6 +124,15 @@ pub trait PathOpsExt {
 
     /// A wrapper around [`std::fs::write`].
     fn write(&self, contents: impl AsRef<[u8]>) -> QuackResult<()>;
+
+    /// Get the last modification time.
+    fn mtime(&self) -> QuackResult<SystemTime>;
+
+    /// Get the last change time.
+    /// Important
+    /// ---------
+    /// This is not "creation time".
+    fn ctime(&self) -> QuackResult<SystemTime>;
 }
 
 impl PathOpsExt for Path {
@@ -393,6 +403,42 @@ impl PathOpsExt for Path {
             .into_iter()
             .map(|c| c.as_os_str())
             .collect()
+    }
+
+    fn mtime(&self) -> QuackResult<SystemTime> {
+        Ok(fs::metadata(self)?.modified()?)
+    }
+
+    #[cfg(unix)]
+    fn ctime(&self) -> QuackResult<SystemTime> {
+        use std::os::unix::fs::MetadataExt;
+        use std::time::Duration;
+
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(fs::metadata(self)?.ctime() as u64))
+    }
+
+    #[cfg(windows)]
+    fn ctime(&self) -> QuackResult<SystemTime> {
+        use std::os::windows::io::AsRawHandle;
+
+        use windows::Win32::Storage::FileSystem::{
+            FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
+        };
+
+        let file = File::open(path)?;
+        let handle = file.as_raw_handle();
+        let mut info = FILE_BASIC_INFO::default();
+
+        unsafe {
+            GetFileInformationByHandleEx(
+                handle,
+                FileBasicInfo,
+                &mut info as *mut _ as *mut _,
+                std::mem::size_of::<FILE_BASIC_INFO>() as u32,
+            )?;
+        }
+
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_nanos(info.ChangeTime as u64))
     }
 }
 

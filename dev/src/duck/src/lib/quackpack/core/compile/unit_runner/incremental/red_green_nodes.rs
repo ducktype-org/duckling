@@ -13,11 +13,13 @@
 //! Local check
 //! -----------
 //! For source code inputs the local check is that:
-//! - all Duckling files in the package have mtime earlier than previous build start timestamp and
+//! - all Duckling files in the package have mtime and ctime (change time) earlier than previous build start timestamp and
 //! - the number of Duckling files inside the package remained the same.
 //!
 //! We need the second check, because the first check cannot detect deleting files.
 //! Two checks are sufficient, since the first one detects adding new files.
+//!
+//! We check ctime, to take renames and moves into account.
 //!
 //! For units the local check is that artifacts for the unit exist and have mtime earlier than previous build end timestamp.
 //!
@@ -28,6 +30,7 @@
 
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 
@@ -44,6 +47,7 @@ use crate::quackpack::core::compile::unit_runner::outputs::unit_output;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::util::dir_iterator::create_dir_iterator;
 use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
+use crate::util::path_ops_ext::PathOpsExt;
 
 impl UnitGraphNode {
     /// Main logic for checking whether a [`UnitGraphNode`] is green or red.
@@ -157,6 +161,7 @@ struct SourceCodeInputLocalCheckResult {
 }
 
 impl SourceCodeInputLocalCheckResult {
+    /// Create a [`SourceCodeInputLocalCheckResult`] for no files at all.
     fn empty() -> Self {
         Self {
             all_mtimes_ok: true,
@@ -164,6 +169,7 @@ impl SourceCodeInputLocalCheckResult {
         }
     }
 
+    /// Create a [`SourceCodeInputLocalCheckResult`] for a single file.
     fn for_single_file(mtime_ok: bool) -> Self {
         Self {
             all_mtimes_ok: mtime_ok,
@@ -171,6 +177,7 @@ impl SourceCodeInputLocalCheckResult {
         }
     }
 
+    /// Update [`self`] with another [`SourceCodeInputLocalCheckResult`].
     fn update(&mut self, other: SourceCodeInputLocalCheckResult) {
         self.all_mtimes_ok &= other.all_mtimes_ok;
         self.num_src_files += other.num_src_files;
@@ -185,15 +192,20 @@ fn check_for_updates(
     path: &Path,
     timestamp: &DateTime<Utc>,
 ) -> QuackResult<SourceCodeInputLocalCheckResult> {
-    if path.is_file() {
+    if path.is_symlink() {
+        Ok(SourceCodeInputLocalCheckResult::empty())
+    } else if path.is_file() {
         if let Some(extention) = path.extension()
             && [DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT]
                 .iter()
                 .any(|&e| e == extention)
         {
-            let mtime = fs::metadata(path)?.modified()?;
+            let mtime = path.mtime()?;
+            // We add one second, since ctime is tracked only with seconds precision, which is too low.
+            // Without the addition any rename/move in a second from the build start would be unnoticed.
+            let ctime = path.ctime()? + Duration::from_secs(1);
             Ok(SourceCodeInputLocalCheckResult::for_single_file(
-                mtime < (*timestamp).into(),
+                mtime < (*timestamp).into() && ctime < (*timestamp).into(),
             ))
         } else {
             Ok(SourceCodeInputLocalCheckResult::empty())
