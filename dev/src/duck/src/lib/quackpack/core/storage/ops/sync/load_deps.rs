@@ -72,7 +72,7 @@ pub fn load_packages_in_freeze(
         return Ok(LoadedFreezePackages::default());
     }
     let count = pkgs.len();
-    fetcher.ctx().info(format!(
+    fetcher.ctx().info_verbose(format!(
         "starting loading {count} package{}",
         count.s_if_plural()
     ))?;

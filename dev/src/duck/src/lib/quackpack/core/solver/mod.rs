@@ -98,7 +98,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
     pub async fn solve(self) -> QuackResult<SolverAnswer> {
         self.root_pcx
             .ctx()
-            .info("starting solving the dependency graph")?;
+            .info_verbose("starting solving the dependency graph")?;
         let root_pkg = self.root_pcx.local_package_id()?;
 
         let (initial_freeze, empty_input) = self.get_initial_freeze(root_pkg)?;
@@ -159,7 +159,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         }
         self.root_pcx
             .ctx()
-            .info("no solution found, retrying without previous freeze")?;
+            .info_verbose("no solution found, retrying without previous freeze")?;
         self.remove_previous_freeze();
         self.solve().await
     }
@@ -234,7 +234,7 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
         let ctx = fetcher.ctx();
-        ctx.info("starting gathering the dependency graph")?;
+        ctx.info_verbose("starting gathering the dependency graph")?;
         let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = Box::new(self.root_pcx.package().manifest().clone());
@@ -261,7 +261,7 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
             debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
-            ctx.info("no need to run the gathering or the solver engine")?;
+            ctx.info_verbose("no need to run the gathering or the solver engine")?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
                 new_freeze: trimmed,
                 pkgs_manifests: prev_freeze_manifests,
@@ -273,7 +273,7 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         }
 
         let root_path = self.root_pcx.package().root().into();
-        ctx.info("running gathering")?;
+        ctx.info_verbose("running gathering")?;
         let gathered_info = Self::run_solver_gatherer(
             &gatherer,
             root_manifest,
@@ -352,7 +352,7 @@ impl SolverEngineData {
     /// Returns a [`SolverAnswer`].
     #[tracing::instrument(skip_all)]
     fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
-        ctx.info("starting the solver engine")?;
+        ctx.info_verbose("starting the solver engine")?;
         let (solution, manifests) =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
         debug!(?solution);

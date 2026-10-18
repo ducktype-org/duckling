@@ -52,6 +52,24 @@ pub trait ProfileLayout {
     fn root_directory(&self) -> &Path {
         self.file_lock_manager().not_locked_path()
     }
+
+    /// Get the name of the file with build process fingerprint.
+    fn fingerprint_name(&self) -> &'static str {
+        ".fingerprint"
+    }
+
+    /// Get the [`LockedFile`] for the fingerprint.
+    fn fingerprint(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
+        self.file_lock_manager()
+            .open_exclusive(self.fingerprint_name(), ctx)
+    }
+
+    /// Get the [`PathBuf`] to the fingerprint.
+    fn fingerprint_path(&self) -> PathBuf {
+        self.file_lock_manager()
+            .not_locked_path()
+            .join(self.fingerprint_name())
+    }
 }
 
 pub trait DependencyLayout {

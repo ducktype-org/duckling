@@ -73,7 +73,7 @@ impl<'duck> GitClient<'duck> {
                     "failed to shallow clone the repository at `{url}`: {e}"
                 ))?;
                 self.ctx
-                    .info("retrying with a full clone instead of a shallow clone")?;
+                    .info_verbose("retrying with a full clone instead of a shallow clone")?;
                 let mut fetch_options = self.fetch_options_for(url, reference);
                 // Here we always want to perform full clone, so set depth to 0.
                 fetch_options.depth(0);
