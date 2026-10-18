@@ -28,6 +28,7 @@
 //! Notice that we need two timestamps, since artifacts produced during the compilation have mtime later than the start,
 //! and source code files should have mtime earlier than the start.
 
+use std::ops::AddAssign;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
@@ -141,7 +142,7 @@ impl CompilationInput {
                 }
             },
         };
-        let SourceCodeInputLocalCheckResult {
+        let SourceSpecificCheckResult {
             all_mtimes_ok,
             number_of_source_files,
         } = check_for_updates(path_to_check, incremental_data.prev_build_start())?;
@@ -157,13 +158,20 @@ impl CompilationInput {
 
 /// Result of local check for [`CompilationInput::PackageSourceCode`].
 /// Contains information if any Duckling file has mtime exceeding given timestampt and the number of found Duckling files.
-struct SourceCodeInputLocalCheckResult {
+struct SourceSpecificCheckResult {
     all_mtimes_ok: bool,
     number_of_source_files: u32,
 }
 
-impl SourceCodeInputLocalCheckResult {
-    /// Create a [`SourceCodeInputLocalCheckResult`] for no files at all.
+impl AddAssign for SourceSpecificCheckResult {
+    fn add_assign(&mut self, rhs: Self) {
+        self.all_mtimes_ok &= rhs.all_mtimes_ok;
+        self.number_of_source_files += rhs.number_of_source_files;
+    }
+}
+
+impl SourceSpecificCheckResult {
+    /// Create a [`SourceSpecificCheckResult`] for no files at all.
     fn empty() -> Self {
         Self {
             all_mtimes_ok: true,
@@ -171,18 +179,12 @@ impl SourceCodeInputLocalCheckResult {
         }
     }
 
-    /// Create a [`SourceCodeInputLocalCheckResult`] for a single file.
+    /// Create a [`SourceSpecificCheckResult`] for a single file.
     fn for_single_file(mtime_ok: bool) -> Self {
         Self {
             all_mtimes_ok: mtime_ok,
             number_of_source_files: 1,
         }
-    }
-
-    /// Update [`self`] with another [`SourceCodeInputLocalCheckResult`].
-    fn update(&mut self, other: SourceCodeInputLocalCheckResult) {
-        self.all_mtimes_ok &= other.all_mtimes_ok;
-        self.number_of_source_files += other.number_of_source_files;
     }
 }
 
@@ -193,9 +195,9 @@ impl SourceCodeInputLocalCheckResult {
 fn check_for_updates(
     path: &Path,
     timestamp: DateTime<Utc>,
-) -> QuackResult<SourceCodeInputLocalCheckResult> {
+) -> QuackResult<SourceSpecificCheckResult> {
     if path.is_symlink() {
-        Ok(SourceCodeInputLocalCheckResult::empty())
+        Ok(SourceSpecificCheckResult::empty())
     } else if path.is_file() {
         if let Some(extention) = path.extension()
             && [DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT]
@@ -204,18 +206,18 @@ fn check_for_updates(
         {
             let mtime = path.mtime()?;
             let ctime = path.ctime()?;
-            Ok(SourceCodeInputLocalCheckResult::for_single_file(
+            Ok(SourceSpecificCheckResult::for_single_file(
                 mtime < timestamp.into() && ctime < timestamp.into(),
             ))
         } else {
-            Ok(SourceCodeInputLocalCheckResult::empty())
+            Ok(SourceSpecificCheckResult::empty())
         }
     } else {
-        let mut result = SourceCodeInputLocalCheckResult::empty();
+        let mut result = SourceSpecificCheckResult::empty();
         // We are in a directory.
         for entry in create_dir_iterator(path)? {
             let entry = entry?;
-            result.update(check_for_updates(&entry.path(), timestamp)?);
+            result += check_for_updates(&entry.path(), timestamp)?;
         }
         Ok(result)
     }
