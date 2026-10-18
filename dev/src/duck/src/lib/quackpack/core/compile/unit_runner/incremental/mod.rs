@@ -5,134 +5,57 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Module for performing package-level incremental compilation.
-//! It serializes onto the disk information about the build process (most significantly a representation of the [`UnitGraph`])
-//! and uses that information to determine the common subgraph between current and previous [`UnitGraph`]s.
-//! Nodes from that subgraph are precisely the nodes for which we can try to do incremental compilation.
+//! It is done by serializing some information about the compilation and saving it to the disk (we call it a fingerprint).
+//! Next compilation process reads that data and uses it to construct [`IncrementalData`],
+//! which is used to decide which units are green (we can reuse previous build artifacts) and which are red (we have to run the unit).
 //!
-//! The information written onto the disk is called a fingerprint and is stored in a struct [`BuildData`].
+//! The modules are:
+//! - [`fingerprint`] --- Contains [`BuildData`], which is precisely the data stored in the fingerprint.
+//! - [`graph_checks`] --- Used for determining the common part of the previous and current [`UnitGraph`](crate::quackpack::core::compile::unit::graph::UnitGraph)s.
+//!   Only the common nodes can possibly be green.
+//! - [`red_green_nodes`] --- Precise rules for whether a node is green or red.
+//! - [`serializable_types`] --- [`UnitGraph`](crate::quackpack::core::compile::unit::graph::UnitGraph) is not easily serializable,
+//!   so we create use serializable counterparts to it and other types.
 
 use std::collections::HashSet;
-use std::io::Write;
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 
-use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
-use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph};
-use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
+use crate::quackpack::core::compile::unit::graph::GraphNodeId;
 use crate::quackpack::core::identity::Identity;
-use crate::util::file_locks::LockedFile;
-use crate::util::hash::sha256_string;
-use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext};
 
+mod fingerprint;
 mod graph_checks;
 mod red_green_nodes;
 mod serializable_types;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-/// Struct containing information about the current build that is stored on the disk,
-/// to be used for incremental compilation in the future builds.
-pub struct BuildData {
-    /// Time of the build.
-    time: DateTime<Utc>,
-    /// Unit graph of the build (in an easily serializable version).
-    unit_graph: SerializableUnitGraph,
-    /// Hash of the profile of the build.
-    profile_hash: String,
-    /// Artifacts type (which implementation of [`ArtifactsLayout`](crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout) this compilation uses).
-    artifacts_type: String,
-}
+pub use fingerprint::BuildData;
 
-impl BuildData {
-    /// Get a [`BuildData`] from [`UnitGraph`] and [`Profile`].
-    /// Should be used for getting [`BuildData`] for the current build process.
-    pub fn for_current_build(
-        graph: &UnitGraph,
-        profile: Profile,
-        layout: &dyn ArtifactsLayout,
-    ) -> Self {
-        let now = Utc::now();
-        let profile_hash = sha256_string(profile.serialize_raw());
-        Self {
-            time: now,
-            unit_graph: graph.into(),
-            profile_hash,
-            artifacts_type: layout.name().to_string(),
-        }
-    }
-
-    /// Get a [`BuildData`] from serialized artifacts.
-    /// Should be used for getting [`BuildData`] for the previous build process.
-    pub fn from_fingerprint(fingerprint: &LockedFile) -> QuackResult<Self> {
-        let fingerprint_content = fingerprint.path().read().with_context(|| {
-            format!(
-                "failed to read the previous fingerprint at `{}`",
-                fingerprint.path().display()
-            )
-        })?;
-        let result =
-            serde_json::from_slice::<BuildData>(&fingerprint_content).with_context(|| {
-                format!(
-                    "failed to parse the previous fingerprint at `{}`",
-                    fingerprint.path().display()
-                )
-            })?;
-        result.unit_graph.check_correctness()?;
-        Ok(result)
-    }
-
-    /// Store a fingerprint with [`BuildData`] on the disk.
-    /// Should be called on [`BuildData`] generated for the current build.
-    pub fn write_fingerprint(&self, fingerprint: &LockedFile) -> QuackResult<()> {
-        let fingerprint_json = serde_json::to_string_pretty(&self).with_context_internal(|| {
-            format!("failed to convert fingerprint into a JSON string: {self:#?}")
-        })?;
-        fingerprint
-            .file()
-            .set_len(0)
-            .with_context(|| format!("failed to truncate `{}`", fingerprint.path().display()))?;
-        fingerprint
-            .file()
-            .write_all(fingerprint_json.as_bytes())
-            .with_context(|| {
-                format!(
-                    "failed to write fingerprint to `{}`",
-                    fingerprint.path().display()
-                )
-            })
-    }
-
-    /// Get [`IncrementalData`] (information about which graph nodes are common and their artifacts can be reused)
-    /// generated from the current [`BuildData`] and previous build's [`BuildData`].
-    pub fn get_incremental_data(&self, other: &Self) -> IncrementalData {
-        // Different profile, we can't reuse anything.
-        if self.profile_hash != other.profile_hash {
-            return IncrementalData::default();
-        }
-        // Something went wrong with build times, be conservative and say that we can't reuse anything.
-        if self.time < other.time {
-            return IncrementalData::default();
-        }
-        self.unit_graph.get_incremental_data(&other.unit_graph)
-    }
-
-    /// Unpack [`self`] into the timestamp.
-    pub fn into_timestamp(self) -> DateTime<Utc> {
-        self.time
-    }
-
-    /// Update the timestamp to the current time.
-    pub fn update_timestamp(&mut self) {
-        self.time = Utc::now();
-    }
+#[derive(Clone, Debug, Default)]
+/// All the information necessary for performing package-level incremental compilation.
+/// Currently it contains:
+/// - [`RedGreenData`] --- a struct containing information about which [`UnitGraphNode`](crate::quackpack::core::compile::unit::graph::UnitGraphNode)s
+///   are common with the previous graph and which of those nodes are green (we can reuse build artifacts for them).
+///   The first former is constructed from the previous fingerprint and for the latter,
+///   green nodes are added one by one by [`UnitRunner::compile_unit`](crate::quackpack::core::compile::unit_runner::UnitRunner::compile_unit).
+/// - Previous compilation start time (to compare source codes against).
+/// - Previous compilation end time (to compare artifacts against).
+///
+/// Note:
+/// -----
+/// Default for [`DateTime`] is UNIX epoch.
+/// [`Self::default`] should be called to state that incremental compilation is for some reason impossible.
+/// UNIX epoch fits that semantic, since we use the timestamps to make sure that given files were not modified since the timestamp.
+/// Obviously in any realistic scenario the files have mtime greater than the epoch.
+pub struct IncrementalData {
+    pub red_green_nodes: RedGreenData,
+    pub prev_build_start: DateTime<Utc>,
+    pub prev_build_end: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 /// Common part between current and previous build [`UnitGraph`]s.
-pub struct IncrementalData {
+pub struct RedGreenData {
     /// Which packages are the same between builds (in the sense of [`Identity`] and other build-specific information).
     /// Important:
     /// ----------

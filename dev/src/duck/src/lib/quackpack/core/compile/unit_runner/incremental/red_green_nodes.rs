@@ -11,8 +11,11 @@
 //! 3. Local check passed.
 //!
 //! The local check is:
-//! - for source code inputs, checking that all Duckling files in the package have mtime earlier than previous build timestamp;
-//! - for units, checking that artifacts for the unit exist and have mtime earlier than previous build timestamp.
+//! - for source code inputs, checking that all Duckling files in the package have mtime earlier than previous build start timestamp;
+//! - for units, checking that artifacts for the unit exist and have mtime earlier than previous build end timestamp.
+//! 
+//! Notice that we need two timestamps, since artifacts produced during the compilation have mtime later than the start,
+//! and source code files should have mtime earlier than the start.
 
 use std::fs;
 use std::path::Path;
@@ -40,35 +43,46 @@ impl UnitGraphNode {
         graph: &UnitGraph,
         layout: &dyn ProfileLayout,
         bcx: &BuildContext<'_, '_>,
-        previous_timestamp: &DateTime<Utc>,
         incremental_data: &mut IncrementalData,
     ) -> QuackResult<bool> {
         let node_id = self.id();
 
         // If node was not in the previous build then it is red.
-        if !incremental_data.common_nodes.contains(&node_id) {
+        if !incremental_data
+            .red_green_nodes
+            .common_nodes
+            .contains(&node_id)
+        {
             return Ok(false);
         }
 
         // Check that all dependencies are green first.
-        let all_deps_green = graph
-            .deps_for(node_id)
-            .iter()
-            .all(|dep_id| incremental_data.green_nodes.contains(dep_id));
+        let all_deps_green = graph.deps_for(node_id).iter().all(|dep_id| {
+            incremental_data
+                .red_green_nodes
+                .green_nodes
+                .contains(dep_id)
+        });
         if !all_deps_green {
             return Ok(false);
         }
 
         // Perform the additional local check.
         let local_check = match self.node() {
-            UnitGraphNodeData::Input(input) => input.local_check(previous_timestamp, graph)?,
-            UnitGraphNodeData::Unit(unit) => {
-                unit.local_check(previous_timestamp, node_id, graph, layout, bcx)?
+            UnitGraphNodeData::Input(input) => {
+                input.local_check(&incremental_data.prev_build_start, graph)?
             }
+            UnitGraphNodeData::Unit(unit) => unit.local_check(
+                &incremental_data.prev_build_end,
+                node_id,
+                graph,
+                layout,
+                bcx,
+            )?,
         };
 
         if local_check {
-            incremental_data.green_nodes.insert(node_id);
+            incremental_data.red_green_nodes.green_nodes.insert(node_id);
             Ok(true)
         } else {
             Ok(false)

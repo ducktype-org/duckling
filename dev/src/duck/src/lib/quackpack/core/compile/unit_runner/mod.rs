@@ -14,7 +14,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
-use chrono::{DateTime, Utc};
 use tracing::{debug, error, info, instrument, trace};
 
 use crate::quackpack::core::compile::BuildContext;
@@ -69,53 +68,42 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     pub fn run(self) -> QuackResult<CompilationOutput> {
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
-        let (fingerprint, mut build_data, previous_build_timestampt, mut incremental_data) =
+        let (fingerprint, mut build_data, mut incremental_data) =
             self.manage_fingerprint(&*artifacts_layout, &*profile_layout)?;
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
-        self.run_all_needed_units(
-            &*profile_layout,
-            &mut incremental_data,
-            &previous_build_timestampt,
-        )?;
+        self.run_all_needed_units(&*profile_layout, &mut incremental_data)?;
         // Update timestamp, so all produced artifacts have earlier modification time that the timestamp.
-        build_data.update_timestamp();
+        build_data.set_end_timestamp();
         build_data.write_fingerprint(&fingerprint)?;
         outputs::get_compiler_output(&self.graph, &*profile_layout, self.bcx)
     }
 
     #[instrument(skip_all)]
-    /// Read the previous build fingerprint, generating [`IncrementalData`] from it.
+    /// Read the previous build fingerprint, generating [`RedGreenData`] from it.
     /// Saving the new fingerprint is postponed to the end of the whole builds, so this function returns a triple,
     /// consisting of:
     /// - [`LockedFile`] --- the fingerprint file;
     /// - [`BuildData`] --- the new fingerprint, yet to be written;
-    /// - [`DateTime`] --- the previous build timestamp (if exists), otherwise UNIX epoch;
-    /// - [`IncrementalData`].
+    /// - [`IncrementalData`] --- all information necessary for performing package-level incremental compilation;
     ///
     /// Note:
     /// -----
-    /// Returns empty [`IncrementalData`] if there was no previous fingerprint found,
+    /// Returns empty [`RedGreenData`] if there was no previous fingerprint found,
     /// parsing it returned an error or profile prohibits incremental.
     fn manage_fingerprint(
         &self,
         artifacts_layout: &dyn ArtifactsLayout,
         profile_layout: &dyn ProfileLayout,
-    ) -> QuackResult<(LockedFile, BuildData, DateTime<Utc>, IncrementalData)> {
+    ) -> QuackResult<(LockedFile, BuildData, IncrementalData)> {
         let prev_fingerprint_exists = profile_layout.fingerprint_path().exists();
         let fingerprint = profile_layout.fingerprint(self.bcx.pcx.ctx())?;
         let cur_build_data =
             BuildData::for_current_build(&self.graph, self.bcx.profile, artifacts_layout);
         if !prev_fingerprint_exists || !self.bcx.profile.incremental {
             // It makes no sense to attempt incremental.
-            return Ok((
-                fingerprint,
-                cur_build_data,
-                DateTime::from_timestamp_nanos(0),
-                IncrementalData::default(),
-            ));
+            return Ok((fingerprint, cur_build_data, IncrementalData::default()));
         }
-        let (incremental_data, previous_timestamp) = match BuildData::from_fingerprint(&fingerprint)
-        {
+        let incremental_data = match BuildData::from_fingerprint(&fingerprint) {
             Ok(prev_build_data) => {
                 debug!(previous_build_data = ?prev_build_data);
                 // Previous fingerprint is well-formed, we can use it.
@@ -123,10 +111,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                     .pcx
                     .ctx()
                     .info_verbose("succesfully loaded previous build fingerprint")?;
-                (
-                    cur_build_data.get_incremental_data(&prev_build_data),
-                    prev_build_data.into_timestamp(),
-                )
+                cur_build_data.get_incremental_data(prev_build_data)
             }
             Err(e) => {
                 // Previous fingerprint was malformed, so return empty result.
@@ -134,20 +119,12 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                     "previous fingerprint at {} is malformed: {e}",
                     fingerprint.path().display()
                 ))?;
-                (
-                    IncrementalData::default(),
-                    DateTime::from_timestamp_nanos(0),
-                )
+                IncrementalData::default()
             }
         };
         debug!(?incremental_data);
         debug!(?cur_build_data);
-        Ok((
-            fingerprint,
-            cur_build_data,
-            previous_timestamp,
-            incremental_data,
-        ))
+        Ok((fingerprint, cur_build_data, incremental_data))
     }
 
     #[instrument(skip_all)]
@@ -158,23 +135,16 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         &self,
         layout: &dyn ProfileLayout,
         incremental_data: &mut IncrementalData,
-        previous_timestamp: &DateTime<Utc>,
     ) -> QuackResult<()> {
         for node in self.graph.compilation_order() {
             let node_id = node.id();
-            let is_green = node.is_green(
-                &self.graph,
-                layout,
-                self.bcx,
-                previous_timestamp,
-                incremental_data,
-            )?;
+            let is_green = node.is_green(&self.graph, layout, self.bcx, incremental_data)?;
             let Some(unit) = node.as_unit() else {
                 continue;
             };
             if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
                 // Nothing truly depends on this unit, so we can safely make it green, potentially making more units green.
-                incremental_data.green_nodes.insert(node_id);
+                incremental_data.red_green_nodes.green_nodes.insert(node_id);
                 continue;
             }
             if is_green {
