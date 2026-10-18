@@ -97,7 +97,7 @@ private:
 		ASSERT_HAS_VALUE(result.run_result);
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
 		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value() == false);
+		ASSERT_TRUE(validation_result.value().memory_valid == false);
 	}
 
 	void nestedLeaks() {
