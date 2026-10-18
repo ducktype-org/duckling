@@ -18,7 +18,6 @@ use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::{IncrementalData, RedGreenData};
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::util::truncate_to_milis::truncate_to_millis;
 use crate::util::file_locks::LockedFile;
 use crate::util::hash::sha256_string;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -55,9 +54,7 @@ impl BuildData {
     ) -> Self {
         let profile_hash = sha256_string(profile.serialize_raw());
         Self {
-            // This is truncated to millis, since we want to compare it with mtimes of files,
-            // which are (at least on Unix) timed to milliseconds.
-            build_start: truncate_to_millis(Utc::now()),
+            build_start: Utc::now(),
             // Unknown so UNIX epoch.
             build_end: DateTime::from_timestamp_nanos(0),
             unit_graph: graph.into(),
