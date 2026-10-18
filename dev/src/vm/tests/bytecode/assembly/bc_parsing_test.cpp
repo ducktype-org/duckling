@@ -4,16 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/optional.hpp>
+#include <vm_tester_utils.hpp>
 
-#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
-
-#include <vm/loader/parser/parser.hpp>
-
-#include <sstream>
-
-using namespace vm::loader;
 
 /**
  * @brief What belongs here: the text assembly parser ONLY. A test feeds it a `.dbc` file with a
@@ -23,12 +16,12 @@ using namespace vm::loader;
  * A file that parses but is semantically wrong (unknown name, bad types, bad jumps) is the
  * loader's business and goes to `loader/verification/`.
  */
-class BCParsingTests: public tester::TestSuite {
+class BCParsingTests: public ParserTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCParsingTests
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	PARSER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(invalidOpcode);
 		TESTER_ADD_TEST(noSemicolon);
 		TESTER_ADD_TEST(invalidTypeSpecifier);
@@ -39,30 +32,6 @@ public:
 	}
 
 private:
-	/**
-	 * @brief Parses a syntactically incorrect file. Asserts that `error_keywords` are present in
-	 * the error message.
-	 */
-	void parseInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
-	) {
-		fs::File file(path(dbc_filename));
-		auto     parsing_result = parser::parse({ file });
-		match_optional(parsing_result) {
-			opt_err(logger) {
-				std::stringstream ss;
-				logger.dumpLog(true, ss);
-				for (auto err_key: error_keywords) {
-					assertTrue(
-						ss.str().find(err_key) != std::string::npos,
-						base::strConcat("Not found: ", err_key)
-					);
-				}
-			}
-			opt_some(_) { CORE_PANIC("Expected error, but correctly parsed."); }
-		}
-	}
-
 	void invalidOpcode() {
 		parseInvalidDbc(
 			"invalid_opcode.dbc",
@@ -117,11 +86,9 @@ private:
 	 * the (inclusive) `.end` covers the last argument and nothing past it.
 	 */
 	void opcodeSourcePositions() {
-		fs::File file(path("source_positions.dbc"));
-		auto     parsing_result = parser::parse({ file });
-		ASSERT_HAS_VALUE(parsing_result, "Expected successful parse.");
+		const auto parsed_files = parseValidDbc("source_positions.dbc");
 
-		const auto& opcodes = parsing_result->front().functions.front()->code->opcodes;
+		const auto& opcodes = parsed_files.front().functions.front()->code->opcodes;
 
 		const std::vector<std::string> expected = {
 			"init_pany_type x, i32",
