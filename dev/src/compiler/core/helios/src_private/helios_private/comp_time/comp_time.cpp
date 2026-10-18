@@ -804,17 +804,7 @@ namespace compiler::helios {
 			}
 
 			void visitReusableExpr(const code::ReusableExpr& reusable) final {
-				// The uses of a reusable expression can't be evaluated on the VM one by one: only
-				// the first use initializes the temporary that the next uses read. All uses share
-				// the inner expression, so the query evaluates it once and caches the value for
-				// the next uses.
-				auto inner_result
-					= ctx.query<QueryEvaluateHOUTExpression>({ reusable.inner.ref() });
-				if (inner_result.hasFailed()) {
-					result = query::Failed();
-					return;
-				}
-				result = inner_result.valueOrThrow();
+				result = CouldNotShortPath{};
 			}
 
 			void visitVariantConstructExpr(const code::VariantConstructExpr&) final {
