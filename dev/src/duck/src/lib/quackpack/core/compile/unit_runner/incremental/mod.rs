@@ -17,7 +17,7 @@
 //! - [`serializable_types`] --- [`UnitGraph`](crate::quackpack::core::compile::unit::graph::UnitGraph) is not easily serializable,
 //!   so we create use serializable counterparts to it and other types.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use chrono::{DateTime, Utc};
 
@@ -53,7 +53,7 @@ pub struct IncrementalData {
     red_green_data: RedGreenData,
     prev_build_start: DateTime<Utc>,
     prev_build_end: DateTime<Utc>,
-    prev_num_src_files: HashMap<Identity, u32>,
+    prev_number_of_source_files: BTreeMap<Identity, u32>,
 }
 
 impl IncrementalData {
@@ -62,24 +62,24 @@ impl IncrementalData {
         red_green_data: RedGreenData,
         prev_build_start: DateTime<Utc>,
         prev_build_end: DateTime<Utc>,
-        prev_num_src_files: HashMap<Identity, u32>,
+        prev_number_of_source_files: BTreeMap<Identity, u32>,
     ) -> Self {
         Self {
             red_green_data,
             prev_build_start,
             prev_build_end,
-            prev_num_src_files,
+            prev_number_of_source_files,
         }
     }
 
     /// Get the previous build start timestamp.
-    pub fn prev_build_start(&self) -> &DateTime<Utc> {
-        &self.prev_build_start
+    pub fn prev_build_start(&self) -> DateTime<Utc> {
+        self.prev_build_start
     }
 
     /// Get the previous build end timestamp.
-    pub fn prev_build_end(&self) -> &DateTime<Utc> {
-        &self.prev_build_end
+    pub fn prev_build_end(&self) -> DateTime<Utc> {
+        self.prev_build_end
     }
 
     /// Get the set of nodes common with the previous graph.
@@ -92,14 +92,14 @@ impl IncrementalData {
         &self.red_green_data.green_nodes
     }
 
-    /// Get mutable access to the set of green nodes.
-    pub fn green_nodes_mut(&mut self) -> &mut HashSet<GraphNodeId> {
-        &mut self.red_green_data.green_nodes
+    /// Mark a [`UnitGraph`](crate::quackpack::core::compile::unit::graph::UnitGraph) as green.
+    pub fn mark_as_green(&mut self, node_id: GraphNodeId) {
+        self.red_green_data.green_nodes.insert(node_id);
     }
 
     /// Get the access to the mapping of previous build packages to the number of Duckling source code files inside them.
-    pub fn prev_num_src_files(&self) -> &HashMap<Identity, u32> {
-        &self.prev_num_src_files
+    pub fn prev_number_of_source_files(&self) -> &BTreeMap<Identity, u32> {
+        &self.prev_number_of_source_files
     }
 }
 

@@ -8,11 +8,11 @@
 //! Node is green if:
 //! 1. It was present in the previous build graph.
 //! 2. All of its dependencies are green.
-//! 3. Local check passed.
+//! 3. Node-specific check passed.
 //!
-//! Local check
-//! -----------
-//! For source code inputs the local check is that:
+//! Node-specific check
+//! -------------------
+//! For source code inputs the check is that:
 //! - all Duckling files in the package have mtime and ctime (change time) earlier than previous build start timestamp and
 //! - the number of Duckling files inside the package remained the same.
 //!
@@ -21,16 +21,14 @@
 //!
 //! We check ctime, to take renames and moves into account.
 //!
-//! For units the local check is that artifacts for the unit exist and have mtime earlier than previous build end timestamp.
+//! For units the check is that artifacts for the unit exist and have mtime and ctime earlier than previous build end timestamp.
 //!
 //! Why two timestamps
 //! ------------------
 //! Notice that we need two timestamps, since artifacts produced during the compilation have mtime later than the start,
 //! and source code files should have mtime earlier than the start.
 
-use std::fs;
 use std::path::Path;
-use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 
@@ -70,12 +68,12 @@ impl UnitGraphNode {
         // For units we first do basic checks, which are probably faster than the local check and realistically fail far more often.
         let is_green = match self.node() {
             UnitGraphNodeData::Input(input) => {
-                input.local_check(incremental_data, graph, current_build_data)?
-                    && basic_checks(incremental_data, node_id, graph)
+                input.node_specific_check(incremental_data, graph, current_build_data)?
+                    && meets_trivial_green_preconditions(incremental_data, node_id, graph)
             }
             UnitGraphNodeData::Unit(unit) => {
-                basic_checks(incremental_data, node_id, graph)
-                    && unit.local_check(
+                meets_trivial_green_preconditions(incremental_data, node_id, graph)
+                    && unit.node_specific_check(
                         incremental_data.prev_build_end(),
                         node_id,
                         graph,
@@ -86,7 +84,7 @@ impl UnitGraphNode {
         };
 
         if is_green {
-            incremental_data.green_nodes_mut().insert(node_id);
+            incremental_data.mark_as_green(node_id);
             Ok(true)
         } else {
             Ok(false)
@@ -95,10 +93,10 @@ impl UnitGraphNode {
 }
 
 /// Helper for [`UnitGraphNode::is_green`].
-/// Performs the "basic" checks, namely that:
+/// Performs the obvious checks, namely that:
 /// - the node is common with the previous build graph and
 /// - all node's dependencies are green.
-fn basic_checks(
+fn meets_trivial_green_preconditions(
     incremental_data: &IncrementalData,
     node_id: GraphNodeId,
     graph: &UnitGraph,
@@ -118,7 +116,7 @@ fn basic_checks(
 impl CompilationInput {
     /// Local check for [`CompilationInput`].
     /// Currently checks for [`CompilationInput::PackageSourceCode`] that all Duckling files of the package were not updated.
-    fn local_check(
+    fn node_specific_check(
         &self,
         incremental_data: &IncrementalData,
         graph: &UnitGraph,
@@ -145,11 +143,15 @@ impl CompilationInput {
         };
         let SourceCodeInputLocalCheckResult {
             all_mtimes_ok,
-            num_src_files,
+            number_of_source_files,
         } = check_for_updates(path_to_check, incremental_data.prev_build_start())?;
-        current_build_data.add_num_src_files(*identity, num_src_files);
+        current_build_data.add_number_of_source_files(*identity, number_of_source_files);
         Ok(all_mtimes_ok
-            && incremental_data.prev_num_src_files().get(identity).copied() == Some(num_src_files))
+            && incremental_data
+                .prev_number_of_source_files()
+                .get(identity)
+                .copied()
+                == Some(number_of_source_files))
     }
 }
 
@@ -157,7 +159,7 @@ impl CompilationInput {
 /// Contains information if any Duckling file has mtime exceeding given timestampt and the number of found Duckling files.
 struct SourceCodeInputLocalCheckResult {
     all_mtimes_ok: bool,
-    num_src_files: u32,
+    number_of_source_files: u32,
 }
 
 impl SourceCodeInputLocalCheckResult {
@@ -165,7 +167,7 @@ impl SourceCodeInputLocalCheckResult {
     fn empty() -> Self {
         Self {
             all_mtimes_ok: true,
-            num_src_files: 0,
+            number_of_source_files: 0,
         }
     }
 
@@ -173,24 +175,24 @@ impl SourceCodeInputLocalCheckResult {
     fn for_single_file(mtime_ok: bool) -> Self {
         Self {
             all_mtimes_ok: mtime_ok,
-            num_src_files: 1,
+            number_of_source_files: 1,
         }
     }
 
     /// Update [`self`] with another [`SourceCodeInputLocalCheckResult`].
     fn update(&mut self, other: SourceCodeInputLocalCheckResult) {
         self.all_mtimes_ok &= other.all_mtimes_ok;
-        self.num_src_files += other.num_src_files;
+        self.number_of_source_files += other.number_of_source_files;
     }
 }
 
-/// Helper for [`CompilationInput::local_check`].
+/// Helper for [`CompilationInput::node_specific_check`].
 /// Recursively checks that all Duckling files inside the given directory (or a single file if `path` is a file)
 /// have mtime and ctime earlier than `timestamp`.
 /// Also returns the number of encountered Duckling source code files.
 fn check_for_updates(
     path: &Path,
-    timestamp: &DateTime<Utc>,
+    timestamp: DateTime<Utc>,
 ) -> QuackResult<SourceCodeInputLocalCheckResult> {
     if path.is_symlink() {
         Ok(SourceCodeInputLocalCheckResult::empty())
@@ -201,11 +203,9 @@ fn check_for_updates(
                 .any(|&e| e == extention)
         {
             let mtime = path.mtime()?;
-            // We add one second, since ctime is tracked only with seconds precision, which is too low.
-            // Without the addition any rename/move in a second from the build start would be unnoticed.
-            let ctime = path.ctime()? + Duration::from_secs(1);
+            let ctime = path.ctime()?;
             Ok(SourceCodeInputLocalCheckResult::for_single_file(
-                mtime < (*timestamp).into() && ctime < (*timestamp).into(),
+                mtime < timestamp.into() && ctime < timestamp.into(),
             ))
         } else {
             Ok(SourceCodeInputLocalCheckResult::empty())
@@ -224,9 +224,9 @@ fn check_for_updates(
 impl Unit {
     /// Local check for [`Unit`].
     /// Checks that artifacts for the unit exist and have mtime earlier than timestamp.
-    fn local_check(
+    fn node_specific_check(
         &self,
-        previous_timestamp: &DateTime<Utc>,
+        previous_timestamp: DateTime<Utc>,
         unit_id_in_graph: GraphNodeId,
         graph: &UnitGraph,
         layout: &dyn ProfileLayout,
@@ -234,8 +234,9 @@ impl Unit {
     ) -> QuackResult<bool> {
         let artifacts_file = unit_output(self, unit_id_in_graph, graph, layout, bcx)?;
         if artifacts_file.exists() {
-            let mtime = fs::metadata(artifacts_file)?.modified()?;
-            Ok(mtime < (*previous_timestamp).into())
+            let mtime = artifacts_file.mtime()?;
+            let ctime = artifacts_file.mtime()?;
+            Ok(mtime < previous_timestamp.into() && ctime < previous_timestamp.into())
         } else {
             Ok(false)
         }

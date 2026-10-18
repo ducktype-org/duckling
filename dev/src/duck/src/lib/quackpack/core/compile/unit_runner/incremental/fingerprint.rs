@@ -6,7 +6,7 @@
 
 //! Module for constructing and saving to the disk fingerprints of the build process.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::Write;
 
 use chrono::{DateTime, Utc};
@@ -40,13 +40,14 @@ pub struct BuildData {
     artifacts_type: String,
     /// Mapping from packages to the number of Duckling source code files inside them.
     /// This might seem weird, but consult [`red_green_nodes`](super::red_green_nodes) module documentation for explanation.
-    num_src_files: HashMap<Identity, u32>,
+    /// We use [`BTreeMap`] to make the fingerprints stable.
+    number_of_source_files: BTreeMap<Identity, u32>,
 }
 
 impl BuildData {
     /// Get a [`BuildData`] from [`UnitGraph`] and [`Profile`].
     /// Should be used for getting [`BuildData`] for the current build process.
-    /// `num_src_files` is empty and should be filled up during local checks for source code inputs.
+    /// `number_of_source_files` is empty and should be filled up during local checks for source code inputs.
     pub fn for_current_build(
         graph: &UnitGraph,
         profile: Profile,
@@ -56,11 +57,11 @@ impl BuildData {
         Self {
             build_start: Utc::now(),
             // Unknown so UNIX epoch.
-            build_end: DateTime::from_timestamp_nanos(0),
+            build_end: DateTime::UNIX_EPOCH,
             unit_graph: graph.into(),
             profile_hash,
             artifacts_type: layout.name().to_string(),
-            num_src_files: HashMap::new(),
+            number_of_source_files: BTreeMap::new(),
         }
     }
 
@@ -120,7 +121,7 @@ impl BuildData {
             red_green_data,
             other.build_start,
             other.build_end,
-            other.num_src_files,
+            other.number_of_source_files,
         )
     }
 
@@ -129,7 +130,8 @@ impl BuildData {
         self.build_end = Utc::now();
     }
 
-    pub fn add_num_src_files(&mut self, package: Identity, num_src_files: u32) {
-        self.num_src_files.insert(package, num_src_files);
+    pub fn add_number_of_source_files(&mut self, package: Identity, number_of_source_files: u32) {
+        self.number_of_source_files
+            .insert(package, number_of_source_files);
     }
 }

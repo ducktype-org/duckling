@@ -11,8 +11,9 @@ use std::fs::{
     read_to_string, remove_dir, remove_file, rename, write,
 };
 use std::io::{self, Read, Write};
+use std::os::unix::fs::MetadataExt;
 use std::path::{Component, Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use tracing::warn;
 
@@ -406,7 +407,12 @@ impl PathOpsExt for Path {
     }
 
     fn mtime(&self) -> QuackResult<SystemTime> {
-        Ok(fs::metadata(self)?.modified()?)
+        let metadata = fs::metadata(self).with_context(|| {
+            format!("when getting the modification time of `{}`", self.display())
+        })?;
+        let seconds = metadata.mtime() as u64;
+        let nanos = metadata.mtime_nsec() as u64;
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(seconds) + Duration::from_nanos(nanos))
     }
 
     #[cfg(unix)]
@@ -414,18 +420,22 @@ impl PathOpsExt for Path {
         use std::os::unix::fs::MetadataExt;
         use std::time::Duration;
 
-        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(fs::metadata(self)?.ctime() as u64))
+        let metadata = fs::metadata(self)
+            .with_context(|| format!("when getting the change time of `{}`", self.display()))?;
+        let seconds = metadata.ctime() as u64;
+        let nanos = metadata.ctime_nsec() as u64;
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(seconds) + Duration::from_nanos(nanos))
     }
 
     #[cfg(windows)]
     fn ctime(&self) -> QuackResult<SystemTime> {
         use std::os::windows::io::AsRawHandle;
 
-        use windows::Win32::Storage::FileSystem::{
+        use windows_sys::Win32::Storage::FileSystem::{
             FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
         };
 
-        let file = File::open(path)?;
+        let file = File::open(path).with_context(|| format!("when opening `{}`", self.display()));
         let handle = file.as_raw_handle();
         let mut info = FILE_BASIC_INFO::default();
 
@@ -435,7 +445,8 @@ impl PathOpsExt for Path {
                 FileBasicInfo,
                 &mut info as *mut _ as *mut _,
                 std::mem::size_of::<FILE_BASIC_INFO>() as u32,
-            )?;
+            )
+            .with_context(|| format!("when getting file information for `{}`", self.display()));
         }
 
         Ok(SystemTime::UNIX_EPOCH + Duration::from_nanos(info.ChangeTime as u64))

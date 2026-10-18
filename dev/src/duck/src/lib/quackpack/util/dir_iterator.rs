@@ -9,7 +9,7 @@
 use std::fs::{DirEntry, ReadDir};
 use std::path::Path;
 
-use crate::QuackResult;
+use crate::{QuackResult, QuackResultContext};
 
 /// Type of an iterator over contents of a directory.
 pub enum DirContents {
@@ -35,7 +35,7 @@ pub fn create_dir_iterator(path: &Path) -> QuackResult<DirContents> {
         Ok(read_dir) => Ok(DirContents::NonEmpty(read_dir)),
         Err(e) => match e.kind() {
             std::io::ErrorKind::NotFound => Ok(DirContents::Empty),
-            _ => Err(e.into()),
+            _ => Err(e).with_context(|| format!("when reading entries in `{}`", path.display())),
         },
     }
 }

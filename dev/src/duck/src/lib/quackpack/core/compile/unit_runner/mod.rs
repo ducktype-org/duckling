@@ -151,13 +151,14 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                 continue;
             };
             if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
+                info!(?unit, "skipping compilation of the unit");
                 // Nothing truly depends on this unit (since task_generator skips it, even units having it as dependency do not use its artifacts).
                 // So we can safely make it green, potentially making more units green.
-                incremental_data.green_nodes_mut().insert(node_id);
+                incremental_data.mark_as_green(node_id);
                 continue;
             }
             if is_green {
-                info!("skipping compilation of a unit");
+                info!(?unit, "reusing previous build artifacts for the unit");
                 self.bcx.pcx.ctx().info(format!(
                     "reusing previous build artifacts for `{}`",
                     unit.package().name()

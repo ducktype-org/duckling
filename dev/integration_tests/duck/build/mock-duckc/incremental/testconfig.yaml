@@ -2,14 +2,12 @@
 # which incremental builds need to find to reuse a unit.
 before-cmd: export PATH="@{ConfigDir}/mock:$PATH"
 
-# Sleep to make sure ctime checks do not fail.
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
   @{duck-exe} -C foo add --local ../bar bar
   @{before-cmd}
-  sleep 1
   @{duck-exe} -C foo build
 
 Tests:
