@@ -373,11 +373,10 @@ namespace compiler::helios::code {
 		// Next, we perform typical overload resolution.
 
 		// Step 1. — special path for numeric promotions
-		if (inner->expression_type.getType().isNumeric() && isNumericOperator(op)) {
+		if (operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+		    && inner->expression_type.getType().isNumeric() && isNumericOperator(op)) {
 			auto numeric_builtin_opt = findNumericUnaryBuiltin(ctx, op, inner.ref());
-			auto new_origin = operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
-			                    ? elementOriginOrdered(op_origin, inner->origin)
-			                    : elementOriginOrdered(inner->origin, op_origin);
+			auto new_origin          = elementOriginOrdered(op_origin, inner->origin);
 
 			if_opt_some(numeric_builtin_opt, numeric_builtin) {
 				auto [operation, coercion] = numeric_builtin;

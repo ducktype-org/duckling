@@ -15,6 +15,13 @@ use crate::quackpack::core::Version;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::test_utils::setup_test;
 
+#[test]
+/// If this test passes (doesn't panic), it means that we successfully initialised the
+/// `LazyLock` with the parsed URL.
+fn default_url_is_valid() {
+    let _ = &*DEFAULT_REGISTRY_URL;
+}
+
 fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without

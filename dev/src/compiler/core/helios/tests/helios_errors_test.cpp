@@ -216,12 +216,12 @@ private:
 				R"(
                 class Number {
                     val: i64;
-                    fun -() -> Number = {
+                    fun prefix -() -> Number = {
                         return Number(-self.val);
                     }
                 }
 
-                fun -(n: Number) -> Number = {
+                fun prefix -(n: Number) -> Number = {
                     return Number(-n.val);
                 }
 
@@ -232,6 +232,36 @@ private:
                 }
             )",
 				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun -(n: i64) -> i64 = n;)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun suffix +(lhs: i64, rhs: i64) -> i64 = lhs;)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun -() -> i64 = 0;
+					}
+				)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun suffix +(rhs: i64) -> i64 = rhs;
+					}
+				)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
 			);
 		}
@@ -1279,7 +1309,31 @@ private:
 		// ============================ Other errors ============================
 		{
 			checkForErrorOnCompileModule(
-				R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
+				R"(fun a() = 100000000000000000000000;)",
+				{ "Numeric literal value is out of the range" },
+				1
+			);
+			// An error about a negative literal points at its `-` too.
+			checkForErrorOnCompileModule(
+				R"(fun a() = -9223372036854775809;)",
+				{ "Numeric literal value is out of the range" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -129i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			// A hex or binary literal is a value, not a bit pattern, so it does not wrap around.
+			checkForErrorOnCompileModule(
+				R"(fun a() = 0x80i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -0b10000001i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun a() = 1000i8;)",
