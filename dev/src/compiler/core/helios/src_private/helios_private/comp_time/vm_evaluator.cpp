@@ -291,9 +291,6 @@ namespace {
 					[&](auto&& num_val) -> std::expected<Box<vm::IVMValue>, VmEvaluationError> {
 						using NumT = std::decay_t<decltype(num_val)>;
 
-						// @TODO: #899 Once CTV will be VMValue based (contain the VMValue and
-					    // compiler::tsh::SymbolType) we should perform this conversion based on the
-					    // `SymbolType` not C++ type sizes.
 						base::StrID dvm_type_name;
 						if constexpr (sizeof(NumT) <= 1)
 							dvm_type_name = base::StrID("i8");
