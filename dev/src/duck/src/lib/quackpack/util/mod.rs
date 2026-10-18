@@ -13,6 +13,7 @@ pub mod paths;
 pub mod str_id;
 pub mod to_path_buf;
 pub mod to_url;
+pub mod truncate_to_milis;
 pub mod with_version;
 
 /// A common message which should be passed to `.expect()`s.

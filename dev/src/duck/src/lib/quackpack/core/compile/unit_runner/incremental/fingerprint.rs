@@ -6,6 +6,7 @@
 
 //! Module for constructing and saving to the disk fingerprints of the build process.
 
+use std::collections::HashMap;
 use std::io::Write;
 
 use chrono::{DateTime, Utc};
@@ -16,6 +17,8 @@ use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::{IncrementalData, RedGreenData};
+use crate::quackpack::core::identity::Identity;
+use crate::quackpack::util::truncate_to_milis::truncate_to_millis;
 use crate::util::file_locks::LockedFile;
 use crate::util::hash::sha256_string;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -36,11 +39,15 @@ pub struct BuildData {
     profile_hash: String,
     /// Artifacts type (which implementation of [`ArtifactsLayout`](crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout) this compilation uses).
     artifacts_type: String,
+    /// Mapping from packages to the number of Duckling source code files inside them.
+    /// This might seem weird, but consult [`red_green_nodes`](super::red_green_nodes) module documentation for explanation.
+    num_src_files: HashMap<Identity, u32>,
 }
 
 impl BuildData {
     /// Get a [`BuildData`] from [`UnitGraph`] and [`Profile`].
     /// Should be used for getting [`BuildData`] for the current build process.
+    /// `num_src_files` is empty and should be filled up during local checks for source code inputs.
     pub fn for_current_build(
         graph: &UnitGraph,
         profile: Profile,
@@ -48,12 +55,15 @@ impl BuildData {
     ) -> Self {
         let profile_hash = sha256_string(profile.serialize_raw());
         Self {
-            build_start: Utc::now(),
+            // This is truncated to millis, since we want to compare it with mtimes of files,
+            // which are (at least on Unix) timed to milliseconds.
+            build_start: truncate_to_millis(Utc::now()),
             // Unknown so UNIX epoch.
             build_end: DateTime::from_timestamp_nanos(0),
             unit_graph: graph.into(),
             profile_hash,
             artifacts_type: layout.name().to_string(),
+            num_src_files: HashMap::new(),
         }
     }
 
@@ -109,15 +119,20 @@ impl BuildData {
         } else {
             self.unit_graph.get_red_green_data(&other.unit_graph)
         };
-        IncrementalData {
-            red_green_nodes: red_green_data,
-            prev_build_start: other.build_start,
-            prev_build_end: other.build_end,
-        }
+        IncrementalData::new(
+            red_green_data,
+            other.build_start,
+            other.build_end,
+            other.num_src_files,
+        )
     }
 
     /// Update the `build_end` timestamp to the current time.
     pub fn set_end_timestamp(&mut self) {
         self.build_end = Utc::now();
+    }
+
+    pub fn add_num_src_files(&mut self, package: Identity, num_src_files: u32) {
+        self.num_src_files.insert(package, num_src_files);
     }
 }

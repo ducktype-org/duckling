@@ -63,11 +63,7 @@ impl SerializableUnitGraph {
     pub fn get_red_green_data(&self, other: &Self) -> RedGreenData {
         let common_packages = self.get_common_packages(other);
         let common_nodes = self.get_common_nodes(other, &common_packages);
-        RedGreenData {
-            common_packages,
-            common_nodes,
-            green_nodes: HashSet::new(),
-        }
+        RedGreenData::new(common_packages, common_nodes)
     }
 
     /// Helper for [`Self::get_red_green_data`].

@@ -17,7 +17,7 @@
 //! - [`serializable_types`] --- [`UnitGraph`](crate::quackpack::core::compile::unit::graph::UnitGraph) is not easily serializable,
 //!   so we create use serializable counterparts to it and other types.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 
@@ -36,10 +36,12 @@ pub use fingerprint::BuildData;
 /// Currently it contains:
 /// - [`RedGreenData`] --- a struct containing information about which [`UnitGraphNode`](crate::quackpack::core::compile::unit::graph::UnitGraphNode)s
 ///   are common with the previous graph and which of those nodes are green (we can reuse build artifacts for them).
-///   The first former is constructed from the previous fingerprint and for the latter,
+///   The former is constructed from the previous fingerprint and for the latter,
 ///   green nodes are added one by one by [`UnitRunner::compile_unit`](crate::quackpack::core::compile::unit_runner::UnitRunner::compile_unit).
 /// - Previous compilation start time (to compare source codes against).
 /// - Previous compilation end time (to compare artifacts against).
+/// - Mapping from packages to the number of Duckling source code files inside them.
+///   This might seem weird, but consult [`red_green_nodes`] module documentation for explanation
 ///
 /// Note:
 /// -----
@@ -48,9 +50,57 @@ pub use fingerprint::BuildData;
 /// UNIX epoch fits that semantic, since we use the timestamps to make sure that given files were not modified since the timestamp.
 /// Obviously in any realistic scenario the files have mtime greater than the epoch.
 pub struct IncrementalData {
-    pub red_green_nodes: RedGreenData,
-    pub prev_build_start: DateTime<Utc>,
-    pub prev_build_end: DateTime<Utc>,
+    red_green_data: RedGreenData,
+    prev_build_start: DateTime<Utc>,
+    prev_build_end: DateTime<Utc>,
+    prev_num_src_files: HashMap<Identity, u32>,
+}
+
+impl IncrementalData {
+    /// Construct new [`IncrementalData`].
+    pub fn new(
+        red_green_data: RedGreenData,
+        prev_build_start: DateTime<Utc>,
+        prev_build_end: DateTime<Utc>,
+        prev_num_src_files: HashMap<Identity, u32>,
+    ) -> Self {
+        Self {
+            red_green_data,
+            prev_build_start,
+            prev_build_end,
+            prev_num_src_files,
+        }
+    }
+
+    /// Get the previous build start timestamp.
+    pub fn prev_build_start(&self) -> &DateTime<Utc> {
+        &self.prev_build_start
+    }
+
+    /// Get the previous build end timestamp.
+    pub fn prev_build_end(&self) -> &DateTime<Utc> {
+        &self.prev_build_end
+    }
+
+    /// Get the set of nodes common with the previous graph.
+    pub fn common_nodes(&self) -> &HashSet<GraphNodeId> {
+        &self.red_green_data.common_nodes
+    }
+
+    /// Get the set of green nodes.
+    pub fn green_nodes(&self) -> &HashSet<GraphNodeId> {
+        &self.red_green_data.green_nodes
+    }
+
+    /// Get mutable access to the set of green nodes.
+    pub fn green_nodes_mut(&mut self) -> &mut HashSet<GraphNodeId> {
+        &mut self.red_green_data.green_nodes
+    }
+
+    /// Get the access to the mapping of previous build packages to the number of Duckling source code files inside them.
+    pub fn prev_num_src_files(&self) -> &HashMap<Identity, u32> {
+        &self.prev_num_src_files
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -61,11 +111,22 @@ pub struct RedGreenData {
     /// ----------
     /// This does not check if the source code of the package changed, this should be done when considering the [`CompilationInput`](crate::quackpack::core::compile::unit::graph::CompilationInput)
     /// for source code of that package.
-    pub common_packages: HashSet<Identity>,
+    common_packages: HashSet<Identity>,
     /// Which nodes are the same between builds (the nodes are the same and the dependencies are the same).
     /// Those are the nodes for which we potentially can reuse previous build artifacts.
-    pub common_nodes: HashSet<GraphNodeId>,
+    common_nodes: HashSet<GraphNodeId>,
     /// Subset of [`Self::common_nodes`], for which we have decided that they are green (we can reuse previous build artifacts for them).
     /// This is empty in the beginning and should be gradually filled up by [`UnitRunner::compile_unit`](crate::quackpack::core::compile::unit_runner::UnitRunner::compile_unit).
-    pub green_nodes: HashSet<GraphNodeId>,
+    green_nodes: HashSet<GraphNodeId>,
+}
+
+impl RedGreenData {
+    /// Comstruct new [`RedGreenData`], without any green nodes.
+    pub fn new(common_packages: HashSet<Identity>, common_nodes: HashSet<GraphNodeId>) -> Self {
+        Self {
+            common_packages,
+            common_nodes,
+            green_nodes: HashSet::new(),
+        }
+    }
 }

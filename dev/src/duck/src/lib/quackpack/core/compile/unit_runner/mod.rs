@@ -71,7 +71,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         let (fingerprint, mut build_data, mut incremental_data) =
             self.manage_fingerprint(&*artifacts_layout, &*profile_layout)?;
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
-        self.run_all_needed_units(&*profile_layout, &mut incremental_data)?;
+        self.run_all_needed_units(&*profile_layout, &mut incremental_data, &mut build_data)?;
         // Update timestamp, so all produced artifacts have earlier modification time that the timestamp.
         build_data.set_end_timestamp();
         build_data.write_fingerprint(&fingerprint)?;
@@ -110,7 +110,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                 self.bcx
                     .pcx
                     .ctx()
-                    .info_verbose("succesfully loaded previous build fingerprint")?;
+                    .info_verbose("successfully loaded previous build fingerprint")?;
                 cur_build_data.get_incremental_data(prev_build_data)
             }
             Err(e) => {
@@ -135,16 +135,25 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         &self,
         layout: &dyn ProfileLayout,
         incremental_data: &mut IncrementalData,
+        current_build_data: &mut BuildData,
     ) -> QuackResult<()> {
         for node in self.graph.compilation_order() {
             let node_id = node.id();
-            let is_green = node.is_green(&self.graph, layout, self.bcx, incremental_data)?;
+            // The order is important, we want to run `is_green` for all nodes, since it updates `current_build_data`.
+            let is_green = node.is_green(
+                &self.graph,
+                layout,
+                self.bcx,
+                incremental_data,
+                current_build_data,
+            )?;
             let Some(unit) = node.as_unit() else {
                 continue;
             };
             if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
-                // Nothing truly depends on this unit, so we can safely make it green, potentially making more units green.
-                incremental_data.red_green_nodes.green_nodes.insert(node_id);
+                // Nothing truly depends on this unit (since task_generator skips it, even units having it as dependency do not use its artifacts).
+                // So we can safely make it green, potentially making more units green.
+                incremental_data.green_nodes_mut().insert(node_id);
                 continue;
             }
             if is_green {

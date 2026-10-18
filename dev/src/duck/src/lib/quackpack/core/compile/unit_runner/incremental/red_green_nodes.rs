@@ -10,10 +10,19 @@
 //! 2. All of its dependencies are green.
 //! 3. Local check passed.
 //!
-//! The local check is:
-//! - for source code inputs, checking that all Duckling files in the package have mtime earlier than previous build start timestamp;
-//! - for units, checking that artifacts for the unit exist and have mtime earlier than previous build end timestamp.
-//! 
+//! Local check
+//! -----------
+//! For source code inputs the local check is that:
+//! - all Duckling files in the package have mtime earlier than previous build start timestamp and
+//! - the number of Duckling files inside the package remained the same.
+//!
+//! We need the second check, because the first check cannot detect deleting files.
+//! Two checks are sufficient, since the first one detects adding new files.
+//!
+//! For units the local check is that artifacts for the unit exist and have mtime earlier than previous build end timestamp.
+//!
+//! Why two timestamps
+//! ------------------
 //! Notice that we need two timestamps, since artifacts produced during the compilation have mtime later than the start,
 //! and source code files should have mtime earlier than the start.
 
@@ -30,7 +39,7 @@ use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::{
     CompilationInput, GraphNodeId, UnitGraph, UnitGraphNode, UnitGraphNodeData,
 };
-use crate::quackpack::core::compile::unit_runner::incremental::IncrementalData;
+use crate::quackpack::core::compile::unit_runner::incremental::{BuildData, IncrementalData};
 use crate::quackpack::core::compile::unit_runner::outputs::unit_output;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::util::dir_iterator::create_dir_iterator;
@@ -38,51 +47,42 @@ use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
 
 impl UnitGraphNode {
     /// Main logic for checking whether a [`UnitGraphNode`] is green or red.
+    ///
+    /// Important
+    /// ---------
+    /// This function also updates `current_build_data` with the number of Duckling source code files for all packages.
     pub fn is_green(
         &self,
         graph: &UnitGraph,
         layout: &dyn ProfileLayout,
         bcx: &BuildContext<'_, '_>,
         incremental_data: &mut IncrementalData,
+        current_build_data: &mut BuildData,
     ) -> QuackResult<bool> {
         let node_id = self.id();
 
-        // If node was not in the previous build then it is red.
-        if !incremental_data
-            .red_green_nodes
-            .common_nodes
-            .contains(&node_id)
-        {
-            return Ok(false);
-        }
-
-        // Check that all dependencies are green first.
-        let all_deps_green = graph.deps_for(node_id).iter().all(|dep_id| {
-            incremental_data
-                .red_green_nodes
-                .green_nodes
-                .contains(dep_id)
-        });
-        if !all_deps_green {
-            return Ok(false);
-        }
-
-        // Perform the additional local check.
-        let local_check = match self.node() {
+        // For source code inputs we first do the local check
+        // (to update `current_build_data` with the number of Duckling files for all packages).
+        // For units we first do basic checks, which are probably faster than the local check and realistically fail far more often.
+        let is_green = match self.node() {
             UnitGraphNodeData::Input(input) => {
-                input.local_check(&incremental_data.prev_build_start, graph)?
+                input.local_check(incremental_data, graph, current_build_data)?
+                    && basic_checks(incremental_data, node_id, graph)
             }
-            UnitGraphNodeData::Unit(unit) => unit.local_check(
-                &incremental_data.prev_build_end,
-                node_id,
-                graph,
-                layout,
-                bcx,
-            )?,
+            UnitGraphNodeData::Unit(unit) => {
+                basic_checks(incremental_data, node_id, graph)
+                    && unit.local_check(
+                        incremental_data.prev_build_end(),
+                        node_id,
+                        graph,
+                        layout,
+                        bcx,
+                    )?
+            }
         };
 
-        if local_check {
-            incremental_data.red_green_nodes.green_nodes.insert(node_id);
+        if is_green {
+            incremental_data.green_nodes_mut().insert(node_id);
             Ok(true)
         } else {
             Ok(false)
@@ -90,18 +90,40 @@ impl UnitGraphNode {
     }
 }
 
+/// Helper for [`UnitGraphNode::is_green`].
+/// Performs the "basic" checks, namely that:
+/// - the node is common with the previous build graph and
+/// - all node's dependencies are green.
+fn basic_checks(
+    incremental_data: &IncrementalData,
+    node_id: GraphNodeId,
+    graph: &UnitGraph,
+) -> bool {
+    // If node was not in the previous build then it is red.
+    if !incremental_data.common_nodes().contains(&node_id) {
+        return false;
+    }
+
+    // Check that all dependencies are green first.
+    graph
+        .deps_for(node_id)
+        .iter()
+        .all(|dep_id| incremental_data.green_nodes().contains(dep_id))
+}
+
 impl CompilationInput {
     /// Local check for [`CompilationInput`].
     /// Currently checks for [`CompilationInput::PackageSourceCode`] that all Duckling files of the package were not updated.
     fn local_check(
         &self,
-        previous_timestamp: &DateTime<Utc>,
+        incremental_data: &IncrementalData,
         graph: &UnitGraph,
+        current_build_data: &mut BuildData,
     ) -> QuackResult<bool> {
         let CompilationInput::PackageSourceCode(identity) = self;
         // Path to recursively check for source code updates.
         let path_to_check = match graph.package_data(*identity).package() {
-            AnyPackage::Package(package) => package.root_directory(),
+            AnyPackage::Package(package) => package.source_directory().expect("cannot be global"),
             AnyPackage::Script(script) => match script {
                 Script::Standalone(_) => script.script_path(),
                 Script::Associated(associated) => {
@@ -109,19 +131,60 @@ impl CompilationInput {
                         script.script_path()
                     } else {
                         // Scripts with associated not global package lie in that package.
-                        associated.package().root_directory()
+                        associated
+                            .package()
+                            .source_directory()
+                            .expect("cannot be global")
                     }
                 }
             },
         };
-        check_for_updates(path_to_check, previous_timestamp)
+        let SourceCodeInputLocalCheckResult {
+            all_mtimes_ok,
+            num_src_files,
+        } = check_for_updates(path_to_check, incremental_data.prev_build_start())?;
+        current_build_data.add_num_src_files(*identity, num_src_files);
+        Ok(all_mtimes_ok
+            && incremental_data.prev_num_src_files().get(identity).copied() == Some(num_src_files))
+    }
+}
+
+/// Result of local check for [`CompilationInput::PackageSourceCode`].
+/// Contains information if any Duckling file has mtime exceeding given timestampt and the number of found Duckling files.
+struct SourceCodeInputLocalCheckResult {
+    all_mtimes_ok: bool,
+    num_src_files: u32,
+}
+
+impl SourceCodeInputLocalCheckResult {
+    fn empty() -> Self {
+        Self {
+            all_mtimes_ok: true,
+            num_src_files: 0,
+        }
+    }
+
+    fn for_single_file(mtime_ok: bool) -> Self {
+        Self {
+            all_mtimes_ok: mtime_ok,
+            num_src_files: 1,
+        }
+    }
+
+    fn update(&mut self, other: SourceCodeInputLocalCheckResult) {
+        self.all_mtimes_ok &= other.all_mtimes_ok;
+        self.num_src_files += other.num_src_files;
     }
 }
 
 /// Helper for [`CompilationInput::local_check`].
 /// Recursively checks that all Duckling files inside the given directory (or a single file if `path` is a file)
 /// have mtime earlier than `timestamp`.
-fn check_for_updates(path: &Path, timestamp: &DateTime<Utc>) -> QuackResult<bool> {
+/// Also returns the number of encountered Duckling source code files.
+fn check_for_updates(
+    path: &Path,
+    timestamp: &DateTime<Utc>,
+) -> QuackResult<SourceCodeInputLocalCheckResult> {
     if path.is_file() {
         if let Some(extention) = path.extension()
             && [DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT]
@@ -129,19 +192,20 @@ fn check_for_updates(path: &Path, timestamp: &DateTime<Utc>) -> QuackResult<bool
                 .any(|&e| e == extention)
         {
             let mtime = fs::metadata(path)?.modified()?;
-            Ok(mtime < (*timestamp).into())
+            Ok(SourceCodeInputLocalCheckResult::for_single_file(
+                mtime < (*timestamp).into(),
+            ))
         } else {
-            Ok(true)
+            Ok(SourceCodeInputLocalCheckResult::empty())
         }
     } else {
+        let mut result = SourceCodeInputLocalCheckResult::empty();
         // We are in a directory.
         for entry in create_dir_iterator(path)? {
             let entry = entry?;
-            if !check_for_updates(&entry.path(), timestamp)? {
-                return Ok(false);
-            }
+            result.update(check_for_updates(&entry.path(), timestamp)?);
         }
-        Ok(true)
+        Ok(result)
     }
 }
 
