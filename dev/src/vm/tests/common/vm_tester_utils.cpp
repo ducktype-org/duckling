@@ -14,6 +14,7 @@
 #include <nlohmann/json_fwd.hpp>
 
 #include <chrono>
+#include <sstream>
 #include <ranges>
 #include <thread>
 #include <variant>
@@ -300,14 +301,15 @@ auto VmTestSuite::runTestOnVmGetResult(
 
 	if_opt_some(optional_input, input) { EXPECT_VOID(vm::api::input(pid, input)); }
 
-	EXPECT_VOID(vm::api::join(pid));
+	auto join_result = vm::api::join(pid);
+	EXPECT_VOID(join_result);
 
 	if_opt_some(optional_output, wanted_output) {
 		auto program_output = vm::api::output(pid);
 		EXPECT_VOID(program_output);
 		ASSERT_EQUAL_PRINT(wanted_output, program_output->output);
 	}
-	const auto exit_value = vm::api::getExitValue(pid).transform([&](vm::api::ExitValue values) {
+	const auto exit_value = join_result.transform([&](vm::api::ExitValue values) {
 		variant_match(values) {
 			variant_case(i64, exit_code) return exit_code;
 			variant_case(std::vector<Ref<vm::IVMValue>>, values) {
@@ -356,48 +358,7 @@ void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code)
 	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
 	const auto validation_result = vm::api::deinitAndValidate(test_result.pid);
 	ASSERT_HAS_VALUE(validation_result);
-	ASSERT_TRUE(validation_result.value());
-}
-
-void VmTestSuite::runFunctionSynchronouslyAsTest(
-	vm::PID                            pid,
-	const std::string&                 func_name,
-	const vm::FunctionRunArguments&    args,
-	const base::Optional<std::string>& optional_input,
-	const base::Optional<std::string>& optional_output,
-	const base::Optional<i64>          expected_exit_code
-) {
-	const auto run_result = vm::api::runFunctionAwait(pid, func_name, args);
-	ASSERT_HAS_VALUE(run_result);
-	ASSERT_NO_VALUE(vm::api::join(pid));
-
-	if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
-
-	if_opt_some(optional_output, output) {
-		auto output_response = vm::api::output(pid);
-		ASSERT_HAS_VALUE(output_response);
-		ASSERT_EQUAL(output, output_response->output);
-	}
-
-	const auto& exit_value = run_result.value();
-	variant_match(exit_value) {
-		variant_case(i64, exit_code) {
-			if (expected_exit_code.has_value())
-				ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_code);
-			else
-				ASSERT_TRUE(exit_code == 0);
-		}
-		variant_case(std::vector<Ref<vm::IVMValue>>, values) {
-			if (expected_exit_code.has_value()) {
-				ASSERT_TRUE(values.size() == 1);
-				ASSERT_EQUAL_PRINT(expected_exit_code.value(), values.at(0)->readBytes<i64>());
-			} else {
-				// @note: If expected_exit_code is an empty optional, it's expected that a called
-				// function doesn't return any values
-				ASSERT_TRUE(values.size() == 0);
-			}
-		}
-	}
+	ASSERT_TRUE(validation_result.value().valid());
 }
 
 void VmTestSuite::assertRunFunctionRefusedWith(
@@ -444,7 +405,8 @@ void VmTestSuite::runAndCheckReturnValues(
 
 	if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
 
-	ASSERT_HAS_VALUE(vm::api::join(pid));
+	auto exit_code_response = vm::api::join(pid);
+	ASSERT_HAS_VALUE(exit_code_response);
 
 	if_opt_some(optional_output, output) {
 		auto output_response = vm::api::output(pid);
@@ -452,8 +414,6 @@ void VmTestSuite::runAndCheckReturnValues(
 		ASSERT_EQUAL(output, output_response->output);
 	}
 
-	auto exit_code_response = vm::api::getExitValue(pid);
-	ASSERT_HAS_VALUE(exit_code_response);
 	const auto& exit_value = exit_code_response.value();
 	ASSERT_MATCHES(exit_value, std::vector<Ref<vm::IVMValue>>);
 	auto& exit_value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
@@ -513,4 +473,30 @@ vm::FunctionRunArguments VmTestSuite::createArgumentList(OwnedArgumentList& argu
 
 void VmTestSuite::freeArguments(OwnedArgumentList& arguments) {
 	for (auto& arg: arguments) arg->freeData();
+}
+
+auto ParserTestSuite::parseValidDbc(const std::string& dbc_filename)
+	-> std::vector<vm::loader::parser::ParsedFile> {
+	auto parsing_result = vm::loader::parser::parse({ fs::File(path(dbc_filename)) });
+	ASSERT_HAS_VALUE(parsing_result, "Expected successful parse.");
+	return std::move(*parsing_result);
+}
+
+void ParserTestSuite::parseInvalidDbc(
+	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+) {
+	auto parsing_result = vm::loader::parser::parse({ fs::File(path(dbc_filename)) });
+	match_optional(parsing_result) {
+		opt_err(logger) {
+			std::stringstream ss;
+			logger.dumpLog(true, ss);
+			for (auto err_key: error_keywords) {
+				assertTrue(
+					ss.str().find(err_key) != std::string::npos,
+					base::strConcat("Not found: ", err_key)
+				);
+			}
+		}
+		opt_some(_) { CORE_PANIC("Expected error, but correctly parsed."); }
+	}
 }

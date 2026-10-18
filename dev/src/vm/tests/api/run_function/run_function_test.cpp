@@ -269,7 +269,20 @@ private:
 	void testSyncRun() {
 		vm::PID pid = initProcess();
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
-		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
+		// `runFunctionAwait` returns only once the function finished, so there is nothing left to
+		// `join` afterwards.
+		const auto exit_value = vm::api::runFunctionAwait(pid, "foo", {});
+		ASSERT_HAS_VALUE(exit_value);
+		ASSERT_NO_VALUE(vm::api::join(pid));
+
+		auto output = vm::api::output(pid);
+		ASSERT_HAS_VALUE(output);
+		ASSERT_EQUAL(std::string("120"), output->output);
+
+		ASSERT_MATCHES(exit_value.value(), std::vector<Ref<vm::IVMValue>>);
+		const auto& values = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value.value());
+		ASSERT_EQUAL_PRINT(values.size(), 1);
+		ASSERT_EQUAL_PRINT(values.at(0)->readBytes<i64>(), 123);
 		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 
@@ -298,8 +311,7 @@ private:
             );
 
 			ASSERT_HAS_VALUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }));
-			ASSERT_HAS_VALUE(vm::api::join(pid));
-			auto value = vm::api::getExitValue(pid);
+			auto value = vm::api::join(pid);
 			if (!value.has_value()) {
 				fail(
 					"Could not load VMValue for: " + function_name
