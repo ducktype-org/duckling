@@ -131,6 +131,19 @@ Tests:
           String: "true\n5\n1\n1\n1\n3\n2\n2\n4\n5\ntrue\n888\n200\ntrue\ntrue\n888\ncat cow duck duckling \ntrue\n888\nwake up\nwake up;eat;swim;\n888\n2\nab\n888\n"
         ExitCode: 0
 
+  # `exp.algorithms.sort`: a stable merge sort of a `List`, ordered by `exp.compare.cmp`.
+  exp_sort:
+    Cases:
+      all:
+        Output:
+          String: "[-3,1,1,2,4,5]\n[-3,1,1,2,4,5]\n888\n0\n[7]\n[8,9]\n888\n200\ntrue\ntrue\n888\n;cat;cow;duck;duckling;\n888\ntrue\n888\nwake up;stretch;swim;eat;quack;sleep;\n888\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 10 # two 200-element sorts under valgrind, 3 seconds is too tight
+        Output:
+          String: "[-3,1,1,2,4,5]\n[-3,1,1,2,4,5]\n888\n0\n[7]\n[8,9]\n888\n200\ntrue\ntrue\n888\n;cat;cow;duck;duckling;\n888\ntrue\n888\nwake up;stretch;swim;eat;quack;sleep;\n888\n"
+        ExitCode: 0
+
   # `exp.io`: short readers for standard input.
   exp_io:
     Cases:

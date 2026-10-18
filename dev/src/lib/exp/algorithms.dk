@@ -1,0 +1,112 @@
+import core.containers as containers;
+import exp.compare as compare;
+import exp.containers as exp_containers;
+
+#{
+    Experimental algorithms. Everything that orders values uses `compare.cmp[T]`, the same
+    convention `exp.containers.Map` and `PriorityQueue` use (see `exp.compare`).
+#}
+
+#{
+    Sorts `list` in place, smallest first by `compare.cmp[T]`. The sort is stable: equal elements
+    keep their order. It takes O(n log n) comparisons, also in the worst case.
+
+    It is a merge sort. Every element is first moved into its own allocation, so the sort only
+    moves pointers around and never copies an element. At the end the elements are moved back.
+#}
+template(T: type)
+fun sort(list: ref containers.List[T]) -> () = {
+    let len = list.length();
+    if (len < 2i64) return;
+
+    # `pop` takes the last element first, so `items` starts out in reverse order.
+    var items: containers.List[ptr T];
+    items.reserve(len);
+    while (list.length() > 0i64) items.push(containers.boxAlloc[T](list.pop()));
+    reversePointers[T](&items);
+
+    var buffer: containers.List[ptr T];
+    buffer.reserve(len);
+    var i = 0i64;
+    while (i < len) {
+        let p: ptr T = items.at(i);
+        buffer.push(p);
+        i = i + 1i64;
+    }
+
+    # Bottom-up: merge runs of length 1 into runs of 2, then 4, and so on.
+    var width = 1i64;
+    while (width < len) {
+        var lo = 0i64;
+        while (lo < len) {
+            var mid = lo + width;
+            if (mid > len) mid = len;
+            var hi = mid + width;
+            if (hi > len) hi = len;
+            mergeRuns[T](&items, &buffer, lo, mid, hi);
+            lo = hi;
+        }
+        i = 0i64;
+        while (i < len) {
+            let p: ptr T = buffer.at(i);
+            items.at(i) = p;
+            i = i + 1i64;
+        }
+        width = width * 2i64;
+    }
+
+    i = 0i64;
+    while (i < len) {
+        let p: ptr T = items.at(i);
+        list.push(exp_containers.unbox[T](p));
+        i = i + 1i64;
+    }
+}
+
+#{
+    Merges the sorted runs `source[lo..mid]` and `source[mid..hi]` into `target[lo..hi]`. On a
+    tie the element from the left run goes first, which keeps the sort stable.
+#}
+template(T: type)
+fun mergeRuns(
+    source: ref containers.List[ptr T], target: ref containers.List[ptr T], lo: i64, mid: i64,
+    hi: i64
+) -> () = {
+    var left  = lo;
+    var right = mid;
+    var k     = lo;
+    while (k < hi) {
+        var take_left = left < mid;
+        if (take_left and right < hi) {
+            let a: ptr T = source.at(left);
+            let b: ptr T = source.at(right);
+            take_left    = not compare.cmp[T](&(*b), &(*a));
+        }
+        if (take_left) {
+            let p: ptr T = source.at(left);
+            target.at(k) = p;
+            left         = left + 1i64;
+        } else {
+            let q: ptr T = source.at(right);
+            target.at(k) = q;
+            right        = right + 1i64;
+        }
+        k = k + 1i64;
+    }
+}
+
+#{
+    Reverses a list of pointers in place.
+#}
+template(T: type)
+fun reversePointers(items: ref containers.List[ptr T]) -> () = {
+    var front = 0i64;
+    var back  = items.length() - 1i64;
+    while (front < back) {
+        let p: ptr T   = items.at(front);
+        items.at(front) = items.at(back);
+        items.at(back)  = p;
+        front           = front + 1i64;
+        back            = back - 1i64;
+    }
+}

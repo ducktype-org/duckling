@@ -1,0 +1,157 @@
+import exp.algorithms.*;
+
+#{
+    A task ordered by `priority` only, through its own `cmp` method. Two tasks with the same
+    priority are equal, so a stable sort keeps them in their original order.
+#}
+class Task {
+    priority: i64;
+    name: String;
+
+    fun cmp(other: const ref Task) -> bool = priority < other.priority;
+}
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun printSeparator() -> () = {
+    print("888\n");
+}
+
+fun intsTest() -> () = {
+    var list: List[i64];
+    list.push(5);
+    list.push(1);
+    list.push(4);
+    list.push(1);
+    list.push(-3);
+    list.push(2);
+    sort[i64](&list);
+    print(list.toString()); # [-3,1,1,2,4,5]
+    print("\n");
+
+    # Sorting a sorted list keeps it as it is.
+    sort[i64](&list);
+    print(list.toString()); # [-3,1,1,2,4,5]
+    print("\n");
+    printSeparator();
+}
+
+fun smallTest() -> () = {
+    var empty: List[i64];
+    sort[i64](&empty);
+    builtin_output_i64(empty.length()); # 0
+
+    var one: List[i64];
+    one.push(7);
+    sort[i64](&one);
+    print(one.toString()); # [7]
+    print("\n");
+
+    var two: List[i64];
+    two.push(9);
+    two.push(8);
+    sort[i64](&two);
+    print(two.toString()); # [8,9]
+    print("\n");
+    printSeparator();
+}
+
+fun manyTest() -> () = {
+    # 37 and 200 share no divisor, so this pushes every number in 0..200 once, out of order.
+    var list: List[i64];
+    var i = 0i64;
+    while (i < 200i64) {
+        list.push((i * 37i64) % 200i64);
+        i = i + 1i64;
+    }
+    sort[i64](&list);
+    builtin_output_i64(list.length()); # 200
+
+    var sorted = true;
+    i = 0i64;
+    while (i < 200i64) {
+        if (list.at(i) != i) sorted = false;
+        i = i + 1i64;
+    }
+    printBool(sorted); # true
+
+    # Reverse order, with every number twice.
+    var twice: List[i64];
+    i = 99i64;
+    while (i >= 0i64) {
+        twice.push(i);
+        twice.push(i);
+        i = i - 1i64;
+    }
+    sort[i64](&twice);
+    var twice_sorted = true;
+    i = 0i64;
+    while (i < 200i64) {
+        if (twice.at(i) != i / 2i64) twice_sorted = false;
+        i = i + 1i64;
+    }
+    printBool(twice_sorted); # true
+    printSeparator();
+}
+
+fun stringsTest() -> () = {
+    var list: List[String];
+    list.push(f"duckling");
+    list.push(f"duck");
+    list.push(f"cow");
+    list.push(f"");
+    list.push(f"cat");
+    sort[String](&list);
+
+    var i = 0i64;
+    while (i < list.length()) {
+        print(list.at(i));
+        print(";");
+        i = i + 1i64;
+    }
+    print("\n"); # ;cat;cow;duck;duckling;
+    printSeparator();
+}
+
+fun floatsTest() -> () = {
+    var list: List[f64];
+    list.push(2.5f64);
+    list.push(-1.0f64);
+    list.push(0.25f64);
+    sort[f64](&list);
+    printBool(list.at(0) == -1.0f64 and list.at(1) == 0.25f64 and list.at(2) == 2.5f64); # true
+    printSeparator();
+}
+
+fun stableTest() -> () = {
+    var list: List[Task];
+    list.push(Task(2, f"swim"));
+    list.push(Task(1, f"wake up"));
+    list.push(Task(2, f"eat"));
+    list.push(Task(3, f"sleep"));
+    list.push(Task(1, f"stretch"));
+    list.push(Task(2, f"quack"));
+    sort[Task](&list);
+
+    var i = 0i64;
+    while (i < list.length()) {
+        print(list.at(i).name.asSlice());
+        print(";");
+        i = i + 1i64;
+    }
+    print("\n"); # wake up;stretch;swim;eat;quack;sleep;
+    printSeparator();
+}
+
+fun main() -> i64 = {
+    intsTest();
+    smallTest();
+    manyTest();
+    stringsTest();
+    floatsTest();
+    stableTest();
+    return 0;
+}
