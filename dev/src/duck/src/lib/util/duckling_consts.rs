@@ -1,0 +1,107 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+//! Various constant related to the Duckling language itself.
+
+/// Extension of Duckling module files.
+pub const DUCKLING_MODULE_EXT: &str = "dk";
+
+/// Extension of Duckling script files.
+pub const DUCKLING_SCRIPT_EXT: &str = "dks";
+
+/// __Sorted__ list of std Duckling packages.
+pub const DUCKLING_STD_PACKAGES: &[&str] = &["core", "exp", "std"];
+
+/// __Sorted__ list of builtin Duckling keywords.
+pub const DUCKLING_KEYWORDS: &[&str] = &[
+    "Array",
+    "Dict",
+    "List",
+    "Set",
+    "and",
+    "assert",
+    "block",
+    "bool",
+    "box",
+    "break",
+    "case",
+    "catch",
+    "char",
+    "compile_assert",
+    "const",
+    "continue",
+    "copy",
+    "copyof",
+    "cptr",
+    "debug",
+    "defer",
+    "destroy",
+    "else",
+    "export",
+    "extern",
+    "f128",
+    "f16",
+    "f32",
+    "f64",
+    "f80",
+    "false",
+    "for",
+    "fun",
+    "fundecl",
+    "global",
+    "hides",
+    "i128",
+    "i16",
+    "i32",
+    "i64",
+    "i8",
+    "if",
+    "implements",
+    "import",
+    "in",
+    "lamba",
+    "lambda",
+    "let",
+    "loop",
+    "manyptr",
+    "match",
+    "move",
+    "namespace",
+    "none",
+    "not",
+    "or",
+    "pattern",
+    "private",
+    "protected",
+    "ptr",
+    "public",
+    "redo",
+    "ref",
+    "refof",
+    "restart",
+    "return",
+    "self",
+    "sizeof",
+    "slice",
+    "str",
+    "switch",
+    "template",
+    "then",
+    "throw",
+    "try",
+    "true",
+    "type",
+    "u128",
+    "u16",
+    "u32",
+    "u64",
+    "u8",
+    "using",
+    "var",
+    "while",
+    "with",
+    "xor",
+];
