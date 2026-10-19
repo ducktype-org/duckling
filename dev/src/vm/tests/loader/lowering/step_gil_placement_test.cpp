@@ -13,6 +13,10 @@
 
 #include <ranges>
 
+/**
+ * @brief What belongs here: where the loader places the `stepGil` instructions (the points where
+ * a thread may give up the global interpreter lock) when it lowers a program.
+ */
 class StepGilPlacementTests: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS StepGilPlacementTests

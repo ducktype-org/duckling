@@ -35,6 +35,10 @@ pub trait ArtifactsLayout {
         self.file_lock_manager()
             .open_exclusive(self.global_lock_name(), ctx)
     }
+
+    /// Name of the [`ArtifactsLayout`] implementation.
+    /// Should be unique from other implementations.
+    fn name(&self) -> &'static str;
 }
 
 pub trait ProfileLayout {

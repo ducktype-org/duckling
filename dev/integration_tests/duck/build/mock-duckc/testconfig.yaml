@@ -10,4 +10,5 @@ SubDirs:
   - dvm-deps
   - errors
   - features
+  - incremental
   - local-cycle
