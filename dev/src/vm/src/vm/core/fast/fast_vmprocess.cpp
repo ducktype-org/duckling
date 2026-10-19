@@ -251,7 +251,6 @@ namespace vm::fast {
 	std::expected<api::Response, api::ApiError> FastVMProcess::freeVMValue(
 		[[maybe_unused]] Ref<IVMValue> vm_value
 	) {
-		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `freeVMValue` is not implemented.");
 	}
 
