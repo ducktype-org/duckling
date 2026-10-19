@@ -15,9 +15,6 @@
  * @brief What belongs here: how the loader initializes and deinitializes local variables when it
  * lowers a program to micro bytecode. A local is initialized without a block, and the block is
  * only created once something needs to refer to the variable through it.
- *
- * Where the loader places `stepGil` goes to `step_gil_placement_test.cpp`. How locals behave while
- * a program runs goes to `runtime/`.
  */
 class LocalInitializationTests: public tester::TestSuite {
 #undef TESTER_CLASS

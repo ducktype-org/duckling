@@ -22,7 +22,10 @@ class VmInheritanceLoadingTest: public VmLoaderTestSuite {
 #define TESTER_CLASS VmInheritanceLoadingTest
 
 public:
-	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(metadataLoading); }
+	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(metadataLoading);
+		TESTER_ADD_TEST(inheritedFieldsKeepTheirOffsets);
+	}
 
 
 private:
@@ -218,6 +221,40 @@ private:
 			child_cry_impl
 		);
 		checkPietMondrian(piet_mondrian);
+	}
+
+	/**
+	 * @brief A subclass does not repeat the fields of its superclass. It gets them from the
+	 * superclass at the same offsets, so a pointer to it can be upcast without moving any field.
+	 */
+	void inheritedFieldsKeepTheirOffsets() {
+		const vm::PID pid    = spawnAndLoad("inherited_fields.dbc");
+		auto          widget = getType(pid, "Widget");
+		auto          button = getType(pid, "Button");
+
+		for (const base::StrID field: { base::StrID("pos_x"), base::StrID("pos_y") }) {
+			auto in_widget = widget->getFieldOffsetByName(field);
+			auto in_button = button->getFieldOffsetByName(field);
+			ASSERT_HAS_VALUE(in_widget, "Widget should declare `", field.str(), "`");
+			ASSERT_HAS_VALUE(in_button, "Button should inherit `", field.str(), "` from Widget");
+			assertTrue(
+				*in_widget == *in_button,
+				base::strConcat(
+					"`", field.str(), "` should have the same offset in Button and Widget"
+				)
+			);
+		}
+
+		ASSERT_HAS_VALUE(button->getFieldOffsetByName(base::StrID("n_clicked")));
+		ASSERT_NO_VALUE(
+			widget->getFieldOffsetByName(base::StrID("n_clicked")),
+			"Widget should not get the fields of its subclass"
+		);
+		assertTrue(
+			button->getFields().value()->size() == widget->getFields().value()->size() + 1,
+			"Button should have the fields of Widget plus its own one"
+		);
+		ASSERT_HAS_VALUE(vm::api::kill(pid));
 	}
 };
 
