@@ -804,7 +804,14 @@ namespace compiler::helios {
 			}
 
 			void visitReusableExpr(const code::ReusableExpr& reusable) final {
-				result = CouldNotShortPath{};
+				// We use the query to cache the inner expression between reusable expressions.
+				auto inner_result
+					= ctx.query<QueryEvaluateHOUTExpression>({ reusable.inner.ref() });
+				if (inner_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = inner_result.valueOrThrow();
 			}
 
 			void visitVariantConstructExpr(const code::VariantConstructExpr&) final {
