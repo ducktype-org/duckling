@@ -57,22 +57,24 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const ReturnOperation& op) {
+		const bool is_already_in_return_local = op.value.has_value()
+		                                    and op.value.value().is<DVMPlace>()
+		                                    and op.value.value().get<DVMPlace>().getSpecialKind()
+		                                            == DVMPlace::SpecialKind::ReturnValue;
+
+		// Since VM does not support `return X;` operation, we must move the value to
+		// the ret_val local and then return.
+		if (not is_already_in_return_local) {
+			if_opt_some(op.value, ret_val) {
+				ctx->pushInstruction(
+					{ OpKind::mov, ctx->getFunctionReturnValueLocal().asArgument(), ret_val }
+				);
+			}
+		}
+
+		ctx->cleanUpRegisteredTemps();
 		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
-		if (op.value.has_value() and op.value.value().is<DVMPlace>()
-		    and op.value.value().get<DVMPlace>().getSpecialKind()
-		            == DVMPlace::SpecialKind::ReturnValue) {
-			// Since VM does not support `return X;` operation, we must move the value to
-			// the ret_val local and then return.
-			ctx->pushInstruction({ OpKind::ret });
-			return;
-		}
-
-		if_opt_some(op.value, ret_val) {
-			ctx->pushInstruction(
-				{ OpKind::mov, ctx->getFunctionReturnValueLocal().asArgument(), ret_val }
-			);
-		}
 		ctx->pushInstruction({ OpKind::ret });
 	}
 
