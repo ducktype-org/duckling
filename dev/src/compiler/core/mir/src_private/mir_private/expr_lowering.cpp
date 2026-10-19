@@ -1210,7 +1210,7 @@ namespace compiler::mir {
 			lowerCall(
 				expr,
 				expr.arguments,
-				Operation::VCall,
+				Operation::IndirectCall,
 				[&](BlockBuilderRef& sub_continuation) -> MIRValue {
 					auto callee_lowered = lowerSubExpr(*expr.callee, sub_continuation);
 					auto callee         = callee_lowered.getResult(function);

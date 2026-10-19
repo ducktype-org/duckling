@@ -890,6 +890,7 @@ namespace compiler::backend_llvm {
 			variant_match(value.getVariant()) {
 				variant_case(lir::LIRPlace, place) { return place.layout; }
 				variant_case(lir::LIRConstant, constant) { return constant.layout; }
+				variant_case(lir::FunctionLiteral, func) { return func.layout; }
 				variant_default { CORE_PANIC("Cannot get the layout of this LIR value"); }
 			}
 			CORE_UNREACHABLE();
@@ -901,15 +902,6 @@ namespace compiler::backend_llvm {
 			const CRef<tsl::TypeLayout> destination_layout,
 			llvm::IRBuilder<>&          builder
 		) {
-			if (source.is<lir::FunctionLiteral>()) {
-				builder.CreateAlignedStore(
-					loadLIRValue(source, builder),
-					destination_ptr,
-					alignmentFromLayout(module, destination_layout)
-				);
-				return;
-			}
-
 			const auto& data_layout           = module->getDataLayout();
 			const auto& source_layout         = layoutOfLIRValue(source);
 			llvm::Type* source_type           = typeFromLayout(module, source_layout);

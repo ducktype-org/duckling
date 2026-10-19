@@ -751,6 +751,16 @@ namespace compiler::helios::code {
 		const tsh::FunctionAbstractType function_type   = callee->expression_type.getType();
 		const auto&                     parameter_types = function_type.getParameterTypes();
 
+		if (callee->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct) {
+			auto direct_callee = coerceFromBox(
+				ctx,
+				std::move(callee),
+				tsh::SymbolType<>::withDefaults(function_type),
+				call_expr->getStablePosition()
+			);
+			UNPACK_QRESULT_MOVE(callee =, direct_callee);
+		}
+
 		usize argument_count = 0;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			if (arg.unlock(ctx)->isNamedArg()) {

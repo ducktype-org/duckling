@@ -182,11 +182,16 @@ namespace {
 			= base::StrID(base::strConcat("comptime_ctv_arg_", anon_counter.fetch_add(1)));
 
 		lir::Function func{
-			.mangled_name       = func_name,
-			.abi                = { lir::LIRAbi::DefaultAbi{} },
-			.link_once          = false,
-			.ignore_on_dvm      = false,
-			.ignore_on_llvm     = true,
+			.mangled_name   = func_name,
+			.abi            = { lir::LIRAbi::DefaultAbi{} },
+			.link_once      = false,
+			.ignore_on_dvm  = false,
+			.ignore_on_llvm = true,
+			.layout         = &ctx
+			               .query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryFunctionType>(
+							   { .parameter_types = {}, .result_type = value_type }
+						   ))
+			               ->valueOrThrow(),
 			.parameter_layouts  = {},
 			.return_type_layout = layout_ref,
 			.blocks             = std::move(blocks),

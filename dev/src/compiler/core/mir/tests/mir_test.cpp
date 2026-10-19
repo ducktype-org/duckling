@@ -1027,8 +1027,8 @@ private:
 	 * of the two outcomes of the left-hand side leads to.
 	 */
 	/**
-	 * @brief A call through a function value lowers to `VCall`, a function used as a value lowers
-	 * to a function literal.
+	 * @brief A call through a function value lowers to `IndirectCall`, a function used as a value
+	 * lowers to a function literal.
 	 */
 	void functionPointerTest() {
 		using compiler::mir::MIRFunctionLiteral;
@@ -1043,7 +1043,7 @@ private:
 				const auto& apply = *test_utils::functionOfUnit(unit, "apply");
 				assertEqual(
 					1u,
-					test_utils::blocksWithOperation(apply, Operation::VCall).size(),
+					test_utils::blocksWithOperation(apply, Operation::IndirectCall).size(),
 					"Expected the call through the parameter to be an indirect call"
 				);
 				assertTrue(

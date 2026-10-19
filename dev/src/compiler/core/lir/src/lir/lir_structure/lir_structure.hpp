@@ -214,9 +214,15 @@ namespace compiler::lir {
 	 * @brief Reference to a function in LIR.
 	 */
 	struct FunctionLiteral final {
-		base::StrID                                         mangled_name;
-		LIRAbi                                              abi;
-		bool                                                link_once;
+		base::StrID mangled_name;
+		LIRAbi      abi;
+		bool        link_once;
+
+		/**
+		 * The layout of the function type, i.e. the layout of the function used as a value.
+		 */
+		CRef<tsl::TypeLayout> layout;
+
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
 
@@ -740,6 +746,11 @@ namespace compiler::lir {
 		 * Used by the DVM/native conditional compilation.
 		 */
 		bool ignore_on_llvm;
+
+		/**
+		 * The layout of the function type, i.e. the layout of the function used as a value.
+		 */
+		CRef<tsl::TypeLayout> layout;
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;

@@ -394,6 +394,7 @@ namespace compiler::lir {
 			.mangled_name = function.mangled_name,
 			.abi          = function.abi,
 			.link_once    = function.link_once,
+			.layout       = function.layout,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
 			.return_type_layout = function.return_type_layout,

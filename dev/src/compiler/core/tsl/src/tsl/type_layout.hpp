@@ -21,6 +21,7 @@
 #include <string_id/string_id.hpp>
 
 #include <variant>
+#include <vector>
 
 /**
  * @brief The namespace of all definitions of the Lower Type System.
@@ -471,10 +472,14 @@ namespace compiler::tsl {
 	};
 
 	/**
-	 * @brief Layout of a functional object or pointer type.
+	 * @brief Layout of a function type. A value of a function type is a pointer to the code of the
+	 * function.
+	 *
+	 * The layout also describes the signature of the function: the layouts of its parameters and of
+	 * its result. They are looked up lazily, so that a type may hold a function referring to itself
+	 * (e.g. `class T { f: fun(T) -> i64; }`) without a query cycle.
 	 */
 	class FunctionalTypeLayout final: public TypeLayoutABC {
-		// @TODO: Add support for function objects
 		explicit FunctionalTypeLayout(
 			const tsh::FunctionAbstractType function_type, query::Context& ctx
 		):
@@ -483,6 +488,20 @@ namespace compiler::tsl {
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:
+		/**
+		 * @brief Get the layouts of the parameters that carry information, in order. Parameters
+		 * which carry no information (e.g. of unit type) are not passed, so they are skipped.
+		 */
+		[[nodiscard]]
+		std::vector<CRef<TypeLayout>> getParameterLayouts(query::Context& ctx) const;
+
+		/**
+		 * @brief Get the layout of the result. A result which carries no information (e.g. a class
+		 * constructor result) is returned as unit.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getReturnLayout(query::Context& ctx) const;
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Functional : " + base::toString(getSize());
