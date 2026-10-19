@@ -172,11 +172,8 @@ jobs:
 
           - Built: $(date -u +"%Y-%m-%d %H:%M UTC")
           - Source: https://github.com/$REPO/tree/$commit
-          - Packaging: ducktype-org/packaging@$packaging_commit
           - Workflow run: $GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID
-
-          The package contains its license (LICENSE.md), the list of third-party components per binary
-          (NOTICE.txt) and their licenses (THIRD_PARTY_NOTICES.txt, THIRD_PARTY_LICENSES/).
+          
           EOF
 
           if gh release view "$RELEASE_TAG" --repo "$REPO" > /dev/null 2>&1; then
