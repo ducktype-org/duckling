@@ -442,13 +442,14 @@ impl PathOpsExt for Path {
         let handle = file.as_raw_handle();
         let mut info = FILE_BASIC_INFO::default();
 
-        // SAFETY: `handle` is a valid file handle borrowed from `file`, which remains
-        // alive for the duration of this call. `info` is a stack-allocated, properly
-        // aligned `FILE_BASIC_INFO` that outlives the call. The size passed to
-        // `GetFileInformationByHandleEx` exactly matches `size_of::<FILE_BASIC_INFO>()`,
-        // so the API writes no more bytes than the buffer can hold. `FileBasicInfo`
-        // is a valid information class for this function, and the returned structure
-        // is fully initialized by the OS on success.
+        // SAFETY:
+        // - `handle` is a valid file handle borrowed from `file`, which isn't closed before the call,
+        // - `info` is a valid `FILE_BASIC_INFO`, therefore mutable pointers to it are valid for reads and writes,
+        //   and are properly aligned,
+        // - size is exactly `size_of::<FILE_BASIC_INFO>()` bytes,
+        // - `FileBasicInfo` is the valid class for `FILE_BASIC_INFO` struct,
+        // - OS ensures that `info` either is valid if the call succeeds, or isn't changed if the call fails. 
+        //   Either way, it will be a valid `FILE_BASIC_INFO`.
         unsafe {
             GetFileInformationByHandleEx(
                 handle,
