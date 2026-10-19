@@ -1,10 +1,8 @@
 # Weekly dev build: builds the Duckling release package and publishes
 # it as the rolling GitHub pre-release `dev-weekly`.
 #
-# Intended location: .github/workflows/weekly-dev-build.yml in ducktype-org/duckling.
-#
-# The first run creates the release. Later runs move its tag to the built commit, update the notes
-# and replace the assets.
+# The first run creates the release. Later runs replace the assets, then move its tag to the built
+# commit and update the notes.
 
 name: weekly-dev-build
 
@@ -12,7 +10,8 @@ on:
   # Do not add a pull_request trigger!
   # Never run on PRs or on pushes to the main branch.
   schedule:
-    - cron: "0 0 * * 1" # every Monday, 00:00 UTC
+    # Off the hour: runs at :00 are often delayed by GitHub.
+    - cron: "17 3 * * 1" # every Monday, 03:17 UTC
   workflow_dispatch:
     # note: package.py refuses an unpublished source: the commit must be in a remote branch.
     inputs:
@@ -22,6 +21,10 @@ on:
         default: main
       exclude-duck:
         description: Leave duck (the cli) and its third-party components out of the release
+        type: boolean
+        default: false
+      publish:
+        description: Publish the build as the `dev-weekly` pre-release (otherwise only a workflow artifact)
         type: boolean
         default: false
 
@@ -41,7 +44,7 @@ env:
 jobs:
   build-and-release:
     runs-on: ubuntu-24.04
-    # This make take a long time, since a clean build might compile
+    # This may take a long time, since a clean build might compile
     # Duckling, ICU, OpenSSL, libgit2, curl and SCIP from source as well.
     timeout-minutes: 240
 
@@ -106,8 +109,8 @@ jobs:
         working-directory: dev
         run: ./toolbox.py init
 
-      # note: cache should have retention of exactly 7 days,
-      # so this should just barely hit each week.
+      # Best effort, often misses: GitHub evicts entries not accessed for 7 days, and this one is
+      # only read once a week. A miss only costs re-downloading the license texts.
       - name: Restore third-party license cache
         uses: actions/cache@v5
         with:
@@ -149,7 +152,9 @@ jobs:
             _packaging/output/${{ env.PACKAGE_NAME }}.tar.gz.sha256
           retention-days: 14
 
+      # Scheduled runs always publish; manual runs only when asked to.
       - name: Publish pre-release
+        if: github.event_name == 'schedule' || inputs.publish
         env:
           GH_TOKEN: ${{ secrets.GH_RELEASE_BUILD_PAT }}
           REPO: ${{ github.repository }}
@@ -157,7 +162,8 @@ jobs:
           set -euo pipefail
           commit="$(git rev-parse HEAD)"
           packaging_commit="$(git -C _packaging rev-parse HEAD)"
-          assets=("_packaging/output/$PACKAGE_NAME.tar.gz" "_packaging/output/$PACKAGE_NAME.tar.gz.sha256")
+          archive="_packaging/output/$PACKAGE_NAME.tar.gz"
+          assets=("$archive" "$archive.sha256")
 
           cat > notes.md <<EOF
           Weekly development build of Duckling. **This is a pre-release; it is rebuilt and replaced every week.**
@@ -172,9 +178,8 @@ jobs:
           EOF
 
           if gh release view "$RELEASE_TAG" --repo "$REPO" > /dev/null 2>&1; then
-            # `gh release create` makes a lightweight tag, so moving it is a ref update.
-            gh api --method PATCH "repos/$REPO/git/refs/tags/$RELEASE_TAG" -f sha="$commit" -F force=true > /dev/null
-            gh release edit "$RELEASE_TAG" --repo "$REPO" --prerelease --title "$RELEASE_TITLE" --notes-file notes.md
+            # Assets first, tag and notes last: if an upload fails, the release still describes the
+            # previous build, and the next run repairs it.
             # Delete assets of earlier builds that this build does not replace (e.g. renamed ones).
             keep=" $(for a in "${assets[@]}"; do printf '%s ' "$(basename "$a")"; done)"
             gh release view "$RELEASE_TAG" --repo "$REPO" --json assets --jq '.assets[].name' | while read -r name; do
@@ -182,7 +187,12 @@ jobs:
                 gh release delete-asset "$RELEASE_TAG" "$name" --repo "$REPO" --yes
               fi
             done
-            gh release upload "$RELEASE_TAG" "${assets[@]}" --repo "$REPO" --clobber
+            # Archive before its checksum, to keep the window where the two do not match short.
+            gh release upload "$RELEASE_TAG" "$archive" --repo "$REPO" --clobber
+            gh release upload "$RELEASE_TAG" "$archive.sha256" --repo "$REPO" --clobber
+            # `gh release create` makes a lightweight tag, so moving it is a ref update.
+            gh api --method PATCH "repos/$REPO/git/refs/tags/$RELEASE_TAG" -f sha="$commit" -F force=true > /dev/null
+            gh release edit "$RELEASE_TAG" --repo "$REPO" --prerelease --title "$RELEASE_TITLE" --notes-file notes.md
           else
             gh release create "$RELEASE_TAG" "${assets[@]}" --repo "$REPO" \
               --prerelease --target "$commit" --title "$RELEASE_TITLE" --notes-file notes.md
