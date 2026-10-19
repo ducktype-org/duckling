@@ -173,7 +173,7 @@ jobs:
           - Built: $(date -u +"%Y-%m-%d %H:%M UTC")
           - Source: https://github.com/$REPO/tree/$commit
           - Workflow run: $GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID
-          
+
           EOF
 
           if gh release view "$RELEASE_TAG" --repo "$REPO" > /dev/null 2>&1; then
