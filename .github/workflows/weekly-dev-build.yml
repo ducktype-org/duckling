@@ -1,0 +1,202 @@
+# Weekly dev build: builds the Duckling release package and publishes
+# it as the rolling GitHub pre-release `dev-weekly`.
+#
+# The first run creates the release. Later runs replace the assets, then move its tag to the built
+# commit and update the notes.
+
+name: weekly-dev-build
+
+on:
+  # Do not add a pull_request trigger!
+  # Never run on PRs or on pushes to the main branch.
+
+
+  schedule:
+    # Off the hour: runs at :00 are often delayed by GitHub.
+    - cron: "17 3 * * 1" # every Monday, 07:17 UTC
+  workflow_dispatch:
+    # note: package.py refuses an unpublished source: the commit must be in a remote branch.
+    inputs:
+      packaging-ref:
+        description: Branch, tag or commit of ducktype-org/packaging to use
+        type: string
+        default: main
+      exclude-duck:
+        description: Leave duck (the cli) and its third-party components out of the release
+        type: boolean
+        default: false
+      publish:
+        description: Publish the build as the `dev-weekly` pre-release (otherwise only a workflow artifact)
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-dev-build
+  cancel-in-progress: false
+
+# GITHUB_TOKEN only reads this repository; everything else uses custom PAT.
+permissions:
+  contents: read
+
+env:
+  RELEASE_TAG: dev-weekly
+  RELEASE_TITLE: Duckling weekly dev build
+  PACKAGE_NAME: duckling-dev-linux-x86_64
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-24.04
+    # This may take a long time, since a clean build might compile
+    # Duckling, ICU, OpenSSL, libgit2, curl and SCIP from source as well.
+    timeout-minutes: 240
+
+    steps:
+      # Duckling goes to the workspace root, as in test CI.
+      - name: Checkout Duckling
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Checkout packaging
+        uses: actions/checkout@v6
+        with:
+          repository: ducktype-org/packaging
+          # Note: `inputs` is empty for scheduled runs.
+          ref: ${{ inputs.packaging-ref || 'main' }}
+          token: ${{ secrets.GH_RELEASE_BUILD_PAT }}
+          # Inside the Duckling checkout, but untracked there, so it does not count as a local change
+          # of the Duckling source (package.py checks that the source is the published commit).
+          path: _packaging
+          persist-credentials: false
+
+      # The release must link the exact LLVM version pinned in packaging's catalog 19.1.7;
+      # We really rely on apt.llvm.org repository here, system LLVM would also be ok, but might
+      # require change in the packaging scripts.
+      # Added before setup-build-env, so that its `apt install llvm-19` takes the newer version.
+      - name: Add apt.llvm.org repository
+        run: |
+          codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-19 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-19.list
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env/
+        with:
+          platform: linux
+          cc: gcc-14
+          cxx: g++-14
+          compiler-name: gcc
+          linker: mold
+          dev-dir: ${{ github.workspace }}/dev
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
+        with:
+          platform: linux
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
+
+      # Quick Fails for LLVM version mismatches.
+      - name: Check LLVM version
+        run: |
+          expected="$(python3 -c 'import tomllib; c = tomllib.load(open("_packaging/data/tpa/components.toml", "rb")); print(next(x["version"] for x in c["component"] if x["id"] == "cmake:llvm"))')"
+          actual="$(llvm-config-19 --version)"
+          echo "LLVM: installed ${actual}, catalogued ${expected}"
+          if [ "${actual}" != "${expected}" ]; then
+            echo "::error::Installed LLVM ${actual} differs from the version in packaging's catalog (${expected})"
+            exit 1
+          fi
+
+      - name: Initialize project
+        working-directory: dev
+        run: ./toolbox.py init
+
+      # Best effort, often misses: GitHub evicts entries not accessed for 7 days, and this one is
+      # only read once a week. A miss only costs re-downloading the license texts.
+      - name: Restore third-party license cache
+        uses: actions/cache@v5
+        with:
+          path: _packaging/cache/tpa
+          key: tpa-${{ hashFiles('_packaging/data/tpa/components.toml', 'dev/src/duck/Cargo.lock') }}
+          restore-keys: |
+            tpa-
+
+      - name: Test packaging scripts
+        working-directory: _packaging
+        run: python3 run_tests.py
+
+      
+      - name: Build package
+        working-directory: _packaging
+        # stdin is closed so that any input prompt fails the step instead of hanging it 
+        # (e.g. toolbox.py prompts for setup-build)
+        run: |
+          python3 package.py \
+            --repo "$GITHUB_WORKSPACE" \
+            --output "output/$PACKAGE_NAME" \
+            ${{ inputs.exclude-duck && '--exclude-product duck' || '' }} \
+            < /dev/null
+
+      - name: Create archive
+        working-directory: _packaging/output
+        run: |
+          tar -czf "$PACKAGE_NAME.tar.gz" "$PACKAGE_NAME"
+          sha256sum "$PACKAGE_NAME.tar.gz" > "$PACKAGE_NAME.tar.gz.sha256"
+          cat "$PACKAGE_NAME.tar.gz.sha256"
+
+      # Kept with the run as well, so a failed publish still leaves the package available.
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: |
+            _packaging/output/${{ env.PACKAGE_NAME }}.tar.gz
+            _packaging/output/${{ env.PACKAGE_NAME }}.tar.gz.sha256
+          retention-days: 14
+
+      # Scheduled runs always publish; manual runs only when asked to.
+      - name: Publish pre-release
+        if: github.event_name == 'schedule' || inputs.publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_BUILD_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          packaging_commit="$(git -C _packaging rev-parse HEAD)"
+          archive="_packaging/output/$PACKAGE_NAME.tar.gz"
+          assets=("$archive" "$archive.sha256")
+
+          cat > notes.md <<EOF
+          Weekly development build of Duckling. **This is a pre-release; it is rebuilt and replaced every week.**
+
+          - Built: $(date -u +"%Y-%m-%d %H:%M UTC")
+          - Source: https://github.com/$REPO/tree/$commit
+          - Packaging: ducktype-org/packaging@$packaging_commit
+          - Workflow run: $GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID
+
+          The package contains its license (LICENSE.md), the list of third-party components per binary
+          (NOTICE.txt) and their licenses (THIRD_PARTY_NOTICES.txt, THIRD_PARTY_LICENSES/).
+          EOF
+
+          if gh release view "$RELEASE_TAG" --repo "$REPO" > /dev/null 2>&1; then
+            # Assets first, tag and notes last: if an upload fails, the release still describes the
+            # previous build, and the next run repairs it.
+            # Delete assets of earlier builds that this build does not replace (e.g. renamed ones).
+            keep=" $(for a in "${assets[@]}"; do printf '%s ' "$(basename "$a")"; done)"
+            gh release view "$RELEASE_TAG" --repo "$REPO" --json assets --jq '.assets[].name' | while read -r name; do
+              if [[ "$keep" != *" $name "* ]]; then
+                gh release delete-asset "$RELEASE_TAG" "$name" --repo "$REPO" --yes
+              fi
+            done
+            # Archive before its checksum, to keep the window where the two do not match short.
+            gh release upload "$RELEASE_TAG" "$archive" --repo "$REPO" --clobber
+            gh release upload "$RELEASE_TAG" "$archive.sha256" --repo "$REPO" --clobber
+            # `gh release create` makes a lightweight tag, so moving it is a ref update.
+            gh api --method PATCH "repos/$REPO/git/refs/tags/$RELEASE_TAG" -f sha="$commit" -F force=true > /dev/null
+            gh release edit "$RELEASE_TAG" --repo "$REPO" --prerelease --title "$RELEASE_TITLE" --notes-file notes.md
+          else
+            gh release create "$RELEASE_TAG" "${assets[@]}" --repo "$REPO" \
+              --prerelease --target "$commit" --title "$RELEASE_TITLE" --notes-file notes.md
+          fi
+          echo "Published: $GITHUB_SERVER_URL/$REPO/releases/tag/$RELEASE_TAG"
