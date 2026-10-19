@@ -16,12 +16,12 @@
  * A file that parses but is semantically wrong (unknown name, bad types, bad jumps) is the
  * loader's business and goes to `loader/verification/`.
  */
-class BCParsingTests: public ParserTestSuite {
+class BCParsingTests: public VmParserTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCParsingTests
 
 public:
-	PARSER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_PARSER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(invalidOpcode);
 		TESTER_ADD_TEST(noSemicolon);
 		TESTER_ADD_TEST(invalidTypeSpecifier);
