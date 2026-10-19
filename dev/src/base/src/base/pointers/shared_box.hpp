@@ -212,7 +212,7 @@ namespace base {
 
 		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete,clang-analyzer-cplusplus.NewDeleteLeaks)
 		template<class Deleter>
-		explicit SharedBox(Box<T, Deleter>&& other) noexcept:
+		SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
 			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) } {
 			other.ptr = nullptr;

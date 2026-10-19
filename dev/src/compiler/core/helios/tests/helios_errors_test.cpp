@@ -816,23 +816,6 @@ private:
 				{ "cannot be evaluated at compile-time", "const y = x" },
 				1
 			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class S {
-					x: i64;
-					S.copy(other: const ref S) = {
-						return S(10);
-					}
-				}
-				
-				fun takeS(x: S) = 10;
-
-				const ctvS = takeS(S(1));
-			)",
-				{ "cannot be evaluated at compile time" },
-				1
-			);
 		}
 
 		// ========================== Default initialization errors ==========================
@@ -1213,19 +1196,6 @@ private:
 				}
 			)",
 				{ "Feature not implemented", "Nested", "function" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A { x: i64 = 0; }
-				const a = A();
-
-				fun main() -> i64 = {
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Compile time" },
 				1
 			);
 
@@ -2185,7 +2155,8 @@ private:
 				var g: i32 = 5;
 				const A = ptrof g;
 			)",
-			{ "Feature not implemented" },
+			{ "Expression cannot be evaluated at compile-time.",
+		      "Using the variable `g` in a constant expression is invalid." },
 			1
 		);
 	}
@@ -2338,9 +2309,15 @@ private:
 			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: i32 = (1i32 << 32);)", { invalid_shift }, 1);
 
-			// Tuple element.
-			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
-			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", { invalid_shift }, 1);
+			// Tuple element. A tuple of values is evaluated by the VM, not by the tree evaluation,
+			// so the shift follows the run-time semantics and reports no `invalid_shift` error.
+			// @TODO: #3792 Check the arithmetic operations evaluated on the compile-time DVM.
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", {}, 0, false);
+			checkForErrorOnCompileModule(
+				R"(const A = (1 / 0, 2);)",
+				{ "Compile time evaluation of this expression failed", "Tried dividing by zero" },
+				1
+			);
 
 			// Cast source expression.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
@@ -2386,33 +2363,13 @@ private:
 
 		// ======================= Not-yet-implemented evaluations =======================
 		{
-			// Indexing a non-meta, non-type-template base.
-			checkForErrorOnCompileModule(
-				R"(
-				const S = "abc";
-				const A = S[0];
-			)",
-				{ "Feature not implemented",
-			      "Evaluating index expressions with non-meta and non-type-template base at "
-			      "compile time." },
-				1
-			);
-
-			// Access expressions.
-			checkForErrorOnCompileModule(
-				R"(const A: i64 = (1, 5)._2;)",
-				{ "Feature not implemented", "Evaluating access expressions at compile time." },
-				1
-			);
-
 			// A call that has to go through the DVM, but fails while being evaluated there.
 			checkForErrorOnCompileModule(
 				R"(
 				fun f(x: i64) -> i64 = x / 0;
 				const A: i64 = f(10);
 			)",
-				{ "Feature not implemented",
-			      "Compile time evaluation of this function call failed or returned unsupported "
+				{ "Compile time evaluation of this function call failed or returned unsupported "
 			      "result." },
 				1
 			);

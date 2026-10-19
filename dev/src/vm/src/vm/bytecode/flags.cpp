@@ -779,7 +779,7 @@ namespace vm::code {
 			// ===== Misc =====
 			instr_case(ins::Op_nop, i) {}
 			instr_case(ins::Op_exit, i) { flags |= ControlFlowModifying; }
-			instr_case(ins::Op_initFromVMValue, i) {}
+			instr_case(ins::Op_initFromVMValue_pany_type_imm, i) { wr(i.var); }
 			instr_case(ins::Comment, i) {}
 			instr_default { CORE_PANIC("Unhandled instruction: ", internal_value.name()); }
 		}

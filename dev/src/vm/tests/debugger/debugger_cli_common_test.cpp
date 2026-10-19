@@ -10,6 +10,10 @@
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/debugger/UI/CLI/common.hpp>
 
+/**
+ * @brief What belongs here: the text helpers of the debugger's command-line UI (stripping input,
+ * formatting values and status lines, removing terminal control sequences).
+ */
 class VmDebuggerCliCommonTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmDebuggerCliCommonTest

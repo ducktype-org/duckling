@@ -4,9 +4,6 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-/**
- * @file dvm_backend_unit_tests.cpp
- */
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
@@ -19,9 +16,13 @@ using namespace vm::code::builders;
 using namespace vm::code::instructions;
 using vm::code::Instruction;
 
-class DVMBackendUnitTest final: public tester::TestSuite {
+/**
+ * @brief What belongs here: the C++ builders that create bytecode instructions and programs
+ * in memory, without any text assembly.
+ */
+class ProgramBuildersTest final: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS DVMBackendUnitTest
+#define TESTER_CLASS ProgramBuildersTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testInstructionBuilder); }
@@ -56,4 +57,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/");
+TESTER_COMMON_MAIN("/src/vm/tests/bytecode/builders/");
