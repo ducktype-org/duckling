@@ -57,7 +57,7 @@ namespace compiler::driver {
 		base::Optional<fs::FilePath> findLinkLibraryDebugInfoPath(const std::string& link_library_path
 		) {
 			constexpr std::string_view DBC_EXTENSION = ".dbc";
-			constexpr std::string_view DI_EXTENSION  = ".di.json";
+			constexpr std::string_view DI_EXTENSION  = ".di";
 
 			if (!link_library_path.ends_with(DBC_EXTENSION)) return {};
 
@@ -164,7 +164,7 @@ namespace compiler::driver {
 
 
 				auto di_output = output_file.parent->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
+					base::StrID(base::strConcat(output_file_stem, ".di").c_str())
 				);
 				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
 				if (!di_out.is_open())

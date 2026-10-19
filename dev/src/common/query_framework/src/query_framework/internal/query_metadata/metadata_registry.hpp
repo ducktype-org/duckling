@@ -11,9 +11,11 @@
 
 namespace query::internal {
 	/**
-	 * @brief Function pointer type for deserializing metadata from bytes.
+	 * @brief Function pointer type for reading metadata straight out of the metadata stream.
+	 * @note The archive is pinned to MetadataIn for the same reason BaseMetadata::serWrite
+	 * pins its own: this is a function POINTER, and a template has no address.
 	 */
-	using BytesDeserializeFunc = Box<BaseMetadata> (*)(std::span<const std::byte>);
+	using ArchiveDeserializeFunc = Box<BaseMetadata> (*)(MetadataIn&);
 
 	/**
 	 * @brief Function pointer type for deserializing StrID metadata from string table.
@@ -23,10 +25,10 @@ namespace query::internal {
 	/**
 	 * @brief Variant holding either bytes or StrID deserializer.
 	 *
-	 * This ensures each type is either a normal type (deserialized from bytes)
+	 * This ensures each type is either a normal type (read from the stream)
 	 * or a StrID type (deserialized from string table index), but never both.
 	 */
-	using DeserializerVariant = std::variant<BytesDeserializeFunc, StrIDDeserializeFunc>;
+	using DeserializerVariant = std::variant<ArchiveDeserializeFunc, StrIDDeserializeFunc>;
 
 	/**
 	 * @brief Global registry for metadata types.
@@ -35,7 +37,7 @@ namespace query::internal {
 	 * enabling runtime deserialization of metadata from serialized data.
 	 *
 	 * Each type is either:
-	 * - Normal type: deserialized from bytes (BytesDeserializeFunc)
+	 * - Normal type: read from the metadata stream (ArchiveDeserializeFunc)
 	 * - StrID type: deserialized from string table (StrIDDeserializeFunc)
 	 *
 	 * Types are automatically registered when DECLARE_METADATA macro is used.
@@ -68,13 +70,13 @@ namespace query::internal {
 		static MetadataRegistry& instance();
 
 		/**
-		 * @brief Register a metadata type with bytes deserializer.
+		 * @brief Register a metadata type with an archive deserializer.
 		 *
 		 * @param type_id The unique StrID of the metadata type.
-		 * @param deserialize_func Function pointer to deserialize the metadata from bytes.
+		 * @param deserialize_func Function pointer to read the metadata out of the stream.
 		 * @return true (always succeeds, asserts on duplicate registration).
 		 */
-		bool registerType(TypeID type_id, BytesDeserializeFunc deserialize_func);
+		bool registerType(TypeID type_id, ArchiveDeserializeFunc deserialize_func);
 
 		/**
 		 * @brief Register a StrID metadata type with StrID deserializer.

@@ -8,9 +8,17 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <debug_info/debug_info_io.hpp>
 
+#include <ser/base/all.hpp>
+#include <ser/ser.hpp>
+#include <ser/std/all.hpp>
 #include <tester/tester.hpp>
 
+#include <cstddef>
+#include <span>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
 
 using namespace debug_info;
 
@@ -22,8 +30,10 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(builderTest);
 		TESTER_ADD_TEST(serializationRoundTripTest);
-		TESTER_ADD_TEST(invalidJsonTest);
+		TESTER_ADD_TEST(invalidStreamTest);
+		TESTER_ADD_TEST(formatEnvelopeTest);
 		TESTER_ADD_TEST(resolvePositionsTest);
+		TESTER_ADD_TEST(debugPrintTest);
 	}
 
 private:
@@ -133,21 +143,21 @@ private:
 		// Serialize
 		std::ostringstream oss;
 		debug_info::saveToStream(info, oss);
-		const std::string first_json = oss.str();
+		const std::string first_bytes = oss.str();
 
-		assertTrue(!first_json.empty(), "Serialized JSON should not be empty");
+		assertTrue(!first_bytes.empty(), "Serialized debug info should not be empty");
 
 		// Deserialize
-		std::istringstream iss(first_json);
+		std::istringstream iss(first_bytes);
 		auto               result = debug_info::loadFromStream(iss);
-		ASSERT_HAS_VALUE(result, "Deserialization of valid JSON should succeed");
+		ASSERT_HAS_VALUE(result, "Deserialization of a valid stream should succeed");
 
-		// Serialize again and compare
+		// Serialize again and compare - the same object has to produce the same bytes
 		std::ostringstream oss2;
 		debug_info::saveToStream(*result, oss2);
-		const std::string second_json = oss2.str();
+		const std::string second_bytes = oss2.str();
 
-		assertTrue(first_json == second_json, "Round-trip JSON should be identical");
+		assertTrue(first_bytes == second_bytes, "Round-trip bytes should be identical");
 
 		// Spot-check deserialized values
 		assertTrue(result->target == debug_info::Target::DBC, "Round-trip: target incorrect");
@@ -186,85 +196,93 @@ private:
 		);
 	}
 
-	void invalidJsonTest() {
-		// Completely malformed JSON
+	/** @brief What loadFromStream does with something that is not debug info. */
+	void invalidStreamTest() {
+		// Not a stream this module wrote at all
 		{
-			std::istringstream iss("not valid json at all {{{");
+			std::istringstream iss("not debug info at all, just text");
 			auto               result = debug_info::loadFromStream(iss);
-			ASSERT_NO_VALUE(result, "Malformed JSON should fail to parse");
-		}
-
-		// Valid JSON but missing required field "target"
-		{
-			std::istringstream iss(R"({"module_path": "x.dk", "source_positions_type": "DBC",
-                "functions": {}, "types": {}})");
-			auto               result = debug_info::loadFromStream(iss);
-			ASSERT_NO_VALUE(result, "JSON missing 'target' field should fail");
-		}
-
-		// Valid JSON but wrong type for a field
-		{
-			std::istringstream iss(
-				R"({"target": 42, "module_path": "x.dk", "source_positions_type": "LineColumn",
-                "functions": {}, "types": {}})"
-			);
-
-			auto _ = debug_info::loadFromStream(iss);
-			// nlohmann enum deserialization may not throw for unknown integers, but
-			// at minimum we verify the function returns without crashing
+			ASSERT_NO_VALUE(result, "Garbage bytes should fail to load");
 		}
 
 		// Empty input
 		{
 			std::istringstream iss("");
 			auto               result = debug_info::loadFromStream(iss);
-			ASSERT_NO_VALUE(result, "Empty input should fail to parse");
+			ASSERT_NO_VALUE(result, "Empty input should fail to load");
 		}
 
-		// Instructions not sorted by offset should fail
+		// A valid stream cut short
 		{
-			std::istringstream iss(R"({
-    "target": "DBC",
-    "module_path": "x.dk",
-    "source_positions_type": "LineColumn",
-    "functions": {
-        "_Zx": {
-            "function_name": "x",
-            "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 1, "start_column": 0, "end_line": 2, "end_column": 0 } },
-            "instr_offsets_to_metadata": [
-                [8, { "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 2, "start_column": 0, "end_line": 2, "end_column": 1 } } }],
-                [4, { "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 3, "start_column": 0, "end_line": 3, "end_column": 1 } } }]
-            ]
-        }
-    },
-    "types": {}
-})");
+			std::ostringstream oss;
+			debug_info::saveToStream(makeTestDebugInfo(), oss);
+			const std::string whole = oss.str();
+
+			std::istringstream iss(whole.substr(0, whole.size() / 2));
 			auto               result = debug_info::loadFromStream(iss);
-			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_metadata should fail");
+			ASSERT_NO_VALUE(result, "A truncated stream should fail to load");
 		}
 
-		// Variable initializations not sorted by offset should fail
+
 		{
-			std::istringstream iss(R"({
-	"target": "DBC",
-	"module_path": "x.dk",
-	"source_positions_type": "LineColumn",
-	"functions": {
-		"_Zx": {
-			"function_name": "x",
-			"position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 1, "start_column": 0, "end_line": 2, "end_column": 0 } },
-			"instr_offsets_to_metadata": [],
-			"instr_offsets_to_variable_init": [
-				[8, { "name": "a", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 2, "start_column": 0, "end_line": 2, "end_column": 1 } } }],
-				[4, { "name": "b", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 3, "start_column": 0, "end_line": 3, "end_column": 1 } } }]
-			]
+			std::vector<std::byte> raw;
+			const auto             wrote = ::ser::write(raw, makeTestDebugInfo());
+			ASSERT_HAS_VALUE(wrote, "The bare payload should still be writable");
+
+			std::istringstream iss(std::string(reinterpret_cast<const char*>(raw.data()), raw.size())
+			);
+			auto result = debug_info::loadFromStream(iss);
+			ASSERT_NO_VALUE(result, "A payload with no envelope should fail to load");
 		}
-	},
-	"types": {}
-})");
+
+		{
+			std::ostringstream oss;
+			debug_info::saveToStream(makeTestDebugInfo(), oss);
+			std::string whole = oss.str();
+
+			// schema_hash sits right after the eight magic bytes - see stream/header.hpp.
+			whole[8] = static_cast<char>(whole[8] ^ 0x01);
+
+			std::istringstream iss(whole);
 			auto               result = debug_info::loadFromStream(iss);
-			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_variable_init should fail");
+			ASSERT_NO_VALUE(result, "A foreign schema_hash should fail to load");
 		}
+
+		// Entry order is the object's own, not a canonical one: what a stream holds is what
+		// the builder produced, so a reordered vector is a different object and not a
+		// damaged file. The round-trip above is what pins that it comes back unchanged.
+	}
+
+	/**
+	 * @brief The on-disk shape of a .di file, pinned.
+	 *
+	 * The VM debugger reads this format from a separately launched binary, so nothing at
+	 * build time makes the writer and the reader agree - a golden file used to, and a
+	 * checked-in binary for a format that moves with every field would only get regenerated
+	 * to green. The envelope is the durable version of that guarantee, and this is what
+	 * fails when the format changes: update the constant deliberately, and know that every
+	 * .di file written by an older compiler is now SchemaMismatch rather than data.
+	 */
+	void formatEnvelopeTest() {
+		std::ostringstream oss;
+		debug_info::saveToStream(makeTestDebugInfo(), oss);
+		const std::string whole = oss.str();
+
+		assertTrue(whole.size() > 32, "A .di file carries a 32-byte header");
+		assertEqual(std::string("SER\0DINF", 8), whole.substr(0, 8), "magic + the .di user magic");
+
+		const auto header = ::ser::peekHeader(
+			std::span<const std::byte>{ reinterpret_cast<const std::byte*>(whole.data()),
+		                                whole.size() },
+			debug_info::DI_STREAM.user_magic
+		);
+		ASSERT_HAS_VALUE(header, "The header must read back");
+		assertEqual(
+			u64{ 0x27'66'D3'6F'3B'C9'49'73 },
+			header->schema_hash,
+			"The .di schema hash changed - so did the format the VM debugger reads"
+		);
+		assertEqual(u64{ whole.size() - 32 }, header->payload_size, "payload_size pins the length");
 	}
 
 	void resolvePositionsTest() {
@@ -335,6 +353,66 @@ private:
 		assertTrue(param_fp.file_path == "resolved.duck", "Parameter: file_path incorrect");
 		assertTrue(param_fp.start_line == 10, "Parameter: start_line incorrect");
 		assertTrue(param_fp.start_column == 100, "Parameter: start_column incorrect");
+	}
+
+	/** @brief What a developer reading a DebugInfo dump gets to see. */
+	void debugPrintTest() {
+		const auto contains = [](const std::string& haystack, std::string_view needle) {
+			return haystack.find(needle) != std::string::npos;
+		};
+
+		const auto dump = makeTestDebugInfo().toString();
+
+		std::ostringstream oss;
+		makeTestDebugInfo().debugPrint(oss);
+		assertTrue(oss.str() == dump, "toString and debugPrint should produce the same text");
+
+		assertTrue(contains(dump, "target: DBC"), "Dump should name the target");
+		assertTrue(contains(dump, "module_path: test.dbc"), "Dump should name the module path");
+		assertTrue(
+			contains(dump, "source_positions_type: LineColumn"),
+			"Dump should name the source positions type"
+		);
+
+		assertTrue(contains(dump, "function _Zfoo {"), "Dump should open the function block");
+		assertTrue(contains(dump, "name: foo"), "Dump should show the demangled function name");
+		assertTrue(
+			contains(dump, "position: test.duck:1:0 - 10:1"),
+			"Dump should show a FilePosition as file:line:column"
+		);
+
+		assertTrue(contains(dump, "parameters: 2"), "Dump should count the parameters");
+		assertTrue(
+			contains(dump, "[0] param_a -> test.duck:2:0 - 2:1"),
+			"Dump should show a parameter by index"
+		);
+		assertTrue(
+			contains(dump, "[1] param_b -> <unknown>"), "Dump should mark a missing position"
+		);
+
+		assertTrue(contains(dump, "instructions: 2"), "Dump should count the instructions");
+		assertTrue(
+			contains(dump, "@0 -> test.duck:2:0 - 2:1"), "Dump should show an instruction by offset"
+		);
+
+		assertTrue(contains(dump, "variable inits: 2"), "Dump should count the variable inits");
+		assertTrue(contains(dump, "@0 local_x -> pst["), "Dump should show a PST-hash position");
+		assertTrue(contains(dump, "@8 local_y -> <unknown>"), "Dump should show every variable");
+
+		assertTrue(contains(dump, "types: 2"), "Dump should count the types");
+		assertTrue(contains(dump, "_TMyType -> MyType"), "Dump should map a type to its name");
+
+		// An empty DebugInfo says so instead of printing bare zeroes.
+		const auto empty_dump = DebugInfoBuilder(Target::DBC, SourcePositionsType::PstHash)
+		                            .beginFunction("_Zempty", std::nullopt, std::nullopt)
+		                            .end()
+		                            .build()
+		                            .toString();
+		assertTrue(contains(empty_dump, "module_path: <none>"), "Empty module path should show");
+		assertTrue(contains(empty_dump, "name: <unnamed>"), "Missing function name should show");
+		assertTrue(contains(empty_dump, "position: <unknown>"), "Missing position should show");
+		assertTrue(contains(empty_dump, "parameters: none"), "Empty parameters should show as none");
+		assertTrue(contains(empty_dump, "types: none"), "Empty types should show as none");
 	}
 };
 
