@@ -11,9 +11,8 @@ use std::fs::{
     read_to_string, remove_dir, remove_file, rename, write,
 };
 use std::io::{self, Read, Write};
-use std::os::unix::fs::MetadataExt;
 use std::path::{Component, Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 use tracing::warn;
 
@@ -407,12 +406,12 @@ impl PathOpsExt for Path {
     }
 
     fn mtime(&self) -> QuackResult<SystemTime> {
-        let metadata = fs::metadata(self).with_context(|| {
+        let metadata = fs::metadata(self)
+            .with_context(|| format!("when getting the metadata of `{}`", self.display()))?;
+        let mtime = metadata.modified().with_context(|| {
             format!("when getting the modification time of `{}`", self.display())
         })?;
-        let seconds = metadata.mtime() as u64;
-        let nanos = metadata.mtime_nsec() as u64;
-        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(seconds) + Duration::from_nanos(nanos))
+        Ok(mtime)
     }
 
     #[cfg(unix)]
@@ -433,12 +432,14 @@ impl PathOpsExt for Path {
         // Documentation:
         // https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_basic_info
         use std::os::windows::io::AsRawHandle;
+        use std::time::Duration;
 
         use windows_sys::Win32::Storage::FileSystem::{
             FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
         };
 
-        let file = File::open(path).with_context(|| format!("when opening `{}`", self.display()));
+        let file =
+            File::open(self).with_context(|| format!("when opening `{}`", self.display()))?;
         let handle = file.as_raw_handle();
         let mut info = FILE_BASIC_INFO::default();
 
