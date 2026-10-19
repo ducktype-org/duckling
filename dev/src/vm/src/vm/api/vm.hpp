@@ -255,11 +255,24 @@ namespace vm::api {
 	/**
 	 * @brief Get an empty VMValue (initialized by zero bytes) of the given type.
 	 * @note This endpoint returns a VMValue which is owned by the caller. It's the callers
-	 * responsibility to call `VMValue::freeData()` on the VMValue. For more information
-	 * on why this is necessary, see documentation of `vm::IVMValue::freeData()`.
+	 * responsibility to free it with the `freeVMValue` endpoint.
 	 * @return Response containing a Box containing the newly allocated VMValue of the specified type.
 	 */
 	std::expected<response::VMValue, ApiError> getVMValue(PID pid, const std::string& type_name);
+
+	/**
+	 * @brief Free the data of a VMValue returned by `getVMValue`.
+	 *
+	 * @note Freeing touches the memory module, so it has to be synchronized with other
+	 * endpoints and refused when the program is running.
+	 *
+	 * @note The caller keeps the ownership of the Box, which can be destroyed once the value was
+	 * freed. A value passed to `runFunction` must not be freed before the function finishes.
+	 *
+	 * @return Nothing if the value was freed or an API error otherwise (the process is running, the
+	 * value belongs to a different process or it was already freed).
+	 */
+	std::expected<void, ApiError> freeVMValue(PID pid, Ref<IVMValue> vm_value);
 
 	/**
 	 * @brief Get the number of current stack frames.

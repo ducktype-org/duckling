@@ -149,7 +149,7 @@ private:
 		ASSERT_HAS_VALUE(empty_variant_response);
 		auto empty_variant = std::move(empty_variant_response->vm_value);
 		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
-		empty_variant->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, empty_variant.refMut()));
 
 		assert_type_tag(8, 0);
 		assert_type_tag(8, 1);
@@ -169,9 +169,9 @@ private:
 			},
 			"An out-of-range variant tag must not be treated as an empty variant."
 		);
-		invalid_variant->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, invalid_variant.refMut()));
 
-		vm_value_max64->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, vm_value_max64.refMut()));
 		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 };

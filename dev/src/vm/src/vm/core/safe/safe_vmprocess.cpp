@@ -660,6 +660,33 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
+	std::expected<api::Response, api::ApiError> SafeVMProcess::freeVMValue(Ref<IVMValue> vm_value) {
+		// Freeing a VMValue deallocates its block in memory, so it must be synchronized against
+		// every other memory-touching endpoint.
+		std::unique_lock lock(api_lock);
+		match_optional(assertProcessCanRespond()) {
+			opt_err(error) return std::unexpected(error);
+			opt_some() {
+				auto* safe_value = dynamic_cast<SafeVMValue*>(vm_value.get());
+				if (safe_value == nullptr)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue is not a SafeVMValue" } });
+
+				if (safe_value->my_process.get() != this)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue comes from a different process" } });
+
+				if (safe_value->pointer.isNull())
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue was already freed" } });
+
+				safe_value->freeData();
+				return api::Response(api::response::Empty());
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
 	std::vector<api::ThreadID> SafeVMProcess::unjoinedApiThreadIds() const {
 		std::lock_guard            lock(threads_pool_mutex);
 		std::vector<api::ThreadID> ids;

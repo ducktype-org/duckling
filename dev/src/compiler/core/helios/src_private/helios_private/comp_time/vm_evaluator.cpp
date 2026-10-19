@@ -499,7 +499,11 @@ namespace {
 				"Failed to initialize the global context on DVM."
 			));
 
-		ctx_vm_value->freeData();
+		if (!vm::api::freeVMValue(pid, ctx_vm_value.refMut()))
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ArgConversionFailed,
+				"Failed to free the opaque pointer of the global context on DVM."
+			));
 		return {};
 	}
 
@@ -531,7 +535,12 @@ namespace {
 			));
 
 		// Free the owned arguments.
-		for (const auto& arg: owned_args) arg->freeData();
+		for (const auto& arg: owned_args)
+			if (!vm::api::freeVMValue(pid, arg.refMut()))
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ArgConversionFailed,
+					base::strConcat("Failed to free an argument of function '", func_name, "'.")
+				));
 
 		variant_match(maybe_exit_value.value()) {
 			variant_case(std::vector<Ref<vm::IVMValue>>, values) {

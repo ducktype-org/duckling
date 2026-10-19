@@ -7,13 +7,11 @@
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/pointers/box.hpp>
 
 #include <tester/tester.hpp>
 
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
-#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <array>
 #include <atomic>
@@ -230,20 +228,15 @@ private:
 
 			assertSucceeded(api::run(pid), "run");
 
-			std::atomic<bool> status_ok{ true };
-			// Keep all the allocated VMValues to free them after this test ends.
-			std::array<std::vector<Box<vm::IVMValue>>, CLIENT_COUNT> allocated_vm_values;
-			std::vector<std::thread>                                 clients;
+			std::atomic<bool>        status_ok{ true };
+			std::vector<std::thread> clients;
 			clients.reserve(CLIENT_COUNT);
 			for (usize client = 0; client < CLIENT_COUNT; client++) {
-				clients.emplace_back([this, pid, seed, client, &status_ok, &allocated_vm_values] {
+				clients.emplace_back([this, pid, seed, client, &status_ok] {
 					std::mt19937_64 rng(seed * CLIENT_COUNT + client);
 					// No `resume` in the mix: it can park a concurrent `api::pause` forever, see
 					// `randomOp`.
-					for (usize op = 0; op < 20; op++)
-						randomOp(
-							pid, rng, false, false, status_ok, Ref(&allocated_vm_values.at(client))
-						);
+					for (usize op = 0; op < 20; op++) randomOp(pid, rng, false, false, status_ok);
 				});
 			}
 			for (auto& client: clients) client.join();
@@ -257,10 +250,6 @@ private:
 				api::stop(pid), base::strConcat("stop after concurrent stress, seed=", seed)
 			);
 			waitUntilStatus(pid, isTerminal, "terminal after the stop");
-
-			// Free the VMValues after all threads are joined.
-			for (auto& values: allocated_vm_values)
-				for (auto& value: values) value->freeData();
 
 			validateTransitions(scoped.log, base::strConcat("seed=", seed));
 			assertSucceeded(api::kill(pid), "kill");
@@ -332,19 +321,13 @@ private:
 	 *
 	 * @p status_ok is cleared instead of asserting on the spot, because this also runs on client
 	 * `std::thread`s, where `fail` throwing would call `std::terminate`.
-	 *
-	 * @p allocated_vm_values An optional vector of VMValues to save which may have been allocated
-	 * by `api::getVMValue`. Pass this in a multithreaded scenario when naively calling `freeData`
-	 * on the VMValue may race other threads. If not passed, the VMValues are immediately freed
-	 * after they are retrieved from `api::getVMValue`.
 	 */
 	void randomOp(
-		vm::PID                                             pid,
-		std::mt19937_64&                                    rng,
-		bool                                                allow_lifecycle,
-		bool                                                allow_resume,
-		std::atomic<bool>&                                  status_ok,
-		base::Optional<Ref<std::vector<Box<vm::IVMValue>>>> allocated_vm_values = {}
+		vm::PID            pid,
+		std::mt19937_64&   rng,
+		bool               allow_lifecycle,
+		bool               allow_resume,
+		std::atomic<bool>& status_ok
 	) {
 		static const std::array<std::string, 3> type_names{ "i64", "i32", "DoesNotExist" };
 		const auto                              rand_type
@@ -388,14 +371,9 @@ private:
 			break;
 		case 9: {
 			auto value = api::getVMValue(pid, rand_type());
-			if (!value.has_value()) break;
-			// We can't just naively deallocate the VMValues here as this touches the memory module
-			// without a lock which may race against other threads, thus we store them for them to
-			// be dropped later.
-			if (allocated_vm_values.has_value())
-				allocated_vm_values.value()->push_back(std::move(value->vm_value));
-			else
-				value->vm_value->freeData();
+			// The caller owns the value, so we free it right away to not leak memory. This VMValue
+			// won't be used anywhere anyway, we just want to test the endpoint.
+			if (value.has_value()) (void) api::freeVMValue(pid, value->vm_value.refMut());
 			break;
 		}
 		case 10:

@@ -47,8 +47,6 @@ private:
 	public:
 		explicit ForeignVMValue(vm::PID pid): pid(pid) {}
 
-		void freeData() override {}
-
 		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
 			CORE_PANIC("ForeignVMValue has no type");
 		}
@@ -200,8 +198,12 @@ private:
 		     | std::ranges::to<vm::FunctionRunArguments>();
 	}
 
+	/**
+	 * @brief Free every owned VMValue in the process it belongs to.
+	 */
 	void freeArguments(OwnedArgumentList& arguments) {
-		for (auto& arg: arguments) arg->freeData();
+		for (auto& arg: arguments)
+			ASSERT_HAS_VALUE(vm::api::freeVMValue(arg->getPID(), arg.refMut()));
 	}
 
 	void multipleFiles() {
@@ -463,6 +465,13 @@ private:
 				"implementation"
 			);
 
+			// The foreign value holds no VM memory and the API refuses to free it.
+			assertRefusedWith<vm::api::OtherError>(
+				vm::api::freeVMValue(pid, arguments.at(1).refMut()),
+				"freeVMValue of a foreign VMValue",
+				"is not a SafeVMValue"
+			);
+			arguments.pop_back();
 			freeArguments(arguments);
 		}
 

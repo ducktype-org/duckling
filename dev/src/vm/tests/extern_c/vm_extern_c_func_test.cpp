@@ -131,7 +131,7 @@ private:
 		ASSERT_HAS_VALUE(vm::api::runFunction(pid, "initialize_vector", { vm_value.refMut() }));
 		ASSERT_HAS_VALUE(vm::api::join(pid));
 
-		vm_value->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, vm_value.refMut()));
 
 		runTestOnVm(pid, { "1 2 3" }, { "3" });
 		ASSERT_EQUAL_PRINT(global_opaque::vec.size(), 3);
