@@ -29,7 +29,7 @@ mod graph_checks;
 mod red_green_nodes;
 mod serializable_types;
 
-pub use fingerprint::BuildData;
+pub use fingerprint::*;
 
 #[derive(Clone, Debug, Default)]
 /// All the information necessary for performing package-level incremental compilation.
