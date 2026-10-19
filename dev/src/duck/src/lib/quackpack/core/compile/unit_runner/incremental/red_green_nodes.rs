@@ -28,8 +28,9 @@
 //! Notice that we need two timestamps, since artifacts produced during the compilation have mtime later than the start,
 //! and source code files should have mtime earlier than the start.
 
+use std::collections::{HashSet, VecDeque};
 use std::ops::AddAssign;
-use std::path::Path;
+use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
 
@@ -145,7 +146,10 @@ impl CompilationInput {
         let SourceSpecificCheckResult {
             all_mtimes_ok,
             number_of_source_files,
-        } = check_for_updates(path_to_check, incremental_data.prev_build_start())?;
+        } = check_for_updates(
+            path_to_check.to_path_buf(),
+            incremental_data.prev_build_start(),
+        )?;
         current_build_data.add_number_of_source_files(*identity, number_of_source_files);
         Ok(all_mtimes_ok
             && incremental_data
@@ -189,38 +193,75 @@ impl SourceSpecificCheckResult {
 }
 
 /// Helper for [`CompilationInput::node_specific_check`].
-/// Recursively checks that all Duckling files inside the given directory (or a single file if `path` is a file)
+/// Checks (in a BFS-like manner) that files inside the given directory (or a single file if `path` is a file)
 /// have mtime and ctime earlier than `timestamp`.
 /// Also returns the number of encountered Duckling source code files.
+///
+/// Note:
+/// -----
+/// We do it in BFS-like and not DFS-like manner, to avoid recursion.
 fn check_for_updates(
-    path: &Path,
+    path_to_check: PathBuf,
     timestamp: DateTime<Utc>,
 ) -> QuackResult<SourceSpecificCheckResult> {
-    if path.is_symlink() {
-        Ok(SourceSpecificCheckResult::empty())
-    } else if path.is_file() {
+    let mut visited_paths = HashSet::new();
+    let mut paths_to_visit: VecDeque<PathBuf> = [path_to_check].into();
+    let mut result = SourceSpecificCheckResult::empty();
+    while !paths_to_visit.is_empty() {
+        check_for_updates_single_step(
+            &mut visited_paths,
+            &mut paths_to_visit,
+            &mut result,
+            timestamp,
+        )?;
+    }
+    Ok(result)
+}
+
+/// Helper for [`check_for_updates`].
+/// Performs the exploration step for the next path in the queue.
+/// If that path is a file, we perform the mtime and ctime checks.
+/// If it is a directory we iterate over all of its contents and add them to the queue.
+///
+/// Note:
+/// -----
+/// `visited_paths` is needed because there can be symlinks creating loops.
+fn check_for_updates_single_step(
+    visited_paths: &mut HashSet<PathBuf>,
+    paths_to_visit: &mut VecDeque<PathBuf>,
+    cur_result: &mut SourceSpecificCheckResult,
+    timestamp: DateTime<Utc>,
+) -> QuackResult<()> {
+    let Some(path) = paths_to_visit.pop_front() else {
+        return Ok(());
+    };
+    // We already visited this path, skip.
+    if visited_paths.contains(&path) {
+        return Ok(());
+    };
+    if path.is_file() {
         if let Some(extention) = path.extension()
             && [DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT]
                 .iter()
                 .any(|&e| e == extention)
         {
+            // `path` is a Duckling file.
             let mtime = path.mtime()?;
             let ctime = path.ctime()?;
-            Ok(SourceSpecificCheckResult::for_single_file(
+            *cur_result += SourceSpecificCheckResult::for_single_file(
                 mtime < timestamp.into() && ctime < timestamp.into(),
-            ))
-        } else {
-            Ok(SourceSpecificCheckResult::empty())
+            );
         }
     } else {
-        let mut result = SourceSpecificCheckResult::empty();
         // We are in a directory.
-        for entry in create_dir_iterator(path)? {
+        for entry in create_dir_iterator(&path)? {
             let entry = entry?;
-            result += check_for_updates(&entry.path(), timestamp)?;
+            paths_to_visit.push_back(entry.path());
         }
-        Ok(result)
     }
+    // Done only here to avoid cloning `path`.
+    visited_paths.insert(path);
+    Ok(())
 }
 
 impl Unit {

@@ -429,6 +429,9 @@ impl PathOpsExt for Path {
 
     #[cfg(windows)]
     fn ctime(&self) -> QuackResult<SystemTime> {
+        // Returns `ChangeTime` from `$STANDARD_INFORMATION` attribute.
+        // Documentation:
+        // https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_basic_info
         use std::os::windows::io::AsRawHandle;
 
         use windows_sys::Win32::Storage::FileSystem::{
@@ -439,6 +442,13 @@ impl PathOpsExt for Path {
         let handle = file.as_raw_handle();
         let mut info = FILE_BASIC_INFO::default();
 
+        // SAFETY: `handle` is a valid file handle borrowed from `file`, which remains
+        // alive for the duration of this call. `info` is a stack-allocated, properly
+        // aligned `FILE_BASIC_INFO` that outlives the call. The size passed to
+        // `GetFileInformationByHandleEx` exactly matches `size_of::<FILE_BASIC_INFO>()`,
+        // so the API writes no more bytes than the buffer can hold. `FileBasicInfo`
+        // is a valid information class for this function, and the returned structure
+        // is fully initialized by the OS on success.
         unsafe {
             GetFileInformationByHandleEx(
                 handle,
