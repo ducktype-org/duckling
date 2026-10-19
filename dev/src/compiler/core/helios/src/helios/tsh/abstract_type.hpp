@@ -278,6 +278,24 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		const std::string& toString() const;
 
+		/**
+		 * @brief Returns a source-oriented representation of this abstract type.
+		 *
+		 * Unlike @ref toString, whose output may contain internal type-system terminology, the
+		 * returned representation follows canonical Duckling source syntax whenever the type has a
+		 * type-expression spelling. Compiler-level types which cannot currently be written as type
+		 * expressions use a human-readable representation instead. Function components are rendered
+		 * recursively using this method. Class and template names include enclosing namespaces and
+		 * classes, but omit module paths and import aliases. Names therefore need not be unique
+		 * across modules or directly resolvable from the caller's scope.
+		 *
+		 * @param ctx Query context used to resolve namespace-qualified class names and baked
+		 * template arguments.
+		 * @return A string containing the source-oriented representation of this type.
+		 */
+		[[nodiscard]]
+		std::string sourceTypeName(query::Context& ctx) const;
+
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
