@@ -34,20 +34,20 @@ public:
 private:
 	void localLeakTest() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("local_leak.dbc"),
+			runTestOnVmGetResult("../common/programs/local_leak.dbc"),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
 
 	void globalLeakTest() {
-		const auto result = runTestOnVmGetResult("global_leak.dbc");
+		const auto result = runTestOnVmGetResult("../common/programs/global_leak.dbc");
 		ASSERT_HAS_VALUE(result.run_result);
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
 		ASSERT_HAS_VALUE(validation_result);
 		ASSERT_TRUE(validation_result.value().memory_valid == false);
 	}
 
-	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc"); }
+	void noDoubleDestructorCalls() { runTestOnVm("../common/programs/no_double_destructor.dbc"); }
 
 	void nestedLeaks() {
 		assertExecutionPanickedWithAndKill(
