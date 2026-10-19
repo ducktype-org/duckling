@@ -23,6 +23,9 @@ pub struct Migration {
 }
 
 /// Run needed migrations.
+///
+/// Migrations are tracked in a separate table `schema_migrations`. In addition to the unique key
+/// (being the [`Migration::version`]), it also tracks the name and timestamp of the migration.
 pub fn run_migrations(
     connection: &mut Connection,
     migrations: &[Migration],
