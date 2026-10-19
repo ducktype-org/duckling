@@ -39,9 +39,9 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Creates a call through @p callee, a value of a function type, like `f(1, 2)` where `f`
 	 * is a variable. Only positional arguments are allowed, each is coerced to the corresponding
-	 * parameter type of the function type.
+	 * parameter type of the function type. Logs an error if @p callee is not of a function type.
 	 *
-	 * @param callee The expression producing the function value. Its type must be a function type.
+	 * @param callee The expression producing the called value.
 	 * @param whole_call_origin The origin of the whole call expression.
 	 * @param call_expr The PST call expression (the `(...)` part).
 	 */

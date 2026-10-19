@@ -20,6 +20,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
@@ -469,6 +470,12 @@ namespace compiler::helios::code {
 				          ->valueOrThrow();
 				return std::vector{ ctor.declaration->original_symbol };
 			}
+			case SymbolKind::Variable:
+			case SymbolKind::Parameter:
+			case SymbolKind::Const:
+			case SymbolKind::Field: {
+				return std::vector{ symbol };
+			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
@@ -478,26 +485,6 @@ namespace compiler::helios::code {
 			}
 			}
 			CORE_UNREACHABLE();
-		}
-
-		/**
-		 * @brief Whether @p symbol names a value of a function type, so a round call on it is a
-		 * call through a function value.
-		 */
-		[[nodiscard]]
-		bool isFunctionValueSymbol(SymID symbol) const {
-			switch (kind(symbol)) {
-			case SymbolKind::Variable:
-			case SymbolKind::Parameter:
-			case SymbolKind::Const:
-			case SymbolKind::Field: {
-				const auto& type = query_ctx.query<QueryTypeOfSymbol>(symbol);
-				return type->hasValue()
-				    && type->valueOrThrow().getType().getKind() == tsh::Kind::Function;
-			}
-			default:
-				return false;
-			}
 		}
 
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
@@ -524,8 +511,11 @@ namespace compiler::helios::code {
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				if (lookup_result->leaves.size() == 1
-				    && isFunctionValueSymbol(lookup_result->leaves.front())) {
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))) {
 					auto value_result = processNamespaceOrValue(
 						lookup_result->leaves.front(), pstOrigin(ident), ident
 					);
@@ -539,10 +529,6 @@ namespace compiler::helios::code {
 					UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
 					return ChainState::ofExpr(std::move(expr));
 				}
-
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
@@ -648,8 +634,7 @@ namespace compiler::helios::code {
 		/**
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()().
-		 * @note: For now this function is called only in the `foo()[i]` case. (where foo is a
-		 * function returning a static array).
+		 * A round call is a call through the value of @p current_expr, like `make()(2)`.
 		 */
 		auto processPSTExpr(Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
@@ -657,22 +642,12 @@ namespace compiler::helios::code {
 			// was deleted in PR #1239. See it for reference.
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				if (current_expr->expression_type.getType().getKind() == tsh::Kind::Function) {
-					auto expr_result = processIndirectCall(
-						query_ctx, std::move(current_expr), pstOrigin(call_expr), call_expr
-					);
-					UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-					return ChainState::ofExpr(std::move(expr));
-				}
-
 				// @TODO: #982 improve type lookup and provide correct
 				// candidates for processFunctionCall. Write tests for this case, when it will be
 				// implemented.
-
-				// This is only a temporary thing for error handling, note the incorrect callee PST
-				// expression.
-				auto expr_result
-					= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
+				auto expr_result = processIndirectCall(
+					query_ctx, std::move(current_expr), pstOrigin(call_expr), call_expr
+				);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 				return ChainState::ofExpr(std::move(expr));
 			}
@@ -867,8 +842,13 @@ namespace compiler::helios::code {
 						  );
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				if (lookup_result->leaves.size() == 1
-				    && isFunctionValueSymbol(lookup_result->leaves.front())) {
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				base::Optional<base::Box<Expr>> expr{};
+
+				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))) {
 					auto field_result = processPSTExpr(std::move(current_expr), expr_access);
 					UNPACK_QRESULT_MOVE(auto field_state =, field_result);
 					auto res = processIndirectCall(
@@ -879,15 +859,8 @@ namespace compiler::helios::code {
 					);
 					UNPACK_QRESULT_MOVE(base::Box<Expr> call =, res);
 					return ChainState::ofExpr(std::move(call));
-				}
-
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
-
-				base::Optional<base::Box<Expr>> expr{};
-				if (callees.size() > 0
-				    and getInterfaceElementOfMemberSym(query_ctx, callees.at(0))->isMethod()) {
+				} else if (callees.size() > 0
+				           and getInterfaceElementOfMemberSym(query_ctx, callees.at(0))->isMethod()) {
 					// The self expression may be passed by copy or by reference,
 					// depending on whether the type is simple or composite, respectively.
 					auto self_expr = current_expr->expression_type.getType().isSimple()

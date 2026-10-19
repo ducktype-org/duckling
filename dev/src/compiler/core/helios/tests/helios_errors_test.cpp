@@ -1685,6 +1685,12 @@ private:
 			{ "cannot be converted to type" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = { let n = 3; return n(1); } )",
+			{ "A value of type `const i32` cannot be called, because it is not a function." },
+			1
+		);
 	}
 
 	void testCopyabilityErrors() {

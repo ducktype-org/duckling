@@ -15,6 +15,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
@@ -748,6 +749,14 @@ namespace compiler::helios::code {
 		ElementOrigin                whole_call_origin,
 		pst::Access<pst::expr::Call> call_expr
 	) {
+		if (callee->expression_type.getType().getKind() != tsh::Kind::Function) {
+			ctx.logInt(makeBox<CallNotCallableError>(
+				call_expr->getStablePosition(),
+				makeBox<InteractiveType>(ctx, callee->expression_type.getSymbolType())
+			));
+			return query::Failed();
+		}
+
 		const tsh::FunctionAbstractType function_type   = callee->expression_type.getType();
 		const auto&                     parameter_types = function_type.getParameterTypes();
 
