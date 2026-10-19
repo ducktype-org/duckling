@@ -15,6 +15,19 @@ namespace {
 	using namespace vm::code::builders;
 
 	/**
+	 * @brief Represents a comparable immediate (a numeric, a char or a bool) as a numeric value.
+	 */
+	base::Optional<ctv::NumericValue> comparableAsNumeric(const ctv::CompileTimeValue& value) {
+		variant_match(value.getStorage()) {
+			variant_case(ctv::NumericValue, numeric) { return numeric; }
+			variant_case(char, c) { return ctv::NumericValue{ static_cast<std::uint8_t>(c) }; }
+			variant_case(bool, b) { return ctv::NumericValue{ static_cast<std::uint8_t>(b) }; }
+			variant_default { return {}; }
+		}
+		CORE_UNREACHABLE();
+	}
+
+	/**
 	 * @brief Helper used to evaluate comparison operations at compile-time.
 	 * @note Keep the same semantics as in the compiler's comp_time and VM.
 	 * @return The result of the comparison.
@@ -24,11 +37,11 @@ namespace {
 		const ctv::CompileTimeValue& lhs_value,
 		const ctv::CompileTimeValue& rhs_value
 	) {
-		auto lhs_numeric_opt = lhs_value.get<ctv::NumericValue>();
-		auto rhs_numeric_opt = rhs_value.get<ctv::NumericValue>();
+		auto lhs_numeric_opt = comparableAsNumeric(lhs_value);
+		auto rhs_numeric_opt = comparableAsNumeric(rhs_value);
 		CORE_ASSERT(
 			lhs_numeric_opt.has_value() && rhs_numeric_opt.has_value(),
-			"Comparison between non-numeric immediates is not supported"
+			"Comparison between non-comparable immediates is not supported"
 		);
 		auto lhs_numeric = lhs_numeric_opt.value();
 		auto rhs_numeric = rhs_numeric_opt.value();
