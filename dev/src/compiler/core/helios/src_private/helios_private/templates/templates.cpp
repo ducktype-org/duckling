@@ -197,14 +197,14 @@ namespace compiler::helios::templates {
 			auto args = bakeTemplateArgumentsSymbols(
 				ctx, signature, ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }), key
 			);
-			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
+			auto baked_sym_id = ctx.query<QuerySymbolFromPST>(baked_statement).valueOrThrow();
 
 
 			// @TODO: #3072 try to improve this.
 			// We atomically set postponed_data here,
 			// The reason we can't do it in the initial setAdditionalRootData call is because
 			// we can't call QueryPrimaryCodeScopeFor(baked_root) or
-			// QuerySymbolOfSTMT(baked_statement) without pst_parent_element set (it is needed for
+			// QuerySymbolFromPST(baked_statement) without pst_parent_element set (it is needed for
 			// relevant scopes be created). At the same time this scope is needed to generate the
 			// template argument symbols, so we have to do it in two steps.
 			CRef<TemplateBakePSTLinkedData> baked_root_data_pointer

@@ -429,7 +429,7 @@ namespace compiler::helios {
 				// Parameters:
 				std::vector<code::Parameter> parameters;
 				for (auto param: *param_list.unlock(ctx)) {
-					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
+					auto  param_symbol = ctx.query<QuerySymbolFromPST>({ param }).valueOrThrow();
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();

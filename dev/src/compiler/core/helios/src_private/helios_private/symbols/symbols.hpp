@@ -37,7 +37,21 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache_and_struct
 	 */
+	DECLARE_QUERY(QuerySymbolFromPST, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
+
+	/**
+	 * @brief Query symbol associated with given statement in PST
+	 *
+	 * \query_thread_safe_if_cache_and_struct
+	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
+
+	/**
+	 * @brief Query symbol associated with given element (but not statement) in PST
+	 *
+	 * \query_thread_safe_if_cache_and_struct
+	 */
+	DECLARE_QUERY(QuerySymbolOfNonSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.

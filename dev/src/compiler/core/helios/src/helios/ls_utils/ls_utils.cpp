@@ -24,6 +24,6 @@ namespace compiler::helios::ls {
 	query::QResult<SymID> getSymbolOfStmt(
 		query::Context& ctx, pst::Access<pst::LangElement> element
 	) {
-		return ctx.query<QuerySymbolOfSTMT>({ element });
+		return ctx.query<QuerySymbolFromPST>({ element });
 	}
 }

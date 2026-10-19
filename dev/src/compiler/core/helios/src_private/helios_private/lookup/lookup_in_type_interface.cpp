@@ -38,7 +38,7 @@ namespace compiler::helios {
 			auto element = related_element.value().unlock(ctx);
 			while (true) {
 				if (element->getElementKind() == pst::ElementKind::Class) {
-					auto class_symbol = ctx.query<QuerySymbolOfSTMT>(element).valueOrThrow();
+					auto class_symbol = ctx.query<QuerySymbolFromPST>(element).valueOrThrow();
 					return ctx.query<tsh::QueryClassType>(class_symbol);
 				}
 
