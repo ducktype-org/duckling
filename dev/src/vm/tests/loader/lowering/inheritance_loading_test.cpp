@@ -11,12 +11,21 @@
 
 #include <string_id/string_id.hpp>
 
-class VmInheritanceLoadingTest: public VmTestSuite {
+/**
+ * @brief What belongs here: the inheritance metadata the loader builds for a valid program, i.e.
+ * the class and interface hierarchy and the vtables it lowers the bytecode types to.
+ *
+ * A hierarchy the loader must reject goes to `loader/inheritance/`.
+ */
+class VmInheritanceLoadingTest: public VmLoaderTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceLoadingTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(metadataLoading); }
+	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(metadataLoading);
+		TESTER_ADD_TEST(inheritedFieldsKeepTheirOffsets);
+	}
 
 
 private:
@@ -178,18 +187,7 @@ private:
 	}
 
 	void metadataLoading() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (1)");
-		auto pid = process_pid_response.value().pid;
-
-		fs::File file(path("../common/programs/inheritance_metadata.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }), "Load failed (1)");
-
-		auto run_response = vm::api::run(pid);
-		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
-
-		auto join_response = vm::api::join(pid);
-		ASSERT_HAS_VALUE(join_response, "Join failed (1)");
+		const vm::PID pid = spawnAndLoad("../../common/programs/inheritance_metadata.dbc");
 
 		auto               pod           = getType(pid, "POD");
 		auto               i1            = getType(pid, "I1");
@@ -224,6 +222,40 @@ private:
 		);
 		checkPietMondrian(piet_mondrian);
 	}
+
+	/**
+	 * @brief A subclass does not repeat the fields of its superclass. It gets them from the
+	 * superclass at the same offsets, so a pointer to it can be upcast without moving any field.
+	 */
+	void inheritedFieldsKeepTheirOffsets() {
+		const vm::PID pid    = spawnAndLoad("inherited_fields.dbc");
+		auto          widget = getType(pid, "Widget");
+		auto          button = getType(pid, "Button");
+
+		for (const base::StrID field: { base::StrID("pos_x"), base::StrID("pos_y") }) {
+			auto in_widget = widget->getFieldOffsetByName(field);
+			auto in_button = button->getFieldOffsetByName(field);
+			ASSERT_HAS_VALUE(in_widget, "Widget should declare `", field.str(), "`");
+			ASSERT_HAS_VALUE(in_button, "Button should inherit `", field.str(), "` from Widget");
+			assertTrue(
+				*in_widget == *in_button,
+				base::strConcat(
+					"`", field.str(), "` should have the same offset in Button and Widget"
+				)
+			);
+		}
+
+		ASSERT_HAS_VALUE(button->getFieldOffsetByName(base::StrID("n_clicked")));
+		ASSERT_NO_VALUE(
+			widget->getFieldOffsetByName(base::StrID("n_clicked")),
+			"Widget should not get the fields of its subclass"
+		);
+		assertTrue(
+			button->getFields().value()->size() == widget->getFields().value()->size() + 1,
+			"Button should have the fields of Widget plus its own one"
+		);
+		ASSERT_HAS_VALUE(vm::api::kill(pid));
+	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/inheritance/");
+TESTER_COMMON_MAIN("/src/vm/tests/loader/lowering/");
