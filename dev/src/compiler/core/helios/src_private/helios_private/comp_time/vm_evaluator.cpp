@@ -487,7 +487,7 @@ namespace {
 		auto response = vm::api::getVMValue(pid, "opaque_ptr");
 		if (!response.has_value())
 			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ArgConversionFailed,
+				VmEvaluationError::Kind::QueryContextInitFailed,
 				"Failed to fetch an opaque pointer when evaluating on DVM."
 			));
 		auto ctx_vm_value = std::move(response->vm_value);
@@ -495,13 +495,13 @@ namespace {
 
 		if (!vm::api::runFunctionAwait(pid, "comptime_set_ctx", { ctx_vm_value.refMut() }))
 			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::FunctionRunFailed,
+				VmEvaluationError::Kind::QueryContextInitFailed,
 				"Failed to initialize the global context on DVM."
 			));
 
 		if (!vm::api::freeVMValue(pid, ctx_vm_value.refMut()))
 			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ArgConversionFailed,
+				VmEvaluationError::Kind::QueryContextInitFailed,
 				"Failed to free the opaque pointer of the global context on DVM."
 			));
 		return {};
@@ -538,7 +538,7 @@ namespace {
 		for (const auto& arg: owned_args)
 			if (!vm::api::freeVMValue(pid, arg.refMut()))
 				return std::unexpected(VmEvaluationError(
-					VmEvaluationError::Kind::ArgConversionFailed,
+					VmEvaluationError::Kind::ArgFreeFailed,
 					base::strConcat("Failed to free an argument of function '", func_name, "'.")
 				));
 
