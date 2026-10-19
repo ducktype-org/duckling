@@ -58,7 +58,7 @@ pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()
         (DependencyKind::Dev, schema.dev_dependencies.as_ref()),
     ];
     for (dep_kind, dependencies) in dependencies_maps {
-        for (effective_name, dependency) in dependencies.into_iter().flatten() {
+        for (effective_name, dependency) in dependencies.map(|deps| &deps.0).into_iter().flatten() {
             if let Some(ref source) = dependency.source
                 && let DependencySource::Detailed(source) = source
                 && let Some(ref name) = source.name
