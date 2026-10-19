@@ -23,6 +23,17 @@
 #include <unordered_set>
 
 namespace compiler::lir {
+	LIRVariableMetadata LIRVariableMetadata::fromHeliosId(
+		query::Context& ctx, const helios::SymID helios_id
+	) {
+		LIRVariableMetadata metadata;
+		metadata.source_code_name = helios::name(helios_id);
+		if_opt_some(helios::maybeSymbolPst(helios_id), pst_elem) {
+			metadata.position = pst_elem.unlock(ctx)->getStablePosition();
+		}
+		return metadata;
+	}
+
 	LIRLocal LIRLocal::fromMIR(
 		query::Context&           ctx,
 		const mir::MIRLocalRef    mir_local,
@@ -31,12 +42,9 @@ namespace compiler::lir {
 		auto type_layout
 			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type)
 		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
-		LIRLocalMetadata metadata;
+		LIRVariableMetadata metadata;
 		if_opt_some(mir_local->helios_id, helios_id) {
-			metadata.source_code_name = helios::name(helios_id);
-			if_opt_some(helios::maybeSymbolPst(helios_id), pst_elem) {
-				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
-			}
+			metadata = LIRVariableMetadata::fromHeliosId(ctx, helios_id);
 		}
 		LIRLocalSpecialKind special_kind = specialKindFromMIR(*mir_local);
 		return LIRLocal{

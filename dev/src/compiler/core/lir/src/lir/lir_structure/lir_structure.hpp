@@ -227,12 +227,18 @@ namespace compiler::lir {
 	};
 
 	/**
-	 * @brief Metadata for LIR local variables or function arguments.
-	 * Used by the backends for the DebugInfo.
+	 * @brief Metadata for LIR variables: locals, function arguments and globals.
+	 * Used by the backends for the DebugInfo and for positions in error messages.
 	 */
-	struct LIRLocalMetadata {
+	struct LIRVariableMetadata {
 		base::Optional<base::StrID>         source_code_name;
 		base::Optional<dia::StablePosition> position;
+
+		/**
+		 * @brief Builds the metadata (source name and PST position) of a HELIOS symbol.
+		 * The position is left empty when the symbol has no PST element.
+		 */
+		static LIRVariableMetadata fromHeliosId(query::Context& ctx, helios::SymID helios_id);
 	};
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
@@ -256,7 +262,7 @@ namespace compiler::lir {
 		 */
 		base::Optional<u64> parameter_index;
 
-		LIRLocalMetadata metadata;
+		LIRVariableMetadata metadata;
 
 		LIRLocalSpecialKind special_kind;
 
@@ -265,7 +271,7 @@ namespace compiler::lir {
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
 			const base::Optional<u64>           parameter_index,
-			LIRLocalMetadata                    metadata,
+			LIRVariableMetadata                 metadata,
 			LIRLocalSpecialKind                 special_kind = LIRLocalSpecialKind::Normal
 		):
 			  helios_id(helios_id),
@@ -785,6 +791,11 @@ namespace compiler::lir {
 
 		LIRGlobal                                         global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+
+		/**
+		 * @brief Source name and position of the global's declaration.
+		 */
+		LIRVariableMetadata metadata;
 
 		/**
 		 * @brief Returns the constructor and destructor pair for the global.
