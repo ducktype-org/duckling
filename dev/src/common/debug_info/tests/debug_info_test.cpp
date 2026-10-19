@@ -25,7 +25,7 @@ public:
 		TESTER_ADD_TEST(invalidJsonTest);
 		TESTER_ADD_TEST(resolvePositionsTest);
 		TESTER_ADD_TEST(mergeGlobalsTest);
-		TESTER_ADD_TEST(missingGlobalsLoadsTest);
+		TESTER_ADD_TEST(missingGlobalsFailsTest);
 	}
 
 private:
@@ -223,7 +223,7 @@ private:
 		// Valid JSON but missing required field "target"
 		{
 			std::istringstream iss(R"({"module_path": "x.dk", "source_positions_type": "DBC",
-                "functions": {}, "types": {}})");
+                "functions": {}, "types": {}, "globals": {}})");
 			auto               result = debug_info::loadFromStream(iss);
 			ASSERT_NO_VALUE(result, "JSON missing 'target' field should fail");
 		}
@@ -232,7 +232,7 @@ private:
 		{
 			std::istringstream iss(
 				R"({"target": 42, "module_path": "x.dk", "source_positions_type": "LineColumn",
-                "functions": {}, "types": {}})"
+                "functions": {}, "types": {}, "globals": {}})"
 			);
 
 			auto _ = debug_info::loadFromStream(iss);
@@ -263,7 +263,8 @@ private:
             ]
         }
     },
-    "types": {}
+    "types": {},
+    "globals": {}
 })");
 			auto               result = debug_info::loadFromStream(iss);
 			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_metadata should fail");
@@ -286,7 +287,8 @@ private:
 			]
 		}
 	},
-	"types": {}
+	"types": {},
+	"globals": {}
 })");
 			auto               result = debug_info::loadFromStream(iss);
 			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_variable_init should fail");
@@ -384,13 +386,11 @@ private:
 		assertTrue(info.globals.at("_Gb").name == "b", "Merge: second global name incorrect");
 	}
 
-	void missingGlobalsLoadsTest() {
-		// Debug info written before globals were recorded has no "globals" key.
+	void missingGlobalsFailsTest() {
 		std::istringstream iss(R"({"target": "DBC", "module_path": "x.dk",
             "source_positions_type": "LineColumn", "functions": {}, "types": {}})");
 		auto               result = debug_info::loadFromStream(iss);
-		ASSERT_HAS_VALUE(result, "JSON without 'globals' should still load");
-		assertTrue(result->globals.empty(), "Missing 'globals' should give no globals");
+		ASSERT_NO_VALUE(result, "JSON missing 'globals' field should fail");
 	}
 };
 

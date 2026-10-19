@@ -230,11 +230,7 @@ namespace debug_info {
 		j.at("source_positions_type").get_to(v.source_positions_type);
 		j.at("functions").get_to(v.functions);
 		j.at("types").get_to(v.types);
-		// Optional, so debug info written before globals were recorded still loads.
-		if (j.contains("globals"))
-			j.at("globals").get_to(v.globals);
-		else
-			v.globals.clear();
+		j.at("globals").get_to(v.globals);
 	}
 
 	// NOLINTEND
