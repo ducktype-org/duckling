@@ -9,6 +9,12 @@ name: weekly-dev-build
 on:
   # Do not add a pull_request trigger!
   # Never run on PRs or on pushes to the main branch.
+
+  # on push just for single test!
+  push:
+    branches:
+      - weekly-rel-build
+
   schedule:
     # Off the hour: runs at :00 are often delayed by GitHub.
     - cron: "17 3 * * 1" # every Monday, 03:17 UTC
