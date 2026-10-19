@@ -23,7 +23,7 @@ public:
 
 private:
 	void hierarchyCorrectness() {
-		runTestOnVm("inheritance_metadata.dbc", {}, {}, {}, 0);
+		runTestOnVm("../common/programs/inheritance_metadata.dbc", {}, {}, {}, 0);
 
 		using namespace vm::code;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({

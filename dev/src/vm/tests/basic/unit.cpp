@@ -46,7 +46,6 @@ public:
 		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
 		TESTER_ADD_TEST(checkCastingInstructions);
-		TESTER_ADD_TEST(testSyncRun);
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
 		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
@@ -185,13 +184,6 @@ private:
 
 	void globalInitialValueTest() {
 		runTestOnVm("global_initial_value.dbc", "", "10\n-10\n/1\n-1\no", {});
-	}
-
-	void testSyncRun() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
-		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 };
 

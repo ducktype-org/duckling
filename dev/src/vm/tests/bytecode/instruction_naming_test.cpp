@@ -21,9 +21,11 @@
 #include <vector>
 
 /**
- * Checks that every high and micro instruction is named
- * `baseName[_operand1Suffix[_operand2Suffix[_operand3Suffix]]]`: a camelCase base name followed by
- * the short name of each of its operands, in order.
+ * @brief What belongs here: the naming rule of the instruction set. Every high and micro
+ * instruction is named `baseName[_operand1Suffix[_operand2Suffix[_operand3Suffix]]]`: a camelCase
+ * base name followed by the short name of each of its operands, in order.
+ *
+ * Building instructions in C++ goes to `builders/`, parsing them from text to `assembly/`.
  */
 class InstructionNamingTester: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -127,4 +129,4 @@ public:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/utils/");
+TESTER_COMMON_MAIN("/src/vm/tests/bytecode/");

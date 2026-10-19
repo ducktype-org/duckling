@@ -52,9 +52,9 @@ private:
 	void reallocShrink() { runTestOnVm("realloc_shrink.dbc", "", "42", {}); }
 
 	void fstToDyn() {
-		runTestOnVm("fst_to_dyn.dbc", "0", "42", {});
+		runTestOnVm("../common/programs/fst_to_dyn.dbc", "0", "42", {});
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("fst_to_dyn.dbc", "1"),
+			runTestOnVmGetResult("../common/programs/fst_to_dyn.dbc", "1"),
 			vm::exceptions::VMOutOfBlockBoundsException::ERR_MSG
 		);
 	}
