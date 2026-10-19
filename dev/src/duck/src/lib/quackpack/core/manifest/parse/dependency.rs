@@ -35,7 +35,7 @@ pub(crate) fn parse(
     let Some(schema) = schema else {
         return Ok(());
     };
-    for (name, dep_schema) in schema.into_iter() {
+    for (name, dep_schema) in schema {
         let guard = scope.push(name.into());
         dependencies.push(parse_single_dependency(
             name.into(),
