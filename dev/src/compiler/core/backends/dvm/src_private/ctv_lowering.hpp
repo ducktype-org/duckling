@@ -15,6 +15,8 @@
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/stable_position.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -50,13 +52,16 @@ namespace compiler::backend_vm::internal {
 		 * @param is_constant Whether the global being created should be marked constant.
 		 * @param lowered_global_name If provided, the global will be created with this name.
 		 * Otherwise, a fresh name will be generated.
+		 * @param position Source position of the global's declaration, if known. Error messages
+		 * about a value that cannot be lowered point at it.
 		 */
 		static const DVMPlace& lowerCTVToNewGlobal(
-			ProgramLoweringContext&      pctx,
-			const ctv::CompileTimeValue& constant,
-			const vm::code::TypeOfData&  type,
-			bool                         is_constant,
-			base::Optional<base::StrID>  lowered_global_name = {}
+			ProgramLoweringContext&             pctx,
+			const ctv::CompileTimeValue&        constant,
+			const vm::code::TypeOfData&         type,
+			bool                                is_constant,
+			base::Optional<base::StrID>         lowered_global_name = {},
+			base::Optional<dia::StablePosition> position            = {}
 		);
 
 	private:

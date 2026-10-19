@@ -71,11 +71,12 @@ namespace compiler::backend_vm::internal {
 	}
 
 	const DVMPlace& CTVLowering::lowerCTVToNewGlobal(
-		ProgramLoweringContext&      pctx,
-		const ctv::CompileTimeValue& constant,
-		const vm::code::TypeOfData&  type,
-		bool                         is_constant,
-		base::Optional<base::StrID>  lowered_global_name
+		ProgramLoweringContext&             pctx,
+		const ctv::CompileTimeValue&        constant,
+		const vm::code::TypeOfData&         type,
+		bool                                is_constant,
+		base::Optional<base::StrID>         lowered_global_name,
+		base::Optional<dia::StablePosition> position
 	) {
 		// copyValueOrElse and not copyValueOr: getAnonymousGlobalName bumps a counter, so asking
 		// for a name we already have would burn one for nothing.
@@ -138,7 +139,7 @@ namespace compiler::backend_vm::internal {
 					pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 				} else {
 					pctx.query_ctx.value()->log<dia::NotYetImplementedCodeError>(
-						"VMValue based comp-time values to file lowering."
+						"VMValue based comp-time values to file lowering.", position
 					);
 					query::throwFailed();
 				}

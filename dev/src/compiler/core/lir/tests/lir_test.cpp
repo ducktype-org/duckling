@@ -300,6 +300,15 @@ private:
 		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
 
+		// Globals carry the same metadata as locals: their source name and declaration position.
+		for (const auto& [global_data, name]: { std::pair{ g, "g" },
+		                                        std::pair{ some_global, "some_global" },
+		                                        std::pair{ global_tuple, "global_tuple" } }) {
+			ASSERT_HAS_VALUE(global_data.metadata.source_code_name);
+			ASSERT_EQUAL(global_data.metadata.source_code_name->strView(), name);
+			ASSERT_HAS_VALUE(global_data.metadata.position);
+		}
+
 		// All the globals here are trivially destructible, so none of them gets a dtor.
 		ASSERT_TRUE(g.getCtorDtorPair().global_dtor.empty());
 		ASSERT_TRUE(some_global.getCtorDtorPair().global_dtor.empty());
