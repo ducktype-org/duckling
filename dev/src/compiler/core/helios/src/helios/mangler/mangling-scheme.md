@@ -22,8 +22,13 @@ either in the scheme or it's implementation, they should be reflected here.
              | <repl-input-wrapper>                         // REPL/script input statements
 
 // Wrappers of REPL/script input statements (expressions, instructions and global variable
-// initializers) use simplified mangling for now. @TODO: #1768 decide if it's correct.
-<repl-input-wrapper> ::= "__repl_input_wrapper_" <base-10-number>
+// initializers) and of comp-time evaluated expressions use simplified mangling for now.
+// @TODO: #1768 decide if it's correct.
+<repl-input-wrapper> ::= <wrapper-name> "_" <base-10-number> "_" <type>
+// the number is the REPL/script input counter, or the ID of the wrapped comp-time expression
+// <type> is the return type of the wrapper
+<wrapper-name> ::= "__repl_input_wrapper"                   // REPL/script input statements
+                 | "__comp_time_expr_wrapper"               // comp-time evaluated expressions
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>

@@ -774,6 +774,8 @@ DEF_INSTR(exit)
  * @arg0 - the initialized local variable.
  * @arg1 - type of the local variable.
  * @arg2 - address of the source `vm::IVMValue`.
+ * @TODO: #3750 The address is only valid, because the process owning the `vm::IVMValue` outlives
+ * every use of the bytecode. Replace the raw address once CTV is VMValue based.
  */
 DEF_INSTR(
 	initFromVMValue_pany_type_imm,
