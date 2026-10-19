@@ -30,6 +30,7 @@ pub struct Manifest {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(transparent)]
+/// Registry dependencies schema.
 pub struct Dependencies(pub Vec<Dependency>);
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

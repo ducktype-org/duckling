@@ -88,7 +88,18 @@ pub struct Metadata {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
+/// Schema of the `dependencies:` table (or its logical variants).
 pub struct Dependencies(pub HashMap<String, Dependency>);
+
+impl<'a> IntoIterator for &'a Dependencies {
+    type Item = <&'a HashMap<String, Dependency> as IntoIterator>::Item;
+
+    type IntoIter = <&'a HashMap<String, Dependency> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
