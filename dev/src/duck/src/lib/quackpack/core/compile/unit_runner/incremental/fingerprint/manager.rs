@@ -13,12 +13,11 @@
 
 use std::path::PathBuf;
 
-use super::BuildData;
 use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult};
 
-const LOCK_NANE: &str = ".lock";
-const FPRINT_NANE: &str = "data.json";
+const LOCK_NAME: &str = ".lock";
+const FPRINT_NAME: &str = "data.json";
 
 #[derive(Debug)]
 pub struct FingerprintManager {
@@ -33,7 +32,7 @@ impl FingerprintManager {
 
     /// Lock exclusively this [`FingerprintManager`].
     pub fn lock(&mut self, ctx: &DuckContext) -> QuackResult<ExclusiveFingerprintGuard<'_>> {
-        let lock = self.manager.open_exclusive(LOCK_NANE, ctx)?;
+        let lock = self.manager.open_exclusive(LOCK_NAME, ctx)?;
         Ok(ExclusiveFingerprintGuard {
             manager: self,
             _lock: lock,
@@ -64,13 +63,13 @@ impl ExclusiveFingerprintGuard<'_> {
     /// Write [`BuildData`] to the fingerprint file.
     ///
     /// [`BuildData`]: super::BuildData
-    pub fn write_build_data(&self, data: BuildData) -> QuackResult<()> {
+    pub fn write_build_data(&self, data: super::BuildData) -> QuackResult<()> {
         let path = self.fingerprint_path();
         data.write_fingerprint(&path)
     }
 
     /// Get the path to the fingerprint file with data.
     pub fn fingerprint_path(&self) -> PathBuf {
-        self.manager.manager.not_locked_path().join(FPRINT_NANE)
+        self.manager.manager.not_locked_path().join(FPRINT_NAME)
     }
 }

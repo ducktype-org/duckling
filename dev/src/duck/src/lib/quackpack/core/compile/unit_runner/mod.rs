@@ -101,7 +101,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
 
     #[instrument(skip_all)]
     /// Read the previous build fingerprint, generating [`RedGreenData`] from it.
-    /// Saving the new fingerprint is postponed to the end of the whole builds, so this function returns a triple,
+    /// Saving the new fingerprint is postponed to the end of the whole builds, so this function returns a tuple,
     /// consisting of:
     /// - [`BuildData`] --- the new fingerprint, yet to be written;
     /// - [`IncrementalData`] --- all information necessary for performing package-level incremental compilation;
