@@ -12,10 +12,9 @@
 #include <vm/loader/loader.hpp>
 
 /**
- * @brief Checks how local variables are initialized and deinitialized in micro bytecode.
- *
- * A local is initialized without a block, and the block is only created once something needs to
- * refer to the variable through it.
+ * @brief What belongs here: how the loader initializes and deinitializes local variables when it
+ * lowers a program to micro bytecode. A local is initialized without a block, and the block is
+ * only created once something needs to refer to the variable through it.
  */
 class LocalInitializationTests: public tester::TestSuite {
 #undef TESTER_CLASS
