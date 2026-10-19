@@ -149,14 +149,14 @@ Tests:
     Cases:
       all:
         Input:
-          String: "  -42 17\n3.5\t2.25\nduck  ling\nx rest of the line\nhello world\n\n"
+          String: "  -42 17\n3.5\t2.25\n-2000000000 -30000 -100\n4000000000 60000 200 300 130\nduck  ling\nx rest of the line\nhello world\n\n"
         Output:
-          String: "-42\n17\n3.5\n2.25\n[duck]\n[ling]\nx[ rest of the line]\n[hello world]\n[]\n[]\n[]\n"
+          String: "-42\n17\n3.5\n2.25\n-2000000000\n-30000\n-100\n4000000000\n60000\n200\n44\n-126\n[duck]\n[ling]\nx[ rest of the line]\n[hello world]\n[]\n[]\n[]\n"
         ExitCode: 0
       llvm_valgrind:
         TimeOut: 3 # 1 second is often not enough on runners
         Input:
-          String: "  -42 17\n3.5\t2.25\nduck  ling\nx rest of the line\nhello world\n\n"
+          String: "  -42 17\n3.5\t2.25\n-2000000000 -30000 -100\n4000000000 60000 200 300 130\nduck  ling\nx rest of the line\nhello world\n\n"
         Output:
-          String: "-42\n17\n3.5\n2.25\n[duck]\n[ling]\nx[ rest of the line]\n[hello world]\n[]\n[]\n[]\n"
+          String: "-42\n17\n3.5\n2.25\n-2000000000\n-30000\n-100\n4000000000\n60000\n200\n44\n-126\n[duck]\n[ling]\nx[ rest of the line]\n[hello world]\n[]\n[]\n[]\n"
         ExitCode: 0

@@ -12,6 +12,15 @@ fun main() -> i64 = {
     print(readF64()); # 3.5
     print(readF32()); # 2.25
 
+    print(readI32()); # -2000000000
+    print(readI16()); # -30000
+    print(readI8()); # -100
+    print(readU32()); # 4000000000
+    print(readU16()); # 60000
+    print(readU8()); # 200
+    print(readU8()); # 44 (300 does not fit, only the low 8 bits stay)
+    print(readI8()); # -126 (130 wraps around)
+
     printBracketed(readWord()); # [duck]
     printBracketed(readWord()); # [ling]
 

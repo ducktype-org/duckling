@@ -23,6 +23,22 @@ fun readI64() -> i64 = pio.readI64();
 fun readU64() -> u64 = pio.readU64();
 
 #{
+    The narrower integer readers read like `readI64()` / `readU64()` and then cast the value. A
+    number that does not fit keeps only its low bits, the same as an `as` cast.
+#}
+fun readI32() -> i32 = pio.readI64() as i32;
+
+fun readI16() -> i16 = pio.readI64() as i16;
+
+fun readI8() -> i8 = pio.readI64() as i8;
+
+fun readU32() -> u32 = pio.readU64() as u32;
+
+fun readU16() -> u16 = pio.readU64() as u16;
+
+fun readU8() -> u8 = pio.readU64() as u8;
+
+#{
     Reads a floating-point number, e.g. `3.14` or `-6.022e+23`.
 #}
 fun readF64() -> f64 = pio.readF64();
