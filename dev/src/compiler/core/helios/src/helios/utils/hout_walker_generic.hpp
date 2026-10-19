@@ -118,6 +118,8 @@ namespace compiler::helios::code {
 
 		void visitIdentifierExpr(const IdentifierExpr& e) override { handler(e); }
 
+		void visitFunctionRefExpr(const FunctionRefExpr& e) override { handler(e); }
+
 		void visitDefaultValueExpr(const DefaultValueExpr& e) override { handler(e); }
 
 		// --- Composite expressions: hand to the handler (pre-order), then descend. ---
@@ -166,6 +168,12 @@ namespace compiler::helios::code {
 			for (const auto& subtype: e.subtypes) walk(*subtype);
 		}
 
+		void visitFunctionTypeExpr(const FunctionTypeExpr& e) override {
+			handler(e);
+			for (const auto& parameter: e.parameters) walk(*parameter);
+			walk(*e.result);
+		}
+
 		void visitVariantConstructExpr(const VariantConstructExpr& e) override {
 			handler(e);
 			walk(*e.inner);
@@ -178,6 +186,12 @@ namespace compiler::helios::code {
 		}
 
 		void visitCallExpr(const CallExpr& e) override {
+			handler(e);
+			walk(*e.callee);
+			for (const auto& argument: e.arguments) walk(*argument);
+		}
+
+		void visitIndirectCallExpr(const IndirectCallExpr& e) override {
 			handler(e);
 			walk(*e.callee);
 			for (const auto& argument: e.arguments) walk(*argument);

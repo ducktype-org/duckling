@@ -46,6 +46,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testFunctionValueErrors);
 		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
@@ -1651,6 +1652,37 @@ private:
 		checkForErrorOnCompileModule(
 			R"(fun main() = { return "bad"; })",
 			{ "slice char", "cannot be converted to type `i64`" },
+			1
+		);
+	}
+
+	void testFunctionValueErrors() {
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f: fun(i64) -> i64 = add; return 0; } )",
+			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `const Function "
+		      "(i64) -> (i64)`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(1); } )",
+			{ "The number of arguments does not match the parameters of the function type." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(a = 1, b = 2); } )",
+			{ "Named arguments cannot be used in a call through a function value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(1, "x"); } )",
+			{ "cannot be converted to type" },
 			1
 		);
 	}

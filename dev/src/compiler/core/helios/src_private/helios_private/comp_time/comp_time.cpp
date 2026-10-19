@@ -753,6 +753,43 @@ namespace compiler::helios {
 				} };
 			}
 
+			void visitFunctionTypeExpr(const code::FunctionTypeExpr& expr) final {
+				std::vector<tsh::SymbolType<>> parameter_types;
+				for (auto& parameter: expr.parameters) {
+					const auto parameter_ctv = evalHoutExpr(ctx, parameter.ref());
+					if (parameter_ctv.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+					parameter_types.emplace_back(
+						parameter_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+					);
+				}
+
+				const auto result_ctv = evalHoutExpr(ctx, expr.result.ref());
+				if (result_ctv.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+
+				result = CompileTimeValue{ tsh::SymbolType<>{
+					ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = std::move(parameter_types),
+						.result_type = result_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(),
+					}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				} };
+			}
+
+			void visitFunctionRefExpr(const code::FunctionRefExpr&) final {
+				result = CouldNotShortPath{};
+			}
+
+			void visitIndirectCallExpr(const code::IndirectCallExpr&) final {
+				result = CouldNotShortPath{};
+			}
+
 			void visitMatchExpr(const code::MatchExpr& expr) final {
 				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating a `match` at compile time.", expr.origin.getStablePosition()

@@ -116,6 +116,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	VariantTryProject,
 
 	Call,
+	/** Call through a function pointer: [callee, args...], the signature is in
+	 * `IndirectCallParameters`. */
+	IndirectCall,
 
 	ReturnVoid,
 	ReturnValue,
@@ -611,10 +614,22 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Parameters of `Operation::IndirectCall`: the signature of the called function.
+	 */
+	struct IndirectCallParameters final {
+		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
+		CRef<tsl::TypeLayout>                               return_type_layout;
+	};
+
+	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
+	using InstrParameters = std::variant<
+		NoInstrParameters,
+		CastParameters,
+		VariantParameters,
+		MetaParameters,
+		IndirectCallParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;

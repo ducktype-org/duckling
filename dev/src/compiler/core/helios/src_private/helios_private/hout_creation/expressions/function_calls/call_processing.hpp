@@ -37,6 +37,22 @@ namespace compiler::helios::code {
 	);
 
 	/**
+	 * @brief Creates a call through @p callee, a value of a function type, like `f(1, 2)` where `f`
+	 * is a variable. Only positional arguments are allowed, each is coerced to the corresponding
+	 * parameter type of the function type.
+	 *
+	 * @param callee The expression producing the function value. Its type must be a function type.
+	 * @param whole_call_origin The origin of the whole call expression.
+	 * @param call_expr The PST call expression (the `(...)` part).
+	 */
+	query::QResult<Box<Expr>> processIndirectCall(
+		query::Context&              ctx,
+		Box<Expr>                    callee,
+		ElementOrigin                whole_call_origin,
+		pst::Access<pst::expr::Call> call_expr
+	);
+
+	/**
 	 * @brief Same as above, but for methods. It finds the "self" argument and then calls the same
 	 * overload resolution as for normal function calls.
 	 *

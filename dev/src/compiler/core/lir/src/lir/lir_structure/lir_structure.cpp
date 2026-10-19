@@ -299,6 +299,11 @@ namespace compiler::lir {
 					output << "{ alt:" << params.alternative_index << " ("
 						   << params.alternative_type.toString() << ") }";
 				}
+				variant_case(IndirectCallParameters, params) {
+					output << "{ params:" << params.parameter_layouts->size()
+						   << ", ret:" << params.return_type_layout->getSourceType().toString()
+						   << " }";
+				}
 			}
 			output << " ";
 		}

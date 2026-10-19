@@ -8,6 +8,7 @@ SubDirs:
   - samples
   - statements
   - functions
+  - function_pointers
   - constants
   - classes
   - extern_c

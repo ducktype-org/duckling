@@ -118,6 +118,30 @@ namespace compiler::lir {
 			= abi::calling_conv::computeCallingConv(abi::hostTargetABI(), abi_fun_type) } };
 	}
 
+	/**
+	 * @brief Layouts of the parameters and of the result of a function type, as they are passed in
+	 * LIR. Information-less parameters are discarded.
+	 */
+	struct SignatureLayouts final {
+		std::vector<CRef<tsl::TypeLayout>> parameter_types;
+		CRef<tsl::TypeLayout>              return_type;
+	};
+
+	SignatureLayouts getSignatureLayouts(query::Context& ctx, tsh::FunctionAbstractType type) {
+		std::vector<CRef<tsl::TypeLayout>> parameter_types;
+		parameter_types.reserve(type.getParameterTypes().size());
+		for (const auto& param: type.getParameterTypes())
+			// Discard information-less parameters from LIR function parameter lists.
+			if (param.getType().carriesInformation(ctx))
+				parameter_types.emplace_back(
+					&ctx.query<tsl::QuerySymbolTypeLayout>(param)->valueOrPanicMsg(
+						"layout query failed at LIR stage"
+					)
+				);
+		return { .parameter_types = std::move(parameter_types),
+			     .return_type     = mirReturnType2LirLayout(ctx, type.getResultType()) };
+	}
+
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
 		tsh::FunctionAbstractType type
 			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
@@ -130,17 +154,7 @@ namespace compiler::lir {
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt
 			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
 
-		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
-		std::vector<CRef<tsl::TypeLayout>> parameter_types;
-		parameter_types.reserve(type.getParameterTypes().size());
-		for (const auto& param: type.getParameterTypes())
-			// Discard information-less parameters from LIR function parameter lists.
-			if (param.getType().carriesInformation(ctx))
-				parameter_types.emplace_back(
-					&ctx.query<tsl::QuerySymbolTypeLayout>(param)->valueOrPanicMsg(
-						"layout query failed at LIR stage"
-					)
-				);
+		auto [parameter_types, return_type] = getSignatureLayouts(ctx, type);
 		auto symbol_abi = getLIRAbi(ctx, helios_id, return_type, parameter_types);
 
 		return FunctionLiteral{
@@ -963,6 +977,36 @@ namespace compiler::lir {
 					auto args   = getLocations(mir_instruction.arguments);
 					curr_block->instructions.emplace_back(
 						Operation::Call, output, std::move(args), mir_instruction.metadata
+					);
+					break;
+				}
+				case mir::Operation::VCall: {
+					auto output = getOutput(mir_instruction.output);
+					auto args   = getLocations(mir_instruction.arguments);
+
+					const auto& callee = mir_instruction.arguments.at(0);
+					if (std::holds_alternative<mir::MIRFunctionLiteral>(callee.getVariant())) {
+						curr_block->instructions.emplace_back(
+							Operation::Call, output, std::move(args), mir_instruction.metadata
+						);
+						break;
+					}
+
+					const tsh::FunctionAbstractType function_type
+						= callee.get<mir::MIRPlace>().type.getType();
+					auto [parameter_types, return_type] = getSignatureLayouts(ctx, function_type);
+					curr_block->instructions.emplace_back(
+						Operation::IndirectCall,
+						output,
+						std::move(args),
+						mir_instruction.metadata,
+						IndirectCallParameters{
+							.parameter_layouts
+							= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(
+								std::move(parameter_types)
+							),
+							.return_type_layout = return_type,
+						}
 					);
 					break;
 				}

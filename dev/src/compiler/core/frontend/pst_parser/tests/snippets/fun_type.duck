@@ -1,0 +1,9 @@
+let a: fun() = f;
+let b: fun(i32, i64) -> bool = f;
+let c: fun(i32) -> Foo = f;
+let d: fun(Foo) -> ptr Foo = f;
+let e: fun(i32) -> fun(i32) -> i32 = f;
+let g: ptr fun(i32) -> i32 = f;
+let h: fun((i32, i32)) -> i32 | bool = f;
+let i: fun(i32,) -> i32 = f;
+fun apply(k: fun(i64) -> i64, x: i64) -> fun(i64) -> i64 = k;

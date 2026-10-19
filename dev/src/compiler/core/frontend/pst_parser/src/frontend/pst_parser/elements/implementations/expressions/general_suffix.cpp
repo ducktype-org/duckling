@@ -38,11 +38,14 @@ namespace pst::expr {
 		reduced_length--;
 		if (fwd == reduced_length) {}  // Error
 
+		auto continues_operand = [](const auto& token) {
+			return token.asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+			       ).copyValueOr(false)
+			    || token.is(NamedOperator::SingleArrow)
+			    || (token.isKeyword() && token.isPrefixOperator());
+		};
 		if (fwd + 1 < reduced_length && state[reduced_length - 1].isIdentifier()
-		    && !state[reduced_length - 2]
-		            .asBinaryOperator()
-		            .map([](auto x) { return x.isAccessOp(); })
-		            .copyValueOr(false))
+		    && !continues_operand(state[reduced_length - 2]))
 			reduced_length--;
 		return parseRecursive(state, base::safeIntConv<u64>(length - reduced_length));
 	}

@@ -25,6 +25,7 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
+#include <concepts>
 #include <ranges>
 
 namespace compiler::mir {
@@ -1134,7 +1135,20 @@ namespace compiler::mir {
 			valueOutput(next_block, boolean_output);
 		}
 
-		void visitCallExpr(const hc::CallExpr& expr) override {
+		/**
+		 * @brief Lowers a call of @p operation with the given @p arguments.
+		 *
+		 * @p lower_callee produces the callee value, which becomes the first argument of the
+		 * instruction. It may lower code before the arguments into the passed continuation, so that
+		 * the callee is evaluated first.
+		 */
+		template<std::invocable<BlockBuilderRef&> CalleeLowering>
+		void lowerCall(
+			const hc::Expr&                   expr,
+			const std::vector<Box<hc::Expr>>& arguments,
+			Operation                         operation,
+			CalleeLowering                    lower_callee
+		) {
 			bool never_returns
 				= expr.expression_type.getSymbolType().getType().getKind() == tsh::Kind::Void;
 
@@ -1150,29 +1164,21 @@ namespace compiler::mir {
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
 
-			auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
-			if (not function_symid.has_value()) {
-				CORE_PANIC(
-					"Call expression where callee is not an identifier expression is currently not "
-					"supported."
-				);
-			}
-			args.emplace_back(MIRFunctionLiteral{ function_symid.value() });
-
 			std::vector<OperationFlag> flags;
-			for (const auto& arg: expr.arguments | std::views::reverse) {
+			for (const auto& arg: arguments | std::views::reverse) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 				args.push_back(arg_lowered.getResultAndTakeOwnership(function, flags));
 				sub_continuation = arg_lowered.begin;
 			}
-			std::reverse(args.begin() + 1, args.end());
+			std::reverse(args.begin(), args.end());
+			args.insert(args.begin(), lower_callee(sub_continuation));
 
 			auto result = ExprLowerRes(
 				sub_continuation,
 				ExprLowerRes::Finalizer(
 					call,
 					Instruction{
-						Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
+						operation, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
 					expr.expression_type.getSymbolType()
 				)
 			);
@@ -1185,6 +1191,44 @@ namespace compiler::mir {
 				valueOutput(sub_continuation, result.getResult(function));
 			else
 				output(std::move(result));
+		}
+
+		void visitCallExpr(const hc::CallExpr& expr) override {
+			lowerCall(expr, expr.arguments, Operation::Call, [&](BlockBuilderRef&) -> MIRValue {
+				auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
+				if (not function_symid.has_value()) {
+					CORE_PANIC(
+						"Call expression where callee is not an identifier expression is currently "
+						"not supported."
+					);
+				}
+				return MIRFunctionLiteral{ function_symid.value() };
+			});
+		}
+
+		void visitIndirectCallExpr(const hc::IndirectCallExpr& expr) override {
+			lowerCall(
+				expr,
+				expr.arguments,
+				Operation::VCall,
+				[&](BlockBuilderRef& sub_continuation) -> MIRValue {
+					auto callee_lowered = lowerSubExpr(*expr.callee, sub_continuation);
+					auto callee         = callee_lowered.getResult(function);
+					sub_continuation    = callee_lowered.begin;
+					return callee;
+				}
+			);
+		}
+
+		void visitFunctionRefExpr(const hc::FunctionRefExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRFunctionLiteral{ expr.function } });
+		}
+
+		void visitFunctionTypeExpr(const hc::FunctionTypeExpr& expr) override {
+			function.getContext().logInt(makeBox<dia::NotYetImplementedCodeError>(
+				"Creating a function type at runtime is not supported yet.", expr.getPosition()
+			));
+			query::throwFailed();
 		}
 
 		bool isEmptyCast(const hc::CastExpr& expr) {

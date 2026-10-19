@@ -140,6 +140,19 @@ namespace compiler::helios::code {
 	 * @brief This error message is used when there are both function symbols and non-function valid
 	 * symbols found during the lookup (like function and class constructor with the same name).
 	 */
+	class FunctionRefBuiltinError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "function_ref_builtin" };
+		}
+
+	public:
+		FunctionRefBuiltinError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
 	class CallInvalidCallablesError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -467,6 +480,26 @@ namespace compiler::helios::code {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Whether @p symbol names a value of a function type, so a round call on it is a
+		 * call through a function value.
+		 */
+		[[nodiscard]]
+		bool isFunctionValueSymbol(SymID symbol) const {
+			switch (kind(symbol)) {
+			case SymbolKind::Variable:
+			case SymbolKind::Parameter:
+			case SymbolKind::Const:
+			case SymbolKind::Field: {
+				const auto& type = query_ctx.query<QueryTypeOfSymbol>(symbol);
+				return type->hasValue()
+				    && type->valueOrThrow().getType().getKind() == tsh::Kind::Function;
+			}
+			default:
+				return false;
+			}
+		}
+
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
 
 		/**
@@ -490,6 +523,22 @@ namespace compiler::helios::code {
 				const auto lookup_qresult
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+
+				if (lookup_result->leaves.size() == 1
+				    && isFunctionValueSymbol(lookup_result->leaves.front())) {
+					auto value_result = processNamespaceOrValue(
+						lookup_result->leaves.front(), pstOrigin(ident), ident
+					);
+					UNPACK_QRESULT_MOVE(auto value_state =, value_result);
+					auto res = processIndirectCall(
+						query_ctx,
+						value_state.getExpr(),
+						multiplePstOriginOrdered({ ident, call_expr }),
+						call_expr
+					);
+					UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+					return ChainState::ofExpr(std::move(expr));
+				}
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -608,6 +657,14 @@ namespace compiler::helios::code {
 			// was deleted in PR #1239. See it for reference.
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
+				if (current_expr->expression_type.getType().getKind() == tsh::Kind::Function) {
+					auto expr_result = processIndirectCall(
+						query_ctx, std::move(current_expr), pstOrigin(call_expr), call_expr
+					);
+					UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+					return ChainState::ofExpr(std::move(expr));
+				}
+
 				// @TODO: #982 improve type lookup and provide correct
 				// candidates for processFunctionCall. Write tests for this case, when it will be
 				// implemented.
@@ -809,6 +866,20 @@ namespace compiler::helios::code {
 				                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 						  );
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+
+				if (lookup_result->leaves.size() == 1
+				    && isFunctionValueSymbol(lookup_result->leaves.front())) {
+					auto field_result = processPSTExpr(std::move(current_expr), expr_access);
+					UNPACK_QRESULT_MOVE(auto field_state =, field_result);
+					auto res = processIndirectCall(
+						query_ctx,
+						field_state.getExpr(),
+						multiplePstOriginOrdered({ expr_access, call_expr }),
+						call_expr
+					);
+					UNPACK_QRESULT_MOVE(base::Box<Expr> call =, res);
+					return ChainState::ofExpr(std::move(call));
+				}
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -1013,6 +1084,17 @@ namespace compiler::helios::code {
 			}
 			case SymbolKind::Template: {
 				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
+			}
+			case SymbolKind::Function:
+			case SymbolKind::FunctionDeclaration: {
+				if (isBuiltin(symbol).has_value()) {
+					query_ctx.logInt(makeBox<FunctionRefBuiltinError>(
+						chain_elements.at(index).unlock(query_ctx)->getStablePosition()
+					));
+					return query::Failed();
+				}
+				auto expr = makeBox<FunctionRefExpr>(query_ctx, pst_element_origin, symbol);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
 				query_ctx.logInt(makeBox<dia::PlaceholderError>(
