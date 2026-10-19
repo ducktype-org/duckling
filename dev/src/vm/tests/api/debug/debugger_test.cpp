@@ -12,20 +12,19 @@
 
 #include <vm/api/vm.hpp>
 
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
 #include <future>
-#include <mutex>
 #include <thread>
 
 namespace api = vm::api;
 
 /**
- * @brief Tests of the DVM debugger endpoints on a single-threaded process.
+ * @brief What belongs here: the `vm::api` debug endpoints on a single-threaded process. That covers
+ * breakpoints, pausing, resuming and stepping (and when they are refused), the current position,
+ * stack frames and their values, and mapping source lines to instructions.
  *
- * The multi-threaded behaviour of the same endpoints is covered by
- * `multithreaded_debugger_tests.cpp`.
+ * The same endpoints on a process with several VMThreads go to `multithreaded_debugger_test.cpp`,
+ * and on a program that never ends to `debugger_infinite_test.cpp`. The `vm::debugger` tool built
+ * on top of them goes to `debugger/`.
  */
 class VmDebugTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -48,7 +47,6 @@ public:
 		TESTER_ADD_TEST(setBreakpointRefusals);
 		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
-		TESTER_ADD_TEST(outputTest);
 	}
 
 private:
@@ -57,7 +55,7 @@ private:
 	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
 	 */
 	void pausesOnBreakpointAndResumes() {
-		auto pid = spawnAndLoad("breakpoint.dbc");
+		auto pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
 			ASSERT_TRUE(
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
@@ -85,7 +83,7 @@ private:
 	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
 	 */
 	void notPausesOnRemovedBreakpoint() {
-		auto pid = spawnAndLoad("breakpoint.dbc");
+		auto pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
 			ASSERT_TRUE(
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
@@ -108,7 +106,7 @@ private:
 	 * @brief Checks if the program will execute step by step.
 	 */
 	void executesStepByStep() {
-		auto pid = spawnAndLoad("breakpoint.dbc");
+		auto pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
 			ASSERT_TRUE(
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
@@ -138,7 +136,7 @@ private:
 	}
 
 	void stepsUntilProgramTerminates() {
-		auto pid = spawnAndLoad("breakpoint.dbc");
+		auto pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, true));
 		ASSERT_HAS_VALUE(vm::api::run(pid));
 		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
@@ -205,7 +203,7 @@ private:
 		// `pause` refuses a thread that never started, one that already terminated and one it does
 		// not know. Pausing a thread that is already paused is a no-op, not an error.
 
-		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/while_true.dbc");
 
 		assertRefusedWith<api::OtherError>(
 			api::pause(pid, api::ThreadID{ 77 }), "pause of an unknown thread", "Thread not found"
@@ -264,7 +262,7 @@ private:
 	void resumeRefusals() {
 		// `resume` only means something to a paused thread.
 
-		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/while_true.dbc");
 
 		assertRefusedWith<api::OtherError>(
 			api::resume(pid, api::ThreadID{ 77 }), "resume of an unknown thread", "Thread not found"
@@ -286,7 +284,7 @@ private:
 	void stepRefusals() {
 		// A thread that is not paused has no position to step from.
 
-		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/while_true.dbc");
 
 		assertRefusedWith<api::OtherError>(
 			api::step(pid, api::ThreadID{ 77 }), "step of an unknown thread", "Thread not found"
@@ -309,7 +307,7 @@ private:
 		// On a single-threaded process `pauseAll` is `pause` of the main thread, and it reports an
 		// empty list when there is nothing to pause.
 
-		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/while_true.dbc");
 
 		auto nothing_running = api::pauseAll(pid);
 		assertSucceeded(nothing_running, "pauseAll on a NotStarted process");
@@ -339,7 +337,7 @@ private:
 		// `waitForBreakpoint` says the thread terminated instead of hanging forever when no
 		// breakpoint is ever hit.
 
-		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
 		assertRefusedWith<api::OtherError>(
 			api::waitForBreakpoint(pid, api::ThreadID{ 77 }),
 			"waitForBreakpoint on an unknown thread",
@@ -358,7 +356,7 @@ private:
 	void currentPositionEndpoint() {
 		// `getCurrentPosition` answers for a paused thread only, and bounds-checks the frame index.
 
-		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/while_true.dbc");
 		assertRefusedWith<api::OtherError>(
 			api::getCurrentPosition(pid), "getCurrentPosition before a run", "wrong execution status"
 		);
@@ -392,7 +390,7 @@ private:
 		// executing - before they even look at the thread id. What they return for a parked thread
 		// is covered by `vmApiMemoryAllTypes`.
 
-		const vm::PID pid = spawnAndLoad("while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/while_true.dbc");
 		assertSucceeded(api::run(pid), "run");
 		waitUntilStatus(pid, isRunning, "Running");
 
@@ -428,7 +426,7 @@ private:
 	void setBreakpointRefusals() {
 		// `setBreakpoint` names why it refuses, and is idempotent in both directions.
 
-		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
+		const vm::PID pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
 
 		assertRefusedWith<api::OtherError>(
 			api::setBreakpoint(pid, base::StrID("no_such_function"), 0, true),
@@ -459,10 +457,10 @@ private:
 	 * @brief Checks dbc to cc mapping.
 	 */
 	void backMapTest() {
-		auto pid = spawnAndLoad("vm_api_tests.dbc");
+		auto pid = spawnAndLoad("../../common/programs/vm_api_tests.dbc");
 
 		auto assert_mapping = [&](usize line, usize index) {
-			fs::File file(path("vm_api_tests.dbc"));
+			fs::File file(path("../../common/programs/vm_api_tests.dbc"));
 			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
 
 			ASSERT_HAS_VALUE(map_response);
@@ -473,7 +471,7 @@ private:
 		};
 
 		auto assert_no_maping = [&](usize line) {
-			fs::File file(path("vm_api_tests.dbc"));
+			fs::File file(path("../../common/programs/vm_api_tests.dbc"));
 			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
 			ASSERT_TRUE(!map_response);
 		};
@@ -495,7 +493,7 @@ private:
 	 * correctly.
 	 */
 	void vmApiMemoryAllTypes() {
-		auto pid = spawnAndLoad("breakpoint_all_types.dbc");
+		auto pid = spawnAndLoad("../../common/programs/breakpoint_all_types.dbc");
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true));
 		auto tid = vm::api::ThreadID(0);
 
@@ -614,32 +612,6 @@ private:
 			ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 0);
 		}
 	}
-
-	/**
-	 * @brief test if the output emitter works
-	 */
-	void outputTest() {
-		std::atomic_bool        output = false;
-		std::condition_variable cv;
-		std::mutex              m;
-
-		auto                          pid = spawnAndLoad("vm_api_tests.dbc");
-		events::Listener<std::string> output_listener([&](const std::string& str) {
-			ASSERT_EQUAL_PRINT("7", str);
-			output.store(true);
-			cv.notify_all();
-		});
-
-		ASSERT_HAS_VALUE(vm::api::attachOutputListener(pid, &output_listener));
-
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-
-		std::unique_lock lk(m);
-		// Test timeout
-		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
-
-		ASSERT_HAS_VALUE(vm::api::stop(pid));
-	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/debugger/");
+TESTER_COMMON_MAIN("/src/vm/tests/api/debug/");
