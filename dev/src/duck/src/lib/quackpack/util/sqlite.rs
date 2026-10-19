@@ -27,6 +27,15 @@ pub fn run_migrations(
     connection: &mut Connection,
     migrations: &[Migration],
 ) -> rusqlite::Result<()> {
+    debug_assert!(migrations.is_sorted_by_key(|migration| migration.version));
+    if cfg!(debug_assertions) {
+        let number_of_migrations = migrations.len();
+        let versions = migrations
+            .iter()
+            .map(|migration| migration.version as usize);
+        let expected_versions = 1..=number_of_migrations;
+        assert!(versions.eq(expected_versions));
+    }
     let tx = connection.transaction_with_behavior(rusqlite::TransactionBehavior::Exclusive)?;
     tx.execute(
         "CREATE TABLE IF NOT EXISTS schema_migrations (

@@ -22,3 +22,21 @@ const CREATE_BASIC_TABLE: Migration = Migration {
 };
 
 pub(super) const MIGRATIONS: &[Migration] = &[CREATE_BASIC_TABLE];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migrations_are_sorted_by_version() {
+        for (idx, migration) in MIGRATIONS.iter().enumerate() {
+            assert_eq!(
+                i32::try_from(idx + 1).unwrap(),
+                migration.version,
+                "{}th migration should have version {}",
+                idx + 1,
+                idx + 1
+            );
+        }
+    }
+}
