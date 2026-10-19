@@ -448,16 +448,20 @@ impl PathOpsExt for Path {
         //   and are properly aligned,
         // - size is exactly `size_of::<FILE_BASIC_INFO>()` bytes,
         // - `FileBasicInfo` is the valid class for `FILE_BASIC_INFO` struct,
-        // - OS ensures that `info` either is valid if the call succeeds, or isn't changed if the call fails. 
+        // - OS ensures that `info` either is valid if the call succeeds, or isn't changed if the call fails.
         //   Either way, it will be a valid `FILE_BASIC_INFO`.
-        unsafe {
+        let return_value = unsafe {
             GetFileInformationByHandleEx(
                 handle,
                 FileBasicInfo,
                 &mut info as *mut _ as *mut _,
                 std::mem::size_of::<FILE_BASIC_INFO>() as u32,
             )
-            .with_context(|| format!("when getting file information for `{}`", self.display()));
+        };
+        if return_value == 0 {
+            return Err(std::io::Error::last_os_error()).with_context(|| {
+                format!("when getting file information for `{}`", self.display())
+            });
         }
 
         Ok(SystemTime::UNIX_EPOCH + Duration::from_nanos(info.ChangeTime as u64))
