@@ -34,14 +34,13 @@ private:
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID(base::generateRandomString(32)));
+		builder->setKind(frontend::ModuleKind::ReplChain);
 
 		auto virtual_file = fs::FileManager::createRandomVirtualFile(source_code);
 		builder->setMainSourceFile(virtual_file);
 		builder->setName(base::StrID("test_repl_module"));
 
-		frontend::ReplData repl_data;
-		if (parent.has_value()) repl_data.m_repl_module_parent = parent.value();
-		builder->setReplModule(repl_data);
+		builder->setParent(parent.value());
 
 		return builder->finalize()->getModuleID();
 	}

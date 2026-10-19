@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "module_id.hpp"
 #include "module_tree.hpp"
 
 #include <base/collections/maps.hpp>
@@ -39,6 +40,8 @@ namespace compiler::frontend {
 		 * @return Boxed ModuleTreeBuilder.
 		 */
 		static base::Box<ModuleTreeBuilder> createWithRandomPackageID();
+
+		void setKind(ModuleKind kind);
 
 		/**
 		 * Factory method to create ModuleTree from filesystem tree.
@@ -109,12 +112,6 @@ namespace compiler::frontend {
 		void setParent(base::Ref<ModuleTree> parent);
 
 		/**
-		 * Sets REPL-specific module data.
-		 * @param repl_data The ReplData struct.
-		 */
-		void setReplModule(const ReplData& repl_data);
-
-		/**
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
@@ -164,6 +161,7 @@ namespace compiler::frontend {
 		 */
 		void handleNewFile(const fs::File& file);
 
+		base::Optional<ModuleKind>                        kind;
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
 		base::StrID                                       m_package_id;
@@ -172,7 +170,5 @@ namespace compiler::frontend {
 
 		base::StrID m_name;
 		bool        m_finalized;
-
-		base::Optional<ReplData> m_repl_data;
 	};
 }
