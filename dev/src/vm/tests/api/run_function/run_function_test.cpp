@@ -52,8 +52,6 @@ private:
 	public:
 		explicit ForeignVMValue(vm::PID pid): pid(pid) {}
 
-		void freeData() override {}
-
 		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
 			CORE_PANIC("ForeignVMValue has no type");
 		}
@@ -229,6 +227,13 @@ private:
 				"implementation"
 			);
 
+			// The foreign value holds no VM memory and the API refuses to free it.
+			assertRefusedWith<vm::api::OtherError>(
+				vm::api::freeVMValue(pid, arguments.at(1).refMut()),
+				"freeVMValue of a foreign VMValue",
+				"is not a SafeVMValue"
+			);
+			arguments.pop_back();
 			freeArguments(arguments);
 		}
 
@@ -336,7 +341,7 @@ private:
 		assertSucceeded(empty_variant_response, "getVMValue");
 		auto empty_variant = std::move(empty_variant_response->vm_value);
 		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
-		empty_variant->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, empty_variant.refMut()));
 
 		assert_type_tag(8, 0);
 		assert_type_tag(8, 1);
@@ -356,9 +361,9 @@ private:
 			},
 			"An out-of-range variant tag must not be treated as an empty variant."
 		);
-		invalid_variant->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, invalid_variant.refMut()));
 
-		vm_value_max64->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, vm_value_max64.refMut()));
 		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 };

@@ -181,7 +181,7 @@ private:
 		);
 		assertSucceeded(vm::api::join(pid), "Joining initialize_vector");
 
-		vm_value->freeData();
+		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, vm_value.refMut()));
 
 		runTestOnVm(pid, { "1 2 3" }, { "3" });
 		ASSERT_EQUAL_PRINT(global_opaque::vec.size(), 3);

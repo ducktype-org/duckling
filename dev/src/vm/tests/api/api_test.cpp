@@ -397,8 +397,8 @@ private:
 			);
 			assertSucceeded(api::join(pid, started.value()), "join of the `add` thread");
 
-			wrong_type->vm_value->freeData();
-			right_type->vm_value->freeData();
+			assertSucceeded(api::freeVMValue(pid, wrong_type->vm_value.refMut()), "freeVMValue");
+			assertSucceeded(api::freeVMValue(pid, right_type->vm_value.refMut()), "freeVMValue");
 			(void) api::kill(pid);
 		}
 
@@ -418,8 +418,8 @@ private:
 			assertSucceeded(result, "runFunctionAwait of `add`");
 			assertReturnedI64(result.value(), 42, "runFunctionAwait of `add`");
 
-			lhs->vm_value->freeData();
-			rhs->vm_value->freeData();
+			assertSucceeded(api::freeVMValue(pid, lhs->vm_value.refMut()), "freeVMValue");
+			assertSucceeded(api::freeVMValue(pid, rhs->vm_value.refMut()), "freeVMValue");
 
 			assertRefusedWith<api::RunError>(
 				api::runFunctionAwait(pid, "no_such_function"),
@@ -980,8 +980,8 @@ private:
 	}
 
 	void dataEndpoints() {
-		// `getType` and `getVMValue` answer for loaded types only, and only while the process can
-		// respond.
+		// `getType`, `getVMValue` and `freeVMValue` answer for loaded types only, and only while
+		// the process can respond.
 
 		const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 
@@ -992,11 +992,61 @@ private:
 
 		auto value = api::getVMValue(pid, "i64");
 		assertSucceeded(value, "getVMValue(i64)");
-		// The caller owns this one, see `vm::IVMValue::freeData()`.
-		value->vm_value->freeData();
+		// The caller owns this one, so it has to be freed through the API.
+		assertSucceeded(api::freeVMValue(pid, value->vm_value.refMut()), "freeVMValue");
+		assertRefusedWith<api::OtherError>(
+			api::freeVMValue(pid, value->vm_value.refMut()),
+			"freeVMValue of an already freed value",
+			"already freed"
+		);
 		assertRefusedWith<api::OtherError>(
 			api::getVMValue(pid, "DoesNotExist"), "getVMValue of an unknown type", "Type not found"
 		);
+
+		{
+			const vm::PID other_pid   = spawnAndLoad("../common/programs/while_true.dbc");
+			auto          other_value = api::getVMValue(other_pid, "i64");
+			assertSucceeded(other_value, "getVMValue(i64) of the other process");
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(pid, other_value->vm_value.refMut()),
+				"freeVMValue of a value from a different process",
+				"different process"
+			);
+			assertSucceeded(
+				api::freeVMValue(other_pid, other_value->vm_value.refMut()),
+				"freeVMValue in the owning process"
+			);
+			(void) api::kill(other_pid);
+		}
+
+		{
+			// The exit values are owned by the process and can't be freed by the user.
+			const vm::PID add_pid  = spawnAndLoad("add.dbc");
+			auto          argument = api::getVMValue(add_pid, "i64");
+			assertSucceeded(argument, "getVMValue(i64) of the `add` argument");
+			auto result = api::runFunctionAwait(
+				add_pid, "add", { argument->vm_value.refMut(), argument->vm_value.refMut() }
+			);
+			assertSucceeded(result, "runFunctionAwait of `add`");
+			ASSERT_MATCHES(result.value(), std::vector<Ref<vm::IVMValue>>);
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(
+					add_pid, v_get(result.value(), std::vector<Ref<vm::IVMValue>>).at(0)
+				),
+				"freeVMValue of an exit value",
+				"owned by the process"
+			);
+			assertSucceeded(
+				api::freeVMValue(add_pid, argument->vm_value.refMut()),
+				"freeVMValue of the `add` argument"
+			);
+			auto valid = api::deinitAndValidate(add_pid);
+			assertSucceeded(valid, "deinitAndValidate after a refused free of an exit value");
+			ASSERT_TRUE(valid.value().valid());
+		}
+
+		auto kept_value = api::getVMValue(pid, "i64");
+		assertSucceeded(kept_value, "getVMValue(i64) kept over the run");
 
 		assertSucceeded(api::run(pid), "run");
 		waitUntilStatus(pid, isRunning, "Running");
@@ -1009,8 +1059,16 @@ private:
 			"getVMValue of a running process",
 			"while program is running"
 		);
+		assertRefusedWith<api::OtherError>(
+			api::freeVMValue(pid, kept_value->vm_value.refMut()),
+			"freeVMValue of a running process",
+			"while program is running"
+		);
 
 		assertSucceeded(api::stop(pid), "stop");
+		assertSucceeded(
+			api::freeVMValue(pid, kept_value->vm_value.refMut()), "freeVMValue after the stop"
+		);
 		(void) api::kill(pid);
 	}
 
