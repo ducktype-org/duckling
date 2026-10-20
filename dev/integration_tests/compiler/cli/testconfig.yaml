@@ -79,6 +79,26 @@ Tests:
         package_path: "./duck_modules/inferred_name/inferred_name.dk"
         ExitCode: 0
 
+  ir-output-after-cached-build:
+    # The IR is printed and dumped while a module compiles. The first run fills the incremental
+    # cache; the second run asks for IR and must still recompile the module to print or dump it.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 5
+    compile_ir_output: "@{duckc_path} compile_package ./duck_modules/ir_output -O 0 --dvm-backend
+      -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
+    Run: "@{compile_ir_output} && @{second_run}"
+    Cases:
+      print-mir:
+        second_run: "@{expect_output} --out-regex 'MIRUnit:' -- @{compile_ir_output} --print-ir mir"
+        ExitCode: 0
+      print-lir:
+        second_run: "@{expect_output} --out-regex 'LIRUnit' -- @{compile_ir_output} --print-ir lir"
+        ExitCode: 0
+      dump-mir:
+        second_run: "@{compile_ir_output} --dump-ir mir
+          && test -f @{case_build}/duck_debug_artifacts/ir_output.ir_output.mir"
+        ExitCode: 0
+
   comp-time-output:
     # Test compile time output to stderr
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
