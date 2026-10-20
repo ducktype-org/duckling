@@ -269,8 +269,6 @@ private:
 	void testSyncRun() {
 		vm::PID pid = initProcess();
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
-		// `runFunctionAwait` returns only once the function finished, so there is nothing left to
-		// `join` afterwards.
 		const auto exit_value = vm::api::runFunctionAwait(pid, "foo", {});
 		ASSERT_HAS_VALUE(exit_value);
 		ASSERT_NO_VALUE(vm::api::join(pid));

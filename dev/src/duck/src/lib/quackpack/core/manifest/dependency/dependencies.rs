@@ -100,6 +100,7 @@ impl TryFrom<registry::Dependencies> for Dependencies {
 
     fn try_from(value: registry::Dependencies) -> Result<Self, Self::Error> {
         let deps = value
+            .0
             .into_iter()
             .map(Dependency::try_from)
             .collect::<Result<_, _>>()?;
@@ -116,5 +117,6 @@ impl TryFrom<Dependencies> for registry::Dependencies {
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()
+            .map(registry::Dependencies)
     }
 }

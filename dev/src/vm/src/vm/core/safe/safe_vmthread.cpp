@@ -189,7 +189,7 @@ namespace vm {
 			const auto& arg_type = func.parameters[static_cast<u64>(i)];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVMValue,
+				initFromVMValue_imm_off,
 				std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)),
 				stack_offset
 			));

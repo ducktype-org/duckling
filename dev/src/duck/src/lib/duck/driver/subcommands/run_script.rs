@@ -12,11 +12,10 @@ use clap::{Arg, ArgMatches, Command, ValueHint, value_parser};
 
 use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
+use crate::util::duckling_consts::DUCKLING_SCRIPT_EXT;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
-
-pub const DUCKLING_SCRIPT_EXT: &str = "dks";
 
 /// Creates parser for the `run_script` subcommand.
 pub fn get_parser() -> Command {

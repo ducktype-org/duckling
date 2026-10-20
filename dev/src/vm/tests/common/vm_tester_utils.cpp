@@ -96,14 +96,19 @@ void VmTestSuite::validateTransitions(const TransitionLog& log, std::string_view
 	ASSERT_NO_VALUE(illegal_edge, illegal_edge.has_value() ? *illegal_edge : "", " (", what, ")");
 }
 
-vm::PID VmTestSuite::spawnAndLoad(const std::string& dbc_filename) {
-	const vm::PID pid    = initProcess();
-	auto          loaded = vm::api::loadFiles(pid, { fs::File(path(dbc_filename)) });
-	ASSERT_HAS_VALUE(loaded, "Load of '", dbc_filename, "' failed: ", errorOf(loaded));
+vm::PID VmTestSuiteCore::spawnAndLoad(const std::string& dbc_filename) {
+	return spawnAndLoad(fs::File(path(dbc_filename)));
+}
+
+vm::PID VmTestSuiteCore::spawnAndLoad(const fs::File& dbc_file) {
+	const vm::PID pid = initProcess();
+	assertSucceeded(
+		vm::api::loadFiles(pid, { dbc_file }), base::strConcat("Load of '", dbc_file.name(), "'")
+	);
 	return pid;
 }
 
-fs::File VmTestSuite::inlineDbc(std::string_view name, std::string_view bytecode) {
+fs::File VmTestSuiteCore::inlineDbc(std::string_view name, std::string_view bytecode) {
 	return fs::FileManager::createRandomVirtualFile(bytecode, base::strConcat("_", name, ".dbc"));
 }
 
@@ -152,7 +157,7 @@ void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid, usize thread_count) {
 	fail(base::strConcat("The program never got all ", thread_count, " of its threads running"));
 }
 
-vm::PID VmTestSuite::initProcess(
+vm::PID VmTestSuiteCore::initProcess(
 	const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config
 ) {
 	auto process_pid_response = vm::api::spawn(config);
@@ -163,7 +168,7 @@ vm::PID VmTestSuite::initProcess(
 	return process_pid_response->pid;
 }
 
-void VmTestSuite::runTestOnVm(
+void VmTestSuiteCore::runTestOnVm(
 	const std::string&                 dbc_filename,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
@@ -175,7 +180,7 @@ void VmTestSuite::runTestOnVm(
 	);
 }
 
-void VmTestSuite::runTestOnVm(
+void VmTestSuiteCore::runTestOnVm(
 	const vm::code::CodeCollection&    code,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
@@ -185,7 +190,7 @@ void VmTestSuite::runTestOnVm(
 	handleTestResult(runTestOnVmGetResult(code, optional_input, optional_output, args), exit_code);
 }
 
-void VmTestSuite::runTestOnVm(
+void VmTestSuiteCore::runTestOnVm(
 	vm::PID                            pid,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
@@ -195,7 +200,7 @@ void VmTestSuite::runTestOnVm(
 	handleTestResult(runTestOnVmGetResult(pid, optional_input, optional_output, args), exit_code);
 }
 
-void VmTestSuite::assertExecutionPanickedWithAndKill(
+void VmTestSuiteCore::assertExecutionPanickedWithAndKill(
 	const TestResult& test_result, std::string_view err_piece
 ) {
 	std::string local_error        = "";
@@ -220,7 +225,7 @@ void VmTestSuite::assertExecutionPanickedWithAndKill(
 	}
 }
 
-void VmTestSuite::loadInvalidDbc(
+void VmTestSuiteCore::loadInvalidDbc(
 	const std::string&                   dbc_filename,
 	const std::vector<std::string_view>& error_keywords,
 	const vm::api::ExecutionConfig       config
@@ -228,7 +233,7 @@ void VmTestSuite::loadInvalidDbc(
 	loadInvalidDbc(fs::File(path(dbc_filename)), error_keywords, config);
 }
 
-void VmTestSuite::loadInvalidDbc(
+void VmTestSuiteCore::loadInvalidDbc(
 	const fs::File&                      dbc_file,
 	const std::vector<std::string_view>& error_keywords,
 	const vm::api::ExecutionConfig       config
@@ -248,7 +253,7 @@ void VmTestSuite::loadInvalidDbc(
 	}
 }
 
-void VmTestSuite::loadThenLoadInvalidDbc(
+void VmTestSuiteCore::loadThenLoadInvalidDbc(
 	const std::string&                   first_dbc,
 	const std::string&                   second_dbc,
 	const std::vector<std::string_view>& error_keywords,
@@ -275,13 +280,13 @@ void VmTestSuite::loadThenLoadInvalidDbc(
 	}
 }
 
-void VmTestSuite::loadValidDbc(
+void VmTestSuiteCore::loadValidDbc(
 	const std::string& dbc_filename, const vm::api::ExecutionConfig config
 ) {
 	loadValidDbc(fs::File(path(dbc_filename)), config);
 }
 
-void VmTestSuite::loadValidDbc(const fs::File& dbc_file, const vm::api::ExecutionConfig config) {
+void VmTestSuiteCore::loadValidDbc(const fs::File& dbc_file, const vm::api::ExecutionConfig config) {
 	auto res = vm::api::loadFiles(initProcess(process_config, config), { dbc_file });
 	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
 	ASSERT_HAS_VALUE(res);
@@ -291,7 +296,7 @@ void VmTestSuite::loadValidDbc(const fs::File& dbc_file, const vm::api::Executio
 	if (auto&& result = action; !result.has_value()) \
 		return { .pid = pid, .run_result = std::unexpected(result.error()) };
 
-auto VmTestSuite::runTestOnVmGetResult(
+auto VmTestSuiteCore::runTestOnVmGetResult(
 	vm::PID                            pid,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
@@ -325,7 +330,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 	return { .pid = pid, .run_result = exit_value };
 }
 
-auto VmTestSuite::runTestOnVmGetResult(
+auto VmTestSuiteCore::runTestOnVmGetResult(
 	const std::string&                 dbc_filename,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
@@ -337,7 +342,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 	return runTestOnVmGetResult(pid, optional_input, optional_output, args);
 }
 
-auto VmTestSuite::runTestOnVmGetResult(
+auto VmTestSuiteCore::runTestOnVmGetResult(
 	const vm::code::CodeCollection&    code,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
@@ -350,7 +355,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 
 #undef EXPECT_VOID
 
-void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code) {
+void VmTestSuiteCore::handleTestResult(const TestResult& test_result, i64 exit_code) {
 	if (!test_result.run_result.has_value()) {
 		auto err_str = to_string(nlohmann::json(test_result.run_result.error()));
 		fail(err_str);
@@ -475,14 +480,14 @@ void VmTestSuite::freeArguments(OwnedArgumentList& arguments) {
 	for (auto& arg: arguments) arg->freeData();
 }
 
-auto ParserTestSuite::parseValidDbc(const std::string& dbc_filename)
+auto VmParserTestSuite::parseValidDbc(const std::string& dbc_filename)
 	-> std::vector<vm::loader::parser::ParsedFile> {
 	auto parsing_result = vm::loader::parser::parse({ fs::File(path(dbc_filename)) });
 	ASSERT_HAS_VALUE(parsing_result, "Expected successful parse.");
 	return std::move(*parsing_result);
 }
 
-void ParserTestSuite::parseInvalidDbc(
+void VmParserTestSuite::parseInvalidDbc(
 	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 ) {
 	auto parsing_result = vm::loader::parser::parse({ fs::File(path(dbc_filename)) });

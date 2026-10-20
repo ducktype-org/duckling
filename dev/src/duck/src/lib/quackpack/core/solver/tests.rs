@@ -89,7 +89,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -103,7 +103,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: [("a".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -117,7 +117,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };

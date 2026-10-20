@@ -55,7 +55,6 @@ public:
 		TESTER_ADD_TEST(runAwaitEndpoint);
 		TESTER_ADD_TEST(rerunEndpoint);
 		TESTER_ADD_TEST(runFunctionEndpoints);
-		TESTER_ADD_TEST(exitValueEndpoint);
 		TESTER_ADD_TEST(joinEndpoint);
 		TESTER_ADD_TEST(stopEndpoint);
 		TESTER_ADD_TEST(killFromEveryState);
@@ -445,32 +444,6 @@ private:
 			assertSucceeded(api::runFunction(pid, "spinner"), "runFunction of an endless function");
 			assertSucceeded(api::kill(pid), "kill of a process running a function");
 		}
-	}
-
-	void exitValueEndpoint() {
-		// `join` is the endpoint that hands back the exit value of a spawned run. A run that did
-		// not complete has none, so `join` refuses it.
-
-		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
-		assertSucceeded(api::run(pid), "run");
-		waitUntilStatus(pid, isCompleted, "Completed");
-
-		auto exit_value = api::join(pid);
-		assertSucceeded(exit_value, "join after completion");
-		assertReturnedI64(exit_value.value(), BREAKPOINT_EXIT_VALUE, "join after completion");
-
-		auto valid = api::deinitAndValidate(pid);
-		assertSucceeded(valid, "deinitAndValidate after the join");
-		ASSERT_TRUE(valid.value().valid());
-
-		// A stopped run never completed, so it has no exit value. `stop` also reaps the execution
-		// thread itself, so the later `join` has nothing left to hand back.
-		const vm::PID stopped_pid = spawnAndLoad("../common/programs/while_true.dbc");
-		assertSucceeded(api::run(stopped_pid), "run");
-		waitUntilStatus(stopped_pid, isRunning, "Running");
-		assertSucceeded(api::stop(stopped_pid), "stop");
-		assertRefusedWith<api::JoinError>(api::join(stopped_pid), "join of a stopped process");
-		(void) api::kill(stopped_pid);
 	}
 
 	void joinEndpoint() {

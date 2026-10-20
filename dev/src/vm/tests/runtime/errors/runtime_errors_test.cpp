@@ -93,11 +93,12 @@ private:
 	}
 
 	void globalLeakTest() {
+		// The leak is only found when the process is validated, so the run itself succeeds.
 		const auto result = runTestOnVmGetResult("../../common/programs/global_leak.dbc");
-		ASSERT_HAS_VALUE(result.run_result);
+		assertSucceeded(result.run_result, "Running global_leak.dbc");
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_HAS_VALUE(validation_result);
-		ASSERT_TRUE(validation_result.value().memory_valid == false);
+		assertSucceeded(validation_result, "Validating the process");
+		assertTrue(!validation_result->memory_valid, "The leaked global was not reported");
 	}
 
 	void nestedLeaks() {
@@ -185,8 +186,7 @@ private:
 
 	// A default-initialized cpointer is null, so a typed load must fail cleanly, not crash.
 	void cptrNullTypedLoadFails() {
-		auto pid  = initProcess();
-		auto file = inlineDbc(
+		const auto pid = spawnAndLoad(inlineDbc(
 			"null_typed_load",
 			"type cpointer: I64Ptr i64\n"
 			"function main { i64, ptr_argv } -> { i64 } {\n"
@@ -195,16 +195,13 @@ private:
 			"    load_pany_pcptr v, p;\n"
 			"    ret;\n"
 			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		ASSERT_HAS_VALUE(load, "Load failed: ", errorOf(load));
+		));
 		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// The same for the raw byte copy.
 	void cptrNullRawReadFails() {
-		auto pid  = initProcess();
-		auto file = inlineDbc(
+		const auto pid = spawnAndLoad(inlineDbc(
 			"null_raw_read",
 			"type cpointer: I64Ptr i64\n"
 			"function main { i64, ptr_argv } -> { i64 } {\n"
@@ -215,16 +212,13 @@ private:
 			"    read_pptr_pcptr op, c;\n"
 			"    ret;\n"
 			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		ASSERT_HAS_VALUE(load, "Load failed: ", errorOf(load));
+		));
 		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// A null VM pointer has no block, so there is no address to take.
 	void cptrCastOfNullPointerFails() {
-		auto pid  = initProcess();
-		auto file = inlineDbc(
+		const auto pid = spawnAndLoad(inlineDbc(
 			"cptr_cast_null",
 			"type cpointer: I64Ptr i64\n"
 			"function main { i64, ptr_argv } -> { i64 } {\n"
@@ -234,9 +228,7 @@ private:
 			"    cast_pcptr_pptr c, p;\n"
 			"    ret;\n"
 			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		ASSERT_HAS_VALUE(load, "Load failed: ", errorOf(load));
+		));
 		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 
