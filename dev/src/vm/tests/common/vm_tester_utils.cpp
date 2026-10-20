@@ -477,7 +477,8 @@ vm::FunctionRunArguments VmTestSuite::createArgumentList(OwnedArgumentList& argu
 }
 
 void VmTestSuite::freeArguments(OwnedArgumentList& arguments) {
-	for (auto& arg: arguments) arg->freeData();
+	for (auto& arg: arguments)
+		assertSucceeded(vm::api::freeVMValue(arg->getPID(), arg.refMut()), "freeVMValue");
 }
 
 auto VmParserTestSuite::parseValidDbc(const std::string& dbc_filename)

@@ -467,7 +467,10 @@ protected:
 	 */
 	static vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments);
 
-	static void freeArguments(OwnedArgumentList& arguments);
+	/**
+	 * @brief Free every owned VMValue in the process it belongs to.
+	 */
+	void freeArguments(OwnedArgumentList& arguments);
 };
 
 /**
