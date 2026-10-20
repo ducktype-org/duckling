@@ -123,6 +123,36 @@ namespace compiler::mir {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
 
+		/**
+		 * @brief Lowers a subexpression whose result has to be addressable.
+		 *
+		 * A result that is not a place (e.g. a constant) is stored in a temporary first.
+		 *
+		 * @return The block beginning the lowered subexpression and the place holding its result.
+		 */
+		std::pair<BlockBuilderRef, MIRPlace> lowerSubExprAsPlace(
+			const hc::Expr& expr, BlockBuilderRef continuation
+		) {
+			auto store_hole = continuation->addHole();
+			auto lowered    = lowerSubExpr(expr, continuation);
+			auto result     = lowered.getResult(function);
+
+			if (const auto* place = std::get_if<MIRPlace>(&result.getVariant())) {
+				store_hole.fillNop(expr_scope);
+				return { lowered.begin, *place };
+			}
+
+			const auto tmp = function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+			store_hole.fill(Instruction{ Operation::Assign,
+			                             MIRPlace(tmp),
+			                             { result },
+			                             { flagConstruct(tmp) },
+			                             expr_scope,
+			                             {},
+			                             { expr.getPosition() } });
+			return { lowered.begin, MIRPlace(tmp) };
+		}
+
 		void visitLiteralUnitExpr(const hc::LiteralUnitExpr&) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
@@ -1003,15 +1033,9 @@ namespace compiler::mir {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 
-				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
-				auto base_val     = lowered_base.getResult(function);
-
-				variant_match(std::move(base_val.getVariant())) {
-					variant_case(MIRPlace, place) {
-						valueOutput(lowered_base.begin, element_place(place, index_val));
-					}
-					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
-				}
+				auto [base_begin, base_place]
+					= lowerSubExprAsPlace(*expr.base, lowered_index.begin);
+				valueOutput(base_begin, element_place(base_place, index_val));
 				return;
 			}
 
@@ -1044,26 +1068,20 @@ namespace compiler::mir {
 			auto lowered_index = lowerSubExpr(*expr.index, entry_block);
 			auto index_val     = lowered_index.getResult(function);
 
-			auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
-			auto base_val     = lowered_base.getResult(function);
+			auto [base_begin, base_place] = lowerSubExprAsPlace(*expr.base, lowered_index.begin);
 
-			variant_match(std::move(base_val.getVariant())) {
-				variant_case(MIRPlace, place) {
-					boundsCheck(
-						{ .condition_block = bounds_check_cond_block,
-					      .fail_block      = bounds_check_fail_block,
-					      .ok_block        = continuation,
-					      .function        = function,
-					      .scope           = expr_scope },
-						index_val,
-						array_length(place),
-						expr.getPosition()
-					);
+			boundsCheck(
+				{ .condition_block = bounds_check_cond_block,
+			      .fail_block      = bounds_check_fail_block,
+			      .ok_block        = continuation,
+			      .function        = function,
+			      .scope           = expr_scope },
+				index_val,
+				array_length(base_place),
+				expr.getPosition()
+			);
 
-					valueOutput(lowered_base.begin, element_place(place, index_val));
-				}
-				variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
-			}
+			valueOutput(base_begin, element_place(base_place, index_val));
 		}
 
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
