@@ -10,20 +10,32 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 
-class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
+/**
+ * @brief What belongs here: every inheritance error the loader must reject. That covers invalid
+ * hierarchies (cycles, extending the wrong kind of type), virtual methods that are missing or
+ * have the wrong signature, duplicates, invalid upcasts, invalid virtual calls and instantiating
+ * an abstract type.
+ *
+ * What a valid hierarchy is lowered to goes to `loader/lowering/`; how it behaves when it runs
+ * goes to `runtime/inheritance/`.
+ */
+class VmInheritanceHierarchyCorrectnessTest: public VmLoaderTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceHierarchyCorrectnessTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_LOADER_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(hierarchyCorrectness);
 		TESTER_ADD_TEST(virtualMethodImplementationCorrectness);
 		TESTER_ADD_TEST(duplicateCorrectness);
+		TESTER_ADD_TEST(invalidUpcast);
+		TESTER_ADD_TEST(invalidVirtualCall);
+		TESTER_ADD_TEST(invalidInstantiation);
 	}
 
 private:
 	void hierarchyCorrectness() {
-		runTestOnVm("../common/programs/inheritance_metadata.dbc", {}, {}, {}, 0);
+		loadValidDbc("../../common/programs/inheritance_metadata.dbc");
 
 		using namespace vm::code;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
@@ -62,6 +74,10 @@ private:
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{
 				"vmethod_implementation/implement_non_existing_method.dbc",
+				InvalidVirtualMethodImplementationError::ERR_MSG,
+			},
+			{
+				"vmethod_implementation/unknown_method.dbc",
 				InvalidVirtualMethodImplementationError::ERR_MSG,
 			},
 			{
@@ -149,6 +165,36 @@ private:
 		for (auto& [filename, error]: invalid_filename_and_error)
 			loadInvalidDbc(filename, { error });
 	}
+
+	void invalidUpcast() {
+		loadInvalidDbc(
+			"invalid_usage/invalid_upcast_primary.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"invalid_usage/invalid_upcast.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
+		);
+	}
+
+	void invalidVirtualCall() {
+		loadInvalidDbc(
+			"invalid_usage/invalid_virtual_call_1.dbc",
+			{ vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"invalid_usage/invalid_virtual_call_2.dbc",
+			{ vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"invalid_usage/invalid_vtable_type.dbc", { vm::code::VTableTypeMismatchError::ERR_MSG }
+		);
+	}
+
+	void invalidInstantiation() {
+		loadInvalidDbc(
+			"invalid_usage/invalid_instantiation.dbc",
+			{ vm::code::UninstantiableValueError::ERR_MSG }
+		);
+	}
 };
 
-TESTER_COMMON_MAIN("/src/vm/tests/inheritance/");
+TESTER_COMMON_MAIN("/src/vm/tests/loader/inheritance/");

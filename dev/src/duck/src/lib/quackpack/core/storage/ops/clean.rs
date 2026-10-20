@@ -18,6 +18,7 @@ use tracing::{debug, error, info, warn};
 use crate::quackpack::core::storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::quackpack::util::dir_iterator::DirContents;
 use crate::util::error::ErrorsLogger;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
@@ -94,7 +95,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     debug!(?all_deps, "used dependencies");
     let all_pkgs = logger
         .log_result(storage.iter_pkgs())
-        .unwrap_or(storage::DirContents::Empty);
+        .unwrap_or(DirContents::Empty);
     let all_pkgs = logger
         .log_result(
             all_pkgs

@@ -17,8 +17,6 @@ use yaml_edit::{Mapping, MappingBuilder, SequenceBuilder};
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
 
-pub type Dependencies = HashMap<String, Dependency>;
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
@@ -86,6 +84,21 @@ pub struct Metadata {
     pub description: Option<String>,
     /// External library to link against.
     pub links: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema of the `dependencies:` table (or its logical variants).
+pub struct Dependencies(pub HashMap<String, Dependency>);
+
+impl<'a> IntoIterator for &'a Dependencies {
+    type Item = <&'a HashMap<String, Dependency> as IntoIterator>::Item;
+
+    type IntoIter = <&'a HashMap<String, Dependency> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]

@@ -1,5 +1,8 @@
 include(CMakePrintHelpers)
 
+# `ffi_test_lib` and `duck_use_ffi_test_lib`, used by the FFI suites below.
+add_subdirectory(ffi)
+
 # When VM runs code for a long time in TC mode, without the "tailcall" optimization
 # enabled, it will run out of stack space.
 function(duck_disable_tc_when_not_opt test_name test_set)
@@ -75,12 +78,7 @@ function(duck_add_vm_tests suffix)
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
         duck_disable_when_jit(debugger_infinite_test ${test_set})
 
-        duck_add_test_custom(vm ${test_set}_inheritance_loading_test inheritance/inheritance_loading.cpp
-                USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp
-                USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
-                inheritance/inheritance_hierarchy_correctness.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_vtable_setting_test inheritance/setting_vtable/vtable_setting.cpp
                 USES ${libvm} Tester ${vmtester})
@@ -153,9 +151,16 @@ duck_add_test_custom(vm vm_bc_serializer_test bytecode/serializer/bc_serializer_
 duck_add_test_custom(vm vm_memory_test memory/memory_test.cpp
         USES LibVM_sc Tester VmTester_sc)
 
-duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_bc_building loader/assembly/bc_building.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_step_gil_placement loader/lowering/step_gil_placement.cpp USES LibVM_sc Tester VmTester_sc)
-duck_add_test_custom(vm vm_local_initialization loader/lowering/local_initialization.cpp USES LibVM_sc Tester VmTester_sc)
-
-add_subdirectory(ffi)
+# loader/ — static verification, lowering (incl. the inheritance metadata), hierarchy checks and
+# FFI declarations.
+duck_add_test_custom(vm vm_bc_verification_test loader/verification/bc_verification_test.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_step_gil_placement_test loader/lowering/step_gil_placement_test.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_local_initialization_test loader/lowering/local_initialization_test.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_inheritance_loading_test loader/lowering/inheritance_loading_test.cpp
+        USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_inheritance_hierarchy_correctness_test
+        loader/inheritance/inheritance_hierarchy_correctness_test.cpp
+        USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_ffi_verification_test loader/ffi/ffi_verification_test.cpp
+        USES LibVM_sc Tester VmTester_sc)
+duck_use_ffi_test_lib(vm_ffi_verification_test)
