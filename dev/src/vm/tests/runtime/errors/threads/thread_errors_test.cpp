@@ -72,7 +72,10 @@ private:
 
 	TestResult runWithDetection(const std::string& filename) {
 		auto pid = initProcess({ .enable_deadlock_detection = true });
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path(filename)) }));
+		assertSucceeded(
+			vm::api::loadFiles(pid, { fs::File(path(filename)) }),
+			base::strConcat("Load of '", filename, "'")
+		);
 		return runTestOnVmGetResult(pid);
 	}
 
