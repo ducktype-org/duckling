@@ -1,5 +1,5 @@
-# Weekly dev build: builds the Duckling release package and publishes
-# it as the rolling GitHub pre-release `dev-weekly`.
+# Weekly dev build: builds the Duckling release packages for Linux and macOS and publishes them
+# as the rolling GitHub pre-release `dev-weekly`.
 #
 # The first run creates the release. Later runs replace the assets, then move its tag to the built
 # commit and update the notes.
@@ -26,7 +26,7 @@ on:
         type: boolean
         default: false
       publish:
-        description: Publish the build as the `dev-weekly` pre-release (otherwise only a workflow artifact)
+        description: Publish the build as the `dev-weekly` pre-release (otherwise only workflow artifacts)
         type: boolean
         default: false
 
@@ -41,16 +41,52 @@ permissions:
 env:
   RELEASE_TAG: dev-weekly
   RELEASE_TITLE: Duckling weekly dev build
-  PACKAGE_NAME: duckling-dev-linux-x86_64
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-24.04
+  build:
+    name: build / ${{ matrix.package }}
+    strategy:
+      # A failing platform must not cancel the other one: its artifact is still useful.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            package: duckling-dev-linux-x86_64
+            runner: ubuntu-24.04
+            # As the GCC builds of the test CI (.github/workflows/setup-build-matrix.py).
+            cc: gcc-14
+            cxx: g++-14
+            compiler-name: gcc
+            linker: mold
+            llvm-config: llvm-config-19
+          - platform: macos
+            package: duckling-dev-macos-arm64
+            # The mac mini of the test CI.
+            runner: { group: SelfHostedRunners, labels: macOS }
+            # As the macOS builds of the test CI (.github/workflows/setup-build-matrix.py); the
+            # packaging scripts use the same compilers by default on macOS.
+            cc: /opt/homebrew/opt/llvm@23/bin/clang
+            cxx: /opt/homebrew/opt/llvm@23/bin/clang++
+            compiler-name: clang-23-macos
+            linker: lld
+            # Homebrew's llvm@19, which setup-build-env points CMake at (CMAKE_PREFIX_PATH).
+            llvm-config: /opt/homebrew/opt/llvm@19/bin/llvm-config
+
+    runs-on: ${{ matrix.runner }}
     # This may take a long time, since a clean build might compile
     # Duckling, ICU, OpenSSL, libgit2, curl and SCIP from source as well.
     timeout-minutes: 240
+    env:
+      PACKAGE_NAME: ${{ matrix.package }}
 
     steps:
+      # The self-hosted mac keeps its workspace between jobs, as in the test CI.
+      - name: Clean workspace
+        if: matrix.platform == 'macos'
+        run: |
+          rm -rf "$GITHUB_WORKSPACE"
+          mkdir -p "$GITHUB_WORKSPACE"
+
       # Duckling goes to the workspace root, as in test CI.
       - name: Checkout Duckling
         uses: actions/checkout@v6
@@ -74,6 +110,7 @@ jobs:
       # require change in the packaging scripts.
       # Added before setup-build-env, so that its `apt install llvm-19` takes the newer version.
       - name: Add apt.llvm.org repository
+        if: matrix.platform == 'linux'
         run: |
           codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
@@ -83,24 +120,26 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-build-env/
         with:
-          platform: linux
-          cc: gcc-14
-          cxx: g++-14
-          compiler-name: gcc
-          linker: mold
+          platform: ${{ matrix.platform }}
+          cc: ${{ matrix.cc }}
+          cxx: ${{ matrix.cxx }}
+          compiler-name: ${{ matrix.compiler-name }}
+          linker: ${{ matrix.linker }}
           dev-dir: ${{ github.workspace }}/dev
+          # Only used on macOS (required there), as in the test CI.
+          ccache-dir: ${{ github.workspace }}/dev/.ccache
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust/
         with:
-          platform: linux
+          platform: ${{ matrix.platform }}
           sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       # Quick Fails for LLVM version mismatches.
       - name: Check LLVM version
         run: |
           expected="$(python3 -c 'import tomllib; c = tomllib.load(open("_packaging/data/tpa/components.toml", "rb")); print(next(x["version"] for x in c["component"] if x["id"] == "cmake:llvm"))')"
-          actual="$(llvm-config-19 --version)"
+          actual="$('${{ matrix.llvm-config }}' --version)"
           echo "LLVM: installed ${actual}, catalogued ${expected}"
           if [ "${actual}" != "${expected}" ]; then
             echo "::error::Installed LLVM ${actual} differs from the version in packaging's catalog (${expected})"
@@ -117,23 +156,24 @@ jobs:
         uses: actions/cache@v5
         with:
           path: _packaging/cache/tpa
-          key: tpa-${{ hashFiles('_packaging/data/tpa/components.toml', 'dev/src/duck/Cargo.lock') }}
+          key: tpa-${{ matrix.platform }}-${{ hashFiles('_packaging/data/tpa/components.toml', 'dev/src/duck/Cargo.lock') }}
           restore-keys: |
-            tpa-
+            tpa-${{ matrix.platform }}-
 
       - name: Test packaging scripts
         working-directory: _packaging
         run: python3 run_tests.py
 
-      
       - name: Build package
         working-directory: _packaging
-        # stdin is closed so that any input prompt fails the step instead of hanging it 
+        # stdin is closed so that any input prompt fails the step instead of hanging it
         # (e.g. toolbox.py prompts for setup-build)
         run: |
           python3 package.py \
             --repo "$GITHUB_WORKSPACE" \
             --output "output/$PACKAGE_NAME" \
+            --cxx-compiler '${{ matrix.cxx }}' \
+            --cc-compiler '${{ matrix.cc }}' \
             ${{ inputs.exclude-duck && '--exclude-product duck' || '' }} \
             < /dev/null
 
@@ -141,10 +181,12 @@ jobs:
         working-directory: _packaging/output
         run: |
           tar -czf "$PACKAGE_NAME.tar.gz" "$PACKAGE_NAME"
-          sha256sum "$PACKAGE_NAME.tar.gz" > "$PACKAGE_NAME.tar.gz.sha256"
+          # sha256sum is not on macOS; `shasum -a 256` writes the same format.
+          shasum -a 256 "$PACKAGE_NAME.tar.gz" > "$PACKAGE_NAME.tar.gz.sha256"
           cat "$PACKAGE_NAME.tar.gz.sha256"
 
-      # Kept with the run as well, so a failed publish still leaves the package available.
+      # Also what the publish job releases. Kept with the run, so a failed publish still leaves the
+      # packages available.
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -154,24 +196,44 @@ jobs:
             _packaging/output/${{ env.PACKAGE_NAME }}.tar.gz.sha256
           retention-days: 14
 
-      # Scheduled runs always publish; manual runs only when asked to.
+  # Publishes only when every platform built: the release always holds packages of the same commit.
+  # Scheduled runs always publish; manual runs only when asked to.
+  publish:
+    needs: build
+    if: github.event_name == 'schedule' || inputs.publish
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: duckling-dev-*
+          path: packages
+          merge-multiple: true
+
       - name: Publish pre-release
-        if: github.event_name == 'schedule' || inputs.publish
         env:
           GH_TOKEN: ${{ secrets.GH_RELEASE_BUILD_PAT }}
           REPO: ${{ github.repository }}
+          # The commit the build jobs checked out.
+          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
-          commit="$(git rev-parse HEAD)"
-          packaging_commit="$(git -C _packaging rev-parse HEAD)"
-          archive="_packaging/output/$PACKAGE_NAME.tar.gz"
-          assets=("$archive" "$archive.sha256")
+          shopt -s nullglob
+          archives=(packages/*.tar.gz)
+          if [ ${#archives[@]} -eq 0 ]; then
+            echo "::error::no packages were downloaded"
+            exit 1
+          fi
+          assets=()
+          for archive in "${archives[@]}"; do
+            assets+=("$archive" "$archive.sha256")
+          done
 
           cat > notes.md <<EOF
           Weekly development build of Duckling. **This is a pre-release; it is rebuilt and replaced every week.**
 
           - Built: $(date -u +"%Y-%m-%d %H:%M UTC")
-          - Source: https://github.com/$REPO/tree/$commit
+          - Source: https://github.com/$REPO/tree/$COMMIT
           - Workflow run: $GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID
 
           EOF
@@ -186,14 +248,16 @@ jobs:
                 gh release delete-asset "$RELEASE_TAG" "$name" --repo "$REPO" --yes
               fi
             done
-            # Archive before its checksum, to keep the window where the two do not match short.
-            gh release upload "$RELEASE_TAG" "$archive" --repo "$REPO" --clobber
-            gh release upload "$RELEASE_TAG" "$archive.sha256" --repo "$REPO" --clobber
+            # Each archive before its checksum, to keep the window where the two do not match short.
+            for archive in "${archives[@]}"; do
+              gh release upload "$RELEASE_TAG" "$archive" --repo "$REPO" --clobber
+              gh release upload "$RELEASE_TAG" "$archive.sha256" --repo "$REPO" --clobber
+            done
             # `gh release create` makes a lightweight tag, so moving it is a ref update.
-            gh api --method PATCH "repos/$REPO/git/refs/tags/$RELEASE_TAG" -f sha="$commit" -F force=true > /dev/null
+            gh api --method PATCH "repos/$REPO/git/refs/tags/$RELEASE_TAG" -f sha="$COMMIT" -F force=true > /dev/null
             gh release edit "$RELEASE_TAG" --repo "$REPO" --prerelease --title "$RELEASE_TITLE" --notes-file notes.md
           else
             gh release create "$RELEASE_TAG" "${assets[@]}" --repo "$REPO" \
-              --prerelease --target "$commit" --title "$RELEASE_TITLE" --notes-file notes.md
+              --prerelease --target "$COMMIT" --title "$RELEASE_TITLE" --notes-file notes.md
           fi
           echo "Published: $GITHUB_SERVER_URL/$REPO/releases/tag/$RELEASE_TAG"
