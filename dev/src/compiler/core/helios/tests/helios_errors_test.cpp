@@ -1691,6 +1691,20 @@ private:
 			{ "A value of type `const i32` cannot be called, because it is not a function." },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { add = add; return 0; } )",
+			{ "Left side of assignment must be addressable location" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let r = &add; return 0; } )",
+			{ "Tried to reference a temporary" },
+			1
+		);
 	}
 
 	void testCopyabilityErrors() {

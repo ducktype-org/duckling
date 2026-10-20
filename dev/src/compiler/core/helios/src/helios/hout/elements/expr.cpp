@@ -46,7 +46,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
 	EXPR_VISITOR(IdentifierExpr)
-	EXPR_VISITOR(FunctionRefExpr)
 	EXPR_VISITOR(ReusableExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
@@ -58,7 +57,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(VariantConstructExpr)
 	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
-	EXPR_VISITOR(IndirectCallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
 	EXPR_VISITOR(SequenceExpr)
@@ -254,32 +252,6 @@ namespace compiler::helios::code {
 
 	Box<Expr> IdentifierExpr::clone() const {
 		return makeBox<IdentifierExpr>(expression_type, origin, symbol);
-	}
-
-	FunctionRefExpr::FunctionRefExpr(query::Context& ctx, ElementOrigin origin, SymID function):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  ),
-			  origin
-		  ),
-		  function(function) {}
-
-	FunctionRefExpr::FunctionRefExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, SymID function
-	):
-		  Expr(expression_type, origin),
-		  function(function) {}
-
-	void FunctionRefExpr::debugPrint(std::ostream& out) const {
-		out << strConcat(
-			"(FunctionRef ", name(function), " (", function.queryUnstablePerfectHash(), "))"
-		);
-	}
-
-	Box<Expr> FunctionRefExpr::clone() const {
-		return makeBox<FunctionRefExpr>(expression_type, origin, function);
 	}
 
 	/**
@@ -1077,54 +1049,6 @@ namespace compiler::helios::code {
 		arguments_cloned.reserve(arguments.size());
 		for (const auto& arg: arguments) arguments_cloned.push_back(arg->clone());
 		return makeBox<CallExpr>(
-			expression_type, origin, callee->clone(), std::move(arguments_cloned)
-		);
-	}
-
-	IndirectCallExpr::IndirectCallExpr(
-		query::Context&,
-		ElementOrigin          origin,
-		base::Box<Expr>        callee,
-		std::vector<Box<Expr>> arguments
-	):
-		  Expr(
-			  tsh::ExpressionType(
-				  getCallResultType(callee->expression_type.getType()),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  callee(std::move(callee)),
-		  arguments(std::move(arguments)) {}
-
-	IndirectCallExpr::IndirectCallExpr(
-		tsh::ExpressionType<>        expression_type,
-		ElementOrigin                origin,
-		base::Box<Expr>              callee,
-		std::vector<base::Box<Expr>> arguments
-	):
-		  Expr(expression_type, origin),
-		  callee(std::move(callee)),
-		  arguments(std::move(arguments)) {}
-
-	void IndirectCallExpr::debugPrint(std::ostream& out) const {
-		out << "(IndirectCall ";
-		callee->debugPrint(out);
-		out << ")(";
-		bool add_comma = false;
-		for (auto&& arg: arguments) {
-			if (add_comma) out << ", ";
-			arg->debugPrint(out);
-			add_comma = true;
-		}
-		out << ")";
-	}
-
-	Box<Expr> IndirectCallExpr::clone() const {
-		std::vector<base::Box<Expr>> arguments_cloned;
-		arguments_cloned.reserve(arguments.size());
-		for (const auto& arg: arguments) arguments_cloned.push_back(arg->clone());
-		return makeBox<IndirectCallExpr>(
 			expression_type, origin, callee->clone(), std::move(arguments_cloned)
 		);
 	}

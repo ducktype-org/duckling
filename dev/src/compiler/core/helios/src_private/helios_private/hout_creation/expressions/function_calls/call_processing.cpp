@@ -796,9 +796,9 @@ namespace compiler::helios::code {
 			arguments.push_back(std::move(arg_expr));
 		}
 
-		return Box<Expr>(makeBox<IndirectCallExpr>(
-			ctx, whole_call_origin, std::move(callee), std::move(arguments)
-		));
+		return Box<Expr>(
+			makeBox<CallExpr>(ctx, whole_call_origin, std::move(callee), std::move(arguments))
+		);
 	}
 
 	query::QResult<Box<Expr>> processMethodCall(

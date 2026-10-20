@@ -1066,7 +1066,7 @@ namespace compiler::helios::code {
 					));
 					return query::Failed();
 				}
-				auto expr = makeBox<FunctionRefExpr>(query_ctx, pst_element_origin, symbol);
+				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:

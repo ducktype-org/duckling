@@ -222,7 +222,8 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents expression made of a single identifier in HOUT.
+	 * @brief Represents expression made of a single identifier in HOUT. An identifier naming a
+	 * function is a function value, the address of the function.
 	 * @note: This will have to be improved,
 	 * when more complex expressions involving "." operator, local variables, etc
 	 * will be introduced.
@@ -242,27 +243,6 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		IdentifierExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, SymID symbol);
-	};
-
-	/**
-	 * @brief A reference to a function symbol used as a value, for example `add` in `let f = add;`.
-	 *
-	 * The value is the address of the function and has the function type of the symbol.
-	 */
-	struct FunctionRefExpr final: public Expr {
-		SymID function;
-
-		FunctionRefExpr(query::Context& ctx, ElementOrigin origin, SymID function);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		FunctionRefExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, SymID function);
 	};
 
 	/**
@@ -724,38 +704,6 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		CallExpr(
-			tsh::ExpressionType<>        expression_type,
-			ElementOrigin                origin,
-			base::Box<Expr>              callee,
-			std::vector<base::Box<Expr>> arguments
-		);
-	};
-
-	/**
-	 * @brief A call through a value of a function type, for example `f(1)` where `f` is a variable.
-	 *
-	 * The arguments are already coerced to the parameter types of the callee's function type.
-	 */
-	struct IndirectCallExpr final: public Expr {
-		base::Box<Expr>              callee;
-		std::vector<base::Box<Expr>> arguments;
-
-		IndirectCallExpr(
-			query::Context&              ctx,
-			ElementOrigin                origin,
-			base::Box<Expr>              callee,
-			std::vector<base::Box<Expr>> arguments
-		);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		IndirectCallExpr(
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
 			base::Box<Expr>              callee,

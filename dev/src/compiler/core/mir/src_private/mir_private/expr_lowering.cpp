@@ -151,6 +151,11 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+			if (helios::isFunctionLike(helios::kind(expr.symbol))) {
+				valueOutput(continuation, MIRValue{ MIRFunctionLiteral{ expr.symbol } });
+				return;
+			}
+
 			auto optional_local = function.findLocal(expr.symbol);
 
 			if (optional_local.has_value()) {
@@ -1170,7 +1175,7 @@ namespace compiler::mir {
 				args.push_back(arg_lowered.getResultAndTakeOwnership(function, flags));
 				sub_continuation = arg_lowered.begin;
 			}
-			std::reverse(args.begin(), args.end());
+			std::ranges::reverse(args);
 			args.insert(args.begin(), lower_callee(sub_continuation));
 
 			auto result = ExprLowerRes(
@@ -1194,19 +1199,14 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
-			lowerCall(expr, expr.arguments, Operation::Call, [&](BlockBuilderRef&) -> MIRValue {
-				auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
-				if (not function_symid.has_value()) {
-					CORE_PANIC(
-						"Call expression where callee is not an identifier expression is currently "
-						"not supported."
-					);
-				}
-				return MIRFunctionLiteral{ function_symid.value() };
-			});
-		}
+			auto callee_symid = helios::getIdentifierExprFunctionID(expr.callee.ref());
+			if (callee_symid.has_value()) {
+				lowerCall(expr, expr.arguments, Operation::Call, [&](BlockBuilderRef&) -> MIRValue {
+					return MIRFunctionLiteral{ callee_symid.value() };
+				});
+				return;
+			}
 
-		void visitIndirectCallExpr(const hc::IndirectCallExpr& expr) override {
 			lowerCall(
 				expr,
 				expr.arguments,
@@ -1218,10 +1218,6 @@ namespace compiler::mir {
 					return callee;
 				}
 			);
-		}
-
-		void visitFunctionRefExpr(const hc::FunctionRefExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MIRFunctionLiteral{ expr.function } });
 		}
 
 		void visitFunctionTypeExpr(const hc::FunctionTypeExpr& expr) override {

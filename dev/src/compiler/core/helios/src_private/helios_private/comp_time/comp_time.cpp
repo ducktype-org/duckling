@@ -106,7 +106,7 @@ namespace compiler::helios {
 			 * builtin, or `std::nullopt` when the call should fall back to VM evaluation.
 			 */
 			std::optional<TreeEvalResult> tryShortPathCall(const code::CallExpr& expr) {
-				const auto callee_sym = getIdentifierExprSymID(expr.callee.ref());
+				const auto callee_sym = getIdentifierExprFunctionID(expr.callee.ref());
 				if (!callee_sym.has_value()) return std::nullopt;
 
 				const auto builtin = isBuiltin(callee_sym.value());
@@ -264,6 +264,8 @@ namespace compiler::helios {
 					result = tsh::SymbolType<>::withDefaults(
 						ctx.query<tsh::QueryClassType>({ expr.symbol })
 					);
+				} else if (isFunctionLike(kind(expr.symbol))) {
+					result = CouldNotShortPath{};
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
@@ -782,14 +784,6 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitFunctionRefExpr(const code::FunctionRefExpr&) final {
-				result = CouldNotShortPath{};
-			}
-
-			void visitIndirectCallExpr(const code::IndirectCallExpr&) final {
-				result = CouldNotShortPath{};
-			}
-
 			void visitMatchExpr(const code::MatchExpr& expr) final {
 				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating a `match` at compile time.", expr.origin.getStablePosition()
@@ -1083,11 +1077,10 @@ namespace compiler::helios {
 		static CompTimeEvalResult evaluateFunctionWithVm(
 			query::Context& ctx, CRef<code::CallExpr> call_expr
 		) {
-			const auto* callee_ident
-				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
-			if (!callee_ident) return query::Failed();
+			const auto callee_sym = getIdentifierExprFunctionID(call_expr->callee.ref());
+			if (!callee_sym.has_value()) return query::Failed();
 
-			const SymID function_sym_id = callee_ident->symbol;
+			const SymID function_sym_id = callee_sym.value();
 
 			validateSignatureSupported(ctx, function_sym_id);
 
@@ -1101,7 +1094,7 @@ namespace compiler::helios {
 
 
 			// Retrieve the functions return type.
-			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
+			auto callee_abs_type = call_expr->callee->expression_type.getSymbolType().getType();
 			CORE_ASSERT(
 				callee_abs_type.getKind() == tsh::Kind::Function,
 				"Attempting to call a non_function type during VM compile time evaluation"
