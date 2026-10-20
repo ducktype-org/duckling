@@ -29,9 +29,11 @@ private:
 
 	void testCollatz() { runTestOnVm("collatz.dbc", "4242", "1276936", {}); }
 
-	void testFibIter() { runTestOnVm("fib_iter.dbc", "1000000 10000", "6875", {}); }
+	void testFibIter() {
+		runTestOnVm("../common/programs/fib_iter.dbc", "1000000 10000", "6875", {});
+	}
 
-	void testFibRec() { runTestOnVm("fib_rec.dbc", "28", "317811", {}); }
+	void testFibRec() { runTestOnVm("../common/programs/fib_rec.dbc", "28", "317811", {}); }
 
 	void testTailCall() { runTestOnVm("tailcall.dbc", "1000000", "0", {}); }
 };

@@ -31,7 +31,7 @@ public:
 		TESTER_ADD_TEST(testValueExpressionWrapsIntoReturnStmt);
 		TESTER_ADD_TEST(testWrapperMetadataMatchesGeneratedSymbolData);
 		TESTER_ADD_TEST(testCounterControlsExpressionWrapperMangling);
-		TESTER_ADD_TEST(testSameCounterDifferentTypeCausesManglingCollision);
+		TESTER_ADD_TEST(testSameCounterDifferentTypeDoesNotCollide);
 	}
 
 private:
@@ -94,12 +94,9 @@ private:
 
 			auto repl_data = std::get_if<helios::defgen::ReplInputWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
-			ASSERT_EQUAL(repl_data->counter, 13u);
-			ASSERT_EQUAL(repl_data->return_type, wrapper.declaration->return_type);
-			assertTrue(
-				repl_data->type == helios::defgen::ReplInputWrapper::Type::Expression,
-				"Expected an expression wrapper"
-			);
+			ASSERT_EQUAL(repl_data->counter.copyValueOr(0), 13u);
+			ASSERT_EQUAL(repl_data->getReturnType(), wrapper.declaration->return_type);
+			ASSERT_MATCHES(repl_data->element, helios::defgen::ReplInputWrapper::Expression);
 			ASSERT_EQUAL(
 				helios::kind(wrapper.declaration->original_symbol), helios::SymbolKind::Function
 			);
@@ -136,7 +133,7 @@ private:
 		});
 	}
 
-	void testSameCounterDifferentTypeCausesManglingCollision() {
+	void testSameCounterDifferentTypeDoesNotCollide() {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto expr_i32 = extractSingleExpression(ctx, "42;");
 			auto expr_f64 = extractSingleExpression(ctx, "3.14;");
@@ -156,12 +153,10 @@ private:
 
 			assertTrue(repl_i32 != nullptr && repl_f64 != nullptr, "Expected ReplInputWrapper");
 
-			// They have different hashes (good)
 			assertTrue(
 				repl_i32->queryUnstablePerfectHash() != repl_f64->queryUnstablePerfectHash(),
 				"Different return types should produce different hashes"
 			);
-			// BUT: Their mangled names collide
 			auto mangled_i32 = helios::mangler::getSimpleMangledName(
 								   ctx, wrapper_i32.declaration->original_symbol
 			)
@@ -171,10 +166,9 @@ private:
 			)
 			                       .strView();
 
-			assertEqual(
-				std::string(mangled_i32),
-				std::string(mangled_f64),
-				"COLLISION: Same counter produces same mangled name despite different return types"
+			assertTrue(
+				mangled_i32 != mangled_f64,
+				"Same counter with different return types should produce different names"
 			);
 		});
 	}

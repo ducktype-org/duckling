@@ -12,6 +12,10 @@
 
 #include <array>
 
+/**
+ * @brief What belongs here: `StableObjIdNameMap`, the map from names to stable object ids. No
+ * program is run.
+ */
 class ObjIdNameMapTester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ObjIdNameMapTester

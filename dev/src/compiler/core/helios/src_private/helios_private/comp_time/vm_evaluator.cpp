@@ -13,14 +13,20 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/queries.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
+
+#include <query_framework/context/context.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
@@ -28,9 +34,81 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <algorithm>
+#include <cstring>
 #include <expected>
 #include <iostream>
 #include <mutex>
+
+namespace compiler::helios {
+	struct KeyFor_QueryCtvMaterializingFunction {
+		ctv::CompileTimeValue ctv;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return ctv.queryUnstablePerfectHash();
+		}
+	};
+
+	/**
+	 * @brief Builds the LIR function `fun comptime_ctv_<mangled ctv>() -> T = return ctv;`, used to
+	 * materialize the `ctv` as a VMValue in the compile-time DVM, utilizing existing CTV
+	 * DVM-backend lowering.
+	 *
+	 * It has to be a query to keep the LIR function (and the CTV inside of it) in the cache,
+	 * because the CTV may contain symbol types, that are taken address of when comp-time.
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryCtvMaterializingFunction,
+		KeyFor_QueryCtvMaterializingFunction,
+		CRef<lir::Function>,
+		({ .uses_qresult = false })
+	)
+
+	struct IMPLEMENT_QUERY(QueryCtvMaterializingFunction, lir::Function) {
+		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
+			const auto  value_type = key.ctv.getTypeOfStoredValue(ctx);
+			const auto& layout = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
+			auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
+
+			lir::Block entry_block;
+			entry_block.terminator = lir::Instruction{
+				lir::Operation::ReturnValue,
+				{},
+				{ lir::LIRValue{ lir::LIRConstant{ .value = key.ctv, .layout = layout_ref } } },
+				{},
+			};
+
+			base::StableVector<lir::Block> blocks;
+			blocks.emplaceBack(std::move(entry_block));
+			lir::BlockRef entry_block_ref = blocks.last();
+
+			return lir::Function{
+				.mangled_name
+				= base::StrID(base::strConcat("comptime_ctv_", mangler::mangleCTV(ctx, key.ctv))),
+				.abi            = { lir::LIRAbi::DefaultAbi{} },
+				.link_once      = false,
+				.ignore_on_dvm  = false,
+				.ignore_on_llvm = true,
+				.layout         = &ctx.query<tsl::QueryAbstractTypeLayout>(
+                                  ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+				                                                              .result_type = value_type })
+                )
+				               ->valueOrThrow(),
+				.parameter_layouts  = {},
+				.return_type_layout = layout_ref,
+				.blocks             = std::move(blocks),
+				.local_list         = {},
+				.block_order        = { entry_block_ref },
+				.metadata           = { .position = {}, .source_code_name = {} },
+			};
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCtvMaterializingFunction);
+}
 
 namespace {
 	using namespace compiler::helios;
@@ -126,9 +204,12 @@ namespace {
 			defer(code_builder.invalidateContext());
 
 			auto new_code = code_builder.insertLIRUnitAndCollectNewlyLoweredCode(lir_code);
-			if (!vm::api::loadCode(*pid, new_code)) {
+			if (auto load_result = vm::api::loadCode(*pid, new_code); !load_result) {
 				return std::unexpected(VmEvaluationError(
-					VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
+					VmEvaluationError::Kind::CodeLoadFailed,
+					base::strConcat(
+						"Failed to load code into VM: ", vm::api::errorToString(load_result.error())
+					)
 				));
 			}
 			return {};
@@ -144,64 +225,20 @@ namespace {
 	};
 
 	/**
-	 * @brief Materializes an aggregate CTV (e.g. a char-slice or String) as an owned VMValue by
-	 * letting the DVM backend lower it.
-	 *
-	 * We synthesize a function like `fun anon() -> T = {return ctv;}`
-	 * in LIR and hand it to the incremental code builder. Lowering the `return` of a `LIRConstant`
-	 * runs the exact same `CTVLowering` path used for regular code, which emits the the DVM code
-	 * returning the VMValue with the ctv. The DVM backend may generate new globals in the
-	 * process.
+	 * @brief Materializes an aggregate CTV (e.g. a char-slice, a String or a type tuple) as a
+	 * VMValue by letting the DVM backend lower it.
+	 * @note The returned VMValue is owned by the comp-time DVM process and is valid as long as the
+	 * process lives.
 	 */
-	std::expected<Box<vm::IVMValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
-		query::Context&                    ctx,
-		CompTimeDVM&                       comptime_dvm,
-		const CompileTimeValue&            ctv,
-		const compiler::tsh::SymbolType<>& value_type
+	std::expected<Ref<vm::IVMValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
+		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
-		static std::atomic<u64> anon_counter{ 0 };
-
-		vm::PID     pid        = *comptime_dvm.getPID();
-		const auto& layout     = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
-		auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
-
-		// Build `fun anon() -> value_type = return {ctv};`.
-		lir::Block entry_block;
-		entry_block.terminator = lir::Instruction{
-			lir::Operation::ReturnValue,
-			{},
-			{ lir::LIRValue{ lir::LIRConstant{ .value = ctv, .layout = layout_ref } } },
-			{},
-		};
-
-		base::StableVector<lir::Block> blocks;
-		blocks.emplaceBack(std::move(entry_block));
-		lir::BlockRef entry_block_ref = blocks.last();
-
-		base::StrID func_name
-			= base::StrID(base::strConcat("comptime_ctv_arg_", anon_counter.fetch_add(1)));
-
-		lir::Function func{
-			.mangled_name   = func_name,
-			.abi            = { lir::LIRAbi::DefaultAbi{} },
-			.link_once      = false,
-			.ignore_on_dvm  = false,
-			.ignore_on_llvm = true,
-			.layout         = &ctx
-			               .query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryFunctionType>(
-							   { .parameter_types = {}, .result_type = value_type }
-						   ))
-			               ->valueOrThrow(),
-			.parameter_layouts  = {},
-			.return_type_layout = layout_ref,
-			.blocks             = std::move(blocks),
-			.local_list         = {},
-			.block_order        = { entry_block_ref },
-			.metadata           = { .position = {}, .source_code_name = {} },
-		};
+		vm::PID                   pid       = *comptime_dvm.getPID();
+		const CRef<lir::Function> func      = ctx.query<QueryCtvMaterializingFunction>({ ctv });
+		const base::StrID         func_name = func->mangled_name;
 
 		lir::LIRUnit unit;
-		unit.lir_functions.emplace_back(&func);
+		unit.lir_functions.push_back(func);
 
 		if (auto res = comptime_dvm.loadCode(ctx, unit); !res) return std::unexpected(res.error());
 
@@ -231,32 +268,14 @@ namespace {
 			CORE_UNREACHABLE();
 		}();
 
-		auto owned_response = vm::api::getVMValue(pid, returned->getType()->getName().str());
-		if (!owned_response.has_value())
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ArgConversionFailed,
-				base::strConcat(
-					"Failed to allocate an owned VM value for '",
-					returned->getType()->getName(),
-					"'."
-				)
-			));
-		auto owned = std::move(owned_response->vm_value);
-
-		CORE_ASSERT(
-			owned->getDataSize() == returned->getDataSize(),
-			"Mismatched sizes when copying a materialized CTV value."
-		);
-		owned->importDataFrom(*returned);
-
-		return owned;
+		return returned;
 	}
 
 	/**
 	 * @brief Converts a given `ctv` to VMValue.
 	 * @return The converted VMValue or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<Box<vm::IVMValue>, VmEvaluationError> ctvToVMValue(
+	std::expected<std::variant<Box<vm::IVMValue>, CRef<vm::IVMValue>>, VmEvaluationError> ctvToVMValue(
 		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
@@ -276,7 +295,7 @@ namespace {
 					[&](auto&& num_val) -> std::expected<Box<vm::IVMValue>, VmEvaluationError> {
 						using NumT = std::decay_t<decltype(num_val)>;
 
-						// @TODO: #899 Once CTV will be VMValue based (contain the VMValue and
+						// @TODO: #3750 Once CTV will be VMValue based (contain the VMValue and
 					    // compiler::tsh::SymbolType) we should perform this conversion based on the
 					    // `SymbolType` not C++ type sizes.
 						base::StrID dvm_type_name;
@@ -308,19 +327,17 @@ namespace {
 				(*maybe_vm_value)->writeBytes<bool>(val);
 				return maybe_vm_value;
 			}
+			variant_case(char, val) {
+				auto maybe_vm_value = get_vm_value(base::StrID("i8"));
+				if (!maybe_vm_value) return maybe_vm_value;
+				(*maybe_vm_value)->writeBytes<char>(val);
+				return maybe_vm_value;
+			}
 			variant_case(compiler::tsh::SymbolType<>, type) {
 				auto maybe_vm_value = get_vm_value(base::StrID("opaque_ptr"));
 				if (!maybe_vm_value) return maybe_vm_value;
 				(*maybe_vm_value)->writeBytes<const compiler::tsh::SymbolType<>*>(&type);
 				return maybe_vm_value;
-			}
-			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, _) {
-				return vmValueFromCtvBackendLowering(
-					ctx,
-					comptime_dvm,
-					ctv,
-					compiler::tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx))
-				);
 			}
 			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, _) {
 				if (!tsh::isStringTypePresent(ctx))
@@ -328,18 +345,26 @@ namespace {
 						VmEvaluationError::Kind::ArgConversionFailed,
 						"String class type is not available in this compilation."
 					));
-				return vmValueFromCtvBackendLowering(
-					ctx,
-					comptime_dvm,
-					ctv,
-					compiler::tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
-				);
+				return vmValueFromCtvBackendLowering(ctx, comptime_dvm, ctv);
+			}
+			variant_case_novalue(
+				CompileTimeValue::TypeTuple, compiler::ctv::CompileTimeValue::CharSliceValue
+			) {
+				return vmValueFromCtvBackendLowering(ctx, comptime_dvm, ctv);
+			}
+			variant_case(CompileTimeValue::VMValue, vm_value) {
+				return CRef<vm::IVMValue>(vm_value.val.get());
 			}
 			variant_default {
-				throw base::NotYetImplemented(
-					"Conversion from ctv to VMValue for this type is not implemented yet: "
-					+ ctv.getTypeOfStoredValue(ctx).toString() + " " + ctv.toString()
-				);
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ArgConversionFailed,
+					base::strConcat(
+						"Conversion from ctv to VMValue for this type is not implemented yet: ",
+						ctv.getTypeOfStoredValue(ctx).toString(),
+						" ",
+						ctv.toString()
+					)
+				));
 			}
 		}
 		return std::unexpected(VmEvaluationError(
@@ -363,23 +388,52 @@ namespace {
 	}
 
 	/**
+	 * @brief Reads a type tuple of `tuple_type` laid out at `data`.
+	 */
+	CompileTimeValue::TypeTuple typeTupleFromBytes(
+		query::Context& ctx, const tsh::AbstractType tuple_type, const byte* data
+	) {
+		const auto& layout = ctx.query<tsl::QueryAbstractTypeLayout>(tuple_type)
+		                         ->valueOrThrow()
+		                         .as<tsl::ClassTypeLayout>();
+
+		std::vector<CompileTimeValue::TypeTuple::Element> elements;
+		for (const auto& field: tuple_type.getInterface(ctx)->getFieldsView()) {
+			const auto field_type = field.getType(ctx);
+
+			switch (field_type.getType().getKind()) {
+			case tsh::Kind::Unit:
+				elements.emplace_back(CompileTimeValue::UnitCTV{});
+				break;
+			case tsh::Kind::Meta: {
+				const auto offset = layout.getOffsetOfFieldSymbol(field.getSymbol()).value();
+				const tsh::SymbolType<>* meta_ptr = nullptr;
+				std::memcpy(&meta_ptr, data + offset.asInt(), sizeof(meta_ptr));
+				elements.emplace_back(*meta_ptr);
+				break;
+			}
+			case tsh::Kind::Tuple: {
+				const auto offset = layout.getOffsetOfFieldSymbol(field.getSymbol()).value();
+				elements.emplace_back(
+					typeTupleFromBytes(ctx, field_type.getType(), data + offset.asInt())
+				);
+				break;
+			}
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
+		return CompileTimeValue::TypeTuple{ std::move(elements) };
+	}
+
+	/**
 	 * @brief Converts a given `vm_value` to CTV representing a specified `type`.
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
 		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::IVMValue> vm_value
 	) {
-		const auto kind        = type.getType().getKind();
-		auto       error_value = [&] {
-            return std::unexpected(VmEvaluationError(
-                VmEvaluationError::Kind::ReturnConversionFailed,
-                base::strConcat(
-                    "VMValue to CTV conversion for type: ",
-                    base::enumToStr(kind),
-                    " is not implemented yet."
-                )
-            ));
-		};
+		const auto kind = type.getType().getKind();
 		switch (kind) {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());
@@ -388,13 +442,17 @@ namespace {
 
 			if (int_type.getSignedness()
 			    == compiler::tsh::IntegralAbstractType::Signedness::Signed) {
-				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
+				if (bit_size <= Bits{ 8 } && vm_type_name == "i8")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<std::int8_t>() } };
+				else if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i16>() } };
 				else if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i32>() } };
 				else if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i64>() } };
 			} else {
+				if (bit_size <= Bits{ 8 } && vm_type_name == "i8")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<std::uint8_t>() } };
 				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u16>() } };
 				if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
@@ -405,7 +463,7 @@ namespace {
 
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ReturnConversionFailed,
-				"Expected an integer VM value (i16/i32/i64), but received: " + vm_type_name.str()
+				"Expected an integer VM value (i8/i16/i32/i64), but received: " + vm_type_name.str()
 			));
 		}
 		case compiler::tsh::Kind::Float: {
@@ -435,6 +493,15 @@ namespace {
 				));
 			return CompileTimeValue{ vm_value->readBytes<bool>() };
 		}
+		case compiler::tsh::Kind::Char: {
+			if (vm_value->getType()->getName() != base::StrID("i8"))
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ReturnConversionFailed,
+					"Expected i8 (char) VM value but received type: "
+						+ vm_value->getType()->getName().str()
+				));
+			return CompileTimeValue{ vm_value->readBytes<char>() };
+		}
 		case compiler::tsh::Kind::Meta: {
 			if (vm_value->getType()->getName() != base::StrID("opaque_ptr"))
 				return std::unexpected(VmEvaluationError(
@@ -451,7 +518,7 @@ namespace {
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
 				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
 					base::StrID(charBackedVMValueToCtv(vm_value)) } };
-			return error_value();
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
 		}
 		case compiler::tsh::Kind::Class: {
 			if (tsh::isStringTypePresent(ctx)) {
@@ -461,27 +528,38 @@ namespace {
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{
 						base::StrID(charBackedVMValueToCtv(vm_value)) } };
 			}
-			return error_value();
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
+		}
+		case compiler::tsh::Kind::Unit:
+			return CompileTimeValue{ CompileTimeValue::UnitCTV{} };
+		case compiler::tsh::Kind::Tuple: {
+			if (CompileTimeValue::TypeTuple::isValid(ctx, type))
+				return CompileTimeValue{
+					typeTupleFromBytes(ctx, type.getType(), vm_value->getBytes())
+				};
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
 		}
 		default: {
-			return error_value();
+			return CompileTimeValue{ CompileTimeValue::VMValue{ .val = vm_value, .type = type } };
 		}
 		}
 	}
 
-	std::expected<std::vector<Box<vm::IVMValue>>, VmEvaluationError> prepareArguments(
+	using VmArguments = std::vector<std::variant<Box<vm::IVMValue>, CRef<vm::IVMValue>>>;
+
+	std::expected<VmArguments, VmEvaluationError> prepareArguments(
 		query::Context&                                     ctx,
 		CompTimeDVM&                                        comptime_dvm,
 		const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
-		std::vector<Box<vm::IVMValue>> owned_arguments;
-		owned_arguments.reserve(args.size());
+		VmArguments result;
+		result.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVMValue(ctx, comptime_dvm, ctv_arg);
-			if (!res) return std::unexpected(res.error());
-			owned_arguments.push_back(std::move(*res));
+			auto vm_val = ctvToVMValue(ctx, comptime_dvm, ctv_arg);
+			if (!vm_val) return std::unexpected(vm_val.error());
+			result.push_back(std::move(vm_val.value()));
 		}
-		return owned_arguments;
+		return result;
 	}
 
 	std::expected<void, VmEvaluationError> setQueryContext(
@@ -509,17 +587,24 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
-		query::Context&                       ctx,
-		CompTimeDVM&                          comptime_dvm,
-		const std::string&                    func_name,
-		const std::vector<Box<vm::IVMValue>>& owned_args,
-		const compiler::tsh::SymbolType<>     return_type
+		query::Context&                   ctx,
+		CompTimeDVM&                      comptime_dvm,
+		const std::string&                func_name,
+		const VmArguments&                vm_value_args,
+		const compiler::tsh::SymbolType<> return_type
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
 
-		vm::FunctionRunArguments args
-			= owned_args | std::views::transform([](auto& value) { return value.refMut(); })
-		    | std::ranges::to<vm::FunctionRunArguments>();
+		auto to_ref = [&](auto& value) {
+			variant_match(value) {
+				variant_case(Box<vm::IVMValue>, val) { return val.ref(); }
+				variant_case(CRef<vm::IVMValue>, val) { return val; }
+			}
+			CORE_UNREACHABLE();
+		};
+
+		vm::FunctionRunArguments args = vm_value_args | std::views::transform(to_ref)
+		                              | std::ranges::to<vm::FunctionRunArguments>();
 
 		auto maybe_exit_value = vm::api::runFunctionAwait(pid, func_name, args);
 
@@ -536,10 +621,14 @@ namespace {
 			));
 
 		// Free the owned arguments.
-		for (const auto& arg: owned_args) arg->freeData();
+		for (auto& arg: vm_value_args) {
+			v_if_matches(arg, Box<vm::IVMValue>, val) { (*val)->freeData(); }
+		}
 
 		variant_match(maybe_exit_value.value()) {
 			variant_case(std::vector<Ref<vm::IVMValue>>, values) {
+				if (return_type.getType().getKind() == tsh::Kind::Unit)
+					return CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 				CORE_ASSERT(
 					values.size() == 1, "Compiler support for multiple values not implemented"
 				);
@@ -583,9 +672,9 @@ namespace compiler::helios {
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)
 			return std::unexpected(res.error());
 
-		auto owned_args = prepareArguments(ctx, comptime_dvm, args);
-		if (!owned_args) return std::unexpected(owned_args.error());
+		auto vm_value_args = prepareArguments(ctx, comptime_dvm, args);
+		if (!vm_value_args) return std::unexpected(vm_value_args.error());
 
-		return runAndGetResult(ctx, comptime_dvm, func_name, *owned_args, return_type);
+		return runAndGetResult(ctx, comptime_dvm, func_name, *vm_value_args, return_type);
 	}
 }
