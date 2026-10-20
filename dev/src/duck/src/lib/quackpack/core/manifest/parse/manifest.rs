@@ -12,17 +12,18 @@ use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::lints::LintLevel;
 use crate::quackpack::core::lints::errors::Errors;
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    BuildOptions, Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata,
-    ParseMode, Profile, Profiles, ScopeGuard, Version,
+    BuildOptions, Dependencies, DependencyKind, Features, Lints, Manifest, OptLevel,
+    PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
-    Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
-    Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
+    Lints as LintsSchema, Manifest as ManifestSchema, Metadata as MetadataSchema,
+    OptLevel as SchemaOptLevel, Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
 };
 use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
@@ -101,6 +102,7 @@ pub(crate) fn parse(
                 profiles,
                 VenvConfig::default_for_script(ctx),
                 BuildOptions::default(),
+                Lints::default(),
             );
             Ok(manifest)
         }
@@ -147,6 +149,14 @@ pub(crate) fn parse(
             };
 
             let build_options = parse_build_options(metadata);
+            let lints = if let Some(lints) = metadata.lints.as_ref() {
+                let mut guard1 = scope.push("metadata".to_string());
+                let guard2 = guard1.push("lints".to_string());
+
+                parse_lints(lints, guard2)?
+            } else {
+                Lints::default()
+            };
 
             Ok(Manifest::new(
                 name.into(),
@@ -157,6 +167,7 @@ pub(crate) fn parse(
                 profiles,
                 venv,
                 build_options,
+                lints,
             ))
         }
     }
@@ -259,4 +270,23 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
 fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
     let links = input.links.as_ref().map(StrId::from);
     BuildOptions { links }
+}
+
+/// Parse [`LintsSchema`] from the schema.
+fn parse_lints(input: &LintsSchema, mut scope: ScopeGuard<'_>) -> QuackResult<Lints> {
+    let overrides = input
+        .0
+        .iter()
+        .map(|(name, level)| {
+            let scope = scope.push(name.to_string());
+            let level = parse_single_lint_level(level, scope)?;
+            Ok((name.to_string(), level))
+        })
+        .collect::<QuackResult<_>>()?;
+    Ok(Lints::new(overrides))
+}
+
+/// Parse a single lint level from [`LintsSchema`].
+fn parse_single_lint_level(level: &str, scope: ScopeGuard<'_>) -> QuackResult<LintLevel> {
+    level.parse().with_context(|| scope.make_context_string())
 }

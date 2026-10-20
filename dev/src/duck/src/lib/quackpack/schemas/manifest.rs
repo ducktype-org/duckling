@@ -84,6 +84,8 @@ pub struct Metadata {
     pub description: Option<String>,
     /// External library to link against.
     pub links: Option<String>,
+    /// Lints configuration.
+    pub lints: Option<Lints>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -432,6 +434,13 @@ pub struct VenvConfig {
     pub ephemeral: Option<bool>,
     pub expose_freezefile: Option<bool>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema for configuring lints. Part of the `metadata.lints`.
+///
+/// Map is lint name -> lint level.
+pub struct Lints(pub HashMap<String, String>);
 
 #[cfg(test)]
 mod tests {

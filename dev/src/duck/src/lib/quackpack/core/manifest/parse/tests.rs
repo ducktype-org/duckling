@@ -1787,3 +1787,46 @@ dev-dependencies:
     assert_eq!(a.alias(), a_dev.alias());
     assert_eq!(a.effective_name(), a_dev.effective_name());
 }
+
+#[test]
+fn valid_lint_levels() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  lints:
+    a: error
+    b: warning
+    c: allow
+"#,
+    );
+    let ctx = DuckContext::default();
+    let _ = parse_manifest(&manifest_path, &ctx).unwrap().0;
+}
+
+#[test]
+fn invalid_lint_levels() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  lints:
+    a: invalid
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.lints.a`",
+                "invalid lint level: expected one of `allow`, `warning`, `error`, but found `invalid`"
+            ]
+        )
+    );
+}

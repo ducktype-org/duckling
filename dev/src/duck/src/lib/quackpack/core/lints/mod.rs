@@ -13,13 +13,14 @@ pub mod rules;
 pub mod warnings;
 
 use std::fmt;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use buffer::LintBuffer;
 use passes::{PASSES, run_single_pass};
 
 use super::PackageContext;
-use crate::QuackResult;
+use crate::{QuackError, QuackResult, qp_bail};
 
 /// A general diagnostic which can be emitted to a user.
 pub trait Diagnostic: fmt::Debug + fmt::Display + Sync + Send {}
@@ -38,6 +39,21 @@ pub enum LintLevel {
     Warning,
     /// This level is an error. It will cause [`LintBuffer::emit`] to fail at the end.
     Error,
+}
+
+impl FromStr for LintLevel {
+    type Err = QuackError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "allow" => Self::Allow,
+            "warning" => Self::Warning,
+            "error" => Self::Error,
+            _ => qp_bail!(
+                "invalid lint level: expected one of `allow`, `warning`, `error`, but found `{s}`"
+            ),
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
