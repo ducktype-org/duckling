@@ -38,6 +38,8 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <unicode_classification/classifications.hpp>
 
+#include <vm/core/vmvalue/ivmvalue.hpp>
+
 #include <algorithm>
 #include <sstream>
 #include <string_view>
@@ -668,7 +670,15 @@ namespace compiler::helios::mangler {
 						CORE_UNREACHABLE();
 					}
 					variant_case(defgen::ReplInputWrapper, repl_wrapper) {
-						return base::strConcat("__repl_input_wrapper_", repl_wrapper.counter);
+						return base::strConcat(
+							compiler::helios::name(symbol_id),
+							"_",
+							repl_wrapper.getUniqueId(),
+							"_",
+							ctx.query<QueryMangledType>({ repl_wrapper.getReturnType() })
+								->valueOrThrow()
+								.strView()
+						);
 					}
 					// Other cases of generated symbols cannot be functions.
 				}
@@ -859,13 +869,27 @@ namespace compiler::helios::mangler {
 				return base::strConcat("s", internal::mangleString(sc.value.strView()));
 			}
 			variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
-			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+			variant_case(compiler::ctv::CompileTimeValue::TypeTuple, tuple) {
 				std::string ret = "T";
-				for (auto&& elem: tuple.getElements()) ret += mangleCTV(ctx, elem);
+				using TypeTuple = compiler::ctv::CompileTimeValue::TypeTuple;
+				for (auto&& elem: tuple.getElements())
+					ret += mangleCTV(ctx, TypeTuple::elementToCtv(elem));
 				return ret += "E";
 			}
 			variant_case(tsh::SymbolType<>, sym) {
 				return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
+			}
+			variant_case(compiler::ctv::CompileTimeValue::VMValue, vm_value) {
+				// @TODO: #2990 Mangle the pointers smartly, by the data they point to.
+				const std::string_view bytes(
+					reinterpret_cast<const char*>(vm_value.val->getBytes()),
+					static_cast<usize>(vm_value.val->getDataSize().asInt())
+				);
+				return base::strConcat(
+					"M",
+					ctx.query<QueryMangledType>({ vm_value.type })->valueOrThrow().strView(),
+					internal::mangleString(bytes)
+				);
 			}
 			variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
 		}

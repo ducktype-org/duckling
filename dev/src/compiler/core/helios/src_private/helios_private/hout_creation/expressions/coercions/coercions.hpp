@@ -14,6 +14,7 @@
 #include "errors.hpp"
 
 #include <helios/hout/elements/expr.hpp>
+#include <helios/tsh/coercions/coercion_mode.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/box_or_ref.hpp>
@@ -36,13 +37,7 @@ namespace compiler::helios {
 
 	class Coercion;
 
-	/**
-	 * @brief How the coerced value is allowed to be handed over.
-	 */
-	enum class CoercionMode {
-		Default,        ///< Only the regular implicit coercions.
-		ImplicitRefOf,  ///< Additionally, a non-`ref` value may be implicitly taken by `ref`.
-	};
+	using tsh::coercions::CoercionMode;
 
 	/**
 	 * @brief Checks if a coercion of value described by from `from` to `to` is possible and returns

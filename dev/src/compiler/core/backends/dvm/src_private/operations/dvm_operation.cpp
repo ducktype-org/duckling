@@ -31,8 +31,8 @@ namespace {
 		switch (op) {
 		case IntegerNeg: 	return OpKind::neg;
 		case FloatNeg:   	return OpKind::fneg;
-		case BooleanNot: 	return OpKind::log_not;
-		case IntegerBitNot: return OpKind::bit_not;
+		case BooleanNot: 	return OpKind::logNot;
+		case IntegerBitNot: return OpKind::bitNot;
 		case IntegerAdd:  	return OpKind::add;
 		case IntegerSub:  	return OpKind::sub;
 		case IntegerMul:  	return OpKind::mul;
@@ -40,17 +40,17 @@ namespace {
 		case IntegerSMod: 	return OpKind::mod;
 		case IntegerUDiv: 	return OpKind::udiv;
 		case IntegerUMod: 	return OpKind::umod;
-		case IntegerBitAnd: return OpKind::bit_and;
-        case IntegerBitOr:  return OpKind::bit_or;
-        case IntegerBitXor: return OpKind::bit_xor;
+		case IntegerBitAnd: return OpKind::bitAnd;
+        case IntegerBitOr:  return OpKind::bitOr;
+        case IntegerBitXor: return OpKind::bitXor;
         case IntegerShl:    return OpKind::shl;
         case IntegerShr:    return OpKind::shr;
 		case FloatAdd:    	return OpKind::fadd;
 		case FloatSub:    	return OpKind::fsub;
 		case FloatMul:    	return OpKind::fmul;
 		case FloatDiv:    	return OpKind::fdiv;
-		case BooleanAnd:  	return OpKind::log_and;
-		case BooleanOr:   	return OpKind::log_or;
+		case BooleanAnd:  	return OpKind::logAnd;
+		case BooleanOr:   	return OpKind::logOr;
 		case IntegerEq:    	return OpKind::cmpEq;
 		case IntegerNeq:   	return OpKind::cmpNeq;
 		case IntegerSLt:   	return OpKind::cmpLt;

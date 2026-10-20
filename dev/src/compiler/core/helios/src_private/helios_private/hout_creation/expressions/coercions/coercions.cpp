@@ -139,7 +139,9 @@ namespace compiler::helios {
 			const auto alternatives
 				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
 			for (usize i = 0; i < alternatives.size(); i++)
-				if (tsh::referenceCoercionRule(from.getRefKind(), alternatives[i].getRefKind())
+				if (tsh::coercions::referenceCoercionRule(
+						from.getRefKind(), alternatives[i].getRefKind()
+					)
 				        .isLegal()
 				    && alternatives[i].getType() == from.getType())
 					return std::pair{ i, alternatives[i] };
@@ -237,8 +239,9 @@ namespace compiler::helios {
 	) {
 		const tsh::SymbolType<> from_type = from.getSymbolType();
 
-		if (mode == CoercionMode::ImplicitRefOf and to.getRefKind() == tsh::ReferenceKind::Ref
-		    and from_type.getRefKind() != tsh::ReferenceKind::Ref) {
+		if (tsh::coercions::referenceCoercionRule(from_type.getRefKind(), to.getRefKind(), mode)
+		        .adjustment
+		    == tsh::coercions::ReferenceAdjustment::RefOf) {
 			UNPACK_QRESULT(
 				const auto ref_coercion =,
 				canCoerce(ctx, code::RefOfExpr::typeOfRefTo(from), to, CoercionMode::Default)
