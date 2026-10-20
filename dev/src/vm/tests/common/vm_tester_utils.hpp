@@ -40,20 +40,240 @@
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
 		  VmLoaderTestSuite(std::move(config), TESTER_SUITE_NAME)
 
-#define PARSER_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                        \
+#define VM_PARSER_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                     \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
-		  ParserTestSuite(std::move(config), TESTER_SUITE_NAME)
+		  VmParserTestSuite(std::move(config), TESTER_SUITE_NAME)
 
-class VmTestSuite: public tester::TestSuite {
-public:
-	VmTestSuite(tester::TestConfig&& config, std::string_view name):
+/**
+ * @brief The helpers shared by the VM suite bases. A suite never derives from it directly (its
+ * constructor is private). It derives from `VmTestSuite`, `VmRuntimeTestSuite` or
+ * `VmLoaderTestSuite`, and the base decides which helpers the suite gets.
+ *
+ * The helpers every VM suite needs are protected. The load and run helpers are private, and a base
+ * that may use a group lists its helpers with `using` declarations. So every base is an allow-list.
+ * A helper added to a private group reaches no base until it is listed there, and a suite that
+ * calls a helper its base does not list fails to compile, even with a qualified
+ * `VmTestSuiteCore::` call.
+ */
+class VmTestSuiteCore: public tester::TestSuite {
+	friend class VmTestSuite;
+	friend class VmRuntimeTestSuite;
+	friend class VmLoaderTestSuite;
+
+	VmTestSuiteCore(tester::TestConfig&& config, std::string_view name):
 		  tester::TestSuite(std::move(config), name) {}
 
 protected:
+	/**
+	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.
+	 */
+	vm::PID spawnAndLoad(const std::string& dbc_filename);
+
+	/**
+	 * @brief Wraps bytecode written in the test itself into an in-memory `.dbc` file, for
+	 * programs that depend on values only known at run time (e.g. the path of a library). The
+	 * file never touches the disk, so suites running in parallel cannot clash. @p name is part of
+	 * the file name, so it shows in the positions of the load errors.
+	 */
+	static fs::File inlineDbc(std::string_view name, std::string_view bytecode);
+
+	vm::PID initProcess() { return initProcess(process_config, {}); }
+
+	vm::PID initProcess(
+		const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config = {}
+	);
+
+	/**
+	 * @brief Asserts the call was refused with the given `ApiError` alternative, and that the
+	 * rendered error mentions @p expected_reason. An empty @p expected_reason skips the message
+	 * check, which is the only option for the alternatives carrying no message.
+	 */
+	template<typename ErrorAlternative, typename T>
+	void assertRefusedWith(
+		const std::expected<T, vm::api::ApiError>& result,
+		std::string_view                           what,
+		std::string_view                           expected_reason = ""
+	) {
+		ASSERT_NO_VALUE(result, what, " was expected to be refused, but it succeeded");
+
+		const std::string message = vm::api::errorToString(result.error());
+		ASSERT_MATCHES_MSG(
+			result.error(),
+			base::strConcat(what, " was refused with an unexpected error kind: ", message),
+			ErrorAlternative
+		);
+		assertTrue(
+			expected_reason.empty() || message.find(expected_reason) != std::string::npos,
+			base::strConcat(
+				what,
+				" was refused, but the reason does not mention '",
+				expected_reason,
+				"'. The error was: ",
+				message
+			)
+		);
+	}
+
+	/**
+	 * @brief Asserts the call succeeded, printing the error otherwise.
+	 */
+	template<typename T>
+	void assertSucceeded(const std::expected<T, vm::api::ApiError>& result, std::string_view what) {
+		ASSERT_HAS_VALUE(
+			result, what, " was expected to succeed, but failed with: ", errorOf(result)
+		);
+	}
+
+	/**
+	 * @brief Renders whatever error an `std::expected` holds, for assertion messages.
+	 */
+	template<typename T>
+	static std::string errorOf(const std::expected<T, vm::api::ApiError>& result) {
+		return result.has_value() ? "<no error>" : vm::api::errorToString(result.error());
+	}
+
+	/**
+	 * @brief ProcessConfig used by the no-arg `initProcess()` (and therefore by `spawnAndLoad`).
+	 * Suites may override it in their constructor. `VmApiTest` disables the JIT this way
+	 * (see #3612).
+	 */
+	vm::api::ProcessConfig process_config{};
+
+private:
+	// Load helpers. Only `VmTestSuite` and `VmLoaderTestSuite` expose them. A runtime suite that
+	// needs one is testing the loader, so the test belongs in a `loader/` suite.
+
+	/**
+	 * @brief Loads a file containing a program which violates syntactic or static verification
+	 * guidelines. Asserts what error keywords are present in the error message.
+	 */
+	void loadInvalidDbc(
+		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
+	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
+	 */
+	void loadInvalidDbc(
+		const fs::File&                      dbc_file,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
+	 * @brief Loads @p first_dbc under an unrestricted config, then loads @p second_dbc under
+	 * @p config on the same process, asserting the second load fails verification with the
+	 * given error keywords. Exercises flag propagation from already-loaded ("old") functions
+	 * to newly loaded ones.
+	 */
+	void loadThenLoadInvalidDbc(
+		const std::string&                   first_dbc,
+		const std::string&                   second_dbc,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
+	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
+	 */
+	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
+
+	/**
+	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
+	 */
+	void loadValidDbc(const fs::File& dbc_file, vm::api::ExecutionConfig config = {});
+
+	// Run helpers. Only `VmTestSuite` and `VmRuntimeTestSuite` expose them. A loader suite that
+	// needs one is testing what a program does, so the test belongs in a `runtime/` suite.
+
 	struct TestResult {
 		vm::PID                               pid;
 		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
 	};
+
+	void handleTestResult(const TestResult& test_result, i64 exit_code);
+
+	/**
+	 * @brief Runs a program from a given filepath with the specified input and command-line
+	 * arguments. Asserts that the actual output matches the expected one.
+	 */
+	void runTestOnVm(
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0
+	);
+	/**
+	 * @brief Same as above, but the program is given as an argument
+	 */
+	void runTestOnVm(
+		const vm::code::CodeCollection&    code,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0
+	);
+
+	void runTestOnVm(
+		vm::PID                            pid,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0
+	);
+
+	TestResult runTestOnVmGetResult(
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {}
+	);
+
+	TestResult runTestOnVmGetResult(
+		const vm::code::CodeCollection&    code,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {}
+	);
+
+	TestResult runTestOnVmGetResult(
+		vm::PID                            pid,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {}
+	);
+
+	/**
+	 * @brief Asserts the process panicked with @p err_piece in its message and kills it.
+	 */
+	void assertExecutionPanickedWithAndKill(
+		const TestResult& test_result, std::string_view err_piece
+	);
+};
+
+/**
+ * @brief Base of the suites that drive a VM process through the API (`api/`, the DVM backend), and
+ * of the old suites that are not split into `loader/` and `runtime/` yet. It exposes both the load
+ * and the run helpers, and adds the process-control helpers that only the API suites need.
+ */
+class VmTestSuite: public VmTestSuiteCore {
+public:
+	VmTestSuite(tester::TestConfig&& config, std::string_view name):
+		  VmTestSuiteCore(std::move(config), name) {}
+
+protected:
+	using VmTestSuiteCore::loadInvalidDbc;
+	using VmTestSuiteCore::loadThenLoadInvalidDbc;
+	using VmTestSuiteCore::loadValidDbc;
+
+	using VmTestSuiteCore::assertExecutionPanickedWithAndKill;
+	using VmTestSuiteCore::handleTestResult;
+	using VmTestSuiteCore::runTestOnVm;
+	using VmTestSuiteCore::runTestOnVmGetResult;
+	using VmTestSuiteCore::TestResult;
 
 	/// Budget for a single poll loop waiting for a process to reach a state.
 	static constexpr auto STATUS_WAIT_BUDGET = std::chrono::seconds(30);
@@ -69,19 +289,6 @@ protected:
 
 	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
 	static constexpr usize SPIN_THREAD_COUNT = 4;
-
-	/**
-	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.
-	 */
-	vm::PID spawnAndLoad(const std::string& dbc_filename);
-
-	/**
-	 * @brief Wraps bytecode written in the test itself into an in-memory `.dbc` file, for
-	 * programs that depend on values only known at run time (e.g. the path of a library). The
-	 * file never touches the disk, so suites running in parallel cannot clash. @p name is part of
-	 * the file name, so it shows in the positions of the load errors.
-	 */
-	static fs::File inlineDbc(std::string_view name, std::string_view bytecode);
 
 	static bool isRunning(const vm::api::ProcStatus& s) { return v_matches(s, vm::api::Running); }
 
@@ -191,120 +398,6 @@ protected:
 	void validateTransitions(const TransitionLog& log, std::string_view what);
 
 	/**
-	 * @brief Asserts the call was refused with the given `ApiError` alternative, and that the
-	 * rendered error mentions @p expected_reason. An empty @p expected_reason skips the message
-	 * check, which is the only option for the alternatives carrying no message.
-	 */
-	template<typename ErrorAlternative, typename T>
-	void assertRefusedWith(
-		const std::expected<T, vm::api::ApiError>& result,
-		std::string_view                           what,
-		std::string_view                           expected_reason = ""
-	) {
-		ASSERT_NO_VALUE(result, what, " was expected to be refused, but it succeeded");
-
-		const std::string message = vm::api::errorToString(result.error());
-		ASSERT_MATCHES_MSG(
-			result.error(),
-			base::strConcat(what, " was refused with an unexpected error kind: ", message),
-			ErrorAlternative
-		);
-		assertTrue(
-			expected_reason.empty() || message.find(expected_reason) != std::string::npos,
-			base::strConcat(
-				what,
-				" was refused, but the reason does not mention '",
-				expected_reason,
-				"'. The error was: ",
-				message
-			)
-		);
-	}
-
-	/**
-	 * @brief Asserts the call succeeded, printing the error otherwise.
-	 */
-	template<typename T>
-	void assertSucceeded(const std::expected<T, vm::api::ApiError>& result, std::string_view what) {
-		ASSERT_HAS_VALUE(
-			result, what, " was expected to succeed, but failed with: ", errorOf(result)
-		);
-	}
-
-	/**
-	 * @brief Renders whatever error an `std::expected` holds, for assertion messages.
-	 */
-	template<typename T>
-	static std::string errorOf(const std::expected<T, vm::api::ApiError>& result) {
-		return result.has_value() ? "<no error>" : vm::api::errorToString(result.error());
-	}
-
-	vm::PID initProcess() { return initProcess(process_config, {}); }
-
-	vm::PID initProcess(
-		const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config = {}
-	);
-	void handleTestResult(const TestResult& test_result, i64 exit_code);
-
-	/**
-	 * @brief Runs a program from a given filepath with the specified input and command-line
-	 * arguments. Asserts that the actual output matches the expected one.
-	 */
-	void runTestOnVm(
-		const std::string&                 dbc_filename,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {},
-		i64                                exit_code       = 0
-	);
-	/**
-	 * @brief Same as above, but the program is given as an argument
-	 */
-	void runTestOnVm(
-		const vm::code::CodeCollection&    code,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {},
-		i64                                exit_code       = 0
-	);
-
-	void runTestOnVm(
-		vm::PID                            pid,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {},
-		i64                                exit_code       = 0
-	);
-
-	TestResult runTestOnVmGetResult(
-		const std::string&                 dbc_filename,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {}
-	);
-
-	TestResult runTestOnVmGetResult(
-		const vm::code::CodeCollection&    code,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {}
-	);
-
-	TestResult runTestOnVmGetResult(
-		vm::PID                            pid,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {}
-	);
-
-	/**
-	 * @brief Asserts the process panicked with @p err_piece in its message and kills it.
-	 */
-	void assertExecutionPanickedWithAndKill(
-		const TestResult& test_result, std::string_view err_piece
-	);
-
-	/**
 	 * @brief Asserts that `runFunction` refused the call and that the process is still runnable
 	 * after the rejected validation.
 	 */
@@ -370,137 +463,49 @@ protected:
 	static vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments);
 
 	static void freeArguments(OwnedArgumentList& arguments);
-
-	/**
-	 * @brief Loads a file containing a program which violates syntactic or static verification
-	 * guidelines. Asserts what error keywords are present in the error message.
-	 */
-	void loadInvalidDbc(
-		const std::string&                   dbc_filename,
-		const std::vector<std::string_view>& error_keywords,
-		vm::api::ExecutionConfig             config = {}
-	);
-
-	/**
-	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
-	 */
-	void loadInvalidDbc(
-		const fs::File&                      dbc_file,
-		const std::vector<std::string_view>& error_keywords,
-		vm::api::ExecutionConfig             config = {}
-	);
-
-	/**
-	 * @brief Loads @p first_dbc under an unrestricted config, then loads @p second_dbc under
-	 * @p config on the same process, asserting the second load fails verification with the
-	 * given error keywords. Exercises flag propagation from already-loaded ("old") functions
-	 * to newly loaded ones.
-	 */
-	void loadThenLoadInvalidDbc(
-		const std::string&                   first_dbc,
-		const std::string&                   second_dbc,
-		const std::vector<std::string_view>& error_keywords,
-		vm::api::ExecutionConfig             config = {}
-	);
-
-	/**
-	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
-	 */
-	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
-
-	/**
-	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
-	 */
-	void loadValidDbc(const fs::File& dbc_file, vm::api::ExecutionConfig config = {});
-
-	/**
-	 * @brief ProcessConfig used by the no-arg `initProcess()` (and therefore by `spawnAndLoad`).
-	 * Suites may override it in their constructor; `VmApiTest` disables the JIT this way
-	 * (see #3612).
-	 */
-	vm::api::ProcessConfig process_config{};
 };
 
 /**
- * @brief Base of the suites under `runtime/`. They check what a program does when it runs, so the
- * helpers that only check whether a program loads are deleted here. A test that expects a load
- * error belongs in a `loader/` suite, which runs once instead of once per VM flavour.
+ * @brief Base of the suites under `runtime/`. They check what a program does when it runs, so they
+ * get the run helpers but not the load helpers. A test that expects a load error belongs in a
+ * `loader/` suite, which runs once instead of once per VM flavour.
  */
-class VmRuntimeTestSuite: public VmTestSuite {
+class VmRuntimeTestSuite: public VmTestSuiteCore {
 public:
 	VmRuntimeTestSuite(tester::TestConfig&& config, std::string_view name):
-		  VmTestSuite(std::move(config), name) {}
+		  VmTestSuiteCore(std::move(config), name) {}
 
-	void loadInvalidDbc(
-		const std::string&                   dbc_filename,
-		const std::vector<std::string_view>& error_keywords,
-		vm::api::ExecutionConfig             config = {}
-	) = delete;
-
-	void loadThenLoadInvalidDbc(
-		const std::string&                   first_dbc,
-		const std::string&                   second_dbc,
-		const std::vector<std::string_view>& error_keywords,
-		vm::api::ExecutionConfig             config = {}
-	) = delete;
-
-	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {})
-		= delete;
+protected:
+	using VmTestSuiteCore::assertExecutionPanickedWithAndKill;
+	using VmTestSuiteCore::handleTestResult;
+	using VmTestSuiteCore::runTestOnVm;
+	using VmTestSuiteCore::runTestOnVmGetResult;
+	using VmTestSuiteCore::TestResult;
 };
 
 /**
  * @brief Base of the suites under `loader/`. They check whether a program loads and what the loader
- * builds from it, so the helpers that run a program are deleted here. A test that runs a program
+ * builds from it, so they get the load helpers but not the run helpers. A test that runs a program
  * belongs in a `runtime/` suite, which runs it once per VM flavour instead of only on SC.
- *
- * Deleting one overload hides every overload of the same name from `VmTestSuite`.
  */
-class VmLoaderTestSuite: public VmTestSuite {
+class VmLoaderTestSuite: public VmTestSuiteCore {
 public:
 	VmLoaderTestSuite(tester::TestConfig&& config, std::string_view name):
-		  VmTestSuite(std::move(config), name) {}
+		  VmTestSuiteCore(std::move(config), name) {}
 
-	void runTestOnVm(
-		const std::string&                 dbc_filename,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {},
-		i64                                exit_code       = 0
-	) = delete;
-
-	TestResult runTestOnVmGetResult(
-		const std::string&                 dbc_filename,
-		const base::Optional<std::string>& optional_input  = {},
-		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {}
-	) = delete;
-
-	void runAndCheckReturnValues(
-		vm::PID                                 pid,
-		const base::Optional<std::string>&      func_name              = {},
-		const vm::RunArguments&                 args                   = {},
-		const base::Optional<std::string>&      optional_input         = {},
-		const base::Optional<std::string>&      optional_output        = {},
-		const base::Optional<std::vector<i64>>& expected_return_values = {}
-	) = delete;
-
-	void runAndCheckReturnValue(
-		vm::PID                            pid,
-		const base::Optional<std::string>& func_name             = {},
-		const vm::RunArguments&            args                  = {},
-		const base::Optional<std::string>& optional_input        = {},
-		const base::Optional<std::string>& optional_output       = {},
-		const base::Optional<i64>&         expected_return_value = {}
-	) = delete;
+protected:
+	using VmTestSuiteCore::loadInvalidDbc;
+	using VmTestSuiteCore::loadThenLoadInvalidDbc;
+	using VmTestSuiteCore::loadValidDbc;
 };
 
 /**
  * @brief Base of the suites that test the text assembly parser on its own. They never start a VM
  * process, so they derive from `tester::TestSuite` directly and only get the parse helpers.
  */
-class ParserTestSuite: public tester::TestSuite {
+class VmParserTestSuite: public tester::TestSuite {
 public:
-	ParserTestSuite(tester::TestConfig&& config, std::string_view name):
+	VmParserTestSuite(tester::TestConfig&& config, std::string_view name):
 		  tester::TestSuite(std::move(config), name) {}
 
 protected:
