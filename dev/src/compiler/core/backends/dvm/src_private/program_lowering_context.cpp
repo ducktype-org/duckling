@@ -340,7 +340,13 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 
 	using vm::code::Identifier;
 
-	// @TODO: #1553 add source position to GlobalVariables
+	if_opt_some(debug_info_builder, builder) {
+		builder.addGlobal(
+			lir_global.global.mangled_name.str(),
+			lir_global.metadata.source_code_name.copyValueOr(lir_global.global.mangled_name).str(),
+			lir_global.metadata.position.map(mapDIPosition)
+		);
+	}
 
 	variant_match(lir_global.data_initialization) {
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
@@ -365,7 +371,12 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 		}
 		variant_case(ctv::CompileTimeValue, ctv_initial_value) {
 			CTVLowering::lowerCTVToNewGlobal(
-				*this, ctv_initial_value, global_type, false, lir_global.global.mangled_name
+				*this,
+				ctv_initial_value,
+				global_type,
+				false,
+				lir_global.global.mangled_name,
+				lir_global.metadata.position
 			);
 		}
 		variant_default {
