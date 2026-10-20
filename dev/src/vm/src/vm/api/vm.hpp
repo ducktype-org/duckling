@@ -269,8 +269,11 @@ namespace vm::api {
 	 * @note The caller keeps the ownership of the Box, which can be destroyed once the value was
 	 * freed. A value passed to `runFunction` must not be freed before the function finishes.
 	 *
+	 * @note Only the VMValue owned by the caller can be freed (the one returned by `api::getVMValue`)
+	 * The values owned by the process (i.e. function/program return values) are rejected here.
+	 *
 	 * @return Nothing if the value was freed or an API error otherwise (the process is running, the
-	 * value belongs to a different process or it was already freed).
+	 * value belongs to a different process, it is owned by the process or it was already freed).
 	 */
 	std::expected<void, ApiError> freeVMValue(PID pid, Ref<IVMValue> vm_value);
 

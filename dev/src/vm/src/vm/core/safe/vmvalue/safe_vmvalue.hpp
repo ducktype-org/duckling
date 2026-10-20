@@ -53,6 +53,10 @@ namespace vm {
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
 
+		/// True when the VMValue is owned by the process (i.e. function return values). The process
+		/// frees them on it's own.
+		bool owned_by_process = false;
+
 		/**
 		 * @brief Frees the data of the SafeVMValue (deinitializes the blocks in the memory module).
 		 * This function has to be called manually when using values created with the

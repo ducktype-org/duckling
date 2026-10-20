@@ -1019,6 +1019,32 @@ private:
 			(void) api::kill(other_pid);
 		}
 
+		{
+			// The exit values are owned by the process and can't be freed by the user.
+			const vm::PID add_pid  = spawnAndLoad("add.dbc");
+			auto          argument = api::getVMValue(add_pid, "i64");
+			assertSucceeded(argument, "getVMValue(i64) of the `add` argument");
+			auto result = api::runFunctionAwait(
+				add_pid, "add", { argument->vm_value.refMut(), argument->vm_value.refMut() }
+			);
+			assertSucceeded(result, "runFunctionAwait of `add`");
+			ASSERT_MATCHES(result.value(), std::vector<Ref<vm::IVMValue>>);
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(
+					add_pid, v_get(result.value(), std::vector<Ref<vm::IVMValue>>).at(0)
+				),
+				"freeVMValue of an exit value",
+				"owned by the process"
+			);
+			assertSucceeded(
+				api::freeVMValue(add_pid, argument->vm_value.refMut()),
+				"freeVMValue of the `add` argument"
+			);
+			auto valid = api::deinitAndValidate(add_pid);
+			assertSucceeded(valid, "deinitAndValidate after a refused free of an exit value");
+			ASSERT_TRUE(valid.value().valid());
+		}
+
 		auto kept_value = api::getVMValue(pid, "i64");
 		assertSucceeded(kept_value, "getVMValue(i64) kept over the run");
 

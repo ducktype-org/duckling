@@ -273,13 +273,15 @@ namespace vm {
 	}
 
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type) {
-		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
+		auto value              = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
+		value->owned_by_process = true;
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
-		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+		auto value              = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+		value->owned_by_process = true;
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
@@ -675,6 +677,11 @@ namespace vm {
 				if (safe_value->my_process.get() != this)
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "VMValue comes from a different process" } });
+
+				// The VMValue is owned by the process, not the user, so we can't just free it.
+				if (safe_value->owned_by_process)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue is owned by the process" } });
 
 				if (safe_value->pointer.isNull())
 					return std::unexpected(api::ApiError{
