@@ -204,14 +204,9 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Key for QueryVariantType.
-	 *
-	 * When @p represents_optional_type is set, the variant is the optional `?T`: its first
-	 * underlying type has to be the held value type `T`, and the second one the `None` type.
-	 * An optional is a distinct type from the plain variant `T | None`.
 	 */
 	struct KeyFor_QueryVariantType final {
 		std::vector<SymbolType<>> underlying_types;
-		bool                      represents_optional_type = false;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryVariantType&) const
@@ -229,7 +224,6 @@ namespace compiler::tsh {
 
 			hashing::SHA256 hasher{};
 			for (const auto& hash: hashes) addToHash(hasher, hash);
-			addToHash(hasher, represents_optional_type);
 			return hasher.finalize();
 		}
 	};
@@ -239,6 +233,37 @@ namespace compiler::tsh {
 	 */
 	DECLARE_QUERY(
 		QueryVariantType, KeyFor_QueryVariantType, VariantAbstractType, ({ .uses_qresult = false })
+	)
+
+	/**
+	 * @brief Key for QueryOptionalType.
+	 */
+	struct KeyFor_QueryOptionalType final {
+		/// The type `T` held by the optional `?T`.
+		SymbolType<> value_type;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryOptionalType&) const
+			= default;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(value_type);
+		}
+	};
+
+	/**
+	 * @brief The optional type `?T`.
+	 *
+	 * It really just creates a special variant type of `T` and `None`, marked as representing
+	 * an optional. Unlike a plain variant its alternatives are not reordered: `T` is always the
+	 * first one and `None` the second one. It is printed as `?T`, exposes the optional interface,
+	 * and is a distinct type from the plain variant `T | None` created by QueryVariantType.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryOptionalType, KeyFor_QueryOptionalType, VariantAbstractType, ({ .uses_qresult = false })
 	)
 
 	/**

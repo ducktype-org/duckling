@@ -14,6 +14,7 @@
 #include <helios/tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
@@ -857,8 +858,8 @@ namespace compiler::tsh {
 	 * Sort variant types, so that var(A, B) = var(B, A)?
 	 */
 	class VariantAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<SymbolType<>>    underlying_types;
-		base::Optional<SymbolType<>> optional_value_type;
+		std::vector<SymbolType<>> underlying_types;
+		bool                      represents_optional;
 
 	public:
 		[[nodiscard]]
@@ -873,11 +874,14 @@ namespace compiler::tsh {
 
 		/**
 		 * @brief Creates a variant of the given alternatives.
-		 * @param represents_optional_type Marks the variant as the optional `?T`, in which case
-		 * the first of @p variant_types has to be the held value type `T`.
+		 * @param represents_optional Marks the variant as the optional `?T`, in which case
+		 * @p variant_types have to be exactly the value type `T` followed by the `None` type. The
+		 * alternatives of an optional keep this order, so `None` is always the second one.
 		 */
 		VariantAbstractTypeImpl(
-			const std::vector<SymbolType<>>& variant_types, bool represents_optional_type
+			query::Context&                  ctx,
+			const std::vector<SymbolType<>>& variant_types,
+			bool                             represents_optional
 		);
 
 		[[nodiscard]]
@@ -887,12 +891,17 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		bool representsOptionalType() const {
-			return optional_value_type.has_value();
+			return represents_optional;
 		}
 
+		/**
+		 * @brief The type `T` held by the optional `?T`, which is always its first alternative.
+		 * @pre representsOptionalType()
+		 */
 		[[nodiscard]]
 		const SymbolType<>& getOptionalValueType() const {
-			return optional_value_type.value();
+			CORE_ASSERT(represents_optional, "Only an optional type holds an optional value type.");
+			return underlying_types.front();
 		}
 
 		[[nodiscard]]

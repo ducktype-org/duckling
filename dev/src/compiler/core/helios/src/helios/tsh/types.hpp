@@ -463,7 +463,8 @@ namespace compiler::tsh {
 		bool representsOptionalType() const;
 
 		/**
-		 * @brief The type `T` held by the optional `?T`.
+		 * @brief The type `T` held by the optional `?T`. It is always the first alternative, and
+		 * `None` the second one.
 		 * @pre representsOptionalType()
 		 */
 		[[nodiscard]]

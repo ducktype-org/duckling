@@ -684,10 +684,44 @@ namespace compiler::helios {
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
-					ctx.query<tsh::QueryVariantType>({
-						.underlying_types         = subtypes,
-						.represents_optional_type = expr.represents_optional_type,
-					}),
+					ctx.query<tsh::QueryVariantType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				} };
+			}
+
+			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr
+			) final {
+				CORE_ASSERT(
+					expr.value_type->expression_type.getType().getKind() == tsh::Kind::Meta,
+					"It's impossible to create an optional of a non-type in HOUT"
+				);
+
+				const auto value_type_ctv = evalHoutExpr(ctx, expr.value_type.ref());
+				if (value_type_ctv.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				const auto value_type
+					= value_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+
+				if (value_type.getType() == getOptionalNoneType(ctx).getType()) {
+					const auto position = expr.origin.getStablePosition();
+					CORE_ASSERT(
+						position.has_value(), "Optional type constructor without a source position"
+					);
+					ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+						position.value(),
+						makeBox<InteractiveType>(
+							ctx, tsh::SymbolType<>::withDefaults(value_type.getType())
+						)
+					));
+					result = query::Failed();
+					return;
+				}
+
+				result = CompileTimeValue{ tsh::SymbolType<>{
+					ctx.query<tsh::QueryOptionalType>({ value_type }),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };

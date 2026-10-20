@@ -148,16 +148,16 @@ namespace compiler::helios {
 				    .path       = { "optional" },
 				    .namespaces = { "optional_primitives", "by_ref" },
 				    .element    = "valueOr" } },
-				{ LanguagePrimitive::OptionalFull,
+				{ LanguagePrimitive::OptionalNonEmpty,
 				  { .package    = "core",
 				    .path       = { "optional" },
 				    .namespaces = { "optional_primitives" },
-				    .element    = "full" } },
-				{ LanguagePrimitive::OptionalEmpty,
+				    .element    = "nonEmpty" } },
+				{ LanguagePrimitive::OptionalIsEmpty,
 				  { .package    = "core",
 				    .path       = { "optional" },
 				    .namespaces = { "optional_primitives" },
-				    .element    = "empty" } },
+				    .element    = "isEmpty" } },
 				{ LanguagePrimitive::OptionalReset,
 				  { .package    = "core",
 				    .path       = { "optional" },
@@ -293,9 +293,6 @@ namespace compiler::helios {
 	}
 
 	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type) {
-		return ctx.query<tsh::QueryVariantType>({
-			.underlying_types         = { value_type, getOptionalNoneType(ctx) },
-			.represents_optional_type = true,
-		});
+		return ctx.query<tsh::QueryOptionalType>({ value_type });
 	}
 }

@@ -6,7 +6,6 @@
 
 #include "expr_lowering.hpp"
 
-
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -695,28 +694,6 @@ namespace compiler::mir {
 			std::vector<MIRValue> subtype_values;
 			subtype_values.reserve(expr.subtypes.size());
 
-			if (expr.represents_optional_type) {
-				auto value_type_lowered = lowerSubExpr(*expr.subtypes.front(), current);
-				subtype_values.push_back(value_type_lowered.getResult(function));
-				current = value_type_lowered.begin;
-
-				noValueOutput(
-					current,
-					hole,
-					Instruction(
-						Operation::MetaTypeOperation,
-						{},
-						subtype_values,
-						{},
-						expr_scope,
-						MetaParameters{ MetaKind::CreateOptional },
-						{ expr.getPosition() }
-					),
-					result_type
-				);
-				return;
-			}
-
 			for (const auto& element: expr.subtypes | std::views::reverse) {
 				auto elem_lowered = lowerSubExpr(*element, current);
 				subtype_values.push_back(elem_lowered.getResult(function));
@@ -734,6 +711,34 @@ namespace compiler::mir {
 					{},
 					expr_scope,
 					MetaParameters{ MetaKind::CreateVariant },
+					{ expr.getPosition() }
+				),
+				result_type
+			);
+			return;
+		}
+
+		void visitOptionalTypeConstructorExpr(const hc::OptionalTypeConstructorExpr& expr) override {
+			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Optional Type Constructor should be meta"
+			);
+
+			auto hole = continuation->addHole();
+
+			auto value_type_lowered = lowerSubExpr(*expr.value_type, continuation);
+
+			noValueOutput(
+				value_type_lowered.begin,
+				hole,
+				Instruction(
+					Operation::MetaTypeOperation,
+					{},
+					{ value_type_lowered.getResult(function) },
+					{},
+					expr_scope,
+					MetaParameters{ MetaKind::CreateOptional },
 					{ expr.getPosition() }
 				),
 				result_type

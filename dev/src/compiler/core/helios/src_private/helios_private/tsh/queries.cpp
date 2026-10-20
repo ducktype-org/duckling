@@ -135,8 +135,8 @@ namespace compiler::tsh {
 			                             LanguagePrimitive::OptionalValueRef,
 			                             LanguagePrimitive::OptionalValueOr,
 			                             LanguagePrimitive::OptionalValueOrRef,
-			                             LanguagePrimitive::OptionalFull,
-			                             LanguagePrimitive::OptionalEmpty,
+			                             LanguagePrimitive::OptionalNonEmpty,
+			                             LanguagePrimitive::OptionalIsEmpty,
 			                             LanguagePrimitive::OptionalReset }) {
 				builder.push(
 					helios::bakeLanguagePrimitiveWithTypes(ctx, primitive, { value_type }),

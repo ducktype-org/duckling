@@ -469,19 +469,12 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Variant constructor inside an expression.
-	 *
-	 * When @p represents_optional_type is set, it constructs the optional `?T`, and @p subtypes
-	 * are exactly the value type `T` followed by the `None` type.
 	 */
 	struct VariantTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
-		bool                         represents_optional_type;
 
 		VariantTypeConstructorExpr(
-			query::Context&              ctx,
-			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> subtypes,
-			bool                         represents_optional_type = false
+			query::Context& ctx, ElementOrigin origin, std::vector<base::Box<Expr>> subtypes
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -495,8 +488,31 @@ namespace compiler::helios::code {
 		VariantTypeConstructorExpr(
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> subtypes,
-			bool                         represents_optional_type
+			std::vector<base::Box<Expr>> subtypes
+		);
+	};
+
+	/**
+	 * @brief Optional type constructor `?T` inside an expression. It creates the optional type
+	 * holding @p value_type, which is a special variant of `T` and `None`.
+	 */
+	struct OptionalTypeConstructorExpr: public Expr {
+		base::Box<Expr> value_type;
+
+		OptionalTypeConstructorExpr(
+			query::Context& ctx, ElementOrigin origin, base::Box<Expr> value_type
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		OptionalTypeConstructorExpr(
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> value_type
 		);
 	};
 

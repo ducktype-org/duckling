@@ -192,14 +192,24 @@ namespace compiler::tsh {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
 
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Impl) {
-		static auto provide(Context&, const QKey& key) -> PResult {
-			return { key.underlying_types, key.represents_optional_type };
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return { ctx, key.underlying_types, false };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
+
+	struct IMPLEMENT_QUERY(QueryOptionalType, VariantAbstractType::Impl) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return { ctx, { key.value_type, helios::getOptionalNoneType(ctx) }, true };
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryOptionalType)
 
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {

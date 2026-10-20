@@ -8,6 +8,7 @@
 
 #include "queries.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -303,13 +304,23 @@ namespace compiler::tsh {
 	}
 
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(
-		const std::vector<SymbolType<>>& variant_types, const bool represents_optional_type
+		query::Context&                  ctx,
+		const std::vector<SymbolType<>>& variant_types,
+		const bool                       represents_optional
 	):
-		  underlying_types(variant_types) {
-		CORE_ASSERT(
-			not represents_optional_type or variant_types.size() == 2,
-			"An optional type has to consist of exactly the value type and the None type."
-		);
+		  underlying_types(variant_types),
+		  represents_optional(represents_optional) {
+		if (represents_optional) {
+			const AbstractType none_type = helios::getOptionalNoneType(ctx).getType();
+			CORE_ASSERT(
+				variant_types.size() == 2 and variant_types.front().getType() != none_type
+					and variant_types.back().getType() == none_type,
+				"An optional type has to consist of exactly one value type and the None type."
+			);
+			representation = "?" + getOptionalValueType().toString();
+			return;
+		}
+
 		// Variants are unordered; canonicalize the alternative order so that the runtime tag
 		// (= index into getUnderlyingTypes()) does not depend on construction order.
 		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
@@ -317,12 +328,7 @@ namespace compiler::tsh {
 		std::ranges::stable_sort(underlying_types, [](const SymbolType<>& a, const SymbolType<>& b) {
 			return a.toString() < b.toString();
 		});
-		if (represents_optional_type) {
-			optional_value_type = variant_types.front();
-			representation      = "?" + variant_types.front().toString();
-		} else {
-			representation = "Variant " + stringifyTypeVector(underlying_types);
-		}
+		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
 	bool VariantAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {

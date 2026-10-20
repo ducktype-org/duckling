@@ -53,6 +53,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
+	EXPR_VISITOR(OptionalTypeConstructorExpr)
 	EXPR_VISITOR(VariantConstructExpr)
 	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
@@ -170,11 +171,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::SymbolType{
-					  tsh::getCharSliceType(ctx),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable,
-				  },
+				  tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
@@ -636,13 +633,9 @@ namespace compiler::helios::code {
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
-		query::Context&,
-		ElementOrigin          origin,
-		std::vector<Box<Expr>> subtypes,
-		const bool             represents_optional_type
+		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> subtypes
 	):
 		  Expr(
-
 			  tsh::ExpressionType{
 				  tsh::SymbolType{
 					  tsh::getMetaType(),
@@ -653,30 +646,17 @@ namespace compiler::helios::code {
 			  },
 			  origin
 		  ),
-		  subtypes(std::move(subtypes)),
-		  represents_optional_type(represents_optional_type) {
-		CORE_ASSERT(
-			not represents_optional_type or this->subtypes.size() == 2,
-			"An optional type constructor needs exactly the value type and the None type."
-		);
-	}
+		  subtypes(std::move(subtypes)) {}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
 		tsh::ExpressionType<>        expression_type,
 		ElementOrigin                origin,
-		std::vector<base::Box<Expr>> subtypes,
-		const bool                   represents_optional_type
+		std::vector<base::Box<Expr>> subtypes
 	):
 		  Expr(expression_type, origin),
-		  subtypes(std::move(subtypes)),
-		  represents_optional_type(represents_optional_type) {}
+		  subtypes(std::move(subtypes)) {}
 
 	void VariantTypeConstructorExpr::debugPrint(std::ostream& out) const {
-		if (represents_optional_type) {
-			out << "?";
-			subtypes.front()->debugPrint(out);
-			return;
-		}
 		out << "(";
 		for (bool add_pipe = false; auto&& subtype: subtypes) {
 			if (add_pipe) out << " | ";
@@ -691,8 +671,39 @@ namespace compiler::helios::code {
 		cloned_subtypes.reserve(subtypes.size());
 		for (const auto& subtype: subtypes) cloned_subtypes.push_back(subtype->clone());
 		return makeBox<VariantTypeConstructorExpr>(
-			expression_type, origin, std::move(cloned_subtypes), represents_optional_type
+			expression_type, origin, std::move(cloned_subtypes)
 		);
+	}
+
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> value_type
+	):
+		  Expr(
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  tsh::getMetaType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  },
+			  origin
+		  ),
+		  value_type(std::move(value_type)) {}
+
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_type
+	):
+		  Expr(expression_type, origin),
+		  value_type(std::move(value_type)) {}
+
+	void OptionalTypeConstructorExpr::debugPrint(std::ostream& out) const {
+		out << "?";
+		value_type->debugPrint(out);
+	}
+
+	Box<Expr> OptionalTypeConstructorExpr::clone() const {
+		return makeBox<OptionalTypeConstructorExpr>(expression_type, origin, value_type->clone());
 	}
 
 	VariantConstructExpr::VariantConstructExpr(

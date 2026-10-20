@@ -1975,8 +1975,8 @@ private:
 			const auto& interface = optional_type.getInterface(ctx);
 			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("value")).size(), 2);
 			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("valueOr")).size(), 2);
-			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("full")).size(), 1);
-			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("empty")).size(), 1);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("nonEmpty")).size(), 1);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("isEmpty")).size(), 1);
 			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("reset")).size(), 1);
 		});
 	}
