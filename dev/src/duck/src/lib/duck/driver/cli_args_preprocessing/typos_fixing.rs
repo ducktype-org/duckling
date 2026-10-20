@@ -18,7 +18,7 @@ use crate::duck::driver::cli_args_preprocessing::builtin::{
 use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
 use crate::duck::driver::subcommands::subcommands;
-use crate::util::edit_distance::find_closest_targets;
+use crate::util::edit_distance::find_all_closest_targets;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 /// Try to fix user typos.
@@ -46,7 +46,7 @@ pub fn fix_typos(
     );
     let distance = ctx.duck_cfg().max_fix_dist()? as u32;
     let targets = targets.iter().map(String::as_str).collect::<Vec<_>>();
-    let closest_targets = find_closest_targets(name, &targets, Some(distance));
+    let closest_targets = find_all_closest_targets(name, &targets, Some(distance));
 
     let Some((&first, rest)) = closest_targets.as_slice().split_first() else {
         return Ok(args);

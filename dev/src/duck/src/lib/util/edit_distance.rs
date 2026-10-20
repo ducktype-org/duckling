@@ -35,28 +35,28 @@ pub fn distance(x: &str, y: &str) -> u32 {
 
 /// Get the closest match to the `key` within a given range.
 ///
-/// Returns `None` if there is no match in the given radius, or `values` is empty.
+/// Returns `None` if there is no match in the given radius, or `targets` is empty.
 ///
-/// If several values have the same smallest distance, the first one is returned.
-pub fn get_closest_match<'a>(
+/// If several targets have the same smallest distance, the first one is returned.
+pub fn find_closest_target<'a>(
     key: &str,
-    values: &[&'a str],
+    targets: &[&'a str],
     max_distance: Option<u32>,
 ) -> Option<&'a str> {
-    values
+    targets
         .iter()
-        .filter_map(|value| {
-            let distance = distance(key, value);
+        .filter_map(|target| {
+            let distance = distance(key, target);
             let should_include = max_distance.is_none_or(|max_distance| distance <= max_distance);
-            should_include.then_some((*value, distance))
+            should_include.then_some((*target, distance))
         })
         .min_by_key(|(_, distance)| *distance)
-        .map(|(value, _)| value)
+        .map(|(target, _)| target)
 }
 
 /// Get all closest targets to the `key`, which are no further than `max_distance` (in terms of
 /// the Levenshtein distance).
-pub fn find_closest_targets<'a>(
+pub fn find_all_closest_targets<'a>(
     key: &str,
     targets: &[&'a str],
     max_distance: Option<u32>,
@@ -73,7 +73,7 @@ pub fn find_closest_targets<'a>(
 
 /// Update closest targets given the actual stack, target, and `max_fix_dist`.
 ///
-/// This function will __only__ keep those values, which are (currently) closest to the target,
+/// This function will __only__ keep those targets, which are (currently) closest to the target,
 /// and all have exactly the same distance.
 fn update_closest_targets<'a>(
     mut acc: Vec<(&'a str, u32)>,
@@ -139,18 +139,21 @@ mod tests {
 
     #[test]
     fn exact_match_is_always_the_best() {
-        assert_eq!(Some("a"), get_closest_match("a", &["a", "b", "aba"], None));
         assert_eq!(
             Some("a"),
-            get_closest_match("a", &["a", "b", "aba"], Some(0))
+            find_closest_target("a", &["a", "b", "aba"], None)
         );
         assert_eq!(
             Some("a"),
-            get_closest_match("a", &["a", "b", "aba"], Some(1))
+            find_closest_target("a", &["a", "b", "aba"], Some(0))
         );
         assert_eq!(
             Some("a"),
-            get_closest_match("a", &["a", "b", "aba"], Some(u32::MAX))
+            find_closest_target("a", &["a", "b", "aba"], Some(1))
+        );
+        assert_eq!(
+            Some("a"),
+            find_closest_target("a", &["a", "b", "aba"], Some(u32::MAX))
         );
     }
 
@@ -158,7 +161,7 @@ mod tests {
     fn none_tests() {
         assert_eq!(
             None,
-            get_closest_match("ab", &["ala", "ma", "kota"], Some(1)),
+            find_closest_target("ab", &["ala", "ma", "kota"], Some(1)),
         );
     }
 
@@ -166,9 +169,9 @@ mod tests {
     fn multiple_matches_smallest_distance() {
         assert_eq!(
             Some("kota"),
-            get_closest_match("kol", &["ala", "maciek", "kota", "pies"], None)
+            find_closest_target("kol", &["ala", "maciek", "kota", "pies"], None)
         );
         // This tests that we return the first index if there are multiple matches.
-        assert_eq!(Some("aa"), get_closest_match("ab", &["aa", "bb"], None));
+        assert_eq!(Some("aa"), find_closest_target("ab", &["aa", "bb"], None));
     }
 }
