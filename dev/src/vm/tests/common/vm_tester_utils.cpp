@@ -161,10 +161,10 @@ vm::PID VmTestSuiteCore::initProcess(
 	const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config
 ) {
 	auto process_pid_response = vm::api::spawn(config);
-	ASSERT_HAS_VALUE(process_pid_response);
+	assertSucceeded(process_pid_response, "spawn");
 	auto set_config_response
 		= vm::api::setExecutionConfig(process_pid_response->pid, execution_config);
-	ASSERT_HAS_VALUE(set_config_response);
+	assertSucceeded(set_config_response, "setExecutionConfig");
 	return process_pid_response->pid;
 }
 
@@ -205,7 +205,7 @@ void VmTestSuiteCore::assertExecutionPanickedWithAndKill(
 ) {
 	std::string local_error        = "";
 	auto        exec_status_result = vm::api::getExecutionStatus(test_result.pid);
-	ASSERT_HAS_VALUE(exec_status_result);
+	assertSucceeded(exec_status_result, "getExecutionStatus");
 
 	// Killed before the asserts, so we remove the process even if this test fails.
 	assertSucceeded(vm::api::kill(test_result.pid), "kill");
@@ -287,8 +287,7 @@ void VmTestSuiteCore::loadValidDbc(
 
 void VmTestSuiteCore::loadValidDbc(const fs::File& dbc_file, const vm::api::ExecutionConfig config) {
 	auto res = vm::api::loadFiles(initProcess(process_config, config), { dbc_file });
-	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
-	ASSERT_HAS_VALUE(res);
+	assertSucceeded(res, base::strConcat("Load of '", dbc_file.name(), "'"));
 }
 
 #define EXPECT_VOID(action)                          \
@@ -361,7 +360,7 @@ void VmTestSuiteCore::handleTestResult(const TestResult& test_result, i64 exit_c
 	}
 	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
 	const auto validation_result = vm::api::deinitAndValidate(test_result.pid);
-	ASSERT_HAS_VALUE(validation_result);
+	assertSucceeded(validation_result, "deinitAndValidate");
 	ASSERT_TRUE(validation_result.value().valid());
 }
 
@@ -382,7 +381,7 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 	);
 
 	auto status = vm::api::getExecutionStatus(pid);
-	ASSERT_HAS_VALUE(status);
+	assertSucceeded(status, "getExecutionStatus");
 	ASSERT_MATCHES(status.value(), vm::api::NotStarted);
 }
 
@@ -410,11 +409,11 @@ void VmTestSuite::runAndCheckReturnValues(
 	if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
 
 	auto exit_code_response = vm::api::join(pid);
-	ASSERT_HAS_VALUE(exit_code_response);
+	assertSucceeded(exit_code_response, "join");
 
 	if_opt_some(optional_output, output) {
 		auto output_response = vm::api::output(pid);
-		ASSERT_HAS_VALUE(output_response);
+		assertSucceeded(output_response, "output");
 		ASSERT_EQUAL(output, output_response->output);
 	}
 
@@ -458,7 +457,7 @@ void VmTestSuite::runAndCheckReturnValue(
 
 Box<vm::IVMValue> VmTestSuite::getIntVMValue(vm::PID pid, i64 value) {
 	auto response = vm::api::getVMValue(pid, "i64");
-	ASSERT_HAS_VALUE(response);
+	assertSucceeded(response, "getVMValue");
 	auto vm_value = std::move(response->vm_value);
 	vm_value->writeBytes<i64>(value);
 	return vm_value;

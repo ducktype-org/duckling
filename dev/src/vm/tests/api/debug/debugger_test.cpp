@@ -96,7 +96,7 @@ private:
 		assertSucceeded(vm::api::run(pid), "run");
 
 		auto execution_position = vm::api::waitForBreakpoint(pid);
-		ASSERT_HAS_VALUE(execution_position);
+		assertSucceeded(execution_position, "waitForBreakpoint");
 
 		ASSERT_EQUAL_PRINT(8, execution_position->instr_number);
 
@@ -155,24 +155,24 @@ private:
 			assertSucceeded(vm::api::step(pid), "step");
 
 			auto status = vm::api::getExecutionStatus(pid);
-			ASSERT_HAS_VALUE(status);
+			assertSucceeded(status, "getExecutionStatus");
 			terminated = vm::api::isStatusTerminal(status.value());
 		}
 		ASSERT_TRUE(terminated);
 
 		auto status = vm::api::getExecutionStatus(pid);
-		ASSERT_HAS_VALUE(status);
+		assertSucceeded(status, "getExecutionStatus");
 		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionCompleted));
 
 		auto exit_value = vm::api::join(pid);
-		ASSERT_HAS_VALUE(exit_value);
+		assertSucceeded(exit_value, "join");
 		ASSERT_EQUAL_PRINT(
 			v_get(exit_value.value(), std::vector<Ref<vm::IVMValue>>).at(0)->readBytes<i64>(), 1
 		);
 
 		// Memory state should be intact.
 		auto validation_result = vm::api::deinitAndValidate(pid);
-		ASSERT_HAS_VALUE(validation_result);
+		assertSucceeded(validation_result, "deinitAndValidate");
 		ASSERT_TRUE(validation_result.value().valid());
 	}
 
@@ -469,7 +469,7 @@ private:
 			fs::File file(path("../../common/programs/vm_api_tests.dbc"));
 			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
 
-			ASSERT_HAS_VALUE(map_response);
+			assertSucceeded(map_response, "mapFileLineToCodeCollectionPosition");
 			auto code_position = map_response.value();
 
 			ASSERT_EQUAL_PRINT(code_position.function_name, "main");
@@ -510,7 +510,7 @@ private:
 
 		{
 			auto response = vm::api::debuggerGetNumberOfStackFrames(pid, tid);
-			ASSERT_HAS_VALUE(response);
+			assertSucceeded(response, "debuggerGetNumberOfStackFrames");
 			auto num_frames_response = response.value();
 			ASSERT_EQUAL_PRINT(num_frames_response.number_of_stack_frames, 2);
 		}
@@ -524,7 +524,7 @@ private:
 			namespace idv = vm::interpreted_data_variant;
 
 			auto response = vm::api::debuggerGetStackFrameData(pid, tid, 1);
-			ASSERT_HAS_VALUE(response);
+			assertSucceeded(response, "debuggerGetStackFrameData");
 
 			auto stack_frame_data = response.value();
 			ASSERT_EQUAL_PRINT(stack_frame_data.function_name, "main");
@@ -610,7 +610,7 @@ private:
 
 		{
 			auto exit_code_response = vm::api::join(pid);
-			ASSERT_HAS_VALUE(exit_code_response);
+			assertSucceeded(exit_code_response, "join");
 			ASSERT_TRUE(
 				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value())
 			);

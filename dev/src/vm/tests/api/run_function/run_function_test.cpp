@@ -199,7 +199,7 @@ private:
 			arguments.push_back(getIntVMValue(pid, 10));
 
 			auto i32_value = vm::api::getVMValue(pid, "i32");
-			ASSERT_HAS_VALUE(i32_value);
+			assertSucceeded(i32_value, "getVMValue");
 			arguments.push_back(std::move(i32_value->vm_value));
 
 			auto func_args = createArgumentList(arguments);
@@ -255,11 +255,11 @@ private:
 	void testSyncRun() {
 		vm::PID    pid        = spawnAndLoad("simple_function.dbc");
 		const auto exit_value = vm::api::runFunctionAwait(pid, "foo", {});
-		ASSERT_HAS_VALUE(exit_value);
+		assertSucceeded(exit_value, "runFunctionAwait");
 		ASSERT_NO_VALUE(vm::api::join(pid));
 
 		auto output = vm::api::output(pid);
-		ASSERT_HAS_VALUE(output);
+		assertSucceeded(output, "output");
 		ASSERT_EQUAL(std::string("120"), output->output);
 
 		ASSERT_MATCHES(exit_value.value(), std::vector<Ref<vm::IVMValue>>);
@@ -275,7 +275,7 @@ private:
 		 */
 		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::IVMValue> {
 			auto response = vm::api::getVMValue(pid, "i64");
-			ASSERT_HAS_VALUE(response);
+			assertSucceeded(response, "getVMValue");
 			auto vm_value = std::move(response->vm_value);
 			vm_value->writeBytes<u64>(value);
 			return vm_value;
@@ -296,12 +296,7 @@ private:
 				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }), "runFunction"
 			);
 			auto value = vm::api::join(pid);
-			if (!value.has_value()) {
-				fail(
-					"Could not load VMValue for: " + function_name
-					+ ", reason: " + vm::api::errorToString(value.error())
-				);
-			}
+			assertSucceeded(value, base::strConcat("Joining ", function_name));
 			ASSERT_MATCHES(value.value(), std::vector<Ref<vm::IVMValue>>);
 			auto& value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(value.value());
 			ASSERT_EQUAL(value_vec.size(), 1);
@@ -338,7 +333,7 @@ private:
 
 
 		auto empty_variant_response = vm::api::getVMValue(pid, "CustomVariant8");
-		ASSERT_HAS_VALUE(empty_variant_response);
+		assertSucceeded(empty_variant_response, "getVMValue");
 		auto empty_variant = std::move(empty_variant_response->vm_value);
 		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
 		empty_variant->freeData();
@@ -351,7 +346,7 @@ private:
 		assert_type_tag(16, 255);
 
 		auto invalid_variant_response = vm::api::getVMValue(pid, "CustomVariant16");
-		ASSERT_HAS_VALUE(invalid_variant_response);
+		assertSucceeded(invalid_variant_response, "getVMValue");
 		auto invalid_variant = std::move(invalid_variant_response->vm_value);
 		invalid_variant->writeBytes<u16>(257);
 		assertThrows<std::out_of_range>(
