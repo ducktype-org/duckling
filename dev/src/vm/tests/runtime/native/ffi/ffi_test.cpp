@@ -67,11 +67,7 @@ private:
 	void runProgram(
 		const std::string& name, const std::string& bytecode, const std::string& expected_output
 	) {
-		auto pid  = initProcess();
-		auto file = inlineDbc(name, bytecode);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		runTestOnVm(pid, {}, expected_output);
+		runTestOnVm(spawnAndLoad(inlineDbc(name, bytecode)), {}, expected_output);
 	}
 
 	void addPrimitives() {
@@ -372,7 +368,7 @@ private:
 
 		vm::code::CodeCollection libs;
 		libs.object_files.emplace_back(SYSTEM_MATH_LIB);
-		ASSERT_HAS_VALUE(vm::api::loadCode(pid, libs));
+		assertSucceeded(vm::api::loadCode(pid, libs), "Loading the system library");
 
 		auto file = inlineDbc(
 			"system_lib_api",
@@ -390,8 +386,7 @@ private:
 			"    ret;\n"
 			"}\n"
 		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertSucceeded(vm::api::loadFiles(pid, { file }), "Load of 'system_lib_api'");
 		runTestOnVm(pid, {}, "1\n");
 	}
 

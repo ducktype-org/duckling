@@ -51,12 +51,9 @@ private:
 	void reuseThreadTest() { runTestOnVm("reuse_thread_test.dbc", "", "149501", {}); }
 
 	void detectionDisabledAllowsNormalMutexUse() {
-		// Spawn a process with deadlock detection disabled (the default) and verify normal mutex
-		// usage still works.
-		auto pid  = initProcess({});
-		auto file = fs::File(path("safe_mutex.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
-		handleTestResult(runTestOnVmGetResult(pid), 0);
+		// The default process config has deadlock detection disabled. Normal mutex usage must still
+		// work.
+		runTestOnVm("safe_mutex.dbc");
 	}
 };
 
