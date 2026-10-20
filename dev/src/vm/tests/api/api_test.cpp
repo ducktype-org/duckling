@@ -1020,6 +1020,16 @@ private:
 		}
 
 		{
+			// A value with a matching PID that the safe VM did not create holds no VM memory.
+			ForeignVMValue foreign_value(pid);
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(pid, Ref<vm::IVMValue>(&foreign_value)),
+				"freeVMValue of a foreign VMValue",
+				"is not a SafeVMValue"
+			);
+		}
+
+		{
 			// The exit values are owned by the process and can't be freed by the user.
 			const vm::PID add_pid  = spawnAndLoad("add.dbc");
 			auto          argument = api::getVMValue(add_pid, "i64");

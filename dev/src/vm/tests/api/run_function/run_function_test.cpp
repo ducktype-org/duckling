@@ -12,7 +12,6 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <array>
 #include <limits>
 #include <string>
 #include <vector>
@@ -44,48 +43,6 @@ public:
 	}
 
 private:
-	/**
-	 * @brief An IVMValue implementation which does not come from the safe VM. Used to check that
-	 * the safe VM rejects values it did not create, even when their PID matches.
-	 */
-	class ForeignVMValue final: public vm::IVMValue {
-	public:
-		explicit ForeignVMValue(vm::PID pid): pid(pid) {}
-
-		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
-			CORE_PANIC("ForeignVMValue has no type");
-		}
-
-		[[nodiscard]] vm::code::valid_type::ValidTypeID getTypeID() const override {
-			CORE_PANIC("ForeignVMValue has no type");
-		}
-
-		[[nodiscard]] Bytes getDataSize() const override { return Bytes(sizeof(data)); }
-
-		[[nodiscard]] base::Optional<vm::InterpretedDataVariant> readData() const override {
-			return {};
-		}
-
-		void importDataFrom(const IVMValue&) override {
-			CORE_PANIC("ForeignVMValue cannot import data");
-		}
-
-		[[nodiscard]] vm::PID getPID() const override { return pid; }
-
-		[[nodiscard]] byte* getBytes() override { return data.data(); }
-
-		[[nodiscard]] const byte* getBytes() const override { return data.data(); }
-
-		void dprint(std::ostream& out, const std::string& indent) const override {
-			out << indent << "ForeignVMValue\n";
-		}
-
-	private:
-		vm::PID pid;
-
-		std::array<byte, sizeof(i64)> data{};
-	};
-
 	void runNoArgFunction() {
 		vm::PID pid = spawnAndLoad("call_no_arg_function.dbc");
 
@@ -227,12 +184,7 @@ private:
 				"implementation"
 			);
 
-			// The foreign value holds no VM memory and the API refuses to free it.
-			assertRefusedWith<vm::api::OtherError>(
-				vm::api::freeVMValue(pid, arguments.at(1).refMut()),
-				"freeVMValue of a foreign VMValue",
-				"is not a SafeVMValue"
-			);
+			// The foreign value holds no VM memory, so only the safe one is freed.
 			arguments.pop_back();
 			freeArguments(arguments);
 		}
@@ -341,7 +293,7 @@ private:
 		assertSucceeded(empty_variant_response, "getVMValue");
 		auto empty_variant = std::move(empty_variant_response->vm_value);
 		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
-		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, empty_variant.refMut()));
+		assertSucceeded(vm::api::freeVMValue(pid, empty_variant.refMut()), "freeVMValue");
 
 		assert_type_tag(8, 0);
 		assert_type_tag(8, 1);
@@ -361,9 +313,9 @@ private:
 			},
 			"An out-of-range variant tag must not be treated as an empty variant."
 		);
-		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, invalid_variant.refMut()));
+		assertSucceeded(vm::api::freeVMValue(pid, invalid_variant.refMut()), "freeVMValue");
 
-		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, vm_value_max64.refMut()));
+		assertSucceeded(vm::api::freeVMValue(pid, vm_value_max64.refMut()), "freeVMValue");
 		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 };

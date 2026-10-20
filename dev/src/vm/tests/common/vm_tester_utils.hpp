@@ -16,9 +16,11 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/loader/parser/parser.hpp>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <expected>
 #include <mutex>
@@ -412,6 +414,48 @@ protected:
 		const vm::FunctionRunArguments& args,
 		std::string_view                expected_reason
 	);
+
+	/**
+	 * @brief An IVMValue implementation which does not come from the safe VM. Used to check that
+	 * the safe VM rejects values it did not create, even when their PID matches.
+	 */
+	class ForeignVMValue final: public vm::IVMValue {
+	public:
+		explicit ForeignVMValue(vm::PID pid): pid(pid) {}
+
+		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
+			CORE_PANIC("ForeignVMValue has no type");
+		}
+
+		[[nodiscard]] vm::code::valid_type::ValidTypeID getTypeID() const override {
+			CORE_PANIC("ForeignVMValue has no type");
+		}
+
+		[[nodiscard]] Bytes getDataSize() const override { return Bytes(sizeof(data)); }
+
+		[[nodiscard]] base::Optional<vm::InterpretedDataVariant> readData() const override {
+			return {};
+		}
+
+		void importDataFrom(const IVMValue&) override {
+			CORE_PANIC("ForeignVMValue cannot import data");
+		}
+
+		[[nodiscard]] vm::PID getPID() const override { return pid; }
+
+		[[nodiscard]] byte* getBytes() override { return data.data(); }
+
+		[[nodiscard]] const byte* getBytes() const override { return data.data(); }
+
+		void dprint(std::ostream& out, const std::string& indent) const override {
+			out << indent << "ForeignVMValue\n";
+		}
+
+	private:
+		vm::PID pid;
+
+		std::array<byte, sizeof(i64)> data{};
+	};
 
 	using OwnedArgumentList = std::vector<Box<vm::IVMValue>>;
 
