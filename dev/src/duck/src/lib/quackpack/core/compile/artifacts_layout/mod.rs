@@ -16,9 +16,13 @@ use crate::{DuckContext, QuackResult};
 pub mod shared;
 pub mod standard;
 
+/// Name of the global artifacts lock.
 const GLOBAL_LOCK_NAME: &str = ".duck_lock";
+/// Name of the directory with fingerprint data.
 const FINGERPRINT_DIR_NAME: &str = ".fingerprint";
+/// Name of the per-dependency lock.
 const DEPENDENCY_LOCK_NAME: &str = ".duck_lock";
+/// Name of the file with manifest JSON schema.
 const DEPENDENCY_JSON_NAME: &str = "deps.json";
 
 pub trait ArtifactsLayout: fmt::Debug {
@@ -60,7 +64,9 @@ pub trait ProfileLayout: fmt::Debug {
         self.file_lock_manager().not_locked_path()
     }
 
-    /// Get the [`LockedFile`] for the fingerprint.
+    /// Get the [`FingerprintManager`] for this layout.
+    ///
+    /// See its documentation for more information.
     fn fingerprint(&self) -> FingerprintManager {
         let manager = self.file_lock_manager().join(FINGERPRINT_DIR_NAME);
         FingerprintManager::new(manager)

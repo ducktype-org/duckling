@@ -20,6 +20,12 @@ const LOCK_NAME: &str = ".lock";
 const FPRINT_NAME: &str = "data.json";
 
 #[derive(Debug)]
+/// Manager of the fingerprint directory.
+///
+/// Inner [`FileLockManager`] is the `.fingerprint/` directory.
+///
+/// This struct doesn't expose any methods for reading or writing the actual data.
+/// You need to call [`FingerprintManager::lock`] and use [`ExclusiveFingerprintGuard`].
 pub struct FingerprintManager {
     manager: FileLockManager,
 }

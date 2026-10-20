@@ -10,4 +10,5 @@ mod build_data;
 mod manager;
 
 pub use build_data::*;
+#[doc(inline)]
 pub use manager::*;
