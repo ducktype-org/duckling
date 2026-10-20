@@ -12,7 +12,6 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <array>
 #include <limits>
 #include <string>
 #include <vector>
@@ -44,83 +43,33 @@ public:
 	}
 
 private:
-	/**
-	 * @brief An IVMValue implementation which does not come from the safe VM. Used to check that
-	 * the safe VM rejects values it did not create, even when their PID matches.
-	 */
-	class ForeignVMValue final: public vm::IVMValue {
-	public:
-		explicit ForeignVMValue(vm::PID pid): pid(pid) {}
-
-		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
-			CORE_PANIC("ForeignVMValue has no type");
-		}
-
-		[[nodiscard]] vm::code::valid_type::ValidTypeID getTypeID() const override {
-			CORE_PANIC("ForeignVMValue has no type");
-		}
-
-		[[nodiscard]] Bytes getDataSize() const override { return Bytes(sizeof(data)); }
-
-		[[nodiscard]] base::Optional<vm::InterpretedDataVariant> readData() const override {
-			return {};
-		}
-
-		void importDataFrom(const IVMValue&) override {
-			CORE_PANIC("ForeignVMValue cannot import data");
-		}
-
-		[[nodiscard]] vm::PID getPID() const override { return pid; }
-
-		[[nodiscard]] byte* getBytes() override { return data.data(); }
-
-		[[nodiscard]] const byte* getBytes() const override { return data.data(); }
-
-		void dprint(std::ostream& out, const std::string& indent) const override {
-			out << indent << "ForeignVMValue\n";
-		}
-
-	private:
-		vm::PID pid;
-
-		std::array<byte, sizeof(i64)> data{};
-	};
-
 	void runNoArgFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_no_arg_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_no_arg_function.dbc");
 
 		runAndCheckReturnValue(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runVoidFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_void_function.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
 		freeArguments(owned_arguments);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runNonVoidFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_non_void_function.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
 		freeArguments(owned_arguments);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runMultipleReturnValuesFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("multiple_retvals.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("multiple_retvals.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 40, 695 });
 		runAndCheckReturnValues(
@@ -142,13 +91,11 @@ private:
 			base::Optional<std::vector<i64>>{ { 17, 15 } }
 		);
 		freeArguments(owned_arguments);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void doubleRunFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("../../common/programs/repl_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		vm::PID pid = spawnAndLoad("../../common/programs/repl_1.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
@@ -156,13 +103,11 @@ private:
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 24);
 		freeArguments(owned_arguments);
 		freeArguments(owned_arguments2);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void manyRunFunctions() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("../../common/programs/repl_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("../../common/programs/repl_1.dbc");
 
 		for (i32 i = 0; i < 100; i++) {
 			OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { i, i });
@@ -171,13 +116,11 @@ private:
 			);
 			freeArguments(owned_arguments);
 		}
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runFunctionArgumentValidation() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_non_void_function.dbc");
 		{
 			// Not enough arguments.
 			OwnedArgumentList arguments;
@@ -211,7 +154,7 @@ private:
 			arguments.push_back(getIntVMValue(pid, 10));
 
 			auto i32_value = vm::api::getVMValue(pid, "i32");
-			ASSERT_HAS_VALUE(i32_value);
+			assertSucceeded(i32_value, "getVMValue");
 			arguments.push_back(std::move(i32_value->vm_value));
 
 			auto func_args = createArgumentList(arguments);
@@ -241,12 +184,7 @@ private:
 				"implementation"
 			);
 
-			// The foreign value holds no VM memory and the API refuses to free it.
-			assertRefusedWith<vm::api::OtherError>(
-				vm::api::freeVMValue(pid, arguments.at(1).refMut()),
-				"freeVMValue of a foreign VMValue",
-				"is not a SafeVMValue"
-			);
+			// The foreign value holds no VM memory, so only the safe one is freed.
 			arguments.pop_back();
 			freeArguments(arguments);
 		}
@@ -265,28 +203,27 @@ private:
 			);
 
 			freeArguments(arguments);
-			ASSERT_HAS_VALUE(vm::api::deinitAndValidate(other_pid));
+			assertSucceeded(vm::api::deinitAndValidate(other_pid), "deinitAndValidate");
 		}
 
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void testSyncRun() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
+		vm::PID    pid        = spawnAndLoad("simple_function.dbc");
 		const auto exit_value = vm::api::runFunctionAwait(pid, "foo", {});
-		ASSERT_HAS_VALUE(exit_value);
+		assertSucceeded(exit_value, "runFunctionAwait");
 		ASSERT_NO_VALUE(vm::api::join(pid));
 
 		auto output = vm::api::output(pid);
-		ASSERT_HAS_VALUE(output);
+		assertSucceeded(output, "output");
 		ASSERT_EQUAL(std::string("120"), output->output);
 
 		ASSERT_MATCHES(exit_value.value(), std::vector<Ref<vm::IVMValue>>);
 		const auto& values = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value.value());
 		ASSERT_EQUAL_PRINT(values.size(), 1);
 		ASSERT_EQUAL_PRINT(values.at(0)->readBytes<i64>(), 123);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void variantTypeTagTest() {
@@ -295,14 +232,13 @@ private:
 		 */
 		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::IVMValue> {
 			auto response = vm::api::getVMValue(pid, "i64");
-			ASSERT_HAS_VALUE(response);
+			assertSucceeded(response, "getVMValue");
 			auto vm_value = std::move(response->vm_value);
 			vm_value->writeBytes<u64>(value);
 			return vm_value;
 		};
 
-		auto pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }));
+		auto pid = spawnAndLoad("variant_type_tag_test.dbc");
 
 		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
@@ -313,14 +249,11 @@ private:
                 "getCustomVariant", type_tag_bits, "Alternative", alternative_index
             );
 
-			ASSERT_HAS_VALUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }));
+			assertSucceeded(
+				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }), "runFunction"
+			);
 			auto value = vm::api::join(pid);
-			if (!value.has_value()) {
-				fail(
-					"Could not load VMValue for: " + function_name
-					+ ", reason: " + vm::api::errorToString(value.error())
-				);
-			}
+			assertSucceeded(value, base::strConcat("Joining ", function_name));
 			ASSERT_MATCHES(value.value(), std::vector<Ref<vm::IVMValue>>);
 			auto& value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(value.value());
 			ASSERT_EQUAL(value_vec.size(), 1);
@@ -357,10 +290,10 @@ private:
 
 
 		auto empty_variant_response = vm::api::getVMValue(pid, "CustomVariant8");
-		ASSERT_HAS_VALUE(empty_variant_response);
+		assertSucceeded(empty_variant_response, "getVMValue");
 		auto empty_variant = std::move(empty_variant_response->vm_value);
 		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
-		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, empty_variant.refMut()));
+		assertSucceeded(vm::api::freeVMValue(pid, empty_variant.refMut()), "freeVMValue");
 
 		assert_type_tag(8, 0);
 		assert_type_tag(8, 1);
@@ -370,7 +303,7 @@ private:
 		assert_type_tag(16, 255);
 
 		auto invalid_variant_response = vm::api::getVMValue(pid, "CustomVariant16");
-		ASSERT_HAS_VALUE(invalid_variant_response);
+		assertSucceeded(invalid_variant_response, "getVMValue");
 		auto invalid_variant = std::move(invalid_variant_response->vm_value);
 		invalid_variant->writeBytes<u16>(257);
 		assertThrows<std::out_of_range>(
@@ -380,10 +313,10 @@ private:
 			},
 			"An out-of-range variant tag must not be treated as an empty variant."
 		);
-		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, invalid_variant.refMut()));
+		assertSucceeded(vm::api::freeVMValue(pid, invalid_variant.refMut()), "freeVMValue");
 
-		ASSERT_HAS_VALUE(vm::api::freeVMValue(pid, vm_value_max64.refMut()));
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::freeVMValue(pid, vm_value_max64.refMut()), "freeVMValue");
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 };
 

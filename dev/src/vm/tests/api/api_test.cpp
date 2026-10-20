@@ -1020,6 +1020,16 @@ private:
 		}
 
 		{
+			// A value with a matching PID that the safe VM did not create holds no VM memory.
+			ForeignVMValue foreign_value(pid);
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(pid, Ref<vm::IVMValue>(&foreign_value)),
+				"freeVMValue of a foreign VMValue",
+				"is not a SafeVMValue"
+			);
+		}
+
+		{
 			// The exit values are owned by the process and can't be freed by the user.
 			const vm::PID add_pid  = spawnAndLoad("add.dbc");
 			auto          argument = api::getVMValue(add_pid, "i64");
@@ -1120,15 +1130,17 @@ private:
 			cv.notify_all();
 		});
 
-		ASSERT_HAS_VALUE(vm::api::attachOutputListener(pid, &output_listener));
+		assertSucceeded(
+			vm::api::attachOutputListener(pid, &output_listener), "attachOutputListener"
+		);
 
-		ASSERT_HAS_VALUE(vm::api::run(pid));
+		assertSucceeded(vm::api::run(pid), "run");
 
 		std::unique_lock lk(m);
 		// Test timeout
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
 
-		ASSERT_HAS_VALUE(vm::api::stop(pid));
+		assertSucceeded(vm::api::stop(pid), "stop");
 	}
 
 	void deadProcessRejectsEveryEndpoint() {
