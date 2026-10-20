@@ -56,6 +56,11 @@ public:
 		TESTER_ADD_TEST(filterUndeclaredDependenciesDropsMissing);
 		TESTER_ADD_TEST(createPackageInfoSuccess);
 		TESTER_ADD_TEST(createPackageInfoMissingMainFails);
+		TESTER_ADD_TEST(packageIDValidation);
+		TESTER_ADD_TEST(packageIDSanitization);
+		TESTER_ADD_TEST(createPackageInfoInvalidIDFails);
+		TESTER_ADD_TEST(packageLookupKeyRoundTrip);
+		TESTER_ADD_TEST(packageNameAndLookupAccessUnlock);
 	}
 
 private:
@@ -336,6 +341,100 @@ private:
 		ASSERT_TRUE(reporter.errors > 0);
 
 		fs::FileManager::deleteFolder(empty_dir, true);
+	}
+
+	void packageIDValidation() {
+		ASSERT_TRUE(isValidPackageID("pkg"));
+		ASSERT_TRUE(isValidPackageID("_pkg"));
+		ASSERT_TRUE(isValidPackageID("Pkg_2"));
+		ASSERT_TRUE(isValidPackageID("_"));
+
+		ASSERT_TRUE(!isValidPackageID(""));
+		ASSERT_TRUE(!isValidPackageID("2pkg"));
+		ASSERT_TRUE(!isValidPackageID("my-pkg"));
+		ASSERT_TRUE(!isValidPackageID("my.pkg"));
+		ASSERT_TRUE(!isValidPackageID("pkg@1"));
+		ASSERT_TRUE(!isValidPackageID("caf\xC3\xA9"));
+	}
+
+	void packageIDSanitization() {
+		ASSERT_EQUAL(sanitizePackageID("pkg").str(), std::string("pkg"));
+		ASSERT_EQUAL(sanitizePackageID("my-pkg.v2").str(), std::string("my_pkg_v2"));
+		ASSERT_EQUAL(sanitizePackageID("2pkg").str(), std::string("_2pkg"));
+		ASSERT_EQUAL(sanitizePackageID("-pkg").str(), std::string("__pkg"));
+		ASSERT_EQUAL(sanitizePackageID("").str(), std::string("_"));
+
+		for (std::string_view raw: { "pkg", "my-pkg.v2", "2pkg", "", "a b", "caf\xC3\xA9" })
+			ASSERT_TRUE(isValidPackageID(sanitizePackageID(raw).strView()));
+	}
+
+	void createPackageInfoInvalidIDFails() {
+		TestReporter   reporter;
+		auto           main_file = fs::FileManager::createRandomVirtualFile("fun main() {}", ".dk");
+		RawPackageInfo raw{
+			.package_id   = base::StrID("my-pkg"),
+			.package_name = base::StrID("my-pkg"),
+			.version      = base::StrID("1.0.0"),
+			.package_path = main_file.getFilePath(),
+			.features     = {},
+			.dependencies = {},
+		};
+
+		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
+		ASSERT_NO_VALUE(pkg_info);
+		ASSERT_EQUAL(reporter.errors, 1);
+
+		fs::FileManager::deleteFile(main_file);
+	}
+
+	void packageLookupKeyRoundTrip() {
+		for (bool found: { true, false }) {
+			KeyOf_PackageLookupSideInput key{ .package_id = base::StrID("core"), .found = found };
+			auto decoded = KeyOf_PackageLookupSideInput::deserialize(key.serialize());
+			ASSERT_TRUE(decoded == key);
+
+			std::ostringstream os;
+			key.prettyPrint(os);
+			ASSERT_TRUE(!os.str().empty());
+		}
+
+		// Both outcomes of a lookup are distinct dependencies.
+		KeyOf_PackageLookupSideInput found{ .package_id = base::StrID("core"), .found = true };
+		KeyOf_PackageLookupSideInput missing{ .package_id = base::StrID("core"), .found = false };
+		ASSERT_TRUE(found.queryStablePerfectHash() != missing.queryStablePerfectHash());
+
+		// The name side input changes with the name, but not only with the id.
+		auto name_a = KeyOf_PackageNameSideInput::computeHash(base::StrID("pkg"), base::StrID("a"));
+		auto name_b = KeyOf_PackageNameSideInput::computeHash(base::StrID("pkg"), base::StrID("b"));
+		ASSERT_TRUE(name_a.queryStablePerfectHash() != name_b.queryStablePerfectHash());
+	}
+
+	void packageNameAndLookupAccessUnlock() {
+		TestReporter   reporter;
+		auto           main_file = fs::FileManager::createRandomVirtualFile("fun main() {}", ".dk");
+		RawPackageInfo raw{
+			.package_id   = base::StrID("pkg"),
+			.package_name = base::StrID("pkg_name"),
+			.version      = base::StrID("1.0.0"),
+			.package_path = main_file.getFilePath(),
+			.features     = {},
+			.dependencies = {},
+		};
+		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
+		ASSERT_HAS_VALUE(pkg_info);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			ASSERT_EQUAL(pkg_info->getName().unlock(ctx).str(), std::string("pkg_name"));
+
+			auto found = PackageLookupAccessLocked(base::StrID("pkg"), true).unlock(ctx);
+			ASSERT_HAS_VALUE(found);
+			ASSERT_EQUAL(found.value().unlock(ctx).getID().str(), std::string("pkg"));
+
+			auto missing = PackageLookupAccessLocked(base::StrID("missing"), false).unlock(ctx);
+			ASSERT_NO_VALUE(missing);
+		});
+
+		fs::FileManager::deleteFile(main_file);
 	}
 
 public:

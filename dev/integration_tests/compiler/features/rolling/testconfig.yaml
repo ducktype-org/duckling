@@ -26,6 +26,7 @@ SubDirs:
   - macros
   - diagnostics
   - packages
+  - packages_incremental
   - custom_operators
   - standard_library
   - conditional_compilation

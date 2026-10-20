@@ -61,7 +61,7 @@ namespace compiler::frontend {
 			if (not owner_pkg_opt.has_value()) return {};
 			auto owner_pkg = owner_pkg_opt.value();
 
-			if (owner_pkg->getName() == path.at(0)) {
+			if (owner_pkg->getName().unlock(ctx) == path.at(0)) {
 				current_module = owner_pkg->getRootModule().unlock(ctx).getID();
 			} else {
 				auto dep_locked_opt
@@ -88,25 +88,25 @@ namespace compiler::frontend {
 	}
 
 	base::Optional<ModuleID> getModuleByAbsolutePath(
-		query::Context& ctx, base::StrID package_name, const std::vector<base::StrID>& path
+		query::Context& ctx, base::StrID package_id, const std::vector<base::StrID>& path
 	) {
-		for (const auto& pkg: global_state::getPackages()) {
-			if (pkg.getPackageID() == package_name) {
-				auto current_module = pkg.getRootModule().unlock(ctx).getID();
+		// The lookup registers a dependency also when the package is missing, so that a package
+		// appearing later (e.g. switching from --no-std to std) invalidates the result.
+		auto package_locked = global_state::getPackageLookup(package_id).unlock(ctx);
+		if_opt_none(package_locked) return {};
 
-				for (const auto& component: path) {
-					auto maybe_child
-						= getModuleRef(current_module)->getSubmoduleByName(component).unlock(ctx);
-					if (maybe_child.has_value())
-						current_module = maybe_child.value().unlock(ctx).getID();
-					else
-						return {};
-				}
+		auto package_info = global_state::getPackageRef(package_locked.value().unlock(ctx).getID());
+		auto current_module = package_info->getRootModule().unlock(ctx).getID();
 
-				return current_module;
-			}
+		for (const auto& component: path) {
+			auto maybe_child
+				= getModuleRef(current_module)->getSubmoduleByName(component).unlock(ctx);
+			if (maybe_child.has_value())
+				current_module = maybe_child.value().unlock(ctx).getID();
+			else
+				return {};
 		}
 
-		return {};
+		return current_module;
 	}
 }

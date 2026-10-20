@@ -39,7 +39,7 @@ if not is_dvm:
     expected = f"""{{
   "packages": [
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [],
@@ -49,7 +49,7 @@ if not is_dvm:
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{duckc_package_id(foo_name)}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}"
     }}
@@ -59,7 +59,7 @@ else:
     expected = f"""{{
   "packages": [
     {{
-      "id": "{foo_name}",
+      "id": "{duckc_package_id(foo_name)}",
       "name": "foo",
       "version": "1.0.0",
       "features": [],
@@ -69,7 +69,7 @@ else:
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{duckc_package_id(foo_name)}",
       "strategy": "dvm_exe",
       "output_file": "{str(layout / "foo.dbc")}"
     }}

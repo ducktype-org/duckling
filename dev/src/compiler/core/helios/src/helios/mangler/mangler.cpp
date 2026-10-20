@@ -189,31 +189,16 @@ namespace compiler::helios::mangler {
 
 			// package/module prefix
 			const auto module_id = module(scope(symbol_id));
-			// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
 			const auto package_id
 				= ctx.query<compiler::frontend::QueryPackageOfModule>(module_id).unlock(ctx).getID();
 
-			// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
-			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
+			if (global_state::getPackageRefOpt(package_id)) {
 				/* we're in a package */
-				// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
-				auto raw_package_name = package_ref_opt.value()->getName().str();
-
-				// @TODO: #3286 for now we allow '-' and just treat it as '_'
-				if (raw_package_name.contains('-') && raw_package_name.contains('_'))
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-						"Currently it is not allowed to mix '-' and '_' in package names."
-					));
-				std::ranges::replace(raw_package_name, '-', '_');
-				auto package_name = identifier(raw_package_name);
-
-				if (const auto c = findExtendedChar(package_name)) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
-						"Name of a package contains a character that is not allowed yet: ",
-						quoteExtendedChar(c.value())
-					)));
-				}
-				ret_ss << 'P' << package_name;
+				// The package id (not the name) identifies the package: it is unique, it is already
+				// a tracked dependency of QueryPackageOfModule, and renaming a package does not
+				// change its symbols. Ids are restricted to identifier characters (see
+				// packages::isValidPackageID).
+				ret_ss << 'P' << identifier(package_id.strView());
 			} else {
 				/* standalone module */
 				ret_ss << 'M';

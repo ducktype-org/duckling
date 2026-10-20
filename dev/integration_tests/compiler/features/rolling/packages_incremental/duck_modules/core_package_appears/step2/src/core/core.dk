@@ -1,0 +1,1 @@
+fun core_root() -> i64 = 1;

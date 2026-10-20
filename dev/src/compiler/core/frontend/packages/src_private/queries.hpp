@@ -42,4 +42,22 @@ namespace compiler::frontend::packages {
 	 */
 	DECLARE_METADATA(PackageDependencyAliasLookup, KeyOf_PackageDependencyAliasSideInput);
 
+	/**
+	 * @brief Side input query registering a dependency on a package's name.
+	 * Triggered by PackageNameAccessLocked::unlock.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(QueryPackageNameSideInput, KeyOf_PackageNameSideInput)
+
+	/**
+	 * @brief Side input query registering a dependency on a lookup of a package by its id.
+	 * Records whether a package with the given id is loaded. Used by PackageLookupAccessLocked.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(QueryPackageLookupSideInput, KeyOf_PackageLookupSideInput)
+
+	/**
+	 * @brief Metadata storing KeyOf_PackageLookupSideInput for incremental driver init.
+	 * Added during the provide call of QueryPackageLookupSideInput.
+	 */
+	DECLARE_METADATA(PackageLookup, KeyOf_PackageLookupSideInput);
+
 }  // namespace compiler::frontend::packages

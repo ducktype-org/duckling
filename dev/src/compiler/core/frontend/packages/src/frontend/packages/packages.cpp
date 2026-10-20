@@ -19,7 +19,10 @@
 #include <json/extract.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <cctype>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -52,7 +55,7 @@ namespace compiler::frontend::packages {
 		return getModuleRef(m_root_module)->getPackage().illegalAccess().getID();
 	}
 
-	base::StrID PackageInfo::getName() const { return m_name; }
+	PackageNameAccessLocked PackageInfo::getName() const { return { getPackageID(), m_name }; }
 
 	const hashing::ComponentHash::HashType& PackageInfo::getPackageHash() const { return m_hash; }
 
@@ -193,12 +196,45 @@ namespace compiler::frontend::packages {
 		};
 	}
 
+	namespace {
+		bool isPackageIDChar(char c) {
+			return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+		}
+
+		bool isPackageIDStartChar(char c) {
+			return std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_';
+		}
+	}
+
+	bool isValidPackageID(std::string_view package_id) {
+		return !package_id.empty() && isPackageIDStartChar(package_id.front())
+		    && std::ranges::all_of(package_id, isPackageIDChar);
+	}
+
+	base::StrID sanitizePackageID(std::string_view raw) {
+		std::string id;
+		id.reserve(raw.size() + 1);
+		if (raw.empty() || !isPackageIDStartChar(raw.front())) id += '_';
+		for (const char c: raw) id += isPackageIDChar(c) ? c : '_';
+		return base::StrID(id);
+	}
+
 	base::Optional<PackageInfo> createPackageInfo(
 		const RawPackageInfo&                        package_info,
 		const std::vector<RawPackageInfo>&           all_packages,
 		const DiagnosticReporter&                    report,
 		base::Optional<compiler::frontend::ModuleID> override_root_module
 	) {
+		if (!isValidPackageID(package_info.package_id.strView())) {
+			report(
+				base::strConcat("Invalid package id \"", package_info.package_id.strView(), "\"."),
+				"A package id may contain only ASCII letters, digits and '_', and must not start "
+				"with a digit.",
+				true
+			);
+			return {};
+		}
+
 		auto root_module = override_root_module.has_value()
 		                     ? *override_root_module
 		                     : compiler::frontend::createModuleTree(

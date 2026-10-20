@@ -326,3 +326,21 @@ fn basic_visitor_order() {
         );
     }
 }
+
+#[test]
+fn duckc_package_ids_are_valid_identifiers() {
+    use super::to_duckc_package_id;
+
+    let hash = "7a2344d81bcc8af19079401bbdf3db452a371ace17798f014d2dbc2db6046b60";
+    assert_eq!(
+        to_duckc_package_id(&format!("my-cool-dep-1.0.0-{hash}")),
+        format!("my_cool_dep_1_0_0_{hash}")
+    );
+    assert_eq!(
+        to_duckc_package_id("foo-1.0.0-rc.1+build"),
+        "foo_1_0_0_rc_1_build"
+    );
+    assert_eq!(to_duckc_package_id("_foo"), "_foo");
+    assert_eq!(to_duckc_package_id("1foo"), "_1foo");
+    assert_eq!(to_duckc_package_id(""), "_");
+}

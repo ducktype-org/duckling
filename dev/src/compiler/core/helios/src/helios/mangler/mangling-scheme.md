@@ -33,12 +33,14 @@ either in the scheme or it's implementation, they should be reflected here.
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
 
-<path-prefix> ::= "P" <package-name> <module-name>+                 // module-path of the module in a package
+<path-prefix> ::= "P" <package-id> <module-name>+                   // module-path of the module in a package
                 | "S" <script-name>                                 // standalone script
                 | "M" <module-name>                                 // standalone module
-                | "R" <package-name> <module-name>+ <script-name>   // script in a package
+                | "R" <package-id> <module-name>+ <script-name>     // script in a package
                 | <back-reference>
-<package-name> ::= <identifier>                                     // package name
+<package-id> ::= <identifier>                                       // package id (not its name, so
+                                                                    // renaming does not change symbols),
+                                                                    // restricted to [A-Za-z_][A-Za-z0-9_]*
 <module-name> ::= <identifier>                                      // module name
                 | <identifier> "I" <templ-arg>* "E"                 // templated module instantiation
 <script-name> ::= <identifier>                                      // script name
