@@ -7,10 +7,10 @@
 //! Common quackpack and duck functions.
 
 use std::collections::{HashMap, HashSet};
-pub mod closest_match;
 pub mod command_ext;
 pub mod dependency_graph;
 pub mod duckling_consts;
+pub mod edit_distance;
 pub mod env;
 pub mod error;
 pub mod extend;
