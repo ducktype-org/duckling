@@ -4,10 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Module for constructing and saving to the disk fingerprints of the build process.
-
 use std::collections::BTreeMap;
 use std::io::Write;
+use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -18,7 +17,6 @@ use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::{IncrementalData, RedGreenData};
 use crate::quackpack::core::identity::Identity;
-use crate::util::file_locks::LockedFile;
 use crate::util::hash::sha256_string;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackResult, QuackResultContext};
@@ -67,18 +65,18 @@ impl BuildData {
 
     /// Get a [`BuildData`] from serialized artifacts.
     /// Should be used for getting [`BuildData`] for the previous build process.
-    pub fn from_fingerprint(fingerprint: &LockedFile) -> QuackResult<Self> {
-        let fingerprint_content = fingerprint.path().read().with_context(|| {
+    pub(super) fn from_fingerprint(fingerprint: &Path) -> QuackResult<Self> {
+        let fingerprint_content = fingerprint.read().with_context(|| {
             format!(
                 "failed to read the previous fingerprint at `{}`",
-                fingerprint.path().display()
+                fingerprint.display()
             )
         })?;
         let result =
             serde_json::from_slice::<BuildData>(&fingerprint_content).with_context(|| {
                 format!(
                     "failed to parse the previous fingerprint at `{}`",
-                    fingerprint.path().display()
+                    fingerprint.display()
                 )
             })?;
         result.unit_graph.check_correctness()?;
@@ -87,23 +85,15 @@ impl BuildData {
 
     /// Store a fingerprint with [`BuildData`] on the disk.
     /// Should be called on [`BuildData`] generated for the current build.
-    pub fn write_fingerprint(&self, fingerprint: &LockedFile) -> QuackResult<()> {
-        let fingerprint_json = serde_json::to_string_pretty(&self).with_context_internal(|| {
+    pub(super) fn write_fingerprint(&self, fingerprint: &Path) -> QuackResult<()> {
+        let fingerprint_json = serde_json::to_string_pretty(self).with_context_internal(|| {
             format!("failed to convert fingerprint into a JSON string: {self:#?}")
         })?;
-        fingerprint
-            .file()
-            .set_len(0)
-            .with_context(|| format!("failed to truncate `{}`", fingerprint.path().display()))?;
-        fingerprint
-            .file()
-            .write_all(fingerprint_json.as_bytes())
-            .with_context(|| {
-                format!(
-                    "failed to write fingerprint to `{}`",
-                    fingerprint.path().display()
-                )
-            })
+        let mut file = fingerprint.touch()?;
+        file.set_len(0)
+            .with_context(|| format!("failed to truncate `{}`", fingerprint.display()))?;
+        file.write_all(fingerprint_json.as_bytes())
+            .with_context(|| format!("failed to write fingerprint to `{}`", fingerprint.display()))
     }
 
     /// Get [`RedGreenData`] (information about which graph nodes are common and their artifacts can be reused)
