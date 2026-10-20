@@ -53,7 +53,9 @@ namespace compiler::helios {
 		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
+			variant_case_novalue(
+				PstImplementedSemantics, PstInferredSemantics, ClassMemberSemantics
+			) {
 				return kind(id) != SymbolKind::FunctionDeclaration;
 			}
 			variant_case(BuiltinSemantics, data) {
@@ -89,6 +91,9 @@ namespace compiler::helios {
 
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstImplementedSemantics, pst_data) {
+				return pst_emission_policy(pst_data.getElement());
+			}
+			variant_case(PstInferredSemantics, pst_data) {
 				return pst_emission_policy(pst_data.getElement());
 			}
 			variant_case(ClassMemberSemantics, member_data) {
@@ -448,7 +453,8 @@ namespace compiler::helios {
 			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
 			// have symbols.
 			CORE_ASSERT(
-				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolFromPST"
+				parent.isLangElement(),
+				"PST element without LangElement parent in QuerySymbolFromPST"
 			);
 			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
 		}
@@ -740,12 +746,12 @@ namespace compiler::helios {
 			auto parent_elem = parent_opt.value().unlock(ctx);
 			if (parent_elem.dynamicCast<pst::For>().has_value()
 			    || parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
-				return SymbolData::makePSTSymbolData(
+				return SymbolData::makePSTInferredSymbolData(
 					{
 						.name = ident_wrapper->unwrap(),
 						.kind = SymbolKind::Variable,
 					},
-					PstImplementedSemantics(scope, element->getHash())
+					PstInferredSemantics(scope, element->getHash())
 				);
 			} else {
 				CORE_PANIC("IdentifierWrapper in QuerySymbolFromPST with unsupported parent");
@@ -789,12 +795,13 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolFromPST);
 
-	
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>();
-			CORE_ASSERT(stmt.has_value(), "Invalid PST element in QuerySymbolOfSTMT, statement expected.");
+			auto stmt  = key.element.unlock(ctx).dynamicCast<pst::Stmt>();
+			CORE_ASSERT(
+				stmt.has_value(), "Invalid PST element in QuerySymbolOfSTMT, statement expected."
+			);
 
 			return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()).valueOrThrow() };
 		}
@@ -806,7 +813,7 @@ namespace compiler::helios {
 				return SymID{ &presult->valueOrPanic() };
 		})
 
-		private:
+	private:
 		/**
 		 * @brief This is a helper function for getAllHeliosSymbols.
 		 * Use only inside that function (and only for debug/test purposes)!
@@ -833,8 +840,11 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QuerySymbolOfNonSTMT, query::QResult<SymbolData>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>();
-			CORE_ASSERT(!stmt.has_value(), "Invalid PST element in QuerySymbolOfNonSTMT, non-statement expected.");
+			auto stmt  = key.element.unlock(ctx).dynamicCast<pst::Stmt>();
+			CORE_ASSERT(
+				!stmt.has_value(),
+				"Invalid PST element in QuerySymbolOfNonSTMT, non-statement expected."
+			);
 
 			return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
 		}
@@ -1113,8 +1123,8 @@ namespace compiler::helios {
 		);
 
 		auto non_stmt_symbols = ImplementationOf_QuerySymbolOfNonSTMT::getAllCachedSymbols();
-		auto stmt_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
-		auto pst_symbols = ImplementationOf_QuerySymbolFromPST::getAllCachedSymbols();
+		auto stmt_symbols     = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto pst_symbols      = ImplementationOf_QuerySymbolFromPST::getAllCachedSymbols();
 		auto generated_symbols
 			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 

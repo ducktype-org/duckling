@@ -120,6 +120,12 @@ namespace compiler::helios {
 		return { std::move(common_data), pst_data };
 	}
 
+	SymbolData SymbolData::makePSTInferredSymbolData(
+		CommonSymbolData common_data, PstInferredSemantics pst_data
+	) {
+		return { std::move(common_data), pst_data };
+	}
+
 	SymbolData SymbolData::makeClassMemberSymbolData(
 		CommonSymbolData common_data, ClassMemberSemantics class_member_data
 	) {
@@ -181,6 +187,7 @@ namespace compiler::helios {
 		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
+			variant_case(PstInferredSemantics, pst_data) { return pst_data.scope; }
 			variant_case(ClassMemberSemantics, member_data) { return member_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
@@ -194,12 +201,14 @@ namespace compiler::helios {
 
 	bool SymbolData::isPstImplemented() const {
 		return std::holds_alternative<PstImplementedSemantics>(other)
+			or std::holds_alternative<PstInferredSemantics>(other)
 		    or std::holds_alternative<ClassMemberSemantics>(other);
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> SymbolData::maybePstElement() const {
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, data) { return data.getElement(); }
+			variant_case(PstInferredSemantics, data) { return data.getElement(); }
 			variant_case(ClassMemberSemantics, data) { return data.getElement(); }
 			variant_case(BuiltinSemantics, data) { return data.getElement(); }
 			variant_default { return {}; }
