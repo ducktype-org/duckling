@@ -1263,7 +1263,7 @@ namespace compiler::mir {
 
 		void visitCastExpr(const hc::CastExpr& expr) override {
 			// If the cast doesn't involves temporaries, it's safe to just lower the source.
-			if (not expr.createsTemporary()) {
+			if (not expr.castCreatesTemporary()) {
 				output(lowerSubExpr(*expr.source_expr, continuation));
 				return;
 			}

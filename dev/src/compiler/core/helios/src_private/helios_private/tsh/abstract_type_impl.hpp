@@ -859,7 +859,11 @@ namespace compiler::tsh {
 	 */
 	class VariantAbstractTypeImpl final: public AbstractTypeImpl {
 		std::vector<SymbolType<>> underlying_types;
-		bool                      represents_optional;
+		/**
+		 * @brief If true then this variant is a different type and is visible to the user as an
+		 * optional. This doesn't change the lower layers in any way.
+		 */
+		bool represents_optional;
 
 	public:
 		[[nodiscard]]

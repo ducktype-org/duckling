@@ -1203,7 +1203,9 @@ namespace compiler::helios::code {
 		query::Context&, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type
 	):
 		  Expr(
-			  CastExpr::createsTemporary(source_expr->expression_type.getSymbolType(), target_type)
+			  CastExpr::castCreatesTemporary(
+				  source_expr->expression_type.getSymbolType(), target_type
+			  )
 				  ? tsh::ExpressionType<>(
 						target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 					)
@@ -1235,7 +1237,7 @@ namespace compiler::helios::code {
 		return makeBox<CastExpr>(expression_type, origin, source_expr->clone(), target_type);
 	}
 
-	bool CastExpr::createsTemporary(tsh::SymbolType<> source, tsh::SymbolType<> target) {
+	bool CastExpr::castCreatesTemporary(tsh::SymbolType<> source, tsh::SymbolType<> target) {
 		auto is_direct = [](const tsh::SymbolType<>& type) -> bool {
 			return type.getRefKind() == tsh::ReferenceKind::Direct;
 		};
@@ -1262,8 +1264,10 @@ namespace compiler::helios::code {
 		return true;
 	}
 
-	bool CastExpr::createsTemporary() const {
-		return CastExpr::createsTemporary(source_expr->expression_type.getSymbolType(), target_type);
+	bool CastExpr::castCreatesTemporary() const {
+		return CastExpr::castCreatesTemporary(
+			source_expr->expression_type.getSymbolType(), target_type
+		);
 	}
 
 	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):

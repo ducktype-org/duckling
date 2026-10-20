@@ -19,8 +19,8 @@ fun checkType(v: str) = ();
 
 fun intro() -> () = {
 	var c: ?Cls = Cls(1);
-	check(c.full(), true, "intro 1");
-	check(c.empty(), false, "intro 2");
+	check(c.nonEmpty(), true, "intro 1");
+	check(c.isEmpty(), false, "intro 2");
 	check(c.value().x, 1, "intro 3");
 
 	c = none;
@@ -30,8 +30,8 @@ fun intro() -> () = {
 	check(c_ref.valueOr(Cls(2)).x, 2, "intro 5");
 	c = Cls(1);
 
-	check(c.full(), true, "intro 6");
-	check(c.empty(), false, "intro 7");
+	check(c.nonEmpty(), true, "intro 6");
+	check(c.isEmpty(), false, "intro 7");
 	check(c.value().x, 1, "intro 8");
 
 
@@ -40,12 +40,12 @@ fun intro() -> () = {
 	check(c.value().x, 1, "intro 9");
 
 	var ntc: ?NonTrivialCls = NonTrivialCls("a".toString());
-	check(c.full(), true, "intro 10");
-	check(c.empty(), false, "intro 11");
+	check(c.nonEmpty(), true, "intro 10");
+	check(c.isEmpty(), false, "intro 11");
 
 	ntc = none;
-	check(ntc.full(), false, "intro 12");
-	check(ntc.empty(), true, "intro 13");
+	check(ntc.nonEmpty(), false, "intro 12");
+	check(ntc.isEmpty(), true, "intro 13");
 
 	var ntc_ref : ref ? NonTrivialCls = &ntc;
 	{
@@ -54,7 +54,7 @@ fun intro() -> () = {
 	};
 
 	ntc = NonTrivialCls("a".toString());
-	check(c.full(), true, "intro 15");
+	check(c.nonEmpty(), true, "intro 15");
 	{
 		var should_be_ref : ref NonTrivialCls = ntc.value();
 	};
@@ -66,9 +66,9 @@ fun intro() -> () = {
 template(T: type)
 fun checkFor(val: T) -> () = {
 	var opt_t : ?T = val;
-	check(opt_t.full(), true, "checkFor 1");
+	check(opt_t.nonEmpty(), true, "checkFor 1");
 	opt_t = none;
-	check(opt_t.full(), false, "checkFor 2");
+	check(opt_t.nonEmpty(), false, "checkFor 2");
 }
 
 fun advanced() -> () = {
@@ -91,8 +91,8 @@ fun compTime() -> () = {
 	var w: ?(i64 | f32) = none;
 	const same_type: bool = (?i32) == (i32 | optional_primitives.None);
 	check(same_type as bool, false, "comp time 2"); 
-	check(w.full(), false, "precedence 1");
-	check(w.empty(), true, "precedence 2");
+	check(w.nonEmpty(), false, "precedence 1");
+	check(w.isEmpty(), true, "precedence 2");
 }
 
 fun main() -> i64 = {
