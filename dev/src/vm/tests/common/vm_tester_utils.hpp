@@ -70,6 +70,11 @@ protected:
 	vm::PID spawnAndLoad(const std::string& dbc_filename);
 
 	/**
+	 * @brief Same as above, but the program is given as a file (e.g. from `inlineDbc`).
+	 */
+	vm::PID spawnAndLoad(const fs::File& dbc_file);
+
+	/**
 	 * @brief Wraps bytecode written in the test itself into an in-memory `.dbc` file, for
 	 * programs that depend on values only known at run time (e.g. the path of a library). The
 	 * file never touches the disk, so suites running in parallel cannot clash. @p name is part of

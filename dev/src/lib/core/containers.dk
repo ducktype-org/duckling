@@ -373,7 +373,7 @@ namespace stringification {
 
         @native_only_impl
         fun stringifyCPtr(pointer: cptr T) -> String = {
-            if (pointer as u64 == 0) return stringifyStr("cptr(null)");
+            if (pointer as u64 == 0u64) return stringifyStr("cptr(null)");
             let buffer_cap = 21;
             var address    = stringReserve(buffer_cap);
             let format     = builtins.ptr_from_slice[char]("%p\0") as cptr char;

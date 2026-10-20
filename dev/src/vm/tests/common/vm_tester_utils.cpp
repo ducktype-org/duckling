@@ -97,9 +97,14 @@ void VmTestSuite::validateTransitions(const TransitionLog& log, std::string_view
 }
 
 vm::PID VmTestSuiteCore::spawnAndLoad(const std::string& dbc_filename) {
-	const vm::PID pid    = initProcess();
-	auto          loaded = vm::api::loadFiles(pid, { fs::File(path(dbc_filename)) });
-	ASSERT_HAS_VALUE(loaded, "Load of '", dbc_filename, "' failed: ", errorOf(loaded));
+	return spawnAndLoad(fs::File(path(dbc_filename)));
+}
+
+vm::PID VmTestSuiteCore::spawnAndLoad(const fs::File& dbc_file) {
+	const vm::PID pid = initProcess();
+	assertSucceeded(
+		vm::api::loadFiles(pid, { dbc_file }), base::strConcat("Load of '", dbc_file.name(), "'")
+	);
 	return pid;
 }
 

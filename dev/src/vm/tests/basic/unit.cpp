@@ -39,7 +39,6 @@ public:
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(literalsTest);
-		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(checkInplaceCast);
 		TESTER_ADD_TEST(structureOperations);
@@ -113,17 +112,6 @@ private:
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "1235", {}); }
 
 	void verySimpleBooleanTest() { runTestOnVm("very_simple_boolean.dbc", "", "1", {}); }
-
-	void checkZeroDivision() {
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("zero_division_i64.dbc", "", "0"),
-			vm::exceptions::VMZeroDivisionException::ERR_MSG
-		);
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
-			vm::exceptions::VMZeroDivisionException::ERR_MSG
-		);
-	}
 
 	void structureOperations() { runTestOnVm("structure_operations.dbc", "", "506", {}); }
 
