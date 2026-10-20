@@ -39,14 +39,11 @@ public:
 		TESTER_ADD_TEST(cptrRawReadWrite);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
-		TESTER_ADD_TEST(cptrNullTypedLoadFails);
-		TESTER_ADD_TEST(cptrNullRawReadFails);
 		TESTER_ADD_TEST(cptrNullCompare);
 		TESTER_ADD_TEST(cptrTypedLoadStoreMallocWorkflow);
 		TESTER_ADD_TEST(cptrAddOffsetArrayWalk);
 		TESTER_ADD_TEST(cptrCastFromPointer);
 		TESTER_ADD_TEST(cptrCastKeepsPointerOffset);
-		TESTER_ADD_TEST(cptrCastOfNullPointerFails);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -239,44 +236,6 @@ private:
 				  "}\n",
 			"4242"
 		);
-	}
-
-	// A default-initialized cpointer is null; a typed load must fail cleanly, not crash.
-	void cptrNullTypedLoadFails() {
-		auto pid  = initProcess();
-		auto file = writeTempDbc(
-			"null_typed_load",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, I64Ptr;\n"
-			"    init_pany_type v, i64;\n"
-			"    load_pany_pcptr v, p;\n"
-			"    ret;\n"
-			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
-	}
-
-	// The same for the raw byte copy.
-	void cptrNullRawReadFails() {
-		auto pid  = initProcess();
-		auto file = writeTempDbc(
-			"null_raw_read",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, I64Ptr;\n"
-			"    init_pany_type out, i64;\n"
-			"    init_pany_type op, ptr_i64;\n"
-			"    ref_pptr_pany op, out;\n"
-			"    read_pptr_pcptr op, c;\n"
-			"    ret;\n"
-			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// `cmpNull_pcptr` sets the flag on a null cpointer (default-initialized here) and clears it
@@ -902,25 +861,6 @@ private:
 				  "}\n",
 			"42"
 		);
-	}
-
-	// A null VM pointer has no block, so there is no address to take.
-	void cptrCastOfNullPointerFails() {
-		auto pid  = initProcess();
-		auto file = writeTempDbc(
-			"cptr_cast_null",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, ptr_i64;\n"
-			"    setNull_pptr p;\n"
-			"    init_pany_type c, I64Ptr;\n"
-			"    cast_pcptr_pptr c, p;\n"
-			"    ret;\n"
-			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 };
 

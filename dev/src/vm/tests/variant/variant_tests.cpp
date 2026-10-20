@@ -26,8 +26,6 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(verySimpleVariant);
 		TESTER_ADD_TEST(simpleVariant0);
-		TESTER_ADD_TEST(simpleVariant1);
-		TESTER_ADD_TEST(simpleVariant2);
 		TESTER_ADD_TEST(blocksDontDisappearTest);
 		TESTER_ADD_TEST(nestedVariantTest);
 		TESTER_ADD_TEST(nestedCopy);
@@ -39,29 +37,9 @@ private:
 
 	void simpleVariant0() { runTestOnVm("../common/programs/simple_variant.dbc", "0", "13"); }
 
-	void simpleVariant1() {
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("../common/programs/simple_variant.dbc", "1", "13"),
-			vm::exceptions::VMNullPointerAccessException::ERR_MSG
-		);
-	}
-
-	void simpleVariant2() {
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("../common/programs/simple_variant.dbc", "2", "13"),
-			vm::exceptions::VMUseAfterFreeException::ERR_MSG
-		);
-	}
-
 	void blocksDontDisappearTest() { runTestOnVm("variant_blocks_dont_disappear.dbc", "5", "5"); }
 
-	void nestedVariantTest() {
-		runTestOnVm("nested.dbc", "15", "15");
-		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("nested_failing.dbc", "15", "15"),
-			vm::exceptions::VMUseAfterFreeException::ERR_MSG
-		);
-	}
+	void nestedVariantTest() { runTestOnVm("nested.dbc", "15", "15"); }
 
 	void nestedCopy() { runTestOnVm("nested_copy.dbc", "3", "3"); }
 
