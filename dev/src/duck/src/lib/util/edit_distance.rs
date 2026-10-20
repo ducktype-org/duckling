@@ -139,21 +139,18 @@ mod tests {
 
     #[test]
     fn exact_match_is_always_the_best() {
+        assert_eq!(Some("a"), get_closest_match("a", &["a", "b", "aba"], None));
         assert_eq!(
-            "a",
-            get_closest_match("a", &["a", "b", "aba"], None).unwrap()
+            Some("a"),
+            get_closest_match("a", &["a", "b", "aba"], Some(0))
         );
         assert_eq!(
-            "a",
-            get_closest_match("a", &["a", "b", "aba"], Some(0)).unwrap()
+            Some("a"),
+            get_closest_match("a", &["a", "b", "aba"], Some(1))
         );
         assert_eq!(
-            "a",
-            get_closest_match("a", &["a", "b", "aba"], Some(1)).unwrap()
-        );
-        assert_eq!(
-            "a",
-            get_closest_match("a", &["a", "b", "aba"], Some(u32::MAX)).unwrap()
+            Some("a"),
+            get_closest_match("a", &["a", "b", "aba"], Some(u32::MAX))
         );
     }
 
@@ -168,10 +165,10 @@ mod tests {
     #[test]
     fn multiple_matches_smallest_distance() {
         assert_eq!(
-            "kota",
-            get_closest_match("kol", &["ala", "maciek", "kota", "pies"], None).unwrap(),
+            Some("kota"),
+            get_closest_match("kol", &["ala", "maciek", "kota", "pies"], None)
         );
         // This tests that we return the first index if there are multiple matches.
-        assert_eq!("aa", get_closest_match("ab", &["aa", "bb"], None).unwrap());
+        assert_eq!(Some("aa"), get_closest_match("ab", &["aa", "bb"], None));
     }
 }
