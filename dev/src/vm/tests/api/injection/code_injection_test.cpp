@@ -38,96 +38,92 @@ private:
 		vm::PID  pid = initProcess();
 		fs::File file1(path("multiple_files_1.dbc"));
 		fs::File file2(path("multiple_files_2.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1, file2 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file1, file2 }), "loadFiles");
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void injectCode() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("inject_code_1.dbc"));
 		fs::File file2(path("inject_code_2.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file1 }), "Load of 'inject_code_1.dbc'");
+		assertSucceeded(vm::api::loadFiles(pid, { file2 }), "Load of 'inject_code_2.dbc'");
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void repl() {
 		vm::PID pid = initProcess();
 
 		fs::File file1(path("../../common/programs/repl_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file1 }), "Load of 'repl_1.dbc'");
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
 		freeArguments(owned_arguments);
 
 		fs::File file2(path("repl_2.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file2 }), "Load of 'repl_2.dbc'");
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
 		freeArguments(owned_arguments2);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void replWithGlobals() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("repl_with_globals_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		vm::PID pid = spawnAndLoad("repl_with_globals_1.dbc");
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "1 2", {}, {});
 
 		fs::File file2(path("repl_with_globals_2.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file2 }), "Load of 'repl_with_globals_2.dbc'");
 		runAndCheckReturnValue(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void incrementalGlobalVariantPersistsValue() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("incremental_global_variant_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		vm::PID pid = spawnAndLoad("incremental_global_variant_1.dbc");
 
 		runAndCheckReturnValue(
 			pid, "set_global_variant_value", vm::FunctionRunArguments{}, {}, {}, {}
 		);
 
 		fs::File file2(path("incremental_global_variant_2.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
+		assertSucceeded(
+			vm::api::loadFiles(pid, { file2 }), "Load of 'incremental_global_variant_2.dbc'"
+		);
 
 		runAndCheckReturnValue(
 			pid, "read_global_variant_value", vm::FunctionRunArguments{}, {}, "735", {}
 		);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void cyclicRepl() {
 		vm::PID pid = initProcess();
 
 		fs::File file1(path("loaded_func_call_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file1 }), "Load of 'loaded_func_call_1.dbc'");
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 12);
 		freeArguments(owned_arguments);
 
 		fs::File file2(path("loaded_func_call_2.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file2 }), "Load of 'loaded_func_call_2.dbc'");
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
 		freeArguments(owned_arguments2);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void separateGlobals() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("separate_globals_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		vm::PID pid = spawnAndLoad("separate_globals_1.dbc");
 
 		fs::File file2(path("separate_globals_2.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
+		assertSucceeded(vm::api::loadFiles(pid, { file2 }), "Load of 'separate_globals_2.dbc'");
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "12", "12", {});
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 };
 

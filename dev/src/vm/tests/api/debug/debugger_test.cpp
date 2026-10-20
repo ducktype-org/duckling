@@ -89,17 +89,19 @@ private:
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
 			);
 
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false));
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 5, false), "Setting a breakpoint"
+		);
 
-		ASSERT_HAS_VALUE(vm::api::run(pid));
+		assertSucceeded(vm::api::run(pid), "run");
 
 		auto execution_position = vm::api::waitForBreakpoint(pid);
 		ASSERT_HAS_VALUE(execution_position);
 
 		ASSERT_EQUAL_PRINT(8, execution_position->instr_number);
 
-		ASSERT_HAS_VALUE(vm::api::resume(pid));
-		ASSERT_HAS_VALUE(vm::api::stop(pid));
+		assertSucceeded(vm::api::resume(pid), "resume");
+		assertSucceeded(vm::api::stop(pid), "stop");
 	}
 
 	/**
@@ -137,16 +139,20 @@ private:
 
 	void stepsUntilProgramTerminates() {
 		auto pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, true));
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, false));
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 2, true), "Setting a breakpoint"
+		);
+		assertSucceeded(vm::api::run(pid), "run");
+		assertSucceeded(vm::api::waitForBreakpoint(pid), "waitForBreakpoint");
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 2, false), "Setting a breakpoint"
+		);
 
 		constexpr u64 STEP_LIMIT = 100;
 
 		bool terminated = false;
 		for (u64 i = 0; i < STEP_LIMIT && !terminated; i++) {
-			ASSERT_HAS_VALUE(vm::api::step(pid));
+			assertSucceeded(vm::api::step(pid), "step");
 
 			auto status = vm::api::getExecutionStatus(pid);
 			ASSERT_HAS_VALUE(status);
@@ -494,11 +500,13 @@ private:
 	 */
 	void vmApiMemoryAllTypes() {
 		auto pid = spawnAndLoad("../../common/programs/breakpoint_all_types.dbc");
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true));
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 20, true), "Setting a breakpoint"
+		);
 		auto tid = vm::api::ThreadID(0);
 
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
+		assertSucceeded(vm::api::run(pid), "run");
+		assertSucceeded(vm::api::waitForBreakpoint(pid), "waitForBreakpoint");
 
 		{
 			auto response = vm::api::debuggerGetNumberOfStackFrames(pid, tid);
@@ -598,7 +606,7 @@ private:
 			}
 		}
 
-		ASSERT_HAS_VALUE(vm::api::resume(pid));
+		assertSucceeded(vm::api::resume(pid), "resume");
 
 		{
 			auto exit_code_response = vm::api::join(pid);

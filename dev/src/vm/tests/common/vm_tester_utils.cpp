@@ -208,7 +208,7 @@ void VmTestSuiteCore::assertExecutionPanickedWithAndKill(
 	ASSERT_HAS_VALUE(exec_status_result);
 
 	// Killed before the asserts, so we remove the process even if this test fails.
-	ASSERT_HAS_VALUE(vm::api::kill(test_result.pid));
+	assertSucceeded(vm::api::kill(test_result.pid), "kill");
 
 	variant_match(exec_status_result.value()) {
 		variant_case(vm::api::ExecutionPanicked, panicked) {
@@ -261,10 +261,9 @@ void VmTestSuiteCore::loadThenLoadInvalidDbc(
 ) {
 	// Load the first batch under an unrestricted config so its functions become already
 	// validated "old" functions, then tighten the config before loading the second batch.
-	auto pid = initProcess();
-	ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path(first_dbc)) }));
+	auto pid = spawnAndLoad(first_dbc);
 
-	ASSERT_HAS_VALUE(vm::api::setExecutionConfig(pid, config));
+	assertSucceeded(vm::api::setExecutionConfig(pid, config), "setExecutionConfig");
 
 	auto second_response = vm::api::loadFiles(pid, { fs::File(path(second_dbc)) });
 	ASSERT_NO_VALUE(second_response);
@@ -399,12 +398,12 @@ void VmTestSuite::runAndCheckReturnValues(
 		opt_some(func_name) {
 			ASSERT_MATCHES(args, vm::FunctionRunArguments);
 			const auto& function_args = std::get<vm::FunctionRunArguments>(args);
-			ASSERT_HAS_VALUE(vm::api::runFunction(pid, func_name, function_args));
+			assertSucceeded(vm::api::runFunction(pid, func_name, function_args), "runFunction");
 		}
 		opt_none {
 			ASSERT_MATCHES(args, std::vector<std::string>);
 			auto program_args = std::get<std::vector<std::string>>(args);
-			ASSERT_HAS_VALUE(vm::api::run(pid, program_args));
+			assertSucceeded(vm::api::run(pid, program_args), "run");
 		}
 	}
 

@@ -89,40 +89,32 @@ private:
 	};
 
 	void runNoArgFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_no_arg_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_no_arg_function.dbc");
 
 		runAndCheckReturnValue(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runVoidFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_void_function.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
 		freeArguments(owned_arguments);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runNonVoidFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_non_void_function.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
 		freeArguments(owned_arguments);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runMultipleReturnValuesFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("multiple_retvals.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("multiple_retvals.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 40, 695 });
 		runAndCheckReturnValues(
@@ -144,13 +136,11 @@ private:
 			base::Optional<std::vector<i64>>{ { 17, 15 } }
 		);
 		freeArguments(owned_arguments);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void doubleRunFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("../../common/programs/repl_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		vm::PID pid = spawnAndLoad("../../common/programs/repl_1.dbc");
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
@@ -158,13 +148,11 @@ private:
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 24);
 		freeArguments(owned_arguments);
 		freeArguments(owned_arguments2);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void manyRunFunctions() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("../../common/programs/repl_1.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("../../common/programs/repl_1.dbc");
 
 		for (i32 i = 0; i < 100; i++) {
 			OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { i, i });
@@ -173,13 +161,11 @@ private:
 			);
 			freeArguments(owned_arguments);
 		}
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void runFunctionArgumentValidation() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		vm::PID pid = spawnAndLoad("call_non_void_function.dbc");
 		{
 			// Not enough arguments.
 			OwnedArgumentList arguments;
@@ -260,15 +246,14 @@ private:
 			);
 
 			freeArguments(arguments);
-			ASSERT_HAS_VALUE(vm::api::deinitAndValidate(other_pid));
+			assertSucceeded(vm::api::deinitAndValidate(other_pid), "deinitAndValidate");
 		}
 
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void testSyncRun() {
-		vm::PID pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
+		vm::PID    pid        = spawnAndLoad("simple_function.dbc");
 		const auto exit_value = vm::api::runFunctionAwait(pid, "foo", {});
 		ASSERT_HAS_VALUE(exit_value);
 		ASSERT_NO_VALUE(vm::api::join(pid));
@@ -281,7 +266,7 @@ private:
 		const auto& values = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value.value());
 		ASSERT_EQUAL_PRINT(values.size(), 1);
 		ASSERT_EQUAL_PRINT(values.at(0)->readBytes<i64>(), 123);
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 
 	void variantTypeTagTest() {
@@ -296,8 +281,7 @@ private:
 			return vm_value;
 		};
 
-		auto pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }));
+		auto pid = spawnAndLoad("variant_type_tag_test.dbc");
 
 		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
@@ -308,7 +292,9 @@ private:
                 "getCustomVariant", type_tag_bits, "Alternative", alternative_index
             );
 
-			ASSERT_HAS_VALUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }));
+			assertSucceeded(
+				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }), "runFunction"
+			);
 			auto value = vm::api::join(pid);
 			if (!value.has_value()) {
 				fail(
@@ -378,7 +364,7 @@ private:
 		invalid_variant->freeData();
 
 		vm_value_max64->freeData();
-		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
+		assertSucceeded(vm::api::deinitAndValidate(pid), "deinitAndValidate");
 	}
 };
 
