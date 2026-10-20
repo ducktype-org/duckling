@@ -32,13 +32,14 @@ public:
 
 private:
 	vm::PID spawnFastAndLoad(const std::string& dbc_file_path) {
-		auto pid = initProcess({
-			.mode = vm::api::ProcessMode::Fast,
-		});
-		assertSucceeded(
-			vm::api::loadFiles(pid, { fs::File(path(dbc_file_path)) }),
-			base::strConcat("Load of '", dbc_file_path, "'")
-		);
+		auto pid         = initProcess({
+					.mode = vm::api::ProcessMode::Fast,
+        });
+		auto load_result = vm::api::loadFiles(pid, { fs::File(path(dbc_file_path)) });
+		if (!load_result.has_value()) {
+			std::cerr << std::format("Error loading file: {}\n", errorToString(load_result.error()));
+		}
+		assertSucceeded(load_result, base::strConcat("Load of '", dbc_file_path, "'"));
 		return pid;
 	}
 

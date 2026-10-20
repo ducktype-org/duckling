@@ -287,6 +287,7 @@ void VmTestSuiteCore::loadValidDbc(
 
 void VmTestSuiteCore::loadValidDbc(const fs::File& dbc_file, const vm::api::ExecutionConfig config) {
 	auto res = vm::api::loadFiles(initProcess(process_config, config), { dbc_file });
+	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
 	assertSucceeded(res, base::strConcat("Load of '", dbc_file.name(), "'"));
 }
 
