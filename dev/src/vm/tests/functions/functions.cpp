@@ -27,6 +27,7 @@ public:
 		TESTER_ADD_TEST(testPreservedFlag);
 		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testMainWithNoArguments);
+		TESTER_ADD_TEST(testFunctionPointers);
 	}
 
 private:
@@ -75,6 +76,11 @@ private:
 	}
 
 	void testGraphJumps() { runTestOnVm("graph_jumps.dbc", "", "42", {}); }
+
+	void testFunctionPointers() {
+		runTestOnVm("function_pointers.dbc", "3 5", "815158153", {}, 0);
+		runTestOnVm("function_pointers.dbc", "2 7", "914149142", {}, 0);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/functions/");
