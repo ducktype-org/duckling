@@ -319,7 +319,10 @@ fn maybe_create_warning_if_url_points_to_a_file(url: &str, warnings: &mut Warnin
     if !path.is_absolute() || !path.exists() {
         return;
     }
-    let warning = GitUrlIsPath::new(url.to_string(), scope.format());
+    let warning = GitUrlIsPath {
+        url: url.to_string(),
+        path_to_dep: scope.format(),
+    };
     warnings.push(warning);
 }
 
