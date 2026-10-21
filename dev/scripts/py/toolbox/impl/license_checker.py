@@ -177,7 +177,10 @@ def add_license_header(path: str) -> None:
 
 
 def get_files_to_check(all: bool, branch: str, no_merge_base: bool) -> list[str]:
-    """The files that need a license header: all tracked ones, or just the diff."""
+    """The files that need a license header: all of them, or just the diff.
+
+    Untracked files are included in both modes (gitignored ones are not).
+    """
     files: list[str] = list_files_impl(
         only_modified=not all,
         branch=branch,
@@ -205,7 +208,8 @@ def license_checker_impl(
     Check that every source file starts with the license header.
 
     Args:
-        all: If True, check all tracked files, otherwise only the ones in the diff
+        all: If True, check all files (tracked and untracked), otherwise only
+            the ones in the diff
         branch: The branch the diff is made against
         no_merge_base: If True, diff against the tip of `branch`, not the merge base
         auto_fix: If True, add the missing headers without asking

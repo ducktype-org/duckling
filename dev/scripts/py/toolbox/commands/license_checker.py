@@ -18,7 +18,7 @@ from click import command
 
 @command()
 @all_flag(
-    help="Check all tracked files, not just the ones that are modified",
+    help="Check all files (tracked and untracked), not just the modified ones",
 )
 @branch(
     help="The branch relative to which the diff is created.",
