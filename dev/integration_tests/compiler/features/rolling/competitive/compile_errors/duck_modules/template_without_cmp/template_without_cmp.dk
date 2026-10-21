@@ -1,0 +1,14 @@
+import exp.algorithms.*;
+
+# `sort` needs a `cmp` method, which `Pair` lacks.
+class Pair {
+    a: i64;
+    b: i64;
+}
+
+fun main() -> i64 = {
+    var pairs: List[Pair];
+    pairs.push(Pair(2, 1));
+    sort[Pair](&pairs);
+    return 0;
+}

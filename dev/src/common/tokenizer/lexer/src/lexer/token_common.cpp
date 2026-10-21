@@ -78,7 +78,8 @@ namespace lexer {
 			    { NamedOperator::Pipe, 540 },       { NamedOperator::Exponentiate, 550 },
 			    { NamedOperator::Multiply, 560 },   { NamedOperator::Divide, 560 },
 			    { NamedOperator::Remainder, 560 },  { NamedOperator::Plus, 570 },
-			    { NamedOperator::Minus, 570 },      { NamedOperator::As, 400 } };
+			    { NamedOperator::Minus, 570 },      { NamedOperator::Range, 580 },
+			    { NamedOperator::As, 400 } };
 		if (precedences.contains(asNamed()))
 			return precedences.at(asNamed());
 		else

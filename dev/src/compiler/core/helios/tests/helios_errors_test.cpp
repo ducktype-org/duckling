@@ -206,13 +206,13 @@ private:
 		{
 			checkForErrorOnCompileModule(
 				R"(fun a() = true + false;)",
-				{ "Call failed due to ambiguous overload resolution" },
+				{ "Call failed because none of the candidates accepts the given arguments" },
 				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun a() = 'c' + 1i64;)",
 				{
-					"Call failed due to ambiguous overload resolution",
+					"Call failed because none of the candidates accepts the given arguments",
 					"type const Function (const u8, const char) -> (const char).",
 					"given argument type `char` cannot be converted to the expected type `const "
 					"u8`.",
@@ -472,7 +472,7 @@ private:
 					return obj.method("abc");
 				}
 			)",
-				{ "Call failed due to ambiguous overload resolution." },
+				{ "Call failed because none of the candidates accepts the given arguments." },
 				1
 			);
 

@@ -1,0 +1,14 @@
+fun main() -> i64 = {
+    # `>>` copies the sign bit in for signed integers.
+    var a = -9i64;
+    print(a >> 1);                         # -5
+    var b: i32 = -1;
+    print(b >> 4);                         # -1
+    var low = -7i64;
+    var high = -2i64;
+    print((low + high) >> 1);              # -5
+    # And shifts zeros in for unsigned ones.
+    var u = 18446744073709551615u64;
+    print(u >> 60u64);                     # 15
+    return 0;
+}

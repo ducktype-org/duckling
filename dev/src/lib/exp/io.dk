@@ -46,6 +46,40 @@ fun readF64() -> f64 = pio.readF64();
 fun readF32() -> f32 = pio.readF64() as f32;
 
 #{
+    `x` with exactly `decimals` digits after the point, rounded half away from zero, e.g.
+    `formatF64(2.0 / 3.0, 3)` is "0.667". `print(x)` shows only 6 significant digits instead, and
+    switches to the exponent form for large numbers. `|x| * 10^decimals` has to fit in an `i64`.
+#}
+fun formatF64(x: f64, decimals: i64) -> containers.String = {
+    var scale = 1i64;
+    var i     = 0i64;
+    while (i < decimals) {
+        scale = scale * 10i64;
+        i     = i + 1i64;
+    }
+
+    let negative  = x < 0.0f64;
+    var magnitude = x;
+    if (negative) magnitude = 0.0f64 - x;
+    let scaled = (magnitude * (scale as f64) + 0.5f64) as i64;
+
+    var result: containers.String;
+    if (negative and scaled != 0i64) result.append('-');
+    result.append((scaled / scale).toString());
+    if (decimals > 0i64) {
+        result.append('.');
+        var fraction    = scaled % scale;
+        var digit_value = scale / 10i64;
+        while (digit_value > 0i64) {
+            result.append(('0' as i64 + fraction / digit_value) as char);
+            fraction    = fraction % digit_value;
+            digit_value = digit_value / 10i64;
+        }
+    }
+    return result;
+}
+
+#{
     Reads the next character as it is, blanks included. At end of input the result is not
     meaningful.
 #}
@@ -67,6 +101,14 @@ fun readWord() -> containers.String = {
 }
 
 #{
-    Reads the rest of the current line, without the newline at its end.
+    Reads the rest of the current line, without the newline at its end. A line ending in "\r\n",
+    as written on Windows, loses the `\r` too.
 #}
-fun readLine() -> containers.String = pio.readString();
+fun readLine() -> containers.String = {
+    var line = pio.readString();
+    if (line.length() > 0i64) {
+        let last: char = line.at(line.length() - 1i64);
+        if (last == '\r') line.len = line.len - 1i64;
+    }
+    return line;
+}

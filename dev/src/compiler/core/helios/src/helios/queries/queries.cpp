@@ -75,10 +75,16 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_fun);
-				if (implementsQueryCodeOfFun(used_fun))
-					out_unit.functions.emplace_back(
-						&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
-					);
+				if (implementsQueryCodeOfFun(used_fun)) {
+					// E.g. an instantiation of a template whose body doesn't compile for the
+					// given arguments. The error has been reported already.
+					auto code = ctx.query<QueryCodeOfFun>(used_fun);
+					if (code->hasFailed()) {
+						result = base::BAD;
+						continue;
+					}
+					out_unit.functions.emplace_back(&code->valueOrPanic());
+				}
 				symbol_stack.push_back(used_fun);
 			}
 			for (auto used_global: used_symbols.used_globals) {
@@ -86,9 +92,12 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_global);
-				out_unit.glob_data.emplace_back(
-					&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
-				);
+				auto global_data = ctx.query<QueryHOUTGlobalData>(used_global);
+				if (global_data->hasFailed()) {
+					result = base::BAD;
+					continue;
+				}
+				out_unit.glob_data.emplace_back(&global_data->valueOrPanic());
 				symbol_stack.push_back(used_global);
 			}
 		}

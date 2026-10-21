@@ -75,7 +75,7 @@ namespace compiler::helios {
 				return block;
 			} else {
 				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getStablePosition()));
-				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
+				query::throwFailed();
 			}
 		}
 
