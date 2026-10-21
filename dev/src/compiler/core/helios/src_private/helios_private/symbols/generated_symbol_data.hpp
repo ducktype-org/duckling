@@ -61,13 +61,20 @@ namespace compiler::helios::defgen {
 
 	/**
 	 * Represents a compiler-generated method shared by all types (the destructor, `length` and
-	 * `toString`). The concrete method is distinguished by `kind`.
+	 * `toString`), or a generated comparison operator of an aggregate type (`==`, `!=`, `<`, `<=`,
+	 * `>`, `>=`). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
 		enum class Kind {
 			DefaultDestructor,
 			LengthMethod,
 			ToString,
+			Equal,
+			NotEqual,
+			Less,
+			LessEqual,
+			Greater,
+			GreaterEqual,
 		};
 
 		tsh::AbstractType owner_type;
@@ -76,6 +83,27 @@ namespace compiler::helios::defgen {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
+
+	/**
+	 * @brief Whether @p kind is one of the generated comparison operators (`==`, `!=`, `<`, `<=`,
+	 * `>`, `>=`).
+	 */
+	[[nodiscard]] constexpr bool isComparisonMethodKind(const Method::Kind kind) {
+		switch (kind) {
+		case Method::Kind::Equal:
+		case Method::Kind::NotEqual:
+		case Method::Kind::Less:
+		case Method::Kind::LessEqual:
+		case Method::Kind::Greater:
+		case Method::Kind::GreaterEqual:
+			return true;
+		case Method::Kind::DefaultDestructor:
+		case Method::Kind::LengthMethod:
+		case Method::Kind::ToString:
+			return false;
+		}
+		return false;
+	}
 
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.

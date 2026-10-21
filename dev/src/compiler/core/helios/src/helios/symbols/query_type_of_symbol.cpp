@@ -360,6 +360,16 @@ namespace compiler::helios {
 								     tsh::SymbolType<>{ tsh::getUnitType(),
 								                        tsh::ReferenceKind::Direct,
 								                        tsh::Mutability::Immutable } };
+						case defgen::Method::Kind::Equal:
+						case defgen::Method::Kind::NotEqual:
+						case defgen::Method::Kind::Less:
+						case defgen::Method::Kind::LessEqual:
+						case defgen::Method::Kind::Greater:
+						case defgen::Method::Kind::GreaterEqual:
+							return { { immmut_self, immmut_self },
+								     tsh::SymbolType<>{ tsh::getBoolType(),
+								                        tsh::ReferenceKind::Direct,
+								                        tsh::Mutability::Immutable } };
 						}
 						CORE_UNREACHABLE();
 					}();

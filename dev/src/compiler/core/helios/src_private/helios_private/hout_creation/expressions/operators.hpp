@@ -76,6 +76,17 @@ namespace compiler::helios::code {
 	);
 
 	/**
+	 * @brief Like @ref resolveBinaryOperator, but for compiler-generated code, which has no calling
+	 * scope. The candidates are the builtin operators, the operator methods of the left-hand side's
+	 * class and the generated comparisons.
+	 * @note The caller must make sure the operator exists: errors have no source position here.
+	 */
+	[[nodiscard]]
+	Box<Expr> resolveBinaryOperatorInGeneratedCode(
+		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
+	);
+
+	/**
 	 * @brief Finds the appropriate unary operator to call and constructs the corresponding
 	 * HOUT expression. Consumes the provided argument expression.
 	 * Some cases, such as the ampersand and asterisk for references are not handled here.

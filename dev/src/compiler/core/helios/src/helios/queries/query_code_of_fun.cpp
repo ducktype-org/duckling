@@ -25,6 +25,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -302,6 +303,13 @@ namespace compiler::helios {
 					case defgen::Method::Kind::LengthMethod:
 						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
 						    ->valueOrThrow();
+					case defgen::Method::Kind::Equal:
+					case defgen::Method::Kind::NotEqual:
+					case defgen::Method::Kind::Less:
+					case defgen::Method::Kind::LessEqual:
+					case defgen::Method::Kind::Greater:
+					case defgen::Method::Kind::GreaterEqual:
+						return ctx.query<defgen::QueryComparisonMethod>(key)->valueOrThrow();
 					}
 					CORE_UNREACHABLE();
 				}
