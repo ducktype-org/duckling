@@ -117,6 +117,10 @@ impl ArtifactsLayout for SharedArtifactsLayout {
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
+
+    fn name(&self) -> &'static str {
+        "shared"
+    }
 }
 
 #[derive(Debug, Clone)]

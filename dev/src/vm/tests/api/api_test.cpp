@@ -16,8 +16,11 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <future>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <variant>
@@ -26,10 +29,13 @@
 namespace api = vm::api;
 
 /**
- * @brief Single-process tests of the whole DVM API. Multi-threaded programs are used where a state
- * needs several threads.
+ * @brief What belongs here: the contract of every `vm::api` endpoint on a single process. That
+ * covers what each endpoint does in every process state and when it refuses a call.
+ * Multi-threaded programs are used where a state needs several threads.
  *
- * The debugger endpoints are only used as setup here, they are covered in `debugger_tests.cpp`.
+ * The debug endpoints are only used as setup here, they go to `api/debug/`. Running one function
+ * with its arguments and return values goes to `api/run_function/`, and loading more code into a
+ * process goes to `api/injection/`.
  */
 class VmApiTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -49,7 +55,6 @@ public:
 		TESTER_ADD_TEST(runAwaitEndpoint);
 		TESTER_ADD_TEST(rerunEndpoint);
 		TESTER_ADD_TEST(runFunctionEndpoints);
-		TESTER_ADD_TEST(exitValueEndpoint);
 		TESTER_ADD_TEST(joinEndpoint);
 		TESTER_ADD_TEST(stopEndpoint);
 		TESTER_ADD_TEST(killFromEveryState);
@@ -63,14 +68,13 @@ public:
 		TESTER_ADD_TEST(ioEndpoints);
 		TESTER_ADD_TEST(dataEndpoints);
 		TESTER_ADD_TEST(listenerEndpoints);
+		TESTER_ADD_TEST(outputListenerEndpoint);
 		TESTER_ADD_TEST(deadProcessRejectsEveryEndpoint);
 	}
 
 	~VmApiTest() override = default;
 
 private:
-	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
-	static constexpr usize SPIN_THREAD_COUNT = 4;
 	/// The exit value of `breakpoint.dbc`.
 	static constexpr i64 BREAKPOINT_EXIT_VALUE = 7;
 	/// How many times `joinEndpoint` makes two `join`s race for the same thread.
@@ -131,7 +135,7 @@ private:
 	void setExecutionConfigEndpoint() {
 		// `setExecutionConfig` is accepted at any point of a process's life.
 
-		const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 		assertSucceeded(api::setExecutionConfig(pid, {}), "setExecutionConfig on NotStarted");
 
 		assertSucceeded(api::run(pid), "run");
@@ -149,7 +153,9 @@ private:
 			"setExecutionConfig with single_thread"
 		);
 		assertRefusedWith<api::LoadProgramError>(
-			api::loadFiles(single_thread_pid, { fs::File(path("../debugger/spin_threads.dbc")) }),
+			api::loadFiles(
+				single_thread_pid, { fs::File(path("../common/programs/spin_threads.dbc")) }
+			),
 			"a load of a multi-threaded program into a single-threaded process",
 			"single_thread flag is set, but function uses multithreading"
 		);
@@ -182,7 +188,7 @@ private:
 		}
 
 		{
-			const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 
@@ -315,7 +321,7 @@ private:
 		}
 
 		{  // Stopped: refused right away, and still refused after the process was drained.
-			const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::stop(pid), "stop");
@@ -391,8 +397,8 @@ private:
 			);
 			assertSucceeded(api::join(pid, started.value()), "join of the `add` thread");
 
-			wrong_type->vm_value->freeData();
-			right_type->vm_value->freeData();
+			assertSucceeded(api::freeVMValue(pid, wrong_type->vm_value.refMut()), "freeVMValue");
+			assertSucceeded(api::freeVMValue(pid, right_type->vm_value.refMut()), "freeVMValue");
 			(void) api::kill(pid);
 		}
 
@@ -412,8 +418,8 @@ private:
 			assertSucceeded(result, "runFunctionAwait of `add`");
 			assertReturnedI64(result.value(), 42, "runFunctionAwait of `add`");
 
-			lhs->vm_value->freeData();
-			rhs->vm_value->freeData();
+			assertSucceeded(api::freeVMValue(pid, lhs->vm_value.refMut()), "freeVMValue");
+			assertSucceeded(api::freeVMValue(pid, rhs->vm_value.refMut()), "freeVMValue");
 
 			assertRefusedWith<api::RunError>(
 				api::runFunctionAwait(pid, "no_such_function"),
@@ -434,36 +440,10 @@ private:
 		}
 
 		{  // A function that never returns is torn down by a kill.
-			const vm::PID pid = spawnAndLoad("../debugger/spin_threads.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/spin_threads.dbc");
 			assertSucceeded(api::runFunction(pid, "spinner"), "runFunction of an endless function");
 			assertSucceeded(api::kill(pid), "kill of a process running a function");
 		}
-	}
-
-	void exitValueEndpoint() {
-		// `join` is the endpoint that hands back the exit value of a spawned run. A run that did
-		// not complete has none, so `join` refuses it.
-
-		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
-		assertSucceeded(api::run(pid), "run");
-		waitUntilStatus(pid, isCompleted, "Completed");
-
-		auto exit_value = api::join(pid);
-		assertSucceeded(exit_value, "join after completion");
-		assertReturnedI64(exit_value.value(), BREAKPOINT_EXIT_VALUE, "join after completion");
-
-		auto valid = api::deinitAndValidate(pid);
-		assertSucceeded(valid, "deinitAndValidate after the join");
-		ASSERT_TRUE(valid.value().valid());
-
-		// A stopped run never completed, so it has no exit value. `stop` also reaps the execution
-		// thread itself, so the later `join` has nothing left to hand back.
-		const vm::PID stopped_pid = spawnAndLoad("../debugger/while_true.dbc");
-		assertSucceeded(api::run(stopped_pid), "run");
-		waitUntilStatus(stopped_pid, isRunning, "Running");
-		assertSucceeded(api::stop(stopped_pid), "stop");
-		assertRefusedWith<api::JoinError>(api::join(stopped_pid), "join of a stopped process");
-		(void) api::kill(stopped_pid);
 	}
 
 	void joinEndpoint() {
@@ -518,7 +498,7 @@ private:
 		{
 			// NotStarted: there is nothing to stop. The flag is deliberately not raised, because a
 			// process that never ran must stay runnable.
-			const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 			assertSucceeded(api::stop(pid), "stop of a NotStarted process");
 			auto status = api::getExecutionStatus(pid);
 			assertSucceeded(status, "getExecutionStatus after a stop of a NotStarted process");
@@ -532,7 +512,7 @@ private:
 		}
 
 		{
-			const vm::PID   pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID   pid = spawnAndLoad("../common/programs/while_true.dbc");
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "run");
@@ -550,7 +530,7 @@ private:
 		}
 
 		{  // A pending pause must not keep a stop from finishing.
-			const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::pause(pid), "pause");
@@ -560,7 +540,7 @@ private:
 		}
 
 		{  // Several threads, some of them parked by the debugger.
-			const vm::PID   pid = spawnAndLoad("../debugger/spin_threads.dbc");
+			const vm::PID   pid = spawnAndLoad("../common/programs/spin_threads.dbc");
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "run of spin_threads.dbc");
@@ -597,14 +577,14 @@ private:
 			);
 		};
 
-		kill_from("NotStarted", "../debugger/while_true.dbc", [](vm::PID) {});
+		kill_from("NotStarted", "../common/programs/while_true.dbc", [](vm::PID) {});
 
-		kill_from("Running", "../debugger/while_true.dbc", [&](vm::PID pid) {
+		kill_from("Running", "../common/programs/while_true.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 		});
 
-		kill_from("Paused", "../debugger/while_true.dbc", [&](vm::PID pid) {
+		kill_from("Paused", "../common/programs/while_true.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::pause(pid), "pause");
@@ -619,17 +599,17 @@ private:
 			waitUntilStatus(pid, isSleeping, "Sleeping (CV-blocked)");
 		});
 
-		kill_from("Sleeping(IO)", "../debugger/io_hang.dbc", [&](vm::PID pid) {
+		kill_from("Sleeping(IO)", "../common/programs/io_hang.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isSleeping, "Sleeping(IO)");
 		});
 
-		kill_from("Running(4 threads)", "../debugger/spin_threads.dbc", [&](vm::PID pid) {
+		kill_from("Running(4 threads)", "../common/programs/spin_threads.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
 			waitUntilEveryThreadRuns(pid, SPIN_THREAD_COUNT);
 		});
 
-		kill_from("Paused(4 threads)", "../debugger/spin_threads.dbc", [&](vm::PID pid) {
+		kill_from("Paused(4 threads)", "../common/programs/spin_threads.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
 			waitUntilEveryThreadRuns(pid, SPIN_THREAD_COUNT);
 			assertSucceeded(api::pauseAll(pid), "pauseAll");
@@ -648,7 +628,7 @@ private:
 		});
 
 		// A stopped process is kept in the table until it is killed.
-		kill_from("Stopped", "../debugger/while_true.dbc", [&](vm::PID pid) {
+		kill_from("Stopped", "../common/programs/while_true.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::stop(pid), "stop");
@@ -663,7 +643,7 @@ private:
 
 		{
 			// An executing process must not have its globals torn down under the running program.
-			const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 
@@ -708,7 +688,7 @@ private:
 		}
 
 		{
-			const vm::PID pid = spawnAndLoad("../memory/global_leak.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/global_leak.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isCompleted, "Completed");
 			assertSucceeded(api::join(pid), "join");
@@ -852,7 +832,7 @@ private:
 
 	void deinitAfterPanicIsRefused() {
 		// A refused deinit leaves the process alive, so it can still be killed.
-		const auto result = runTestOnVmGetResult("../memory/local_leak.dbc", "", "");
+		const auto result = runTestOnVmGetResult("../common/programs/local_leak.dbc", "", "");
 		ASSERT_NO_VALUE(result.run_result);
 
 		assertRefusedWith<api::StateError>(
@@ -875,8 +855,7 @@ private:
 
 	void deinitKillsTheProcessWhenAGlobalDestructorPanics() {
 		// The run completes and the deinit is legal, but a global destructor panics during it.
-		const auto result
-			= runTestOnVmGetResult("../memory/panicking_global_destructor.dbc", "", "");
+		const auto result = runTestOnVmGetResult("panicking_global_destructor.dbc", "", "");
 		ASSERT_HAS_VALUE(result.run_result);
 
 		auto status = api::getExecutionStatus(result.pid);
@@ -899,7 +878,7 @@ private:
 	void deinitOnNotStartedProcessRunsNoGlobalDestructors() {
 		// No constructor ran on a process which was only loaded, so the deinit must not run any
 		// destructor either.
-		const vm::PID pid = spawnAndLoad("../memory/two_globals_second_destructor_aborts.dbc");
+		const vm::PID pid = spawnAndLoad("two_globals_second_destructor_aborts.dbc");
 
 		std::ostringstream captured;
 		assertSucceeded(api::attach(pid, std::cin, captured), "attach");
@@ -916,7 +895,8 @@ private:
 	void deinitOrKillEndpoint() {
 		// `deinitOrKill` deinitializes a completed process and kills one that cannot be
 		// deinitialized. Either way the process is gone afterwards.
-		const auto completed = runTestOnVmGetResult("../memory/no_double_destructor.dbc", "", "");
+		const auto completed
+			= runTestOnVmGetResult("../common/programs/no_double_destructor.dbc", "", "");
 		ASSERT_HAS_VALUE(completed.run_result);
 		auto clean_teardown = api::deinitOrKill(completed.pid);
 		assertSucceeded(clean_teardown, "deinitOrKill of a completed process");
@@ -925,7 +905,7 @@ private:
 		);
 		ASSERT_TRUE(clean_teardown->value().valid());
 
-		const auto panicked = runTestOnVmGetResult("../memory/local_leak.dbc", "", "");
+		const auto panicked = runTestOnVmGetResult("../common/programs/local_leak.dbc", "", "");
 		ASSERT_NO_VALUE(panicked.run_result);
 		auto forced_teardown = api::deinitOrKill(panicked.pid);
 		assertSucceeded(forced_teardown, "deinitOrKill of a panicked process");
@@ -942,8 +922,7 @@ private:
 
 		// A process whose deinit fails half-way is killed, and the destructors that already ran are
 		// not undone.
-		const auto aborting
-			= runTestOnVmGetResult("../memory/two_globals_second_destructor_aborts.dbc");
+		const auto aborting = runTestOnVmGetResult("two_globals_second_destructor_aborts.dbc");
 		ASSERT_HAS_VALUE(aborting.run_result);
 
 		std::ostringstream captured;
@@ -963,7 +942,7 @@ private:
 		// `attach`, `detach`, `input` and `output`.
 
 		{  // `input` reaches a thread that is already sleeping on it, and wakes it.
-			const vm::PID pid = spawnAndLoad("../debugger/io_hang.dbc");
+			const vm::PID pid = spawnAndLoad("../common/programs/io_hang.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isSleeping, "Sleeping(IO)");
 			assertSucceeded(api::input(pid, "42 "), "input to a sleeping thread");
@@ -1001,10 +980,10 @@ private:
 	}
 
 	void dataEndpoints() {
-		// `getType` and `getVMValue` answer for loaded types only, and only while the process can
-		// respond.
+		// `getType`, `getVMValue` and `freeVMValue` answer for loaded types only, and only while
+		// the process can respond.
 
-		const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
+		const vm::PID pid = spawnAndLoad("../common/programs/while_true.dbc");
 
 		assertSucceeded(api::getType(pid, "i64"), "getType(i64)");
 		assertRefusedWith<api::OtherError>(
@@ -1013,11 +992,71 @@ private:
 
 		auto value = api::getVMValue(pid, "i64");
 		assertSucceeded(value, "getVMValue(i64)");
-		// The caller owns this one, see `vm::IVMValue::freeData()`.
-		value->vm_value->freeData();
+		// The caller owns this one, so it has to be freed through the API.
+		assertSucceeded(api::freeVMValue(pid, value->vm_value.refMut()), "freeVMValue");
+		assertRefusedWith<api::OtherError>(
+			api::freeVMValue(pid, value->vm_value.refMut()),
+			"freeVMValue of an already freed value",
+			"already freed"
+		);
 		assertRefusedWith<api::OtherError>(
 			api::getVMValue(pid, "DoesNotExist"), "getVMValue of an unknown type", "Type not found"
 		);
+
+		{
+			const vm::PID other_pid   = spawnAndLoad("../common/programs/while_true.dbc");
+			auto          other_value = api::getVMValue(other_pid, "i64");
+			assertSucceeded(other_value, "getVMValue(i64) of the other process");
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(pid, other_value->vm_value.refMut()),
+				"freeVMValue of a value from a different process",
+				"different process"
+			);
+			assertSucceeded(
+				api::freeVMValue(other_pid, other_value->vm_value.refMut()),
+				"freeVMValue in the owning process"
+			);
+			(void) api::kill(other_pid);
+		}
+
+		{
+			// A value with a matching PID that the safe VM did not create holds no VM memory.
+			ForeignVMValue foreign_value(pid);
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(pid, Ref<vm::IVMValue>(&foreign_value)),
+				"freeVMValue of a foreign VMValue",
+				"is not a SafeVMValue"
+			);
+		}
+
+		{
+			// The exit values are owned by the process and can't be freed by the user.
+			const vm::PID add_pid  = spawnAndLoad("add.dbc");
+			auto          argument = api::getVMValue(add_pid, "i64");
+			assertSucceeded(argument, "getVMValue(i64) of the `add` argument");
+			auto result = api::runFunctionAwait(
+				add_pid, "add", { argument->vm_value.refMut(), argument->vm_value.refMut() }
+			);
+			assertSucceeded(result, "runFunctionAwait of `add`");
+			ASSERT_MATCHES(result.value(), std::vector<Ref<vm::IVMValue>>);
+			assertRefusedWith<api::OtherError>(
+				api::freeVMValue(
+					add_pid, v_get(result.value(), std::vector<Ref<vm::IVMValue>>).at(0)
+				),
+				"freeVMValue of an exit value",
+				"owned by the process"
+			);
+			assertSucceeded(
+				api::freeVMValue(add_pid, argument->vm_value.refMut()),
+				"freeVMValue of the `add` argument"
+			);
+			auto valid = api::deinitAndValidate(add_pid);
+			assertSucceeded(valid, "deinitAndValidate after a refused free of an exit value");
+			ASSERT_TRUE(valid.value().valid());
+		}
+
+		auto kept_value = api::getVMValue(pid, "i64");
+		assertSucceeded(kept_value, "getVMValue(i64) kept over the run");
 
 		assertSucceeded(api::run(pid), "run");
 		waitUntilStatus(pid, isRunning, "Running");
@@ -1030,16 +1069,25 @@ private:
 			"getVMValue of a running process",
 			"while program is running"
 		);
+		assertRefusedWith<api::OtherError>(
+			api::freeVMValue(pid, kept_value->vm_value.refMut()),
+			"freeVMValue of a running process",
+			"while program is running"
+		);
 
 		assertSucceeded(api::stop(pid), "stop");
+		assertSucceeded(
+			api::freeVMValue(pid, kept_value->vm_value.refMut()), "freeVMValue after the stop"
+		);
 		(void) api::kill(pid);
 	}
 
 	void listenerEndpoints() {
 		// A status listener sees every status the process emits. The output listener is covered by
-		// `debugger_tests`, it is only attached here so both endpoints are exercised together.
+		// `outputListenerEndpoint`, it is only attached here so both endpoints are exercised
+		// together.
 
-		const vm::PID pid = spawnAndLoad("../debugger/io_hang.dbc");
+		const vm::PID pid = spawnAndLoad("../common/programs/io_hang.dbc");
 
 		events::Listener<std::string> output_listener([](const std::string&) {});
 		assertSucceeded(api::attachOutputListener(pid, &output_listener), "attachOutputListener");
@@ -1066,6 +1114,33 @@ private:
 
 		output_listener.detach();
 		(void) api::kill(pid);
+	}
+
+	void outputListenerEndpoint() {
+		// An output listener receives what the program prints.
+
+		std::atomic_bool        output = false;
+		std::condition_variable cv;
+		std::mutex              m;
+
+		auto                          pid = spawnAndLoad("../common/programs/vm_api_tests.dbc");
+		events::Listener<std::string> output_listener([&](const std::string& str) {
+			ASSERT_EQUAL_PRINT("7", str);
+			output.store(true);
+			cv.notify_all();
+		});
+
+		assertSucceeded(
+			vm::api::attachOutputListener(pid, &output_listener), "attachOutputListener"
+		);
+
+		assertSucceeded(vm::api::run(pid), "run");
+
+		std::unique_lock lk(m);
+		// Test timeout
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
+
+		assertSucceeded(vm::api::stop(pid), "stop");
 	}
 
 	void deadProcessRejectsEveryEndpoint() {
