@@ -31,8 +31,9 @@ pub struct BuildData {
     build_start: DateTime<Utc>,
     /// Time of the end of the build. If yet unknown (the build is ongoing), set to UNIX epoch.
     build_end: DateTime<Utc>,
-    /// The version of `duckc` used in the previous build.
-    duckc_version: String,
+    /// Hash of the version of `duckc` used in the build.
+    /// It is important to use the verbose version, so thatfor example changing LLVM version forces recompilation in the incremental setting.
+    duckc_version_hash: String,
     /// Unit graph of the build (in an easily serializable version).
     unit_graph: SerializableUnitGraph,
     /// Hash of the profile of the build.
@@ -55,13 +56,14 @@ impl BuildData {
         profile: Profile,
         layout: &dyn ArtifactsLayout,
     ) -> QuackResult<Self> {
-        let duckc_version = Duckc::get_version(ctx)?;
+        let duckc_version = Duckc::get_verbose_version(ctx)?;
+        let version_hash = sha256_string(duckc_version);
         let profile_hash = sha256_string(profile.serialize_raw());
         Ok(Self {
             build_start: Utc::now(),
             // Unknown so UNIX epoch.
             build_end: DateTime::UNIX_EPOCH,
-            duckc_version,
+            duckc_version_hash: version_hash,
             unit_graph: graph.into(),
             profile_hash,
             artifacts_type: layout.name().to_string(),
@@ -108,7 +110,7 @@ impl BuildData {
         // Different profile, different layouts or different duckc version, we can't reuse anything.
         let red_green_data = if self.profile_hash != other.profile_hash
             || self.artifacts_type != other.artifacts_type
-            || self.duckc_version != other.duckc_version
+            || self.duckc_version_hash != other.duckc_version_hash
         {
             RedGreenData::default()
         } else {

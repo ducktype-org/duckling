@@ -158,9 +158,9 @@ impl DuckcProcessBuilder {
     }
 
     /// Ask for the version of `duckc`.
-    pub fn ask_for_version(&mut self) -> &mut Self {
+    pub fn ask_for_verbose_version(&mut self) -> &mut Self {
         trace!("asking for duckc's version");
-        self.inner.arg("--version");
+        self.inner.arg("--version-verbose");
         self
     }
 
