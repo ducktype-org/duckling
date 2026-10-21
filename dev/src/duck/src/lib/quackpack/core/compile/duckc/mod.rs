@@ -23,8 +23,9 @@ use std::convert::Infallible;
 
 pub use compilation_type::CompilationType;
 use tempfile::TempDir;
+use tracing::error;
 
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug)]
 /// Data holder of all required in order to execute the compiler.
@@ -65,5 +66,21 @@ impl Duckc {
             .set_subcommand(process_builder::DuckcSubcommand::Repl)
             .execute_and_replace()
             .context("failed to start a REPL session")
+    }
+
+    /// Get the version of `duckc`.
+    pub fn get_version(ctx: &DuckContext) -> QuackResult<String> {
+        let this = Self::new(ctx);
+        let output = this
+            .process_builder()
+            .ask_for_version()
+            .execute_and_get_output()?;
+        let status = output.status;
+        if !status.success() {
+            error!(%status, "invoking duckc failed, status is not success");
+            // Maybe print stderr here?
+            qp_bail!("failed to run `duckc --version`")
+        }
+        String::from_utf8(output.stdout).with_context(|| "`duckc --version` returned invalid utf8")
     }
 }
