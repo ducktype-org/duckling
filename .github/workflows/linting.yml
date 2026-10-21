@@ -173,3 +173,9 @@ jobs:
           cd dev
           python3 toolbox.py todo-validate --branch origin/main --no-merge-base
         shell: bash
+
+      - name: Run license checker
+        run: |
+          cd dev
+          python3 toolbox.py license-checker --branch origin/main --no-merge-base --no-fix
+        shell: bash
