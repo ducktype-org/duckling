@@ -14,15 +14,9 @@ Tests:
       build:
         test-cmd: duck -C foo build
         Output:
-          Run: |+
-            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
-            info: starting solving the dependency graph
-            info: starting gathering the dependency graph
-            info: running gathering
-            info: starting the solver engine
-            info: starting loading 3 packages
+          String: |+
             info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`bar\`...
             info: compiling \`baz\`...
-            info: compiling \`foo\`..."
+            info: compiling \`foo\`...

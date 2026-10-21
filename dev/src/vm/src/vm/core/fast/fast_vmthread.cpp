@@ -62,8 +62,6 @@ void vm::fast::FastVMThread::execGlobalDestructors() {
 	throw vm::VMNotImplemented("Method `execGlobalDestructors` is not implemented.");
 }
 
-[[nodiscard]] i64 vm::fast::FastVMThread::getExitValue() const { return exit_value; }
-
 vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	const exec::ExecFunction& function, const RunArguments& run_arguments
 ) {

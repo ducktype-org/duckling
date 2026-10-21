@@ -296,8 +296,10 @@ namespace compiler::tsh::coercions {
 			const std::vector<SymbolType<>>& components = source_tuple.getComponents();
 
 			if (target.getType().getKind() == Kind::Meta) {
+				// A component behind a reference is refused (like (ref type, type) -> type).
 				for (const SymbolType<>& component: components)
-					if (planPart(ctx, component, target)->isRefused())
+					if (component.getRefKind() != ReferenceKind::Direct
+					    || planPart(ctx, component, target)->isRefused())
 						return refused(source, target, coercion_error::IncompatibleTypes{});
 				return converted(ctx, source, target, coercion_step::LiftToType{});
 			}

@@ -270,6 +270,7 @@ private:
 			.steps({ MUTABILITY_CHANGE });
 		plan("()", "type").succeeds().steps({ LIFT_TO_TYPE });
 		plan("((), ())", "type").succeeds().steps({ LIFT_TO_TYPE });
+		plan("ref ((), type)", "type").succeeds().steps({ DEREF, LIFT_TO_TYPE });
 
 		// Void has no value, so it is retyped into anything and nothing is handed over.
 		plan("void", "void").succeeds().steps({});
@@ -345,6 +346,10 @@ private:
 		plan(immutable_pointer, mutable_pointer).refuses().because<IncompatibleTypes>();
 		plan("()", "i32").refuses().because<IncompatibleTypes>();
 		plan("(i32, i32)", "type").refuses().because<IncompatibleTypes>();
+
+		// A component behind a reference is not lifted.
+		plan("(ref type, type)", "type").refuses().because<IncompatibleTypes>();
+		plan("((), (ref type, ()))", "type").refuses().because<IncompatibleTypes>();
 		plan("i32 | bool", "i32").refuses().because<IncompatibleTypes>();
 		plan("i32 | bool", "bool").refuses().because<IncompatibleTypes>();
 		plan(functionOf(type("i32"), type("i32")), type("i32"))
