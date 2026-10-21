@@ -8,15 +8,18 @@
 # Mock `duckc` for incremental build tests.
 # Unlike `../../duckc`, it creates the `output_file` of every task, because `duck build`
 # reuses a unit only if its previous artifact exists.
-# It also has `--version` flag, since incremental uses it.
+# It also has `--version-verbose` flag, since incremental uses it.
+# The printed version can be controled by the MOCK_DUCKC_VERSION environmental variable, and by default is `1.0.0`.
 # Invoked as: duckc compile_packages <deps.json> -a <artifacts dir> -O <level>
+# Or: duckc --version-verbose
 
 import json
+import os
 import sys
 from pathlib import Path
 
-if sys.argv[1] == "--version":
-    print("1.0.0")
+if sys.argv[1] == "--version-verbose":
+    print(os.environ.get("MOCK_DUCKC_VERSION", "1.0.0"))
 else:
     for task in json.loads(Path(sys.argv[2]).read_text())["tasks"]:
         output_file = Path(task["output_file"])
