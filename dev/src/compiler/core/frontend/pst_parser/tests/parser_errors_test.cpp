@@ -224,7 +224,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>      simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
 	Example<pst::Fun, false>     bad_function{ "fun foo(x: i32, y) = {}" };
 	Example<pst::Fun, false>     bad_fun_expr{ "fun foo(t: type) -> type = return t;" };
-	Example<pst::Fun, true>     good_fun_expr{ "fun foo(t: type) -> type = ref t;" };
+	Example<pst::Fun, true>      good_fun_expr{ "fun foo(t: type) -> type = ref t;" };
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };

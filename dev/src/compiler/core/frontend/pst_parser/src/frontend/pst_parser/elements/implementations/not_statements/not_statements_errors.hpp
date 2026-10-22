@@ -182,7 +182,8 @@ namespace pst {
 		}
 
 	public:
-		SimpleExpressionNotAttributeAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		SimpleExpressionNotAttributeAllowed(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	class SimpleExpressionNotSpecifierAllowed final: public dia::MessageWithCodeFragmentAndCause {
@@ -194,7 +195,8 @@ namespace pst {
 		}
 
 	public:
-		SimpleExpressionNotSpecifierAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		SimpleExpressionNotSpecifierAllowed(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	class SimpleExpressionNotStatementAllowed final: public dia::MessageWithCodeFragmentAndCause {
@@ -206,10 +208,12 @@ namespace pst {
 		}
 
 	public:
-		SimpleExpressionNotStatementAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		SimpleExpressionNotStatementAllowed(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class OnlySimpleExpressionOrCodeBlockAllowed final: public dia::MessageWithCodeFragmentAndCause {
+	class OnlySimpleExpressionOrCodeBlockAllowed final:
+		  public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -218,7 +222,8 @@ namespace pst {
 		}
 
 	public:
-		OnlySimpleExpressionOrCodeBlockAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		OnlySimpleExpressionOrCodeBlockAllowed(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 }

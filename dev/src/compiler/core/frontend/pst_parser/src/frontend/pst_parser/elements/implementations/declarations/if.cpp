@@ -7,7 +7,7 @@
 #include "../../hierarchy/declarations/if.hpp"
 
 #include "../../hierarchy/not_statements/code_block_or_any_statement.hpp"  // IWYU pragma: keep
-#include "../../hierarchy/not_statements/round_group_expression.hpp"   // IWYU pragma: keep
+#include "../../hierarchy/not_statements/round_group_expression.hpp"       // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
@@ -67,7 +67,9 @@ namespace pst {
 	}
 
 	base::Optional<AccessLocked<CodeBlockOrStmt>> If::getElseBody() const {
-		return else_body.map([](const auto& access) -> AccessLocked<CodeBlockOrStmt> { return access.give(); });
+		return else_body.map([](const auto& access) -> AccessLocked<CodeBlockOrStmt> {
+			return access.give();
+		});
 	}
 
 	void If::acceptVisitor(PstVisitor& visitor) const { visitor.visitIf(*this); }

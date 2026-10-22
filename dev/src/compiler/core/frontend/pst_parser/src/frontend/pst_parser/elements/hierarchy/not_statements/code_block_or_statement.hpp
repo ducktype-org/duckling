@@ -20,6 +20,7 @@ namespace pst {
 	class CodeBlockOrStmt: public NotStmt {
 	public:
 		ELEMENT_CLONE_DECL(CodeBlockOrStmt);
+
 	private:
 		THIS_CLASS(CodeBlockOrStmt);
 		PARENT_CLASS(NotStmt);

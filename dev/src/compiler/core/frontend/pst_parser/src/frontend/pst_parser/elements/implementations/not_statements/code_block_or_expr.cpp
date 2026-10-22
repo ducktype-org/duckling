@@ -19,14 +19,18 @@ namespace pst {
 			if (!block) return nullptr;
 			PARSE().assign(&out->code_block, std::move(block));
 		} else {
-			// These errors other than the last one should not occur with the current fallbacks but are left for if they change.
+			// These errors other than the last one should not occur with the current fallbacks but
+			// are left for if they change.
 			if (state[0].is(Special::AtSign)) {
 				state.logInt(makeBox<SimpleExpressionNotAttributeAllowed>(state.getPosition()));
 			} else if (state[0].isKeyword()) {
 				Keyword key = state[0].asKeyword();
-				if (lang_def::keywordFlags(key).contains(lang_def::KeywordFlagsOptions::IsSpecifier)) {
+				if (lang_def::keywordFlags(key).contains(lang_def::KeywordFlagsOptions::IsSpecifier
+				    )) {
 					state.logInt(makeBox<SimpleExpressionNotSpecifierAllowed>(state.getPosition()));
-				} else if (lang_def::keywordFlags(key).contains(lang_def::KeywordFlagsOptions::IsStmtStart)) {
+				} else if (lang_def::keywordFlags(key).contains(
+							   lang_def::KeywordFlagsOptions::IsStmtStart
+						   )) {
 					state.logInt(makeBox<SimpleExpressionNotStatementAllowed>(state.getPosition()));
 				}
 			} else if (state.ctokens().size() == 0) {
