@@ -1098,7 +1098,8 @@ private:
 				R"(
 				const ARR = [42, "is the answer"];
 			)",
-				{ "Type `const slice char` cannot be converted to type `i32`." },
+				{ "Invalid array element type. Expected `i32`, but got `const slice char`. "
+			      "All array elements must be of the same type." },
 				1
 			);
 		}

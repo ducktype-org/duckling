@@ -821,9 +821,24 @@ namespace compiler::helios::code {
 
 				for (auto elem_holder: *list_unlocked) {
 					auto elem_pst_expr = elem_holder.unlock(ctx)->getExpr();
-					auto elem = elem_type ? subExprFromPSTWithType(ctx, elem_pst_expr, *elem_type)
-					                      : subExprFromPST(ctx, elem_pst_expr);
+					auto elem          = subExprFromPST(ctx, elem_pst_expr);
 					if (elem.hasFailed()) return;
+
+					if (auto curr_elem_type = elem.valueOrThrow()->expression_type.getSymbolType();
+					    elem_type && curr_elem_type != *elem_type) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat(
+								"Invalid array element type. Expected `",
+								elem_type->toString(),
+								"`, but got `",
+								curr_elem_type.toString(),
+								"`. All array elements must be of the same type."
+							),
+							elem_pst_expr.unlock(ctx)->getStablePosition()
+						));
+						return;
+					}
+
 					elems.emplace_back(std::move(elem).valueOrThrow());
 					if (!elem_type) elem_type = elems.back()->expression_type.getSymbolType();
 				}
