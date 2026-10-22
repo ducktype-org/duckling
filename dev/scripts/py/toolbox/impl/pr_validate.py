@@ -34,24 +34,31 @@ def pr_validate_impl(
     more time-consuming ones.
     """
 
+    # workflow YAML validation
     if not workflows_lint_impl():
         exit_with_error("Workflow YAML validation has failed")
 
+    # duck linter
     if not duck_linter_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("Duck linter has failed")
 
+    # pragma once check
     if not header_checker_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("Header pragma once check has failed")
 
+    # validate !todos and !fixmes
     if not todo_validate_impl():
         exit_with_error("T" + "ODO validation has failed")
 
+    # issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
 
+    # license headers
     if not license_checker_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("License header check has failed")
 
+    # Run formatting checker
     _, clang_format_failed = cpp_linter_impl(
         clang_tidy_path=None,
         clang_format_path=clang_format_path,
@@ -66,6 +73,7 @@ def pr_validate_impl(
             f"C++ formatting check failed. Please run `./scripts/formatting/format_repo_cpp.sh {clang_format_path}` or fix the issues manually."
         )
 
+    # build
     # `bash_command` raises on a non-zero exit code, so getting past it means
     # everything has been built.
     bash_command(
@@ -73,8 +81,10 @@ def pr_validate_impl(
     )
     log_good("Everything has been built successfully")
 
+    # test
     test_impl(build_dir=build_dir, thread_count=thread_count, timeout=60)
 
+    # integration tests
     tester_impl(
         clean=False,
         dry=False,
@@ -86,6 +96,7 @@ def pr_validate_impl(
         jobs=thread_count,
     )
 
+    # clang-tidy
     clang_tidy_failed, _ = cpp_linter_impl(
         clang_tidy_path=clang_tidy_path,
         clang_format_path=None,
