@@ -26,6 +26,10 @@ enum SimpleSourceKind {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 /// Version of [`Source`](crate::quackpack::core::manifest), disregarding [`GitReference`](crate::quackpack::core::manifest) for git sources.
 /// Should be used for checking whether there are two dependencies in the manifest with the same source.
+/// By same source, we mean:
+/// - same registry and name for registry dependencies,
+/// - same path for local dependencies,
+/// - same git url (but not necessarily reference) for git dependencies.
 pub struct UniqueSource {
     kind: SimpleSourceKind,
     url: InternedUrl,
