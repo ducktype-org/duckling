@@ -43,7 +43,7 @@ def pr_validate_impl(
         exit_with_error("Duck linter has failed")
 
     # Step 3 - pragma once check
-    if not header_checker_impl():
+    if not header_checker_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("Header pragma once check has failed")
 
     # Step 4 - validate !todos and !fixmes
