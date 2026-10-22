@@ -1,0 +1,67 @@
+fun add(a: i64, b: i64) -> i64 = a + b;
+fun mul(a: i64, b: i64) -> i64 = a * b;
+
+fun apply(f: fun(i64, i64) -> i64, x: i64, y: i64) -> i64 = f(x, y);
+
+fun pick(m: bool) -> fun(i64, i64) -> i64 = {
+    if (m) { return mul; }
+    return add;
+}
+
+fun big(a: (i64, i64, i64), k: i64) -> (i64, i64, i64) = {
+    return (a._1 * k, a._2 * k, a._3 * k);
+}
+
+fun inc2(x: i64) -> i64 = x + 2;
+
+fun inc(r: ref i64) = {
+    r += 1;
+}
+
+fun show(x: i64) = {
+    builtin_output_i64(x);
+}
+
+fun callRef(f: ref fun(i64) -> i64, x: i64) -> i64 = f(x);
+
+fun twice(f: fun(i64), x: i64) = {
+    f(x);
+    f(x);
+}
+
+class Holder {
+    cb: fun(i64, i64) -> i64;
+}
+
+fun main() -> i64 = {
+    let f = add;
+    builtin_output_i64(f(1, 2));
+    var g: fun(i64, i64) -> i64 = mul;
+    builtin_output_i64(g(3, 4));
+    g = add;
+    builtin_output_i64(apply(g, 5, 6));
+    builtin_output_i64(apply(mul, 5, 6));
+    builtin_output_i64(pick(true)(7, 8));
+
+    let b = big;
+    let t = b((1, 2, 3), 10);
+    builtin_output_i64(t._1 + t._2 + t._3);
+
+    var v: i64 = 5;
+    let i = inc;
+    i(&v);
+    builtin_output_i64(v);
+
+    twice(show, 7);
+
+    builtin_output_i64((add)(20, 22));
+
+    let h = Holder(add);
+    let cb = h.cb;
+    builtin_output_i64(cb(1, 1));
+    builtin_output_i64(h.cb(2, 3));
+
+    var j = inc2;
+    builtin_output_i64(callRef(&j, 40));
+    return 0;
+}

@@ -30,6 +30,12 @@ namespace pst::expr {
 		        ).copyValueOr(false)
 			)
 		) {
+			if (state[fwd].is(NamedOperator::SingleArrow)) {
+				fwd++;
+				PST_WHILE(fwd < length && state[fwd].isPrefixOperator()) { fwd++; }
+				if (fwd < length && state[fwd].isIdentifier()) fwd++;
+				continue;
+			}
 			fwd++;
 		}
 		return fwd;

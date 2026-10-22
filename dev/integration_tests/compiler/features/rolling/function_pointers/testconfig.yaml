@@ -1,0 +1,12 @@
+# Tests for function types and function values (function pointers).
+
+Tests:
+  # Functions stored in variables, reassigned, passed as arguments and returned. Calls through
+  # function values with aggregate, reference and unit signatures, a parenthesized function name
+  # as the callee, a function stored in a class field and a reference to a function value.
+  function_pointers:
+    Cases:
+      llvm:
+        Output:
+          String: "3\n12\n11\n30\n56\n60\n6\n7\n7\n42\n2\n5\n42\n"
+        ExitCode: 0

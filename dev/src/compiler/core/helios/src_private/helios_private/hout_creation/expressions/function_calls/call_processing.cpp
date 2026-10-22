@@ -14,6 +14,8 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/types.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
@@ -710,6 +712,92 @@ namespace compiler::helios::code {
 
 		return constructCallExpr(
 			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
+		);
+	}
+
+	namespace {
+		class IndirectCallArgumentCountError final: public dia::MessageWithCodeFragmentAndCause {
+			dia::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "type_check",
+					     .name          = "indirect_call_argument_count" };
+			}
+
+		public:
+			IndirectCallArgumentCountError(dia::StablePosition source_position):
+				  MessageWithCodeFragmentAndCause(source_position) {}
+		};
+
+		class IndirectCallNamedArgumentError final: public dia::MessageWithCodeFragmentAndCause {
+			dia::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "type_check",
+					     .name          = "indirect_call_named_argument" };
+			}
+
+		public:
+			IndirectCallNamedArgumentError(dia::StablePosition source_position):
+				  MessageWithCodeFragmentAndCause(source_position) {}
+		};
+	}
+
+	query::QResult<Box<Expr>> processIndirectCall(
+		query::Context&              ctx,
+		Box<Expr>                    callee,
+		ElementOrigin                whole_call_origin,
+		pst::Access<pst::expr::Call> call_expr
+	) {
+		if (callee->expression_type.getType().getKind() != tsh::Kind::Function) {
+			ctx.logInt(makeBox<CallNotCallableError>(
+				call_expr->getStablePosition(),
+				makeBox<InteractiveType>(ctx, callee->expression_type.getSymbolType())
+			));
+			return query::Failed();
+		}
+
+		const tsh::FunctionAbstractType function_type   = callee->expression_type.getType();
+		const auto&                     parameter_types = function_type.getParameterTypes();
+
+		if (callee->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct) {
+			auto direct_callee = coerceFromBox(
+				ctx,
+				std::move(callee),
+				tsh::SymbolType<>::withDefaults(function_type),
+				call_expr->getStablePosition()
+			);
+			UNPACK_QRESULT_MOVE(callee =, direct_callee);
+		}
+
+		usize argument_count = 0;
+		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
+			if (arg.unlock(ctx)->isNamedArg()) {
+				ctx.logInt(
+					makeBox<IndirectCallNamedArgumentError>(arg.unlock(ctx)->getStablePosition())
+				);
+				return query::Failed();
+			}
+			argument_count++;
+		}
+
+		if (argument_count != parameter_types.size()) {
+			ctx.logInt(makeBox<IndirectCallArgumentCountError>(call_expr->getStablePosition()));
+			return query::Failed();
+		}
+
+		std::vector<Box<Expr>> arguments;
+		arguments.reserve(argument_count);
+		for (usize index = 0; auto&& arg: *call_expr->getArgs().unlock(ctx)) {
+			auto arg_result = subExprFromPSTWithType(
+				ctx, arg.unlock(ctx)->getArg().unlock(ctx)->getExpr(), parameter_types.at(index++)
+			);
+			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_result);
+			arguments.push_back(std::move(arg_expr));
+		}
+
+		return Box<Expr>(
+			makeBox<CallExpr>(ctx, whole_call_origin, std::move(callee), std::move(arguments))
 		);
 	}
 

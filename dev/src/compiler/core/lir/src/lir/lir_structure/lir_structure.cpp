@@ -307,6 +307,11 @@ namespace compiler::lir {
 					output << "{ alt:" << params.alternative_index << " ("
 						   << params.alternative_type.toString() << ") }";
 				}
+				variant_case(IndirectCallParameters, params) {
+					output << "{ params:" << params.parameter_layouts->size()
+						   << ", ret:" << params.return_type_layout->getSourceType().toString()
+						   << " }";
+				}
 			}
 			output << " ";
 		}
@@ -397,6 +402,7 @@ namespace compiler::lir {
 			.mangled_name = function.mangled_name,
 			.abi          = function.abi,
 			.link_once    = function.link_once,
+			.layout       = function.layout,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
 			.return_type_layout = function.return_type_layout,

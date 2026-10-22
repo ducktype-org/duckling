@@ -62,6 +62,7 @@ public:
 		TESTER_ADD_TEST(conditionalTemporaryMoveStateTest);
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(lazyBooleanShortCircuitTest);
+		TESTER_ADD_TEST(functionPointerTest);
 		TESTER_ADD_TEST(lazyBooleanChainsTest);
 	}
 
@@ -1027,6 +1028,46 @@ private:
 	 * @brief `and` / `or` lower lazily: the right-hand side sits in its own block, which only one
 	 * of the two outcomes of the left-hand side leads to.
 	 */
+	/**
+	 * @brief A call through a function value lowers to `IndirectCall`, a function used as a value
+	 * lowers to a function literal.
+	 */
+	void functionPointerTest() {
+		using compiler::mir::MIRFunctionLiteral;
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun add(a: i64, b: i64) -> i64 = a + b;
+               fun apply(f: fun(i64, i64) -> i64) -> i64 = f(1, 2);
+               fun direct() -> i64 = apply(add);)",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				const auto& apply = *test_utils::functionOfUnit(unit, "apply");
+				assertEqual(
+					1u,
+					test_utils::blocksWithOperation(apply, Operation::IndirectCall).size(),
+					"Expected the call through the parameter to be an indirect call"
+				);
+				assertTrue(
+					test_utils::blocksWithOperation(apply, Operation::Call).empty(),
+					"Expected no direct call in `apply`"
+				);
+
+				const auto& direct          = *test_utils::functionOfUnit(unit, "direct");
+				bool        passes_function = false;
+				for (auto block_id: direct.block_order)
+					for (const auto& instruction: direct.blocks[block_id].instructions)
+						if (instruction.operation == Operation::Call
+					        and instruction.arguments.size() == 2
+					        and std::holds_alternative<MIRFunctionLiteral>(
+								instruction.arguments.at(1).getVariant()
+							))
+							passes_function = true;
+				assertTrue(passes_function, "Expected `add` to be passed as a function literal");
+			}
+		);
+	}
+
 	void lazyBooleanShortCircuitTest() {
 		using compiler::mir::Operation;
 		namespace test_utils = compiler::mir::test_utils;

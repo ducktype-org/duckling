@@ -19,6 +19,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
@@ -682,6 +683,29 @@ namespace compiler::tsl {
 	CRef<TypeLayout> PointerTypeLayout::getPointee(query::Context& ctx) const {
 		CORE_ASSERT(pointee_type.has_value(), "Untyped pointer layout has no pointee.");
 		return &ctx.query<QuerySymbolTypeLayout>(*pointee_type)->valueOrThrow();
+	}
+
+	std::vector<CRef<TypeLayout>> FunctionalTypeLayout::getParameterLayouts(query::Context& ctx
+	) const {
+		const tsh::FunctionAbstractType function_type = getSourceType().getType();
+
+		std::vector<CRef<TypeLayout>> parameter_layouts;
+		parameter_layouts.reserve(function_type.getParameterTypes().size());
+		for (const auto& parameter: function_type.getParameterTypes())
+			if (parameter.getType().carriesInformation(ctx))
+				parameter_layouts.emplace_back(
+					&ctx.query<QuerySymbolTypeLayout>(parameter)->valueOrThrow()
+				);
+		return parameter_layouts;
+	}
+
+	CRef<TypeLayout> FunctionalTypeLayout::getReturnLayout(query::Context& ctx) const {
+		const tsh::FunctionAbstractType function_type = getSourceType().getType();
+
+		const auto result_type = function_type.getResultType();
+		if (result_type.getType().carriesInformation(ctx))
+			return &ctx.query<QuerySymbolTypeLayout>(result_type)->valueOrThrow();
+		return &ctx.query<QueryAbstractTypeLayout>(tsh::getUnitType())->valueOrThrow();
 	}
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }

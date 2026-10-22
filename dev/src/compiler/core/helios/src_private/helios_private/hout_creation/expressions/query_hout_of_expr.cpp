@@ -593,6 +593,33 @@ namespace compiler::helios::code {
 				node = fromChainExpr(ctx, chain_expr).valueOrThrow();
 			}
 
+			void visitFunTypeExpr(pst::Access<pst::expr::FunTypeExpr> fun_type) override {
+				const auto meta_type = tsh::SymbolType<>{
+					tsh::getMetaType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				std::vector<Box<Expr>> parameters;
+				for (auto parameter: fun_type->getParams()) {
+					auto parameter_hout = subExprFromPSTWithType(ctx, parameter, meta_type);
+					if (parameter_hout.hasFailed()) return;
+					parameters.emplace_back(std::move(parameter_hout).valueOrThrow());
+				}
+
+				Box<Expr> result
+					= makeBox<LiteralTypeExpr>(ctx, pstOrigin(fun_type), tsh::getUnitType());
+				if_opt_some(fun_type->getRet(), ret) {
+					auto result_hout = subExprFromPSTWithType(ctx, ret, meta_type);
+					if (result_hout.hasFailed()) return;
+					result = std::move(result_hout).valueOrThrow();
+				}
+
+				node = makeBox<FunctionTypeExpr>(
+					ctx, pstOrigin(fun_type), std::move(parameters), std::move(result)
+				);
+			}
+
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round_expr) override {
 				round_expr->getInner().unlock(ctx)->acceptExprVisitor(*this);
 			}

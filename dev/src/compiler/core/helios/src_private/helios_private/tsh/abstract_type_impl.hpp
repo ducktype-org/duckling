@@ -819,10 +819,11 @@ namespace compiler::tsh {
 			bool                      free = false
 		);
 
-		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override {
-			// @TODO: #1273 this is a placeholder, implement proper logic
-			return false;
-		}
+		/**
+		 * @brief Function values are only pointers to the code of a function, so destroying them is
+		 * a no-op.
+		 */
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		/**
 		 * @brief Function types are not default constructible, cause what even is a default function?
@@ -839,12 +840,10 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
 
 		/**
-		 * @brief Function types are trivially copyable if they are not bound to any closure, this
-		 * is just a pointer copy then. Otherwise it's not trivially copyable.
+		 * @brief Function values are only pointers to the code of a function, so copying them is a
+		 * pointer copy.
 		 */
-		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override {
-			throw base::NotYetImplemented("isTriviallyCopyable for FunctionAbstractType");
-		}
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;

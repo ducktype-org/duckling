@@ -53,6 +53,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
+	EXPR_VISITOR(FunctionTypeExpr)
 	EXPR_VISITOR(VariantConstructExpr)
 	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
@@ -676,6 +677,53 @@ namespace compiler::helios::code {
 		for (const auto& subtype: subtypes) cloned_subtypes.push_back(subtype->clone());
 		return makeBox<VariantTypeConstructorExpr>(
 			expression_type, origin, std::move(cloned_subtypes)
+		);
+	}
+
+	FunctionTypeExpr::FunctionTypeExpr(
+		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> parameters, Box<Expr> result
+	):
+		  Expr(
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  tsh::getMetaType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  },
+			  origin
+		  ),
+		  parameters(std::move(parameters)),
+		  result(std::move(result)) {}
+
+	FunctionTypeExpr::FunctionTypeExpr(
+		tsh::ExpressionType<>        expression_type,
+		ElementOrigin                origin,
+		std::vector<base::Box<Expr>> parameters,
+		base::Box<Expr>              result
+	):
+		  Expr(expression_type, origin),
+		  parameters(std::move(parameters)),
+		  result(std::move(result)) {}
+
+	void FunctionTypeExpr::debugPrint(std::ostream& out) const {
+		out << "fun(";
+		for (bool add_comma = false; auto&& parameter: parameters) {
+			if (add_comma) out << ", ";
+			parameter->debugPrint(out);
+			add_comma = true;
+		}
+		out << ") -> ";
+		result->debugPrint(out);
+	}
+
+	Box<Expr> FunctionTypeExpr::clone() const {
+		std::vector<base::Box<Expr>> cloned_parameters;
+		cloned_parameters.reserve(parameters.size());
+		for (const auto& parameter: parameters) cloned_parameters.push_back(parameter->clone());
+		return makeBox<FunctionTypeExpr>(
+			expression_type, origin, std::move(cloned_parameters), result->clone()
 		);
 	}
 
