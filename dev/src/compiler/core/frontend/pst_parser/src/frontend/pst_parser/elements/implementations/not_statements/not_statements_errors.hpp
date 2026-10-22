@@ -209,4 +209,16 @@ namespace pst {
 		SimpleExpressionNotStatementAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
+	class OnlySimpleExpressionOrCodeBlockAllowed final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "simple_expr_or_code_block_allowed" };
+		}
+
+	public:
+		OnlySimpleExpressionOrCodeBlockAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
 }

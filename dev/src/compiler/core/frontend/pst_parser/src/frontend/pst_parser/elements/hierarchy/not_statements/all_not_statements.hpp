@@ -10,6 +10,8 @@
 #include "call_argument.hpp"                                     // IWYU pragma: export
 #include "code_block.hpp"                                        // IWYU pragma: export
 #include "code_block_or_statement.hpp"                           // IWYU pragma: export
+#include "code_block_or_any_statement.hpp"                           // IWYU pragma: export
+#include "code_block_or_expr.hpp"                           // IWYU pragma: export
 #include "dotted_name.hpp"                                       // IWYU pragma: export
 #include "expr_element.hpp"                                      // IWYU pragma: export
 #include "format_string_sub_elements/format_sub_element.hpp"     // IWYU pragma: export

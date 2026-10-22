@@ -61,9 +61,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const {
-			return else_body.map([](const auto& access) { return access.give(); });
-		}
+		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const;
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {

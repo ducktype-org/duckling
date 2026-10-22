@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>

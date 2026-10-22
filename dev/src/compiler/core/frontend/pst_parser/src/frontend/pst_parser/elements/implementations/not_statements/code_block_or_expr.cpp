@@ -19,6 +19,7 @@ namespace pst {
 			if (!block) return nullptr;
 			PARSE().assign(&out->code_block, std::move(block));
 		} else {
+			// These errors other than the last one should not occur with the current fallbacks but are left for if they change.
 			if (state[0].is(Special::AtSign)) {
 				state.logInt(makeBox<SimpleExpressionNotAttributeAllowed>(state.getPosition()));
 			} else if (state[0].isKeyword()) {
@@ -28,6 +29,8 @@ namespace pst {
 				} else if (lang_def::keywordFlags(key).contains(lang_def::KeywordFlagsOptions::IsStmtStart)) {
 					state.logInt(makeBox<SimpleExpressionNotStatementAllowed>(state.getPosition()));
 				}
+			} else if (state.ctokens().size() == 0) {
+				state.logInt(makeBox<OnlySimpleExpressionOrCodeBlockAllowed>(state.getPosition()));
 			}
 			MBox<Stmt> stmt;
 			PARSE().one(&stmt);

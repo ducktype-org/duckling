@@ -28,7 +28,7 @@ namespace pst {
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
 			state.setContextStmt(StmtContext::Normal);
-			PARSE().one(NamedOperator::Assign).with(&out->body, CodeBlockOrStmt::parseAllowOnlyExpression);
+			PARSE().all(NamedOperator::Assign, &out->body);
 		})
 
 		PST_RETURN out;
