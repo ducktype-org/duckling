@@ -8,3 +8,4 @@ SubDirs:
   - nonexistent_features
   - overwrite
   - unused-keys
+  - same-source

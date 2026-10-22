@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Local manifest schemas.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -89,12 +89,13 @@ pub struct Metadata {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
 /// Schema of the `dependencies:` table (or its logical variants).
-pub struct Dependencies(pub HashMap<String, Dependency>);
+/// [`BTreeMap`] instead of [`HashMap`] makes itests easier.
+pub struct Dependencies(pub BTreeMap<String, Dependency>);
 
 impl<'a> IntoIterator for &'a Dependencies {
-    type Item = <&'a HashMap<String, Dependency> as IntoIterator>::Item;
+    type Item = <&'a BTreeMap<String, Dependency> as IntoIterator>::Item;
 
-    type IntoIter = <&'a HashMap<String, Dependency> as IntoIterator>::IntoIter;
+    type IntoIter = <&'a BTreeMap<String, Dependency> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
