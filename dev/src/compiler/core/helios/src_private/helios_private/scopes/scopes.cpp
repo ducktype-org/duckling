@@ -775,6 +775,7 @@ namespace compiler::helios {
 				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
 				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
 				{ .package = base::StrID("core"), .path = { base::StrID("prints") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("optional") } },
 			};
 			return imports;
 		}

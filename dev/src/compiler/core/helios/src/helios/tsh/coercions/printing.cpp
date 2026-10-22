@@ -51,6 +51,9 @@ namespace compiler::tsh::coercions {
 			case Rank::MutabilityChange:
 				out << "MutabilityChange";
 				return;
+			case Rank::RefOf:
+				out << "RefOf";
+				return;
 			case Rank::Deref:
 				out << "Deref";
 				return;
