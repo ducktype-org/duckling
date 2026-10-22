@@ -12,7 +12,12 @@ from .helpers import (
     log_warning,
     log_new_line,
 )
-from .license_checker import HEADER_LINES, HeaderStatus, check_license_header
+from .license_checker import (
+    HEADER_LINES,
+    HeaderStatus,
+    check_license_header,
+    get_comment_prefix,
+)
 from .list_files import list_files_impl
 
 PRAGMA_ONCE_PATTERN = re.compile(r"^\s*#\s*pragma\s+once\b")
@@ -134,19 +139,17 @@ def _add_pragma_once(file: str) -> None:
     with open(file, "r", encoding="utf-8", newline="") as f:
         content = f.read()
 
+    bom = "\ufeff" if content.startswith("\ufeff") else ""
+    content = content.removeprefix(bom)
     newline = "\r\n" if "\r\n" in content else "\n"
     lines = content.splitlines(keepends=True)
+    shebang_lines = int(_is_shebang(lines[0])) if lines else 0
     if check_license_header(file) == HeaderStatus.OK:
-        header_end = len(HEADER_LINES)
+        header_end = shebang_lines + len(HEADER_LINES)
     else:
-        # Keep any existing leading comment, including a malformed or foreign
-        # license header, ahead of the pragma.
-        header_end = 0
-        for line in lines:
-            if line.lstrip("\ufeff").lstrip().startswith("//"):
-                header_end += 1
-            else:
-                break
+        # Preserve the leading comment preamble using the syntax supported by
+        # the license checker for this file type.
+        header_end = _leading_comment_end(lines, get_comment_prefix(file))
 
     header = lines[:header_end]
     body = lines[header_end:]
@@ -155,8 +158,8 @@ def _add_pragma_once(file: str) -> None:
 
     prefix = "".join(header)
     if prefix and not prefix.endswith(newline * 2):
-        prefix += newline
-    content = prefix + f"#pragma once{newline}{newline}" + "".join(body)
+        prefix += newline if prefix.endswith(newline) else newline * 2
+    content = bom + prefix + f"#pragma once{newline}{newline}" + "".join(body)
 
     with open(file, "w", encoding="utf-8", newline="") as f:
         f.write(content)
@@ -180,3 +183,38 @@ def _remove_pragma_once(file: str) -> None:
 
     with open(file, "w", encoding="utf-8", newline="") as f:
         f.writelines(filtered_lines)
+
+
+def _leading_comment_end(lines: list[str], comment_prefix: str | None) -> int:
+    index = int(bool(lines) and _is_shebang(lines[0]))
+    if comment_prefix is None:
+        return index
+
+    supports_block_comments = comment_prefix == "//"
+    in_block_comment = False
+    while index < len(lines):
+        line = lines[index].lstrip()
+        if not line.strip():
+            break
+
+        if in_block_comment:
+            in_block_comment = "*/" not in line
+            index += 1
+            continue
+
+        if line.startswith(comment_prefix):
+            index += 1
+            continue
+
+        if supports_block_comments and line.startswith("/*"):
+            in_block_comment = "*/" not in line[2:]
+            index += 1
+            continue
+
+        break
+
+    return index
+
+
+def _is_shebang(line: str) -> bool:
+    return line.startswith("#!") and not line[2:].lstrip().startswith("[")
