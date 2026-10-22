@@ -272,6 +272,10 @@ namespace vm {
 				return getVMValueForType(vmvalue_request.type_name);
 			}
 
+			variant_case(api::request::FreeVMValue, free_request) {
+				return freeVMValue(free_request.vm_value);
+			}
+
 			variant_case(api::request::DebuggerGetNumberOfCurrentStackFrames, request) {
 				return getNumberOfCurrentStackFrames(request.thread_id);
 			}
