@@ -18,14 +18,14 @@
 mod compilation_type;
 pub mod multipackage_schema;
 pub mod process_builder;
+mod version;
 
 use std::convert::Infallible;
 
 pub use compilation_type::CompilationType;
 use tempfile::TempDir;
-use tracing::error;
 
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
 /// Data holder of all required in order to execute the compiler.
@@ -66,24 +66,5 @@ impl Duckc {
             .set_subcommand(process_builder::DuckcSubcommand::Repl)
             .execute_and_replace()
             .context("failed to start a REPL session")
-    }
-
-    /// Get the verbose version of `duckc` (the result of `duckc --version-verbose`).
-    pub fn get_verbose_version(ctx: &DuckContext) -> QuackResult<String> {
-        let this = Self::new(ctx);
-        let output = this
-            .process_builder()
-            .ask_for_verbose_version()
-            .output()?;
-        let status = output.status;
-        if !status.success() {
-            error!(%status, "invoking duckc failed, status is not success");
-            // We captured stderr, so print it with the error.
-            qp_bail!(
-                "failed to run `duckc --version-verbose` ({status}): {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            )
-        }
-        String::from_utf8(output.stdout).with_context(|| "`duckc --version` returned invalid utf8")
     }
 }

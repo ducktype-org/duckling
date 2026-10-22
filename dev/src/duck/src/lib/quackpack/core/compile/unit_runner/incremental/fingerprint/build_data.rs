@@ -10,6 +10,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::compile::duckc::Duckc;
@@ -56,14 +57,13 @@ impl BuildData {
         profile: Profile,
         layout: &dyn ArtifactsLayout,
     ) -> QuackResult<Self> {
-        let duckc_version = Duckc::get_verbose_version(ctx)?;
-        let version_hash = sha256_string(duckc_version);
+        let duckc_version = Duckc::get_version(ctx)?;
         let profile_hash = sha256_string(profile.serialize_raw());
         Ok(Self {
             build_start: Utc::now(),
             // Unknown so UNIX epoch.
             build_end: DateTime::UNIX_EPOCH,
-            duckc_version_hash: version_hash,
+            duckc_version_hash: duckc_version.hash_sha256(),
             unit_graph: graph.into(),
             profile_hash,
             artifacts_type: layout.name().to_string(),
@@ -112,6 +112,7 @@ impl BuildData {
             || self.artifacts_type != other.artifacts_type
             || self.duckc_version_hash != other.duckc_version_hash
         {
+            info!("profile, layout or duckc version changed, rerunning all units");
             RedGreenData::default()
         } else {
             self.unit_graph.get_red_green_data(&other.unit_graph)
