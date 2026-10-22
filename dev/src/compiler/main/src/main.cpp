@@ -520,6 +520,12 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
+	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-incremental")
 	                     .addShortDesc(
@@ -545,7 +551,8 @@ clah::Clah getClahForMain() {
 								},
 							},
 							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
+								.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
+								                      .copyValueOr("./duck_build/"),
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
