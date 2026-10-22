@@ -74,7 +74,7 @@ impl Duckc {
         let output = this
             .process_builder()
             .ask_for_verbose_version()
-            .execute_and_get_output()?;
+            .output()?;
         let status = output.status;
         if !status.success() {
             error!(%status, "invoking duckc failed, status is not success");

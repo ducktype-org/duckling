@@ -183,7 +183,7 @@ impl DuckcProcessBuilder {
     }
 
     /// Execute the built command and get its output.
-    pub fn execute_and_get_output(&mut self) -> QuackResult<Output> {
+    pub fn output(&mut self) -> QuackResult<Output> {
         info!(duckc = ?self, "executing duckc");
         self.inner
             .output()
