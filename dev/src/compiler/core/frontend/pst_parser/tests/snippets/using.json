@@ -1,7 +1,7 @@
 {
 	"position": {
 		"sourceStart": 0,
-		"sourceEnd": 111
+		"sourceEnd": 275
 	},
 	"Top Level": [
 		{
@@ -10,38 +10,48 @@
 				"sourceEnd": 16
 			},
 			"Using": {
-				"position": {
-					"sourceStart": 6,
-					"sourceEnd": 15
-				},
-				"Dotted Name": {
-					"star": "false",
-					"names": [
+				"selectors": {
+					"position": {
+						"sourceStart": 6,
+						"sourceEnd": 15
+					},
+					"selector list": [
 						{
 							"position": {
 								"sourceStart": 6,
-								"sourceEnd": 9
-							},
-							"Identifier Wrapper": {
-								"value": "aaaa"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 11,
-								"sourceEnd": 13
-							},
-							"Identifier Wrapper": {
-								"value": "bbb"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 15,
 								"sourceEnd": 15
 							},
-							"Identifier Wrapper": {
-								"value": "c"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 6,
+											"sourceEnd": 9
+										},
+										"Identifier Wrapper": {
+											"value": "aaaa"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 11,
+											"sourceEnd": 13
+										},
+										"Identifier Wrapper": {
+											"value": "bbb"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 15,
+											"sourceEnd": 15
+										},
+										"Identifier Wrapper": {
+											"value": "c"
+										}
+									},
+								],
+								"tail": "none"
 							}
 						},
 					]
@@ -54,29 +64,39 @@
 				"sourceEnd": 38
 			},
 			"Using": {
-				"position": {
-					"sourceStart": 25,
-					"sourceEnd": 37
-				},
-				"Dotted Name": {
-					"star": "true",
-					"names": [
+				"selectors": {
+					"position": {
+						"sourceStart": 25,
+						"sourceEnd": 37
+					},
+					"selector list": [
 						{
 							"position": {
 								"sourceStart": 25,
-								"sourceEnd": 30
+								"sourceEnd": 37
 							},
-							"Identifier Wrapper": {
-								"value": "dasdsa"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 32,
-								"sourceEnd": 35
-							},
-							"Identifier Wrapper": {
-								"value": "dasd"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 25,
+											"sourceEnd": 30
+										},
+										"Identifier Wrapper": {
+											"value": "dasdsa"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 32,
+											"sourceEnd": 35
+										},
+										"Identifier Wrapper": {
+											"value": "dasd"
+										}
+									},
+								],
+								"tail": "star"
 							}
 						},
 					]
@@ -89,20 +109,30 @@
 				"sourceEnd": 51
 			},
 			"Using": {
-				"position": {
-					"sourceStart": 47,
-					"sourceEnd": 50
-				},
-				"Dotted Name": {
-					"star": "false",
-					"names": [
+				"selectors": {
+					"position": {
+						"sourceStart": 47,
+						"sourceEnd": 50
+					},
+					"selector list": [
 						{
 							"position": {
 								"sourceStart": 47,
 								"sourceEnd": 50
 							},
-							"Identifier Wrapper": {
-								"value": "aaaa"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 47,
+											"sourceEnd": 50
+										},
+										"Identifier Wrapper": {
+											"value": "aaaa"
+										}
+									},
+								],
+								"tail": "none"
 							}
 						},
 					]
@@ -115,47 +145,57 @@
 				"sourceEnd": 67
 			},
 			"Using": {
-				"position": {
-					"sourceStart": 60,
-					"sourceEnd": 66
-				},
-				"Dotted Name": {
-					"star": "false",
-					"names": [
+				"selectors": {
+					"position": {
+						"sourceStart": 60,
+						"sourceEnd": 66
+					},
+					"selector list": [
 						{
 							"position": {
 								"sourceStart": 60,
-								"sourceEnd": 60
-							},
-							"Identifier Wrapper": {
-								"value": "a"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 62,
-								"sourceEnd": 62
-							},
-							"Identifier Wrapper": {
-								"value": "b"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 64,
-								"sourceEnd": 64
-							},
-							"Identifier Wrapper": {
-								"value": "c"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 66,
 								"sourceEnd": 66
 							},
-							"Identifier Wrapper": {
-								"value": "d"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 60,
+											"sourceEnd": 60
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 62,
+											"sourceEnd": 62
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 64,
+											"sourceEnd": 64
+										},
+										"Identifier Wrapper": {
+											"value": "c"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 66,
+											"sourceEnd": 66
+										},
+										"Identifier Wrapper": {
+											"value": "d"
+										}
+									},
+								],
+								"tail": "none"
 							}
 						},
 					]
@@ -168,38 +208,48 @@
 				"sourceEnd": 91
 			},
 			"Using": {
-				"position": {
-					"sourceStart": 76,
-					"sourceEnd": 90
-				},
-				"Dotted Name": {
-					"star": "false",
-					"names": [
+				"selectors": {
+					"position": {
+						"sourceStart": 76,
+						"sourceEnd": 90
+					},
+					"selector list": [
 						{
 							"position": {
 								"sourceStart": 76,
-								"sourceEnd": 79
-							},
-							"Identifier Wrapper": {
-								"value": "ἄλφα"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 81,
-								"sourceEnd": 84
-							},
-							"Identifier Wrapper": {
-								"value": "βῆτα"
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 86,
 								"sourceEnd": 90
 							},
-							"Identifier Wrapper": {
-								"value": "γάμμα"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 76,
+											"sourceEnd": 79
+										},
+										"Identifier Wrapper": {
+											"value": "ἄλφα"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 81,
+											"sourceEnd": 84
+										},
+										"Identifier Wrapper": {
+											"value": "βῆτα"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 86,
+											"sourceEnd": 90
+										},
+										"Identifier Wrapper": {
+											"value": "γάμμα"
+										}
+									},
+								],
+								"tail": "none"
 							}
 						},
 					]
@@ -212,29 +262,592 @@
 				"sourceEnd": 111
 			},
 			"Using": {
-				"position": {
-					"sourceStart": 100,
-					"sourceEnd": 110
-				},
-				"Dotted Name": {
-					"star": "true",
-					"names": [
+				"selectors": {
+					"position": {
+						"sourceStart": 100,
+						"sourceEnd": 110
+					},
+					"selector list": [
 						{
 							"position": {
 								"sourceStart": 100,
-								"sourceEnd": 103
+								"sourceEnd": 110
 							},
-							"Identifier Wrapper": {
-								"value": "ἄλφα"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 100,
+											"sourceEnd": 103
+										},
+										"Identifier Wrapper": {
+											"value": "ἄλφα"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 105,
+											"sourceEnd": 108
+										},
+										"Identifier Wrapper": {
+											"value": "βῆτα"
+										}
+									},
+								],
+								"tail": "star"
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 114,
+				"sourceEnd": 130
+			},
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 120,
+						"sourceEnd": 129
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 120,
+								"sourceEnd": 129
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 120,
+											"sourceEnd": 120
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 122,
+											"sourceEnd": 122
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+								],
+								"tail": "nested",
+								"nested": {
+									"position": {
+										"sourceStart": 124,
+										"sourceEnd": 129
+									},
+									"nested selector list": [
+										{
+											"position": {
+												"sourceStart": 125,
+												"sourceEnd": 125
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 125,
+															"sourceEnd": 125
+														},
+														"Identifier Wrapper": {
+															"value": "c"
+														}
+													},
+												],
+												"tail": "none"
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 128,
+												"sourceEnd": 128
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 128,
+															"sourceEnd": 128
+														},
+														"Identifier Wrapper": {
+															"value": "d"
+														}
+													},
+												],
+												"tail": "none"
+											}
+										},
+									]
+								}
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 133,
+				"sourceEnd": 149
+			},
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 139,
+						"sourceEnd": 148
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 139,
+								"sourceEnd": 148
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 139,
+											"sourceEnd": 139
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 141,
+											"sourceEnd": 141
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 143,
+											"sourceEnd": 143
+										},
+										"Identifier Wrapper": {
+											"value": "c"
+										}
+									},
+								],
+								"tail": "as",
+								"as": {
+									"position": {
+										"sourceStart": 148,
+										"sourceEnd": 148
+									},
+									"Identifier Wrapper": {
+										"value": "d"
+									}
+								}
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 152,
+				"sourceEnd": 164
+			},
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 158,
+						"sourceEnd": 163
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 158,
+								"sourceEnd": 163
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 158,
+											"sourceEnd": 158
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+								],
+								"tail": "as",
+								"as": {
+									"position": {
+										"sourceStart": 163,
+										"sourceEnd": 163
+									},
+									"Identifier Wrapper": {
+										"value": "d"
+									}
+								}
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 167,
+				"sourceEnd": 188
+			},
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 173,
+						"sourceEnd": 187
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 173,
+								"sourceEnd": 187
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 173,
+											"sourceEnd": 173
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 175,
+											"sourceEnd": 175
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+								],
+								"tail": "nested",
+								"nested": {
+									"position": {
+										"sourceStart": 177,
+										"sourceEnd": 187
+									},
+									"nested selector list": [
+										{
+											"position": {
+												"sourceStart": 178,
+												"sourceEnd": 183
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 178,
+															"sourceEnd": 178
+														},
+														"Identifier Wrapper": {
+															"value": "c"
+														}
+													},
+												],
+												"tail": "as",
+												"as": {
+													"position": {
+														"sourceStart": 183,
+														"sourceEnd": 183
+													},
+													"Identifier Wrapper": {
+														"value": "d"
+													}
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 186,
+												"sourceEnd": 186
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 186,
+															"sourceEnd": 186
+														},
+														"Identifier Wrapper": {
+															"value": "e"
+														}
+													},
+												],
+												"tail": "none"
+											}
+										},
+									]
+								}
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 191,
+				"sourceEnd": 208
+			},
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 197,
+						"sourceEnd": 207
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 197,
+								"sourceEnd": 207
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 197,
+											"sourceEnd": 197
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+								],
+								"tail": "star",
+								"hides": [
+									{
+										"position": {
+											"sourceStart": 207,
+											"sourceEnd": 207
+										},
+										"Identifier Wrapper": {
+											"value": "x"
+										}
+									},
+								]
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 211,
+				"sourceEnd": 237
+			},
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 217,
+						"sourceEnd": 236
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 217,
+								"sourceEnd": 236
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 217,
+											"sourceEnd": 217
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+								],
+								"tail": "star",
+								"hides": [
+									{
+										"position": {
+											"sourceStart": 228,
+											"sourceEnd": 228
+										},
+										"Identifier Wrapper": {
+											"value": "x"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 231,
+											"sourceEnd": 231
+										},
+										"Identifier Wrapper": {
+											"value": "y"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 234,
+											"sourceEnd": 234
+										},
+										"Identifier Wrapper": {
+											"value": "z"
+										}
+									},
+								]
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 240,
+				"sourceEnd": 254
+			},
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 246,
+						"sourceEnd": 253
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 246,
+								"sourceEnd": 248
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 246,
+											"sourceEnd": 246
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 248,
+											"sourceEnd": 248
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+								],
+								"tail": "none"
 							}
 						},
 						{
 							"position": {
-								"sourceStart": 105,
-								"sourceEnd": 108
+								"sourceStart": 251,
+								"sourceEnd": 253
 							},
-							"Identifier Wrapper": {
-								"value": "βῆτα"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 251,
+											"sourceEnd": 251
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 253,
+											"sourceEnd": 253
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+								],
+								"tail": "none"
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 257,
+				"sourceEnd": 275
+			},
+			"specifiers": [
+				{
+					"position": {
+						"sourceStart": 257,
+						"sourceEnd": 262
+					},
+					"StmtSpecifier": {
+						"specifier": {
+							"position": {
+								"sourceStart": 257,
+								"sourceEnd": 262
+							},
+							"Keyword Wrapper": {
+								"value": "export"
+							}
+						},
+					}
+				},
+			],
+			"Using": {
+				"selectors": {
+					"position": {
+						"sourceStart": 270,
+						"sourceEnd": 274
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 270,
+								"sourceEnd": 274
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 270,
+											"sourceEnd": 270
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 272,
+											"sourceEnd": 272
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+								],
+								"tail": "star"
 							}
 						},
 					]

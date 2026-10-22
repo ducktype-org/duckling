@@ -1,7 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
+#include <base/pointers/ref.hpp>
+
+#include <filesystem/vfs.hpp>
 
 #include <filesystem>
 #include <string>
@@ -30,6 +40,8 @@ namespace fs {
 	private:
 		std::filesystem::path path;
 		PathType              type;
+		/// The VFS this path resolves against; set if and only if `type == PathType::Virtual`.
+		base::Optional<base::Ref<VFS>> vfs;
 
 		/**
 		 * @brief Determines the path type based on the path string.
@@ -38,15 +50,47 @@ namespace fs {
 		 */
 		static PathType determinePathType(const std::filesystem::path& path);
 
-	public:
 		/**
-		 * @brief Constructor accepting any type convertible to std::filesystem::path.
-		 * @tparam T Type that is convertible to std::filesystem::path.
-		 * @param path_like The path-like object to construct from.
+		 * @brief Returns the VFS binding a freshly classified path of `type` should carry.
+		 */
+		static base::Optional<base::Ref<VFS>> defaultVfsFor(PathType type);
+
+		/**
+		 * @brief Builds a path with an explicitly chosen type and VFS binding.
+		 */
+		FilePath(std::filesystem::path path, PathType type, base::Optional<base::Ref<VFS>> vfs):
+			  path(std::move(path)),
+			  type(type),
+			  vfs(vfs) {}
+
+	public:
+		FilePath(const FilePath&)            = default;
+		FilePath(FilePath&&)                 = default;
+		FilePath& operator=(const FilePath&) = default;
+		FilePath& operator=(FilePath&&)      = default;
+		~FilePath()                          = default;
+
+		/**
+		 * @brief Constructor binding a virtual path to an explicit VFS instance.
+		 * @note FilePath itself is excluded: it converts to std::filesystem::path, so without
+		 * this the template would outrank the copy constructor for a non-const lvalue and
+		 * silently change the VFS of the path for example.
+		 * @param path_like The path-like object to construct from; must be a virtual path.
+		 * @param vfs The vfs of the path. If empty and the path is virtual,
+		 * then chooses the default VFS instance.
 		 */
 		template<typename T>
 		requires std::is_convertible_v<T, std::filesystem::path>
-		FilePath(T&& path_like): path(std::forward<T>(path_like)), type(determinePathType(path)) {}
+		          && (!std::is_same_v<std::remove_cvref_t<T>, FilePath>)
+		FilePath(T&& path_like, base::Optional<base::Ref<VFS>> vfs = {}):
+			  path(std::forward<T>(path_like)),
+			  type(determinePathType(path)),
+			  vfs(type == PathType::Virtual && vfs.has_value() ? vfs : defaultVfsFor(type)) {}
+
+		/**
+		 * @brief Gets the VFS this path resolves against, empty for non-virtual paths.
+		 */
+		[[nodiscard]] const base::Optional<base::Ref<VFS>>& getVfs() const noexcept { return vfs; }
 
 		/**
 		 * @brief Gets the underlying std::filesystem::path.
@@ -97,7 +141,7 @@ namespace fs {
 		 * @brief Gets the parent path.
 		 * @return FilePath representing the parent directory.
 		 */
-		[[nodiscard]] FilePath parentPath() const { return path.parent_path(); }
+		[[nodiscard]] FilePath parentPath() const { return { path.parent_path(), type, vfs }; }
 
 		/**
 		 * @brief Gets the file extension.
@@ -141,10 +185,11 @@ namespace fs {
 		/**
 		 * @brief Converts this path to a virtual path.
 		 * @note Only physical paths can be converted to virtual paths.
+		 * @param target The virtual filesystem the resulting path resolves against.
 		 * @return FilePath representing the virtual path.
 		 * @throws CORE_PANIC if the path is already virtual or conversion fails.
 		 */
-		[[nodiscard]] FilePath toVirtualPath() const;
+		[[nodiscard]] FilePath toVirtualPath(base::Ref<VFS> target = VFS::getInstance()) const;
 
 		/**
 		 * @brief Converts this virtual path to a physical path.
@@ -180,6 +225,22 @@ namespace fs {
 		 * @return FilePath representing the absolute path.
 		 */
 		[[nodiscard]] FilePath absolute() const;
+
+		/**
+		 * @brief Removes redundant `.` and `..` components without touching the filesystem.
+		 * @return FilePath representing the normalized path.
+		 */
+		[[nodiscard]] FilePath lexicallyNormal() const;
+
+		/**
+		 * @brief Returns the same virtual path bound to a different VFS instance.
+		 */
+		[[nodiscard]] FilePath withVfs(base::Ref<VFS> other) const {
+			CORE_ASSERT(
+				type == PathType::Virtual, "Only virtual paths can be rebound: " + path.string()
+			);
+			return { path, type, other };
+		}
 
 		/**
 		 * @brief Checks if the path is absolute.
@@ -221,18 +282,14 @@ namespace fs {
 		 */
 		[[nodiscard]] static FilePath getDefaultTempDirectoryPath();
 
-		/**
-		 * Returns the default virtual directory as a FilePath.
-		 */
-		[[nodiscard]] static FilePath getDefaultVirtualDirectoryPath();
-
 		// Comparison operators
 		auto operator<=>(const FilePath& other) const {
 			CORE_ASSERT(
 				(path != other.path) || (type == other.type),
 				"FilePath differ in exactly one of type/path, this should never happen"
 			);
-			return path <=> other.path;
+			if (auto cmp = path <=> other.path; cmp != std::strong_ordering::equal) return cmp;
+			return vfsHandle() <=> other.vfsHandle();
 		}
 
 		auto operator==(const FilePath& other) const {
@@ -250,10 +307,25 @@ namespace fs {
 					")"
 				)
 			);
-			return path == other.path;
+			return path == other.path && vfsHandle() == other.vfsHandle();
+		}
+
+		/**
+		 * @brief Returns the bound VFS as a raw pointer, null when unbound.
+		 */
+		[[nodiscard]] const VFS* vfsHandle() const noexcept {
+			return vfs.has_value() ? vfs.value().get() : nullptr;
 		}
 
 		// Conversion to std::filesystem::path
 		operator std::filesystem::path() const { return path; }
 	};
 }
+
+/**
+ * @brief Hashes a path together with the VFS instance it is bound to.
+ */
+template<>
+struct std::hash<fs::FilePath> final {
+	usize operator()(const fs::FilePath& key) const;
+};

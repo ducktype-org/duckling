@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "safe_vmprocess.hpp"
 
 #include <base/collections/optional.hpp>
@@ -5,6 +11,8 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
+
+#include <logger/logger.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
@@ -23,6 +31,7 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <algorithm>
 #include <expected>
 #include <iostream>
 #include <mutex>
@@ -36,6 +45,18 @@ namespace vm {
 	namespace ts = thread_state;
 
 	Memory& SafeVMProcess::getMemory() { return memory; }
+
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided) {
+		return base::strConcat(
+			"Function '",
+			func.name.str(),
+			"' expects ",
+			func.parameters.size(),
+			" arguments, but ",
+			provided,
+			" were provided."
+		);
+	}
 
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
@@ -54,6 +75,12 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			// Exec threads never take api_lock; the GIL is what excludes them. recompile()
+			// grows LowVMProgram::functions (a std::vector-backed map), which moves every
+			// LowFuncData — and with it every CRef<LowFuncData> held by running frames
+			// (frame->current_function) and every jit_data reference in the entrypoint
+			// opfuns — so it must run under the GIL.
+			GIL::ScopedLock gil_lock(gil);
 			compiler.recompile();
 			updateGlobalDataMemory(loaded_program);
 			return api::Response(api::response::Empty());
@@ -85,15 +112,7 @@ namespace vm {
 		const auto& func_args = v_get(run_arguments, FunctionRunArguments);
 
 		if (func_args.size() != func.parameters.size())
-			return refuse(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			return refuse(argumentCountMismatchMessage(func, func_args.size()));
 
 		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
 			if (arg_value->getPID() != getPID())
@@ -130,7 +149,7 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(api_lock);
-		return spawnThread(func_name, run_arguments);
+		return spawnThread(IVMThread::ThreadOwner::API, func_name, run_arguments);
 	}
 
 	std::expected<api::ThreadID, api::ApiError> SafeVMProcess::startNewThreadFromExecutionThread(
@@ -143,18 +162,21 @@ namespace vm {
 			return std::unexpected(api::ApiError{
 				api::StateError{ "Cannot start a thread while the process is stopping" } });
 
-		return spawnThread(func_name, {}).transform([](const api::Response& response) {
-			return v_get(response, api::ThreadID);
-		});
+		return spawnThread(IVMThread::ThreadOwner::Program, func_name, {})
+		    .transform([](const api::Response& response) { return v_get(response, api::ThreadID); });
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::spawnThread(
-		const std::string& func_name, const RunArguments& run_arguments
+		const IVMThread::ThreadOwner owner,
+		const std::string&           func_name,
+		const RunArguments&          run_arguments
 	) {
 		std::lock_guard lock(threads_pool_mutex);
 
 		SafeVMThread& thread = getEmptyThreadLocked();
 		thread.setThreadCtx(func_name);
+		// Overwrite the previous owner if we recycle the thread.
+		thread.setOwner(owner);
 
 		if (!thread.spawnThreadAndRun(func_name, run_arguments)) {
 			thread.setThreadCtx("");
@@ -251,13 +273,15 @@ namespace vm {
 	}
 
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type) {
-		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
+		auto value              = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
+		value->owned_by_process = true;
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
-		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+		auto value              = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+		value->owned_by_process = true;
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
@@ -270,8 +294,11 @@ namespace vm {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
+	SafeVMProcess::SafeVMProcess(
+		const PID my_pid, bool enable_deadlock_detection, [[maybe_unused]] bool enable_jit
+	):
 		  IVMProcess(my_pid),
+		  compiler(*loader.getHighProgram(), enable_jit),
 		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
@@ -303,30 +330,24 @@ namespace vm {
 
 	SafeVMThread& SafeVMProcess::getEmptyThreadLocked() {
 		for (auto& thread: vm_threads) {
-			// Thread must not be executing AND must not have an active exec_thread handle
-			if (!ts::isActive(thread.getThreadState()) && !thread.hasActiveThread()) return thread;
+			// Thread may only be reused if it never started or was joined.
+			if (v_matches(thread.getThreadState(), ts::NotStarted, ts::Joined)) return thread;
 		}
 		return *vm_threads.get(vm_threads.add(*this));
 	}
 
-	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
-		// `api_lock` is not needed here, since the only shared read here is the process state which
-		// is being synchronized by `ProcessStateManager`.
-		const ProcessState state = getProcessState();
-		variant_match(state) {
-			variant_case(ps::Completed, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(api::StateError(
-				v_matches(state, ps::NotStarted) ? "Execution did not start"
-												 : "Execution did not complete"
-			));
-		}
-		CORE_UNREACHABLE();
-	}
-
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
-		// We just `joinAllExecutionThreads` here as this endpoint assumes that the process is
-		// stopped already.
-		joinAllExecutionThreads();
+		// Join all Program-spawned threads if it's needed.
+		// Done before taking `api_lock`, since a thread winding down may still need it.
+		joinFinishedThreads();
+		const std::vector<api::response::UnjoinedThread> unjoined_by_program
+			= unjoinedProgramThreads();
+
+		const auto validation_result = [&](const bool memory_valid) {
+			return api::response::ValidationResult{ .memory_valid = memory_valid,
+				                                    .unjoined_program_threads
+				                                    = unjoined_by_program };
+		};
 
 		std::unique_lock lock(api_lock);
 		try {
@@ -336,7 +357,7 @@ namespace vm {
 
 			memory.deinitGlobals();
 		} catch (const exceptions::VMFoundMemoryLeakException&) {
-			return false;
+			return validation_result(false);
 		} catch (const KillProcessException& e) {
 			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("A global destructor was interrupted: ", e.what()) } });
@@ -344,7 +365,7 @@ namespace vm {
 			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("The process could not be deinitialized: ", e.what()) } });
 		}
-		return memory.validateMemoryState();
+		return validation_result(memory.validateMemoryState());
 	}
 
 	std::expected<void, api::ApiError> SafeVMProcess::requestPauseOfVMThread(api::ThreadID thread_id
@@ -641,15 +662,92 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::vector<api::ThreadID> SafeVMProcess::unjoinedThreadIds() const {
+	std::expected<api::Response, api::ApiError> SafeVMProcess::freeVMValue(Ref<IVMValue> vm_value) {
+		// Freeing a VMValue deallocates its block in memory, so it must be synchronized against
+		// every other memory-touching endpoint.
+		std::unique_lock lock(api_lock);
+		match_optional(assertProcessCanRespond()) {
+			opt_err(error) return std::unexpected(error);
+			opt_some() {
+				auto* safe_value = dynamic_cast<SafeVMValue*>(vm_value.get());
+				if (safe_value == nullptr)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue is not a SafeVMValue" } });
+
+				if (safe_value->my_process.get() != this)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue comes from a different process" } });
+
+				// The VMValue is owned by the process, not the user, so we can't just free it.
+				if (safe_value->owned_by_process)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue is owned by the process" } });
+
+				if (safe_value->pointer.isNull())
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "VMValue was already freed" } });
+
+				safe_value->freeData();
+				return api::Response(api::response::Empty());
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	std::vector<api::ThreadID> SafeVMProcess::unjoinedApiThreadIds() const {
 		std::lock_guard            lock(threads_pool_mutex);
 		std::vector<api::ThreadID> ids;
-		for (const auto& thread: vm_threads)
-			if (thread.hasActiveThread()) ids.push_back(thread.getThreadID());
+		for (const auto& thread: vm_threads) {
+			if (thread.getOwner() != IVMThread::ThreadOwner::API) continue;
+			const ts::ThreadState state = thread.getThreadState();
+			if (ts::hasStarted(state) && !ts::isJoined(state)) ids.push_back(thread.getThreadID());
+		}
 		return ids;
 	}
 
-	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() {
+	void SafeVMProcess::joinFinishedThreads() {
+		const auto to_strid = [](const std::string& thread_ctx) -> base::Optional<base::StrID> {
+			if (thread_ctx.empty()) return std::nullopt;
+			return base::StrID(thread_ctx);
+		};
+
+		{
+			std::lock_guard lock(threads_pool_mutex);
+			// A thread the program started and never joined is a bug in that program, but not one
+			// the API caller can do anything about, so it is reported instead of refusing the
+			// request. The function it ran is what a reader can act on, the ID alone is a slot
+			// number which the next run reuses.
+			for (const auto& thread: vm_threads) {
+				if (thread.getOwner() != IVMThread::ThreadOwner::Program) continue;
+				const ts::ThreadState state = thread.getThreadState();
+				if (!ts::hasStarted(state) || ts::isJoined(state)) continue;
+
+				unjoined_program_threads.push_back(api::response::UnjoinedThread{
+					.function_name = to_strid(thread.getThreadCtx()),
+					.thread_id     = thread.getThreadID(),
+					.run_number    = run_number,
+				});
+				CORE_DEV_LOG(
+					DVM,
+					"Run ",
+					run_number,
+					" started `",
+					thread.getThreadCtx(),
+					"` on VMThread ",
+					thread.getThreadID().asInt(),
+					" and never joined it.\n"
+				);
+			}
+		}
+		joinAllExecutionThreads();
+	}
+
+	std::vector<api::response::UnjoinedThread> SafeVMProcess::unjoinedProgramThreads() const {
+		std::lock_guard lock(threads_pool_mutex);
+		return unjoined_program_threads;
+	}
+
+	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() const {
 		std::lock_guard            lock(threads_pool_mutex);
 		std::vector<api::ThreadID> thread_ids;
 		for (const auto& thread: vm_threads)
@@ -660,6 +758,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpoint(
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
+		// @TODO: #3585 In JIT builds this can clobber or incorrectly restore the
+		// jitFuncEntrypoint/jitLoopEntrypoint opcodes patched in by the compiler: disabling a
+		// breakpoint restores the opcode from the original program, losing the JIT entrypoint.
 		std::unique_lock lock(api_lock);
 		auto response = compiler.setBreakpoint(function_name, instruction_index, enable);
 		if (!response) return std::unexpected(api::OtherError{ response.error() });
@@ -718,4 +819,5 @@ namespace vm {
 	SynchronizationPrimitives& SafeVMProcess::getSynchronizationPrimitives() {
 		return synchronization_primitives;
 	}
+
 }

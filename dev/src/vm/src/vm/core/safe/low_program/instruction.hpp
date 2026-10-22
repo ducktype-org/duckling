@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file instruction.hpp
  * @brief Defines the instruction structure (types) and the opcodes functions used by the Executor
@@ -24,6 +30,8 @@
 	[[maybe_unused]] const MicroInstruction *instr, [[maybe_unused]] byte *local_stack, \
 		[[maybe_unused]] Frame *frame, [[maybe_unused]] SafeVMThread &thread
 
+// There is a strong dependency in creating the instruction implementation type in LLVM JIT
+// compiler. (jit_data.cpp)
 #define OPFUN_REF_ARGS                                                                    \
 	[[maybe_unused]] const MicroInstruction *&instr, [[maybe_unused]] byte *&local_stack, \
 		[[maybe_unused]] Frame *&frame, [[maybe_unused]] SafeVMThread &thread

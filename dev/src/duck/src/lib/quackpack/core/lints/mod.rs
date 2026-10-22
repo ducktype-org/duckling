@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! This module contains logic for emitting lints and warnings in QuackPack.
 
 mod buffer;
+pub mod errors;
 mod passes;
 pub mod rules;
 pub mod warnings;
@@ -45,13 +52,13 @@ pub struct Lint {
     pub level: LintLevel,
 }
 
-/// A shorthand for emitting warnings and lints.
-pub fn emit_warnings_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
-    pcx.emit_warnings()?;
+/// A shorthand for emitting diagnostics and running lints.
+pub fn emit_diagnostics_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
+    pcx.emit_diagnostics()?;
     run_lint_passes(pcx)
 }
 
-/// Emit lints for the given package.
+/// Run lints for the given package.
 pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
     let mut buffer = LintBuffer::new();
 
@@ -127,7 +134,7 @@ pub(crate) mod macros {
     /// As You can see, `self.` is prepend to the arguments to [`Display`].
     ///
     /// [`Display`]: std::fmt::Display
-    /// [`Diagnostic`]: super::Diagnostic
+    /// [`Diagnostic`]: crate::quackpack::core::lints::Diagnostics
     macro_rules! make_diagnostic {
     (
         $struct_vis:vis struct $name:ident {

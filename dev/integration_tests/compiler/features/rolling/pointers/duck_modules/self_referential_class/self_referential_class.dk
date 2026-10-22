@@ -1,0 +1,37 @@
+import core.builtins.*;
+
+# A class holding a pointer to its own type: its layout must not need its own layout.
+class Node {
+    next: ptr Node;
+    v: i64;
+}
+
+# A class holding an optional reference to its own type, i.e. a linked list.
+class Link {
+    v: i64;
+    next: ref Link | ();
+}
+
+fun sum(l: ref Link) -> i64 = {
+    return l.v + match (l.next) {
+        case n : ref Link = sum(n);
+        case _ = 0i64;
+    };
+}
+
+fun main() -> i64 = {
+    var a: Node;
+    var b: Node;
+    a.v = 5;
+    b.v = 7;
+    a.next = &b as ptr Node;
+    b.next = &a as ptr Node;
+    builtin_output_i64((*a.next).v);
+    builtin_output_i64((*(*a.next).next).v);
+
+    var x = Link(1, ());
+    var y = Link(20, &x);
+    var z = Link(300, &y);
+    builtin_output_i64(sum(&z));
+    return 0;
+}

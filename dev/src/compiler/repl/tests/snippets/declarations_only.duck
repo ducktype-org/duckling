@@ -1,6 +1,6 @@
 import X as x;
 using X;
-alias X = X;
+using X as Y;
 class Foo {}
 namespace Math {}
 fun add(a: i32, b: i32) -> i32 = {

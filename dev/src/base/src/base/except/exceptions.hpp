@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file exceptions.hpp
  *
@@ -12,6 +18,7 @@
 #pragma once
 
 #include <base/preproc/cat.hpp>
+#include <base/preproc/diagnostics.hpp>
 #include <base/preproc/stringify.hpp>
 #include <base/str/str_utils.hpp>  // IWYU pragma: export
 
@@ -103,7 +110,8 @@ namespace base {
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
-	#define CORE_ASSERT(cond, what, ...) [[assume(cond)]]
+	#define CORE_ASSERT(cond, what, ...) \
+		PUSH_DIAGNOSTIC IGNORE_ASSUME [[assume(cond)]] POP_DIAGNOSTIC
 #endif
 
 #if defined(BUILD_TYPE_DEV)

@@ -2,7 +2,7 @@ fun foo(condition: i64) -> i64 = {
     var a: i64 = 123;
     var ref_a = &a;
     
-    if (condition) {
+    if (condition as bool) {
         ref_a = ref_a + 1;
     } else {
         ref_a = ref_a + 2;

@@ -15,9 +15,15 @@ copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/nul
 
 Run: "@{duckc_path} @{run_args}"
 
-# `<tool> <major>.<minor>[.<patch>...][-<prerelease>]`, followed by the commit group when the
-# build came from a git worktree - so the regex must not be anchored at the end of the line.
+# `<tool> <major>.<minor>[.<patch>...][-<prerelease>]`.
 version_regex: "[0-9]+(\\.[0-9]+)+(-[a-z]+)?"
+# The commit the binaries were built from. Every build regenerates the hash and the root PreNode
+# rebuilds duckc, VM and duck_ls first, so it is HEAD. Same command as GenerateCommitInfo.cmake.
+commit_hash: "$(git -C @{dev_dir} rev-parse --short=9 HEAD)"
+# The whole first line: `<tool> <version> (<commit hash> <commit date>)`.
+version_line_regex: "@{version_regex} \\(@{commit_hash} [0-9]+-[0-9]+-[0-9]+\\)\\n"
+# The `commit-hash:` row of `--version-verbose`.
+commit_hash_row_regex: "\\ncommit-hash: +@{commit_hash}\\n"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
@@ -56,6 +62,23 @@ Tests:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
 
+  compile-package-inferred-name:
+    # Without -n, compile_package names the package after its directory or root module file.
+    # The package id is the prefix of the dumped IR file name, so check that file exists.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 3
+    inferred_hir: "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.hir"
+    Run: "@{duckc_path} compile_package @{package_path} -O 0 --no-incremental --dvm-backend
+      --dump-ir hir -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+      && test -f @{inferred_hir}"
+    Cases:
+      from-directory:
+        package_path: "./duck_modules/inferred_name"
+        ExitCode: 0
+      from-root-module-file:
+        package_path: "./duck_modules/inferred_name/inferred_name.dk"
+        ExitCode: 0
+
   comp-time-output:
     # Test compile time output to stderr
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
@@ -69,22 +92,33 @@ Tests:
         ExitCode: 0
 
   cli-version:
-    # The shared rows are the Version module's job and are unit-tested there. What only the real
-    # binary can prove is that it names itself correctly and contributes its own extra rows.
+    # The shared rows are the Version module's job. What only the real binary can prove is that it
+    # names itself correctly, reports the commit it was built from and contributes its own extra rows.
     Cases:
       duckc-version:
-        Run: '@{expect_output} --out-regex "^duckc @{version_regex}" -- @{duckc_path} --version'
+        Run: '@{expect_output} --out-regex "^duckc @{version_line_regex}" -- @{duckc_path} --version'
 
       duckc-version-verbose:
-        Run: '@{expect_output} --out-regex "^duckc @{version_regex}"
+        Run: '@{expect_output} --out-regex "^duckc @{version_line_regex}"
+          --out-regex "@{commit_hash_row_regex}"
           --out-regex "LLVM: +[0-9]+\."
           --out-regex "JIT: +(enabled|disabled)"
           -- @{duckc_path} --version-verbose'
 
       vm-version:
-        Run: '@{expect_output} --out-regex "^DVM @{version_regex}" -- @{dvm_path} --version'
+        Run: '@{expect_output} --out-regex "^DVM @{version_line_regex}" -- @{dvm_path} --version'
 
       vm-version-verbose:
-        Run: '@{expect_output} --out-regex "^DVM @{version_regex}"
+        Run: '@{expect_output} --out-regex "^DVM @{version_line_regex}"
+          --out-regex "@{commit_hash_row_regex}"
           --out-regex "dispatch: +[A-Za-z]"
           -- @{dvm_path} --version-verbose'
+
+      duck-ls-version:
+        Run: '@{expect_output} --out-regex "^duck_ls @{version_line_regex}"
+          -- @{duck_ls_path} --version'
+
+      duck-ls-version-verbose:
+        Run: '@{expect_output} --out-regex "^duck_ls @{version_line_regex}"
+          --out-regex "@{commit_hash_row_regex}"
+          -- @{duck_ls_path} --version-verbose'

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 // NOLINTBEGIN
 #include <stdarg.h>
 #include <stdint.h>
@@ -100,5 +106,11 @@ int64_t sum_varargs_struct(int64_t count, ...) {
 	va_end(ap);
 	return total;
 }
+
+// --- C functions named after Duckling keywords, linked through `@c_symbol_name`. ---
+
+int64_t match(int64_t a) { return a + 1; }
+
+int64_t in(int64_t a) { return a * 2; }
 
 //NOLINTEND

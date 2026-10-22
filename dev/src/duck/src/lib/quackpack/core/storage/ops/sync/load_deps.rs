@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Module for loading (and firstly downloading if absent) packages of the freeze generated during `sync`.
 use std::cell::RefCell;
 use std::fs::File;
@@ -66,7 +72,7 @@ pub fn load_packages_in_freeze(
         return Ok(LoadedFreezePackages::default());
     }
     let count = pkgs.len();
-    fetcher.ctx().info(format!(
+    fetcher.ctx().info_verbose(format!(
         "starting loading {count} package{}",
         count.s_if_plural()
     ))?;

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/pst_parser/pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
@@ -94,7 +100,7 @@ private:
 		ASSERT_NO_VALUE(extract("namespace Foo {}"), "Expected empty for namespace declaration");
 		ASSERT_NO_VALUE(extract("import X as x;"), "Expected empty for import statement");
 		ASSERT_NO_VALUE(extract("using X;"), "Expected empty for using statement");
-		ASSERT_NO_VALUE(extract("alias X = X;"), "Expected empty for alias declaration");
+		ASSERT_NO_VALUE(extract("using X as Y;"), "Expected empty for `using ... as` declaration");
 
 		// Actions (return, break, continue, throw, etc.) are not instructions
 		ASSERT_NO_VALUE(extract("return 2;"), "Expected empty for return action");

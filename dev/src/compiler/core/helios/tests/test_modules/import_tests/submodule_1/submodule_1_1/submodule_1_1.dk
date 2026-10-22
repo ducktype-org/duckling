@@ -8,6 +8,6 @@ const my_value: i64 = 7812313;
 
 
 # other:
-alias it_in_sm11 = it.my_value;
+using it.my_value as it_in_sm11;
 
 const sm1_in_sm11: i64 = sm1.my_value;

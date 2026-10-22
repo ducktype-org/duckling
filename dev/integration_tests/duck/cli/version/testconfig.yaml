@@ -1,0 +1,18 @@
+# `duck --version` must name the commit duck was built from. build.rs asks git for the hash
+# every time HEAD moves, and the duck PreNode rebuilds duck first, so it is HEAD.
+# Same git commands as build.rs: `--short` for the first line, the full hash for the verbose row.
+short_commit_hash: "$(git -C @{dev_dir} rev-parse --short HEAD)"
+long_commit_hash: "$(git -C @{dev_dir} rev-parse HEAD)"
+# The whole first line: `duck <version> (<commit hash> <commit date>)`.
+version_line_regex: "^duck [0-9]+(\\.[0-9]+)+(-[a-z]+)? \\(@{short_commit_hash} [0-9]+-[0-9]+-[0-9]+\\)\\n"
+
+Tests:
+  version:
+    Cases:
+      version:
+        test-cmd: '@{expect_output} --out-regex "@{version_line_regex}" -- duck --version'
+
+      version-verbose:
+        test-cmd: '@{expect_output} --out-regex "@{version_line_regex}"
+          --out-regex "\\ncommit-hash: +@{long_commit_hash}\\n"
+          -- duck --version --verbose'

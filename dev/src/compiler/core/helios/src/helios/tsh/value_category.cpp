@@ -1,6 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "value_category.hpp"
 
 #include <helios/symbols/symbol_kind.hpp>
+
+#include <base/str/str_utils.hpp>
 
 namespace compiler::tsh {
 	PrimaryCategory primaryCategoryOfSymbol(query::Context& ctx, compiler::helios::SymID symbol) {
@@ -16,6 +24,18 @@ namespace compiler::tsh {
 
 		// Everything else is a global.
 		return PrimaryCategory::Global;
+	}
+
+	std::string ValueCategory::toString() const {
+		std::string out{ base::enumToStr(category) };
+
+		if (is_pure) out += ", pure";
+		if (not allows_semantic.toString().empty())
+			out += base::strConcat(", allows ", allows_semantic.toString());
+		if (not force_semantic.toString().empty())
+			out += base::strConcat(", forces ", force_semantic.toString());
+
+		return out;
 	}
 
 	/**
@@ -55,6 +75,8 @@ namespace compiler::tsh {
 			is_pure         = true;
 			allows_semantic = COPY | USE | DESTROY;  // All but MOVE and REINIT
 			break;
+		default:
+			CORE_UNREACHABLE();
 		}
 	}
 

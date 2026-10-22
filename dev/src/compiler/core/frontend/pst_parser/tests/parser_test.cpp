@@ -1,4 +1,10 @@
-﻿#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+﻿// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -31,7 +37,6 @@ public:
 
 	PSTVISITOR_METHOD(Import)
 	PSTVISITOR_METHOD(Using)
-	PSTVISITOR_METHOD(Alias)
 	PSTVISITOR_METHOD(ExprStmt)
 	PSTVISITOR_METHOD(Return)
 	PSTVISITOR_METHOD(Redo)
@@ -122,7 +127,7 @@ private:
 		}
 	}
 
-	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
+	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 17); }
 
 	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 

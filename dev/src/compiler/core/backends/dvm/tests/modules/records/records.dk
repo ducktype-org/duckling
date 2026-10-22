@@ -117,10 +117,10 @@ fun accessInConditions() -> () = {
     var t: T = T(&a);
     var ref_t: ref T = &t;
 
-    var cond = if ref_t.a then false else true;
+    var cond = if ref_t.a as bool then false else true;
     runtime.dvm.builtin_output_i64(cond);
 
-    if (ref_t.a) {
+    if (ref_t.a as bool) {
         runtime.dvm.builtin_output_i64(1);
     } else {
         runtime.dvm.builtin_output_i64(0);

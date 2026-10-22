@@ -9,16 +9,28 @@
       "include": "#strings"
     },
     {
+      "include": "#chars"
+    },
+    {
       "include": "#numbers"
     },
     {
       "include": "#attributes"
     },
     {
+      "include": "#functionDeclarations"
+    },
+    {
+      "include": "#typeDeclarations"
+    },
+    {
       "include": "#keywords"
     },
     {
       "include": "#declarations"
+    },
+    {
+      "include": "#modifiers"
     },
     {
       "include": "#types"
@@ -43,150 +55,31 @@
     }
   ],
   "repository": {
-    "attributes": {
-      "patterns": [
-        {
-          "name": "support.function.builtin.duckling",
-          "match": "@(in|out|invariant|nodiscard|noreturn)\\b"
-        }
-      ]
-    },
-    "keywords": {
-      "patterns": [
-        {
-          "name": "keyword.control.duckling",
-          "match": "\\b(if|else|then|while|for|match|case|pattern|in|break|continue|result|defer|import|export|from|as|return|static|lambda|this|extends|implements|override|create|destroy|public|private|protected|pure|virtual|async|threadsafe|unique|leaking|debug|move|expand)\\b"
-        }
-      ]
-    },
-    "declarations": {
-      "patterns": [
-        {
-          "name": "keyword.declaration.duckling",
-          "match": "\\b(var|let|const|fun|class|interface|namespace|block|template|macro|alias|using)\\b"
-        }
-      ]
-    },
-    "types": {
-      "patterns": [
-        {
-          "name": "storage.type.duckling",
-          "match": "\\b(type|i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128|void|unit|bool|byte|char|str)\\b"
-        }
-      ]
-    },
-    "constants": {
-      "patterns": [
-        {
-          "name": "constant.language.duckling",
-          "match": "\\b(true|false|null)\\b"
-        }
-      ]
-    },
-    "operatorsWord": {
-      "patterns": [
-        {
-          "name": "keyword.operator.word.duckling",
-          "match": "\\b(and|or|not|ref|box)\\b"
-        }
-      ]
-    },
-    "numbers": {
-      "patterns": [
-        {
-          "name": "constant.numeric.binary.duckling",
-          "match": "0b[01]+"
-        },
-        {
-          "name": "constant.numeric.octal.duckling",
-          "match": "0o[0-7]+"
-        },
-        {
-          "name": "constant.numeric.hex.duckling",
-          "match": "0x[0-9A-Fa-f]+"
-        },
-        {
-          "name": "constant.numeric.float.duckling",
-          "match": "[0-9]+\\.[0-9]*([eE][+-]?[0-9]+)?"
-        },
-        {
-          "name": "constant.numeric.float.duckling",
-          "match": "[0-9]*\\.[0-9]+([eE][+-]?[0-9]+)?"
-        },
-        {
-          "name": "constant.numeric.float.duckling",
-          "match": "[0-9]+[eE][+-]?[0-9]+"
-        },
-        {
-          "name": "constant.numeric.integer.duckling",
-          "match": "\\b[0-9]+\\b"
-        }
-      ]
-    },
-    "functions": {
-      "patterns": [
-        {
-          "name": "entity.name.function.duckling",
-          "match": "\\b[_a-zA-Z][_a-zA-Z0-9]*(?=\\s*\\()"
-        }
-      ]
-    },
-    "identifiers": {
-      "patterns": [
-        {
-          "name": "variable.other.duckling",
-          "match": "\\b[_a-zA-Z][_a-zA-Z0-9]*\\b(?!\\s*(\\.|::))"
-        }
-      ]
-    },
-    "operators": {
-      "patterns": [
-        {
-          "name": "keyword.operator.duckling",
-          "match": "[+\\-/*%=><|^*&@]"
-        }
-      ]
-    },
-    "punctuation": {
-      "patterns": [
-        {
-          "name": "punctuation.separator.duckling",
-          "match": "[;:,]"
-        },
-        {
-          "name": "punctuation.bracket.duckling",
-          "match": "[(){}\\[\\]]"
-        },
-        {
-          "name": "punctuation.accessor.duckling",
-          "match": "\\."
-        }
-      ]
-    },
     "comments": {
       "patterns": [
         {
           "name": "comment.block.duckling",
           "begin": "#\\{",
           "end": "#\\}",
-          "patterns": [
-            {
-              "match": "[^#{}]+",
-              "name": "comment.block.duckling"
-            },
-            {
-              "match": "#\\{",
-              "name": "comment.block.duckling"
-            },
-            {
-              "match": "#\\}",
-              "name": "comment.block.duckling"
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.begin.duckling"
             }
-          ]
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.end.duckling"
+            }
+          }
         },
         {
           "name": "comment.line.number-sign.duckling",
-          "match": "#.*$"
+          "match": "(#).*$",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.comment.duckling"
+            }
+          }
         }
       ]
     },
@@ -194,53 +87,352 @@
       "patterns": [
         {
           "name": "string.interpolated.duckling",
-          "begin": "f\"",
-          "end": "\"",
+          "begin": "\\bf\"",
+          "end": "\"|$",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.duckling"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.duckling"
+            }
+          },
           "patterns": [
             {
-              "name": "constant.character.escape.duckling",
-              "match": "\\\\."
+              "include": "#escapes"
             },
             {
-              "name": "punctuation.section.interpolation.begin.duckling",
-              "match": "{",
-              "push": "interpolation"
+              "include": "#interpolation"
             }
           ]
         },
         {
           "name": "string.quoted.double.duckling",
           "begin": "\"",
-          "end": "\"",
+          "end": "\"|$",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.duckling"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.duckling"
+            }
+          },
           "patterns": [
             {
-              "name": "constant.character.escape.duckling",
-              "match": "\\\\."
+              "include": "#escapes"
             }
           ]
+        }
+      ]
+    },
+    "chars": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.duckling",
+          "begin": "'",
+          "end": "'|$",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.duckling"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.duckling"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
+        }
+      ]
+    },
+    "escapes": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.duckling",
+          "match": "\\\\."
         }
       ]
     },
     "interpolation": {
       "patterns": [
         {
-          "name": "punctuation.section.interpolation.begin.duckling",
-          "match": "{",
-          "push": "#interpolation"
+          "name": "meta.interpolation.duckling",
+          "contentName": "source.duckling",
+          "begin": "\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.interpolation.begin.duckling"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.interpolation.end.duckling"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#interpolationBraces"
+            },
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "interpolationBraces": {
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.bracket.duckling"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.bracket.duckling"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#interpolationBraces"
         },
         {
-          "name": "punctuation.section.interpolation.end.duckling",
-          "match": "}",
-          "pop": true
+          "include": "$self"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.binary.duckling",
+          "match": "\\b0[bB][01]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.duckling"
+            }
+          }
         },
         {
-          "include": "#keywords"
+          "name": "constant.numeric.octal.duckling",
+          "match": "\\b0[oO][0-7]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.duckling"
+            }
+          }
         },
         {
-          "include": "#identifiers"
+          "name": "constant.numeric.hex.duckling",
+          "match": "\\b0[xX][0-9A-Fa-f]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.duckling"
+            }
+          }
         },
         {
-          "include": "#numbers"
+          "name": "constant.numeric.decimal.duckling",
+          "match": "(?:\\b[0-9]++|(?<![\\w.])(?=\\.[0-9]))(?:\\.(?![-+*/%=<>!&|^~?:.\\\\])[0-9]*+)?(?:[eE][+-]?[0-9]++)?(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.duckling"
+            }
+          }
+        }
+      ]
+    },
+    "attributes": {
+      "patterns": [
+        {
+          "name": "meta.attribute.duckling",
+          "match": "(@)\\s*([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.attribute.duckling"
+            },
+            "2": {
+              "name": "entity.name.function.decorator.duckling"
+            }
+          }
+        }
+      ]
+    },
+    "functionDeclarations": {
+      "patterns": [
+        {
+          "match": "\\b(fun|fundecl)\\b(?:\\s+(prefix|suffix)\\b(?=\\s*[-+*/%=<>!&|^~?:.\\\\]))?(?:\\s+([_\\p{L}][\\w]*))?",
+          "captures": {
+            "1": {
+              "name": "storage.type.function.duckling"
+            },
+            "2": {
+              "name": "storage.modifier.fixity.duckling"
+            },
+            "3": {
+              "name": "entity.name.function.duckling"
+            }
+          }
+        }
+      ]
+    },
+    "typeDeclarations": {
+      "patterns": [
+        {
+          "match": "\\b(class)\\s+([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "name": "storage.type.class.duckling"
+            },
+            "2": {
+              "name": "entity.name.type.class.duckling"
+            }
+          }
+        },
+        {
+          "match": "\\b(namespace)\\s+([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "name": "storage.type.namespace.duckling"
+            },
+            "2": {
+              "name": "entity.name.namespace.duckling"
+            }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.duckling",
+          "match": "\\b(if|then|else|while|for|loop|in|match|switch|case|with|try|catch|break|continue|redo|restart|return|defer|throw)\\b"
+        },
+        {
+          "name": "keyword.control.import.duckling",
+          "match": "\\b(import|using|hides)\\b"
+        },
+        {
+          "name": "keyword.other.duckling",
+          "match": "\\b(lambda|expand|assert|compile_assert|destroy)\\b"
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "name": "storage.type.duckling",
+          "match": "\\b(var|let|const|fun|fundecl|class|namespace|pattern|template|block)\\b"
+        }
+      ]
+    },
+    "modifiers": {
+      "patterns": [
+        {
+          "name": "storage.modifier.duckling",
+          "match": "\\b(public|private|protected|global|extern|export|debug|extends|implements)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.duckling",
+          "match": "\\b(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128|bool|char|str|void|type)\\b"
+        },
+        {
+          "name": "support.type.duckling",
+          "match": "\\b(Set|Dict|Array)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.duckling",
+          "match": "\\b(true|false|none)\\b"
+        },
+        {
+          "name": "variable.language.self.duckling",
+          "match": "\\bself\\b"
+        }
+      ]
+    },
+    "operatorsWord": {
+      "patterns": [
+        {
+          "name": "keyword.operator.logical.duckling",
+          "match": "\\b(and|or|not|xor)\\b"
+        },
+        {
+          "name": "keyword.operator.word.duckling",
+          "match": "\\b(as|sizeof|ref|box|new|ptr|cptr|manyptr|slice|copy|copyof|move|refof|ptrof)\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.call.duckling",
+          "match": "\\b[_\\p{L}][\\w]*(?=\\s*\\()"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.duckling",
+          "match": "\\b[_\\p{L}][\\w]*\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "punctuation.accessor.duckling",
+          "match": "\\.(?![-+*/%=<>!&|^~?:.\\\\])"
+        },
+        {
+          "name": "punctuation.separator.colon.duckling",
+          "match": ":(?![-+*/%=<>!&|^~?:.\\\\])"
+        },
+        {
+          "name": "keyword.operator.arrow.duckling",
+          "match": "(?:->|=>)(?![-+*/%=<>!&|^~?:.\\\\])"
+        },
+        {
+          "name": "keyword.operator.duckling",
+          "match": "[-+*/%=<>!&|^~?:.\\\\]+"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.statement.duckling",
+          "match": ";"
+        },
+        {
+          "name": "punctuation.separator.comma.duckling",
+          "match": ","
+        },
+        {
+          "name": "punctuation.bracket.duckling",
+          "match": "[(){}\\[\\]]"
+        },
+        {
+          "name": "keyword.other.special.duckling",
+          "match": "\\$"
         }
       ]
     }

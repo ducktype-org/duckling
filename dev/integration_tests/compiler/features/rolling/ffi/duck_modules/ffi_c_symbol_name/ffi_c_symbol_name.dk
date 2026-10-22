@@ -1,0 +1,21 @@
+import core.builtins.*;
+
+extern("C") {
+    # `match` and `in` are Duckling keywords, so the C functions with those names are declared
+    # under other names and linked through `@c_symbol_name`.
+    @c_symbol_name("match") fundecl c_match(a: i64) -> i64;
+
+    namespace keywords {
+        @c_symbol_name("in") fundecl c_in(a: i64) -> i64;
+    }
+
+    # Two Duckling names may link to the same C symbol, as long as both have the same signature.
+    @c_symbol_name("match") fundecl match_again(a: i64) -> i64;
+}
+
+fun main() -> i64 = {
+    builtin_output_i64(c_match(20i64));            # 21
+    builtin_output_i64(keywords::c_in(20i64));     # 40
+    builtin_output_i64(match_again(1i64));         # 2
+    return 0i64;
+}

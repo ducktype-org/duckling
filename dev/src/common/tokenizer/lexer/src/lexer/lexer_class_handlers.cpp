@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "lexer_class.hpp"
 
 #include <diagnostic/message.hpp>
@@ -382,7 +388,9 @@ namespace lexer {
 			next();  // first char - digit
 			while (!isEOF()) {
 				if (!peek().isDigit()) {
-					if (!was_dot && peek().is('.')) {  // Only one dot can appear.
+					// Only one dot can appear. A dot followed by operator char starts an operator
+					// (e.g. `1..2` is a range), so it does not belong to the number.
+					if (!was_dot && peek().is('.') && !peek(1).is(Class::operator_continue)) {
 						was_dot = true;
 					} else if (!was_e
 					           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.

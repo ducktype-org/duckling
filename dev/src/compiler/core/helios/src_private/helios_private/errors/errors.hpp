@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios_private/errors/dia_interactive_elements.hpp>
@@ -64,6 +70,32 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia::InteractiveArgument>("given_type", std::move(given_type));
 		}
+	};
+
+	class MissingUnaryOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "missing_unary_operator_fixity" };
+		}
+
+	public:
+		explicit MissingUnaryOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class InvalidOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "invalid_operator_fixity" };
+		}
+
+	public:
+		explicit InvalidOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
 	class ReturnWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {

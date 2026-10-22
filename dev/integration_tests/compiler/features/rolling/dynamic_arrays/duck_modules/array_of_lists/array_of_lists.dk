@@ -3,7 +3,7 @@ class Point {
     y: i64 = 2;
 }
 
-fun printPointList(l: ref List:{Point}) -> () = {
+fun printPointList(l: ref List[Point]) -> () = {
     var i = 0;
     while (i < l.length()) {
         builtin_output_i64(l.at(i).x);
@@ -13,8 +13,8 @@ fun printPointList(l: ref List:{Point}) -> () = {
 }
 
 fun arrayOfListsTest() -> () = {
-    # @TODO: #3349 Write `List:{Point}[2]` directly once a bake can be indexed.
-    const PointList = List:{Point};
+    # @TODO: #3349 Write `List[Point][2]` directly once a bake can be indexed.
+    const PointList = List[Point];
     var arrayOfLists: PointList[2];
 
     arrayOfLists[0].push(Point(1, 2));

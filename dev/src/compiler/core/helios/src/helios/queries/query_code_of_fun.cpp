@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "function_queries.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -303,7 +309,7 @@ namespace compiler::helios {
 					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
 				}
 				variant_case(defgen::ReplInputWrapper, input) {
-					return repl::getReplInputFunction(ctx, input);
+					return repl::getReplInputFunction(ctx, key, input);
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

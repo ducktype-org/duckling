@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Provides locks for accessing storage:
 //!
 //! - [`CleanLock`]: holding this lock implies that there are no running operations
@@ -27,9 +33,9 @@
 
 use std::io;
 
-use crate::quackpack::core::storage::DirContents;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::quackpack::util::dir_iterator::DirContents;
 use crate::util::file_locks::{FileLockManager, LockedFile};
 #[cfg(windows)]
 use crate::util::path_ops_ext::PathOpsExt;

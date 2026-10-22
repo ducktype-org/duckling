@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
@@ -427,11 +433,11 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow checking against zero,
-			// as well as promoting to greater sizes
+			// Only allow promoting to greater sizes
 			// signed to unsigned coercions are not allowed
-			auto bool_coercion = (target.getKind() == Kind::Bool);
-			auto int_coercion  = (target.getKind() == Kind::Integral);
+			// @TODO: #3631 we may bring back coercions to bool in the future, but that requires
+			// solving an issue with overload resolution, e.g. with `1u64 == 2i64`.
+			auto int_coercion = (target.getKind() == Kind::Integral);
 			auto upsize_coercion
 				= (int_coercion && (IntegralAbstractType(target).getSize() > size));
 			auto drop_sign_coercion
@@ -439,7 +445,7 @@ namespace compiler::tsh {
 			       && IntegralAbstractType(target).getSignedness()
 			              == IntegralAbstractType::Signedness::Unsigned);
 
-			return bool_coercion || (upsize_coercion && !drop_sign_coercion);
+			return upsize_coercion && !drop_sign_coercion;
 		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }

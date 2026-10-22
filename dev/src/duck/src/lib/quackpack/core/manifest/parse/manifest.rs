@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Parsing of the manifest from its schema.
 use std::collections::HashMap;
 use std::path::Path;
@@ -6,6 +12,7 @@ use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::lints::errors::Errors;
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
@@ -27,6 +34,7 @@ pub(crate) fn parse(
     schema: &ManifestSchema,
     mode: ParseMode<'_>,
     warnings: &mut Warnings,
+    _errors: &mut Errors,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();

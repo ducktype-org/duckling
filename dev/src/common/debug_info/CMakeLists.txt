@@ -5,5 +5,6 @@ add_library(DebugInfo
 )
 
 make_module(DebugInfo USES Base JSON)
+target_include_directories(DebugInfo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 duck_add_test(common debug_info tests/debug_info_test.cpp USES DebugInfo Base)

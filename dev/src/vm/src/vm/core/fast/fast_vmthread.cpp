@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "fast_vmthread.hpp"
 
 #include "fast_vmprocess.hpp"
@@ -55,8 +61,6 @@ bool vm::fast::FastVMThread::isAtExecutionEnd() const {
 void vm::fast::FastVMThread::execGlobalDestructors() {
 	throw vm::VMNotImplemented("Method `execGlobalDestructors` is not implemented.");
 }
-
-[[nodiscard]] i64 vm::fast::FastVMThread::getExitValue() const { return exit_value; }
 
 vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	const exec::ExecFunction& function, const RunArguments& run_arguments

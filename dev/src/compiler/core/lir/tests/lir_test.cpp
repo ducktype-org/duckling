@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lir_tests.cpp
  * @brief Tests in this file are very bad right now, because MIR
@@ -53,6 +59,7 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
+		TESTER_ADD_TEST(cSymbolNameTest);
 		TESTER_ADD_TEST(debugPrintStandaloneElements);
 		TESTER_ADD_TEST(debugPrintElementsWithFunctionIDs);
 		TESTER_ADD_TEST(debugPrintFunctionWithAndWithoutContext);
@@ -113,11 +120,18 @@ private:
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
-		// note: it might change where those branch operations are placed:
-		// if this happens, just see lir-output of tested module for lir block numbers
+		// The two `if`s are the only branches of the function. They are looked up by their
+		// terminator rather than by block index, because the number of blocks between them
+		// depends on how many edges the destructor pass had to split.
+		std::vector<CRef<compiler::lir::Instruction>> branches;
+		for (const auto& block: foo_lir->block_order)
+			if (block->terminator.operation == compiler::lir::Operation::Branch)
+				branches.emplace_back(&block->terminator);
 
-		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
-		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
+		ASSERT_EQUAL_PRINT(2, branches.size());
+
+		auto true_lir_value  = branches.at(0)->arguments.at(0);
+		auto false_lir_value = branches.at(1)->arguments.at(0);
 
 		auto true_lir_constant  = true_lir_value.get<compiler::lir::LIRConstant>().value;
 		auto false_lir_constant = false_lir_value.get<compiler::lir::LIRConstant>().value;
@@ -194,7 +208,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
 
-			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 			// The ctor writes the initial value through a pointer to the global, so it holds that
 			// pointer in a local.
 			ASSERT_EQUAL(g_ctor->local_list.size(), 1);
@@ -285,6 +299,15 @@ private:
 		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
+
+		// Globals carry the same metadata as locals: their source name and declaration position.
+		for (const auto& [global_data, name]: { std::pair{ g, "g" },
+		                                        std::pair{ some_global, "some_global" },
+		                                        std::pair{ global_tuple, "global_tuple" } }) {
+			ASSERT_HAS_VALUE(global_data.metadata.source_code_name);
+			ASSERT_EQUAL(global_data.metadata.source_code_name->strView(), name);
+			ASSERT_HAS_VALUE(global_data.metadata.position);
+		}
 
 		// All the globals here are trivially destructible, so none of them gets a dtor.
 		ASSERT_TRUE(g.getCtorDtorPair().global_dtor.empty());
@@ -590,11 +613,20 @@ private:
 			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);
 			check_meta_function("createSlice", MK::CreateSlice, 1);
 			check_meta_function("createVariant", MK::CreateVariant, 4);
-			check_meta_function("createTuple", MK::CreateTuple, 4);
+
+			{
+				auto create_tuple       = module.lirFunc("createTuple");
+				bool found_create_tuple = false;
+				for (const auto& block: create_tuple->block_order)
+					for (const auto& instr: block->instructions)
+						if (instr.operation == MetaTypeOperation
+						    && meta_kind(instr) == MK::CreateTuple && instr.arguments.size() == 4)
+							found_create_tuple = true;
+				ASSERT_TRUE(found_create_tuple);
+			}
 
 			{
 				auto mega_type = module.lirFunc("megaType");
-				for (const auto& local: mega_type->local_list) assert_is_meta_local(local);
 
 				int  create_variant_count = 0;
 				int  create_tuple_count   = 0;
@@ -719,12 +751,57 @@ private:
 		});
 	}
 
+	/**
+	 * @brief Tests `@c_symbol_name("<name>")` on `extern("C")` declarations.
+	 */
+	void cSymbolNameTest() {
+		auto module     = getLIROfModule(path("modules/c_symbol_name"));
+		auto caller_lir = module.lirFunc("caller");
+
+		using namespace compiler::lir;
+
+		std::vector<base::StrID> called;
+		for (const auto& block: caller_lir->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+
+				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
+				assertTrue(
+					std::holds_alternative<lir::LIRAbi::CAbi>(literal.abi.value),
+					"Expected the call to use the C ABI"
+				);
+				called.push_back(literal.mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(called.size(), 3);
+		ASSERT_EQUAL_PRINT(called.at(0), base::StrID("match"));
+		ASSERT_EQUAL_PRINT(called.at(1), base::StrID("in"));
+		ASSERT_EQUAL_PRINT(called.at(2), base::StrID("plain_c"));
+
+		// On a declaration that is not `extern("C")` the attribute is ignored.
+		std::vector<base::StrID> ignored_called;
+		for (const auto& block: module.lirFunc("ignored_caller")->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+				ignored_called.push_back(instr.arguments.at(0).get<FunctionLiteral>().mangled_name);
+			}
+		}
+		ASSERT_EQUAL_PRINT(ignored_called.size(), 2);
+		assertTrue(
+			ignored_called.at(0).strView().starts_with("_Q"),
+			base::strConcat(
+				"Expected `notExternC` to be mangled, got `", ignored_called.at(0).str(), "`"
+			)
+		);
+		ASSERT_EQUAL_PRINT(ignored_called.at(1), base::StrID("dvmDecl"));
+	}
+
 	void debugPrintStandaloneElements() {
 		auto module  = getLIROfModule(path("modules/simple"));
 		auto foo_lir = module.lirFunc("foo");
 
-		lir::LIRPlace output{ foo_lir->local_list[0], {} };
-		lir::LIRPlace argument{ foo_lir->local_list[1], {} };
+		lir::LIRPlace output{ foo_lir->local_list[0] };
+		lir::LIRPlace argument{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		output.debugPrint(place_output);
@@ -784,7 +861,7 @@ private:
 
 		// Standalone printing would assign Local(?0) to this place because it is the first
 		// encountered local. Function context preserves its actual index in local_list.
-		lir::LIRPlace place{ foo_lir->local_list[1], {} };
+		lir::LIRPlace place{ foo_lir->local_list[1] };
 
 		std::stringstream place_output;
 		place.debugPrint(place_output, foo_lir);
@@ -796,8 +873,7 @@ private:
 
 		lir::Instruction  instruction{ lir::Operation::Assign,
                                       place,
-			                           { lir::LIRValue{
-                                          lir::LIRPlace{ foo_lir->local_list[0], {} } } },
+			                           { lir::LIRValue{ lir::LIRPlace{ foo_lir->local_list[0] } } },
 			                           {} };
 		std::stringstream instruction_output;
 		instruction.debugPrint(instruction_output, foo_lir);

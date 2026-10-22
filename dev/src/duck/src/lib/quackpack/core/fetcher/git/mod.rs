@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Module responsible for interacting with Git repositories.
 
 use std::path::Path;
@@ -67,7 +73,7 @@ impl<'duck> GitClient<'duck> {
                     "failed to shallow clone the repository at `{url}`: {e}"
                 ))?;
                 self.ctx
-                    .info("retrying with a full clone instead of a shallow clone")?;
+                    .info_verbose("retrying with a full clone instead of a shallow clone")?;
                 let mut fetch_options = self.fetch_options_for(url, reference);
                 // Here we always want to perform full clone, so set depth to 0.
                 fetch_options.depth(0);

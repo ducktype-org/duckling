@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/types/ints.hpp>
@@ -10,7 +16,9 @@ namespace compiler::repl {
 	class FrontendMinImplementation final {
 	public:
 		explicit FrontendMinImplementation(
-			bool completions_enabled = false, bool bracketed_paste_enabled = false
+			bool completions_enabled     = false,
+			bool bracketed_paste_enabled = false,
+			bool decorative_output       = true
 		);
 		~FrontendMinImplementation() = default;
 
@@ -21,6 +29,7 @@ namespace compiler::repl {
 		void        clearHistory();
 		void        clearScreen();
 		void        printHelp() const;
+		void        printCompletions(std::string_view prefix) const;
 
 	private:
 		struct EditorState {
@@ -75,6 +84,7 @@ namespace compiler::repl {
 		EditorState              m_stashed_editor_state;
 		const std::string        m_sequence_to_align_cursor_to_multiline_start;
 		bool                     m_bracketed_paste_enabled;
+		bool                     m_decorative_output;
 		bool                     m_in_bracketed_paste = false;
 	};
 }

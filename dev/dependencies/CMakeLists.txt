@@ -10,6 +10,7 @@ include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 include(YamlCpp.cmake)
 include(Libffi.cmake)
+include(LspFramework.cmake)
 
 add_subdirectory(allocators)
 

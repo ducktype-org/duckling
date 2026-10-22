@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/object_pool.hpp>
@@ -45,7 +51,7 @@ namespace vm {
 		 * representation which exists in this class.
 		 */
 		loader::Loader                       loader{};
-		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
+		loader::compiler::safe::SafeCompiler compiler;
 
 		/**
 		 * @brief The program being executed by this process.
@@ -77,6 +83,13 @@ namespace vm {
 		 * Not recycling, because SafeVMThread is not move-constructible.
 		 */
 		base::StableObjectPool<SafeVMThread, api::ThreadID, false, true> vm_threads;
+		/**
+		 * @brief Every thread the user program started and never joined, over all runs of this
+		 * process. Kept here because a rerun resets the thread states, and the final
+		 * `deinitAndValidate` still has to report what the earlier runs left behind.
+		 * @note Guarded by `threads_pool_mutex`.
+		 */
+		std::vector<api::response::UnjoinedThread> unjoined_program_threads;
 
 		/**
 		 * @brief Returns first thread in thread queue.
@@ -105,9 +118,13 @@ namespace vm {
 		/**
 		 * @brief Helper used by `runFunction` and `startNewThreadFromExecutionThread`. Takes no
 		 * `api_lock`, only `threads_pool_mutex`.
+		 *
+		 * @param owner Who spawned/has to join the thread we're spawning.
 		 */
 		std::expected<api::Response, api::ApiError> spawnThread(
-			const std::string& func_name, const RunArguments& run_arguments
+			IVMThread::ThreadOwner owner,
+			const std::string&     func_name,
+			const RunArguments&    run_arguments
 		);
 
 		std::expected<void, api::ApiError> assertProcessCanRespond();
@@ -131,8 +148,6 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> join(api::ThreadID thread_id) override;
 
 		std::expected<api::Response, api::ApiError> stop() override;
-
-		std::expected<api::Response, api::StateError> getExitCode() override;
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
@@ -172,9 +187,18 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
+		std::expected<api::Response, api::ApiError> freeVMValue(Ref<IVMValue> vm_value) override;
 
-		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
+		[[nodiscard]] std::vector<api::ThreadID> getAllActiveThreadIDs() const override;
+
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedApiThreadIds() const override;
+
+		void joinFinishedThreads() override;
+
+		/**
+		 * @brief A copy of `unjoined_program_threads`, taken under `threads_pool_mutex`.
+		 */
+		[[nodiscard]] std::vector<api::response::UnjoinedThread> unjoinedProgramThreads() const;
 
 		void requestStopAllThreads() noexcept override;
 
@@ -197,7 +221,7 @@ namespace vm {
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:
-		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
+		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false, bool enable_jit = true);
 
 		/**
 		 * @brief Frees what the blocks still hold.
@@ -265,4 +289,10 @@ namespace vm {
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 	};
+
+	/**
+	 * @brief Shared wording for the function-argument-count mismatch error, used both when
+	 * validating a Run request and as a hard check when building the start function.
+	 */
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided);
 }

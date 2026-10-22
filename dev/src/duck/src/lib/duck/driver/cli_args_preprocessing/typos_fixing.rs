@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Try to (wisely) fix user typos.
 use std::ffi::OsString;
 
@@ -9,10 +15,10 @@ use crate::duck::driver::cli;
 use crate::duck::driver::cli_args_preprocessing::builtin::{
     get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand,
 };
-use crate::duck::driver::cli_args_preprocessing::levenshtein;
 use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
 use crate::duck::driver::subcommands::subcommands;
+use crate::util::edit_distance::find_all_closest_targets;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 /// Try to fix user typos.
@@ -38,7 +44,9 @@ pub fn fix_typos(
         ?targets,
         "Testing levenshtein",
     );
-    let closest_targets = find_closest_targets(name, &targets, ctx.duck_cfg().max_fix_dist()?);
+    let distance = ctx.duck_cfg().max_fix_dist()? as u32;
+    let targets = targets.iter().map(String::as_str).collect::<Vec<_>>();
+    let closest_targets = find_all_closest_targets(name, &targets, Some(distance));
 
     let Some((&first, rest)) = closest_targets.as_slice().split_first() else {
         return Ok(args);
@@ -88,55 +96,6 @@ fn possible_targets(
     targets.extend(external_cmds.load(ctx).keys().cloned());
     targets.extend(get_builtin_aliases().map(str::to_string));
     Ok(targets)
-}
-
-/// Get all closest targets to the `bad_cmd`, which are no further than `max_fix_dist` (in terms of
-/// the Levenshtein distance).
-fn find_closest_targets<'a>(
-    bad_cmd: &str,
-    targets: &'a [String],
-    max_fix_dist: u64,
-) -> Vec<&'a str> {
-    targets
-        .iter()
-        .fold(Vec::new(), |acc, target| {
-            update_closest_targets(acc, target, bad_cmd, max_fix_dist)
-        })
-        .into_iter()
-        .map(|(target, _)| target)
-        .collect()
-}
-
-/// Update closest targets given the actual stack, target, and `max_fix_dist`.
-///
-/// This function will __only__ keep those values, which are (currently) closest to the target,
-/// and all have exactly the same distance.
-fn update_closest_targets<'a>(
-    mut acc: Vec<(&'a str, u64)>,
-    target: &'a str,
-    bad_cmd: &str,
-    max_fix_dist: u64,
-) -> Vec<(&'a str, u64)> {
-    let dist = levenshtein::distance(bad_cmd, target) as u64;
-    if dist > max_fix_dist {
-        return acc;
-    }
-    match acc.len() {
-        0 => {
-            acc.push((target, dist));
-        }
-        _ => match (dist < acc[0].1, dist == acc[0].1) {
-            (true, false) => {
-                acc.clear();
-                acc.push((target, dist));
-            }
-            (false, true) => {
-                acc.push((target, dist));
-            }
-            _ => {}
-        },
-    }
-    acc
 }
 
 /// Helper for creating a common message if we didn't fix a typo.

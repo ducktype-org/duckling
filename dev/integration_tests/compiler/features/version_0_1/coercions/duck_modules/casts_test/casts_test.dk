@@ -52,7 +52,7 @@ fun main() -> i64 = {
     builtin_output_i64(w64b);        # 9
 
     var bool_i64: i64 = 64;
-    var bool_val: bool = bool_i64;
+    var bool_val: bool = bool_i64 as bool;
     var bool_i64b: i64 = bool_val;
     builtin_output_i64(bool_i64b);   # 1
 

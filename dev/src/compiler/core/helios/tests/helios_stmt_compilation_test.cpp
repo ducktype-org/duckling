@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file helios_stmt_compilation_test.cpp
  * @brief Unit tests for compileSingleStatement (hout_stmt_compilation.cpp).
@@ -362,6 +368,24 @@ private:
 	 * Tests: basic assignment, expression statements, and list operations (push/pop).
 	 */
 	void testAssignmentAndExpressions() {
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					var a:i64 = 1;
+					a += 2;
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id, 1);
+				ASSERT_EQUAL(block.statements.size(), 1);
+				StmtKindCounter c;
+				block.statements.at(0)->acceptVisitor(c);
+				ASSERT_EQUAL(c.assignment_count, 1);
+			});
+		}
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -126,10 +132,6 @@ namespace vm {
 		 * builtin spawn thread.
 		 */
 		std::string thread_ctx;
-
-#ifdef ENABLE_JIT
-		jit::JitData jit_data;
-#endif
 
 		/**
 		 * @brief RAII object guaranteeing the release of the GIL lock.

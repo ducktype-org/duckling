@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "cli.hpp"
 #include "server.hpp"
 
@@ -120,11 +126,23 @@ clah::Clah getVmClah() {
 							 "Fast mode for the VM, which does not perform certain runtime checks."
 						 )
 	                     .build())
+#ifndef ENABLE_JIT
+				// JIT and debugger are conflicting due to common in-place modification of the
+	            // executed bytecode (JIT entrypoint patching vs breakpoints), see #3585.
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addShortName('d')
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
+#else
+				.add(clah::ParamBuilder::ofValue(clah::CategoryParser::make(
+													 "on|off",
+													 std::vector<std::string>{ "on", "off" }
+												 ))
+	                     .addLongName("jit")
+	                     .addShortDesc("Enable or disable the JIT at runtime (default: on).")
+	                     .build())
+#endif  // ENABLE_JIT
 				.add(clah::ParamBuilder::ofValue(
 						 clah::StringListParser::make("args", clah::StringParser::make())
 				)
@@ -160,6 +178,10 @@ clah::Clah getVmClah() {
 					vm::api::ProcessConfig process_options{};
 					if (options.isFlag("fast-mode"))
 						process_options.mode = vm::api::ProcessMode::Fast;
+#ifdef ENABLE_JIT
+					process_options.enable_jit
+						= options.getValue<std::string>("jit").copyValueOr("on") == "on";
+#endif
 
 					if (options.isFlag("debug")) {
 						auto debugger = vm::debugger::cli::CLIDebugger();
@@ -192,12 +214,15 @@ clah::Clah getVmClah() {
 						return cli(source_files, args, process_options, ffi_libs);
 				})
 		)
+#ifndef ENABLE_JIT
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   vm::debugger::debug_adapter::DebugAdapter::get().run();
 							   return 0;
-						   }));
+						   }))
+#endif  // ENABLE_JIT
+		;
 }
 
 int main(int argc, const char** argv) {

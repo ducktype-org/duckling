@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/comptime/is_complete.hpp>
@@ -206,7 +212,7 @@ namespace base {
 
 		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete,clang-analyzer-cplusplus.NewDeleteLeaks)
 		template<class Deleter>
-		explicit SharedBox(Box<T, Deleter>&& other) noexcept:
+		SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
 			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) } {
 			other.ptr = nullptr;

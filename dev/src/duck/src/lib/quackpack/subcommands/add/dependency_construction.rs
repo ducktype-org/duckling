@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! The goal of module is to turn CLI-specified description of the dependency to add,
 //! into a pair that can be directly inserted into the manifest schema.
 //!
@@ -124,7 +130,7 @@ pub fn construct_dependency(
         // Adding registry dependency without versions is treated as adding the dependency in the latest version.
         versions = vec![latest_version];
     }
-    let source = construct_source_schema(source, local_path, &name_spec)?;
+    let source = construct_source_schema(source, local_path, &name_spec, pcx.ctx())?;
     let dep = Dependency {
         version: if versions.is_empty() {
             None
@@ -185,9 +191,7 @@ fn construct_source(
         Ok((Source::for_registry(registry_url), None))
     } else {
         // Registry dependency from default registry.
-        let default_registry_url = Fetcher::DEFAULT_REGISTRY_URL
-            .to_url()
-            .context_internal("default registry url is invalid")?;
+        let default_registry_url = ctx.duck_cfg().registry_url()?;
         Ok((Source::for_registry(default_registry_url), None))
     }
 }
@@ -302,6 +306,7 @@ fn construct_source_schema(
     source: Source,
     local_path: Option<PathBuf>,
     name_spec: &NameSpecification,
+    ctx: &DuckContext,
 ) -> QuackResult<Option<SourceSchema>> {
     let name = name_spec.source_name();
     match source.kind() {
@@ -323,16 +328,16 @@ fn construct_source_schema(
             })))
         }
         SourceKind::Registry => {
-            let registry_url = source.url().to_string();
+            let registry_url = source.url();
             if name.is_none() {
-                if registry_url == Fetcher::DEFAULT_REGISTRY_URL {
+                if registry_url == ctx.duck_cfg().registry_url()? {
                     Ok(None)
                 } else {
-                    Ok(Some(SourceSchema::Simple(registry_url)))
+                    Ok(Some(SourceSchema::Simple(registry_url.to_string())))
                 }
             } else {
                 Ok(Some(SourceSchema::Detailed(DetailedSource {
-                    registry_url: Some(registry_url),
+                    registry_url: Some(registry_url.to_string()),
                     name,
                     path: None,
                     git_url: None,

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_dvm_helpers.hpp"
 
 #include <backends/dvm/repl_lowering.hpp>
@@ -179,7 +185,6 @@ namespace compiler::repl {
 
 		return vm::api::runFunction(pid, std::string(func_name), {})
 		    .and_then([&](auto) { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
 				[type_view](vm::api::ExitValue exit_values

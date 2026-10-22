@@ -16,7 +16,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
+          String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
         ExitCode: 0
 
   default_initialization:
@@ -62,4 +62,11 @@ Tests:
       all:
         Output:
           String: ""
+        ExitCode: 0
+
+  selectors: # `using ... as`, `export using`, `export { ... }`
+    Cases:
+      all:
+        Output:
+          String: "7\n7\n3\n8\n12\n"
         ExitCode: 0

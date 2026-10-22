@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -83,7 +89,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -97,7 +103,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: [("a".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -111,7 +117,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };

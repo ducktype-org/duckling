@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "abstract_type_impl.hpp"
 
 #include "queries.hpp"
@@ -233,12 +239,12 @@ namespace compiler::tsh {
 		}
 
 		if (target.getKind() == Kind::Meta) {
-			// Tuples can be coerced to the Meta type if and only if their components
-			// can all be coerced to Meta type. Note that the components can have additional
-			// indirection and mutability specifiers (the component types are symbol
-			// types), but that's OK, we need only to check the abstract types underneath.
+			// Tuples can be coerced to the Meta type if and only if their components are direct
+			// values that can all be coerced to Meta type. A component behind a reference is
+			// rejected, as the type it refers to can always be copied into the tuple directly.
 			for (const auto& component: components)
-				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({
+				if (component.getRefKind() != ReferenceKind::Direct
+				    || !ctx.query<QueryImplicitCoercibilityOnAbstractType>({
 						component.getType(),
 						target,  //< target is the Meta type.
 					}))

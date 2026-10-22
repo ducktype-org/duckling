@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Schemas used when communicating with a registry.
 use std::collections::HashMap;
 
@@ -5,8 +11,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
-
-pub type Dependencies = Vec<Dependency>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
@@ -22,6 +26,12 @@ pub struct Manifest {
     /// Package's profiles.
     pub profiles: HashMap<String, Profile>,
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(transparent)]
+/// Registry dependencies schema.
+pub struct Dependencies(pub Vec<Dependency>);
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]

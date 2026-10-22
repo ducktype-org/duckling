@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Managing all dependencies of the root package.
 use std::collections::HashSet;
 
@@ -94,6 +100,7 @@ impl TryFrom<registry::Dependencies> for Dependencies {
 
     fn try_from(value: registry::Dependencies) -> Result<Self, Self::Error> {
         let deps = value
+            .0
             .into_iter()
             .map(Dependency::try_from)
             .collect::<Result<_, _>>()?;
@@ -110,5 +117,6 @@ impl TryFrom<Dependencies> for registry::Dependencies {
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()
+            .map(registry::Dependencies)
     }
 }

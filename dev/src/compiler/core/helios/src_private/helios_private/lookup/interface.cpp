@@ -1,13 +1,23 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "interface.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/lookup/errors.hpp>
+#include <helios_private/lookup/lookup.hpp>
 #include <helios_private/lookup/lookup_in_type_interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
@@ -15,6 +25,31 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
+	HInterface HInterface::ofSymbol(query::Context& ctx, SymID symbol) {
+		switch (kind(symbol)) {
+		case SymbolKind::Module:
+			return ofModule(symbol);
+		case SymbolKind::Namespace:
+			return ofNamespace(symbol);
+		case SymbolKind::Using:
+			return ofUsing(symbol);
+		case SymbolKind::Import:
+			return ofImport(symbol);
+		case SymbolKind::Class:
+			return ofTypeMeta(ctx.query<tsh::QueryClassType>(symbol));
+		case SymbolKind::Variable:
+		case SymbolKind::Field:
+		case SymbolKind::Parameter:
+		case SymbolKind::Const:
+			return ofTypeInstance(ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow().getType());
+		default:
+			ctx.log<dia::NotYetImplementedCodeError>(
+				base::strConcat("Interface of the ", base::enumToStr(kind(symbol)))
+			);
+			query::throwFailed();
+		}
+	}
+
 	CRef<query::QResult<LookupResult>> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
@@ -27,8 +62,24 @@ namespace compiler::helios {
 					{ scope.scope, name, params.with_wildcards }
 				);
 			}
-			variant_case(SymbolInterface, symbol) {
-				return ctx.query<QueryLookupInSymbol>({ symbol.symbol, name, params.with_wildcards }
+			variant_case(ModuleInterface, symbol) {
+				return ctx.query<QueryLookupInNamespaceOrModule>(
+					{ symbol.id, name, params.with_wildcards }
+				);
+			}
+			variant_case(NamespaceInterface, symbol) {
+				return ctx.query<QueryLookupInNamespaceOrModule>(
+					{ symbol.id, name, params.with_wildcards }
+				);
+			}
+			variant_case(UsingInterface, symbol) {
+				return ctx.query<QueryLookupInUsingImport>(
+					{ symbol.symbol, name, params.with_wildcards }
+				);
+			}
+			variant_case(ImportInterface, symbol) {
+				return ctx.query<QueryLookupInUsingImport>(
+					{ symbol.symbol, name, params.with_wildcards }
 				);
 			}
 			variant_case(TypeInstanceInterface, type) {
@@ -61,16 +112,7 @@ namespace compiler::helios {
 		if (get_as_single.hasFailed()) return query::Failed();
 
 		variant_match(get_as_single.valueOrThrow()) {
-			variant_case(SymbolList, symbol_list) {
-				SymbolList dealiased_result;
-
-				for (auto path_symbol: symbol_list) {
-					UNPACK_QRESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
-					dealiased_result.appendList(dealiased);
-				}
-
-				return dealiased_result;
-			}
+			variant_case(SymbolList, symbol_list) { return symbol_list; }
 			variant_case(errors::Ambiguity, _) {
 				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
 				for (auto& leaf: lookup_result->leaves) {

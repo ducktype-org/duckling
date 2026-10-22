@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import sys
 from pathlib import Path
 
@@ -97,22 +103,6 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{root_name}",
-      "name": "my_cool_root",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(root_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{dep_name}"
-        }},
-        {{
-          "id": "{dep2_name}",
-          "alias": "my_cool_dep_but_aliased"
-        }}
-      ]
-    }},
-    {{
       "id": "{dep_name}",
       "name": "my_cool_dep",
       "version": "1.0.0",
@@ -127,6 +117,22 @@ expected = f"""{{
       "features": [],
       "path": "{str(dep2_path)}/src",
       "dependencies": []
+    }},
+    {{
+      "id": "{root_name}",
+      "name": "my_cool_root",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(root_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{dep_name}"
+        }},
+        {{
+          "id": "{dep2_name}",
+          "alias": "my_cool_dep_but_aliased"
+        }}
+      ]
     }}
   ],
   "tasks": [
@@ -134,7 +140,10 @@ expected = f"""{{
       "package": "{root_name}",
       "strategy": "native",
       "output_file": "{str(layout / "my-cool-root")}",
-      "linking_options": "{str(dep_artifacts / f"{dep_name}.a")} {str(dep2_artifacts / f"{dep2_name}.a")}"
+      "linking_options": [
+        "{str(dep_artifacts / f"{dep_name}.a")}",
+        "{str(dep2_artifacts / f"{dep2_name}.a")}"
+      ]
     }}
   ]
 }}"""

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "casts.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
@@ -48,6 +54,17 @@ namespace compiler::helios::code {
 		// example).
 		auto coercion = canCoerce(ctx, value->expression_type, to).valueOrThrow();
 		if (coercion.isValid()) return coercion.coerce(ctx, std::move(value));
+
+		// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
+		// Casting to bool needs custom handling.
+		// We use coercion logic here because it's surprisingly complex and handles references
+		// (e.g. ref i64 -> bool). @TODO: #3625 we might want to abstract it to a common helper.
+		if (auto value_type = value->expression_type.getType();
+		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
+		    && to.getType().getKind() == Kind::Bool) {
+			auto coercion_numeric_to_bool = Coercion::valid(from, to, false);
+			return coercion_numeric_to_bool.coerce(ctx, std::move(value));
+		}
 
 		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
 		    && from.getRefKind() == ReferenceKind::Direct

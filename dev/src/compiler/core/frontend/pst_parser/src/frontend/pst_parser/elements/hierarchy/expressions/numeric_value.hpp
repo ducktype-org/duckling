@@ -1,6 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "expr_common.hpp"
+
+#include <lang_definitions/key_spec_op.hpp>
 
 namespace pst::expr {
 	/**
@@ -17,6 +25,12 @@ namespace pst::expr {
 		tpc::NumericValue getValue() const {
 			return value;
 		}
+
+		/**
+		 * @brief The type the literal is written with, like `u8` in `5u8`. `NotATypeSpecifier` for
+		 * a literal written without one, like `5`.
+		 */
+		[[nodiscard]] lang_def::NumericLiteralTypeSpecifier getTypeSpecifier() const;
 
 		explicit ExprNumericValue(const LangParserState& state): ExprElement(state, 0) {}
 

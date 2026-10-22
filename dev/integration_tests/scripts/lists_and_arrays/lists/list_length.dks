@@ -1,4 +1,4 @@
-var l: List:{i64};
+var l: List[i64];
 l.push(1); 
 l.push(2); 
 l.push(3); 

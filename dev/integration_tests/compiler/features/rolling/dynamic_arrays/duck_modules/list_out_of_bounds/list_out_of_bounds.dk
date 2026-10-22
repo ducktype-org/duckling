@@ -1,5 +1,5 @@
 fun main() -> i64 = {
-    var lst: List:{i64};
+    var lst: List[i64];
     lst.push(1);
     lst.push(2);
     builtin_output_i64(lst.at(2));

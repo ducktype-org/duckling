@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use crate::StrId;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};

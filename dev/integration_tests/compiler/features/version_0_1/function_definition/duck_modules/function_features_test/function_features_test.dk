@@ -8,13 +8,13 @@ fun compute(a: i64, b: i64 = 5, c: i64 = 10) -> i64 = a + b + c;
 
 # Test function with static variable (per docs: shared across invocations)
 fun counter() -> i64 = {
-    static count: i64 = 0;
+    global count: i64 = 0;
     count = count + 1;
     return count;
 }
 
 fun accumulator(val: i64) -> i64 = {
-    static total: i64 = 0;
+    global total: i64 = 0;
     total = total + val;
     return total;
 }

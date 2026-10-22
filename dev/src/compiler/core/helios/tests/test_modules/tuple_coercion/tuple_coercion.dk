@@ -20,7 +20,7 @@ fun lift_literal(x: i64) -> (type, i64) = {
 
 # A tuple literal whose first element is coerced to a bool with a zero-check.
 fun to_bool(x: i32) -> (bool, i64) = {
-    return (x, x);
+    return (x as bool, x);
 }
 
 # An already built tuple, so the elements have to be read back out of it before being coerced.

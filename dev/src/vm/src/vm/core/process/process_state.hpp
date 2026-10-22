@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @brief States and events for the VMProcess.
  *
@@ -6,8 +12,8 @@
  * `ProcessStateManager`. Every thread state change goes through the table, which recomputes the
  * aggregate.
  *
- * `ProcessEvent` covers only the two process operations (which actually cause a process state
- * change) -  `Run`, `Stop`. Pause/Resume/Step are per-thread operations.
+ * `ProcessEvent` covers only the process-wide operations (which actually cause a process state
+ * change) - `Run`, `Stop` and `DeinitAndValidate`. Pause/Resume/Step are per-thread operations.
  */
 #pragma once
 
@@ -26,6 +32,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace vm {
@@ -175,7 +182,7 @@ namespace vm {
 		 *   	5. Any VMThread is Sleeping                  			-> VMProcess Sleeping
 		 *   	6. Any VMThread is Paused 								-> VMProcess Paused
 		 *   	7. Every VMThread is either NotStarted or terminal:
-		 *   		- Main VMThread Completed (not Panicked/Stopped) 	-> VMProcess Completed{exit}
+		 *   		- Main VMThread Completed (joined or not) 				-> Completed{exit}
 		 *   		- Otherwise 										-> VMProcess Stopped
 		 */
 		[[nodiscard]] process_state::ProcessState aggregateState() const {
@@ -220,13 +227,18 @@ namespace vm {
 					);
 			});
 
-			// Nothing is active, so every thread is either NotStarted or terminal.
-			for (const auto& [tid, entry]: threads)
-				// If Main thread completed, VMProcess does as well.
-				if (tid == main_tid)
-					v_if_matches(
-						entry.state, ts::Completed, completed
-					) return Completed{ completed->exit_value };
+			// Nothing is active, so every thread is either NotStarted or terminal. The process
+			// completed iff the main thread completed.
+			const auto main_entry = threads.atMaybe(main_tid);
+			if (!main_entry.has_value()) return Stopped{};
+
+			const base::Optional<ts::TerminalOutcome> main_outcome
+				= ts::terminalOutcome(main_entry.value()->state);
+			if (!main_outcome.has_value()) return Stopped{};
+
+			v_if_matches(
+				*main_outcome, ts::Completed, completed
+			) return Completed{ completed->exit_value };
 			return Stopped{};
 		}
 	};

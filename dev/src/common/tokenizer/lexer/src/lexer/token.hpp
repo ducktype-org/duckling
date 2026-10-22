@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file token.hpp
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
@@ -216,9 +222,19 @@ namespace lexer {
 		[[nodiscard]]
 		bool isChar() const;
 
+		/**
+		 * @brief Whether the token's value is literal text: a string, char, format-string part or
+		 * comment. Such a token is never a keyword, special or operator, whatever its text is.
+		 */
+		[[nodiscard]]
+		bool isLiteralText() const;
+
 		[[nodiscard]] bool is(Type) const;
+		/** @brief Whether the token is the special `spc`; never true for literal text. */
 		[[nodiscard]] bool is(Special) const;
+		/** @brief Whether the token is the operator `op`; never true for literal text. */
 		[[nodiscard]] bool is(Operator) const;
+		/** @brief Whether the token is the keyword `key`; never true for literal text. */
 		[[nodiscard]] bool is(Keyword) const;
 
 		[[nodiscard]]

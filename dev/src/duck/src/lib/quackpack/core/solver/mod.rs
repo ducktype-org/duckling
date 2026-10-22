@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! This module contains a [`Solver`] struct which is designated to finding the dependency resolution of a given package.
 //! By *dependency resolution* we mean a set of packages, each with a designated set of features,
 //! so that each package's dependencies are satisfied inside that set.
@@ -92,7 +98,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
     pub async fn solve(self) -> QuackResult<SolverAnswer> {
         self.root_pcx
             .ctx()
-            .info("starting solving the dependency graph")?;
+            .info_verbose("starting solving the dependency graph")?;
         let root_pkg = self.root_pcx.local_package_id()?;
 
         let (initial_freeze, empty_input) = self.get_initial_freeze(root_pkg)?;
@@ -153,7 +159,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         }
         self.root_pcx
             .ctx()
-            .info("no solution found, retrying without previous freeze")?;
+            .info_verbose("no solution found, retrying without previous freeze")?;
         self.remove_previous_freeze();
         self.solve().await
     }
@@ -228,11 +234,11 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
         let ctx = fetcher.ctx();
-        ctx.info("starting gathering the dependency graph")?;
+        ctx.info_verbose("starting gathering the dependency graph")?;
         let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = Box::new(self.root_pcx.package().manifest().clone());
-        let root_features = root_manifest
+        let root_features: HashSet<FeatureName> = root_manifest
             .features()
             .all_features()
             .keys()
@@ -245,14 +251,17 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         prev_freeze_manifests.insert(self.root_pkg, root_manifest.clone());
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
-            .find_maximal_correct_dep_solution(&prev_freeze_manifests, fetcher)
+            .find_maximal_correct_dep_solution(
+                root_features.clone(),
+                &prev_freeze_manifests,
+                fetcher,
+            )
             .await?;
-
         if is_root_satisfied {
             debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
-            ctx.info("no need to run the gathering or the solver engine")?;
+            ctx.info_verbose("no need to run the gathering or the solver engine")?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
                 new_freeze: trimmed,
                 pkgs_manifests: prev_freeze_manifests,
@@ -264,7 +273,7 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         }
 
         let root_path = self.root_pcx.package().root().into();
-        ctx.info("running gathering")?;
+        ctx.info_verbose("running gathering")?;
         let gathered_info = Self::run_solver_gatherer(
             &gatherer,
             root_manifest,
@@ -343,7 +352,7 @@ impl SolverEngineData {
     /// Returns a [`SolverAnswer`].
     #[tracing::instrument(skip_all)]
     fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
-        ctx.info("starting the solver engine")?;
+        ctx.info_verbose("starting the solver engine")?;
         let (solution, manifests) =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
         debug!(?solution);

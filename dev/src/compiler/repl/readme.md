@@ -65,6 +65,16 @@ Disable completions/hints:
 ./duckc repl --no-completions
 ```
 
+Suppress prompts, welcome and exit messages, and result markers:
+
+```bash
+./duckc repl --plain-output
+```
+
+With the minimal frontend (`-DUSE_REPLXX=OFF`), this mode reads one line at a
+time without the interactive editor. Alt+Enter multiline input and history
+navigation shortcuts are unavailable; `/commands` still shows entered commands.
+
 ### Commands
 
 | Command | Aliases | Description |

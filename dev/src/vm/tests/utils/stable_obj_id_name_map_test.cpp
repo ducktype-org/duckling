@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/misc/int_conv.hpp>
 
 #include <tester/tester.hpp>
@@ -6,6 +12,10 @@
 
 #include <array>
 
+/**
+ * @brief What belongs here: `StableObjIdNameMap`, the map from names to stable object ids. No
+ * program is run.
+ */
 class ObjIdNameMapTester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ObjIdNameMapTester

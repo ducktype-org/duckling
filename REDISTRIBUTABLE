@@ -1,0 +1,19 @@
+Redistributable Components
+==========================
+
+This file lists the Redistributable Components of The Software, as defined
+in the DuckType Compiler License, Version 1.0 (see LICENSE.md).
+
+The following material is a Redistributable Component. Each entry covers
+every file in the listed directory and its subdirectories, both in source
+form and in any compiled form We supply or The Software produces from it:
+
+    dev/src/lib/core/    Duckling core library
+    dev/src/lib/std/     Duckling standard library
+
+Under Section 6.1 of the License, Redistributable Components carry no
+conditions as contained in Compiler Output. Under Section 6.2, a
+Redistributable Component Distributed on its own, as source code or as a
+separately identifiable component, remains governed by the License.
+
+No other part of The Software is a Redistributable Component.

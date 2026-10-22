@@ -43,3 +43,4 @@ runs:
         echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
         echo "SCCACHE_DIR=$dir" >> "$GITHUB_ENV"
         echo "SCCACHE_CACHE_SIZE=${{ inputs.sccache-size }}" >> "$GITHUB_ENV"
+        echo "SCCACHE_SERVER_PORT=$((10000 + $(id -u)))" >> "$GITHUB_ENV"

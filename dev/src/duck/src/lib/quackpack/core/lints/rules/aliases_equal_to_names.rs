@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Home of "aliases equal to names" lint.
 
 use crate::QuackResult;
@@ -42,6 +48,10 @@ dependencies:
 
 /// Run the pass for [`LINT`].
 pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()> {
+    let level = LINT.level;
+    if level == LintLevel::Allow {
+        return Ok(());
+    }
     let schema = pcx.package().original_schema();
     let dependencies_maps = [
         (DependencyKind::Normal, schema.dependencies.as_ref()),
@@ -54,13 +64,14 @@ pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()
                 && let Some(ref name) = source.name
                 && effective_name == name
             {
-                buffer.register_warning(
+                buffer.register(
                     AliasEqualsNameDiagnostic {
                         name: name.clone(),
                         dep_kind,
                         key_in_manifest: dep_kind.key_in_manifest(),
                     },
                     LINT,
+                    level,
                 );
             }
         }

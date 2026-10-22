@@ -29,7 +29,7 @@ extern("C") {
 }
 
 fun cstr(s: str) -> cptr char = {
-    return ptr_from_slice:{char}(s) as cptr char;
+    return ptr_from_slice[char](s) as cptr char;
 }
 
 # NUL-terminated string literals handed to C as `cptr char`.
@@ -118,7 +118,7 @@ fun cPointerRepointingTest() = {
     # `manyptr i32` -> `cptr Inner`: a many-pointer is a dynamic table handle, so it first has
     # to become the address of element 0, and only then change pointee. `Inner` is two i32s,
     # so it reads the first two elements of the table.
-    var table = dvm_alloc_arr:{i32}(2i64);
+    var table = dvm_alloc_arr[i32](2i64);
     table[0] = 6i32;
     table[1] = 7i32;
 
@@ -126,7 +126,27 @@ fun cPointerRepointingTest() = {
     builtin_output_i64((*head_p).a as i64);             # 6
     builtin_output_i64((*head_p).b as i64);             # 7
 
-    dvm_free_arr:{i32}(table);
+    dvm_free_arr[i32](table);
+}
+
+fun cPointerAddressOfTest() = {
+    var v: Vec;
+    v.nums[1] = 12;
+    let p = &v as cptr Vec;
+
+    let bytes = p as cptr u8;
+    let offset_p = &bytes[12] as cptr i32;
+    builtin_output_i64((*offset_p) as i64);
+    (*offset_p) = 13;
+    builtin_output_i64(v.nums[1] as i64);
+
+    let field_p = &p[0].nums[2] as cptr i32;
+    (*field_p) = 17;
+    builtin_output_i64(v.nums[2] as i64);
+
+    let deref_p = &(*p).inner as cptr Inner;
+    (*deref_p).b = 8;
+    builtin_output_i64(v.inner.b as i64);
 }
 
 # libm, and a `cptr` used as an out parameter.
@@ -144,6 +164,7 @@ fun main() -> i64 = {
     cPointerProjectionsTest();
     cPointerToCTest();
     cPointerRepointingTest();
+    cPointerAddressOfTest();
     mathTest();
     return 0;
 }

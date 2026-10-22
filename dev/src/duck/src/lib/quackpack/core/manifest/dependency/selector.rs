@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Selectors for easy searching the dependencies vector.
 
 use std::collections::HashSet;
 
 use super::{Dependency, DependencyKind};
-use crate::{StrId, quackpack::core::FeatureName};
+use crate::StrId;
+use crate::quackpack::core::FeatureName;
 
 #[derive(Clone, Eq, PartialEq)]
 /// A selector allows to easily filter the dependencies vector.

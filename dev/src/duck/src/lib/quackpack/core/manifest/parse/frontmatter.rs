@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Parsing of the frontmatter from its schema.
 //! A frontmatter is a fragment of yaml code similiar to a manifest, at the beginning of a Duckling script.
 //! It can specify script's dependencies, allowing the script to be run without any venv.
@@ -29,6 +35,7 @@ use tracing::{debug, trace};
 
 use super::parse_schema;
 use crate::quackpack::core::ParseMode;
+use crate::quackpack::core::lints::errors::Errors;
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::parse::manifest::parse;
 use crate::quackpack::core::script::FrontMatter;
@@ -44,7 +51,10 @@ pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
 /// Parse a frontmatter of a script at a given `path`.
 ///
 /// Script doesn't have to have a frontmatter; in that case, a default will be returned.
-pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
+pub fn parse_frontmatter(
+    path: &Path,
+    ctx: &DuckContext,
+) -> QuackResult<(FrontMatter, Warnings, Errors)> {
     trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
@@ -56,19 +66,21 @@ pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMa
 
 /// Helper for [`parse_frontmatter`].
 /// First generates the appropriate [`ManifestSchema`] and then parses it into [`FrontMatter`].
-fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings, Errors)> {
     let mut warnings = Warnings::default();
-    let schema = generate_schema(path, &mut warnings)?;
+    let mut errors = Errors::default();
+    let schema = generate_schema(path, &mut errors)?;
     let frontmatter = parse(
         &schema,
         ParseMode::FrontMatter {
             frontmatter_path: path,
         },
         &mut warnings,
+        &mut errors,
         ctx,
     )?;
     FrontMatter::new(path.to_path_buf(), schema, Box::new(frontmatter))
-        .map(|frontmatter| (frontmatter, warnings))
+        .map(|frontmatter| (frontmatter, warnings, errors))
 }
 
 /// Try to capture a frontmatter from the given contents.
@@ -89,7 +101,7 @@ pub fn capture_frontmatter(contents: &str) -> QuackResult<Option<Captures<'_>>> 
 /// This includes resolving import, meaning that if the frontmatter has the `import` field,
 /// the schema is generated based on the path specified in the import.
 /// If the script does not contain a frontmatter, returns [`ManifestSchema`] with `None`s.
-fn generate_schema(path: &Path, warnings: &mut Warnings) -> QuackResult<ManifestSchema> {
+fn generate_schema(path: &Path, errors: &mut Errors) -> QuackResult<ManifestSchema> {
     let content = path.read_to_string()?;
     // @TODO: #2860 Finalize frontmatters syntax
     // This has a bug when `</frontmatter>` is in a yaml comment (maybe don't care / make it a feature).
@@ -110,7 +122,7 @@ fn generate_schema(path: &Path, warnings: &mut Warnings) -> QuackResult<Manifest
         path,
         frontmatter_content,
         /* resolve_imports */ true,
-        warnings,
+        errors,
     )
 }
 
@@ -122,11 +134,11 @@ fn generate_schema_from_content(
     path: &Path,
     content: &str,
     resolve_imports: bool,
-    warnings: &mut Warnings,
+    errors: &mut Errors,
 ) -> QuackResult<ManifestSchema> {
-    let schema = parse_schema(content, warnings)?;
+    let schema = parse_schema(content, errors)?;
     if resolve_imports {
-        resolve_import_in_schema(path, schema, warnings)
+        resolve_import_in_schema(path, schema, errors)
     } else if schema.import.is_some() {
         qp_bail!("imported frontmatter cannot have `import` field itself")
     } else {
@@ -142,7 +154,7 @@ fn generate_schema_from_content(
 fn resolve_import_in_schema(
     script_path: &Path,
     schema: ManifestSchema,
-    warnings: &mut Warnings,
+    errors: &mut Errors,
 ) -> QuackResult<ManifestSchema> {
     if let Some(ref import) = schema.import {
         debug!(
@@ -173,7 +185,7 @@ fn resolve_import_in_schema(
             &imported_path,
             &content,
             /* resolve_imports */ false,
-            warnings,
+            errors,
         )
         .with_context(|| {
             format!(

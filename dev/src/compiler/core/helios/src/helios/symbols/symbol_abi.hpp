@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 
@@ -29,6 +35,12 @@ namespace compiler::helios {
 		 * Empty if a function is not variadic.
 		 */
 		base::Optional<u64> fixed_params;
+
+		/**
+		 * @brief The linked symbol name set with `@c_symbol_name("<name>")`.
+		 * Empty when the symbol links under its own name.
+		 */
+		base::Optional<base::StrID> symbol_name;
 	};
 
 	struct DefaultAbi final {};

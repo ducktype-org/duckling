@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 import pathlib
 import sys
@@ -21,6 +26,7 @@ from scripts.py.toolbox.commands.init import init
 from scripts.py.toolbox.commands.install_llvm import install_llvm
 from scripts.py.toolbox.commands.issue_checker import issue_checker
 from scripts.py.toolbox.commands.itest import itest
+from scripts.py.toolbox.commands.license_checker import license_checker
 from scripts.py.toolbox.commands.list_files import list_files
 from scripts.py.toolbox.commands.pr_validate import pr_validate
 from scripts.py.toolbox.commands.run_preprocessor import run_preprocessor
@@ -50,6 +56,7 @@ cli.add_command(init)
 cli.add_command(install_llvm)
 cli.add_command(issue_checker)
 cli.add_command(itest)
+cli.add_command(license_checker)
 cli.add_command(list_files)
 cli.add_command(pr_validate)
 cli.add_command(run_preprocessor)

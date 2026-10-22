@@ -1,4 +1,4 @@
-fun printList(list: ref List:{i64}) -> () = {
+fun printList(list: ref List[i64]) -> () = {
     print("8888888888888888888\n");
     var i = 0;
     while (i < list.length()) {
@@ -8,7 +8,7 @@ fun printList(list: ref List:{i64}) -> () = {
     print("8888888888888888888\n");
 }
 
-fun listByRef(list: ref List:{i64}) -> () = {
+fun listByRef(list: ref List[i64]) -> () = {
     printList(list);
 
     var i = 0;
@@ -25,7 +25,7 @@ fun elementByRef(element: ref i64) -> () = {
 
 fun main() -> i64 = {
     # Simple usage.
-    var arr: List:{i64};
+    var arr: List[i64];
     arr.push(111);
     arr.push(222);
     arr.push(333);

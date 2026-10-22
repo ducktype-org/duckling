@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 namespace pst {
@@ -7,14 +13,15 @@ namespace pst {
 	// Lists
 	class ParamList;
 	class ImplementsList;
-	class TemplateList;
 	class AtrArgList;
 	class CallList;
 	class FlowPatternList;
-	class NestedImportList;
+	class SelectorList;
+	class NestedSelectorList;
 	// Not Statements
 	class Param;
 	class DottedName;
+	class Selector;
 	class Attribute;
 	class CallArgument;
 	class CodeBlock;
@@ -38,16 +45,10 @@ namespace pst {
 	class WildcardPattern;
 	class BindingPattern;
 	class ValuePattern;
-	// Import Chains
-	class ImportChain;
-	class ImportIdentifierAs;
-	class ImportStarHides;
-	class ImportNested;
 	// Statements
 	class Import;
 	class Using;
 	class ExprStmt;
-	class Alias;
 	class Action;
 	class Decl;
 	class Expand;
@@ -94,7 +95,6 @@ namespace pst {
 		class ExprCharValue;
 		class ExprFormatStrValue;
 		class Literal;
-		class TemplateSpecifier;
 		class IdentifierLiteral;
 		class KeywordLiteral;
 		class Access;

@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -116,9 +122,10 @@ def tester_impl(
 
     if len(failed):
         failed_tests = map(lambda x: " - " + x, failed)
+        failed_tests_text = "\n".join(failed_tests)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
-            + f"Please see log file '{log_file.absolute()}' for more info."
+            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{failed_tests_text}\n"
+            f"Please see log file '{log_file.absolute()}' for more info."
         )
     elif not clean:
         print_success(f"All tests have run successfully!")

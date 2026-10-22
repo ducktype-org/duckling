@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../helpers.hpp"
@@ -12,7 +18,9 @@ namespace compiler::repl {
 	class FrontendReplxxImplementation final {
 	public:
 		explicit FrontendReplxxImplementation(
-			bool completions_enabled = true, bool bracketed_paste_enabled = true
+			bool completions_enabled     = true,
+			bool bracketed_paste_enabled = true,
+			bool decorative_output       = true
 		);
 		~FrontendReplxxImplementation();
 
@@ -40,6 +48,7 @@ namespace compiler::repl {
 
 		replxx::Replxx m_replxx{};
 		bool           m_completions_enabled;
+		bool           m_decorative_output;
 
 		/// Set of user-defined identifiers collected from previous inputs (for completion).
 		std::set<std::string> m_user_words{};

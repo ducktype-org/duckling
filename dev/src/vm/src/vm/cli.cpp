@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "cli.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -39,7 +45,10 @@ int cli(
 		          // cleanly or force kill it otherwise.
 				  defer({
 					  const auto res = vm::api::deinitOrKill(pid);
-					  if (not res) std::cerr << convertError(res.error()) << '\n';
+					  if (not res)
+						  std::cerr << convertError(res.error()) << '\n';
+					  else if (res->has_value())
+						  std::cerr << res->value().toString();
 				  });
 
 				  return std::expected<void, vm::api::ApiError>{}

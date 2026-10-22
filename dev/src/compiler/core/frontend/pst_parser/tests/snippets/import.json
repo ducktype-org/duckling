@@ -1,7 +1,7 @@
 {
 	"position": {
 		"sourceStart": 0,
-		"sourceEnd": 210
+		"sourceEnd": 280
 	},
 	"Top Level": [
 		{
@@ -10,51 +10,60 @@
 				"sourceEnd": 22
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
 						"sourceStart": 7,
 						"sourceEnd": 21
 					},
-					"Import Identifier As Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 7,
-									"sourceEnd": 10
-								},
-								"Identifier Wrapper": {
-									"value": "aaaa"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 12,
-									"sourceEnd": 14
-								},
-								"Identifier Wrapper": {
-									"value": "bbb"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 16,
-									"sourceEnd": 16
-								},
-								"Identifier Wrapper": {
-									"value": "c"
-								}
-							},
-						],
-						"as": {
+					"selector list": [
+						{
 							"position": {
-								"sourceStart": 21,
+								"sourceStart": 7,
 								"sourceEnd": 21
 							},
-							"Identifier Wrapper": {
-								"value": "D"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 7,
+											"sourceEnd": 10
+										},
+										"Identifier Wrapper": {
+											"value": "aaaa"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 12,
+											"sourceEnd": 14
+										},
+										"Identifier Wrapper": {
+											"value": "bbb"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 16,
+											"sourceEnd": 16
+										},
+										"Identifier Wrapper": {
+											"value": "c"
+										}
+									},
+								],
+								"tail": "as",
+								"as": {
+									"position": {
+										"sourceStart": 21,
+										"sourceEnd": 21
+									},
+									"Identifier Wrapper": {
+										"value": "D"
+									}
+								}
 							}
-						}
-					}
+						},
+					]
 				}
 			}
 		},
@@ -64,33 +73,42 @@
 				"sourceEnd": 45
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
 						"sourceStart": 32,
 						"sourceEnd": 44
 					},
-					"Import Star Hides Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 32,
-									"sourceEnd": 37
-								},
-								"Identifier Wrapper": {
-									"value": "dasdsa"
-								}
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 32,
+								"sourceEnd": 44
 							},
-							{
-								"position": {
-									"sourceStart": 39,
-									"sourceEnd": 42
-								},
-								"Identifier Wrapper": {
-									"value": "dasd"
-								}
-							},
-						],
-					}
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 32,
+											"sourceEnd": 37
+										},
+										"Identifier Wrapper": {
+											"value": "dasdsa"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 39,
+											"sourceEnd": 42
+										},
+										"Identifier Wrapper": {
+											"value": "dasd"
+										}
+									},
+								],
+								"tail": "star"
+							}
+						},
+					]
 				}
 			}
 		},
@@ -100,33 +118,42 @@
 				"sourceEnd": 67
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
 						"sourceStart": 55,
 						"sourceEnd": 66
 					},
-					"Import Identifier As Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 55,
-									"sourceEnd": 58
-								},
-								"Identifier Wrapper": {
-									"value": "aaaa"
-								}
-							},
-						],
-						"as": {
+					"selector list": [
+						{
 							"position": {
-								"sourceStart": 63,
+								"sourceStart": 55,
 								"sourceEnd": 66
 							},
-							"Identifier Wrapper": {
-								"value": "σααα"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 55,
+											"sourceEnd": 58
+										},
+										"Identifier Wrapper": {
+											"value": "aaaa"
+										}
+									},
+								],
+								"tail": "as",
+								"as": {
+									"position": {
+										"sourceStart": 63,
+										"sourceEnd": 66
+									},
+									"Identifier Wrapper": {
+										"value": "σααα"
+									}
+								}
 							}
-						}
-					}
+						},
+					]
 				}
 			}
 		},
@@ -136,51 +163,60 @@
 				"sourceEnd": 84
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
 						"sourceStart": 77,
 						"sourceEnd": 83
 					},
-					"Import Identifier As Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 77,
-									"sourceEnd": 77
-								},
-								"Identifier Wrapper": {
-									"value": "a"
-								}
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 77,
+								"sourceEnd": 83
 							},
-							{
-								"position": {
-									"sourceStart": 79,
-									"sourceEnd": 79
-								},
-								"Identifier Wrapper": {
-									"value": "b"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 81,
-									"sourceEnd": 81
-								},
-								"Identifier Wrapper": {
-									"value": "c"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 83,
-									"sourceEnd": 83
-								},
-								"Identifier Wrapper": {
-									"value": "d"
-								}
-							},
-						],
-					}
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 77,
+											"sourceEnd": 77
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 79,
+											"sourceEnd": 79
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 81,
+											"sourceEnd": 81
+										},
+										"Identifier Wrapper": {
+											"value": "c"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 83,
+											"sourceEnd": 83
+										},
+										"Identifier Wrapper": {
+											"value": "d"
+										}
+									},
+								],
+								"tail": "none"
+							}
+						},
+					]
 				}
 			}
 		},
@@ -190,51 +226,60 @@
 				"sourceEnd": 114
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
 						"sourceStart": 94,
 						"sourceEnd": 113
 					},
-					"Import Identifier As Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 94,
-									"sourceEnd": 97
-								},
-								"Identifier Wrapper": {
-									"value": "ἄλφα"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 99,
-									"sourceEnd": 102
-								},
-								"Identifier Wrapper": {
-									"value": "βῆτα"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 104,
-									"sourceEnd": 108
-								},
-								"Identifier Wrapper": {
-									"value": "γάμμα"
-								}
-							},
-						],
-						"as": {
+					"selector list": [
+						{
 							"position": {
-								"sourceStart": 113,
+								"sourceStart": 94,
 								"sourceEnd": 113
 							},
-							"Identifier Wrapper": {
-								"value": "U"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 94,
+											"sourceEnd": 97
+										},
+										"Identifier Wrapper": {
+											"value": "ἄλφα"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 99,
+											"sourceEnd": 102
+										},
+										"Identifier Wrapper": {
+											"value": "βῆτα"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 104,
+											"sourceEnd": 108
+										},
+										"Identifier Wrapper": {
+											"value": "γάμμα"
+										}
+									},
+								],
+								"tail": "as",
+								"as": {
+									"position": {
+										"sourceStart": 113,
+										"sourceEnd": 113
+									},
+									"Identifier Wrapper": {
+										"value": "U"
+									}
+								}
 							}
-						}
-					}
+						},
+					]
 				}
 			}
 		},
@@ -244,270 +289,552 @@
 				"sourceEnd": 135
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
 						"sourceStart": 124,
 						"sourceEnd": 134
 					},
-					"Import Star Hides Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 124,
-									"sourceEnd": 127
-								},
-								"Identifier Wrapper": {
-									"value": "ἄλφα"
-								}
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 124,
+								"sourceEnd": 134
 							},
-							{
-								"position": {
-									"sourceStart": 129,
-									"sourceEnd": 132
-								},
-								"Identifier Wrapper": {
-									"value": "βῆτα"
-								}
-							},
-						],
-					}
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 124,
+											"sourceEnd": 127
+										},
+										"Identifier Wrapper": {
+											"value": "ἄλφα"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 129,
+											"sourceEnd": 132
+										},
+										"Identifier Wrapper": {
+											"value": "βῆτα"
+										}
+									},
+								],
+								"tail": "star"
+							}
+						},
+					]
 				}
 			}
 		},
 		{
 			"position": {
 				"sourceStart": 138,
-				"sourceEnd": 160
+				"sourceEnd": 163
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
 						"sourceStart": 145,
-						"sourceEnd": 159
+						"sourceEnd": 162
 					},
-					"Import Nested": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 145,
-									"sourceEnd": 145
-								},
-								"Identifier Wrapper": {
-									"value": "A"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 147,
-									"sourceEnd": 147
-								},
-								"Identifier Wrapper": {
-									"value": "B"
-								}
-							},
-						],
-						"nested_import": {
+					"selector list": [
+						{
 							"position": {
-								"sourceStart": 149,
-								"sourceEnd": 159
+								"sourceStart": 145,
+								"sourceEnd": 162
 							},
-							"nested import list": [
-								{
-									"position": {
-										"sourceStart": 150,
-										"sourceEnd": 150
-									},
-									"Import Identifier As Chain": {
-										"names": [
-											{
-												"position": {
-													"sourceStart": 150,
-													"sourceEnd": 150
-												},
-												"Identifier Wrapper": {
-													"value": "C"
-												}
-											},
-										],
-									}
-								},
-								{
-									"position": {
-										"sourceStart": 152,
-										"sourceEnd": 157
-									},
-									"Import Nested": {
-										"names": [],
-										"nested_import": {
-											"position": {
-												"sourceStart": 152,
-												"sourceEnd": 157
-											},
-											"nested import list": [
-												{
-													"position": {
-														"sourceStart": 153,
-														"sourceEnd": 153
-													},
-													"Import Identifier As Chain": {
-														"names": [
-															{
-																"position": {
-																	"sourceStart": 153,
-																	"sourceEnd": 153
-																},
-																"Identifier Wrapper": {
-																	"value": "D"
-																}
-															},
-														],
-													}
-												},
-												{
-													"position": {
-														"sourceStart": 156,
-														"sourceEnd": 156
-													},
-													"Import Identifier As Chain": {
-														"names": [
-															{
-																"position": {
-																	"sourceStart": 156,
-																	"sourceEnd": 156
-																},
-																"Identifier Wrapper": {
-																	"value": "E"
-																}
-															},
-														],
-													}
-												},
-											]
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 145,
+											"sourceEnd": 145
+										},
+										"Identifier Wrapper": {
+											"value": "A"
 										}
-									}
-								},
-							]
-						}
-					}
-				}
-			}
-		},
-		{
-			"position": {
-				"sourceStart": 163,
-				"sourceEnd": 180
-			},
-			"Import": {
-				"import_chain": {
-					"position": {
-						"sourceStart": 170,
-						"sourceEnd": 179
-					},
-					"Import Identifier As Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 170,
-									"sourceEnd": 170
-								},
-								"Identifier Wrapper": {
-									"value": "A"
+									},
+									{
+										"position": {
+											"sourceStart": 147,
+											"sourceEnd": 147
+										},
+										"Identifier Wrapper": {
+											"value": "B"
+										}
+									},
+								],
+								"tail": "nested",
+								"nested": {
+									"position": {
+										"sourceStart": 149,
+										"sourceEnd": 162
+									},
+									"nested selector list": [
+										{
+											"position": {
+												"sourceStart": 150,
+												"sourceEnd": 150
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 150,
+															"sourceEnd": 150
+														},
+														"Identifier Wrapper": {
+															"value": "C"
+														}
+													},
+												],
+												"tail": "none"
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 153,
+												"sourceEnd": 160
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 153,
+															"sourceEnd": 153
+														},
+														"Identifier Wrapper": {
+															"value": "D"
+														}
+													},
+												],
+												"tail": "nested",
+												"nested": {
+													"position": {
+														"sourceStart": 155,
+														"sourceEnd": 160
+													},
+													"nested selector list": [
+														{
+															"position": {
+																"sourceStart": 156,
+																"sourceEnd": 156
+															},
+															"Selector": {
+																"names": [
+																	{
+																		"position": {
+																			"sourceStart": 156,
+																			"sourceEnd": 156
+																		},
+																		"Identifier Wrapper": {
+																			"value": "E"
+																		}
+																	},
+																],
+																"tail": "none"
+															}
+														},
+														{
+															"position": {
+																"sourceStart": 159,
+																"sourceEnd": 159
+															},
+															"Selector": {
+																"names": [
+																	{
+																		"position": {
+																			"sourceStart": 159,
+																			"sourceEnd": 159
+																		},
+																		"Identifier Wrapper": {
+																			"value": "F"
+																		}
+																	},
+																],
+																"tail": "none"
+															}
+														},
+													]
+												}
+											}
+										},
+									]
 								}
-							},
-							{
-								"position": {
-									"sourceStart": 172,
-									"sourceEnd": 172
-								},
-								"Identifier Wrapper": {
-									"value": "B"
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 174,
-									"sourceEnd": 174
-								},
-								"Identifier Wrapper": {
-									"value": "C"
-								}
-							},
-						],
-						"as": {
-							"position": {
-								"sourceStart": 179,
-								"sourceEnd": 179
-							},
-							"Identifier Wrapper": {
-								"value": "D"
 							}
-						}
-					}
+						},
+					]
 				}
 			}
 		},
 		{
 			"position": {
-				"sourceStart": 183,
-				"sourceEnd": 210
+				"sourceStart": 166,
+				"sourceEnd": 183
 			},
 			"Import": {
-				"import_chain": {
+				"selectors": {
 					"position": {
-						"sourceStart": 190,
-						"sourceEnd": 209
+						"sourceStart": 173,
+						"sourceEnd": 182
 					},
-					"Import Star Hides Chain": {
-						"names": [
-							{
-								"position": {
-									"sourceStart": 190,
-									"sourceEnd": 190
-								},
-								"Identifier Wrapper": {
-									"value": "A"
-								}
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 173,
+								"sourceEnd": 182
 							},
-							{
-								"position": {
-									"sourceStart": 192,
-									"sourceEnd": 192
-								},
-								"Identifier Wrapper": {
-									"value": "B"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 173,
+											"sourceEnd": 173
+										},
+										"Identifier Wrapper": {
+											"value": "A"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 175,
+											"sourceEnd": 175
+										},
+										"Identifier Wrapper": {
+											"value": "B"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 177,
+											"sourceEnd": 177
+										},
+										"Identifier Wrapper": {
+											"value": "C"
+										}
+									},
+								],
+								"tail": "as",
+								"as": {
+									"position": {
+										"sourceStart": 182,
+										"sourceEnd": 182
+									},
+									"Identifier Wrapper": {
+										"value": "D"
+									}
 								}
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 186,
+				"sourceEnd": 206
+			},
+			"Import": {
+				"selectors": {
+					"position": {
+						"sourceStart": 193,
+						"sourceEnd": 205
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 193,
+								"sourceEnd": 205
 							},
-						],
-						"hides": [
-							{
-								"position": {
-									"sourceStart": 202,
-									"sourceEnd": 202
-								},
-								"Identifier Wrapper": {
-									"value": "D"
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 193,
+											"sourceEnd": 193
+										},
+										"Identifier Wrapper": {
+											"value": "A"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 195,
+											"sourceEnd": 195
+										},
+										"Identifier Wrapper": {
+											"value": "B"
+										}
+									},
+								],
+								"tail": "star",
+								"hides": [
+									{
+										"position": {
+											"sourceStart": 205,
+											"sourceEnd": 205
+										},
+										"Identifier Wrapper": {
+											"value": "D"
+										}
+									},
+								]
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 209,
+				"sourceEnd": 237
+			},
+			"Import": {
+				"selectors": {
+					"position": {
+						"sourceStart": 216,
+						"sourceEnd": 236
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 216,
+								"sourceEnd": 236
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 216,
+											"sourceEnd": 216
+										},
+										"Identifier Wrapper": {
+											"value": "A"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 218,
+											"sourceEnd": 218
+										},
+										"Identifier Wrapper": {
+											"value": "B"
+										}
+									},
+								],
+								"tail": "star",
+								"hides": [
+									{
+										"position": {
+											"sourceStart": 229,
+											"sourceEnd": 229
+										},
+										"Identifier Wrapper": {
+											"value": "D"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 232,
+											"sourceEnd": 232
+										},
+										"Identifier Wrapper": {
+											"value": "G"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 235,
+											"sourceEnd": 235
+										},
+										"Identifier Wrapper": {
+											"value": "C"
+										}
+									},
+								]
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 240,
+				"sourceEnd": 262
+			},
+			"Import": {
+				"selectors": {
+					"position": {
+						"sourceStart": 247,
+						"sourceEnd": 261
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 247,
+								"sourceEnd": 261
+							},
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 247,
+											"sourceEnd": 247
+										},
+										"Identifier Wrapper": {
+											"value": "A"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 249,
+											"sourceEnd": 249
+										},
+										"Identifier Wrapper": {
+											"value": "B"
+										}
+									},
+								],
+								"tail": "nested",
+								"nested": {
+									"position": {
+										"sourceStart": 251,
+										"sourceEnd": 261
+									},
+									"nested selector list": [
+										{
+											"position": {
+												"sourceStart": 252,
+												"sourceEnd": 257
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 252,
+															"sourceEnd": 252
+														},
+														"Identifier Wrapper": {
+															"value": "C"
+														}
+													},
+												],
+												"tail": "as",
+												"as": {
+													"position": {
+														"sourceStart": 257,
+														"sourceEnd": 257
+													},
+													"Identifier Wrapper": {
+														"value": "D"
+													}
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 260,
+												"sourceEnd": 260
+											},
+											"Selector": {
+												"names": [
+													{
+														"position": {
+															"sourceStart": 260,
+															"sourceEnd": 260
+														},
+														"Identifier Wrapper": {
+															"value": "E"
+														}
+													},
+												],
+												"tail": "none"
+											}
+										},
+									]
 								}
+							}
+						},
+					]
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 265,
+				"sourceEnd": 280
+			},
+			"Import": {
+				"selectors": {
+					"position": {
+						"sourceStart": 272,
+						"sourceEnd": 279
+					},
+					"selector list": [
+						{
+							"position": {
+								"sourceStart": 272,
+								"sourceEnd": 274
 							},
-							{
-								"position": {
-									"sourceStart": 206,
-									"sourceEnd": 206
-								},
-								"Identifier Wrapper": {
-									"value": "G"
-								}
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 272,
+											"sourceEnd": 272
+										},
+										"Identifier Wrapper": {
+											"value": "A"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 274,
+											"sourceEnd": 274
+										},
+										"Identifier Wrapper": {
+											"value": "A"
+										}
+									},
+								],
+								"tail": "none"
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 277,
+								"sourceEnd": 279
 							},
-							{
-								"position": {
-									"sourceStart": 209,
-									"sourceEnd": 209
-								},
-								"Identifier Wrapper": {
-									"value": "C"
-								}
-							},
-						],
-					}
+							"Selector": {
+								"names": [
+									{
+										"position": {
+											"sourceStart": 277,
+											"sourceEnd": 277
+										},
+										"Identifier Wrapper": {
+											"value": "B"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 279,
+											"sourceEnd": 279
+										},
+										"Identifier Wrapper": {
+											"value": "B"
+										}
+									},
+								],
+								"tail": "none"
+							}
+						},
+					]
 				}
 			}
 		},

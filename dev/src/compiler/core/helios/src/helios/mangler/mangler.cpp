@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "mangler.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -31,6 +37,8 @@
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <unicode_classification/classifications.hpp>
+
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <algorithm>
 #include <sstream>
@@ -71,26 +79,31 @@ namespace compiler::helios::mangler {
 			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
 
 		/**
-		 * @brief Check if the symbol should be mangled in the first place.
+		 * @brief The name a symbol links under when it is not mangled (C/DVM linkage), or none
+		 * when it has to be mangled. For `extern("C")` it is the `@c_symbol_name` when one is set.
 		 * @note: See mangling-scheme.md for details
 		 */
-		bool shouldMangle(query::Context& ctx, const KeyOf_MangledSymbol& key) {
+		base::Optional<base::StrID> unmangledName(
+			query::Context& ctx, const KeyOf_MangledSymbol& key
+		) {
 			if (key.kind != ManglingSymbolKind::Standard) {
 				// Non-standard symbols can't have C mangling
-				return true;
+				return std::nullopt;
 			}
 
 			const auto sym_id = std::get<SymID>(key.symbol_key);
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
-					variant_case_novalue(CAbi) { return false; }
-					variant_case_novalue(DVMAbi) { return false; }
-					variant_case_novalue(DefaultAbi) { return true; }
-					variant_default { CORE_PANIC("Unknown ABI in shouldMangle()"); }
+					variant_case(CAbi, c_abi) {
+						return c_abi.symbol_name.copyValueOr(name(sym_id));
+					}
+					variant_case_novalue(DVMAbi) { return name(sym_id); }
+					variant_case_novalue(DefaultAbi) { return std::nullopt; }
+					variant_default { CORE_PANIC("Unknown ABI in unmangledName()"); }
 				}
 			}
 
-			return true;
+			return std::nullopt;
 		}
 
 		/**
@@ -361,6 +374,34 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
+		 * @brief Adds the identifier of the name for the ancestor unless it was already added
+		 * before which can happen for template identifiers
+		 */
+		template<typename ElemT>
+		auto checkAndAddElem(
+			const auto& it, const auto& ancestors, const auto& ancestor, auto& ret, auto& ctx
+		) {
+			if (std::ranges::any_of(
+					std::ranges::subrange(ancestors.rbegin(), it),
+					[&](const auto& elem) { return elem.second == ancestor->getID(); }
+				))
+				return;
+
+			const auto val = ancestor.template dynamicCast<ElemT>().value();
+
+			if constexpr (std::same_as<ElemT, pst::Fun>) {
+				auto sym = ctx.template query<QuerySymbolOfSTMT>({ val }).valueOrPanic();
+				ret += unscopedName(ctx, sym);
+
+				std::string func(query::Context&, SymID);
+				ret += func(ctx, sym);
+				return;
+			}
+
+			ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
+		}
+
+		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
 		 * within a single module.
 		 * @note It does not mangle module/package names, pathPrefix and path functions are
@@ -412,6 +453,7 @@ namespace compiler::helios::mangler {
 					using enum pst::ElementKind;
 				case Namespace:
 				case Class:
+				case Fun:
 					is_nested = true;
 					ancestors.emplace_back(ancestor, std::nullopt);
 					break;
@@ -439,21 +481,15 @@ namespace compiler::helios::mangler {
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) break;
-
-					const auto val = ancestor.dynamicCast<pst::Namespace>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-
+					checkAndAddElem<pst::Namespace>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case Class: {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) break;
-
-					const auto val = ancestor.dynamicCast<pst::Class>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-
+					checkAndAddElem<pst::Class>(it, ancestors, ancestor, ret, ctx);
+					break;
+				}
+				case Fun: {
+					checkAndAddElem<pst::Fun>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case TemplateStmt: {
@@ -634,7 +670,15 @@ namespace compiler::helios::mangler {
 						CORE_UNREACHABLE();
 					}
 					variant_case(defgen::ReplInputWrapper, repl_wrapper) {
-						return base::strConcat("__repl_input_wrapper_", repl_wrapper.counter);
+						return base::strConcat(
+							compiler::helios::name(symbol_id),
+							"_",
+							repl_wrapper.getUniqueId(),
+							"_",
+							ctx.query<QueryMangledType>({ repl_wrapper.getReturnType() })
+								->valueOrThrow()
+								.strView()
+						);
 					}
 					// Other cases of generated symbols cannot be functions.
 				}
@@ -825,13 +869,27 @@ namespace compiler::helios::mangler {
 				return base::strConcat("s", internal::mangleString(sc.value.strView()));
 			}
 			variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
-			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+			variant_case(compiler::ctv::CompileTimeValue::TypeTuple, tuple) {
 				std::string ret = "T";
-				for (auto&& elem: tuple.getElements()) ret += mangleCTV(ctx, elem);
+				using TypeTuple = compiler::ctv::CompileTimeValue::TypeTuple;
+				for (auto&& elem: tuple.getElements())
+					ret += mangleCTV(ctx, TypeTuple::elementToCtv(elem));
 				return ret += "E";
 			}
 			variant_case(tsh::SymbolType<>, sym) {
 				return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
+			}
+			variant_case(compiler::ctv::CompileTimeValue::VMValue, vm_value) {
+				// @TODO: #2990 Mangle the pointers smartly, by the data they point to.
+				const std::string_view bytes(
+					reinterpret_cast<const char*>(vm_value.val->getBytes()),
+					static_cast<usize>(vm_value.val->getDataSize().asInt())
+				);
+				return base::strConcat(
+					"M",
+					ctx.query<QueryMangledType>({ vm_value.type })->valueOrThrow().strView(),
+					internal::mangleString(bytes)
+				);
 			}
 			variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
 		}
@@ -839,7 +897,7 @@ namespace compiler::helios::mangler {
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (not internal::shouldMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
+			if_opt_some(internal::unmangledName(ctx, key), unmangled) return unmangled;
 
 			// note: global identifiers starting with underscore and a capital letter are
 			// reserved in C. Q seems to be free and stands for both query and quack

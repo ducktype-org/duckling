@@ -1,10 +1,25 @@
 
 Tests:
+  local_consts:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n2\n1\n4\n7\n4\n100\n104\n107\n104\n42\n"
+        ExitCode: 0
+
   simple_class_templates:
     Cases:
       all:
         Output:
           String: "5\n10\n42\n"
+        ExitCode: 0
+
+  square_bracket_bakes:
+    Cases:
+      all:
+        Output:
+          String: "12\n12\n9\n"
         ExitCode: 0
 
   simple_function_template:
@@ -42,7 +57,7 @@ Tests:
     Cases:
       llvm:
         Output:
-          String: "1\n2\n1\n1\n2\n1\n5\n4\n6\n5\n5\n4\n1\n2\n1\n"
+          String: "1\n2\n1\n1\n2\n1\n5\n4\n6\n5\n5\n4\n1\n2\n1\n10\n"
         ExitCode: 0
 
   # @TODO: #3112 maybe reenable it (see the other note in tests).

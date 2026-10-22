@@ -1,4 +1,8 @@
-
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "symbol_abi.hpp"
 
@@ -204,6 +208,12 @@ namespace compiler::helios {
 					);
 					result.fixed_params = fixed_params;
 				}
+			}
+
+			// Like `@cffi_variadic_fixed_params`, `@c_symbol_name` only means something for the C
+			// ABI: on a default-ABI or `extern("DVM")` symbol it is ignored.
+			if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
+				result.symbol_name = link_name->name;
 			}
 
 			if (args.size() == 2) {  // `extern("C" "mylib")` case

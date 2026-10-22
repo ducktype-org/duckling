@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Home of "always_false_conditions" lint.
 
 use super::util::{is_nonexistent_feature, walk_conditions};
@@ -28,30 +34,38 @@ dependencies:
       package-features: []
 ```
 "#,
-    level: LintLevel::Warning,
+    level: LintLevel::Error,
 };
 
 /// Run the pass for [`LINT`].
 pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
+    let level = LINT.level;
+    if level == LintLevel::Allow {
+        return Ok(());
+    }
     walk_conditions(manifest, |conds| {
         let Some(required_features) = conds.conds().required_root_package_features() else {
             return;
         };
         if required_features.is_empty() {
-            return emit_empty_features_diag(conds, buffer);
+            return emit_empty_features_diag(conds, buffer, level);
         }
         if has_only_nonexistent_features(required_features, manifest) {
-            emit_only_nonexistent_features_diag(conds, buffer);
+            emit_only_nonexistent_features_diag(conds, buffer, level);
         }
     });
     Ok(())
 }
 
-fn emit_empty_features_diag(conds: MatchedConditions<'_>, buffer: &mut LintBuffer) {
+fn emit_empty_features_diag(
+    conds: MatchedConditions<'_>,
+    buffer: &mut LintBuffer,
+    level: LintLevel,
+) {
     match conds {
         MatchedConditions::Dep { dep, conds: _ } => {
             let diag = DependencyWithEmptyConditionsDiagnostic { dep: dep.name() };
-            buffer.register_warning(diag, LINT);
+            buffer.register(diag, LINT, level);
         }
         MatchedConditions::Feature {
             feature,
@@ -62,7 +76,7 @@ fn emit_empty_features_diag(conds: MatchedConditions<'_>, buffer: &mut LintBuffe
                 dep: dep.name(),
                 feature: feature.name(),
             };
-            buffer.register_warning(diag, LINT);
+            buffer.register(diag, LINT, level);
         }
     }
 }
@@ -73,11 +87,15 @@ fn has_only_nonexistent_features(required_features: &[FeatureName], manifest: &M
         .all(|feature| is_nonexistent_feature(manifest, *feature))
 }
 
-fn emit_only_nonexistent_features_diag(conds: MatchedConditions<'_>, buffer: &mut LintBuffer) {
+fn emit_only_nonexistent_features_diag(
+    conds: MatchedConditions<'_>,
+    buffer: &mut LintBuffer,
+    level: LintLevel,
+) {
     match conds {
         MatchedConditions::Dep { dep, conds: _ } => {
             let diag = DependencyWithOnlyNonexistentFeaturesDiagnostic { dep: dep.name() };
-            buffer.register_warning(diag, LINT);
+            buffer.register(diag, LINT, level);
         }
         MatchedConditions::Feature {
             feature,
@@ -88,7 +106,7 @@ fn emit_only_nonexistent_features_diag(conds: MatchedConditions<'_>, buffer: &mu
                 dep: dep.name(),
                 feature: feature.name(),
             };
-            buffer.register_warning(diag, LINT);
+            buffer.register(diag, LINT, level);
         }
     }
 }

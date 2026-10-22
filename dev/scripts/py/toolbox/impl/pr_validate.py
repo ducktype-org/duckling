@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from ..impl.test import test_impl
 from .helpers import (
     bash_command,
@@ -8,6 +14,7 @@ from .duck_linter import duck_linter_impl
 from .cpp_linter import cpp_linter_impl
 from .header_checker import header_checker_impl
 from .issue_checker import issue_checker_impl
+from .license_checker import license_checker_impl
 from .todo_validate import todo_validate_impl
 from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 from .workflows_lint import workflows_lint_impl
@@ -46,6 +53,10 @@ def pr_validate_impl(
     # Step 5 - issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
+
+    # Step 5 - license headers
+    if not license_checker_impl(auto_fix=auto_fix, no_fix=no_fix):
+        exit_with_error("License header check has failed")
 
     # Step 6 - Run formatting checker
     _, clang_format_failed = cpp_linter_impl(

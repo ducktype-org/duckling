@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -8,7 +14,6 @@ use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Alia
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::fetcher;
 use crate::quackpack::schemas::config::{RegistryConfig, SecurityConfig, StorageConfig};
-use crate::quackpack::util::to_url::ToUrl;
 use crate::util::once_lock_ext::OnceLockExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
@@ -115,10 +120,8 @@ impl DuckCfg {
     /// Get the default registry url.
     pub fn registry_url(&self) -> QuackResult<Url> {
         let url = self.registry()?.url.clone();
-        match url {
-            Some(url) => Ok(url),
-            None => fetcher::Fetcher::DEFAULT_REGISTRY_URL.to_url(),
-        }
+        let url = url.unwrap_or_else(|| fetcher::DEFAULT_REGISTRY_URL.clone());
+        Ok(url)
     }
 
     /// Get the maximal allowed amount of opened connections.

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file mir_tests.cpp
  */
@@ -64,8 +70,8 @@ private:
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
 			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
-			// This 4 blocks are from the conditions for the slice access bounds check
-			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 5);
+			// 4 blocks per slice access are from the conditions of its bounds check
+			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 9);
 		});
 	}
 

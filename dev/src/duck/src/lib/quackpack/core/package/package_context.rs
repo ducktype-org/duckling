@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! A context of a package  parsed from the disk.
 use std::path::{Path, PathBuf};
 
 use super::script::Script;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::lints::errors::Errors;
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::package_loader::PackageLoader;
 use crate::quackpack::core::script::StandaloneScript;
@@ -18,18 +25,22 @@ pub struct PackageContext<'duck> {
 
     /// Warnings created while this package had been parsed.
     warnings: Warnings,
+
+    /// Errors created while this package had been parsed.
+    errors: Errors,
 }
 
 impl<'duck> PackageContext<'duck> {
     /// Create new [`PackageContext`].
     #[tracing::instrument(skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let (package, warnings) =
+        let (package, warnings, errors) =
             core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
         Ok(Self {
             package: AnyPackage::Package(package),
             ctx,
             warnings,
+            errors,
         })
     }
 
@@ -48,17 +59,23 @@ impl<'duck> PackageContext<'duck> {
     /// Create a new [`PackageContext`] for a standalone script.
     #[tracing::instrument(skip_all)]
     pub fn new_standalone_script(path: &Path, ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let (frontmatter, warnings) = core::parse_frontmatter(path, ctx)?;
+        let (frontmatter, warnings, errors) = core::parse_frontmatter(path, ctx)?;
         let script = StandaloneScript::new(frontmatter);
-        Ok(Self::new_script(script.into(), ctx, warnings))
+        Ok(Self::new_script(script.into(), ctx, warnings, errors))
     }
 
     /// Create a new [`PackageContext`] for a script.
-    pub fn new_script(script: Script, ctx: &'duck DuckContext, warnings: Warnings) -> Self {
+    pub fn new_script(
+        script: Script,
+        ctx: &'duck DuckContext,
+        warnings: Warnings,
+        errors: Errors,
+    ) -> Self {
         Self {
             package: AnyPackage::Script(script),
             ctx,
             warnings,
+            errors,
         }
     }
 
@@ -72,9 +89,9 @@ impl<'duck> PackageContext<'duck> {
         self.package
     }
 
-    /// Transform into the underlying [`AnyPackage`] and keep the warnings.
-    pub fn into_package_and_warnings(self) -> (AnyPackage, Warnings) {
-        (self.package, self.warnings)
+    /// Transform into the underlying [`AnyPackage`] and other fields.
+    pub fn into_inner(self) -> (AnyPackage, Warnings, Errors) {
+        (self.package, self.warnings, self.errors)
     }
 
     /// Get [`DuckContext`] used to create this [`PackageContext`]
@@ -92,9 +109,10 @@ impl<'duck> PackageContext<'duck> {
         self.package().venv().storage_path()
     }
 
-    /// Emit collected warnings.
-    pub fn emit_warnings(&self) -> QuackResult<()> {
-        self.warnings.emit_warnings(self.ctx())
+    /// Emit collected diagnostics.
+    pub fn emit_diagnostics(&self) -> QuackResult<()> {
+        self.warnings.emit_warnings(self.ctx())?;
+        self.errors.emit_errors(self.ctx())
     }
 
     /// Returns the [`PackageId`] associated with this package treated as a local one.

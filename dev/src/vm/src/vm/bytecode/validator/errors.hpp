@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -128,6 +134,23 @@ namespace vm::code {
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
 			return VISIT(type, type, return static_cast<const ElementBase*>(&type));
 		}
+	};
+
+	class InvalidConstructorDestructorSignature: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Invalid signature for ";
+
+		InvalidConstructorDestructorSignature(
+			bool is_ctor, base::StrID func_name, base::StrID global_name
+		):
+			  ValidationError(base::strConcat(
+				  ERR_MSG,
+				  is_ctor ? "constructor '" : "destructor '",
+				  func_name,
+				  "' of global variable '",
+				  global_name,
+				  "' (expected {} -> {})"
+			  )) {}
 	};
 
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! A simple package identity, a unique identifier in the dependencies' graph.
 //! If you want to validate build graph (f.e. check that we don't have duplicates) this is the type
 //! you are looking for. Do __not__ use [`FullIdentity`] for that.
@@ -73,6 +79,18 @@ impl PartialEq<Identity> for FullIdentity {
 impl Display for Identity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}", self.name, self.origin)
+    }
+}
+
+impl PartialOrd for Identity {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(Self::cmp(self, other))
+    }
+}
+
+impl Ord for Identity {
+    fn cmp(&self, other: &Self) -> Ordering {
+        Self::stable_compare(*self, *other)
     }
 }
 

@@ -1,0 +1,11 @@
+global_data g i64 {}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type p, ptr_i64;
+    ref_pptr_pany p, g;
+
+    # Globals are not heap-allocated.
+    free_pptr p;
+
+    ret;
+}

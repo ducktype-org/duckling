@@ -9,7 +9,7 @@ import X as x;
 
 using X;
 
-alias X = X;
+using X as Y;
 
 1 + 5;
 

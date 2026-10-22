@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/packages/packages.hpp>
@@ -105,7 +111,7 @@ namespace compiler::driver {
 			/**
 			 * @brief The options that will be passed "as-is" to linker.
 			 */
-			base::Optional<std::string> native_additional_link_options;
+			std::vector<std::string> native_additional_link_options{};
 			/**
 			 * @brief Whether to link the c standard library.
 			 */
@@ -190,12 +196,21 @@ namespace compiler::driver {
 		};
 
 		/**
+		 * Language server mode: the packages are loaded by the language server itself, so only
+		 * the standard library packages are registered during initialization.
+		 */
+		struct LanguageServerMode final {
+			options_types::DebugOptions     debug_options;
+			options_types::ExecutionOptions execution_options;
+			options_types::StdLibOptions    stdlib_options;
+		};
+
+		/**
 		 * @note: in the future this might hold more modes,
-		 * like lsp daemon, etc.
 		 * don't refrain from refactoring this file (and module) if needed.
 		 * We might also want to restrain compiler functionality based on the mode.
 		 */
-		std::variant<BareMode, PackageCompilationMode, ReplMode, ScriptMode> mode;
+		std::variant<BareMode, PackageCompilationMode, ReplMode, ScriptMode, LanguageServerMode> mode;
 
 		CompilerModeOfOperationAndOptions(BareMode bare_mode): mode(bare_mode) {}
 
@@ -205,5 +220,8 @@ namespace compiler::driver {
 		CompilerModeOfOperationAndOptions(ReplMode repl_mode): mode(repl_mode) {}
 
 		CompilerModeOfOperationAndOptions(ScriptMode script_mode): mode(script_mode) {}
+
+		CompilerModeOfOperationAndOptions(LanguageServerMode language_server_mode):
+			  mode(language_server_mode) {}
 	};
 };

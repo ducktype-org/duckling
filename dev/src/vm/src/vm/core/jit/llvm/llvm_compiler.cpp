@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../jit_compiler.hpp"
 #include "jit_data.hpp"
 #include "jit_utils.hpp"
@@ -30,7 +36,7 @@ LLVM_INCLUDE_END()
 namespace vm::jit {
 
 	/**
-	 * @brief Optimizie Module with O3, inlining all calls to opfunctions.
+	 * @brief Optimize Module with O3, inlining all calls to opfunctions.
 	 */
 	void optimizeModule(llvm::Module& m) {
 		for (auto& fun: m) {
@@ -56,7 +62,7 @@ namespace vm::jit {
 		llvm::ModuleAnalysisManager   mam;
 
 		// For maximum optimization:
-		// Register all available module analyses passess.
+		// Register all available module analyses passes.
 		pb.registerModuleAnalyses(mam);
 		// Registers all available CGSCC (Call Graph Strongly Connected Component) passes.
 		pb.registerCGSCCAnalyses(cgam);
@@ -64,14 +70,24 @@ namespace vm::jit {
 		pb.registerFunctionAnalyses(fam);
 		// Register all available loop analysis passes.
 		pb.registerLoopAnalyses(lam);
-		// Connects all passess together, so they are not independent and can share analysis.
+		// Connects all passes together, so they are not independent and can share analysis.
 		pb.crossRegisterProxies(lam, fam, cgam, mam);
 		// Register all O3 optimizations.
 		auto mpm = pb.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
 		mpm.run(m, mam);
 	}
 
-	MRef<JitOpFun> compileLLVM(
+	static void printModule(Ref<llvm::Module> module, std::string_view filename) {
+		std::error_code      error_code;
+		llvm::raw_fd_ostream file(filename, error_code, llvm::sys::fs::OF_Text);
+
+		if (error_code)
+			llvm::errs() << "Error opening file: " << error_code.message() << "\n";
+		else
+			module->print(file, nullptr);
+	}
+
+	MRef<JitLLVMFunc> compileLLVM(
 		const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc, const base::StrID& name
 	) {
 		auto&                         llvm_data = llvmData();
@@ -90,7 +106,28 @@ namespace vm::jit {
 
 		LLVMBuilder(new_module.get(), ctx).lowerCFG(cfg, bc, name);
 
+		// Deliberately inside CORE_ASSERT: verification runs only in DEV builds, so the JIT
+		// hot path in release builds doesn't pay for it.
+		CORE_ASSERT(
+			!llvm::verifyModule(*new_module, &llvm::errs()), "Module invalid BEFORE optimization"
+		);
+
+		CORE_DEV_LOG(
+			DVMDetails,
+			(printModule(new_module.get(), symbol_name + "-before.llvm"), "Compiled function dumped")
+		);
+
 		optimizeModule(*new_module);
+
+		// Same as above: verification is deliberately dev-only.
+		CORE_ASSERT(
+			!llvm::verifyModule(*new_module, &llvm::errs()), "Module invalid AFTER optimization"
+		);
+
+		CORE_DEV_LOG(
+			DVMDetails,
+			(printModule(new_module.get(), symbol_name + "-after.llvm"), "Compiled function dumped")
+		);
 
 		auto&                       lljit = *llvm_data.lljit_instance;
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);
@@ -106,10 +143,9 @@ namespace vm::jit {
 			});
 			return nullptr;
 		}
-
 		llvm::orc::ExecutorAddr addr = *addr_or_err;
 
-		auto compiled_fn = addr.toPtr<vm::jit::JitOpFun>();
+		auto compiled_fn = addr.toPtr<vm::jit::JitLLVMFunc>();
 
 		return compiled_fn;
 	}

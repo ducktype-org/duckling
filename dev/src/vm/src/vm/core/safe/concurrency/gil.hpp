@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/types/ints.hpp>
@@ -53,5 +59,22 @@ namespace vm {
 		 * checking release_requested_flag.
 		 */
 		bool shouldRelease();
+
+		/**
+		 * @brief RAII guard acquiring the GIL for the scope. For use outside exec threads
+		 * (e.g. by SafeVMProcess), where SafeVMThread::ScopedGilGuard does not apply.
+		 */
+		class ScopedLock {
+		public:
+			explicit ScopedLock(GIL& gil): gil(gil) { gil.acquire(); }
+
+			~ScopedLock() { gil.release(); }
+
+			ScopedLock(const ScopedLock&)            = delete;
+			ScopedLock& operator=(const ScopedLock&) = delete;
+
+		private:
+			GIL& gil;
+		};
 	};
 }

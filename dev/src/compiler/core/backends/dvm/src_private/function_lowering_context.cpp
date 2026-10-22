@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "function_lowering_context.hpp"
 
 #include "ctv_lowering.hpp"
@@ -39,11 +45,11 @@ FunctionLoweringContext::FunctionLoweringContext(
 	base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 ):
 	  program_context(program_context),
-	  function_return_type(program_context.lowerAndKeepTslType(return_type)
+	  function_return_type(program_context.lowerAndKeepReturnTslType(return_type)
                                .map([](CRef<vm::code::TypeOfData> ref) { return *ref; })),
 	  function_parameter_types(
 		  parameter_types | std::views::transform([&](auto&& layout) {
-			  return **program_context.lowerAndKeepTslType(layout);
+			  return program_context.keepTslType(layout);
 		  })
 		  | std::ranges::to<std::vector>()
 	  ),
@@ -276,7 +282,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				);
 				const auto& current_pointer_layout
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-				auto pointee_layout = current_pointer_layout.getPointee();
+				auto pointee_layout
+					= current_pointer_layout.getPointee(**program_context.getActiveContext());
 
 				if (current_place.isDirect()) {
 					// In this case we have a direct stack variable which stores a pointer.
@@ -286,7 +293,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					current_layout = pointee_layout;
 				} else {
 					vm::code::TypeOfData vm_loaded_type
-						= **program_context.lowerAndKeepTslType(current_layout);
+						= *program_context.lowerAndKeepTslType(current_layout);
 
 					DVMPlace loaded_val_tmp = loadFromPlace(current_place, vm_loaded_type);
 
@@ -314,7 +321,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 				// Prepare the pointer to field type.
 				const vm::code::TypeOfData vm_field_type
-					= **program_context.lowerAndKeepTslType(field_layout);
+					= *program_context.lowerAndKeepTslType(field_layout);
 
 				auto vm_field_name = base::strConcat("_", field_index);
 
@@ -323,7 +330,9 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// current_place determines current access kind (Pointer, CPointer)
 				const auto field_pointer_kind = pointerForAccess(current_place.getAccessKind());
 				const vm::code::TypeOfData& ptr_to_field_type
-					= program_context.getOrInsertPointerType(vm_field_type, field_pointer_kind);
+					= program_context.getOrInsertPointerType(
+						typeName(vm_field_type), field_pointer_kind
+					);
 				// Create a temporary to the field, with the right access kind.
 				DVMPlace field_ptr_tmp
 					= pushTempLocal(ptr_to_field_type, "field_addr")
@@ -336,7 +345,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				case DVMPlace::AccessKind::Direct:
 				case DVMPlace::AccessKind::Pointer: {
 					const vm::code::TypeOfData& vm_class_type
-						= **program_context.lowerAndKeepTslType(current_layout);
+						= *program_context.lowerAndKeepTslType(current_layout);
 					pushInstruction({ vm::code::builders::OpKind::structLea,
 					                  field_ptr_tmp,
 					                  current_place,
@@ -364,13 +373,15 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					if (current_layout->is<tsl::StaticArrayTypeLayout>())
 						return current_layout->as<tsl::StaticArrayTypeLayout>().getElementLayout();
 					if (current_layout->is<tsl::PointerTypeLayout>())
-						return current_layout->as<tsl::PointerTypeLayout>().getPointee();
+						return current_layout->as<tsl::PointerTypeLayout>().getPointee(
+							**program_context.getActiveContext()
+						);
 					CORE_PANIC("Type is not indexable");
 				}();
 
 				// Prepare VM types
 				const vm::code::TypeOfData& vm_element_type
-					= **program_context.lowerAndKeepTslType(element_layout);
+					= *program_context.lowerAndKeepTslType(element_layout);
 
 				// Case when we have a pointer to a static array type layout,
 				// for example a pointer to a class field Cls {field: i64[4]}
@@ -380,7 +391,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 					const vm::code::TypeOfData& ptr_to_element_type
 						= program_context.getOrInsertPointerType(
-							vm_element_type, element_pointer_kind
+							typeName(vm_element_type), element_pointer_kind
 						);
 					DVMPlace element_ptr_tmp
 						= pushTempLocal(ptr_to_element_type, "index_addr")
@@ -417,7 +428,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					// We have to insert deref, to get the manyptr loaded into temporary.
 					if (not current_place.isDirect()) {
 						const vm::code::TypeOfData& vm_pointer_type
-							= **program_context.lowerAndKeepTslType(current_layout);
+							= *program_context.lowerAndKeepTslType(current_layout);
 						current_place = loadFromPlace(current_place, vm_pointer_type);
 					}
 
@@ -444,7 +455,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 					const vm::code::TypeOfData& ptr_to_element_type
 						= program_context.getOrInsertPointerType(
-							vm_element_type, element_pointer_kind
+							typeName(vm_element_type), element_pointer_kind
 						);
 					DVMPlace element_ptr_tmp
 						= pushTempLocal(ptr_to_element_type, "element_ptr")
@@ -492,7 +503,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 			} else {
 				// Otherwise it's indirect. We have to load it from memory into a stack variable.
 				const vm::code::TypeOfData& val_type
-					= **program_context.lowerAndKeepTslType(place.layout);
+					= *program_context.lowerAndKeepTslType(place.layout);
 				auto tmp = loadFromPlace(resolved, val_type);
 				// Now mark the place as direct as the value was loaded from the pointer.
 				return { tmp };
@@ -517,14 +528,14 @@ const DVMPlace& FunctionLoweringContext::createLirLocalToDVMMapping(lir::LIRLoca
 		if_opt_some(lir_local->parameter_index, index) {
 			auto var_name = base::StrID(base::strConcat("arg", index));
 			auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
-			return { var_name, **var_type, DVMPlace::AccessKind::Direct };
+			return { var_name, *var_type, DVMPlace::AccessKind::Direct };
 		}
 
 		if (lir_local->special_kind == lir::LIRLocalSpecialKind::ReturnValue)
 			return getFunctionReturnValueLocal();
 
 		auto var_name = base::StrID(base::strConcat("var", lir_local_to_dvm.size()));
-		auto var_type = **program_context.lowerAndKeepTslType(lir_local->layout);
+		auto var_type = *program_context.lowerAndKeepTslType(lir_local->layout);
 		return { var_name, var_type, DVMPlace::AccessKind::Direct };
 	}();
 
@@ -573,7 +584,7 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	vm::code::Function function;
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
-		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
+		function.signature.parameters.emplace_back(param_type);
 	function.signature.result_types = {};
 	if_opt_some(function_return_type, ret_type) {
 		function.signature.result_types.emplace_back(vm::code::typeName(ret_type));

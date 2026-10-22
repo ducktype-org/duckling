@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 
 use futures::executor::block_on;
@@ -73,7 +79,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg1],
+        dependencies: registry::Dependencies(vec![pkg1]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -87,7 +93,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg2, pkg3],
+        dependencies: registry::Dependencies(vec![pkg2, pkg3]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -101,7 +107,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
             links: None,
         },
-        dependencies: registry::Dependencies::new(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -173,7 +179,7 @@ fn single_metadata() {
     .unwrap();
     assert_eq!(response.metadata.name, "foo");
     assert_eq!(response.metadata.version, Version::new(1, 2, 3));
-    assert_eq!(response.dependencies.len(), 2);
+    assert_eq!(response.dependencies.0.len(), 2);
 
     assert!(
         block_on(client.get_exact_metadata(types::PackageWithUrl {

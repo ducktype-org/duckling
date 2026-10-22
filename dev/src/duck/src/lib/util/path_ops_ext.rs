@@ -1,11 +1,18 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fs::{
-    File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
+    self, File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
     read_to_string, remove_dir, remove_file, rename, write,
 };
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
+use std::time::SystemTime;
 
 use tracing::warn;
 
@@ -117,6 +124,15 @@ pub trait PathOpsExt {
 
     /// A wrapper around [`std::fs::write`].
     fn write(&self, contents: impl AsRef<[u8]>) -> QuackResult<()>;
+
+    /// Get the last modification time.
+    fn mtime(&self) -> QuackResult<SystemTime>;
+
+    /// Get the last change time.
+    /// Important
+    /// ---------
+    /// This is not "creation time".
+    fn ctime(&self) -> QuackResult<SystemTime>;
 }
 
 impl PathOpsExt for Path {
@@ -387,6 +403,69 @@ impl PathOpsExt for Path {
             .into_iter()
             .map(|c| c.as_os_str())
             .collect()
+    }
+
+    fn mtime(&self) -> QuackResult<SystemTime> {
+        let metadata = fs::metadata(self)
+            .with_context(|| format!("when getting the metadata of `{}`", self.display()))?;
+        let mtime = metadata.modified().with_context(|| {
+            format!("when getting the modification time of `{}`", self.display())
+        })?;
+        Ok(mtime)
+    }
+
+    #[cfg(unix)]
+    fn ctime(&self) -> QuackResult<SystemTime> {
+        use std::os::unix::fs::MetadataExt;
+        use std::time::Duration;
+
+        let metadata = fs::metadata(self)
+            .with_context(|| format!("when getting the change time of `{}`", self.display()))?;
+        let seconds = metadata.ctime() as u64;
+        let nanos = metadata.ctime_nsec() as u64;
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(seconds) + Duration::from_nanos(nanos))
+    }
+
+    #[cfg(windows)]
+    fn ctime(&self) -> QuackResult<SystemTime> {
+        // Returns `ChangeTime` from `$STANDARD_INFORMATION` attribute.
+        // Documentation:
+        // https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_basic_info
+        use std::os::windows::io::AsRawHandle;
+        use std::time::Duration;
+
+        use windows_sys::Win32::Storage::FileSystem::{
+            FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
+        };
+
+        let file =
+            File::open(self).with_context(|| format!("when opening `{}`", self.display()))?;
+        let handle = file.as_raw_handle();
+        let mut info = FILE_BASIC_INFO::default();
+
+        // SAFETY:
+        // - `handle` is a valid file handle borrowed from `file`, which isn't closed before the call,
+        // - `info` is a valid `FILE_BASIC_INFO`, therefore mutable pointers to it are valid for reads and writes,
+        //   and are properly aligned,
+        // - size is exactly `size_of::<FILE_BASIC_INFO>()` bytes,
+        // - `FileBasicInfo` is the valid class for `FILE_BASIC_INFO` struct,
+        // - OS ensures that `info` either is valid if the call succeeds, or isn't changed if the call fails.
+        //   Either way, it will be a valid `FILE_BASIC_INFO`.
+        let return_value = unsafe {
+            GetFileInformationByHandleEx(
+                handle,
+                FileBasicInfo,
+                &mut info as *mut _ as *mut _,
+                std::mem::size_of::<FILE_BASIC_INFO>() as u32,
+            )
+        };
+        if return_value == 0 {
+            return Err(std::io::Error::last_os_error()).with_context(|| {
+                format!("when getting file information for `{}`", self.display())
+            });
+        }
+
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_nanos(info.ChangeTime as u64))
     }
 }
 

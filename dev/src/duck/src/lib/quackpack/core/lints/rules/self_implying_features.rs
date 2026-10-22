@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Home of "feature pulls itself" lint.
 
 use crate::quackpack::core::Manifest;
@@ -35,9 +41,17 @@ features:
 
 /// Run the pass for [`LINT`].
 pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
+    let level = LINT.level;
+    if level == LintLevel::Allow {
+        return Ok(());
+    }
     for (feature, expands_to) in manifest.features().all_features() {
         if expands_to.contains(feature) {
-            buffer.register_warning(SelfImplyingFeatureDiagnostic { feature: *feature }, LINT);
+            buffer.register(
+                SelfImplyingFeatureDiagnostic { feature: *feature },
+                LINT,
+                level,
+            );
         }
     }
     Ok(())

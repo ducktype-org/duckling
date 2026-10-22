@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "lang_parser_context.hpp"
@@ -19,8 +25,6 @@ namespace pst {
 	 * @brief State used for parsing Duckling to PST
 	 */
 	class LangParserState final: public tpc::ParserState {
-		std::vector<ImportType> imports;
-
 		bool skip_till_fallback = false;  ///< Tells whether parser is currently skipping the
 		                                  ///< parsing steps to get back to fallback.
 		u64 skipped_entries_depth = 0;    ///< Keeps balance of skipped entries to new fallbacks.
@@ -99,22 +103,6 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		bool isFinalized() const;
-
-		/**
-		 * @brief Adds import to the list of imports.
-		 */
-		void addImport(const CRef<pst::Import>& import);
-
-		/**
-		 * @brief Extracts imports from state.
-		 *
-		 * @note Leaves State in an `illegal` state.
-		 */
-		[[nodiscard]]
-		auto extractState() && -> std::vector<ImportType> {
-			CORE_ASSERT(isFinalized(), "Parsing was not finalized before extracting imports");
-			return std::move(imports);
-		}
 
 		/**
 		 * @brief Do final checks that everything is parsed.
