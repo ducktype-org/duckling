@@ -1,0 +1,18 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add --local ../bar bar
+  @{duck-exe} -C foo add --local ../bar --alias bar2 bar
+
+Tests:
+  same-sources:
+    Description: emits errors about same source dependencies
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            error: normal dependency \`bar2\` has the same source as normal dependency \`bar\` [same sources]
+            error: emitted 1 error

@@ -24,15 +24,17 @@ impl Dependencies {
         Ok(Self(dependencies))
     }
 
-    /// Bail, if some dependencies have the same name.
+    /// Bail, if some dependencies have the same effective name.
     fn bail_if_has_duplicated_names(deps: &[Dependency]) -> QuackResult<()> {
         let mut seen_names = HashSet::new();
         for dep in deps {
             let kind = dep.kind();
-            let name = dep.name();
+            let name = dep.effective_name();
             let was_present = !seen_names.insert((kind, name));
             if was_present {
-                qp_bail!("multiple {kind} dependencies specify the same name `{name}`",)
+                qp_bail!(
+                    "multiple {kind} dependencies would be referenced by the same name `{name}`",
+                )
             }
         }
         Ok(())
