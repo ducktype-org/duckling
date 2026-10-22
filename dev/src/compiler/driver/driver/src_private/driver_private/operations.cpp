@@ -11,6 +11,7 @@
 #include <driver_private/lir_unit_with_name.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
@@ -89,6 +90,11 @@ namespace compiler::driver {
 	) {
 		const auto& hout_unit_qr = ctx.query<helios::QueryModuleHOUT>(module_id);
 		if (hout_unit_qr->hasFailed()) return query::Failed();
+
+		// The parser recovers from syntax errors to report as many of them as it can, so the code
+		// compiles nonetheless. It is still wrong, so no artifact may come out of it.
+		const auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
+		if (frontend::getFilePST(ctx, main_file)->getLogger()->bad()) return query::Failed();
 
 		auto module_str_id   = base::StrID(base::strConcat(
             "module_",

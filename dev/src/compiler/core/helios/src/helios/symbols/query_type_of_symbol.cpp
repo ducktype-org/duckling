@@ -20,6 +20,7 @@
 #include <helios/utils/main_return_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -218,26 +219,16 @@ namespace compiler::helios {
 				tsh::SymbolType<> iterable_type
 					= iterable_hout->valueOrThrow()->expression_type.getSymbolType();
 
-				auto iterable_kind = iterable_type.getType().getKind();
-				auto element_type  = [&]() -> base::Optional<tsh::SymbolType<>> {
-                    switch (iterable_kind) {
-                    case tsh::Kind::StaticArray:
-                        return iterable_type.getType()
-                            .as<tsh::StaticArrayAbstractType>()
-                            .getElementType();
-                    default:
-                        return {};
-                    }
-				}();
-				if (!element_type.has_value()) {
+				auto iterable_info = desugaring::getForIterableInfo(ctx, iterable_type);
+				if (!iterable_info.has_value()) {
 					// We don't log a NYI error here, since it's logged in the
 					// `desugaring::desugarFor()`.
 					setFailed();
 					return;
 				}
 
-				// First assume that the iterator is the same as the element type of the array.
-				tsh::SymbolType<> iter_type = element_type.value();
+				// First assume that the iterator is the same as the element type of the iterable.
+				tsh::SymbolType<> iter_type = iterable_info.value().element_type;
 
 				// Now look for the explicit type annotation which will potentially override the
 				// deduced type.

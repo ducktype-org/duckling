@@ -35,6 +35,7 @@
 #include <query_framework/query_result.hpp>
 
 #include <algorithm>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -101,6 +102,12 @@ namespace compiler::helios::code {
 		 * this "coercion ticket" to actually perform the coercion.
 		 */
 		std::vector<Coercion> coercions;
+
+		/**
+		 * Whether every argument keeps its type: it is only copied out of a reference, or only its
+		 * mutability changes. Such a candidate is preferred over the ones that convert an argument.
+		 */
+		bool keeps_argument_types;
 	};
 
 	struct NoMatch final {
@@ -235,9 +242,17 @@ namespace compiler::helios::code {
 
 
 		if (coercion_present) {
-			return CoercionMatch{ .function        = fun,
-				                  .argument_origin = std::move(argument_origin_final),
-				                  .coercions       = std::move(coercions_final) };
+			const bool keeps_argument_types
+				= std::ranges::all_of(coercions_final, [](const Coercion& coercion) {
+					  const auto to_ref_kind = coercion.to.getRefKind();
+					  return coercion.validated_from.getType() == coercion.to.getType()
+				          && (to_ref_kind == tsh::ReferenceKind::Direct
+				              || to_ref_kind == coercion.validated_from.getRefKind());
+				  });
+			return CoercionMatch{ .function             = fun,
+				                  .argument_origin      = std::move(argument_origin_final),
+				                  .coercions            = std::move(coercions_final),
+				                  .keeps_argument_types = keeps_argument_types };
 		}
 
 
@@ -590,6 +605,22 @@ namespace compiler::helios::code {
 		}
 
 		if (coercion_match.size() > 1) {
+			// E.g. `print(x)` for a `let x: i32`: `print(i32)` only copies `x`, while `print(i64)`
+			// also widens it. Without this both would be equally good and the call ambiguous.
+			auto type_keeping = coercion_match | std::views::filter([](const CoercionMatch& match) {
+									return match.keeps_argument_types;
+								});
+			if (std::ranges::distance(type_keeping) == 1) {
+				const auto& match = *type_keeping.begin();
+				return OverloadResolutionResult{
+					match.function,
+					match.argument_origin,
+					match.coercions,
+				};
+			}
+		}
+
+		if (coercion_match.size() > 1) {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
 				pst_origin.whole_call_origin.getStablePosition().value()
 			);
@@ -612,7 +643,7 @@ namespace compiler::helios::code {
 			));
 		} else {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getStablePosition().value()
+				pst_origin.whole_call_origin.getStablePosition().value(), true
 			);
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, false);
 			ctx.logInt(std::move(main_msg));

@@ -1618,6 +1618,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(Shl)
 			case IntegerShr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LShr)
+			case IntegerSShr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(AShr)
 			case IntegerBitNot:
 				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
 			case Cast: {

@@ -1,0 +1,30 @@
+# Invalid programs that used to crash the compiler, or to compile with exit code 0 despite the
+# reported error. Each one only has to be rejected with exit code 1.
+
+enable_conc_deterministic_tests: "false"
+
+PreCase: "mkdir -p @{case_build}"
+
+Run: "@{compile_llvm_backend_cmd}"
+
+Tests:
+  template_without_cmp: # The error is inside an instantiation of `exp.compare.cmp`.
+    Cases:
+      llvm:
+        ExitCode: 1
+  block_then_statement: # A block statement followed by another statement without a `;`.
+    Cases:
+      llvm:
+        ExitCode: 1
+  missing_semicolon: # The parser recovers, but the program is still invalid.
+    Cases:
+      llvm:
+        ExitCode: 1
+  single_stmt_body: # An `if` statement as the body of a `fun f() = ...` function.
+    Cases:
+      llvm:
+        ExitCode: 1
+  char_to_bool: # `char` does not coerce to `bool`.
+    Cases:
+      llvm:
+        ExitCode: 1

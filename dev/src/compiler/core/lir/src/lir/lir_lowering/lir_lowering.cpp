@@ -209,7 +209,7 @@ namespace compiler::lir {
 		case mir::Operation::IntegerShl:
 			return Operation::IntegerShl;
 		case mir::Operation::IntegerShr:
-			return Operation::IntegerShr;
+			return signed_version ? Operation::IntegerSShr : Operation::IntegerShr;
 		// Integer Comparison
 		case mir::Operation::IntegerLt:
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;

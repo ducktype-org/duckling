@@ -1,0 +1,85 @@
+import exp.compare.*;
+
+#{
+    Ordered by `priority`, highest first, through its own `cmp` method.
+#}
+class Task {
+    priority: i64;
+
+    fun cmp(other: const ref Task) -> bool = priority > other.priority;
+}
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun printSeparator() -> () = {
+    print("888\n");
+}
+
+fun numbersTest() -> () = {
+    let a = 1i64;
+    let b = 2i64;
+    printBool(cmp[i64](&a, &b)); # true
+    printBool(cmp[i64](&b, &a)); # false
+    printBool(cmp[i64](&a, &a)); # false
+
+    let x = -1i32;
+    let y = 3i32;
+    printBool(cmp[i32](&x, &y)); # true
+
+    let u = 7u8;
+    let v = 3u8;
+    printBool(cmp[u8](&u, &v)); # false
+
+    let f = 0.5f64;
+    let g = 0.25f64;
+    printBool(cmp[f64](&g, &f)); # true
+
+    let c = 'a';
+    let d = 'b';
+    printBool(cmp[char](&c, &d)); # true
+    printSeparator();
+}
+
+fun boolTest() -> () = {
+    let no  = false;
+    let yes = true;
+    printBool(cmp[bool](&no, &yes)); # true
+    printBool(cmp[bool](&yes, &no)); # false
+    printBool(cmp[bool](&yes, &yes)); # false
+    printSeparator();
+}
+
+fun stringsTest() -> () = {
+    let ab  = f"ab";
+    let abc = f"abc";
+    let b   = f"b";
+    printBool(cmp[String](&ab, &abc)); # true, a prefix comes first
+    printBool(cmp[String](&abc, &ab)); # false
+    printBool(cmp[String](&abc, &b));  # true
+    printBool(cmp[String](&ab, &ab));  # false
+
+    let s: str = "duck";
+    let t: str = "ducks";
+    printBool(cmp[str](&s, &t)); # true
+    printBool(cmp[str](&t, &s)); # false
+    printSeparator();
+}
+
+fun customTest() -> () = {
+    let low  = Task(1);
+    let high = Task(9);
+    printBool(cmp[Task](&high, &low)); # true, the higher priority comes first
+    printBool(cmp[Task](&low, &high)); # false
+    printSeparator();
+}
+
+fun main() -> i64 = {
+    numbersTest();
+    boolTest();
+    stringsTest();
+    customTest();
+    return 0;
+}

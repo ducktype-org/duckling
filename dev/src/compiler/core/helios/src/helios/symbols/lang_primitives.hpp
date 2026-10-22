@@ -37,8 +37,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	StringifySlice,
 	StringifyStaticArray,
 	BoxAlloc,
-	BoxFree
-	// List
+	BoxFree,
+
+	// Containers used by the `for` desugaring
+	List,
+	TemporaryRange
 	// PanicOutOfBounds
 )
 

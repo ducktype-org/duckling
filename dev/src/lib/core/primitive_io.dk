@@ -120,11 +120,12 @@ fun writeF64(x: f64) -> i64 = {
 # ------------------------------------------------------------------- readers ---
 
 #{
-    Consumes leading blanks (space, tab, newline) and returns the first non-blank character.
+    Consumes leading blanks (space, tab, newline, carriage return) and returns the first non-blank
+    character. The carriage return is there for input written on Windows, with "\r\n" newlines.
 #}
 fun skipBlanks() -> char = {
     var c = readChar();
-    while (c == ' ' or c == '\t' or c == '\n') c = readChar();
+    while (c == ' ' or c == '\t' or c == '\n' or c == '\r') c = readChar();
     return c;
 }
 
@@ -134,6 +135,8 @@ fun readI64() -> i64 = {
     if (c == '-') {
         negative = true;
         c        = readChar();
+    } else if (c == '+') {
+        c = readChar();
     }
 
     var value = 0i64;
@@ -147,7 +150,8 @@ fun readI64() -> i64 = {
 }
 
 fun readU64() -> u64 = {
-    var c     = skipBlanks();
+    var c = skipBlanks();
+    if (c == '+') c = readChar();
     var value = 0u64;
     while (c >= '0' and c <= '9') {
         value = value * 10u64 + (c as i64 - '0' as i64) as u64;
@@ -159,8 +163,10 @@ fun readU64() -> u64 = {
 fun readF64() -> f64 = {
     var buffer: containers.String;
     var c = readCharCode();
-    while (c == ' ' as i32 or c == '\t' as i32 or c == '\n' as i32) c = readCharCode();
-    while (c >= 0 and c != ' ' as i32 and c != '\t' as i32 and c != '\n' as i32) {
+    while (c == ' ' as i32 or c == '\t' as i32 or c == '\n' as i32 or c == '\r' as i32)
+        c = readCharCode();
+    while (c >= 0 and c != ' ' as i32 and c != '\t' as i32 and c != '\n' as i32
+           and c != '\r' as i32) {
         buffer.append(c as char);
         c = readCharCode();
     }

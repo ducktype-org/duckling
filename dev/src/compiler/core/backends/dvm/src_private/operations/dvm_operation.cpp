@@ -45,6 +45,9 @@ namespace {
         case IntegerBitXor: return OpKind::bitXor;
         case IntegerShl:    return OpKind::shl;
         case IntegerShr:    return OpKind::shr;
+        // @TODO: The DVM has no arithmetic shift yet, so a negative value is shifted
+        // logically there, unlike on LLVM and in compile-time evaluation.
+        case IntegerSShr:   return OpKind::shr;
 		case FloatAdd:    	return OpKind::fadd;
 		case FloatSub:    	return OpKind::fsub;
 		case FloatMul:    	return OpKind::fmul;
@@ -283,6 +286,7 @@ namespace compiler::backend_vm::internal {
 		case IntegerBitXor:
 		case IntegerShl:
 		case IntegerShr:
+		case IntegerSShr:
 		case FloatAdd:
 		case FloatSub:
 		case FloatMul:

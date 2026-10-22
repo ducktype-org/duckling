@@ -1,0 +1,6 @@
+fun sign(x: i64) -> i64 = if (x == 0) 0 else 1;
+
+fun main() -> i64 = {
+    print(sign(5));
+    return 0;
+}

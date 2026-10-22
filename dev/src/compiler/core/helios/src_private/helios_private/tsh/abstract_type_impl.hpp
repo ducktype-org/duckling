@@ -302,9 +302,11 @@ namespace compiler::tsh {
 		explicit ByteAbstractTypeImpl() { representation = "byte"; }
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow checking against null bytes.
-			return target.getKind() == Kind::Bool;
+		bool isImplicitlyCoercible(const AbstractType, query::Context&) const override {
+			// @TODO: #3631 Coercions to bool are temporarily disabled, like the numeric ones.
+			// `Coercion::coerce` has no lowering for them, and as an implicit candidate they
+			// made comparisons of `ref byte` operands ambiguous between the `==` overloads.
+			return false;
 		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
@@ -374,9 +376,11 @@ namespace compiler::tsh {
 		explicit CharAbstractTypeImpl() { representation = "char"; }
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow checking against null chars.
-			return target.getKind() == Kind::Bool;
+		bool isImplicitlyCoercible(const AbstractType, query::Context&) const override {
+			// @TODO: #3631 Coercions to bool are temporarily disabled, like the numeric ones.
+			// `Coercion::coerce` has no lowering for them, and as an implicit candidate they
+			// made e.g. `s.at(i) == c` ambiguous between the `==` overloads.
+			return false;
 		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }

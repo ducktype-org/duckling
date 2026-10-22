@@ -10,6 +10,8 @@ extern("C") {
 
     fundecl getchar() -> i32;
     fundecl putchar(c: i32) -> i32;
+    fundecl fflush(stream: cptr u8) -> i32;
+    fundecl write(fd: i32, buf: cptr char, count: u64) -> i64;
 
     fundecl strtod(nptr: cptr char, endptr: cptr cptr char) -> f64;
 

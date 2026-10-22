@@ -1,0 +1,40 @@
+# Programs in the style of competitive programming tasks: a single module with a `main`, using
+# `std`, `core` and `exp`. Each one used to fail to compile, crash the compiler or misbehave.
+
+Tests:
+  cp_expressions: # `..` precedence, `ref char` comparisons, `let` arguments, casts from references
+    Cases:
+      all:
+        Output:
+          String: "106\ntrue\ntrue\ntrue\n-7\nB\n5\n300\n44\n7\n"
+        ExitCode: 0
+
+  cp_signed_shift: # The DVM has no arithmetic shift yet, so only LLVM is checked.
+    Cases:
+      llvm:
+        Output:
+          String: "-5\n-1\n-5\n15\n"
+        ExitCode: 0
+
+  cp_io: # Windows newlines, a `+` sign, fixed-point float formatting
+    Cases:
+      all:
+        Input:
+          String: "first line\r\n+5 -3\r\n\r\n12\n"
+        Output:
+          String: "[first line]\n5\n-3\n12\n0.667\n-2\n0.000\n1234567.89\n"
+        ExitCode: 0
+
+  cp_panic_flush: # The output printed before a panic is not lost, the message goes to stderr.
+    NoParallel: true
+    Cases:
+      llvm:
+        # Exits with the program's exit code, but only when the message is on stderr.
+        Run: "@{compiled_to_llvm} 2> @{case_build}/stderr.txt; code=$?;
+          grep -q 'Program panicked!' @{case_build}/stderr.txt && exit $code"
+        Output:
+          String: "before\n"
+        ExitCode: 134
+
+SubDirs:
+  - compile_errors

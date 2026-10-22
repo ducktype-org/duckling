@@ -3,19 +3,28 @@ import core.clib;
 import core.runtime;
 
 fun panic() -> void = {
-    builtin_output_str("Program panicked!\n");
     return doPanic();
 }
 
 @backend_dependent
 fundecl doPanic() -> void;
 
+#{
+    `abort` drops whatever is still in the stdio buffers. When stdout is a file or a pipe that is
+    everything printed so far, so the buffers are flushed first. The message goes to stderr, so it
+    is not mixed into the program's output.
+#}
 @native_only_impl
 fun doPanic() -> void = {
+    var every_stream: cptr u8; # A null stream, for which `fflush` flushes all of them.
+    clib.fflush(every_stream);
+    let message = "Program panicked!\n";
+    clib.write(2, ptr_from_slice[char](message) as cptr char, message.length() as u64);
     return clib.abort();
 }
 
 @dvm_only_impl
 fun doPanic() -> void = {
+    builtin_output_str("Program panicked!\n");
     return runtime.dvm.abort();
 }
