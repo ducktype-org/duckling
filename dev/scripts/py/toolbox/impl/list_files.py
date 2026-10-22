@@ -20,6 +20,7 @@ def list_files_impl(
     no_merge_base: bool = False,
     lines: bool = False,
     include_untracked: bool = False,
+    filter_deleted: bool = False,
 ) -> list[str] | dict[str, list[tuple[int, int]]]:
     """
     List files in the repository based on the specified criteria.
@@ -34,13 +35,14 @@ def list_files_impl(
         include_untracked: If True, also list untracked files (counted as fully modified
                    when lines=True); if False, and with only_modified=True, only warn
                    that they were left out
+        filter_deleted: If True, exclude deleted files from the listing
 
     Returns:
         List of file paths relative to the current working directory when lines=False,
         or Dict mapping file paths to list of (start_line, end_line) tuples when lines=True
     """
     if not only_modified:
-        files = _get_all_tracked_files(extensions)
+        files = _get_all_tracked_files(extensions, filter_deleted)
         if include_untracked:
             files += _get_untracked_files(extensions)
         if lines:
@@ -51,15 +53,17 @@ def list_files_impl(
     else:
         if lines:
             return _get_modified_files_and_lines(
-                extensions, branch, no_merge_base, include_untracked
+                extensions, branch, no_merge_base, include_untracked, filter_deleted
             )
         else:
             return _get_modified_files(
-                extensions, branch, no_merge_base, include_untracked
+                extensions, branch, no_merge_base, include_untracked, filter_deleted
             )
 
 
-def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
+def _get_all_tracked_files(
+    extensions: list[str] | None = None, filter_deleted: bool = False
+) -> list[str]:
     """
     Get all tracked files below the current directory, relative to it.
 
@@ -69,6 +73,11 @@ def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
     files_str, _ = bash_command_get_output("git ls-files --cached")
     files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
 
+    if filter_deleted:
+        deleted_str, _ = bash_command_get_output("git ls-files --deleted")
+        deleted_files = set(deleted_str.splitlines())
+        files = [file for file in files if file not in deleted_files]
+
     return _filter_by_extensions(files, extensions)
 
 
@@ -77,11 +86,12 @@ def _get_modified_files(
     branch: str = "origin/main",
     no_merge_base: bool = False,
     include_untracked: bool = False,
+    filter_deleted: bool = False,
 ) -> list[str]:
     """Get modified files compared to the specified branch."""
     # Get the diff
     diff_out, _ = bash_command_get_output(
-        f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative"
+        f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative {'--diff-filter=d' if filter_deleted else ''}"
     )
     files = [f.strip() for f in diff_out.strip().split("\n") if f.strip()]
 
@@ -155,11 +165,12 @@ def _get_modified_files_and_lines(
     branch: str = "origin/main",
     no_merge_base: bool = False,
     include_untracked: bool = False,
+    filter_deleted: bool = False,
 ) -> dict[str, list[tuple[int, int]]]:
     """Get modified files and their line ranges compared to the specified branch."""
     # Get the diff with line ranges
     diff_out, _ = bash_command_get_output(
-        f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative"
+        f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative {'--diff-filter=d' if filter_deleted else ''}"
     )
     diff_lines = diff_out.splitlines()
 
