@@ -528,7 +528,7 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_module", "Compile given module into a binary.")
+			clah::Clah("compile_module", "Compile one module into backend object artifacts.")
 				.addPositional(clah::FileParser::make("module", true))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
@@ -614,7 +614,8 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah(
 				"compile_modules",
-				"Compile given modules into binaries. Every module is placed in its own package "
+				"Compile given modules into backend objects, optionally linking an executable. "
+				"Every module is placed in its own package "
 				"and every package depends on all the other ones. "
 				"This mimics the simple case of multi file compilation with GCC/clang which is "
 				"sometimes useful. Note that the package based entry points should be preferred "
@@ -861,7 +862,10 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_package", "Compile given package into a binary.")
+			clah::Clah(
+				"compile_package",
+				"Compile a package and optionally link an executable or library."
+			)
 				.addPositional(
 					clah::FileParser::make("path", true),
 					"Path to the root module of the package or the root module file."
@@ -1235,7 +1239,10 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
+			clah::Clah(
+				"compile_script",
+				"Compile a .dks script into backend objects, a .dbc package, or an executable."
+			)
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDumpIRParameter())

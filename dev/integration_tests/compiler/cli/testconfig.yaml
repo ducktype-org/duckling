@@ -98,6 +98,7 @@ Tests:
           --custom-std-artifacts-path @{case_std_artifacts}
           && test -s "@{case_build}/duck_debug_artifacts/artifact_name_short.inferred_name.hir"
           && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
+          && test ! -e @{case_build}/package_llvm.exe
           && test ! -e "$DIT_TMP_DIR/duck_build"
         ExitCode: 0
       explicit-artifact-directory-long:
@@ -122,6 +123,16 @@ Tests:
           --custom-std-artifacts-path @{case_std_artifacts}
           && test -s "$DIT_TMP_DIR/duck_build/duck_debug_artifacts/artifact_name_default.inferred_name.hir"
           && test -s "$(find "$DIT_TMP_DIR/duck_build" -type f -name '*.o' -print -quit)"
+        ExitCode: 0
+
+      dvm-object-artifact:
+        Run: >-
+          @{duckc_path} compile_module ./duck_modules/inferred_name/inferred_name.dk -O 0
+          --dvm-backend --no-incremental --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name '*.dbc' -print -quit)"
+          && test -s "$(find @{case_build} -type f -path '*/query/*' -name '*.dbc' -print -quit)"
+          && test ! -e @{case_build}/package_dvm.dbc
         ExitCode: 0
 
   compile-script-dump-ir:
