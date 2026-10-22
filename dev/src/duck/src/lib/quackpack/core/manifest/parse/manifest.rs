@@ -22,8 +22,9 @@ use crate::quackpack::core::{
     PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
-    Lints as LintsSchema, Manifest as ManifestSchema, Metadata as MetadataSchema,
-    OptLevel as SchemaOptLevel, Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
+    DuckLints as DuckLintsSchema, Lints as LintsSchema, Manifest as ManifestSchema,
+    Metadata as MetadataSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
+    VenvConfig as VenvConfigSchema,
 };
 use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
@@ -65,6 +66,14 @@ pub(crate) fn parse(
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
+
+    let lints = if let Some(lints) = schema.lints.as_ref() {
+        let guard = scope.push("lints".to_string());
+
+        parse_lints(lints, guard)?
+    } else {
+        Lints::default()
+    };
     match mode {
         ParseMode::FrontMatter { frontmatter_path } => {
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
@@ -102,7 +111,7 @@ pub(crate) fn parse(
                 profiles,
                 VenvConfig::default_for_script(ctx),
                 BuildOptions::default(),
-                Lints::default(),
+                lints,
             );
             Ok(manifest)
         }
@@ -149,15 +158,6 @@ pub(crate) fn parse(
             };
 
             let build_options = parse_build_options(metadata);
-            let lints = if let Some(lints) = metadata.lints.as_ref() {
-                let mut guard1 = scope.push("metadata".to_string());
-                let guard2 = guard1.push("lints".to_string());
-
-                parse_lints(lints, guard2)?
-            } else {
-                Lints::default()
-            };
-
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -274,6 +274,19 @@ fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
 
 /// Parse [`LintsSchema`] from the schema.
 fn parse_lints(input: &LintsSchema, mut scope: ScopeGuard<'_>) -> QuackResult<Lints> {
+    let duck_lints = if let Some(ref duck_lints) = input.duck {
+        let guard = scope.push("duck".into());
+        parse_duck_lints(duck_lints, guard)?
+    } else {
+        HashMap::default()
+    };
+    Ok(Lints { duck_lints })
+}
+
+fn parse_duck_lints(
+    input: &DuckLintsSchema,
+    mut scope: ScopeGuard<'_>,
+) -> QuackResult<HashMap<String, LintLevel>> {
     let overrides = input
         .0
         .iter()
@@ -283,7 +296,7 @@ fn parse_lints(input: &LintsSchema, mut scope: ScopeGuard<'_>) -> QuackResult<Li
             Ok((name.to_string(), level))
         })
         .collect::<QuackResult<_>>()?;
-    Ok(Lints::new(overrides))
+    Ok(overrides)
 }
 
 /// Parse a single lint level from [`LintsSchema`].

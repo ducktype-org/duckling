@@ -13,22 +13,15 @@ use crate::quackpack::core::lints::{Lint, LintLevel};
 #[derive(Debug, Clone, Default)]
 /// QuackPack's lints' configuration.
 pub struct Lints {
-    levels_by_name: HashMap<String, LintLevel>,
+    pub duck_lints: HashMap<String, LintLevel>,
 }
 
 impl Lints {
-    /// Create a new [`Lints`] with given [`LintLevel`]s overrides.
-    pub fn new(overrides: HashMap<String, LintLevel>) -> Self {
-        Self {
-            levels_by_name: overrides,
-        }
-    }
-
     /// Get the [`LintLevel`] for the given [`Lint`].
     ///
     /// If level was not overridden, the lint's default level is returned instead.
-    pub fn level_for_lint(&self, lint: &Lint) -> LintLevel {
-        self.levels_by_name
+    pub fn level_for_duck_lint(&self, lint: &Lint) -> LintLevel {
+        self.duck_lints
             .get(lint.name)
             .copied()
             .unwrap_or(lint.level)

@@ -37,6 +37,8 @@ pub struct Manifest {
     pub import: Option<PathBuf>,
     /// `venv:` root field.
     pub venv: Option<VenvConfig>,
+    /// Lints configuration.
+    pub lints: Option<Lints>,
 }
 
 impl Manifest {
@@ -47,6 +49,7 @@ impl Manifest {
             && self.dependencies.is_none()
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
+            && self.lints.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -84,8 +87,6 @@ pub struct Metadata {
     pub description: Option<String>,
     /// External library to link against.
     pub links: Option<String>,
-    /// Lints configuration.
-    pub lints: Option<Lints>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -436,11 +437,17 @@ pub struct VenvConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+/// Schema for configuring lints.
+pub struct Lints {
+    pub duck: Option<DuckLints>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
-/// Schema for configuring lints. Part of the `metadata.lints`.
+/// Schema for configuring duck lints. Maps to the `lints.duck`.
 ///
 /// Map is lint name -> lint level.
-pub struct Lints(pub HashMap<String, String>);
+pub struct DuckLints(pub HashMap<String, String>);
 
 #[cfg(test)]
 mod tests {

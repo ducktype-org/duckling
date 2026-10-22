@@ -48,7 +48,7 @@ dependencies:
 
 /// Run the pass for [`LINT`].
 pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let level = pcx.package().manifest().lints().level_for_lint(&LINT);
+    let level = pcx.package().manifest().lints().level_for_duck_lint(&LINT);
     if level == LintLevel::Allow {
         return Ok(());
     }
