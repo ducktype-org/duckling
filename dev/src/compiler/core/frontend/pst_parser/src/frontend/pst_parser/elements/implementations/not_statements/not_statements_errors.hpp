@@ -225,5 +225,4 @@ namespace pst {
 		OnlySimpleExpressionOrCodeBlockAllowed(dia::SourcePosition pos):
 			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
-
 }

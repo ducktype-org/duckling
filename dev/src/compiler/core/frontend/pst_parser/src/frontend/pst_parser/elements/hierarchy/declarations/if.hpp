@@ -8,8 +8,6 @@
 
 #include "preamble.hpp"
 
-#
-
 namespace pst {
 	/**
 	 * @brief If declaration
