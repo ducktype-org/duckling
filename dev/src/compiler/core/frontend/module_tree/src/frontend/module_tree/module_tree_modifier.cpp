@@ -29,7 +29,8 @@ namespace compiler::frontend {
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
 		);
-		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
+		module->m_main_source_file = SourceFile::create(file, module);
+		module->invalidateHash();
 		module->updateModuleHashFromRootToThis();
 	}
 
@@ -122,6 +123,7 @@ namespace compiler::frontend {
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
 		module->m_main_source_file = {};
+		module->invalidateHash();
 		module->updateModuleHashFromRootToThis();
 	}
 
@@ -239,7 +241,7 @@ namespace compiler::frontend {
 					"Submodule with Name ",
 					module->getName(),
 					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash(),
+					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
 					" does not exist in parent module ",
 					parent.value()->getName().strView()
 				)
@@ -283,7 +285,7 @@ namespace compiler::frontend {
 					"Submodule with Name ",
 					module->getName(),
 					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash(),
+					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
 					" does not exist in parent module ",
 					parent.value()->getName().strView()
 				)

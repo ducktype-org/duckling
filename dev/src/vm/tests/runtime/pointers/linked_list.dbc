@@ -1,0 +1,107 @@
+type pointer: LinkedList Node
+
+type data: Node {
+    head: i64,
+    tail: LinkedList
+}
+
+function cons { i64, LinkedList } -> { LinkedList } {
+    # ret0: result
+    # arg0: head
+    # arg1: tail
+
+    # using LinkedList = *Node
+
+    # ret0 = new Node()
+    alloc_pptr_type ret0, Node;
+
+    structStore_pptr_pany_field ret0, arg0, Node.head;
+
+    structStore_pptr_pany_field ret0, arg1, Node.tail;
+
+    ret;
+}
+
+# OPTIMISED!!!
+function tail {} -> { LinkedList } {
+    structLoad_pany_pptr_field ret0, ret0, Node.tail;
+
+    ret;
+}
+
+function print_list {LinkedList} -> {} {
+    # arg0: LinkedList
+
+    cmpNull_pptr arg0;
+    jmpIfNot_label non_empty;
+    ret;
+label non_empty;
+
+    init_pany_type curr, i64;
+
+    # curr = arg0->x
+    structLoad_pany_pptr_field curr, arg0, Node.head;
+
+    output_p64 curr;
+
+    deinit;  # curr
+    call_func tail;
+
+    retTailcall_func print_list;
+}
+
+function free_list {LinkedList} -> {} {
+    # arg0: LinkedList
+
+    cmpNull_pptr arg0;
+    jmpIfNot_label non_empty;
+    ret;
+label non_empty;
+
+    init_pany_type next, LinkedList;
+    mov_pptr_pptr next, arg0;
+    call_func tail;
+
+    call_func free_list;
+    free_pptr arg0;
+
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    # INPUT: n - list_length
+    #        x1 x2 ... xn - list elements
+    # OUTPUT: Inverted and concatenated elements
+
+    init_pany_type length, i64;
+    input_p64 length;
+
+    # list = []  # aka NULL
+    init_pany_type list, LinkedList;
+
+label loop_begin;
+    cmpEq_p64_imm length, 0;
+    jmpIf_label loop_end;
+
+    # curr = input()
+    init_pany_type curr, i64;
+    input_p64 curr;
+
+    # list = cons(curr, list)
+    init_pany_type tail, LinkedList;
+    mov_pptr_pptr tail, list;
+    call_func cons;
+
+    sub_p64_imm length, 1;
+
+    jmp_label loop_begin;
+label loop_end;
+
+    init_pany_type list2, LinkedList;
+    mov_pptr_pptr list2, list;
+
+    call_func print_list;
+    call_func free_list;
+
+    ret;
+}

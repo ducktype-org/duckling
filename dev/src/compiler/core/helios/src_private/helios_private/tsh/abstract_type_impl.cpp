@@ -8,6 +8,7 @@
 
 #include "queries.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -239,12 +240,12 @@ namespace compiler::tsh {
 		}
 
 		if (target.getKind() == Kind::Meta) {
-			// Tuples can be coerced to the Meta type if and only if their components
-			// can all be coerced to Meta type. Note that the components can have additional
-			// indirection and mutability specifiers (the component types are symbol
-			// types), but that's OK, we need only to check the abstract types underneath.
+			// Tuples can be coerced to the Meta type if and only if their components are direct
+			// values that can all be coerced to Meta type. A component behind a reference is
+			// rejected, as the type it refers to can always be copied into the tuple directly.
 			for (const auto& component: components)
-				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({
+				if (component.getRefKind() != ReferenceKind::Direct
+				    || !ctx.query<QueryImplicitCoercibilityOnAbstractType>({
 						component.getType(),
 						target,  //< target is the Meta type.
 					}))
@@ -302,8 +303,24 @@ namespace compiler::tsh {
 		);
 	}
 
-	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
-		  underlying_types(variant_types) {
+	VariantAbstractTypeImpl::VariantAbstractTypeImpl(
+		query::Context&                  ctx,
+		const std::vector<SymbolType<>>& variant_types,
+		const bool                       represents_optional
+	):
+		  underlying_types(variant_types),
+		  represents_optional(represents_optional) {
+		if (represents_optional) {
+			const AbstractType none_type = helios::getOptionalNoneType(ctx).getType();
+			CORE_ASSERT(
+				variant_types.size() == 2 and variant_types.front().getType() != none_type
+					and variant_types.back().getType() == none_type,
+				"An optional type has to consist of exactly one value type and the None type."
+			);
+			representation = "?" + getOptionalValueType().toString();
+			return;
+		}
+
 		// Variants are unordered; canonicalize the alternative order so that the runtime tag
 		// (= index into getUnderlyingTypes()) does not depend on construction order.
 		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
@@ -412,7 +429,11 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("Function type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
+		if (representsOptionalType())
+			return &ctx.query<QueryInterfaceOfOptional>(toAbstractType().as<VariantAbstractType>())
+			            ->valueOrThrow();
+
 		// A variant declares nothing of its own: it is reached through its alternatives, so its
 		// whole interface is the default one.
 		static TypeInterface empty{};

@@ -175,12 +175,15 @@ namespace compiler::frontend::packages {
 	 * @brief Resolve a RawPackageInfo into a PackageInfo by loading its module tree.
 	 * Pure — does not log; routes errors via @p report.
 	 * @param all_packages Vector of all available package infos, used to resolve dependencies.
+	 * @param override_root_module If given, used as the package's root module instead of loading
+	 * the module tree from @p package_info's path.
 	 * @return The loaded PackageInfo or empty if an error was reported.
 	 */
 	base::Optional<PackageInfo> createPackageInfo(
-		const RawPackageInfo&              package_info,
-		const std::vector<RawPackageInfo>& all_packages,
-		const DiagnosticReporter&          report
+		const RawPackageInfo&                        package_info,
+		const std::vector<RawPackageInfo>&           all_packages,
+		const DiagnosticReporter&                    report,
+		base::Optional<compiler::frontend::ModuleID> override_root_module = {}
 	);
 
 	/**

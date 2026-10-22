@@ -178,6 +178,7 @@ namespace compiler::helios {
 				case pst::ElementKind::If:
 				case pst::ElementKind::While:
 				case pst::ElementKind::For:
+				case pst::ElementKind::Const:
 					return false;
 
 				// For other elements we go up the PST tree:

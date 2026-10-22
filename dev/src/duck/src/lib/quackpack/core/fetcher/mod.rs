@@ -11,7 +11,7 @@
 //! [`GitClient`](git::GitClient).
 use std::cell::RefCell;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use tempfile::TempDir;
 use tracing::{debug, error, info};
@@ -51,15 +51,23 @@ pub struct Fetcher<'duck> {
     artifacts_cache_path: FileLockManager,
 }
 
+/// URL of the default Ducknest instance.
+/// It should be used only by [`DuckCfg::registry_url`] or tests (as it's the case during writing
+/// this comment; we don't (yet) have any fast paths for the _real_ default registry).
+///
+/// [`DuckCfg::registry_url`]: crate::duck::util::duck_cfg::DuckCfg::registry_url
+pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
+    "http://localhost:9001"
+        .parse()
+        .expect("compile time known value")
+});
+
 impl<'duck> Fetcher<'duck> {
     /// Filename of the default package's compressed source.
     const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
 
     /// Filename of the per-package lock.
     const PER_PACKAGE_LOCK: &'static str = ".duck.package.lock";
-
-    /// URL of the default Ducknest instance.
-    pub const DEFAULT_REGISTRY_URL: &'static str = "http://localhost:9001";
 
     /// Create a new [`Fetcher`].
     ///
@@ -84,7 +92,13 @@ impl<'duck> Fetcher<'duck> {
         );
         let http_client = Arc::new(AsyncHttpClient::new(ctx));
         let ducknest_client = ducknest::DucknestClient::new(http_client.clone());
-        let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
+        let cache_location = if cfg!(test) {
+            // For tests, we want to use in-memory database.
+            cache::CacheLocation::Memory
+        } else {
+            cache::CacheLocation::Path(metadata_path.as_path())
+        };
+        let cache = cache::ManifestCache::new(cache_location)?;
         let git_client = git::GitClient::new(ctx);
         let git_fastpath_client = git::fast_path::GitFastPathClient::new(http_client);
         Ok(Self {

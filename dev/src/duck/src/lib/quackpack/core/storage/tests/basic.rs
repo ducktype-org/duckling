@@ -8,7 +8,6 @@ use std::path::Path;
 
 use super::{registry_url_hash, setup_mock_storage};
 use crate::DuckContext;
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::freeze::{DepIdWithAlias, FreezePackage, VenvFreeze};
@@ -19,8 +18,7 @@ use crate::quackpack::core::storage::tests::{
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
-use crate::quackpack::core::{PackageLoader, Version};
-use crate::quackpack::util::to_url::ToUrl;
+use crate::quackpack::core::{PackageLoader, Version, fetcher};
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn check_venvs_exist(root: &Path, names: &[&str]) {
@@ -275,7 +273,7 @@ fn save_trims_files() {
     // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
     let number_of_new_packages = 5;
     for _ in 0..number_of_new_packages {
-        let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        let origin = FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone());
         let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
         let package =
             FreezePackage::new(mock_identity("dep"), Version::new(1, 0, 0), vec![], vec![]);

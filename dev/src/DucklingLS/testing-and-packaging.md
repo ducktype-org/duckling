@@ -66,20 +66,46 @@ To generate a `.vsix` file for your extension, follow these steps:
     npm install -g @vscode/vsce
     ```
 
-2. Package your extension. This command generates a `.vsix` file in your current directory. You can optionally specify a name for the output file using `--out`.
+2. Install the dependencies and package the extension. `vsce package` runs the `vscode:prepublish` script,
+   which compiles the client, then writes a `.vsix` file to the current directory.
 
     ```bash
+    npm install
     vsce package
     # Optionally, specify the output file name
     vsce package --out my-extension.vsix
     ```
 
-## Publishing Your Extension
-
-After packaging your extension, you can publish it to the Visual Studio Code Marketplace:
-
-1. Run the following command to publish your extension. Ensure you're logged in to `vsce` with your publisher account.
+3. Check the packaged files with `vsce ls --tree` and test the package locally:
 
     ```bash
-    vsce publish
+    code --install-extension duckling-language-support-<version>.vsix
     ```
+
+The package does not contain `duck_ls`. Users have to install it separately (see `DucklingLanguageSupport.executablePath`).
+
+## Publishing Your Extension
+
+The extension is published under the `DuckType` publisher (the `publisher` field in `package.json`).
+
+1. Get access to the `DuckType` publisher at https://marketplace.visualstudio.com/manage (or create it there).
+2. Create a Personal Access Token in Azure DevOps (https://dev.azure.com, User settings → Personal access tokens)
+   with organization `All accessible organizations` and the `Marketplace → Manage` scope.
+3. Log in and publish. A version can be published only once, so bump `version` in `package.json` first, or let
+   `vsce` do it (it also creates a git commit and tag):
+
+    ```bash
+    vsce login DuckType
+    vsce publish
+    # or bump the version while publishing
+    vsce publish patch
+    # or publish an already packaged file
+    vsce publish --packagePath duckling-language-support-<version>.vsix
+    ```
+
+To publish to Open VSX (VSCodium, Cursor and other VS Code forks), create a token at https://open-vsx.org and run:
+
+```bash
+npx ovsx create-namespace DuckType -p <token>   # only once
+npx ovsx publish duckling-language-support-<version>.vsix -p <token>
+```

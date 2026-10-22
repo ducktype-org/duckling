@@ -13,7 +13,6 @@ use chrono::Utc;
 use tempfile::TempDir;
 
 use crate::DuckContext;
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::freeze::{
@@ -22,10 +21,11 @@ use crate::quackpack::core::storage::freeze::{
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::{PackageContext, PackageLoader, Version, storage_name_for_registry};
+use crate::quackpack::core::{
+    PackageContext, PackageLoader, Version, fetcher, storage_name_for_registry,
+};
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
-use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -33,7 +33,7 @@ mod basic;
 mod concurrent;
 
 fn registry_url_hash() -> String {
-    let url = Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap();
+    let url = &*fetcher::DEFAULT_REGISTRY_URL;
     crate::util::hash::sha256_string(url.host_str().unwrap())
 }
 
@@ -79,7 +79,7 @@ fn setup_mock_packages(root: &Path) {
             .join(storage_name_for_registry(
                 name,
                 Version::new(1, 0, 0),
-                Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap().into(),
+                fetcher::DEFAULT_REGISTRY_URL.clone().into(),
             ))
             .join("src")
             .join("main.duck")
@@ -125,8 +125,8 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         ctx,
     );
 
-    let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let origin = FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone());
+    let simple_origin = Origin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone());
     let mock_simple_dep_identity =
         |name: &str| DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin));
     let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);

@@ -6,6 +6,8 @@
 
 #include "repl_split_helpers.hpp"
 
+#include "repl_statement_helpers.hpp"
+
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -53,7 +55,9 @@ namespace compiler::repl {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
-		builder->setName(base::StrID("repl_probe"));
+		builder->setName(base::StrID(
+			base::strConcat("repl_probe_", std::to_string(ReplSessionID::next().asInt()))
+		));
 		builder->setReplModule(frontend::ReplData{});
 		return builder->finalize();
 	}

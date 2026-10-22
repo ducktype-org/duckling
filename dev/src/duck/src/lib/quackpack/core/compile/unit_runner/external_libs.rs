@@ -13,8 +13,8 @@ use std::ops::ControlFlow;
 use tracing::instrument;
 
 use crate::quackpack::core::compile::unit::Unit;
-use crate::quackpack::core::compile::unit::graph::UnitGraph;
-use crate::quackpack::core::compile::unit::unit_visitor::UnitVisitor;
+use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph, UnitGraphNode};
+use crate::quackpack::core::compile::unit::graph_visitor::GraphVisitor;
 use crate::{QuackResult, StrId, qp_bail};
 
 #[derive(Debug)]
@@ -42,13 +42,19 @@ pub struct ExternalLibrariesFound {
 /// This function returns _any_ [`Unit`] with external library, if there is one.
 ///
 /// In case there are multiple such [`Unit`]s, it's not guaranteed which one is returned.
-pub fn has_external_libraries(unit: &Unit, graph: &UnitGraph) -> Option<ExternalLibrariesFound> {
+pub fn has_external_libraries(
+    unit_graph_id: GraphNodeId,
+    graph: &UnitGraph,
+) -> Option<ExternalLibrariesFound> {
     struct ExternalLibsVisitor;
 
-    impl UnitVisitor for ExternalLibsVisitor {
+    impl GraphVisitor for ExternalLibsVisitor {
         type Break = ExternalLibrariesFound;
 
-        fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
+        fn visit(&mut self, node: &UnitGraphNode) -> ControlFlow<Self::Break> {
+            let Some(unit) = node.as_unit() else {
+                return ControlFlow::Continue(());
+            };
             let links = &unit.package().manifest().build_options().links;
             match links {
                 Some(links) => ControlFlow::Break(ExternalLibrariesFound {
@@ -59,22 +65,30 @@ pub fn has_external_libraries(unit: &Unit, graph: &UnitGraph) -> Option<External
             }
         }
     }
-    unit.accept(&mut ExternalLibsVisitor {}, graph)
+    graph
+        .node_for(unit_graph_id)
+        .accept(&mut ExternalLibsVisitor {}, graph)
 }
 
 #[instrument(skip_all)]
 /// Validate external libraries against which we are linking.
 /// Right now this checks for duplicates of the same library.
-pub fn validate_external_libraries(unit: &Unit, graph: &UnitGraph) -> QuackResult<()> {
+pub fn validate_external_libraries(
+    unit_graph_id: GraphNodeId,
+    graph: &UnitGraph,
+) -> QuackResult<()> {
     #[derive(Default)]
     /// Map external lib -> Unit linking with it.
     struct DuplicateLibsVisitor(HashMap<StrId, Unit>);
 
-    impl UnitVisitor for DuplicateLibsVisitor {
+    impl GraphVisitor for DuplicateLibsVisitor {
         /// (Dup A, Dup B, What)
         type Break = (Unit, Unit, StrId);
 
-        fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
+        fn visit(&mut self, node: &UnitGraphNode) -> ControlFlow<Self::Break> {
+            let Some(unit) = node.as_unit() else {
+                return ControlFlow::Continue(());
+            };
             let links = unit
                 .package()
                 .manifest()
@@ -94,27 +108,31 @@ pub fn validate_external_libraries(unit: &Unit, graph: &UnitGraph) -> QuackResul
             ControlFlow::Break((previous.clone(), unit.clone(), links))
         }
     }
+    let unit = graph.node_for(unit_graph_id);
     let Some((dup_a, dup_b, links)) = unit.accept(&mut DuplicateLibsVisitor::default(), graph)
     else {
         return Ok(());
     };
     qp_bail!(
         "two different packages {} and {} both link against external library `{links}`",
-        dup_a.descriptive_name(),
-        dup_b.descriptive_name()
+        dup_a.pkg_descriptive_name(),
+        dup_b.pkg_descriptive_name()
     )
 }
 
 #[instrument(skip_all)]
-/// Gather all external libraries of the subgraph rooted ad `unit`.
-pub fn gather_external_libraries(unit: &Unit, graph: &UnitGraph) -> Vec<StrId> {
+/// Gather all external libraries of the subgraph rooted at a given node in the [`UnitGraph`].
+pub fn gather_external_libraries(unit_graph_id: GraphNodeId, graph: &UnitGraph) -> Vec<StrId> {
     #[derive(Default)]
     struct ExternalLibsCollector(Vec<StrId>);
 
-    impl UnitVisitor for ExternalLibsCollector {
+    impl GraphVisitor for ExternalLibsCollector {
         type Break = Infallible;
 
-        fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
+        fn visit(&mut self, node: &UnitGraphNode) -> ControlFlow<Self::Break> {
+            let Some(unit) = node.as_unit() else {
+                return ControlFlow::Continue(());
+            };
             let links = unit
                 .package()
                 .manifest()
@@ -129,6 +147,7 @@ pub fn gather_external_libraries(unit: &Unit, graph: &UnitGraph) -> Vec<StrId> {
         }
     }
     let mut visitor = ExternalLibsCollector::default();
-    unit.accept(&mut visitor, graph);
+    let node = graph.node_for(unit_graph_id);
+    node.accept(&mut visitor, graph);
     visitor.0
 }
