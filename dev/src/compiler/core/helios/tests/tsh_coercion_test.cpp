@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(typeCoercionErrors);
 		TESTER_ADD_TEST(ownership);
 		TESTER_ADD_TEST(tupleLiterals);
+		TESTER_ADD_TEST(implicitRefOf);
 	}
 
 private:
@@ -87,6 +88,20 @@ private:
 			);
 		}
 
+		const ReferenceCoercion ref_of{ .adjustment        = RefOf,
+			                            .creates_new_value = false,
+			                            .points_to_source  = true };
+		for (const auto& [from, into, expected]: table) {
+			const ReferenceCoercion found
+				= referenceCoercionRule(from, into, CoercionMode::ImplicitRefOf);
+			const bool takes_ref = from != Ref && into == Ref;
+			assertEqual(
+				takes_ref ? ref_of : expected,
+				found,
+				base::strConcat("Implicit ref of is `", found.toString(), "`.")
+			);
+		}
+
 		ASSERT_EQUAL(
 			referenceCoercionRule(Ref, Direct),
 			plan("ref i32", "i64").succeeds().get().referenceCoercion()
@@ -103,14 +118,21 @@ private:
 			referenceCoercionRule(Box, Box),
 			plan("box i32", "box i32").succeeds().get().referenceCoercion()
 		);
+		ASSERT_EQUAL(
+			ref_of,
+			plan("box i32", "ref i32", CoercionMode::ImplicitRefOf)
+				.succeeds()
+				.get()
+				.referenceCoercion()
+		);
 	}
 
 	void coercionRanks() {
 		using enum Rank;
 
 		const std::vector<Rank> best_to_worst{
-			Identity,   MutabilityChange, Deref,     Numeric,    VariantPack,
-			LiftToType, UserConversion,   ZeroCheck, RetypeVoid,
+			Identity,    MutabilityChange, RefOf,          Deref,     Numeric,
+			VariantPack, LiftToType,       UserConversion, ZeroCheck, RetypeVoid,
 		};
 		for (usize i = 1; i < best_to_worst.size(); i++) {
 			const CoercionRank better = CoercionRank::of(best_to_worst[i - 1]);
@@ -134,6 +156,7 @@ private:
 		plan("box i32", "box i32").succeeds().ranks(Identity);
 		plan("(const i32, i32)", "(i32, i32)").succeeds().ranks(MutabilityChange);
 		plan(mutable_pointer, immutable_pointer).succeeds().ranks(MutabilityChange);
+		plan("i32", "ref i32", CoercionMode::ImplicitRefOf).succeeds().ranks(RefOf);
 		plan("box i32", "i32").succeeds().ranks(Deref);
 		plan("ref i32", "i64").succeeds().ranks(Numeric);
 		plan("(i32, i32)", "(i64, i64)").succeeds().ranks(Numeric);
@@ -513,6 +536,45 @@ private:
 		nested.part(1).part(1).steps({});
 
 		coerce("(1i32, x)", "(i32, i32)").succeeds().steps({});
+	}
+
+	void implicitRefOf() {
+		using namespace coercion_error;
+		using enum CoercionMode;
+
+		// Only the mode allows taking a value by `ref`.
+		plan("i32", "ref i32").refuses().because<IncompatibleTypes>();
+		plan("box i32", "ref i32").refuses().because<IncompatibleTypes>();
+		plan("i32", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		plan("box i32", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		plan("Owner", "ref Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
+
+		// A `ref` is kept as it is.
+		plan("ref i32", "ref i32", ImplicitRefOf).succeeds().steps({});
+
+		// The mode only allows more, every other coercion stays the same.
+		plan("i32", "i64", ImplicitRefOf).succeeds().steps({ NUMERIC });
+		plan("box i32", "i32", ImplicitRefOf).succeeds().steps({ DEREF });
+		plan("box i32", "box i32", ImplicitRefOf).succeeds().steps({ HAND_OVER });
+
+		// Nothing converts behind the reference that was taken.
+		plan("i32", "ref i64", ImplicitRefOf)
+			.refuses()
+			.because<IncompatibleTypes>()
+			.aboutTheWholeCoercion();
+		plan("(i32, i32)", "(ref i32, i32)", ImplicitRefOf)
+			.refuses()
+			.because<SubPartRefused>()
+			.component(0)
+			.because<IncompatibleTypes>();
+
+		// The value is not handed over, so no ownership is needed for it.
+		coerce("x", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("b", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("o", "ref Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("global_box", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("makeOwner()", "ref Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("r", "ref (box i32, i32)", ImplicitRefOf).succeeds().steps({});
 	}
 };
 

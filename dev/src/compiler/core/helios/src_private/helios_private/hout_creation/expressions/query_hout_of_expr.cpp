@@ -374,6 +374,14 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				if (op->unwrap() == lang_def::NamedOperator::QuestionMark
+				    and inner_type.getType().getKind() == tsh::Kind::Meta) {
+					node = makeBox<OptionalTypeConstructorExpr>(
+						ctx, pstOrigin(stmt), std::move(inner)
+					);
+					return;
+				}
+
 				// Handle taking pointers. Unlike `&`, `ptrof` keeps the reference kind of the
 				// operand, so `ptrof` of a `box T` place is a `ptr box T` addressing the box itself.
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Ptrof)) {
