@@ -190,6 +190,14 @@ Tests:
           && awk '/4242/ && !first { first = NR } /1234/ && !second { second = NR } /7777/ && !third { third = NR } END { exit !(first && second && third && first < second && second < third) }' "$hir_dump"
         ExitCode: 0
 
+  dump-ir-help:
+    Cases:
+      artifact-extensions:
+        Run: >-
+          @{duckc_path} compile_module --help
+          | grep -F 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc)'
+        ExitCode: 0
+
   compile-package-inferred-name:
     # Without -n, compile_package names the package after its directory or root module file.
     # The package id is the prefix of the dumped IR file name, so check that file exists.

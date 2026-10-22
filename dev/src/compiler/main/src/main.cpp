@@ -425,9 +425,9 @@ namespace debug_options {
 		    .addLongName("dump-ir")
 		    .addShortDesc("Dump HIR, MIR, LIR, LLVM IR, assembly, or DVM bytecode output to a file.")
 		    .addLongDesc(
-				"Supported categories are hir, mir, lir, llvm, asm, and dbc. The dbc category "
-		        "requires "
-				"--dvm-backend."
+				"Supported categories and artifact extensions, in compilation order, are "
+				"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
+				"LLVM IR and assembly require the LLVM backend; DBC requires --dvm-backend."
 			)
 		    .build();
 	}
