@@ -46,7 +46,7 @@ impl Duckc {
         Ok(DUCKC_VERSION.get_or_init(|| DuckcVersion::new(stdout)))
     }
 
-    /// Helper for et the verbose version of `duckc` (the result of `duckc --version-verbose`).
+    /// Helper for the verbose version of `duckc` (the result of `duckc --version-verbose`).
     fn get_version_impl(ctx: &DuckContext) -> QuackResult<String> {
         let this = Self::new(ctx);
         let output = this.process_builder().ask_for_verbose_version().output()?;
