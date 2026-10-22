@@ -32,7 +32,7 @@ pub struct BuildData {
     /// Time of the end of the build. If yet unknown (the build is ongoing), set to UNIX epoch.
     build_end: DateTime<Utc>,
     /// Hash of the version of `duckc` used in the build.
-    /// It is important to use the verbose version, so thatfor example changing LLVM version forces recompilation in the incremental setting.
+    /// It is important to use the verbose version, so that for example changing LLVM version forces recompilation in the incremental setting.
     duckc_version_hash: String,
     /// Unit graph of the build (in an easily serializable version).
     unit_graph: SerializableUnitGraph,
