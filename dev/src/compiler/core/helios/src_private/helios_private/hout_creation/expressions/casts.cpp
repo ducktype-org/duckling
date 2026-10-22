@@ -55,6 +55,8 @@ namespace compiler::helios::code {
 		auto coercion = canCoerce(ctx, value->expression_type, to).valueOrThrow();
 		if (coercion.isValid()) {
 			auto coerced = coercion.coerce(ctx, std::move(value));
+
+			// @TODO: #3853 go back to this once defined
 			if (coerced->expression_type.getSymbolType() != to)
 				return cast_expr(std::move(coerced));
 			return coerced;
@@ -74,6 +76,9 @@ namespace compiler::helios::code {
 		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
 		    && from.getRefKind() == ReferenceKind::Direct
 		    && to.getRefKind() == ReferenceKind::Direct)
+			return cast_expr(std::move(value));
+
+		if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
 			return cast_expr(std::move(value));
 
 		struct CastPattern {

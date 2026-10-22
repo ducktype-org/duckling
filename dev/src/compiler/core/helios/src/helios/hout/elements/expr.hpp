@@ -496,7 +496,7 @@ namespace compiler::helios::code {
 	 * @brief Optional type constructor `?T` inside an expression. It creates the optional type
 	 * holding @p value_type, which is a special variant of `T` and `None`.
 	 */
-	struct OptionalTypeConstructorExpr: public Expr {
+	struct OptionalTypeConstructorExpr final: public Expr {
 		base::Box<Expr> value_type;
 
 		OptionalTypeConstructorExpr(
