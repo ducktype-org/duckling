@@ -96,6 +96,7 @@ namespace coercion_testing {
 	inline constexpr std::string_view HAND_OVER         = coercion_step::HandOver::NAME;
 	inline constexpr std::string_view IMPLICIT_MOVE     = coercion_step::ImplicitMove::NAME;
 	inline constexpr std::string_view MUTABILITY_CHANGE = coercion_step::MutabilityChange::NAME;
+	inline constexpr std::string_view REF_OF            = coercion_step::RefOf::NAME;
 	inline constexpr std::string_view NUMERIC           = coercion_step::Numeric::NAME;
 	inline constexpr std::string_view ZERO_CHECK        = coercion_step::ZeroCheck::NAME;
 	inline constexpr std::string_view LIFT_TO_TYPE      = coercion_step::LiftToType::NAME;
@@ -363,7 +364,9 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		 * A tuple literal is described part by part, like the caller of `coercionOf` describes it.
 		 */
 		[[nodiscard]] CoercionCheck coerce(
-			const std::string_view value, const std::string_view into
+			const std::string_view value,
+			const std::string_view into,
+			const CoercionMode     mode = CoercionMode::Default
 		) {
 			const std::string function = base::strConcat(
 				"fun coercion_case(into: ",
@@ -383,7 +386,9 @@ var global_pair: (box i32, i32) = (new 1, 2);
 				return CoercionCheck{
 					*this,
 					base::strConcat("`", value, "` into `", into, "`"),
-					inContext([&](query::Context& ctx) { return coercionOf(ctx, source, target); }),
+					inContext([&](query::Context& ctx) {
+						return coercionOf(ctx, source, target, mode);
+					}),
 					target,
 				};
 			});
@@ -414,7 +419,11 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		/**
 		 * @brief The plan between the types @p from and @p into, written in one module.
 		 */
-		[[nodiscard]] CoercionCheck plan(const std::string_view from, const std::string_view into) {
+		[[nodiscard]] CoercionCheck plan(
+			const std::string_view from,
+			const std::string_view into,
+			const CoercionMode     mode = CoercionMode::Default
+		) {
 			const std::string function
 				= base::strConcat("fun coercion_case(from: ", from, ", into: ", into, ") = {\n}\n");
 			return compiled(function, [&](const compiler::helios::ScopeID body) {
@@ -423,7 +432,8 @@ var global_pair: (box i32, i32) = (new 1, 2);
 				return planned(
 					getSymbolTypeOf("from", body),
 					getSymbolTypeOf("into", body),
-					base::strConcat("`", from, "` into `", into, "`")
+					base::strConcat("`", from, "` into `", into, "`"),
+					mode
 				);
 			});
 		}
@@ -451,13 +461,18 @@ var global_pair: (box i32, i32) = (new 1, 2);
 
 	private:
 		[[nodiscard]] CoercionCheck planned(
-			const SymbolType<>& from, const SymbolType<>& into, const std::string& description
+			const SymbolType<>& from,
+			const SymbolType<>& into,
+			const std::string&  description,
+			const CoercionMode  mode = CoercionMode::Default
 		) {
 			return {
 				*this,
 				description,
 				inContext([&](query::Context& ctx) {
-					return SymbolTypeCoercion{ *ctx.query<QuerySymbolTypeCoercion>({ from, into }) };
+					return SymbolTypeCoercion{
+						*ctx.query<QuerySymbolTypeCoercion>({ from, into, mode })
+					};
 				}),
 				into,
 			};
