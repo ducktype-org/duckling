@@ -172,4 +172,41 @@ namespace pst {
 			addArgument<dia::TextArgument>("operator", std::move(op));
 		}
 	};
+
+	class SimpleExpressionNotAttributeAllowed final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "simple_expr_not_attribute" };
+		}
+
+	public:
+		SimpleExpressionNotAttributeAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	class SimpleExpressionNotSpecifierAllowed final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "simple_expr_not_specifier" };
+		}
+
+	public:
+		SimpleExpressionNotSpecifierAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	class SimpleExpressionNotStatementAllowed final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "simple_expr_not_statement" };
+		}
+
+	public:
+		SimpleExpressionNotStatementAllowed(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
 }

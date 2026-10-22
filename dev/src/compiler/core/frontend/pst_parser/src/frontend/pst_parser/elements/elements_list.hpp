@@ -26,6 +26,8 @@ namespace pst {
 	class CallArgument;
 	class CodeBlock;
 	class CodeBlockOrStmt;
+	class CodeBlockOrAnyStmt;
+	class CodeBlockOrExpr;
 	class StmtSpecifier;
 	class RoundGroupExpr;
 	class ExprElement;

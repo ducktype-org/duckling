@@ -8,6 +8,8 @@
 
 #include "preamble.hpp"
 
+#
+
 namespace pst {
 	/**
 	 * @brief If declaration
@@ -22,8 +24,8 @@ namespace pst {
 	protected:
 		NAMED_CHILD(condition, RoundGroupExpr);
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
-		NAMED_CHILD(then_body, CodeBlockOrStmt);
-		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
+		NAMED_CHILD(then_body, CodeBlockOrAnyStmt);
+		NAMED_CHILD_OPT(else_body, CodeBlockOrAnyStmt);
 		bool is_const = false;
 
 	protected:

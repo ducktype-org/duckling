@@ -17,8 +17,12 @@ namespace pst {
 	/**
 	 * @brief Code Block or Statement.
 	 */
-	class CodeBlockOrStmt final: public NotStmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CodeBlockOrStmt, NotStmt);
+	class CodeBlockOrStmt: public NotStmt {
+	public:
+		ELEMENT_CLONE_DECL(CodeBlockOrStmt);
+	private:
+		THIS_CLASS(CodeBlockOrStmt);
+		PARENT_CLASS(NotStmt);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -32,8 +36,6 @@ namespace pst {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
 
-		static MBox<CodeBlockOrStmt> parse(LangParserState& state);
-		~CodeBlockOrStmt() final = default;
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 

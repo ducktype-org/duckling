@@ -20,7 +20,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr); // Only expression allowed as statement
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);

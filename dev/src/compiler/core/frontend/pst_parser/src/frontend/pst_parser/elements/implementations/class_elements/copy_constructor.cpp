@@ -6,7 +6,7 @@
 
 #include "../../hierarchy/class_elements/copy_constructor.hpp"
 
-#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_expr.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
@@ -28,7 +28,7 @@ namespace pst {
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
 			state.setContextStmt(StmtContext::Normal);
-			PARSE().all(NamedOperator::Assign, &out->body);
+			PARSE().one(NamedOperator::Assign).with(&out->body, CodeBlockOrStmt::parseAllowOnlyExpression);
 		})
 
 		PST_RETURN out;
