@@ -64,7 +64,6 @@ pub struct Lint {
     /// give a reason why it's bad.
     pub description: &'static str,
     /// The default level of this lint.
-    // Adding it as a member, since in the future maybe we want to configure levels.
     pub level: LintLevel,
 }
 
