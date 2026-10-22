@@ -597,7 +597,9 @@ namespace compiler::driver {
 			return merged;
 		}
 
-		base::OkBad compileScriptToLLVMExecutable(const linker::LinkingOptions& linking_options) {
+		base::OkBad compileScriptToLLVMExecutable(
+			const linker::LinkingOptions& linking_options, bool link_executable
+		) {
 			auto& script_context = global_state::getScriptContext();
 
 			base::Optional<std::string> error_message;
@@ -646,6 +648,8 @@ namespace compiler::driver {
 					);
 				}
 
+				if (!link_executable) return;
+
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(output_name.c_str())
@@ -675,7 +679,9 @@ namespace compiler::driver {
 			return base::OK;
 		}
 
-		base::OkBad compileScriptToDVMBytecode(const DVMLinkingOptions& linking_options) {
+		base::OkBad compileScriptToDVMBytecode(
+			const DVMLinkingOptions& linking_options, bool link_executable
+		) {
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto script_lir = compileScriptToLIRModuleData(ctx);
@@ -704,6 +710,8 @@ namespace compiler::driver {
 
 				vm::code::serializeCode(dvm_module.code, module_output_file);
 				module_output_file.close();
+
+				if (!link_executable) return;
 
 				auto& script_context = global_state::getScriptContext();
 				auto  output_file    = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -737,16 +745,17 @@ namespace compiler::driver {
 	base::OkBad compileScript(
 		BackendType                          backend_type,
 		const options_types::StdLibOptions&  std_lib_opts,
-		const options_types::LinkingOptions& linking_opts
+		const options_types::LinkingOptions& linking_opts,
+		bool                                 link_executable
 	) {
 		switch (backend_type) {
 		case BackendType::LLVM:
 			return compileScriptToLLVMExecutable(
-				constructNativeLinkerOptions(linking_opts, std_lib_opts)
+				constructNativeLinkerOptions(linking_opts, std_lib_opts), link_executable
 			);
 		case BackendType::DVM:
 			return compileScriptToDVMBytecode(
-				constructDVMLinkingOptions(linking_opts, std_lib_opts, false)
+				constructDVMLinkingOptions(linking_opts, std_lib_opts, false), link_executable
 			);
 		default:
 			CORE_PANIC("bad backend type");

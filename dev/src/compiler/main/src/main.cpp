@@ -393,6 +393,13 @@ namespace debug_options {
 		    .build();
 	}
 
+	auto getClahNoExecutableParameter() {
+		return clah::ParamBuilder::ofFlag()
+		    .addLongName("no-executable")
+		    .addShortDesc("Compile source and requested outputs without linking a final executable.")
+		    .build();
+	}
+
 	/**
 	 * @brief Return the array of clah::Parameter for the debug options of the driver, which can be
 	 * added to a Clah instance.
@@ -641,10 +648,7 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-executable")
-	                     .addShortDesc("Compile all modules without linking an executable.")
-	                     .build())
+				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-incremental")
 	                     .addShortDesc(
@@ -1236,6 +1240,7 @@ clah::Clah getClahForMain() {
 							 "Compile to DVM bytecode (.dbc) instead of a native executable."
 						 )
 	                     .build())
+				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
 	                     .addLongName("workers")
@@ -1281,7 +1286,10 @@ clah::Clah getClahForMain() {
 					}
 
 					auto result = driver::compileScript(
-						backend_type, stdlib_options, getLinkingOptionsFromClah(options)
+						backend_type,
+						stdlib_options,
+						getLinkingOptionsFromClah(options),
+						!options.isFlag("no-executable")
 					);
 
 					compiler::driver::exit();

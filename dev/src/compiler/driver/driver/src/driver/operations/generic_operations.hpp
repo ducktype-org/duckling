@@ -82,11 +82,15 @@ namespace compiler::driver {
 	 * @param backend_type  Whether to use DVM or LLVM backend.
 	 * @param std_lib_opts  Standard library configuration.
 	 * @param linking_opts  Linking configuration.
+	 * @param link_executable Whether to link the final executable/DBC package. When false, keep
+	 *                        the generated LLVM object or DVM bytecode object in the artifact
+	 *                        directory and skip the final link step.
 	 */
 	base::OkBad compileScript(
 		BackendType                          backend_type,
 		const options_types::StdLibOptions&  std_lib_opts,
-		const options_types::LinkingOptions& linking_opts
+		const options_types::LinkingOptions& linking_opts,
+		bool                                 link_executable = true
 	);
 
 	/**

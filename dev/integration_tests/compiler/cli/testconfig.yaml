@@ -218,6 +218,31 @@ Tests:
           | grep -F 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc)'
         ExitCode: 0
 
+  compile-script-no-executable:
+    # Compile the script object/bytecode artifacts but skip the final executable/package link.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Cases:
+      llvm-object:
+        Run: >-
+          @{duckc_path} compile_script ./duck_scripts/foo.dks
+          --no-executable --dump-ir asm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' -print -quit)"
+          && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -eq 1
+          && test ! -e @{case_build}/foo.exe
+        ExitCode: 0
+      dvm-object:
+        Run: >-
+          @{duckc_path} compile_script ./duck_scripts/foo.dks
+          --dvm-backend --no-executable --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' -print -quit)"
+          && test "$(find @{case_build} -type f -name '*.o.dbc' | wc -l)" -eq 1
+          && test ! -e @{case_build}/foo.dbc
+        ExitCode: 0
+
   compile-package-inferred-name:
     # Without -n, compile_package names the package after its directory or root module file.
     # The package id is the prefix of the dumped IR file name, so check that file exists.
