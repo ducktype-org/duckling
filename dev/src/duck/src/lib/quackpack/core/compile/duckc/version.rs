@@ -12,6 +12,7 @@ use tracing::error;
 
 use super::Duckc;
 use crate::util::hash::sha256_string;
+use crate::util::once_lock_ext::OnceLockExt;
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 /// Struct containing all information about duckc and its dependencies versions.
@@ -39,14 +40,14 @@ static DUCKC_VERSION: OnceLock<DuckcVersion> = OnceLock::new();
 
 impl Duckc {
     pub fn get_version(ctx: &DuckContext) -> QuackResult<&'static DuckcVersion> {
-        if let Some(version) = DUCKC_VERSION.get() {
-            return Ok(version);
-        }
-        let stdout = Self::get_version_impl(ctx)?;
-        Ok(DUCKC_VERSION.get_or_init(|| DuckcVersion::new(stdout)))
+        DUCKC_VERSION.try_init_with(|| {
+            let stdout = Self::get_version_impl(ctx)?;
+            Ok(DuckcVersion::new(stdout))
+        })
     }
 
-    /// Helper for the verbose version of `duckc` (the result of `duckc --version-verbose`).
+    /// Helper for the [`Self::get_version`].
+    /// Calls duckc to get its verbose version (the result of `duckc --version-verbose`).
     fn get_version_impl(ctx: &DuckContext) -> QuackResult<String> {
         let this = Self::new(ctx);
         let output = this.process_builder().ask_for_verbose_version().output()?;
