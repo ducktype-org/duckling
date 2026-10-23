@@ -94,13 +94,13 @@ impl BuildData {
     /// Store a fingerprint with [`BuildData`] on the disk.
     /// Should be called on [`BuildData`] generated for the current build.
     pub(super) fn write_fingerprint(&self, fingerprint: &Path) -> QuackResult<()> {
-        let fingerprint_json = serde_json::to_string_pretty(self).with_context_internal(|| {
+        let fingerprint_json = serde_json::to_vec(self).with_context_internal(|| {
             format!("failed to convert fingerprint into a JSON string: {self:#?}")
         })?;
         let mut file = fingerprint.touch()?;
         file.set_len(0)
             .with_context(|| format!("failed to truncate `{}`", fingerprint.display()))?;
-        file.write_all(fingerprint_json.as_bytes())
+        file.write_all(fingerprint_json.as_slice())
             .with_context(|| format!("failed to write fingerprint to `{}`", fingerprint.display()))
     }
 
