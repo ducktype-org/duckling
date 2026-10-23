@@ -18,8 +18,7 @@
 //!   so we create use serializable counterparts to it and other types.
 
 use std::collections::{BTreeMap, HashSet};
-
-use chrono::{DateTime, Utc};
+use std::time::SystemTime;
 
 use crate::quackpack::core::compile::unit::graph::GraphNodeId;
 use crate::quackpack::core::identity::Identity;
@@ -31,7 +30,7 @@ mod serializable_types;
 
 pub use fingerprint::*;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 /// All the information necessary for performing package-level incremental compilation.
 /// Currently it contains:
 /// - [`RedGreenData`] --- a struct containing information about which [`UnitGraphNode`](crate::quackpack::core::compile::unit::graph::UnitGraphNode)s
@@ -51,17 +50,28 @@ pub use fingerprint::*;
 /// Obviously in any realistic scenario the files have mtime greater than the epoch.
 pub struct IncrementalData {
     red_green_data: RedGreenData,
-    prev_build_start: DateTime<Utc>,
-    prev_build_end: DateTime<Utc>,
+    prev_build_start: SystemTime,
+    prev_build_end: SystemTime,
     prev_number_of_source_files: BTreeMap<Identity, u32>,
+}
+
+impl Default for IncrementalData {
+    fn default() -> Self {
+        Self {
+            red_green_data: Default::default(),
+            prev_build_start: SystemTime::UNIX_EPOCH,
+            prev_build_end: SystemTime::UNIX_EPOCH,
+            prev_number_of_source_files: Default::default(),
+        }
+    }
 }
 
 impl IncrementalData {
     /// Construct new [`IncrementalData`].
     pub fn new(
         red_green_data: RedGreenData,
-        prev_build_start: DateTime<Utc>,
-        prev_build_end: DateTime<Utc>,
+        prev_build_start: SystemTime,
+        prev_build_end: SystemTime,
         prev_number_of_source_files: BTreeMap<Identity, u32>,
     ) -> Self {
         Self {
@@ -73,12 +83,12 @@ impl IncrementalData {
     }
 
     /// Get the previous build start timestamp.
-    pub fn prev_build_start(&self) -> DateTime<Utc> {
+    pub fn prev_build_start(&self) -> SystemTime {
         self.prev_build_start
     }
 
     /// Get the previous build end timestamp.
-    pub fn prev_build_end(&self) -> DateTime<Utc> {
+    pub fn prev_build_end(&self) -> SystemTime {
         self.prev_build_end
     }
 

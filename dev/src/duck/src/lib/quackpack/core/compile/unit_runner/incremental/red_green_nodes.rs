@@ -31,8 +31,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::ops::AddAssign;
 use std::path::PathBuf;
-
-use chrono::{DateTime, Utc};
+use std::time::SystemTime;
 
 use crate::QuackResult;
 use crate::quackpack::core::AnyPackage;
@@ -202,7 +201,7 @@ impl SourceSpecificCheckResult {
 /// We do it in BFS-like and not DFS-like manner, to avoid recursion.
 fn check_for_updates(
     path_to_check: PathBuf,
-    timestamp: DateTime<Utc>,
+    timestamp: SystemTime,
 ) -> QuackResult<SourceSpecificCheckResult> {
     let mut visited_paths = HashSet::new();
     let mut paths_to_visit: VecDeque<PathBuf> = [path_to_check].into();
@@ -230,7 +229,7 @@ fn check_for_updates_single_step(
     visited_paths: &mut HashSet<PathBuf>,
     paths_to_visit: &mut VecDeque<PathBuf>,
     cur_result: &mut SourceSpecificCheckResult,
-    timestamp: DateTime<Utc>,
+    timestamp: SystemTime,
 ) -> QuackResult<()> {
     let Some(path) = paths_to_visit.pop_front() else {
         return Ok(());
@@ -248,9 +247,8 @@ fn check_for_updates_single_step(
             // `path` is a Duckling file.
             let mtime = path.mtime()?;
             let ctime = path.ctime()?;
-            *cur_result += SourceSpecificCheckResult::for_single_file(
-                mtime < timestamp.into() && ctime < timestamp.into(),
-            );
+            let mtime_ok = mtime < timestamp && ctime < timestamp;
+            *cur_result += SourceSpecificCheckResult::for_single_file(mtime_ok);
         }
     } else {
         // We are in a directory.
@@ -269,7 +267,7 @@ impl Unit {
     /// Checks that artifacts for the unit exist and have mtime earlier than timestamp.
     fn node_specific_check(
         &self,
-        previous_timestamp: DateTime<Utc>,
+        previous_timestamp: SystemTime,
         unit_id_in_graph: GraphNodeId,
         graph: &UnitGraph,
         layout: &dyn ProfileLayout,
@@ -279,7 +277,7 @@ impl Unit {
         if artifacts_file.exists() {
             let mtime = artifacts_file.mtime()?;
             let ctime = artifacts_file.mtime()?;
-            Ok(mtime < previous_timestamp.into() && ctime < previous_timestamp.into())
+            Ok(mtime < previous_timestamp && ctime < previous_timestamp)
         } else {
             Ok(false)
         }

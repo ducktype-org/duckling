@@ -7,8 +7,8 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
+use std::time::SystemTime;
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
@@ -29,9 +29,9 @@ use crate::{DuckContext, QuackResult, QuackResultContext};
 /// This information is stored on the disk, to be used for incremental compilation in the future builds.
 pub struct BuildData {
     /// Time of the start of the build.
-    build_start: DateTime<Utc>,
+    build_start: SystemTime,
     /// Time of the end of the build. If yet unknown (the build is ongoing), set to UNIX epoch.
-    build_end: DateTime<Utc>,
+    build_end: SystemTime,
     /// Hash of the version of `duckc` used in the build.
     /// It is important to use the verbose version, so that for example changing LLVM version forces recompilation in the incremental setting.
     duckc_version_hash: String,
@@ -60,9 +60,9 @@ impl BuildData {
         let duckc_version = Duckc::get_version(ctx)?;
         let profile_hash = sha256_string(profile.serialize_raw());
         Ok(Self {
-            build_start: Utc::now(),
+            build_start: SystemTime::now(),
             // Unknown so UNIX epoch.
-            build_end: DateTime::UNIX_EPOCH,
+            build_end: SystemTime::UNIX_EPOCH,
             duckc_version_hash: duckc_version.hash_sha256(),
             unit_graph: graph.into(),
             profile_hash,
@@ -126,8 +126,8 @@ impl BuildData {
     }
 
     /// Update the `build_end` timestamp to the current time.
-    pub fn set_end_timestamp(&mut self) {
-        self.build_end = Utc::now();
+    pub fn set_end_timestamp(&mut self, timestamp: SystemTime) {
+        self.build_end = timestamp;
     }
 
     pub fn add_number_of_source_files(&mut self, package: Identity, number_of_source_files: u32) {
