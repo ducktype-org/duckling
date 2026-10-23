@@ -1675,7 +1675,7 @@ dependencies:
 }
 
 #[test]
-// Note: such manifest triggers [same_sources] lint.
+// Note: such manifest triggers [same_source_dependencies] lint.
 fn dep_and_dev_dep_can_share_name() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
@@ -1703,7 +1703,7 @@ dev-dependencies:
 }
 
 #[test]
-// Note: such manifest triggers [same_sources] lint.
+// Note: such manifest triggers [same_source_dependencies] lint.
 fn two_deps_can_share_name_if_aliased() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
