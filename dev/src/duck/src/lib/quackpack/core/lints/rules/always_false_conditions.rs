@@ -39,7 +39,7 @@ dependencies:
 
 /// Run the pass for [`LINT`].
 pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let level = LINT.level;
+    let level = manifest.lints().level_for_duck_lint(&LINT);
     if level == LintLevel::Allow {
         return Ok(());
     }

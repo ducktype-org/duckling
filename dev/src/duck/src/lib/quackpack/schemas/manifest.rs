@@ -37,6 +37,8 @@ pub struct Manifest {
     pub import: Option<PathBuf>,
     /// `venv:` root field.
     pub venv: Option<VenvConfig>,
+    /// Lints configuration.
+    pub lints: Option<Lints>,
 }
 
 impl Manifest {
@@ -47,6 +49,7 @@ impl Manifest {
             && self.dependencies.is_none()
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
+            && self.lints.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -433,6 +436,19 @@ pub struct VenvConfig {
     pub ephemeral: Option<bool>,
     pub expose_freezefile: Option<bool>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+/// Schema for configuring lints.
+pub struct Lints {
+    pub duck: Option<DuckLints>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema for configuring duck lints. Maps to the `lints.duck`.
+///
+/// Map is lint name -> lint level.
+pub struct DuckLints(pub HashMap<String, String>);
 
 #[cfg(test)]
 mod tests {

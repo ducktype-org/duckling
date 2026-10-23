@@ -10,8 +10,10 @@ use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
+use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
@@ -19,7 +21,7 @@ use crate::quackpack::core::compile::unit_runner::incremental::{IncrementalData,
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -30,6 +32,9 @@ pub struct BuildData {
     build_start: DateTime<Utc>,
     /// Time of the end of the build. If yet unknown (the build is ongoing), set to UNIX epoch.
     build_end: DateTime<Utc>,
+    /// Hash of the version of `duckc` used in the build.
+    /// It is important to use the verbose version, so that for example changing LLVM version forces recompilation in the incremental setting.
+    duckc_version_hash: String,
     /// Unit graph of the build (in an easily serializable version).
     unit_graph: SerializableUnitGraph,
     /// Hash of the profile of the build.
@@ -47,20 +52,23 @@ impl BuildData {
     /// Should be used for getting [`BuildData`] for the current build process.
     /// `number_of_source_files` is empty and should be filled up during local checks for source code inputs.
     pub fn for_current_build(
+        ctx: &DuckContext,
         graph: &UnitGraph,
         profile: Profile,
         layout: &dyn ArtifactsLayout,
-    ) -> Self {
+    ) -> QuackResult<Self> {
+        let duckc_version = Duckc::get_version(ctx)?;
         let profile_hash = sha256_string(profile.serialize_raw());
-        Self {
+        Ok(Self {
             build_start: Utc::now(),
             // Unknown so UNIX epoch.
             build_end: DateTime::UNIX_EPOCH,
+            duckc_version_hash: duckc_version.hash_sha256(),
             unit_graph: graph.into(),
             profile_hash,
             artifacts_type: layout.name().to_string(),
             number_of_source_files: BTreeMap::new(),
-        }
+        })
     }
 
     /// Get a [`BuildData`] from serialized artifacts.
@@ -99,10 +107,12 @@ impl BuildData {
     /// Get [`RedGreenData`] (information about which graph nodes are common and their artifacts can be reused)
     /// generated from the current [`BuildData`] and previous build's [`BuildData`].
     pub fn get_incremental_data(&self, other: Self) -> IncrementalData {
-        // Different profile or different layouts, we can't reuse anything.
+        // Different profile, different layouts or different duckc version, we can't reuse anything.
         let red_green_data = if self.profile_hash != other.profile_hash
             || self.artifacts_type != other.artifacts_type
+            || self.duckc_version_hash != other.duckc_version_hash
         {
+            info!("profile, layout or duckc version changed, rerunning all units");
             RedGreenData::default()
         } else {
             self.unit_graph.get_red_green_data(&other.unit_graph)

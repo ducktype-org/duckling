@@ -8,7 +8,7 @@
 
 use std::convert::Infallible;
 use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Output};
 use std::{fmt, io};
 
 use tracing::{debug, info, trace, warn};
@@ -157,6 +157,13 @@ impl DuckcProcessBuilder {
         self
     }
 
+    /// Ask for the version of `duckc`.
+    pub fn ask_for_verbose_version(&mut self) -> &mut Self {
+        trace!("asking for duckc's version");
+        self.inner.arg("--version-verbose");
+        self
+    }
+
     /// Execute the built command.
     pub fn execute(&mut self) -> QuackResult<ExitStatus> {
         info!(duckc = ?self, "executing duckc");
@@ -171,6 +178,15 @@ impl DuckcProcessBuilder {
         info!(duckc = ?self, "replacing with duckc");
         self.inner
             .exec_replace()
+            .context("failed to spawn duckc")
+            .map_err(add_path_hint_to_missing_duckc)
+    }
+
+    /// Execute the built command and get its output.
+    pub fn output(&mut self) -> QuackResult<Output> {
+        info!(duckc = ?self, "executing duckc");
+        self.inner
+            .output()
             .context("failed to spawn duckc")
             .map_err(add_path_hint_to_missing_duckc)
     }

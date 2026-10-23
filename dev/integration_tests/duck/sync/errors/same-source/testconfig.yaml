@@ -1,3 +1,4 @@
+
 Tests:
   same-local-sources:
     Description: emits errors about same source dependencies
@@ -27,4 +28,3 @@ Tests:
         Err:
           String: |+
             error: dev dependency \`bar2\` has the same source as normal dependency \`bar\` [same_source_dependencies]
-            error: emitted 1 error
