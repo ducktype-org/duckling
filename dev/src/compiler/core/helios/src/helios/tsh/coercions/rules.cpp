@@ -10,6 +10,7 @@
  * them.
  */
 
+#include "../queries/types.hpp"
 #include "../types.hpp"
 #include "best_coercion.hpp"
 #include "passing.hpp"
@@ -296,12 +297,35 @@ namespace compiler::tsh::coercions {
 			const std::vector<SymbolType<>>& components = source_tuple.getComponents();
 
 			if (target.getType().getKind() == Kind::Meta) {
-				// A component behind a reference is refused (like (ref type, type) -> type).
-				for (const SymbolType<>& component: components)
-					if (component.getRefKind() != ReferenceKind::Direct
-					    || planPart(ctx, component, target)->isRefused())
-						return refused(source, target, coercion_error::IncompatibleTypes{});
-				return converted(ctx, source, target, coercion_step::LiftToType{});
+				// A tuple can be coerced into a type of all of it's components can be coerced into
+				// a type. This includes `(ref type, type) -> type`.
+
+				// OPT: A tuple of direct types, units and such tuples is a type as it is. We just
+				// lift it.
+				if (source_tuple.isTupleOfTypes())
+					return converted(ctx, source, target, coercion_step::LiftToType{});
+
+				// A more complex coercion like `(ref type, ())`. We coerce it into a tuple of types
+				// first and then lift it. If this fails the error names the components that can't
+				// be coerced to a type.
+				const SymbolType<> tuple_of_types{
+					ctx.query<QueryTupleType>({ std::vector(components.size(), target) }),
+					ReferenceKind::Direct,
+					Mutability::Mutable,
+				};
+				const base::CRef<SymbolTypeCoercion> into_types
+					= planPart(ctx, source, tuple_of_types);
+
+				if (into_types->isRefused()) {
+					CoercionError error = into_types->getError();
+					error.target        = target;
+					return SymbolTypeCoercion::refusedCoercion(source, std::move(error));
+				}
+
+				CoercionNode node = into_types->getRoot();
+				node.target       = target;
+				node.append({ .kind = coercion_step::LiftToType{}, .result = target });
+				return accepted(std::move(node));
 			}
 
 			if (target.getType().getKind() != Kind::Tuple)

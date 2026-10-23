@@ -330,6 +330,12 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		std::vector<AbstractType> getComponentAbstractTypes() const;
 
+		/**
+		 * @brief Whether every component is a direct `type`, `()` or a tuple which `isTupleOfTypes`.
+		 */
+		[[nodiscard]]
+		bool isTupleOfTypes() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(TupleAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(TupleAbstractType)

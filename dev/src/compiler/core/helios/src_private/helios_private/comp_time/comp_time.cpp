@@ -615,9 +615,7 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
-				if (not CompileTimeValue::TypeTuple::isValid(
-						ctx, expr.expression_type.getSymbolType()
-					)) {
+				if (not CompileTimeValue::TypeTuple::isValid(expr.expression_type.getSymbolType())) {
 					result = CouldNotShortPath{};
 					return;
 				}

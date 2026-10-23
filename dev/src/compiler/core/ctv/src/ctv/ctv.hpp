@@ -58,10 +58,11 @@ namespace compiler::ctv {
 
 			/**
 			 * @brief Checks if a value of `tuple_type` can be represented as a TypeTuple.
-			 * @note Only direct (not referenced) tuples are accepted.
+			 * @note Only direct tuples of types, units and tuples of such components are accepted
+			 * (@see `TupleAbstractType::isTupleOfTypes`).
 			 */
 			[[nodiscard]]
-			static bool isValid(query::Context& ctx, const tsh::SymbolType<>& tuple_type);
+			static bool isValid(const tsh::SymbolType<>& tuple_type);
 
 			/**
 			 * @brief Converts `ctv` to an Element.

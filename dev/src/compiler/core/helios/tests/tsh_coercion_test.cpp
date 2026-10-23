@@ -272,6 +272,17 @@ private:
 		plan("((), ())", "type").succeeds().steps({ LIFT_TO_TYPE });
 		plan("ref ((), type)", "type").succeeds().steps({ DEREF, LIFT_TO_TYPE });
 
+		// A tuple is a type when every component can be coerces into a type.
+		const NodeCheck referenced
+			= plan("(ref type, ())", "type").succeeds().steps({ ELEMENTWISE, LIFT_TO_TYPE });
+		referenced.ranks(Rank::LiftToType);
+		referenced.part(0).steps({ DEREF });
+		referenced.part(1).steps({ LIFT_TO_TYPE });
+		const NodeCheck nested
+			= plan("((), (ref type, ()))", "type").succeeds().steps({ ELEMENTWISE, LIFT_TO_TYPE });
+		nested.part(0).steps({ LIFT_TO_TYPE });
+		nested.part(1).steps({ ELEMENTWISE, LIFT_TO_TYPE }).part(0).steps({ DEREF });
+
 		// Void has no value, so it is retyped into anything and nothing is handed over.
 		plan("void", "void").succeeds().steps({});
 		plan("void", "i32").succeeds().steps({ RETYPE_VOID });
@@ -345,11 +356,13 @@ private:
 		plan(byte_type, type("u8")).refuses().because<IncompatibleTypes>();
 		plan(immutable_pointer, mutable_pointer).refuses().because<IncompatibleTypes>();
 		plan("()", "i32").refuses().because<IncompatibleTypes>();
-		plan("(i32, i32)", "type").refuses().because<IncompatibleTypes>();
-
-		// A component behind a reference is not lifted.
-		plan("(ref type, type)", "type").refuses().because<IncompatibleTypes>();
-		plan("((), (ref type, ()))", "type").refuses().because<IncompatibleTypes>();
+		plan("(ref type, i32)", "type")
+			.refuses()
+			.because<SubPartRefused>()
+			.aboutTheWholeCoercion()
+			.causes(1)
+			.component(1)
+			.because<IncompatibleTypes>();
 		plan("i32 | bool", "i32").refuses().because<IncompatibleTypes>();
 		plan("i32 | bool", "bool").refuses().because<IncompatibleTypes>();
 		plan(functionOf(type("i32"), type("i32")), type("i32"))
@@ -376,6 +389,20 @@ private:
 			.because<IncompatibleTypes>()
 			.about("i32", "f64");
 		plan("(i32, i32)", "(bool, f64)").refuses().because<SubPartRefused>().causes(2);
+		plan("(i32, i32)", "type")
+			.refuses()
+			.because<SubPartRefused>()
+			.aboutTheWholeCoercion()
+			.causes(2);
+		plan("((), (i32, ()))", "type")
+			.refuses()
+			.because<SubPartRefused>()
+			.causes(1)
+			.component(1)
+			.because<SubPartRefused>()
+			.causes(1)
+			.component(0)
+			.because<IncompatibleTypes>();
 		plan("((i32, i32), i32)", "((i64, f64), i64)")
 			.refuses()
 			.because<SubPartRefused>()
