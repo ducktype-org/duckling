@@ -1710,8 +1710,6 @@ fn two_deps_can_share_name_if_aliased() {
 metadata:
   name: foo
   version: '1'
-
-<<<<<<< HEAD
 dependencies:
   a:
     version: '1'
