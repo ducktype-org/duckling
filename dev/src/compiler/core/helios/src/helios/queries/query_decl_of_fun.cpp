@@ -789,8 +789,14 @@ namespace compiler::helios {
 						}
 						CORE_UNREACHABLE();
 					}
+					variant_case(defgen::Method, method) {
+						// The generated comparisons are the only binary operator methods.
+						const auto operatoriness = defgen::isComparisonMethodKind(method.kind)
+						                             ? HOUTFunctionDeclaration::Operatoriness::Infix
+						                             : HOUTFunctionDeclaration::Operatoriness::None;
+						return funDeclFromType(ctx, key, operatoriness);
+					}
 					variant_case_novalue(
-						defgen::Method,
 						defgen::BuiltinTemplatedSymbol,
 						defgen::ReplInputWrapper,
 						defgen::ScriptMainWrapper

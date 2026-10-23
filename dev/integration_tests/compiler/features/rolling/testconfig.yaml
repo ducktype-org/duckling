@@ -27,5 +27,6 @@ SubDirs:
   - diagnostics
   - packages
   - custom_operators
+  - generated_comparisons
   - standard_library
   - conditional_compilation
