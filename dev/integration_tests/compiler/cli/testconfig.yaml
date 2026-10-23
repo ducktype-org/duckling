@@ -104,6 +104,37 @@ Tests:
           && test -s "$(find "$DIT_TMP_DIR/duck_build" -type f -name '*.o' -print -quit)"
         ExitCode: 0
 
+  compile-script-dump-ir:
+    # Each case checks its dump and the linked output for that backend.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Cases:
+      assembly:
+        Run: >-
+          @{duckc_path} compile_script duck_scripts/simple_addition.dks
+          --dump-ir asm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' -print -quit)"
+          && test -s "@{case_build}/simple_addition.exe"
+        ExitCode: 0
+      llvm-ir:
+        Run: >-
+          @{duckc_path} compile_script duck_scripts/simple_addition.dks
+          --dump-ir llvm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.ll' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.ll' -print -quit)"
+          && test -s "@{case_build}/simple_addition.exe"
+        ExitCode: 0
+      dbc:
+        Run: >-
+          @{duckc_path} compile_script duck_scripts/simple_addition.dks
+          --dvm-backend --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' -print -quit)"
+          && test -s "@{case_build}/simple_addition.dbc"
+        ExitCode: 0
+
   compile-package-inferred-name:
     # Without -n, compile_package names the package after its directory or root module file.
     # The package id is the prefix of the dumped IR file name, so check that file exists.

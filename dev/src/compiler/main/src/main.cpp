@@ -415,6 +415,22 @@ namespace debug_options {
 
 		return debug_options;
 	}
+
+	auto getClahScriptDumpIRParameter() {
+		return clah::ParamBuilder::ofValue(
+				   clah::CategoryListParser::make(
+					   "categories",
+					   clah::CategoryParser::make(std::vector<std::string>{ "asm", "llvm", "dbc" })
+				   )
+		)
+		    .addLongName("dump-ir")
+		    .addShortDesc("Dump assembly, LLVM IR, or DVM bytecode output to a file.")
+		    .addLongDesc(
+				"Supported categories are asm, llvm, and dbc. The dbc category requires "
+				"--dvm-backend."
+			)
+		    .build();
+	}
 }
 
 /**
@@ -1168,6 +1184,7 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahScriptDumpIRParameter())
 				.add(getClahLinkingOptions())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
