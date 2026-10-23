@@ -22,7 +22,6 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/optional.hpp>
@@ -76,6 +75,7 @@ namespace compiler::helios::code {
 	// =================== Match Result Variants ===================
 
 	using tsh::coercions::Coercion;
+	using tsh::coercions::CoercionMode;
 	using tsh::coercions::CoercionRank;
 	using tsh::coercions::Rank;
 
@@ -154,12 +154,16 @@ namespace compiler::helios::code {
 	/**
 	 * Checks if a function can be called with the given arguments for overload resolution
 	 * based on function declaration.
+	 *
+	 * @param first_argument_mode The coercion mode of the first positional argument, which allows
+	 * the `self` argument of a method to be implicitly taken by `ref`.
 	 */
 	MatchResult matchOverloadCandidate(
 		query::Context&                                        ctx,
 		SymID                                                  fun,
 		const std::vector<Box<Expr>>&                          positional_arguments,
-		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
+		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
+		const CoercionMode                                     first_argument_mode
 	) {
 		auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
 		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
@@ -178,8 +182,14 @@ namespace compiler::helios::code {
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
 			const tsh::SymbolType expected_type = decl.parameters[i].type;
-			Coercion              coercion
-				= coercions::coercionOf(ctx, positional_arguments[i].ref(), expected_type);
+			const CoercionMode    mode     = i == 0 ? first_argument_mode : CoercionMode::Default;
+			Coercion              coercion = coercions::coercionOf(
+                ctx,
+                positional_arguments[i].ref(),
+                expected_type,
+                coercions::HandOverKind::Regular,
+                mode
+            );
 
 			if (coercion.isRefused()) {
 				return NoMatch{ .function = fun,
@@ -536,16 +546,6 @@ namespace compiler::helios::code {
 		= std::tuple<SymID, std::vector<ArgumentOrigin>, ArgumentCoercions>;
 
 	/**
-	 * Associates a subset of overload candidates with an alternate representation of the call
-	 * arguments. Operator methods need their operand prepared as `self`, while standalone and
-	 * builtin operators must retain the operand's original value category.
-	 */
-	struct CandidateArgumentsOverride final {
-		const std::vector<SymID>& candidates;
-		const CallArguments&      arguments;
-	};
-
-	/**
 	 * @brief Performs overload resolution for a function call, taking into account coercions,
 	 * positional and named arguments. Performs diagnostic logging in case of resolution failure.
 	 * Returns the symbol of the function that should be called, the ArgumentOrigins for the
@@ -554,14 +554,16 @@ namespace compiler::helios::code {
 	 * @note Does *NOT* take into account the name of each candidate. Resolution is performed solely
 	 * based on how well the arguments match the parameters from the declaration.
 	 *
+	 * @param method_candidates The candidates which are methods, so their first positional
+	 * argument is `self` and may be implicitly taken by `ref`.
 	 * @return The function symbol, the argument origins, and the coercions.
 	 */
 	query::QResult<OverloadResolutionResult> doOverloadResolution(
-		query::Context&                            ctx,
-		const std::vector<SymID>&                  candidates,
-		const CallArguments&                       call_arguments,
-		const CallPstOrigin&                       pst_origin,
-		base::Optional<CandidateArgumentsOverride> arguments_override = {}
+		query::Context&           ctx,
+		const std::vector<SymID>& candidates,
+		const CallArguments&      call_arguments,
+		const CallPstOrigin&      pst_origin,
+		const std::vector<SymID>& method_candidates = {}
 	) {
 		if (candidates.empty()) {
 			ctx.logInt(makeBox<NoCandidatesFoundError>(
@@ -574,16 +576,13 @@ namespace compiler::helios::code {
 		std::vector<NoMatch> no_match;
 
 		for (const auto candidate: candidates) {
-			const auto& candidate_call_arguments
-				= arguments_override.has_value()
-			           && std::ranges::contains(arguments_override->candidates, candidate)
-			        ? arguments_override->arguments
-			        : call_arguments;
 			MatchResult match = matchOverloadCandidate(
 				ctx,
 				candidate,
-				candidate_call_arguments.positional_arguments,
-				candidate_call_arguments.named_arguments
+				call_arguments.positional_arguments,
+				call_arguments.named_arguments,
+				std::ranges::contains(method_candidates, candidate) ? CoercionMode::ImplicitRefOf
+																	: CoercionMode::Default
 			);
 
 			variant_match(match) {
@@ -782,9 +781,10 @@ namespace compiler::helios::code {
 			.arguments_origin  = std::move(arguments_origin),
 		};
 
-		// Resolve overloads and construct call expression
+		// Resolve overloads and construct call expression. Every candidate is a method, so `self`
+		// may be implicitly taken by `ref`.
 		auto overload_resolution_qresult
-			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
+			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, candidates);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
 
@@ -815,36 +815,12 @@ namespace compiler::helios::code {
 		CallArguments call_arguments{};
 		call_arguments.positional_arguments.emplace_back(std::move(lhs));
 		call_arguments.positional_arguments.emplace_back(std::move(rhs));
-		// Keep the original arguments for standalone and builtin operators. Method operators
-		// require a separate expression tree whose left operand is prepared as `self`; the winning
-		// candidate must later be constructed with the same representation used to match it.
-		CallArguments method_call_arguments{};
-		if (not method_candidates.empty()) {
-			method_call_arguments.positional_arguments.emplace_back(
-				shorthands::Shorthand{ ctx }.prepToPassSelf(
-					call_arguments.positional_arguments.at(0)->clone()
-				)
-			);
-			method_call_arguments.positional_arguments.emplace_back(
-				call_arguments.positional_arguments.at(1)->clone()
-			);
-		}
-		base::Optional<CandidateArgumentsOverride> method_arguments_override{};
-		if (not method_candidates.empty())
-			method_arguments_override.emplace(CandidateArgumentsOverride{
-				.candidates = method_candidates,
-				.arguments  = method_call_arguments,
-			});
 
 		// Resolve overloads and construct call expression
-		auto overload_resolution_qresult = doOverloadResolution(
-			ctx, candidates, call_arguments, pst_origin, method_arguments_override
-		);
+		auto overload_resolution_qresult
+			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, method_candidates);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
-		auto& selected_call_arguments = std::ranges::contains(method_candidates, callee_sym)
-		                                  ? method_call_arguments
-		                                  : call_arguments;
 
 		// Now construct the expression.
 		// If the function is a builtin operator, we use special
@@ -854,7 +830,7 @@ namespace compiler::helios::code {
 		variant_match(getSymRef(callee_sym)->other) {
 			variant_case_novalue(defgen::BuiltinOperator) {
 				return constructHOUTBuiltinOpExpr(
-					ctx, pst_origin, callee_sym, std::move(selected_call_arguments), coercions
+					ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
 				);
 			}
 			variant_default {}
@@ -862,7 +838,7 @@ namespace compiler::helios::code {
 
 		// Otherwise, we construct a normal function call expression.
 		return constructCallExpr(
-			ctx, callee_sym, pst_origin, std::move(selected_call_arguments), argument_origin, coercions
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
 
@@ -892,32 +868,12 @@ namespace compiler::helios::code {
 		};
 		CallArguments call_arguments{};
 		call_arguments.positional_arguments.emplace_back(std::move(inner));
-		// As for binary operators, only method candidates may see the operand prepared as `self`.
-		// Preserve both trees so resolution and construction use the same representation.
-		CallArguments method_call_arguments{};
-		if (not method_candidates.empty()) {
-			method_call_arguments.positional_arguments.emplace_back(
-				shorthands::Shorthand{ ctx }.prepToPassSelf(
-					call_arguments.positional_arguments.at(0)->clone()
-				)
-			);
-		}
-		base::Optional<CandidateArgumentsOverride> method_arguments_override{};
-		if (not method_candidates.empty())
-			method_arguments_override.emplace(CandidateArgumentsOverride{
-				.candidates = method_candidates,
-				.arguments  = method_call_arguments,
-			});
 
 		// Resolve overloads and construct call expression
-		auto overload_resolution_qresult = doOverloadResolution(
-			ctx, candidates, call_arguments, pst_origin, method_arguments_override
-		);
+		auto overload_resolution_qresult
+			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, method_candidates);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
-		auto& selected_call_arguments = std::ranges::contains(method_candidates, callee_sym)
-		                                  ? method_call_arguments
-		                                  : call_arguments;
 
 		// Now construct the expression.
 		// If the function is a builtin operator, we use special
@@ -925,14 +881,14 @@ namespace compiler::helios::code {
 		variant_match(getSymRef(callee_sym)->other) {
 			variant_case(defgen::BuiltinOperator, generated) {
 				return constructHOUTBuiltinOpExpr(
-					ctx, pst_origin, callee_sym, std::move(selected_call_arguments), coercions
+					ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
 				);
 			}
 		}
 
 		// Otherwise, we construct a normal function call expression.
 		return constructCallExpr(
-			ctx, callee_sym, pst_origin, std::move(selected_call_arguments), argument_origin, coercions
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
 }

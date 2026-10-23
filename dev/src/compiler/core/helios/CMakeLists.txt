@@ -127,7 +127,9 @@ duck_add_test(compiler helios_pst_layer tests/helios_pst_layer_test.cpp
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES HELIOS)
-duck_add_test(compiler tsh_coercion tests/tsh_coercion_test.cpp USES HELIOS)
+duck_add_test(compiler tsh_coercion tests/tsh_coercion_test.cpp
+	USES HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES HELIOS)
 

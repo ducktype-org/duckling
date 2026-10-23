@@ -231,10 +231,15 @@ namespace compiler::tsh::coercions {
 		}
 	}
 
-	Coercion coercionOf(query::Context& ctx, const ValueSource& source, const SymbolType<>& target) {
+	Coercion coercionOf(
+		query::Context&     ctx,
+		const ValueSource&  source,
+		const SymbolType<>& target,
+		const CoercionMode  mode
+	) {
 		const ExpressionType<>&   value = source.getValue();
 		const SymbolTypeCoercion& plan
-			= *ctx.query<QuerySymbolTypeCoercion>({ value.getSymbolType(), target });
+			= *ctx.query<QuerySymbolTypeCoercion>({ value.getSymbolType(), target, mode });
 
 		// If the `SymbolTypeCoercion` failed we return it's error so we don't override it with the
 		// ownership errors.

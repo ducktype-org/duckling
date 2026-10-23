@@ -13,6 +13,7 @@
 #include "errors.hpp"
 
 #include <helios/hout/elements/expr.hpp>
+#include <helios/tsh/coercions/coercion_mode.hpp>
 #include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
@@ -25,6 +26,7 @@
 
 namespace compiler::helios::coercions {
 	using tsh::coercions::Coercion;
+	using tsh::coercions::CoercionMode;
 
 	/**
 	 * @brief Whether this is the last use of the returned value (i.e. coercion of a value in a
@@ -38,12 +40,17 @@ namespace compiler::helios::coercions {
 
 	/**
 	 * @brief The coercion of an expression @p from into @p target type.
+	 *
+	 * @param kind Whether this is the last use of the value.
+	 * @param mode Which coercions the location allows (e.g. `self` of a method call, which may be
+	 * implicitly taken by `ref`).
 	 */
 	[[nodiscard]] Coercion coercionOf(
 		query::Context&          ctx,
 		CRef<code::Expr>         from,
 		const tsh::SymbolType<>& target,
-		HandOverKind             kind = HandOverKind::Regular
+		HandOverKind             kind = HandOverKind::Regular,
+		CoercionMode             mode = CoercionMode::Default
 	);
 
 	/**

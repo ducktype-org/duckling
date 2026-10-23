@@ -115,6 +115,7 @@ fn generate_schema(path: &Path, errors: &mut Errors) -> QuackResult<ManifestSche
             profiles: None,
             import: None,
             venv: None,
+            lints: None,
         });
     };
     let frontmatter_content = captures.get(1).unwrap().as_str();

@@ -229,6 +229,28 @@ namespace compiler::tsh::coercions {
 		}
 
 		/**
+		 * @brief The source is implicitly taken by `ref`. The reference is then coerced into the
+		 * target.
+		 */
+		SymbolTypeCoercion takeByRef(
+			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		) {
+			const SymbolType<> referenced = source.withReferenceKind(ReferenceKind::Ref);
+			const base::CRef<SymbolTypeCoercion> rest = planPart(ctx, referenced, target);
+
+			if (rest->isRefused()) {
+				CoercionError error = rest->getError();
+				error.source        = source;
+				return SymbolTypeCoercion::refusedCoercion(source, std::move(error));
+			}
+
+			CoercionNode node = startNode(source, target);
+			node.append({ .kind = coercion_step::RefOf{}, .result = referenced });
+			for (const CoercionStep& step: rest->getRoot().steps) node.append(step);
+			return accepted(std::move(node));
+		}
+
+		/**
 		 * @brief A composite that is rebuilt out of its parts, each coerced on its own.
 		 */
 		SymbolTypeCoercion coerceElementwise(
@@ -462,10 +484,18 @@ namespace compiler::tsh::coercions {
 		 * @brief The main type coercion logic.
 		 */
 		SymbolTypeCoercion planCoercion(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+			query::Context&     ctx,
+			const SymbolType<>& source,
+			const SymbolType<>& target,
+			const CoercionMode  mode
 		) {
 			// First check if we're retyping a `void` type.
 			if (source.getType().getKind() == Kind::Void) return retypeVoid(source, target);
+
+			// Then check if the value is implicitly taken by `ref`, which only the mode allows.
+			if (referenceCoercionRule(source.getRefKind(), target.getRefKind(), mode).adjustment
+			    == ReferenceAdjustment::RefOf)
+				return takeByRef(ctx, source, target);
 
 			// Secondly, validate coercions which keep the "pointer like" behaviour.
 			if (target.getRefKind() != ReferenceKind::Direct)
@@ -486,7 +516,7 @@ namespace compiler::tsh::coercions {
 
 	struct IMPLEMENT_QUERY(QuerySymbolTypeCoercion, SymbolTypeCoercion) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			return planCoercion(ctx, key.source, key.target);
+			return planCoercion(ctx, key.source, key.target, key.mode);
 		}
 
 		QUERY_AUTO_CACHE_CREF

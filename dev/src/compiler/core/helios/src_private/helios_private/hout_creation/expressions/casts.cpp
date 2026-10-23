@@ -53,7 +53,14 @@ namespace compiler::helios::code {
 		// We first check if we can cover the case by the coercion logic (from bool or to bool for
 		// example).
 		const tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, value.ref(), to);
-		if (coercion.isValid()) return coercions::applyCoercion(ctx, coercion, std::move(value));
+		if (coercion.isValid()) {
+			auto coerced = coercions::applyCoercion(ctx, coercion, std::move(value));
+
+			// @TODO: #3853 go back to this once defined
+			if (coerced->expression_type.getSymbolType() != to)
+				return cast_expr(std::move(coerced));
+			return coerced;
+		}
 
 		// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
 		// Casting to bool needs custom handling.
@@ -75,6 +82,9 @@ namespace compiler::helios::code {
 		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
 		    && from.getRefKind() == ReferenceKind::Direct
 		    && to.getRefKind() == ReferenceKind::Direct)
+			return cast_expr(std::move(value));
+
+		if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
 			return cast_expr(std::move(value));
 
 		struct CastPattern {

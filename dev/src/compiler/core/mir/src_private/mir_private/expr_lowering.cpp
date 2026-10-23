@@ -718,6 +718,34 @@ namespace compiler::mir {
 			return;
 		}
 
+		void visitOptionalTypeConstructorExpr(const hc::OptionalTypeConstructorExpr& expr) override {
+			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Optional Type Constructor should be meta"
+			);
+
+			auto hole = continuation->addHole();
+
+			auto value_type_lowered = lowerSubExpr(*expr.value_type, continuation);
+
+			noValueOutput(
+				value_type_lowered.begin,
+				hole,
+				Instruction(
+					Operation::MetaTypeOperation,
+					{},
+					{ value_type_lowered.getResult(function) },
+					{},
+					expr_scope,
+					MetaParameters{ MetaKind::CreateOptional },
+					{ expr.getPosition() }
+				),
+				result_type
+			);
+			return;
+		}
+
 		void visitVariantConstructExpr(const hc::VariantConstructExpr& expr) override {
 			auto result_type = expr.expression_type.getSymbolType();
 			CORE_ASSERT(
@@ -1205,29 +1233,6 @@ namespace compiler::mir {
 				output(std::move(result));
 		}
 
-		bool isEmptyCast(const hc::CastExpr& expr) {
-			if (expr.source_expr->expression_type.getSymbolType() == expr.target_type) return true;
-
-			// If cast is from ref T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Ref
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
-			}
-
-			// If cast is from box T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Box
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
-			}
-
-			if (expr.source_expr->expression_type.getType().getKind() == tsh::Kind::Void)
-				return true;
-
-			return false;
-		}
-
 		/**
 		 * @brief Whether the cast hands a `ptr T` over to a `box T`.
 		 *
@@ -1257,9 +1262,8 @@ namespace compiler::mir {
 		}
 
 		void visitCastExpr(const hc::CastExpr& expr) override {
-			// Maybe in the future the cast expr can be converted into more specific instructions.
-			if (isEmptyCast(expr)) {
-				// If the cast doesn't change the representation, simply ignore it.
+			// If the cast doesn't involves temporaries, it's safe to just lower the source.
+			if (not expr.castCreatesTemporary()) {
 				output(lowerSubExpr(*expr.source_expr, continuation));
 				return;
 			}

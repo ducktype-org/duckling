@@ -13,6 +13,8 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
@@ -750,6 +752,11 @@ namespace compiler::tsh {
 	 */
 	class VariantAbstractTypeImpl final: public AbstractTypeImpl {
 		std::vector<SymbolType<>> underlying_types;
+		/**
+		 * @brief If true then this variant is a different type and is visible to the user as an
+		 * optional. This doesn't change the lower layers in any way.
+		 */
+		bool represents_optional;
 
 	public:
 		[[nodiscard]]
@@ -762,11 +769,36 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Variant;
 
-		explicit VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types);
+		/**
+		 * @brief Creates a variant of the given alternatives.
+		 * @param represents_optional Marks the variant as the optional `?T`, in which case
+		 * @p variant_types have to be exactly the value type `T` followed by the `None` type. The
+		 * alternatives of an optional keep this order, so `None` is always the second one.
+		 */
+		VariantAbstractTypeImpl(
+			query::Context&                  ctx,
+			const std::vector<SymbolType<>>& variant_types,
+			bool                             represents_optional
+		);
 
 		[[nodiscard]]
 		const std::vector<SymbolType<>>& getUnderlyingTypes() const {
 			return underlying_types;
+		}
+
+		[[nodiscard]]
+		bool representsOptionalType() const {
+			return represents_optional;
+		}
+
+		/**
+		 * @brief The type `T` held by the optional `?T`, which is always its first alternative.
+		 * @pre representsOptionalType()
+		 */
+		[[nodiscard]]
+		const SymbolType<>& getOptionalValueType() const {
+			CORE_ASSERT(represents_optional, "Only an optional type holds an optional value type.");
+			return underlying_types.front();
 		}
 
 		[[nodiscard]]

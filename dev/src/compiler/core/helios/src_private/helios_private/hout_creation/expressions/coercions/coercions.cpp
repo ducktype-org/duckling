@@ -144,6 +144,13 @@ namespace compiler::helios::coercions {
 		}
 
 		Box<Expr> applyStep(
+			query::Context& ctx, const step::RefOf&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<RefOfExpr>(ctx, origin, std::move(from));
+		}
+
+		Box<Expr> applyStep(
 			query::Context& ctx, const step::Deref&, const tsh::SymbolType<>&, Box<Expr> from
 		) {
 			const auto origin = from->origin.generatedFrom();
@@ -260,7 +267,8 @@ namespace compiler::helios::coercions {
 		query::Context&          ctx,
 		const CRef<Expr>         from,
 		const tsh::SymbolType<>& target,
-		const HandOverKind       kind
+		const HandOverKind       kind,
+		const CoercionMode       mode
 	) {
 		const ValueSource source = [&] {
 			ValueSource value = valueSourceOf(from);
@@ -271,7 +279,7 @@ namespace compiler::helios::coercions {
 			return ValueSource::singleValueSource(tsh::coercions::consumed(from->expression_type));
 		}();
 
-		return tsh::coercions::coercionOf(ctx, source, target);
+		return tsh::coercions::coercionOf(ctx, source, target, mode);
 	}
 
 	Coercion coercionToMeta(query::Context& ctx, const CRef<Expr> from) {
