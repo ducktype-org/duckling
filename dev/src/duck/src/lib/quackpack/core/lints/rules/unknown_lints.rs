@@ -50,7 +50,7 @@ pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()
     };
     let known_lints = known_lint_names();
     for lint_name in duck.0.keys() {
-        if !is_unknown_lint(lint_name) {
+        if is_known_lint(lint_name) {
             continue;
         }
         let hint = find_closest_target(lint_name, &known_lints, None).map(ToString::to_string);
@@ -70,8 +70,8 @@ fn known_lint_names() -> Vec<&'static str> {
     super::ALL_LINTS.iter().map(|lint| lint.name).collect()
 }
 
-fn is_unknown_lint(name: &str) -> bool {
-    !super::ALL_LINTS.iter().any(|lint| lint.name == name)
+fn is_known_lint(name: &str) -> bool {
+    super::ALL_LINTS.iter().any(|lint| lint.name == name)
 }
 
 #[derive(Debug)]
