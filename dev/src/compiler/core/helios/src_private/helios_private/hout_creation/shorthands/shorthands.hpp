@@ -56,10 +56,6 @@
 
 namespace compiler::helios::code::shorthands {
 
-	/*******************
-	 *   AMBIENT CTX   *
-	 *******************/
-
 	namespace internal {
 		/**
 		 * @brief Arithmetic types that denote a numeric literal.

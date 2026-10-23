@@ -120,9 +120,9 @@ namespace compiler::helios::code {
 		/**
 		 * @brief Compares the two candidates. The "smaller" one is the better match.
 		 *
-		 * Candidates are compared argument by argument. A candidate is better only when its better
-		 * "somewhere" without being worse "anywhere". Two candidates that are each better at
-		 * something are unordered.
+		 * Candidates are compared argument by argument. A candidate is better only when it's at
+		 * least as good everywhere, and better on at least one argument. Two candidates that are
+		 * each better at different arguments are unordered.
 		 */
 		[[nodiscard]]
 		std::partial_ordering operator<=>(const Match& other) const {

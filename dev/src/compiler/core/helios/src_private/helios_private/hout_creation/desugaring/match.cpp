@@ -13,7 +13,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/tsh/coercions/queries.hpp>
+#include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/mutability.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -185,18 +185,16 @@ namespace compiler::helios::desugaring {
 			if (not match_subject.moves_ownership)
 				source_type = source_type.withReferenceKind(tsh::ReferenceKind::Ref);
 
-			const tsh::coercions::Coercion coercion = tsh::coercions::coercionOf(
+			const auto coercion = coercions::validCoercionOf(
 				ctx,
 				tsh::coercions::ValueSource::singleValueSource({
 					source_type,
 					match_subject.expr->expression_type.getValueCategory(),
 				}),
-				constraint
+				constraint,
+				pos
 			);
-			if (coercion.isRefused()) {
-				coercions::logCoercionFailure(ctx, coercion, pos, {});
-				return query::Failed();
-			}
+			if (coercion.hasFailed()) return query::Failed();
 			return index;
 		}
 

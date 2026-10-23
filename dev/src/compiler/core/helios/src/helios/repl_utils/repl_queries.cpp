@@ -58,11 +58,11 @@ namespace compiler::repl {
 			variant_case(helios::defgen::ReplInputWrapper::Expression, expr) {
 				CORE_DEV_LOG(REPL, "Creating ReturnStmt for value expression\n");
 
+				namespace coercions = helios::coercions;
+
 				// `return <expr>` is the last use of the expression, so a temporary is moved out
 				// implicitly. A value that may not be handed over, like a global of a type that is
 				// not trivially copyable, is returned as it is.
-				namespace coercions = helios::coercions;
-
 				const coercions::Coercion coercion = coercions::coercionOf(
 					ctx,
 					expr.expr.ref(),

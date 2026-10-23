@@ -302,6 +302,21 @@ namespace compiler::helios::coercions {
 		return query::Failed();
 	}
 
+	query::QResult<Coercion> validCoercionOf(
+		query::Context&                     ctx,
+		const ValueSource&                  from,
+		const tsh::SymbolType<>&            target,
+		const dia::StablePosition           source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		const CoercionErrorOverrides&       error_overrides
+	) {
+		Coercion coercion = coercionOf(ctx, from, target);
+		if (coercion.isValid()) return coercion;
+
+		logCoercionFailure(ctx, coercion, source_position, coercion_expects_pos, error_overrides);
+		return query::Failed();
+	}
+
 	Box<Expr> applyCoercion(query::Context& ctx, const Coercion& coercion, Box<Expr> from) {
 		const auto describe = [&] {
 			std::ostringstream out;

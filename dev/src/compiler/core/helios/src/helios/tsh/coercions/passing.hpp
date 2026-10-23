@@ -42,8 +42,13 @@ namespace compiler::tsh::coercions {
 	[[nodiscard]] bool isCopiedByBytes(query::Context& ctx, const SymbolType<>& type);
 
 	/**
-	 * @brief The ValueCategory of the value after it has been handed over (i.e. implicitly moved by
+	 * @brief The ValueCategory of the value after it has been handed over (e.g. implicitly moved by
 	 * a return).
+	 *
+	 * @note This resolves a case of `return x`, where `x` is a non trivially copyable local.
+	 * `passingMethod` would return `ExplicitCopyOrMove` for such a local and the coercion would be
+	 * rejected. `consumed` resolves this case, by changeing the `ValueCategory` to temporary which
+	 * causes the coercion machinery to insert an `ImplicitMove` automatically.
 	 */
 	[[nodiscard]] ExpressionType<> consumed(const ExpressionType<>& value);
 }

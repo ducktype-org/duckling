@@ -13,14 +13,12 @@
 #include "errors.hpp"
 
 #include <helios/hout/elements/expr.hpp>
-#include <helios/tsh/coercions/coercion.hpp>
-#include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/box_or_ref.hpp>
 
 #include <diagnostic/stable_position.hpp>
-#include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
 #include <cstdint>
@@ -67,6 +65,19 @@ namespace compiler::helios::coercions {
 		base::Optional<dia::StablePosition> coercion_expects_pos = {},
 		const CoercionErrorOverrides&       error_overrides      = {},
 		HandOverKind                        kind                 = HandOverKind::Regular
+	);
+
+	/**
+	 * @brief Same as above, but for a value that is not an expression (e.g. a variant alternative
+	 * read out by a `match` case), described by @p from `ValueSource`.
+	 */
+	query::QResult<Coercion> validCoercionOf(
+		query::Context&                     ctx,
+		const tsh::coercions::ValueSource&  from,
+		const tsh::SymbolType<>&            target,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		const CoercionErrorOverrides&       error_overrides      = {}
 	);
 
 	/**

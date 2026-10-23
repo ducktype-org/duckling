@@ -71,7 +71,7 @@ namespace compiler::tsh::coercions {
 			/// The type of the copied value.
 			SymbolType<> type;
 			/// Whether the value is the pointee read out of a `ref`/`box`.
-			bool is_pointee{ false };
+			bool is_pointee;
 		};
 
 		/**
