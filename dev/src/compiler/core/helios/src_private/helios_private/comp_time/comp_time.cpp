@@ -23,7 +23,6 @@
 #include <helios/utils/hout_walker_generic.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -616,9 +615,7 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
-				if (not CompileTimeValue::TypeTuple::isValid(
-						ctx, expr.expression_type.getSymbolType()
-					)) {
+				if (not CompileTimeValue::TypeTuple::isValid(expr.expression_type.getSymbolType())) {
 					result = CouldNotShortPath{};
 					return;
 				}
