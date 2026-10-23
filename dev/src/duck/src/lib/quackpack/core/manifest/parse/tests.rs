@@ -1011,94 +1011,6 @@ profiles:
 }
 
 #[test]
-fn duplicated_names() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.10'
-
-dependencies:
-  a:
-    version: '1'
-  b:
-    version: '1'
-    source:
-      name: a
-"#,
-    );
-    let ctx = DuckContext::default();
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            ["multiple normal dependencies specify the same name `a`"]
-        )
-    );
-}
-
-#[test]
-fn duplicated_names_in_aliases() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.10'
-
-dependencies:
-  a:
-    version: '1'
-    source:
-      name: c
-  b:
-    version: '1'
-    source:
-      name: c
-"#,
-    );
-    let ctx = DuckContext::default();
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            ["multiple normal dependencies specify the same name `c`"]
-        )
-    );
-}
-
-#[test]
-fn git_exclusive_fields() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.10'
-
-dependencies:
-  a:
-    version: '1'
-    source:
-      name: c
-  b:
-    version: '1'
-    source:
-      name: c
-"#,
-    );
-    let ctx = DuckContext::default();
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            ["multiple normal dependencies specify the same name `c`"]
-        )
-    );
-}
-
-#[test]
 fn branch_and_tag_are_mutually_exclusive() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
@@ -1763,6 +1675,7 @@ dependencies:
 }
 
 #[test]
+// Note: such manifest triggers [same_source_dependencies] lint.
 fn dep_and_dev_dep_can_share_name() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
@@ -1790,13 +1703,40 @@ dev-dependencies:
 }
 
 #[test]
+// Note: such manifest triggers [same_source_dependencies] lint.
+fn two_deps_can_share_name_if_aliased() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+dependencies:
+  a:
+    version: '1'
+  b:
+    version: '1'
+    source:
+      name: a 
+"#,
+    );
+    let ctx = DuckContext::default();
+    let package = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let deps = package.manifest().dependencies();
+    assert_eq!(deps.all_dependencies().len(), 2);
+    let a = deps.get_by_effective_name("a".into()).unwrap();
+    let ab = deps.get_by_effective_name("b".into()).unwrap();
+    assert_eq!(a.source(), ab.source());
+    assert_eq!(a.name(), "a");
+    assert_eq!(ab.name(), "a");
+}
+
+#[test]
 fn valid_lint_levels() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: foo
   version: '1'
-
 lints:
   duck:
     a: error

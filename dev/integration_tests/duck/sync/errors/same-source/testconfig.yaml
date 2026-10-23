@@ -1,0 +1,31 @@
+
+Tests:
+  same-local-sources:
+    Description: emits errors about same source dependencies
+    Cases:
+      basic:
+        PreCase: |+
+          @{cd-tmp-dir}
+          @{duck-exe} init foo
+          @{duck-exe} init bar
+          @{duck-exe} -C foo add --local ../bar bar
+          @{duck-exe} -C foo add --local ../bar --alias bar2 bar
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            error: normal dependency \`bar2\` has the same source as normal dependency \`bar\` [same_source_dependencies]
+            error: emitted 1 error
+      one-normal-one-dev:
+        PreCase: |+
+          @{cd-tmp-dir}
+          @{duck-exe} init foo
+          @{duck-exe} init bar
+          @{duck-exe} -C foo add --local ../bar bar
+          @{duck-exe} -C foo add --local ../bar --alias bar2 --dev bar
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            error: dev dependency \`bar2\` has the same source as normal dependency \`bar\` [same_source_dependencies]
+            error: emitted 1 error

@@ -216,11 +216,11 @@ fn removes_inactive_deps2() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
