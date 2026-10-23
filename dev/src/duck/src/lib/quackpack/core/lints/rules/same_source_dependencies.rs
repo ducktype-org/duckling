@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Home of "nonexistent_features" lint.
+//! Home of "same_source_dependencies" lint.
 
 use std::collections::HashMap;
 
@@ -30,7 +30,7 @@ enum SimpleSourceKind {
 /// - same registry and name for registry dependencies,
 /// - same path for local dependencies,
 /// - same git url (but not necessarily reference) for git dependencies.
-pub struct UniqueSource {
+struct UniqueSource {
     kind: SimpleSourceKind,
     url: InternedUrl,
 }
@@ -50,8 +50,8 @@ impl From<&Dependency> for UniqueSource {
 }
 
 pub const LINT: Lint = Lint {
-    name: "same sources",
-    description: r#"# Nonexistent features
+    name: "same_source_dependencies",
+    description: r#"# Same source dependencies
 ## What this lint does?
 
 It checks for dependencies with the same source (even for dependencies with different kinds).
@@ -59,7 +59,7 @@ It checks for dependencies with the same source (even for dependencies with diff
 ## Why is this bad?
 
 This can introduce weird bugs due to conflicts between same-source packages.
-Also objects from same-source packages seem interchangable, but are not.
+Also objects from same-source packages seem interchangeable, but are not.
 
 ## Example
 
@@ -70,6 +70,16 @@ dependencies:
 dev-dependencies:
   foo:
     version: 2.0.0
+```
+
+## Corrected example
+
+Leave just one of the duplicated dependency entries, depending on your goal.
+
+```yaml
+dependencies:
+  foo:
+    version: 1.0.0
 ```
 "#,
     level: LintLevel::Error,

@@ -1674,6 +1674,7 @@ dependencies:
 }
 
 #[test]
+// Note: such manifest triggers [same_sources] lint.
 fn dep_and_dev_dep_can_share_name() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
@@ -1698,4 +1699,33 @@ dev-dependencies:
     assert_eq!(a.name(), a_dev.name());
     assert_eq!(a.alias(), a_dev.alias());
     assert_eq!(a.effective_name(), a_dev.effective_name());
+}
+
+#[test]
+// Note: such manifest triggers [same_sources] lint.
+fn two_deps_can_share_name_if_aliased() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  a:
+    version: '1'
+  b:
+    version: '1'
+    source:
+      name: a 
+"#,
+    );
+    let ctx = DuckContext::default();
+    let package = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let deps = package.manifest().dependencies();
+    assert_eq!(deps.all_dependencies().len(), 2);
+    let a = deps.get_by_effective_name("a".into()).unwrap();
+    let ab = deps.get_by_effective_name("b".into()).unwrap();
+    assert_eq!(a.source(), ab.source());
+    assert_eq!(a.name(), "a");
+    assert_eq!(ab.name(), "a");
 }
