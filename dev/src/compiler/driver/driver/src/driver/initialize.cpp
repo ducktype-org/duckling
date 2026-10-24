@@ -217,14 +217,30 @@ namespace compiler::driver {
 			}
 		}
 
-		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
+		/**
+		 * The IR is printed and dumped from inside the `CompileModule` query, so a module loaded
+		 * from the incremental cache prints and dumps nothing.
+		 */
+		bool requestsIROutput(const options_types::DebugOptions& debug_options) {
+			return debug_options.dump_llvm or debug_options.dump_asm or debug_options.dump_dbc
+			    or debug_options.dump_lir or debug_options.dump_mir or debug_options.dump_hir
+			    or debug_options.print_dbc or debug_options.print_lir or debug_options.print_mir
+			    or debug_options.print_hir;
+		}
+
+		void handleIncrementalOptions(
+			const options_types::IncrementalOptions& inc_options,
+			const options_types::DebugOptions&       debug_options
+		) {
 			if (inc_options.enabled) {
 				CORE_ASSERT(
 					!global_state::getPackages().empty(),
 					"Main package must be set before handling incremental compilation"
 				);
 				driver::enable_incremental_compilation = true;
-				loadPreviousQueryGraphIfExists();
+				// Without the previous graph every module is recompiled, so its IR gets printed
+				// and dumped. The new graph is still saved, so the next run is incremental again.
+				if (not requestsIROutput(debug_options)) loadPreviousQueryGraphIfExists();
 			} else {
 				driver::enable_incremental_compilation = false;
 				// Disable the query graph because it's not needed and adds overhead.
@@ -305,7 +321,10 @@ namespace compiler::driver {
 				if (package_success.isBad()) return base::BAD;
 
 				handleBackendOptions(package_compilation_options.backend_options);
-				handleIncrementalOptions(package_compilation_options.incremental);
+				handleIncrementalOptions(
+					package_compilation_options.incremental,
+					package_compilation_options.debug_options
+				);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
 				auto repl_packages_info = getScriptStubPackage();
