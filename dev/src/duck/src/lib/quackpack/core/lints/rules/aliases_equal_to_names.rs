@@ -47,11 +47,11 @@ dependencies:
 };
 
 /// Run the pass for [`LINT`].
-pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let level = pcx.package().manifest().lints().level_for_duck_lint(&LINT);
-    if level == LintLevel::Allow {
-        return Ok(());
-    }
+pub fn pass(
+    pcx: &PackageContext<'_>,
+    level: LintLevel,
+    buffer: &mut LintBuffer,
+) -> QuackResult<()> {
     let schema = pcx.package().original_schema();
     let dependencies_maps = [
         (DependencyKind::Normal, schema.dependencies.as_ref()),
