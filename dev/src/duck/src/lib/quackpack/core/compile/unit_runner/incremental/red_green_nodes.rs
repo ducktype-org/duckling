@@ -276,7 +276,7 @@ impl Unit {
         let artifacts_file = unit_output(self, unit_id_in_graph, graph, layout, bcx)?;
         if artifacts_file.exists() {
             let mtime = artifacts_file.mtime()?;
-            let ctime = artifacts_file.mtime()?;
+            let ctime = artifacts_file.ctime()?;
             Ok(mtime < previous_timestamp && ctime < previous_timestamp)
         } else {
             Ok(false)

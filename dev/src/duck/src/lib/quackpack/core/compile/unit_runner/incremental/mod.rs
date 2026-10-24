@@ -44,7 +44,7 @@ pub use fingerprint::*;
 ///
 /// Note:
 /// -----
-/// Default for [`DateTime`] is UNIX epoch.
+/// [`Self::default`] uses [`SystemTime::UNIX_EPOCH`] as a default time.
 /// [`Self::default`] should be called to state that incremental compilation is for some reason impossible.
 /// UNIX epoch fits that semantic, since we use the timestamps to make sure that given files were not modified since the timestamp.
 /// Obviously in any realistic scenario the files have mtime greater than the epoch.

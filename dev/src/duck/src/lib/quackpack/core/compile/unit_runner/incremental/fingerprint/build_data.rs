@@ -125,7 +125,7 @@ impl BuildData {
         )
     }
 
-    /// Update the `build_end` timestamp to the current time.
+    /// Set the timestamp of the end of compilation.
     pub fn set_end_timestamp(&mut self, timestamp: SystemTime) {
         self.build_end = timestamp;
     }
