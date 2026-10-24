@@ -4,3 +4,4 @@ fun foo() -> i64 = {
     return x + y;
 }
 builtin_output_i64(foo());
+builtin_output_i64(7777);

@@ -420,12 +420,13 @@ namespace debug_options {
 		return clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
 											   "categories",
 											   clah::CategoryParser::make(std::vector<std::string>{
-												   "lir", "asm", "llvm", "dbc" })
+												   "hir", "mir", "lir", "llvm", "asm", "dbc" })
 										   ))
 		    .addLongName("dump-ir")
-		    .addShortDesc("Dump LIR, assembly, LLVM IR, or DVM bytecode output to a file.")
+		    .addShortDesc("Dump HIR, MIR, LIR, LLVM IR, assembly, or DVM bytecode output to a file.")
 		    .addLongDesc(
-				"Supported categories are lir, asm, llvm, and dbc. The dbc category requires "
+				"Supported categories are hir, mir, lir, llvm, asm, and dbc. The dbc category "
+		        "requires "
 				"--dvm-backend."
 			)
 		    .build();

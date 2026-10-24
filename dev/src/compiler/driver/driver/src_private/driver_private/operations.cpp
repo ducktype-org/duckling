@@ -45,15 +45,22 @@ namespace compiler::driver {
 		const helios::HOUTUnit& hout_unit,
 		base::StrID             module_id,
 		base::StrID             module_id_human,
-		bool                    dump_lir
+		bool                    dump_lir,
+		std::ostream*           aggregate_mir_dump,
+		std::ostream*           aggregate_hir_dump
 	) {
 #define DEBUG_DUMP_ARTIFACT(str_id_name, ext) \
 	getDebugDumpArtifact(base::StrID(base::strConcat(str_id_name.strView(), ext)))
 
 		if (driver::print_ir_options.print_hir) hout_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_hir) {
-			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".hir");
-			hout_unit.debugPrint(ctx, ofstream);
+			if (aggregate_hir_dump) {
+				*aggregate_hir_dump << "HIR for " << module_id_human.strView() << ":\n";
+				hout_unit.debugPrint(ctx, *aggregate_hir_dump);
+			} else {
+				auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".hir");
+				hout_unit.debugPrint(ctx, ofstream);
+			}
 		}
 
 		auto mir_unit_qr = mir::lowerToMIRUnit(ctx, &hout_unit);
@@ -62,8 +69,13 @@ namespace compiler::driver {
 
 		if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_mir) {
-			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".mir");
-			mir_unit.debugPrint(ctx, ofstream);
+			if (aggregate_mir_dump) {
+				*aggregate_mir_dump << "MIR for " << module_id_human.strView() << ":\n";
+				mir_unit.debugPrint(ctx, *aggregate_mir_dump);
+			} else {
+				auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".mir");
+				mir_unit.debugPrint(ctx, ofstream);
+			}
 		}
 
 		auto lir_module = LIRUnitWithBackendName{

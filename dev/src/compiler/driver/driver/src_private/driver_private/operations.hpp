@@ -30,7 +30,9 @@ namespace compiler::driver {
 		const helios::HOUTUnit& hout_unit,
 		base::StrID             module_id,
 		base::StrID             module_id_human,
-		bool                    dump_lir = true
+		bool                    dump_lir           = true,
+		std::ostream*           aggregate_mir_dump = nullptr,
+		std::ostream*           aggregate_hir_dump = nullptr
 	);
 
 	/**

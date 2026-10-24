@@ -67,6 +67,7 @@
 #include <array>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -422,6 +423,8 @@ namespace compiler::driver {
 			// Track wrapper symbols to build the synthetic main that runs them in order.
 			// We preserve the original statement order to match script semantics.
 			std::vector<helios::SymID>         wrapper_symbols;
+			std::ostringstream                 aggregate_mir_dump;
+			std::ostringstream                 aggregate_hir_dump;
 			base::Optional<frontend::ModuleID> parent_module_id;
 			u64                                statement_counter = 0;
 			auto                               session_id        = repl::ReplSessionID::next();
@@ -464,7 +467,13 @@ namespace compiler::driver {
 
 						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, *hout_unit.value(), module_name_id, module_name_id, false
+							ctx,
+							*hout_unit.value(),
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile definition statement to LIR");
@@ -494,7 +503,9 @@ namespace compiler::driver {
 							std::move(hout_unit_result).value(),
 							module_name_id,
 							module_name_id,
-							false
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile executable statement to LIR");
@@ -512,7 +523,13 @@ namespace compiler::driver {
 						wrapper_symbols.push_back(wrapper_result->initializer_function);
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, wrapper_result->hout_unit, module_name_id, module_name_id, false
+							ctx,
+							wrapper_result->hout_unit,
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile variable statement to LIR");
@@ -537,7 +554,13 @@ namespace compiler::driver {
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
 			auto main_lir = compileHOUTUnitToLIRModuleData(
-				ctx, main_unit, merged.module_id, merged.module_id_human, false
+				ctx,
+				main_unit,
+				merged.module_id,
+				merged.module_id_human,
+				false,
+				&aggregate_mir_dump,
+				&aggregate_hir_dump
 			);
 			if (main_lir.hasFailed())
 				return std::unexpected("Failed to compile script main to LIR");
@@ -549,6 +572,20 @@ namespace compiler::driver {
 			// one. We are not sure, whether this is the best way to handle this, but it is a simple
 			// solution for now.
 			merged.lir_unit.deduplicateSymbols();
+
+			if (driver::dump_ir_options.dump_hir) {
+				auto output_file = getDebugDumpArtifact(
+					base::StrID(base::strConcat(merged.module_id_human.strView(), ".hir"))
+				);
+				output_file << aggregate_hir_dump.str();
+			}
+
+			if (driver::dump_ir_options.dump_mir) {
+				auto output_file = getDebugDumpArtifact(
+					base::StrID(base::strConcat(merged.module_id_human.strView(), ".mir"))
+				);
+				output_file << aggregate_mir_dump.str();
+			}
 
 			if (driver::dump_ir_options.dump_lir) {
 				auto output_file = getDebugDumpArtifact(

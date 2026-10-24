@@ -112,7 +112,8 @@ Tests:
       assembly:
         Run: >-
           @{duckc_path} compile_script ./duck_scripts/foo.dks
-          --dump-ir asm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          --dump-ir asm -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' | wc -l)" -eq 1
           && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' -print -quit)"
           && test -s "@{case_build}/foo.exe"
@@ -120,7 +121,8 @@ Tests:
       llvm-ir:
         Run: >-
           @{duckc_path} compile_script ./duck_scripts/foo.dks
-          --dump-ir llvm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          --dump-ir llvm -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.ll' | wc -l)" -eq 1
           && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.ll' -print -quit)"
           && test -s "@{case_build}/foo.exe"
@@ -148,6 +150,44 @@ Tests:
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.lir' | wc -l)" -eq 1
           && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.lir' -print -quit)"
           && grep -q 'foo' "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.lir' -print -quit)"
+        ExitCode: 0
+
+  compile-script-mir:
+    # Checks if MIR is collected in source order in one debug artifact.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Cases:
+      foo-script:
+        Run: >-
+          @{duckc_path} compile_script ./duck_scripts/foo.dks
+          --dump-ir mir -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.mir' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name '*.mir' -print -quit)"
+        ExitCode: 0
+      multiple-statements:
+        Run: >-
+          @{duckc_path} compile_script ./duck_scripts/foo.dks --dump-ir mir -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.mir' | wc -l)" -eq 1
+          && mir_dump="$(find @{case_build}/duck_debug_artifacts -type f -name '*.mir' -print -quit)"
+          && test "$(grep -c '^MIR for ' "$mir_dump")" -eq 4
+          && awk '/4242/ && !first { first = NR } /1234/ && !second { second = NR } /7777/ && !third { third = NR } END { exit !(first && second && third && first < second && second < third) }' "$mir_dump"
+        ExitCode: 0
+
+  compile-script-hir:
+    # Checks if HIR is collected in source order in one debug artifact.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Cases:
+      multiple-statements:
+        Run: >-
+          @{duckc_path} compile_script ./duck_scripts/foo.dks --dump-ir hir -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.hir' | wc -l)" -eq 1
+          && hir_dump="$(find @{case_build}/duck_debug_artifacts -type f -name '*.hir' -print -quit)"
+          && test "$(grep -c '^HIR for ' "$hir_dump")" -eq 4
+          && awk '/4242/ && !first { first = NR } /1234/ && !second { second = NR } /7777/ && !third { third = NR } END { exit !(first && second && third && first < second && second < third) }' "$hir_dump"
         ExitCode: 0
 
   compile-package-inferred-name:
