@@ -11,8 +11,15 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout_fd.hpp>
 
+#include <fstream>
+
 namespace compiler::driver {
 
+	/**
+	 * @brief Utility function to get an ofstream for dumping debug artifacts.
+	 * The artifact will be created if it does not exist.
+	 */
+	std::ofstream getDebugDumpArtifact(base::StrID artifact_name);
 
 	/**
 	 * @brief Converts HOUTUnit to LIRUnitWithBackendName.
@@ -22,7 +29,8 @@ namespace compiler::driver {
 		query::Context&         ctx,
 		const helios::HOUTUnit& hout_unit,
 		base::StrID             module_id,
-		base::StrID             module_id_human
+		base::StrID             module_id_human,
+		bool                    dump_lir = true
 	);
 
 	/**

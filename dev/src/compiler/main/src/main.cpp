@@ -417,16 +417,15 @@ namespace debug_options {
 	}
 
 	auto getClahScriptDumpIRParameter() {
-		return clah::ParamBuilder::ofValue(
-				   clah::CategoryListParser::make(
-					   "categories",
-					   clah::CategoryParser::make(std::vector<std::string>{ "asm", "llvm", "dbc" })
-				   )
-		)
+		return clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
+											   "categories",
+											   clah::CategoryParser::make(std::vector<std::string>{
+												   "lir", "asm", "llvm", "dbc" })
+										   ))
 		    .addLongName("dump-ir")
-		    .addShortDesc("Dump assembly, LLVM IR, or DVM bytecode output to a file.")
+		    .addShortDesc("Dump LIR, assembly, LLVM IR, or DVM bytecode output to a file.")
 		    .addLongDesc(
-				"Supported categories are asm, llvm, and dbc. The dbc category requires "
+				"Supported categories are lir, asm, llvm, and dbc. The dbc category requires "
 				"--dvm-backend."
 			)
 		    .build();

@@ -464,7 +464,7 @@ namespace compiler::driver {
 
 						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, *hout_unit.value(), module_name_id, module_name_id
+							ctx, *hout_unit.value(), module_name_id, module_name_id, false
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile definition statement to LIR");
@@ -490,7 +490,11 @@ namespace compiler::driver {
 							return std::unexpected(hout_unit_result.error());
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, std::move(hout_unit_result).value(), module_name_id, module_name_id
+							ctx,
+							std::move(hout_unit_result).value(),
+							module_name_id,
+							module_name_id,
+							false
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile executable statement to LIR");
@@ -508,7 +512,7 @@ namespace compiler::driver {
 						wrapper_symbols.push_back(wrapper_result->initializer_function);
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, wrapper_result->hout_unit, module_name_id, module_name_id
+							ctx, wrapper_result->hout_unit, module_name_id, module_name_id, false
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile variable statement to LIR");
@@ -533,7 +537,7 @@ namespace compiler::driver {
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
 			auto main_lir = compileHOUTUnitToLIRModuleData(
-				ctx, main_unit, merged.module_id, merged.module_id_human
+				ctx, main_unit, merged.module_id, merged.module_id_human, false
 			);
 			if (main_lir.hasFailed())
 				return std::unexpected("Failed to compile script main to LIR");
@@ -545,6 +549,13 @@ namespace compiler::driver {
 			// one. We are not sure, whether this is the best way to handle this, but it is a simple
 			// solution for now.
 			merged.lir_unit.deduplicateSymbols();
+
+			if (driver::dump_ir_options.dump_lir) {
+				auto output_file = getDebugDumpArtifact(
+					base::StrID(base::strConcat(merged.module_id_human.strView(), ".lir"))
+				);
+				merged.debugPrint(ctx, output_file);
+			}
 
 			return merged;
 		}
