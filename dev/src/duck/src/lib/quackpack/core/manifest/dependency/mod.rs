@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::quackpack::core::{FeatureName, Source, Version};
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
@@ -219,6 +220,11 @@ impl Dependency {
     /// Get the [`Conditions`] of this dependency.
     pub fn conditions(&self) -> Option<&Conditions> {
         self.conditions.as_ref()
+    }
+
+    /// Get the [`Identity`] of this [`Dependency`].
+    pub fn identity(&self) -> Identity {
+        Identity::new(self.name(), self.source.into())
     }
 }
 
