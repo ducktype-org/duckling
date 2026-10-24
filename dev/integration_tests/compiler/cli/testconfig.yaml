@@ -260,6 +260,26 @@ Tests:
         package_path: "./duck_modules/inferred_name/inferred_name.dk"
         ExitCode: 0
 
+  compile-package-no-executable:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Cases:
+      llvm-objects:
+        Run: >-
+          @{duckc_path} compile_package ./duck_modules/inferred_name --no-executable -O 0
+          --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -gt 0
+          && test ! -e @{case_build}/package_llvm.exe
+        ExitCode: 0
+      dvm-objects:
+        Run: >-
+          @{duckc_path} compile_package ./duck_modules/inferred_name --dvm-backend
+          --no-executable --no-incremental --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build} -maxdepth 1 -type f -name '*.dbc' -size +0c | wc -l)" -gt 0
+          && test ! -e @{case_build}/package_dvm.dbc
+        ExitCode: 0
+
   compile-packages-dump-ir:
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
     TimeOut: 10
@@ -272,6 +292,22 @@ Tests:
           -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
           && test -s "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.hir"
           && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
+        ExitCode: 0
+
+  compile-packages-no-executable:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    package_manifest: "$DIT_TMP_DIR/packages.json"
+    Cases:
+      native-and-dvm-tasks:
+        Run: >-
+          printf '%s' '{"packages":[{"id":"inferred_name","name":"inferred_name","path":"duck_modules/inferred_name"}],"tasks":[{"package":"inferred_name","strategy":"native","output_file":"native_output"},{"package":"inferred_name","strategy":"dvm_exe","output_file":"dvm_output"}]}' > @{package_manifest}
+          && @{duckc_path} compile_packages @{package_manifest} -O 0 --no-incremental --no-executable
+          -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -gt 0
+          && test "$(find @{case_build} -type f -name '*.dbc' | wc -l)" -gt 0
+          && test ! -e @{case_build}/native_output
+          && test ! -e @{case_build}/dvm_output
         ExitCode: 0
 
   comp-time-output:

@@ -904,7 +904,7 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case_novalue(BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
+				variant_case_novalue(BuildTargetDVM, BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
 				}
 				variant_default {
@@ -1040,7 +1040,7 @@ namespace compiler::driver {
 						result = base::BAD;
 					}
 				}
-				variant_case_novalue(BuildTargetLLVM) {
+				variant_case_novalue(BuildTargetLLVM, BuildTargetDVM) {
 					// Do nothing for plain object files
 				}
 				variant_case(BuildTargetDVMLibrary, target_dvm) {

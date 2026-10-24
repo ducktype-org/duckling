@@ -103,6 +103,11 @@ namespace compiler::driver {
 	};
 
 	/**
+	 * @brief Package build target for DVM bytecode objects without a package link step.
+	 */
+	struct BuildTargetDVM final {};
+
+	/**
 	 * @brief Package build target for LLVM backend (to object files).
 	 */
 	struct BuildTargetLLVM final {};
@@ -146,6 +151,7 @@ namespace compiler::driver {
 	using BuildTarget = std::variant<
 		BuildTargetDVMLibrary,
 		BuildTargetDVMExecutable,
+		BuildTargetDVM,
 		BuildTargetLLVM,
 		BuildTargetLLVMExecutable,
 		BuildTargetLLVMStaticLibrary>;
