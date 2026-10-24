@@ -67,6 +67,7 @@
 #include <array>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -89,6 +90,23 @@ namespace compiler::driver {
 	}
 
 	namespace {
+		bool hasRequestedIROutput(BackendType backend) {
+			const auto& dump  = driver::dump_ir_options;
+			const auto& print = driver::print_ir_options;
+			if (dump.dump_hir || dump.dump_mir || dump.dump_lir || print.print_hir
+			    || print.print_mir || print.print_lir)
+				return true;
+
+			switch (backend) {
+			case BackendType::LLVM:
+				return dump.dump_llvm || dump.dump_asm;
+			case BackendType::DVM:
+				return dump.dump_dbc || print.print_dbc;
+			default:
+				CORE_PANIC("bad backend type");
+			}
+		}
+
 		/**
 		 * @brief Handles the `--print-ir=dbc` and `--dump-ir=dbc` debug options for a module
 		 * compiled to DVM bytecode. The dump is written to the `duck_debug_artifacts` directory.
@@ -327,9 +345,14 @@ namespace compiler::driver {
 
 		/**
 		 * Load precompiled artifact from disk without performing any compilation.
-		 * Returns Optional empty if the underlying file does not exist anymore.
+		 * Returns Optional empty if IR output is requested or the underlying file is unavailable.
 		 */
 		static auto loadFromDisk(const QKey& key) -> base::Optional<PResult> {
+			// IR output is emitted by provide(), so a cached object cannot satisfy the request.
+			// @TODO: #3861 Separate IR emission from object compilation so dumps and prints
+			// can be regenerated while reusing valid cached objects.
+			if (hasRequestedIROutput(key.backend_type)) return {};
+
 			auto output_name = getModuleOutputName(key);
 
 			auto collection = getQueryArtifactsCollection();
@@ -422,6 +445,8 @@ namespace compiler::driver {
 			// Track wrapper symbols to build the synthetic main that runs them in order.
 			// We preserve the original statement order to match script semantics.
 			std::vector<helios::SymID>         wrapper_symbols;
+			std::ostringstream                 aggregate_mir_dump;
+			std::ostringstream                 aggregate_hir_dump;
 			base::Optional<frontend::ModuleID> parent_module_id;
 			u64                                statement_counter = 0;
 			auto                               session_id        = repl::ReplSessionID::next();
@@ -464,7 +489,13 @@ namespace compiler::driver {
 
 						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, *hout_unit.value(), module_name_id, module_name_id
+							ctx,
+							*hout_unit.value(),
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile definition statement to LIR");
@@ -490,7 +521,13 @@ namespace compiler::driver {
 							return std::unexpected(hout_unit_result.error());
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, std::move(hout_unit_result).value(), module_name_id, module_name_id
+							ctx,
+							std::move(hout_unit_result).value(),
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile executable statement to LIR");
@@ -508,7 +545,13 @@ namespace compiler::driver {
 						wrapper_symbols.push_back(wrapper_result->initializer_function);
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, wrapper_result->hout_unit, module_name_id, module_name_id
+							ctx,
+							wrapper_result->hout_unit,
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile variable statement to LIR");
@@ -533,7 +576,13 @@ namespace compiler::driver {
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
 			auto main_lir = compileHOUTUnitToLIRModuleData(
-				ctx, main_unit, merged.module_id, merged.module_id_human
+				ctx,
+				main_unit,
+				merged.module_id,
+				merged.module_id_human,
+				false,
+				&aggregate_mir_dump,
+				&aggregate_hir_dump
 			);
 			if (main_lir.hasFailed())
 				return std::unexpected("Failed to compile script main to LIR");
@@ -546,10 +595,33 @@ namespace compiler::driver {
 			// solution for now.
 			merged.lir_unit.deduplicateSymbols();
 
+			if (driver::dump_ir_options.dump_hir) {
+				auto output_file = getDebugDumpArtifact(
+					base::StrID(base::strConcat(merged.module_id_human.strView(), ".hir"))
+				);
+				output_file << aggregate_hir_dump.str();
+			}
+
+			if (driver::dump_ir_options.dump_mir) {
+				auto output_file = getDebugDumpArtifact(
+					base::StrID(base::strConcat(merged.module_id_human.strView(), ".mir"))
+				);
+				output_file << aggregate_mir_dump.str();
+			}
+
+			if (driver::dump_ir_options.dump_lir) {
+				auto output_file = getDebugDumpArtifact(
+					base::StrID(base::strConcat(merged.module_id_human.strView(), ".lir"))
+				);
+				merged.debugPrint(ctx, output_file);
+			}
+
 			return merged;
 		}
 
-		base::OkBad compileScriptToLLVMExecutable(const linker::LinkingOptions& linking_options) {
+		base::OkBad compileScriptToLLVMExecutable(
+			const linker::LinkingOptions& linking_options, bool link_executable
+		) {
 			auto& script_context = global_state::getScriptContext();
 
 			base::Optional<std::string> error_message;
@@ -598,6 +670,8 @@ namespace compiler::driver {
 					);
 				}
 
+				if (!link_executable) return;
+
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(output_name.c_str())
@@ -627,7 +701,9 @@ namespace compiler::driver {
 			return base::OK;
 		}
 
-		base::OkBad compileScriptToDVMBytecode(const DVMLinkingOptions& linking_options) {
+		base::OkBad compileScriptToDVMBytecode(
+			const DVMLinkingOptions& linking_options, bool link_executable
+		) {
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto script_lir = compileScriptToLIRModuleData(ctx);
@@ -656,6 +732,8 @@ namespace compiler::driver {
 
 				vm::code::serializeCode(dvm_module.code, module_output_file);
 				module_output_file.close();
+
+				if (!link_executable) return;
 
 				auto& script_context = global_state::getScriptContext();
 				auto  output_file    = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -689,16 +767,17 @@ namespace compiler::driver {
 	base::OkBad compileScript(
 		BackendType                          backend_type,
 		const options_types::StdLibOptions&  std_lib_opts,
-		const options_types::LinkingOptions& linking_opts
+		const options_types::LinkingOptions& linking_opts,
+		bool                                 link_executable
 	) {
 		switch (backend_type) {
 		case BackendType::LLVM:
 			return compileScriptToLLVMExecutable(
-				constructNativeLinkerOptions(linking_opts, std_lib_opts)
+				constructNativeLinkerOptions(linking_opts, std_lib_opts), link_executable
 			);
 		case BackendType::DVM:
 			return compileScriptToDVMBytecode(
-				constructDVMLinkingOptions(linking_opts, std_lib_opts, false)
+				constructDVMLinkingOptions(linking_opts, std_lib_opts, false), link_executable
 			);
 		default:
 			CORE_PANIC("bad backend type");
@@ -847,7 +926,9 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case_novalue(BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
+				variant_case_novalue(
+					BuildTargetDVM, BuildTargetDVMLibrary, BuildTargetDVMExecutable
+				) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
 				}
 				variant_default {
@@ -983,7 +1064,7 @@ namespace compiler::driver {
 						result = base::BAD;
 					}
 				}
-				variant_case_novalue(BuildTargetLLVM) {
+				variant_case_novalue(BuildTargetLLVM, BuildTargetDVM) {
 					// Do nothing for plain object files
 				}
 				variant_case(BuildTargetDVMLibrary, target_dvm) {

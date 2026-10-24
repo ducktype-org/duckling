@@ -63,6 +63,7 @@
 #include <iostream>
 #include <ranges>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -366,32 +367,54 @@ namespace debug_options {
 		return print_field_mapping;
 	}
 
+	const std::vector<std::string>& getDumpIRCategories() {
+		static const std::vector<std::string> categories{
+			"hir", "mir", "lir", "llvm", "asm", "dbc"
+		};
+		return categories;
+	}
+
+	const std::vector<std::string>& getPrintIRCategories() {
+		static const std::vector<std::string> categories{ "hir", "mir", "lir", "dbc" };
+		return categories;
+	}
+
+	auto getClahDumpIRParameter() {
+		return clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
+											   "categories",
+											   clah::CategoryParser::make(getDumpIRCategories())
+										   ))
+		    .addLongName("dump-ir")
+		    .addShortDesc("Dump selected intermediate representations to files.")
+		    .addLongDesc(
+				"Supported categories and artifact extensions, in compilation order, are "
+				"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
+				"LLVM IR and assembly require the LLVM backend; DBC requires --dvm-backend."
+			)
+		    .build();
+	}
+
+	auto getClahNoExecutableParameter() {
+		return clah::ParamBuilder::ofFlag()
+		    .addLongName("no-executable")
+		    .addShortDesc("Skip the final executable link and keep compiler object artifacts.")
+		    .build();
+	}
+
 	/**
 	 * @brief Return the array of clah::Parameter for the debug options of the driver, which can be
 	 * added to a Clah instance.
 	 */
 	auto getClahDebugParameters() {
-		std::vector<std::string> dump_categories = getDebugDumpIROptions() | std::views::keys
-		                                         | std::ranges::to<std::vector<std::string>>();
-		std::vector<std::string> print_categories = getDebugPrintIROptions() | std::views::keys
-		                                          | std::ranges::to<std::vector<std::string>>();
-
 		return std::array{
-			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-											"categories", clah::CategoryParser::make(dump_categories)
-										))
-				.addLongName("dump-ir")
-				.addShortDesc("Dump to file the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc "
-			                 "requires --dvm-backend.")
-				.build(),
+			getClahDumpIRParameter(),
 			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
 											"categories",
-											clah::CategoryParser::make(print_categories)
+											clah::CategoryParser::make(getPrintIRCategories())
 										))
 				.addLongName("print-ir")
-				.addShortDesc("Print to stdout the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: dbc, lir, mir, hir.")
+				.addShortDesc("Print selected intermediate representations to stdout.")
+				.addLongDesc("Possible values are: hir, mir, lir, dbc.")
 				.build(),
 		};
 	}
@@ -415,6 +438,7 @@ namespace debug_options {
 
 		return debug_options;
 	}
+
 }
 
 /**
@@ -504,7 +528,7 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_module", "Compile given module into a binary.")
+			clah::Clah("compile_module", "Compile one module into backend object artifacts.")
 				.addPositional(clah::FileParser::make("module", true))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
@@ -519,6 +543,12 @@ clah::Clah getClahForMain() {
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-incremental")
@@ -545,7 +575,8 @@ clah::Clah getClahForMain() {
 								},
 							},
 							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
+								.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
+								                      .copyValueOr("./duck_build/"),
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
@@ -583,11 +614,13 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah(
 				"compile_modules",
-				"Compile given modules into binaries. Every module is placed in its own package "
+				"Compile given modules into backend objects, optionally linking an executable. "
+				"Every module is placed in its own package "
 				"and every package depends on all the other ones. "
 				"This mimics the simple case of multi file compilation with GCC/clang which is "
 				"sometimes useful. Note that the package based entry points should be preferred "
-				"when possible."
+				"when possible. Use --no-executable to compile modules without linking an "
+				"executable."
 			)
 				.addPositional(clah::FileParser::make("module"))
 				.setDefaultValueParser(clah::FileParser::make("module"))
@@ -617,6 +650,7 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
+				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-incremental")
 	                     .addShortDesc(
@@ -628,7 +662,8 @@ clah::Clah getClahForMain() {
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
-					const bool dvm_backend = options.isFlag("dvm-backend");
+					const bool dvm_backend   = options.isFlag("dvm-backend");
+					const bool no_executable = options.isFlag("no-executable");
 
 					std::set<base::StrID>               aliases_duplicate_check;
 					base::Map<base::StrID, base::StrID> package_id_aliases;
@@ -731,6 +766,21 @@ clah::Clah getClahForMain() {
 							continue;
 
 						auto root_module = package.getRootModule().illegalAccess().getID();
+						if (no_executable) {
+							if (package_id == package_ids.front()) main_root_module = root_module;
+							if (dvm_backend) {
+								compilation_tasks.push_back(driver::PackageCompilationTask{
+									.root_module  = root_module,
+									.build_target = driver::BuildTargetDVM{},
+								});
+							} else {
+								compilation_tasks.push_back(driver::PackageCompilationTask{
+									.root_module  = root_module,
+									.build_target = driver::BuildTargetLLVM{},
+								});
+							}
+							continue;
+						}
 						if (package_id == package_ids.front()) {
 							main_root_module = root_module;
 							continue;
@@ -765,6 +815,13 @@ clah::Clah getClahForMain() {
 					}
 
 					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
+					if (no_executable) {
+						base::OkBad result = driver::compilePackages(compilation_tasks);
+
+						compiler::driver::exit();
+
+						return result.isOk() ? 0 : 1;
+					}
 
 					if (dvm_backend) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
@@ -805,7 +862,9 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_package", "Compile given package into a binary.")
+			clah::Clah(
+				"compile_package", "Compile a package and optionally link an executable or library."
+			)
 				.addPositional(
 					clah::FileParser::make("path", true),
 					"Path to the root module of the package or the root module file."
@@ -834,6 +893,7 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
+				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("print-statistics")
 	                     .addShortDesc("Print execution time statistics.")
@@ -947,7 +1007,14 @@ clah::Clah getClahForMain() {
 
 
 					compiler::driver::BuildTarget build_target;
-					if (options.isFlag("dvm-backend")) {
+					const bool                    no_executable = options.isFlag("no-executable");
+					const bool emit_static_lib                  = options.isFlag("emit-static-lib");
+					if (no_executable && !emit_static_lib) {
+						if (options.isFlag("dvm-backend"))
+							build_target = compiler::driver::BuildTargetDVM{};
+						else
+							build_target = compiler::driver::BuildTargetLLVM{};
+					} else if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
 						auto is_lib              = options.isFlag("emit-static-lib");
@@ -1025,6 +1092,7 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
 				.addPositional(clah::FileParser::make("manifest"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
@@ -1033,6 +1101,7 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
 	                     .optional()
 	                     .build())
+				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("print-statistics")
 	                     .addShortDesc("Print execution time statistics.")
@@ -1125,7 +1194,20 @@ clah::Clah getClahForMain() {
 						}
 						variant_match(converted->task_data) {
 							variant_case(compiler::driver::PackageCompilationTask, package_task) {
-								compilation_tasks.push_back(package_task);
+								auto task = package_task;
+								if (options.isFlag("no-executable")) {
+									if (std::holds_alternative<
+											compiler::driver::BuildTargetLLVMExecutable>(
+											task.build_target
+										))
+										task.build_target = compiler::driver::BuildTargetLLVM{};
+									else if (std::holds_alternative<
+												 compiler::driver::BuildTargetDVMExecutable>(
+												 task.build_target
+											 ))
+										task.build_target = compiler::driver::BuildTargetDVM{};
+								}
+								compilation_tasks.push_back(std::move(task));
 							}
 							variant_default { CORE_PANIC("Unsupported task type in manifest"); }
 						}
@@ -1158,9 +1240,13 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
+			clah::Clah(
+				"compile_script",
+				"Compile a .dks script into backend objects, a .dbc package, or an executable."
+			)
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDumpIRParameter())
 				.add(getClahLinkingOptions())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
@@ -1176,6 +1262,7 @@ clah::Clah getClahForMain() {
 							 "Compile to DVM bytecode (.dbc) instead of a native executable."
 						 )
 	                     .build())
+				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
 	                     .addLongName("workers")
@@ -1221,7 +1308,10 @@ clah::Clah getClahForMain() {
 					}
 
 					auto result = driver::compileScript(
-						backend_type, stdlib_options, getLinkingOptionsFromClah(options)
+						backend_type,
+						stdlib_options,
+						getLinkingOptionsFromClah(options),
+						!options.isFlag("no-executable")
 					);
 
 					compiler::driver::exit();
