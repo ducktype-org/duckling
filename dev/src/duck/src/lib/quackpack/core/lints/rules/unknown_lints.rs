@@ -48,12 +48,14 @@ pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()
     let Some(ref duck) = lints.duck else {
         return Ok(());
     };
+    let max_distance = pcx.ctx().duck_cfg().max_fix_dist()? as u32;
     let known_lints = known_lint_names();
     for lint_name in duck.0.keys() {
         if is_known_lint(lint_name) {
             continue;
         }
-        let hint = find_closest_target(lint_name, &known_lints, None).map(ToString::to_string);
+        let hint = find_closest_target(lint_name, &known_lints, Some(max_distance))
+            .map(ToString::to_string);
         buffer.register(
             UnknownLintDiagnostic {
                 lint_name: lint_name.to_string(),
