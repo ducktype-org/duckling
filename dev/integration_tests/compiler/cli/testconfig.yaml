@@ -215,6 +215,20 @@ Tests:
         package_path: "./duck_modules/inferred_name/inferred_name.dk"
         ExitCode: 0
 
+  compile-packages-dump-ir:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    package_manifest: "$DIT_TMP_DIR/packages.json"
+    Cases:
+      object-task:
+        Run: >-
+          printf '%s' '{"packages":[{"id":"inferred_name","name":"inferred_name","path":"duck_modules/inferred_name"}],"tasks":[{"package":"inferred_name","strategy":"obj"}]}' > @{package_manifest}
+          && @{duckc_path} compile_packages @{package_manifest} -O 0 --no-incremental --dump-ir hir
+          -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test -s "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.hir"
+          && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
+        ExitCode: 0
+
   comp-time-output:
     # Test compile time output to stderr
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"

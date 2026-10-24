@@ -366,32 +366,47 @@ namespace debug_options {
 		return print_field_mapping;
 	}
 
+	const std::vector<std::string>& getDumpIRCategories() {
+		static const std::vector<std::string> categories{
+			"hir", "mir", "lir", "llvm", "asm", "dbc"
+		};
+		return categories;
+	}
+
+	const std::vector<std::string>& getPrintIRCategories() {
+		static const std::vector<std::string> categories{ "hir", "mir", "lir", "dbc" };
+		return categories;
+	}
+
+	auto getClahDumpIRParameter() {
+		return clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
+											   "categories",
+											   clah::CategoryParser::make(getDumpIRCategories())
+										   ))
+		    .addLongName("dump-ir")
+		    .addShortDesc("Dump selected intermediate representations to files.")
+		    .addLongDesc(
+				"Supported categories and artifact extensions, in compilation order, are "
+				"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
+				"LLVM IR and assembly require the LLVM backend; DBC requires --dvm-backend."
+			)
+		    .build();
+	}
+
 	/**
 	 * @brief Return the array of clah::Parameter for the debug options of the driver, which can be
 	 * added to a Clah instance.
 	 */
 	auto getClahDebugParameters() {
-		std::vector<std::string> dump_categories = getDebugDumpIROptions() | std::views::keys
-		                                         | std::ranges::to<std::vector<std::string>>();
-		std::vector<std::string> print_categories = getDebugPrintIROptions() | std::views::keys
-		                                          | std::ranges::to<std::vector<std::string>>();
-
 		return std::array{
-			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-											"categories", clah::CategoryParser::make(dump_categories)
-										))
-				.addLongName("dump-ir")
-				.addShortDesc("Dump to file the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc "
-			                 "requires --dvm-backend.")
-				.build(),
+			getClahDumpIRParameter(),
 			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
 											"categories",
-											clah::CategoryParser::make(print_categories)
+											clah::CategoryParser::make(getPrintIRCategories())
 										))
 				.addLongName("print-ir")
-				.addShortDesc("Print to stdout the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: dbc, lir, mir, hir.")
+				.addShortDesc("Print selected intermediate representations to stdout.")
+				.addLongDesc("Possible values are: hir, mir, lir, dbc.")
 				.build(),
 		};
 	}
@@ -416,21 +431,6 @@ namespace debug_options {
 		return debug_options;
 	}
 
-	auto getClahScriptDumpIRParameter() {
-		return clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-											   "categories",
-											   clah::CategoryParser::make(std::vector<std::string>{
-												   "hir", "mir", "lir", "llvm", "asm", "dbc" })
-										   ))
-		    .addLongName("dump-ir")
-		    .addShortDesc("Dump HIR, MIR, LIR, LLVM IR, assembly, or DVM bytecode output to a file.")
-		    .addLongDesc(
-				"Supported categories and artifact extensions, in compilation order, are "
-				"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
-				"LLVM IR and assembly require the LLVM backend; DBC requires --dvm-backend."
-			)
-		    .build();
-	}
 }
 
 /**
@@ -1048,6 +1048,7 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
 				.addPositional(clah::FileParser::make("manifest"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
@@ -1184,7 +1185,7 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
-				.add(debug_options::getClahScriptDumpIRParameter())
+				.add(debug_options::getClahDumpIRParameter())
 				.add(getClahLinkingOptions())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
