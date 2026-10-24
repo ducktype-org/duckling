@@ -7,7 +7,7 @@
 #include "copy_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>

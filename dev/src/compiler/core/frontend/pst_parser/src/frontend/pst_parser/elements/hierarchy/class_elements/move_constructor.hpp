@@ -20,7 +20,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(MoveConstructor);
