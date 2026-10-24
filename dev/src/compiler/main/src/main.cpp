@@ -610,7 +610,8 @@ clah::Clah getClahForMain() {
 				"and every package depends on all the other ones. "
 				"This mimics the simple case of multi file compilation with GCC/clang which is "
 				"sometimes useful. Note that the package based entry points should be preferred "
-				"when possible."
+				"when possible. Use --no-executable to compile modules without linking an "
+				"executable."
 			)
 				.addPositional(clah::FileParser::make("module"))
 				.setDefaultValueParser(clah::FileParser::make("module"))
@@ -641,6 +642,10 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-executable")
+	                     .addShortDesc("Compile all modules without linking an executable.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-incremental")
 	                     .addShortDesc(
 							 "Disable incremental compilation (do not load previous query graph)."
@@ -651,7 +656,8 @@ clah::Clah getClahForMain() {
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
-					const bool dvm_backend = options.isFlag("dvm-backend");
+					const bool dvm_backend   = options.isFlag("dvm-backend");
+					const bool no_executable = options.isFlag("no-executable");
 
 					std::set<base::StrID>               aliases_duplicate_check;
 					base::Map<base::StrID, base::StrID> package_id_aliases;
@@ -754,6 +760,28 @@ clah::Clah getClahForMain() {
 							continue;
 
 						auto root_module = package.getRootModule().illegalAccess().getID();
+						if (no_executable) {
+							if (package_id == package_ids.front()) main_root_module = root_module;
+							if (dvm_backend) {
+								compilation_tasks.push_back(driver::PackageCompilationTask{
+									.root_module  = root_module,
+									.build_target = driver::BuildTargetDVMLibrary{
+										.output_file_name = base::StrID(
+											base::strConcat(package_id.strView(), ".dbc")
+										),
+										.dvm_linking_options = driver::constructDVMLinkingOptions(
+											getLinkingOptionsFromClah(options), stdlib_options, true
+										),
+								},
+							});
+							} else {
+								compilation_tasks.push_back(driver::PackageCompilationTask{
+									.root_module  = root_module,
+									.build_target = driver::BuildTargetLLVM{},
+								});
+							}
+							continue;
+						}
 						if (package_id == package_ids.front()) {
 							main_root_module = root_module;
 							continue;
@@ -788,6 +816,13 @@ clah::Clah getClahForMain() {
 					}
 
 					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
+					if (no_executable) {
+						base::OkBad result = driver::compilePackages(compilation_tasks);
+
+						compiler::driver::exit();
+
+						return result.isOk() ? 0 : 1;
+					}
 
 					if (dvm_backend) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")

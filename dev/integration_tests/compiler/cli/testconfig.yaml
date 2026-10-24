@@ -61,6 +61,26 @@ Tests:
       two-modules:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
+      two-modules-no-executable:
+        Run: >-
+          @{duckc_path} compile_modules ./duck_modules/two_modules/b.dk ./duck_modules/two_modules/a.dk
+          --no-executable -O 0 --no-incremental --dump-ir asm -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.a.s' | wc -l)" -eq 1
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.b.s' | wc -l)" -eq 1
+          && test "$(find @{case_build} -type f -name '*.o' -size +0c | wc -l)" -ge 2
+          && test ! -e @{case_build}/package_llvm.exe
+        ExitCode: 0
+      two-modules-dvm-no-executable:
+        Run: >-
+          @{duckc_path} compile_modules ./duck_modules/two_modules/b.dk ./duck_modules/two_modules/a.dk
+          --dvm-backend --no-executable -O 0 --no-incremental --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.a.dbc' | wc -l)" -eq 1
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.b.dbc' | wc -l)" -eq 1
+          && test "$(find @{case_build} -maxdepth 1 -type f -name '*.dbc' -size +0c | wc -l)" -eq 2
+          && test ! -e @{case_build}/package_dvm.dbc
+        ExitCode: 0
 
   compile-module-artifact-location:
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
