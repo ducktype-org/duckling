@@ -90,6 +90,23 @@ namespace compiler::driver {
 	}
 
 	namespace {
+		bool hasRequestedIROutput(BackendType backend) {
+			const auto& dump  = driver::dump_ir_options;
+			const auto& print = driver::print_ir_options;
+			if (dump.dump_hir || dump.dump_mir || dump.dump_lir || print.print_hir
+			    || print.print_mir || print.print_lir)
+				return true;
+
+			switch (backend) {
+			case BackendType::LLVM:
+				return dump.dump_llvm || dump.dump_asm;
+			case BackendType::DVM:
+				return dump.dump_dbc || print.print_dbc;
+			default:
+				CORE_PANIC("bad backend type");
+			}
+		}
+
 		/**
 		 * @brief Handles the `--print-ir=dbc` and `--dump-ir=dbc` debug options for a module
 		 * compiled to DVM bytecode. The dump is written to the `duck_debug_artifacts` directory.
@@ -328,9 +345,14 @@ namespace compiler::driver {
 
 		/**
 		 * Load precompiled artifact from disk without performing any compilation.
-		 * Returns Optional empty if the underlying file does not exist anymore.
+		 * Returns Optional empty if IR output is requested or the underlying file is unavailable.
 		 */
 		static auto loadFromDisk(const QKey& key) -> base::Optional<PResult> {
+			// IR output is emitted by provide(), so a cached object cannot satisfy the request.
+			// @TODO: #3861 Separate IR emission from object compilation so dumps and prints
+			// can be regenerated while reusing valid cached objects.
+			if (hasRequestedIROutput(key.backend_type)) return {};
+
 			auto output_name = getModuleOutputName(key);
 
 			auto collection = getQueryArtifactsCollection();
@@ -904,7 +926,9 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case_novalue(BuildTargetDVM, BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
+				variant_case_novalue(
+					BuildTargetDVM, BuildTargetDVMLibrary, BuildTargetDVMExecutable
+				) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
 				}
 				variant_default {

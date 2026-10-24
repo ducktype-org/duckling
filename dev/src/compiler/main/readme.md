@@ -30,5 +30,8 @@ The same artifact location and dump options apply to these commands:
 compilation failures normally. Use the command's `--help` output for its complete command-specific
 options.
 
+@TODO: #3861 Requesting an applicable `--dump-ir` category, or `--print-ir` on commands that support it,
+currently recompiles affected modules even when cached objects are available.
+
 The focused CLI integration cases live in
 [`integration_tests/compiler/cli/testconfig.yaml`](../../../integration_tests/compiler/cli/testconfig.yaml).

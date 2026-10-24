@@ -863,8 +863,7 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah(
-				"compile_package",
-				"Compile a package and optionally link an executable or library."
+				"compile_package", "Compile a package and optionally link an executable or library."
 			)
 				.addPositional(
 					clah::FileParser::make("path", true),
@@ -1008,8 +1007,8 @@ clah::Clah getClahForMain() {
 
 
 					compiler::driver::BuildTarget build_target;
-					const bool no_executable = options.isFlag("no-executable");
-					const bool emit_static_lib = options.isFlag("emit-static-lib");
+					const bool                    no_executable = options.isFlag("no-executable");
+					const bool emit_static_lib                  = options.isFlag("emit-static-lib");
 					if (no_executable && !emit_static_lib) {
 						if (options.isFlag("dvm-backend"))
 							build_target = compiler::driver::BuildTargetDVM{};
@@ -1198,12 +1197,14 @@ clah::Clah getClahForMain() {
 								auto task = package_task;
 								if (options.isFlag("no-executable")) {
 									if (std::holds_alternative<
-											compiler::driver::BuildTargetLLVMExecutable
-										>(task.build_target))
+											compiler::driver::BuildTargetLLVMExecutable>(
+											task.build_target
+										))
 										task.build_target = compiler::driver::BuildTargetLLVM{};
 									else if (std::holds_alternative<
-											 compiler::driver::BuildTargetDVMExecutable
-										 >(task.build_target))
+												 compiler::driver::BuildTargetDVMExecutable>(
+												 task.build_target
+											 ))
 										task.build_target = compiler::driver::BuildTargetDVM{};
 								}
 								compilation_tasks.push_back(std::move(task));
