@@ -11,7 +11,7 @@ use std::fmt;
 use crate::QuackResult;
 use crate::quackpack::core::PackageContext;
 use crate::quackpack::core::lints::buffer::LintBuffer;
-use crate::quackpack::core::lints::{Diagnostic, Lint, LintLevel};
+use crate::quackpack::core::lints::{Diagnostic, Lint, LintLevel, PASSES};
 use crate::util::edit_distance::find_closest_target;
 
 pub const LINT: Lint = Lint {
@@ -37,11 +37,11 @@ lints:
 };
 
 /// Run the pass for [`LINT`].
-pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let level = pcx.package().manifest().lints().level_for_duck_lint(&LINT);
-    if level == LintLevel::Allow {
-        return Ok(());
-    }
+pub fn pass(
+    pcx: &PackageContext<'_>,
+    level: LintLevel,
+    buffer: &mut LintBuffer,
+) -> QuackResult<()> {
     let Some(ref lints) = pcx.package().original_schema().lints else {
         return Ok(());
     };
@@ -69,11 +69,11 @@ pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()
 }
 
 fn known_lint_names() -> Vec<&'static str> {
-    super::ALL_LINTS.iter().map(|lint| lint.name).collect()
+    PASSES.iter().map(|pass| pass.0.name).collect()
 }
 
 fn is_known_lint(name: &str) -> bool {
-    super::ALL_LINTS.iter().any(|lint| lint.name == name)
+    PASSES.iter().any(|pass| pass.0.name == name)
 }
 
 #[derive(Debug)]
