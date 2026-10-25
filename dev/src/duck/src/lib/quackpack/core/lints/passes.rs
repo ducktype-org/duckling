@@ -42,7 +42,8 @@ pub(super) enum LintPass {
     Manifest(ManifestLintFn),
 }
 
-/// Registered lints' passes.
+/// Registered lints' passes. Pairs are (lints, its pass). It's important not to confuse them,
+/// as we use the lint to figure out the level (and possibly skip the lint).
 pub(super) const PASSES: &[(&Lint, LintPass)] = &[
     (
         &rules::always_false_conditions::LINT,
