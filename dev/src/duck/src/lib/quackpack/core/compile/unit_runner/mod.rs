@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitStatus;
+use std::time::SystemTime;
 
 use tracing::{debug, error, info, instrument, trace};
 
@@ -92,9 +93,10 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         let (mut build_data, mut incremental_data) = self.manage_fingerprint(&guard)?;
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         self.run_all_needed_units(&mut incremental_data, &mut build_data)?;
+        let end = SystemTime::now();
         let output = outputs::get_compiler_output(&self.graph, &*self.profile_layout, self.bcx)?;
         // Update timestamp, so all produced artifacts have earlier modification time that the timestamp.
-        build_data.set_end_timestamp();
+        build_data.set_end_timestamp(end);
         if let Err(e) = guard.write_build_data(build_data) {
             self.ctx().warning(format!(
                 "failed to update fingerprint at `{}`: {e}",
