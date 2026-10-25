@@ -241,9 +241,9 @@ namespace maybe {
 
 	template(T: type)
 	fun value(m: Maybe(T)) -> T = {
-		return match(moveof m) {
+		return match(move m) {
 			case _: () = panicking.panic();
-			case v: T = moveof v;
+			case v: T = move v;
 		}
 	}
 }

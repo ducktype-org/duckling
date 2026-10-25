@@ -376,7 +376,7 @@
         },
         {
           "name": "keyword.operator.word.duckling",
-          "match": "\\b(as|sizeof|ref|box|new|ptr|cptr|manyptr|slice|copy|copyof|move|moveof|refof|ptrof)\\b"
+          "match": "\\b(as|sizeof|ref|box|new|ptr|cptr|manyptr|slice|copy|copyof|move|refof|ptrof)\\b"
         }
       ]
     },

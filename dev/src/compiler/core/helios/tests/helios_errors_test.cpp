@@ -2198,7 +2198,7 @@ private:
 		);
 	}
 
-	/// @brief `move` keeps the reference kind and rejects a temporary, `moveof` accepts it.
+	/// @brief `move` keeps the reference kind and rejects a temporary.
 	void testMoveSemantics() {
 		// A trivially copyable local, a `box` and a `ref` are all moved as they are, without a
 		// warning.
@@ -2232,32 +2232,6 @@ private:
 				}
 			)",
 			{ "A temporary is moved out of implicitly, `move` is not needed here." },
-			1
-		);
-
-		// `moveof` does not report a moved temporary.
-		checkForWarningOnCompileModule(
-			R"(
-				class Res { x: i64; }
-				fun moveofTemporary() -> i64 = {
-					var a = moveof Res(1);
-					return a.x;
-				}
-			)",
-			{},
-			0
-		);
-
-		// `moveof` checks its operand the same way `move` does.
-		checkForErrorOnCompileModule(
-			R"(
-				class Cls { x: i64; }
-				fun moveofField() = {
-					let a = Cls(10);
-					moveof a.x;
-				}
-			)",
-			{ "`moveof` can only be applied to an owned local variable." },
 			1
 		);
 	}

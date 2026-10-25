@@ -98,7 +98,7 @@ namespace allocation {
 template(T: type)
 fun boxAlloc(value: T) -> ptr T = {
     let storage = allocation[T].alloc();
-    builtins.move_in[T](storage, moveof value);
+    builtins.move_in[T](storage, move value);
     return storage;
 }
 
@@ -519,7 +519,7 @@ class List {
 
     fun push(value: T) -> () = {
         reserve(len + 1i64);
-        builtins.move_in[T](ptrof pointer[len], moveof value);
+        builtins.move_in[T](ptrof pointer[len], move value);
         len = len + 1i64;
     }
 

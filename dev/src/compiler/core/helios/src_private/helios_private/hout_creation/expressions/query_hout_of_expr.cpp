@@ -420,27 +420,13 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				const bool is_move
-					= op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move);
-				const bool is_moveof
-					= op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Moveof);
-				if (is_move or is_moveof) {
-					// `move x` and `moveof x` are only valid on an owned lvalue (a local variable).
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
+					// `move x` is only valid on an owned lvalue (a local variable).
 					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							base::strConcat(
-								"`",
-								is_move ? "move" : "moveof",
-								"` can only be applied to an owned local variable."
-							),
+							"`move` can only be applied to an owned local variable.",
 							stmt->getStablePosition()
 						));
-						return;
-					}
-
-					// We don't issue any warnings when we have moveof.
-					if (is_moveof) {
-						node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
 						return;
 					}
 

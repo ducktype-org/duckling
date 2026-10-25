@@ -18,17 +18,17 @@ namespace optional_primitives {
     namespace by_value {
         template(T: type)
         fun value(o: ?T) -> T = {
-            return match (moveof o) {
-                case v: T = moveof v;
+            return match (move o) {
+                case v: T = move v;
                 case _: None = panicking.panic();
             };
         }
 
         template(T: type)
         fun valueOr(o: ?T, oth: T) -> T = {
-            return match (moveof o) {
-                case v: T = moveof v;
-                case _: None = moveof oth;
+            return match (move o) {
+                case v: T = move v;
+                case _: None = move oth;
             };
         }
     }
