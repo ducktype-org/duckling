@@ -256,6 +256,14 @@ impl DependencySource {
             }
         }
     }
+
+    /// Whether the [`DependencySource`] specifies a name.
+    pub fn has_name(&self) -> bool {
+        match self {
+            DependencySource::Simple(_) => false,
+            DependencySource::Detailed(detailed_source) => detailed_source.name.is_some(),
+        }
+    }
 }
 
 impl<'de> de::Deserialize<'de> for DependencySource {

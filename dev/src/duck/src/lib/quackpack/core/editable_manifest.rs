@@ -88,8 +88,6 @@ impl<'duck> EditableManifest<'duck> {
             package: pkg,
             yaml_file: content,
         };
-        // Make sure the manifest parses.
-        result.check_if_parses()?;
         // Make sure `as_mapping` will work in the future.
         result.as_mapping()?;
         Ok(result)
@@ -187,7 +185,7 @@ impl<'duck> EditableManifest<'duck> {
 
     /// Add a dependency into the manifest.
     /// This checks if there is already a dependency with such effective name, if so, this has no effect.
-    /// It might seem that we can delegate caching this error to [`Self::check_if_parses`],
+    /// It might seem that we can delegate catching this error to [`Self::check_if_parses`],
     /// but it is not the case.
     /// The new dependency entry could just override the old entry, and not add another entry with the same effective name.
     ///
@@ -204,12 +202,9 @@ impl<'duck> EditableManifest<'duck> {
         for dep_kind in [DependencyKind::Normal, DependencyKind::Dev] {
             let manifest = self.as_mapping()?;
             let key = dep_kind.key_in_manifest();
-            if !manifest.contains_key(key) {
+            let Some(dep_map) = manifest.get(key) else {
                 continue;
-            }
-            let dep_map = manifest.get(key).with_context_internal(|| {
-                format!("skipped `continue`, but no entry for {key} in manifest {manifest:?}")
-            })?;
+            };
             let dep_map = self.dependencies_as_mapping(dep_map, dep_kind)?;
             if dep_map.contains_key(name) {
                 return Ok(DependencyAdded::AlreadyExists(dep_kind));

@@ -97,7 +97,7 @@ impl DependencyGraph {
     fn reachable_subgraph_nodes_inner(&self, package: Identity, visited: &mut HashSet<Identity>) {
         if !visited.contains(&package) {
             visited.insert(package);
-            for (_, pkg_dep) in self.dependencies_for_package(&package).dependencies() {
+            for (_ename, pkg_dep) in self.dependencies_for_package(&package).dependencies() {
                 self.reachable_subgraph_nodes_inner(*pkg_dep, visited);
             }
         }

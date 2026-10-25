@@ -72,10 +72,10 @@ impl SolverFreeze {
     ) -> Result<Self, MalformedFreezeError<'a>> {
         debug!(?root, freeze = ?value);
         check_different_dependencies_identities(value)?;
-        let mut expanded_pkgs_by_identity = HashMap::new();
+        let mut expanded_pkgs_by_identity: HashMap<Identity, PackageId> = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = PackageId::new(pkg_freeze.identity(), pkg_freeze.version());
-            expanded_pkgs_by_identity.insert(pkg.identity().as_identity(), pkg);
+            expanded_pkgs_by_identity.insert(pkg.identity().into(), pkg);
         }
         let mut pkg_freezes = HashMap::new();
         for pkg_freeze in value.dependencies() {

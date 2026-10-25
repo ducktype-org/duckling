@@ -40,6 +40,7 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     } else {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
+    let has_alias = dep_spec.name_spec.alias.is_none();
     let (effective_name, dep) = construct_dependency(dep_spec, &pcx)?;
 
     let pkg = pcx.package().get_package();
@@ -54,6 +55,7 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
         &effective_name,
         dep,
         kind,
+        has_alias,
         pkg_name,
         &pkg_root,
     )?;
@@ -72,6 +74,7 @@ fn add_dep(
     name: &str,
     dep: Dependency,
     kind: DependencyKind,
+    has_alias: bool,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
@@ -79,19 +82,19 @@ fn add_dep(
         DependencyAdded::Yes => Ok(()),
         DependencyAdded::AlreadyExists(other_kind) => {
             // If no alias, add hint to use them.
-            if *name == *pkg_name {
+            if has_alias {
                 let err: Result<(), QuackError> = Err(QuackError::hint(
                     "use aliases to have multiple dependencies with the same name",
                 ));
                 err.with_context(|| {
                     format!(
-                        "there already is a {other_kind} dependency reffered to by `{name}` in the project `{pkg_name}` at `{}`",
+                        "there already is a {other_kind} dependency referred to by `{name}` in the project `{pkg_name}` at `{}`",
                         pkg_root.display()
                     )
                 })
             } else {
                 qp_bail!(
-                    "there already is a {other_kind} dependency reffered to by `{name}` in the project `{pkg_name}` at `{}`",
+                    "there already is a {other_kind} dependency referred to by `{name}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             }

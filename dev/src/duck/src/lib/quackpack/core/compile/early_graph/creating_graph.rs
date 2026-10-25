@@ -28,7 +28,7 @@ impl DependencyGraph {
             let pkg_deps = pkg_freeze
                 .dependencies_realization
                 .iter()
-                .map(|(name, id)| (*name, id.identity().as_identity()));
+                .map(|(name, id)| (*name, id.identity().into()));
             graph.insert(pkg_id.identity().into(), DependencyNode::new(pkg_deps));
         }
         let root_identity = freeze.main_pkg.identity().into();
@@ -70,11 +70,14 @@ impl DependencyGraph {
 
 impl DependencyNode {
     /// Creates a new [`DependencyNode`] with the given dependencies.
+    /// Accepts pairs consisting of the effective name and [`Identity`] of each dependency.
     pub(super) fn new(dependencies: impl IntoIterator<Item = (StrId, Identity)>) -> Self {
         Self {
             dependencies: dependencies
                 .into_iter()
-                .sorted_by(|(_, l), (_, r)| Identity::stable_compare(*l, *r))
+                .sorted_by(|(_left_ename, left_id), (_right_ename, right_id)| {
+                    Identity::stable_compare(*left_id, *right_id)
+                })
                 .collect(),
         }
     }
@@ -164,7 +167,7 @@ fn dfs1(
     visited.insert(vertex);
 
     if let Some(neighbors) = graph.get(&vertex) {
-        for (_, neighbor) in neighbors.dependencies() {
+        for (_ename, neighbor) in neighbors.dependencies() {
             if !visited.contains(neighbor) {
                 dfs1(graph, *neighbor, visited, order);
             }
@@ -207,7 +210,7 @@ fn reverse_graph(graph: &HashMap<Identity, DependencyNode>) -> HashMap<Identity,
 
     // Add reversed edges
     for (from, to_list) in graph {
-        for (_, to) in to_list.dependencies() {
+        for (_ename, to) in to_list.dependencies() {
             reversed.entry(*to).or_insert_with(Vec::new).push(*from);
         }
     }

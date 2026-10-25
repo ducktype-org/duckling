@@ -23,12 +23,12 @@ impl DependencyGraph {
         for (k, v) in self.graph.iter_mut() {
             let mut to_remove = HashSet::new();
             let this = packages.package(k);
-            for (name, dep) in &v.dependencies {
+            for (ename, dep) in &v.dependencies {
                 let is_enabled = this
                     .package()
                     .manifest()
                     .dependencies()
-                    .get_by_effective_name(*name)
+                    .get_by_effective_name(*ename)
                     .unwrap_or_else(|| {
                         missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
                     })
@@ -98,14 +98,14 @@ impl EarlyGraph {
                 .graph
                 .get(&current)
                 .expect("we've verified that there are dependencies");
-            for (name, dep) in &node.dependencies {
+            for (ename, dep) in &node.dependencies {
                 let this_features = added_features.entry(current).or_default();
                 let (enabled_features, is_enabled) = {
                     let entry_in_dep_manifest = this
                         .package()
                         .manifest()
                         .dependencies()
-                        .get_by_effective_name(*name)
+                        .get_by_effective_name(*ename)
                         .unwrap_or_else(|| {
                             missing_depenendcy_in_manifest(
                                 &this.package().name(),

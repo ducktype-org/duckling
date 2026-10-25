@@ -33,27 +33,27 @@ impl Dependencies {
         for dep in deps {
             let kind = dep.kind();
             let name = dep.effective_name();
-            let was_present = seen_names.insert(name, kind);
-            if let Some(other_kind) = was_present {
+            let maybe_overriden_kind = seen_names.insert(name, kind);
+            if let Some(overriden_kind) = maybe_overriden_kind {
                 qp_bail!(
-                    "multiple dependencies (one {other_kind} and one {kind}) are referenced by the same name `{name}`",
+                    "multiple dependencies (one {overriden_kind} and one {kind}) are referenced by the same name `{name}`",
                 )
             }
         }
         Ok(())
     }
 
-    /// Bail, if some dependencies specify packages with same [`identities``](crate::quackpack::core::identity::Identity).
+    /// Bail, if some dependencies specify packages with same [`identities`](crate::quackpack::core::identity::Identity).
     /// Observe that this prohibits having two versions of the same package as dependencies.
     /// Note:
     /// -----
     /// [`Identity`] contains the name, so the user _can_ add dependencies for the same git or local package
     /// and not trigger the error here, but at least one of those entries will have not matching name,
-    /// trigerring error during [`gathering`](crate::quackpack::core::solver::gathering).
+    /// triggering error during [`gathering`](crate::quackpack::core::solver::gathering).
     fn bail_if_has_duplicated_identities(deps: &[Dependency]) -> QuackResult<()> {
         let mut dependencies_ids: HashMap<Identity, (StrId, DependencyKind)> = HashMap::new();
         for dep in deps {
-            let identity = dep.into();
+            let identity = dep.identity();
             if let Some((other_dep_name, other_dep_kind)) = dependencies_ids.get(&identity) {
                 qp_bail!(
                     "{} dependency `{}` has the same source as {} dependency `{}`",
