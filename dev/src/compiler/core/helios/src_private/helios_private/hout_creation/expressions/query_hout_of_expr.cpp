@@ -22,6 +22,7 @@
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_category.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
@@ -437,55 +438,17 @@ namespace compiler::helios::code {
 						return;
 					}
 
-					// `moveof x` moves `x` while keeping its full symbol type (including reference
-					// kind), so it fits generic code where `T` may itself be a `ref`/`box`.
-					// moveof: T -> T
-					// moveof: ref T -> ref T
-					// moveof: box T -> box T
+					// We don't issue any warnings when we have moveof.
 					if (is_moveof) {
 						node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
 						return;
 					}
 
-					// `move` dereferences a `ref`, like `copy` does. A `box` owns its value, so
-					// `move` keeps it and moves the box itself.
-					// move: T -> T
-					// move: ref T -> T
-					// move: box T -> box T
-					const bool is_indirect = inner_type.getRefKind() == tsh::ReferenceKind::Ref;
-					const tsh::SymbolType<> moved_type
-						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
-
-					if (moved_type.isTriviallyCopyable(ctx)) {
-						ctx.logInt(makeBox<dia::PlaceholderWarning>(
-							base::strConcat(
-								"Type `",
-								moved_type.toString(),
-								"` is trivially copyable. No need to use the explicit `move` "
-								"keyword."
-							),
-							stmt->getStablePosition()
-						));
-						// Moving a trivially copyable value copies it. Through a `ref` it copies
-						// the pointee, so the result does not alias the referenced value.
-						if (is_indirect) {
-							const Shorthand s{ ctx };
-							node = s.deref(std::move(inner));
-						} else {
-							node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
-						}
-						return;
-					}
-
-					// Moving a value out of the storage a `ref` points to is not supported (MIR can
-					// only move out of a local), so reject it rather than alias it.
-					if (is_indirect) {
+					if (inner->expression_type.getValueCategory().getCategory()
+					    == tsh::PrimaryCategory::Temporary) {
+						// The move is not needed, and should be discouraged.
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							base::strConcat(
-								"`move` cannot move a value out of `",
-								inner_type.toString(),
-								"`. Use `moveof` to move the reference itself."
-							),
+							"A temporary is moved out of implicitly, `move` is not needed here.",
 							stmt->getStablePosition()
 						));
 						return;

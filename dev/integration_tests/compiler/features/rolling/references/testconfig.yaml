@@ -30,9 +30,3 @@ Tests:
         Output:
           String: "2\n"
         ExitCode: 0
-  move_through_ref:
-    Cases:
-      all:
-        Output:
-          String: "42\n7\n3\n9\n11\n"
-        ExitCode: 0

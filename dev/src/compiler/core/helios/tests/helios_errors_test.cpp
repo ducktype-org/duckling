@@ -59,8 +59,8 @@ public:
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
-		TESTER_ADD_TEST(testTriviallyCopyableCopyAndMoveWarnings);
-		TESTER_ADD_TEST(testMoveThroughReferenceErrors);
+		TESTER_ADD_TEST(testTriviallyCopyableCopyWarning);
+		TESTER_ADD_TEST(testMoveSemantics);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
@@ -2182,11 +2182,8 @@ private:
 		);
 	}
 
-	/// @brief `copy` and `move` of a trivially copyable value only copy it, so both warn.
-	void testTriviallyCopyableCopyAndMoveWarnings() {
-		const std::string_view move_msg
-			= "is trivially copyable. No need to use the explicit `move` keyword.";
-
+	/// @brief `copy` of a trivially copyable value is redundant, so it warns.
+	void testTriviallyCopyableCopyWarning() {
 		checkForWarningOnCompileModule(
 			R"(
 				fun copyLocal() -> i64 = {
@@ -2199,111 +2196,56 @@ private:
 		      "keyword." },
 			1
 		);
-
-		checkForWarningOnCompileModule(
-			R"(
-				fun moveLocal() -> i64 = {
-					var a: i64 = 5;
-					let b = move a;
-					return b;
-				}
-			)",
-			{ "Type `i64`", move_msg },
-			1
-		);
-
-		// A variant of plain classes is trivially copyable too.
-		checkForWarningOnCompileModule(
-			R"(
-				class A { x: i64; }
-				class B { y: i64; }
-				fun moveVariant() -> i64 = {
-					var v: A | B = A(1);
-					let w = move v;
-					return 0;
-				}
-			)",
-			{ move_msg },
-			1
-		);
-
-		// `move`, like `copy`, dereferences: moving a `ref i64` returned by a call copies the
-		// `i64`, so the result is an `i64` and does not alias the referenced value.
-		checkForWarningOnCompileModule(
-			R"(
-				class Holder {
-					v: i64;
-					fun at() -> ref i64 = { return &v; }
-				}
-				fun moveReturnedRef() -> i64 = {
-					var h = Holder(42);
-					var y = move h.at();
-					var check: i64 = y;
-					return check;
-				}
-			)",
-			{ "Type `i64`", move_msg },
-			1
-		);
-
-		// `moveof` keeps the reference kind, so it is what a template body uses for a `T` that
-		// may be trivially copyable, and it never warns.
-		checkForWarningOnCompileModule(
-			R"(
-				template(T: type)
-				fun passOn(value: T) -> T = {
-					let moved = moveof value;
-					return moved;
-				}
-				fun useTemplate() -> i64 = {
-					var a: i64 = 5;
-					let b = moveof a;
-					return passOn[i64](b);
-				}
-			)",
-			{},
-			0
-		);
 	}
 
-	/// @brief `move` keeps a `box`, but cannot move a non-trivially copyable value out of a `ref`.
-	void testMoveThroughReferenceErrors() {
-		// A `box` owns its value, so `move` moves the box itself: no error and no warning, even
-		// when the boxed type is trivially copyable.
+	/// @brief `move` keeps the reference kind and rejects a temporary, `moveof` accepts it.
+	void testMoveSemantics() {
+		// A trivially copyable local, a `box` and a `ref` are all moved as they are, without a
+		// warning.
 		checkForWarningOnCompileModule(
 			R"(
 				class Res {
 					x: i64;
 					Res.copy(other: const ref Res) = { return Res(other.x); }
 				}
-				fun moveBox() -> i64 = {
+				fun moveKeepsKind() -> i64 = {
+					var n: i64 = 5;
+					let m = move n;
 					var a: box Res = new Res(1);
 					var b: box Res = move a;
-					var n: box i64 = new 2i64;
-					var m: box i64 = move n;
-					return b.x + m;
+					var c = Res(2);
+					var r: ref Res = &c;
+					var s: ref Res = move r;
+					return m + b.x + s.x;
 				}
 			)",
 			{},
 			0
 		);
 
-		// `move` dereferences a `ref`, and it would have to move the class out of it.
+		// A temporary is already moved out of implicitly.
 		checkForErrorOnCompileModule(
 			R"(
-				class Res {
-					x: i64;
-					Res.copy(other: const ref Res) = { return Res(other.x); }
-				}
-				fun moveRef() = {
-					var a = Res(1);
-					var r: ref Res = &a;
-					var c = move r;
+				class Res { x: i64; }
+				fun moveTemporary() = {
+					var a = move Res(1);
 				}
 			)",
-			{ "`move` cannot move a value out of `ref Class Res`. Use `moveof` to move the "
-		      "reference itself." },
+			{ "A temporary is moved out of implicitly, `move` is not needed here." },
 			1
+		);
+
+		// `moveof` does not report a moved temporary.
+		checkForWarningOnCompileModule(
+			R"(
+				class Res { x: i64; }
+				fun moveofTemporary() -> i64 = {
+					var a = moveof Res(1);
+					return a.x;
+				}
+			)",
+			{},
+			0
 		);
 
 		// `moveof` checks its operand the same way `move` does.
