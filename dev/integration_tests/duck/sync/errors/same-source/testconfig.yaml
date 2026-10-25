@@ -8,24 +8,41 @@ Tests:
           @{cd-tmp-dir}
           @{duck-exe} init foo
           @{duck-exe} init bar
-          @{duck-exe} -C foo add --local ../bar bar
-          @{duck-exe} -C foo add --local ../bar --alias bar2 bar
+          echo "dependencies:
+            bar:
+              source:
+                path: ../bar
+            bar2:
+              source:
+                path: ../bar
+                name: bar" >> foo/quackconfig.yaml
         test-cmd: duck -C foo sync
         ExitCode: 1
         Err:
-          String: |+
-            error: normal dependency \`bar2\` has the same source as normal dependency \`bar\` [same_source_dependencies]
-            error: emitted 1 error
+          Run: |+
+            echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+
+              Caused by:
+                normal dependency \`bar2\` has the same source as normal dependency \`bar\`"
       one-normal-one-dev:
         PreCase: |+
           @{cd-tmp-dir}
           @{duck-exe} init foo
           @{duck-exe} init bar
-          @{duck-exe} -C foo add --local ../bar bar
-          @{duck-exe} -C foo add --local ../bar --alias bar2 --dev bar
+          echo "dependencies:
+            bar:
+              source:
+                path: ../bar
+          dev-dependencies:
+            bar2:
+              source:
+                path: ../bar
+                name: bar" >> foo/quackconfig.yaml
         test-cmd: duck -C foo sync
         ExitCode: 1
         Err:
-          String: |+
-            error: dev dependency \`bar2\` has the same source as normal dependency \`bar\` [same_source_dependencies]
-            error: emitted 1 error
+          Run: |+
+            echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+
+              Caused by:
+                dev dependency \`bar2\` has the same source as normal dependency \`bar\`"

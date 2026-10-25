@@ -1,10 +1,9 @@
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
+  @{duck-exe} init a
+  @{duck-exe} -C foo add --local ../a a
   mkdir not_package
-  @{duck-exe} init --name dep dep1
-  @{duck-exe} init --name dep dep2
-  @{duck-exe} -C foo add --local ../dep1 dep
 
 Tests:
   errors:
@@ -15,14 +14,24 @@ Tests:
         Err:
           Run: |+
             echo "error: the directory \`$DIT_TMP_DIR/not_package\` has no manifest"
-      already-such-dep:
-        test-cmd: duck -C foo add --local ../dep2 dep
+      duplicated-effective-names:
+        test-cmd: duck -C foo add --local ../a a
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: normal dependency \`dep\` already exists in the project \`foo\` at \`$DIT_TMP_DIR/foo\`
-
-            hint: use aliases to have multiple dependencies with the same name"
+            echo "error: there already is a normal dependency reffered to by \`a\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+      duplicated-sources:
+        test-cmd: duck -C foo add --local ../a --alias b a
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: when trying to add the normal dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`
+            
+              Caused by:
+                the modified manifest would fail to parse
+            
+              Caused by:
+                normal dependency \`b\` has the same source as normal dependency \`a\`"
 
 SubDirs:
   - cannot-add-itself

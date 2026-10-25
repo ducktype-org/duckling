@@ -14,9 +14,7 @@ use super::parse_manifest;
 use crate::quackpack::core::lints::{Lint, LintLevel};
 use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
-use crate::quackpack::core::{
-    DependencyKind, GitReference, OptLevel, Profile, Version, capture_frontmatter,
-};
+use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -1011,6 +1009,62 @@ profiles:
 }
 
 #[test]
+fn duplicated_effective_names() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: '1'
+dev-dependencies:
+  a:
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            ["multiple dependencies (one normal and one dev) are referenced by the same name `a`"]
+        )
+    );
+}
+
+#[test]
+fn duplicated_identities_registry() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: '1'
+dev-dependencies:
+  b:
+    version: '2'
+    source:
+      name: a
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            ["dev dependency `b` has the same source as normal dependency `a`"]
+        )
+    );
+}
+
+#[test]
 fn branch_and_tag_are_mutually_exclusive() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
@@ -1675,35 +1729,6 @@ dependencies:
 }
 
 #[test]
-// Note: such manifest triggers [same_source_dependencies] lint.
-fn dep_and_dev_dep_can_share_name() {
-    let (_dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: foo
-  version: '1'
-
-dependencies:
-  a:
-    version: '1'
-dev-dependencies:
-  a:
-    version: '1'
-"#,
-    );
-    let ctx = DuckContext::default();
-    let package = parse_manifest(&manifest_path, &ctx).unwrap().0;
-    let deps = package.manifest().dependencies();
-    assert_eq!(deps.all_dependencies().len(), 2);
-    let a = deps.filter_by_kind(DependencyKind::Normal).next().unwrap();
-    let a_dev = deps.filter_by_kind(DependencyKind::Dev).next().unwrap();
-    assert_eq!(a.name(), a_dev.name());
-    assert_eq!(a.alias(), a_dev.alias());
-    assert_eq!(a.effective_name(), a_dev.effective_name());
-}
-
-#[test]
-// Note: such manifest triggers [same_source_dependencies] lint.
 fn two_deps_can_share_name_if_aliased() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
@@ -1714,9 +1739,9 @@ dependencies:
   a:
     version: '1'
   b:
-    version: '1'
     source:
-      name: a 
+      name: a
+      path: ../a
 "#,
     );
     let ctx = DuckContext::default();
@@ -1725,7 +1750,6 @@ dependencies:
     assert_eq!(deps.all_dependencies().len(), 2);
     let a = deps.get_by_effective_name("a".into()).unwrap();
     let ab = deps.get_by_effective_name("b".into()).unwrap();
-    assert_eq!(a.source(), ab.source());
     assert_eq!(a.name(), "a");
     assert_eq!(ab.name(), "a");
 }

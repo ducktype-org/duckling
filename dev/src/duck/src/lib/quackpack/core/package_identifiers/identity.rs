@@ -20,6 +20,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize, de};
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::{Dependency, Source, SourceKind};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
@@ -338,6 +339,32 @@ impl PartialEq<FullKind> for Kind {
 impl PartialEq<Kind> for FullKind {
     fn eq(&self, other: &Kind) -> bool {
         other == self
+    }
+}
+
+impl From<&Dependency> for Identity {
+    fn from(dependency: &Dependency) -> Self {
+        let name = dependency.name();
+        let origin = dependency.source().into();
+        Self { name, origin }
+    }
+}
+
+impl From<Source> for Origin {
+    fn from(source: Source) -> Self {
+        let url = source.url();
+        let kind = source.kind().into();
+        Self { url, kind }
+    }
+}
+
+impl From<SourceKind> for Kind {
+    fn from(source_kind: SourceKind) -> Self {
+        match source_kind {
+            SourceKind::Registry => Self::Registry,
+            SourceKind::Local => Self::Local,
+            SourceKind::Git(_) => Self::Git,
+        }
     }
 }
 

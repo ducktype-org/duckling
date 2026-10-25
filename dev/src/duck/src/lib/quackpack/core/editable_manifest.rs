@@ -12,7 +12,11 @@ use std::str::FromStr;
 
 use yaml_edit::{Mapping, YamlFile, YamlNode};
 
-use crate::quackpack::core::{DependencyKind, Package, PackageContext};
+use crate::quackpack::core::lints::errors::Errors;
+use crate::quackpack::core::lints::warnings::Warnings;
+use crate::quackpack::core::{
+    DependencyKind, Package, PackageContext, ParseMode, manifest, parse_schema,
+};
 use crate::quackpack::schemas::manifest::Dependency;
 use crate::util::DescriptionWithAnArticle;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -63,8 +67,9 @@ pub enum DependencyRemoved {
 pub enum DependencyAdded {
     /// Dependency successfully added.
     Yes,
-    /// Dependency with such name and kind already exists.
-    AlreadyExists,
+    /// Dependency with such name already exists.
+    /// The [`DependencyKind`] signifies the kind of that dependency.
+    AlreadyExists(DependencyKind),
 }
 
 impl<'duck> EditableManifest<'duck> {
@@ -83,6 +88,8 @@ impl<'duck> EditableManifest<'duck> {
             package: pkg,
             yaml_file: content,
         };
+        // Make sure the manifest parses.
+        result.check_if_parses()?;
         // Make sure `as_mapping` will work in the future.
         result.as_mapping()?;
         Ok(result)
@@ -179,6 +186,10 @@ impl<'duck> EditableManifest<'duck> {
     }
 
     /// Add a dependency into the manifest.
+    /// This checks if there is already a dependency with such effective name, if so, this has no effect.
+    /// It might seem that we can delegate caching this error to [`Self::check_if_parses`],
+    /// but it is not the case.
+    /// The new dependency entry could just override the old entry, and not add another entry with the same effective name.
     ///
     /// Important
     /// ---------
@@ -189,13 +200,24 @@ impl<'duck> EditableManifest<'duck> {
         dependency: Dependency,
         kind: DependencyKind,
     ) -> QuackResult<DependencyAdded> {
-        let dependencies_map = self.get_dependencies_map(kind)?;
-        if dependencies_map.contains_key(name) {
-            return Ok(DependencyAdded::AlreadyExists);
-        } else {
-            let dependency = Into::<Mapping>::into(dependency);
-            dependencies_map.set(name, dependency);
+        // Check that no dependency with such effective name exists.
+        for dep_kind in [DependencyKind::Normal, DependencyKind::Dev] {
+            let manifest = self.as_mapping()?;
+            let key = dep_kind.key_in_manifest();
+            if !manifest.contains_key(key) {
+                continue;
+            }
+            let dep_map = manifest.get(key).with_context_internal(|| {
+                format!("skipped `continue`, but no entry for {key} in manifest {manifest:?}")
+            })?;
+            let dep_map = self.dependencies_as_mapping(dep_map, dep_kind)?;
+            if dep_map.contains_key(name) {
+                return Ok(DependencyAdded::AlreadyExists(dep_kind));
+            }
         }
+        let dependencies_map = self.get_dependencies_map(kind)?;
+        let dependency = Into::<Mapping>::into(dependency);
+        dependencies_map.set(name, dependency);
         Ok(DependencyAdded::Yes)
     }
 
@@ -232,7 +254,9 @@ impl<'duck> EditableManifest<'duck> {
 
     /// Serialize the underlying [`YamlFile`] to the manifest.
     pub fn save(&self) -> QuackResult<()> {
-        let new_manifest = self.yaml_file.to_string();
+        let new_manifest = self
+            .check_if_parses()
+            .context("the modified manifest would fail to parse")?;
         self.manifest_path().write(new_manifest).with_context(|| {
             format!(
                 "failed to write the new manifest into file at `{}`",
@@ -243,5 +267,24 @@ impl<'duck> EditableManifest<'duck> {
             "written new manifest to `{}`",
             self.manifest_path().display()
         ))
+    }
+
+    /// Check if the manifest parses to [`Manifest`](crate::quackpack::core::Manifest).
+    /// If so, returns the raw string of the manifest.
+    fn check_if_parses(&self) -> QuackResult<String> {
+        let new_manifest = self.yaml_file.to_string();
+        let mut warnings = Warnings::default();
+        let mut errors = Errors::default();
+        let schema = parse_schema(&new_manifest, &mut errors)?;
+        manifest::parse(
+            &schema,
+            ParseMode::Package {
+                package_root: self.package.root_directory(),
+            },
+            &mut warnings,
+            &mut errors,
+            self.ctx,
+        )?;
+        Ok(new_manifest)
     }
 }

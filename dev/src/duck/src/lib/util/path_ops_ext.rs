@@ -52,7 +52,7 @@ pub trait PathOpsExt {
     /// the [`create_dir`], or the [`create_dir_all`].
     ///
     /// Note that this function will return `Ok(())`, if [`create_dir`] returns `Err` with kind
-    /// [`ErrorKind::AlreadyExists`](io::ErrorKind::AlreadyExists).
+    /// [`ErrorKind::NameAlreadyExists`](io::ErrorKind::NameAlreadyExists).
     fn mkdir(&self, opts: MkdirOptions) -> QuackResult<()>;
 
     /// Normalize `self` fully, as best as possible.
