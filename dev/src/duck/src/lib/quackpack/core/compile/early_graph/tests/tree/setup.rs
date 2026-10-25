@@ -13,7 +13,7 @@ use crate::quackpack::core::compile::early_graph::tests::{mock_local_pkg, mock_r
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::{PackageId, PackageLoader, Version, fetcher, storage};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
 pub fn setup_mock_storage() -> (DuckContext, TempDir) {

@@ -13,7 +13,7 @@ use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
 use tracing::debug;
 
 use super::DescriptionWithAnArticle;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;

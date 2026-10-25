@@ -19,7 +19,7 @@ use crate::quackpack::core::{
 };
 use crate::quackpack::schemas::manifest::Dependency;
 use crate::util::DescriptionWithAnArticle;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
 
 /// Desired order of the top-level keys in a manifest.

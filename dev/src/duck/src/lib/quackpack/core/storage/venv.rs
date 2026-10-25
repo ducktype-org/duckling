@@ -68,7 +68,7 @@ use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::hash;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::util::path_ops::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
