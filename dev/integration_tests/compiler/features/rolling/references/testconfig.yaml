@@ -34,5 +34,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "42\n7\n3\n9\n"
+          String: "42\n7\n3\n9\n11\n"
         ExitCode: 0

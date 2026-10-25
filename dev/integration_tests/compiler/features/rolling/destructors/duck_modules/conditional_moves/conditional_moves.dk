@@ -44,12 +44,12 @@ fun bothPaths() = {
 fun boxed() = {
     var a: box Res = new Res(7);
     if (a.id == 7) {
-        eatBoxed(moveof a);     # 7
+        eatBoxed(move a);       # 7
     }
 
     var b: box Res = new Res(8);
     if (b.id == 999) {
-        eatBoxed(moveof b);
+        eatBoxed(move b);
     }
     builtin_output_i64(9);      # 9
 }                               # 8

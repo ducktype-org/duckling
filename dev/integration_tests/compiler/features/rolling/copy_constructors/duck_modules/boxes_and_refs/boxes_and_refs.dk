@@ -36,8 +36,8 @@ fun main() -> i64 = {
     builtin_output_i64(copies);                 # 2
     builtin_output_i64(from_box.id as i64);     # 9
      
-    # `moveof` should not copy.
-    var bc3: box Counter = moveof bc;           # Should not copy
+    # `move` should not copy.
+    var bc3: box Counter = move bc;             # Should not copy
     builtin_output_i64(copies);                 # 2
 
     var rebox: box Counter = new copy bc3;       # +1

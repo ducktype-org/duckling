@@ -335,7 +335,7 @@ fun dropBox(v: box i32 | f32) -> i64 = {
 # The box outlives the match, moved on out of the binding.
 fun stealBox(v: box i32 | f32) -> box i32 = {
 	return match (move v) {
-		case b : box i32 = moveof b;
+		case b : box i32 = move b;
 		case f : f32 = new 0i32;
 	};
 }

@@ -447,11 +447,12 @@ namespace compiler::helios::code {
 						return;
 					}
 
-					// `move`, like `copy`, always creates a direct value.
+					// `move` dereferences a `ref`, like `copy` does. A `box` owns its value, so
+					// `move` keeps it and moves the box itself.
 					// move: T -> T
 					// move: ref T -> T
-					// move: box T -> T
-					const bool is_indirect = inner_type.getRefKind() != tsh::ReferenceKind::Direct;
+					// move: box T -> box T
+					const bool is_indirect = inner_type.getRefKind() == tsh::ReferenceKind::Ref;
 					const tsh::SymbolType<> moved_type
 						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
 
@@ -465,8 +466,8 @@ namespace compiler::helios::code {
 							),
 							stmt->getStablePosition()
 						));
-						// Moving a trivially copyable value copies it. Through a `ref`/`box` it
-						// copies the pointee, so the result does not alias the referenced value.
+						// Moving a trivially copyable value copies it. Through a `ref` it copies
+						// the pointee, so the result does not alias the referenced value.
 						if (is_indirect) {
 							const Shorthand s{ ctx };
 							node = s.deref(std::move(inner));
@@ -476,8 +477,8 @@ namespace compiler::helios::code {
 						return;
 					}
 
-					// Moving a value out of the storage a `ref`/`box` points to is not supported
-					// (MIR can only move out of a local), so reject it rather than alias it.
+					// Moving a value out of the storage a `ref` points to is not supported (MIR can
+					// only move out of a local), so reject it rather than alias it.
 					if (is_indirect) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
 							base::strConcat(

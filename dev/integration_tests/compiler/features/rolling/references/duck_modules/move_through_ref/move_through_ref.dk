@@ -36,9 +36,19 @@ fun moveofBox() -> () = {
     builtin_output_i64(b.y);                    # 9
 }
 
+# `move` keeps a box: it moves the box itself, so `c` is the same box that `b` wrote to.
+fun moveBox() -> () = {
+    var a: box Point = new Point(5, 6);
+    var b: box Point = move a;
+    b.x = 11;
+    var c: box Point = move b;
+    builtin_output_i64(c.x);                    # 11
+}
+
 fun main() -> i64 = {
     moveFromList();
     moveVariantFromList();
     moveofBox();
+    moveBox();
     return 0;
 }

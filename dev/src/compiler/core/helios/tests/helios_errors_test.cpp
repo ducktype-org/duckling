@@ -2266,27 +2266,29 @@ private:
 		);
 	}
 
-	/// @brief `move` cannot move a non-trivially copyable value out of a `ref`/`box`.
+	/// @brief `move` keeps a `box`, but cannot move a non-trivially copyable value out of a `ref`.
 	void testMoveThroughReferenceErrors() {
-		// `moveof` moves the box itself, `move` would have to move the class out of it.
-		checkForErrorOnCompileModule(
+		// A `box` owns its value, so `move` moves the box itself: no error and no warning, even
+		// when the boxed type is trivially copyable.
+		checkForWarningOnCompileModule(
 			R"(
 				class Res {
 					x: i64;
 					Res.copy(other: const ref Res) = { return Res(other.x); }
 				}
-				fun moveBox() = {
+				fun moveBox() -> i64 = {
 					var a: box Res = new Res(1);
-					var b: box Res = moveof a;
-					var c = move b;
+					var b: box Res = move a;
+					var n: box i64 = new 2i64;
+					var m: box i64 = move n;
+					return b.x + m;
 				}
 			)",
-			{ "`move` cannot move a value out of `box Class Res`. Use `moveof` to move the "
-		      "reference itself." },
-			1
+			{},
+			0
 		);
 
-		// The same for a `ref`.
+		// `move` dereferences a `ref`, and it would have to move the class out of it.
 		checkForErrorOnCompileModule(
 			R"(
 				class Res {
@@ -2299,7 +2301,8 @@ private:
 					var c = move r;
 				}
 			)",
-			{ "`move` cannot move a value out of `ref Class Res`." },
+			{ "`move` cannot move a value out of `ref Class Res`. Use `moveof` to move the "
+		      "reference itself." },
 			1
 		);
 
