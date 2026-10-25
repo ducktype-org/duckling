@@ -12,7 +12,7 @@ Tests:
     Description: Checks that dependencies with same names but different sources and effective names are ok
     Cases:
       basic:
-        enabled: false # @TODO: #3505 reenable when landed
+        Enabled: "false" # @TODO: #3505 reenable when landed
         test-cmd: duck -C root sync
         Output:
           String: |+
