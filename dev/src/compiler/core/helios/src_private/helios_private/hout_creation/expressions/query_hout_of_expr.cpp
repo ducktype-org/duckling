@@ -32,6 +32,7 @@
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -133,6 +134,23 @@ namespace compiler::helios::code {
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
+		}
+
+		/**
+		 * @brief Whether the element is a part of a template body.
+		 *
+		 * The body is compiled once per bake, so a diagnostic about the type of an expression
+		 * there may hold only for some template arguments.
+		 */
+		bool isInsideTemplate(query::Context& ctx, pst::Access<pst::LangElement> element) {
+			auto ancestor = getPSTElementParent(ctx, element);
+			while (ancestor.isLangElement()) {
+				auto ancestor_element = ancestor.getAsLangElement().unlock(ctx);
+				if (ancestor_element->getElementKind() == pst::ElementKind::TemplateStmt)
+					return true;
+				ancestor = getPSTElementParent(ctx, ancestor_element);
+			}
+			return false;
 		}
 
 		/**
@@ -427,6 +445,21 @@ namespace compiler::helios::code {
 							stmt->getStablePosition()
 						));
 						return;
+					}
+					// Moving a trivially copyable value is the same as copying it. On a `ref`
+					// (e.g. returned by a call) it copies the reference, so the result silently
+					// aliases the referenced value. Template bodies are skipped, `move value` of
+					// a `T` is needed there whenever `T` is not trivially copyable.
+					if (inner_type.isTriviallyCopyable(ctx) and not isInsideTemplate(ctx, stmt)) {
+						ctx.logInt(makeBox<dia::PlaceholderWarning>(
+							base::strConcat(
+								"Type `",
+								inner_type.toString(),
+								"` is trivially copyable. `move` does not move it, it is copied "
+								"instead."
+							),
+							stmt->getStablePosition()
+						));
 					}
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
