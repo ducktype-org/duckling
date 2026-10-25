@@ -150,6 +150,7 @@ namespace lang_def {
 		Copy,
 		Copyof,
 		Move,
+		Moveof,
 		Refof,
 		Ptrof,
 

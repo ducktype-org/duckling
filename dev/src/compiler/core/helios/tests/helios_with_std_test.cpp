@@ -1006,11 +1006,11 @@ private:
 			auto* deref = dynamic_cast<const DerefExpr*>(boxed_value);
 			ASSERT_TRUE(deref != nullptr);
 		}
-		// var box_box_a: box i32 = move box_a; (Box -> Box)
+		// var box_box_a: box i32 = moveof box_a; (Box -> Box)
 		{
 			const auto& var_stmt = get_var_stmt(6);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
-			// `box = box` needs an explicit `move`.
+			// `box = box` needs an explicit `moveof`.
 			auto* move_expr
 				= dynamic_cast<const MoveExpr*>(stripImplicitMove(var_stmt.initial_value.get()));
 			ASSERT_TRUE(move_expr != nullptr);

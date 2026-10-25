@@ -32,7 +32,6 @@
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
-#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -134,23 +133,6 @@ namespace compiler::helios::code {
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
-		}
-
-		/**
-		 * @brief Whether the element is a part of a template body.
-		 *
-		 * The body is compiled once per bake, so a diagnostic about the type of an expression
-		 * there may hold only for some template arguments.
-		 */
-		bool isInsideTemplate(query::Context& ctx, pst::Access<pst::LangElement> element) {
-			auto ancestor = getPSTElementParent(ctx, element);
-			while (ancestor.isLangElement()) {
-				auto ancestor_element = ancestor.getAsLangElement().unlock(ctx);
-				if (ancestor_element->getElementKind() == pst::ElementKind::TemplateStmt)
-					return true;
-				ancestor = getPSTElementParent(ctx, ancestor_element);
-			}
-			return false;
 		}
 
 		/**
@@ -437,30 +419,77 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
-					// `move x` is only valid on an owned lvalue (a local variable).
+				const bool is_move
+					= op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move);
+				const bool is_moveof
+					= op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Moveof);
+				if (is_move or is_moveof) {
+					// `move x` and `moveof x` are only valid on an owned lvalue (a local variable).
 					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							"`move` can only be applied to an owned local variable.",
+							base::strConcat(
+								"`",
+								is_move ? "move" : "moveof",
+								"` can only be applied to an owned local variable."
+							),
 							stmt->getStablePosition()
 						));
 						return;
 					}
-					// Moving a trivially copyable value is the same as copying it. On a `ref`
-					// (e.g. returned by a call) it copies the reference, so the result silently
-					// aliases the referenced value. Template bodies are skipped, `move value` of
-					// a `T` is needed there whenever `T` is not trivially copyable.
-					if (inner_type.isTriviallyCopyable(ctx) and not isInsideTemplate(ctx, stmt)) {
+
+					// `moveof x` moves `x` while keeping its full symbol type (including reference
+					// kind), so it fits generic code where `T` may itself be a `ref`/`box`.
+					// moveof: T -> T
+					// moveof: ref T -> ref T
+					// moveof: box T -> box T
+					if (is_moveof) {
+						node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+						return;
+					}
+
+					// `move`, like `copy`, always creates a direct value.
+					// move: T -> T
+					// move: ref T -> T
+					// move: box T -> T
+					const bool is_indirect = inner_type.getRefKind() != tsh::ReferenceKind::Direct;
+					const tsh::SymbolType<> moved_type
+						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
+
+					if (moved_type.isTriviallyCopyable(ctx)) {
 						ctx.logInt(makeBox<dia::PlaceholderWarning>(
 							base::strConcat(
 								"Type `",
-								inner_type.toString(),
-								"` is trivially copyable. `move` does not move it, it is copied "
-								"instead."
+								moved_type.toString(),
+								"` is trivially copyable. No need to use the explicit `move` "
+								"keyword."
 							),
 							stmt->getStablePosition()
 						));
+						// Moving a trivially copyable value copies it. Through a `ref`/`box` it
+						// copies the pointee, so the result does not alias the referenced value.
+						if (is_indirect) {
+							const Shorthand s{ ctx };
+							node = s.deref(std::move(inner));
+						} else {
+							node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+						}
+						return;
 					}
+
+					// Moving a value out of the storage a `ref`/`box` points to is not supported
+					// (MIR can only move out of a local), so reject it rather than alias it.
+					if (is_indirect) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat(
+								"`move` cannot move a value out of `",
+								inner_type.toString(),
+								"`. Use `moveof` to move the reference itself."
+							),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}

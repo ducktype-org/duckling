@@ -60,6 +60,7 @@ public:
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testTriviallyCopyableCopyAndMoveWarnings);
+		TESTER_ADD_TEST(testMoveThroughReferenceErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
@@ -2184,7 +2185,7 @@ private:
 	/// @brief `copy` and `move` of a trivially copyable value only copy it, so both warn.
 	void testTriviallyCopyableCopyAndMoveWarnings() {
 		const std::string_view move_msg
-			= "is trivially copyable. `move` does not move it, it is copied instead.";
+			= "is trivially copyable. No need to use the explicit `move` keyword.";
 
 		checkForWarningOnCompileModule(
 			R"(
@@ -2226,8 +2227,8 @@ private:
 			1
 		);
 
-		// Moving a reference returned by a call copies the reference, so the result aliases the
-		// referenced value.
+		// `move`, like `copy`, dereferences: moving a `ref i64` returned by a call copies the
+		// `i64`, so the result is an `i64` and does not alias the referenced value.
 		checkForWarningOnCompileModule(
 			R"(
 				class Holder {
@@ -2237,28 +2238,82 @@ private:
 				fun moveReturnedRef() -> i64 = {
 					var h = Holder(42);
 					var y = move h.at();
-					return y;
+					var check: i64 = y;
+					return check;
 				}
 			)",
-			{ "Type `ref i64`", move_msg },
+			{ "Type `i64`", move_msg },
 			1
 		);
 
-		// A template body is shared by every bake, so `move` of a `T` does not warn even when
-		// `T` turns out to be trivially copyable.
+		// `moveof` keeps the reference kind, so it is what a template body uses for a `T` that
+		// may be trivially copyable, and it never warns.
 		checkForWarningOnCompileModule(
 			R"(
 				template(T: type)
 				fun passOn(value: T) -> T = {
-					let moved = move value;
+					let moved = moveof value;
 					return moved;
 				}
 				fun useTemplate() -> i64 = {
-					return passOn[i64](5);
+					var a: i64 = 5;
+					let b = moveof a;
+					return passOn[i64](b);
 				}
 			)",
 			{},
 			0
+		);
+	}
+
+	/// @brief `move` cannot move a non-trivially copyable value out of a `ref`/`box`.
+	void testMoveThroughReferenceErrors() {
+		// `moveof` moves the box itself, `move` would have to move the class out of it.
+		checkForErrorOnCompileModule(
+			R"(
+				class Res {
+					x: i64;
+					Res.copy(other: const ref Res) = { return Res(other.x); }
+				}
+				fun moveBox() = {
+					var a: box Res = new Res(1);
+					var b: box Res = moveof a;
+					var c = move b;
+				}
+			)",
+			{ "`move` cannot move a value out of `box Class Res`. Use `moveof` to move the "
+		      "reference itself." },
+			1
+		);
+
+		// The same for a `ref`.
+		checkForErrorOnCompileModule(
+			R"(
+				class Res {
+					x: i64;
+					Res.copy(other: const ref Res) = { return Res(other.x); }
+				}
+				fun moveRef() = {
+					var a = Res(1);
+					var r: ref Res = &a;
+					var c = move r;
+				}
+			)",
+			{ "`move` cannot move a value out of `ref Class Res`." },
+			1
+		);
+
+		// `moveof` checks its operand the same way `move` does.
+		checkForErrorOnCompileModule(
+			R"(
+				class Cls { x: i64; }
+				fun moveofField() = {
+					let a = Cls(10);
+					moveof a.x;
+				}
+			)",
+			{ "`moveof` can only be applied to an owned local variable." },
+			1
 		);
 	}
 

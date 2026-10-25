@@ -241,9 +241,9 @@ namespace maybe {
 
 	template(T: type)
 	fun value(m: Maybe(T)) -> T = {
-		return match(move m) {
+		return match(moveof m) {
 			case _: () = panicking.panic();
-			case v: T = move v;
+			case v: T = moveof v;
 		}
 	}
 }
@@ -335,7 +335,7 @@ fun dropBox(v: box i32 | f32) -> i64 = {
 # The box outlives the match, moved on out of the binding.
 fun stealBox(v: box i32 | f32) -> box i32 = {
 	return match (move v) {
-		case b : box i32 = move b;
+		case b : box i32 = moveof b;
 		case f : f32 = new 0i32;
 	};
 }

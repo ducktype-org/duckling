@@ -163,8 +163,8 @@ fun listOfBoxesTest() -> () = {
 
     list_of_boxes.push(new Point(1, 2));
 
-    list_of_boxes.push(move p1);
-    list_of_boxes.push(move p2);
+    list_of_boxes.push(moveof p1);
+    list_of_boxes.push(moveof p2);
     builtin_output_i64(list_of_boxes.length());
     printSeparator();
 

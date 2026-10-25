@@ -522,15 +522,16 @@ private:
 			.steps({ ELEMENTWISE, MUTABILITY_CHANGE })
 			.part(0)
 			.steps({ IMPLICIT_MOVE });
-		coerce("(move b, 1i64)", "(box i32, i64)").succeeds().part(0).steps({});
+		coerce("(moveof b, 1i64)", "(box i32, i64)").succeeds().part(0).steps({});
 
 		const NodeCheck mixed
-			= coerce("(makeBox(), x, move b)", "(box i32, i64, box i32)").succeeds();
+			= coerce("(makeBox(), x, moveof b)", "(box i32, i64, box i32)").succeeds();
 		mixed.part(0).steps({ IMPLICIT_MOVE });
 		mixed.part(1).steps({ NUMERIC });
 		mixed.part(2).steps({});
 
-		const NodeCheck nested = coerce("(1i32, (x, move b))", "(i64, (i64, box i32))").succeeds();
+		const NodeCheck nested
+			= coerce("(1i32, (x, moveof b))", "(i64, (i64, box i32))").succeeds();
 		nested.part(0).steps({ NUMERIC });
 		nested.part(1).part(0).steps({ NUMERIC });
 		nested.part(1).part(1).steps({});
