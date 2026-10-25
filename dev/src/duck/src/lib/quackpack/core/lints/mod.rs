@@ -78,7 +78,7 @@ pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
     let mut buffer = LintBuffer::new();
 
     for pass in PASSES {
-        run_single_pass(pcx, *pass, &mut buffer)?;
+        run_single_pass(pcx, pass.0, pass.1, &mut buffer)?;
     }
     buffer.emit(pcx.ctx())
 }
