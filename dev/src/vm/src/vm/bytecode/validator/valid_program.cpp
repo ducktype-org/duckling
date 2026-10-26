@@ -14,6 +14,8 @@
 #include <vm/bytecode/validator/ffi_type_builder.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/bytecode/validator/initial_value.hpp>
+#include <vm/bytecode/validator/type_inserter.hpp>
+#include <vm/bytecode/validator/type_resolver.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 
 #include <algorithm>
@@ -73,7 +75,7 @@ void vm::code::ValidProgram::insertCode(
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
-	type_context.insertAndValidate(new_types, function_signatures);
+	detail::insertTypes(type_context, new_types, function_signatures);
 
 	// Verify `assert_size` annotations against the computed layout.
 	for (const auto& type: new_types) {
@@ -98,8 +100,8 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
-		if (!types.contains(global.type.expr.canonicalName()))
-			throw UnknownTypeError(opargs::Type(global.type.expr));
+		const auto type = findResolved(types, global.type.expr);
+		if (!type.has_value()) throw UnknownTypeError(opargs::Type(global.type.expr));
 		if (global.ctor_name.has_value() && global.initial_value.has_value())
 			throw GlobalCtorAndInitialValueConflictError(global.name);
 		if (global.ctor_name.has_value() && !function_signatures.contains(global.ctor_name.value()))
@@ -121,9 +123,8 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 				);
 		}
 		if (global.initial_value.has_value()) {
-			auto type_it = types.at(global.type.expr.canonicalName());
 			detail::validateInitialValue(
-				global.initial_value.value(), type_it->getID(), types, global.name
+				global.initial_value.value(), type.value()->getID(), types, global.name
 			);
 		}
 		globals_map.insert(global, global.name);
@@ -167,8 +168,8 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 			CORE_ASSERT(
 				new_func.signature.result_types.size() == 1, "C functions return only one type"
 			);
-			if (auto tp = type_context.getCurrentTypes().atMaybe(
-					new_func.signature.result_types[0].expr.canonicalName()
+			if (auto tp = findResolved(
+					type_context.getCurrentTypes(), new_func.signature.result_types[0].expr
 				)) {
 				if (!tp.value()->isTriviallyCopyable())
 					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
@@ -177,7 +178,7 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 		}
 
 		for (const auto& type: new_func.signature.parameters)
-			if (auto tp = type_context.getCurrentTypes().atMaybe(type.expr.canonicalName())) {
+			if (auto tp = findResolved(type_context.getCurrentTypes(), type.expr)) {
 				if (!tp.value()->isTriviallyCopyable())
 					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 			} else
@@ -193,7 +194,7 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 	auto validate_ffi_type = [&](const TypeExprUse& type_ref) {
 		const auto& types = type_context.getCurrentTypes();
 
-		auto tp = types.atMaybe(type_ref.expr.canonicalName());
+		auto tp = findResolved(types, type_ref.expr);
 		if (!tp) throw UnknownTypeError(opargs::Type(type_ref.expr));
 
 		// C has no by-value arrays: a fixed-size table can only cross the FFI boundary as a

@@ -9,6 +9,7 @@
 #include "instruction_lowering.hpp"
 
 #include <vm/bytecode/validator/ffi_type_builder.hpp>
+#include <vm/bytecode/validator/type_resolver.hpp>
 #include <vm/bytecode/validator/valid_type/type_size.hpp>
 #include <vm/core/builtin_functions.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
@@ -214,7 +215,8 @@ namespace vm::loader::compiler::safe {
 
 			for (const auto& param: signature.parameters) {
 				CRef<code::valid_type::ValidType> type
-					= high_program.getTypeContext().getCurrentTypes().at(param.expr.canonicalName());
+					= code::findResolved(high_program.getTypeContext().getCurrentTypes(), param.expr)
+				          .expect("A validated signature only names known types");
 				parameters.emplace_back(low_program.getTypes().at(type->getName()));
 				parameters_size += type->getSize();
 			}
