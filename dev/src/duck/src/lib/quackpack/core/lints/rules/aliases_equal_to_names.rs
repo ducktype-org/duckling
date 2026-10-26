@@ -58,11 +58,11 @@ pub fn pass(
         (DependencyKind::Dev, schema.dev_dependencies.as_ref()),
     ];
     for (dep_kind, dependencies) in dependencies_maps {
-        for (effective_name, dependency) in dependencies.into_iter().flatten() {
+        for (ename, dependency) in dependencies.into_iter().flatten() {
             if let Some(ref source) = dependency.source
                 && let DependencySource::Detailed(source) = source
                 && let Some(ref name) = source.name
-                && effective_name == name
+                && ename == name
             {
                 buffer.register(
                     AliasEqualsNameDiagnostic {

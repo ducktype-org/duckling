@@ -58,7 +58,7 @@ impl SolverFreeze {
                 )
             };
             parent.dependencies_realization.insert(
-                dependency_edge.manifest_child_name,
+                dependency_edge.manifest_child_ename,
                 PackageId::new(dependency_edge.dep_identity, destination),
             );
         }
@@ -114,14 +114,14 @@ impl SolverFreeze {
             .dependencies()
             .select(&Selector::EnabledBy(&base_pkg_features))
         {
-            let dep_name = dependency.effective_name();
-            let realization = self.get_realization(base_pkg, dep_name)?;
+            let dep_ename = dependency.effective_name();
+            let realization = self.get_realization(base_pkg, dep_ename)?;
             let Some(dep_manifest) = manifests.get(&realization) else {
                 qp_bail_internal!(
                     "freeze package `{realization:?}` with no manifest: {manifests:#?}"
                 )
             };
-            Self::add_realization(new_pkg_freezes, base_pkg, dep_name, realization)?;
+            Self::add_realization(new_pkg_freezes, base_pkg, dep_ename, realization)?;
             let enabled_features = dependency.enabled_features(&base_pkg_features);
             let forced_features = dep_manifest
                 .features()
@@ -163,15 +163,15 @@ impl SolverFreeze {
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Finds how a dependency is realized.
-    fn get_realization(&self, pkg: PackageId, dep_name: StrId) -> QuackResult<PackageId> {
+    fn get_realization(&self, pkg: PackageId, dep_ename: StrId) -> QuackResult<PackageId> {
         let Some(pkg) = self.package_freezes.get(&pkg) else {
             qp_bail_internal!(
                 "current package `{pkg:?}` does not appear in the freeze: {:#?}",
                 self.package_freezes
             )
         };
-        let Some(realization) = pkg.dependencies_realization.get(&dep_name) else {
-            qp_bail_internal!("no realisation for `{dep_name}` in {:#?}", pkg)
+        let Some(realization) = pkg.dependencies_realization.get(&dep_ename) else {
+            qp_bail_internal!("no realisation for `{dep_ename}` in {:#?}", pkg)
         };
         Ok(*realization)
     }
@@ -181,7 +181,7 @@ impl SolverFreeze {
     fn add_realization(
         new_pkg_freezes: &mut HashMap<PackageId, SolverPackageFreeze>,
         pkg: PackageId,
-        dep_name: StrId,
+        dep_ename: StrId,
         realization: PackageId,
     ) -> QuackResult<()> {
         let Some(pkg) = new_pkg_freezes.get_mut(&pkg) else {
@@ -190,7 +190,7 @@ impl SolverFreeze {
             )
         };
         pkg.dependencies_realization
-            .entry(dep_name)
+            .entry(dep_ename)
             .or_insert(realization);
         Ok(())
     }
@@ -290,7 +290,7 @@ metadata:
                 DependencyEdge {
                     parent: pkg_a,
                     dep_identity: identity_c,
-                    manifest_child_name: StrId::new("c"),
+                    manifest_child_ename: StrId::new("c"),
                 },
                 Version::new(3, 0, 0),
             )]),

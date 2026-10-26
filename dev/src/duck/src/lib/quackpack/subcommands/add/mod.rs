@@ -41,7 +41,7 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
     let has_alias = dep_spec.name_spec.alias.is_none();
-    let (effective_name, dep) = construct_dependency(dep_spec, &pcx)?;
+    let (ename, dep) = construct_dependency(dep_spec, &pcx)?;
 
     let pkg = pcx.package().get_package();
 
@@ -52,17 +52,16 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     let editable_manifest = EditableManifest::new(&pcx)?;
     add_dep(
         &editable_manifest,
-        &effective_name,
+        &ename,
         dep,
         kind,
         has_alias,
         pkg_name,
         &pkg_root,
     )?;
-    editable_manifest.save().with_context(|| format!("when trying to add the {kind} dependency `{effective_name}` to the project `{pkg_name}` at `{}`", pkg_root.display()))?;
-    ctx.info(
-        format!(
-        "successfully added {kind} dependency `{effective_name}` to the project `{pkg_name}` at `{}`",
+    editable_manifest.save().with_context(|| format!("when trying to add the {kind} dependency `{ename}` to the project `{pkg_name}` at `{}`", pkg_root.display()))?;
+    ctx.info(format!(
+        "successfully added {kind} dependency `{ename}` to the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
     Ok(())
@@ -71,14 +70,14 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
 /// Add a dependency or provide a meaningful error.
 fn add_dep(
     editable_manifest: &EditableManifest,
-    name: &str,
+    ename: &str,
     dep: Dependency,
     kind: DependencyKind,
     has_alias: bool,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
-    match editable_manifest.add_dependency(name, dep, kind)? {
+    match editable_manifest.add_dependency(ename, dep, kind)? {
         DependencyAdded::Yes => Ok(()),
         DependencyAdded::AlreadyExists(other_kind) => {
             // If no alias, add hint to use them.
@@ -88,13 +87,13 @@ fn add_dep(
                 ));
                 err.with_context(|| {
                     format!(
-                        "there already is a {other_kind} dependency referred to by `{name}` in the project `{pkg_name}` at `{}`",
+                        "there already is a {other_kind} dependency referred to by `{ename}` in the project `{pkg_name}` at `{}`",
                         pkg_root.display()
                     )
                 })
             } else {
                 qp_bail!(
-                    "there already is a {other_kind} dependency referred to by `{name}` in the project `{pkg_name}` at `{}`",
+                    "there already is a {other_kind} dependency referred to by `{ename}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             }

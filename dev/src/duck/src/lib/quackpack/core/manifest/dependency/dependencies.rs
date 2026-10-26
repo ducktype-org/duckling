@@ -29,14 +29,14 @@ impl Dependencies {
     /// Bail, if some dependencies have the same effective name.
     /// Effective name is how source code accesses the package, so having duplicates would make code ambiguous.
     fn bail_if_has_duplicated_names(deps: &[Dependency]) -> QuackResult<()> {
-        let mut seen_names = HashMap::new();
+        let mut seen_enames = HashMap::new();
         for dep in deps {
             let kind = dep.kind();
-            let name = dep.effective_name();
-            let maybe_overriden_kind = seen_names.insert(name, kind);
+            let ename = dep.effective_name();
+            let maybe_overriden_kind = seen_enames.insert(ename, kind);
             if let Some(overriden_kind) = maybe_overriden_kind {
                 qp_bail!(
-                    "multiple dependencies (one {overriden_kind} and one {kind}) are referenced by the same name `{name}`",
+                    "multiple dependencies (one {overriden_kind} and one {kind}) are referenced by the same name `{ename}`",
                 )
             }
         }
@@ -54,13 +54,13 @@ impl Dependencies {
         let mut dependencies_ids: HashMap<Identity, (StrId, DependencyKind)> = HashMap::new();
         for dep in deps {
             let identity = dep.identity();
-            if let Some((other_dep_name, other_dep_kind)) = dependencies_ids.get(&identity) {
+            if let Some((other_dep_ename, other_dep_kind)) = dependencies_ids.get(&identity) {
                 qp_bail!(
                     "{} dependency `{}` has the same source as {} dependency `{}`",
                     dep.kind(),
                     dep.effective_name(),
                     other_dep_kind,
-                    other_dep_name
+                    other_dep_ename
                 );
             } else {
                 dependencies_ids.insert(identity, (dep.effective_name(), dep.kind()));
@@ -90,13 +90,13 @@ impl Dependencies {
     }
 
     /// Check if a dependency exists by an effective name.
-    pub fn has_by_effective_name(&self, name: StrId) -> bool {
-        self.get_by_effective_name(name).is_some()
+    pub fn has_by_effective_name(&self, ename: StrId) -> bool {
+        self.get_by_effective_name(ename).is_some()
     }
 
     /// Get a dependency by a compilation name.
-    pub fn get_by_effective_name(&self, name: StrId) -> Option<&Dependency> {
-        self.select(&Selector::EffectiveName(name)).next()
+    pub fn get_by_effective_name(&self, ename: StrId) -> Option<&Dependency> {
+        self.select(&Selector::EffectiveName(ename)).next()
     }
 
     /// Get a dependency by a given [`Selector`].

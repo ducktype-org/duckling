@@ -35,10 +35,10 @@ pub(crate) fn parse(
     let Some(schema) = schema else {
         return Ok(());
     };
-    for (name, dep_schema) in schema {
-        let guard = scope.push(name.into());
+    for (ename, dep_schema) in schema {
+        let guard = scope.push(ename.into());
         dependencies.push(parse_single_dependency(
-            name.into(),
+            ename.into(),
             dep_schema,
             mode,
             kind,
@@ -51,9 +51,9 @@ pub(crate) fn parse(
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
-#[tracing::instrument(skip_all, fields(name = %manifest_name))]
+#[tracing::instrument(skip_all, fields(name = %manifest_ename))]
 fn parse_single_dependency(
-    manifest_name: StrId,
+    manifest_ename: StrId,
     schema: &DependencySchema,
     mode: ParseMode<'_>,
     kind: DependencyKind,
@@ -62,18 +62,18 @@ fn parse_single_dependency(
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
     debug!(?schema, "parsing a dependency");
-    let name = parse_name(schema).unwrap_or(manifest_name);
-    let alias = if name == manifest_name {
+    let name = parse_name(schema).unwrap_or(manifest_ename);
+    let alias = if name == manifest_ename {
         None
     } else {
-        Some(manifest_name)
+        Some(manifest_ename)
     };
     validate_package_name(&name)
         .with_context(|| {
             if alias.is_none() {
-                format!("dependency `{manifest_name}` has an invalid name")
+                format!("dependency `{manifest_ename}` has an invalid name")
             } else {
-                format!("aliased dependency `{manifest_name}` points to a package `{name}` with an invalid name")
+                format!("aliased dependency `{manifest_ename}` points to a package `{name}` with an invalid name")
             }
         })
         .with_context(|| scope.make_context_string())?;
@@ -93,7 +93,7 @@ fn parse_single_dependency(
 
     let features = parse_features(schema.features.as_ref());
     let pinned = schema.pinned.unwrap_or(false);
-    let name = parse_name(schema).unwrap_or(manifest_name);
+    let name = parse_name(schema).unwrap_or(manifest_ename);
 
     let conditions = schema.conditions.as_ref().map(parse_conditions);
     Dependency::new(
