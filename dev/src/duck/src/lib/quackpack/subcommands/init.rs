@@ -16,7 +16,7 @@ use crate::quackpack::core::valid_package_name::{
     is_duckling_keyword, is_duckling_std_name, validate_package_name,
 };
 use crate::quackpack::core::{PackageLoader, Version};
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::util::path_ops::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Options for initializing a new project.

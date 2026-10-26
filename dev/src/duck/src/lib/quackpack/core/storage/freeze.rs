@@ -18,6 +18,7 @@ use crate::{QuackError, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// General storage/venv freezefile.
+/// Assumes that [identities](Identity) of the packages inside the freeze are unique.
 #[serde(rename_all = "kebab-case")]
 pub struct VenvFreeze {
     root: RootPackage,

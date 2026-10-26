@@ -23,12 +23,12 @@ impl DependencyGraph {
         for (k, v) in self.graph.iter_mut() {
             let mut to_remove = HashSet::new();
             let this = packages.package(k);
-            for dep in &v.dependencies {
+            for (ename, dep) in &v.dependencies {
                 let is_enabled = this
                     .package()
                     .manifest()
                     .dependencies()
-                    .get_by_name(dep.name())
+                    .get_by_effective_name(*ename)
                     .unwrap_or_else(|| {
                         missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
                     })
@@ -45,7 +45,7 @@ impl DependencyGraph {
                     enabled_deps.insert(*dep);
                 }
             }
-            v.dependencies.retain(|dep| !to_remove.contains(dep));
+            v.dependencies.retain(|(_, dep)| !to_remove.contains(dep));
         }
         self.graph.retain(|dep, _| enabled_deps.contains(dep));
     }
@@ -63,7 +63,7 @@ impl DependencyGraph {
                 continue;
             }
             let deps = self.dependencies_for_package(&current).dependencies();
-            bfs_stack.extend(deps);
+            bfs_stack.extend(deps.iter().map(|(_, id)| id));
         }
         self.graph.retain(|dep, _| {
             if reachable_deps.contains(dep) {
@@ -98,14 +98,14 @@ impl EarlyGraph {
                 .graph
                 .get(&current)
                 .expect("we've verified that there are dependencies");
-            for dep in &node.dependencies {
+            for (ename, dep) in &node.dependencies {
                 let this_features = added_features.entry(current).or_default();
                 let (enabled_features, is_enabled) = {
                     let entry_in_dep_manifest = this
                         .package()
                         .manifest()
                         .dependencies()
-                        .get_by_name(dep.name())
+                        .get_by_effective_name(*ename)
                         .unwrap_or_else(|| {
                             missing_depenendcy_in_manifest(
                                 &this.package().name(),

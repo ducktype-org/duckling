@@ -381,7 +381,7 @@ mod test {
     use crate::quackpack::core::solver::solving::input::{PackageData, PreexistenceData};
     use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops::PathOpsExt;
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

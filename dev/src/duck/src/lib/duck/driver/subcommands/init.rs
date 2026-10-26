@@ -11,7 +11,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
 use crate::quackpack::subcommands::init::{InitOptions, init};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `init` subcommand.

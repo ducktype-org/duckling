@@ -15,7 +15,7 @@ use crate::quackpack::core::Package;
 use crate::quackpack::core::lints::errors::{Errors, UnusedKey};
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 mod dependency;
