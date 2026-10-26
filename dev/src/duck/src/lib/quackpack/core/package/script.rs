@@ -15,7 +15,7 @@ use crate::quackpack::core::{
     Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter,
 };
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]

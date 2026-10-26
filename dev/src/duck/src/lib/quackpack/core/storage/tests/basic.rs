@@ -19,7 +19,7 @@ use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
 use crate::quackpack::core::{PackageLoader, Version, fetcher};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {

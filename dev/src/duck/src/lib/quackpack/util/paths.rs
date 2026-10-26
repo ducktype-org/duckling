@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::util::env::Env;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 
 /// Environmental variable overriding duck home root.
 const DUCK_HOME_ENV: &str = "DUCK_HOME";

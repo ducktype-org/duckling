@@ -16,7 +16,7 @@ use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
 use crate::util::file_locks::FileLockManager;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {

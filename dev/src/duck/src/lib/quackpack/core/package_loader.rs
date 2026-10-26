@@ -18,7 +18,7 @@ use crate::quackpack::core::script::{PackageScript, Script};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -228,7 +228,7 @@ mod tests {
 
     use crate::DuckContext;
     use crate::quackpack::core::PackageLoader;
-    use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+    use crate::util::path_ops::{MkdirOptions, PathOpsExt};
 
     const BASIC_MANIFEST: &str = r"
 metadata:
