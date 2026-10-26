@@ -221,12 +221,17 @@ Tests:
           && awk '/4242/ && !first { first = NR } /1234/ && !second { second = NR } /7777/ && !third { third = NR } END { exit !(first && second && third && first < second && second < third) }' "$hir_dump"
         ExitCode: 0
 
-  dump-ir-help:
+  ir-options-help:
     Cases:
-      artifact-extensions:
+      compilation-commands:
         Run: >-
-          @{duckc_path} compile_module --help
-          | grep -F 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc)'
+          for command in compile_module compile_modules compile_package compile_packages compile_script; do
+            @{duckc_path} "$command" --help > "$DIT_TMP_DIR/help" || exit 1;
+            for option in artifact-location dump-ir print-ir; do
+              grep -Eq "^[[:space:]]+(-[[:alnum:]], +)?--$option([[:space:]]|$)" "$DIT_TMP_DIR/help" || exit 1;
+            done;
+            grep -Fq 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc)' "$DIT_TMP_DIR/help" || exit 1;
+          done
         ExitCode: 0
 
   compile-script-print-ir:
