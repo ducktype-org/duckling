@@ -1,16 +1,15 @@
 type data: Pair { a: i64, b: i64 } assert_size 16
-type pointer: PairPtr Pair
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
 	init_pany_type s, Pair;
-	init_pany_type sp, PairPtr;
+	init_pany_type sp, ptr{Pair};
 	ref_pptr_pany sp, s;            # sp := &s
 
-	init_pany_type fp, ptr_i64;
+	init_pany_type fp, ptr{i64};
 	structLea_pptr_pptr_field fp, sp, Pair.b;   # fp := &s.b
 
 	init_pany_type id, i64;
@@ -29,7 +28,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	output_p64 id2;                 # 0
 
 	# A null pointer points into no block, so decomposing it fails. Last, it ends the program.
-	init_pany_type np, ptr_i64;
+	init_pany_type np, ptr{i64};
 	setNull_pptr np;
 	ptrParts_p64_p64_pptr id, off, np;
 

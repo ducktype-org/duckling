@@ -188,9 +188,8 @@ private:
 	void cptrNullTypedLoadFails() {
 		const auto pid = spawnAndLoad(inlineDbc(
 			"null_typed_load",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, I64Ptr;\n"
+			"function main { i64, ptr{argv} } -> { i64 } {\n"
+			"    init_pany_type p, cptr{i64};\n"
 			"    init_pany_type v, i64;\n"
 			"    load_pany_pcptr v, p;\n"
 			"    ret;\n"
@@ -203,11 +202,10 @@ private:
 	void cptrNullRawReadFails() {
 		const auto pid = spawnAndLoad(inlineDbc(
 			"null_raw_read",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type c, I64Ptr;\n"
+			"function main { i64, ptr{argv} } -> { i64 } {\n"
+			"    init_pany_type c, cptr{i64};\n"
 			"    init_pany_type out, i64;\n"
-			"    init_pany_type op, ptr_i64;\n"
+			"    init_pany_type op, ptr{i64};\n"
 			"    ref_pptr_pany op, out;\n"
 			"    read_pptr_pcptr op, c;\n"
 			"    ret;\n"
@@ -220,11 +218,10 @@ private:
 	void cptrCastOfNullPointerFails() {
 		const auto pid = spawnAndLoad(inlineDbc(
 			"cptr_cast_null",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, ptr_i64;\n"
+			"function main { i64, ptr{argv} } -> { i64 } {\n"
+			"    init_pany_type p, ptr{i64};\n"
 			"    setNull_pptr p;\n"
-			"    init_pany_type c, I64Ptr;\n"
+			"    init_pany_type c, cptr{i64};\n"
 			"    cast_pcptr_pptr c, p;\n"
 			"    ret;\n"
 			"}\n"

@@ -1,8 +1,5 @@
-type pointer: pointer_Animal Animal
-type pointer: pointer_Dog Dog
-
 # ========== VIRTUAL METHOD DECLARATIONS ==============
-type fun: method_toHumanYears {pointer_Animal} {}
+type fun: method_toHumanYears {ptr{Animal}} {}
 
 # ============ CLASSES DEFINITIONS ============
 type class: Animal {
@@ -23,7 +20,7 @@ type class: Dog {
 # ============ METHODS IMPLEMENTATION ============
 
 # Implementation for Dog.
-function dog_year_to_human_years {pointer_Dog} -> {} {
+function dog_year_to_human_years {ptr{Dog}} -> {} {
     init_pany_type         call_res,      i64;
     init_pany_type         call_arg0,     i64;
     mov_p64_imm            call_arg0,       0;
@@ -32,8 +29,8 @@ function dog_year_to_human_years {pointer_Dog} -> {} {
     ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type  dog_ptr, pointer_Dog;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type  dog_ptr, ptr{Dog};
     alloc_pptr_type dog_ptr, Dog;
 
     # vtable unset: setVTable_pptr_type  dog_ptr, Dog;

@@ -1,7 +1,7 @@
 # A local whose block is created on demand sits above variables of mixed sizes, so the offset
 # the lowering emits and the address its slot records have to agree.
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
@@ -12,7 +12,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type		d, i32;
 	init_pany_type		target, i64;
 	init_pany_type		source, i64;
-	init_pany_type		ptr, ptr_i64;
+	init_pany_type		p, ptr{i64};
 
 	mov_p8_imm			a, 1;
 	mov_p64_imm			b, 2;
@@ -23,8 +23,8 @@ function main { i64, ptr_argv } -> { i64 } {
 
 	# `target` gets its block here, and writing through the pointer has to land on `target`
 	# itself rather than on any of its differently sized neighbours.
-	ref_pptr_pany		ptr, target;
-	store_pptr_pany		ptr, source;
+	ref_pptr_pany		p, target;
+	store_pptr_pany		p, source;
 
 	output_p64			target;
 	output_p64			b;

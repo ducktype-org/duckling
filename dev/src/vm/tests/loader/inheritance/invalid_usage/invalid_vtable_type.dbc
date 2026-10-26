@@ -1,5 +1,4 @@
-type pointer: pointer_Child Child
-type fun: method_child_void {pointer_Child} {}
+type fun: method_child_void {ptr{Child}} {}
 
 type class: Child {
     virtual_methods: { 
@@ -10,12 +9,12 @@ type class: Child {
     };
 }
 
-function Child_cry_impl_type {pointer_Child} -> {} {
+function Child_cry_impl_type {ptr{Child}} -> {} {
     init_pany_type res, i64; mov_p64_imm res, 55; output_p64 res; deinit; deinit; ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type actual_child, pointer_Child;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type actual_child, ptr{Child};
     alloc_pptr_type actual_child, Child;
     setVTable_pptr_type actual_child, i64;
 

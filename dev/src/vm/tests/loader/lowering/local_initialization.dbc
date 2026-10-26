@@ -1,16 +1,15 @@
 # Fixture for the local variable initialization lowering test.
 
-type pointer: ptr_i64 i64
 type data: pair {
 	first: i64,
 	second: i64
 }
 type variant: maybe { i64, i8 }
 type data: pair_with_pointer {
-	first: ptr_i64,
+	first: ptr{i64},
 	second: i64
 }
-type fixed_size_table: pointer_table ptr_i64 2
+type fixed_size_table: pointer_table ptr{i64} 2
 type data: holds_a_variant {
 	tag: i64,
 	choice: maybe
@@ -35,8 +34,8 @@ function simple { } -> { } {
 # still does not create one.
 function referenced { } -> { } {
 	init_pany_type		target, i64;
-	init_pany_type		ptr, ptr_i64;
-	ref_pptr_pany		ptr, target;
+	init_pany_type		p, ptr{i64};
+	ref_pptr_pany		p, target;
 	deinit; # ptr
 	deinit; # target
 	ret;
@@ -45,7 +44,7 @@ function referenced { } -> { } {
 # A pointer holds a reference to a block, so leaving its scope must release it even when the
 # variable itself never got a block of its own.
 function holds_pointer { } -> { } {
-	init_pany_type		ptr, ptr_i64;
+	init_pany_type		p, ptr{i64};
 	init_pany_type		plain, pair;
 	deinit; # plain
 	deinit; # ptr

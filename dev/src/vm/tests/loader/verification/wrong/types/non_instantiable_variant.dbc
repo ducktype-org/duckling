@@ -4,7 +4,7 @@ type class: A {
 
 type variant: simple_variant { i64, A, i32 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     # let v0: variant<i64, A, i32>;
     init_pany_type v0, simple_variant;
 
@@ -12,21 +12,21 @@ function main { i64, ptr_argv } -> { i64 } {
     variantSetInner_pvnt_type v0, i64;
 
     # let ptr: ptr<i64>;
-    init_pany_type ptr, ptr_i64;
+    init_pany_type p, ptr{i64};
 
     # ptr = v0.getData<i64>();
-    variantGetInner_pptr_pvnt_type ptr, v0, i64;
+    variantGetInner_pptr_pvnt_type p, v0, i64;
 
     # let value: i64 = input();
     init_pany_type value, i64;
     input_p64 value;
 
     # *ptr = value;
-    store_pptr_pany ptr, value;
+    store_pptr_pany p, value;
 
     # let read_val: i64 = *ptr;
     init_pany_type read_val, i64;
-    load_pany_pptr read_val, ptr;
+    load_pany_pptr read_val, p;
 
     output_p64 read_val;
 

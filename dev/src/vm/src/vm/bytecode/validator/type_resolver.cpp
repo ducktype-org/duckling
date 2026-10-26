@@ -27,19 +27,43 @@ namespace vm::code {
 		if (auto type = findResolved(context->getCurrentTypes(), expr))
 			return type.value()->getID();
 
-		const base::StrID name        = expr.getKindAs<expr::Named>()->name;
-		const auto        declaration = context->findDeclaration(name);
-		if (!declaration.has_value()) throw UnknownTypeError(opargs::Type(expr));
+		// A named type is built from its declaration; any other expression describes its type
+		// itself.
+		base::Optional<CRef<TypeOfData>> declaration;
+		if_opt_some(expr.maybeGetKindAs<expr::Named>(), named) {
+			declaration = context->findDeclaration(named->name);
+			if (!declaration.has_value()) throw UnknownTypeError(opargs::Type(expr));
+		}
 
 		const auto id = context->declare(expr);
 		built.push_back(id);
-		define(id, **declaration);
+		if (declaration.has_value())
+			define(id, **declaration);
+		else
+			defineDerived(id, expr);
 		return id;
 	}
 
 	void TypeResolver::finalizeBuilt() {
 		for (const auto id: built) context->finalize(id);
 		built.clear();
+	}
+
+	void TypeResolver::defineDerived(valid_type::ValidTypeID id, const TypeExpr& expr) {
+		// What the type is built from is resolved before it is fetched for defining, as in
+		// `define`.
+		variant_match(expr.getKind()) {
+			variant_case(expr::Pointer, pointer) {
+				const auto pointee = resolve(pointer.pointee);
+				context->forDefinition(id).definePointer(pointee);
+			}
+			variant_case(expr::CPointer, cpointer) {
+				const auto pointee
+					= cpointer.pointee.map([&](const TypeExpr& inner) { return resolve(inner); });
+				context->forDefinition(id).defineCPointer(pointee);
+			}
+			variant_case_novalue(expr::Named) { CORE_UNREACHABLE(); }
+		}
 	}
 
 	void TypeResolver::define(valid_type::ValidTypeID id, const TypeOfData& declaration) {
@@ -67,15 +91,6 @@ namespace vm::code {
 		variant_match(declaration) {
 			variant_case(PrimitiveType, primitive) {
 				type().definePrimitive(Bytes(primitive.size));
-			}
-			variant_case(PointerType, pointer) {
-				const auto inner = resolve(pointer.inner);
-				type().definePointer(inner);
-			}
-			variant_case(CPointerType, cpointer) {
-				const auto inner
-					= cpointer.inner.map([&](const TypeExpr& expr) { return resolve(expr); });
-				type().defineCPointer(inner);
 			}
 			variant_case(FixedSizeTableType, fixed_size_table) {
 				const auto inner = resolve(fixed_size_table.inner);

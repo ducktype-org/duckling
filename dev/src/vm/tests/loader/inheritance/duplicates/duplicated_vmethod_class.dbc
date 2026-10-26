@@ -1,6 +1,5 @@
-type pointer: pointer_A A
-type fun: method_foo {pointer_A} {}
-type fun: method_bar {pointer_A} {}
+type fun: method_foo {ptr{A}} {}
+type fun: method_bar {ptr{A}} {}
 
 type class: A {
     abstract: true;

@@ -77,13 +77,12 @@ namespace compiler::backend_vm::internal {
 	FunctionCallInfo FunctionCallInfo::fromLirFunction(
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
-		base::Optional<vm::code::TypeOfData> called_result_type
-			= program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
-		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
+		base::Optional<vm::code::TypeExpr> called_result_type
+			= program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout);
 
-		std::vector<vm::code::TypeOfData> param_types
+		std::vector<vm::code::TypeExpr> param_types
 			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-				  return *program_context.lowerAndKeepTslType(layout);
+				  return program_context.lowerAndKeepTslType(layout);
 			  })
 		    | std::ranges::to<std::vector>();
 
@@ -107,16 +106,15 @@ namespace compiler::backend_vm::internal {
 			ext_func.signature.result_types.size() <= 1, "Functions should return one value at most"
 		);
 
-		base::Optional<vm::code::TypeOfData> called_result_type = {};
+		base::Optional<vm::code::TypeExpr> called_result_type = {};
 		if (ext_func.signature.result_types.size()) {
 			auto reslt         = ext_func.signature.result_types.at(0);
-			called_result_type = vm::code::getBuiltinTypeByName(reslt.expr.canonicalName()).value();
+			called_result_type = reslt.expr;
 		}
 
-		std::vector<vm::code::TypeOfData> param_types
-			= ext_func.signature.parameters | std::views::transform([&](const auto& type_ref) {
-				  return vm::code::getBuiltinTypeByName(type_ref.expr.canonicalName()).value();
-			  })
+		std::vector<vm::code::TypeExpr> param_types
+			= ext_func.signature.parameters
+		    | std::views::transform([](const auto& type_ref) { return type_ref.expr; })
 		    | std::ranges::to<std::vector>();
 
 		return FunctionCallInfo{
@@ -200,9 +198,8 @@ namespace compiler::backend_vm::internal {
 
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
-				base::Optional<vm::code::TypeOfData> return_type
-					= ctx.program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
-				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
+				base::Optional<vm::code::TypeExpr> return_type
+					= ctx.program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout);
 				return BuiltinCallOperation{
 					.kind        = builtin,
 					.args        = std::move(call_args),

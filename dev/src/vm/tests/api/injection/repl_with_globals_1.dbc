@@ -1,5 +1,5 @@
 global_data counter i64 {}
-global_data global_ptr ptr_i64 {}
+global_data global_ptr ptr{i64} {}
 
 function globaler_setter {} -> {} {
 	init_pany_type  x, i64;
@@ -7,10 +7,10 @@ function globaler_setter {} -> {} {
 	mov_p64_p64     counter, x;
 
 	input_p64           x;
-	init_pany_type      ptr, ptr_i64;
-	alloc_pptr_type     ptr, i64;
-	store_pptr_pany  	ptr, x;
-	mov_pptr_pptr       global_ptr, ptr;
+	init_pany_type      p, ptr{i64};
+	alloc_pptr_type     p, i64;
+	store_pptr_pany  	p, x;
+	mov_pptr_pptr       global_ptr, p;
 
 	deinit; # ptr
 	deinit; # x

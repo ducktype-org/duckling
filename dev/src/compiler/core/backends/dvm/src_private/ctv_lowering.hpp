@@ -58,7 +58,7 @@ namespace compiler::backend_vm::internal {
 		static const DVMPlace& lowerCTVToNewGlobal(
 			ProgramLoweringContext&             pctx,
 			const ctv::CompileTimeValue&        constant,
-			const vm::code::TypeOfData&         type,
+			vm::code::TypeExpr                  type,
 			bool                                is_constant,
 			base::Optional<base::StrID>         lowered_global_name = {},
 			base::Optional<dia::StablePosition> position            = {}

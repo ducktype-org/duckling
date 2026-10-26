@@ -427,7 +427,9 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::OutputString,
 				{ base::StrID("builtin_strOutput_pptr"),
-			      code::FuncSignature({}, { code::TypeExpr(base::StrID("ptr_string")) }) },
+			      code::FuncSignature(
+					  {}, { code::TypeExpr::pointer(code::TypeExpr{ base::StrID("string") }) }
+				  ) },
 			},
 			{
 				BuiltinFunctionID::Stoi,
@@ -435,7 +437,7 @@ namespace vm::builtins {
 					base::StrID("builtin_stoi_pptr"),
 					code::FuncSignature(
 						{ code::TypeExpr(base::StrID("i64")) },
-						{ code::TypeExpr(base::StrID("ptr_string")) }
+						{ code::TypeExpr::pointer(code::TypeExpr{ base::StrID("string") }) }
 					),
 				},
 			},
@@ -447,7 +449,7 @@ namespace vm::builtins {
 					base::StrID("strtod"),
 					code::FuncSignature(
 						{ code::TypeExpr(base::StrID("f64")) },
-						{ code::TypeExpr(base::StrID("ptr_dyntable_i8")) }
+						{ code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }) }
 					),
 				},
 			},
@@ -459,7 +461,7 @@ namespace vm::builtins {
 			      code::FuncSignature(
 					  { code::TypeExpr(base::StrID("i64")) },
 					  { code::TypeExpr(base::StrID("f64")),
-			            code::TypeExpr(base::StrID("ptr_dyntable_i8")),
+			            code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }),
 			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},
@@ -469,7 +471,7 @@ namespace vm::builtins {
 			      code::FuncSignature(
 					  { code::TypeExpr(base::StrID("i64")) },
 					  { code::TypeExpr(base::StrID("i64")),
-			            code::TypeExpr(base::StrID("ptr_dyntable_i8")),
+			            code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }),
 			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},
@@ -479,7 +481,7 @@ namespace vm::builtins {
 			      code::FuncSignature(
 					  { code::TypeExpr(base::StrID("i64")) },
 					  { code::TypeExpr(base::StrID("i64")),
-			            code::TypeExpr(base::StrID("ptr_dyntable_i8")),
+			            code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }),
 			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},

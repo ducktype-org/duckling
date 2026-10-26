@@ -1,13 +1,11 @@
 type dynamic_table: dtable_i64 i64
-type pointer: ptr_dtable_i64 dtable_i64
-type dynamic_table: dtable_ptr ptr_dtable_i64
-type pointer: ptr_dtable_ptr dtable_ptr
+type dynamic_table: dtable_ptr ptr{dtable_i64}
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 
     init_pany_type idx, i64;
-    init_pany_type inner_ptr, ptr_dtable_i64;
-    init_pany_type outer_ptr, ptr_dtable_ptr;
+    init_pany_type inner_ptr, ptr{dtable_i64};
+    init_pany_type outer_ptr, ptr{dtable_ptr};
 
     # A table of two i64s, referenced by `inner_ptr`.
     mov_p64_imm idx, 2;

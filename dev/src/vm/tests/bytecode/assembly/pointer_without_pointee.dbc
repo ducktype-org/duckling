@@ -1,0 +1,4 @@
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type bad, ptr{};
+    ret;
+}

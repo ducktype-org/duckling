@@ -44,21 +44,12 @@ namespace {
 		return instruction;
 	}
 
-	vm::code::TypeExprUse typeExprUse(const tpc::Identifier& type_name) {
-		vm::code::TypeExprUse use(vm::code::TypeExpr(type_name.value));
-		use.bytecode_pos = type_name.position;
-		return use;
-	}
-
 	// Shared between regular and FFI function declarations.
 	vm::code::FuncSignature makeSignature(
-		const std::vector<tpc::Identifier>& parameters,
-		const std::vector<tpc::Identifier>& result_types
+		const std::vector<vm::code::TypeExprUse>& parameters,
+		const std::vector<vm::code::TypeExprUse>& result_types
 	) {
-		vm::code::FuncSignature signature;
-		for (const auto& param: parameters) signature.parameters.push_back(typeExprUse(param));
-		for (const auto& reslt: result_types) signature.result_types.push_back(typeExprUse(reslt));
-		return signature;
+		return { .result_types = result_types, .parameters = parameters };
 	}
 }
 
@@ -74,7 +65,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 				for (const auto& global: parsed_file.global_data) {
 					code::GlobalData code_global;
 					code_global.name         = global->name;
-					code_global.type         = typeExprUse(global->type);
+					code_global.type         = global->type;
 					code_global.bytecode_pos = global->position;
 					code_global.is_constant  = global->is_constant;
 					if (global->ctor_name.has_value())

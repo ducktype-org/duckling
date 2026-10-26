@@ -9,7 +9,7 @@ function worker {} -> {} {
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	mov_p64_imm				completed_runs, 0;
 
 	init_pany_type			reused_count, i64;

@@ -86,7 +86,7 @@ namespace compiler::backend_vm::internal {
 		 * refer to a type from within the lowering of another type. Prefer it whenever only the
 		 * name is needed.
 		 */
-		base::StrID keepTslType(CRef<tsl::TypeLayout> layout);
+		vm::code::TypeExpr keepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
@@ -98,16 +98,32 @@ namespace compiler::backend_vm::internal {
 		 * variant alternatives and pointees by type name. It is opaque rather than a one-byte
 		 * primitive, so that it never collides with a `bool` or `i8` alternative of the same variant.
 		 */
-		CRef<vm::code::TypeOfData> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+		vm::code::TypeExpr lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+
+		/**
+		 * @brief The declaration of the type `expr` denotes.
+		 * @return An empty optional for a pointer, which is written rather than declared.
+		 */
+		base::Optional<CRef<vm::code::TypeOfData>> declarationOf(vm::code::TypeExpr expr);
+
+		/**
+		 * @brief A place of the type `expr` denotes.
+		 * @note Gives the place its declaration when the type has one, which is what lets the
+		 * place pick the operand kind its contents need.
+		 */
+		DVMPlace makePlace(
+			base::StrID           name,
+			vm::code::TypeExpr    expr,
+			DVMPlace::AccessKind  access_kind,
+			DVMPlace::SpecialKind special_kind = DVMPlace::SpecialKind::Normal
+		);
 
 		/**
 		 * @brief Lowers a function return type layout like lowerAndKeepTslType.
 		 * @return The DVM return type, or an empty optional for `tsl::EmptyTypeLayout`, as a
 		 * function returning Unit has no DVM result.
 		 */
-		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepReturnTslType(
-			CRef<tsl::TypeLayout> layout
-		);
+		base::Optional<vm::code::TypeExpr> lowerAndKeepReturnTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
 		 * @brief Inserts a manually created DVM type into the program context and returns a
@@ -120,8 +136,13 @@ namespace compiler::backend_vm::internal {
 		 * @brief Creates and inserts a pointer type into the program lowering context.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(
-			base::StrID                         pointee_name,
+		/**
+		 * @brief How a pointer of `kind` to `pointee` is written.
+		 * @note A pointer is not declared, so nothing is kept for it. The dynamic table a
+		 * many-pointer points at is declared, so that one is kept.
+		 */
+		vm::code::TypeExpr pointerTypeExpr(
+			vm::code::TypeExpr                  pointee,
 			tsl::PointerTypeLayout::PointerKind kind
 			= tsl::PointerTypeLayout::PointerKind::SinglePointer
 		);
@@ -130,7 +151,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Returns the builtin `cptr` type - a cpointer with an unknown pointee, the DVM
 		 * counterpart of C's `void*`. Inserts it into the module on first use.
 		 */
-		const vm::code::TypeOfData& getVoidCPointerType();
+		vm::code::TypeExpr getVoidCPointerType();
 
 		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
@@ -252,9 +273,10 @@ namespace compiler::backend_vm::internal {
 		 * @note A pointer is named after its pointee's name only, so the pointee is never lowered
 		 * and a class's name is its mangled name, so naming does not recurse into fields.
 		 */
-		base::StrID getTslNameInternal(CRef<tsl::TypeLayout> layout);
+		vm::code::TypeExpr getTslTypeExprInternal(CRef<tsl::TypeLayout> layout);
 
-		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
+		/// @return The declaration to keep, or nothing for a pointer, which has none.
+		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
 		/**
 		 * @brief Constructs the VM pointer type from the name of the pointee type, internal.
@@ -274,7 +296,8 @@ namespace compiler::backend_vm::internal {
 
 		struct TypeStorage {
 			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
-			base::Map<CRef<tsl::TypeLayout>, base::StrID> tsl_type_to_dvm_type_name;
+			/// What each lowered layout's type is written as.
+			base::Map<CRef<tsl::TypeLayout>, vm::code::TypeExpr> tsl_type_to_dvm_type;
 			// Main container for all types in the module.
 			base::HashMap<base::StrID, vm::code::TypeOfData> dvm_types;
 		};

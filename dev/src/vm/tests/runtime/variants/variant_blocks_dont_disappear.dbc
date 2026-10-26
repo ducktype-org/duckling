@@ -1,21 +1,21 @@
 type primitive: i8 1
 type variant: simple_variant { i64, i8 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type v1, simple_variant;
     variantSetInner_pvnt_type v1, i64;
 
     init_pany_type value, i64;
     input_p64 value;
 
-    init_pany_type ptr, ptr_i64;
-    variantGetInner_pptr_pvnt_type ptr, v1, i64;
+    init_pany_type p, ptr{i64};
+    variantGetInner_pptr_pvnt_type p, v1, i64;
 
-    store_pptr_pany ptr, value;
+    store_pptr_pany p, value;
 
     deinit; # ptr
 
-    init_pany_type new_ptr, ptr_i64;
+    init_pany_type new_ptr, ptr{i64};
     variantGetInner_pptr_pvnt_type new_ptr, v1, i64;
 
     mov_p64_imm value, 0;

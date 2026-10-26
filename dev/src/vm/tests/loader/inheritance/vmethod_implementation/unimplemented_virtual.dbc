@@ -1,7 +1,6 @@
-type pointer: pointer_A A
-type fun: method_foo {pointer_A} {}
-type fun: method_bar {pointer_A} {}
-function method_foo_impl {pointer_A} -> {} {
+type fun: method_foo {ptr{A}} {}
+type fun: method_bar {ptr{A}} {}
+function method_foo_impl {ptr{A}} -> {} {
     ret;
 }
 

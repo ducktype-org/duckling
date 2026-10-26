@@ -93,7 +93,7 @@ namespace compiler::backend_vm::internal {
 
 		auto lower_builder_pattern = [&](const BuilderSequence& builder_sequence) {
 			auto builder = ctx->pushTempLocal(
-				vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 }), "meta_builder"
+				vm::code::TypeExpr{ base::StrID("opaque_ptr") }, "meta_builder"
 			);
 			DVMPlace builder_place = builder;
 

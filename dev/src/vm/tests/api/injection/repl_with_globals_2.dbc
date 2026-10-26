@@ -3,12 +3,12 @@ function globaler_reader {} -> {} {
 	mov_p64_p64     x, counter;
 	output_p64      x;
 
-	init_pany_type ptr, ptr_i64;
-	mov_pptr_pptr ptr, global_ptr;
-	load_pany_pptr x, ptr;
+	init_pany_type p, ptr{i64};
+	mov_pptr_pptr p, global_ptr;
+	load_pany_pptr x, p;
 	output_p64      x;
 
-	free_pptr ptr;
+	free_pptr p;
 
 	deinit; # ptr
 	deinit; # x

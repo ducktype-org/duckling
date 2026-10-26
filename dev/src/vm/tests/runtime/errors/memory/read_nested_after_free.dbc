@@ -1,18 +1,17 @@
 type primitive: i8 1
 type variant: simple_variant { i64, i8 }
-type pointer: ptr_simple_variant simple_variant
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type ptr, ptr_simple_variant;
-    alloc_pptr_type ptr, simple_variant;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type p, ptr{simple_variant};
+    alloc_pptr_type p, simple_variant;
     # Gives the variant a nested child block.
-    variantSetInner_pptr_type ptr, i64;
+    variantSetInner_pptr_type p, i64;
 
-    free_pptr ptr;
+    free_pptr p;
 
     # Reading the nested block of a variant whose own block is gone.
-    init_pany_type inner, ptr_i64;
-    variantGetInner_pptr_pptr_type inner, ptr, i64;
+    init_pany_type inner, ptr{i64};
+    variantGetInner_pptr_pptr_type inner, p, i64;
 
     init_pany_type out, i64;
     load_pany_pptr out, inner;

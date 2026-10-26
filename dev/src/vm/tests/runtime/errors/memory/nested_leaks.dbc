@@ -4,43 +4,39 @@
 # table = MyStruct[3];
 # table[0].field = &ret0;
 
-type variant: MyVariant { ptr_i64, i64 }
+type variant: MyVariant { ptr{i64}, i64 }
 
 type data: MyStruct {
     field: MyVariant
 }
 
 type fixed_size_table: MyTable MyStruct 3
-type pointer: MyTablePtr MyTable
-type pointer: MyStructPtr MyStruct
-type pointer: MyVariantPtr MyVariant
-type pointer: ptr_ptr_i64 ptr_i64
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 
-    init_pany_type int_ptr_ptr, ptr_ptr_i64;
+    init_pany_type int_ptr_ptr, ptr{ptr{i64}};
     init_pany_type table, MyTable;
     # table = MyStruct[3];
 
-    init_pany_type table_ptr, MyTablePtr;
+    init_pany_type table_ptr, ptr{MyTable};
     ref_pptr_pany table_ptr, table;
     # table_ptr = &MyStruct[0];
 
-    init_pany_type struct_ptr, MyStructPtr;
+    init_pany_type struct_ptr, ptr{MyStruct};
     fixedSizeTableLea_pptr_pptr_p64 struct_ptr, table_ptr, ret0;  # ret0 == 0
     # struct_ptr = &MyStruct[0];
 
-    init_pany_type variant_ptr, MyVariantPtr;
+    init_pany_type variant_ptr, ptr{MyVariant};
     structLea_pptr_pptr_field variant_ptr, struct_ptr, MyStruct.field;
     # variant_ptr = &struct_ptr->field;
 
-    variantSetInner_pptr_type variant_ptr, ptr_i64;
+    variantSetInner_pptr_type variant_ptr, ptr{i64};
     # (*variant_ptr).setType<ptr_i64>();
 
-    variantGetInner_pptr_pptr_type int_ptr_ptr, variant_ptr, ptr_i64;
+    variantGetInner_pptr_pptr_type int_ptr_ptr, variant_ptr, ptr{i64};
     # int_ptr_ptr = variant_ptr->asPtr<ptr_i64>();
 
-    init_pany_type int_ptr, ptr_i64;
+    init_pany_type int_ptr, ptr{i64};
     alloc_pptr_type int_ptr, i64;
 
     store_pptr_pany int_ptr_ptr, int_ptr;

@@ -10,7 +10,7 @@ function spinner {} -> {} {
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	init_pany_type			t1, i64;
 	setThreadCtx_func			spinner;
 	call_builtinfunc		builtin_start_thread;

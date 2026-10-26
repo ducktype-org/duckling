@@ -1,12 +1,11 @@
 type dynamic_table: dtablei64 i64
-type pointer: dptr_i64 dtablei64
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 
     init_pany_type iter, i64;
     init_pany_type val, i64;
-    init_pany_type table_ptr, dptr_i64;
-    init_pany_type other_ptr, ptr_i64;
+    init_pany_type table_ptr, ptr{dtablei64};
+    init_pany_type other_ptr, ptr{i64};
     mov_p64_imm val, 5;
     dynTableReAlloc_pptr_type_p64 table_ptr, dtablei64, val;
     mov_p64_imm iter, 5;

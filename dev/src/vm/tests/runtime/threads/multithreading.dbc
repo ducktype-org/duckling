@@ -22,7 +22,7 @@ function inc {} -> {} {
     ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	init_pany_type			thread_inc1_id, i64;
 	setThreadCtx_func			inc;
     call_builtinfunc		builtin_start_thread;

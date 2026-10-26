@@ -240,10 +240,10 @@ namespace vm {
 		auto        main_return_type = func.result_types;
 		const auto& types            = process_program->getTypes();
 		auto        argv_type        = types.at(base::StrID("argv"));
-		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
+		auto        argv_ptr_type    = types.at(base::StrID("ptr{argv}"));
 		auto        i64_type         = types.at(base::StrID("i64"));
 		auto        str_type         = types.at(base::StrID("string"));
-		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
+		auto        str_ptr_type     = types.at(base::StrID("ptr{string}"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
 		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),

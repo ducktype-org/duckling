@@ -48,16 +48,17 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 }
 
 DVMPlace compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
-	const vm::code::TypeOfData& type, base::Optional<std::string_view> name_hint, bool tracked
+	vm::code::TypeExpr type, base::Optional<std::string_view> name_hint, bool tracked
 ) {
-	auto name       = base::strConcat(name_hint.copyValueOr("temp"), next_temp_id++);
-	auto temp_local = DVMPlace(base::StrID(name), type, DVMPlace::AccessKind::Direct);
+	auto name = base::strConcat(name_hint.copyValueOr("temp"), next_temp_id++);
+	auto temp_local
+		= program_context.makePlace(base::StrID(name), type, DVMPlace::AccessKind::Direct);
 	if (tracked) current_temp_count++;
 
 	pushInstruction({
 		OpKind::init,
 		temp_local.asAnyArgument(),
-		vm::opargs::Type(vm::code::TypeExpr(typeName(type))),
+		vm::opargs::Type(type),
 	});
 	return temp_local;
 }

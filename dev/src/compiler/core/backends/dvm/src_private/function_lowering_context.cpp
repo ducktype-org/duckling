@@ -45,8 +45,7 @@ FunctionLoweringContext::FunctionLoweringContext(
 	base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 ):
 	  program_context(program_context),
-	  function_return_type(program_context.lowerAndKeepReturnTslType(return_type)
-                               .map([](CRef<vm::code::TypeOfData> ref) { return *ref; })),
+	  function_return_type(program_context.lowerAndKeepReturnTslType(return_type)),
 	  function_parameter_types(
 		  parameter_types | std::views::transform([&](auto&& layout) {
 			  return program_context.keepTslType(layout);
@@ -78,7 +77,7 @@ DVMPlace FunctionLoweringContext::forceToPlace(
 	if (value.is<DVMPlace>()) return value.get<DVMPlace>();
 
 	if (value.is<DVMImmediate>()) {
-		DVMPlace temp = pushTempLocal(value.getType(), name_hint);
+		DVMPlace temp = pushTempLocal(value.getTypeExpr(), name_hint);
 		pushInstruction({
 			vm::code::builders::OpKind::mov,
 			temp.asArgument(),
@@ -92,7 +91,7 @@ DVMPlace FunctionLoweringContext::forceToPlace(
 DVMPlace FunctionLoweringContext::copyToTempPlace(
 	const DVMValue& value, base::Optional<std::string_view> name_hint
 ) {
-	DVMPlace temp = pushTempLocal(value.getType(), name_hint);
+	DVMPlace temp = pushTempLocal(value.getTypeExpr(), name_hint);
 	pushInstruction({
 		vm::code::builders::OpKind::mov,
 		temp.asArgument(),
@@ -137,7 +136,7 @@ void FunctionLoweringContext::maybeStoreResult(
 			// For dynamic table pointer we need to use the extended store with index 0, as the
 			// pointer points to the first element of the table.
 			auto     u64_zero = DVMImmediate::u64(0);
-			DVMPlace idx_temp = pushTempLocal(u64_zero.type, "index_tmp");
+			DVMPlace idx_temp = pushTempLocal(u64_zero.getTypeExpr(), "index_tmp");
 			pushInstruction({ vm::code::builders::OpKind::mov, idx_temp, u64_zero });
 			pushInstruction({ vm::code::builders::OpKind::dynTableStore,
 			                  dest_place.asArgument(),
@@ -152,7 +151,7 @@ void FunctionLoweringContext::maybeStoreResult(
 }
 
 DVMPlace FunctionLoweringContext::loadFromPlace(
-	const DVMPlace& place, const vm::code::TypeOfData& pointee_type
+	const DVMPlace& place, vm::code::TypeExpr pointee_type
 ) {
 	DVMPlace temp = pushTempLocal(pointee_type, "deref_tmp");
 	switch (place.getAccessKind()) {
@@ -162,7 +161,7 @@ DVMPlace FunctionLoweringContext::loadFromPlace(
 		break;
 	case DVMPlace::AccessKind::DynTablePointer: {
 		auto     u64_value = DVMImmediate::u64(0);
-		DVMPlace idx_temp  = pushTempLocal(u64_value.type, "index_tmp");
+		DVMPlace idx_temp  = pushTempLocal(u64_value.getTypeExpr(), "index_tmp");
 		pushInstruction({ vm::code::builders::OpKind::mov, idx_temp, u64_value });
 		pushInstruction(
 			{ vm::code::builders::OpKind::dynTableLoad, temp.asAnyArgument(), place, idx_temp }
@@ -206,9 +205,9 @@ void FunctionLoweringContext::cPointerArrayLea(
 	else {
 		DVMPlace offset_place = copyToTempPlace(index, "cptr_index_offset");
 		CORE_ASSERT(
-			vm::code::typeName(offset_place.getType()) == base::StrID("i64"),
+			offset_place.getTypeExpr() == vm::code::TypeExpr{ base::StrID("i64") },
 			"Index used for cpointer arithmetic must be a 64-bit integer, got: ",
-			vm::code::typeName(offset_place.getType())
+			offset_place.getTypeExpr().canonicalName()
 		);
 		pushInstruction(
 			{ vm::code::builders::OpKind::mul, offset_place, DVMImmediate::i64(element_stride) }
@@ -292,8 +291,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 						= current_place.withAccessKind(accessKindForPointer(current_pointer_layout));
 					current_layout = pointee_layout;
 				} else {
-					vm::code::TypeOfData vm_loaded_type
-						= *program_context.lowerAndKeepTslType(current_layout);
+					vm::code::TypeExpr vm_loaded_type
+						= program_context.lowerAndKeepTslType(current_layout);
 
 					DVMPlace loaded_val_tmp = loadFromPlace(current_place, vm_loaded_type);
 
@@ -320,8 +319,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					= class_layout.getFieldLayoutOfLayoutIndex(field_index);
 
 				// Prepare the pointer to field type.
-				const vm::code::TypeOfData vm_field_type
-					= *program_context.lowerAndKeepTslType(field_layout);
+				const vm::code::TypeExpr vm_field_type
+					= program_context.lowerAndKeepTslType(field_layout);
 
 				auto vm_field_name = base::strConcat("_", field_index);
 
@@ -329,10 +328,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// and when we have a Pointer to a struct, we can get a Pointer to a field.
 				// current_place determines current access kind (Pointer, CPointer)
 				const auto field_pointer_kind = pointerForAccess(current_place.getAccessKind());
-				const vm::code::TypeOfData& ptr_to_field_type
-					= program_context.getOrInsertPointerType(
-						typeName(vm_field_type), field_pointer_kind
-					);
+				const vm::code::TypeExpr ptr_to_field_type
+					= program_context.pointerTypeExpr(vm_field_type, field_pointer_kind);
 				// Create a temporary to the field, with the right access kind.
 				DVMPlace field_ptr_tmp
 					= pushTempLocal(ptr_to_field_type, "field_addr")
@@ -344,12 +341,12 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					break;
 				case DVMPlace::AccessKind::Direct:
 				case DVMPlace::AccessKind::Pointer: {
-					const vm::code::TypeOfData& vm_class_type
-						= *program_context.lowerAndKeepTslType(current_layout);
+					const vm::code::TypeExpr vm_class_type
+						= program_context.lowerAndKeepTslType(current_layout);
 					pushInstruction({ vm::code::builders::OpKind::structLea,
 					                  field_ptr_tmp,
 					                  current_place,
-					                  vm::opargs::Field{ vm::code::TypeExpr(typeName(vm_class_type)),
+					                  vm::opargs::Field{ vm_class_type,
 					                                     base::StrID(vm_field_name) } });
 					break;
 				}
@@ -380,8 +377,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				}();
 
 				// Prepare VM types
-				const vm::code::TypeOfData& vm_element_type
-					= *program_context.lowerAndKeepTslType(element_layout);
+				const vm::code::TypeExpr vm_element_type
+					= program_context.lowerAndKeepTslType(element_layout);
 
 				// Case when we have a pointer to a static array type layout,
 				// for example a pointer to a class field Cls {field: i64[4]}
@@ -389,10 +386,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					auto       current_access       = current_place.getAccessKind();
 					const auto element_pointer_kind = pointerForAccess(current_access);
 
-					const vm::code::TypeOfData& ptr_to_element_type
-						= program_context.getOrInsertPointerType(
-							typeName(vm_element_type), element_pointer_kind
-						);
+					const vm::code::TypeExpr ptr_to_element_type
+						= program_context.pointerTypeExpr(vm_element_type, element_pointer_kind);
 					DVMPlace element_ptr_tmp
 						= pushTempLocal(ptr_to_element_type, "index_addr")
 					          .withAccessKind(accessKindForPointer(element_pointer_kind));
@@ -427,8 +422,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					// obj -> access_proj field -> index_proj 10
 					// We have to insert deref, to get the manyptr loaded into temporary.
 					if (not current_place.isDirect()) {
-						const vm::code::TypeOfData& vm_pointer_type
-							= *program_context.lowerAndKeepTslType(current_layout);
+						const vm::code::TypeExpr vm_pointer_type
+							= program_context.lowerAndKeepTslType(current_layout);
 						current_place = loadFromPlace(current_place, vm_pointer_type);
 					}
 
@@ -453,10 +448,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 						}
 					}();
 
-					const vm::code::TypeOfData& ptr_to_element_type
-						= program_context.getOrInsertPointerType(
-							typeName(vm_element_type), element_pointer_kind
-						);
+					const vm::code::TypeExpr ptr_to_element_type
+						= program_context.pointerTypeExpr(vm_element_type, element_pointer_kind);
 					DVMPlace element_ptr_tmp
 						= pushTempLocal(ptr_to_element_type, "element_ptr")
 					          .withAccessKind(accessKindForPointer(element_pointer_kind));
@@ -502,8 +495,8 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 				return { resolved };
 			} else {
 				// Otherwise it's indirect. We have to load it from memory into a stack variable.
-				const vm::code::TypeOfData& val_type
-					= *program_context.lowerAndKeepTslType(place.layout);
+				const vm::code::TypeExpr val_type
+					= program_context.lowerAndKeepTslType(place.layout);
 				auto tmp = loadFromPlace(resolved, val_type);
 				// Now mark the place as direct as the value was loaded from the pointer.
 				return { tmp };
@@ -528,15 +521,15 @@ const DVMPlace& FunctionLoweringContext::createLirLocalToDVMMapping(lir::LIRLoca
 		if_opt_some(lir_local->parameter_index, index) {
 			auto var_name = base::StrID(base::strConcat("arg", index));
 			auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
-			return { var_name, *var_type, DVMPlace::AccessKind::Direct };
+			return program_context.makePlace(var_name, var_type, DVMPlace::AccessKind::Direct);
 		}
 
 		if (lir_local->special_kind == lir::LIRLocalSpecialKind::ReturnValue)
 			return getFunctionReturnValueLocal();
 
 		auto var_name = base::StrID(base::strConcat("var", lir_local_to_dvm.size()));
-		auto var_type = *program_context.lowerAndKeepTslType(lir_local->layout);
-		return { var_name, var_type, DVMPlace::AccessKind::Direct };
+		auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
+		return program_context.makePlace(var_name, var_type, DVMPlace::AccessKind::Direct);
 	}();
 
 	lir_local_to_dvm.put(lir_local, result);
@@ -584,11 +577,10 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	vm::code::Function function;
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
-		function.signature.parameters.emplace_back(vm::code::TypeExpr{ param_type });
+		function.signature.parameters.emplace_back(param_type);
 	function.signature.result_types = {};
 	if_opt_some(function_return_type, ret_type) {
-		function.signature.result_types.emplace_back(vm::code::TypeExpr(vm::code::typeName(ret_type)
-		));
+		function.signature.result_types.emplace_back(ret_type);
 	}
 	function.body = std::move(function_body);
 
@@ -606,15 +598,16 @@ DVMPlace FunctionLoweringContext::getFunctionReturnValueLocal() {
 	const auto& ret_type = *function_return_type;
 	if (function_name == "main") {
 		CORE_ASSERT(
-			function_return_type
-				== vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), Bytes{ 8 }) },
+			ret_type == vm::code::TypeExpr{ base::StrID("i64") },
 			"Main function must have i64 return type"
 		);
 	}
-	return { base::StrID("ret0"),
-		     ret_type,
-		     DVMPlace::AccessKind::Direct,
-		     DVMPlace::SpecialKind::ReturnValue };
+	return program_context.makePlace(
+		base::StrID("ret0"),
+		ret_type,
+		DVMPlace::AccessKind::Direct,
+		DVMPlace::SpecialKind::ReturnValue
+	);
 }
 
 [[nodiscard]] const compiler::backend_vm::internal::DVMPlace& compiler::backend_vm::internal::
@@ -636,7 +629,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	pushInstruction({
 		vm::code::builders::OpKind::init,
 		dvm_local.asAnyArgument(),
-		vm::opargs::Type(vm::code::TypeExpr(typeName(dvm_local.getType()))),
+		vm::opargs::Type(dvm_local.getTypeExpr()),
 	});
 }
 

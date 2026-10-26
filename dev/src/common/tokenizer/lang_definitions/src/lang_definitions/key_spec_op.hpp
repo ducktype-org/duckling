@@ -180,7 +180,7 @@ namespace lang_def {
 		BCAssertSize,
 		BCType,
 		BCPrimitive,
-		BCPointer,
+		BCPtr,
 		BCFixedSizeTable,
 		BCDynamicTable,
 		BCData,
@@ -203,7 +203,7 @@ namespace lang_def {
 		BCIsConstant,
 		BCInitialValue,
 		BCPacked,
-		BCCPointer,
+		BCCPtr,
 		COUNT,
 	};
 

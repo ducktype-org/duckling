@@ -209,6 +209,19 @@ namespace vm::loader::compiler::safe::detail {
 			return compiler.high_program.getTypeContext().getCurrentTypes().at(type_name);
 		}
 
+		/// @brief The expression denoting `type`. A pointer is built from its pointee, not named.
+		static code::TypeExpr exprOf(TypeCRef type) {
+			if_opt_some(
+				type->get<vm::kind::Pointer>(), pointer
+			) return code::TypeExpr::pointer(exprOf(pointer->inner_type));
+			if_opt_some(type->get<vm::kind::CPointer>(), cpointer) {
+				return code::TypeExpr::cpointer(cpointer->inner_type.map([](TypeCRef inner) {
+					return exprOf(inner);
+				}));
+			}
+			return code::TypeExpr::type(type->getName());
+		}
+
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
 			if (auto maybe_val = ctx.function.local_stack.getTypeName(curr_state, p.var_name))
 				return resolveTypeName(*maybe_val);
@@ -626,24 +639,24 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_cmpNull_pptr, i) { addLow<Op_cmpNull_pptr>(i.ptr); }
 			instr_case(high::Op_variantSetInner_pvnt_type, i) {
 				addLow<Op_variantSetInner_bvnt_type>(i.variant, i.inner_type);
-				opargs::Type variant_type = code::TypeExpr(getPlaceType(i.variant)->getName());
+				opargs::Type variant_type = exprOf(getPlaceType(i.variant));
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_pptr_pvnt_type, i) {
 				addLow<Op_variantGetInner_pptr_bvnt>(i.dst_ptr, i.variant);
-				opargs::Type variant_type = code::TypeExpr(getPlaceType(i.variant)->getName());
+				opargs::Type variant_type = exprOf(getPlaceType(i.variant));
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_variantSetInner_pptr_type, i) {
 				addLow<Op_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
 				opargs::Type variant_type
-					= code::TypeExpr(getPlaceType(i.variant_ptr)->getInnerType().value()->getName());
+					= exprOf(getPlaceType(i.variant_ptr)->getInnerType().value());
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_pptr_pptr_type, i) {
 				addLow<Op_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
 				opargs::Type variant_type
-					= code::TypeExpr(getPlaceType(i.variant_ptr)->getInnerType().value()->getName());
+					= exprOf(getPlaceType(i.variant_ptr)->getInnerType().value());
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
@@ -699,8 +712,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_upcast_pptr_pptr, i) { addLow<Op_mov_pptr_pptr>(i.dst, i.src); }
 			instr_case(high::Op_downcast_pptr_pptr, i) {
 				addLow<Op_downcast_pptr_pptr>(i.dst, i.src);
-				opargs::Type variant_type
-					= code::TypeExpr(getPlaceType(i.dst)->getInnerType().value()->getName());
+				opargs::Type variant_type = exprOf(getPlaceType(i.dst)->getInnerType().value());
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtualCall_pptr_method, i) {
@@ -713,8 +725,7 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
 			instr_case(high::Op_free_pptr, i) {
-				opargs::Type expected_type
-					= code::TypeExpr(getPlaceType(i.ptr)->getInnerType().value()->getName());
+				opargs::Type expected_type = exprOf(getPlaceType(i.ptr)->getInnerType().value());
 				addLow<Op_free_pptr_type>(i.ptr, expected_type);
 			}
 			instr_case(high::Op_store_pptr_pany, i) {
@@ -748,60 +759,54 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_ext_field>(i.field);
 			}
 #define TABLE_PTR_ELEM_TYPE(ptr_arg) \
-	(*(*getPlaceType(ptr_arg)->getInnerType())->getInnerType())->getName()
-#define TABLE_VAL_ELEM_TYPE(val_arg) (*getPlaceType(val_arg)->getInnerType())->getName()
+	exprOf(*(*getPlaceType(ptr_arg)->getInnerType())->getInnerType())
+#define TABLE_VAL_ELEM_TYPE(val_arg) exprOf(*getPlaceType(val_arg)->getInnerType())
 			instr_case(high::Op_fixedSizeTableLea_pptr_pptr_p64, i) {
 				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_PTR_ELEM_TYPE(i.src_table_ptr)) }
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pptr_p64, i) {
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_PTR_ELEM_TYPE(i.src_table_ptr)) }
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
 			}
 			instr_case(high::Op_fixedSizeTableStore_pptr_pany_p64, i) {
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_PTR_ELEM_TYPE(i.dst_table_ptr)) }
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
 				);
 			}
 			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
 				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
-				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_VAL_ELEM_TYPE(i.src_table)) }
-				);
+				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
 				addLow<Op_fixedSizeTableLoad_bany_bfst>(i.dst, i.src_table);
-				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_VAL_ELEM_TYPE(i.src_table)) }
-				);
+				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
 			}
 			instr_case(high::Op_fixedSizeTableStore_pfst_pany_p64, i) {
 				addLow<Op_fixedSizeTableStore_bfst_bany>(i.dst_table, i.src);
-				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_VAL_ELEM_TYPE(i.dst_table)) }
-				);
+				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.dst_table) });
 			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {
 				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_PTR_ELEM_TYPE(i.src_table_ptr)) }
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
 			}
 			instr_case(high::Op_dynTableLoad_pany_pptr_p64, i) {
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_PTR_ELEM_TYPE(i.src_table_ptr)) }
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
 			}
 			instr_case(high::Op_dynTableStore_pptr_pany_p64, i) {
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64_type>(
-					i.index, opargs::Type{ code::TypeExpr(TABLE_PTR_ELEM_TYPE(i.dst_table_ptr)) }
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
 				);
 			}
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {

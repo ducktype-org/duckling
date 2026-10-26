@@ -20,7 +20,7 @@ function worker {} -> {} {
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	init_pany_type		worker1_id, i64;
 	setThreadCtx_func		worker;
 	call_builtinfunc	builtin_start_thread;

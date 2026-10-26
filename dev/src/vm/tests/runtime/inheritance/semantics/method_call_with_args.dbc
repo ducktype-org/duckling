@@ -1,7 +1,6 @@
-type pointer: pointer_A A
-type fun: method_foo_int_int_A {pointer_A, i64, i64} { i64 }
+type fun: method_foo_int_int_A {ptr{A}, i64, i64} { i64 }
 
-function method_foo_int_int_impl_A {pointer_A, i64, i64} -> { i64 } {
+function method_foo_int_int_impl_A {ptr{A}, i64, i64} -> { i64 } {
     mov_p64_p64 ret0, arg1;
     add_p64_p64 ret0, arg2;
     deinit; # arg2
@@ -22,14 +21,14 @@ type class: A {
     };
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type a_obj, pointer_A;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type a_obj, ptr{A};
     alloc_pptr_type a_obj, A;
     setVTable_pptr_type a_obj, A;
     
     init_pany_type ret, i64;
 
-    init_pany_type a_ptr, pointer_A;
+    init_pany_type a_ptr, ptr{A};
     mov_pptr_pptr a_ptr, a_obj;
     init_pany_type a0, i64;
     init_pany_type a1, i64;

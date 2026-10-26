@@ -1,8 +1,6 @@
 type data: Foo {}
 type data: Bar {}
-type pointer: ptr_foo Foo
-type pointer: ptr_bar Bar
 
-function foo { ptr_foo } -> { ptr_bar } {
+function foo { ptr{Foo} } -> { ptr{Bar} } {
     mov_pptr_pptr ret0, arg0;
 }

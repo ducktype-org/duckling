@@ -17,6 +17,7 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_state.hpp>
 
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -52,7 +53,7 @@ namespace vm::loader::parser {
 		using AsmElement::AsmElement;
 
 		tpc::Identifier                     name;
-		tpc::Identifier                     type;
+		code::TypeExprUse                   type;
 		base::Optional<tpc::Identifier>     ctor_name;
 		base::Optional<tpc::Identifier>     dtor_name;
 		bool                                is_constant{ false };
@@ -93,10 +94,10 @@ namespace vm::loader::parser {
 	struct Func final: AsmElement {
 		using AsmElement::AsmElement;
 
-		tpc::Identifier              name;
-		std::vector<tpc::Identifier> parameters;
-		std::vector<tpc::Identifier> result_types;
-		MBox<ByteCode>               code;
+		tpc::Identifier                name;
+		std::vector<code::TypeExprUse> parameters;
+		std::vector<code::TypeExprUse> result_types;
+		MBox<ByteCode>                 code;
 
 		static MBox<Func> parse(F8ParserState& state);
 
@@ -108,9 +109,9 @@ namespace vm::loader::parser {
 	struct FFIFunc final: AsmElement {
 		using AsmElement::AsmElement;
 
-		tpc::Identifier              name;
-		std::vector<tpc::Identifier> parameters;
-		std::vector<tpc::Identifier> result_types;
+		tpc::Identifier                name;
+		std::vector<code::TypeExprUse> parameters;
+		std::vector<code::TypeExprUse> result_types;
 
 		static MBox<FFIFunc> parse(F8ParserState& state);
 

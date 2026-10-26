@@ -529,8 +529,10 @@ private:
 			auto stack_frame_data = response.value();
 			ASSERT_EQUAL_PRINT(stack_frame_data.function_name, "main");
 
+			bool checked_struct = false;
 			for (const auto& var: stack_frame_data.frame_vars) {
-				if (var.value->getType()->getName() == base::StrID("ptr_struct")) {
+				if (var.value->getType()->getName() == base::StrID("ptr{AllTypeKindsStruct}")) {
+					checked_struct               = true;
 					auto struct_pointer_data_opt = var.value->readData();
 					ASSERT_HAS_VALUE(struct_pointer_data_opt);
 
@@ -559,7 +561,9 @@ private:
 
 					{  // Check pointer field
 						auto data = getStructField<idv::Pointer>(
-							struct_data, base::StrID("ptr_struct"), base::StrID("var_pointer")
+							struct_data,
+							base::StrID("ptr{AllTypeKindsStruct}"),
+							base::StrID("var_pointer")
 						);
 						auto value = data.referenced;
 						getVMValueRefData<idv::Data>(value.value());
@@ -568,7 +572,7 @@ private:
 					{  // Check dynamic table field
 						auto table_pointer = getStructField<idv::Pointer>(
 							struct_data,
-							base::StrID("ptr_dyntable_i64"),
+							base::StrID("ptr{dyntable_i64}"),
 							base::StrID("var_dyntable_pointer")
 						);
 						ASSERT_HAS_VALUE(table_pointer.referenced);
@@ -582,7 +586,7 @@ private:
 					{  // Check fixed size table field
 						auto table_pointer = getStructField<idv::Pointer>(
 							struct_data,
-							base::StrID("ptr_fixtable_i64"),
+							base::StrID("ptr{fixtable_i64}"),
 							base::StrID("var_fixtable_pointer")
 						);
 						ASSERT_HAS_VALUE(table_pointer.referenced);
@@ -604,6 +608,7 @@ private:
 					}
 				}
 			}
+			ASSERT_TRUE(checked_struct);
 		}
 
 		assertSucceeded(vm::api::resume(pid), "resume");

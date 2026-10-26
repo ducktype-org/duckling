@@ -167,22 +167,44 @@ namespace {
 	}
 
 	/**
+	 * @brief The declared type a cycle through a reference to `expr` would continue into.
+	 * @note None for a pointer: a pointer's size does not depend on its pointee, which is what
+	 * makes self-referential types legal.
+	 */
+	base::Optional<base::StrID> recursesInto(const TypeExpr& expr) {
+		return expr.maybeGetKindAs<expr::Named>().map([](CRef<expr::Named> named) {
+			return named->name;
+		});
+	}
+
+	/**
+	 * @brief Whether every name an expression is built from is declared.
+	 * @note A pointer needs no declaration of its own, so only its pointee is checked.
+	 */
+	bool isDeclared(const vm::ObjIdNameMap<TypeOfData>& tod_types, const TypeExpr& expr) {
+		variant_match(expr.getKind()) {
+			variant_case(expr::Named, named) { return tod_types.contains(named.name); }
+			variant_case(expr::Pointer, pointer) { return isDeclared(tod_types, pointer.pointee); }
+			variant_case(expr::CPointer, cpointer) {
+				return cpointer.pointee.empty() || isDeclared(tod_types, *cpointer.pointee);
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	/// @brief Whether `expr` is a managed pointer to the type named `pointee`.
+	bool isPointerTo(const TypeExpr& expr, base::StrID pointee) {
+		return expr == TypeExpr::pointer(TypeExpr::type(pointee));
+	}
+
+	/**
 	 * @brief Validates that a method's FunctionType first parameter is a pointer to the 'this'
 	 * object.
 	 */
 	template<InheritableTypeConcept InheritableType>
-	void validateMethodFirstArgument(
-		const InheritableType&              inh,
-		const FunctionType&                 func_type,
-		const vm::ObjIdNameMap<TypeOfData>& tod_types
-	) {
+	void validateMethodFirstArgument(const InheritableType& inh, const FunctionType& func_type) {
 		if (func_type.parameters.empty()) throw MethodFirstArgumentError(inh, func_type.name);
-		const auto  first_param_type_name = func_type.parameters[0].canonicalName();
-		const auto& first_param_type
-			= getType<PointerType>(tod_types, first_param_type_name, inh, [&]() {
-				  return MethodFirstArgumentError(inh, func_type.name);
-			  });
-		if (first_param_type.inner.canonicalName() != inh.name)
+		if (!isPointerTo(func_type.parameters[0], inh.name))
 			throw MethodFirstArgumentError(inh, func_type.name);
 	}
 
@@ -191,18 +213,10 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateMethodFirstArgumentImpl(
-		const InheritableType&              inh,
-		const FuncSignature&                func_signature,
-		base::StrID                         func_name,
-		const vm::ObjIdNameMap<TypeOfData>& tod_types
+		const InheritableType& inh, const FuncSignature& func_signature, base::StrID func_name
 	) {
 		if (func_signature.parameters.empty()) throw MethodFirstArgumentError(inh, func_name);
-		const auto  first_param_type_name = func_signature.parameters[0].expr.canonicalName();
-		const auto& first_param_type
-			= getType<PointerType>(tod_types, first_param_type_name, inh, [&]() {
-				  return MethodFirstArgumentError(inh, func_name);
-			  });
-		if (first_param_type.inner.canonicalName() != inh.name)
+		if (!isPointerTo(func_signature.parameters[0].expr, inh.name))
 			throw MethodFirstArgumentError(inh, func_name);
 	}
 
@@ -244,7 +258,7 @@ namespace {
 				= getType<FunctionType>(tod_types, vmethod.type.canonicalName(), inh, [&]() {
 					  return TypeIsNotFunctionalError(vmethod.type.canonicalName());
 				  });
-			validateMethodFirstArgument(inh, vmethod_type, tod_types);
+			validateMethodFirstArgument(inh, vmethod_type);
 		}
 	}
 
@@ -276,7 +290,7 @@ namespace {
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
 			const auto& impl_signature = functions.at(impl_name);
-			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name, tod_types);
+			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name);
 			validateMethodSignatureMatchImpl(inh, vmethod_type, impl_signature, impl_name);
 		}
 	}
@@ -306,7 +320,7 @@ namespace {
 		const FieldableType& fieldable, const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		for (auto& field: fieldable.fields)
-			if (!tod_types.contains(field.type.canonicalName()))
+			if (!isDeclared(tod_types, field.type))
 				throw UnknownSubtypeError(fieldable, field.type.canonicalName());
 
 		base::HashMap<base::StrID, base::StrID> fields;
@@ -339,31 +353,21 @@ namespace {
 			variant_case(PrimitiveType, primitive) {
 				if (primitive.size == Bytes{ 0 }) throw InvalidPrimitiveSizeError(primitive);
 			}
-			variant_case(PointerType, pointer) {
-				if (!tod_types.contains(pointer.inner.canonicalName()))
-					throw UnknownSubtypeError(pointer, pointer.inner.canonicalName());
-			}
-			variant_case(CPointerType, cpointer) {
-				if (cpointer.inner.has_value()) {
-					if (!tod_types.contains(cpointer.inner->canonicalName()))
-						throw UnknownSubtypeError(cpointer, cpointer.inner->canonicalName());
-				}
-			}
 			variant_case(FixedSizeTableType, fixed_table) {
-				if (!tod_types.contains(fixed_table.inner.canonicalName()))
+				if (!isDeclared(tod_types, fixed_table.inner))
 					throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
 			}
 			variant_case(DynamicTableType, dynamic_table) {
-				if (!tod_types.contains(dynamic_table.inner.canonicalName()))
+				if (!isDeclared(tod_types, dynamic_table.inner))
 					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner.canonicalName());
 			}
 			variant_case(FunctionType, function) {
 				for (auto& param: function.parameters)
-					if (!tod_types.contains(param.canonicalName()))
+					if (!isDeclared(tod_types, param))
 						throw UnknownSubtypeError(function, param.canonicalName());
 
 				for (auto& reslt: function.result)
-					if (!tod_types.contains(reslt.canonicalName()))
+					if (!isDeclared(tod_types, reslt))
 						throw UnknownSubtypeError(function, reslt.canonicalName());
 			}
 			variant_case(VariantType, variant) {
@@ -372,7 +376,7 @@ namespace {
 				std::unordered_set<base::StrID> alternative_set;
 				for (auto& alternative: variant.variant_alternatives) {
 					const auto alternative_name = alternative.canonicalName();
-					if (!tod_types.contains(alternative_name))
+					if (!isDeclared(tod_types, alternative))
 						throw UnknownSubtypeError(variant, alternative_name);
 					if (alternative_set.contains(alternative_name))
 						throw DuplicatedVariantAlternativeError(variant, alternative_name);
@@ -428,21 +432,21 @@ namespace {
 			variant_match(type) {
 				variant_case(ClassType, clazz) {
 					if_opt_some(clazz.extends, superclass) {
-						if (!tod_types.contains(superclass.canonicalName()))
+						if (!isDeclared(tod_types, superclass))
 							throw InvalidExtendsError(clazz, superclass.canonicalName());
-						self(*tod_types.at(superclass.canonicalName()));
+						if_opt_some(recursesInto(superclass), next) self(*tod_types.at(next));
 					}
 					for (auto iface: clazz.implements) {
-						if (!tod_types.contains(iface.canonicalName()))
+						if (!isDeclared(tod_types, iface))
 							throw InvalidImplementsError(clazz, iface.canonicalName());
-						self(*tod_types.at(iface.canonicalName()));
+						if_opt_some(recursesInto(iface), next) self(*tod_types.at(next));
 					}
 				}
 				variant_case(InterfaceType, interface) {
 					for (auto iface: interface.implements) {
-						if (!tod_types.contains(iface.canonicalName()))
+						if (!isDeclared(tod_types, iface))
 							throw InvalidImplementsError(interface, iface.canonicalName());
-						self(*tod_types.at(iface.canonicalName()));
+						if_opt_some(recursesInto(iface), next) self(*tod_types.at(next));
 					}
 				}
 			}
@@ -468,54 +472,51 @@ namespace {
 			status[name] = Visited;
 			variant_match(type) {
 				variant_case(PrimitiveType, primitive) {}
-				variant_case(PointerType, pointer) {}
-				// A C pointer never recurses into its pointee: self-referential C structs and
-				// pointers to forward-declared (opaque) types are legal.
-				variant_case(CPointerType, cpointer) {}
 				variant_case(FixedSizeTableType, fixed_table) {
-					if (!tod_types.contains(fixed_table.inner.canonicalName()))
+					if (!isDeclared(tod_types, fixed_table.inner))
 						throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
-					self(*tod_types.at(fixed_table.inner.canonicalName()));
+					if_opt_some(recursesInto(fixed_table.inner), next) self(*tod_types.at(next));
 				}
 				variant_case(DynamicTableType, dynamic_table) {
-					if (!tod_types.contains(dynamic_table.inner.canonicalName()))
+					if (!isDeclared(tod_types, dynamic_table.inner))
 						throw UnknownSubtypeError(
 							dynamic_table, dynamic_table.inner.canonicalName()
 						);
-					self(*tod_types.at(dynamic_table.inner.canonicalName()));
+					if_opt_some(recursesInto(dynamic_table.inner), next) self(*tod_types.at(next));
 				}
 				variant_case(InterfaceType, interface) {}
 				variant_case(ClassType, clazz) {
 					for (auto& field: clazz.fields) {
-						if (!tod_types.contains(field.type.canonicalName()))
+						if (!isDeclared(tod_types, field.type))
 							throw UnknownSubtypeError(clazz, field.type.canonicalName());
-						self(*tod_types.at(field.type.canonicalName()));
+						if_opt_some(recursesInto(field.type), next) self(*tod_types.at(next));
 					}
 				}
 				variant_case(DataType, data) {
 					for (auto& field: data.fields) {
-						if (!tod_types.contains(field.type.canonicalName()))
+						if (!isDeclared(tod_types, field.type))
 							throw UnknownSubtypeError(data, field.type.canonicalName());
-						self(*tod_types.at(field.type.canonicalName()));
+						if_opt_some(recursesInto(field.type), next) self(*tod_types.at(next));
 					}
 				}
 				variant_case(FunctionType, function) {
 					for (auto& param: function.parameters)
-						if (!tod_types.contains(param.canonicalName()))
+						if (!isDeclared(tod_types, param))
 							throw UnknownSubtypeError(function, param.canonicalName());
 					for (auto& reslt: function.result)
-						if (!tod_types.contains(reslt.canonicalName()))
+						if (!isDeclared(tod_types, reslt))
 							throw UnknownSubtypeError(function, reslt.canonicalName());
 					for (auto& param: function.parameters)
-						self(*tod_types.at(param.canonicalName()));
-					for (auto& reslt: function.result) self(*tod_types.at(reslt.canonicalName()));
+						if_opt_some(recursesInto(param), next) self(*tod_types.at(next));
+					for (auto& reslt: function.result)
+						if_opt_some(recursesInto(reslt), next) self(*tod_types.at(next));
 				}
 				variant_case(VariantType, variant) {
 					for (auto& alternative: variant.variant_alternatives)
-						if (!tod_types.contains(alternative.canonicalName()))
+						if (!isDeclared(tod_types, alternative))
 							throw UnknownSubtypeError(variant, alternative.canonicalName());
 					for (auto& alternative: variant.variant_alternatives)
-						self(*tod_types.at(alternative.canonicalName()));
+						if_opt_some(recursesInto(alternative), next) self(*tod_types.at(next));
 				}
 				variant_case(OpaqueType, opaque) {}
 				variant_default {

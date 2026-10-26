@@ -15,21 +15,23 @@
 using namespace compiler::backend_vm::internal;
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asArgument() const {
-	variant_match(type) {
+	// A pointer's operand kind follows from how it is written, with no declaration to consult.
+	if (expr.isKind<vm::code::expr::Pointer>()) return vm::opargs::PlacePtr(name);
+	if (expr.isKind<vm::code::expr::CPointer>()) return vm::opargs::PlaceCPtr(name);
+
+	variant_match(getType()) {
 		variant_case(vm::code::PrimitiveType, primitive) {
 			if (primitive.size == Bytes{ 8 }) return vm::opargs::Place64{ name };
 			if (primitive.size == Bytes{ 4 }) return vm::opargs::Place32{ name };
 			if (primitive.size == Bytes{ 2 }) return vm::opargs::Place16{ name };
 			if (primitive.size == Bytes{ 1 }) return vm::opargs::Place8{ name };
 		}
-		variant_case(vm::code::PointerType, pointer) { return vm::opargs::PlacePtr(name); }
-		variant_case(vm::code::CPointerType, cpointer) { return vm::opargs::PlaceCPtr(name); }
 		variant_case(vm::code::FixedSizeTableType, array) { return vm::opargs::PlaceFSTable(name); }
 		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
 		variant_case(vm::code::VariantType, variant) { return vm::opargs::PlaceVnt(name); }
 		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
 		variant_default {
-			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));
+			CORE_PANIC("DVMLocal type not supported for argument: ", expr.canonicalName());
 		}
 	}
 	CORE_UNREACHABLE();
@@ -52,7 +54,11 @@ DVMPlace::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 	}
 }
 
-const vm::code::TypeOfData& DVMPlace::getType() const { return type; }
+const vm::code::TypeOfData& DVMPlace::getType() const {
+	return declaration.expect(base::strConcat(
+		"Place `", name, "` of type `", expr.canonicalName(), "` has no declared type"
+	));
+}
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMImmediate::asArgument() const {
 	return vm::opargs::Immediate{ value };
@@ -132,6 +138,15 @@ DVMImmediate::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 }
 
 DVMValue::operator vm::opargs::OpCodeArg() const { return asArgument(); }
+
+[[nodiscard]] vm::code::TypeExpr DVMValue::getTypeExpr() const {
+	variant_match(stored_value) {
+		variant_case(DVMPlace, place) return place.getTypeExpr();
+		variant_case(DVMImmediate, immediate) return immediate.getTypeExpr();
+		variant_default { CORE_PANIC("This DVM value has no type"); }
+	}
+	CORE_UNREACHABLE();
+}
 
 [[nodiscard]] vm::code::TypeOfData DVMValue::getType() const {
 	variant_match(stored_value) {

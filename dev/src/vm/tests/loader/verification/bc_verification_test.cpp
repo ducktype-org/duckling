@@ -99,6 +99,7 @@ public:
 		// C pointer verification
 		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
 		TESTER_ADD_TEST(movPCptrStrictnessFails);
+		TESTER_ADD_TEST(movPCptrSamePointeeIsOneType);
 		TESTER_ADD_TEST(cptrLoadThroughVoidCPtrFails);
 		TESTER_ADD_TEST(cptrLoadPointeeMismatchFails);
 		TESTER_ADD_TEST(cptrLoadPackedPointeeFails);
@@ -717,7 +718,7 @@ private:
 		loadValidDbc(inlineDbc(
 			"packed_size",
 			"type data: Mix { a: i8, b: i64 } packed assert_size 9\n"
-			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
+			"function main { i64, ptr{argv} } -> { i64 } { ret; }\n"
 		));
 	}
 
@@ -725,7 +726,7 @@ private:
 		loadValidDbc(inlineDbc(
 			"assert_ok",
 			"type data: Pair { a: i32, b: i32 } assert_size 8\n"
-			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
+			"function main { i64, ptr{argv} } -> { i64 } { ret; }\n"
 		));
 	}
 
@@ -740,7 +741,7 @@ private:
 	// has no single size to assert against.
 	void assertSizeOnPointerTypeFails() {
 		loadInvalidDbc(
-			inlineDbc("assert_ptr", "type data: Holder { p: ptr_i64 } assert_size 8\n"),
+			inlineDbc("assert_ptr", "type data: Holder { p: ptr{i64} } assert_size 8\n"),
 			{ vm::code::TypeSizeAssertPointerDependentError::ERR_MSG }
 		);
 	}
@@ -749,14 +750,38 @@ private:
 
 	void cpointerToUnknownTypeFails() {
 		loadInvalidDbc(
-			inlineDbc("cpointer_unknown_inner", "type cpointer: BadPtr NoSuchType\n"),
-			{ vm::code::UnknownSubtypeError::ERR_MSG, "NoSuchType" }
+			inlineDbc(
+				"cpointer_unknown_inner",
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type bad, cptr{NoSuchType};\n"
+				"    ret;\n"
+				"}\n"
+			),
+			{ vm::code::UnknownTypeError::ERR_MSG, "NoSuchType" }
 		);
 	}
 
 	// `mov_pcptr_pcptr` requires identical types on both sides: no implicit pointee change, no
-	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
-	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
+	// mixing `cptr{}` (unknown pointee) with a typed one, and non-cpointer operands are rejected
+	// outright. Two C pointers to the same pointee are one type, so that case is allowed; it is
+	// covered by `movPCptrSamePointeeIsOneType`.
+	/**
+	 * @brief Two C pointers to the same pointee are the same type, however they are reached.
+	 * @note This is the point of writing a pointer rather than declaring one: there is no way
+	 * to produce two different C pointers to `i64`.
+	 */
+	void movPCptrSamePointeeIsOneType() {
+		loadValidDbc(inlineDbc(
+			"mov_pcptr_same_pointee",
+			"function main { i64, ptr{argv} } -> { i64 } {\n"
+			"    init_pany_type a, cptr{i64};\n"
+			"    init_pany_type b, cptr{i64};\n"
+			"    mov_pcptr_pcptr a, b;\n"
+			"    ret;\n"
+			"}\n"
+		));
+	}
+
 	void movPCptrStrictnessFails() {
 		auto expect_mov_error = [&](const std::string& name,
 		                            const std::string& types,
@@ -766,7 +791,7 @@ private:
 			loadInvalidDbc(
 				inlineDbc(
 					name,
-					types + "function main { i64, ptr_argv } -> { i64 } {\n"
+					types + "function main { i64, ptr{argv} } -> { i64 } {\n"
 						+ "    init_pany_type a, " + a_type + ";\n" + "    init_pany_type b, "
 						+ b_type + ";\n"
 						+ "    mov_pcptr_pcptr a, b;\n"
@@ -778,23 +803,16 @@ private:
 		};
 		expect_mov_error(
 			"mov_pcptr_across_types",
-			"type cpointer: APtr i64\ntype cpointer: BPtr i32\n",
-			"APtr",
-			"BPtr",
+			"",
+			"cptr{i64}",
+			"cptr{i32}",
 			vm::code::CPointerTypeMismatchError::ERR_MSG
 		);
 		expect_mov_error(
 			"mov_pcptr_cptr_to_typed",
-			"type cpointer: APtr i64\n",
-			"APtr",
-			"cptr",
-			vm::code::CPointerTypeMismatchError::ERR_MSG
-		);
-		expect_mov_error(
-			"mov_pcptr_same_pointee",
-			"type cpointer: APtr i64\ntype cpointer: BPtr i64\n",
-			"APtr",
-			"BPtr",
+			"",
+			"cptr{i64}",
+			"cptr{}",
 			vm::code::CPointerTypeMismatchError::ERR_MSG
 		);
 		expect_mov_error(
@@ -802,13 +820,13 @@ private:
 		);
 	}
 
-	// The builtin `cptr` has no pointee, so it cannot be dereferenced with a typed load.
+	// The builtin `cptr{}` has no pointee, so it cannot be dereferenced with a typed load.
 	void cptrLoadThroughVoidCPtrFails() {
 		loadInvalidDbc(
 			inlineDbc(
 				"load_through_void",
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type c, cptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type c, cptr{};\n"
 				"    init_pany_type v, i64;\n"
 				"    load_pany_pcptr v, c;\n"
 				"    ret;\n"
@@ -822,9 +840,8 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"load_pointee_mismatch",
-				"type cpointer: I64Ptr i64\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type p, I64Ptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type p, cptr{i64};\n"
 				"    init_pany_type v, i32;\n"
 				"    load_pany_pcptr v, p;\n"
 				"    ret;\n"
@@ -840,9 +857,8 @@ private:
 			inlineDbc(
 				"load_packed_pointee",
 				"type data: P { a: i8, b: i64 } packed\n"
-				"type cpointer: PPtr P\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type p, PPtr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type p, cptr{P};\n"
 				"    init_pany_type s, P;\n"
 				"    load_pany_pcptr s, p;\n"
 				"    ret;\n"
@@ -857,8 +873,8 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"store_through_void",
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type c, cptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type c, cptr{};\n"
 				"    init_pany_type v, i64;\n"
 				"    store_pcptr_pany c, v;\n"
 				"    ret;\n"
@@ -873,9 +889,8 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"store_pointee_mismatch",
-				"type cpointer: I64Ptr i64\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type p, I64Ptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type p, cptr{i64};\n"
 				"    init_pany_type v, i32;\n"
 				"    store_pcptr_pany p, v;\n"
 				"    ret;\n"
@@ -891,9 +906,8 @@ private:
 			inlineDbc(
 				"store_packed_pointee",
 				"type data: P { a: i8, b: i64 } packed\n"
-				"type cpointer: PPtr P\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type p, PPtr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type p, cptr{P};\n"
 				"    init_pany_type s, P;\n"
 				"    store_pcptr_pany p, s;\n"
 				"    ret;\n"
@@ -903,15 +917,15 @@ private:
 		);
 	}
 
-	// The builtin `cptr` has no pointee, so the byte count of a raw copy is unknown.
+	// The builtin `cptr{}` has no pointee, so the byte count of a raw copy is unknown.
 	void cptrReadThroughVoidCPtrFails() {
 		loadInvalidDbc(
 			inlineDbc(
 				"read_through_void",
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type c, cptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type c, cptr{};\n"
 				"    init_pany_type v, i64;\n"
-				"    init_pany_type vp, ptr_i64;\n"
+				"    init_pany_type vp, ptr{i64};\n"
 				"    ref_pptr_pany vp, v;\n"
 				"    read_pptr_pcptr vp, c;\n"
 				"    ret;\n"
@@ -926,11 +940,10 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"read_pointee_mismatch",
-				"type cpointer: I64Ptr i64\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type p, I64Ptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type p, cptr{i64};\n"
 				"    init_pany_type v, i32;\n"
-				"    init_pany_type vp, ptr_i32;\n"
+				"    init_pany_type vp, ptr{i32};\n"
 				"    ref_pptr_pany vp, v;\n"
 				"    read_pptr_pcptr vp, p;\n"
 				"    ret;\n"
@@ -945,10 +958,10 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"write_through_void",
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type c, cptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type c, cptr{};\n"
 				"    init_pany_type v, i64;\n"
-				"    init_pany_type vp, ptr_i64;\n"
+				"    init_pany_type vp, ptr{i64};\n"
 				"    ref_pptr_pany vp, v;\n"
 				"    write_pcptr_pptr c, vp;\n"
 				"    ret;\n"
@@ -963,11 +976,10 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"write_pointee_mismatch",
-				"type cpointer: I64Ptr i64\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type p, I64Ptr;\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type p, cptr{i64};\n"
 				"    init_pany_type v, i32;\n"
-				"    init_pany_type vp, ptr_i32;\n"
+				"    init_pany_type vp, ptr{i32};\n"
 				"    ref_pptr_pany vp, v;\n"
 				"    write_pcptr_pptr p, vp;\n"
 				"    ret;\n"
@@ -983,12 +995,10 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"read_into_pointer_pointee",
-				"type data: Holder { p: ptr_i64, v: i64 }\n"
-				"type pointer: HolderPtr Holder\n"
-				"type cpointer: HolderCPtr Holder\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type c, HolderCPtr;\n"
-				"    init_pany_type hp, HolderPtr;\n"
+				"type data: Holder { p: ptr{i64}, v: i64 }\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type c, cptr{Holder};\n"
+				"    init_pany_type hp, ptr{Holder};\n"
 				"    read_pptr_pcptr hp, c;\n"
 				"    ret;\n"
 				"}\n"
@@ -1002,12 +1012,10 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"write_from_pointer_pointee",
-				"type data: Holder { p: ptr_i64, v: i64 }\n"
-				"type pointer: HolderPtr Holder\n"
-				"type cpointer: HolderCPtr Holder\n"
-				"function main { i64, ptr_argv } -> { i64 } {\n"
-				"    init_pany_type c, HolderCPtr;\n"
-				"    init_pany_type hp, HolderPtr;\n"
+				"type data: Holder { p: ptr{i64}, v: i64 }\n"
+				"function main { i64, ptr{argv} } -> { i64 } {\n"
+				"    init_pany_type c, cptr{Holder};\n"
+				"    init_pany_type hp, ptr{Holder};\n"
 				"    write_pcptr_pptr c, hp;\n"
 				"    ret;\n"
 				"}\n"

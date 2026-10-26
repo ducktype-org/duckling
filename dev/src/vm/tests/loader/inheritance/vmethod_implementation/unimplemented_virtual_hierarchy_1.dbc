@@ -1,30 +1,27 @@
 # Method gaa() lacks implementation in an instantiable class C.
-type pointer: pointer_A A
-type pointer: pointer_B B
-type pointer: pointer_C C
 
-type fun: method_foo {pointer_A} {}
-type fun: method_bar {pointer_A} {}
-type fun: method_goo {pointer_B} {}
-type fun: method_gaa {pointer_C} {}
+type fun: method_foo {ptr{A}} {}
+type fun: method_bar {ptr{A}} {}
+type fun: method_goo {ptr{B}} {}
+type fun: method_gaa {ptr{C}} {}
 
-function method_foo_impl_A {pointer_A} -> {} {
+function method_foo_impl_A {ptr{A}} -> {} {
     ret;
 }
 
-function method_foo_impl_B {pointer_B} -> {} {
+function method_foo_impl_B {ptr{B}} -> {} {
     ret;
 }
 
-function method_bar_impl_B {pointer_B} -> {} {
+function method_bar_impl_B {ptr{B}} -> {} {
     ret;
 }
 
-function method_goo_impl_C {pointer_C} -> {} {
+function method_goo_impl_C {ptr{C}} -> {} {
     ret;
 }
 
-type fun: method_gaa_impl_C {pointer_C} {}
+type fun: method_gaa_impl_C {ptr{C}} {}
 
 type class: A {
     abstract: true;
