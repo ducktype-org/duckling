@@ -21,7 +21,7 @@ use crate::quackpack::schemas::manifest::{
 };
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].

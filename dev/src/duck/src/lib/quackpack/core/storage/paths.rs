@@ -35,7 +35,7 @@ use crate::quackpack::core::{PackageId, Version, storage_name_for_git, storage_n
 use crate::quackpack::util::dir_iterator::{DirContents, create_dir_iterator};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";

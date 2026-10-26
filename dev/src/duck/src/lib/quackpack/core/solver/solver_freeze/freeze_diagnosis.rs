@@ -343,7 +343,7 @@ mod test {
     use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops::PathOpsExt;
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {

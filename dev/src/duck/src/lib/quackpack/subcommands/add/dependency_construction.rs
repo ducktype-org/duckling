@@ -44,7 +44,7 @@ use crate::quackpack::schemas::manifest::{
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::ErrorsLogger;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
