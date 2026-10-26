@@ -84,6 +84,29 @@ metadata:
 }
 
 #[test]
+fn fail_duplicate_fields() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  name: dx
+  version: '0.1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let result = parse_manifest(&manifest_path, &ctx);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            ["metadata: duplicate entry with key \"name\" at line 3 column 3",]
+        )
+    );
+}
+
+#[test]
 fn parse_with_deps() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
