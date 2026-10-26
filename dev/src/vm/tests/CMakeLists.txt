@@ -154,6 +154,8 @@ duck_add_test_custom(vm vm_mapper_test debugger/mapper_test.cpp
 # bytecode/ — instruction set, program builders, the assembly parser and the serializer.
 duck_add_test_custom(vm vm_instruction_naming_test bytecode/instruction_naming_test.cpp
         USES LibVM_sc Tester)
+duck_add_test_custom(vm vm_type_expr_test bytecode/type_expr_test.cpp
+        USES LibVM_sc Tester)
 duck_add_test_custom(vm vm_program_builders_test bytecode/builders/program_builders_test.cpp
         USES LibVM)
 duck_add_test_custom(vm vm_bc_parsing_test bytecode/assembly/bc_parsing_test.cpp USES LibVM_sc Tester VmTester_sc)
