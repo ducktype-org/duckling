@@ -141,7 +141,7 @@ fn cleanup_locks_impl(
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
     use crate::util::path_ops::remove_file;
     let path = root.not_locked_path().join(name);
-    match rm(path) {
+    match remove_file(path) {
         Ok(()) => Ok(()),
         Err(e) => {
             let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() else {

@@ -88,7 +88,7 @@ fn try_fsync_dir_inner(_dir: &Path) -> io::Result<()> {
 ///
 /// ## Returns
 /// [`Ok(File)`](std::fs::File) if created successfully, otherwise an error, as reported by
-/// the [`PathOpsExt::mkdir`] or the [`OpenOptions::open`].
+/// the [`fs::create_dir_all`] or the [`OpenOptions::open`].
 pub fn touch(path: impl AsRef<Path>) -> QuackResult<File> {
     let path = path.as_ref();
     touch_inner(path).with_context(|| format!("failed to touch `{}`", path.display()))
@@ -162,6 +162,7 @@ pub fn normalize(path: impl AsRef<Path>) -> PathBuf {
 }
 
 // This is out of line, since it's pretty large.
+#[track_caller]
 fn normalize_inner(path: &Path) -> PathBuf {
     let mut result: Vec<Component> = vec![];
     let components = path.components().peekable();
