@@ -223,6 +223,11 @@ impl Dependency {
     }
 
     /// Get the [`Identity`] of this [`Dependency`].
+    ///
+    /// This helper exists, because [`Identity`] is unambiguous, unlike [`FullIdentity`],
+    /// which requires git commit.
+    ///
+    /// [`FullIdentity`]: crate::quackpack::core::full_identity::FullIdentity
     pub fn identity(&self) -> Identity {
         Identity::new(self.name(), self.source.into())
     }

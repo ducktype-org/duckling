@@ -192,13 +192,9 @@ impl Origin {
 
 impl From<Source> for Origin {
     fn from(value: Source) -> Self {
-        let kind = match value.kind() {
-            SourceKind::Registry => Kind::Registry,
-            SourceKind::Local => Kind::Local,
-            SourceKind::Git(_) => Kind::Git,
-        };
+        let kind = value.kind().into();
         let url = value.url();
-        Origin { kind, url }
+        Origin::new(url, kind)
     }
 }
 
@@ -327,6 +323,16 @@ impl Kind {
             (Self::Git, Self::Registry)
             | (Self::Local, Self::Registry)
             | (Self::Local, Self::Git) => Ordering::Less,
+        }
+    }
+}
+
+impl From<SourceKind> for Kind {
+    fn from(value: SourceKind) -> Self {
+        match value {
+            SourceKind::Registry => Kind::Registry,
+            SourceKind::Local => Kind::Local,
+            SourceKind::Git(_) => Kind::Git,
         }
     }
 }
