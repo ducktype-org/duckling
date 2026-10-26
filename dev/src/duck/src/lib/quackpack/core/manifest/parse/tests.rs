@@ -84,13 +84,17 @@ metadata:
 }
 
 #[test]
-fn fail_duplicate_fields() {
+fn fail_duplicate_fields_in_maps() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: xd
-  name: dx
   version: '0.1'
+dependencies:
+  dx:
+    version: '0.1'
+  dx:
+    version: '0.1'
 "#,
     );
     let ctx = DuckContext::default();
@@ -101,7 +105,7 @@ metadata:
         err.to_string(),
         make_errors_message(
             &dir,
-            ["metadata: duplicate entry with key \"name\" at line 3 column 3",]
+            ["dependencies: duplicate entry with key \"dx\" at line 6 column 3",]
         )
     );
 }
