@@ -396,38 +396,47 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::InputI64,
 				{ base::StrID("builtin_input_i64"),
-			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			      code::FuncSignature({ code::TypeExpr(base::StrID("i64")) }, {}) },
 			},
 			{
 				BuiltinFunctionID::InputChar,
 				{ base::StrID("builtin_input_char"),
-			      code::FuncSignature({ base::StrID("i32") }, {}) },
+			      code::FuncSignature({ code::TypeExpr(base::StrID("i32")) }, {}) },
 			},
 			{
 				BuiltinFunctionID::OutputI64,
 				{ base::StrID("builtin_output_i64"),
-			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+			      code::FuncSignature(
+					  { code::TypeExpr(base::StrID("i64")) }, { code::TypeExpr(base::StrID("i64")) }
+				  ) },
 			},
 			{
 				BuiltinFunctionID::OutputI32,
 				{ base::StrID("builtin_output_i32"),
-			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i32") }) },
+			      code::FuncSignature(
+					  { code::TypeExpr(base::StrID("i64")) }, { code::TypeExpr(base::StrID("i32")) }
+				  ) },
 			},
 			{
 				BuiltinFunctionID::OutputChar,
 				{ base::StrID("builtin_output_char"),
-			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i8") }) },
+			      code::FuncSignature(
+					  { code::TypeExpr(base::StrID("i64")) }, { code::TypeExpr(base::StrID("i8")) }
+				  ) },
 			},
 			{
 				BuiltinFunctionID::OutputString,
 				{ base::StrID("builtin_strOutput_pptr"),
-			      code::FuncSignature({}, { base::StrID("ptr_string") }) },
+			      code::FuncSignature({}, { code::TypeExpr(base::StrID("ptr_string")) }) },
 			},
 			{
 				BuiltinFunctionID::Stoi,
 				{
 					base::StrID("builtin_stoi_pptr"),
-					code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
+					code::FuncSignature(
+						{ code::TypeExpr(base::StrID("i64")) },
+						{ code::TypeExpr(base::StrID("ptr_string")) }
+					),
 				},
 			},
 			// `manyptr char` lowers to a pointer to a dynamic table of `i8`; the parsed value is
@@ -436,7 +445,10 @@ namespace vm::builtins {
 				BuiltinFunctionID::Strtod,
 				{
 					base::StrID("strtod"),
-					code::FuncSignature({ base::StrID("f64") }, { base::StrID("ptr_dyntable_i8") }),
+					code::FuncSignature(
+						{ code::TypeExpr(base::StrID("f64")) },
+						{ code::TypeExpr(base::StrID("ptr_dyntable_i8")) }
+					),
 				},
 			},
 			// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`
@@ -445,66 +457,76 @@ namespace vm::builtins {
 				BuiltinFunctionID::FloatToString,
 				{ base::StrID("float_to_string"),
 			      code::FuncSignature(
-					  { base::StrID("i64") },
-					  { base::StrID("f64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+					  { code::TypeExpr(base::StrID("i64")) },
+					  { code::TypeExpr(base::StrID("f64")),
+			            code::TypeExpr(base::StrID("ptr_dyntable_i8")),
+			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},
 			{
 				BuiltinFunctionID::U64ToString,
 				{ base::StrID("u64_to_string"),
 			      code::FuncSignature(
-					  { base::StrID("i64") },
-					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+					  { code::TypeExpr(base::StrID("i64")) },
+					  { code::TypeExpr(base::StrID("i64")),
+			            code::TypeExpr(base::StrID("ptr_dyntable_i8")),
+			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},
 			{
 				BuiltinFunctionID::I64ToString,
 				{ base::StrID("i64_to_string"),
 			      code::FuncSignature(
-					  { base::StrID("i64") },
-					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+					  { code::TypeExpr(base::StrID("i64")) },
+					  { code::TypeExpr(base::StrID("i64")),
+			            code::TypeExpr(base::StrID("ptr_dyntable_i8")),
+			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},
 			{
 				BuiltinFunctionID::StartThread,
 				{ base::StrID("builtin_start_thread"),
-			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			      code::FuncSignature({ code::TypeExpr(base::StrID("i64")) }, {}) },
 			},
 			{
 				BuiltinFunctionID::JoinThread,
 				{ base::StrID("builtin_join_thread"),
-			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+			      code::FuncSignature(
+					  { code::TypeExpr(base::StrID("i64")) }, { code::TypeExpr(base::StrID("i64")) }
+				  ) },
 			},
 			{ BuiltinFunctionID::CreateMutex,
 			  { base::StrID("builtin_create_mutex"),
-			    code::FuncSignature({ base::StrID("mutex") }, {}) } },
+			    code::FuncSignature({ code::TypeExpr(base::StrID("mutex")) }, {}) } },
 			{ BuiltinFunctionID::LockMutex,
 			  { base::StrID("builtin_lock_mutex"),
-			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			    code::FuncSignature({}, { code::TypeExpr(base::StrID("mutex")) }) } },
 			{ BuiltinFunctionID::UnlockMutex,
 			  { base::StrID("builtin_unlock_mutex"),
-			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			    code::FuncSignature({}, { code::TypeExpr(base::StrID("mutex")) }) } },
 			{ BuiltinFunctionID::DestroyMutex,
 			  { base::StrID("builtin_destroy_mutex"),
-			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			    code::FuncSignature({}, { code::TypeExpr(base::StrID("mutex")) }) } },
 			{ BuiltinFunctionID::CreateCV,
 			  { base::StrID("builtin_create_cv"),
-			    code::FuncSignature({ base::StrID("condition_variable") }, {}) } },
+			    code::FuncSignature({ code::TypeExpr(base::StrID("condition_variable")) }, {}) } },
 			{ BuiltinFunctionID::WaitCV,
 			  { base::StrID("builtin_wait_cv"),
 			    code::FuncSignature(
-					{}, { base::StrID("condition_variable"), base::StrID("mutex") }
+					{},
+					{ code::TypeExpr(base::StrID("condition_variable")),
+			          code::TypeExpr(base::StrID("mutex")) }
 				) } },
 			{ BuiltinFunctionID::NotifyCV,
 			  { base::StrID("builtin_notify_cv"),
-			    code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+			    code::FuncSignature({}, { code::TypeExpr(base::StrID("condition_variable")) }) } },
 			{ BuiltinFunctionID::NotifyAllCV,
 			  { base::StrID("builtin_notify_all_cv"),
-			    code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+			    code::FuncSignature({}, { code::TypeExpr(base::StrID("condition_variable")) }) } },
 			{
 				BuiltinFunctionID::DestroyCV,
 				{ base::StrID("builtin_destroy_cv"),
-			      code::FuncSignature({}, { base::StrID("condition_variable") }) },
+			      code::FuncSignature({}, { code::TypeExpr(base::StrID("condition_variable")) }) },
 			},
 		};
 

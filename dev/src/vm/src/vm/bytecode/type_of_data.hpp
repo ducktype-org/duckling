@@ -12,6 +12,7 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/element_base.hpp>
+#include <vm/bytecode/type_expr.hpp>
 
 #include <utility>
 
@@ -38,10 +39,10 @@ namespace vm::code {
 	struct PointerType final: ElementBase {
 		PointerType() = default;
 
-		PointerType(base::StrID name, base::StrID inner): name(name), inner(inner) {}
+		PointerType(base::StrID name, TypeExpr inner): name(name), inner(inner) {}
 
 		base::StrID name;
-		base::StrID inner;
+		TypeExpr    inner;
 
 		bool operator==(const PointerType& other) const {
 			return name == other.name && inner == other.inner;
@@ -56,12 +57,12 @@ namespace vm::code {
 	struct CPointerType final: ElementBase {
 		CPointerType() = default;
 
-		CPointerType(const base::StrID name, const base::Optional<base::StrID> inner):
+		CPointerType(const base::StrID name, const base::Optional<TypeExpr> inner):
 			  name(name),
 			  inner(inner) {}
 
-		base::StrID                 name;
-		base::Optional<base::StrID> inner;
+		base::StrID              name;
+		base::Optional<TypeExpr> inner;
 
 		bool operator==(const CPointerType& other) const {
 			return name == other.name && inner == other.inner;
@@ -74,13 +75,13 @@ namespace vm::code {
 	struct FixedSizeTableType final: ElementBase {
 		FixedSizeTableType() = default;
 
-		FixedSizeTableType(base::StrID name, base::StrID inner, usize table_size):
+		FixedSizeTableType(base::StrID name, TypeExpr inner, usize table_size):
 			  name(name),
 			  inner(inner),
 			  table_size(table_size) {}
 
 		base::StrID name;
-		base::StrID inner;
+		TypeExpr    inner;
 		usize       table_size{};
 
 		bool operator==(const FixedSizeTableType& other) const {
@@ -94,10 +95,10 @@ namespace vm::code {
 	struct DynamicTableType final: ElementBase {
 		DynamicTableType() = default;
 
-		DynamicTableType(base::StrID name, base::StrID inner): name(name), inner(inner) {}
+		DynamicTableType(base::StrID name, TypeExpr inner): name(name), inner(inner) {}
 
 		base::StrID name;
-		base::StrID inner;
+		TypeExpr    inner;
 
 		bool operator==(const DynamicTableType& other) const {
 			return name == other.name && inner == other.inner;
@@ -111,13 +112,32 @@ namespace vm::code {
 	struct Field final: ElementBase {
 		Field() = default;
 
-		Field(base::StrID name, base::StrID type): name(name), type(type) {}
+		Field(base::StrID name, TypeExpr type): name(name), type(type) {}
 
 		base::StrID name;
-		base::StrID type;
+		TypeExpr    type;
 
 		bool operator==(const Field& other) const {
 			return name == other.name && type == other.type;
+		}
+	};
+
+	/**
+	 * @brief Binds a virtual method to the function implementing it.
+	 * @note Kept apart from `Field` because the second member names a function, not a type.
+	 */
+	struct MethodImpl final: ElementBase {
+		MethodImpl() = default;
+
+		MethodImpl(base::StrID name, base::StrID function_name):
+			  name(name),
+			  function_name(function_name) {}
+
+		base::StrID name;
+		base::StrID function_name;
+
+		bool operator==(const MethodImpl& other) const {
+			return name == other.name && function_name == other.function_name;
 		}
 	};
 
@@ -152,12 +172,12 @@ namespace vm::code {
 	struct VariantType final: ElementBase {
 		VariantType() = default;
 
-		VariantType(base::StrID name, std::vector<base::StrID> variant_alternatives):
+		VariantType(base::StrID name, std::vector<TypeExpr> variant_alternatives):
 			  name(name),
 			  variant_alternatives(std::move(variant_alternatives)) {}
 
-		base::StrID              name;
-		std::vector<base::StrID> variant_alternatives;
+		base::StrID           name;
+		std::vector<TypeExpr> variant_alternatives;
 
 		bool operator==(const VariantType& other) const {
 			return name == other.name && variant_alternatives == other.variant_alternatives;
@@ -171,15 +191,15 @@ namespace vm::code {
 	 */
 	struct FunctionType final: ElementBase {
 		FunctionType(
-			base::StrID name, std::vector<base::StrID> parameters, std::vector<base::StrID> result
+			base::StrID name, std::vector<TypeExpr> parameters, std::vector<TypeExpr> result
 		):
 			  name(name),
 			  parameters(std::move(parameters)),
 			  result(std::move(result)) {}
 
-		base::StrID              name;
-		std::vector<base::StrID> parameters;
-		std::vector<base::StrID> result;
+		base::StrID           name;
+		std::vector<TypeExpr> parameters;
+		std::vector<TypeExpr> result;
 
 		bool operator==(const FunctionType& other) const {
 			return name == other.name && parameters == other.parameters && result == other.result;
@@ -211,13 +231,13 @@ namespace vm::code {
 		ClassType() = default;
 
 		ClassType(
-			base::StrID                 name,
-			std::vector<Field>          fields,
-			bool                        is_abstract,
-			base::Optional<base::StrID> extends,
-			std::vector<base::StrID>    implements,
-			std::vector<Field>          virtual_methods,
-			std::vector<Field>          implementations
+			base::StrID              name,
+			std::vector<Field>       fields,
+			bool                     is_abstract,
+			base::Optional<TypeExpr> extends,
+			std::vector<TypeExpr>    implements,
+			std::vector<Field>       virtual_methods,
+			std::vector<MethodImpl>  implementations
 		):
 			  name{ name },
 			  fields{ std::move(fields) },
@@ -227,13 +247,13 @@ namespace vm::code {
 			  virtual_methods{ std::move(virtual_methods) },
 			  implementations{ std::move(implementations) } {}
 
-		base::StrID                 name;
-		std::vector<Field>          fields;
-		bool                        is_abstract{};
-		base::Optional<base::StrID> extends;
-		std::vector<base::StrID>    implements;
-		std::vector<Field>          virtual_methods;
-		std::vector<Field>          implementations;
+		base::StrID              name;
+		std::vector<Field>       fields;
+		bool                     is_abstract{};
+		base::Optional<TypeExpr> extends;
+		std::vector<TypeExpr>    implements;
+		std::vector<Field>       virtual_methods;
+		std::vector<MethodImpl>  implementations;
 
 		bool operator==(const ClassType& other) const {
 			return name == other.name && fields == other.fields && is_abstract == other.is_abstract
@@ -250,20 +270,20 @@ namespace vm::code {
 		InterfaceType() = default;
 
 		InterfaceType(
-			base::StrID              name,
-			std::vector<base::StrID> implements,
-			std::vector<Field>       virtual_methods,
-			std::vector<Field>       implementations
+			base::StrID             name,
+			std::vector<TypeExpr>   implements,
+			std::vector<Field>      virtual_methods,
+			std::vector<MethodImpl> implementations
 		):
 			  name{ name },
 			  implements{ std::move(implements) },
 			  virtual_methods{ std::move(virtual_methods) },
 			  implementations{ std::move(implementations) } {}
 
-		base::StrID              name;
-		std::vector<base::StrID> implements;
-		std::vector<Field>       virtual_methods;
-		std::vector<Field>       implementations;
+		base::StrID             name;
+		std::vector<TypeExpr>   implements;
+		std::vector<Field>      virtual_methods;
+		std::vector<MethodImpl> implementations;
 
 		bool operator==(const InterfaceType& other) const {
 			return name == other.name && implements == other.implements

@@ -77,14 +77,14 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::Type,
 			opargs::Type,
-			return safeReadObjectBytes<u64>(compiler.low_program.getTypes().at(opcode_arg.type_name));
+			return safeReadObjectBytes<u64>(compiler.low_program.getTypes().at(opcode_arg.expr.canonicalName()));
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::Field,
 			opargs::Field,
 			return static_cast<u64>(*compiler.low_program.getTypes()
-		                                 .at(opcode_arg.type_name)
+		                                 .at(opcode_arg.expr.canonicalName())
 		                                 ->getFieldOffsetByName(opcode_arg.field_name));
 		);
 
@@ -214,7 +214,7 @@ namespace vm::loader::compiler::safe {
 
 			for (const auto& param: signature.parameters) {
 				CRef<code::valid_type::ValidType> type
-					= high_program.getTypeContext().getCurrentTypes().at(param.str);
+					= high_program.getTypeContext().getCurrentTypes().at(param.expr.canonicalName());
 				parameters.emplace_back(low_program.getTypes().at(type->getName()));
 				parameters_size += type->getSize();
 			}
@@ -222,8 +222,11 @@ namespace vm::loader::compiler::safe {
 			code::valid_type::TypeSize ret_type_sum = {};
 			std::vector<TypeCRef>      result_types = {};
 			for (auto& ret: signature.result_types) {
-				ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
-				result_types.emplace_back(low_program.types->at(ret));
+				ret_type_sum += high_program.getTypeContext()
+				                    .getCurrentTypes()
+				                    .at(ret.expr.canonicalName())
+				                    ->getSize();
+				result_types.emplace_back(low_program.types->at(ret.expr.canonicalName()));
 			}
 
 #ifdef ENABLE_JIT
@@ -290,7 +293,7 @@ namespace vm::loader::compiler::safe {
 
 
 			low::LowGlobalData data{
-				.type                 = low_program.types->at(global.type),
+				.type                 = low_program.types->at(global.type.expr.canonicalName()),
 				.init                 = global_init,
 				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
 				.global_block_idx     = program_ctx.global_count,
@@ -341,11 +344,11 @@ namespace vm::loader::compiler::safe {
 		const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
-			std::vector<TypeCRef> params = new_func.signature.parameters
-			                             | std::views::transform([this](const auto& param_name) {
-											   return low_program.types->at(param_name);
-										   })
-			                             | std::ranges::to<std::vector<TypeCRef>>();
+			std::vector<TypeCRef> params
+				= new_func.signature.parameters | std::views::transform([this](const auto& param) {
+					  return low_program.types->at(param.expr.canonicalName());
+				  })
+			    | std::ranges::to<std::vector<TypeCRef>>();
 			auto param_size_sum = std::ranges::fold_left(
 				params | std::views::transform([](const auto& param) {
 					return param->getSize().asInt();
@@ -354,11 +357,12 @@ namespace vm::loader::compiler::safe {
 				std::plus()
 			);
 
-			std::vector<TypeCRef> rets = new_func.signature.result_types
-			                           | std::views::transform([this](const auto& param_name) {
-											 return low_program.types->at(param_name);
-										 })
-			                           | std::ranges::to<std::vector<TypeCRef>>();
+			std::vector<TypeCRef> rets
+				= new_func.signature.result_types
+			    | std::views::transform([this](const auto& param) {
+					  return low_program.types->at(param.expr.canonicalName());
+				  })
+			    | std::ranges::to<std::vector<TypeCRef>>();
 
 			low_program.extern_c_functions.insert(
 				low::LowExternCFunction{
@@ -384,7 +388,7 @@ namespace vm::loader::compiler::safe {
 			code::ffi_detail::FFITypeStorage storage;
 
 			for (const auto& param: new_func.signature.parameters) {
-				CRef<code::valid_type::ValidType> type = high_types.at(param.str);
+				CRef<code::valid_type::ValidType> type = high_types.at(param.expr.canonicalName());
 				low_func.parameters.emplace_back(low_program.types->at(type->getName()));
 				low_func.ffi_arg_types.push_back(
 					code::ffi_detail::buildFFIType(*type, high_types, storage)
@@ -393,7 +397,7 @@ namespace vm::loader::compiler::safe {
 
 			ffi_type* result_type = &ffi_type_void;
 			for (const auto& ret: new_func.signature.result_types) {
-				CRef<code::valid_type::ValidType> type = high_types.at(ret.str);
+				CRef<code::valid_type::ValidType> type = high_types.at(ret.expr.canonicalName());
 				low_func.result_types.emplace_back(low_program.types->at(type->getName()));
 				result_type = code::ffi_detail::buildFFIType(*type, high_types, storage);
 			}

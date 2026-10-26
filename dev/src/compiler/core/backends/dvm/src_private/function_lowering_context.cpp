@@ -349,7 +349,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					pushInstruction({ vm::code::builders::OpKind::structLea,
 					                  field_ptr_tmp,
 					                  current_place,
-					                  vm::opargs::Field{ typeName(vm_class_type),
+					                  vm::opargs::Field{ vm::code::TypeExpr(typeName(vm_class_type)),
 					                                     base::StrID(vm_field_name) } });
 					break;
 				}
@@ -584,10 +584,11 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	vm::code::Function function;
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
-		function.signature.parameters.emplace_back(param_type);
+		function.signature.parameters.emplace_back(vm::code::TypeExpr{ param_type });
 	function.signature.result_types = {};
 	if_opt_some(function_return_type, ret_type) {
-		function.signature.result_types.emplace_back(vm::code::typeName(ret_type));
+		function.signature.result_types.emplace_back(vm::code::TypeExpr(vm::code::typeName(ret_type)
+		));
 	}
 	function.body = std::move(function_body);
 
@@ -635,7 +636,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	pushInstruction({
 		vm::code::builders::OpKind::init,
 		dvm_local.asAnyArgument(),
-		vm::opargs::Type(typeName(dvm_local.getType())),
+		vm::opargs::Type(vm::code::TypeExpr(typeName(dvm_local.getType()))),
 	});
 }
 

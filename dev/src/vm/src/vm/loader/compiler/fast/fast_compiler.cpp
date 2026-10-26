@@ -43,13 +43,13 @@ void fast::FastCompiler::compileNewGlobals(const std::vector<GlobalData>& new_gl
 		program.global_data.insert(
 			vm::fast::GlobalData{
 				.name                 = global.name,
-				.type                 = program.types.at(global.type),
+				.type                 = program.types.at(global.type.expr.canonicalName()),
 				.global_buffer_offset = program.global_buffer_size.asInt(),
 			},
 			global.name
 		);
 
-		program.global_buffer_size += program.types.at(global.type)->getSize();
+		program.global_buffer_size += program.types.at(global.type.expr.canonicalName())->getSize();
 	}
 }
 
@@ -57,12 +57,12 @@ void fast::FastCompiler::compileNewFunctions(
 	const std::vector<code::valid_function::ValidFunction>& new_functions
 ) {
 	for (const code::valid_function::ValidFunction& function: new_functions) {
-		// Reusable transforms: map a type name to its byte size / its fast-mode TypeID.
-		auto get_sizes    = std::views::transform([this](const auto& type_name) {
-            return program.types.at(type_name)->getSize();
+		// Reusable transforms: map a type reference to its byte size / its fast-mode TypeID.
+		auto get_sizes    = std::views::transform([this](const auto& type_ref) {
+            return program.types.at(type_ref.expr.canonicalName())->getSize();
         });
-		auto get_type_ids = std::views::transform([this](const auto& type_name) {
-			return program.types.at(type_name)->getID();
+		auto get_type_ids = std::views::transform([this](const auto& type_ref) {
+			return program.types.at(type_ref.expr.canonicalName())->getID();
 		});
 		program.functions.insert(
 			vm::fast::FunctionInfo{
@@ -95,7 +95,7 @@ void fast::FastCompiler::compileNewExtCFunctions(
 	for (const ExternalCFunction& func: new_functions) {
 		base::Optional<vm::fast::TypeCRef> result_type = std::nullopt;
 		if (func.signature.result_types.size() == 1)
-			result_type = program.types.at(func.signature.result_types[0]);
+			result_type = program.types.at(func.signature.result_types[0].expr.canonicalName());
 		else if (func.signature.result_types.size() > 1)
 			CORE_PANIC("External C function cannot have more than 1 return type");
 
@@ -104,15 +104,15 @@ void fast::FastCompiler::compileNewExtCFunctions(
 				.name               = func.name,
 				.function_pointer   = func.function_pointer,
 				.parameter_size_sum = std::ranges::fold_left(
-					func.signature.parameters | std::views::transform([this](const auto& param_name) {
-						return program.types.at(param_name)->getSize();
+					func.signature.parameters | std::views::transform([this](const auto& param) {
+						return program.types.at(param.expr.canonicalName())->getSize();
 					}),
 					Bytes(0),
 					std::plus()
 				),
 				.parameter_types = func.signature.parameters
-		                         | std::views::transform([this](const auto& param_name) {
-									   return program.types.at(param_name);
+		                         | std::views::transform([this](const auto& param) {
+									   return program.types.at(param.expr.canonicalName());
 								   })
 		                         | std::ranges::to<std::vector<vm::fast::TypeCRef>>(),
 				.result_type = result_type

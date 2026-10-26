@@ -297,7 +297,7 @@ namespace compiler::helios::comptime_ops {
 		// system calls during DVM evaluation.
 		vm::code::GlobalData context_global;
 		context_global.name = base::StrID("comptime_query_ctx"),
-		context_global.type = base::StrID("opaque_ptr");
+		context_global.type = vm::code::TypeExpr(base::StrID("opaque_ptr"));
 
 		// A function used for initializing the global context pointer. Called by the comptime
 		// VM instance, before comptime operations. Takes in an opaque pointer storing the
@@ -317,7 +317,8 @@ namespace compiler::helios::comptime_ops {
 		init_global_context.name = base::StrID("comptime_set_ctx");
 		init_global_context.body = { mov_popq_popq, ret };
 		init_global_context.signature
-			= { .result_types = {}, .parameters = { base::StrID("opaque_ptr") } };
+			= { .result_types = {},
+			    .parameters   = { vm::code::TypeExpr(base::StrID("opaque_ptr")) } };
 
 		return {
 			.functions            = { init_global_context },

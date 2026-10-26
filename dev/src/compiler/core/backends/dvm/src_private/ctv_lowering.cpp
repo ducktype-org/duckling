@@ -86,7 +86,7 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::GlobalData global_data{};
 		global_data.name        = global_name;
-		global_data.type        = typeName(type);
+		global_data.type        = vm::code::TypeExpr(typeName(type));
 		global_data.is_constant = is_constant;
 
 		const DVMPlace& inserted_global_place = pctx.declareGlobal(global_name, type);
@@ -163,7 +163,7 @@ namespace compiler::backend_vm::internal {
 		// the static byte array, the dynamic-table pointer and the `fstToDynTable` cast all agree
 		// on the element type.
 		const auto& struct_data   = std::get<vm::code::DataType>(inserted_global_place.getType());
-		base::StrID ptr_type_name = struct_data.fields.at(0).type;
+		base::StrID ptr_type_name = struct_data.fields.at(0).type.canonicalName();
 		const auto& dyn_ptr_type  = pctx.type_storage.dvm_types.at(ptr_type_name);
 
 		// ================ Part 1: insert fixed-size table with string bytes =================
@@ -175,7 +175,7 @@ namespace compiler::backend_vm::internal {
 		// Static fixed-size-table global holding the string bytes.
 		auto array_type_name = base::strConcat("arr_", typeName(element_type), "_", length);
 		vm::code::FixedSizeTableType array_type{ base::StrID(array_type_name),
-			                                     typeName(element_type),
+			                                     vm::code::TypeExpr(typeName(element_type)),
 			                                     length };
 		pctx.keepVMType(array_type);
 
@@ -253,7 +253,7 @@ namespace compiler::backend_vm::internal {
 		DVMPlace    local(base::StrID("vm_value"), type, DVMPlace::AccessKind::Direct);
 		ctor_ctx.pushInstruction({ OpKind::initFromVMValue,
 		                           local.asAnyArgument(),
-		                           vm::opargs::Type(typeName(type)),
+		                           vm::opargs::Type(vm::code::TypeExpr(typeName(type))),
 		                           vm::opargs::Immediate{ std::bit_cast<u64>(vm_value.val.get()) } }
 		);
 		ctor_ctx.maybeStoreResult(inserted_global_place, DVMValue{ local });
@@ -277,12 +277,14 @@ namespace compiler::backend_vm::internal {
 			auto& field       = structure_type.fields[i];
 			auto& field_value = values[i];
 
-			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(field.type);
-			DVMPlace field_ptr     = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
+			auto ptr_to_field_type
+				= ctor_ctx.program_context.getOrInsertPointerType(field.type.canonicalName());
+			DVMPlace field_ptr = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
 			ctor_ctx.pushInstruction({ OpKind::structLea,
 			                           field_ptr,
 			                           destination,
-			                           vm::opargs::Field{ structure_type.name, field.name } });
+			                           vm::opargs::Field{ vm::code::TypeExpr(structure_type.name),
+			                                              field.name } });
 
 			ctor_ctx.maybeStoreResult(
 				field_ptr.withAccessKind(DVMPlace::AccessKind::Pointer), field_value
@@ -303,7 +305,8 @@ namespace compiler::backend_vm::internal {
 				variant_case_novalue(ctv::CompileTimeValue::UnitCTV) {}
 				variant_case(compiler::tsh::SymbolType<>, type_val) {
 					CORE_ASSERT(field != data_type.fields.end(), "Too few tuple fields.");
-					const auto& field_type = pctx.type_storage.dvm_types.at(field->type);
+					const auto& field_type
+						= pctx.type_storage.dvm_types.at(field->type.canonicalName());
 					result->fields.emplace_back(
 						field->name,
 						makeBox<vm::code::ConstantImmediate>(
@@ -317,7 +320,8 @@ namespace compiler::backend_vm::internal {
 				}
 				variant_case(ctv::CompileTimeValue::TypeTuple, nested) {
 					CORE_ASSERT(field != data_type.fields.end(), "Too few tuple fields.");
-					const auto& field_type = pctx.type_storage.dvm_types.at(field->type);
+					const auto& field_type
+						= pctx.type_storage.dvm_types.at(field->type.canonicalName());
 					result->fields.emplace_back(
 						field->name,
 						lowerTypeTupleToConstant(pctx, nested, v_get(field_type, vm::code::DataType))

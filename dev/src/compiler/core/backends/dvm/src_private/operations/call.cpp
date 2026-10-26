@@ -21,14 +21,14 @@ namespace {
 		vm::code::FFIFunction ffi_function;
 		ffi_function.name
 			= vm::code::Identifier(std::get<DVMFFIFunctionName>(call_info.call_target).name);
-		ffi_function.signature.parameters
-			= call_info.param_types | std::views::transform([](const auto& type) {
-				  return vm::code::Identifier(vm::code::typeName(type));
-			  })
-		    | std::ranges::to<std::vector>();
+		ffi_function.signature.parameters = call_info.param_types
+		                                  | std::views::transform([](const auto& type) {
+												return vm::code::TypeExpr(vm::code::typeName(type));
+											})
+		                                  | std::ranges::to<std::vector<vm::code::TypeExprUse>>();
 		if_opt_some(call_info.return_type, result_type) {
 			ffi_function.signature.result_types
-				= { vm::code::Identifier(vm::code::typeName(result_type)) };
+				= { vm::code::TypeExpr(vm::code::typeName(result_type)) };
 		}
 		return ffi_function;
 	}

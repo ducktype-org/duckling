@@ -121,20 +121,28 @@ const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
 	switch (kind) {
 	case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
 		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
-		return vm::code::PointerType(base::StrID(pointer_type_name), pointee_name);
+		return vm::code::PointerType(
+			base::StrID(pointer_type_name), vm::code::TypeExpr{ pointee_name }
+		);
 	}
 	case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
 		// Many pointer is a pointer to a dynamic table of the pointee type.
 		auto                       dyntable_type_name = base::strConcat("dyntable_", pointee_name);
-		vm::code::DynamicTableType dyntable_type(base::StrID(dyntable_type_name), pointee_name);
+		vm::code::DynamicTableType dyntable_type(
+			base::StrID(dyntable_type_name), vm::code::TypeExpr{ pointee_name }
+		);
 		// Ensure the dynamic table type is stored in the context.
 		keepVMType(dyntable_type);
 		auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
-		return vm::code::PointerType(base::StrID(pointer_type_name), typeName(dyntable_type));
+		return vm::code::PointerType(
+			base::StrID(pointer_type_name), vm::code::TypeExpr(typeName(dyntable_type))
+		);
 	}
 	case tsl::PointerTypeLayout::PointerKind::CPointer:
 		auto pointer_type_name = base::strConcat("cptr_", pointee_name);
-		return vm::code::CPointerType(base::StrID(pointer_type_name), pointee_name);
+		return vm::code::CPointerType(
+			base::StrID(pointer_type_name), vm::code::TypeExpr{ pointee_name }
+		);
 	}
 	CORE_UNREACHABLE();
 }
@@ -203,7 +211,7 @@ const DVMPlace& ProgramLoweringContext::insertStaticDataGlobal(
 
 	vm::code::GlobalData global_data{};
 	global_data.name          = global_name;
-	global_data.type          = typeName(type);
+	global_data.type          = vm::code::TypeExpr(typeName(type));
 	global_data.is_constant   = true;
 	global_data.initial_value = std::move(init);
 	defineGlobal(std::move(global_data));
@@ -352,7 +360,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
 			vm::code::GlobalData global_data{};
 			global_data.name        = lir_global.global.mangled_name;
-			global_data.type        = typeName(global_type);
+			global_data.type        = vm::code::TypeExpr(typeName(global_type));
 			global_data.is_constant = false;
 
 			if (ctor_dtor_pair.global_ctor.has_value()) {
@@ -559,7 +567,10 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			// @TODO: #2100 Change that to indexes.
 			for (usize i{ 0 }; i < num_fields; i++) {
 				const auto field_layout = class_layout.getFieldLayoutOfLayoutIndex(i);
-				fields.emplace_back(base::StrID(base::strConcat("_", i)), keepTslType(field_layout));
+				fields.emplace_back(
+					base::StrID(base::strConcat("_", i)),
+					vm::code::TypeExpr(keepTslType(field_layout))
+				);
 			}
 
 			return vm::code::DataType{
@@ -570,7 +581,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 		variant_case(tsl::VariantTypeLayout, variant_layout) {
 			const usize num_alternatives = variant_layout.getNumAlternatives();
 
-			std::vector<base::StrID> alternatives;
+			std::vector<vm::code::TypeExpr> alternatives;
 			alternatives.reserve(num_alternatives);
 			for (usize i{ 0 }; i < num_alternatives; i++)
 				alternatives.emplace_back(keepTslType(variant_layout.getLayoutOfIndex(i)));
@@ -583,7 +594,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
 			return vm::code::FixedSizeTableType{
 				name,
-				keepTslType(array_layout.getElementLayout()),
+				vm::code::TypeExpr(keepTslType(array_layout.getElementLayout())),
 				array_layout.getElementCount(),
 			};
 		}
