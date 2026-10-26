@@ -31,7 +31,7 @@ namespace lexer {
 	class Lexer final {
 	public:
 		/**
-		 * @param options Options controlling lexing; by default comments are discarded.
+		 * @param options Options controlling lexing.
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
 		explicit Lexer(Ref<tokenizer::TokenSource>, const LexOptions& options = {});

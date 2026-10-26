@@ -133,7 +133,7 @@ namespace tokenizer {
 		 * call to this function, because we need the same keyword mode
 		 * for tokenizing and parsing.
 		 *
-		 * @param options Options forwarded to the lexer; by default comments are discarded.
+		 * @param options Options forwarded to the lexer.
 		 * @return If tokenizing process run without errors.
 		 */
 		template<
