@@ -24,6 +24,11 @@ namespace compiler::driver {
 	/**
 	 * @brief Converts HOUTUnit to LIRUnitWithBackendName.
 	 * @note It also prints and/or saves in artifacts IR representations if requested by options.
+	 * @param dump_lir Whether to write this unit's own LIR artifact when LIR dumping is enabled.
+	 * @param aggregate_mir_dump Optional destination for requested MIR dumps instead of a per-unit
+	 * file.
+	 * @param aggregate_hir_dump Optional destination for requested HIR dumps instead of a per-unit
+	 * file. Aggregated dumps are prefixed with the representation and module name.
 	 */
 	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
 		query::Context&         ctx,
