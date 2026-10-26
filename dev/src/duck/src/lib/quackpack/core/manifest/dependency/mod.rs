@@ -222,14 +222,15 @@ impl Dependency {
         self.conditions.as_ref()
     }
 
-    /// Get the unique [`Identity`] which could be associated with this dependency.
-    /// Note:
-    /// -----
-    /// Mapping [`Dependency`] -> [`Identity`] is unambiguous, however mapping [`Dependency`] -> [`FullIdentity`](crate::quackpack::core::full_identity::FullIdentity) is.
+
+    /// Get the [`Identity`] of this [`Dependency`].
+    ///
+    /// This helper exists, because [`Identity`] is unambiguous, unlike [`FullIdentity`],
+    /// which requires git commit.
+    ///
+    /// [`FullIdentity`]: crate::quackpack::core::full_identity::FullIdentity
     pub fn identity(&self) -> Identity {
-        let name = self.name();
-        let origin = self.source().into();
-        Identity::new(name, origin)
+        Identity::new(self.name(), self.source.into())
     }
 }
 

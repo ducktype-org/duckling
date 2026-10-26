@@ -190,6 +190,14 @@ impl Origin {
     }
 }
 
+impl From<Source> for Origin {
+    fn from(value: Source) -> Self {
+        let kind = value.kind().into();
+        let url = value.url();
+        Origin::new(url, kind)
+    }
+}
+
 impl PartialEq<FullOrigin> for Origin {
     fn eq(&self, other: &FullOrigin) -> bool {
         self.kind() == other.kind() && self.url() == other.url()
@@ -319,6 +327,16 @@ impl Kind {
     }
 }
 
+impl From<SourceKind> for Kind {
+    fn from(value: SourceKind) -> Self {
+        match value {
+            SourceKind::Registry => Kind::Registry,
+            SourceKind::Local => Kind::Local,
+            SourceKind::Git(_) => Kind::Git,
+        }
+    }
+}
+
 impl Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
@@ -339,24 +357,6 @@ impl PartialEq<FullKind> for Kind {
 impl PartialEq<Kind> for FullKind {
     fn eq(&self, other: &Kind) -> bool {
         other == self
-    }
-}
-
-impl From<Source> for Origin {
-    fn from(source: Source) -> Self {
-        let url = source.url();
-        let kind = source.kind().into();
-        Self::new(url, kind)
-    }
-}
-
-impl From<SourceKind> for Kind {
-    fn from(source_kind: SourceKind) -> Self {
-        match source_kind {
-            SourceKind::Registry => Self::Registry,
-            SourceKind::Local => Self::Local,
-            SourceKind::Git(_) => Self::Git,
-        }
     }
 }
 
