@@ -447,6 +447,33 @@ namespace compiler::driver {
 			std::vector<helios::SymID>         wrapper_symbols;
 			std::ostringstream                 aggregate_mir_dump;
 			std::ostringstream                 aggregate_hir_dump;
+			auto                               flush_dumps = [&] {
+                if (driver::dump_ir_options.dump_hir && !aggregate_hir_dump.view().empty()) {
+                    auto output_file = getDebugDumpArtifact(
+                        base::StrID(base::strConcat(merged.module_id_human.strView(), ".hir"))
+                    );
+                    output_file << aggregate_hir_dump.view();
+                }
+                if (driver::dump_ir_options.dump_mir && !aggregate_mir_dump.view().empty()) {
+                    auto output_file = getDebugDumpArtifact(
+                        base::StrID(base::strConcat(merged.module_id_human.strView(), ".mir"))
+                    );
+                    output_file << aggregate_mir_dump.view();
+                }
+                if (driver::dump_ir_options.dump_lir
+                    && (!merged.lir_unit.lir_functions.empty()
+                        || !merged.lir_unit.lir_globals.empty())) {
+                    auto output_file = getDebugDumpArtifact(
+                        base::StrID(base::strConcat(merged.module_id_human.strView(), ".lir"))
+                    );
+                    merged.debugPrint(ctx, output_file);
+                }
+			};
+			auto fail
+				= [&](std::string message) -> std::expected<LIRUnitWithBackendName, std::string> {
+				flush_dumps();
+				return std::unexpected(std::move(message));
+			};
 			base::Optional<frontend::ModuleID> parent_module_id;
 			u64                                statement_counter = 0;
 			auto                               session_id        = repl::ReplSessionID::next();
@@ -476,8 +503,7 @@ namespace compiler::driver {
 				);
 
 				auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
-				if (!statement_info_result.has_value())
-					return std::unexpected(statement_info_result.error());
+				if (!statement_info_result.has_value()) return fail(statement_info_result.error());
 				auto statement_info = statement_info_result.value();
 				auto module_name    = repl::getStatementModuleName(module_id, "script_module_");
 				auto module_name_id = base::StrID(module_name.c_str());
@@ -487,7 +513,7 @@ namespace compiler::driver {
 						CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
 						auto hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
 
-						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
+						if (not hout_unit.has_value()) return fail(hout_unit.error());
 						auto lir_result = compileHOUTUnitToLIRModuleData(
 							ctx,
 							*hout_unit.value(),
@@ -498,7 +524,7 @@ namespace compiler::driver {
 							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
-							return std::unexpected("Failed to compile definition statement to LIR");
+							return fail("Failed to compile definition statement to LIR");
 						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 					}
 					variant_case_novalue(
@@ -508,8 +534,7 @@ namespace compiler::driver {
 						auto wrapper_result = repl::buildStatementWrapper(
 							ctx, statement_info_result.value(), statement_counter
 						);
-						if (!wrapper_result.has_value())
-							return std::unexpected(wrapper_result.error());
+						if (!wrapper_result.has_value()) return fail(wrapper_result.error());
 
 						wrapper_symbols.push_back(
 							wrapper_result->wrapper_function.declaration->original_symbol
@@ -517,8 +542,7 @@ namespace compiler::driver {
 
 						auto hout_unit_result
 							= repl::makeExecutableHOUTUnit(ctx, wrapper_result->wrapper_function);
-						if (not hout_unit_result.has_value())
-							return std::unexpected(hout_unit_result.error());
+						if (not hout_unit_result.has_value()) return fail(hout_unit_result.error());
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
 							ctx,
@@ -530,7 +554,7 @@ namespace compiler::driver {
 							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
-							return std::unexpected("Failed to compile executable statement to LIR");
+							return fail("Failed to compile executable statement to LIR");
 
 						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 					}
@@ -539,8 +563,7 @@ namespace compiler::driver {
 
 						auto wrapper_result
 							= repl::buildVariableWrapper(ctx, value, statement_counter);
-						if (not wrapper_result.has_value())
-							return std::unexpected(wrapper_result.error());
+						if (not wrapper_result.has_value()) return fail(wrapper_result.error());
 
 						wrapper_symbols.push_back(wrapper_result->initializer_function);
 
@@ -554,7 +577,7 @@ namespace compiler::driver {
 							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
-							return std::unexpected("Failed to compile variable statement to LIR");
+							return fail("Failed to compile variable statement to LIR");
 
 						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 					}
@@ -565,7 +588,7 @@ namespace compiler::driver {
 			}
 
 			if (!parent_module_id.has_value())
-				return std::unexpected("Script has no parent module for synthetic main");
+				return fail("Script has no parent module for synthetic main");
 
 			// We use the last (or empty one when script is empty) statement's module
 			// (parent_module_id) because it sits at the end of the REPL-style chain and has a
@@ -584,8 +607,7 @@ namespace compiler::driver {
 				&aggregate_mir_dump,
 				&aggregate_hir_dump
 			);
-			if (main_lir.hasFailed())
-				return std::unexpected("Failed to compile script main to LIR");
+			if (main_lir.hasFailed()) return fail("Failed to compile script main to LIR");
 			repl::appendScriptLIRModuleData(merged, main_lir.valueOrPanic());
 
 			// @TODO: #2694 #2424 come back to this, and maybe remove or adapt this call
@@ -595,27 +617,7 @@ namespace compiler::driver {
 			// solution for now.
 			merged.lir_unit.deduplicateSymbols();
 
-			if (driver::dump_ir_options.dump_hir) {
-				auto output_file = getDebugDumpArtifact(
-					base::StrID(base::strConcat(merged.module_id_human.strView(), ".hir"))
-				);
-				output_file << aggregate_hir_dump.str();
-			}
-
-			if (driver::dump_ir_options.dump_mir) {
-				auto output_file = getDebugDumpArtifact(
-					base::StrID(base::strConcat(merged.module_id_human.strView(), ".mir"))
-				);
-				output_file << aggregate_mir_dump.str();
-			}
-
-			if (driver::dump_ir_options.dump_lir) {
-				auto output_file = getDebugDumpArtifact(
-					base::StrID(base::strConcat(merged.module_id_human.strView(), ".lir"))
-				);
-				merged.debugPrint(ctx, output_file);
-			}
-
+			flush_dumps();
 			return merged;
 		}
 
