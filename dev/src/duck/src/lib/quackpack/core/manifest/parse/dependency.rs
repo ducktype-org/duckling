@@ -71,15 +71,15 @@ fn parse_single_dependency(
     validate_package_name(&name)
         .with_context(|| {
             if alias.is_none() {
-                format!("dependency `{manifest_ename}` has an invalid name")
+                format!("{kind} dependency named `{manifest_ename}` has an invalid name")
             } else {
-                format!("aliased dependency `{manifest_ename}` points to a package `{name}` with an invalid name")
+                format!("{kind} dependency named `{manifest_ename}` points to a package `{name}` with an invalid name")
             }
         })
         .with_context(|| scope.make_context_string())?;
     if let Some(alias) = alias {
         validate_package_name(&alias)
-            .with_context(|| format!("dependency `{name}` has an invalid alias name `{alias}`"))
+            .with_context(|| format!("{kind} dependency named `{alias}` has an invalid alias"))
             .with_context(|| scope.make_context_string())?;
     }
     let guard = scope.push("source".into());

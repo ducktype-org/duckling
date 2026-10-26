@@ -36,7 +36,8 @@ impl Dependencies {
             let maybe_overriden_kind = seen_enames.insert(ename, kind);
             if let Some(overriden_kind) = maybe_overriden_kind {
                 qp_bail!(
-                    "multiple dependencies (one {overriden_kind} and one {kind}) are referenced by the same name `{ename}`",
+                    "{kind} dependency named `{}` has the same name as a {overriden_kind} dependency",
+                    dep.diagnostic_name(),
                 )
             }
         }
@@ -51,19 +52,19 @@ impl Dependencies {
     /// and not trigger the error here, but at least one of those entries will have not matching name,
     /// triggering error during [`gathering`](crate::quackpack::core::solver::gathering).
     fn bail_if_has_duplicated_identities(deps: &[Dependency]) -> QuackResult<()> {
-        let mut dependencies_ids: HashMap<Identity, (StrId, DependencyKind)> = HashMap::new();
+        let mut dependencies_ids: HashMap<Identity, &Dependency> = HashMap::new();
         for dep in deps {
             let identity = dep.identity();
-            if let Some((other_dep_ename, other_dep_kind)) = dependencies_ids.get(&identity) {
+            if let Some(other_dep) = dependencies_ids.get(&identity) {
                 qp_bail!(
-                    "{} dependency `{}` has the same source as {} dependency `{}`",
+                    "{} dependency named `{}` has the same source as {} dependency named `{}`",
                     dep.kind(),
-                    dep.effective_name(),
-                    other_dep_kind,
-                    other_dep_ename
+                    dep.diagnostic_name(),
+                    other_dep.kind(),
+                    other_dep.diagnostic_name()
                 );
             } else {
-                dependencies_ids.insert(identity, (dep.effective_name(), dep.kind()));
+                dependencies_ids.insert(identity, dep);
             }
         }
         Ok(())

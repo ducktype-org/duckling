@@ -23,7 +23,7 @@ Tests:
             echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
 
               Caused by:
-                normal dependency \`bar2\` has the same source as normal dependency \`bar\`"
+                normal dependency named \`bar2\` has the same source as normal dependency named \`bar\`"
       one-normal-one-dev:
         PreCase: |+
           @{cd-tmp-dir}
@@ -45,4 +45,4 @@ Tests:
             echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
 
               Caused by:
-                dev dependency \`bar2\` has the same source as normal dependency \`bar\`"
+                dev dependency named \`bar2\` has the same source as normal dependency named \`bar\`"

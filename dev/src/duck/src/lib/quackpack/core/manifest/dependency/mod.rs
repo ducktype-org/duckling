@@ -266,7 +266,7 @@ impl TryFrom<registry::Dependency> for Dependency {
         let alias = alias.map(StrId::from);
         let name = name.into();
         if alias == Some(name) {
-            qp_bail!("registry dependency `{name}` specified itself as an alias")
+            qp_bail!("registry dependency named `{name}` specified itself as an alias")
         }
         let features = features
             .into_iter()

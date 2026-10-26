@@ -34,9 +34,13 @@ pub mod unit_runner;
 pub mod unit_task_generator;
 
 /// A common message for panicking when a manifest is missing a dependency.
-pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {
+pub fn missing_depenendcy_in_manifest(
+    root_name: &str,
+    dep_ename: &str,
+    context: &dyn fmt::Debug,
+) -> ! {
     panic!(
-        "malformed manifest of `{root_name}`: missing dependency `{dep}` in the manifest {context:#?}"
+        "malformed manifest of `{root_name}`: missing dependency named `{dep_ename}` in the manifest {context:#?}"
     )
 }
 

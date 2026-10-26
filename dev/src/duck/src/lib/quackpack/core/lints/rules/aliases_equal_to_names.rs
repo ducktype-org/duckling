@@ -86,7 +86,7 @@ macros::make_diagnostic! {
         key_in_manifest: &'static str,
     }
     display(
-        "{} dependency's alias `{}` is equal to its name specified at `{}.{}.source.name`",
+        "{} dependency named `{}` has an alias equal to its name specified at `{}.{}.source.name`",
         dep_kind,
         name,
         key_in_manifest,
