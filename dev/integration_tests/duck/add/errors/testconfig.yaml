@@ -19,9 +19,9 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: there already is a normal dependency referred to by \`a\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "error: there already is a normal dependency referred to by \`a\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`
 
-            hint: use aliases to have multiple dependencies with the same name
+            hint: use aliases to have multiple dependencies with the same name"
       duplicated-sources:
         test-cmd: duck -C foo add --local ../a --alias b a
         ExitCode: 1
