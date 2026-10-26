@@ -62,6 +62,12 @@ namespace pst {
 		Transparent,
 	};
 
+	enum class OperatorFixity {
+		None,
+		Prefix,
+		Suffix,
+	};
+
 	enum class StmtKind : int {
 		Import,
 		Using,

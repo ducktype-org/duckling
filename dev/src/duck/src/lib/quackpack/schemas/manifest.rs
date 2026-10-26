@@ -17,8 +17,6 @@ use yaml_edit::{Mapping, MappingBuilder, SequenceBuilder};
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
 
-pub type Dependencies = HashMap<String, Dependency>;
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
@@ -39,6 +37,8 @@ pub struct Manifest {
     pub import: Option<PathBuf>,
     /// `venv:` root field.
     pub venv: Option<VenvConfig>,
+    /// Lints configuration.
+    pub lints: Option<Lints>,
 }
 
 impl Manifest {
@@ -49,6 +49,7 @@ impl Manifest {
             && self.dependencies.is_none()
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
+            && self.lints.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -86,6 +87,21 @@ pub struct Metadata {
     pub description: Option<String>,
     /// External library to link against.
     pub links: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema of the `dependencies:` table (or its logical variants).
+pub struct Dependencies(pub HashMap<String, Dependency>);
+
+impl<'a> IntoIterator for &'a Dependencies {
+    type Item = <&'a HashMap<String, Dependency> as IntoIterator>::Item;
+
+    type IntoIter = <&'a HashMap<String, Dependency> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -419,6 +435,19 @@ pub struct VenvConfig {
     pub ephemeral: Option<bool>,
     pub expose_freezefile: Option<bool>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+/// Schema for configuring lints.
+pub struct Lints {
+    pub duck: Option<DuckLints>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema for configuring duck lints. Maps to the `lints.duck`.
+///
+/// Map is lint name -> lint level.
+pub struct DuckLints(pub HashMap<String, String>);
 
 #[cfg(test)]
 mod tests {

@@ -152,17 +152,28 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralUnitExpr>(ctx, pstOrigin(elem));
 			}
 
-			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
-				auto parsed_numeric_value = fromExprNumericValue(ctx, stmt);
+			/**
+			 * @brief Creates the numeric @p literal, which may be negative if @p sign says so.
+			 * For a negative literal, @p origin and @p position also cover the `-`.
+			 */
+			void createNumericLiteral(
+				pst::Access<pst::expr::ExprNumericValue> literal,
+				const ElementOrigin&                     origin,
+				const dia::StablePosition&               position,
+				const LiteralSign                        sign
+			) {
+				auto parsed_numeric_value = fromExprNumericValue(ctx, literal, position, sign);
 
-				if (parsed_numeric_value.has_value()) {
-					node = makeBox<LiteralNumericExpr>(
-						ctx, pstOrigin(stmt), parsed_numeric_value.value()
-					);
-				} else {
-					// Error was logged in fromExprNumericValue.
-					return;
-				}
+				// Error was logged in fromExprNumericValue.
+				if (not parsed_numeric_value.has_value()) return;
+
+				node = makeBox<LiteralNumericExpr>(ctx, origin, parsed_numeric_value.value());
+			}
+
+			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
+				createNumericLiteral(
+					stmt, pstOrigin(stmt), stmt->getStablePosition(), LiteralSign::Positive
+				);
 			}
 
 			void visitExprCharValue(pst::Access<pst::expr::ExprCharValue> stmt) override {
@@ -317,9 +328,27 @@ namespace compiler::helios::code {
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
-				const auto op         = stmt->getOperator().unlock(ctx);
-				auto       inner      = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
-				auto       inner_type = inner->expression_type.getSymbolType();
+				const auto op = stmt->getOperator().unlock(ctx);
+
+				// A `-` before a numeric literal is a part of the literal. If not for that values
+				// like `-128i8` couldn't be parsed since `128` does not fit into `i8` (same for
+				// other INT_MIN flavours).
+				if (op->unwrap() == lang_def::NamedOperator::Minus) {
+					const auto literal
+						= stmt->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprNumericValue>();
+					if (literal.has_value() && canBeNegative(ctx, literal.value())) {
+						createNumericLiteral(
+							literal.value(),
+							pstOrigin(stmt),
+							stmt->getStablePosition(),
+							LiteralSign::Negative
+						);
+						return;
+					}
+				}
+
+				auto inner      = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				auto inner_type = inner->expression_type.getSymbolType();
 
 				// Handle taking references
 				if (op->unwrap() == lang_def::NamedOperator::Ampersand) {
@@ -342,6 +371,14 @@ namespace compiler::helios::code {
 						return;
 					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
+				if (op->unwrap() == lang_def::NamedOperator::QuestionMark
+				    and inner_type.getType().getKind() == tsh::Kind::Meta) {
+					node = makeBox<OptionalTypeConstructorExpr>(
+						ctx, pstOrigin(stmt), std::move(inner)
+					);
 					return;
 				}
 

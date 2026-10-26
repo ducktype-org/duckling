@@ -15,6 +15,13 @@ use crate::quackpack::core::Version;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::test_utils::setup_test;
 
+#[test]
+/// If this test passes (doesn't panic), it means that we successfully initialised the
+/// `LazyLock` with the parsed URL.
+fn default_url_is_valid() {
+    let _ = &*DEFAULT_REGISTRY_URL;
+}
+
 fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without
@@ -95,7 +102,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg1],
+        dependencies: registry::Dependencies(vec![pkg1]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -109,7 +116,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg2, pkg3],
+        dependencies: registry::Dependencies(vec![pkg2, pkg3]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -123,7 +130,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: registry::Dependencies::new(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };

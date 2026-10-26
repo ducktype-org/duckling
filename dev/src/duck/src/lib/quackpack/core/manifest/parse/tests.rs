@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
+use crate::quackpack::core::lints::{Lint, LintLevel};
 use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{
@@ -1786,4 +1787,92 @@ dev-dependencies:
     assert_eq!(a.name(), a_dev.name());
     assert_eq!(a.alias(), a_dev.alias());
     assert_eq!(a.effective_name(), a_dev.effective_name());
+}
+
+#[test]
+fn valid_lint_levels() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+lints:
+  duck:
+    a: error
+    b: warning
+    c: allow
+"#,
+    );
+    let ctx = DuckContext::default();
+    let a_lint = Lint {
+        name: "a",
+        description: "",
+        level: LintLevel::Allow,
+    };
+
+    let b_lint = Lint {
+        name: "b",
+        description: "",
+        level: LintLevel::Warning,
+    };
+
+    let c_lint = Lint {
+        name: "c",
+        description: "",
+        level: LintLevel::Error,
+    };
+
+    let ommited_lint = Lint {
+        name: "x",
+        description: "",
+        level: LintLevel::Error,
+    };
+    let manifest = parse_manifest(&manifest_path, &ctx)
+        .unwrap()
+        .0
+        .into_manifest();
+    let lints = manifest.lints();
+    let duck_lints = &lints.duck_lints;
+    assert_eq!(duck_lints.len(), 3);
+    assert_eq!(
+        duck_lints,
+        &HashMap::from([
+            ("a".to_string(), LintLevel::Error),
+            ("b".to_string(), LintLevel::Warning),
+            ("c".to_string(), LintLevel::Allow)
+        ]),
+    );
+    assert_eq!(lints.level_for_duck_lint(&a_lint), LintLevel::Error);
+    assert_eq!(lints.level_for_duck_lint(&b_lint), LintLevel::Warning);
+    assert_eq!(lints.level_for_duck_lint(&c_lint), LintLevel::Allow);
+    assert_eq!(lints.level_for_duck_lint(&ommited_lint), LintLevel::Error);
+}
+
+#[test]
+fn invalid_lint_levels() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+lints:
+  duck:
+    a: invalid
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `lints.duck.a`",
+                "invalid lint level: expected one of `allow`, `warning`, `error`, but found `invalid`"
+            ]
+        )
+    );
 }

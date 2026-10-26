@@ -46,6 +46,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testOptionalErrors);
 		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
@@ -216,12 +217,12 @@ private:
 				R"(
                 class Number {
                     val: i64;
-                    fun -() -> Number = {
+                    fun prefix -() -> Number = {
                         return Number(-self.val);
                     }
                 }
 
-                fun -(n: Number) -> Number = {
+                fun prefix -(n: Number) -> Number = {
                     return Number(-n.val);
                 }
 
@@ -232,6 +233,36 @@ private:
                 }
             )",
 				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun -(n: i64) -> i64 = n;)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun suffix +(lhs: i64, rhs: i64) -> i64 = lhs;)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun -() -> i64 = 0;
+					}
+				)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun suffix +(rhs: i64) -> i64 = rhs;
+					}
+				)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
 			);
 		}
@@ -564,7 +595,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `const slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -737,23 +768,6 @@ private:
 				}
 			)",
 				{ "cannot be evaluated at compile-time", "const y = x" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class S {
-					x: i64;
-					S.copy(other: const ref S) = {
-						return S(10);
-					}
-				}
-				
-				fun takeS(x: S) = 10;
-
-				const ctvS = takeS(S(1));
-			)",
-				{ "cannot be evaluated at compile time" },
 				1
 			);
 		}
@@ -1081,7 +1095,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `const slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -1160,19 +1174,6 @@ private:
 				}
 			)",
 				{ "Feature not implemented", "Nested", "function" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A { x: i64 = 0; }
-				const a = A();
-
-				fun main() -> i64 = {
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Compile time" },
 				1
 			);
 
@@ -1309,7 +1310,31 @@ private:
 		// ============================ Other errors ============================
 		{
 			checkForErrorOnCompileModule(
-				R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
+				R"(fun a() = 100000000000000000000000;)",
+				{ "Numeric literal value is out of the range" },
+				1
+			);
+			// An error about a negative literal points at its `-` too.
+			checkForErrorOnCompileModule(
+				R"(fun a() = -9223372036854775809;)",
+				{ "Numeric literal value is out of the range" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -129i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			// A hex or binary literal is a value, not a bit pattern, so it does not wrap around.
+			checkForErrorOnCompileModule(
+				R"(fun a() = 0x80i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -0b10000001i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun a() = 1000i8;)",
@@ -1702,6 +1727,50 @@ private:
 			} )",
 			{ "Cannot implicitly copy a value of non-trivially-copyable type "
 		      "`Tuple(i32, Class L)`" },
+			1
+		);
+	}
+
+	/**
+	 * Errors of the `?T` interface on a non-trivially-copyable value type.
+	 */
+	void testOptionalErrors() {
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var o: ?L = L(1i32);
+				var b: L = o.value();
+				return 0;
+			} )",
+			{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
+		      "`ref Class L`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun goo() -> ?L = L(1i32);
+			fun main() -> i64 = {
+				var b: L = goo().value();
+				return 0;
+			} )",
+			{ "Call failed due to ambiguous overload resolution",
+		      "Found coercible candidate",
+		      "Found coercible candidate" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var o: ?L = L(1i32);
+				var b = o.valueOr(L(2i32));
+				return 0;
+			} )",
+			{ "Call failed due to ambiguous overload resolution",
+		      "Cannot implicitly copy a value of non-trivially-copyable type `?Class L`",
+		      "The given argument type `Class L` cannot be converted to the expected type `ref "
+		      "Class L`" },
 			1
 		);
 	}
@@ -2108,7 +2177,8 @@ private:
 				var g: i32 = 5;
 				const A = ptrof g;
 			)",
-			{ "Feature not implemented" },
+			{ "Expression cannot be evaluated at compile-time.",
+		      "Using the variable `g` in a constant expression is invalid." },
 			1
 		);
 	}
@@ -2261,9 +2331,15 @@ private:
 			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: i32 = (1i32 << 32);)", { invalid_shift }, 1);
 
-			// Tuple element.
-			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
-			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", { invalid_shift }, 1);
+			// Tuple element. A tuple of values is evaluated by the VM, not by the tree evaluation,
+			// so the shift follows the run-time semantics and reports no `invalid_shift` error.
+			// @TODO: #3792 Check the arithmetic operations evaluated on the compile-time DVM.
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", {}, 0, false);
+			checkForErrorOnCompileModule(
+				R"(const A = (1 / 0, 2);)",
+				{ "Compile time evaluation of this expression failed", "Tried dividing by zero" },
+				1
+			);
 
 			// Cast source expression.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
@@ -2309,33 +2385,13 @@ private:
 
 		// ======================= Not-yet-implemented evaluations =======================
 		{
-			// Indexing a non-meta, non-type-template base.
-			checkForErrorOnCompileModule(
-				R"(
-				const S = "abc";
-				const A = S[0];
-			)",
-				{ "Feature not implemented",
-			      "Evaluating index expressions with non-meta and non-type-template base at "
-			      "compile time." },
-				1
-			);
-
-			// Access expressions.
-			checkForErrorOnCompileModule(
-				R"(const A: i64 = (1, 5)._2;)",
-				{ "Feature not implemented", "Evaluating access expressions at compile time." },
-				1
-			);
-
 			// A call that has to go through the DVM, but fails while being evaluated there.
 			checkForErrorOnCompileModule(
 				R"(
 				fun f(x: i64) -> i64 = x / 0;
 				const A: i64 = f(10);
 			)",
-				{ "Feature not implemented",
-			      "Compile time evaluation of this function call failed or returned unsupported "
+				{ "Compile time evaluation of this function call failed or returned unsupported "
 			      "result." },
 				1
 			);

@@ -53,6 +53,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
+	EXPR_VISITOR(OptionalTypeConstructorExpr)
 	EXPR_VISITOR(VariantConstructExpr)
 	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
@@ -170,11 +171,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::SymbolType{
-					  tsh::getCharSliceType(ctx),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
+				  tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
@@ -639,7 +636,6 @@ namespace compiler::helios::code {
 		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> subtypes
 	):
 		  Expr(
-
 			  tsh::ExpressionType{
 				  tsh::SymbolType{
 					  tsh::getMetaType(),
@@ -677,6 +673,37 @@ namespace compiler::helios::code {
 		return makeBox<VariantTypeConstructorExpr>(
 			expression_type, origin, std::move(cloned_subtypes)
 		);
+	}
+
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> value_type
+	):
+		  Expr(
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  tsh::getMetaType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  },
+			  origin
+		  ),
+		  value_type(std::move(value_type)) {}
+
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_type
+	):
+		  Expr(expression_type, origin),
+		  value_type(std::move(value_type)) {}
+
+	void OptionalTypeConstructorExpr::debugPrint(std::ostream& out) const {
+		out << "?";
+		value_type->debugPrint(out);
+	}
+
+	Box<Expr> OptionalTypeConstructorExpr::clone() const {
+		return makeBox<OptionalTypeConstructorExpr>(expression_type, origin, value_type->clone());
 	}
 
 	VariantConstructExpr::VariantConstructExpr(
@@ -1176,9 +1203,15 @@ namespace compiler::helios::code {
 		query::Context&, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type
 	):
 		  Expr(
-			  tsh::ExpressionType<>(
-				  target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
+			  CastExpr::castCreatesTemporary(
+				  source_expr->expression_type.getSymbolType(), target_type
+			  )
+				  ? tsh::ExpressionType<>(
+						target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+					)
+				  : tsh::ExpressionType<>(
+						target_type, source_expr->expression_type.getValueCategory()
+					),
 			  origin
 		  ),
 		  source_expr(std::move(source_expr)),
@@ -1204,26 +1237,58 @@ namespace compiler::helios::code {
 		return makeBox<CastExpr>(expression_type, origin, source_expr->clone(), target_type);
 	}
 
-	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  [](const tsh::ExpressionType<>& inner_type) -> tsh::ValueCategory {
-					  switch (inner_type.getSymbolType().getRefKind()) {
-					  case tsh::ReferenceKind::Direct:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
-					  case tsh::ReferenceKind::Ref:
-						  return inner_type.getValueCategory();
-					  case tsh::ReferenceKind::Box:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
-					  }
-					  CORE_UNREACHABLE();
-				  }(inner->expression_type)
+	bool CastExpr::castCreatesTemporary(tsh::SymbolType<> source, tsh::SymbolType<> target) {
+		// @TODO: #3853 go back to this once defined
+		auto is_direct = [](const tsh::SymbolType<>& type) -> bool {
+			return type.getRefKind() == tsh::ReferenceKind::Direct;
+		};
 
-			  ),
-			  origin
-		  ),
+		if (source == target) return false;
+
+		// If cast is from ref T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Ref
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		// If cast is from box T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Box
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		if (source.getType().getKind() == tsh::Kind::Void) return false;
+
+		if (is_direct(source) && is_direct(target)) {
+			if (source.getType() == target.getType()) return false;  // const drop
+		}
+		return true;
+	}
+
+	bool CastExpr::castCreatesTemporary() const {
+		return CastExpr::castCreatesTemporary(
+			source_expr->expression_type.getSymbolType(), target_type
+		);
+	}
+
+	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+		  Expr(typeOfRefTo(inner->expression_type), origin),
 		  inner(std::move(inner)) {}
+
+	tsh::ExpressionType<> RefOfExpr::typeOfRefTo(const tsh::ExpressionType<>& inner_type) {
+		return { inner_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
+			     [&]() -> tsh::ValueCategory {
+					 switch (inner_type.getSymbolType().getRefKind()) {
+					 case tsh::ReferenceKind::Direct:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+					 case tsh::ReferenceKind::Ref:
+						 return inner_type.getValueCategory();
+					 case tsh::ReferenceKind::Box:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+					 }
+					 CORE_UNREACHABLE();
+				 }() };
+	}
 
 	RefOfExpr::RefOfExpr(
 		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner

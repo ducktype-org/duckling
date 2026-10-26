@@ -17,27 +17,35 @@
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/extend_cpp/flag.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/types/bit256.hpp>
 
 #include <hashing/hash.hpp>
 
-namespace compiler::tsh {
-	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
-	// Maybe in the future we want to bring back "Identifiable" and make a struct to keep more
-	// information
-	/**
-	 * Primary category describes source of the value.
-	 */
-	enum class PrimaryCategory {
-		Temporary,    /**< Product of expression evaluation. An owned rvalue. */
-		Local,        /**< A local variable. An owned lvalue. */
-		Global,       /**< A global variable. A non-owned lvalue. */
-		Literal,      /**< A value written explicitly in the code. A non-owned rvalue. */
-		Dereferenced, /**< A location reached by dereferencing a pointer/reference/box. A non-owned
-		                   lvalue. It may be read or assigned to, but not moved out of, because this
-		                   expression does not own the pointee. */
-	};
+#include <cstdint>
+#include <string>
 
+// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
+// Maybe in the future we want to bring back "Identifiable" and make a struct to keep more
+// information
+/**
+ * Primary category describes source of the value.
+ */
+MAKE_STRINGIFYABLE_ENUM(compiler::tsh, uint8_t, PrimaryCategory,
+	/// Product of expression evaluation. An owned rvalue.
+	Temporary,
+	/// A local variable. An owned lvalue.
+	Local,
+	/// A global variable. A non-owned lvalue.
+	Global,
+	/// A value written explicitly in the code. A non-owned rvalue.
+	Literal,
+	/// A location reached by dereferencing a pointer/reference/box. A non-owned lvalue. It may be
+	/// read or assigned to, but not moved out of, because this expression does not own the pointee.
+	Dereferenced
+)
+
+namespace compiler::tsh {
 	/**
 	 * @brief Get the primary category of a symbol: either Local or Global.
 	 * @param ctx The query context, needed to distinguish local variables from global ones.
@@ -104,8 +112,6 @@ namespace compiler::tsh {
 		// It is not obvious what the default value category should be,
 		// so the default constructor is disabled.
 		ValueCategory() = delete;
-
-		ValueCategory(const ValueCategory&) = default;
 
 		explicit ValueCategory(const PrimaryCategory&);
 
@@ -213,6 +219,11 @@ namespace compiler::tsh {
 		}
 
 		auto operator<=>(const ValueCategory& other) const = default;
+
+		/**
+		 * @brief A human readable description of the value category.
+		 */
+		[[nodiscard]] std::string toString() const;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
