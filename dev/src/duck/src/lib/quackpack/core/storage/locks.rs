@@ -139,7 +139,7 @@ fn cleanup_locks_impl(
 /// leads to an ERROR_SHARING_VIOLATION error.
 #[cfg(windows)]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
-    use crate::util::path_ops::rm;
+    use crate::util::path_ops::remove_file;
     let path = root.not_locked_path().join(name);
     match rm(path) {
         Ok(()) => Ok(()),
@@ -161,7 +161,7 @@ fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
 
 #[cfg(not(windows))]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
-    use crate::util::path_ops::rm;
+    use crate::util::path_ops::remove_file;
     let guard = match root.try_open_exclusive(name) {
         Ok(guard) => guard,
         Err(e) => {
@@ -183,7 +183,7 @@ fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
         }
     };
     if let Some(ref guard) = guard {
-        rm(guard.path())?;
+        remove_file(guard.path())?;
     };
     Ok(())
 }

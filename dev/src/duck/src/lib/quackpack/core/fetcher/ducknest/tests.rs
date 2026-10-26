@@ -16,7 +16,7 @@ use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
 use crate::util::file_locks::FileLockManager;
-use crate::util::path_ops::read_to_string;
+use crate::util::path_ops::read_path_to_string;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {
@@ -220,7 +220,7 @@ fn download_blob() {
     ))
     .unwrap();
     assert_eq!(
-        read_to_string(dir.path().join("target")).unwrap(),
+        read_path_to_string(dir.path().join("target")).unwrap(),
         "foo-1.2.3"
     );
 }

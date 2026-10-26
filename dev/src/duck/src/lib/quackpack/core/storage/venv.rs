@@ -69,7 +69,7 @@ use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::hash;
 use crate::util::path_ops::{
-    MkdirOptions, copy_file_to, copy_to, mkdir, read_to_string, rmtree, touch, try_fsync_dir,
+    MkdirOptions, copy_file, mkdir, read_path_to_string, remove_tree, touch, try_fsync_dir,
 };
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
@@ -147,7 +147,7 @@ impl VenvData {
     #[tracing::instrument(skip_all, fields(path = %path.display()))]
     fn load(path: &Path) -> QuackResult<Self> {
         trace!("loading venv data");
-        let content = read_to_string(path)?;
+        let content = read_path_to_string(path)?;
         let Some((data, found_checksum)) = content.rsplit_once("\n") else {
             error!("missing a newline");
             return Err(CorruptedVenvError {
@@ -422,7 +422,7 @@ impl Venv {
                 }
             };
             if let Some(venv) = data {
-                copy_to(backup_metadata, metadata)?;
+                copy_file(backup_metadata, metadata)?;
                 let mut this = Self::new(id, venv);
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(Utc::now());
@@ -436,7 +436,7 @@ impl Venv {
         }
         // both files are not valid, so the venv does not exist,
         // put it in the canonical form by deleting its directory
-        rmtree(storage.venv_dir(id))?;
+        remove_tree(storage.venv_dir(id))?;
         try_fsync_dir(storage.venvs_root_dir())?;
         Ok(None)
     }
@@ -476,12 +476,12 @@ impl Venv {
             // move old current state to backup file, as when error occurs during
             // overwriting the main file, the invariants will be upkept.
             // (the backup file will be valid)
-            copy_file_to(&metadata, &backup_metadata)?;
+            copy_file(&metadata, &backup_metadata)?;
         }
         self.data.save_to(&metadata)?;
         // also initialize the `.old` file, such that issues
         // relating to unavailable directory `fsync` are minimized
-        copy_file_to(metadata, &backup_metadata)?;
+        copy_file(metadata, &backup_metadata)?;
         try_fsync_dir(storage.venv_dir(self.id))?;
         Ok(())
     }

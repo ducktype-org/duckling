@@ -25,7 +25,7 @@ use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops::{touch, try_fsync_dir, write};
+use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
@@ -71,7 +71,7 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
     touch(&manifest).unwrap();
-    write(&manifest, contents).unwrap();
+    write_file(&manifest, contents).unwrap();
     try_fsync_dir(dir.path()).unwrap();
     (dir, manifest)
 }

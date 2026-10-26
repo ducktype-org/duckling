@@ -27,11 +27,11 @@ pub enum MkdirOptions {
 }
 
 /// Copy the contents of one file into another and synchronize the result to disk.
-pub fn copy_file_to(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
-    copy_file_to_inner(from.as_ref(), to.as_ref())
+pub fn copy_file(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+    copy_file_inner(from.as_ref(), to.as_ref())
 }
 
-fn copy_file_to_inner(from: &Path, to: &Path) -> QuackResult<()> {
+fn copy_file_inner(from: &Path, to: &Path) -> QuackResult<()> {
     let mut source = {
         let mut opts = OpenOptions::new();
         open(from, opts.read(true))?
@@ -195,7 +195,7 @@ fn normalize_inner(path: &Path) -> PathBuf {
 ///
 /// This is equivalent to:
 /// ```rust,ignore (illustrative)
-/// ctx.cwd().join(self).normalize()
+/// normalize(ctx.cwd().join(self))
 /// ```
 pub fn resolve(path: impl AsRef<Path>, ctx: &DuckContext) -> PathBuf {
     normalize(ctx.cwd().join(path))
@@ -205,7 +205,8 @@ pub fn resolve(path: impl AsRef<Path>, ctx: &DuckContext) -> PathBuf {
 ///
 /// This is equivalent to:
 /// ```rust,ignore (illustrative)
-/// ctx.cwd().join(self.expand_tilde(ctx)).normalize()
+/// let resolved = expand_tilde(path, ctx);
+/// normalize(ctx.cwd().join(resolved))
 /// ```
 pub fn resolve_with_tilde(path: impl AsRef<Path>, ctx: &DuckContext) -> PathBuf {
     let resolved = expand_tilde(path, ctx);
@@ -308,16 +309,8 @@ fn is_executable_inner(_path: &Path) -> bool {
     false
 }
 
-/// A wrapper around [`std::fs::copy`].
-pub fn copy_to(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<u64> {
-    let from = from.as_ref();
-    let to = to.as_ref();
-    fs::copy(from, to)
-        .with_context(|| format!("failed to copy `{}` to `{}", from.display(), to.display()))
-}
-
 /// A wrapper around [`std::fs::hard_link`].
-pub fn hard_link_to(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+pub fn hard_link(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
     fs::hard_link(from, to).with_context(|| {
@@ -330,19 +323,19 @@ pub fn hard_link_to(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult
 }
 
 /// A wrapper around [`std::fs::read`].
-pub fn read(path: impl AsRef<Path>) -> QuackResult<Vec<u8>> {
+pub fn read_path(path: impl AsRef<Path>) -> QuackResult<Vec<u8>> {
     let path = path.as_ref();
     fs::read(path).with_context(|| format!("failed to read `{}`", path.display()))
 }
 
 /// A wrapper around [`std::fs::read_to_string`].
-pub fn read_to_string(path: impl AsRef<Path>) -> QuackResult<String> {
+pub fn read_path_to_string(path: impl AsRef<Path>) -> QuackResult<String> {
     let path = path.as_ref();
     fs::read_to_string(path).with_context(|| format!("failed to read `{}`", path.display()))
 }
 
 /// A wrapper around [`std::fs::rename`].
-pub fn rename_to(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
     fs::rename(from, to).with_context(|| {
@@ -355,21 +348,21 @@ pub fn rename_to(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()
 }
 
 /// A wrapper around [`std::fs::remove_file`].
-pub fn rm(path: impl AsRef<Path>) -> QuackResult<()> {
+pub fn remove_file(path: impl AsRef<Path>) -> QuackResult<()> {
     let path = path.as_ref();
     ignore_not_found(fs::remove_file(path))
         .with_context(|| format!("failed to remove file `{}`", path.display()))
 }
 
 /// A wrapper around [`std::fs::remove_dir`].
-pub fn rmdir(path: impl AsRef<Path>) -> QuackResult<()> {
+pub fn remove_dir(path: impl AsRef<Path>) -> QuackResult<()> {
     let path = path.as_ref();
     ignore_not_found(fs::remove_dir(path))
         .with_context(|| format!("failed to remove directory `{}`", path.display()))
 }
 
 /// A wrapper around [`std::fs::remove_dir_all`].
-pub fn rmtree(path: impl AsRef<Path>) -> QuackResult<()> {
+pub fn remove_tree(path: impl AsRef<Path>) -> QuackResult<()> {
     let path = path.as_ref();
     ignore_not_found(fs::remove_dir_all(path))
         .with_context(|| format!("failed to remove tree at `{}`", path.display()))
@@ -383,7 +376,7 @@ pub fn set_permissions(path: impl AsRef<Path>, permissions: Permissions) -> Quac
 }
 
 /// A wrapper around [`std::fs::write`].
-pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> QuackResult<()> {
+pub fn write_file(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> QuackResult<()> {
     let path = path.as_ref();
     fs::write(path, contents).with_context(|| format!("failed to write to `{}`", path.display()))
 }
@@ -400,7 +393,7 @@ pub fn mtime(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
     let metadata = metadata(path)?;
     let mtime = metadata
         .modified()
-        .with_context(|| format!("when getting the modification time of `{}`", path.display()))?;
+        .with_context(|| format!("failed to get modification time of `{}`", path.display()))?;
     Ok(mtime)
 }
 

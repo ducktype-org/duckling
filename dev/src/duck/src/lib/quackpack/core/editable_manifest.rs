@@ -19,7 +19,7 @@ use crate::quackpack::core::{
 };
 use crate::quackpack::schemas::manifest::Dependency;
 use crate::util::DescriptionWithAnArticle;
-use crate::util::path_ops::write;
+use crate::util::path_ops::write_file;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
 
 /// Desired order of the top-level keys in a manifest.
@@ -252,7 +252,7 @@ impl<'duck> EditableManifest<'duck> {
         let new_manifest = self
             .check_if_parses()
             .context("the modified manifest would fail to parse")?;
-        write(self.manifest_path(), new_manifest).with_context(|| {
+        write_file(self.manifest_path(), new_manifest).with_context(|| {
             format!(
                 "failed to write the new manifest into file at `{}`",
                 self.manifest_path().display()

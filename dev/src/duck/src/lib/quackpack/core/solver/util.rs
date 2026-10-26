@@ -164,14 +164,14 @@ mod test {
     use crate::quackpack::core::solver::util::get_possible_realizations;
     use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops::{touch, try_fsync_dir, write};
+    use crate::util::path_ops::{touch, try_fsync_dir, write_file};
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
         touch(&manifest).unwrap();
-        write(&manifest, contents).unwrap();
+        write_file(&manifest, contents).unwrap();
         try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
     }

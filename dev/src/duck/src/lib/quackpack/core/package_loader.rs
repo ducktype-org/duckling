@@ -228,7 +228,7 @@ mod tests {
 
     use crate::DuckContext;
     use crate::quackpack::core::PackageLoader;
-    use crate::util::path_ops::{MkdirOptions, mkdir, normalize, touch, write};
+    use crate::util::path_ops::{MkdirOptions, mkdir, normalize, touch, write_file};
 
     const BASIC_MANIFEST: &str = r"
 metadata:
@@ -276,7 +276,7 @@ metadata:
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         touch(&file).unwrap();
-        write(&file, BASIC_MANIFEST).unwrap();
+        write_file(&file, BASIC_MANIFEST).unwrap();
         let ctx = DuckContext::default();
         let package =
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap();
@@ -291,7 +291,7 @@ metadata:
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         touch(&file).unwrap();
-        write(&file, BASIC_MANIFEST).unwrap();
+        write_file(&file, BASIC_MANIFEST).unwrap();
         let child = tmp_file.path().join("foo");
         mkdir(&child, MkdirOptions::WithoutParents).unwrap();
         assert!(child.is_dir());
@@ -308,7 +308,7 @@ metadata:
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         touch(&file).unwrap();
-        write(&file, BASIC_MANIFEST).unwrap();
+        write_file(&file, BASIC_MANIFEST).unwrap();
         let ctx = DuckContext::default();
         let package = PackageLoader::find_at_exact_directory(tmp_file.path(), &ctx).unwrap();
         assert_eq!(

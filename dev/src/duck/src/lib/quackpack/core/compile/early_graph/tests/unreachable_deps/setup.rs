@@ -14,7 +14,7 @@ use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::storage::paths;
 use crate::quackpack::core::{PackageId, PackageLoader, Version, fetcher};
-use crate::util::path_ops::{touch, try_fsync_dir, write};
+use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 use crate::util::test_utils::setup_test;
 
 pub fn setup_mock_storage() -> (DuckContext, TempDir) {
@@ -54,7 +54,7 @@ pub fn setup_mock_packages(root: &Path) {
         )
         .unwrap();
 
-        write(
+        write_file(
             root.join("pkg")
                 .join(mock_registry_pkg.storage_name())
                 .join(PackageLoader::MANIFEST_NAME),
@@ -107,7 +107,7 @@ features:
 fn setup_mock_root_package(root: &Path) {
     let pkg_root = root.join("root");
     touch(pkg_root.join("src").join("main.duck")).unwrap();
-    write(
+    write_file(
         pkg_root.join(PackageLoader::MANIFEST_NAME),
         "
 metadata:

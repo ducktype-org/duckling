@@ -40,7 +40,7 @@ use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::parse::manifest::parse;
 use crate::quackpack::core::script::FrontMatter;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops::read_to_string;
+use crate::util::path_ops::read_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
@@ -102,7 +102,7 @@ pub fn capture_frontmatter(contents: &str) -> QuackResult<Option<Captures<'_>>> 
 /// the schema is generated based on the path specified in the import.
 /// If the script does not contain a frontmatter, returns [`ManifestSchema`] with `None`s.
 fn generate_schema(path: &Path, errors: &mut Errors) -> QuackResult<ManifestSchema> {
-    let content = read_to_string(path)?;
+    let content = read_path_to_string(path)?;
     // @TODO: #2860 Finalize frontmatters syntax
     // This has a bug when `</frontmatter>` is in a yaml comment (maybe don't care / make it a feature).
     // Moreover the syntax is not yet finalized.
@@ -175,7 +175,7 @@ fn resolve_import_in_schema(
             .parent()
             .expect("Script path should point to a file with parent");
         let imported_path = root_path.join(import);
-        let content = read_to_string(&imported_path).with_context(|| {
+        let content = read_path_to_string(&imported_path).with_context(|| {
             format!(
                 "while reading the file imported by `{}` at `{}`",
                 script_path.display(),

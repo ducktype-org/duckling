@@ -142,7 +142,7 @@ mod tests {
     use tempfile::{TempDir, tempdir};
 
     use super::*;
-    use crate::util::path_ops::write;
+    use crate::util::path_ops::write_file;
     use crate::util::test_utils::setup_test;
 
     fn setup_duck_home_with_a_given_max_fix_distance(dist: u64) -> (DuckContext, TempDir) {
@@ -153,7 +153,7 @@ mod tests {
         unsafe {
             std::env::set_var("DUCK_HOME", dir.path());
         }
-        write(
+        write_file(
             dir.path().join("config.yaml"),
             format!(
                 "security:

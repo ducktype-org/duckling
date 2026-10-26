@@ -17,14 +17,14 @@ use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops::{normalize, touch, try_fsync_dir, write};
+use crate::util::path_ops::{normalize, touch, try_fsync_dir, write_file};
 use crate::{DuckContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join("x");
     touch(&manifest).unwrap();
-    write(&manifest, contents).unwrap();
+    write_file(&manifest, contents).unwrap();
     try_fsync_dir(dir.path()).unwrap();
     (dir, manifest)
 }
@@ -33,7 +33,7 @@ fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let frontmatter = dir.path().join("x");
     touch(&frontmatter).unwrap();
-    write(
+    write_file(
         &frontmatter,
         format!("<frontmatter>\n{}\n</frontmatter>", contents),
     )
@@ -1226,7 +1226,7 @@ fn frontmatter_with_import() {
     let importing = dir.path().join("x");
     let imported = dir.path().join("y");
     touch(&importing).unwrap();
-    write(
+    write_file(
         &importing,
         r#" 
             
@@ -1237,7 +1237,7 @@ import: y
     )
     .unwrap();
     touch(&imported).unwrap();
-    write(
+    write_file(
         &imported,
         r#"
 dependencies:
@@ -1291,7 +1291,7 @@ let a = 5
 import: y
 </frontmatter>
         "#;
-    write(&script, contents).unwrap();
+    write_file(&script, contents).unwrap();
     let ctx = DuckContext::default();
     // Check that we don't find a frontmatter...
     assert!(!Script::has_frontmatter(&script).unwrap());
@@ -1306,7 +1306,7 @@ fn fail_not_closed_frontmatter() {
     let dir = TempDir::new().unwrap();
     let script = dir.path().join("x");
     touch(&script).unwrap();
-    write(
+    write_file(
         &script,
         r#"
 <frontmatter>

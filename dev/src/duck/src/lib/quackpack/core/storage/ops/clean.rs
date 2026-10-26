@@ -20,7 +20,7 @@ use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::util::dir_iterator::DirContents;
 use crate::util::error::ErrorsLogger;
-use crate::util::path_ops::{rm, rmtree};
+use crate::util::path_ops::{remove_file, remove_tree};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug)]
@@ -54,9 +54,9 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
     if !storage.venv_dir(venv_id).is_dir() {
         return Ok(());
     }
-    rmtree(storage.venv_dir(venv_id))?;
-    rm(storage.sync_locks_path().join(venv_id))?;
-    rm(data_lock.path())?;
+    remove_tree(storage.venv_dir(venv_id))?;
+    remove_file(storage.sync_locks_path().join(venv_id))?;
+    remove_file(data_lock.path())?;
     info!("deleted venv");
     ctx.info(format!("successfully removed venv `{venv_id}`"))?;
     Ok(())
@@ -117,7 +117,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         .collect::<Vec<_>>();
     debug!(?packages_to_remove, "cleaning packages");
     for pkg in packages_to_remove.iter() {
-        let _ = logger.log_result(rmtree(pkg));
+        let _ = logger.log_result(remove_tree(pkg));
     }
     info!(?packages_to_remove, "cleaned packages");
     ctx.info("successfully cleaned the storage")?;
@@ -146,7 +146,7 @@ fn clean_venv_from_storage(
     let Some(mut venv) = venv else {
         error!("failed to fix and load venv");
         warn!("will clean regardless of what");
-        rmtree(dir.path()).with_context(|| {
+        remove_tree(dir.path()).with_context(|| {
             format!(
                 "while removing venv `{venv_id}` at `{}`",
                 dir.path().display()
@@ -179,7 +179,7 @@ fn clean_venv_from_storage(
     );
     if should_remove_venv {
         debug!("removing venv from the shared storage, as it's too old and is ephemeral");
-        rmtree(dir.path()).with_context(|| {
+        remove_tree(dir.path()).with_context(|| {
             format!(
                 "while removing venv `{venv_id}` at `{}`",
                 dir.path().display()
