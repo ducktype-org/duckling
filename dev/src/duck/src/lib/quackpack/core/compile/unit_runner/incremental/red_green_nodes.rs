@@ -46,7 +46,7 @@ use crate::quackpack::core::compile::unit_runner::outputs::unit_output;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::util::dir_iterator::create_dir_iterator;
 use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 
 impl UnitGraphNode {
     /// Main logic for checking whether a [`UnitGraphNode`] is green or red.

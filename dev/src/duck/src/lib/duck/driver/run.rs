@@ -23,7 +23,7 @@ use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_s
 use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::command_ext::CommandExt;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 /// Run the duck with the given [`DuckContext`].

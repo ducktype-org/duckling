@@ -9,7 +9,7 @@
 use tracing::error;
 
 use crate::util::file_locks::LockedFile;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::util::set_once::SetOnce;
 
 /// Remove a file on drop, if armed.

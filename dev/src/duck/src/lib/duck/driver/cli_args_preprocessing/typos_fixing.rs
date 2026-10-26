@@ -142,7 +142,7 @@ mod tests {
     use tempfile::{TempDir, tempdir};
 
     use super::*;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops::PathOpsExt;
     use crate::util::test_utils::setup_test;
 
     fn setup_duck_home_with_a_given_max_fix_distance(dist: u64) -> (DuckContext, TempDir) {
