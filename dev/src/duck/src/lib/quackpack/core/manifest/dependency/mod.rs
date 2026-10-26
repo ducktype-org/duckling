@@ -222,7 +222,6 @@ impl Dependency {
         self.conditions.as_ref()
     }
 
-
     /// Get the [`Identity`] of this [`Dependency`].
     ///
     /// This helper exists, because [`Identity`] is unambiguous, unlike [`FullIdentity`],
