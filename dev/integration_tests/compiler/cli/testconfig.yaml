@@ -229,6 +229,24 @@ Tests:
           | grep -F 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc)'
         ExitCode: 0
 
+  compile-script-print-ir:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Run: |
+      for category in @{print_categories}; do
+        @{duckc_path} compile_script ./duck_scripts/foo.dks @{backend_flags} \
+        --no-executable --print-ir "$category" -a @{case_build} \
+        --custom-std-artifacts-path @{case_std_artifacts} > "$DIT_TMP_DIR/printed-ir" || exit 1;
+        grep -q 'foo' "$DIT_TMP_DIR/printed-ir" || exit 1;
+      done
+    Cases:
+      llvm:
+        backend_flags: ""
+        print_categories: "hir mir lir"
+      dvm:
+        backend_flags: "--dvm-backend"
+        print_categories: "dbc"
+
   compile-script-no-executable:
     # Compile the script object/bytecode artifacts but skip the final executable/package link.
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"

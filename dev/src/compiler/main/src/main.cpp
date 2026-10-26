@@ -61,6 +61,8 @@
 #include <array>
 #include <iostream>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -345,49 +347,42 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
  */
 namespace debug_options {
 	using compiler::driver::options_types::DebugOptions;
+	using IROption = std::pair<std::string_view, bool DebugOptions::*>;
 
-	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
-		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
-			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
-			{ "dbc", &DebugOptions::dump_dbc }, { "lir", &DebugOptions::dump_lir },
-			{ "mir", &DebugOptions::dump_mir }, { "hir", &DebugOptions::dump_hir },
-		};
-		return dump_field_mapping;
-	}
+	constexpr std::array<IROption, 6> DUMP_IR_OPTIONS{ {
+		{ "hir", &DebugOptions::dump_hir },
+		{ "mir", &DebugOptions::dump_mir },
+		{ "lir", &DebugOptions::dump_lir },
+		{ "llvm", &DebugOptions::dump_llvm },
+		{ "asm", &DebugOptions::dump_asm },
+		{ "dbc", &DebugOptions::dump_dbc },
+	} };
+	constexpr std::array<IROption, 4> PRINT_IR_OPTIONS{ {
+		{ "hir", &DebugOptions::print_hir },
+		{ "mir", &DebugOptions::print_mir },
+		{ "lir", &DebugOptions::print_lir },
+		{ "dbc", &DebugOptions::print_dbc },
+	} };
 
-	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
-		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
-			{ "dbc", &DebugOptions::print_dbc },
-			{ "lir", &DebugOptions::print_lir },
-			{ "mir", &DebugOptions::print_mir },
-			{ "hir", &DebugOptions::print_hir },
-		};
-		return print_field_mapping;
-	}
-
-	const std::vector<std::string>& getDumpIRCategories() {
-		static const std::vector<std::string> categories{
-			"hir", "mir", "lir", "llvm", "asm", "dbc"
-		};
-		return categories;
-	}
-
-	const std::vector<std::string>& getPrintIRCategories() {
-		static const std::vector<std::string> categories{ "hir", "mir", "lir", "dbc" };
+	std::vector<std::string> getIRCategories(const auto& options) {
+		std::vector<std::string> categories;
+		categories.reserve(options.size());
+		for (const auto& [name, field]: options) categories.emplace_back(name);
 		return categories;
 	}
 
 	auto getClahDumpIRParameter() {
-		return clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-											   "categories",
-											   clah::CategoryParser::make(getDumpIRCategories())
-										   ))
+		return clah::ParamBuilder::ofValue(
+				   clah::CategoryListParser::make(
+					   "categories", clah::CategoryParser::make(getIRCategories(DUMP_IR_OPTIONS))
+				   )
+		)
 		    .addLongName("dump-ir")
 		    .addShortDesc("Dump selected intermediate representations to files.")
 		    .addLongDesc(
 				"Supported categories and artifact extensions, in compilation order, are "
 				"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
-				"LLVM IR and assembly require the LLVM backend; DBC requires --dvm-backend."
+				"LLVM IR and assembly require the LLVM backend; DBC requires the DVM backend."
 			)
 		    .build();
 	}
@@ -406,10 +401,11 @@ namespace debug_options {
 	auto getClahDebugParameters() {
 		return std::array{
 			getClahDumpIRParameter(),
-			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-											"categories",
-											clah::CategoryParser::make(getPrintIRCategories())
-										))
+			clah::ParamBuilder::ofValue(
+				clah::CategoryListParser::make(
+					"categories", clah::CategoryParser::make(getIRCategories(PRINT_IR_OPTIONS))
+				)
+			)
 				.addLongName("print-ir")
 				.addShortDesc("Print selected intermediate representations to stdout.")
 				.addLongDesc("Possible values are: hir, mir, lir, dbc.")
@@ -427,12 +423,15 @@ namespace debug_options {
 			.immediate_print_diagnostics = true,
 		};
 
-		if (auto dump_categories = parsing_result.getValue<std::vector<std::string>>("dump-ir"))
-			for (const auto& category: dump_categories.value())
-				debug_options.*(getDebugDumpIROptions().at(category)) = true;
-		if (auto print_categories = parsing_result.getValue<std::vector<std::string>>("print-ir"))
-			for (const auto& category: print_categories.value())
-				debug_options.*(getDebugPrintIROptions().at(category)) = true;
+		const auto apply_ir_options = [&](const char* flag, const auto& options) {
+			if (auto categories = parsing_result.getValue<std::vector<std::string>>(flag))
+				for (const auto& [category, field]: options)
+					debug_options.*field
+						= std::find(categories->begin(), categories->end(), category)
+					   != categories->end();
+		};
+		apply_ir_options("dump-ir", DUMP_IR_OPTIONS);
+		apply_ir_options("print-ir", PRINT_IR_OPTIONS);
 
 		return debug_options;
 	}
@@ -1244,7 +1243,7 @@ clah::Clah getClahForMain() {
 			)
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
-				.add(debug_options::getClahDumpIRParameter())
+				.add(debug_options::getClahDebugParameters())
 				.add(getClahLinkingOptions())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)

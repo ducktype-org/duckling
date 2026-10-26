@@ -2,8 +2,9 @@
 
 The `duckc` compilation commands share `-a` / `--artifact-location` for selecting the root
 directory for build and debug artifacts. The default is `./duck_build/`. The commands also share
-`--dump-ir` for requesting compiler representations. Debug dumps are written under
-`duck_debug_artifacts/` inside the selected artifact directory.
+`--dump-ir` for writing compiler representations under `duck_debug_artifacts/` inside the selected
+artifact directory, and `--print-ir` for printing them to stdout. Printing supports `hir`, `mir`,
+`lir`, and `dbc`.
 
 The dump categories are listed in compilation order:
 
@@ -30,8 +31,10 @@ The same artifact location and dump options apply to these commands:
 compilation failures normally. Use the command's `--help` output for its complete command-specific
 options.
 
-@TODO: #3861 Requesting an applicable `--dump-ir` category, or `--print-ir` on commands that support it,
-currently recompiles affected modules even when cached objects are available.
+@TODO: #3861 Requesting an applicable `--dump-ir` or `--print-ir` category currently bypasses cached
+objects for all visited modules using that backend (including core and standard-library modules).
+HIR, MIR, and LIR requests apply to both backends; LLVM IR and assembly apply only to LLVM, and DBC
+only to DVM. Categories for the other backend leave its cached objects usable.
 
 The focused CLI integration cases live in
 [`integration_tests/compiler/cli/testconfig.yaml`](../../../integration_tests/compiler/cli/testconfig.yaml).
