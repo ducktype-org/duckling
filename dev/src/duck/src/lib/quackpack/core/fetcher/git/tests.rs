@@ -11,7 +11,7 @@ use url::Url;
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::git::GitClient;
 use crate::quackpack::core::{GitReference, PackageLoader};
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::{read_to_string, write};
 
 fn generate_local_git_repo() -> TempDir {
     let tmpdir = tempdir().unwrap();
@@ -19,17 +19,16 @@ fn generate_local_git_repo() -> TempDir {
     let repo = Repository::init(tmpdir.path()).unwrap();
 
     let test_file = tmpdir.path().join("test_file.txt");
-    test_file.as_path().write("Hello, Git!").unwrap();
+    write(test_file.as_path(), "Hello, Git!").unwrap();
     let manifest = tmpdir.path().join(PackageLoader::MANIFEST_NAME);
-    manifest
-        .as_path()
-        .write(
-            "\
+    write(
+        manifest.as_path(),
+        "\
 metadata:
   name: foo
   version: '1'",
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     let mut index = repo.index().unwrap();
     index
@@ -72,7 +71,7 @@ fn clone_local_repo() {
     assert!(target.is_dir());
     assert!(Repository::open(&target).is_ok());
     assert_eq!(
-        target.join("test_file.txt").read_to_string().unwrap(),
+        read_to_string(target.join("test_file.txt")).unwrap(),
         "Hello, Git!"
     );
 }

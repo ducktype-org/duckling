@@ -37,8 +37,6 @@ use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::util::dir_iterator::DirContents;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-#[cfg(windows)]
-use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -141,8 +139,9 @@ fn cleanup_locks_impl(
 /// leads to an ERROR_SHARING_VIOLATION error.
 #[cfg(windows)]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
+    use crate::util::path_ops::rm;
     let path = root.not_locked_path().join(name);
-    match path.rm() {
+    match rm(path) {
         Ok(()) => Ok(()),
         Err(e) => {
             let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() else {
@@ -162,8 +161,7 @@ fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
 
 #[cfg(not(windows))]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
-    use crate::util::path_ops::PathOpsExt;
-
+    use crate::util::path_ops::rm;
     let guard = match root.try_open_exclusive(name) {
         Ok(guard) => guard,
         Err(e) => {
@@ -185,7 +183,7 @@ fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
         }
     };
     if let Some(ref guard) = guard {
-        guard.path().rm()?;
+        rm(guard.path())?;
     };
     Ok(())
 }

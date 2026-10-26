@@ -68,7 +68,9 @@ use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::hash;
-use crate::util::path_ops::{MkdirOptions, PathOpsExt};
+use crate::util::path_ops::{
+    MkdirOptions, copy_file_to, copy_to, mkdir, read_to_string, rmtree, touch, try_fsync_dir,
+};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -145,7 +147,7 @@ impl VenvData {
     #[tracing::instrument(skip_all, fields(path = %path.display()))]
     fn load(path: &Path) -> QuackResult<Self> {
         trace!("loading venv data");
-        let content = path.read_to_string()?;
+        let content = read_to_string(path)?;
         let Some((data, found_checksum)) = content.rsplit_once("\n") else {
             error!("missing a newline");
             return Err(CorruptedVenvError {
@@ -186,7 +188,7 @@ impl VenvData {
         trace!("saving venv data");
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
-        let mut file = path.touch()?;
+        let mut file = touch(path)?;
         file.set_len(0)
             .with_context(|| format!("failed to truncate `{}`", path.display()))?;
         let full_data = format!("{data}\n{checksum}");
@@ -420,7 +422,7 @@ impl Venv {
                 }
             };
             if let Some(venv) = data {
-                backup_metadata.copy_to(metadata)?;
+                copy_to(backup_metadata, metadata)?;
                 let mut this = Self::new(id, venv);
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(Utc::now());
@@ -434,8 +436,8 @@ impl Venv {
         }
         // both files are not valid, so the venv does not exist,
         // put it in the canonical form by deleting its directory
-        storage.venv_dir(id).rmtree()?;
-        storage.venvs_root_dir().try_fsync_dir()?;
+        rmtree(storage.venv_dir(id))?;
+        try_fsync_dir(storage.venvs_root_dir())?;
         Ok(None)
     }
 
@@ -468,19 +470,19 @@ impl Venv {
             format!("path `{}` does not have a parent?", metadata.display())
         })?;
         if !parent.exists() {
-            parent.mkdir(MkdirOptions::WithParents)?;
+            mkdir(parent, MkdirOptions::WithParents)?;
         }
         if existed {
             // move old current state to backup file, as when error occurs during
             // overwriting the main file, the invariants will be upkept.
             // (the backup file will be valid)
-            metadata.copy_file_to(&backup_metadata)?;
+            copy_file_to(&metadata, &backup_metadata)?;
         }
         self.data.save_to(&metadata)?;
         // also initialize the `.old` file, such that issues
         // relating to unavailable directory `fsync` are minimized
-        metadata.copy_file_to(&backup_metadata)?;
-        storage.venv_dir(self.id).try_fsync_dir()?;
+        copy_file_to(metadata, &backup_metadata)?;
+        try_fsync_dir(storage.venv_dir(self.id))?;
         Ok(())
     }
 }

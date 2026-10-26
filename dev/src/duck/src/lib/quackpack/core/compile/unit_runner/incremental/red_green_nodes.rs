@@ -46,7 +46,7 @@ use crate::quackpack::core::compile::unit_runner::outputs::unit_output;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::util::dir_iterator::create_dir_iterator;
 use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::{ctime, mtime};
 
 impl UnitGraphNode {
     /// Main logic for checking whether a [`UnitGraphNode`] is green or red.
@@ -245,8 +245,8 @@ fn check_for_updates_single_step(
                 .any(|&e| e == extention)
         {
             // `path` is a Duckling file.
-            let mtime = path.mtime()?;
-            let ctime = path.ctime()?;
+            let mtime = mtime(&path)?;
+            let ctime = ctime(&path)?;
             let mtime_ok = mtime < timestamp && ctime < timestamp;
             *cur_result += SourceSpecificCheckResult::for_single_file(mtime_ok);
         }
@@ -275,8 +275,8 @@ impl Unit {
     ) -> QuackResult<bool> {
         let artifacts_file = unit_output(self, unit_id_in_graph, graph, layout, bcx)?;
         if artifacts_file.exists() {
-            let mtime = artifacts_file.mtime()?;
-            let ctime = artifacts_file.ctime()?;
+            let mtime = mtime(&artifacts_file)?;
+            let ctime = ctime(artifacts_file)?;
             Ok(mtime < previous_timestamp && ctime < previous_timestamp)
         } else {
             Ok(false)

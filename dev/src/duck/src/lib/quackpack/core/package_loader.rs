@@ -18,7 +18,7 @@ use crate::quackpack::core::script::{PackageScript, Script};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::resolve;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -94,7 +94,7 @@ impl PackageLoader {
         ctx: &'duck DuckContext,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageContext<'duck>> {
-        let start = start.resolve(ctx);
+        let start = resolve(start, ctx);
         if !start.is_dir() {
             let err = qp_err!("the path `{}` is not a directory", start.display());
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
@@ -228,7 +228,7 @@ mod tests {
 
     use crate::DuckContext;
     use crate::quackpack::core::PackageLoader;
-    use crate::util::path_ops::{MkdirOptions, PathOpsExt};
+    use crate::util::path_ops::{MkdirOptions, mkdir, normalize, touch, write};
 
     const BASIC_MANIFEST: &str = r"
 metadata:
@@ -250,7 +250,7 @@ metadata:
             format!("{err}"),
             format!(
                 "no manifest has been found from the `{}` to the `{}`",
-                tmp_file.path().normalize().display(),
+                normalize(tmp_file.path()).display(),
                 root
             )
         );
@@ -266,7 +266,7 @@ metadata:
             format!("{err}"),
             format!(
                 "the path `{}` is not a directory",
-                file.normalize().display()
+                normalize(file).display()
             )
         );
     }
@@ -275,18 +275,14 @@ metadata:
     fn finds_from_directory() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
-        file.touch().unwrap();
-        file.write(BASIC_MANIFEST).unwrap();
+        touch(&file).unwrap();
+        write(&file, BASIC_MANIFEST).unwrap();
         let ctx = DuckContext::default();
         let package =
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap();
         assert_eq!(
-            package
-                .into_package()
-                .unwrap_package()
-                .root_directory()
-                .normalize(),
-            tmp_file.path().normalize(),
+            normalize(package.into_package().unwrap_package().root_directory()),
+            normalize(tmp_file)
         );
     }
 
@@ -294,20 +290,16 @@ metadata:
     fn finds_at_parent() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
-        file.touch().unwrap();
-        file.write(BASIC_MANIFEST).unwrap();
+        touch(&file).unwrap();
+        write(&file, BASIC_MANIFEST).unwrap();
         let child = tmp_file.path().join("foo");
-        child.mkdir(MkdirOptions::WithoutParents).unwrap();
+        mkdir(&child, MkdirOptions::WithoutParents).unwrap();
         assert!(child.is_dir());
         let ctx = DuckContext::default();
         let package = PackageLoader::find_from_directory(&child, &ctx, false.into()).unwrap();
         assert_eq!(
-            package
-                .into_package()
-                .unwrap_package()
-                .root_directory()
-                .normalize(),
-            tmp_file.path().normalize()
+            normalize(package.into_package().unwrap_package().root_directory()),
+            normalize(tmp_file)
         );
     }
 
@@ -315,17 +307,13 @@ metadata:
     fn finds_at_exact_directory() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
-        file.touch().unwrap();
-        file.write(BASIC_MANIFEST).unwrap();
+        touch(&file).unwrap();
+        write(&file, BASIC_MANIFEST).unwrap();
         let ctx = DuckContext::default();
         let package = PackageLoader::find_at_exact_directory(tmp_file.path(), &ctx).unwrap();
         assert_eq!(
-            package
-                .into_package()
-                .unwrap_package()
-                .root_directory()
-                .normalize(),
-            tmp_file.path().normalize()
+            normalize(package.into_package().unwrap_package().root_directory()),
+            normalize(tmp_file)
         );
     }
 
@@ -341,7 +329,7 @@ metadata:
             format!("the path `{}` is not a directory", file.display())
         );
 
-        file.touch().unwrap();
+        touch(&file).unwrap();
         assert!(!file.is_dir());
 
         let err = PackageLoader::find_at_exact_directory(&file, &ctx).unwrap_err();

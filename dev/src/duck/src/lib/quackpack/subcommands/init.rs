@@ -16,7 +16,7 @@ use crate::quackpack::core::valid_package_name::{
     is_duckling_keyword, is_duckling_std_name, validate_package_name,
 };
 use crate::quackpack::core::{PackageLoader, Version};
-use crate::util::path_ops::{MkdirOptions, PathOpsExt};
+use crate::util::path_ops::{MkdirOptions, mkdir};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Options for initializing a new project.
@@ -155,7 +155,7 @@ fn create_manifest_file(
         make_default_manifest_for_name(name)
     };
     if let Some(parent) = manifest_path.parent() {
-        parent.mkdir(MkdirOptions::WithParents)?;
+        mkdir(parent, MkdirOptions::WithParents)?;
     }
     let mut manifest_file = match File::create_new(manifest_path) {
         Err(err) => {
@@ -230,7 +230,7 @@ fn append_venv_config_to_manifest(
         return Ok(());
     };
     if let Some(parent) = manifest_file.parent() {
-        parent.mkdir(MkdirOptions::WithParents)?;
+        mkdir(parent, MkdirOptions::WithParents)?;
     }
     let mut file = OpenOptions::new()
         .append(true)
@@ -274,7 +274,7 @@ fn generate_venv_config(
 fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
     let source_file_path = root_path.join("src").join(DEFAULT_SOURCE_FILENAME);
     if let Some(parent) = source_file_path.parent() {
-        parent.mkdir(MkdirOptions::WithParents)?;
+        mkdir(parent, MkdirOptions::WithParents)?;
     }
     let mut source_file = match File::create_new(&source_file_path) {
         Err(err) => {
@@ -301,7 +301,7 @@ fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
     Repository::init(root_path).context("failed to initialize a git repository")?;
     let gitignore_path = root_path.join(".gitignore");
     if let Some(parent) = gitignore_path.parent() {
-        parent.mkdir(MkdirOptions::WithParents)?;
+        mkdir(parent, MkdirOptions::WithParents)?;
     }
     let mut gitignore_file = match File::create_new(&gitignore_path) {
         Err(err) => {

@@ -35,7 +35,7 @@ use crate::quackpack::core::{PackageId, Version, storage_name_for_git, storage_n
 use crate::quackpack::util::dir_iterator::{DirContents, create_dir_iterator};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::{rmtree, touch};
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";
@@ -219,7 +219,7 @@ impl Storage {
     /// Mark git package as fully stored in storage.
     pub fn mark_git_stored(&self, url: InternedUrl, commit: &str) -> QuackResult<()> {
         let dir = self.git_dir(url, commit);
-        dir.join(OK_FILENAME).touch()?;
+        touch(dir.join(OK_FILENAME))?;
         Ok(())
     }
 
@@ -231,7 +231,7 @@ impl Storage {
         url: InternedUrl,
     ) -> QuackResult<()> {
         let dir = self.registry_dir(name, version, url);
-        dir.join(OK_FILENAME).touch()?;
+        touch(dir.join(OK_FILENAME))?;
         Ok(())
     }
 
@@ -243,6 +243,6 @@ impl Storage {
             FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
             FullKind::Local => return Ok(()),
         };
-        pkg_dir.rmtree()
+        rmtree(pkg_dir)
     }
 }
