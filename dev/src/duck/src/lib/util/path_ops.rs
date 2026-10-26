@@ -28,36 +28,31 @@ pub enum MkdirOptions {
 
 /// Copy the contents of one file into another and synchronize the result to disk.
 pub fn copy_file(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
-    copy_file_inner(from.as_ref(), to.as_ref())
+    let from = from.as_ref();
+    let to = to.as_ref();
+    copy_file_inner(from, to)
+        .with_context(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))
 }
 
-fn copy_file_inner(from: &Path, to: &Path) -> QuackResult<()> {
+fn copy_file_inner(from: &Path, to: &Path) -> io::Result<()> {
     let mut source = {
         let mut opts = OpenOptions::new();
-        open(from, opts.read(true))?
+        opts.read(true).open(from)?
     };
     let mut target = {
         let mut opts = OpenOptions::new();
-        open(to, opts.write(true).create(true).truncate(true))?
+        opts.write(true).create(true).truncate(true).open(to)?
     };
     let mut buffer = [0; BUFFER_SIZE];
     loop {
-        let n = source
-            .read(&mut buffer)
-            .with_context(|| format!("failed to read from `{}`", from.display()))?;
+        let n = source.read(&mut buffer)?;
         if n == 0 {
             break;
         }
-        target
-            .write_all(&buffer[..n])
-            .with_context(|| format!("failed to write to `{}`", to.display()))?;
+        target.write_all(&buffer[..n])?;
     }
-    target
-        .flush()
-        .with_context(|| format!("failed to flush `{}`", to.display()))?;
-    target
-        .sync_data()
-        .with_context(|| format!("failed to sync `{}`", to.display()))?;
+    target.flush()?;
+    target.sync_data()?;
     Ok(())
 }
 
@@ -65,24 +60,26 @@ fn copy_file_inner(from: &Path, to: &Path) -> QuackResult<()> {
 ///
 /// This is a best-effort operation. If unsupported, it will be silently skipped.
 pub fn try_fsync_dir(dir: impl AsRef<Path>) -> QuackResult<()> {
-    try_fsync_dir_inner(dir.as_ref())
+    let dir = dir.as_ref();
+    try_fsync_dir_inner(dir)
+        .with_context(|| format!("failed to sync directory `{}`", dir.display()))
 }
 
 #[cfg(not(windows))]
-fn try_fsync_dir_inner(dir: &Path) -> QuackResult<()> {
+fn try_fsync_dir_inner(dir: &Path) -> io::Result<()> {
     let file = {
         let mut opts = OpenOptions::new();
-        open(dir, opts.read(true))?
+        opts.read(true).open(dir)?
     };
     match file.sync_data() {
         Ok(_) => Ok(()),
         Err(e) if matches!(e.kind(), io::ErrorKind::Unsupported) => Ok(()),
-        Err(e) => Err(e).with_context(|| format!("failed to sync `{}", dir.display())),
+        Err(e) => Err(e),
     }
 }
 
 #[cfg(windows)]
-fn try_fsync_dir_inner(_dir: &Path) -> QuackResult<()> {
+fn try_fsync_dir_inner(_dir: &Path) -> io::Result<()> {
     // sync_data and sync_all are unreliable on Windows and usually unneeded.
     Ok(())
 }
@@ -94,8 +91,12 @@ fn try_fsync_dir_inner(_dir: &Path) -> QuackResult<()> {
 /// the [`PathOpsExt::mkdir`] or the [`OpenOptions::open`].
 pub fn touch(path: impl AsRef<Path>) -> QuackResult<File> {
     let path = path.as_ref();
+    touch_inner(path).with_context(|| format!("failed to touch `{}`", path.display()))
+}
+
+fn touch_inner(path: &Path) -> io::Result<File> {
     if let Some(parent) = path.parent() {
-        mkdir(parent, MkdirOptions::WithParents)?;
+        fs::create_dir_all(parent)?;
     }
     let mut opts = OpenOptions::new();
     opts.read(true).write(true).create(true).truncate(false);
@@ -109,7 +110,7 @@ pub fn touch(path: impl AsRef<Path>) -> QuackResult<File> {
             opts.mode(permissions & MASK);
         }
     }
-    open(path, &opts)
+    opts.open(path)
 }
 
 /// Open a file with the given [`fs::OpenOptions`].
@@ -390,11 +391,12 @@ pub fn metadata(path: impl AsRef<Path>) -> QuackResult<fs::Metadata> {
 /// Get the last modification time.
 pub fn mtime(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
     let path = path.as_ref();
-    let metadata = metadata(path)?;
-    let mtime = metadata
-        .modified()
-        .with_context(|| format!("failed to get modification time of `{}`", path.display()))?;
-    Ok(mtime)
+    mtime_inner(path)
+        .with_context(|| format!("failed to get modification time of `{}`", path.display()))
+}
+fn mtime_inner(path: &Path) -> io::Result<SystemTime> {
+    let metadata = fs::metadata(path)?;
+    metadata.modified()
 }
 
 /// Get the last change time.
@@ -402,22 +404,23 @@ pub fn mtime(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
 /// ---------
 /// This is not "creation time".
 pub fn ctime(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
-    ctime_inner(path.as_ref())
+    let path = path.as_ref();
+    ctime_inner(path).with_context(|| format!("failed to get change time of `{}`", path.display()))
 }
 
 #[cfg(unix)]
-fn ctime_inner(path: &Path) -> QuackResult<SystemTime> {
+fn ctime_inner(path: &Path) -> io::Result<SystemTime> {
     use std::os::unix::fs::MetadataExt;
     use std::time::Duration;
 
-    let metadata = metadata(path)?;
+    let metadata = fs::metadata(path)?;
     let seconds = metadata.ctime() as u64;
     let nanos = metadata.ctime_nsec() as u64;
     Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(seconds) + Duration::from_nanos(nanos))
 }
 
 #[cfg(windows)]
-fn ctime_inner(path: &Path) -> QuackResult<SystemTime> {
+fn ctime_inner(path: &Path) -> io::Result<SystemTime> {
     // Returns `ChangeTime` from `$STANDARD_INFORMATION` attribute.
     // Documentation:
     // https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_basic_info
@@ -428,7 +431,7 @@ fn ctime_inner(path: &Path) -> QuackResult<SystemTime> {
         FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
     };
 
-    let file = File::open(path).with_context(|| format!("when opening `{}`", path.display()))?;
+    let file = File::open(path)?;
     let handle = file.as_raw_handle();
     let mut info = FILE_BASIC_INFO::default();
 
@@ -449,8 +452,7 @@ fn ctime_inner(path: &Path) -> QuackResult<SystemTime> {
         )
     };
     if return_value == 0 {
-        return Err(std::io::Error::last_os_error())
-            .with_context(|| format!("when getting file information for `{}`", path.display()));
+        return Err(std::io::Error::last_os_error());
     }
 
     Ok(SystemTime::UNIX_EPOCH + Duration::from_nanos(info.ChangeTime as u64))
