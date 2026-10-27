@@ -13,6 +13,7 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/bytecode/type_expr.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
 
 #include <json/json.hpp>
@@ -45,11 +46,11 @@ namespace vm {
 
 		State state = State::Declared;
 
-		base::StrID name;
-		TypeSize    size      = TypeSize(-1);
-		Kind        kind_type = Kind::None;
-		TypeID      id{};
-		bool        am_i_instantiable = true;
+		code::TypeExpr expr;
+		TypeSize       size      = TypeSize(-1);
+		Kind           kind_type = Kind::None;
+		TypeID         id{};
+		bool           am_i_instantiable = true;
 
 		std::variant<
 			std::monostate,
@@ -86,7 +87,7 @@ namespace vm {
 
 	public:
 		// Type declaration:
-		static Type declareType(base::StrID name);
+		static Type declareType(code::TypeExpr expr);
 
 		// Type definition:
 		void definePrimitive(TypeSize size);
@@ -123,7 +124,13 @@ namespace vm {
 
 		[[nodiscard]]
 		base::StrID getName() const {
-			return name;
+			return expr.canonicalName();
+		}
+
+		/// @brief The expression denoting this type, whose spelling is its name.
+		[[nodiscard]]
+		code::TypeExpr getExpr() const {
+			return expr;
 		}
 
 		[[nodiscard]]

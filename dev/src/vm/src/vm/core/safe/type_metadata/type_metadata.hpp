@@ -61,6 +61,10 @@ namespace vm {
 		TypeCRef at(base::StrID name) const;
 		TypeRef  at(base::StrID name);
 
+		/// @brief The type `expr` denotes, which is stored under its spelling.
+		[[nodiscard]]
+		TypeCRef at(const code::TypeExpr& expr) const;
+
 		[[nodiscard]]
 		base::Optional<TypeCRef> atMaybe(TypeID id) const;
 		base::Optional<TypeRef>  atMaybe(TypeID id);

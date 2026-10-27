@@ -15,7 +15,7 @@ namespace vm {
 			"Tried to add types to type metadata when it was not in the adding types state"
 		);
 
-		base::StrID name = type.name;
+		base::StrID name = type.getName();
 		TypeID      id   = types.insert(std::move(type), name);
 		TypeRef     ref  = types.at(id);
 		ref->id          = id;
@@ -54,5 +54,9 @@ namespace vm {
 	TypeRef TypeMetadata::at(base::StrID name) { return types.at(name); }
 
 	TypeCRef TypeMetadata::at(base::StrID name) const { return types.at(name); }
+
+	TypeCRef TypeMetadata::at(const code::TypeExpr& expr) const {
+		return types.at(expr.canonicalName());
+	}
 
 }

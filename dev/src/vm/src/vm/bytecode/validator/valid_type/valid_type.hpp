@@ -12,6 +12,7 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/bytecode/type_expr.hpp>
 #include <vm/bytecode/validator/valid_type/defined_kinds.hpp>
 #include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 #include <vm/bytecode/validator/valid_type/type_map.hpp>
@@ -37,7 +38,7 @@ namespace vm::code::valid_type {
 		/****************/
 		/* Constructors */
 		/****************/
-		static ValidType declareType(base::StrID name, ValidTypeID id);
+		static ValidType declareType(TypeExpr expr, ValidTypeID id);
 
 		void definePrimitive(Bytes size);
 
@@ -94,6 +95,9 @@ namespace vm::code::valid_type {
 		/**********************/
 
 		[[nodiscard]] base::StrID getName() const;
+
+		/// @brief The expression denoting this type, whose spelling is its name.
+		[[nodiscard]] TypeExpr getExpr() const;
 
 		[[nodiscard]] ValidTypeID getID() const;
 
@@ -217,9 +221,9 @@ namespace vm::code::valid_type {
 
 		TypeSize alignment = TypeSize(Bytes(1), Bytes(1));
 
-		ValidType(base::StrID name, ValidTypeID id);
+		ValidType(TypeExpr expr, ValidTypeID id);
 
-		base::StrID name;
+		TypeExpr    expr;
 		ValidTypeID id;
 
 		struct Declared final {};

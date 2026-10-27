@@ -14,25 +14,91 @@
 
 using namespace compiler::backend_vm::internal;
 
-[[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asArgument() const {
-	// A pointer's operand kind follows from how it is written, with no declaration to consult.
-	if (expr.isKind<vm::code::expr::Pointer>()) return vm::opargs::PlacePtr(name);
-	if (expr.isKind<vm::code::expr::CPointer>()) return vm::opargs::PlaceCPtr(name);
+namespace {
+	vm::code::TypeExpr named(std::string_view name) {
+		return vm::code::TypeExpr::type(base::StrID(name));
+	}
+}
 
-	variant_match(getType()) {
-		variant_case(vm::code::PrimitiveType, primitive) {
-			if (primitive.size == Bytes{ 8 }) return vm::opargs::Place64{ name };
-			if (primitive.size == Bytes{ 4 }) return vm::opargs::Place32{ name };
-			if (primitive.size == Bytes{ 2 }) return vm::opargs::Place16{ name };
-			if (primitive.size == Bytes{ 1 }) return vm::opargs::Place8{ name };
+#define DVM_NAMED_TYPE(func, name)                          \
+	vm::code::TypeExpr dvm_type::func() {                   \
+		static const vm::code::TypeExpr expr = named(name); \
+		return expr;                                        \
+	}
+
+DVM_NAMED_TYPE(unit, "unit")
+DVM_NAMED_TYPE(i8, "i8")
+DVM_NAMED_TYPE(i16, "i16")
+DVM_NAMED_TYPE(i32, "i32")
+DVM_NAMED_TYPE(i64, "i64")
+DVM_NAMED_TYPE(f32, "f32")
+DVM_NAMED_TYPE(f64, "f64")
+DVM_NAMED_TYPE(opaquePtr, "opaque_ptr")
+
+#undef DVM_NAMED_TYPE
+
+DVMPlace::DVMPlace(
+	base::StrID                                name,
+	vm::code::TypeExpr                         expr,
+	base::Optional<CRef<vm::code::TypeOfData>> declaration,
+	AccessKind                                 access_kind,
+	SpecialKind                                special_kind
+):
+	  DVMPlace(name, expr, OperandKind::Unsupported, access_kind, special_kind) {
+	// A pointer's operand kind follows from how it is written, with no declaration to consult.
+	if (expr.isKind<vm::code::expr::Pointer>()) {
+		operand_kind = OperandKind::Pointer;
+		return;
+	}
+	if (expr.isKind<vm::code::expr::CPointer>()) {
+		operand_kind = OperandKind::CPointer;
+		return;
+	}
+
+	if (declaration.has_value()) {
+		const vm::code::TypeOfData& type = **declaration;
+		variant_match(type) {
+			variant_case(vm::code::PrimitiveType, primitive) {
+				if (primitive.size == Bytes{ 8 }) operand_kind = OperandKind::Place64;
+				if (primitive.size == Bytes{ 4 }) operand_kind = OperandKind::Place32;
+				if (primitive.size == Bytes{ 2 }) operand_kind = OperandKind::Place16;
+				if (primitive.size == Bytes{ 1 }) operand_kind = OperandKind::Place8;
+			}
+			variant_case_novalue(vm::code::FixedSizeTableType) {
+				operand_kind = OperandKind::FixedSizeTable;
+			}
+			variant_case_novalue(vm::code::DataType) { operand_kind = OperandKind::Structure; }
+			variant_case_novalue(vm::code::VariantType) { operand_kind = OperandKind::Variant; }
+			variant_case_novalue(vm::code::OpaqueType) { operand_kind = OperandKind::Opaque; }
+			variant_default {}
 		}
-		variant_case(vm::code::FixedSizeTableType, array) { return vm::opargs::PlaceFSTable(name); }
-		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
-		variant_case(vm::code::VariantType, variant) { return vm::opargs::PlaceVnt(name); }
-		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
-		variant_default {
-			CORE_PANIC("DVMLocal type not supported for argument: ", expr.canonicalName());
-		}
+	}
+}
+
+[[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asArgument() const {
+	switch (operand_kind) {
+	case OperandKind::Place8:
+		return vm::opargs::Place8{ name };
+	case OperandKind::Place16:
+		return vm::opargs::Place16{ name };
+	case OperandKind::Place32:
+		return vm::opargs::Place32{ name };
+	case OperandKind::Place64:
+		return vm::opargs::Place64{ name };
+	case OperandKind::FixedSizeTable:
+		return vm::opargs::PlaceFSTable(name);
+	case OperandKind::Structure:
+		return vm::opargs::PlaceStructure(name);
+	case OperandKind::Variant:
+		return vm::opargs::PlaceVnt(name);
+	case OperandKind::Opaque:
+		return vm::opargs::PlaceOpq(name);
+	case OperandKind::Pointer:
+		return vm::opargs::PlacePtr(name);
+	case OperandKind::CPointer:
+		return vm::opargs::PlaceCPtr(name);
+	case OperandKind::Unsupported:
+		CORE_PANIC("DVMLocal type not supported for argument: ", expr.canonicalName());
 	}
 	CORE_UNREACHABLE();
 }
@@ -54,66 +120,36 @@ DVMPlace::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 	}
 }
 
-const vm::code::TypeOfData& DVMPlace::getType() const {
-	return declaration.expect(base::strConcat(
-		"Place `", name, "` of type `", expr.canonicalName(), "` has no declared type"
-	));
-}
-
 [[nodiscard]] vm::opargs::OpCodeArg DVMImmediate::asArgument() const {
 	return vm::opargs::Immediate{ value };
 }
 
-DVMImmediate::DVMImmediate(::u64 value, vm::code::TypeOfData type):
-	  value(value),
-	  type(std::move(type)) {}
+DVMImmediate::DVMImmediate(::u64 value, vm::code::TypeExpr type): value(value), type(type) {}
 
-DVMImmediate DVMImmediate::u8(::u8 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), Bytes{ 1 }) };
-}
+DVMImmediate DVMImmediate::u8(::u8 value) { return { translateToU64(value), dvm_type::i8() }; }
 
-DVMImmediate DVMImmediate::u16(::u16 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i16"), Bytes{ 2 }) };
-}
+DVMImmediate DVMImmediate::u16(::u16 value) { return { translateToU64(value), dvm_type::i16() }; }
 
-DVMImmediate DVMImmediate::u32(::u32 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i32"), Bytes{ 4 }) };
-}
+DVMImmediate DVMImmediate::u32(::u32 value) { return { translateToU64(value), dvm_type::i32() }; }
 
-DVMImmediate DVMImmediate::u64(::u64 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i64"), Bytes{ 8 }) };
-}
+DVMImmediate DVMImmediate::u64(::u64 value) { return { translateToU64(value), dvm_type::i64() }; }
 
-DVMImmediate DVMImmediate::i8(::i8 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), Bytes{ 1 }) };
-}
+DVMImmediate DVMImmediate::i8(::i8 value) { return { translateToU64(value), dvm_type::i8() }; }
 
-DVMImmediate DVMImmediate::i16(::i16 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i16"), Bytes{ 2 }) };
-}
+DVMImmediate DVMImmediate::i16(::i16 value) { return { translateToU64(value), dvm_type::i16() }; }
 
-DVMImmediate DVMImmediate::i32(::i32 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i32"), Bytes{ 4 }) };
-}
+DVMImmediate DVMImmediate::i32(::i32 value) { return { translateToU64(value), dvm_type::i32() }; }
 
-DVMImmediate DVMImmediate::i64(::i64 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i64"), Bytes{ 8 }) };
-}
+DVMImmediate DVMImmediate::i64(::i64 value) { return { translateToU64(value), dvm_type::i64() }; }
 
-DVMImmediate DVMImmediate::f32(::f32 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("f32"), Bytes{ 4 }) };
-}
+DVMImmediate DVMImmediate::f32(::f32 value) { return { translateToU64(value), dvm_type::f32() }; }
 
-DVMImmediate DVMImmediate::f64(::f64 value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("f64"), Bytes{ 8 }) };
-}
+DVMImmediate DVMImmediate::f64(::f64 value) { return { translateToU64(value), dvm_type::f64() }; }
 
-DVMImmediate DVMImmediate::boolean(bool value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), Bytes{ 1 }) };
-}
+DVMImmediate DVMImmediate::boolean(bool value) { return { translateToU64(value), dvm_type::i8() }; }
 
 DVMImmediate DVMImmediate::character(char value) {
-	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), Bytes{ 1 }) };
+	return { translateToU64(value), dvm_type::i8() };
 }
 
 DVMImmediate::operator vm::opargs::OpCodeArg() const { return asArgument(); }
@@ -146,12 +182,4 @@ DVMValue::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 		variant_default { CORE_PANIC("This DVM value has no type"); }
 	}
 	CORE_UNREACHABLE();
-}
-
-[[nodiscard]] vm::code::TypeOfData DVMValue::getType() const {
-	variant_match(stored_value) {
-		variant_case(DVMPlace, place) return place.getType();
-		variant_case(DVMImmediate, imm) return imm.type;
-		variant_default CORE_PANIC("Tried to get type of label or function literal");
-	}
 }

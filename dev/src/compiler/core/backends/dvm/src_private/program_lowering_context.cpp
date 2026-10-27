@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <ranges>
+#include <utility>
 
 using namespace compiler::backend_vm::internal;
 
@@ -70,11 +71,17 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
                             : base::Optional<debug_info::DebugInfoBuilder>{})
 	  ) {}
 
-CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
-	auto type_name      = typeName(dvm_type);
-	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
-	if (inserted) lowered_type_order.push_back(type_name);
-	return &it->second;
+vm::code::TypeExpr ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
+	const auto expr = vm::code::TypeExpr::type(typeName(dvm_type));
+	keepDeclaration(expr, std::move(dvm_type));
+	return expr;
+}
+
+void ProgramLoweringContext::keepDeclaration(
+	vm::code::TypeExpr expr, vm::code::TypeOfData declaration
+) {
+	auto [_, inserted] = type_storage.dvm_types.put(expr, std::move(declaration));
+	if (inserted) lowered_type_order.push_back(expr);
 }
 
 vm::code::TypeExpr ProgramLoweringContext::keepTslType(CRef<tsl::TypeLayout> layout) {
@@ -88,49 +95,44 @@ DVMPlace ProgramLoweringContext::makePlace(
 	DVMPlace::AccessKind  access_kind,
 	DVMPlace::SpecialKind special_kind
 ) {
-	if (const auto declaration = declarationOf(expr))
-		return { name, **declaration, access_kind, special_kind };
-
-	// A VM builtin is declared by the VM rather than kept here, so it is not in `dvm_types`.
-	if_opt_some(
-		expr.maybeGetKindAs<vm::code::expr::Named>(), named
-	) if (const auto builtin = vm::code::getBuiltinTypeByName(named->name
-	      )) return { name, *builtin, access_kind, special_kind };
-
-	return { name, expr, access_kind, special_kind };
+	return { name, expr, declarationOf(expr), access_kind, special_kind };
 }
 
 base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::declarationOf(
 	vm::code::TypeExpr expr
 ) {
-	const auto declaration = type_storage.dvm_types.atMaybe(expr.canonicalName());
-	if (!declaration.has_value()) return {};
-	return CRef<vm::code::TypeOfData>(&**declaration);
+	if (const auto declaration = std::as_const(type_storage.dvm_types).atMaybe(expr))
+		return declaration;
+
+	// A VM builtin is declared by the VM rather than kept here, so it is not in `dvm_types`.
+	if_opt_some(
+		expr.maybeGetKindAs<vm::code::expr::Named>(), named
+	) return vm::code::getBuiltinTypeByName(named->name);
+	return {};
 }
 
 vm::code::TypeExpr ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout) {
 	if (auto cached = type_storage.tsl_type_to_dvm_type.atMaybe(layout)) return **cached;
 
 	const vm::code::TypeExpr type_expr = getTslTypeExprInternal(layout);
-	const base::StrID        type_name = type_expr.canonicalName();
 	type_storage.tsl_type_to_dvm_type.put(layout, type_expr);
 
 	// A pointer is written rather than declared, so lowering it yields nothing to keep.
 	if (auto declaration = lowerTslTypeInternal(layout)) {
 		CORE_ASSERT(
-			vm::code::typeName(*declaration) == type_name, "Declared and lowered names differ"
+			vm::code::typeName(*declaration) == type_expr.canonicalName(),
+			"Declared and lowered names differ"
 		);
-		auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(*declaration));
-		if (inserted) lowered_type_order.push_back(type_name);
+		keepDeclaration(type_expr, std::move(*declaration));
 	}
 
 	CORE_DEV_LOG(REPL, "[DEBUG] lowered_type_order size=", lowered_type_order.size(), "\n");
 	for (const auto& lowered_type: lowered_type_order)
-		CORE_DEV_LOG(REPL, "  type: ", lowered_type, "\n");
+		CORE_DEV_LOG(REPL, "  type: ", lowered_type.canonicalName(), "\n");
 
 
 	if_opt_some(debug_info_builder, builder) {
-		builder.addType(type_name.str(), layout->getSourceType().toString());
+		builder.addType(type_expr.canonicalName().str(), layout->getSourceType().toString());
 	}
 
 	return type_expr;
@@ -171,10 +173,6 @@ vm::code::TypeExpr ProgramLoweringContext::pointerTypeExpr(
 	CORE_UNREACHABLE();
 }
 
-vm::code::TypeExpr ProgramLoweringContext::getVoidCPointerType() {
-	return vm::code::TypeExpr::cpointer();
-}
-
 const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
 	if (auto maybe_global = global_name_to_dvm.atMaybe(lir_global->mangled_name))
 		return **maybe_global;
@@ -196,10 +194,9 @@ base::StrID ProgramLoweringContext::getAnonymousGlobalName(base::StrID name_hint
 	);
 }
 
-const DVMPlace& ProgramLoweringContext::declareGlobal(
-	base::StrID name, const vm::code::TypeOfData& type
-) {
-	auto [it, _] = global_name_to_dvm.put(name, DVMPlace(name, type, DVMPlace::AccessKind::Direct));
+const DVMPlace& ProgramLoweringContext::declareGlobal(base::StrID name, vm::code::TypeExpr type) {
+	auto [it, _]
+		= global_name_to_dvm.put(name, makePlace(name, type, DVMPlace::AccessKind::Direct));
 	return it->second;
 }
 
@@ -211,14 +208,14 @@ const vm::code::GlobalData& ProgramLoweringContext::defineGlobal(vm::code::Globa
 }
 
 const DVMPlace& ProgramLoweringContext::insertStaticDataGlobal(
-	base::StrID name_hint, const vm::code::TypeOfData& type, vm::code::ConstantValue init
+	base::StrID name_hint, vm::code::TypeExpr type, vm::code::ConstantValue init
 ) {
 	auto            global_name = getAnonymousGlobalName(name_hint);
 	const DVMPlace& place       = declareGlobal(global_name, type);
 
 	vm::code::GlobalData global_data{};
 	global_data.name          = global_name;
-	global_data.type          = vm::code::TypeExpr(typeName(type));
+	global_data.type          = type;
 	global_data.is_constant   = true;
 	global_data.initial_value = std::move(init);
 	defineGlobal(std::move(global_data));
@@ -278,10 +275,8 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 		);
 		std::vector<vm::code::TypeOfData> result;
 		result.reserve(lowered_type_order.size() - start_index);
-		for (usize i = start_index; i < lowered_type_order.size(); ++i) {
-			const auto& type_name = lowered_type_order[i];
-			result.push_back(type_storage.dvm_types.at(type_name));
-		}
+		for (usize i = start_index; i < lowered_type_order.size(); ++i)
+			result.push_back(type_storage.dvm_types.at(lowered_type_order[i]));
 		return result;
 	};
 
@@ -459,9 +454,7 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 
 vm::code::TypeExpr ProgramLoweringContext::getTslTypeExprInternal(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
-		variant_case_novalue(tsl::EmptyTypeLayout) {
-			return vm::code::TypeExpr{ base::StrID("unit") };
-		}
+		variant_case_novalue(tsl::EmptyTypeLayout) { return dvm_type::unit(); }
 		variant_case_novalue(tsl::IntegralTypeLayout) {
 			Bits bits = layout->getSize();
 			if (bits == Bits{ 1 }) bits = Bits{ 8 };
@@ -471,9 +464,7 @@ vm::code::TypeExpr ProgramLoweringContext::getTslTypeExprInternal(CRef<tsl::Type
 			return vm::code::TypeExpr{ base::StrID(base::strConcat("f", layout->getSize().asInt())
 			) };
 		}
-		variant_case_novalue(tsl::MetaTypeLayout) {
-			return vm::code::TypeExpr{ base::StrID("opaque_ptr") };
-		}
+		variant_case_novalue(tsl::MetaTypeLayout) { return dvm_type::opaquePtr(); }
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			using enum tsl::PointerTypeLayout::PointerKind;
 			const vm::code::TypeExpr pointee

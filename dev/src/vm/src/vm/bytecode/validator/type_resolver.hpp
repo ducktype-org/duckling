@@ -40,6 +40,11 @@ namespace vm::code {
 	 * themselves, and defined afterwards. The types built are finalized together by
 	 * `finalizeBuilt`, once every one of them is defined.
 	 */
+	/// @brief The type `expr` denotes, which validating the program has already resolved.
+	[[nodiscard]] CRef<valid_type::ValidType> getResolved(
+		const valid_type::ValidTypeMap& types, const TypeExpr& expr
+	);
+
 	class TypeResolver final {
 	public:
 		explicit TypeResolver(TypeContext& context): context(&context) {}

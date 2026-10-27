@@ -101,7 +101,7 @@ namespace compiler::backend_vm::internal {
 		vm::code::TypeExpr lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
-		 * @brief The declaration of the type `expr` denotes.
+		 * @brief The declaration of the type `expr` denotes, kept here or built into the VM.
 		 * @return An empty optional for a pointer, which is written rather than declared.
 		 */
 		base::Optional<CRef<vm::code::TypeOfData>> declarationOf(vm::code::TypeExpr expr);
@@ -126,16 +126,11 @@ namespace compiler::backend_vm::internal {
 		base::Optional<vm::code::TypeExpr> lowerAndKeepReturnTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
-		 * @brief Inserts a manually created DVM type into the program context and returns a
-		 * reference to it. Used when want to register a type and use it by its name.
-		 * @return CRef<vm::code::TypeOfData>
+		 * @brief Inserts a manually created DVM type into the program context.
+		 * @return How the type is written.
 		 */
-		CRef<vm::code::TypeOfData> keepVMType(vm::code::TypeOfData dvm_type);
+		vm::code::TypeExpr keepVMType(vm::code::TypeOfData dvm_type);
 
-		/**
-		 * @brief Creates and inserts a pointer type into the program lowering context.
-		 * It caches the result, so inserts the type into the program only if needed.
-		 */
 		/**
 		 * @brief How a pointer of `kind` to `pointee` is written.
 		 * @note A pointer is not declared, so nothing is kept for it. The dynamic table a
@@ -146,12 +141,6 @@ namespace compiler::backend_vm::internal {
 			tsl::PointerTypeLayout::PointerKind kind
 			= tsl::PointerTypeLayout::PointerKind::SinglePointer
 		);
-
-		/**
-		 * @brief Returns the builtin `cptr` type - a cpointer with an unknown pointee, the DVM
-		 * counterpart of C's `void*`. Inserts it into the module on first use.
-		 */
-		vm::code::TypeExpr getVoidCPointerType();
 
 		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
@@ -177,7 +166,7 @@ namespace compiler::backend_vm::internal {
 		 * @return The DVM place referring to the inserted global.
 		 */
 		const DVMPlace& insertStaticDataGlobal(
-			base::StrID name_hint, const vm::code::TypeOfData& type, vm::code::ConstantValue init
+			base::StrID name_hint, vm::code::TypeExpr type, vm::code::ConstantValue init
 		);
 
 		/**
@@ -194,7 +183,7 @@ namespace compiler::backend_vm::internal {
 		 * Inserts a `Direct`-access place for @p name / @p type into the place table and returns
 		 * it. This only declares where the global lives; use @ref defineGlobal to attach its data.
 		 */
-		const DVMPlace& declareGlobal(base::StrID name, const vm::code::TypeOfData& type);
+		const DVMPlace& declareGlobal(base::StrID name, vm::code::TypeExpr type);
 
 		/**
 		 * @brief Stores the data of a global and records it in emission order.
@@ -278,12 +267,8 @@ namespace compiler::backend_vm::internal {
 		/// @return The declaration to keep, or nothing for a pointer, which has none.
 		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
-		/**
-		 * @brief Constructs the VM pointer type from the name of the pointee type, internal.
-		 */
-		const vm::code::TypeOfData lowerPointerType(
-			base::StrID pointee_name, tsl::PointerTypeLayout::PointerKind kind
-		);
+		/// @brief Keeps `declaration` as the type `expr` denotes, once.
+		void keepDeclaration(vm::code::TypeExpr expr, vm::code::TypeOfData declaration);
 
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.
@@ -295,17 +280,16 @@ namespace compiler::backend_vm::internal {
 		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
 
 		struct TypeStorage {
-			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
 			/// What each lowered layout's type is written as.
 			base::Map<CRef<tsl::TypeLayout>, vm::code::TypeExpr> tsl_type_to_dvm_type;
-			// Main container for all types in the module.
-			base::HashMap<base::StrID, vm::code::TypeOfData> dvm_types;
+			/// The declaration of every type kept in the module.
+			base::HashMap<vm::code::TypeExpr, vm::code::TypeOfData> dvm_types;
 		};
 
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.
 		TypeStorage type_storage;
 		// Maintains insertion order for types so REPL can emit only new types.
-		std::vector<base::StrID> lowered_type_order;
+		std::vector<vm::code::TypeExpr> lowered_type_order;
 		// Maintains insertion order for functions so REPL can emit only new functions.
 		std::vector<base::StrID> lowered_function_order;
 		// Maintains insertion order for globals so REPL can emit only new globals.

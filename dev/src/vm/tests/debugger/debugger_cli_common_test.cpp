@@ -58,7 +58,7 @@ private:
 		}
 
 		{
-			auto type = vm::Type::declareType(base::StrID("i64"));
+			auto type = vm::Type::declareType(vm::code::TypeExpr::type(base::StrID("i64")));
 			type.definePrimitive(Bytes(8));
 			type.finalize();
 

@@ -67,9 +67,9 @@ namespace vm {
 	}
 
 	// Type declaration:
-	Type Type::declareType(base::StrID name) {
+	Type Type::declareType(code::TypeExpr expr) {
 		Type type{};
-		type.name = name;
+		type.expr = expr;
 		return type;
 	}
 
@@ -81,7 +81,6 @@ namespace vm {
 		kind_type = Kind::Primitive;
 		size      = pass_size;
 		kind      = kind::Primitive();
-		if (name == "void") am_i_instantiable = false;
 	}
 
 	void Type::definePointer(TypeCRef inner) {

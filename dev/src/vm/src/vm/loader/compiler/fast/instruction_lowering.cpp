@@ -12,6 +12,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/validator/type_resolver.hpp>
 #include <vm/core/fast/program/ids.hpp>
 #include <vm/core/fast/program/instructions/relocatable.hpp>
 
@@ -177,7 +178,7 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 		ctx.stack_sid                            = stack_ctx.function.stack_states[i];
 		instr_match(instruction) {
 			instr_case(high::Op_init_pany_type, init) {
-				auto type      = high_program.types().at(init.type.expr.canonicalName());
+				auto type      = vm::code::getResolved(high_program.types(), init.type.expr);
 				auto type_size = getByteSize(type->getSize());
 				PUSH(init_pany_imm, init.var, type_size);
 			}

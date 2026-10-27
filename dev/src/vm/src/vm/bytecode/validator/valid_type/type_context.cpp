@@ -36,7 +36,7 @@ valid_type::ValidTypeID TypeContext::declare(const TypeExpr& expr) {
 	CORE_ASSERT(!types.contains(name), "A type is already stored for `", name, "`");
 
 	const auto id = valid_type::ValidTypeID(types.size());
-	types.insert(valid_type::ValidType::declareType(name, id), name);
+	types.insert(valid_type::ValidType::declareType(expr, id), name);
 	return id;
 }
 

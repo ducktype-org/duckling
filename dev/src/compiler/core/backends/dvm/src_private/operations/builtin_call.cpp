@@ -14,13 +14,13 @@
 namespace compiler::backend_vm::internal {
 	namespace {
 		/**
-		 * @brief Given a pointer type as an argument, return the name of the type it points to.
-		 * For a `manyptr T` that is the dynamic table of `T`, for a `ptr T` it is `T` itself.
+		 * @brief The type a pointer points to. For a `manyptr T` that is the dynamic table of `T`,
+		 * for a `ptr T` it is `T` itself.
 		 */
-		base::StrID extractPointeeTypeName(vm::code::TypeExpr ptr_type) {
+		vm::code::TypeExpr pointeeOf(vm::code::TypeExpr ptr_type) {
 			return ptr_type.maybeGetKindAs<vm::code::expr::Pointer>()
 			    .expect("DVM builtin expects a `ptr`/`manyptr` operand")
-			    ->pointee.canonicalName();
+			    ->pointee;
 		}
 	}
 
@@ -34,23 +34,21 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(op.args.size() == 1, "dvm_alloc_arr expects 1 argument (size)");
 			CORE_ASSERT(dest.has_value(), "dvm_alloc_arr must have a destination");
 
-			auto count      = ctx->forceToPlace(op.args.front(), "alloc_count");
-			auto table_type = extractPointeeTypeName(dest->getTypeExpr());
+			auto count = ctx->forceToPlace(op.args.front(), "alloc_count");
 			ctx->pushInstruction({ OpKind::dynTableReAlloc,
 			                       dest->asArgument(),
-			                       vm::opargs::Type(vm::code::TypeExpr{ table_type }),
+			                       vm::opargs::Type(pointeeOf(dest->getTypeExpr())),
 			                       count.asArgument() });
 			break;
 		}
 		case lir::BuiltinFunctionKind::DvmReallocArr: {
 			CORE_ASSERT(op.args.size() == 2, "dvm_realloc_arr expects 2 arguments (ptr, size)");
 
-			auto table_ptr  = ctx->forceToPlace(op.args.at(0), "realloc_ptr");
-			auto count      = ctx->forceToPlace(op.args.at(1), "realloc_count");
-			auto table_type = extractPointeeTypeName(table_ptr.getTypeExpr());
+			auto table_ptr = ctx->forceToPlace(op.args.at(0), "realloc_ptr");
+			auto count     = ctx->forceToPlace(op.args.at(1), "realloc_count");
 			ctx->pushInstruction({ OpKind::dynTableReAlloc,
 			                       table_ptr.asArgument(),
-			                       vm::opargs::Type(vm::code::TypeExpr{ table_type }),
+			                       vm::opargs::Type(pointeeOf(table_ptr.getTypeExpr())),
 			                       count.asArgument() });
 			break;
 		}
@@ -68,10 +66,9 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(op.args.empty(), "dvm_alloc expects no arguments");
 			CORE_ASSERT(dest.has_value(), "dvm_alloc must have a destination");
 
-			auto pointee_type = extractPointeeTypeName(dest->getTypeExpr());
 			ctx->pushInstruction({ OpKind::alloc,
 			                       dest->asArgument(),
-			                       vm::opargs::Type(vm::code::TypeExpr{ pointee_type }) });
+			                       vm::opargs::Type(pointeeOf(dest->getTypeExpr())) });
 			break;
 		}
 		case lir::BuiltinFunctionKind::DvmFree: {

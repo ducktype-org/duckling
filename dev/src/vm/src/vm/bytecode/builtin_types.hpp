@@ -33,5 +33,5 @@ namespace vm::code {
 	 * @brief Returns the builtin type of a given name.
 	 * @return The type or empty optional if a type with the given name doesn't exist.
 	 */
-	base::Optional<TypeOfData> getBuiltinTypeByName(base::StrID type_name);
+	base::Optional<CRef<TypeOfData>> getBuiltinTypeByName(base::StrID type_name);
 }

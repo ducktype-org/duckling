@@ -205,7 +205,7 @@ void FunctionLoweringContext::cPointerArrayLea(
 	else {
 		DVMPlace offset_place = copyToTempPlace(index, "cptr_index_offset");
 		CORE_ASSERT(
-			offset_place.getTypeExpr() == vm::code::TypeExpr{ base::StrID("i64") },
+			offset_place.getTypeExpr() == dvm_type::i64(),
 			"Index used for cpointer arithmetic must be a 64-bit integer, got: ",
 			offset_place.getTypeExpr().canonicalName()
 		);
@@ -596,12 +596,8 @@ DVMPlace FunctionLoweringContext::getFunctionReturnValueLocal() {
 	);
 
 	const auto& ret_type = *function_return_type;
-	if (function_name == "main") {
-		CORE_ASSERT(
-			ret_type == vm::code::TypeExpr{ base::StrID("i64") },
-			"Main function must have i64 return type"
-		);
-	}
+	if (function_name == "main")
+		CORE_ASSERT(ret_type == dvm_type::i64(), "Main function must have i64 return type");
 	return program_context.makePlace(
 		base::StrID("ret0"),
 		ret_type,

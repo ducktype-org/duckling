@@ -23,6 +23,12 @@ namespace vm::code {
 		return types.atMaybe(expr.canonicalName());
 	}
 
+	CRef<valid_type::ValidType> getResolved(
+		const valid_type::ValidTypeMap& types, const TypeExpr& expr
+	) {
+		return findResolved(types, expr).expect("A validated program only names known types");
+	}
+
 	valid_type::ValidTypeID TypeResolver::resolve(const TypeExpr& expr) {
 		if (auto type = findResolved(context->getCurrentTypes(), expr))
 			return type.value()->getID();
