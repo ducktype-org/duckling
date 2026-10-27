@@ -145,38 +145,6 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Determine whether it is legal to consider an implicit coercion
-		 * from a value described by this ExpressionType to one described by target.
-		 *
-		 * An implicit coercion is when, for example, a boolean is expected, but
-		 * and integer is given. A desirable (and common) behaviour may be to
-		 * convert the integer value to true if and only if it is non-zero.
-		 *
-		 * Another context in which implicit coercions are desirable is when
-		 * casting from subclass to superclass.
-		 *
-		 * This method does not determine how to perform a coercion.
-		 * It only determines whether one should be considered.
-		 * A coercion may thus be allowed but not implemented, or implemented
-		 * but not allowed to be used implicitly by the compiler, so the user
-		 * may define a coercion from class A to class B, but not want it
-		 * to ever be used implicitly (in C++ that is achieved by annotating a
-		 * single-argument constructor with the `explicit` keyword).
-		 *
-		 * This is typically determined by rules specific for the Kind of the source type.
-		 *
-		 * @param target The target of a hypothetical implicit coercion.
-		 * @param context The query context necessary for checking user defined coercions.
-		 * @return Whether the implicit coercion is allowed or not.
-		 */
-		[[nodiscard]]
-		virtual bool isImplicitlyCoercible(
-			[[maybe_unused]] const AbstractType target, [[maybe_unused]] query::Context& context
-		) const {
-			return false;
-		}
-
-		/**
 		 * @brief Whether the type carries any information, in an information-theoretic sense. For
 		 * example, the unit and void types does not carry any information, while other types do.
 		 * @param ctx Query context needed to process complex types, esp. classes.
@@ -231,9 +199,6 @@ namespace compiler::tsh {
 
 		UnitAbstractTypeImpl() { representation = "()"; }
 
-		[[nodiscard]] bool isImplicitlyCoercible(AbstractType target, query::Context& context)
-			const override;
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
@@ -266,12 +231,6 @@ namespace compiler::tsh {
 
 		VoidAbstractTypeImpl() { representation = "void"; }
 
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType, query::Context&) const override {
-			// Void has no values, so it is a subtype of every type.
-			return true;
-		}
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
@@ -303,12 +262,6 @@ namespace compiler::tsh {
 
 		explicit ByteAbstractTypeImpl() { representation = "byte"; }
 
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow checking against null bytes.
-			return target.getKind() == Kind::Bool;
-		}
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
@@ -339,12 +292,6 @@ namespace compiler::tsh {
 
 		explicit BoolAbstractTypeImpl() { representation = "bool"; }
 
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow adding to an integral counter.
-			return target.getKind() == Kind::Integral;
-		}
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
@@ -374,12 +321,6 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::Char;
 
 		explicit CharAbstractTypeImpl() { representation = "char"; }
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow checking against null chars.
-			return target.getKind() == Kind::Bool;
-		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
@@ -433,23 +374,6 @@ namespace compiler::tsh {
 			return signedness;
 		}
 
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Only allow promoting to greater sizes
-			// signed to unsigned coercions are not allowed
-			// @TODO: #3631 we may bring back coercions to bool in the future, but that requires
-			// solving an issue with overload resolution, e.g. with `1u64 == 2i64`.
-			auto int_coercion = (target.getKind() == Kind::Integral);
-			auto upsize_coercion
-				= (int_coercion && (IntegralAbstractType(target).getSize() > size));
-			auto drop_sign_coercion
-				= (int_coercion && signedness == IntegralAbstractType::Signedness::Signed
-			       && IntegralAbstractType(target).getSignedness()
-			              == IntegralAbstractType::Signedness::Unsigned);
-
-			return upsize_coercion && !drop_sign_coercion;
-		}
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
@@ -489,12 +413,6 @@ namespace compiler::tsh {
 			representation = base::strConcat("f", size);
 		}
 
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow promoting to greater sizes
-			return target.getKind() == Kind::Float && FloatAbstractType(target).getSize() > size;
-		}
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
@@ -530,17 +448,6 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		bool isMutable() const {
 			return mutability == Mutability::Mutable;
-		}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow checking against null pointer and dropping mutability.
-			// We do not allow casting to a typed pointer,
-			// because we forbid implicit type specification in this context.
-			return target.getKind() == Kind::Bool
-			    || (target.getKind() == Kind::RawPointer
-			        && (mutability == Mutability::Mutable
-			            || !RawPointerAbstractType(target).isMutable()));
 		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
@@ -589,9 +496,6 @@ namespace compiler::tsh {
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
 			representation = base::strConcat("ptr ", component.toString());
 		}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
@@ -674,9 +578,6 @@ namespace compiler::tsh {
 			representation = base::strConcat("slice ", element.toString());
 		}
 
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
@@ -728,8 +629,6 @@ namespace compiler::tsh {
 			return size;
 		}
 
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context&) const override;
 		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isDefaultConstructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context& ctx) const override;
@@ -759,9 +658,6 @@ namespace compiler::tsh {
 		const std::vector<SymbolType<>>& getComponents() const {
 			return components;
 		}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
 		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
 
@@ -810,9 +706,6 @@ namespace compiler::tsh {
 		bool isFree() const {
 			return free;
 		}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const override;
 
 		FunctionAbstractTypeImpl(
 			std::vector<SymbolType<>> parameter_types,

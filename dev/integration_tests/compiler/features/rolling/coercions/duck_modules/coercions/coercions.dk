@@ -1,0 +1,184 @@
+import core.builtins.*;
+
+# ===== Tuples =====
+# Tuples are coerced component by component, both as literals and as values that already exist.
+
+fun sum(pair: (i64, i64)) -> i64 = pair._1 + pair._2;
+
+fun makePair() -> (i32, i32) = {
+    return (3i32, 4i32);
+}
+
+fun tuples() = {
+    var literal: (i64, i64) = (0, 1);
+    builtin_output_i64(literal._1 + literal._2);    # 1
+
+    var mixed: (i64, f64) = (2i32, 1.5f32);
+    builtin_output_i64(mixed._1);                   # 2
+
+    var small: (i32, i32) = (5i32, 6i32);
+    var wide: (i64, i64) = small;
+    builtin_output_i64(wide._1 + wide._2);          # 11
+
+    builtin_output_i64(sum(makePair()));            # 7
+
+    var with_type: (i64, type) = (8, i32);
+    builtin_output_i64(with_type._1);               # 8
+
+    var with_variant: (i64 | bool, i64) = (9i32, 10i32);
+    builtin_output_i64(with_variant._2);            # 10
+}
+
+fun tuplesBehindReferences() = {
+    # A tuple behind a reference is read out and rebuilt component by component.
+    var t: (i32, i32) = (8, 9);
+    var rt: ref (i32, i32) = &t;
+    var wide: (i64, i64) = rt;
+    builtin_output_i64(wide._1 + wide._2);          # 17
+
+    # A reference inside a tuple literal is read through on its own.
+    var mixed: (i32, (i64, i64)) = (1i32, &t);
+    builtin_output_i64(mixed._2._2);                # 9
+}
+
+# ===== Variants =====
+
+fun describe(v: i64 | bool) -> i64 = match (v) {
+    case i : i64 = i;
+    case b : bool = if b then 100i64 else 200i64;
+};
+
+fun describeRef(v: ref i32 | bool) -> i64 = match (v) {
+    case r : ref i32 = r as i64;
+    case _ : bool = -1i64;
+};
+
+fun describeNested(v: (i32 | bool) | f64) -> i64 = match (v) {
+    case inner : i32 | bool = match (inner) {
+        case i : i32 = i as i64;
+        case _ : bool = -1i64;
+    };
+    case _ : f64 = -2i64;
+};
+
+fun variants() = {
+    var widened: i64 | bool = 1i32;
+    builtin_output_i64(describe(widened));          # 1
+
+    # An exact alternative is packed as it is.
+    builtin_output_i64(describe(true));             # 100
+
+    # A reference is read through before it is packed.
+    var x: i32 = 2;
+    var r: ref i32 = &x;
+    builtin_output_i64(describe(r));                # 2
+    builtin_output_i64(describeRef(r));             # 2
+
+    # A value is packed into a variant nested in the target.
+    builtin_output_i64(describeNested(3i32));       # 3
+
+    # A variant is packed whole into a variant that has it as an alternative.
+    var inner: i32 | bool = 4i32;
+    builtin_output_i64(describeNested(inner));      # 4
+}
+
+# ===== Overloads =====
+
+fun pick(a: i32) -> i64 = 1;
+fun pick(a: i64) -> i64 = 2;
+fun pick(a: i32 | f64) -> i64 = 3;
+fun pick(a: bool) -> i64 = 4;
+
+fun pickWithoutExact(a: i64) -> i64 = 2;
+fun pickWithoutExact(a: i32 | f64) -> i64 = 3;
+
+fun pickPair(a: i32, b: i64) -> i64 = 1;
+fun pickPair(a: i64, b: i64) -> i64 = 2;
+
+fun overloads() = {
+    # Taking the argument as it is wins over everything else.
+    builtin_output_i64(pick(1i32));                 # 1
+    builtin_output_i64(pick(1i64));                 # 2
+    builtin_output_i64(pick(1.5f64));               # 3
+    builtin_output_i64(pick(true));                 # 4
+
+    # Widening wins over packing into a variant.
+    builtin_output_i64(pickWithoutExact(1i32));     # 2
+
+    # A candidate that is better at one argument and no worse at any other wins.
+    builtin_output_i64(pickPair(1i32, 1i32));       # 1
+}
+
+# ===== Ownership =====
+class Res {
+    id: i64 = 0;
+
+    Res.destroy() = {
+        builtin_output_i64(id);
+    }
+}
+
+# A temporary is moved into a tuple literal, its second component is converted.
+fun temporaryIntoLiteral() = {
+    var pair: (Res, i64) = (Res(101), 21i32);
+    builtin_output_i64(pair._2);                    # 21
+}                                                   # 101
+
+# A local is moved into the tuple explicitly, the tuple destroys it.
+fun movedIntoLiteral() = {
+    var res = Res(102);
+    var pair: (Res, i64) = (move res, 22i32);
+    builtin_output_i64(pair._2);                    # 22
+}                                                   # 102
+
+# A returned local is moved implicitly, so the caller destroys it.
+fun makeOwnedPair(id: i64) -> (Res, i64) = {
+    var pair: (Res, i64) = (Res(id), 23i32);
+    return pair;
+}
+
+fun returnedLocal() = {
+    var pair = makeOwnedPair(103);
+    builtin_output_i64(pair._2);                    # 23
+}                                                   # 103
+
+# A returned local is moved out implicitly and it is still packed into a variant.
+fun wrap(id: i64) -> Res | i64 = {
+    var res = Res(id);
+    return res;
+}
+
+fun packedLocal() = {
+    var wrapped = wrap(104);
+    builtin_output_i64(24);                         # 24
+}                                                   # 104
+
+# A tuple literal handed to a parameter is owned, and so destroyed, by the callee.
+fun consumePair(pair: (Res, i64)) -> i64 = {
+    return pair._2;
+}                                                   # 105
+
+fun passedLiteral() = {
+    builtin_output_i64(consumePair((Res(105), 25i32)));    # 25
+}
+
+# A box is moved into a tuple literal, and its pointee is read out of it without taking it.
+fun boxedLiteral() = {
+    var pair: (box i64, i64) = (new 26i64, 1i32);
+    var inner: i64 = pair._1;
+    builtin_output_i64(inner + pair._2);            # 27
+}
+
+fun main() -> i64 = {
+    tuples();
+    tuplesBehindReferences();
+    variants();
+    overloads();
+    temporaryIntoLiteral();
+    movedIntoLiteral();
+    returnedLocal();
+    packedLocal();
+    passedLiteral();
+    boxedLiteral();
+    return 0;
+}

@@ -28,5 +28,5 @@ Tests:
     Cases: 
       all:
         Output:
-          String: "2\n"
+          String: "1\n"
         ExitCode: 0
