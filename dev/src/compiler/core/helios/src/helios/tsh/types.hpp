@@ -14,6 +14,7 @@
 
 #pragma once
 #include "abstract_type.hpp"
+#include "function_kind.hpp"
 #include "symbol_type.hpp"
 
 #include <helios/symbols/symbol_abi.hpp>
@@ -339,10 +340,10 @@ namespace compiler::tsh {
 	 * @brief The Function types.
 	 *
 	 * Each function type has a list of parameter types and a return type.
-	 * Additionally, it may be a pure function and it may be a free function.
+	 * Additionally, it may be a pure function and it has a FunctionKind.
 	 *
 	 * While function parameter types and return types are rather self explanatory,
-	 * purity and freedom are not.
+	 * purity and the kind are not.
 	 *
 	 * A function is **pure** if it has no side effects. That means, that calling it
 	 * multiple times with the same arguments will always yield the same result
@@ -357,26 +358,15 @@ namespace compiler::tsh {
 	 * language and use of global values and shared states is expected. Also, it's
 	 * easier to introduce a `pure` annotation than a `nonpure` annotation.
 	 *
-	 * A function is **free** if it is not associated with any object. This object
-	 * may be an instance of a class, where the function is a method of said class,
-	 * or it can be a structure with captures and bindings.
+	 * A **raw** function (`funptr(A) -> R`) is not associated with any object. It is, in
+	 * effect, a C-like function pointer: the address of the code of the function.
 	 *
-	 * A function that is free is, in effect, a C-like function pointer, while a
-	 * non-free function can be thought of as a function object, like a lambda with
-	 * captures or a partially applied function.
+	 * A **closure** (`(A) -> R`) can be thought of as a function object, like a lambda
+	 * with captures or a partially applied function. It carries, besides the code, an
+	 * environment with captures and bindings. A closure cannot be converted to a raw
+	 * function, but a raw function can be converted to a closure with an empty environment.
 	 *
-	 * A non-free (bound? [to an object]) function can be represented as two pointers:
-	 * one to the executable code, and another to a structure with captures and bindings.
-	 * A non-free function cannot be converted to a free function, but a free function can
-	 * be trivially converted to a function object by supplying it with a pointer to an empty
-	 * structure.
-	 *
-	 * A non-free function introduces overhead when being called or passed to higher order
-	 * functions. Yet we expect that if a function is expected, then a lambda with captures
-	 * will work in that context. Thus, a function is by default non-free, and can be marked
-	 * as free in order to constrict expressive power, but enable optimisations.
-	 *
-	 * A function can be non-free and pure if it does not change its captures.
+	 * A closure can be pure if it does not change its captures.
 	 */
 	class FunctionAbstractType: public AbstractType {
 	public:
@@ -404,11 +394,10 @@ namespace compiler::tsh {
 		bool isPure() const;
 
 		/**
-		 * @brief Check whether the function type is free or not.
-		 * @return Whether the function type is free or not.
+		 * @brief Gets whether the function type is a raw function or a closure.
 		 */
 		[[nodiscard]]
-		bool isFree() const;
+		FunctionKind getFunctionKind() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(FunctionAbstractType)
 

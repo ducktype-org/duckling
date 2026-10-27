@@ -17,7 +17,6 @@
 #include "comma.hpp"                // IWYU pragma: export
 #include "comparison_chain.hpp"     // IWYU pragma: export
 #include "format_string_value.hpp"  // IWYU pragma: export
-#include "fun_type_expr.hpp"        // IWYU pragma: export
 #include "general_binary.hpp"       // IWYU pragma: export
 #include "general_prefix.hpp"       // IWYU pragma: export
 #include "general_suffix.hpp"       // IWYU pragma: export

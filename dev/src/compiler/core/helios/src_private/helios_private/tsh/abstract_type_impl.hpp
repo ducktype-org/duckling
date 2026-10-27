@@ -776,7 +776,8 @@ namespace compiler::tsh {
 	class FunctionAbstractTypeImpl final: public AbstractTypeImpl {
 		std::vector<SymbolType<>> parameter_types;
 		SymbolType<>              result_type;
-		bool                      pure, free;
+		bool                      pure;
+		FunctionKind              function_kind;
 
 	public:
 		[[nodiscard]]
@@ -805,8 +806,8 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		bool isFree() const {
-			return free;
+		FunctionKind getFunctionKind() const {
+			return function_kind;
 		}
 
 		[[nodiscard]]
@@ -815,8 +816,8 @@ namespace compiler::tsh {
 		FunctionAbstractTypeImpl(
 			std::vector<SymbolType<>> parameter_types,
 			SymbolType<>              result_type,
-			bool                      pure = false,
-			bool                      free = false
+			bool                      pure          = false,
+			FunctionKind              function_kind = FunctionKind::Raw
 		);
 
 		/**

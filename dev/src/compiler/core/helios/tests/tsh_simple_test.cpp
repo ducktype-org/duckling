@@ -655,7 +655,9 @@ private:
 		);
 		assertTrue(fun_1.getResultType() == st(int_32), "Result type should be as constructed.");
 		assertTrue(!fun_1.isPure(), "Purity should be as constructed.");
-		assertTrue(!fun_1.isFree(), "Freedom should be as constructed.");
+		assertTrue(
+			fun_1.getFunctionKind() == FunctionKind::Raw, "Function kind should be as constructed."
+		);
 
 		const AbstractType         type_fun = fun_1;
 		const FunctionAbstractType fun2     = type_fun;
@@ -677,10 +679,27 @@ private:
 			fun_1 != fun_different_output, "Functions of different output types should be different."
 		);
 		const auto fun_different_flags = query::entryPoint<QueryFunctionType>(
-			{ { st(int_16), st(int_32) }, st(int_32), true, true }
+			{ { st(int_16), st(int_32) }, st(int_32), true, FunctionKind::Closure }
 		);
 		assertTrue(
 			fun_1 != fun_different_flags, "Functions with different flags should be different."
+		);
+
+		const auto fun_closure = query::entryPoint<QueryFunctionType>(
+			{ { st(int_16), st(int_32) }, st(int_32), false, FunctionKind::Closure }
+		);
+		assertTrue(fun_1 != fun_closure, "Raw functions and closures should be different.");
+		assertTrue(
+			fun_closure.getFunctionKind() == FunctionKind::Closure,
+			"Function kind should be as constructed."
+		);
+		assertFalse(
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ fun_1, fun_closure }),
+			"A raw function should not be coercible to a closure yet."
+		);
+		assertFalse(
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ fun_closure, fun_1 }),
+			"A closure should not be coercible to a raw function."
 		);
 
 		const AbstractType         type_fun_different_flags = fun_different_flags;

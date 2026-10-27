@@ -28,7 +28,6 @@ namespace pst::expr {
 		Call,
 		ChainExpr,
 		RoundExpr,
-		FunTypeExpr,
 		UnitExpr,
 		BlockExpr,
 		MatchExpr,

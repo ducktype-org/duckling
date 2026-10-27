@@ -472,18 +472,15 @@ namespace compiler::tsl {
 	};
 
 	/**
-	 * @brief Layout of a function type. A value of a function type is a pointer to the code of the
-	 * function.
+	 * @brief Layout of a function type. A value of a raw function type is a pointer to the code of
+	 * the function. Closure function types have no layout yet, requesting one reports an error.
 	 *
 	 * The layout also describes the signature of the function: the layouts of its parameters and of
 	 * its result. They are looked up lazily, so that a type may hold a function referring to itself
-	 * (e.g. `class T { f: fun(T) -> i64; }`) without a query cycle.
+	 * (e.g. `class T { f: funptr(T) -> i64; }`) without a query cycle.
 	 */
 	class FunctionalTypeLayout final: public TypeLayoutABC {
-		explicit FunctionalTypeLayout(
-			const tsh::FunctionAbstractType function_type, query::Context& ctx
-		):
-			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {}
+		explicit FunctionalTypeLayout(tsh::FunctionAbstractType function_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 

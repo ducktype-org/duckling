@@ -681,7 +681,11 @@ namespace compiler::helios::code {
 	}
 
 	FunctionTypeExpr::FunctionTypeExpr(
-		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> parameters, Box<Expr> result
+		query::Context&,
+		ElementOrigin          origin,
+		std::vector<Box<Expr>> parameters,
+		Box<Expr>              result,
+		tsh::FunctionKind      kind
 	):
 		  Expr(
 			  tsh::ExpressionType{
@@ -695,20 +699,24 @@ namespace compiler::helios::code {
 			  origin
 		  ),
 		  parameters(std::move(parameters)),
-		  result(std::move(result)) {}
+		  result(std::move(result)),
+		  kind(kind) {}
 
 	FunctionTypeExpr::FunctionTypeExpr(
 		tsh::ExpressionType<>        expression_type,
 		ElementOrigin                origin,
 		std::vector<base::Box<Expr>> parameters,
-		base::Box<Expr>              result
+		base::Box<Expr>              result,
+		tsh::FunctionKind            kind
 	):
 		  Expr(expression_type, origin),
 		  parameters(std::move(parameters)),
-		  result(std::move(result)) {}
+		  result(std::move(result)),
+		  kind(kind) {}
 
 	void FunctionTypeExpr::debugPrint(std::ostream& out) const {
-		out << "fun(";
+		if (kind == tsh::FunctionKind::Raw) out << "funptr";
+		out << "(";
 		for (bool add_comma = false; auto&& parameter: parameters) {
 			if (add_comma) out << ", ";
 			parameter->debugPrint(out);
@@ -723,7 +731,7 @@ namespace compiler::helios::code {
 		cloned_parameters.reserve(parameters.size());
 		for (const auto& parameter: parameters) cloned_parameters.push_back(parameter->clone());
 		return makeBox<FunctionTypeExpr>(
-			expression_type, origin, std::move(cloned_parameters), result->clone()
+			expression_type, origin, std::move(cloned_parameters), result->clone(), kind
 		);
 	}
 

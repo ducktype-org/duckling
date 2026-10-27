@@ -6,10 +6,9 @@
 
 #include "../../hierarchy/expressions/chain_expr.hpp"
 
-#include "../../hierarchy/expressions/access.hpp"         // IWYU pragma: keep
-#include "../../hierarchy/expressions/atom.hpp"           // IWYU pragma: keep
-#include "../../hierarchy/expressions/call.hpp"           // IWYU pragma: keep
-#include "../../hierarchy/expressions/fun_type_expr.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/expressions/access.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/expressions/atom.hpp"    // IWYU pragma: keep
+#include "../../hierarchy/expressions/call.hpp"    // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {
@@ -36,8 +35,6 @@ namespace pst::expr {
 
 	MBox<ExprElement> ChainExpr::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
-		if (state[0].is(Keyword::Fun) && state[1].isBracketGroup(lexer::Token::Round))
-			return FunTypeExpr::parse(state);
 
 		i64 fwd = toNextLink(state);
 		if (state[fwd].is(Token::Type::Sentinel)) return Lower::parse(state);

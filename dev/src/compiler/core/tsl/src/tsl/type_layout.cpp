@@ -27,6 +27,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_errors.hpp>
 
@@ -683,6 +684,24 @@ namespace compiler::tsl {
 	CRef<TypeLayout> PointerTypeLayout::getPointee(query::Context& ctx) const {
 		CORE_ASSERT(pointee_type.has_value(), "Untyped pointer layout has no pointee.");
 		return &ctx.query<QuerySymbolTypeLayout>(*pointee_type)->valueOrThrow();
+	}
+
+	FunctionalTypeLayout::FunctionalTypeLayout(
+		const tsh::FunctionAbstractType function_type, query::Context& ctx
+	):
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {
+		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
+			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				base::strConcat(
+					"Lowering of the closure function type `",
+					function_type.toString(),
+					"` is not supported yet."
+				),
+				"Use a raw function type, for example `funptr(i64) -> i64` instead of `(i64) -> "
+				"i64`."
+			));
+			query::throwFailed();
+		}
 	}
 
 	std::vector<CRef<TypeLayout>> FunctionalTypeLayout::getParameterLayouts(query::Context& ctx

@@ -136,6 +136,28 @@ namespace compiler::helios::code {
 		}
 
 		/**
+		 * @brief Extracts the parameter type expressions of a function type from its PST
+		 * parameters expression. A round group is the list of parameters (`()` has none, `(a)`
+		 * has `a`, `(a, b)` has `a` and `b`), anything else is the only parameter.
+		 */
+		std::vector<pst::AccessLocked<pst::ExprElement>> getFunctionTypeParameterExprs(
+			query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
+		) {
+			if (expr.unlock(ctx).dynamicCast<pst::expr::UnitExpr>()) return {};
+			auto round = expr.unlock(ctx).dynamicCast<pst::expr::RoundExpr>();
+			if (!round.has_value()) return { expr };
+
+			const auto inner = round.value()->getInner();
+			auto       comma = inner.unlock(ctx).dynamicCast<pst::expr::Comma>();
+			if (!comma.has_value()) return { inner };
+
+			std::vector<pst::AccessLocked<pst::ExprElement>> parameters;
+			for (auto parameter: comma.value()->getExpressions())
+				parameters.emplace_back(parameter);
+			return parameters;
+		}
+
+		/**
 		 * Visitor that implements logic of creation of HOUT expressions from PST expressions.
 		 */
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
@@ -329,6 +351,15 @@ namespace compiler::helios::code {
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				const auto op = stmt->getOperator().unlock(ctx);
+
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::FunPtr)) {
+					ctx.logInt(makeBox<dia::PlaceholderError>(
+						"`funptr` must be followed by `-> <result type>`, for example "
+						"`funptr(i64) -> ()`.",
+						stmt->getStablePosition()
+					));
+					return;
+				}
 
 				// A `-` before a numeric literal is a part of the literal. If not for that values
 				// like `-128i8` couldn't be parsed since `128` does not fit into `i8` (same for
@@ -537,6 +568,10 @@ namespace compiler::helios::code {
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// Handle explicit type conversions
 				const auto op = stmt->getOperator().unlock(ctx);
+				if (op->unwrap() == lang_def::NamedOperator::SingleArrow) {
+					createFunctionType(stmt);
+					return;
+				}
 				if (op->unwrap() == lang_def::NamedOperator::As) {
 					auto value_expr  = subExprFromPST(ctx, stmt->getLeftOperand()).valueOrThrow();
 					auto type_ctv    = getTypeCTVFromPST(ctx, stmt->getRightOperand());
@@ -593,30 +628,42 @@ namespace compiler::helios::code {
 				node = fromChainExpr(ctx, chain_expr).valueOrThrow();
 			}
 
-			void visitFunTypeExpr(pst::Access<pst::expr::FunTypeExpr> fun_type) override {
-				const auto meta_type = tsh::SymbolType<>{
-					tsh::getMetaType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
+			/**
+			 * @brief Creates the function type `<parameters> -> <result>` of @p arrow. It is a raw
+			 * function when the parameters are prefixed with `funptr`, otherwise a closure.
+			 */
+			void createFunctionType(pst::Access<pst::expr::BinaryOperator> arrow) {
+				auto parameters_expr = arrow->getLeftOperand();
+				auto kind            = tsh::FunctionKind::Closure;
+
+				if (auto prefix
+				    = parameters_expr.unlock(ctx).dynamicCast<pst::expr::PrefixOperator>();
+				    prefix.has_value()
+				    && prefix.value()->getOperator().unlock(ctx)->unwrap()
+				           == lang_def::keywordToStr(lang_def::Keyword::FunPtr)) {
+					parameters_expr = prefix.value()->getExpr();
+					kind            = tsh::FunctionKind::Raw;
+				}
+
+				const ElementOrigin origin    = pstOrigin(arrow);
+				const auto          meta_type = tsh::SymbolType<>{
+                    tsh::getMetaType(),
+                    tsh::ReferenceKind::Direct,
+                    tsh::Mutability::Mutable,
 				};
 
 				std::vector<Box<Expr>> parameters;
-				for (auto parameter: fun_type->getParams()) {
+				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
 					auto parameter_hout = subExprFromPSTWithType(ctx, parameter, meta_type);
 					if (parameter_hout.hasFailed()) return;
 					parameters.emplace_back(std::move(parameter_hout).valueOrThrow());
 				}
 
-				Box<Expr> result
-					= makeBox<LiteralTypeExpr>(ctx, pstOrigin(fun_type), tsh::getUnitType());
-				if_opt_some(fun_type->getRet(), ret) {
-					auto result_hout = subExprFromPSTWithType(ctx, ret, meta_type);
-					if (result_hout.hasFailed()) return;
-					result = std::move(result_hout).valueOrThrow();
-				}
+				auto result = subExprFromPSTWithType(ctx, arrow->getRightOperand(), meta_type);
+				if (result.hasFailed()) return;
 
 				node = makeBox<FunctionTypeExpr>(
-					ctx, pstOrigin(fun_type), std::move(parameters), std::move(result)
+					ctx, origin, std::move(parameters), std::move(result).valueOrThrow(), kind
 				);
 			}
 

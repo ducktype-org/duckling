@@ -203,8 +203,8 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto [params, result, pure, free] = key;
-			return { params, result, pure, free };
+			const auto [params, result, pure, kind] = key;
+			return { params, result, pure, kind };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF

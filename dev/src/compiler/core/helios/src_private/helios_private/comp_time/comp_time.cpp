@@ -713,6 +713,7 @@ namespace compiler::helios {
 					ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = std::move(parameter_types),
 						.result_type = result_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(),
+						.kind        = expr.kind,
 					}),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,

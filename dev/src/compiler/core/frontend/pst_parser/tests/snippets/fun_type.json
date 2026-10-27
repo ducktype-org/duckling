@@ -1,13 +1,13 @@
 {
 	"position": {
 		"sourceStart": 0,
-		"sourceEnd": 315
+		"sourceEnd": 662
 	},
 	"Top Level": [
 		{
 			"position": {
 				"sourceStart": 0,
-				"sourceEnd": 16
+				"sourceEnd": 25
 			},
 			"Let": {
 				"name": {
@@ -23,37 +23,75 @@
 				"type": {
 					"position": {
 						"sourceStart": 7,
-						"sourceEnd": 11
+						"sourceEnd": 20
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
 								"sourceStart": 7,
-								"sourceEnd": 11
+								"sourceEnd": 20
 							},
-							"Function Type Expression": {
-								"parameters": [],
-								"return": "unit"
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 7,
+										"sourceEnd": 14
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 7,
+												"sourceEnd": 12
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
+										},
+										"expression": {
+											"position": {
+												"sourceStart": 13,
+												"sourceEnd": 14
+											},
+											"Unit Expression": {}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 16,
+										"sourceEnd": 17
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 19,
+										"sourceEnd": 20
+									},
+									"Unit Expression": {}
+								}
 							}
 						}
 					}
 				},
 				"value": {
 					"position": {
-						"sourceStart": 15,
-						"sourceEnd": 15
+						"sourceStart": 24,
+						"sourceEnd": 24
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 15,
-								"sourceEnd": 15
+								"sourceStart": 24,
+								"sourceEnd": 24
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 15,
-										"sourceEnd": 15
+										"sourceStart": 24,
+										"sourceEnd": 24
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -67,14 +105,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 18,
-				"sourceEnd": 50
+				"sourceStart": 27,
+				"sourceEnd": 62
 			},
 			"Let": {
 				"name": {
 					"position": {
-						"sourceStart": 22,
-						"sourceEnd": 22
+						"sourceStart": 31,
+						"sourceEnd": 31
 					},
 					"Identifier Wrapper": {
 						"value": "b"
@@ -83,62 +121,104 @@
 				"mutable": false,
 				"type": {
 					"position": {
-						"sourceStart": 25,
-						"sourceEnd": 45
+						"sourceStart": 34,
+						"sourceEnd": 57
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 25,
-								"sourceEnd": 45
+								"sourceStart": 34,
+								"sourceEnd": 57
 							},
-							"Function Type Expression": {
-								"parameters": [
-									{
-										"position": {
-											"sourceStart": 29,
-											"sourceEnd": 31
-										},
-										"Keyword Expression": {
-											"keyword": {
-												"position": {
-													"sourceStart": 29,
-													"sourceEnd": 31
-												},
-												"Keyword Wrapper": {
-													"value": "i32"
-												}
-											}
-										}
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 34,
+										"sourceEnd": 49
 									},
-									{
-										"position": {
-											"sourceStart": 34,
-											"sourceEnd": 36
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 34,
+												"sourceEnd": 39
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
 										},
-										"Keyword Expression": {
-											"keyword": {
-												"position": {
-													"sourceStart": 34,
-													"sourceEnd": 36
-												},
-												"Keyword Wrapper": {
-													"value": "i64"
+										"expression": {
+											"position": {
+												"sourceStart": 40,
+												"sourceEnd": 49
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 41,
+														"sourceEnd": 48
+													},
+													"Comma Expr": {
+														"sub-expressions": [
+															{
+																"position": {
+																	"sourceStart": 41,
+																	"sourceEnd": 43
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 41,
+																			"sourceEnd": 43
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i32"
+																		}
+																	}
+																}
+															},
+															{
+																"position": {
+																	"sourceStart": 46,
+																	"sourceEnd": 48
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 46,
+																			"sourceEnd": 48
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
+																}
+															}
+														]
+													}
 												}
 											}
 										}
 									}
-								],
-								"return": {
+								},
+								"operator": {
 									"position": {
-										"sourceStart": 42,
-										"sourceEnd": 45
+										"sourceStart": 51,
+										"sourceEnd": 52
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 54,
+										"sourceEnd": 57
 									},
 									"Keyword Expression": {
 										"keyword": {
 											"position": {
-												"sourceStart": 42,
-												"sourceEnd": 45
+												"sourceStart": 54,
+												"sourceEnd": 57
 											},
 											"Keyword Wrapper": {
 												"value": "bool"
@@ -152,20 +232,20 @@
 				},
 				"value": {
 					"position": {
-						"sourceStart": 49,
-						"sourceEnd": 49
+						"sourceStart": 61,
+						"sourceEnd": 61
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 49,
-								"sourceEnd": 49
+								"sourceStart": 61,
+								"sourceEnd": 61
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 49,
-										"sourceEnd": 49
+										"sourceStart": 61,
+										"sourceEnd": 61
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -179,14 +259,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 52,
-				"sourceEnd": 78
+				"sourceStart": 64,
+				"sourceEnd": 93
 			},
 			"Let": {
 				"name": {
 					"position": {
-						"sourceStart": 56,
-						"sourceEnd": 56
+						"sourceStart": 68,
+						"sourceEnd": 68
 					},
 					"Identifier Wrapper": {
 						"value": "c"
@@ -195,45 +275,77 @@
 				"mutable": false,
 				"type": {
 					"position": {
-						"sourceStart": 59,
-						"sourceEnd": 73
+						"sourceStart": 71,
+						"sourceEnd": 88
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 59,
-								"sourceEnd": 73
+								"sourceStart": 71,
+								"sourceEnd": 88
 							},
-							"Function Type Expression": {
-								"parameters": [
-									{
-										"position": {
-											"sourceStart": 63,
-											"sourceEnd": 65
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 71,
+										"sourceEnd": 81
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 71,
+												"sourceEnd": 76
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
 										},
-										"Keyword Expression": {
-											"keyword": {
-												"position": {
-													"sourceStart": 63,
-													"sourceEnd": 65
-												},
-												"Keyword Wrapper": {
-													"value": "i32"
+										"expression": {
+											"position": {
+												"sourceStart": 77,
+												"sourceEnd": 81
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 78,
+														"sourceEnd": 80
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 78,
+																"sourceEnd": 80
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
+													}
 												}
 											}
 										}
 									}
-								],
-								"return": {
+								},
+								"operator": {
 									"position": {
-										"sourceStart": 71,
-										"sourceEnd": 73
+										"sourceStart": 83,
+										"sourceEnd": 84
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 86,
+										"sourceEnd": 88
 									},
 									"Identifier Expression": {
 										"name": {
 											"position": {
-												"sourceStart": 71,
-												"sourceEnd": 73
+												"sourceStart": 86,
+												"sourceEnd": 88
 											},
 											"Identifier Wrapper": {
 												"value": "Foo"
@@ -247,20 +359,20 @@
 				},
 				"value": {
 					"position": {
-						"sourceStart": 77,
-						"sourceEnd": 77
+						"sourceStart": 92,
+						"sourceEnd": 92
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 77,
-								"sourceEnd": 77
+								"sourceStart": 92,
+								"sourceEnd": 92
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 77,
-										"sourceEnd": 77
+										"sourceStart": 92,
+										"sourceEnd": 92
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -274,14 +386,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 80,
-				"sourceEnd": 110
+				"sourceStart": 95,
+				"sourceEnd": 128
 			},
 			"Let": {
 				"name": {
 					"position": {
-						"sourceStart": 84,
-						"sourceEnd": 84
+						"sourceStart": 99,
+						"sourceEnd": 99
 					},
 					"Identifier Wrapper": {
 						"value": "d"
@@ -290,45 +402,77 @@
 				"mutable": false,
 				"type": {
 					"position": {
-						"sourceStart": 87,
-						"sourceEnd": 105
+						"sourceStart": 102,
+						"sourceEnd": 123
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 87,
-								"sourceEnd": 105
+								"sourceStart": 102,
+								"sourceEnd": 123
 							},
-							"Function Type Expression": {
-								"parameters": [
-									{
-										"position": {
-											"sourceStart": 91,
-											"sourceEnd": 93
-										},
-										"Identifier Expression": {
-											"name": {
-												"position": {
-													"sourceStart": 91,
-													"sourceEnd": 93
-												},
-												"Identifier Wrapper": {
-													"value": "Foo"
-												}
-											}
-										}
-									}
-								],
-								"return": {
+							"Binary Operator": {
+								"left_expr": {
 									"position": {
-										"sourceStart": 99,
-										"sourceEnd": 105
+										"sourceStart": 102,
+										"sourceEnd": 112
 									},
 									"Prefix Operator": {
 										"operator": {
 											"position": {
-												"sourceStart": 99,
-												"sourceEnd": 101
+												"sourceStart": 102,
+												"sourceEnd": 107
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
+										},
+										"expression": {
+											"position": {
+												"sourceStart": 108,
+												"sourceEnd": 112
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 109,
+														"sourceEnd": 111
+													},
+													"Identifier Expression": {
+														"name": {
+															"position": {
+																"sourceStart": 109,
+																"sourceEnd": 111
+															},
+															"Identifier Wrapper": {
+																"value": "Foo"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 114,
+										"sourceEnd": 115
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 117,
+										"sourceEnd": 123
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 117,
+												"sourceEnd": 119
 											},
 											"Operator Wrapper": {
 												"value": "ptr"
@@ -336,14 +480,14 @@
 										},
 										"expression": {
 											"position": {
-												"sourceStart": 103,
-												"sourceEnd": 105
+												"sourceStart": 121,
+												"sourceEnd": 123
 											},
 											"Identifier Expression": {
 												"name": {
 													"position": {
-														"sourceStart": 103,
-														"sourceEnd": 105
+														"sourceStart": 121,
+														"sourceEnd": 123
 													},
 													"Identifier Wrapper": {
 														"value": "Foo"
@@ -359,20 +503,20 @@
 				},
 				"value": {
 					"position": {
-						"sourceStart": 109,
-						"sourceEnd": 109
+						"sourceStart": 127,
+						"sourceEnd": 127
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 109,
-								"sourceEnd": 109
+								"sourceStart": 127,
+								"sourceEnd": 127
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 109,
-										"sourceEnd": 109
+										"sourceStart": 127,
+										"sourceEnd": 127
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -386,14 +530,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 112,
-				"sourceEnd": 150
+				"sourceStart": 130,
+				"sourceEnd": 174
 			},
 			"Let": {
 				"name": {
 					"position": {
-						"sourceStart": 116,
-						"sourceEnd": 116
+						"sourceStart": 134,
+						"sourceEnd": 134
 					},
 					"Identifier Wrapper": {
 						"value": "e"
@@ -402,70 +546,134 @@
 				"mutable": false,
 				"type": {
 					"position": {
-						"sourceStart": 119,
-						"sourceEnd": 145
+						"sourceStart": 137,
+						"sourceEnd": 169
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 119,
-								"sourceEnd": 145
+								"sourceStart": 137,
+								"sourceEnd": 169
 							},
-							"Function Type Expression": {
-								"parameters": [
-									{
-										"position": {
-											"sourceStart": 123,
-											"sourceEnd": 125
-										},
-										"Keyword Expression": {
-											"keyword": {
-												"position": {
-													"sourceStart": 123,
-													"sourceEnd": 125
-												},
-												"Keyword Wrapper": {
-													"value": "i32"
-												}
-											}
-										}
-									}
-								],
-								"return": {
+							"Binary Operator": {
+								"left_expr": {
 									"position": {
-										"sourceStart": 131,
-										"sourceEnd": 145
+										"sourceStart": 137,
+										"sourceEnd": 147
 									},
-									"Function Type Expression": {
-										"parameters": [
-											{
-												"position": {
-													"sourceStart": 135,
-													"sourceEnd": 137
-												},
-												"Keyword Expression": {
-													"keyword": {
-														"position": {
-															"sourceStart": 135,
-															"sourceEnd": 137
-														},
-														"Keyword Wrapper": {
-															"value": "i32"
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 137,
+												"sourceEnd": 142
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
+										},
+										"expression": {
+											"position": {
+												"sourceStart": 143,
+												"sourceEnd": 147
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 144,
+														"sourceEnd": 146
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 144,
+																"sourceEnd": 146
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
 														}
 													}
 												}
 											}
-										],
-										"return": {
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 149,
+										"sourceEnd": 150
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 152,
+										"sourceEnd": 169
+									},
+									"Binary Operator": {
+										"left_expr": {
 											"position": {
-												"sourceStart": 143,
-												"sourceEnd": 145
+												"sourceStart": 152,
+												"sourceEnd": 162
+											},
+											"Prefix Operator": {
+												"operator": {
+													"position": {
+														"sourceStart": 152,
+														"sourceEnd": 157
+													},
+													"Operator Wrapper": {
+														"value": "funptr"
+													}
+												},
+												"expression": {
+													"position": {
+														"sourceStart": 158,
+														"sourceEnd": 162
+													},
+													"Round Group Expression": {
+														"inner_expr": {
+															"position": {
+																"sourceStart": 159,
+																"sourceEnd": 161
+															},
+															"Keyword Expression": {
+																"keyword": {
+																	"position": {
+																		"sourceStart": 159,
+																		"sourceEnd": 161
+																	},
+																	"Keyword Wrapper": {
+																		"value": "i32"
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+										"operator": {
+											"position": {
+												"sourceStart": 164,
+												"sourceEnd": 165
+											},
+											"Operator Wrapper": {
+												"value": "->"
+											}
+										},
+										"right_expr": {
+											"position": {
+												"sourceStart": 167,
+												"sourceEnd": 169
 											},
 											"Keyword Expression": {
 												"keyword": {
 													"position": {
-														"sourceStart": 143,
-														"sourceEnd": 145
+														"sourceStart": 167,
+														"sourceEnd": 169
 													},
 													"Keyword Wrapper": {
 														"value": "i32"
@@ -481,20 +689,20 @@
 				},
 				"value": {
 					"position": {
-						"sourceStart": 149,
-						"sourceEnd": 149
+						"sourceStart": 173,
+						"sourceEnd": 173
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 149,
-								"sourceEnd": 149
+								"sourceStart": 173,
+								"sourceEnd": 173
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 149,
-										"sourceEnd": 149
+										"sourceStart": 173,
+										"sourceEnd": 173
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -508,14 +716,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 152,
-				"sourceEnd": 182
+				"sourceStart": 176,
+				"sourceEnd": 211
 			},
 			"Let": {
 				"name": {
 					"position": {
-						"sourceStart": 156,
-						"sourceEnd": 156
+						"sourceStart": 180,
+						"sourceEnd": 180
 					},
 					"Identifier Wrapper": {
 						"value": "g"
@@ -524,20 +732,20 @@
 				"mutable": false,
 				"type": {
 					"position": {
-						"sourceStart": 159,
-						"sourceEnd": 177
+						"sourceStart": 183,
+						"sourceEnd": 206
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 159,
-								"sourceEnd": 177
+								"sourceStart": 183,
+								"sourceEnd": 206
 							},
 							"Prefix Operator": {
 								"operator": {
 									"position": {
-										"sourceStart": 159,
-										"sourceEnd": 161
+										"sourceStart": 183,
+										"sourceEnd": 185
 									},
 									"Operator Wrapper": {
 										"value": "ptr"
@@ -545,42 +753,82 @@
 								},
 								"expression": {
 									"position": {
-										"sourceStart": 163,
-										"sourceEnd": 177
+										"sourceStart": 187,
+										"sourceEnd": 206
 									},
-									"Function Type Expression": {
-										"parameters": [
-											{
-												"position": {
-													"sourceStart": 167,
-													"sourceEnd": 169
-												},
-												"Keyword Expression": {
-													"keyword": {
-														"position": {
-															"sourceStart": 167,
-															"sourceEnd": 169
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 188,
+												"sourceEnd": 205
+											},
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 188,
+														"sourceEnd": 198
+													},
+													"Prefix Operator": {
+														"operator": {
+															"position": {
+																"sourceStart": 188,
+																"sourceEnd": 193
+															},
+															"Operator Wrapper": {
+																"value": "funptr"
+															}
 														},
-														"Keyword Wrapper": {
-															"value": "i32"
+														"expression": {
+															"position": {
+																"sourceStart": 194,
+																"sourceEnd": 198
+															},
+															"Round Group Expression": {
+																"inner_expr": {
+																	"position": {
+																		"sourceStart": 195,
+																		"sourceEnd": 197
+																	},
+																	"Keyword Expression": {
+																		"keyword": {
+																			"position": {
+																				"sourceStart": 195,
+																				"sourceEnd": 197
+																			},
+																			"Keyword Wrapper": {
+																				"value": "i32"
+																			}
+																		}
+																	}
+																}
+															}
 														}
 													}
-												}
-											}
-										],
-										"return": {
-											"position": {
-												"sourceStart": 175,
-												"sourceEnd": 177
-											},
-											"Keyword Expression": {
-												"keyword": {
+												},
+												"operator": {
 													"position": {
-														"sourceStart": 175,
-														"sourceEnd": 177
+														"sourceStart": 200,
+														"sourceEnd": 201
 													},
-													"Keyword Wrapper": {
-														"value": "i32"
+													"Operator Wrapper": {
+														"value": "->"
+													}
+												},
+												"right_expr": {
+													"position": {
+														"sourceStart": 203,
+														"sourceEnd": 205
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 203,
+																"sourceEnd": 205
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
 													}
 												}
 											}
@@ -593,20 +841,20 @@
 				},
 				"value": {
 					"position": {
-						"sourceStart": 181,
-						"sourceEnd": 181
+						"sourceStart": 210,
+						"sourceEnd": 210
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 181,
-								"sourceEnd": 181
+								"sourceStart": 210,
+								"sourceEnd": 210
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 181,
-										"sourceEnd": 181
+										"sourceStart": 210,
+										"sourceEnd": 210
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -620,14 +868,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 184,
-				"sourceEnd": 224
+				"sourceStart": 213,
+				"sourceEnd": 256
 			},
 			"Let": {
 				"name": {
 					"position": {
-						"sourceStart": 188,
-						"sourceEnd": 188
+						"sourceStart": 217,
+						"sourceEnd": 217
 					},
 					"Identifier Wrapper": {
 						"value": "h"
@@ -636,89 +884,87 @@
 				"mutable": false,
 				"type": {
 					"position": {
-						"sourceStart": 191,
-						"sourceEnd": 219
+						"sourceStart": 220,
+						"sourceEnd": 251
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 191,
-								"sourceEnd": 219
+								"sourceStart": 220,
+								"sourceEnd": 251
 							},
 							"Binary Operator": {
 								"left_expr": {
 									"position": {
-										"sourceStart": 191,
-										"sourceEnd": 212
+										"sourceStart": 220,
+										"sourceEnd": 237
 									},
-									"Function Type Expression": {
-										"parameters": [
-											{
-												"position": {
-													"sourceStart": 195,
-													"sourceEnd": 204
-												},
-												"Round Group Expression": {
-													"inner_expr": {
-														"position": {
-															"sourceStart": 196,
-															"sourceEnd": 203
-														},
-														"Comma Expr": {
-															"sub-expressions": [
-																{
-																	"position": {
-																		"sourceStart": 196,
-																		"sourceEnd": 198
-																	},
-																	"Keyword Expression": {
-																		"keyword": {
-																			"position": {
-																				"sourceStart": 196,
-																				"sourceEnd": 198
-																			},
-																			"Keyword Wrapper": {
-																				"value": "i32"
-																			}
-																		}
-																	}
-																},
-																{
-																	"position": {
-																		"sourceStart": 201,
-																		"sourceEnd": 203
-																	},
-																	"Keyword Expression": {
-																		"keyword": {
-																			"position": {
-																				"sourceStart": 201,
-																				"sourceEnd": 203
-																			},
-																			"Keyword Wrapper": {
-																				"value": "i32"
-																			}
-																		}
-																	}
-																}
-															]
-														}
-													}
-												}
-											}
-										],
-										"return": {
+									"Prefix Operator": {
+										"operator": {
 											"position": {
-												"sourceStart": 210,
-												"sourceEnd": 212
+												"sourceStart": 220,
+												"sourceEnd": 225
 											},
-											"Keyword Expression": {
-												"keyword": {
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
+										},
+										"expression": {
+											"position": {
+												"sourceStart": 226,
+												"sourceEnd": 237
+											},
+											"Round Group Expression": {
+												"inner_expr": {
 													"position": {
-														"sourceStart": 210,
-														"sourceEnd": 212
+														"sourceStart": 227,
+														"sourceEnd": 236
 													},
-													"Keyword Wrapper": {
-														"value": "i32"
+													"Round Group Expression": {
+														"inner_expr": {
+															"position": {
+																"sourceStart": 228,
+																"sourceEnd": 235
+															},
+															"Comma Expr": {
+																"sub-expressions": [
+																	{
+																		"position": {
+																			"sourceStart": 228,
+																			"sourceEnd": 230
+																		},
+																		"Keyword Expression": {
+																			"keyword": {
+																				"position": {
+																					"sourceStart": 228,
+																					"sourceEnd": 230
+																				},
+																				"Keyword Wrapper": {
+																					"value": "i32"
+																				}
+																			}
+																		}
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 233,
+																			"sourceEnd": 235
+																		},
+																		"Keyword Expression": {
+																			"keyword": {
+																				"position": {
+																					"sourceStart": 233,
+																					"sourceEnd": 235
+																				},
+																				"Keyword Wrapper": {
+																					"value": "i32"
+																				}
+																			}
+																		}
+																	}
+																]
+															}
+														}
 													}
 												}
 											}
@@ -727,26 +973,60 @@
 								},
 								"operator": {
 									"position": {
-										"sourceStart": 214,
-										"sourceEnd": 214
+										"sourceStart": 239,
+										"sourceEnd": 240
 									},
 									"Operator Wrapper": {
-										"value": "|"
+										"value": "->"
 									}
 								},
 								"right_expr": {
 									"position": {
-										"sourceStart": 216,
-										"sourceEnd": 219
+										"sourceStart": 242,
+										"sourceEnd": 251
 									},
-									"Keyword Expression": {
-										"keyword": {
+									"Binary Operator": {
+										"left_expr": {
 											"position": {
-												"sourceStart": 216,
-												"sourceEnd": 219
+												"sourceStart": 242,
+												"sourceEnd": 244
 											},
-											"Keyword Wrapper": {
-												"value": "bool"
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 242,
+														"sourceEnd": 244
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
+											}
+										},
+										"operator": {
+											"position": {
+												"sourceStart": 246,
+												"sourceEnd": 246
+											},
+											"Operator Wrapper": {
+												"value": "|"
+											}
+										},
+										"right_expr": {
+											"position": {
+												"sourceStart": 248,
+												"sourceEnd": 251
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 248,
+														"sourceEnd": 251
+													},
+													"Keyword Wrapper": {
+														"value": "bool"
+													}
+												}
 											}
 										}
 									}
@@ -757,20 +1037,20 @@
 				},
 				"value": {
 					"position": {
-						"sourceStart": 223,
-						"sourceEnd": 223
+						"sourceStart": 255,
+						"sourceEnd": 255
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 223,
-								"sourceEnd": 223
+								"sourceStart": 255,
+								"sourceEnd": 255
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 223,
-										"sourceEnd": 223
+										"sourceStart": 255,
+										"sourceEnd": 255
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -784,14 +1064,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 226,
-				"sourceEnd": 253
+				"sourceStart": 258,
+				"sourceEnd": 288
 			},
 			"Let": {
 				"name": {
 					"position": {
-						"sourceStart": 230,
-						"sourceEnd": 230
+						"sourceStart": 262,
+						"sourceEnd": 262
 					},
 					"Identifier Wrapper": {
 						"value": "i"
@@ -800,45 +1080,87 @@
 				"mutable": false,
 				"type": {
 					"position": {
-						"sourceStart": 233,
-						"sourceEnd": 248
+						"sourceStart": 265,
+						"sourceEnd": 283
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 233,
-								"sourceEnd": 248
+								"sourceStart": 265,
+								"sourceEnd": 283
 							},
-							"Function Type Expression": {
-								"parameters": [
-									{
-										"position": {
-											"sourceStart": 237,
-											"sourceEnd": 239
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 265,
+										"sourceEnd": 276
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 265,
+												"sourceEnd": 270
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
 										},
-										"Keyword Expression": {
-											"keyword": {
-												"position": {
-													"sourceStart": 237,
-													"sourceEnd": 239
-												},
-												"Keyword Wrapper": {
-													"value": "i32"
+										"expression": {
+											"position": {
+												"sourceStart": 271,
+												"sourceEnd": 276
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 272,
+														"sourceEnd": 275
+													},
+													"Comma Expr": {
+														"sub-expressions": [
+															{
+																"position": {
+																	"sourceStart": 272,
+																	"sourceEnd": 274
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 272,
+																			"sourceEnd": 274
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i32"
+																		}
+																	}
+																}
+															}
+														]
+													}
 												}
 											}
 										}
 									}
-								],
-								"return": {
+								},
+								"operator": {
 									"position": {
-										"sourceStart": 246,
-										"sourceEnd": 248
+										"sourceStart": 278,
+										"sourceEnd": 279
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 281,
+										"sourceEnd": 283
 									},
 									"Keyword Expression": {
 										"keyword": {
 											"position": {
-												"sourceStart": 246,
-												"sourceEnd": 248
+												"sourceStart": 281,
+												"sourceEnd": 283
 											},
 											"Keyword Wrapper": {
 												"value": "i32"
@@ -852,20 +1174,20 @@
 				},
 				"value": {
 					"position": {
-						"sourceStart": 252,
-						"sourceEnd": 252
+						"sourceStart": 287,
+						"sourceEnd": 287
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 252,
-								"sourceEnd": 252
+								"sourceStart": 287,
+								"sourceEnd": 287
 							},
 							"Identifier Expression": {
 								"name": {
 									"position": {
-										"sourceStart": 252,
-										"sourceEnd": 252
+										"sourceStart": 287,
+										"sourceEnd": 287
 									},
 									"Identifier Wrapper": {
 										"value": "f"
@@ -879,14 +1201,14 @@
 		},
 		{
 			"position": {
-				"sourceStart": 255,
-				"sourceEnd": 315
+				"sourceStart": 290,
+				"sourceEnd": 356
 			},
 			"Function": {
 				"name": {
 					"position": {
-						"sourceStart": 259,
-						"sourceEnd": 263
+						"sourceStart": 294,
+						"sourceEnd": 298
 					},
 					"Identifier Wrapper": {
 						"value": "apply"
@@ -894,21 +1216,21 @@
 				},
 				"parameters": {
 					"position": {
-						"sourceStart": 264,
-						"sourceEnd": 291
+						"sourceStart": 299,
+						"sourceEnd": 329
 					},
 					"function parameter list": [
 						{
 							"position": {
-								"sourceStart": 265,
-								"sourceEnd": 282
+								"sourceStart": 300,
+								"sourceEnd": 320
 							},
 							"Parameter": {
 								"Parameter": {
 									"name": {
 										"position": {
-											"sourceStart": 265,
-											"sourceEnd": 265
+											"sourceStart": 300,
+											"sourceEnd": 300
 										},
 										"Identifier Wrapper": {
 											"value": "k"
@@ -916,45 +1238,77 @@
 									},
 									"type": {
 										"position": {
-											"sourceStart": 268,
-											"sourceEnd": 282
+											"sourceStart": 303,
+											"sourceEnd": 320
 										},
 										"Top Level Expression": {
 											"expr": {
 												"position": {
-													"sourceStart": 268,
-													"sourceEnd": 282
+													"sourceStart": 303,
+													"sourceEnd": 320
 												},
-												"Function Type Expression": {
-													"parameters": [
-														{
-															"position": {
-																"sourceStart": 272,
-																"sourceEnd": 274
+												"Binary Operator": {
+													"left_expr": {
+														"position": {
+															"sourceStart": 303,
+															"sourceEnd": 313
+														},
+														"Prefix Operator": {
+															"operator": {
+																"position": {
+																	"sourceStart": 303,
+																	"sourceEnd": 308
+																},
+																"Operator Wrapper": {
+																	"value": "funptr"
+																}
 															},
-															"Keyword Expression": {
-																"keyword": {
-																	"position": {
-																		"sourceStart": 272,
-																		"sourceEnd": 274
-																	},
-																	"Keyword Wrapper": {
-																		"value": "i64"
+															"expression": {
+																"position": {
+																	"sourceStart": 309,
+																	"sourceEnd": 313
+																},
+																"Round Group Expression": {
+																	"inner_expr": {
+																		"position": {
+																			"sourceStart": 310,
+																			"sourceEnd": 312
+																		},
+																		"Keyword Expression": {
+																			"keyword": {
+																				"position": {
+																					"sourceStart": 310,
+																					"sourceEnd": 312
+																				},
+																				"Keyword Wrapper": {
+																					"value": "i64"
+																				}
+																			}
+																		}
 																	}
 																}
 															}
 														}
-													],
-													"return": {
+													},
+													"operator": {
 														"position": {
-															"sourceStart": 280,
-															"sourceEnd": 282
+															"sourceStart": 315,
+															"sourceEnd": 316
+														},
+														"Operator Wrapper": {
+															"value": "->"
+														}
+													},
+													"right_expr": {
+														"position": {
+															"sourceStart": 318,
+															"sourceEnd": 320
 														},
 														"Keyword Expression": {
 															"keyword": {
 																"position": {
-																	"sourceStart": 280,
-																	"sourceEnd": 282
+																	"sourceStart": 318,
+																	"sourceEnd": 320
 																},
 																"Keyword Wrapper": {
 																	"value": "i64"
@@ -971,15 +1325,15 @@
 						},
 						{
 							"position": {
-								"sourceStart": 285,
-								"sourceEnd": 290
+								"sourceStart": 323,
+								"sourceEnd": 328
 							},
 							"Parameter": {
 								"Parameter": {
 									"name": {
 										"position": {
-											"sourceStart": 285,
-											"sourceEnd": 285
+											"sourceStart": 323,
+											"sourceEnd": 323
 										},
 										"Identifier Wrapper": {
 											"value": "x"
@@ -987,20 +1341,20 @@
 									},
 									"type": {
 										"position": {
-											"sourceStart": 288,
-											"sourceEnd": 290
+											"sourceStart": 326,
+											"sourceEnd": 328
 										},
 										"Top Level Expression": {
 											"expr": {
 												"position": {
-													"sourceStart": 288,
-													"sourceEnd": 290
+													"sourceStart": 326,
+													"sourceEnd": 328
 												},
 												"Keyword Expression": {
 													"keyword": {
 														"position": {
-															"sourceStart": 288,
-															"sourceEnd": 290
+															"sourceStart": 326,
+															"sourceEnd": 328
 														},
 														"Keyword Wrapper": {
 															"value": "i64"
@@ -1017,45 +1371,77 @@
 				},
 				"return": {
 					"position": {
-						"sourceStart": 296,
-						"sourceEnd": 310
+						"sourceStart": 334,
+						"sourceEnd": 351
 					},
 					"Top Level Expression": {
 						"expr": {
 							"position": {
-								"sourceStart": 296,
-								"sourceEnd": 310
+								"sourceStart": 334,
+								"sourceEnd": 351
 							},
-							"Function Type Expression": {
-								"parameters": [
-									{
-										"position": {
-											"sourceStart": 300,
-											"sourceEnd": 302
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 334,
+										"sourceEnd": 344
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 334,
+												"sourceEnd": 339
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
 										},
-										"Keyword Expression": {
-											"keyword": {
-												"position": {
-													"sourceStart": 300,
-													"sourceEnd": 302
-												},
-												"Keyword Wrapper": {
-													"value": "i64"
+										"expression": {
+											"position": {
+												"sourceStart": 340,
+												"sourceEnd": 344
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 341,
+														"sourceEnd": 343
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 341,
+																"sourceEnd": 343
+															},
+															"Keyword Wrapper": {
+																"value": "i64"
+															}
+														}
+													}
 												}
 											}
 										}
 									}
-								],
-								"return": {
+								},
+								"operator": {
 									"position": {
-										"sourceStart": 308,
-										"sourceEnd": 310
+										"sourceStart": 346,
+										"sourceEnd": 347
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 349,
+										"sourceEnd": 351
 									},
 									"Keyword Expression": {
 										"keyword": {
 											"position": {
-												"sourceStart": 308,
-												"sourceEnd": 310
+												"sourceStart": 349,
+												"sourceEnd": 351
 											},
 											"Keyword Wrapper": {
 												"value": "i64"
@@ -1069,30 +1455,1372 @@
 				},
 				"body": {
 					"position": {
-						"sourceStart": 314,
-						"sourceEnd": 315
+						"sourceStart": 355,
+						"sourceEnd": 356
 					},
 					"Code Block or Statement": {
 						"position": {
-							"sourceStart": 314,
-							"sourceEnd": 315
+							"sourceStart": 355,
+							"sourceEnd": 356
 						},
 						"Expr Stmt": {
 							"position": {
-								"sourceStart": 314,
-								"sourceEnd": 314
+								"sourceStart": 355,
+								"sourceEnd": 355
 							},
 							"Top Level Expression": {
 								"expr": {
 									"position": {
-										"sourceStart": 314,
-										"sourceEnd": 314
+										"sourceStart": 355,
+										"sourceEnd": 355
 									},
 									"Identifier Expression": {
 										"name": {
 											"position": {
-												"sourceStart": 314,
-												"sourceEnd": 314
+												"sourceStart": 355,
+												"sourceEnd": 355
+											},
+											"Identifier Wrapper": {
+												"value": "k"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 358,
+				"sourceEnd": 387
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 362,
+						"sourceEnd": 362
+					},
+					"Identifier Wrapper": {
+						"value": "j"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 365,
+						"sourceEnd": 382
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 365,
+								"sourceEnd": 382
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 365,
+										"sourceEnd": 374
+									},
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 366,
+												"sourceEnd": 373
+											},
+											"Comma Expr": {
+												"sub-expressions": [
+													{
+														"position": {
+															"sourceStart": 366,
+															"sourceEnd": 368
+														},
+														"Keyword Expression": {
+															"keyword": {
+																"position": {
+																	"sourceStart": 366,
+																	"sourceEnd": 368
+																},
+																"Keyword Wrapper": {
+																	"value": "i32"
+																}
+															}
+														}
+													},
+													{
+														"position": {
+															"sourceStart": 371,
+															"sourceEnd": 373
+														},
+														"Keyword Expression": {
+															"keyword": {
+																"position": {
+																	"sourceStart": 371,
+																	"sourceEnd": 373
+																},
+																"Keyword Wrapper": {
+																	"value": "i64"
+																}
+															}
+														}
+													}
+												]
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 376,
+										"sourceEnd": 377
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 379,
+										"sourceEnd": 382
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 379,
+												"sourceEnd": 382
+											},
+											"Keyword Wrapper": {
+												"value": "bool"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 386,
+						"sourceEnd": 386
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 386,
+								"sourceEnd": 386
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 386,
+										"sourceEnd": 386
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 389,
+				"sourceEnd": 410
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 393,
+						"sourceEnd": 393
+					},
+					"Identifier Wrapper": {
+						"value": "k"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 396,
+						"sourceEnd": 405
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 396,
+								"sourceEnd": 405
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 396,
+										"sourceEnd": 398
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 396,
+												"sourceEnd": 398
+											},
+											"Keyword Wrapper": {
+												"value": "i32"
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 400,
+										"sourceEnd": 401
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 403,
+										"sourceEnd": 405
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 403,
+												"sourceEnd": 405
+											},
+											"Keyword Wrapper": {
+												"value": "i32"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 409,
+						"sourceEnd": 409
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 409,
+								"sourceEnd": 409
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 409,
+										"sourceEnd": 409
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 412,
+				"sourceEnd": 432
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 416,
+						"sourceEnd": 416
+					},
+					"Identifier Wrapper": {
+						"value": "l"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 419,
+						"sourceEnd": 427
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 419,
+								"sourceEnd": 427
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 419,
+										"sourceEnd": 420
+									},
+									"Unit Expression": {}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 422,
+										"sourceEnd": 423
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 425,
+										"sourceEnd": 427
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 425,
+												"sourceEnd": 427
+											},
+											"Keyword Wrapper": {
+												"value": "i32"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 431,
+						"sourceEnd": 431
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 431,
+								"sourceEnd": 431
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 431,
+										"sourceEnd": 431
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 434,
+				"sourceEnd": 466
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 438,
+						"sourceEnd": 438
+					},
+					"Identifier Wrapper": {
+						"value": "m"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 441,
+						"sourceEnd": 461
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 441,
+								"sourceEnd": 461
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 441,
+										"sourceEnd": 445
+									},
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 442,
+												"sourceEnd": 444
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 442,
+														"sourceEnd": 444
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 447,
+										"sourceEnd": 448
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 450,
+										"sourceEnd": 461
+									},
+									"Binary Operator": {
+										"left_expr": {
+											"position": {
+												"sourceStart": 450,
+												"sourceEnd": 454
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 451,
+														"sourceEnd": 453
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 451,
+																"sourceEnd": 453
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
+													}
+												}
+											}
+										},
+										"operator": {
+											"position": {
+												"sourceStart": 456,
+												"sourceEnd": 457
+											},
+											"Operator Wrapper": {
+												"value": "->"
+											}
+										},
+										"right_expr": {
+											"position": {
+												"sourceStart": 459,
+												"sourceEnd": 461
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 459,
+														"sourceEnd": 461
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 465,
+						"sourceEnd": 465
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 465,
+								"sourceEnd": 465
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 465,
+										"sourceEnd": 465
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 468,
+				"sourceEnd": 505
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 472,
+						"sourceEnd": 472
+					},
+					"Identifier Wrapper": {
+						"value": "n"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 475,
+						"sourceEnd": 500
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 475,
+								"sourceEnd": 500
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 475,
+										"sourceEnd": 486
+									},
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 476,
+												"sourceEnd": 485
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 477,
+														"sourceEnd": 484
+													},
+													"Comma Expr": {
+														"sub-expressions": [
+															{
+																"position": {
+																	"sourceStart": 477,
+																	"sourceEnd": 479
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 477,
+																			"sourceEnd": 479
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i32"
+																		}
+																	}
+																}
+															},
+															{
+																"position": {
+																	"sourceStart": 482,
+																	"sourceEnd": 484
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 482,
+																			"sourceEnd": 484
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i32"
+																		}
+																	}
+																}
+															}
+														]
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 488,
+										"sourceEnd": 489
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 491,
+										"sourceEnd": 500
+									},
+									"Binary Operator": {
+										"left_expr": {
+											"position": {
+												"sourceStart": 491,
+												"sourceEnd": 493
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 491,
+														"sourceEnd": 493
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
+											}
+										},
+										"operator": {
+											"position": {
+												"sourceStart": 495,
+												"sourceEnd": 495
+											},
+											"Operator Wrapper": {
+												"value": "|"
+											}
+										},
+										"right_expr": {
+											"position": {
+												"sourceStart": 497,
+												"sourceEnd": 500
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 497,
+														"sourceEnd": 500
+													},
+													"Keyword Wrapper": {
+														"value": "bool"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 504,
+						"sourceEnd": 504
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 504,
+								"sourceEnd": 504
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 504,
+										"sourceEnd": 504
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 507,
+				"sourceEnd": 534
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 511,
+						"sourceEnd": 511
+					},
+					"Identifier Wrapper": {
+						"value": "o"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 514,
+						"sourceEnd": 529
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 514,
+								"sourceEnd": 529
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 514,
+										"sourceEnd": 522
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 514,
+												"sourceEnd": 516
+											},
+											"Operator Wrapper": {
+												"value": "ptr"
+											}
+										},
+										"expression": {
+											"position": {
+												"sourceStart": 518,
+												"sourceEnd": 522
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 519,
+														"sourceEnd": 521
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 519,
+																"sourceEnd": 521
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 524,
+										"sourceEnd": 525
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 527,
+										"sourceEnd": 529
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 527,
+												"sourceEnd": 529
+											},
+											"Keyword Wrapper": {
+												"value": "i32"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 533,
+						"sourceEnd": 533
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 533,
+								"sourceEnd": 533
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 533,
+										"sourceEnd": 533
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 536,
+				"sourceEnd": 574
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 540,
+						"sourceEnd": 540
+					},
+					"Identifier Wrapper": {
+						"value": "p"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 543,
+						"sourceEnd": 569
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 543,
+								"sourceEnd": 569
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 543,
+										"sourceEnd": 562
+									},
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 544,
+												"sourceEnd": 561
+											},
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 544,
+														"sourceEnd": 554
+													},
+													"Prefix Operator": {
+														"operator": {
+															"position": {
+																"sourceStart": 544,
+																"sourceEnd": 549
+															},
+															"Operator Wrapper": {
+																"value": "funptr"
+															}
+														},
+														"expression": {
+															"position": {
+																"sourceStart": 550,
+																"sourceEnd": 554
+															},
+															"Round Group Expression": {
+																"inner_expr": {
+																	"position": {
+																		"sourceStart": 551,
+																		"sourceEnd": 553
+																	},
+																	"Keyword Expression": {
+																		"keyword": {
+																			"position": {
+																				"sourceStart": 551,
+																				"sourceEnd": 553
+																			},
+																			"Keyword Wrapper": {
+																				"value": "i32"
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												},
+												"operator": {
+													"position": {
+														"sourceStart": 556,
+														"sourceEnd": 557
+													},
+													"Operator Wrapper": {
+														"value": "->"
+													}
+												},
+												"right_expr": {
+													"position": {
+														"sourceStart": 559,
+														"sourceEnd": 561
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 559,
+																"sourceEnd": 561
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 564,
+										"sourceEnd": 565
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 567,
+										"sourceEnd": 569
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 567,
+												"sourceEnd": 569
+											},
+											"Keyword Wrapper": {
+												"value": "i32"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 573,
+						"sourceEnd": 573
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 573,
+								"sourceEnd": 573
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 573,
+										"sourceEnd": 573
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 576,
+				"sourceEnd": 614
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 580,
+						"sourceEnd": 580
+					},
+					"Identifier Wrapper": {
+						"value": "q"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 583,
+						"sourceEnd": 609
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 583,
+								"sourceEnd": 609
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 583,
+										"sourceEnd": 593
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 583,
+												"sourceEnd": 588
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
+										},
+										"expression": {
+											"position": {
+												"sourceStart": 589,
+												"sourceEnd": 593
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 590,
+														"sourceEnd": 592
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 590,
+																"sourceEnd": 592
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 595,
+										"sourceEnd": 596
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 598,
+										"sourceEnd": 609
+									},
+									"Binary Operator": {
+										"left_expr": {
+											"position": {
+												"sourceStart": 598,
+												"sourceEnd": 602
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 599,
+														"sourceEnd": 601
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 599,
+																"sourceEnd": 601
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
+													}
+												}
+											}
+										},
+										"operator": {
+											"position": {
+												"sourceStart": 604,
+												"sourceEnd": 605
+											},
+											"Operator Wrapper": {
+												"value": "->"
+											}
+										},
+										"right_expr": {
+											"position": {
+												"sourceStart": 607,
+												"sourceEnd": 609
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 607,
+														"sourceEnd": 609
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 613,
+						"sourceEnd": 613
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 613,
+								"sourceEnd": 613
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 613,
+										"sourceEnd": 613
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 616,
+				"sourceEnd": 662
+			},
+			"Function": {
+				"name": {
+					"position": {
+						"sourceStart": 620,
+						"sourceEnd": 624
+					},
+					"Identifier Wrapper": {
+						"value": "close"
+					}
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 625,
+						"sourceEnd": 641
+					},
+					"function parameter list": [
+						{
+							"position": {
+								"sourceStart": 626,
+								"sourceEnd": 640
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 626,
+											"sourceEnd": 626
+										},
+										"Identifier Wrapper": {
+											"value": "k"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 629,
+											"sourceEnd": 640
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 629,
+													"sourceEnd": 640
+												},
+												"Binary Operator": {
+													"left_expr": {
+														"position": {
+															"sourceStart": 629,
+															"sourceEnd": 633
+														},
+														"Round Group Expression": {
+															"inner_expr": {
+																"position": {
+																	"sourceStart": 630,
+																	"sourceEnd": 632
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 630,
+																			"sourceEnd": 632
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
+																}
+															}
+														}
+													},
+													"operator": {
+														"position": {
+															"sourceStart": 635,
+															"sourceEnd": 636
+														},
+														"Operator Wrapper": {
+															"value": "->"
+														}
+													},
+													"right_expr": {
+														"position": {
+															"sourceStart": 638,
+															"sourceEnd": 640
+														},
+														"Keyword Expression": {
+															"keyword": {
+																"position": {
+																	"sourceStart": 638,
+																	"sourceEnd": 640
+																},
+																"Keyword Wrapper": {
+																	"value": "i64"
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					]
+				},
+				"return": {
+					"position": {
+						"sourceStart": 646,
+						"sourceEnd": 657
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 646,
+								"sourceEnd": 657
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 646,
+										"sourceEnd": 650
+									},
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 647,
+												"sourceEnd": 649
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 647,
+														"sourceEnd": 649
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 652,
+										"sourceEnd": 653
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 655,
+										"sourceEnd": 657
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 655,
+												"sourceEnd": 657
+											},
+											"Keyword Wrapper": {
+												"value": "i64"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"body": {
+					"position": {
+						"sourceStart": 661,
+						"sourceEnd": 662
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 661,
+							"sourceEnd": 662
+						},
+						"Expr Stmt": {
+							"position": {
+								"sourceStart": 661,
+								"sourceEnd": 661
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 661,
+										"sourceEnd": 661
+									},
+									"Identifier Expression": {
+										"name": {
+											"position": {
+												"sourceStart": 661,
+												"sourceEnd": 661
 											},
 											"Identifier Wrapper": {
 												"value": "k"

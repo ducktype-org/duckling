@@ -264,13 +264,14 @@ namespace compiler::tsh {
 		std::vector<SymbolType<>> parameter_types,
 		const SymbolType<>        result_type,
 		const bool                pure,
-		const bool                free
+		const FunctionKind        function_kind
 	):
 		  parameter_types(std::move(parameter_types)),
 		  result_type(result_type),
 		  pure(pure),
-		  free(free) {
-		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
+		  function_kind(function_kind) {
+		representation = (function_kind == FunctionKind::Closure ? "" : "Function ")
+		               + stringifyTypeVector(this->parameter_types) + " -> ("
 		               + result_type.toString() + ")";
 	}
 
@@ -283,11 +284,12 @@ namespace compiler::tsh {
 		// similar to the rules of function subtyping.
 		//
 		// Additionally, only a pure function can be coerced to a pure function,
-		// and only a free function can be coerced to a free function.
+		// and the function kinds must be the same.
 
 		if (target.getKind() != Kind::Function) return false;
 		const FunctionAbstractType target_function = target;
-		if ((!pure && target_function.isPure()) || (!free && target_function.isFree())
+		if ((!pure && target_function.isPure())
+		    || function_kind != target_function.getFunctionKind()
 		    || parameter_types.size() != target_function.getParameterTypes().size()) {
 			return false;
 		}

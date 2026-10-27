@@ -11,6 +11,7 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/function_kind.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -494,19 +495,22 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Function type constructor inside an expression, for example `fun(i32) -> bool`.
+	 * @brief Function type constructor inside an expression, for example `funptr(i32) -> bool` (a
+	 * raw function) or `(i32) -> bool` (a closure).
 	 *
 	 * Every parameter and the result are expressions of the meta type.
 	 */
 	struct FunctionTypeExpr final: public Expr {
 		std::vector<base::Box<Expr>> parameters;
 		base::Box<Expr>              result;
+		tsh::FunctionKind            kind;
 
 		FunctionTypeExpr(
 			query::Context&              ctx,
 			ElementOrigin                origin,
 			std::vector<base::Box<Expr>> parameters,
-			base::Box<Expr>              result
+			base::Box<Expr>              result,
+			tsh::FunctionKind            kind
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -521,7 +525,8 @@ namespace compiler::helios::code {
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
 			std::vector<base::Box<Expr>> parameters,
-			base::Box<Expr>              result
+			base::Box<Expr>              result,
+			tsh::FunctionKind            kind
 		);
 	};
 

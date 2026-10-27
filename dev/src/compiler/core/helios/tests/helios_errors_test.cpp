@@ -1629,7 +1629,7 @@ private:
 	void testFunctionValueErrors() {
 		checkForErrorOnCompileModule(
 			R"( fun add(a: i64, b: i64) -> i64 = a + b;
-			fun main() -> i64 = { let f: fun(i64) -> i64 = add; return 0; } )",
+			fun main() -> i64 = { let f: funptr(i64) -> i64 = add; return 0; } )",
 			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `const Function "
 		      "(i64) -> (i64)`." },
 			1
@@ -1673,6 +1673,21 @@ private:
 			R"( fun add(a: i64, b: i64) -> i64 = a + b;
 			fun main() -> i64 = { let r = &add; return 0; } )",
 			{ "Tried to reference a temporary" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun inc(x: i64) -> i64 = x + 1;
+			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
+			{ "Type `Function (i64) -> (i64)` cannot be converted to type `const Closure (i64) -> "
+		      "(i64)`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun show(x: i64) = { builtin_output_i64(x); }
+			fun main() -> i64 = { let f: funptr(i64) = show; return 0; } )",
+			{ "`funptr` must be followed by `-> <result type>`" },
 			1
 		);
 	}

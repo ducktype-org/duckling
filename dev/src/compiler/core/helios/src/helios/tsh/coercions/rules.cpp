@@ -320,7 +320,7 @@ namespace compiler::tsh::coercions {
 			const FunctionAbstractType from = source.getType();
 			const FunctionAbstractType to   = target.getType();
 
-			if ((not from.isPure() && to.isPure()) || (not from.isFree() && to.isFree())
+			if ((not from.isPure() && to.isPure()) || from.getFunctionKind() != to.getFunctionKind()
 			    || from.getParameterTypes().size() != to.getParameterTypes().size())
 				return refused(source, target, coercion_error::IncompatibleTypes{});
 

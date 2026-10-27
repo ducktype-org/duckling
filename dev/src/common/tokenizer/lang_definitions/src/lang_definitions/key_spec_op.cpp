@@ -104,6 +104,7 @@ namespace lang_def {
 			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::CPtr, "cptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::ManyPtr, "manyptr", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::FunPtr, "funptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Slice, "slice", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copyof, "copyof", KeywordFlagsOptions::IsGenPrefixOp },

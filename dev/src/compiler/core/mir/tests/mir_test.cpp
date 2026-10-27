@@ -1039,7 +1039,7 @@ private:
 
 		test_utils::checkLoweredModule(
 			R"(fun add(a: i64, b: i64) -> i64 = a + b;
-               fun apply(f: fun(i64, i64) -> i64) -> i64 = f(1, 2);
+               fun apply(f: funptr(i64, i64) -> i64) -> i64 = f(1, 2);
                fun direct() -> i64 = apply(add);)",
 			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
 				const auto& apply = *test_utils::functionOfUnit(unit, "apply");

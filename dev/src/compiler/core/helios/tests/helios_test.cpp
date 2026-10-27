@@ -420,6 +420,60 @@ private:
 				expected_nested,
 				getConstValueAs<compiler::tsh::SymbolType<>>("NESTED_TYPE_TUPLE", root_scope)
 			);
+
+			auto single_tuple
+				= getConstValueAs<CompileTimeValue::TypeTuple>("SINGLE_TYPE_TUPLE", root_scope);
+			ASSERT_EQUAL(single_tuple.getElements().size(), 1);
+			ASSERT_EQUAL(
+				st(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::SymbolType<>)
+			);
+		}
+
+		// Function types.
+		{
+			using compiler::tsh::FunctionKind;
+			using compiler::tsh::QueryFunctionType;
+
+			auto i32_st      = st(i32_type);
+			auto bool_st     = st(compiler::tsh::getBoolType());
+			auto function_of = [&](std::vector<compiler::tsh::SymbolType<>> parameters,
+			                       compiler::tsh::SymbolType<>              result,
+			                       FunctionKind                             kind) {
+				return st(query::entryPoint<QueryFunctionType>(
+					{ .parameter_types = std::move(parameters), .result_type = result, .kind = kind }
+				));
+			};
+			auto const_type = [&](const std::string& name) {
+				return getConstValueAs<compiler::tsh::SymbolType<>>(name, root_scope);
+			};
+
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw), const_type("RAW_PAIR")
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Closure),
+				const_type("CLOSURE_PAIR")
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw), const_type("RAW_SINGLE")
+			);
+			ASSERT_EQUAL(function_of({}, bool_st, FunctionKind::Raw), const_type("RAW_NO_PARAMS"));
+			ASSERT_EQUAL(
+				function_of({ i32_st }, st(compiler::tsh::getUnitType()), FunctionKind::Raw),
+				const_type("RAW_UNIT_RESULT")
+			);
+			auto i32_pair
+				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_st, i32_st } }));
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw), const_type("RAW_TUPLE_PARAM")
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				const_type("RAW_ONE_ELEMENT_LIST")
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw), const_type("RAW_FROM_ALIAS")
+			);
 		}
 	}
 

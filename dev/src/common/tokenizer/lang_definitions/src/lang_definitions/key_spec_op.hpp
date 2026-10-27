@@ -147,6 +147,7 @@ namespace lang_def {
 		Ptr,
 		CPtr,
 		ManyPtr,
+		FunPtr,
 		Slice,
 		Copy,
 		Copyof,
