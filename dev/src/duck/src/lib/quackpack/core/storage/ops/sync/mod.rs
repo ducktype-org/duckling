@@ -31,7 +31,7 @@ use crate::quackpack::core::{
 };
 use crate::util::Pluralize;
 use crate::util::error::MessageError;
-use crate::util::path_ops::{read_path_to_string, write_file};
+use crate::util::path_ops::{read_from_path_to_string, write_file};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 pub mod load_deps;
@@ -223,7 +223,7 @@ fn load_external_freezefile(
     if !freeze_path.is_file() {
         return Ok(None);
     }
-    let content = read_path_to_string(&freeze_path)?;
+    let content = read_from_path_to_string(&freeze_path)?;
 
     serde_json::from_str(&content)
         .with_context(|| format!("malformed freezefile `{}`", freeze_path.display()))

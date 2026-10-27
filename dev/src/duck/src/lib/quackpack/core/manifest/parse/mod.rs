@@ -15,7 +15,7 @@ use crate::quackpack::core::Package;
 use crate::quackpack::core::lints::errors::{Errors, UnusedKey};
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops::read_path_to_string;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 mod dependency;
@@ -169,7 +169,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
     let package_root = path.parent().with_context_internal(|| {
         format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
     })?;
-    let content = read_path_to_string(path)?;
+    let content = read_from_path_to_string(path)?;
     let mut warnings = Warnings::default();
     let mut errors = Errors::default();
     let schema = parse_schema(&content, &mut errors)?;

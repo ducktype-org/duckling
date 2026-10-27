@@ -75,12 +75,12 @@ pub fn metadata(path: impl AsRef<Path>) -> QuackResult<fs::Metadata> {
 }
 
 /// Get the last modification time.
-pub fn mtime(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
+pub fn modification_time(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
     let path = path.as_ref();
-    mtime_inner(path)
+    modification_time_inner(path)
         .with_context(|| format!("failed to get modification time of `{}`", path.display()))
 }
-fn mtime_inner(path: &Path) -> io::Result<SystemTime> {
+fn modification_time_inner(path: &Path) -> io::Result<SystemTime> {
     let metadata = fs::metadata(path)?;
     metadata.modified()
 }
@@ -96,13 +96,13 @@ pub fn open(path: impl AsRef<Path>, opts: &OpenOptions) -> QuackResult<File> {
 }
 
 /// A wrapper around [`std::fs::read`].
-pub fn read_path(path: impl AsRef<Path>) -> QuackResult<Vec<u8>> {
+pub fn read_from_path(path: impl AsRef<Path>) -> QuackResult<Vec<u8>> {
     let path = path.as_ref();
     fs::read(path).with_context(|| format!("failed to read `{}`", path.display()))
 }
 
 /// A wrapper around [`std::fs::read_to_string`].
-pub fn read_path_to_string(path: impl AsRef<Path>) -> QuackResult<String> {
+pub fn read_from_path_to_string(path: impl AsRef<Path>) -> QuackResult<String> {
     let path = path.as_ref();
     fs::read_to_string(path).with_context(|| format!("failed to read `{}`", path.display()))
 }
@@ -162,13 +162,14 @@ pub fn write_file(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> QuackRe
 /// Important
 /// ---------
 /// This is not "creation time".
-pub fn ctime(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
+pub fn change_time(path: impl AsRef<Path>) -> QuackResult<SystemTime> {
     let path = path.as_ref();
-    ctime_inner(path).with_context(|| format!("failed to get change time of `{}`", path.display()))
+    change_time_inner(path)
+        .with_context(|| format!("failed to get change time of `{}`", path.display()))
 }
 
 #[cfg(unix)]
-fn ctime_inner(path: &Path) -> io::Result<SystemTime> {
+fn change_time_inner(path: &Path) -> io::Result<SystemTime> {
     use std::os::unix::fs::MetadataExt;
     use std::time::Duration;
 
@@ -179,7 +180,7 @@ fn ctime_inner(path: &Path) -> io::Result<SystemTime> {
 }
 
 #[cfg(windows)]
-fn ctime_inner(path: &Path) -> io::Result<SystemTime> {
+fn change_time_inner(path: &Path) -> io::Result<SystemTime> {
     // Returns `ChangeTime` from `$STANDARD_INFORMATION` attribute.
     // Documentation:
     // https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_basic_info

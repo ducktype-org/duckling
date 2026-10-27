@@ -69,7 +69,7 @@ use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::hash;
 use crate::util::path_ops::{
-    MkdirOptions, copy_file, mkdir, read_path_to_string, remove_tree, touch, try_fsync_dir,
+    MkdirOptions, copy_file, mkdir, read_from_path_to_string, remove_tree, touch, try_fsync_dir,
 };
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
@@ -147,7 +147,7 @@ impl VenvData {
     #[tracing::instrument(skip_all, fields(path = %path.display()))]
     fn load(path: &Path) -> QuackResult<Self> {
         trace!("loading venv data");
-        let content = read_path_to_string(path)?;
+        let content = read_from_path_to_string(path)?;
         let Some((data, found_checksum)) = content.rsplit_once("\n") else {
             error!("missing a newline");
             return Err(CorruptedVenvError {

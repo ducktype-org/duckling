@@ -19,7 +19,7 @@ use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
 use crate::quackpack::core::{PackageLoader, Version, fetcher};
-use crate::util::path_ops::{normalize, read_path_to_string};
+use crate::util::path_ops::{normalize, read_from_path_to_string};
 
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {
@@ -247,8 +247,8 @@ fn assert_can_load_after_save(venv: &Venv, storage: &Storage, ctx: &DuckContext)
     let id = venv.id();
     let metadata = storage.venv_metadata(id);
     let backup = storage.venv_backup_metadata(id);
-    let metadata_contents = read_path_to_string(&metadata).unwrap();
-    let backup_contents = read_path_to_string(&backup).unwrap();
+    let metadata_contents = read_from_path_to_string(&metadata).unwrap();
+    let backup_contents = read_from_path_to_string(&backup).unwrap();
     assert_eq!(
         metadata_contents,
         backup_contents,
@@ -596,8 +596,8 @@ fn sync_with_deps_and_expose_freezefile() {
             vec![],
         )]
     );
-    let data =
-        read_path_to_string(root.path().join("root").join(PackageLoader::FREEZE_NAME)).unwrap();
+    let data = read_from_path_to_string(root.path().join("root").join(PackageLoader::FREEZE_NAME))
+        .unwrap();
     println!("{}", data);
     let exposed_freeze = serde_json::from_str::<VenvFreeze>(&data).unwrap();
     assert_eq!(exposed_freeze, freeze.clone());

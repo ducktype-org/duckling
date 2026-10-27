@@ -20,7 +20,7 @@ use crate::quackpack::core::compile::unit_runner::incremental::serializable_type
 use crate::quackpack::core::compile::unit_runner::incremental::{IncrementalData, RedGreenData};
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
-use crate::util::path_ops::{read_path, touch};
+use crate::util::path_ops::{read_from_path, touch};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -74,7 +74,7 @@ impl BuildData {
     /// Get a [`BuildData`] from serialized artifacts.
     /// Should be used for getting [`BuildData`] for the previous build process.
     pub(super) fn from_fingerprint(fingerprint: &Path) -> QuackResult<Self> {
-        let fingerprint_content = read_path(fingerprint).with_context(|| {
+        let fingerprint_content = read_from_path(fingerprint).with_context(|| {
             format!(
                 "failed to read the previous fingerprint at `{}`",
                 fingerprint.display()
