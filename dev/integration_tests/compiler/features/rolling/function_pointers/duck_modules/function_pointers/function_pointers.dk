@@ -1,9 +1,9 @@
 fun add(a: i64, b: i64) -> i64 = a + b;
 fun mul(a: i64, b: i64) -> i64 = a * b;
 
-fun apply(f: fun(i64, i64) -> i64, x: i64, y: i64) -> i64 = f(x, y);
+fun apply(f: funptr(i64, i64) -> i64, x: i64, y: i64) -> i64 = f(x, y);
 
-fun pick(m: bool) -> fun(i64, i64) -> i64 = {
+fun pick(m: bool) -> funptr(i64, i64) -> i64 = {
     if (m) { return mul; }
     return add;
 }
@@ -22,21 +22,21 @@ fun show(x: i64) = {
     builtin_output_i64(x);
 }
 
-fun callRef(f: ref fun(i64) -> i64, x: i64) -> i64 = f(x);
+fun callRef(f: ref (funptr(i64) -> i64), x: i64) -> i64 = f(x);
 
-fun twice(f: fun(i64), x: i64) = {
+fun twice(f: funptr(i64) -> (), x: i64) = {
     f(x);
     f(x);
 }
 
 class Holder {
-    cb: fun(i64, i64) -> i64;
+    cb: funptr(i64, i64) -> i64;
 }
 
 fun main() -> i64 = {
     let f = add;
     builtin_output_i64(f(1, 2));
-    var g: fun(i64, i64) -> i64 = mul;
+    var g: funptr(i64, i64) -> i64 = mul;
     builtin_output_i64(g(3, 4));
     g = add;
     builtin_output_i64(apply(g, 5, 6));
