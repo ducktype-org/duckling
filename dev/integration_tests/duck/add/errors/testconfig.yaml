@@ -19,7 +19,7 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: there already is a normal dependency referred to by \`a\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`
+            echo "error: there already is a normal dependency named \`a\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`
 
             hint: use aliases to have multiple dependencies with the same name"
       duplicated-sources:
@@ -27,13 +27,13 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: when trying to add the normal dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`
+            echo "error: when trying to add the normal dependency named \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`
             
               Caused by:
                 the modified manifest would fail to parse
             
               Caused by:
-                normal dependency \`b\` has the same source as normal dependency \`a\`"
+                normal dependency named \`b\` has the same source as normal dependency named \`a\`"
 
 SubDirs:
   - cannot-add-itself

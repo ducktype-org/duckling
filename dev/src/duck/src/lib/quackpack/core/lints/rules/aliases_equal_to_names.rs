@@ -58,11 +58,11 @@ pub fn pass(
         (DependencyKind::Dev, schema.dev_dependencies.as_ref()),
     ];
     for (dep_kind, dependencies) in dependencies_maps {
-        for (effective_name, dependency) in dependencies.into_iter().flatten() {
+        for (ename, dependency) in dependencies.into_iter().flatten() {
             if let Some(ref source) = dependency.source
                 && let DependencySource::Detailed(source) = source
                 && let Some(ref name) = source.name
-                && effective_name == name
+                && ename == name
             {
                 buffer.register(
                     AliasEqualsNameDiagnostic {
@@ -86,7 +86,7 @@ macros::make_diagnostic! {
         key_in_manifest: &'static str,
     }
     display(
-        "{} dependency's alias `{}` is equal to its name specified at `{}.{}.source.name`",
+        "{} dependency named `{}` has an alias equal to its name specified at `{}.{}.source.name`",
         dep_kind,
         name,
         key_in_manifest,

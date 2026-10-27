@@ -212,6 +212,14 @@ impl Dependency {
         self.alias.unwrap_or(self.name)
     }
 
+    /// Get the name used to refer to this dependency in user-facing messages.
+    ///
+    /// It is equal to [`Self::effective_name`], because it is unique among the dependencies
+    /// of a package.
+    pub fn diagnostic_name(&self) -> StrId {
+        self.effective_name()
+    }
+
     /// Get [`DependencyKind`] of this dependency.
     pub fn kind(&self) -> DependencyKind {
         self.kind
@@ -258,7 +266,7 @@ impl TryFrom<registry::Dependency> for Dependency {
         let alias = alias.map(StrId::from);
         let name = name.into();
         if alias == Some(name) {
-            qp_bail!("registry dependency `{name}` specified itself as an alias")
+            qp_bail!("registry dependency named `{name}` specified itself as an alias")
         }
         let features = features
             .into_iter()

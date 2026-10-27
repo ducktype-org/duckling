@@ -459,7 +459,7 @@ fn construct_package_data(
                 .manifest()
                 .dependencies()
                 .get_by_effective_name(*ename)
-                .unwrap_or_else(|| panic!("{identity} has no dependency named {}", dep.name()))
+                .unwrap_or_else(|| panic!("{identity} has no dependency named `{ename}`"))
                 .alias()
                 .map(|alias| normalise_package_name(&alias).into());
             (*dep, alias)

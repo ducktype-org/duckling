@@ -12,7 +12,7 @@ Tests:
         Output:
           Run: |+
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully added normal dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: successfully added normal dependency named \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         expected-manifest: 1
       same-name-with-alias:
         PreCase: |+
@@ -25,6 +25,6 @@ Tests:
         Output:
           Run: |+
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully added normal dependency \`dep2\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: successfully added normal dependency named \`dep2\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         expected-manifest: 2
         

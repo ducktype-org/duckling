@@ -14,8 +14,8 @@ Tests:
         test-cmd: duck -C foo sync
         Err:
           String: |+
-            warning: normal dependency's alias \`bar\` is equal to its name specified at \`dependencies.bar.source.name\` [aliases_equal_to_names]
-            warning: dev dependency's alias \`bar2\` is equal to its name specified at \`dev-dependencies.bar2.source.name\` [aliases_equal_to_names]
+            warning: normal dependency named \`bar\` has an alias equal to its name specified at \`dependencies.bar.source.name\` [aliases_equal_to_names]
+            warning: dev dependency named \`bar2\` has an alias equal to its name specified at \`dev-dependencies.bar2.source.name\` [aliases_equal_to_names]
         Output:
           String: |+
             info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present

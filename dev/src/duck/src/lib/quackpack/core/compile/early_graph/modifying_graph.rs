@@ -30,7 +30,7 @@ impl DependencyGraph {
                     .dependencies()
                     .get_by_effective_name(*ename)
                     .unwrap_or_else(|| {
-                        missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
+                        missing_depenendcy_in_manifest(&this.package().name(), ename, this)
                     })
                     .is_enabled_for(this.enabled_features());
                 debug!(
@@ -107,11 +107,7 @@ impl EarlyGraph {
                         .dependencies()
                         .get_by_effective_name(*ename)
                         .unwrap_or_else(|| {
-                            missing_depenendcy_in_manifest(
-                                &this.package().name(),
-                                &dep.name(),
-                                this,
-                            )
+                            missing_depenendcy_in_manifest(&this.package().name(), ename, this)
                         });
                     (
                         entry_in_dep_manifest.enabled_features(this_features),

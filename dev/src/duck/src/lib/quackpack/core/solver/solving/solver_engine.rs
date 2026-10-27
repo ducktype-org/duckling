@@ -101,7 +101,7 @@ impl<'a> SolverEngine<'a> {
         };
 
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
-        let Some(realization) = parent_data.dependency_preexists(edge.manifest_child_name) else {
+        let Some(realization) = parent_data.dependency_preexists(edge.manifest_child_ename) else {
             return self.add_constraints_for_edge(edge, manifest_dependency);
         };
         // Below we assume that the dependency was realized in the previous freeze.
@@ -451,7 +451,7 @@ metadata:
                 DependencyEdge {
                     parent: pkg_a,
                     dep_identity: identity_b,
-                    manifest_child_name: StrId::new("b"),
+                    manifest_child_ename: StrId::new("b"),
                 },
                 Version::new(2, 0, 0)
             )])
@@ -524,7 +524,7 @@ dependencies:
                     DependencyEdge {
                         parent: pkg_a,
                         dep_identity: identity_b,
-                        manifest_child_name: StrId::new("b"),
+                        manifest_child_ename: StrId::new("b"),
                     },
                     Version::new(2, 0, 0)
                 ),
@@ -532,7 +532,7 @@ dependencies:
                     DependencyEdge {
                         parent: pkg_b,
                         dep_identity: identity_a,
-                        manifest_child_name: StrId::new("a"),
+                        manifest_child_ename: StrId::new("a"),
                     },
                     Version::new(1, 0, 0)
                 ),
@@ -829,7 +829,7 @@ features:
                 DependencyEdge {
                     parent: pkg_a,
                     dep_identity: identity_b,
-                    manifest_child_name: StrId::new("b"),
+                    manifest_child_ename: StrId::new("b"),
                 },
                 Version::new(2, 0, 0)
             )])

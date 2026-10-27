@@ -13,4 +13,4 @@ Tests:
         Output:
           Run: |+
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully added normal dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: successfully added normal dependency named \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
