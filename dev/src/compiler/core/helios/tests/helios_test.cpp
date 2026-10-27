@@ -36,6 +36,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -127,6 +128,7 @@ public:
 		TESTER_ADD_TEST(testOperatoriness);
 		TESTER_ADD_TEST(testMethodOperatorResolution);
 		TESTER_ADD_TEST(testBitwiseOperators);
+		TESTER_ADD_TEST(testGeneratedComparisons);
 		// this is at the end
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
@@ -3601,6 +3603,79 @@ private:
 		ASSERT_EQUAL(suffix_method_sym, suffix_callee->symbol);
 		ASSERT_EQUAL(1, suffix_call.arguments.size());
 		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(suffix_call.arguments.at(0).get()) != nullptr);
+	}
+
+	void testGeneratedComparisons() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/generated_comparisons")));
+		using namespace compiler::helios::code;
+		using Kind = compiler::helios::defgen::Method::Kind;
+
+		// The value returned by the last statement of a function.
+		auto returned_value = [&](compiler::helios::SymID fn_sym) -> const Expr* {
+			const auto& fn_hout
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ fn_sym })->valueOrPanic();
+			const auto* ret_stmt
+				= dynamic_cast<const ReturnStmt*>(fn_hout.body->statements.back().get());
+			ASSERT_TRUE(ret_stmt != nullptr);
+			return stripImplicitMove(ret_stmt->value.get());
+		};
+
+		// `expr` must call the generated operator of kind `kind`, passing both operands by
+		// reference. Returns the called operator.
+		auto expect_generated_call = [&](const Expr* expr, Kind kind) {
+			const auto* call = dynamic_cast<const CallExpr*>(expr);
+			ASSERT_TRUE(call != nullptr);
+			const auto* callee = dynamic_cast<const IdentifierExpr*>(call->callee.get());
+			ASSERT_TRUE(callee != nullptr);
+			const auto* method = std::get_if<compiler::helios::defgen::Method>(
+				&compiler::helios::getSymRef(callee->symbol)->other
+			);
+			ASSERT_TRUE(method != nullptr);
+			ASSERT_TRUE(method->kind == kind);
+			ASSERT_TRUE(
+				query::entryPoint<compiler::helios::QueryDeclOfFun>(callee->symbol)
+					->valueOrThrow()
+					.operatoriness
+				== compiler::helios::HOUTFunctionDeclaration::Operatoriness::Infix
+			);
+			ASSERT_EQUAL(2, call->arguments.size());
+			for (const auto& argument: call->arguments)
+				ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(argument.get()) != nullptr);
+			return callee->symbol;
+		};
+
+		// `<` on tuples: `a.0 < b.0 or (not (b.0 < a.0) and a.1 < b.1)`.
+		const auto tuple_less = expect_generated_call(
+			returned_value(getChain("tupleLess", root_scope).back()), Kind::Less
+		);
+		const auto* less_body = dynamic_cast<const BinaryOperatorExpr*>(returned_value(tuple_less));
+		ASSERT_TRUE(less_body != nullptr);
+		ASSERT_TRUE(less_body->operation == BuiltinBinary::BooleanOr);
+
+		// `==` on classes: every field compared, joined with `and`.
+		const auto class_equal = expect_generated_call(
+			returned_value(getChain("classEqual", root_scope).back()), Kind::Equal
+		);
+		const auto* equal_body
+			= dynamic_cast<const BinaryOperatorExpr*>(returned_value(class_equal));
+		ASSERT_TRUE(equal_body != nullptr);
+		ASSERT_TRUE(equal_body->operation == BuiltinBinary::BooleanAnd);
+
+		// `>=` is `not (a < b)`, calling the generated `<` of the same class.
+		const auto class_greater_equal = expect_generated_call(
+			returned_value(getChain("classGreaterEqual", root_scope).back()), Kind::GreaterEqual
+		);
+		const auto* not_less
+			= dynamic_cast<const UnaryOperatorExpr*>(returned_value(class_greater_equal));
+		ASSERT_TRUE(not_less != nullptr);
+		ASSERT_TRUE(not_less->operation == BuiltinUnary::BooleanNot);
+		expect_generated_call(not_less->expr.get(), Kind::Less);
+
+		// Tuples of types are still compared as types, not field by field.
+		ASSERT_TRUE(
+			dynamic_cast<const CallExpr*>(returned_value(getChain("typesEqual", root_scope).back()))
+			== nullptr
+		);
 	}
 
 	void testScopeParentsAndDepth() {

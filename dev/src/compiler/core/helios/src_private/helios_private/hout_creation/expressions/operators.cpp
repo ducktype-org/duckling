@@ -11,11 +11,13 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -28,6 +30,7 @@
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -174,6 +177,184 @@ namespace {
 			return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
 		});
 	}
+
+	/**
+	 * @brief Collects the infix operator candidates for @p op: the functions visible from
+	 * @p scope (if any), the builtin operators and, when the left-hand side is a class, its
+	 * operator methods.
+	 * @return All the candidates, and the method candidates among them.
+	 */
+	std::pair<std::vector<SymID>, std::vector<SymID>> collectBinaryOperatorCandidates(
+		query::Context&               ctx,
+		const lexer::Operator         op,
+		const tsh::AbstractType       lhs_abstract_type,
+		const base::Optional<ScopeID> scope
+	) {
+		std::vector<SymID> all_candidates;
+		if_opt_some(scope, lookup_scope) {
+			const auto lookup_result
+				= HInterface::ofScopeWithParents(lookup_scope).lookup(ctx, op.value);
+			// @TODO: #1412 fix dealias
+			all_candidates = lookup_result->valueOrThrow().leaves;
+		}
+		std::vector<SymID> method_candidates;
+		for (const auto [builtin_operator_sym, _]:
+		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
+			if (name(builtin_operator_sym) == op.value)
+				all_candidates.push_back(builtin_operator_sym);
+		}
+		filterFunctionsByOperatoriness(
+			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+		);
+
+		// Look for operator methods declared on the left-hand side's type (classes only)
+		if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
+			const auto method_lookup_result
+				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
+			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			filterFunctionsByOperatoriness(
+				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+			);
+
+			for (const auto method_candidate: method_candidates)
+				if (not std::ranges::contains(all_candidates, method_candidate))
+					all_candidates.push_back(method_candidate);
+		}
+		return { std::move(all_candidates), std::move(method_candidates) };
+	}
+
+	/**
+	 * @brief Finds the generated comparison to call for `lhs op rhs`, if it applies: @p op is a
+	 * comparison, both operands convert to the same tuple or class, and every field can be
+	 * compared. Comparison operators are reserved, so a user-defined one can never compete.
+	 *
+	 * A tuple which can be lifted to a `type`, like `(i32, i64)`, is still compared as a type.
+	 */
+	base::Optional<SymID> findGeneratedComparison(
+		query::Context& ctx, const lexer::Operator op, const CRef<Expr> lhs, const CRef<Expr> rhs
+	) {
+		const auto kind = defgen::comparisonKindForOperator(op);
+		if (not kind.has_value()) return {};
+		if (canCoerceToMeta(ctx, lhs->expression_type).valueOrThrow().isValid()
+		    and canCoerceToMeta(ctx, rhs->expression_type).valueOrThrow().isValid())
+			return {};
+
+		// Both operands must have, or convert to, the type of one of them.
+		auto converts_to = [&](const CRef<Expr> operand, const tsh::AbstractType type) {
+			return operand->expression_type.getType() == type
+			    or canCoerce(ctx, operand->expression_type, tsh::SymbolType<>::withDefaults(type))
+			           .valueOrThrow()
+			           .isValid();
+		};
+		auto common_type = [&] -> base::Optional<tsh::AbstractType> {
+			for (const auto& operand: { lhs, rhs }) {
+				const auto type = operand->expression_type.getType();
+				if (type.getKind() != tsh::Kind::Tuple and type.getKind() != tsh::Kind::Class)
+					continue;
+				if (converts_to(lhs, type) and converts_to(rhs, type)) return type;
+			}
+			return {};
+		}();
+		if_opt_none(common_type) return {};
+
+		if (not defgen::canGenerateComparison(ctx, common_type.value(), kind.value())) return {};
+
+		return defgen::generatedComparisonSymForType(ctx, common_type.value(), kind.value());
+	}
+
+	/**
+	 * @brief Calls the generated comparison @p comparison_sym on two operands. Both are passed
+	 * the way `self` is, i.e. by reference, after converting them to the compared type first.
+	 */
+	Box<Expr> callGeneratedComparison(
+		query::Context& ctx,
+		const SymID     comparison_sym,
+		ElementOrigin   op_origin,
+		Box<Expr>       lhs,
+		Box<Expr>       rhs
+	) {
+		using namespace compiler::helios::code::shorthands;
+		const Shorthand s{ ctx };
+		const auto      compared_type   = typeMemberOwner(comparison_sym);
+		auto            prepare_operand = [&](Box<Expr> operand) {
+            if (operand->expression_type.getType() != compared_type)
+                operand
+                    = s.coerce(std::move(operand), tsh::SymbolType<>::withDefaults(compared_type));
+            return s.prepToPassSelf(std::move(operand));
+		};
+
+		const auto whole_origin = elementOriginOrdered(lhs->origin, rhs->origin);
+		auto       callee       = withOrigin(op_origin, s.ident(comparison_sym));
+		return withOrigin(
+			whole_origin,
+			s.call(
+				std::move(callee), prepare_operand(std::move(lhs)), prepare_operand(std::move(rhs))
+			)
+		);
+	}
+
+	Box<Expr> resolveBinaryOperatorImpl(
+		query::Context&               ctx,
+		lexer::Operator               op,
+		ElementOrigin                 op_origin,
+		Box<Expr>                     lhs,
+		Box<Expr>                     rhs,
+		const base::Optional<ScopeID> scope
+	) {
+		//@TODO: #3702 handle custom, or otherwise fancy operators ending with `=`
+		CORE_ASSERT(!op.isAssignment(), "Assignement operator should be desugared by now.");
+
+		const auto lhs_type = lhs->expression_type.getSymbolType();
+		const auto rhs_type = rhs->expression_type.getSymbolType();
+
+		// Binary operator resolution now happens in three steps:
+		// 1. If the arguments are both numeric (integral or float) and the operator is a
+		// built-in arithmetic operator, we look for promotions from left to right and from
+		// right to left, and then use the built-in operator on the promoted-to type.
+		// 2. If the operator compares two tuples or classes, we call the compiler-generated
+		// comparison of that type.
+		// 3. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+		//    a. The calling scope (a user can define a standalone function named `+`).
+		//    b. The type of the left-hand side argument (for an operator method).
+		// Next, we perform typical overload resolution.
+
+		// Step 1. — special path for numeric promotions
+		// @TODO: #3700 It always prefers builtin numeric to user-defined operator
+		if (lhs_type.getType().isNumeric() && rhs_type.getType().isNumeric()
+		    && isNumericOperator(op)) {
+			auto numeric_builtin_opt = findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+
+			if_opt_some(numeric_builtin_opt, numeric_builtin) {
+				using namespace compiler::helios::code::shorthands;
+				Shorthand s{ ctx };
+
+				auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
+				auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+				auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+
+				return desugarBuiltinBinaryOperation(
+						   ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
+				)
+				    .valueOrThrow();
+			}
+		}
+
+		// Step 2. — Generated comparisons of tuples and classes
+		if_opt_some(findGeneratedComparison(ctx, op, lhs.ref(), rhs.ref()), comparison_sym) {
+			return callGeneratedComparison(
+				ctx, comparison_sym, op_origin, std::move(lhs), std::move(rhs)
+			);
+		}
+
+		// Step 3. — Regular lookup and overload resolution
+		auto [all_candidates, method_candidates]
+			= collectBinaryOperatorCandidates(ctx, op, lhs_type.getType(), scope);
+
+		return processBinaryOperatorCall(
+				   ctx, all_candidates, method_candidates, std::move(lhs), std::move(rhs), op_origin
+		)
+		    .valueOrThrow();
+	}
 }
 
 namespace compiler::helios::code {
@@ -279,76 +460,15 @@ namespace compiler::helios::code {
 		Box<Expr>       rhs,
 		ScopeID         scope
 	) {
-		//@TODO: #3702 handle custom, or otherwise fancy operators ending with `=`
-		CORE_ASSERT(!op.isAssignment(), "Assignement operator should be desugared by now.");
+		return resolveBinaryOperatorImpl(ctx, op, op_origin, std::move(lhs), std::move(rhs), scope);
+	}
 
-		const auto lhs_type = lhs->expression_type.getSymbolType();
-		const auto rhs_type = rhs->expression_type.getSymbolType();
-
-		// Binary operator resolution now happens in two steps:
-		// 1. If the arguments are both numeric (integral or float) and the operator is a
-		// built-in arithmetic operator, we look for promotions from left to right and from
-		// right to left, and then use the built-in operator on the promoted-to type.
-		// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
-		//    a. The calling scope (a user can define a standalone function named `+`).
-		//    b. The type of the left-hand side argument (for an operator method).
-		// Next, we perform typical overload resolution.
-
-		// Step 1. — special path for numeric promotions
-		// @TODO: #3700 It always prefers builtin numeric to user-defined operator
-		if (lhs_type.getType().isNumeric() && rhs_type.getType().isNumeric()
-		    && isNumericOperator(op)) {
-			auto numeric_builtin_opt = findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
-
-			if_opt_some(numeric_builtin_opt, numeric_builtin) {
-				using namespace compiler::helios::code::shorthands;
-				Shorthand s{ ctx };
-
-				auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
-				auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-				auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-
-				return desugarBuiltinBinaryOperation(
-						   ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
-				)
-				    .valueOrThrow();
-			}
-		}
-
-		// Step 2. — Regular lookup and overload resolution
-		const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
-		// @TODO: #1412 fix dealias
-		auto               all_candidates = lookup_result->valueOrThrow().leaves;
-		std::vector<SymID> method_candidates;
-		for (const auto [builtin_operator_sym, _]:
-		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
-			if (name(builtin_operator_sym) == op.value)
-				all_candidates.push_back(builtin_operator_sym);
-		}
-		filterFunctionsByOperatoriness(
-			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+	Box<Expr> resolveBinaryOperatorInGeneratedCode(
+		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
+	) {
+		return resolveBinaryOperatorImpl(
+			ctx, op, generatedOrigin(), std::move(lhs), std::move(rhs), {}
 		);
-
-		// Step 2b. — Look for operator methods declared on the left-hand side's type
-		// (classes only)
-		const auto lhs_abstract_type = lhs_type.getType();
-		if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
-			const auto method_lookup_result
-				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
-			method_candidates = method_lookup_result->valueOrThrow().leaves;
-			filterFunctionsByOperatoriness(
-				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
-			);
-
-			for (const auto method_candidate: method_candidates)
-				if (not std::ranges::contains(all_candidates, method_candidate))
-					all_candidates.push_back(method_candidate);
-		}
-
-		return processBinaryOperatorCall(
-				   ctx, all_candidates, method_candidates, std::move(lhs), std::move(rhs), op_origin
-		)
-		    .valueOrThrow();
 	}
 
 	Box<Expr> resolveUnaryOperator(

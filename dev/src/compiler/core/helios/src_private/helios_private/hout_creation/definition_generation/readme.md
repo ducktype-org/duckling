@@ -7,6 +7,7 @@ This includes:
 - Default constructors
 - Destructors
 - Stringification
+- Comparison operators of tuples and classes
 
 This does not include:
 - User-defined constructors / destructors / stringification

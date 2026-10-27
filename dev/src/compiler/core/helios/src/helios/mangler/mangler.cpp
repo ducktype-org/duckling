@@ -656,6 +656,18 @@ namespace compiler::helios::mangler {
 							return "HtoString" + func(ctx, symbol_id) + "E";
 						case defgen::Method::Kind::LengthMethod:
 							return "Hlength" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::Equal:
+							return "Heq" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::NotEqual:
+							return "Hne" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::Less:
+							return "Hlt" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::LessEqual:
+							return "Hle" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::Greater:
+							return "Hgt" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::GreaterEqual:
+							return "Hge" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
