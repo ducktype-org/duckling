@@ -11,7 +11,7 @@ use super::paths::Storage;
 use crate::QuackResult;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::util::interned_url::InternedUrl;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::util::path_ops::{MkdirOptions, PathOpsExt};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {

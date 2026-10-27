@@ -13,13 +13,14 @@ pub mod rules;
 pub mod warnings;
 
 use std::fmt;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use buffer::LintBuffer;
 use passes::{PASSES, run_single_pass};
 
 use super::PackageContext;
-use crate::QuackResult;
+use crate::{QuackError, QuackResult, qp_bail};
 
 /// A general diagnostic which can be emitted to a user.
 pub trait Diagnostic: fmt::Debug + fmt::Display + Sync + Send {}
@@ -40,6 +41,21 @@ pub enum LintLevel {
     Error,
 }
 
+impl FromStr for LintLevel {
+    type Err = QuackError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "allow" => Self::Allow,
+            "warning" => Self::Warning,
+            "error" => Self::Error,
+            _ => qp_bail!(
+                "invalid lint level: expected one of `allow`, `warning`, `error`, but found `{s}`"
+            ),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Lint {
     /// Name of the lint.
@@ -48,7 +64,6 @@ pub struct Lint {
     /// give a reason why it's bad.
     pub description: &'static str,
     /// The default level of this lint.
-    // Adding it as a member, since in the future maybe we want to configure levels.
     pub level: LintLevel,
 }
 
@@ -63,7 +78,7 @@ pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
     let mut buffer = LintBuffer::new();
 
     for pass in PASSES {
-        run_single_pass(pcx, *pass, &mut buffer)?;
+        run_single_pass(pcx, pass.0, pass.1, &mut buffer)?;
     }
     buffer.emit(pcx.ctx())
 }

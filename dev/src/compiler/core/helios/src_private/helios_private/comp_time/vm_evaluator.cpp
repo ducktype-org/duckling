@@ -529,7 +529,7 @@ namespace {
 		case compiler::tsh::Kind::Unit:
 			return CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 		case compiler::tsh::Kind::Tuple: {
-			if (CompileTimeValue::TypeTuple::isValid(ctx, type))
+			if (CompileTimeValue::TypeTuple::isValid(type))
 				return CompileTimeValue{
 					typeTupleFromBytes(ctx, type.getType(), vm_value->getBytes())
 				};

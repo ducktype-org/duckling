@@ -330,6 +330,12 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		std::vector<AbstractType> getComponentAbstractTypes() const;
 
+		/**
+		 * @brief Whether every component is a direct `type`, `()` or a tuple which `isTupleOfTypes`.
+		 */
+		[[nodiscard]]
+		bool isTupleOfTypes() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(TupleAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(TupleAbstractType)
@@ -454,6 +460,21 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		SymbolType<> getMember(usize index) const;
+
+		/**
+		 * @brief Whether this variant is the optional `?T`, i.e. `T | None` printed and exposing
+		 * its interface as an optional.
+		 */
+		[[nodiscard]]
+		bool representsOptionalType() const;
+
+		/**
+		 * @brief The type `T` held by the optional `?T`. It is always the first alternative, and
+		 * `None` the second one.
+		 * @pre representsOptionalType()
+		 */
+		[[nodiscard]]
+		SymbolType<> getOptionalValueType() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantAbstractType)
 

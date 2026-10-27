@@ -36,6 +36,7 @@ namespace compiler::helios::code {
 		ChainComparisonExpr,
 		TupleExpr,
 		VariantTypeConstructorExpr,
+		OptionalTypeConstructorExpr,
 		VariantConstructExpr,
 		MatchExpr,
 		CallExpr,

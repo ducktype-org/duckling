@@ -28,7 +28,6 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
-#include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
@@ -107,26 +106,27 @@ namespace compiler::helios {
 
 				const auto& expr_hout = expr_hout_qresult->valueOrThrow();
 
-				// Move before the coercion, so the coercion knows about the changed value category.
-				auto returned = moveReturnedLocal(ctx, expr_hout->clone());
-
-				auto expr_coerced = coerceFromBox(
-					ctx, std::move(returned), return_type, pst_expr.unlock(ctx)->getStablePosition()
+				// The returned local dies with the function, so we have to mark it as `LastUse` and
+				// implicitly move it.
+				const auto position = pst_expr.unlock(ctx)->getStablePosition();
+				const query::QResult<coercions::Coercion> coercion = coercions::validCoercionOf(
+					ctx, expr_hout.ref(), return_type, position, {}, {}, coercions::HandOverKind::LastUse
 				);
-				if (expr_coerced.hasFailed()) query::throwFailed();
+				if (coercion.hasFailed()) query::throwFailed();
 
 				// Report only if the compilation of the return statement actually succeeded.
 				if (expr_hout->expression_type.getValueCategory().mustMove()) {
 					ctx.logInt(makeBox<dia::PlaceholderWarning>(
 						"A returned value is moved out of implicitly, `move` is not needed "
 						"here.",
-						pst_expr.unlock(ctx)->getStablePosition()
+						position
 					));
 				}
 
-				output(
-					code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.valueOrPanic()))
-				);
+				output(code::ReturnStmt(
+					code::pstOrigin(stmt),
+					coercions::applyCoercionFromRef(ctx, coercion.valueOrThrow(), expr_hout.ref())
+				));
 			} else {
 				const bool returns_unit = return_type.getType() == tsh::getUnitType()
 				                       && return_type.getRefKind() == tsh::ReferenceKind::Direct;

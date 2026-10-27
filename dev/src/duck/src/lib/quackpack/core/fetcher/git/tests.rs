@@ -11,7 +11,7 @@ use url::Url;
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::git::GitClient;
 use crate::quackpack::core::{GitReference, PackageLoader};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 
 fn generate_local_git_repo() -> TempDir {
     let tmpdir = tempdir().unwrap();
