@@ -1,4 +1,4 @@
-type fixed_size_table: tablei64 i64 42
+# Tests refer to lines of this file by number.
 
 function main {} -> { i64 } {
 

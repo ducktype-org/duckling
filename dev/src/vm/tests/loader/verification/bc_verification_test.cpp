@@ -395,6 +395,9 @@ private:
 				vm::code::CyclicDependencyError::ERR_MSG,
 			}
 		);
+		loadInvalidDbc(
+			"wrong/types/cyclic_through_derived.dbc", { vm::code::CyclicDependencyError::ERR_MSG }
+		);
 	}
 
 	void duplicatedVariantAlternatives() {

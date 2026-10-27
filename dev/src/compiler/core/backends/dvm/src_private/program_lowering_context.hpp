@@ -102,7 +102,8 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief The declaration of the type `expr` denotes, kept here or built into the VM.
-		 * @return An empty optional for a pointer, which is written rather than declared.
+		 * @return An empty optional for a type that is written rather than declared, such as a
+		 * pointer.
 		 */
 		base::Optional<CRef<vm::code::TypeOfData>> declarationOf(vm::code::TypeExpr expr);
 
@@ -263,7 +264,8 @@ namespace compiler::backend_vm::internal {
 		 */
 		vm::code::TypeExpr getTslTypeExprInternal(CRef<tsl::TypeLayout> layout);
 
-		/// @return The declaration to keep, or nothing for a pointer, which has none.
+		/// @return The declaration to keep, or nothing for a type that is written rather than
+		/// declared, such as a pointer or a variant.
 		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
 		/// @brief Keeps `declaration` as the type `expr` denotes, once.

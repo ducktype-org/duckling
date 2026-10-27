@@ -161,13 +161,6 @@ namespace vm::code {
 				out << type.size.asInt();
 			}
 
-			void operator()(const FixedSizeTableType& type) const {
-				out << "type fixed_size_table: ";
-				out << type.name.strView() << " ";
-				out << type.inner.canonicalName().strView() << " ";
-				out << type.table_size;
-			}
-
 			void operator()(const DataType& type) const {
 				out << "type data: ";
 				out << type.name.strView() << " {\n";
@@ -178,18 +171,6 @@ namespace vm::code {
 				if (type.packed) out << " packed";
 				if (type.assert_size.has_value()) out << " assert_size " << *type.assert_size;
 				out << "\n";
-			}
-
-			void operator()(const VariantType& type) const {
-				out << "type variant: ";
-				out << type.name.strView() << " { ";
-				bool first = true;
-				for (const auto& alternative: type.variant_alternatives) {
-					if (!first) out << ", ";
-					out << alternative.canonicalName().strView();
-					first = false;
-				}
-				out << " }";
 			}
 
 			void operator()(const FunctionType& fun) const {
@@ -288,7 +269,7 @@ namespace vm::code {
 		}
 
 		void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
-			out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView() << " [ ";
+			out << lang_def::keywordToStr(lang_def::Keyword::BCFixtable).strView() << " [ ";
 			bool first = true;
 			for (const auto& elem: val.elements) {
 				if (!first) out << ", ";

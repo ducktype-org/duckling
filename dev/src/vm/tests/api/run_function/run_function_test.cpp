@@ -289,7 +289,16 @@ private:
 		};
 
 
-		auto empty_variant_response = vm::api::getVMValue(pid, "CustomVariant8");
+		// The variant of `CustomInt0` to `CustomInt<count - 1>`, which `count` decides the tag
+		// size of.
+		const auto custom_variant = [](usize count) {
+			std::string spelling = "variant{";
+			for (usize i = 0; i < count; ++i)
+				spelling += base::strConcat(i == 0 ? "" : ", ", "CustomInt", i);
+			return spelling + "}";
+		};
+
+		auto empty_variant_response = vm::api::getVMValue(pid, custom_variant(255));
 		assertSucceeded(empty_variant_response, "getVMValue");
 		auto empty_variant = std::move(empty_variant_response->vm_value);
 		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
@@ -302,7 +311,7 @@ private:
 		assert_type_tag(16, 1);
 		assert_type_tag(16, 255);
 
-		auto invalid_variant_response = vm::api::getVMValue(pid, "CustomVariant16");
+		auto invalid_variant_response = vm::api::getVMValue(pid, custom_variant(256));
 		assertSucceeded(invalid_variant_response, "getVMValue");
 		auto invalid_variant = std::move(invalid_variant_response->vm_value);
 		invalid_variant->writeBytes<u16>(257);

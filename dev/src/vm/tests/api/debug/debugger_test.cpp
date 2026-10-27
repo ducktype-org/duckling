@@ -586,7 +586,7 @@ private:
 					{  // Check fixed size table field
 						auto table_pointer = getStructField<idv::Pointer>(
 							struct_data,
-							base::StrID("ptr{fixtable_i64}"),
+							base::StrID("ptr{fixtable{i64, 7}}"),
 							base::StrID("var_fixtable_pointer")
 						);
 						ASSERT_HAS_VALUE(table_pointer.referenced);
@@ -599,7 +599,7 @@ private:
 
 					{  // Check variant field
 						auto variant = getStructField<idv::Variant>(
-							struct_data, base::StrID("simple_variant"), base::StrID("var_variant")
+							struct_data, base::StrID("variant{i64, i32}"), base::StrID("var_variant")
 						);
 						ASSERT_EQUAL_PRINT(variant.alternative_index, 0);
 						auto primitive_value

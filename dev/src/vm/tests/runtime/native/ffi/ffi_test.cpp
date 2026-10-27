@@ -443,16 +443,15 @@ private:
 		runProgram(
 			"struct_with_nested_tables",
 			ffiObjectHeader()
-				+ "type fixed_size_table: arr2 i32 2\n"
-				  "type fixed_size_table: arr2x2 arr2 2\n"
-				  "type data: WithArr { v: arr2x2, tail: i64 } assert_size 24\n"
+				+ ""
+				  "type data: WithArr { v: fixtable{fixtable{i32, 2}, 2}, tail: i64 } assert_size 24\n"
 				  "ffi function ffi_arr_sum { WithArr } -> { i64 };\n"
 				  "function main { i64, ptr{argv} } -> { i64 } {\n"
 				  "    init_pany_type x, i32;\n"
 				  "    init_pany_type i, i64;\n"
 				  "    init_pany_type t, i64;\n"
-				  "    init_pany_type row, arr2;\n"
-				  "    init_pany_type m, arr2x2;\n"
+				  "    init_pany_type row, fixtable{i32, 2};\n"
+				  "    init_pany_type m, fixtable{fixtable{i32, 2}, 2};\n"
 				  "    init_pany_type res, i64;\n"
 				  "    init_pany_type w, WithArr;\n"
 				  "    mov_p32_imm x, 1;\n"
@@ -489,14 +488,13 @@ private:
 			"struct_with_table_of_structs",
 			ffiObjectHeader()
 				+ "type data: Inner { x: i32, y: i32 } assert_size 8\n"
-				  "type fixed_size_table: inner2 Inner 2\n"
-				  "type data: PtTab { pts: inner2, tail: i64 } assert_size 24\n"
+				  "type data: PtTab { pts: fixtable{Inner, 2}, tail: i64 } assert_size 24\n"
 				  "ffi function ffi_pt_sum { PtTab } -> { i64 };\n"
 				  "function main { i64, ptr{argv} } -> { i64 } {\n"
 				  "    init_pany_type v, i32;\n"
 				  "    init_pany_type p, Inner;\n"
 				  "    init_pany_type i, i64;\n"
-				  "    init_pany_type ps, inner2;\n"
+				  "    init_pany_type ps, fixtable{Inner, 2};\n"
 				  "    init_pany_type t, i64;\n"
 				  "    init_pany_type res, i64;\n"
 				  "    init_pany_type s, PtTab;\n"
@@ -530,13 +528,12 @@ private:
 			"struct_with_float_table",
 			ffiObjectHeader()
 				+ "type primitive: f32 4\n"
-				  "type fixed_size_table: farr4 f32 4\n"
-				  "type data: FQuad { v: farr4 } assert_size 16\n"
+				  "type data: FQuad { v: fixtable{f32, 4} } assert_size 16\n"
 				  "ffi function ffi_fquad_sum { FQuad } -> { f32 };\n"
 				  "function main { i64, ptr{argv} } -> { i64 } {\n"
 				  "    init_pany_type x, f32;\n"
 				  "    init_pany_type i, i64;\n"
-				  "    init_pany_type a, farr4;\n"
+				  "    init_pany_type a, fixtable{f32, 4};\n"
 				  "    init_pany_type res, f32;\n"
 				  "    init_pany_type q, FQuad;\n"
 				  "    mov_p32_imm x, 10.5f32;\n"
@@ -569,15 +566,14 @@ private:
 		runProgram(
 			"struct_with_table_returned",
 			ffiObjectHeader()
-				+ "type fixed_size_table: arr4 i32 4\n"
-				  "type data: WithArr { v: arr4, tail: i64 } assert_size 24\n"
+				+ "type data: WithArr { v: fixtable{i32, 4}, tail: i64 } assert_size 24\n"
 				  "ffi function ffi_arr_make { i32 } -> { WithArr };\n"
 				  "function main { i64, ptr{argv} } -> { i64 } {\n"
 				  "    init_pany_type res, WithArr;\n"
 				  "    init_pany_type base, i32;\n"
 				  "    mov_p32_imm base, 6;\n"
 				  "    call_ffifunc ffi_arr_make;\n"
-				  "    init_pany_type a4, arr4;\n"
+				  "    init_pany_type a4, fixtable{i32, 4};\n"
 				  "    structLoad_pany_pste_field a4, res, WithArr.v;\n"
 				  "    init_pany_type sum, i32;\n"
 				  "    init_pany_type x, i32;\n"

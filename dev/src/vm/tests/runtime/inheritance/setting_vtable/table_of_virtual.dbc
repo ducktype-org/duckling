@@ -17,7 +17,6 @@ type class: Dog {
     };
 }
 
-type fixed_size_table: dog_table Dog 2
 
 # ============ METHODS IMPLEMENTATION ============
 
@@ -33,8 +32,8 @@ function dog_year_to_human_years {ptr{Dog}} -> {} {
 
 function main { i64, ptr{argv} } -> { i64 } {
     # Dog array[2];
-    init_pany_type                  array, ptr{dog_table};
-    alloc_pptr_type                 array, dog_table;
+    init_pany_type                  array, ptr{fixtable{Dog, 2}};
+    alloc_pptr_type                 array, fixtable{Dog, 2};
 
     # Dog* dog_ptr = &array[0]
     init_pany_type                  index, i64;

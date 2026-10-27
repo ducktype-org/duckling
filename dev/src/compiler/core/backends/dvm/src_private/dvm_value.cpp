@@ -45,14 +45,25 @@ DVMPlace::DVMPlace(
 	SpecialKind                                special_kind
 ):
 	  DVMPlace(name, expr, OperandKind::Unsupported, access_kind, special_kind) {
-	// A pointer's operand kind follows from how it is written, with no declaration to consult.
-	if (expr.isKind<vm::code::expr::Pointer>()) {
-		operand_kind = OperandKind::Pointer;
-		return;
-	}
-	if (expr.isKind<vm::code::expr::CPointer>()) {
-		operand_kind = OperandKind::CPointer;
-		return;
+	// A derived type's operand kind follows from how it is written, with no declaration to consult.
+	variant_match(expr.getKind()) {
+		variant_case_novalue(vm::code::expr::Pointer) {
+			operand_kind = OperandKind::Pointer;
+			return;
+		}
+		variant_case_novalue(vm::code::expr::CPointer) {
+			operand_kind = OperandKind::CPointer;
+			return;
+		}
+		variant_case_novalue(vm::code::expr::FixedSizeTable) {
+			operand_kind = OperandKind::FixedSizeTable;
+			return;
+		}
+		variant_case_novalue(vm::code::expr::Variant) {
+			operand_kind = OperandKind::Variant;
+			return;
+		}
+		variant_default {}
 	}
 
 	if (declaration.has_value()) {
@@ -64,11 +75,7 @@ DVMPlace::DVMPlace(
 				if (primitive.size == Bytes{ 2 }) operand_kind = OperandKind::Place16;
 				if (primitive.size == Bytes{ 1 }) operand_kind = OperandKind::Place8;
 			}
-			variant_case_novalue(vm::code::FixedSizeTableType) {
-				operand_kind = OperandKind::FixedSizeTable;
-			}
 			variant_case_novalue(vm::code::DataType) { operand_kind = OperandKind::Structure; }
-			variant_case_novalue(vm::code::VariantType) { operand_kind = OperandKind::Variant; }
 			variant_case_novalue(vm::code::OpaqueType) { operand_kind = OperandKind::Opaque; }
 			variant_default {}
 		}

@@ -73,6 +73,14 @@ public:
 
 		ASSERT_TRUE(TypeExpr::dyntable(dog) == TypeExpr::dyntable(dog));
 		ASSERT_TRUE(!(TypeExpr::dyntable(dog) == TypeExpr::pointer(dog)));
+
+		// The length of a fixed-size table and the order of a variant's alternatives are part of
+		// the identity.
+		ASSERT_TRUE(TypeExpr::fixtable(dog, 3) == TypeExpr::fixtable(dog, 3));
+		ASSERT_TRUE(!(TypeExpr::fixtable(dog, 3) == TypeExpr::fixtable(dog, 4)));
+		const auto i64 = TypeExpr::type(base::StrID("i64"));
+		ASSERT_TRUE(TypeExpr::variant({ dog, i64 }) == TypeExpr::variant({ dog, i64 }));
+		ASSERT_TRUE(!(TypeExpr::variant({ dog, i64 }) == TypeExpr::variant({ i64, dog })));
 	}
 
 	void testCanonicalNames() {
@@ -87,6 +95,11 @@ public:
 			spell(TypeExpr::pointer(TypeExpr::cpointer(TypeExpr::type(base::StrID("Dog")))))
 		);
 		ASSERT_EQUAL(std::string("dyntable{i64}"), spell(TypeExpr::dyntable(i64)));
+		ASSERT_EQUAL(std::string("fixtable{i64, 7}"), spell(TypeExpr::fixtable(i64, 7)));
+		ASSERT_EQUAL(
+			std::string("variant{i64, ptr{i64}}"),
+			spell(TypeExpr::variant({ i64, TypeExpr::pointer(i64) }))
+		);
 		ASSERT_EQUAL(
 			std::string("ptr{dyntable{ptr{i64}}}"),
 			spell(TypeExpr::pointer(TypeExpr::dyntable(TypeExpr::pointer(i64))))
@@ -118,12 +131,20 @@ public:
 		const auto dogs = TypeExpr::dyntable(dog);
 		ASSERT_TRUE(dogs.isKind<DynamicTable>());
 		ASSERT_TRUE(dogs.getKindAs<DynamicTable>()->element == dog);
+
+		const auto three_dogs = TypeExpr::fixtable(dog, 3);
+		ASSERT_TRUE(three_dogs.getKindAs<FixedSizeTable>()->element == dog);
+		ASSERT_EQUAL(three_dogs.getKindAs<FixedSizeTable>()->length, usize{ 3 });
+
+		const auto dog_or_dogs = TypeExpr::variant({ dog, dogs });
+		ASSERT_TRUE(dog_or_dogs.getKindAs<Variant>()->alternatives.at(1) == dogs);
 	}
 
 	/// A name spelled like a derived expression, or an empty one inside `cptr{}`, would otherwise
 	/// share that expression's node.
 	void testInvalidNamesPanic() {
-		for (const auto* name: { "", "ptr{Dog}", "cptr{}", "dyntable{i8}", "Dog}", "two words" }) {
+		for (const auto* name:
+		     { "", "ptr{Dog}", "cptr{}", "dyntable{i8}", "fixtable{i8, 2}", "Dog}", "two words" }) {
 			bool panicked = false;
 			try {
 				std::ignore = TypeExpr::type(base::StrID(name));

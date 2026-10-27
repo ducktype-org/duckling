@@ -1,21 +1,17 @@
-type fixed_size_table: InnerArray i64 10
-type data: Level2 { pad_l2: i64, arr: InnerArray }
+type data: Level2 { pad_l2: i64, arr: fixtable{i64, 10} }
 type data: Level1 { pad_l1: i64, l2: Level2 }
 type data: Root   { pad_root: i64, l1: Level1 }
 
 
 type data: Element { x: i64, y: i64, z: i64 }
-type fixed_size_table: Table Element 5
 
-type fixed_size_table: StaticOfDyn ptr{i64} 5
-type fixed_size_table: InnerStatic i64 4
 
 # ==========================================================
 # Nested Struct Array
 # ==========================================================
 function test_nested {} -> {} {
     init_pany_type root, Root;
-    init_pany_type p_arr, ptr{InnerArray};
+    init_pany_type p_arr, ptr{fixtable{i64, 10}};
     init_pany_type p_val, ptr{i64};
     init_pany_type idx, i64;
     init_pany_type val, i64;
@@ -46,7 +42,7 @@ function test_nested {} -> {} {
 # Array of Structs
 # ==========================================================
 function test_struct_array {} -> {} {
-    init_pany_type tbl, Table;
+    init_pany_type tbl, fixtable{Element, 5};
     init_pany_type p_el, ptr{Element};
     init_pany_type el, Element;
     init_pany_type idx, i64;
@@ -76,12 +72,10 @@ function test_struct_array {} -> {} {
 # ==========================================================
 # Static of static
 # ==========================================================
-type fixed_size_table: Row i64 4
-type fixed_size_table: Matrix Row 4
 
 function test_matrix {} -> {} {
-    init_pany_type m, Matrix;
-    init_pany_type p_row, ptr{Row};
+    init_pany_type m, fixtable{fixtable{i64, 4}, 4};
+    init_pany_type p_row, ptr{fixtable{i64, 4}};
     init_pany_type p_val, ptr{i64};
     init_pany_type idx_r, i64;
     init_pany_type idx_c, i64;

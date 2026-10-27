@@ -4,11 +4,10 @@ type data: Point {
     is_ok: i8,
 }
 
-type fixed_size_table: point_arr Point 2
 
-global_data answers point_arr {
+global_data answers fixtable{Point, 2} {
     is_constant: true,
-    initial_value: fixed_size_table [ class { x: 0x0000000A, y: 0xFFFFFFF6, is_ok: 0x2F }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x6F } ]
+    initial_value: fixtable [ class { x: 0x0000000A, y: 0xFFFFFFF6, is_ok: 0x2F }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x6F } ]
 }
 
 function main {} -> { i64 } {

@@ -1,9 +1,8 @@
 type primitive: i8 1
-type variant: simple_variant { i64, i8 }
 
 type data: VariantStruct {
     first: i64,
-    second: simple_variant
+    second: variant{i64, i8}
 }
 
 
@@ -16,7 +15,7 @@ function main { i64, ptr{argv} } -> { i64 } {
     ref_pptr_pany ptr_a, a;
 
     # let ptr_second: ptr<variant<i64, i8>> = &ptr_a->second;
-    init_pany_type ptr_second, ptr{simple_variant};
+    init_pany_type ptr_second, ptr{variant{i64, i8}};
     structLea_pptr_pptr_field ptr_second, ptr_a, VariantStruct.second;
 
     # ptr_second->setType<i64>();
@@ -34,11 +33,11 @@ function main { i64, ptr{argv} } -> { i64 } {
     store_pptr_pany int_ptr, value;
 
     # let var = ptr_a->second;
-    init_pany_type var, simple_variant;
+    init_pany_type var, variant{i64, i8};
     structLoad_pany_pptr_field var, ptr_a, VariantStruct.second;
 
     # let var_ptr: ptr<variant<i64, i8>> = &var;
-    init_pany_type var_ptr, ptr{simple_variant};
+    init_pany_type var_ptr, ptr{variant{i64, i8}};
     ref_pptr_pany var_ptr, var;
 
     # let read_ptr: ptr<i64> = var_ptr->getData<i64>();

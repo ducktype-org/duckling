@@ -217,9 +217,7 @@ private:
 			);
 			const auto dvm_type = program_ctx.lowerAndKeepTslType(layout);
 
-			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(
-				*program_ctx.declarationOf(dvm_type).expect("A variant is declared")
-			);
+			const auto dvm_variant = dvm_type.maybeGetKindAs<vm::code::expr::Variant>();
 			ASSERT_HAS_VALUE(dvm_variant);
 
 			const auto unit_dvm_type = program_ctx.lowerAndKeepTslType(
@@ -228,9 +226,7 @@ private:
 			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(
 				*program_ctx.declarationOf(unit_dvm_type).expect("Unit is declared")
 			));
-			ASSERT_TRUE(
-				std::ranges::contains(dvm_variant.value().variant_alternatives, unit_dvm_type)
-			);
+			ASSERT_TRUE(std::ranges::contains(dvm_variant.value()->alternatives, unit_dvm_type));
 		});
 	}
 

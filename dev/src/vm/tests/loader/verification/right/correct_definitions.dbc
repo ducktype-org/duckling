@@ -1,10 +1,25 @@
 type fun: foo { i64, ptr{foo} } {}
 
 
-type variant: Value {
-    i64, ptr{Value}
+# A variant has no name, so it refers to itself through a declared type.
+type data: Value {
+    value: variant{i64, ptr{Value}},
+}
+
+# These refer to a type declared after them, so they are finalized once it is. The table behind
+# the pointer is reached by nothing that finalizing `Pair` walks into.
+type data: Pair {
+    halves: fixtable{Half, 2},
+    either: variant{Half, i64},
+    more: ptr{fixtable{Half, 3}},
+}
+
+type data: Half {
+    value: i32,
 }
 
 function main { i64, ptr{argv} } -> { i64 } {
+	init_pany_type more, fixtable{Half, 3};
+	deinit;
 	ret;
 }

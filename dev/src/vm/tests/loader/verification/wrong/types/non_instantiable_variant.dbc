@@ -2,11 +2,10 @@ type class: A {
     abstract: true;
 }
 
-type variant: simple_variant { i64, A, i32 }
 
 function main { i64, ptr{argv} } -> { i64 } {
     # let v0: variant<i64, A, i32>;
-    init_pany_type v0, simple_variant;
+    init_pany_type v0, variant{i64, A, i32};
 
     # v0.setType<i64>();
     variantSetInner_pvnt_type v0, i64;

@@ -16,9 +16,11 @@
 #include <concurrent/base/collections/hash_map.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <vm/bytecode/type_expr.hpp>
 
+#include <algorithm>
 #include <deque>
 #include <mutex>
 #include <string>
@@ -26,7 +28,7 @@
 namespace vm::code {
 	namespace detail {
 		struct TypeExprNode final {
-			expr::Variant kind;
+			expr::Kind kind;
 			/// The spelling of this node, which doubles as the name of the type it denotes.
 			base::StrID canonical_name;
 			/// The order this node was interned in.
@@ -54,7 +56,7 @@ namespace vm::code {
 
 		constinit std::mutex mutex;
 
-		base::StrID buildCanonicalName(const expr::Variant& kind) {
+		base::StrID buildCanonicalName(const expr::Kind& kind) {
 			variant_match(kind) {
 				variant_case(expr::Named, named) { return named.name; }
 				variant_case(expr::Pointer, pointer) {
@@ -69,11 +71,28 @@ namespace vm::code {
 						"dyntable{" + dynamic_table.element.canonicalName().str() + "}"
 					);
 				}
+				variant_case(expr::FixedSizeTable, fixed_size_table) {
+					return base::StrID(base::strConcat(
+						"fixtable{",
+						fixed_size_table.element.canonicalName().strView(),
+						", ",
+						fixed_size_table.length,
+						"}"
+					));
+				}
+				variant_case(expr::Variant, variant) {
+					std::string spelling = "variant{";
+					for (usize i = 0; i < variant.alternatives.size(); ++i) {
+						if (i != 0) spelling += ", ";
+						spelling += variant.alternatives[i].canonicalName().strView();
+					}
+					return base::StrID(spelling + "}");
+				}
 			}
 			CORE_UNREACHABLE();
 		}
 
-		const TypeExprNode* intern(const expr::Variant& kind) {
+		const TypeExprNode* intern(const expr::Kind& kind) {
 			const base::StrID canonical_name = buildCanonicalName(kind);
 
 			// Fast path: an existing node is found without taking the insertion mutex.
@@ -120,6 +139,19 @@ namespace vm::code {
 		node = intern(dynamic_table);
 	}
 
+	TypeExpr::TypeExpr(const expr::FixedSizeTable& fixed_size_table) {
+		CORE_ASSERT(fixed_size_table.element.isValid(), "A fixed-size table needs an element type");
+		node = intern(fixed_size_table);
+	}
+
+	TypeExpr::TypeExpr(const expr::Variant& variant) {
+		CORE_ASSERT(
+			std::ranges::all_of(variant.alternatives, &TypeExpr::isValid),
+			"Every variant alternative must denote a type"
+		);
+		node = intern(variant);
+	}
+
 	TypeExpr TypeExpr::type(base::StrID name) { return TypeExpr(expr::Named{ .name = name }); }
 
 	TypeExpr TypeExpr::pointer(TypeExpr pointee) {
@@ -134,7 +166,15 @@ namespace vm::code {
 		return TypeExpr(expr::DynamicTable{ .element = element });
 	}
 
-	const expr::Variant& TypeExpr::getKind() const {
+	TypeExpr TypeExpr::fixtable(TypeExpr element, usize length) {
+		return TypeExpr(expr::FixedSizeTable{ .element = element, .length = length });
+	}
+
+	TypeExpr TypeExpr::variant(std::vector<TypeExpr> alternatives) {
+		return TypeExpr(expr::Variant{ .alternatives = std::move(alternatives) });
+	}
+
+	const expr::Kind& TypeExpr::getKind() const {
 		CORE_ASSERT(isValid(), "Type expression denotes no type");
 		return node->kind;
 	}

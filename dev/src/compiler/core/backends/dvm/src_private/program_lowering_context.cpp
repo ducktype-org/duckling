@@ -48,6 +48,17 @@ namespace {
 			variant_case(vm::code::expr::DynamicTable, dynamic_table) {
 				return base::StrID(base::strConcat("dyntable_", mangledName(dynamic_table.element)));
 			}
+			variant_case(vm::code::expr::FixedSizeTable, fixed_size_table) {
+				return base::StrID(base::strConcat(
+					"arr_", mangledName(fixed_size_table.element), "_", fixed_size_table.length
+				));
+			}
+			variant_case(vm::code::expr::Variant, variant) {
+				std::string name = "vnt";
+				for (const auto& alternative: variant.alternatives)
+					name = base::strConcat(name, "_", mangledName(alternative));
+				return base::StrID(name);
+			}
 		}
 		CORE_UNREACHABLE();
 	}
@@ -115,7 +126,7 @@ vm::code::TypeExpr ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLay
 	const vm::code::TypeExpr type_expr = getTslTypeExprInternal(layout);
 	type_storage.tsl_type_to_dvm_type.put(layout, type_expr);
 
-	// A pointer is written rather than declared, so lowering it yields nothing to keep.
+	// A derived type is written rather than declared, so lowering it yields nothing to keep.
 	if (auto declaration = lowerTslTypeInternal(layout)) {
 		CORE_ASSERT(
 			vm::code::typeName(*declaration) == type_expr.canonicalName(),
@@ -496,20 +507,17 @@ vm::code::TypeExpr ProgramLoweringContext::getTslTypeExprInternal(CRef<tsl::Type
 			return vm::code::TypeExpr{ base::StrID(tuple_type_name) };
 		}
 		variant_case(tsl::VariantTypeLayout, variant_layout) {
-			std::string variant_type_name = "vnt";
-			for (usize i{ 0 }; i < variant_layout.getNumAlternatives(); i++) {
-				const base::StrID alternative_name
-					= mangledName(getTslTypeExprInternal(variant_layout.getLayoutOfIndex(i)));
-				variant_type_name = base::strConcat(variant_type_name, "_", alternative_name);
-			}
-			return vm::code::TypeExpr{ base::StrID(variant_type_name) };
+			std::vector<vm::code::TypeExpr> alternatives;
+			alternatives.reserve(variant_layout.getNumAlternatives());
+			for (usize i{ 0 }; i < variant_layout.getNumAlternatives(); i++)
+				alternatives.push_back(getTslTypeExprInternal(variant_layout.getLayoutOfIndex(i)));
+			return vm::code::TypeExpr::variant(std::move(alternatives));
 		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
-			const base::StrID element_name
-				= mangledName(getTslTypeExprInternal(array_layout.getElementLayout()));
-			return vm::code::TypeExpr{ base::StrID(
-				base::strConcat("arr_", element_name, "_", array_layout.getElementCount())
-			) };
+			return vm::code::TypeExpr::fixtable(
+				getTslTypeExprInternal(array_layout.getElementLayout()),
+				array_layout.getElementCount()
+			);
 		}
 		variant_default {
 			CORE_ASSERT(query_ctx.has_value(), "Query context must be set for error reporting");
@@ -579,24 +587,15 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			};
 		}
 		variant_case(tsl::VariantTypeLayout, variant_layout) {
-			const usize num_alternatives = variant_layout.getNumAlternatives();
-
-			std::vector<vm::code::TypeExpr> alternatives;
-			alternatives.reserve(num_alternatives);
-			for (usize i{ 0 }; i < num_alternatives; i++)
-				alternatives.emplace_back(keepTslType(variant_layout.getLayoutOfIndex(i)));
-
-			return vm::code::VariantType{
-				name,
-				std::move(alternatives),
-			};
+			// Written rather than declared; only the alternatives may need declaring.
+			for (usize i{ 0 }; i < variant_layout.getNumAlternatives(); i++)
+				std::ignore = keepTslType(variant_layout.getLayoutOfIndex(i));
+			return {};
 		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
-			return vm::code::FixedSizeTableType{
-				name,
-				vm::code::TypeExpr(keepTslType(array_layout.getElementLayout())),
-				array_layout.getElementCount(),
-			};
+			// Written rather than declared; only the element type may need declaring.
+			std::ignore = keepTslType(array_layout.getElementLayout());
+			return {};
 		}
 		variant_default { CORE_UNREACHABLE(); }
 	}

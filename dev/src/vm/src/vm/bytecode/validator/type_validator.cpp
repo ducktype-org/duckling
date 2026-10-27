@@ -167,14 +167,26 @@ namespace {
 	}
 
 	/**
-	 * @brief The declared type a cycle through a reference to `expr` would continue into.
+	 * @brief The declared types whose size the size of `expr` depends on, which a cycle through
+	 * a reference to it would continue into.
 	 * @note None for a pointer or a dynamic table: neither one's size depends on what it is
 	 * built from, which is what makes self-referential types legal.
 	 */
-	base::Optional<base::StrID> recursesInto(const TypeExpr& expr) {
-		return expr.maybeGetKindAs<expr::Named>().map([](CRef<expr::Named> named) {
-			return named->name;
-		});
+	std::vector<base::StrID> recursesInto(const TypeExpr& expr) {
+		variant_match(expr.getKind()) {
+			variant_case(expr::Named, named) { return { named.name }; }
+			variant_case(expr::FixedSizeTable, fixed_size_table) {
+				return recursesInto(fixed_size_table.element);
+			}
+			variant_case(expr::Variant, variant) {
+				std::vector<base::StrID> names;
+				for (const auto& alternative: variant.alternatives)
+					std::ranges::copy(recursesInto(alternative), std::back_inserter(names));
+				return names;
+			}
+			variant_default { return {}; }
+		}
+		CORE_UNREACHABLE();
 	}
 
 	/**
@@ -191,6 +203,14 @@ namespace {
 			}
 			variant_case(expr::DynamicTable, dynamic_table) {
 				return isDeclared(tod_types, dynamic_table.element);
+			}
+			variant_case(expr::FixedSizeTable, fixed_size_table) {
+				return isDeclared(tod_types, fixed_size_table.element);
+			}
+			variant_case(expr::Variant, variant) {
+				return std::ranges::all_of(variant.alternatives, [&](const TypeExpr& alternative) {
+					return isDeclared(tod_types, alternative);
+				});
 			}
 		}
 		CORE_UNREACHABLE();
@@ -357,10 +377,6 @@ namespace {
 			variant_case(PrimitiveType, primitive) {
 				if (primitive.size == Bytes{ 0 }) throw InvalidPrimitiveSizeError(primitive);
 			}
-			variant_case(FixedSizeTableType, fixed_table) {
-				if (!isDeclared(tod_types, fixed_table.inner))
-					throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
-			}
 			variant_case(FunctionType, function) {
 				for (auto& param: function.parameters)
 					if (!isDeclared(tod_types, param))
@@ -369,19 +385,6 @@ namespace {
 				for (auto& reslt: function.result)
 					if (!isDeclared(tod_types, reslt))
 						throw UnknownSubtypeError(function, reslt.canonicalName());
-			}
-			variant_case(VariantType, variant) {
-				if (variant.variant_alternatives.size() < 2)
-					throw TooFewVariantAlternativesError(variant);
-				std::unordered_set<base::StrID> alternative_set;
-				for (auto& alternative: variant.variant_alternatives) {
-					const auto alternative_name = alternative.canonicalName();
-					if (!isDeclared(tod_types, alternative))
-						throw UnknownSubtypeError(variant, alternative_name);
-					if (alternative_set.contains(alternative_name))
-						throw DuplicatedVariantAlternativeError(variant, alternative_name);
-					alternative_set.insert(alternative_name);
-				}
 			}
 			variant_case(DataType, data) {
 				validateFieldDuplicatesAndSubtypeExistence(data, tod_types);
@@ -434,19 +437,19 @@ namespace {
 					if_opt_some(clazz.extends, superclass) {
 						if (!isDeclared(tod_types, superclass))
 							throw InvalidExtendsError(clazz, superclass.canonicalName());
-						if_opt_some(recursesInto(superclass), next) self(*tod_types.at(next));
+						for (const auto next: recursesInto(superclass)) self(*tod_types.at(next));
 					}
 					for (auto iface: clazz.implements) {
 						if (!isDeclared(tod_types, iface))
 							throw InvalidImplementsError(clazz, iface.canonicalName());
-						if_opt_some(recursesInto(iface), next) self(*tod_types.at(next));
+						for (const auto next: recursesInto(iface)) self(*tod_types.at(next));
 					}
 				}
 				variant_case(InterfaceType, interface) {
 					for (auto iface: interface.implements) {
 						if (!isDeclared(tod_types, iface))
 							throw InvalidImplementsError(interface, iface.canonicalName());
-						if_opt_some(recursesInto(iface), next) self(*tod_types.at(next));
+						for (const auto next: recursesInto(iface)) self(*tod_types.at(next));
 					}
 				}
 			}
@@ -472,24 +475,19 @@ namespace {
 			status[name] = Visited;
 			variant_match(type) {
 				variant_case(PrimitiveType, primitive) {}
-				variant_case(FixedSizeTableType, fixed_table) {
-					if (!isDeclared(tod_types, fixed_table.inner))
-						throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
-					if_opt_some(recursesInto(fixed_table.inner), next) self(*tod_types.at(next));
-				}
 				variant_case(InterfaceType, interface) {}
 				variant_case(ClassType, clazz) {
 					for (auto& field: clazz.fields) {
 						if (!isDeclared(tod_types, field.type))
 							throw UnknownSubtypeError(clazz, field.type.canonicalName());
-						if_opt_some(recursesInto(field.type), next) self(*tod_types.at(next));
+						for (const auto next: recursesInto(field.type)) self(*tod_types.at(next));
 					}
 				}
 				variant_case(DataType, data) {
 					for (auto& field: data.fields) {
 						if (!isDeclared(tod_types, field.type))
 							throw UnknownSubtypeError(data, field.type.canonicalName());
-						if_opt_some(recursesInto(field.type), next) self(*tod_types.at(next));
+						for (const auto next: recursesInto(field.type)) self(*tod_types.at(next));
 					}
 				}
 				variant_case(FunctionType, function) {
@@ -500,16 +498,9 @@ namespace {
 						if (!isDeclared(tod_types, reslt))
 							throw UnknownSubtypeError(function, reslt.canonicalName());
 					for (auto& param: function.parameters)
-						if_opt_some(recursesInto(param), next) self(*tod_types.at(next));
+						for (const auto next: recursesInto(param)) self(*tod_types.at(next));
 					for (auto& reslt: function.result)
-						if_opt_some(recursesInto(reslt), next) self(*tod_types.at(next));
-				}
-				variant_case(VariantType, variant) {
-					for (auto& alternative: variant.variant_alternatives)
-						if (!isDeclared(tod_types, alternative))
-							throw UnknownSubtypeError(variant, alternative.canonicalName());
-					for (auto& alternative: variant.variant_alternatives)
-						if_opt_some(recursesInto(alternative), next) self(*tod_types.at(next));
+						for (const auto next: recursesInto(reslt)) self(*tod_types.at(next));
 				}
 				variant_case(OpaqueType, opaque) {}
 				variant_default {

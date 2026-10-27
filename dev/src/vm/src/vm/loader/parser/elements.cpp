@@ -32,7 +32,8 @@
 namespace vm::loader::parser {
 	/**
 	 * @brief Parses a type reference: a name, `ptr{T}`, `cptr{T}` with `cptr{}` standing for an
-	 * unknown pointee, or `dyntable{T}`. A builtin alias such as `string` is expanded here.
+	 * unknown pointee, `dyntable{T}`, `fixtable{T, N}` or `variant{A, B, ...}`. A builtin alias
+	 * such as `string` is expanded here.
 	 * @return An empty optional if the reference is malformed, having logged why.
 	 */
 	base::Optional<code::TypeExpr> parseTypeExpr(F8ParserState& state) {
@@ -43,49 +44,93 @@ namespace vm::loader::parser {
 			return {};
 		}
 
-		const bool is_pointer  = state[0].is(lang_def::Keyword::BCPtr);
-		const bool is_cpointer = state[0].is(lang_def::Keyword::BCCPtr);
-		const bool is_dyntable = state[0].is(lang_def::Keyword::BCDyntable);
-		if (!is_pointer && !is_cpointer && !is_dyntable) {
+		using enum lang_def::Keyword;
+		const auto keyword = state[0].isKeyword() ? state[0].asKeyword() : NotAKeyword;
+		if (keyword != BCPtr && keyword != BCCPtr && keyword != BCDyntable && keyword != BCFixtable
+		    && keyword != BCVariant) {
 			tpc::Identifier name;
 			state.parse().one(&name);
 			if (auto alias = code::getBuiltinAlias(name.value)) return *alias;
 			return code::TypeExpr(name.value);
 		}
 
-		const std::string_view argument = is_dyntable ? "element type" : "pointee";
-
 		state.tokens().next();
 		if (state.empty() || !state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia::PlaceholderError>(
-				base::strConcat("Expected `{` with the ", argument, " after here."),
-				state.getPosition(-1)
-			));
+			state.logInt(
+				makeBox<dia::PlaceholderError>("Expected `{` after here.", state.getPosition(-1))
+			);
 			return {};
 		}
 
+		// Every argument is a type, except the length of a fixed-size table.
 		state.goDown();
-		base::Optional<code::TypeExpr> inner;
-		if (state.notEmpty()) {
-			inner = parseTypeExpr(state);
-			if (state.notEmpty())
+		std::vector<code::TypeExpr> arguments;
+		base::Optional<usize>       length;
+		bool                        malformed = false;
+		while (state.notEmpty()) {
+			if (keyword == BCFixtable && arguments.size() == 1) {
+				const lexer::Token token = state.tokens().next();
+				if (!token.isNumLiteralGroup()) {
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Expected the table length after here.", state.getPosition(-1)
+					));
+					malformed = true;
+					break;
+				}
+				length = static_cast<usize>(strIDToNum(token.getValue()));
+			} else if (auto argument = parseTypeExpr(state)) {
+				arguments.push_back(*argument);
+			} else {
+				malformed = true;
+				break;
+			}
+
+			if (state.empty()) break;
+			if (!state[0].is(lang_def::Special::Comma)) {
 				state.logInt(makeBox<dia::PlaceholderError>(
-					base::strConcat("Expected `}` after the ", argument, "."), state.getPosition()
+					"Expected `,` or `}` after here.", state.getPosition(-1)
 				));
+				malformed = true;
+				break;
+			}
+			state.parse().one(lang_def::Special::Comma);
 		}
 		state.goUpAndSkip();
+		if (malformed) return {};
 
-		if (is_cpointer) return code::TypeExpr::cpointer(inner);
-		if (!inner.has_value()) {
-			state.logInt(makeBox<dia::PlaceholderError>(
-				is_dyntable ? "`dyntable` needs an element type."
-							: "`ptr` needs a pointee; only `cptr` may be left empty.",
-				state.getPosition(-1)
-			));
-			return {};
+		const auto expect = [&](bool well_formed, std::string_view message) {
+			if (!well_formed)
+				state.logInt(
+					makeBox<dia::PlaceholderError>(std::string(message), state.getPosition(-1))
+				);
+			return well_formed;
+		};
+		switch (keyword) {
+		case BCPtr:
+			if (!expect(!arguments.empty(), "`ptr` needs a pointee; only `cptr` may be left empty."))
+				return {};
+			if (!expect(arguments.size() == 1, "`ptr` takes exactly one pointee.")) return {};
+			return code::TypeExpr::pointer(arguments[0]);
+		case BCCPtr:
+			if (!expect(arguments.size() <= 1, "`cptr` takes at most one pointee.")) return {};
+			if (arguments.empty()) return code::TypeExpr::cpointer();
+			return code::TypeExpr::cpointer(arguments[0]);
+		case BCDyntable:
+			if (!expect(arguments.size() == 1, "`dyntable` takes exactly one element type."))
+				return {};
+			return code::TypeExpr::dyntable(arguments[0]);
+		case BCFixtable:
+			if (!expect(
+					arguments.size() == 1 && length.has_value(),
+					"`fixtable` takes an element type and a length."
+				))
+				return {};
+			return code::TypeExpr::fixtable(arguments[0], *length);
+		case BCVariant:
+			return code::TypeExpr::variant(std::move(arguments));
+		default:
+			CORE_UNREACHABLE();
 		}
-		if (is_dyntable) return code::TypeExpr::dyntable(*inner);
-		return code::TypeExpr::pointer(*inner);
 	}
 
 	namespace opargs_parsers {
@@ -521,10 +566,10 @@ namespace vm::loader::parser {
 					state.goUpAndSkip();
 					return std::move(struct_val);
 				}
-				case lang_def::Keyword::BCFixedSizeTable: {
+				case lang_def::Keyword::BCFixtable: {
 					if (!state[0].isBracketGroup(lexer::Token::BracketType::Square)) {
 						state.logInt(makeBox<dia::PlaceholderError>(
-							"Expected `[` after `fixed_size_table`.", state.getPosition()
+							"Expected `[` after `fixtable`.", state.getPosition()
 						));
 						return {};
 					}
@@ -940,26 +985,6 @@ namespace vm::loader::parser {
 			}
 			break;
 		}
-		case lang_def::Keyword::BCFixedSizeTable: {
-			auto inner = parseTypeExpr(state);
-			if (!inner.has_value()) {
-				break;
-			} else {
-				auto size = state.tokens().next();
-				if (!size.isNumLiteralGroup()) {
-					state.logInt(makeBox<dia::PlaceholderError>(
-						"Expected a numeric literal after here.", state.getPosition()
-					));
-				} else {
-					auto tp         = FixedSizeTableType{ name,
-                                                  *inner,
-                                                  static_cast<usize>(strIDToNum(size.getValue())) };
-					tp.bytecode_pos = out->position;
-					out->datatype   = tp;
-				}
-			}
-			break;
-		}
 		case lang_def::Keyword::BCData: {
 			auto tp = DataType{ name, parseFields(state) };
 			// Trailing modifiers, accepted in any order: `packed`, `assert_size N`.
@@ -981,37 +1006,6 @@ namespace vm::loader::parser {
 					break;
 				}
 			}
-			tp.bytecode_pos = out->position;
-			out->datatype   = std::move(tp);
-			break;
-		}
-		case lang_def::Keyword::BCVariant: {
-			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected `{` after here.", state.getPosition(-1)
-				));
-				return nullptr;
-			}
-
-			state.goDown();
-			std::vector<TypeExpr> alternatives;
-			while (state.notEmpty()) {
-				auto alternative = parseTypeExpr(state);
-				if (!alternative.has_value()) break;
-				alternatives.emplace_back(*alternative);
-
-				if (state.empty()) break;
-				if (state[0].is(lang_def::Special::Comma)) {
-					state.parse().one(lang_def::Special::Comma);
-				} else {
-					state.logInt(makeBox<dia::PlaceholderError>(
-						"Expected comma or `}` after here.", state.getPosition()
-					));
-					state.tokens().skip();
-				}
-			}
-			state.goUpAndSkip();
-			auto tp         = VariantType{ name, alternatives };
 			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;

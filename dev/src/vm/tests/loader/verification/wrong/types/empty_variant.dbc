@@ -1,1 +1,5 @@
-type variant: empty {}
+function main { } -> { i64 } {
+    init_pany_type v, variant{};
+    deinit;
+    ret;
+}

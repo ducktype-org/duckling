@@ -432,9 +432,7 @@ namespace vm::code {
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
 	DEFINE_TYPE_ERROR(InvalidPrimitiveSizeError, "Primitive type cannot have size 0: ");
-	DEFINE_TYPE_ERROR(
-		TooFewVariantAlternativesError, "Variants should have at least two alternatives: "
-	);
+
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidImplementsError,
 		"This object can implement only existing interfaces other than itself: "
@@ -480,9 +478,6 @@ namespace vm::code {
 		"Method implementation lacks its declaration as a virtual method: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
-	DEFINE_TYPE_ATTRIBUTE_ERROR(
-		DuplicatedVariantAlternativeError, "This variant alternative is duplicated"
-	)
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
@@ -496,6 +491,12 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.");
 	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.");
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
+	DEFINE_ARGUMENT_ERROR(
+		TooFewVariantAlternativesError, "Variants should have at least two alternatives: "
+	);
+	DEFINE_ARGUMENT_ERROR(
+		DuplicatedVariantAlternativeError, "This variant alternative is duplicated: "
+	);
 	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");
 	DEFINE_ARGUMENT_ERROR(DuplicatedLocalNameError, "Duplicated local name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLabelError, "Unknown label: ");

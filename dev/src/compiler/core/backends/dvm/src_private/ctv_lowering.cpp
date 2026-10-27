@@ -92,35 +92,38 @@ namespace compiler::backend_vm::internal {
 		global_data.type        = type;
 		global_data.is_constant = is_constant;
 
-		const vm::code::TypeOfData& declaration = *pctx.declarationOf(type).expect(DECLARED);
-		const DVMPlace&             inserted_global_place = pctx.declareGlobal(global_name, type);
+		const DVMPlace& inserted_global_place = pctx.declareGlobal(global_name, type);
+		// Only some constants are of a declared type, so the declaration is looked up by those.
+		const auto declaration = [&]() -> const vm::code::TypeOfData& {
+			return *pctx.declarationOf(type).expect(DECLARED);
+		};
 
 		variant_match(constant.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				// Numeric values are representable as a single immediate, so we can just store the
 				// value directly in the global's `initial_value`.
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					numericValueToU64(numeric), std::get<vm::code::PrimitiveType>(declaration).size
+					numericValueToU64(numeric), std::get<vm::code::PrimitiveType>(declaration()).size
 				);
 			}
 			variant_case(bool, value) {
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					translateToU64(value), std::get<vm::code::PrimitiveType>(declaration).size
+					translateToU64(value), std::get<vm::code::PrimitiveType>(declaration()).size
 				);
 			}
 			variant_case(char, value) {
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					translateToU64(value), std::get<vm::code::PrimitiveType>(declaration).size
+					translateToU64(value), std::get<vm::code::PrimitiveType>(declaration()).size
 				);
 			}
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					metaTypeToU64(pctx, type_val), v_get(declaration, vm::code::OpaqueType).size
+					metaTypeToU64(pctx, type_val), v_get(declaration(), vm::code::OpaqueType).size
 				);
 			}
 			variant_case(ctv::CompileTimeValue::TypeTuple, tuple) {
 				global_data.initial_value = vm::code::ConstantValue::fromData(
-					lowerTypeTupleToConstant(pctx, tuple, v_get(declaration, vm::code::DataType))
+					lowerTypeTupleToConstant(pctx, tuple, v_get(declaration(), vm::code::DataType))
 				);
 			}
 			variant_case(ctv::CompileTimeValue::CharSliceValue, str) {
@@ -180,9 +183,7 @@ namespace compiler::backend_vm::internal {
 		const usize length = bytes.size();
 
 		// Static fixed-size-table global holding the string bytes.
-		auto array_type_name = base::strConcat("arr_", element_type.canonicalName(), "_", length);
-		const vm::code::TypeExpr array_type = pctx.keepVMType(vm::code::FixedSizeTableType{
-			base::StrID(array_type_name), element_type, length });
+		const vm::code::TypeExpr array_type = vm::code::TypeExpr::fixtable(element_type, length);
 
 		auto string_table = makeBox<vm::code::ConstantFixedSizeTable>();
 		string_table->elements.reserve(length);

@@ -181,7 +181,7 @@ namespace lang_def {
 		BCType,
 		BCPrimitive,
 		BCPtr,
-		BCFixedSizeTable,
+		BCFixtable,
 		BCDyntable,
 		BCData,
 		BCVariant,

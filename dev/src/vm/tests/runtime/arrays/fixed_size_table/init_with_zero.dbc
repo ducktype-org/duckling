@@ -1,5 +1,3 @@
-type fixed_size_table: tablei64 i64 2
-
 function main { i64, ptr{argv} } -> { i64 } {
 	# ret0 -> main ret0
 	# arg0 -> argc
@@ -8,9 +6,9 @@ function main { i64, ptr{argv} } -> { i64 } {
 	init_pany_type           x, i64;
 	init_pany_type           i, i64;
 	init_pany_type           y, i64;
-	init_pany_type           t, ptr{tablei64};
+	init_pany_type           t, ptr{fixtable{i64, 2}};
 
-	alloc_pptr_type     t, tablei64;
+	alloc_pptr_type     t, fixtable{i64, 2};
 
 	# x := t[0]
 	mov_p64_imm         		i, 0;

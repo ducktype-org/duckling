@@ -1,12 +1,11 @@
 type primitive: i8 1
-type variant: simple_variant { i64, i8 }
 
 function main { i64, ptr{argv} } -> { i64 } {
-    init_pany_type v1, simple_variant;
+    init_pany_type v1, variant{i64, i8};
     # Gives the variant a nested child block.
     variantSetInner_pvnt_type v1, i64;
 
-    init_pany_type p, ptr{simple_variant};
+    init_pany_type p, ptr{variant{i64, i8}};
     ref_pptr_pany p, v1;
 
     # Locals are not heap-allocated.

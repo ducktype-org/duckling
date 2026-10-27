@@ -1,7 +1,3 @@
-type fixed_size_table: fixtable_i64 i64 7
-
-type variant: simple_variant { i64, i32 }
-
 type data: AllTypeKindsStruct {
 	# Primitive
 	var_byte: byte,
@@ -14,10 +10,10 @@ type data: AllTypeKindsStruct {
 
 	# Tables
 	var_dyntable_pointer: ptr{dyntable{i64}},
-	var_fixtable_pointer: ptr{fixtable_i64},
+	var_fixtable_pointer: ptr{fixtable{i64, 7}},
 
 	# Variant
-	var_variant: simple_variant
+	var_variant: variant{i64, i32}
 }
 
 
@@ -32,7 +28,7 @@ function main { i64, ptr{argv} } -> { i64 } {
 	alloc_pptr_type		struct_pointer, AllTypeKindsStruct;
 	
 	init_pany_type		dyntable_pointer, ptr{dyntable{i64}};
-	init_pany_type		fixtable_pointer, ptr{fixtable_i64};
+	init_pany_type		fixtable_pointer, ptr{fixtable{i64, 7}};
 	
 
 	# struct_pointer->var_pointer = struct_pointer;
@@ -46,11 +42,11 @@ function main { i64, ptr{argv} } -> { i64 } {
 	deinit; # new_dyntable_size
 
 	# struct_pointer->var_fixtable_pointer = new fixed_size_table();
-	alloc_pptr_type					fixtable_pointer, fixtable_i64;
+	alloc_pptr_type					fixtable_pointer, fixtable{i64, 7};
 	structStore_pptr_pany_field		struct_pointer, fixtable_pointer, AllTypeKindsStruct.var_fixtable_pointer;
 
 	# struct_pointer->var_variant = 0i64;
-	init_pany_type				variant_pointer, ptr{simple_variant};
+	init_pany_type				variant_pointer, ptr{variant{i64, i32}};
 	structLea_pptr_pptr_field	variant_pointer, struct_pointer, AllTypeKindsStruct.var_variant;
 	variantSetInner_pptr_type	variant_pointer, i64;
 
