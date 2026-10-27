@@ -215,7 +215,7 @@ mod tests {
 
         let args_matches = cli().try_get_matches_from(["duck", "ny_aias"]).unwrap();
         let (mut ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(2));
-        ctx.duck_cfg_mut().set_aliases(fake_aliases);
+        ctx.duck_cfg_mut().cfg_file_mut().set_aliases(fake_aliases);
         let external_cmds = ExternalSubcommands::default();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("my_alias"));

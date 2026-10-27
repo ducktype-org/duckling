@@ -19,7 +19,7 @@ use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Default)]
-pub struct DuckCfg {
+pub struct DuckConfigurationFile {
     inner: YamlConfig,
     // Fast config accessors.
     security: OnceLock<SecurityConfig>,
@@ -37,9 +37,9 @@ const DEFAULT_MAXIMAL_AUTOFIX_DISTANCE: u64 = 3;
 /// A random, but reasonable(?) value.
 const DEFAULT_NUMBER_OF_OPEN_CONNECTIONS: usize = 64;
 
-impl DuckCfg {
-    /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
-    pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
+impl DuckConfigurationFile {
+    /// Create a new [`DuckConfigurationFile`] using config file from the given [`DuckHome`].
+    pub fn new(home: &DuckHome) -> QuackResult<DuckConfigurationFile> {
         let inner = YamlConfig::new(home.user_config().to_path_buf())?;
         debug!(?inner, "parsed the user config");
         Ok(Self {
@@ -135,9 +135,9 @@ impl DuckCfg {
 mod test_utils {
     use std::collections::HashMap;
 
-    use super::DuckCfg;
+    use super::DuckConfigurationFile;
 
-    impl DuckCfg {
+    impl DuckConfigurationFile {
         pub fn set_aliases(&mut self, new_val: HashMap<String, String>) {
             let val: serde_yaml_ng::Mapping = new_val
                 .into_iter()

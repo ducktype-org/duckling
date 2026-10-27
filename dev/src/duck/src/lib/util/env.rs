@@ -94,13 +94,24 @@ impl Env {
     /// ## Arguments
     ///
     /// * `key` - key for environmental variable. Must implement [`AsRef<Str>`].
-    pub fn get(&self, key: impl AsRef<OsStr>) -> QuackResult<&str> {
+    pub fn get(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<&str>> {
         let key = key.as_ref();
         let display = key.display();
         self.get_os(key)
-            .ok_or_else(|| qp_err!("environmental variable `{display}` is missing"))?
-            .to_str()
-            .ok_or_else(|| qp_err!("environmental variable `{display}` is not a utf8 string"))
+            .map(|res| {
+                res.to_str().ok_or_else(|| {
+                    qp_err!("environmental variable `{display}` is not a utf8 string")
+                })
+            })
+            .transpose()
+    }
+
+    pub fn get_i64(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<i64>> {
+        Ok(self.get(key)?.map(str::parse::<i64>).transpose()?)
+    }
+
+    pub fn get_bool(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<bool>> {
+        Ok(self.get(key)?.map(str::parse::<bool>).transpose()?)
     }
 
     fn from_iter<I: Iterator<Item = (OsString, OsString)>>(t: I) -> Self {
@@ -156,11 +167,11 @@ mod test {
         let env = make_dummy_env();
         assert!(env.has("ala"));
         assert_eq!(env.get_os("ala"), Some(OsStr::new("bar")));
-        assert!(matches!(env.get("ala"), Ok("bar")));
+        assert!(matches!(env.get("ala"), Ok(Some("bar"))));
         if cfg!(windows) {
             assert!(env.has("aLA"));
             assert_eq!(env.get_os("aLA"), Some(OsStr::new("bar")));
-            assert!(matches!(env.get("aLA"), Ok("bar")));
+            assert!(matches!(env.get("aLA"), Ok(Some("bar"))));
         } else {
             assert!(!env.has("aLA"));
             assert_eq!(env.get_os("aLA"), None);

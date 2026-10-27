@@ -11,10 +11,9 @@ use std::str::FromStr;
 use tracing::trace;
 
 use super::terminal::Verbosity;
-use crate::duck::util::duck_cfg::DuckCfg;
+use crate::duck::util::duck_cfg::{DuckCfg, get_duck_cfg_and_home};
 use crate::duck::util::duck_home::DuckHome;
 use crate::duck::util::terminal::Terminal;
-use crate::quackpack::util::paths::duck_home_path;
 use crate::util::env::Env;
 use crate::util::file_locks::FileLockManager;
 use crate::{QuackResult, QuackResultContext};
@@ -59,13 +58,12 @@ impl DuckContext {
         let stdout = Terminal::stdout();
         let stderr = Terminal::stderr();
         let user_home = home_dir().context("while trying to get user home directory")?;
-        let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
-        let config = DuckCfg::new(&duck_home)?;
+        let (cfg, duck_home) = get_duck_cfg_and_home(&user_home)?;
         let cwd = current_dir().context("while trying to get the current working directory")?;
         Ok(Self {
             stdout,
             stderr,
-            duck_cfg: config,
+            duck_cfg: cfg,
             cwd,
             user_home,
             duck_home,
@@ -232,7 +230,7 @@ impl Default for DuckContext {
         );
         let env = Default::default();
         let user_home = home_dir().unwrap();
-        let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
+        let (cfg, duck_home) = get_duck_cfg_and_home(&user_home).unwrap();
         let mut stdout = Terminal::stdout();
         let mut stderr = Terminal::stderr();
         stdout.set_verbosity(Verbosity::Quiet);
@@ -240,7 +238,7 @@ impl Default for DuckContext {
         Self {
             stdout,
             stderr,
-            duck_cfg: DuckCfg::new(&duck_home).unwrap(),
+            duck_cfg: cfg,
             env,
             cwd: current_dir().unwrap(),
             duck_home,

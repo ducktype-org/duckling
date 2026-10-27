@@ -184,7 +184,7 @@ mod tests {
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
         let mut ctx = DuckContext::new().unwrap();
-        ctx.duck_cfg_mut().set_aliases(fake_aliases);
+        ctx.duck_cfg_mut().cfg_file_mut().set_aliases(fake_aliases);
         let visited = Vec::new();
         let err = expand_aliases(args_matches, &ctx, visited).unwrap_err();
         assert_eq!(
@@ -203,7 +203,7 @@ mod tests {
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
         let mut ctx = DuckContext::new().unwrap();
-        ctx.duck_cfg_mut().set_aliases(fake_aliases);
+        ctx.duck_cfg_mut().cfg_file_mut().set_aliases(fake_aliases);
         let visited = Vec::new();
         let new_args_matches = expand_aliases(args_matches, &ctx, visited).unwrap();
         assert_eq!(new_args_matches.subcommand_name().unwrap(), "build");
