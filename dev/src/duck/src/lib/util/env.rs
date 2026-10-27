@@ -14,7 +14,7 @@ use std::time::Duration;
 use url::Url;
 
 use crate::quackpack::schemas::config::HumanDeserializableDuration;
-use crate::{QuackResult, qp_err};
+use crate::{QuackResult, QuackResultContext, qp_err};
 
 /// Safe wrapper around [`std::env::vars_os`], which is safe to access on Windows: some of its
 /// environmental variables are case-insensitive.
@@ -95,12 +95,12 @@ impl Env {
     }
 
     /// Get environmental variable pointed by `key` and convert it to utf8.
+    /// Returns [`None`] if no variable is found.
     ///
     /// ## Arguments
     ///
-    /// * `key` - key for environmental variable. Must implement [`AsRef<Str>`].
-    pub fn get(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<&str>> {
-        let key = key.as_ref();
+    /// * `key` - key for environmental variable.
+    fn get(&self, key: &OsStr) -> QuackResult<Option<&str>> {
         let display = key.display();
         self.get_os(key)
             .map(|res| {
@@ -111,31 +111,72 @@ impl Env {
             .transpose()
     }
 
+    /// Get the [`str`] from an environmental variable.
+    /// Returns [`None`] if no variable is found.
+    pub fn get_str(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<&str>> {
+        self.get(key.as_ref()).with_context(|| {
+            format!(
+                "when reading the environmental variable {}",
+                key.as_ref().display()
+            )
+        })
+    }
+
     /// Get the [`u64`] from an environmental variable.
+    /// Returns [`None`] if no variable is found.
     pub fn get_u64(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<u64>> {
-        Ok(self.get(key)?.map(str::parse::<u64>).transpose()?)
+        self.get(key.as_ref())?
+            .map(str::parse::<u64>)
+            .transpose()
+            .with_context(|| {
+                format!(
+                    "when reading the environmental variable {}",
+                    key.as_ref().display()
+                )
+            })
     }
 
     /// Get the [`bool`] from an environmental variable.
+    /// Returns [`None`] if no variable is found.
     pub fn get_bool(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<bool>> {
-        Ok(self.get(key)?.map(str::parse::<bool>).transpose()?)
+        self.get(key.as_ref())?
+            .map(str::parse::<bool>)
+            .transpose()
+            .with_context(|| {
+                format!(
+                    "when reading the environmental variable {}",
+                    key.as_ref().display()
+                )
+            })
     }
 
     /// Get the [`Duration`] from an environmental variable.
+    /// Returns [`None`] if no variable is found.
     pub fn get_duration(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<Duration>> {
-        let Some(duration_str) = self.get(key)? else {
+        let Some(duration_str) = self.get(key.as_ref())? else {
             return Ok(None);
         };
-        let duration = HumanDeserializableDuration::from_str(duration_str)?;
+        let duration = HumanDeserializableDuration::from_str(duration_str).with_context(|| {
+            format!(
+                "when reading the environmental variable {}",
+                key.as_ref().display()
+            )
+        })?;
         Ok(Some(duration.0))
     }
 
     /// Get the [`Url`] from an environmental variable.
+    /// Returns [`None`] if no variable is found.
     pub fn get_url(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<Url>> {
-        let Some(url_str) = self.get(key)? else {
+        let Some(url_str) = self.get(key.as_ref())? else {
             return Ok(None);
         };
-        let url = Url::parse(url_str)?;
+        let url = Url::parse(url_str).with_context(|| {
+            format!(
+                "when reading the environmental variable {}",
+                key.as_ref().display()
+            )
+        })?;
         Ok(Some(url))
     }
 
@@ -158,6 +199,16 @@ impl Env {
 impl Default for Env {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+impl Env {
+    pub fn empty() -> Self {
+        Self {
+            env: HashMap::new(),
+            normalised_keys: HashMap::new(),
+        }
     }
 }
 
@@ -192,11 +243,11 @@ mod test {
         let env = make_dummy_env();
         assert!(env.has("ala"));
         assert_eq!(env.get_os("ala"), Some(OsStr::new("bar")));
-        assert!(matches!(env.get("ala"), Ok(Some("bar"))));
+        assert!(matches!(env.get_str("ala"), Ok(Some("bar"))));
         if cfg!(windows) {
             assert!(env.has("aLA"));
             assert_eq!(env.get_os("aLA"), Some(OsStr::new("bar")));
-            assert!(matches!(env.get("aLA"), Ok(Some("bar"))));
+            assert!(matches!(env.get_str("aLA"), Ok(Some("bar"))));
         } else {
             assert!(!env.has("aLA"));
             assert_eq!(env.get_os("aLA"), None);

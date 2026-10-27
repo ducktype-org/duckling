@@ -26,7 +26,6 @@ pub struct DuckContext {
     cwd: PathBuf,
     user_home: PathBuf,
     duck_home: DuckHome,
-    env: Env,
     offline: bool,
 }
 
@@ -54,11 +53,11 @@ impl DuckContext {
             "linked against `{:#?}`",
             curl::Version::get()
         );
-        let env = Env::default();
+        let env = Env::new();
         let stdout = Terminal::stdout();
         let stderr = Terminal::stderr();
         let user_home = home_dir().context("while trying to get user home directory")?;
-        let (cfg, duck_home) = get_duck_cfg_and_home(&user_home)?;
+        let (cfg, duck_home) = get_duck_cfg_and_home(env, &user_home)?;
         let cwd = current_dir().context("while trying to get the current working directory")?;
         Ok(Self {
             stdout,
@@ -67,7 +66,6 @@ impl DuckContext {
             cwd,
             user_home,
             duck_home,
-            env,
             offline: false,
         })
     }
@@ -105,7 +103,7 @@ impl DuckContext {
 
     /// Get the snapshot of all environmental variables.
     pub fn env(&self) -> &Env {
-        &self.env
+        self.duck_cfg.env()
     }
 
     /// Get a path to the current working directory.
@@ -229,9 +227,9 @@ impl Default for DuckContext {
             "linked against `{:#?}`",
             curl::Version::get()
         );
-        let env = Default::default();
+        let env = Env::empty();
         let user_home = home_dir().unwrap();
-        let (cfg, duck_home) = get_duck_cfg_and_home(&user_home).unwrap();
+        let (cfg, duck_home) = get_duck_cfg_and_home(env, &user_home).unwrap();
         let mut stdout = Terminal::stdout();
         let mut stderr = Terminal::stderr();
         stdout.set_verbosity(Verbosity::Quiet);
@@ -240,7 +238,6 @@ impl Default for DuckContext {
             stdout,
             stderr,
             duck_cfg: cfg,
-            env,
             cwd: current_dir().unwrap(),
             duck_home,
             user_home,

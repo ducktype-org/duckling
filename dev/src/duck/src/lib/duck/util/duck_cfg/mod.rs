@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Module dealing with all of the posible user configuration of `duck`.
+//! Module dealing with all of the possible user configuration of `duck`.
 //! The submodules are:
 //! - [`duck_home_path`] for determining the location of duck home;
 //! - [`configuration_file`] abstracting over the configuration file at duck home.
@@ -31,10 +31,10 @@ mod duck_home_path;
 const FIXES_ENABLED_ENV: &str = "DUCK_SECURITY_TYPOS_ENABLED";
 
 /// Environmental variable for overriding the `security.typos.max-distance` field of the configuration file.
-const MAX_FIX_DIST_ENV: &str = "DUCK_SECURITY_TYPOS_MAXDISTANCE";
+const MAX_FIX_DIST_ENV: &str = "DUCK_SECURITY_TYPOS_MAX_DISTANCE";
 
 /// Environmental variable for overriding the `storage.temporary-lifetime` field of the configuration file.
-const STORAGE_LIFETIME_ENV: &str = "DUCK_STORAGE_TEMPORARYLIFETIME";
+const STORAGE_LIFETIME_ENV: &str = "DUCK_STORAGE_TEMPORARY_LIFETIME";
 
 /// Environmental variable for overriding the `registry.url` field of the configuration file.
 const REGISTRY_URL_ENV: &str = "DUCK_REGISTRY_URL";
@@ -107,6 +107,11 @@ impl DuckCfg {
             .unwrap_or_else(|| self.cfg_file.registry_url())
     }
 
+    /// Get the maximal allowed amount of opened connections.
+    pub fn max_open_connections(&self) -> usize {
+        self.cfg_file.max_open_connections()
+    }
+
     /// Get access to the underlying [`DuckConfigurationFile`].
     pub fn cfg_file(&self) -> &DuckConfigurationFile {
         &self.cfg_file
@@ -117,16 +122,15 @@ impl DuckCfg {
         &mut self.cfg_file
     }
 
-    /// Get the maximal allowed amount of opened connections.
-    pub fn max_open_connections(&self) -> usize {
-        self.cfg_file.max_open_connections()
+    /// Get access to the underlying [`Env`].
+    pub fn env(&self) -> &Env {
+        &self.env
     }
 }
 
 /// Create [`DuckCfg`] and [`DuckHome`].
-pub fn get_duck_cfg_and_home(user_home: &Path) -> QuackResult<(DuckCfg, DuckHome)> {
+pub fn get_duck_cfg_and_home(env: Env, user_home: &Path) -> QuackResult<(DuckCfg, DuckHome)> {
     // This is joined into one function, because `DuckCfg` needs `DuckHome` and `DuckHome` needs `Env`.
-    let env = Env::default();
     let duck_home = DuckHome::new(duck_home_path(&env, user_home));
     let cfg_file = DuckConfigurationFile::new(&duck_home)?;
     let cfg = DuckCfg { env, cfg_file };
