@@ -221,7 +221,7 @@ namespace compiler::driver {
 		 * The IR is printed and dumped from inside the `CompileModule` query, so a module loaded
 		 * from the incremental cache prints and dumps nothing.
 		 */
-		bool requestsIROutput(const options_types::DebugOptions& debug_options) {
+		bool requiresDisabledIncremental(const options_types::DebugOptions& debug_options) {
 			return debug_options.dump_llvm or debug_options.dump_asm or debug_options.dump_dbc
 			    or debug_options.dump_lir or debug_options.dump_mir or debug_options.dump_hir
 			    or debug_options.print_dbc or debug_options.print_lir or debug_options.print_mir
@@ -232,15 +232,15 @@ namespace compiler::driver {
 			const options_types::IncrementalOptions& inc_options,
 			const options_types::DebugOptions&       debug_options
 		) {
-			if (inc_options.enabled) {
+			bool enabled = inc_options.enabled;
+			enabled      = requiresDisabledIncremental(debug_options) ? false : enabled;
+			if (enabled) {
 				CORE_ASSERT(
 					!global_state::getPackages().empty(),
 					"Main package must be set before handling incremental compilation"
 				);
 				driver::enable_incremental_compilation = true;
-				// Without the previous graph every module is recompiled, so its IR gets printed
-				// and dumped. The new graph is still saved, so the next run is incremental again.
-				if (not requestsIROutput(debug_options)) loadPreviousQueryGraphIfExists();
+				loadPreviousQueryGraphIfExists();
 			} else {
 				driver::enable_incremental_compilation = false;
 				// Disable the query graph because it's not needed and adds overhead.
