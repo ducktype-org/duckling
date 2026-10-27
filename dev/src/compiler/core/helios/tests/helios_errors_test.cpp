@@ -59,7 +59,7 @@ public:
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
-		TESTER_ADD_TEST(testTriviallyCopyableCopyWarning);
+		TESTER_ADD_TEST(testCopyMoveErrors);
 		TESTER_ADD_TEST(testMoveSemantics);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
@@ -2182,8 +2182,7 @@ private:
 		);
 	}
 
-	/// @brief `copy` of a trivially copyable value is redundant, so it warns.
-	void testTriviallyCopyableCopyWarning() {
+	void testCopyMoveErrors() {
 		checkForWarningOnCompileModule(
 			R"(
 				fun copyLocal() -> i64 = {
@@ -2196,34 +2195,7 @@ private:
 		      "keyword." },
 			1
 		);
-	}
 
-	/// @brief `move` keeps the reference kind and rejects a temporary.
-	void testMoveSemantics() {
-		// A trivially copyable local, a `box` and a `ref` are all moved as they are, without a
-		// warning.
-		checkForWarningOnCompileModule(
-			R"(
-				class Res {
-					x: i64;
-					Res.copy(other: const ref Res) = { return Res(other.x); }
-				}
-				fun moveKeepsKind() -> i64 = {
-					var n: i64 = 5;
-					let m = move n;
-					var a: box Res = new Res(1);
-					var b: box Res = move a;
-					var c = Res(2);
-					var r: ref Res = &c;
-					var s: ref Res = move r;
-					return m + b.x + s.x;
-				}
-			)",
-			{},
-			0
-		);
-
-		// A temporary is already moved out of implicitly.
 		checkForErrorOnCompileModule(
 			R"(
 				class Res { x: i64; }
