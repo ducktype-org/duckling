@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! Abstraction over the duck configuration file, located at `<duck's home root>/config.yaml`.
+
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -19,6 +21,8 @@ use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Default)]
+/// Abstraction over the duck configuration file, located at `<duck's home root>/config.yaml`.
+/// Provides the sensible defaults for fields not present in the file.
 pub struct DuckConfigurationFile {
     inner: YamlConfig,
     // Fast config accessors.

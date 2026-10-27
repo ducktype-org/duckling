@@ -8,7 +8,12 @@
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
+use std::str::FromStr;
+use std::time::Duration;
 
+use url::Url;
+
+use crate::quackpack::schemas::config::HumanDeserializableDuration;
 use crate::{QuackResult, qp_err};
 
 /// Safe wrapper around [`std::env::vars_os`], which is safe to access on Windows: some of its
@@ -106,12 +111,32 @@ impl Env {
             .transpose()
     }
 
-    pub fn get_i64(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<i64>> {
-        Ok(self.get(key)?.map(str::parse::<i64>).transpose()?)
+    /// Get the [`u64`] from an environmental variable.
+    pub fn get_u64(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<u64>> {
+        Ok(self.get(key)?.map(str::parse::<u64>).transpose()?)
     }
 
+    /// Get the [`bool`] from an environmental variable.
     pub fn get_bool(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<bool>> {
         Ok(self.get(key)?.map(str::parse::<bool>).transpose()?)
+    }
+
+    /// Get the [`Duration`] from an environmental variable.
+    pub fn get_duration(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<Duration>> {
+        let Some(duration_str) = self.get(key)? else {
+            return Ok(None);
+        };
+        let duration = HumanDeserializableDuration::from_str(duration_str)?;
+        Ok(Some(duration.0))
+    }
+
+    /// Get the [`Url`] from an environmental variable.
+    pub fn get_url(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<Url>> {
+        let Some(url_str) = self.get(key)? else {
+            return Ok(None);
+        };
+        let url = Url::parse(url_str)?;
+        Ok(Some(url))
     }
 
     fn from_iter<I: Iterator<Item = (OsString, OsString)>>(t: I) -> Self {

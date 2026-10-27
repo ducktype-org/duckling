@@ -92,12 +92,13 @@ impl DuckContext {
         &mut self.stderr
     }
 
-    /// Get the [`DuckCfg`].
+    /// Get the access to [`DuckCfg`].
     pub fn duck_cfg(&self) -> &DuckCfg {
         &self.duck_cfg
     }
 
     #[cfg(test)]
+    /// Get the mutable access to [`DuckCfg`].
     pub fn duck_cfg_mut(&mut self) -> &mut DuckCfg {
         &mut self.duck_cfg
     }
