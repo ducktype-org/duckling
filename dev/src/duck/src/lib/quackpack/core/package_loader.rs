@@ -69,7 +69,6 @@ impl std::error::Error for PackageNotFound {}
 impl PackageLoader {
     pub const MANIFEST_NAME: &str = "quackconfig.yaml";
     pub const FREEZE_NAME: &str = "quackfreeze.json";
-    pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
     /// Get the global package.
     pub fn global_package<'duck>(ctx: &'duck DuckContext) -> QuackResult<PackageContext<'duck>> {

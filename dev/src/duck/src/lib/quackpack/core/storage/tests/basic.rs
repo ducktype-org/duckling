@@ -555,7 +555,6 @@ fn sync_with_deps_and_expose_freezefile() {
         FullIdentity::new(name.into(), origin)
     };
 
-    // Reload venv config changes
     let pcx = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
 
     let SyncOutput {
