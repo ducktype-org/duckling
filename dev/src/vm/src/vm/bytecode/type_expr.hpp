@@ -7,10 +7,10 @@
 /**
  * @file type_expr.hpp
  * @brief A reference to a type in the bytecode, which is either a name or a type built from
- * another type, such as `ptr{i64}`.
+ * another type, such as `ptr{i64}` or `dyntable{i64}`.
  *
  * Derived types are not declared. Every spelling of `ptr{Foo}` denotes the same type, so the
- * VM can intern one pointer type per pointee instead of letting two declarations describe the
+ * VM can intern one such type per argument instead of letting two declarations describe the
  * same thing.
  */
 
@@ -32,6 +32,7 @@ namespace vm::code {
 		struct Named;
 		struct Pointer;
 		struct CPointer;
+		struct DynamicTable;
 	}
 
 	namespace detail {
@@ -69,6 +70,8 @@ namespace vm::code {
 
 		explicit TypeExpr(const expr::CPointer& cpointer);
 
+		explicit TypeExpr(const expr::DynamicTable& dynamic_table);
+
 		/// @brief The expression for a declared type's name, such as `Dog`.
 		[[nodiscard]] static TypeExpr type(base::StrID name);
 
@@ -78,11 +81,15 @@ namespace vm::code {
 		/// @brief A C pointer, such as `cptr{Dog}`. An absent pointee gives `cptr{}`.
 		[[nodiscard]] static TypeExpr cpointer(const base::Optional<TypeExpr>& pointee = {});
 
+		/// @brief A dynamic table of `element`, such as `dyntable{i64}`.
+		[[nodiscard]] static TypeExpr dyntable(TypeExpr element);
+
 		/// @brief Whether this expression denotes a type, i.e. was not default constructed.
 		[[nodiscard]] bool isValid() const noexcept { return node != nullptr; }
 
 		/// @brief Which form this expression takes, for `variant_match`.
-		[[nodiscard]] const std::variant<expr::Named, expr::Pointer, expr::CPointer>& getKind() const;
+		[[nodiscard]] const std::variant<expr::Named, expr::Pointer, expr::CPointer, expr::DynamicTable>& getKind(
+		) const;
 
 		template<class T>
 		[[nodiscard]] bool isKind() const;
@@ -134,10 +141,15 @@ namespace vm::code {
 			base::Optional<TypeExpr> pointee;
 		};
 
-		using Variant = std::variant<Named, Pointer, CPointer>;
+		/// @brief A table whose length is only known at run time, `dyntable{T}`.
+		struct DynamicTable final {
+			TypeExpr element;
+		};
+
+		using Variant = std::variant<Named, Pointer, CPointer, DynamicTable>;
 
 		template<class T>
-		concept ConcreteExpr = base::IsOneOf<T, Named, Pointer, CPointer>;
+		concept ConcreteExpr = base::IsOneOf<T, Named, Pointer, CPointer, DynamicTable>;
 	}
 
 	template<class T>

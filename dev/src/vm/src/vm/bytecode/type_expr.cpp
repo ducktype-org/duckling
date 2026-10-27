@@ -64,6 +64,11 @@ namespace vm::code {
 					if (cpointer.pointee.empty()) return base::StrID("cptr{}");
 					return base::StrID("cptr{" + cpointer.pointee->canonicalName().str() + "}");
 				}
+				variant_case(expr::DynamicTable, dynamic_table) {
+					return base::StrID(
+						"dyntable{" + dynamic_table.element.canonicalName().str() + "}"
+					);
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -110,6 +115,11 @@ namespace vm::code {
 		node = intern(cpointer);
 	}
 
+	TypeExpr::TypeExpr(const expr::DynamicTable& dynamic_table) {
+		CORE_ASSERT(dynamic_table.element.isValid(), "A dynamic table needs an element type");
+		node = intern(dynamic_table);
+	}
+
 	TypeExpr TypeExpr::type(base::StrID name) { return TypeExpr(expr::Named{ .name = name }); }
 
 	TypeExpr TypeExpr::pointer(TypeExpr pointee) {
@@ -118,6 +128,10 @@ namespace vm::code {
 
 	TypeExpr TypeExpr::cpointer(const base::Optional<TypeExpr>& pointee) {
 		return TypeExpr(expr::CPointer{ .pointee = pointee });
+	}
+
+	TypeExpr TypeExpr::dyntable(TypeExpr element) {
+		return TypeExpr(expr::DynamicTable{ .element = element });
 	}
 
 	const expr::Variant& TypeExpr::getKind() const {

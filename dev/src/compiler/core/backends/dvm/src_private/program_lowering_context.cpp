@@ -45,13 +45,11 @@ namespace {
 				if (cpointer.pointee.empty()) return base::StrID("cptr_void");
 				return base::StrID(base::strConcat("cptr_", mangledName(*cpointer.pointee)));
 			}
+			variant_case(vm::code::expr::DynamicTable, dynamic_table) {
+				return base::StrID(base::strConcat("dyntable_", mangledName(dynamic_table.element)));
+			}
 		}
 		CORE_UNREACHABLE();
-	}
-
-	/// @brief The name of the dynamic table a many-pointer to `element` points at.
-	base::StrID dynamicTableName(vm::code::TypeExpr element) {
-		return base::StrID(base::strConcat("dyntable_", mangledName(element)));
 	}
 }
 
@@ -161,12 +159,9 @@ vm::code::TypeExpr ProgramLoweringContext::pointerTypeExpr(
 	switch (kind) {
 	case SinglePointer:
 		return vm::code::TypeExpr::pointer(pointee);
-	case ManyPointer: {
-		// A many-pointer points at a dynamic table of the pointee, which is declared.
-		const auto table_name = dynamicTableName(pointee);
-		keepVMType(vm::code::DynamicTableType(table_name, pointee));
-		return vm::code::TypeExpr::pointer(vm::code::TypeExpr::type(table_name));
-	}
+	case ManyPointer:
+		// A many-pointer points at a dynamic table of the pointee.
+		return vm::code::TypeExpr::pointer(vm::code::TypeExpr::dyntable(pointee));
 	case CPointer:
 		return vm::code::TypeExpr::cpointer(pointee);
 	}
@@ -474,8 +469,7 @@ vm::code::TypeExpr ProgramLoweringContext::getTslTypeExprInternal(CRef<tsl::Type
 				return vm::code::TypeExpr::pointer(pointee);
 			case ManyPointer:
 				// A many-pointer points at a dynamic table of the pointee.
-				return vm::code::TypeExpr::pointer(vm::code::TypeExpr::type(dynamicTableName(pointee
-				)));
+				return vm::code::TypeExpr::pointer(vm::code::TypeExpr::dyntable(pointee));
 			case CPointer:
 				return vm::code::TypeExpr::cpointer(pointee);
 			}
@@ -556,12 +550,8 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			    and not pointer_layout.hasPointee())
 				return {};
 
-			const vm::code::TypeExpr pointee = keepTslType(pointer_layout.getPointee(**query_ctx));
-			if (pointer_layout.getPointerKind()
-			    == tsl::PointerTypeLayout::PointerKind::ManyPointer) {
-				// A many-pointer points at a dynamic table, which does need declaring.
-				keepVMType(vm::code::DynamicTableType(dynamicTableName(pointee), pointee));
-			}
+			// Written rather than declared; only the pointee may need declaring.
+			std::ignore = keepTslType(pointer_layout.getPointee(**query_ctx));
 			return {};
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {

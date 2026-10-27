@@ -1,13 +1,11 @@
-type dynamic_table: tablei64 i64
-
 function main { i64, ptr{argv} } -> { i64 } {
     
     init_pany_type aggr, i64;
     init_pany_type iter, i64;
     init_pany_type val, i64;
-    init_pany_type tbl_ptr, ptr{tablei64};
+    init_pany_type tbl_ptr, ptr{dyntable{i64}};
     mov_p64_imm val, 5;
-    dynTableReAlloc_pptr_type_p64 tbl_ptr, tablei64, val;
+    dynTableReAlloc_pptr_type_p64 tbl_ptr, dyntable{i64}, val;
     mov_p64_imm iter, 5;
 
     label Loop1;
@@ -18,7 +16,7 @@ function main { i64, ptr{argv} } -> { i64 } {
         jmpIfNot_label Loop1;
     
     mov_p64_imm val, 10;
-    dynTableReAlloc_pptr_type_p64 tbl_ptr, tablei64, val;
+    dynTableReAlloc_pptr_type_p64 tbl_ptr, dyntable{i64}, val;
 
     mov_p64_imm iter, 10;
     label Loop2;

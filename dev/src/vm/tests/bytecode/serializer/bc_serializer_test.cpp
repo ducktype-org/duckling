@@ -10,6 +10,7 @@
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -37,6 +38,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(roundtripMinimalProgram);
 		TESTER_ADD_TEST(roundtripFromString);
+		TESTER_ADD_TEST(aliasesAreExpanded);
 	}
 
 private:
@@ -245,6 +247,7 @@ type data: Handles {
     managed: ptr{Point},
     raw: cptr{Point},
     unknown: cptr{},
+    many: ptr{dyntable{Point}},
 }
 
 
@@ -256,7 +259,7 @@ global_data answers point_arr {
 ffi object "libm.so.6";
 ffi function sqrt { i64 } -> { i64 };
 
-function main { i64, ptr{argv} } -> { i64 } {
+function main { i64, ptr{dyntable{ptr{dyntable{byte}}}} } -> { i64 } {
     mov_p64_imm                ret0,        0;
     ret                   ;
 }
@@ -274,6 +277,33 @@ function main { i64, ptr{argv} } -> { i64 } {
 		serializeCode(parsed, oss);
 		std::string serialized = oss.str();
 		ASSERT_EQUAL_PRINT(content, serialized);
+	}
+
+	/// `string` and `argv` never name a type of their own, so they are expanded where read.
+	void aliasesAreExpanded() {
+		const std::string content = R"(function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type s, ptr{string};
+    deinit;
+    ret;
+}
+)";
+
+		fs::File vfile  = fs::FileManager::createRandomVirtualFile(content, ".dbc");
+		auto     result = Loader::parseCodeCollectionFromFiles({ vfile });
+		ASSERT_HAS_VALUE(result, "Parsing should succeed");
+
+		const auto& main = result.value().functions.at(0);
+		ASSERT_TRUE(
+			main.signature.parameters.at(1).expr
+			== vm::code::TypeExpr::pointer(vm::code::argvTypeExpr())
+		);
+		ASSERT_EQUAL_PRINT(
+			std::string("dyntable{ptr{dyntable{byte}}}"),
+			vm::code::argvTypeExpr().canonicalName().str()
+		);
+
+		const auto& init = main.body.at(0).get<vm::code::instructions::Op_init_pany_type>();
+		ASSERT_TRUE(init.type.expr == vm::code::TypeExpr::pointer(vm::code::stringTypeExpr()));
 	}
 };
 

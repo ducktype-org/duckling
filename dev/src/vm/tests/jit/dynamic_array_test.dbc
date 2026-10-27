@@ -2,11 +2,10 @@
 # Function f performs ~40 dynamic array operations sequentially (no branches, no calls)
 # Main reads n from STDIN and calls f n times
 
-type dynamic_table: table_i64 i64
 
 function f {} -> { } {
     # Declare local variables
-    init_pany_type arr, ptr{table_i64};
+    init_pany_type arr, ptr{dyntable{i64}};
     init_pany_type idx, i64;
     init_pany_type val, i64;
     init_pany_type tmp, i64;
@@ -14,7 +13,7 @@ function f {} -> { } {
     
     # Allocate dynamic array with initial size 10
     mov_p64_imm size, 10;
-    dynTableReAlloc_pptr_type_p64 arr, table_i64, size;
+    dynTableReAlloc_pptr_type_p64 arr, dyntable{i64}, size;
     
     # Initialize value
     mov_p64_imm val, 200;
@@ -61,7 +60,7 @@ function f {} -> { } {
     
     # Reallocate to larger size
     mov_p64_imm size, 15;
-    dynTableReAlloc_pptr_type_p64 arr, table_i64, size;
+    dynTableReAlloc_pptr_type_p64 arr, dyntable{i64}, size;
     
     # Store more values
     mov_p64_imm val, 300;

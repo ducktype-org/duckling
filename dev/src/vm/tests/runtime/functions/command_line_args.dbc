@@ -1,6 +1,5 @@
 # Should output a sum of numerical arguments passed to a program.
 
-type dynamic_table: dtablei64 i64
 
 function main { i64, ptr{argv} } -> { i64 } {
 	# ret0 -> main ret0
@@ -9,8 +8,8 @@ function main { i64, ptr{argv} } -> { i64 } {
 
 	init_pany_type sum, i64;
 	init_pany_type temp, i64;
-	init_pany_type res_arr_ptr, ptr{dtablei64};
-	dynTableReAlloc_pptr_type_p64 res_arr_ptr, dtablei64, arg0;
+	init_pany_type res_arr_ptr, ptr{dyntable{i64}};
+	dynTableReAlloc_pptr_type_p64 res_arr_ptr, dyntable{i64}, arg0;
 	init_pany_type stoi_ret0, i64;
 	mov_p64_imm ret0, 0;
 	#output_p64 ret0;

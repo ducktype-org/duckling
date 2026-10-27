@@ -28,8 +28,8 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	// The program's start function is hand-built rather than loaded, so the pointers it uses
 	// have no mention anywhere to bring them into being.
 	TypeResolver resolver(program.type_context);
-	for (const base::StrID pointee: { base::StrID("argv"), base::StrID("string") })
-		std::ignore = resolver.resolve(TypeExpr::pointer(TypeExpr{ pointee }));
+	for (const TypeExpr pointee: { argvTypeExpr(), stringTypeExpr() })
+		std::ignore = resolver.resolve(TypeExpr::pointer(pointee));
 	resolver.finalizeBuilt();
 
 	return program;

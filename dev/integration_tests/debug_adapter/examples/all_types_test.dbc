@@ -1,5 +1,3 @@
-type dynamic_table: dyntable_i64 i64
-
 type fixed_size_table: fixtable_i64 i64 7
 
 type variant: simple_variant { i64, i32 }
@@ -15,7 +13,7 @@ type data: AllTypeKindsStruct {
 	var_pointer: ptr{AllTypeKindsStruct},
 
 	# Tables
-	var_dyntable_pointer: ptr{dyntable_i64},
+	var_dyntable_pointer: ptr{dyntable{i64}},
 	var_fixtable_pointer: ptr{fixtable_i64},
 
 	# Variant
@@ -33,17 +31,17 @@ function main { i64, ptr{argv} } -> { i64 } {
 	init_pany_type		struct_pointer, ptr{AllTypeKindsStruct};
 	alloc_pptr_type		struct_pointer, AllTypeKindsStruct;
 	
-	init_pany_type		dyntable_pointer, ptr{dyntable_i64};
+	init_pany_type		dyntable_pointer, ptr{dyntable{i64}};
 	init_pany_type		fixtable_pointer, ptr{fixtable_i64};
 	
 
 	# struct_pointer->var_pointer = struct_pointer;
 	structStore_pptr_pany_field struct_pointer, struct_pointer, AllTypeKindsStruct.var_pointer;
 
-	# struct_pointer->var_dyntable_pointer = new dyntable_i64(5);
+	# struct_pointer->var_dyntable_pointer = new dyntable{i64}(5);
 	init_pany_type	new_dyntable_size, i64;
 	mov_p64_imm		new_dyntable_size, 5;
-	dynTableReAlloc_pptr_type_p64	dyntable_pointer, dyntable_i64, new_dyntable_size;
+	dynTableReAlloc_pptr_type_p64	dyntable_pointer, dyntable{i64}, new_dyntable_size;
 	structStore_pptr_pany_field		struct_pointer, dyntable_pointer, AllTypeKindsStruct.var_dyntable_pointer;
 	deinit; # new_dyntable_size
 

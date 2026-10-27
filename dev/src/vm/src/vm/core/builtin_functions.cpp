@@ -11,6 +11,7 @@
 #include <base/preproc/for_each.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 #include <vm/core/builtin_functions.hpp>
@@ -427,9 +428,7 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::OutputString,
 				{ base::StrID("builtin_strOutput_pptr"),
-			      code::FuncSignature(
-					  {}, { code::TypeExpr::pointer(code::TypeExpr{ base::StrID("string") }) }
-				  ) },
+			      code::FuncSignature({}, { code::TypeExpr::pointer(code::stringTypeExpr()) }) },
 			},
 			{
 				BuiltinFunctionID::Stoi,
@@ -437,7 +436,7 @@ namespace vm::builtins {
 					base::StrID("builtin_stoi_pptr"),
 					code::FuncSignature(
 						{ code::TypeExpr(base::StrID("i64")) },
-						{ code::TypeExpr::pointer(code::TypeExpr{ base::StrID("string") }) }
+						{ code::TypeExpr::pointer(code::stringTypeExpr()) }
 					),
 				},
 			},
@@ -449,7 +448,9 @@ namespace vm::builtins {
 					base::StrID("strtod"),
 					code::FuncSignature(
 						{ code::TypeExpr(base::StrID("f64")) },
-						{ code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }) }
+						{ code::TypeExpr::pointer(
+							code::TypeExpr::dyntable(code::TypeExpr(base::StrID("i8")))
+						) }
 					),
 				},
 			},
@@ -461,7 +462,9 @@ namespace vm::builtins {
 			      code::FuncSignature(
 					  { code::TypeExpr(base::StrID("i64")) },
 					  { code::TypeExpr(base::StrID("f64")),
-			            code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }),
+			            code::TypeExpr::pointer(
+							code::TypeExpr::dyntable(code::TypeExpr(base::StrID("i8")))
+						),
 			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},
@@ -471,7 +474,9 @@ namespace vm::builtins {
 			      code::FuncSignature(
 					  { code::TypeExpr(base::StrID("i64")) },
 					  { code::TypeExpr(base::StrID("i64")),
-			            code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }),
+			            code::TypeExpr::pointer(
+							code::TypeExpr::dyntable(code::TypeExpr(base::StrID("i8")))
+						),
 			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},
@@ -481,7 +486,9 @@ namespace vm::builtins {
 			      code::FuncSignature(
 					  { code::TypeExpr(base::StrID("i64")) },
 					  { code::TypeExpr(base::StrID("i64")),
-			            code::TypeExpr::pointer(code::TypeExpr{ base::StrID("dyntable_i8") }),
+			            code::TypeExpr::pointer(
+							code::TypeExpr::dyntable(code::TypeExpr(base::StrID("i8")))
+						),
 			            code::TypeExpr(base::StrID("i64")) }
 				  ) },
 			},

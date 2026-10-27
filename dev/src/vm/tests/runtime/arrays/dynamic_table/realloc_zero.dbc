@@ -1,17 +1,15 @@
-type dynamic_table: tablei64 i64
-
 function main { i64, ptr{argv} } -> { i64 } {
     
-    init_pany_type tbl_ptr, ptr{tablei64};
+    init_pany_type tbl_ptr, ptr{dyntable{i64}};
     init_pany_type iter, i64;
     mov_p64_imm iter, 5;
     
     # Allocate table with 5 elements
-    dynTableReAlloc_pptr_type_p64 tbl_ptr, tablei64, iter;
+    dynTableReAlloc_pptr_type_p64 tbl_ptr, dyntable{i64}, iter;
     
     # Reallocate to 0 elements - this should free the data and set pointer to null
     mov_p64_imm iter, 0;
-    dynTableReAlloc_pptr_type_p64 tbl_ptr, tablei64, iter;
+    dynTableReAlloc_pptr_type_p64 tbl_ptr, dyntable{i64}, iter;
     
     # Check that pointer is null after 0-element reallocation
     cmpNull_pptr tbl_ptr;
@@ -30,7 +28,7 @@ label pointer_is_null_as_expected;
     
     # Try to allocate again with 3 elements after the zero reallocation
     mov_p64_imm iter, 3;
-    dynTableReAlloc_pptr_type_p64 tbl_ptr, tablei64, iter;
+    dynTableReAlloc_pptr_type_p64 tbl_ptr, dyntable{i64}, iter;
     
     # If we get here without crashing, output 42 to indicate success
     mov_p64_imm iter, 42;

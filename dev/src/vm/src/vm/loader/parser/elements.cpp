@@ -10,6 +10,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/types/floats.hpp>
 
 #include <diagnostic/placeholder.hpp>
@@ -20,6 +21,7 @@
 #include <token_parser_core/token_stream.hpp>
 #include <token_source/source.hpp>
 
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/const_value_visitor.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -29,8 +31,8 @@
 
 namespace vm::loader::parser {
 	/**
-	 * @brief Parses a type reference: a name, `ptr{T}`, or `cptr{T}` with `cptr{}` standing
-	 * for an unknown pointee.
+	 * @brief Parses a type reference: a name, `ptr{T}`, `cptr{T}` with `cptr{}` standing for an
+	 * unknown pointee, or `dyntable{T}`. A builtin alias such as `string` is expanded here.
 	 * @return An empty optional if the reference is malformed, having logged why.
 	 */
 	base::Optional<code::TypeExpr> parseTypeExpr(F8ParserState& state) {
@@ -43,16 +45,21 @@ namespace vm::loader::parser {
 
 		const bool is_pointer  = state[0].is(lang_def::Keyword::BCPtr);
 		const bool is_cpointer = state[0].is(lang_def::Keyword::BCCPtr);
-		if (!is_pointer && !is_cpointer) {
+		const bool is_dyntable = state[0].is(lang_def::Keyword::BCDyntable);
+		if (!is_pointer && !is_cpointer && !is_dyntable) {
 			tpc::Identifier name;
 			state.parse().one(&name);
+			if (auto alias = code::getBuiltinAlias(name.value)) return *alias;
 			return code::TypeExpr(name.value);
 		}
+
+		const std::string_view argument = is_dyntable ? "element type" : "pointee";
 
 		state.tokens().next();
 		if (state.empty() || !state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.logInt(makeBox<dia::PlaceholderError>(
-				"Expected `{` with the pointee after here.", state.getPosition(-1)
+				base::strConcat("Expected `{` with the ", argument, " after here."),
+				state.getPosition(-1)
 			));
 			return {};
 		}
@@ -63,7 +70,7 @@ namespace vm::loader::parser {
 			inner = parseTypeExpr(state);
 			if (state.notEmpty())
 				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected `}` after the pointee.", state.getPosition()
+					base::strConcat("Expected `}` after the ", argument, "."), state.getPosition()
 				));
 		}
 		state.goUpAndSkip();
@@ -71,10 +78,13 @@ namespace vm::loader::parser {
 		if (is_cpointer) return code::TypeExpr::cpointer(inner);
 		if (!inner.has_value()) {
 			state.logInt(makeBox<dia::PlaceholderError>(
-				"`ptr` needs a pointee; only `cptr` may be left empty.", state.getPosition(-1)
+				is_dyntable ? "`dyntable` needs an element type."
+							: "`ptr` needs a pointee; only `cptr` may be left empty.",
+				state.getPosition(-1)
 			));
 			return {};
 		}
+		if (is_dyntable) return code::TypeExpr::dyntable(*inner);
 		return code::TypeExpr::pointer(*inner);
 	}
 
@@ -947,15 +957,6 @@ namespace vm::loader::parser {
 					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
 				}
-			}
-			break;
-		}
-		case lang_def::Keyword::BCDynamicTable: {
-			auto inner = parseTypeExpr(state);
-			if (inner.has_value()) {
-				auto tp         = DynamicTableType{ name, *inner };
-				tp.bytecode_pos = out->position;
-				out->datatype   = tp;
 			}
 			break;
 		}

@@ -1,19 +1,16 @@
-type dynamic_table: dtable_i64 i64
-type dynamic_table: dtable_ptr ptr{dtable_i64}
-
 function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type size, i64;
     init_pany_type val, i64;
-    init_pany_type inner_ptr, ptr{dtable_i64};
-    init_pany_type outer_ptr, ptr{dtable_ptr};
+    init_pany_type inner_ptr, ptr{dyntable{i64}};
+    init_pany_type outer_ptr, ptr{dyntable{ptr{dyntable{i64}}}};
 
     mov_p64_imm val, 1235;
     mov_p64_imm size, 5;
-    dynTableReAlloc_pptr_type_p64 inner_ptr, dtable_i64, size;
+    dynTableReAlloc_pptr_type_p64 inner_ptr, dyntable{i64}, size;
     mov_p64_imm size, 3;
     dynTableStore_pptr_pany_p64 inner_ptr, val, size;
     mov_p64_imm val, 0;
-    dynTableReAlloc_pptr_type_p64 outer_ptr, dtable_ptr, size;
+    dynTableReAlloc_pptr_type_p64 outer_ptr, dyntable{ptr{dyntable{i64}}}, size;
     mov_p64_imm size, 2;
     dynTableStore_pptr_pany_p64 outer_ptr, inner_ptr, size;
     dynTableLoad_pany_pptr_p64 inner_ptr, outer_ptr, size;

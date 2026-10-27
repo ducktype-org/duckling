@@ -572,7 +572,7 @@ private:
 					{  // Check dynamic table field
 						auto table_pointer = getStructField<idv::Pointer>(
 							struct_data,
-							base::StrID("ptr{dyntable_i64}"),
+							base::StrID("ptr{dyntable{i64}}"),
 							base::StrID("var_dyntable_pointer")
 						);
 						ASSERT_HAS_VALUE(table_pointer.referenced);

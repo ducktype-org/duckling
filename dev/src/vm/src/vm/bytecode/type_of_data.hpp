@@ -54,22 +54,6 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Represents a dynamic array of elements of the same type.
-	 */
-	struct DynamicTableType final: ElementBase {
-		DynamicTableType() = default;
-
-		DynamicTableType(base::StrID name, TypeExpr inner): name(name), inner(inner) {}
-
-		base::StrID name;
-		TypeExpr    inner;
-
-		bool operator==(const DynamicTableType& other) const {
-			return name == other.name && inner == other.inner;
-		}
-	};
-
-	/**
 	 * @brief Field is a building block of a datatype. It represents a storage
 	 * for value of some type.
 	 */
@@ -262,7 +246,6 @@ namespace vm::code {
 	using TypeOfData = std::variant<
 		PrimitiveType,
 		FixedSizeTableType,
-		DynamicTableType,
 		DataType,
 		VariantType,
 		FunctionType,

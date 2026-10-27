@@ -168,12 +168,6 @@ namespace vm::code {
 				out << type.table_size;
 			}
 
-			void operator()(const DynamicTableType& type) const {
-				out << "type dynamic_table: ";
-				out << type.name.strView() << " ";
-				out << type.inner.canonicalName().strView();
-			}
-
 			void operator()(const DataType& type) const {
 				out << "type data: ";
 				out << type.name.strView() << " {\n";
