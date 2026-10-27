@@ -20,7 +20,7 @@ namespace compiler::tsh::coercions {
 	enum class CoercionMode : uint8_t {
 		/// Only the regular implicit coercions.
 		Default,
-		/// Additionally, a non-`ref` value may be implicitly taken by `ref` (a method's `self`).
+		/// A non-`ref` value may be implicitly taken by `ref` (a method's `self`).
 		ImplicitRefOf,
 	};
 }

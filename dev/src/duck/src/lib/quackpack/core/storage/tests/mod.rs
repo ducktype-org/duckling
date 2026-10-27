@@ -26,7 +26,7 @@ use crate::quackpack::core::{
 };
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
 mod basic;

@@ -13,6 +13,8 @@
 #include <helios/hout/origin.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/coercions/coercion.hpp>
+#include <helios/tsh/coercions/coercion_rank.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
@@ -20,7 +22,6 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/optional.hpp>
@@ -35,6 +36,7 @@
 #include <query_framework/query_result.hpp>
 
 #include <algorithm>
+#include <compare>
 #include <utility>
 #include <vector>
 
@@ -55,13 +57,11 @@ namespace compiler::helios::code {
 		// We can't keep a direct reference to the argument because we would like to move
 		// from the positional arguments vector later, so we just keep the index.
 		usize index_in_positional_args;
-		bool  requires_coercion;
 	};
 
 	struct NamedArgumentOrigin final {
 		// Same as above.
 		usize index_in_named_args;
-		bool  requires_coercion;
 	};
 
 	struct DefaultArgumentOrigin final {
@@ -74,33 +74,74 @@ namespace compiler::helios::code {
 
 	// =================== Match Result Variants ===================
 
-	struct ExactMatch final {
+	using tsh::coercions::Coercion;
+	using tsh::coercions::CoercionMode;
+	using tsh::coercions::CoercionRank;
+	using tsh::coercions::Rank;
+
+	using ArgumentCoercions = std::vector<base::Optional<Coercion>>;
+
+	/**
+	 * @brief Whether @p rank means that the argument is passed as is with no runtime effects, which
+	 * at most relaxes the mutability it is seen with.
+	 * @TODO: #1488 Revisit this.
+	 */
+	bool isExactRank(const CoercionRank rank) { return rank.getRank() <= Rank::MutabilityChange; }
+
+	struct Match final {
 		/**
 		 * The function that was matched.
 		 */
 		SymID function;
+
 		/**
 		 * The origin of each argument in the call.
 		 */
 		std::vector<ArgumentOrigin> argument_origin;
-	};
-
-	struct CoercionMatch final {
-		/**
-		 * Same as in ExactMatch.
-		 */
-		SymID function;
 
 		/**
-		 * Same as in ExactMatch.
+		 * The coercion of each argument into its parameter.
 		 */
-		std::vector<ArgumentOrigin> argument_origin;
+		ArgumentCoercions coercions;
 
 		/**
-		 * The coercion that was validated for each argument, because the coercion logic requires
-		 * this "coercion ticket" to actually perform the coercion.
+		 * How well each argument matched its parameter, in the order the arguments were written.
 		 */
-		std::vector<Coercion> coercions;
+		std::vector<CoercionRank> argument_ranks;
+
+		/**
+		 * @brief Whether this is an exact match.
+		 */
+		[[nodiscard]]
+		bool isExact() const {
+			return std::ranges::all_of(argument_ranks, isExactRank);
+		}
+
+		/**
+		 * @brief Compares the two candidates. The "smaller" one is the better match.
+		 *
+		 * Candidates are compared argument by argument. A candidate is better only when it's at
+		 * least as good everywhere, and better on at least one argument. Two candidates that are
+		 * each better at different arguments are unordered.
+		 */
+		[[nodiscard]]
+		std::partial_ordering operator<=>(const Match& other) const {
+			CORE_ASSERT(
+				argument_ranks.size() == other.argument_ranks.size(), "Argument count should match"
+			);
+
+			bool better_somewhere = false;
+			bool worse_somewhere  = false;
+			for (const auto& [mine, theirs]: std::views::zip(argument_ranks, other.argument_ranks)) {
+				better_somewhere = better_somewhere || mine.dominates(theirs);
+				worse_somewhere  = worse_somewhere || theirs.dominates(mine);
+			}
+
+			if (better_somewhere && worse_somewhere) return std::partial_ordering::unordered;
+			if (better_somewhere) return std::partial_ordering::less;
+			if (worse_somewhere) return std::partial_ordering::greater;
+			return std::partial_ordering::equivalent;
+		}
 	};
 
 	struct NoMatch final {
@@ -108,7 +149,7 @@ namespace compiler::helios::code {
 		FunctionMatchFailure reason;
 	};
 
-	using MatchResult = std::variant<CoercionMatch, ExactMatch, NoMatch>;
+	using MatchResult = std::variant<Match, NoMatch>;
 
 	/**
 	 * Checks if a function can be called with the given arguments for overload resolution
@@ -122,12 +163,14 @@ namespace compiler::helios::code {
 		SymID                                                  fun,
 		const std::vector<Box<Expr>>&                          positional_arguments,
 		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
-		CoercionMode                                           first_argument_mode
+		const CoercionMode                                     first_argument_mode
 	) {
 		auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
 		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
-		std::vector<base::Optional<Coercion>>       coercions(decl.parameters.size());
-		bool                                        coercion_present = false;
+		ArgumentCoercions                           coercions(decl.parameters.size());
+		std::vector<CoercionRank>                   argument_ranks(
+            positional_arguments.size() + named_arguments.size(), CoercionRank::identity()
+        );
 
 		if (positional_arguments.size() > decl.parameters.size())
 			return NoMatch{ .function = fun,
@@ -138,16 +181,17 @@ namespace compiler::helios::code {
 
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
-			tsh::SymbolType expected_type = decl.parameters[i].type;
-			auto            coercion      = canCoerce(
-                                ctx,
-                                positional_arguments[i]->expression_type,
-                                expected_type,
-                                i == 0 ? first_argument_mode : CoercionMode::Default
-            )
-			                    .valueOrThrow();
+			const tsh::SymbolType expected_type = decl.parameters[i].type;
+			const CoercionMode    mode     = i == 0 ? first_argument_mode : CoercionMode::Default;
+			Coercion              coercion = coercions::coercionOf(
+                ctx,
+                positional_arguments[i].ref(),
+                expected_type,
+                coercions::HandOverKind::Regular,
+                mode
+            );
 
-			if (coercion.isInvalid()) {
+			if (coercion.isRefused()) {
 				return NoMatch{ .function = fun,
 					            .reason   = ArgumentCoercionFailure{
 									  .failed         = coercion,
@@ -156,12 +200,10 @@ namespace compiler::helios::code {
                                 } };
 			}
 
-			bool is_empty = coercion.isEmptyCoercion();
-			if (not is_empty) coercion_present = true;
+			argument_ranks[i] = coercion.getRank();
 
 			// Position in the parameter list is the same as in the positional arguments list.
-			argument_origin[i].emplace(PositionalArgumentOrigin{
-				.index_in_positional_args = i, .requires_coercion = not is_empty });
+			argument_origin[i].emplace(PositionalArgumentOrigin{ .index_in_positional_args = i });
 			coercions[i].emplace(std::move(coercion));
 		}
 
@@ -191,13 +233,12 @@ namespace compiler::helios::code {
                                                                 = positional_arguments.size() + i,
 					                                              .function = fun } };
 
-			usize               param_idx = param_idx_with_matching_name.value();
-			tsh::ExpressionType provided_expr_type
-				= std::get<1>(named_arguments[i])->expression_type;
-			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-			auto coercion = canCoerce(ctx, provided_expr_type, expected_type).valueOrThrow();
+			const usize           param_idx     = param_idx_with_matching_name.value();
+			const tsh::SymbolType expected_type = decl.parameters[param_idx].type;
+			Coercion              coercion
+				= coercions::coercionOf(ctx, std::get<1>(named_arguments[i]).ref(), expected_type);
 
-			if (coercion.isInvalid()) {
+			if (coercion.isRefused()) {
 				return NoMatch{ .function = fun,
 					            .reason   = ArgumentCoercionFailure{
 									  .failed         = coercion,
@@ -206,24 +247,19 @@ namespace compiler::helios::code {
                                 } };
 			}
 
-			bool is_empty = coercion.isEmptyCoercion();
-			if (not is_empty) coercion_present = true;
+			argument_ranks[positional_arguments.size() + i] = coercion.getRank();
 
-			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
-				                                              .requires_coercion   = not is_empty };
+			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i };
 			coercions[param_idx].emplace(std::move(coercion));
 		}
 
-		// Go over default arguments
+		// Go over default arguments.
 		for (usize i{ 0 }; i < decl.parameters.size(); i++) {
 			if (not argument_origin[i].has_value()) {
-				if (decl.parameters[i].initial_value.has_value()) {
+				if (decl.parameters[i].initial_value.has_value())
 					argument_origin[i].emplace(DefaultArgumentOrigin{
 						decl.parameters[i].initial_value.value().ref() });
-					coercions[i].emplace(Coercion::emptyCoercion(
-						decl.parameters[i].initial_value.value()->expression_type.getSymbolType()
-					));
-				} else
+				else
 					return NoMatch{ .function = fun,
 						            .reason   = MissingCallArgument{ .parameter_index = i,
 						                                             .function        = fun } };
@@ -237,20 +273,10 @@ namespace compiler::helios::code {
 			  })
 		    | std::ranges::to<std::vector>();
 
-		std::vector<Coercion> coercions_final
-			= coercions
-		    | std::views::transform([](const base::Optional<Coercion>& opt) { return opt.value(); })
-		    | std::ranges::to<std::vector>();
-
-
-		if (coercion_present) {
-			return CoercionMatch{ .function        = fun,
-				                  .argument_origin = std::move(argument_origin_final),
-				                  .coercions       = std::move(coercions_final) };
-		}
-
-
-		return ExactMatch{ .function = fun, .argument_origin = std::move(argument_origin_final) };
+		return Match{ .function        = fun,
+			          .argument_origin = std::move(argument_origin_final),
+			          .coercions       = std::move(coercions),
+			          .argument_ranks  = std::move(argument_ranks) };
 	}
 
 	/**
@@ -266,17 +292,17 @@ namespace compiler::helios::code {
 	 * @param call_arguments The arguments of the call. Will be moved.
 	 * @param argument_origin The origin of each argument in the call (e.x. first argument is
 	 * positional, second is named, third is default, etc.)
-	 * @param coercions Optional vector of coercions to apply to each argument
+	 * @param coercions The coercion to apply to each argument, if there is one
 	 *
 	 * @return Box<CallExpr> representing the function call
 	 */
 	Box<Expr> constructCallExpr(
-		query::Context&                              ctx,
-		SymID                                        fun,
-		const CallPstOrigin&                         pst_origin,
-		CallArguments                                call_arguments,
-		const std::vector<ArgumentOrigin>&           argument_origin,
-		const base::Optional<std::vector<Coercion>>& coercions
+		query::Context&                    ctx,
+		SymID                              fun,
+		const CallPstOrigin&               pst_origin,
+		CallArguments                      call_arguments,
+		const std::vector<ArgumentOrigin>& argument_origin,
+		const ArgumentCoercions&           coercions
 	) {
 		std::vector<Box<Expr>> final_arguments;
 		final_arguments.reserve(argument_origin.size());
@@ -302,12 +328,10 @@ namespace compiler::helios::code {
 				CORE_UNREACHABLE();
 			}();
 
-			if (coercions.has_value()) {
-				Box<Expr> coerced_expr = coercions.value()[i].coerce(ctx, std::move(expr));
-				final_arguments.push_back(std::move(coerced_expr));
-			} else {
-				final_arguments.push_back(std::move(expr));
+			if_opt_some(coercions[i], coercion) {
+				expr = coercions::applyCoercion(ctx, coercion, std::move(expr));
 			}
+			final_arguments.push_back(std::move(expr));
 		}
 		return makeBox<CallExpr>(
 			ctx,
@@ -329,23 +353,24 @@ namespace compiler::helios::code {
 	 * translates to in the lower level.
 	 */
 	Box<Expr> constructHOUTBuiltinOpExpr(
-		query::Context&                              ctx,
-		const CallPstOrigin&                         pst_origin,
-		const SymID                                  fun,
-		CallArguments                                call_arguments,
-		const base::Optional<std::vector<Coercion>>& coercions
+		query::Context&          ctx,
+		const CallPstOrigin&     pst_origin,
+		const SymID              fun,
+		CallArguments            call_arguments,
+		const ArgumentCoercions& coercions
 	) {
 		const auto call_origin = pst_origin.whole_call_origin;
 		auto  hout_op = ctx.query<QueryRegularBuiltinOperatorSymbols>({})->atMaybe(fun).value()->op;
 		auto& arguments = call_arguments.positional_arguments;
 
 		std::vector<Box<Expr>> coerced_args;
-		if (coercions) {
-			coerced_args.reserve(coercions->size());
-			for (usize i{ 0 }; i < coercions->size(); i++)
-				coerced_args.emplace_back(coercions->at(i).coerce(ctx, std::move(arguments.at(i))));
-		} else {
-			coerced_args = std::move(arguments);
+		coerced_args.reserve(arguments.size());
+		for (usize i{ 0 }; i < arguments.size(); i++) {
+			Box<Expr> argument = std::move(arguments.at(i));
+			if_opt_some(coercions.at(i), coercion) {
+				argument = coercions::applyCoercion(ctx, coercion, std::move(argument));
+			}
+			coerced_args.emplace_back(std::move(argument));
 		}
 
 		variant_match(hout_op) {
@@ -372,10 +397,10 @@ namespace compiler::helios::code {
 	}
 
 	void appendExactMatchesErrors(
-		query::Context&                ctx,
-		Box<AmbiguousMatchesError>&    main_msg,
-		const std::vector<ExactMatch>& exact_matches,
-		bool                           as_a_link = false
+		query::Context&             ctx,
+		Box<AmbiguousMatchesError>& main_msg,
+		const std::vector<Match>&   exact_matches,
+		bool                        as_a_link = false
 	) {
 		if (exact_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
@@ -413,10 +438,10 @@ namespace compiler::helios::code {
 	}
 
 	void appendCoercibleMatchesErrors(
-		query::Context&                   ctx,
-		Box<AmbiguousMatchesError>&       main_msg,
-		const std::vector<CoercionMatch>& coercible_matches,
-		bool                              as_a_link
+		query::Context&             ctx,
+		Box<AmbiguousMatchesError>& main_msg,
+		const std::vector<Match>&   coercible_matches,
+		bool                        as_a_link
 	) {
 		if (coercible_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
@@ -439,13 +464,15 @@ namespace compiler::helios::code {
 
 				auto result = makeBox<CoercibleCandidateNote>(decl_pos);
 				for (usize i{ 0 }; i < match.coercions.size(); i++) {
-					auto& coercion = match.coercions[i];
-					if (not coercion.isEmptyCoercion()) {
+					if_opt_none(match.coercions[i]) continue;
+					const Coercion& coercion = match.coercions[i].value();
+					if (not isExactRank(coercion.getRank())) {
 						if_opt_none(decl.parameters[i].origin.getStablePosition()) continue;
 						auto param_pos = decl.parameters[i].origin.getStablePosition().value();
 
 						auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
-							coercion.to.toString(), coercion.validated_from.toString()
+							coercion.getTarget().toString(),
+							coercion.getSource().getSymbolType().toString()
 						);
 						auto pm_message_id = dia::MessageBase::getUniqueID();
 						result->addLinkedMessage(pm_message_id, std::move(pm));
@@ -516,7 +543,7 @@ namespace compiler::helios::code {
 	}
 
 	using OverloadResolutionResult
-		= std::tuple<SymID, std::vector<ArgumentOrigin>, base::Optional<std::vector<Coercion>>>;
+		= std::tuple<SymID, std::vector<ArgumentOrigin>, ArgumentCoercions>;
 
 	/**
 	 * @brief Performs overload resolution for a function call, taking into account coercions,
@@ -545,9 +572,8 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 
-		std::vector<ExactMatch>    exact_match;
-		std::vector<CoercionMatch> coercion_match;
-		std::vector<NoMatch>       no_match;
+		std::vector<Match>   matches;
+		std::vector<NoMatch> no_match;
 
 		for (const auto candidate: candidates) {
 			MatchResult match = matchOverloadCandidate(
@@ -560,8 +586,7 @@ namespace compiler::helios::code {
 			);
 
 			variant_match(match) {
-				variant_case(ExactMatch, data) { exact_match.push_back(std::move(data)); }
-				variant_case(CoercionMatch, data) { coercion_match.push_back(std::move(data)); }
+				variant_case(Match, data) { matches.push_back(std::move(data)); }
 				variant_case(NoMatch, data) {
 					no_match.push_back(data);
 					// For now ignore it, it is handled by the logic below.
@@ -569,39 +594,54 @@ namespace compiler::helios::code {
 			}
 		}
 
-		if (exact_match.size() > 1) {
-			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getStablePosition().value()
-			);
-			appendExactMatchesErrors(ctx, main_msg, exact_match, false);
-			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
-			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, true);
-			ctx.logInt(std::move(main_msg));
-			return query::Failed();
-		}
-		if (exact_match.size() == 1) {
-			return OverloadResolutionResult{
-				exact_match.back().function,
-				exact_match.back().argument_origin,
-				{},
+		if (not matches.empty()) {
+			const auto is_best = [&](const Match& match) {
+				return std::ranges::none_of(matches, [&](const Match& other) {
+					return other < match;
+				});
 			};
-		}
 
-		if (coercion_match.size() > 1) {
+			std::vector<usize> best;
+			for (usize i = 0; i < matches.size(); i++)
+				if (is_best(matches.at(i))) best.push_back(i);
+
+			// Exactly one best candidate. Success.
+			if (best.size() == 1) {
+				Match& winner = matches.at(best.front());
+				return OverloadResolutionResult{
+					winner.function,
+					std::move(winner.argument_origin),
+					std::move(winner.coercions),
+				};
+			}
+
+			// Otherwise the call is ambiguous
+			std::vector<Match> exact;
+			std::vector<Match> coercible;
+			std::vector<Match> beaten;
+			for (usize i = 0; i < matches.size(); i++)
+				if (not std::ranges::contains(best, i))
+					beaten.push_back(std::move(matches.at(i)));
+				else if (matches.at(i).isExact())
+					exact.push_back(std::move(matches.at(i)));
+				else
+					coercible.push_back(std::move(matches.at(i)));
+
 			auto main_msg = makeBox<AmbiguousMatchesError>(
 				pst_origin.whole_call_origin.getStablePosition().value()
 			);
-			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
+
+			if (not exact.empty()) {
+				appendExactMatchesErrors(ctx, main_msg, exact, false);
+				for (Match& match: beaten) coercible.push_back(std::move(match));
+				appendCoercibleMatchesErrors(ctx, main_msg, coercible, true);
+			} else {
+				appendCoercibleMatchesErrors(ctx, main_msg, coercible, false);
+			}
+
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, true);
 			ctx.logInt(std::move(main_msg));
 			return query::Failed();
-		}
-		if (coercion_match.size() == 1) {
-			return OverloadResolutionResult{
-				coercion_match.back().function,
-				coercion_match.back().argument_origin,
-				coercion_match.back().coercions,
-			};
 		}
 
 		if (candidates.size() == 1) {
@@ -741,7 +781,8 @@ namespace compiler::helios::code {
 			.arguments_origin  = std::move(arguments_origin),
 		};
 
-		// Resolve overloads and construct call expression
+		// Resolve overloads and construct call expression. Every candidate is a method, so `self`
+		// may be implicitly taken by `ref`.
 		auto overload_resolution_qresult
 			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, candidates);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);

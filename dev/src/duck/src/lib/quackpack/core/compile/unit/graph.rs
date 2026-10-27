@@ -454,11 +454,11 @@ fn construct_package_data(
     let direct_pkg_deps = graph.dependencies_for_package(&identity).dependencies();
     let direct_pkg_deps = direct_pkg_deps
         .iter()
-        .map(|dep| {
+        .map(|(ename, dep)| {
             let alias = package
                 .manifest()
                 .dependencies()
-                .get_by_name(dep.name())
+                .get_by_effective_name(*ename)
                 .unwrap_or_else(|| panic!("{identity} has no dependency named {}", dep.name()))
                 .alias()
                 .map(|alias| normalise_package_name(&alias).into());

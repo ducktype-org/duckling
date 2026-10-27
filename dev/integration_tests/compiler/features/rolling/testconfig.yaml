@@ -21,6 +21,7 @@ SubDirs:
   - pointers
   - globals
   - tuples
+  - coercions
   - templates
   - imports
   - macros
