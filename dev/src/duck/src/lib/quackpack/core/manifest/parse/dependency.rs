@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Parsing of the {dev-,}dependencies fields in a manifest.
-use tracing::debug;
+use tracing::trace;
 
 use super::{ParseMode, ScopeGuard, source};
 use crate::quackpack::core::lints::warnings::Warnings;
@@ -22,7 +22,6 @@ use crate::{DuckContext, QuackResult, StrId};
 /// Parse [`Dependency`]ies from the [`DependenciesSchema`], and append them into a vector.
 ///
 /// It is a role of a caller to make sure that [`DependenciesSchema`] matches [`DependencyKind`].
-#[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     mode: ParseMode<'_>,
@@ -51,7 +50,6 @@ pub(crate) fn parse(
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
-#[tracing::instrument(skip_all, fields(name = %manifest_name))]
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
@@ -61,7 +59,7 @@ fn parse_single_dependency(
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
-    debug!(?schema, "parsing a dependency");
+    trace!(?schema, "parsing the dependency `{manifest_name}`");
     let name = parse_name(schema).unwrap_or(manifest_name);
     let alias = if name == manifest_name {
         None
@@ -103,15 +101,13 @@ fn parse_single_dependency(
 }
 
 /// Parse dependency's features
-#[tracing::instrument(skip_all)]
 fn parse_features(schema: Option<&Vec<FeatureSchema>>) -> Vec<DependencyFeature> {
     let Some(schema) = schema else {
         return vec![];
     };
-    debug!(?schema);
     let mut result = vec![];
     for feature in schema {
-        debug!(?feature, "parsing feature");
+        trace!(?feature, "parsing a feature");
         match feature {
             FeatureSchema::Simple(name) => {
                 result.push(DependencyFeature::new(name.into(), None));

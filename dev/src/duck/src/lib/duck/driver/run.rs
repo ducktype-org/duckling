@@ -9,7 +9,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use clap::ArgMatches;
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::cli;
 use super::cli_args_preprocessing::aliases_expansion::expand_aliases;
@@ -52,10 +52,7 @@ pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
         return Ok(());
     }
     global_opts.update_context(ctx)?;
-    debug!(
-        subcommand = ?args.subcommand_name(),
-        "after expanding everything"
-    );
+    debug!(subcommand = ?args.subcommand_name(), "expanded aliases and typos");
     run_subcmd(ctx, args, &external)
 }
 
@@ -93,10 +90,7 @@ pub(super) fn gather_external_subcmds(ctx: &DuckContext) -> HashMap<String, Path
         }
     }
 
-    debug!(
-        external = ?commands.keys(),
-        "found the external subcommands"
-    );
+    trace!(external = ?commands.keys(), "found the external subcommands");
     commands
 }
 
@@ -140,9 +134,9 @@ fn external_cli_args(sub_args: &ArgMatches) -> Vec<&OsStr> {
 /// Execute the external subcommand.
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<&OsStr>) -> QuackResult<()> {
     debug!(
-        path = %exec_path.display(),
         ?cli_args,
-        "executing external command"
+        "executing the external command `{}`",
+        exec_path.display()
     );
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);

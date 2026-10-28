@@ -43,7 +43,7 @@ impl fmt::Debug for DuckHome {
 impl DuckHome {
     /// Create a new [`DuckHome`] rooted at `root`.
     pub fn new(root: PathBuf) -> Self {
-        debug!(?root, "duck home");
+        debug!("using the duck home at `{}`", root.display());
         Self {
             root: FileLockManager::new(root),
         }
