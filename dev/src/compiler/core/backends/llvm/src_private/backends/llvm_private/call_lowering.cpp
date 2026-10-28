@@ -184,7 +184,20 @@ namespace compiler::backend_llvm {
 			if (indirect) {
 				const auto llvm_index = base::safeIntConv<u32>(llvm_parameters.size());
 				parameter_attributes.emplace_back(
-					llvm_index, llvm::Attribute::getWithByValType(ctx, parameter_type)
+					llvm_index, llvm::Attribute::get(ctx, llvm::Attribute::NoAlias)
+				);
+				parameter_attributes.emplace_back(
+					llvm_index, llvm::Attribute::get(ctx, llvm::Attribute::NonNull)
+				);
+				parameter_attributes.emplace_back(
+					llvm_index,
+					llvm::Attribute::getWithAlignment(ctx, alignmentFromLayout(module, parameter))
+				);
+				parameter_attributes.emplace_back(
+					llvm_index,
+					llvm::Attribute::getWithDereferenceableBytes(
+						ctx, module->getDataLayout().getTypeAllocSize(parameter_type).getFixedValue()
+					)
 				);
 				llvm_parameters.push_back(llvm::PointerType::getUnqual(ctx));
 			} else {

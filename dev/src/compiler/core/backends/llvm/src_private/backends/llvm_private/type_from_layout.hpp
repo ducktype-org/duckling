@@ -12,6 +12,7 @@ LLVM_INCLUDE_BEGIN()
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
+#include <llvm/Support/Alignment.h>
 
 LLVM_INCLUDE_END()
 
@@ -32,4 +33,9 @@ namespace compiler::backend_llvm {
 	 * @return The created llvm::Type*.
 	 */
 	llvm::Type* typeFromLayout(Ref<llvm::Module> module, CRef<tsl::TypeLayout> layout);
+
+	/**
+	 * @brief The alignment guaranteed for storage holding a value of the given layout.
+	 */
+	llvm::Align alignmentFromLayout(Ref<llvm::Module> module, CRef<tsl::TypeLayout> layout);
 }
