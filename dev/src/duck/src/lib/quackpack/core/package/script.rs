@@ -15,7 +15,7 @@ use crate::quackpack::core::{
     Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter,
 };
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
@@ -208,7 +208,7 @@ impl Script {
 
     /// Returns true if script at `path` has a frontmatter.
     pub fn has_frontmatter(path: &Path) -> QuackResult<bool> {
-        let contents = path.read_to_string()?;
+        let contents = read_from_path_to_string(path)?;
         capture_frontmatter(&contents).map(|maybe_frontmatter| maybe_frontmatter.is_some())
     }
 

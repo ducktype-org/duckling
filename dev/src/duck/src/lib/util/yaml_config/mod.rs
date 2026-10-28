@@ -13,7 +13,7 @@ use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
 use tracing::debug;
 
 use super::DescriptionWithAnArticle;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
@@ -100,7 +100,7 @@ impl YamlConfig {
     /// Create a new [`YamlConfig`] from the YAML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
         debug!(path = %path.display(), "parsing YAML config");
-        let content = match path.as_path().read_to_string() {
+        let content = match read_from_path_to_string(&path) {
             Ok(string) => string,
             Err(e) => {
                 if let Some(err) = e.downcast_ref_in_chain::<io::Error>()

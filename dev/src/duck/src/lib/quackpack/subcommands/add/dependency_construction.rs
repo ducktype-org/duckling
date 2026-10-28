@@ -44,7 +44,7 @@ use crate::quackpack::schemas::manifest::{
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::ErrorsLogger;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::{normalize, resolve, resolve_both_and_get_relative};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
@@ -175,9 +175,9 @@ fn construct_source(
             "guarded by the parser"
         );
         // We take into account that `local_path` is relative to `cwd`, not to `pkg_root`.
-        let from_project_to_cwd = pkg_root.resolve_both_and_get_relative(ctx.cwd(), ctx);
-        let from_project_to_dep = from_project_to_cwd.join(path).normalize();
-        let dep_resolved = from_project_to_dep.resolve(ctx);
+        let from_project_to_cwd = resolve_both_and_get_relative(pkg_root, ctx.cwd(), ctx);
+        let from_project_to_dep = normalize(from_project_to_cwd.join(path));
+        let dep_resolved = resolve(&from_project_to_dep, ctx);
         Ok((Source::for_local(&dep_resolved)?, Some(from_project_to_dep)))
     } else if let Some(git_url) = git_url {
         // Git dependency.
