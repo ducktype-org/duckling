@@ -31,7 +31,7 @@ use crate::quackpack::core::{
 };
 use crate::util::Pluralize;
 use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 pub mod load_deps;

@@ -7,8 +7,8 @@
 #include "ctv.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -55,13 +55,10 @@ namespace compiler::ctv {
 		CORE_UNREACHABLE();
 	}
 
-	bool CompileTimeValue::TypeTuple::isValid(
-		query::Context& ctx, const tsh::SymbolType<>& tuple_type
-	) {
+	bool CompileTimeValue::TypeTuple::isValid(const tsh::SymbolType<>& tuple_type) {
 		return tuple_type.getRefKind() == tsh::ReferenceKind::Direct
 		    && tuple_type.getType().getKind() == tsh::Kind::Tuple
-		    && ctx.query<tsh::QueryImplicitCoercibilityOnAbstractType>({ tuple_type.getType(),
-		                                                                 tsh::getMetaType() });
+		    && tsh::TupleAbstractType{ tuple_type.getType() }.isTupleOfTypes();
 	}
 
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {

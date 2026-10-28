@@ -40,7 +40,7 @@ use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::parse::manifest::parse;
 use crate::quackpack::core::script::FrontMatter;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
@@ -115,6 +115,7 @@ fn generate_schema(path: &Path, errors: &mut Errors) -> QuackResult<ManifestSche
             profiles: None,
             import: None,
             venv: None,
+            lints: None,
         });
     };
     let frontmatter_content = captures.get(1).unwrap().as_str();

@@ -236,6 +236,37 @@ namespace compiler::tsh {
 	)
 
 	/**
+	 * @brief Key for QueryOptionalType.
+	 */
+	struct KeyFor_QueryOptionalType final {
+		/// The type `T` held by the optional `?T`.
+		SymbolType<> value_type;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryOptionalType&) const
+			= default;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(value_type);
+		}
+	};
+
+	/**
+	 * @brief The optional type `?T`.
+	 *
+	 * It really just creates a special variant type of `T` and `None`, marked as representing
+	 * an optional. Unlike a plain variant its alternatives are not reordered: `T` is always the
+	 * first one and `None` the second one. It is printed as `?T`, exposes the optional interface,
+	 * and is a distinct type from the plain variant `T | None` created by QueryVariantType.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryOptionalType, KeyFor_QueryOptionalType, VariantAbstractType, ({ .uses_qresult = false })
+	)
+
+	/**
 	 * @brief Key for QueryFunctionType.
 	 */
 	struct KeyFor_QueryFunctionType final {

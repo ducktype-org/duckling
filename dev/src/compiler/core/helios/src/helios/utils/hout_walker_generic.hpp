@@ -172,6 +172,11 @@ namespace compiler::helios::code {
 			walk(*e.result);
 		}
 
+		void visitOptionalTypeConstructorExpr(const OptionalTypeConstructorExpr& e) override {
+			handler(e);
+			walk(*e.value_type);
+		}
+
 		void visitVariantConstructExpr(const VariantConstructExpr& e) override {
 			handler(e);
 			walk(*e.inner);

@@ -11,14 +11,13 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
+use crate::quackpack::core::lints::{Lint, LintLevel};
 use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
-use crate::quackpack::core::{
-    DependencyKind, GitReference, OptLevel, Profile, Version, capture_frontmatter,
-};
+use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::{DuckContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -81,6 +80,33 @@ metadata:
     assert_eq!(
         summary.venv().storage_path(),
         ctx.default_storage_root().not_locked_path()
+    );
+}
+
+#[test]
+fn fail_duplicate_fields_in_maps() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+dependencies:
+  dx:
+    version: '0.1'
+  dx:
+    version: '0.1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let result = parse_manifest(&manifest_path, &ctx);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            ["dependencies: duplicate entry with key \"dx\" at line 6 column 3",]
+        )
     );
 }
 
@@ -1010,7 +1036,7 @@ profiles:
 }
 
 #[test]
-fn duplicated_names() {
+fn duplicated_effective_names() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
@@ -1020,8 +1046,36 @@ metadata:
 dependencies:
   a:
     version: '1'
-  b:
+dev-dependencies:
+  a:
     version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            ["multiple dependencies (one normal and one dev) are referenced by the same name `a`"]
+        )
+    );
+}
+
+#[test]
+fn duplicated_identities_registry() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: '1'
+dev-dependencies:
+  b:
+    version: '2'
     source:
       name: a
 "#,
@@ -1032,67 +1086,7 @@ dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            ["multiple normal dependencies specify the same name `a`"]
-        )
-    );
-}
-
-#[test]
-fn duplicated_names_in_aliases() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.10'
-
-dependencies:
-  a:
-    version: '1'
-    source:
-      name: c
-  b:
-    version: '1'
-    source:
-      name: c
-"#,
-    );
-    let ctx = DuckContext::default();
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            ["multiple normal dependencies specify the same name `c`"]
-        )
-    );
-}
-
-#[test]
-fn git_exclusive_fields() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.10'
-
-dependencies:
-  a:
-    version: '1'
-    source:
-      name: c
-  b:
-    version: '1'
-    source:
-      name: c
-"#,
-    );
-    let ctx = DuckContext::default();
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            ["multiple normal dependencies specify the same name `c`"]
+            ["dev dependency `b` has the same source as normal dependency `a`"]
         )
     );
 }
@@ -1762,28 +1756,114 @@ dependencies:
 }
 
 #[test]
-fn dep_and_dev_dep_can_share_name() {
+fn two_deps_can_share_name_if_aliased() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: foo
   version: '1'
-
 dependencies:
   a:
     version: '1'
-dev-dependencies:
-  a:
-    version: '1'
+  b:
+    source:
+      name: a
+      path: ../a
 "#,
     );
     let ctx = DuckContext::default();
     let package = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let deps = package.manifest().dependencies();
     assert_eq!(deps.all_dependencies().len(), 2);
-    let a = deps.filter_by_kind(DependencyKind::Normal).next().unwrap();
-    let a_dev = deps.filter_by_kind(DependencyKind::Dev).next().unwrap();
-    assert_eq!(a.name(), a_dev.name());
-    assert_eq!(a.alias(), a_dev.alias());
-    assert_eq!(a.effective_name(), a_dev.effective_name());
+    let a = deps.get_by_effective_name("a".into()).unwrap();
+    let ab = deps.get_by_effective_name("b".into()).unwrap();
+    assert_eq!(a.name(), "a");
+    assert_eq!(ab.name(), "a");
+}
+
+#[test]
+fn valid_lint_levels() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+lints:
+  duck:
+    a: error
+    b: warning
+    c: allow
+"#,
+    );
+    let ctx = DuckContext::default();
+    let a_lint = Lint {
+        name: "a",
+        description: "",
+        level: LintLevel::Allow,
+    };
+
+    let b_lint = Lint {
+        name: "b",
+        description: "",
+        level: LintLevel::Warning,
+    };
+
+    let c_lint = Lint {
+        name: "c",
+        description: "",
+        level: LintLevel::Error,
+    };
+
+    let ommited_lint = Lint {
+        name: "x",
+        description: "",
+        level: LintLevel::Error,
+    };
+    let manifest = parse_manifest(&manifest_path, &ctx)
+        .unwrap()
+        .0
+        .into_manifest();
+    let lints = manifest.lints();
+    let duck_lints = &lints.duck_lints;
+    assert_eq!(duck_lints.len(), 3);
+    assert_eq!(
+        duck_lints,
+        &HashMap::from([
+            ("a".to_string(), LintLevel::Error),
+            ("b".to_string(), LintLevel::Warning),
+            ("c".to_string(), LintLevel::Allow)
+        ]),
+    );
+    assert_eq!(lints.level_for_duck_lint(&a_lint), LintLevel::Error);
+    assert_eq!(lints.level_for_duck_lint(&b_lint), LintLevel::Warning);
+    assert_eq!(lints.level_for_duck_lint(&c_lint), LintLevel::Allow);
+    assert_eq!(lints.level_for_duck_lint(&ommited_lint), LintLevel::Error);
+}
+
+#[test]
+fn invalid_lint_levels() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+lints:
+  duck:
+    a: invalid
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `lints.duck.a`",
+                "invalid lint level: expected one of `allow`, `warning`, `error`, but found `invalid`"
+            ]
+        )
+    );
 }

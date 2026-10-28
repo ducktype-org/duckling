@@ -25,7 +25,7 @@ use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
