@@ -222,7 +222,7 @@ impl SolverFreeze {
             .still_satisfies_dep(manifest_dependency, fetcher)
             .await?
         {
-            debug!("was satisfied before, but now is not");
+            debug!(target: "duck::solver", "was satisfied before, but now is not");
             return Ok(false);
         }
         let forced_child_features = manifest_dependency.enabled_features(pkg_features);
@@ -290,7 +290,7 @@ impl SolverFreeze {
                     .retain(|_, realization| still_satisfied_pkgs.contains(realization));
             }
             let is_satisfied = still_satisfied_pkgs.contains(pkg);
-            trace!(?pkg, %is_root_package, %is_satisfied);
+            trace!(target: "duck::solver", ?pkg, %is_root_package, %is_satisfied);
             is_satisfied || is_root_package
         });
         Ok(())

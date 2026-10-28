@@ -116,16 +116,16 @@ impl<'duck> Fetcher<'duck> {
     /// Retrieve metadata for `package` from a given Ducknest instance.
     ///
     /// Exact cache hit takes precedence over HTTP requests.
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
     pub async fn get_package_metadata(
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
         if let Some(cached) = self.cache.borrow().get_manifest(package)? {
-            debug!("metadata cache hit");
+            debug!(target: "duck::ducknest", "metadata cache hit");
             return Ok(FetcherResponse::Some(cached));
         }
-        debug!("metadata cache miss");
+        debug!(target: "duck::ducknest", "metadata cache miss");
         if self.ctx.is_offline() {
             return Ok(FetcherResponse::Offline);
         }
@@ -152,14 +152,14 @@ impl<'duck> Fetcher<'duck> {
     /// Otherwise __no__ lookup is performed.
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
     pub async fn get_package_all_metadata(
         &self,
         url: InternedUrl,
         package_name: StrId,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
-            debug!("offline, using only the cached metadata");
+            debug!(target: "duck::ducknest", "offline, using only the cached metadata");
             let package = PackageWithUrl {
                 name: package_name,
                 version: 1.into(),
@@ -197,7 +197,7 @@ impl<'duck> Fetcher<'duck> {
             .join(Self::DEFAULT_BLOB_FILENAME);
 
         if blob_path.exists() {
-            debug!("blob cache hit at `{}`", blob_path.display());
+            debug!(target: "duck::ducknest", "blob cache hit at `{}`", blob_path.display());
             return Ok(blob_path);
         }
 
@@ -232,7 +232,7 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Clone a git repository pointed by `source` to the `destination_directory`.
-    #[tracing::instrument(level = "debug", skip(self, url), fields(%url))]
+    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url))]
     pub fn clone_from_git_to_directory(
         &self,
         url: &Url,
@@ -275,7 +275,7 @@ impl<'duck> Fetcher<'duck> {
         self.ctx
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
     /// Fetch a package from ducknest with retries.
     pub async fn fetch_package_blob_with_retries(
         &self,
@@ -290,11 +290,11 @@ impl<'duck> Fetcher<'duck> {
         for attempt in 1..=calls {
             match self.fetch_package_blob(pkg).await {
                 Ok(path) => {
-                    debug!("fetched on attempt {attempt}/{calls}");
+                    debug!(target: "duck::ducknest", "fetched on attempt {attempt}/{calls}");
                     return Ok(path);
                 }
                 Err(e) => {
-                    debug!(error = %e, "attempt {attempt}/{calls} failed");
+                    debug!(target: "duck::ducknest", error = %e, "attempt {attempt}/{calls} failed");
                     self.ctx.warning(format!(
                         "failed to download `{}` version {} from `{}`: {e}",
                         pkg.name, pkg.version, pkg.url

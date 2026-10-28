@@ -391,13 +391,13 @@ pub struct FoundSolution {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
-    #[tracing::instrument(level = "debug", skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
         let solve = self.model.minimize().solve();
         let Some(solution) = solve.best_sol() else {
             qp_bail!(NoSolutionError())
         };
-        debug!(?solution);
+        debug!(target: "duck::solver", ?solution);
         let preexisting_packages = self.input.all_preexisting_pkgs();
         let new_packages = new_packages(self.package_vars, &preexisting_packages, &solution);
         let new_features = new_features(
@@ -422,7 +422,7 @@ fn new_packages(
     preexisting_packages: &HashSet<PackageId>,
     solution: &Solution,
 ) -> HashSet<PackageId> {
-    trace!(?preexisting_packages, ?package_vars);
+    trace!(target: "duck::solver", ?preexisting_packages, ?package_vars);
     let new_packages = package_vars
         .into_iter()
         .filter_map(|(pkg, var)| {
@@ -436,7 +436,7 @@ fn new_packages(
         .difference(preexisting_packages)
         .cloned()
         .collect::<HashSet<PackageId>>();
-    trace!(?new_packages);
+    trace!(target: "duck::solver", ?new_packages);
     new_packages
 }
 

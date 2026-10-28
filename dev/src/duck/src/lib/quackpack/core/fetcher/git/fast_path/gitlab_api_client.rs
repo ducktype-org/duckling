@@ -136,8 +136,8 @@ impl<'duck> GitlabApiClient<'duck> {
 
     /// Helper for [`Self::request`].
     fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
-        debug!("building a `{method}` request to `{url}`");
-        trace!(?body);
+        debug!(target: "duck::git", "building a `{method}` request to `{url}`");
+        trace!(target: "duck::git", ?body);
         http::Request::builder()
             .uri(url.as_str())
             .method(&method)
