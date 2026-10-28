@@ -35,7 +35,7 @@ use std::time::Duration;
 use curl::easy::{Easy2, Handler};
 use curl::multi::{Easy2Handle, Multi};
 use futures::channel::oneshot as async_oneshot;
-use tracing::{debug, error, info};
+use tracing::{debug, error, trace, warn};
 
 use super::util::http::handlers::Collector;
 use super::util::http::{
@@ -87,7 +87,6 @@ impl<'duck> AsyncHttpClient<'duck> {
     }
 
     /// Perform an asynchronous generic HTTP request.
-    #[tracing::instrument(skip_all)]
     pub async fn request(&self, request: Request) -> QuackResult<Response> {
         let mut easy = self.create_easy(Collector::default(), &request)?;
         let (parts, body) = request.into_parts();
@@ -129,7 +128,7 @@ impl Drop for AsyncHttpClient<'_> {
     fn drop(&mut self) {
         drop(self.sender.take().unwrap());
         if self.worker.take().unwrap().join().is_err() {
-            error!("helper thread panicked");
+            error!(target: "duck::curl", "helper thread panicked");
         }
     }
 }
@@ -170,7 +169,7 @@ impl Worker {
         if let Err(e) = multi.pipelining(
             /* http/1.1 pipelining */ false, /* multiplexing */ true,
         ) {
-            error!(target = "curl", error = %e, "failed to set pipelining on multi");
+            warn!(target: "duck::curl", error = %e, "failed to enable HTTP pipelining");
         }
         Self {
             receiver,
@@ -221,7 +220,7 @@ impl Worker {
                 self.connections.insert(token, (handle, sender));
             }
             Err(err) => {
-                error!(target = "curl", error = %err, "failed to register a new Easy2Handle");
+                debug!(target: "duck::curl", error = %err, "failed to register a new `Easy2Handle`");
                 let _ = sender.send(CompletedRequest { response: Err(err) });
             }
         };
@@ -258,12 +257,11 @@ impl Worker {
             Err(err) => {
                 // We should call `perform` again.
                 if err.is_call_perform() {
-                    debug!(target = "curl", "got `is_call_perform`");
+                    trace!(target: "duck::curl", "got `is_call_perform`");
                     return ShouldCheckForClosedChannel::No;
                 }
                 // An error means that we should remove all pending connections:
                 // https://curl.se/libcurl/c/curl_multi_perform.html.
-                error!(target = "curl", "failed to perform");
                 self.fail_all_connections(&err);
                 return ShouldCheckForClosedChannel::No;
             }
@@ -282,7 +280,7 @@ impl Worker {
         });
         // There are still pending transfers. Wait a bit.
         if transfers_in_progress > 0 {
-            debug!("still has work to do");
+            trace!(target: "duck::curl", %transfers_in_progress, "waiting for the transfers in progress");
             let delay = self
                 .multi
                 .get_timeout()
@@ -297,7 +295,6 @@ impl Worker {
             // https://curl.se/libcurl/c/curl_multi_wait.html.
                 && let Err(e) = self.multi.wait(&mut [], delay)
             {
-                error!(target = "curl", error = %e, "failed to wait");
                 self.fail_all_connections(&e);
             }
             return ShouldCheckForClosedChannel::No;
@@ -312,13 +309,13 @@ impl Worker {
     fn check_for_closed_channel(&mut self) -> ControlFlow<()> {
         match self.receiver.recv() {
             Ok(request) => {
-                debug!("resumed work");
+                trace!(target: "duck::curl", "got a new request");
                 self.enqueue_incoming_connection(request);
                 ControlFlow::Continue(())
             }
             // Pipe has been closed. Shut down worker.
             Err(_) => {
-                info!("shutting down");
+                debug!(target: "duck::curl", "all senders are gone, shutting down the HTTP worker");
                 ControlFlow::Break(())
             }
         }
@@ -326,7 +323,7 @@ impl Worker {
 
     /// We've got an error when driving a [`Multi`]. Close all opened connections with the given error.
     fn fail_all_connections(&mut self, error: &curl::MultiError) {
-        error!(target = "curl", %error, "stopping all pending HTTP connections");
+        warn!(target: "duck::curl", %error, "stopping all pending HTTP connections");
         // NOTE: Handles are detached/removed when dropped.
         for (_, (_, sender)) in self.connections.drain() {
             let _ = sender.send(CompletedRequest {

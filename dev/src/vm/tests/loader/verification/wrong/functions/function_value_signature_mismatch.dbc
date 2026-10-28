@@ -1,0 +1,13 @@
+# The function stored in a function value has a different signature than its function type.
+type fun: unop { i64 } { i64 }
+
+function noop {} -> {} {
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type f, unop;
+    mov_pfun_func f, noop;
+    deinit; # f
+    ret;
+}

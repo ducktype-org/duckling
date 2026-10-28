@@ -9,9 +9,10 @@ use std::fs::{File, OpenOptions, TryLockError};
 use std::io::{self, Read, Seek, Write};
 use std::path::{Display, Path, PathBuf};
 
-use tracing::{debug, error};
+use tracing::{error, trace};
 
-use crate::util::path_ops::{MkdirOptions, PathOpsExt};
+use super::path_ops::mkdir;
+use crate::util::path_ops::MkdirOptions;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -93,8 +94,8 @@ impl Drop for LockedFile {
         if let Err(e) = self.file.unlock() {
             error!(
                 error = %e,
-                path = %self.path.display(),
-                "failed to unlock"
+                "failed to unlock `{}`",
+                self.path.display()
             );
         }
     }
@@ -134,7 +135,7 @@ impl FileLockManager {
 
     /// Create recursive directories at this `root`.
     pub fn mkdir(&self) -> QuackResult<()> {
-        self.root.mkdir(MkdirOptions::WithParents)
+        mkdir(&self.root, MkdirOptions::WithParents)
     }
 
     /// Open a `path` from `root`, in RW mode, create it, and lock it exclusively.
@@ -241,7 +242,7 @@ impl FileLockManager {
             .or_else(|err| {
                 if err.kind() == io::ErrorKind::NotFound && create {
                     if let Some(parent) = path.parent() {
-                        parent.mkdir(MkdirOptions::WithParents)?;
+                        mkdir(parent, MkdirOptions::WithParents)?;
                     }
                     Ok(opts.open(path)?)
                 } else {
@@ -264,7 +265,7 @@ impl FileLockManager {
 
 /// Try to acquire a non-blocking lock.
 fn try_lock(path: &Path, f: impl FnOnce() -> Result<(), TryLockError>) -> QuackResult<bool> {
-    debug!(path = %path.display(), "trying to lock");
+    trace!("trying to lock `{}`", path.display());
     match f() {
         Ok(()) => Ok(true),
         Err(TryLockError::WouldBlock) => Ok(false),
@@ -282,10 +283,9 @@ fn lock(
     blocking: impl FnOnce() -> io::Result<()>,
 ) -> QuackResult<()> {
     if try_lock(path, non_blocking)? {
-        debug!(path = %path.display(), "locked non-blocking");
+        trace!("locked `{}` without blocking", path.display());
         return Ok(());
     }
-    debug!(path = %path.display(), "locking blocking");
     ctx.info(format!("waiting for file lock `{}`", path.display()))?;
     blocking().with_context(|| format!("failed to lock `{}`", path.display()))
 }

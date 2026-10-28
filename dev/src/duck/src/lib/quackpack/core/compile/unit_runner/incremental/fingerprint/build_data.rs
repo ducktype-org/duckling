@@ -10,7 +10,7 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::debug;
 
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::compile::duckc::Duckc;
@@ -20,7 +20,7 @@ use crate::quackpack::core::compile::unit_runner::incremental::serializable_type
 use crate::quackpack::core::compile::unit_runner::incremental::{IncrementalData, RedGreenData};
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::{read_from_path, touch};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -74,7 +74,7 @@ impl BuildData {
     /// Get a [`BuildData`] from serialized artifacts.
     /// Should be used for getting [`BuildData`] for the previous build process.
     pub(super) fn from_fingerprint(fingerprint: &Path) -> QuackResult<Self> {
-        let fingerprint_content = fingerprint.read().with_context(|| {
+        let fingerprint_content = read_from_path(fingerprint).with_context(|| {
             format!(
                 "failed to read the previous fingerprint at `{}`",
                 fingerprint.display()
@@ -97,7 +97,7 @@ impl BuildData {
         let fingerprint_json = serde_json::to_vec(self).with_context_internal(|| {
             format!("failed to convert fingerprint into a JSON string: {self:#?}")
         })?;
-        let mut file = fingerprint.touch()?;
+        let mut file = touch(fingerprint)?;
         file.set_len(0)
             .with_context(|| format!("failed to truncate `{}`", fingerprint.display()))?;
         file.write_all(fingerprint_json.as_slice())
@@ -108,11 +108,22 @@ impl BuildData {
     /// generated from the current [`BuildData`] and previous build's [`BuildData`].
     pub fn get_incremental_data(&self, other: Self) -> IncrementalData {
         // Different profile, different layouts or different duckc version, we can't reuse anything.
-        let red_green_data = if self.profile_hash != other.profile_hash
-            || self.artifacts_type != other.artifacts_type
-            || self.duckc_version_hash != other.duckc_version_hash
-        {
-            info!("profile, layout or duckc version changed, rerunning all units");
+        let profile_changed = self.profile_hash != other.profile_hash;
+        let layout_changed = self.artifacts_type != other.artifacts_type;
+        let duckc_changed = self.duckc_version_hash != other.duckc_version_hash;
+        if profile_changed {
+            debug!("the profile changed since the previous build");
+        }
+        if layout_changed {
+            debug!(
+                "the artifacts layout changed from `{}` to `{}`",
+                other.artifacts_type, self.artifacts_type
+            );
+        }
+        if duckc_changed {
+            debug!("the `duckc` version changed since the previous build");
+        }
+        let red_green_data = if profile_changed || layout_changed || duckc_changed {
             RedGreenData::default()
         } else {
             self.unit_graph.get_red_green_data(&other.unit_graph)

@@ -147,6 +147,7 @@ namespace vm::code {
 			FLAGS_W(mov_p32_imm)
 			FLAGS_W(mov_p64_imm)
 			FLAGS_W(setNull_pptr)
+			FLAGS_W(mov_pfun_func)
 
 			FLAGS_W_R(mov_p8_p8)
 			FLAGS_W_R(mov_p16_p16)
@@ -154,6 +155,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_p64_p64)
 			FLAGS_W_R(mov_pptr_pptr)
 			FLAGS_W_R(mov_pcptr_pcptr)
+			FLAGS_W_R(mov_pfun_pfun)
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
@@ -479,6 +481,13 @@ namespace vm::code {
 				// call it is opaque, may do IO, runs outside the VM, and can block.
 				flags |= CallExternal | InstructionFlag(ControlFlowModifying)
 				       | InstructionFlag(IORead) | InstructionFlag(IOWrite)
+				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
+			}
+			instr_case(ins::Op_call_pfun, i) {
+				rd(i.callee);
+				flags |= Call | InstructionFlag(ControlFlowModifying) | InstructionFlag(IORead)
+				       | InstructionFlag(IOWrite) | InstructionFlag(GlobalRead)
+				       | InstructionFlag(GlobalWrite) | InstructionFlag(Multithread)
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
 			}
 			instr_case(ins::Op_setThreadCtx_func, i) {

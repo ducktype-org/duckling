@@ -420,6 +420,64 @@ private:
 				expected_nested,
 				getConstValueAs<compiler::tsh::SymbolType<>>("NESTED_TYPE_TUPLE", root_scope)
 			);
+
+			auto single_tuple
+				= getConstValueAs<CompileTimeValue::TypeTuple>("SINGLE_TYPE_TUPLE", root_scope);
+			ASSERT_EQUAL(single_tuple.getElements().size(), 1);
+			ASSERT_EQUAL(
+				st(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::SymbolType<>)
+			);
+		}
+
+		// Function types.
+		{
+			using compiler::tsh::FunctionKind;
+			using compiler::tsh::QueryFunctionType;
+
+			auto i32_st      = st(i32_type);
+			auto bool_st     = st(compiler::tsh::getBoolType());
+			auto function_of = [&](std::vector<compiler::tsh::SymbolType<>> parameters,
+			                       compiler::tsh::SymbolType<>              result,
+			                       FunctionKind                             kind) {
+				return st(query::entryPoint<QueryFunctionType>(
+					{ .parameter_types = std::move(parameters), .result_type = result, .kind = kind }
+				));
+			};
+
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_PAIR", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Closure),
+				getConstValueAs<compiler::tsh::SymbolType<>>("CLOSURE_PAIR", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_SINGLE", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({}, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_NO_PARAMS", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, st(compiler::tsh::getUnitType()), FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_UNIT_RESULT", root_scope)
+			);
+			auto i32_pair
+				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_st, i32_st } }));
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_TUPLE_PARAM", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_ONE_ELEMENT_LIST", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_FROM_ALIAS", root_scope)
+			);
 		}
 	}
 

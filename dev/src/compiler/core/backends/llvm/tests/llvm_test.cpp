@@ -52,6 +52,7 @@ public:
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(functionPointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
 	}
 
@@ -555,6 +556,27 @@ private:
 	void pointersTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
 		std::string ir          = llvm_module.dumpLLVMToString();
+	}
+
+	void functionPointersTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/function_pointers");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store ptr @\S+add\S*, ptr %)" }),
+			"Expected the address of `add` to be stored in a local"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call i64 %\S+\(i64 %\S+, i64 %\S+\))" }),
+			"Expected an indirect call returning i64"
+		);
+		assertTrue(
+			std::regex_search(
+				ir,
+				std::regex{ R"(call void %\S+\(ptr sret\(%\S+\) %\S+, ptr byval\(%\S+\) %\S+\))" }
+			),
+			"Expected an indirect call passing and returning an aggregate in memory"
+		);
 	}
 
 	void backendDependentTest() {

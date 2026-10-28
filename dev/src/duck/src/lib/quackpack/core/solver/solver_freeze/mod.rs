@@ -9,7 +9,7 @@ mod new_freeze_generation;
 
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::freeze::{
@@ -65,12 +65,11 @@ pub enum MalformedFreezeError<'a> {
 }
 
 impl SolverFreeze {
-    #[tracing::instrument(skip_all)]
     pub fn try_from_venv_freeze<'a>(
         root: PackageId,
         value: &'a VenvFreeze,
     ) -> Result<Self, MalformedFreezeError<'a>> {
-        debug!(?root, freeze = ?value);
+        trace!(target: "duck::solver", ?root, freeze = ?value);
         check_different_dependencies_identities(value)?;
         let mut expanded_pkgs_by_identity: HashMap<Identity, PackageId> = HashMap::new();
         for pkg_freeze in value.dependencies() {
@@ -142,18 +141,16 @@ fn check_different_dependencies_identities(
 }
 
 impl SolverFreeze {
-    #[tracing::instrument(skip_all)]
     pub fn empty_with_root(root: PackageId) -> QuackResult<Self> {
-        debug!(?root);
+        trace!(target: "duck::solver", ?root);
         Ok(Self {
             main_pkg: root,
             package_freezes: [(root, SolverPackageFreeze::default())].into(),
         })
     }
 
-    #[tracing::instrument(skip_all)]
     pub fn generate_storage_freeze(&self) -> QuackResult<VenvFreeze> {
-        debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
+        trace!(target: "duck::solver", root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
         let Some(root_freeze) = self.package_freezes.get(&self.main_pkg).cloned() else {
             qp_bail_internal!("no main freeze: {self:#?}")

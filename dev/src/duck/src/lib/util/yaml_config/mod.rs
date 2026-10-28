@@ -10,10 +10,10 @@ use std::{fmt, io};
 
 use serde::Deserialize;
 use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::DescriptionWithAnArticle;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
@@ -49,7 +49,6 @@ macro_rules! delegate_getter {
         CastFunctionName: $yaml_value_fn:ident $(,)?
     ) => {
         #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
-        #[tracing::instrument(skip_all)]
         pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
             let value = self.get(key)?;
             let Some(value) = value else {
@@ -73,7 +72,6 @@ macro_rules! delegate_setter {
         InputType: $value:ty $(,)?
     ) => {
         #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
-        #[tracing::instrument(skip_all)]
         pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {
             let value: Value = value.into();
             self.set(key, value)
@@ -99,17 +97,14 @@ impl fmt::Debug for YamlConfig {
 impl YamlConfig {
     /// Create a new [`YamlConfig`] from the YAML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
-        debug!(path = %path.display(), "parsing YAML config");
-        let content = match path.as_path().read_to_string() {
+        debug!("parsing the YAML config at `{}`", path.display());
+        let content = match read_from_path_to_string(&path) {
             Ok(string) => string,
             Err(e) => {
                 if let Some(err) = e.downcast_ref_in_chain::<io::Error>()
                     && err.kind() == io::ErrorKind::NotFound
                 {
-                    debug!(
-                        path = %path.display(),
-                        "missing config",
-                    );
+                    debug!("no YAML config at `{}`, using an empty one", path.display());
                     return Ok(Self::default());
                 } else {
                     return Err(e).context(format!(
@@ -158,7 +153,7 @@ impl YamlConfig {
     #[track_caller]
     /// Get the value from the dotted key.
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
-        debug!(%key, where = %self.get_location_description());
+        trace!(%key, where = %self.get_location_description());
         if key.is_empty() {
             qp_bail_internal!("empty key in `_get`")
         }
@@ -201,7 +196,7 @@ impl YamlConfig {
     #[track_caller]
     /// Set the value at the dotted key.
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
-        debug!(%key, ?value, where = %self.get_location_description());
+        trace!(%key, ?value, where = %self.get_location_description());
         if key.is_empty() {
             qp_bail_internal!("empty key in `_set`")
         }
