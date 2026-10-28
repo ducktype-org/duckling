@@ -1,0 +1,7 @@
+f"{x} + {y} = {x + y}";
+f"{x}{y}{z}";
+f"nothing";
+f"{x}{y} = z";
+f"{a < b < c}";
+f" aa {a and b or c} bb ";
+f" aa {a + foo(1 + 1)} bb ";

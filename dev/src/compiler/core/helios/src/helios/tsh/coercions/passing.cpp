@@ -41,4 +41,34 @@ namespace compiler::tsh::coercions {
 	bool isCopiedByBytes(query::Context& ctx, const SymbolType<>& type) {
 		return type.isTriviallyCopyable(ctx) && type.isTriviallyDestructible(ctx);
 	}
+
+	ExpressionType<> consumed(const ExpressionType<>& value) {
+		using enum ValueSemanticsOptions;
+
+		const ValueCategory category = value.getValueCategory();
+
+		// If we're not a local or are a projection we can't implicitly move.
+		if (category.getCategory() != PrimaryCategory::Local || not category.isMovableFrom())
+			return value;
+
+		// An implicitly moved local is handed over as a temporary. A temporary is not an lvalue, so
+		// it can be neither assigned to nor referenced. That is why it loses the `REINIT` and
+		// `REFERENCE` semantics, and keeps the rest of the ones it had as a local.
+		//
+		// @note In the current compiler state the following code could be just:
+		// `return { value.getSymbolType(), ValueCategory(PrimaryCategory::Temporary) }`
+		// This is because the allowed semantics of a temporary are the same as the ones of a local,
+		// but without `REINIT` and `REFERENCE`. This may change in the future if we create locals
+		// with a different set of allowed semantics. The current version would preserve them, the
+		// simpler one would lose them and create a hard to spot bug.
+		ValueSemantics allows = category.getAllowsSemantic();
+		allows -= REINIT | REFERENCE;
+
+		return {
+			value.getSymbolType(),
+			ValueCategory(
+				PrimaryCategory::Temporary, category.isPure(), allows, category.getForceSemantic()
+			),
+		};
+	}
 }

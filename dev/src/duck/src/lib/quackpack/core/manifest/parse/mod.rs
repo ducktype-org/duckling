@@ -196,6 +196,12 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
 pub fn parse_schema(yaml_content: &str, errors: &mut Errors) -> QuackResult<ManifestSchema> {
+    // Reject duplicate keys.
+    // As of 26.10.2026, map-typed fields (`dependencies`, `features`, …) silently keep the last
+    // duplicate when deserialized into `HashMap`/`BTreeMap`.
+    // On the other hand `serde_yaml_ng::Value` errors on them, so we use it for the check.
+    let _: serde_yaml_ng::Value = serde_yaml_ng::from_str(yaml_content)?;
+
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
     let schema = serde_ignored::deserialize(deserializer, |path| {
         let mut buffer = String::new();

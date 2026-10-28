@@ -21,6 +21,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <algorithm>
 #include <concepts>
 #include <sstream>
 
@@ -104,6 +105,17 @@ namespace compiler::tsh {
 		component_types.reserve(components.size());
 		for (const auto& component: components) component_types.push_back(component.getType());
 		return component_types;
+	}
+
+	bool TupleAbstractType::isTupleOfTypes() const {
+		return std::ranges::all_of(getComponents(), [](const SymbolType<>& component) {
+			if (component.getRefKind() != ReferenceKind::Direct) return false;
+
+			const Kind kind = component.getType().getKind();
+			if (kind == Kind::Tuple)
+				return TupleAbstractType{ component.getType() }.isTupleOfTypes();
+			return kind == Kind::Meta || kind == Kind::Unit;
+		});
 	}
 
 	struct FunctionConstructionRecord {

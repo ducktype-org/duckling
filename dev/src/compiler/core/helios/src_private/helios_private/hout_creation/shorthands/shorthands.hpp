@@ -29,15 +29,17 @@
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/coercions/coercion.hpp>
+#include <helios/tsh/coercions/coercion_error.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
-#include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
@@ -46,15 +48,13 @@
 
 #include <query_framework/context/context.hpp>
 
+#include <sstream>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace compiler::helios::code::shorthands {
-
-	/*******************
-	 *   AMBIENT CTX   *
-	 *******************/
 
 	namespace internal {
 		/**
@@ -126,32 +126,44 @@ namespace compiler::helios::code::shorthands {
 		/**
 		 * @brief Prepares an expression to be consumed by a new owner. Every builder that hands a
 		 * value to a new owner should pass it through this method.
+		 *
+		 * @param kind Whether this is the last use of @p value, @see `coercions::HandOverKind`.
 		 */
 		[[nodiscard]]
-		Box<Expr> consume(Box<Expr> value) const {
-			switch (passingMethod(*ctx, value->expression_type)) {
-			case PassingMethod::ByteCopy:
-				return value;
-			case PassingMethod::ImplicitMove: {
-				auto origin = value->origin.generatedFrom();
-				return makeBox<MoveExpr>(
-					*ctx, origin, std::move(value), MoveExpr::MoveKind::Implicit
-				);
-			}
-			case PassingMethod::ExplicitCopyOrMove:
-				CORE_PANIC(base::strConcat(
-					"Generated HOUT passes a non-trivially-copyable value of type `",
-					value->expression_type.getSymbolType().toString(),
-					"` without saying how. Wrap it in `s.copy(...)` to copy it or "
-					"`s.move(...)` "
-					"to move it."
-				));
-			case PassingMethod::NotCopyable:
-				CORE_PANIC(base::strConcat(
-					"Consumed value of type `",
-					value->expression_type.getSymbolType().toString(),
-					"` is not copyable. `s.move(...)` it."
-				));
+		Box<Expr> consume(
+			Box<Expr> value, const coercions::HandOverKind kind = coercions::HandOverKind::Regular
+		) const {
+			namespace ce = tsh::coercions::coercion_error;
+
+			const tsh::coercions::Coercion coercion = coercions::coercionOf(
+				*ctx, value.ref(), value->expression_type.getSymbolType(), kind
+			);
+			if (coercion.isValid())
+				return coercions::applyCoercion(*ctx, coercion, std::move(value));
+
+			const std::string type = value->expression_type.getSymbolType().toString();
+			variant_match(coercion.getError().reason) {
+				variant_case_novalue(ce::RequiresExplicitCopyMove) {
+					CORE_PANIC(base::strConcat(
+						"Generated HOUT passes a non-trivially-copyable value of type `",
+						type,
+						"` without saying how. Wrap it in `s.copy(...)` to copy it or "
+						"`s.move(...)` to move it."
+					));
+				}
+				variant_case_novalue(ce::TypeNotCopyable) {
+					CORE_PANIC(base::strConcat(
+						"Consumed value of type `", type, "` is not copyable. `s.move(...)` it."
+					));
+				}
+				variant_default {
+					std::ostringstream description;
+					coercion.debugPrint(description);
+					CORE_PANIC(base::strConcat(
+						"Generated HOUT cannot hand a value over to its own type: ",
+						description.str()
+					));
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -544,7 +556,7 @@ namespace compiler::helios::code::shorthands {
 		[[nodiscard]]
 		Box<ReturnStmt> ret(Box<Expr> value) const {
 			return makeBox<ReturnStmt>(
-				generatedOrigin(), consume(moveReturnedLocal(*ctx, std::move(value)))
+				generatedOrigin(), consume(std::move(value), coercions::HandOverKind::LastUse)
 			);
 		}
 
@@ -600,8 +612,9 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		Box<Expr> coerce(Box<Expr> expr, const tsh::SymbolType<> target_type) const {
-			auto coercion = canCoerce(*ctx, expr->expression_type, target_type);
-			return coercion.valueOrThrow().coerce(*ctx, std::move(expr));
+			const tsh::coercions::Coercion coercion
+				= coercions::coercionOf(*ctx, expr.ref(), target_type);
+			return coercions::applyCoercion(*ctx, coercion, std::move(expr));
 		}
 
 		/**
