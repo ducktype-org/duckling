@@ -189,7 +189,7 @@ namespace vm {
 			const auto& arg_type = func.parameters[static_cast<u64>(i)];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVMValue,
+				initFromVMValue_imm_off,
 				std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)),
 				stack_offset
 			));
@@ -547,8 +547,7 @@ namespace vm {
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
 			const usize slot_index = orig_slot_stack_size + idx;
 			// A result the callee never took a block for still has to be handed out as a
-			// pointer, so it gets one here. This is the common case, not a rare one -
-			// `vm_sc_unit_test` panics if the block is assumed to exist.
+			// pointer, so it gets one here.
 			Block* block = frame->local_slot_stack_base[slot_index].block;
 			if (block == nullptr)
 				block = createLocalSlotBlock(*frame, process_memory, slot_index).get();

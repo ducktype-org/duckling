@@ -21,7 +21,7 @@ use crate::quackpack::schemas::manifest::{
 };
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{expand_tilde, normalize};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].
@@ -269,8 +269,8 @@ pub(super) fn resolve_path_maybe_relative_to_dir(
     root: &Path,
     ctx: &DuckContext,
 ) -> PathBuf {
-    let expanded = path.expand_tilde(ctx);
-    root.join(expanded).normalize()
+    let expanded = expand_tilde(path, ctx);
+    normalize(root.join(expanded))
 }
 
 /// Parse a url of a git dependency.
@@ -319,7 +319,10 @@ fn maybe_create_warning_if_url_points_to_a_file(url: &str, warnings: &mut Warnin
     if !path.is_absolute() || !path.exists() {
         return;
     }
-    let warning = GitUrlIsPath::new(url.to_string(), scope.format());
+    let warning = GitUrlIsPath {
+        url: url.to_string(),
+        path_to_dep: scope.format(),
+    };
     warnings.push(warning);
 }
 

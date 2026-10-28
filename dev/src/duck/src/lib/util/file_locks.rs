@@ -11,7 +11,8 @@ use std::path::{Display, Path, PathBuf};
 
 use tracing::{debug, error};
 
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use super::path_ops::mkdir;
+use crate::util::path_ops::MkdirOptions;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -134,7 +135,7 @@ impl FileLockManager {
 
     /// Create recursive directories at this `root`.
     pub fn mkdir(&self) -> QuackResult<()> {
-        self.root.mkdir(MkdirOptions::WithParents)
+        mkdir(&self.root, MkdirOptions::WithParents)
     }
 
     /// Open a `path` from `root`, in RW mode, create it, and lock it exclusively.
@@ -241,7 +242,7 @@ impl FileLockManager {
             .or_else(|err| {
                 if err.kind() == io::ErrorKind::NotFound && create {
                     if let Some(parent) = path.parent() {
-                        parent.mkdir(MkdirOptions::WithParents)?;
+                        mkdir(parent, MkdirOptions::WithParents)?;
                     }
                     Ok(opts.open(path)?)
                 } else {

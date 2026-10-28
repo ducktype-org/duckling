@@ -8,6 +8,8 @@
 
 #include "expr_common.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
+
 namespace pst::expr {
 	/**
 	 * @brief Element representing a number value in an expression
@@ -23,6 +25,12 @@ namespace pst::expr {
 		tpc::NumericValue getValue() const {
 			return value;
 		}
+
+		/**
+		 * @brief The type the literal is written with, like `u8` in `5u8`. `NotATypeSpecifier` for
+		 * a literal written without one, like `5`.
+		 */
+		[[nodiscard]] lang_def::NumericLiteralTypeSpecifier getTypeSpecifier() const;
 
 		explicit ExprNumericValue(LangElementConstructionData state): ExprElement(state, 0) {}
 

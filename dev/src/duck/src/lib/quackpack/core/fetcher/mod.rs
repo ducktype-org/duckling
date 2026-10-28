@@ -92,7 +92,13 @@ impl<'duck> Fetcher<'duck> {
         );
         let http_client = Arc::new(AsyncHttpClient::new(ctx));
         let ducknest_client = ducknest::DucknestClient::new(http_client.clone());
-        let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
+        let cache_location = if cfg!(test) {
+            // For tests, we want to use in-memory database.
+            cache::CacheLocation::Memory
+        } else {
+            cache::CacheLocation::Path(metadata_path.as_path())
+        };
+        let cache = cache::ManifestCache::new(cache_location)?;
         let git_client = git::GitClient::new(ctx);
         let git_fastpath_client = git::fast_path::GitFastPathClient::new(http_client);
         Ok(Self {

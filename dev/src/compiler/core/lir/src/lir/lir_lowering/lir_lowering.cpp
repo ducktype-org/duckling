@@ -301,6 +301,8 @@ namespace compiler::lir {
 			return lir::MetaKind::CreateTuple;
 		case CreateVariant:
 			return lir::MetaKind::CreateVariant;
+		case CreateOptional:
+			return lir::MetaKind::CreateOptional;
 		case Eq:
 			return lir::MetaKind::Eq;
 		case Neq:
@@ -644,9 +646,7 @@ namespace compiler::lir {
 
 			static bool isArgSigned(const mir::MIRValue& location) {
 				variant_match(location.getVariant()) {
-					variant_case(
-						mir::MIRConstant, value
-					) {  // @TODO: #899 Remove this visit once CTV is VMValue based and stores it's type.
+					variant_case(mir::MIRConstant, value) {
 						match_optional(value.value.get<numeric_value::NumericValue>()) {
 							opt_some(numeric) {
 								return std::visit(

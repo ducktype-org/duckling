@@ -58,15 +58,15 @@ fn creates_valid_initial_graph() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
@@ -339,7 +339,7 @@ fn removes_inactive_deps1() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
@@ -404,11 +404,11 @@ fn removes_inactive_deps2() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
@@ -479,15 +479,15 @@ fn removes_inactive_deps3() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
@@ -564,15 +564,15 @@ fn removes_inactive_deps4() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),

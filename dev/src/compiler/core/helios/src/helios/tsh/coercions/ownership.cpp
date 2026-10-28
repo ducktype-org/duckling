@@ -152,6 +152,11 @@ namespace compiler::tsh::coercions {
 				return {};
 			}
 
+			const coercion_error::CopiedValue copied{
+				.type       = step.result,
+				.is_pointee = planned.derefs(),
+			};
+
 			switch (passingMethod(ctx, value.getValue())) {
 			case PassingMethod::ByteCopy:
 				return {};
@@ -159,9 +164,11 @@ namespace compiler::tsh::coercions {
 				decided.append({ .kind = coercion_step::ImplicitMove{}, .result = step.result });
 				return {};
 			case PassingMethod::ExplicitCopyOrMove:
-				return refusalOf(planned, coercion_error::RequiresExplicitCopyMove{});
+				return refusalOf(
+					planned, coercion_error::RequiresExplicitCopyMove{ .copied = copied }
+				);
 			case PassingMethod::NotCopyable:
-				return refusalOf(planned, coercion_error::TypeNotCopyable{});
+				return refusalOf(planned, coercion_error::TypeNotCopyable{ .copied = copied });
 			}
 
 			CORE_UNREACHABLE();
@@ -224,10 +231,15 @@ namespace compiler::tsh::coercions {
 		}
 	}
 
-	Coercion coercionOf(query::Context& ctx, const ValueSource& source, const SymbolType<>& target) {
+	Coercion coercionOf(
+		query::Context&     ctx,
+		const ValueSource&  source,
+		const SymbolType<>& target,
+		const CoercionMode  mode
+	) {
 		const ExpressionType<>&   value = source.getValue();
 		const SymbolTypeCoercion& plan
-			= *ctx.query<QuerySymbolTypeCoercion>({ value.getSymbolType(), target });
+			= *ctx.query<QuerySymbolTypeCoercion>({ value.getSymbolType(), target, mode });
 
 		// If the `SymbolTypeCoercion` failed we return it's error so we don't override it with the
 		// ownership errors.
