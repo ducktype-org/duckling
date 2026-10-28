@@ -24,7 +24,7 @@ function g_ctor {} -> {} {
     ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     mov_p64_p64 g, f;
     mov_p64_p64 ret0, g;
     ret;

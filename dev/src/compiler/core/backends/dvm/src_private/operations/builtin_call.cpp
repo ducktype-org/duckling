@@ -17,10 +17,10 @@ namespace compiler::backend_vm::internal {
 		 * @brief Given a pointer type as an argument, return the name of the type it points to.
 		 * For a `manyptr T` that is the dynamic table of `T`, for a `ptr T` it is `T` itself.
 		 */
-		base::StrID extractPointeeTypeName(const vm::code::TypeOfData& ptr_type) {
-			const auto* pointer = std::get_if<vm::code::PointerType>(&ptr_type);
-			CORE_ASSERT(pointer != nullptr, "DVM builtin expects a `ptr`/`manyptr` operand");
-			return pointer->inner.canonicalName();
+		base::StrID extractPointeeTypeName(vm::code::TypeExpr ptr_type) {
+			return ptr_type.maybeGetKindAs<vm::code::expr::Pointer>()
+			    .expect("DVM builtin expects a `ptr`/`manyptr` operand")
+			    ->pointee.canonicalName();
 		}
 	}
 
@@ -35,7 +35,7 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(dest.has_value(), "dvm_alloc_arr must have a destination");
 
 			auto count      = ctx->forceToPlace(op.args.front(), "alloc_count");
-			auto table_type = extractPointeeTypeName(dest->getType());
+			auto table_type = extractPointeeTypeName(dest->getTypeExpr());
 			ctx->pushInstruction({ OpKind::dynTableReAlloc,
 			                       dest->asArgument(),
 			                       vm::opargs::Type(vm::code::TypeExpr{ table_type }),
@@ -47,7 +47,7 @@ namespace compiler::backend_vm::internal {
 
 			auto table_ptr  = ctx->forceToPlace(op.args.at(0), "realloc_ptr");
 			auto count      = ctx->forceToPlace(op.args.at(1), "realloc_count");
-			auto table_type = extractPointeeTypeName(table_ptr.getType());
+			auto table_type = extractPointeeTypeName(table_ptr.getTypeExpr());
 			ctx->pushInstruction({ OpKind::dynTableReAlloc,
 			                       table_ptr.asArgument(),
 			                       vm::opargs::Type(vm::code::TypeExpr{ table_type }),
@@ -68,7 +68,7 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(op.args.empty(), "dvm_alloc expects no arguments");
 			CORE_ASSERT(dest.has_value(), "dvm_alloc must have a destination");
 
-			auto pointee_type = extractPointeeTypeName(dest->getType());
+			auto pointee_type = extractPointeeTypeName(dest->getTypeExpr());
 			ctx->pushInstruction({ OpKind::alloc,
 			                       dest->asArgument(),
 			                       vm::opargs::Type(vm::code::TypeExpr{ pointee_type }) });
@@ -91,19 +91,19 @@ namespace compiler::backend_vm::internal {
 
 			auto ptr = ctx->forceToPlace(op.args.front(), "ptr_parts_ptr");
 
-			const auto     u64_type   = DVMImmediate::u64(0).type;
+			const auto     u64_type   = DVMImmediate::u64(0).getTypeExpr();
 			const DVMPlace id_tmp     = ctx->pushTempLocal(u64_type, "ptr_parts_id");
 			const DVMPlace offset_tmp = ctx->pushTempLocal(u64_type, "ptr_parts_offset");
 			ctx->pushInstruction({ OpKind::ptrParts, id_tmp, offset_tmp, ptr.asArgument() });
 
-			const auto& ptr_to_u64_type
-				= ctx->program_context.getOrInsertPointerType(typeName(u64_type));
+			const auto ptr_to_u64_type = ctx->program_context.pointerTypeExpr(u64_type);
 
 			// We store the results in a two-element array.
 			const std::array<DVMPlace, 2> halves{ id_tmp, offset_tmp };
 			for (::u64 index = 0; index < halves.size(); index++) {
 				const auto     index_imm = DVMImmediate::u64(index);
-				const DVMPlace index_tmp = ctx->pushTempLocal(index_imm.type, "ptr_parts_index");
+				const DVMPlace index_tmp
+					= ctx->pushTempLocal(index_imm.getTypeExpr(), "ptr_parts_index");
 				ctx->pushInstruction({ OpKind::mov, index_tmp, index_imm });
 
 				const DVMPlace element_ptr

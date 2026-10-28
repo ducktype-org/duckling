@@ -1,15 +1,13 @@
 type fixed_size_table: fst1_i64 i64 1
 type dynamic_table: dyn_i64 i64
-type pointer: ptr_fst fst1_i64
-type pointer: ptr_dyn dyn_i64
 
 global_data g_arr fst1_i64 {
     initial_value: fixed_size_table [ 0x000000000000002A ]
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type t_fst, ptr_fst;
-    init_pany_type t_dyn, ptr_dyn;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type t_fst, ptr{fst1_i64};
+    init_pany_type t_dyn, ptr{dyn_i64};
     init_pany_type count, i64;
 
     ref_pptr_pany t_fst, g_arr;

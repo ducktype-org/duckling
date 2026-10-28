@@ -28,6 +28,9 @@
 
 namespace compiler::backend_vm::internal {
 	namespace {
+		/// Immediates and globals always have a declared type; only pointers do not.
+		constexpr std::string_view DECLARED = "A constant's type is always declared";
+
 		using vm::code::builders::OpKind;
 
 		u64 numericValueToU64(compiler::numeric_value::NumericValue numeric) {
@@ -52,17 +55,20 @@ namespace compiler::backend_vm::internal {
 	) {
 		ProgramLoweringContext& pctx = fctx.program_context;
 		// We have to save the typename here.
-		const vm::code::TypeOfData& type = *pctx.lowerAndKeepTslType(constant.layout);
+		const vm::code::TypeExpr type = pctx.lowerAndKeepTslType(constant.layout);
 
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
-				return DVMValue{ DVMImmediate{ numericValueToU64(numeric), type } };
+				return DVMValue{ DVMImmediate{ numericValueToU64(numeric),
+					                           *pctx.declarationOf(type).expect(DECLARED) } };
 			}
 			variant_case(char, value) {
-				return DVMValue{ DVMImmediate{ translateToU64(value), type } };
+				return DVMValue{ DVMImmediate{ translateToU64(value),
+					                           *pctx.declarationOf(type).expect(DECLARED) } };
 			}
 			variant_case(bool, value) {
-				return DVMValue{ DVMImmediate{ translateToU64(value), type } };
+				return DVMValue{ DVMImmediate{ translateToU64(value),
+					                           *pctx.declarationOf(type).expect(DECLARED) } };
 			}
 			variant_default {
 				return DVMValue{ lowerCTVToNewGlobal(pctx, constant.value, type, true) };
@@ -73,7 +79,7 @@ namespace compiler::backend_vm::internal {
 	const DVMPlace& CTVLowering::lowerCTVToNewGlobal(
 		ProgramLoweringContext&             pctx,
 		const ctv::CompileTimeValue&        constant,
-		const vm::code::TypeOfData&         type,
+		vm::code::TypeExpr                  type,
 		bool                                is_constant,
 		base::Optional<base::StrID>         lowered_global_name,
 		base::Optional<dia::StablePosition> position
@@ -86,37 +92,38 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::GlobalData global_data{};
 		global_data.name        = global_name;
-		global_data.type        = vm::code::TypeExpr(typeName(type));
+		global_data.type        = type;
 		global_data.is_constant = is_constant;
 
-		const DVMPlace& inserted_global_place = pctx.declareGlobal(global_name, type);
+		const vm::code::TypeOfData& declaration = *pctx.declarationOf(type).expect(DECLARED);
+		const DVMPlace& inserted_global_place   = pctx.declareGlobal(global_name, declaration);
 
 		variant_match(constant.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				// Numeric values are representable as a single immediate, so we can just store the
 				// value directly in the global's `initial_value`.
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					numericValueToU64(numeric), std::get<vm::code::PrimitiveType>(type).size
+					numericValueToU64(numeric), std::get<vm::code::PrimitiveType>(declaration).size
 				);
 			}
 			variant_case(bool, value) {
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					translateToU64(value), std::get<vm::code::PrimitiveType>(type).size
+					translateToU64(value), std::get<vm::code::PrimitiveType>(declaration).size
 				);
 			}
 			variant_case(char, value) {
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					translateToU64(value), std::get<vm::code::PrimitiveType>(type).size
+					translateToU64(value), std::get<vm::code::PrimitiveType>(declaration).size
 				);
 			}
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
-					metaTypeToU64(pctx, type_val), v_get(type, vm::code::OpaqueType).size
+					metaTypeToU64(pctx, type_val), v_get(declaration, vm::code::OpaqueType).size
 				);
 			}
 			variant_case(ctv::CompileTimeValue::TypeTuple, tuple) {
 				global_data.initial_value = vm::code::ConstantValue::fromData(
-					lowerTypeTupleToConstant(pctx, tuple, v_get(type, vm::code::DataType))
+					lowerTypeTupleToConstant(pctx, tuple, v_get(declaration, vm::code::DataType))
 				);
 			}
 			variant_case(ctv::CompileTimeValue::CharSliceValue, str) {
@@ -162,9 +169,9 @@ namespace compiler::backend_vm::internal {
 		// `{ pointer, len, cap, offset }`. We derive every type we need from the first field, so
 		// the static byte array, the dynamic-table pointer and the `fstToDynTable` cast all agree
 		// on the element type.
-		const auto& struct_data   = std::get<vm::code::DataType>(inserted_global_place.getType());
-		base::StrID ptr_type_name = struct_data.fields.at(0).type.canonicalName();
-		const auto& dyn_ptr_type  = pctx.type_storage.dvm_types.at(ptr_type_name);
+		const auto& struct_data = std::get<vm::code::DataType>(inserted_global_place.getType());
+		// The first field is a pointer, so it is written rather than declared.
+		const vm::code::TypeExpr dyn_ptr_type = struct_data.fields.at(0).type;
 
 		// ================ Part 1: insert fixed-size table with string bytes =================
 		auto element_type = DVMImmediate::character('\0').type;
@@ -201,8 +208,8 @@ namespace compiler::backend_vm::internal {
 
 		// ref -> pointer to the static fixed-size table, then reinterpret as a
 		// dynamic-table pointer (the slice's `_0`).
-		const vm::code::TypeOfData& ptr_to_array_type
-			= pctx.getOrInsertPointerType(typeName(array_type));
+		const vm::code::TypeExpr ptr_to_array_type
+			= pctx.pointerTypeExpr(vm::code::TypeExpr{ typeName(array_type) });
 		DVMPlace fst_ptr = ctor_ctx.pushTempLocal(ptr_to_array_type, "str_fst_ptr");
 		ctor_ctx.pushInstruction({ OpKind::ref, fst_ptr.asArgument(), array_global.asAnyArgument() }
 		);
@@ -277,8 +284,7 @@ namespace compiler::backend_vm::internal {
 			auto& field       = structure_type.fields[i];
 			auto& field_value = values[i];
 
-			auto ptr_to_field_type
-				= ctor_ctx.program_context.getOrInsertPointerType(field.type.canonicalName());
+			auto     ptr_to_field_type = ctor_ctx.program_context.pointerTypeExpr(field.type);
 			DVMPlace field_ptr = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
 			ctor_ctx.pushInstruction({ OpKind::structLea,
 			                           field_ptr,

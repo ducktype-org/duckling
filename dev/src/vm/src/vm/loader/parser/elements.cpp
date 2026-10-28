@@ -28,6 +28,56 @@
 #include <cstring>
 
 namespace vm::loader::parser {
+	/**
+	 * @brief Parses a type reference: a name, `ptr{T}`, or `cptr{T}` with `cptr{}` standing
+	 * for an unknown pointee.
+	 * @return An empty optional if the reference is malformed, having logged why.
+	 */
+	base::Optional<code::TypeExpr> parseTypeExpr(F8ParserState& state) {
+		if (state.empty()) {
+			state.logInt(
+				makeBox<dia::PlaceholderError>("Expected a type after here.", state.getPosition(-1))
+			);
+			return {};
+		}
+
+		const bool is_pointer  = state[0].is(lang_def::Keyword::BCPtr);
+		const bool is_cpointer = state[0].is(lang_def::Keyword::BCCPtr);
+		if (!is_pointer && !is_cpointer) {
+			tpc::Identifier name;
+			state.parse().one(&name);
+			return code::TypeExpr(name.value);
+		}
+
+		state.tokens().next();
+		if (state.empty() || !state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.logInt(makeBox<dia::PlaceholderError>(
+				"Expected `{` with the pointee after here.", state.getPosition(-1)
+			));
+			return {};
+		}
+
+		state.goDown();
+		base::Optional<code::TypeExpr> inner;
+		if (state.notEmpty()) {
+			inner = parseTypeExpr(state);
+			if (state.notEmpty())
+				state.logInt(makeBox<dia::PlaceholderError>(
+					"Expected `}` after the pointee.", state.getPosition()
+				));
+		}
+		state.goUpAndSkip();
+
+		if (is_cpointer) return code::TypeExpr::cpointer(inner);
+		if (!inner.has_value()) {
+			state.logInt(makeBox<dia::PlaceholderError>(
+				"`ptr` needs a pointee; only `cptr` may be left empty.", state.getPosition(-1)
+			));
+			return {};
+		}
+		return code::TypeExpr::pointer(*inner);
+	}
+
 	namespace opargs_parsers {
 		namespace detail {
 			/**
@@ -342,13 +392,14 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
-			tpc::Identifier type_name, field_name;
-			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
-			auto field = vm::opargs::Field{ code::TypeExpr(type_name.value), field_name.value };
+			const auto      start = state.getPosition();
+			auto            expr  = parseTypeExpr(state);
+			tpc::Identifier field_name;
+			state.parse().all(lang_def::NamedOperator::Period, &field_name);
+			auto field = vm::opargs::Field{ expr.has_value() ? *expr : code::TypeExpr(),
+				                            field_name.value };
 			field.bytecode_pos = dia::SourcePosition(
-				type_name.position.getLocation(),
-				type_name.position.getStart(),
-				field_name.position.getEnd()
+				start.getLocation(), start.getStart(), field_name.position.getEnd()
 			);
 			return field;
 		}
@@ -364,9 +415,10 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
-			auto identifier  = parseIdentifier(state);
-			auto arg         = vm::opargs::Type{ code::TypeExpr(identifier.value) };
-			arg.bytecode_pos = identifier.position;
+			const auto start = state.getPosition();
+			auto       expr  = parseTypeExpr(state);
+			auto       arg   = vm::opargs::Type{ expr.has_value() ? *expr : code::TypeExpr() };
+			arg.bytecode_pos = start;
 			return arg;
 		}
 
@@ -502,7 +554,11 @@ namespace vm::loader::parser {
 		state.parse().one(lang_def::Keyword::BCGlobalData);
 
 		state.parse().one(&out->name);
-		state.parse().one(&out->type);
+		const auto type_start = state.getPosition();
+		if (auto type = parseTypeExpr(state)) {
+			out->type              = *type;
+			out->type.bytecode_pos = type_start;
+		}
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.logInt(
@@ -634,7 +690,7 @@ namespace vm::loader::parser {
 	}
 
 	namespace {
-		base::Optional<std::vector<tpc::Identifier>> parseTypeList(F8ParserState& state) {
+		base::Optional<std::vector<code::TypeExprUse>> parseTypeList(F8ParserState& state) {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected `{` after here.", state.getPosition(-1)
@@ -642,12 +698,14 @@ namespace vm::loader::parser {
 				return {};
 			}
 
-			std::vector<tpc::Identifier> result;
+			std::vector<code::TypeExprUse> result;
 			state.goDown();
 			while (state.notEmpty()) {
-				tpc::Identifier field_type;
-				state.parse().one(&field_type);
-				result.emplace_back(field_type);
+				const auto start = state.getPosition();
+				auto       expr  = parseTypeExpr(state);
+				if (!expr.has_value()) break;
+				auto& entry        = result.emplace_back(*expr);
+				entry.bytecode_pos = start;
 
 				if (state.empty()) break;
 				if (state[0].is(lang_def::Special::Comma)) {
@@ -801,9 +859,38 @@ namespace vm::loader::parser {
 		}
 
 		std::vector<code::Field> parseFields(F8ParserState& state) {
-			return parseNamedPairs<code::Field>(state, [](base::StrID name, base::StrID type) {
-				return code::Field(name, code::TypeExpr{ type });
-			});
+			std::vector<code::Field> out;
+
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.logInt(makeBox<dia::PlaceholderError>(
+					"Expected `{` after here.", state.getPosition(-1)
+				));
+				return {};
+			}
+
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_name;
+				state.parse().all(&field_name, lang_def::NamedOperator::Colon);
+				auto type = parseTypeExpr(state);
+				if (!type.has_value()) break;
+
+				auto& field        = out.emplace_back(field_name.value, *type);
+				field.bytecode_pos = field_name.position;
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Expected comma or } after here.", state.getPosition()
+					));
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
+
+			return out;
 		}
 
 		std::vector<code::MethodImpl> parseMethodImpls(F8ParserState& state) {
@@ -843,43 +930,10 @@ namespace vm::loader::parser {
 			}
 			break;
 		}
-		case lang_def::Keyword::BCPointer: {
-			auto pointed_type = state.tokens().next();
-			if (!pointed_type.isIdentifier())
-				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected an identifier after here.", state.getPosition()
-				));
-			else {
-				auto tp         = PointerType{ name, TypeExpr(pointed_type.getValue()) };
-				tp.bytecode_pos = out->position;
-				out->datatype   = tp;
-			}
-			break;
-		}
-		case lang_def::Keyword::BCCPointer: {
-			// The pointee is optional: `type cpointer: Name [Inner]`. No inner means a pointer
-			// to an unknown pointee (C's `void*`).
-			base::Optional<TypeExpr> inner;
-			if (state.notEmpty() && state[0].isIdentifier())
-				inner = TypeExpr(state.tokens().next().getValue());
-			if (state.notEmpty() && (state[0].isNumLiteralGroup() || state[0].isString())) {
-				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected an identifier (pointee type) or end of declaration.",
-					state.getPosition()
-				));
-				state.tokens().skip();
-			}
-			auto tp         = CPointerType{ name, inner };
-			tp.bytecode_pos = out->position;
-			out->datatype   = tp;
-			break;
-		}
 		case lang_def::Keyword::BCFixedSizeTable: {
-			auto type_name = state.tokens().next();
-			if (!type_name.isIdentifier()) {
-				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected an identifier after here.", state.getPosition()
-				));
+			auto inner = parseTypeExpr(state);
+			if (!inner.has_value()) {
+				break;
 			} else {
 				auto size = state.tokens().next();
 				if (!size.isNumLiteralGroup()) {
@@ -888,7 +942,7 @@ namespace vm::loader::parser {
 					));
 				} else {
 					auto tp         = FixedSizeTableType{ name,
-                                                  TypeExpr(type_name.getValue()),
+                                                  *inner,
                                                   static_cast<usize>(strIDToNum(size.getValue())) };
 					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
@@ -897,13 +951,9 @@ namespace vm::loader::parser {
 			break;
 		}
 		case lang_def::Keyword::BCDynamicTable: {
-			const lexer::Token& type_name = state.tokens().next();
-			if (!type_name.isIdentifier())
-				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected an identifier after here.", state.getPosition()
-				));
-			else {
-				auto tp         = DynamicTableType{ name, TypeExpr(type_name.getValue()) };
+			auto inner = parseTypeExpr(state);
+			if (inner.has_value()) {
+				auto tp         = DynamicTableType{ name, *inner };
 				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
@@ -945,9 +995,9 @@ namespace vm::loader::parser {
 			state.goDown();
 			std::vector<TypeExpr> alternatives;
 			while (state.notEmpty()) {
-				tpc::Identifier field_type;
-				state.parse().one(&field_type);
-				alternatives.emplace_back(field_type.value);
+				auto alternative = parseTypeExpr(state);
+				if (!alternative.has_value()) break;
+				alternatives.emplace_back(*alternative);
 
 				if (state.empty()) break;
 				if (state[0].is(lang_def::Special::Comma)) {
@@ -976,9 +1026,9 @@ namespace vm::loader::parser {
 			state.goDown();
 			std::vector<TypeExpr> arguments;
 			while (state.notEmpty()) {
-				tpc::Identifier field_type;
-				state.parse().one(&field_type);
-				arguments.emplace_back(field_type.value);
+				auto argument = parseTypeExpr(state);
+				if (!argument.has_value()) break;
+				arguments.emplace_back(*argument);
 
 				if (state.empty()) break;
 				if (state[0].is(lang_def::Special::Comma)) {
@@ -1002,9 +1052,9 @@ namespace vm::loader::parser {
 			std::vector<TypeExpr> returned;
 			state.goDown();
 			while (state.notEmpty()) {
-				tpc::Identifier field_type;
-				state.parse().one(&field_type);
-				returned.emplace_back(field_type.value);
+				auto result = parseTypeExpr(state);
+				if (!result.has_value()) break;
+				returned.emplace_back(*result);
 
 				if (state.empty()) break;
 				if (state[0].is(lang_def::Special::Comma)) {
@@ -1064,11 +1114,10 @@ namespace vm::loader::parser {
 							"Interfaces cannot extend classes.", state.getPosition()
 						));
 					} else {
-						tpc::Identifier superclass;
-						state.parse().all(
-							lang_def::NamedOperator::Colon, &superclass, lang_def::Special::Semicolon
-						);
-						extends.emplace(TypeExpr(superclass.value));
+						state.parse().one(lang_def::NamedOperator::Colon);
+						auto superclass_type = parseTypeExpr(state);
+						state.parse().one(lang_def::Special::Semicolon);
+						if (superclass_type.has_value()) extends.emplace(*superclass_type);
 					}
 					break;
 				}
@@ -1107,9 +1156,9 @@ namespace vm::loader::parser {
 
 					state.goDown();
 					while (state.notEmpty()) {
-						tpc::Identifier interface;
-						state.parse().one(&interface);
-						implements.emplace_back(interface.value);
+						auto interface_type = parseTypeExpr(state);
+						if (!interface_type.has_value()) break;
+						implements.push_back(*interface_type);
 
 						if (state.empty()) break;
 						if (state[0].is(lang_def::Special::Comma)) {
@@ -1265,7 +1314,7 @@ namespace vm::loader::parser {
 
 	void GlobalData::dprint(std::ostream& out) const {
 		out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << " ";
-		out << name.value.strView() << " " << type.value.strView() << " {";
+		out << name.value.strView() << " " << type.expr.canonicalName().strView() << " {";
 		if (is_constant) {
 			out << "\n    " << lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView()
 				<< ": " << lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView() << ",";
@@ -1290,14 +1339,14 @@ namespace vm::loader::parser {
 		bool first = true;
 		for (const auto& param: parameters) {
 			if (!first) out << ", ";
-			out << param.value.strView();
+			out << param.expr.canonicalName().strView();
 			first = false;
 		}
 		out << "} -> { ";
 		first = true;
 		for (const auto& param: result_types) {
 			if (!first) out << ", ";
-			out << param.value.strView();
+			out << param.expr.canonicalName().strView();
 			first = false;
 		}
 		out << " } {\n";
@@ -1311,14 +1360,14 @@ namespace vm::loader::parser {
 		bool first = true;
 		for (const auto& param: parameters) {
 			if (!first) out << ", ";
-			out << param.value.strView();
+			out << param.expr.canonicalName().strView();
 			first = false;
 		}
 		out << " } -> { ";
 		first = true;
 		for (const auto& param: result_types) {
 			if (!first) out << ", ";
-			out << param.value.strView();
+			out << param.expr.canonicalName().strView();
 			first = false;
 		}
 		out << " }";

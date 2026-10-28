@@ -28,7 +28,7 @@ function a_dtor {} -> {} {
     ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     mov_p64_imm ret0, 0;
     ret;
 }

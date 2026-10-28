@@ -37,10 +37,13 @@ class TypeResolverTester: public tester::TestSuite {
 		vm::code::TypeContext                   context;
 		const std::vector<vm::code::TypeOfData> types{
 			primitive("i64", 8),
-			vm::code::PointerType(base::StrID("ptr_i64"), TypeExpr(base::StrID("i64"))),
+			// A pointer is written inside a declaration rather than declared itself.
 			vm::code::DataType(
 				base::StrID("Point"),
-				{ vm::code::Field(base::StrID("x"), TypeExpr(base::StrID("i64"))) }
+				{ vm::code::Field(base::StrID("x"), TypeExpr{ base::StrID("i64") }),
+			      vm::code::Field(
+					  base::StrID("next"), TypeExpr::pointer(TypeExpr{ base::StrID("Point") })
+				  ) }
 			),
 		};
 		vm::code::detail::insertTypes(context, types, {});
@@ -92,14 +95,18 @@ public:
 		const auto  context = makeContext();
 		const auto& types   = context.getCurrentTypes();
 
-		const auto i64
-			= findResolved(types, TypeExpr(base::StrID("i64"))).expect("i64 was declared");
 		const auto pointer
-			= findResolved(types, TypeExpr(base::StrID("ptr_i64"))).expect("ptr_i64 was declared");
+			= findResolved(types, TypeExpr::pointer(TypeExpr{ base::StrID("Point") }))
+		          .expect("`ptr{Point}` was built when the field using it resolved");
 
 		const auto pointee = pointer->maybeGetKindAs<vm::code::valid_type::finalized::Pointer>();
 		ASSERT_TRUE(pointee.has_value());
-		ASSERT_TRUE(pointee.value()->inner == i64->getID());
+		ASSERT_TRUE(
+			pointee.value()->inner
+			== findResolved(types, TypeExpr{ base::StrID("Point") })
+				   .expect("Point was declared")
+				   ->getID()
+		);
 	}
 
 	void testRedeclaringIsAccepted() {
@@ -119,10 +126,11 @@ public:
 		const std::vector<vm::code::TypeOfData> types{
 			vm::code::DataType(
 				base::StrID("Node"),
-				{ vm::code::Field(base::StrID("next"), TypeExpr(base::StrID("ptr_Node"))),
+				{ vm::code::Field(
+					  base::StrID("next"), TypeExpr::pointer(TypeExpr(base::StrID("Node")))
+				  ),
 			      vm::code::Field(base::StrID("value"), TypeExpr(base::StrID("i64"))) }
 			),
-			vm::code::PointerType(base::StrID("ptr_Node"), TypeExpr(base::StrID("Node"))),
 			primitive("i64", 8),
 		};
 		vm::code::detail::insertTypes(context, types, {});
@@ -134,8 +142,8 @@ public:
 		const auto i64 = findResolved(stored, TypeExpr(base::StrID("i64"))).expect("i64 is built");
 		ASSERT_TRUE(node->getSize().assumePointerSize(Bytes(8)) == Bytes(16));
 
-		const auto pointer = findResolved(stored, TypeExpr(base::StrID("ptr_Node")))
-		                         .expect("ptr_Node is built")
+		const auto pointer = findResolved(stored, TypeExpr::pointer(TypeExpr(base::StrID("Node"))))
+		                         .expect("ptr{Node} is built")
 		                         ->maybeGetKindAs<vm::code::valid_type::finalized::Pointer>();
 		ASSERT_TRUE(pointer.has_value());
 		ASSERT_TRUE(pointer.value()->inner == node->getID());

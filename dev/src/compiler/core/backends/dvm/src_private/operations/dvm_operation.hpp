@@ -27,9 +27,9 @@ namespace compiler::backend_vm::internal {
 	 * for both LIR and ExternCFunctions.
 	 */
 	struct FunctionCallInfo {
-		DVMCallable                          call_target;
-		base::Optional<vm::code::TypeOfData> return_type;
-		std::vector<vm::code::TypeOfData>    param_types;
+		DVMCallable                        call_target;
+		base::Optional<vm::code::TypeExpr> return_type;
+		std::vector<vm::code::TypeExpr>    param_types;
 
 		/**
 		 * @brief Created call info for a LIR function.
@@ -85,10 +85,10 @@ namespace compiler::backend_vm::internal {
 	 * @brief Represents a call DVM operation.
 	 */
 	struct BuiltinCallOperation final {
-		lir::BuiltinFunctionKind             kind;
-		std::deque<DVMValue>                 args;
-		base::Optional<DVMPlace>             dest;
-		base::Optional<vm::code::TypeOfData> return_type;
+		lir::BuiltinFunctionKind           kind;
+		std::deque<DVMValue>               args;
+		base::Optional<DVMPlace>           dest;
+		base::Optional<vm::code::TypeExpr> return_type;
 	};
 
 	/**

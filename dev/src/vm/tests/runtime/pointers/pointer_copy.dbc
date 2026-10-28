@@ -1,13 +1,13 @@
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
 	init_pany_type           x, i64;
 	init_pany_type           y, i64;
-	init_pany_type           p, ptr_i64;
-	init_pany_type           q, ptr_i64;
-	init_pany_type           r, ptr_i64;
+	init_pany_type           p, ptr{i64};
+	init_pany_type           q, ptr{i64};
+	init_pany_type           r, ptr{i64};
 
 	ref_pptr_pany        p, x;      # p := &x
 

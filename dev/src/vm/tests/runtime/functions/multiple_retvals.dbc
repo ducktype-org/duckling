@@ -30,7 +30,7 @@ function unsafe_div { i64, i64 } -> { i64, i64 } {
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	init_pany_type 	foo_ret0_0, i64;
 	init_pany_type 	foo_ret0_1, i64;
 

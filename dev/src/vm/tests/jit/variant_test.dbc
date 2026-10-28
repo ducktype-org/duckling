@@ -4,7 +4,6 @@
 
 type primitive: i8 1
 type variant: var_i64_i8 { i64, i8 }
-type pointer: ptr_var var_i64_i8
 
 function f {} -> { } {
     # Declare local variables - multiple variants
@@ -12,10 +11,10 @@ function f {} -> { } {
     init_pany_type v2, var_i64_i8;
     init_pany_type v3, var_i64_i8;
     init_pany_type v4, var_i64_i8;
-    init_pany_type ptr1, ptr_i64;
-    init_pany_type ptr2, ptr_i64;
-    init_pany_type ptr3, ptr_i64;
-    init_pany_type ptr4, ptr_i64;
+    init_pany_type ptr1, ptr{i64};
+    init_pany_type ptr2, ptr{i64};
+    init_pany_type ptr3, ptr{i64};
+    init_pany_type ptr4, ptr{i64};
     init_pany_type val, i64;
     init_pany_type tmp, i64;
     
@@ -95,7 +94,7 @@ function f {} -> { } {
     ret;
 }
 
-function main { i64, ptr_argv }-> { i64 } {
+function main { i64, ptr{argv} }-> { i64 } {
     # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv

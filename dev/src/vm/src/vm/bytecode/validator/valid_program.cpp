@@ -19,10 +19,19 @@
 #include <vm/bytecode/validator/type_validator.hpp>
 
 #include <algorithm>
+#include <tuple>
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program = ValidProgram();
 	program.insertTypes(getBuiltinTypes());
+
+	// The program's start function is hand-built rather than loaded, so the pointers it uses
+	// have no mention anywhere to bring them into being.
+	TypeResolver resolver(program.type_context);
+	for (const base::StrID pointee: { base::StrID("argv"), base::StrID("string") })
+		std::ignore = resolver.resolve(TypeExpr::pointer(TypeExpr{ pointee }));
+	resolver.finalizeBuilt();
+
 	return program;
 }
 
@@ -62,11 +71,48 @@ const vm::ObjIdNameMap<vm::code::valid_function::ValidFunction>& vm::code::Valid
 	return function_map;
 }
 
+namespace {
+	/// Brings into being every type the code refers to, so that validating it only has to look
+	/// types up.
+	void resolveCodeTypes(
+		vm::code::TypeContext& context, const vm::code::CodeCollection& collection
+	) {
+		vm::code::TypeResolver resolver(context);
+		const auto             resolve
+			= [&](const vm::code::TypeExpr& expr) { std::ignore = resolver.resolve(expr); };
+		const auto resolve_signature = [&](const vm::code::FuncSignature& signature) {
+			for (const auto& param: signature.parameters) resolve(param.expr);
+			for (const auto& result: signature.result_types) resolve(result.expr);
+		};
+
+		for (const auto& global: collection.global_data) resolve(global.type.expr);
+		for (const auto& function: collection.external_c_functions)
+			resolve_signature(function.signature);
+		for (const auto& function: collection.ffi_functions) resolve_signature(function.signature);
+		for (const auto& function: collection.functions) {
+			resolve_signature(function.signature);
+			for (const auto& instruction: function.body)
+				for (const auto& arg: instruction.args()) variant_match(arg) {
+						variant_case(CRef<vm::opargs::Type>, type_arg) { resolve(type_arg->expr); }
+						variant_case(CRef<vm::opargs::Field>, field_arg) {
+							resolve(field_arg->expr);
+						}
+						variant_default {}
+					}
+		}
+		resolver.finalizeBuilt();
+	}
+}
+
 void vm::code::ValidProgram::insertCode(
 	const CodeCollection& collection, api::ExecutionConfig config
 ) {
 	for (const auto& func: collection.functions) function_signatures.put(func.name, func.signature);
 	insertTypes(collection.types);
+
+	// A pointer is written rather than declared, so the first mention of one anywhere in the
+	// code is what brings it into being. Doing that here keeps every validator read-only.
+	resolveCodeTypes(type_context, collection);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);
 	insertObjectFiles(collection.object_files);

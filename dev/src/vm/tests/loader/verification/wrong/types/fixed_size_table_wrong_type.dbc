@@ -1,14 +1,13 @@
 type fixed_size_table: tablei64 i64 4
-type pointer: ptr_tablei64 tablei64
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
 	init_pany_type      x, i32;
 	init_pany_type      i, i64;
-	init_pany_type      arr_ptr, ptr_tablei64;
+	init_pany_type      arr_ptr, ptr{tablei64};
 
 	alloc_pptr_type     arr_ptr, tablei64; # arr_ptr := alloc *int[]
 	mov_p64_imm         i, 0;        # i := 0

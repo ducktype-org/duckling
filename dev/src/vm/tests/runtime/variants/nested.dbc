@@ -1,10 +1,8 @@
 type primitive: i8 1
 type variant: simple_variant { i64, i8 }
 type variant: nested { simple_variant, i64 }
-type pointer: ptr_sv simple_variant
-type pointer: ptr_nested nested
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     # let v0: variant<variant<i64, i8>, i64>;
     init_pany_type v0, nested;
 
@@ -12,7 +10,7 @@ function main { i64, ptr_argv } -> { i64 } {
     variantSetInner_pvnt_type v0, simple_variant;
 
     # let inner_ptr: ptr<variant<i64, i8>>;
-    init_pany_type inner_ptr, ptr_sv;
+    init_pany_type inner_ptr, ptr{simple_variant};
 
     # inner_ptr = v0.getData<variant<i64, i8>>();
     variantGetInner_pptr_pvnt_type inner_ptr, v0, simple_variant;
@@ -21,21 +19,21 @@ function main { i64, ptr_argv } -> { i64 } {
     variantSetInner_pptr_type inner_ptr, i64;
 
     # let ptr: ptr<i64>;
-    init_pany_type ptr, ptr_i64;
+    init_pany_type p, ptr{i64};
 
     # ptr = inner_ptr->getData<i64>();
-    variantGetInner_pptr_pptr_type ptr, inner_ptr, i64;
+    variantGetInner_pptr_pptr_type p, inner_ptr, i64;
 
     # let value: i64 = input();
     init_pany_type value, i64;
     input_p64 value;
 
     # *ptr = value;
-    store_pptr_pany ptr, value;
+    store_pptr_pany p, value;
 
     # let read_val: i64 = *ptr;
     init_pany_type read_val, i64;
-    load_pany_pptr read_val, ptr;
+    load_pany_pptr read_val, p;
 
     output_p64 read_val;
 

@@ -1,7 +1,6 @@
 # Virtual method for bar() doesn't exist.
-type pointer: pointer_A A
-type fun: method_foo {pointer_A} {}
-function method_bar_impl {pointer_A} -> {} {
+type fun: method_foo {ptr{A}} {}
+function method_bar_impl {ptr{A}} -> {} {
     ret;
 }
 

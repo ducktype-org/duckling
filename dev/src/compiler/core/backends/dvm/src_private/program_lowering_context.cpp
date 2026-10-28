@@ -29,6 +29,31 @@
 
 using namespace compiler::backend_vm::internal;
 
+namespace {
+	/**
+	 * @brief An identifier-safe spelling of `expr`, such as `ptr_Dog`, for composing the name of a
+	 * type declared out of other types. The braces of `canonicalName` would not lex as part of one.
+	 */
+	base::StrID mangledName(vm::code::TypeExpr expr) {
+		variant_match(expr.getKind()) {
+			variant_case(vm::code::expr::Named, named) { return named.name; }
+			variant_case(vm::code::expr::Pointer, pointer) {
+				return base::StrID(base::strConcat("ptr_", mangledName(pointer.pointee)));
+			}
+			variant_case(vm::code::expr::CPointer, cpointer) {
+				if (cpointer.pointee.empty()) return base::StrID("cptr_void");
+				return base::StrID(base::strConcat("cptr_", mangledName(*cpointer.pointee)));
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	/// @brief The name of the dynamic table a many-pointer to `element` points at.
+	base::StrID dynamicTableName(vm::code::TypeExpr element) {
+		return base::StrID(base::strConcat("dyntable_", mangledName(element)));
+	}
+}
+
 compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 	query::Context& query_ctx,
 	base::StrID     module_id,
@@ -52,40 +77,52 @@ CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfDa
 	return &it->second;
 }
 
-base::StrID ProgramLoweringContext::keepTslType(CRef<tsl::TypeLayout> layout) {
-	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout))
-		return **maybe_name;
-	return vm::code::typeName(*lowerAndKeepTslType(layout));
+vm::code::TypeExpr ProgramLoweringContext::keepTslType(CRef<tsl::TypeLayout> layout) {
+	if (auto cached = type_storage.tsl_type_to_dvm_type.atMaybe(layout)) return **cached;
+	return lowerAndKeepTslType(layout);
 }
 
-CRef<vm::code::TypeOfData> ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+DVMPlace ProgramLoweringContext::makePlace(
+	base::StrID           name,
+	vm::code::TypeExpr    expr,
+	DVMPlace::AccessKind  access_kind,
+	DVMPlace::SpecialKind special_kind
 ) {
-	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout)) {
-		auto maybe_type = type_storage.dvm_types.atMaybe(**maybe_name);
+	if (const auto declaration = declarationOf(expr))
+		return { name, **declaration, access_kind, special_kind };
+
+	// A VM builtin is declared by the VM rather than kept here, so it is not in `dvm_types`.
+	if_opt_some(
+		expr.maybeGetKindAs<vm::code::expr::Named>(), named
+	) if (const auto builtin = vm::code::getBuiltinTypeByName(named->name
+	      )) return { name, *builtin, access_kind, special_kind };
+
+	return { name, expr, access_kind, special_kind };
+}
+
+base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::declarationOf(
+	vm::code::TypeExpr expr
+) {
+	const auto declaration = type_storage.dvm_types.atMaybe(expr.canonicalName());
+	if (!declaration.has_value()) return {};
+	return CRef<vm::code::TypeOfData>(&**declaration);
+}
+
+vm::code::TypeExpr ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout) {
+	if (auto cached = type_storage.tsl_type_to_dvm_type.atMaybe(layout)) return **cached;
+
+	const vm::code::TypeExpr type_expr = getTslTypeExprInternal(layout);
+	const base::StrID        type_name = type_expr.canonicalName();
+	type_storage.tsl_type_to_dvm_type.put(layout, type_expr);
+
+	// A pointer is written rather than declared, so lowering it yields nothing to keep.
+	if (auto declaration = lowerTslTypeInternal(layout)) {
 		CORE_ASSERT(
-			maybe_type.has_value(),
-			"Type '",
-			**maybe_name,
-			"' is declared, but its lowering has not finished yet. Use keepTslType instead."
+			vm::code::typeName(*declaration) == type_name, "Declared and lowered names differ"
 		);
-		return *maybe_type;
+		auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(*declaration));
+		if (inserted) lowered_type_order.push_back(type_name);
 	}
-
-	const base::StrID type_name = getTslNameInternal(layout);
-	type_storage.tsl_type_to_dvm_type_name.put(layout, type_name);
-
-	vm::code::TypeOfData dvm_type = lowerTslTypeInternal(layout);
-	CORE_ASSERT(vm::code::typeName(dvm_type) == type_name, "Declared and lowered type names differ");
-
-	IF_BUILD_TYPE_DEV({
-		auto maybe_type = type_storage.dvm_types.atMaybe(type_name);
-		CORE_ASSERT(
-			!maybe_type.has_value() || **maybe_type == dvm_type, "Type mismatch in type lowering"
-		);
-	});
-
-	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
-	if (inserted) lowered_type_order.push_back(type_name);
 
 	CORE_DEV_LOG(REPL, "[DEBUG] lowered_type_order size=", lowered_type_order.size(), "\n");
 	for (const auto& lowered_type: lowered_type_order)
@@ -96,10 +133,10 @@ CRef<vm::code::TypeOfData> ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl:
 		builder.addType(type_name.str(), layout->getSourceType().toString());
 	}
 
-	return { &it->second };
+	return type_expr;
 }
 
-base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepReturnTslType(
+base::Optional<vm::code::TypeExpr> ProgramLoweringContext::lowerAndKeepReturnTslType(
 	CRef<tsl::TypeLayout> layout
 ) {
 	if (layout->is<tsl::EmptyTypeLayout>()) return {};
@@ -115,68 +152,38 @@ compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLow
 		     lowered_ffi_function_order.size() };
 }
 
-const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
-	const base::StrID pointee_name, tsl::PointerTypeLayout::PointerKind kind
+vm::code::TypeExpr ProgramLoweringContext::pointerTypeExpr(
+	vm::code::TypeExpr pointee, tsl::PointerTypeLayout::PointerKind kind
 ) {
+	using enum tsl::PointerTypeLayout::PointerKind;
 	switch (kind) {
-	case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
-		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
-		return vm::code::PointerType(
-			base::StrID(pointer_type_name), vm::code::TypeExpr{ pointee_name }
-		);
+	case SinglePointer:
+		return vm::code::TypeExpr::pointer(pointee);
+	case ManyPointer: {
+		// A many-pointer points at a dynamic table of the pointee, which is declared.
+		const auto table_name = dynamicTableName(pointee);
+		keepVMType(vm::code::DynamicTableType(table_name, pointee));
+		return vm::code::TypeExpr::pointer(vm::code::TypeExpr::type(table_name));
 	}
-	case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
-		// Many pointer is a pointer to a dynamic table of the pointee type.
-		auto                       dyntable_type_name = base::strConcat("dyntable_", pointee_name);
-		vm::code::DynamicTableType dyntable_type(
-			base::StrID(dyntable_type_name), vm::code::TypeExpr{ pointee_name }
-		);
-		// Ensure the dynamic table type is stored in the context.
-		keepVMType(dyntable_type);
-		auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
-		return vm::code::PointerType(
-			base::StrID(pointer_type_name), vm::code::TypeExpr(typeName(dyntable_type))
-		);
-	}
-	case tsl::PointerTypeLayout::PointerKind::CPointer:
-		auto pointer_type_name = base::strConcat("cptr_", pointee_name);
-		return vm::code::CPointerType(
-			base::StrID(pointer_type_name), vm::code::TypeExpr{ pointee_name }
-		);
+	case CPointer:
+		return vm::code::TypeExpr::cpointer(pointee);
 	}
 	CORE_UNREACHABLE();
 }
 
-const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
-	const base::StrID pointee_name, tsl::PointerTypeLayout::PointerKind kind
-) {
-	auto lowered_pointer = lowerPointerType(pointee_name, kind);
-	auto name            = typeName(lowered_pointer);
-
-	auto result = type_storage.dvm_types.put(name, std::move(lowered_pointer));
-	if (result.second) lowered_type_order.push_back(name);
-	return result.first->second;
-}
-
-const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
-	const base::StrID& void_cpointer_name = base::StrID("cptr");
-
-	if (auto maybe_type = type_storage.dvm_types.atMaybe(void_cpointer_name)) return **maybe_type;
-
-	// `cptr` is a DVM builtin, so it is taken from the builtin table rather than synthesized, to
-	// keep the definition emitted here identical to the one the VM already knows.
-	return *keepVMType(vm::code::getBuiltinTypeByName(void_cpointer_name).value());
+vm::code::TypeExpr ProgramLoweringContext::getVoidCPointerType() {
+	return vm::code::TypeExpr::cpointer();
 }
 
 const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
 	if (auto maybe_global = global_name_to_dvm.atMaybe(lir_global->mangled_name))
 		return **maybe_global;
 	else {
-		const vm::code::TypeOfData& global_type = *lowerAndKeepTslType(lir_global->layout);
+		const vm::code::TypeExpr global_type = lowerAndKeepTslType(lir_global->layout);
 
 		global_name_to_dvm.put(
 			lir_global->mangled_name,
-			DVMPlace(lir_global->mangled_name, global_type, DVMPlace::AccessKind::Direct)
+			makePlace(lir_global->mangled_name, global_type, DVMPlace::AccessKind::Direct)
 		);
 
 		return global_name_to_dvm.at(lir_global->mangled_name);
@@ -344,7 +351,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.global.mangled_name))
 		return **maybe_global;
 
-	auto& global_type = *lowerAndKeepTslType(lir_global.global.layout);
+	auto global_type = lowerAndKeepTslType(lir_global.global.layout);
 
 	using vm::code::Identifier;
 
@@ -360,7 +367,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
 			vm::code::GlobalData global_data{};
 			global_data.name        = lir_global.global.mangled_name;
-			global_data.type        = vm::code::TypeExpr(typeName(global_type));
+			global_data.type        = global_type;
 			global_data.is_constant = false;
 
 			if (ctor_dtor_pair.global_ctor.has_value()) {
@@ -450,35 +457,42 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 	extern_c_functions.put(extern_func.name.str, extern_func);
 }
 
-base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> layout) {
+vm::code::TypeExpr ProgramLoweringContext::getTslTypeExprInternal(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
-		variant_case_novalue(tsl::EmptyTypeLayout) { return base::StrID("unit"); }
+		variant_case_novalue(tsl::EmptyTypeLayout) {
+			return vm::code::TypeExpr{ base::StrID("unit") };
+		}
 		variant_case_novalue(tsl::IntegralTypeLayout) {
 			Bits bits = layout->getSize();
 			if (bits == Bits{ 1 }) bits = Bits{ 8 };
-			return base::StrID(base::strConcat("i", bits.asInt()));
+			return vm::code::TypeExpr{ base::StrID(base::strConcat("i", bits.asInt())) };
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
-			return base::StrID(base::strConcat("f", layout->getSize().asInt()));
+			return vm::code::TypeExpr{ base::StrID(base::strConcat("f", layout->getSize().asInt())
+			) };
 		}
-		variant_case_novalue(tsl::MetaTypeLayout) { return base::StrID("opaque_ptr"); }
+		variant_case_novalue(tsl::MetaTypeLayout) {
+			return vm::code::TypeExpr{ base::StrID("opaque_ptr") };
+		}
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			using enum tsl::PointerTypeLayout::PointerKind;
-			const base::StrID pointee_name
-				= getTslNameInternal(pointer_layout.getPointee(**query_ctx));
+			const vm::code::TypeExpr pointee
+				= getTslTypeExprInternal(pointer_layout.getPointee(**query_ctx));
 			switch (pointer_layout.getPointerKind()) {
 			case SinglePointer:
-				return base::StrID(base::strConcat("ptr_", pointee_name));
+				return vm::code::TypeExpr::pointer(pointee);
 			case ManyPointer:
-				return base::StrID(base::strConcat("ptr_dyntable_", pointee_name));
+				// A many-pointer points at a dynamic table of the pointee.
+				return vm::code::TypeExpr::pointer(vm::code::TypeExpr::type(dynamicTableName(pointee
+				)));
 			case CPointer:
-				return base::StrID(base::strConcat("cptr_", pointee_name));
+				return vm::code::TypeExpr::cpointer(pointee);
 			}
 			CORE_UNREACHABLE();
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
 			if (class_layout.getSourceType().getType().getKind() != tsh::Kind::Tuple)
-				return class_layout.getMangledName();
+				return vm::code::TypeExpr{ class_layout.getMangledName() };
 
 			// Tuple types are mangled by types alone. Mangler distinguishes type mutability and
 			// would provide two different mangled names for `(const i32, i32)` and `(i32, i32)`
@@ -490,25 +504,27 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 			std::string tuple_type_name = base::strConcat("tup", num_fields);
 			for (usize i{ 0 }; i < num_fields; i++) {
 				const base::StrID field_name
-					= getTslNameInternal(class_layout.getFieldLayoutOfLayoutIndex(i));
+					= mangledName(getTslTypeExprInternal(class_layout.getFieldLayoutOfLayoutIndex(i)
+				    ));
 				tuple_type_name = base::strConcat(tuple_type_name, "_", field_name);
 			}
-			return base::StrID(tuple_type_name);
+			return vm::code::TypeExpr{ base::StrID(tuple_type_name) };
 		}
 		variant_case(tsl::VariantTypeLayout, variant_layout) {
 			std::string variant_type_name = "vnt";
 			for (usize i{ 0 }; i < variant_layout.getNumAlternatives(); i++) {
 				const base::StrID alternative_name
-					= getTslNameInternal(variant_layout.getLayoutOfIndex(i));
+					= mangledName(getTslTypeExprInternal(variant_layout.getLayoutOfIndex(i)));
 				variant_type_name = base::strConcat(variant_type_name, "_", alternative_name);
 			}
-			return base::StrID(variant_type_name);
+			return vm::code::TypeExpr{ base::StrID(variant_type_name) };
 		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
-			const base::StrID element_name = getTslNameInternal(array_layout.getElementLayout());
-			return base::StrID(
+			const base::StrID element_name
+				= mangledName(getTslTypeExprInternal(array_layout.getElementLayout()));
+			return vm::code::TypeExpr{ base::StrID(
 				base::strConcat("arr_", element_name, "_", array_layout.getElementCount())
-			);
+			) };
 		}
 		variant_default {
 			CORE_ASSERT(query_ctx.has_value(), "Query context must be set for error reporting");
@@ -526,8 +542,10 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 	CORE_UNREACHABLE();
 }
 
-vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
-	const base::StrID name = getTslNameInternal(layout);
+base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInternal(
+	CRef<tsl::TypeLayout> layout
+) {
+	const base::StrID name = getTslTypeExprInternal(layout).canonicalName();
 
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) {
@@ -545,11 +563,15 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			if (pointer_layout.getPointerKind() == tsl::PointerTypeLayout::PointerKind::CPointer
 			    and not pointer_layout.hasPointee())
-				return getVoidCPointerType();
+				return {};
 
-			return lowerPointerType(
-				keepTslType(pointer_layout.getPointee(**query_ctx)), pointer_layout.getPointerKind()
-			);
+			const vm::code::TypeExpr pointee = keepTslType(pointer_layout.getPointee(**query_ctx));
+			if (pointer_layout.getPointerKind()
+			    == tsl::PointerTypeLayout::PointerKind::ManyPointer) {
+				// A many-pointer points at a dynamic table, which does need declaring.
+				keepVMType(vm::code::DynamicTableType(dynamicTableName(pointee), pointee));
+			}
+			return {};
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
 			std::vector<vm::code::Field> fields;
@@ -567,10 +589,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			// @TODO: #2100 Change that to indexes.
 			for (usize i{ 0 }; i < num_fields; i++) {
 				const auto field_layout = class_layout.getFieldLayoutOfLayoutIndex(i);
-				fields.emplace_back(
-					base::StrID(base::strConcat("_", i)),
-					vm::code::TypeExpr(keepTslType(field_layout))
-				);
+				fields.emplace_back(base::StrID(base::strConcat("_", i)), keepTslType(field_layout));
 			}
 
 			return vm::code::DataType{

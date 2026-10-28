@@ -1,7 +1,7 @@
 type primitive: i8 1
 type variant: simple_variant { i64, i8 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type scenario, i64;
     input_p64 scenario;
 
@@ -15,8 +15,8 @@ function main { i64, ptr_argv } -> { i64 } {
         variantSetInner_pvnt_type v1, i64;        # v1.setType<i64>();
     label not_scenario_1;
 
-    init_pany_type ptr, ptr_i64;        # var ptr: i64*;
-    variantGetInner_pptr_pvnt_type ptr, v1, i64;        # ptr = v1.getData<i64>();  -- this causes panic in scenario 1
+    init_pany_type p, ptr{i64};        # var ptr: i64*;
+    variantGetInner_pptr_pvnt_type p, v1, i64;        # ptr = v1.getData<i64>();  -- this causes panic in scenario 1
 
     init_pany_type int, i64;            # var int: i64;
     mov_p64_imm int, 13;                # int = 13;
@@ -27,10 +27,10 @@ function main { i64, ptr_argv } -> { i64 } {
         variantSetInner_pvnt_type v1, i64;
     label not_scenario_2;
 
-    store_pptr_pany ptr, int;        # *ptr = int;  -- this causes panic in scenario 2
+    store_pptr_pany p, int;        # *ptr = int;  -- this causes panic in scenario 2
 
     init_pany_type read_ptr, i64;       # var read_ptr: i64;
-    load_pany_pptr read_ptr, ptr;    # read_ptr = *ptr;
+    load_pany_pptr read_ptr, p;    # read_ptr = *ptr;
 
     output_p64 read_ptr;                # print(read_ptr);
 

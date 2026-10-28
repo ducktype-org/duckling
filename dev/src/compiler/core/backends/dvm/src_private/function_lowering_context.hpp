@@ -105,7 +105,7 @@ namespace compiler::backend_vm::internal {
 		 * These temporaries have to be deinitialized manually.
 		 */
 		DVMPlace pushTempLocal(
-			const vm::code::TypeOfData&      type,
+			vm::code::TypeExpr               type,
 			base::Optional<std::string_view> name_hint = {},
 			bool                             tracked   = true
 		);
@@ -136,7 +136,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Load to temporary local variable from a given pointer type place.
 		 * Return the place representing the temporary local variable.
 		 */
-		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
+		DVMPlace loadFromPlace(const DVMPlace& place, vm::code::TypeExpr pointee_type);
 
 		void cPointerStructLea(
 			const DVMPlace&             base_place,
@@ -220,10 +220,10 @@ namespace compiler::backend_vm::internal {
 		base::Map<lir::LIRLocalRef, DVMPlace> lir_local_to_dvm;
 		base::Map<lir::BlockRef, base::StrID> block_to_label;
 
-		base::Optional<vm::code::TypeOfData> function_return_type;
-		std::vector<base::StrID>             function_parameter_types;
-		base::StrID                          function_name;
-		std::vector<vm::code::Instruction>   function_body;
+		base::Optional<vm::code::TypeExpr> function_return_type;
+		std::vector<vm::code::TypeExpr>    function_parameter_types;
+		base::StrID                        function_name;
+		std::vector<vm::code::Instruction> function_body;
 
 		usize next_temp_id = 0;
 

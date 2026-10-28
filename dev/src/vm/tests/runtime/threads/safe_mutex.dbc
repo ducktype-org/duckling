@@ -1,7 +1,7 @@
 # Simple mutex lock/unlock without any deadlock.
 # Used to verify that deadlock detection disabled does not break normal mutex usage.
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type      m, mutex;
     call_builtinfunc    builtin_create_mutex;
 

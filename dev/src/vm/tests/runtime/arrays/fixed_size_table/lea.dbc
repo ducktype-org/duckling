@@ -1,14 +1,13 @@
 type fixed_size_table: stable64 i64 4
-type pointer: stable64_ptr stable64
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     # ret0
     # argc
     # *argv
     init_pany_type test_val, i64;
-    init_pany_type test_ptr, ptr_i64;
+    init_pany_type test_ptr, ptr{i64};
     init_pany_type test_idx, i64;
-    init_pany_type arr_ptr, stable64_ptr;
+    init_pany_type arr_ptr, ptr{stable64};
     alloc_pptr_type arr_ptr, stable64;
     mov_p64_imm test_val, 42;
     mov_p64_imm test_idx, 2;

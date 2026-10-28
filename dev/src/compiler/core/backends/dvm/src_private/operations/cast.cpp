@@ -106,10 +106,11 @@ namespace compiler::backend_vm::internal {
 						 */
 						auto cptr_source_type_tmp
 							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
-							const vm::code::TypeOfData& source_pointer_type
-								= ctx->programCtx().getOrInsertPointerType(
-									ctx->programCtx().keepTslType(pointer_layout.getPointee(query_ctx
-							        )),
+							const vm::code::TypeExpr source_pointer_type
+								= ctx->programCtx().pointerTypeExpr(
+									vm::code::TypeExpr{ ctx->programCtx().keepTslType(
+										pointer_layout.getPointee(query_ctx)
+									) },
 									CPointer
 								);
 							const DVMPlace cptr_source_elem_tmp
@@ -124,11 +125,10 @@ namespace compiler::backend_vm::internal {
 						 */
 						auto lea_first_element
 							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
-							const vm::code::TypeOfData& ptr_to_element_type
-								= ctx->programCtx().getOrInsertPointerType(
+							const vm::code::TypeExpr ptr_to_element_type
+								= ctx->programCtx().pointerTypeExpr(vm::code::TypeExpr{
 									ctx->programCtx().keepTslType(pointer_layout.getPointee(query_ctx
-							        ))
-								);
+							        )) });
 
 							auto index_tmp
 								= ctx->forceToPlace(DVMValue(DVMImmediate::u64(0)), "index_tmp");
@@ -189,7 +189,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const CastOperation& op) {
-		auto target_type = *ctx->program_context.lowerAndKeepTslType(op.cast_params.target_layout);
+		auto target_type = ctx->program_context.lowerAndKeepTslType(op.cast_params.target_layout);
 
 		// If the source is an immediate, we place it in a local and perform a cast on it.
 		std::vector<vm::opargs::OpCodeArg> arguments{ ctx->forceToPlace(op.src, "cast_src_tmp") };

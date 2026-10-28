@@ -408,7 +408,7 @@ function fptosi_saturation_test {} -> { i32 } {
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	init_pany_type test_ret, i32;
 	
 	call_func sext_test;

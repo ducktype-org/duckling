@@ -1,35 +1,35 @@
 global_data counter i64 {}
 
-global_data global_ptr ptr_i64 {}
+global_data global_ptr ptr{i64} {}
 
 function for_coverage {} -> {} {
-	init_pany_type ptr, ptr_i64;
-	alloc_pptr_type ptr, i64;
-	mov_pptr_pptr global_ptr, ptr;
+	init_pany_type p, ptr{i64};
+	alloc_pptr_type p, i64;
+	mov_pptr_pptr global_ptr, p;
 
-	init_pany_type ptr2, ptr_i64;
-	mov_pptr_pptr ptr, ptr2;  # clear
+	init_pany_type ptr2, ptr{i64};
+	mov_pptr_pptr p, ptr2;  # clear
 	deinit;
 
-	mov_pptr_pptr ptr, global_ptr;
+	mov_pptr_pptr p, global_ptr;
 	init_pany_type int, i64;
 	mov_p64_imm int, 5;
-	store_pptr_pany ptr, int;
+	store_pptr_pany p, int;
 
 	deinit;
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	mov_p64_imm counter, 5;
 	mov_p64_p64 ret0, counter;
 	output_p64 ret0;
 
 	call_func for_coverage;
-	init_pany_type ptr, ptr_i64;
-	mov_pptr_pptr ptr, global_ptr;
-	load_pany_pptr ret0, ptr;
-	free_pptr ptr;
+	init_pany_type p, ptr{i64};
+	mov_pptr_pptr p, global_ptr;
+	load_pany_pptr ret0, p;
+	free_pptr p;
 
 
 	deinit; # ptr

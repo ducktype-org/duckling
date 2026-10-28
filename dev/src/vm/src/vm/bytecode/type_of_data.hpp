@@ -34,42 +34,6 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Represents a pointer.
-	 */
-	struct PointerType final: ElementBase {
-		PointerType() = default;
-
-		PointerType(base::StrID name, TypeExpr inner): name(name), inner(inner) {}
-
-		base::StrID name;
-		TypeExpr    inner;
-
-		bool operator==(const PointerType& other) const {
-			return name == other.name && inner == other.inner;
-		}
-	};
-
-	/**
-	 * @brief Represents a raw C pointer crossing the FFI boundary. Unlike `PointerType`, it is a
-	 * plain native address (no block reference). An absent `inner` means a pointer to an unknown
-	 * pointee (C's `void*`); the builtin `cptr` is a `CPointerType` with no inner.
-	 */
-	struct CPointerType final: ElementBase {
-		CPointerType() = default;
-
-		CPointerType(const base::StrID name, const base::Optional<TypeExpr> inner):
-			  name(name),
-			  inner(inner) {}
-
-		base::StrID              name;
-		base::Optional<TypeExpr> inner;
-
-		bool operator==(const CPointerType& other) const {
-			return name == other.name && inner == other.inner;
-		}
-	};
-
-	/**
 	 * @brief Represents a fixed-size array of elements of the same type.
 	 */
 	struct FixedSizeTableType final: ElementBase {
@@ -297,8 +261,6 @@ namespace vm::code {
 	 */
 	using TypeOfData = std::variant<
 		PrimitiveType,
-		PointerType,
-		CPointerType,
 		FixedSizeTableType,
 		DynamicTableType,
 		DataType,

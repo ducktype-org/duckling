@@ -60,11 +60,14 @@ private:
 		code.types.emplace_back(
 			FixedSizeTableType(base::StrID("points"), TypeExpr(base::StrID("Point")), 3)
 		);
-		// C pointers: one typed, one with an unknown pointee (no inner).
-		code.types.emplace_back(
-			CPointerType(base::StrID("point_ptr"), TypeExpr(base::StrID("Point")))
-		);
-		code.types.emplace_back(CPointerType(base::StrID("raw_ptr"), {}));
+		// Pointers are written rather than declared, so they appear in a type that refers to
+		// them. `cptr{}` stands for an unknown pointee.
+		code.types.emplace_back(DataType(
+			base::StrID("Handles"),
+			{ Field(base::StrID("managed"), TypeExpr::pointer(TypeExpr{ base::StrID("Point") })),
+		      Field(base::StrID("raw"), TypeExpr::cpointer(TypeExpr{ base::StrID("Point") })),
+		      Field(base::StrID("unknown"), TypeExpr::cpointer()) }
+		));
 
 		// Global data: constant answer i64 with initial_value 42
 		GlobalData global;
@@ -103,7 +106,8 @@ private:
 		Function func;
 		func.name = Identifier(base::StrID("main"));
 		func.signature.parameters.emplace_back(TypeExpr(base::StrID("i64")));
-		func.signature.parameters.emplace_back(TypeExpr(base::StrID("ptr_argv")));
+		func.signature.parameters.emplace_back(TypeExpr::pointer(TypeExpr::type(base::StrID("argv"))
+		));
 		func.signature.result_types.emplace_back(TypeExpr(base::StrID("i64")));
 		func.body.emplace_back(
 			instructions::Op_mov_p64_imm(opargs::Place64(base::StrID("ret0")), opargs::Immediate(0))
@@ -150,15 +154,21 @@ private:
 			"Data type should keep assert_size after round-trip"
 		);
 
-		const auto& typed_cptr = std::get<CPointerType>(parsed.types[3]);
-		assertEqual(typed_cptr.name, base::StrID("point_ptr"), "C pointer name should survive");
+		// Pointer expressions must come back as the very same interned expressions.
+		const auto& handles = std::get<DataType>(parsed.types[3]);
+		assertEqual(handles.name, base::StrID("Handles"), "Data type name should be Handles");
 		assertTrue(
-			typed_cptr.inner == base::Optional<TypeExpr>(TypeExpr(base::StrID("Point"))),
-			"C pointer inner should survive round-trip"
+			handles.fields.at(0).type == TypeExpr::pointer(TypeExpr{ base::StrID("Point") }),
+			"`ptr{Point}` should survive the round-trip"
 		);
-		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
-		assertEqual(void_cptr.name, base::StrID("raw_ptr"), "C pointer name should survive");
-		ASSERT_NO_VALUE(void_cptr.inner, "An absent C pointer inner should survive round-trip");
+		assertTrue(
+			handles.fields.at(1).type == TypeExpr::cpointer(TypeExpr{ base::StrID("Point") }),
+			"`cptr{Point}` should survive the round-trip"
+		);
+		assertTrue(
+			handles.fields.at(2).type == TypeExpr::cpointer(),
+			"`cptr{}` should survive the round-trip"
+		);
 
 		// Check global data
 		assertEqual(
@@ -231,8 +241,12 @@ type data: PackedPoint {
 } packed assert_size 8
 
 type fixed_size_table: point_arr Point 2
-type cpointer: point_ptr Point
-type cpointer: raw_ptr
+type data: Handles {
+    managed: ptr{Point},
+    raw: cptr{Point},
+    unknown: cptr{},
+}
+
 
 global_data answers point_arr {
     is_constant: true,
@@ -242,7 +256,7 @@ global_data answers point_arr {
 ffi object "libm.so.6";
 ffi function sqrt { i64 } -> { i64 };
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     mov_p64_imm                ret0,        0;
     ret                   ;
 }

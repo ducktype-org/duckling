@@ -1,47 +1,43 @@
 # Method bbb() is unimplemented in an instantiable class.
-type pointer: pointer_A A
-type pointer: pointer_I1 I1
-type pointer: pointer_I2 I2
-type pointer: pointer_B B
 
-type fun: method_aaa {pointer_I1} {}
-type fun: method_bbb {pointer_I1} {}
+type fun: method_aaa {ptr{I1}} {}
+type fun: method_bbb {ptr{I1}} {}
 
-function method_aaa_impl {pointer_I1} -> {} {
+function method_aaa_impl {ptr{I1}} -> {} {
     ret;
 }
 
-type fun: method_ccc {pointer_I2} {}
-type fun: method_ddd {pointer_I2} {}
+type fun: method_ccc {ptr{I2}} {}
+type fun: method_ddd {ptr{I2}} {}
 
-function method_ccc_impl {pointer_I2} -> {} {
+function method_ccc_impl {ptr{I2}} -> {} {
     ret;
 }
 
-type fun: method_eee {pointer_A} {}
-type fun: method_fff {pointer_A} {}
+type fun: method_eee {ptr{A}} {}
+type fun: method_fff {ptr{A}} {}
 
-function method_eee_impl {pointer_A} -> {} {
+function method_eee_impl {ptr{A}} -> {} {
     ret;
 }
 
-type fun: method_ggg {pointer_B} {}
+type fun: method_ggg {ptr{B}} {}
 
-function method_aaa_impl_B {pointer_B} -> {} {
+function method_aaa_impl_B {ptr{B}} -> {} {
     ret;
 }
 
-type fun: method_bbb_impl {pointer_B} {}
+type fun: method_bbb_impl {ptr{B}} {}
 
-function method_ddd_impl {pointer_B} -> {} {
+function method_ddd_impl {ptr{B}} -> {} {
     ret;
 }
 
-function method_fff_impl {pointer_B} -> {} {
+function method_fff_impl {ptr{B}} -> {} {
     ret;
 }
 
-function method_ggg_impl {pointer_B} -> {} {
+function method_ggg_impl {ptr{B}} -> {} {
     ret;
 }
 

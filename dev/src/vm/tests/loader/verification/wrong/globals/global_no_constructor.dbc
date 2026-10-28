@@ -4,7 +4,7 @@ global_data g i64 {
     constructor: g_ctor,
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     mov_p64_p64 ret0, g;
     ret;
 }

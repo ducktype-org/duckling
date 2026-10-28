@@ -1,12 +1,9 @@
-type pointer: LinkedList Node
-type pointer: LinkedListPtr LinkedList
-
 type data: Node {
     head: i64,
-    tail: LinkedList
+    tail: ptr{Node}
 }
 
-function cons { i64, LinkedList } -> { LinkedList } {
+function cons { i64, ptr{Node} } -> { ptr{Node} } {
     # ret0: result
     # arg0: head
     # arg1: tail
@@ -17,7 +14,7 @@ function cons { i64, LinkedList } -> { LinkedList } {
     alloc_pptr_type ret0, Node;
 
     # head_ptr = &(ret0->head)
-    init_pany_type head_ptr, ptr_i64;
+    init_pany_type head_ptr, ptr{i64};
     structLea_pptr_pptr_field head_ptr, ret0, Node.head;
 
     # *head_ptr = head
@@ -25,7 +22,7 @@ function cons { i64, LinkedList } -> { LinkedList } {
     deinit;  # head_ptr
 
     # ret0->tail = arg1
-    init_pany_type tail_ptr, LinkedListPtr;
+    init_pany_type tail_ptr, ptr{ptr{Node}};
     structLea_pptr_pptr_field tail_ptr, ret0, Node.tail;
 
     store_pptr_pany tail_ptr, arg1;
@@ -36,8 +33,8 @@ function cons { i64, LinkedList } -> { LinkedList } {
 }
 
 # OPTIMISED!!!
-function tail {} -> { LinkedList } {
-    init_pany_type ptr_ptr_node, LinkedListPtr;
+function tail {} -> { ptr{Node} } {
+    init_pany_type ptr_ptr_node, ptr{ptr{Node}};
     structLea_pptr_pptr_field ptr_ptr_node, ret0, Node.tail;
 
     load_pany_pptr ret0, ptr_ptr_node;
@@ -45,7 +42,7 @@ function tail {} -> { LinkedList } {
     ret;
 }
 
-function print_list { LinkedList } -> {} {
+function print_list { ptr{Node} } -> {} {
     # arg0: LinkedList
 
     cmpNull_pptr arg0;
@@ -54,7 +51,7 @@ function print_list { LinkedList } -> {} {
 label non_empty;
 
     init_pany_type curr, i64;
-    init_pany_type x_ptr, ptr_i64;
+    init_pany_type x_ptr, ptr{i64};
 
     # curr = arg0->x
     structLea_pptr_pptr_field x_ptr, arg0, Node.head;
@@ -70,7 +67,7 @@ label non_empty;
 }
 
 
-function free_list {LinkedList} -> {} {
+function free_list {ptr{Node}} -> {} {
     # arg0: LinkedList
 
     cmpNull_pptr arg0;
@@ -78,7 +75,7 @@ function free_list {LinkedList} -> {} {
     ret;
 label non_empty;
 
-    init_pany_type next, LinkedList;
+    init_pany_type next, ptr{Node};
     mov_pptr_pptr next, arg0;
     call_func tail;
 
@@ -88,7 +85,7 @@ label non_empty;
     ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     # INPUT: n - list_length
     #        x1 x2 ... xn - list elements
     # OUTPUT: Inverted and concatenated elements
@@ -97,7 +94,7 @@ function main { i64, ptr_argv } -> { i64 } {
     input_p64 length;
 
     # list = []  # aka NULL
-    init_pany_type list, LinkedList;
+    init_pany_type list, ptr{Node};
 
 label loop_begin;
     cmpEq_p64_imm length, 0;
@@ -108,7 +105,7 @@ label loop_begin;
     input_p64 curr;
 
     # list = cons(curr, list)
-    init_pany_type tail, LinkedList;
+    init_pany_type tail, ptr{Node};
     mov_pptr_pptr tail, list;
     call_func cons;
 
@@ -117,7 +114,7 @@ label loop_begin;
     jmp_label loop_begin;
 label loop_end;
 
-    init_pany_type list2, LinkedList;
+    init_pany_type list2, ptr{Node};
     mov_pptr_pptr list2, list;
     call_func print_list;
     call_func free_list;

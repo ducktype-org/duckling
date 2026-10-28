@@ -27,7 +27,7 @@ public:
 		TESTER_ADD_TEST(invalidTypeSpecifier);
 		TESTER_ADD_TEST(noFunctionSignature);
 		TESTER_ADD_TEST(invalidLocalName);
-		TESTER_ADD_TEST(cpointerBadPointee);
+		TESTER_ADD_TEST(pointerWithoutPointeeFails);
 		TESTER_ADD_TEST(opcodeSourcePositions);
 	}
 
@@ -74,10 +74,11 @@ private:
 		parseInvalidDbc("invalid_local_name.dbc", { "Expected an identifier here" });
 	}
 
-	void cpointerBadPointee() {
+	/// Only a C pointer may leave its pointee out, giving `cptr{}`.
+	void pointerWithoutPointeeFails() {
 		parseInvalidDbc(
-			"cpointer_bad_pointee.dbc",
-			{ "Expected an identifier (pointee type) or end of declaration." }
+			"pointer_without_pointee.dbc",
+			{ "`ptr` needs a pointee; only `cptr` may be left empty." }
 		);
 	}
 

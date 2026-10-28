@@ -13,7 +13,7 @@ namespace compiler::backend_vm::internal {
 	using namespace vm::code;
 
 	namespace {
-		base::StrID alternativeTypeNameOf(
+		vm::code::TypeExpr alternativeTypeOf(
 			Ref<FunctionLoweringContext> ctx, const lir::VariantParameters& params
 		) {
 			return ctx->programCtx().keepTslType(params.alternative_layout);
@@ -21,9 +21,8 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const VariantConstructOperation& op) {
-		const base::StrID alternative_type_name = alternativeTypeNameOf(ctx, op.variant_params);
-		const auto        alternative_type_arg
-			= vm::opargs::Type(vm::code::TypeExpr{ alternative_type_name });
+		const vm::code::TypeExpr alternative_type     = alternativeTypeOf(ctx, op.variant_params);
+		const auto               alternative_type_arg = vm::opargs::Type(alternative_type);
 
 		// Activate the alternative, then store the payload through a pointer to the
 		// variant's data.
@@ -34,9 +33,8 @@ namespace compiler::backend_vm::internal {
 		// so there is no payload to write.
 		if (op.payload.empty()) return;
 
-		const TypeOfData& ptr_type
-			= ctx->programCtx().getOrInsertPointerType(alternative_type_name);
-		DVMPlace payload_ptr = ctx->pushTempLocal(ptr_type, "variant_data_ptr");
+		const vm::code::TypeExpr ptr_type    = ctx->programCtx().pointerTypeExpr(alternative_type);
+		DVMPlace                 payload_ptr = ctx->pushTempLocal(ptr_type, "variant_data_ptr");
 		ctx->pushInstruction({ OpKind::variantGetInner,
 		                       payload_ptr.asArgument(),
 		                       op.dest.asArgument(),
@@ -50,7 +48,7 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const VariantTryProjectOperation& op) {
 		CORE_ASSERT(op.dest.isDirect(), "Non direct dest is not supported.");
 
-		const base::StrID alternative_type_name = alternativeTypeNameOf(ctx, op.variant_params);
+		const vm::code::TypeExpr alternative_type = alternativeTypeOf(ctx, op.variant_params);
 
 		// `op.variant` is a reference to the variant, so `asArgument` yields a pointer place and
 		// the loader picks the `variantGetInner_pptr_pptr_type` form, which recovers the variant
@@ -59,6 +57,6 @@ namespace compiler::backend_vm::internal {
 		ctx->pushInstruction({ OpKind::variantGetInner,
 		                       op.dest.asArgument(),
 		                       op.variant.asArgument(),
-		                       vm::opargs::Type(vm::code::TypeExpr{ alternative_type_name }) });
+		                       vm::opargs::Type(alternative_type) });
 	}
 }

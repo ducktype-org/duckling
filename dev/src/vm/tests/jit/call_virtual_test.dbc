@@ -1,10 +1,6 @@
-type pointer: pointer_I1 I1
-type pointer: pointer_Parent Parent
-type pointer: pointer_Child Child
-
-type fun: method_I1_void {pointer_I1} {}
-type fun: method_parent_void {pointer_Parent} {}
-type fun: method_child_void {pointer_Child} {}
+type fun: method_I1_void {ptr{I1}} {}
+type fun: method_parent_void {ptr{Parent}} {}
+type fun: method_child_void {ptr{Child}} {}
 
 type interface: I1 {
     virtual_methods: { 
@@ -37,25 +33,25 @@ type class: Child {
 }
 
 # ============ METHODS IMPLEMENTATION ============ 
-function I1_foo_default_impl_type {pointer_I1} -> { } {
+function I1_foo_default_impl_type {ptr{I1}} -> { } {
     init_pany_type res, i64; mov_p64_imm res, 1; output_p64 res; deinit; deinit; ret;
 }
-function Child_I1_bar_impl_type {pointer_Child} -> { } {
+function Child_I1_bar_impl_type {ptr{Child}} -> { } {
     init_pany_type res, i64; mov_p64_imm res, 2; output_p64 res; deinit; deinit; ret;
 }
-function Parent_getAge_impl_type {pointer_Parent} -> { } {
+function Parent_getAge_impl_type {ptr{Parent}} -> { } {
     init_pany_type res, i64; mov_p64_imm res, 3; output_p64 res; deinit; ret;
 }
-function Child_getAge_impl_type {pointer_Child} -> { } {
+function Child_getAge_impl_type {ptr{Child}} -> { } {
     init_pany_type res, i64; mov_p64_imm res, 4; output_p64 res; deinit; deinit; ret;
 }
 
-function to_jit { pointer_Parent } -> { } {
-    init_pany_type           sub_arg, pointer_I1;
+function to_jit { ptr{Parent} } -> { } {
+    init_pany_type           sub_arg, ptr{I1};
     upcast_pptr_pptr         sub_arg, arg0;
     virtualCall_pptr_method sub_arg, foo;
 
-    init_pany_type           sub_arg, pointer_I1;
+    init_pany_type           sub_arg, ptr{I1};
     upcast_pptr_pptr         sub_arg, arg0;
     virtualCall_pptr_method sub_arg, bar;
 
@@ -63,14 +59,14 @@ function to_jit { pointer_Parent } -> { } {
     ret;
 }
 
-function main { i64, ptr_argv }-> { i64 } {
+function main { i64, ptr{argv} }-> { i64 } {
     # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 
-    init_pany_type ptr_child, pointer_Child;
+    init_pany_type ptr_child, ptr{Child};
 
-    init_pany_type actual_child, pointer_Child;
+    init_pany_type actual_child, ptr{Child};
     alloc_pptr_type actual_child, Child;
     setVTable_pptr_type actual_child, Child;
 
@@ -83,7 +79,7 @@ label loop_start;
     cmpEq_p64_imm counter, 0;
     jmpIf_label loop_end;
 
-    init_pany_type      ptr_i1, pointer_Parent;
+    init_pany_type      ptr_i1, ptr{Parent};
     upcast_pptr_pptr    ptr_i1, actual_child;
     call_func to_jit;
 

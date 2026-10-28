@@ -136,7 +136,7 @@ namespace compiler::backend_vm::internal {
 			// a CMP b;
 			// mov x, 0;
 			// cmov x, 1;
-			auto                     result_type = DVMImmediate::u8(u8(0)).type;
+			auto                     result_type = DVMImmediate::u8(u8(0)).getTypeExpr();
 			base::Optional<DVMPlace> dest_opt;
 
 			if (op.dest.has_value() && op.dest->isDirect())

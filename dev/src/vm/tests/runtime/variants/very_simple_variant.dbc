@@ -1,21 +1,21 @@
 type primitive: i8 1
 type variant: simple_variant { i64, i8 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type v1, simple_variant;  # var v1: variant<i64, i8>;
 
     variantSetInner_pvnt_type v1, i64;        # v1.setType<i64>();
 
-    init_pany_type ptr, ptr_i64;        # var ptr: i64*;
-    variantGetInner_pptr_pvnt_type ptr, v1, i64;        # ptr = v1.getData<i64>();
+    init_pany_type p, ptr{i64};        # var ptr: i64*;
+    variantGetInner_pptr_pvnt_type p, v1, i64;        # ptr = v1.getData<i64>();
 
     init_pany_type int, i64;            # var int: i64;
     input_p64 int;                      # int = input();
 
-    store_pptr_pany ptr, int;           # *ptr = int;
+    store_pptr_pany p, int;           # *ptr = int;
 
     init_pany_type read_ptr, i64;       # var read_ptr: i64;
-    load_pany_pptr read_ptr, ptr;       # read_ptr = *ptr;
+    load_pany_pptr read_ptr, p;       # read_ptr = *ptr;
 
     output_p64 read_ptr;                # print(read_ptr);
 

@@ -1,8 +1,5 @@
-type pointer: pointer_Animal Animal
-type pointer: pointer_Dog Dog
-
 # ========== VIRTUAL METHOD DECLARATIONS ==============
-type fun: method_toHumanYears {pointer_Animal} {}
+type fun: method_toHumanYears {ptr{Animal}} {}
 
 # ============ CLASSES DEFINITIONS ============
 type class: Animal {
@@ -21,12 +18,11 @@ type class: Dog {
 }
 
 type fixed_size_table: dog_table Dog 2
-type pointer:          dog_table_ptr dog_table
 
 # ============ METHODS IMPLEMENTATION ============
 
 # Implementation for Dog.
-function dog_year_to_human_years {pointer_Dog} -> {} {
+function dog_year_to_human_years {ptr{Dog}} -> {} {
     init_pany_type         call_res,      i64;
     init_pany_type         call_arg0,     i64;
     mov_p64_imm            call_arg0,       0;
@@ -37,11 +33,11 @@ function dog_year_to_human_years {pointer_Dog} -> {} {
 
 type variant: Dog_or_i64 {Dog, i64}
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type              dog_or_i64, Dog_or_i64;
     variantSetInner_pvnt_type   dog_or_i64, Dog;
 
-    init_pany_type              dog_ptr, pointer_Dog;
+    init_pany_type              dog_ptr, ptr{Dog};
     variantGetInner_pptr_pvnt_type   dog_ptr, dog_or_i64, Dog;
     setVTable_pptr_type         dog_ptr, Dog;
     virtualCall_pptr_method    dog_ptr, toHumanYears;

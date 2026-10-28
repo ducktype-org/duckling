@@ -2,13 +2,12 @@ type data: Foo {
     a: i64,
     b: i64
 }
-type pointer: ptr_Foo Foo
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type p, ptr_Foo;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type p, ptr{Foo};
     alloc_pptr_type p, Foo;
 
-    init_pany_type field_ptr, ptr_i64;
+    init_pany_type field_ptr, ptr{i64};
 
     init_pany_type case, i64;
     input_p64 case; # 0 for a, 1 for b

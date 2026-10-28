@@ -1,13 +1,13 @@
-global_data global_ptr ptr_i64 {}
+global_data global_ptr ptr{i64} {}
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type ptr, ptr_i64;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type p, ptr{i64};
     init_pany_type value, i64;
-    alloc_pptr_type ptr, i64;
+    alloc_pptr_type p, i64;
     mov_p64_imm value, 5;
-    store_pptr_pany ptr, value;
-    mov_pptr_pptr global_ptr, ptr;
-    setNull_pptr ptr;
+    store_pptr_pany p, value;
+    mov_pptr_pptr global_ptr, p;
+    setNull_pptr p;
 
 	ret;
 }

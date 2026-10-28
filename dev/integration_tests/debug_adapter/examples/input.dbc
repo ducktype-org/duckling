@@ -1,6 +1,6 @@
 # Returns number that was inputed
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	# [0, 8) main ret0
 	# [8, 16) argc
 	# [16, 32) *argv

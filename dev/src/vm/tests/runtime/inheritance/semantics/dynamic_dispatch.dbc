@@ -1,11 +1,7 @@
-type pointer: pointer_Animal Animal
-type pointer: pointer_Feline Feline
-type pointer: pointer_Cat Cat
-
 # ========== VIRTUAL METHOD DECLARATIONS ==============
-type fun: method_Animal_void {pointer_Animal} {}
-type fun: method_Feline_void {pointer_Feline} {}
-type fun: method_Cat_void {pointer_Cat} {}
+type fun: method_Animal_void {ptr{Animal}} {}
+type fun: method_Feline_void {ptr{Feline}} {}
+type fun: method_Cat_void {ptr{Cat}} {}
 
 # ============ CLASSES DEFINITIONS ============
 type class: Animal {
@@ -38,7 +34,7 @@ type class: Cat {
 
 # ============ METHODS IMPLEMENTATION ============ 
 # Implementation for Animal.
-function Animal_makeSound_impl {pointer_Animal} -> {} {
+function Animal_makeSound_impl {ptr{Animal}} -> {} {
     init_pany_type x, i64;
     mov_p64_imm x, 1;
     output_p64 x; 
@@ -48,7 +44,7 @@ function Animal_makeSound_impl {pointer_Animal} -> {} {
 }
 
 # Override for Feline
-function Feline_makeSound_impl {pointer_Feline} -> {} { 
+function Feline_makeSound_impl {ptr{Feline}} -> {} { 
     init_pany_type x, i64;
     mov_p64_imm x, 2;
     output_p64 x; 
@@ -58,7 +54,7 @@ function Feline_makeSound_impl {pointer_Feline} -> {} {
 }
 
 # Implementation for Feline.
-function Feline_hunt_impl {pointer_Feline} -> {} { 
+function Feline_hunt_impl {ptr{Feline}} -> {} { 
     init_pany_type x, i64;
     mov_p64_imm x, 3;
     output_p64 x; 
@@ -68,7 +64,7 @@ function Feline_hunt_impl {pointer_Feline} -> {} {
 }
 
 # Override for Cat.
-function Cat_makeSound_impl {pointer_Cat} -> {} { 
+function Cat_makeSound_impl {ptr{Cat}} -> {} { 
     init_pany_type x, i64;
     mov_p64_imm x, 4;
     output_p64 x; 
@@ -78,7 +74,7 @@ function Cat_makeSound_impl {pointer_Cat} -> {} {
 }
 
 # Override for Cat.
-function Cat_hunt_impl {pointer_Cat} -> {} { 
+function Cat_hunt_impl {ptr{Cat}} -> {} { 
     init_pany_type x, i64;
     mov_p64_imm x, 5;
     output_p64 x; 
@@ -87,36 +83,36 @@ function Cat_hunt_impl {pointer_Cat} -> {} {
     ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_pany_type ptr_a, pointer_Animal;
-    init_pany_type ptr_f, pointer_Feline;
-    init_pany_type ptr_c, pointer_Cat;
+function main { i64, ptr{argv} } -> { i64 } {
+    init_pany_type ptr_a, ptr{Animal};
+    init_pany_type ptr_f, ptr{Feline};
+    init_pany_type ptr_c, ptr{Cat};
 
-    init_pany_type temp_a, pointer_Animal;
-    init_pany_type temp_f, pointer_Feline;
-    init_pany_type temp_c, pointer_Cat;
+    init_pany_type temp_a, ptr{Animal};
+    init_pany_type temp_f, ptr{Feline};
+    init_pany_type temp_c, ptr{Cat};
 
-    init_pany_type actual_animal_obj, pointer_Animal;
-    init_pany_type actual_feline_obj, pointer_Feline;
-    init_pany_type actual_cat_obj, pointer_Cat;
+    init_pany_type actual_animal_obj, ptr{Animal};
+    init_pany_type actual_feline_obj, ptr{Feline};
+    init_pany_type actual_cat_obj, ptr{Cat};
 
     # --------------------- Cat object, Cat* pointer --------------------------
     alloc_pptr_type actual_cat_obj, Cat;
     setVTable_pptr_type actual_cat_obj, Cat;        
     upcast_pptr_pptr ptr_c, actual_cat_obj;     # ptr_c = (Cat*)actual_cat_obj;
 
-    init_pany_type temp_c_1, pointer_Cat;
+    init_pany_type temp_c_1, ptr{Cat};
     mov_pptr_pptr temp_c_1, ptr_c;
     virtualCall_pptr_method ptr_c, makeSound; # Expected output: 4.
 
     # ---------------------- Cat object, Feline* pointer ------------------
     upcast_pptr_pptr ptr_f, actual_cat_obj;                     # ptr_f = (Feline*)actual_cat_obj;
     
-    init_pany_type temp_f_1, pointer_Feline;
+    init_pany_type temp_f_1, ptr{Feline};
     mov_pptr_pptr temp_f_1, ptr_f;
     virtualCall_pptr_method ptr_f, makeSound;   # Expected output: 4
 
-    init_pany_type temp_f_2, pointer_Feline;
+    init_pany_type temp_f_2, ptr{Feline};
     mov_pptr_pptr temp_f_2, ptr_f;
     virtualCall_pptr_method ptr_f, hunt;         # Expected output: 5
 
@@ -127,7 +123,7 @@ function main { i64, ptr_argv } -> { i64 } {
     setVTable_pptr_type actual_cat_obj, Cat;        
     upcast_pptr_pptr ptr_a, actual_cat_obj;     # ptr_a = (Animal*)actual_cat_obj;
 
-    init_pany_type temp_a_1, pointer_Animal;
+    init_pany_type temp_a_1, ptr{Animal};
     mov_pptr_pptr temp_a_1, ptr_a;
     virtualCall_pptr_method ptr_a, makeSound; # Expected output: 4.
 
@@ -138,18 +134,18 @@ function main { i64, ptr_argv } -> { i64 } {
     setVTable_pptr_type actual_feline_obj, Feline;        
     upcast_pptr_pptr ptr_f, actual_feline_obj;
 
-    init_pany_type temp_f_3, pointer_Feline;
+    init_pany_type temp_f_3, ptr{Feline};
     mov_pptr_pptr temp_f_3, ptr_f;
     virtualCall_pptr_method ptr_f, makeSound;   # Expected output: 2
 
-    init_pany_type temp_f_4, pointer_Feline;
+    init_pany_type temp_f_4, ptr{Feline};
     mov_pptr_pptr temp_f_4, ptr_f;
     virtualCall_pptr_method ptr_f, hunt;   # Expected output: 3
 
     # ---------------------- Feline object, Animal* pointer ------------------
     upcast_pptr_pptr ptr_a, actual_feline_obj;      # ptr_a = (Animal*)actual_feline_obj;
 
-    init_pany_type temp_a_2, pointer_Animal;
+    init_pany_type temp_a_2, ptr{Animal};
     mov_pptr_pptr temp_a_2, ptr_a;
     virtualCall_pptr_method ptr_a, makeSound;   # Expected output: 2
 
@@ -160,7 +156,7 @@ function main { i64, ptr_argv } -> { i64 } {
     setVTable_pptr_type actual_animal_obj, Animal;   
     upcast_pptr_pptr ptr_a, actual_animal_obj;
 
-    init_pany_type temp_a_3, pointer_Animal;
+    init_pany_type temp_a_3, ptr{Animal};
     mov_pptr_pptr temp_a_3, ptr_a;
     virtualCall_pptr_method ptr_a, makeSound; # Expected output: 1
 

@@ -161,18 +161,6 @@ namespace vm::code {
 				out << type.size.asInt();
 			}
 
-			void operator()(const PointerType& type) const {
-				out << "type pointer: ";
-				out << type.name.strView() << " ";
-				out << type.inner.canonicalName().strView();
-			}
-
-			void operator()(const CPointerType& type) const {
-				out << "type cpointer: ";
-				out << type.name.strView();
-				if (type.inner.has_value()) out << " " << type.inner->canonicalName().strView();
-			}
-
 			void operator()(const FixedSizeTableType& type) const {
 				out << "type fixed_size_table: ";
 				out << type.name.strView() << " ";

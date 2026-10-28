@@ -22,13 +22,12 @@ namespace {
 		ffi_function.name
 			= vm::code::Identifier(std::get<DVMFFIFunctionName>(call_info.call_target).name);
 		ffi_function.signature.parameters = call_info.param_types
-		                                  | std::views::transform([](const auto& type) {
-												return vm::code::TypeExpr(vm::code::typeName(type));
+		                                  | std::views::transform([](vm::code::TypeExpr type) {
+												return vm::code::TypeExprUse(type);
 											})
 		                                  | std::ranges::to<std::vector<vm::code::TypeExprUse>>();
 		if_opt_some(call_info.return_type, result_type) {
-			ffi_function.signature.result_types
-				= { vm::code::TypeExpr(vm::code::typeName(result_type)) };
+			ffi_function.signature.result_types = { vm::code::TypeExprUse(result_type) };
 		}
 		return ffi_function;
 	}
@@ -51,7 +50,7 @@ namespace compiler::backend_vm::internal {
 
 		for (const auto& [arg_idx, func_arg, arg_type]:
 		     std::views::zip(std::views::iota(0), op.args, op.call_info.param_types)) {
-			CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
+			CORE_DEV_LOG(Backend, "Initializing: ", arg_type.canonicalName(), '\n');
 
 			auto arg_name = base::strConcat("call", "_arg", arg_idx, "_");
 			auto temp_arg = ctx->pushTempLocal(arg_type, arg_name, false);

@@ -182,7 +182,7 @@ namespace lang_def {
 			{ Keyword::BCAssertSize, "assert_size", KeywordFlags() },
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
-			{ Keyword::BCPointer, "pointer", KeywordFlags() },
+			{ Keyword::BCPtr, "ptr", KeywordFlags() },
 			{ Keyword::BCFixedSizeTable, "fixed_size_table", KeywordFlags() },
 			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
 			{ Keyword::BCData, "data", KeywordFlags() },
@@ -205,7 +205,7 @@ namespace lang_def {
 			{ Keyword::BCIsConstant, "is_constant", KeywordFlags() },
 			{ Keyword::BCInitialValue, "initial_value", KeywordFlags() },
 			{ Keyword::BCPacked, "packed", KeywordFlags() },
-			{ Keyword::BCCPointer, "cpointer", KeywordFlags() },
+			{ Keyword::BCCPtr, "cptr", KeywordFlags() },
 		});
 
 	// `- 1` because of `Keyword::NotAKeyword`

@@ -178,7 +178,7 @@ function consumer {} -> {} {
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 
 	init_pany_type              m_init, mutex;
 	call_builtinfunc            builtin_create_mutex;

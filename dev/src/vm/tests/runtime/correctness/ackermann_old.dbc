@@ -1,4 +1,4 @@
-function ackermann { i64, ptr_i64 } -> { i64 } {
+function ackermann { i64, ptr{i64} } -> { i64 } {
 	# arg0 -> m
 	# arg1 -> nPtr
 
@@ -17,7 +17,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 	# return A(m-1, A(m, n-1))
 	init_pany_type          new_ret0, i64;       # A(m, n-1) ret0
 	init_pany_type          n1_arg0, i64;           # A(m, n-1) arg0 -> m
-	init_pany_type          n1_arg1, ptr_i64;       # A(m, n-1) arg1 -> nPtr
+	init_pany_type          n1_arg1, ptr{i64};       # A(m, n-1) arg1 -> nPtr
 
 	mov_p64_p64             n1_arg0, arg0;          # arg0 := m
 	sub_p64_imm             n, 1;                   # n := n-1
@@ -31,7 +31,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 	mov_p64_p64             n, new_ret0;         # n := A(m, n-1) (n used as a temp store)
 
 	init_pany_type          m1_arg0, i64;           # A(m-1, A(m, n-1)) arg0 -> m
-	init_pany_type          m1_arg1, ptr_i64;       # A(m-1, A(m, n-1)) arg1 -> nPtr
+	init_pany_type          m1_arg1, ptr{i64};       # A(m-1, A(m, n-1)) arg1 -> nPtr
 	sub_p64_imm             arg0, 1;                # m := m-1
 	mov_p64_p64             m1_arg0, arg0;          # arg0 := m
 	alloc_pptr_type         m1_arg1, i64;           # arg1 := alloc *i64
@@ -49,7 +49,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 	# return A(m-1, 1)
 	init_pany_type          n0_ret0, i64;        # A(m-1, 1) ret0
 	init_pany_type          n0_arg0, i64;           # A(m-1, 1) arg0 -> m
-	init_pany_type          n0_arg1, ptr_i64;       # A(m-1, 1) arg1 -> nPtr
+	init_pany_type          n0_arg1, ptr{i64};       # A(m-1, 1) arg1 -> nPtr
 
 	sub_p64_imm             arg0, 1;                # m := m-1
 	mov_p64_p64             n0_arg0, arg0;          # arg0 := m
@@ -78,7 +78,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr{argv} } -> { i64 } {
 	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
@@ -86,7 +86,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type          n, i64;
 	init_pany_type          ack_ret0, i64;
 	init_pany_type          ack_arg0, i64;
-	init_pany_type          ack_arg1, ptr_i64;
+	init_pany_type          ack_arg1, ptr{i64};
 
 	input_p64               ack_arg0;
 	input_p64               n;

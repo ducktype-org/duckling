@@ -57,6 +57,9 @@ namespace vm::code {
 		/// @brief Defines the type declared under `id` from its declaration.
 		void define(valid_type::ValidTypeID id, const TypeOfData& declaration);
 
+		/// @brief Defines the type declared under `id` from `expr`, which is not a name.
+		void defineDerived(valid_type::ValidTypeID id, const TypeExpr& expr);
+
 		Ref<TypeContext>                     context;
 		std::vector<valid_type::ValidTypeID> built;
 	};
