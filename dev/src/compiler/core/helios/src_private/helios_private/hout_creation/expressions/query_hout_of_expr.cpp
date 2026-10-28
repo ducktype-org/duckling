@@ -22,6 +22,7 @@
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_category.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
@@ -459,6 +460,17 @@ namespace compiler::helios::code {
 						));
 						return;
 					}
+
+					if (inner->expression_type.getValueCategory().getCategory()
+					    == tsh::PrimaryCategory::Temporary) {
+						// The move is not needed, and should be discouraged.
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							"A temporary is moved out of implicitly, `move` is not needed here.",
+							stmt->getStablePosition()
+						));
+						return;
+					}
+
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}
