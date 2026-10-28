@@ -142,7 +142,7 @@ mod tests {
     use tempfile::{TempDir, tempdir};
 
     use super::*;
-    use crate::util::path_ops::PathOpsExt;
+    use crate::util::path_ops::write_file;
     use crate::util::test_utils::setup_test;
 
     fn setup_duck_home_with_a_given_max_fix_distance(dist: u64) -> (DuckContext, TempDir) {
@@ -153,15 +153,16 @@ mod tests {
         unsafe {
             std::env::set_var("DUCK_HOME", dir.path());
         }
-        dir.path()
-            .join("config.yaml")
-            .write(format!(
+        write_file(
+            dir.path().join("config.yaml"),
+            format!(
                 "security:
   typos:
     enabled: true
     max-distance: {dist}",
-            ))
-            .unwrap();
+            ),
+        )
+        .unwrap();
         let ctx = DuckContext::default();
         assert_eq!(ctx.duck_cfg().max_fix_dist().unwrap(), dist);
         assert!(ctx.duck_cfg().fixes_enabled().unwrap());
