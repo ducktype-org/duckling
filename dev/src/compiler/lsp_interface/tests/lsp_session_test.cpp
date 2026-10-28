@@ -45,6 +45,8 @@ namespace {
 		/// rejected change can be driven from a test.
 		base::OkBad update_result = base::OK;
 		base::OkBad close_result  = base::OK;
+		/// What a semantic tokens request is answered with.
+		base::Optional<lsp::SemanticTokens> semantic_tokens_result{};
 
 		void addWorkspace(const lsp::Uri& root) override {
 			calls.push_back(Call{ .name = "addWorkspace", .uri = root.toString() });
@@ -88,6 +90,11 @@ namespace {
 				= queried_uri_opt.has_value() ? queried_uri_opt.value().toString() : std::string{},
 			});
 		}
+
+		base::Optional<lsp::SemanticTokens> semanticTokens(const lsp::Uri& uri) override {
+			calls.push_back(Call{ .name = "semanticTokens", .uri = uri.toString() });
+			return semantic_tokens_result;
+		}
 	};
 
 	struct SessionRun final {
@@ -107,9 +114,10 @@ namespace {
 	 * compiler.
 	 */
 	SessionRun runSession(
-		const std::vector<std::string>& messages,
-		base::OkBad                     update_result = base::OK,
-		base::OkBad                     close_result  = base::OK
+		const std::vector<std::string>&     messages,
+		base::OkBad                         update_result          = base::OK,
+		base::OkBad                         close_result           = base::OK,
+		base::Optional<lsp::SemanticTokens> semantic_tokens_result = {}
 	) {
 		std::string input;
 		for (const auto& message: messages) input += duck_ls_test::frame(message);
@@ -122,8 +130,9 @@ namespace {
 		RecordingCompiler      compiler{ base::Ref<duck_ls::ServerSession>(&session),
                                     base::Ref<duck_ls::FilesCache>(&files) };
 
-		compiler.update_result = update_result;
-		compiler.close_result  = close_result;
+		compiler.update_result          = update_result;
+		compiler.close_result           = close_result;
+		compiler.semantic_tokens_result = std::move(semantic_tokens_result);
 
 		session.registerHandlers(compiler);
 		endpoint.runMessageLoop();
@@ -173,6 +182,9 @@ public:
 		TESTER_ADD_TEST(didChangeWatchedFilesTest);
 		TESTER_ADD_TEST(didChangeWatchedFilesWithNothingElseTest);
 		TESTER_ADD_TEST(unsupportedUriIsNotFatalTest);
+		TESTER_ADD_TEST(initializeSemanticTokensCapabilityTest);
+		TESTER_ADD_TEST(semanticTokensFullTest);
+		TESTER_ADD_TEST(semanticTokensFullUnknownDocumentTest);
 	}
 
 private:
@@ -342,6 +354,58 @@ private:
 		assertTrue(
 			run.calls[0].uri == "untitled:Untitled-1",
 			"The URI must be forwarded as the client spelled it"
+		);
+	}
+
+	void initializeSemanticTokensCapabilityTest() {
+		auto written = compact(runSession({ INITIALIZE, INITIALIZED, SHUTDOWN, EXIT }).written);
+
+		assertTrue(
+			written.find(R"("semanticTokensProvider":{)") != std::string::npos,
+			"initialize must advertise semantic tokens: " + written
+		);
+		assertTrue(
+			written.find(R"("tokenTypes":["namespace","type","class")") != std::string::npos,
+			"initialize must advertise the standard token types in order: " + written
+		);
+		assertTrue(
+			written.find(R"("full":true)") != std::string::npos,
+			"initialize must advertise full semantic tokens: " + written
+		);
+	}
+
+	void semanticTokensFullTest() {
+		auto run = runSession(
+			session({
+				R"({"jsonrpc":"2.0","id":3,"method":"textDocument/semanticTokens/full","params":)"
+				R"({"textDocument":{"uri":"file:///ws/a.dk"}}})",
+			}),
+			base::OK,
+			base::OK,
+			lsp::SemanticTokens{ .data = { 0, 0, 3, 15, 0 } }
+		);
+
+		assertMethodCalls(run, { "semanticTokens" }, "semanticTokens/full");
+		assertTrue(run.calls[0].uri == "file:///ws/a.dk", "The request must name the document");
+
+		auto written = compact(run.written);
+		assertTrue(
+			written.find(R"("id":3,"result":{"data":[0,0,3,15,0]})") != std::string::npos,
+			"The tokens must be the response: " + written
+		);
+	}
+
+	void semanticTokensFullUnknownDocumentTest() {
+		auto run = runSession(session({
+			R"({"jsonrpc":"2.0","id":3,"method":"textDocument/semanticTokens/full","params":)"
+			R"({"textDocument":{"uri":"file:///ws/a.dk"}}})",
+		}));
+
+		assertMethodCalls(run, { "semanticTokens" }, "semanticTokens/full without tokens");
+		auto written = compact(run.written);
+		assertTrue(
+			written.find(R"("id":3,"result":null)") != std::string::npos,
+			"A document without tokens must be answered with null: " + written
 		);
 	}
 };
