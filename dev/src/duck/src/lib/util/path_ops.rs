@@ -219,8 +219,7 @@ fn change_time_inner(path: &Path) -> io::Result<SystemTime> {
 }
 
 /// Copy the contents of one file into another and synchronize the result to disk.
-// !TODO: Do we want to change it to `std::fs::copy`? It's more optimised (e.g. uses `sendfile` on
-// Linux).
+// Do we want to change it to `std::fs::copy`? It's more optimised (e.g. uses `sendfile` on Linux).
 pub fn copy_file(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
