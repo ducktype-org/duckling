@@ -11,6 +11,8 @@
 
 #include "chain_expr.hpp"
 
+#include <helios/symbols/symbol_abi.hpp>
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -1045,6 +1047,14 @@ namespace compiler::helios::code {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration: {
 				if (isBuiltin(symbol).has_value()) {
+					query_ctx.logInt(makeBox<FunctionRefBuiltinError>(
+						chain_elements.at(index).unlock(query_ctx)->getStablePosition()
+					));
+					return query::Failed();
+				}
+				if (not base::holds<DefaultAbi>(
+						query_ctx.query<QuerySymbolABI>(symbol)->valueOrThrow()
+					)) {
 					query_ctx.logInt(makeBox<FunctionRefBuiltinError>(
 						chain_elements.at(index).unlock(query_ctx)->getStablePosition()
 					));

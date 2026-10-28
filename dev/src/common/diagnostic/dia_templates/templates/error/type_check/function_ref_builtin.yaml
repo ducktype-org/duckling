@@ -16,7 +16,7 @@ params:
 
 
 header_message:
-  - "A builtin function cannot be used as a value."
+  - "A builtin or non-default ABI function cannot be used as a value."
 
 
 description:
