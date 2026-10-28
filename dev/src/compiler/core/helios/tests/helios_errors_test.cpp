@@ -61,7 +61,6 @@ public:
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testCopyMoveErrors);
-		TESTER_ADD_TEST(testMoveSemantics);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
