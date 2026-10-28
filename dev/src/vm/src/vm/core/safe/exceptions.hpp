@@ -32,7 +32,7 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMNullFunctionCallException, "Calling a null function value");
 	VM_RUNTIME_EXCEPTION(
 		VMInvalidFunctionValueException,
-		"Calling a function value which does not reference a function of its signature"
+		"Calling a function value which does not reference a function"
 	);
 	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");

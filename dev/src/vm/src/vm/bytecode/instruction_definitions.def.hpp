@@ -435,7 +435,7 @@ DEF_INSTR(mov_pfun_pfun, (vm::opargs::PlaceFunc, dst), (vm::opargs::PlaceFunc, s
  * @brief Calls the function referenced by `callee`, with the same convention as `call_func`. The
  * parameters and results are those of the function type of `callee`.
  *
- * Panics if `callee` is null or references a function of a different signature.
+ * Panics if `callee` is null or references no function.
  */
 DEF_INSTR(call_pfun, (vm::opargs::PlaceFunc, callee))
 
