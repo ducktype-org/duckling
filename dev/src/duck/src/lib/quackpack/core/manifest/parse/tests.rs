@@ -17,26 +17,28 @@ use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::{normalize, touch, try_fsync_dir, write_file};
 use crate::{DuckContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join("x");
-    manifest.touch().unwrap();
-    manifest.write(contents).unwrap();
-    dir.path().try_fsync_dir().unwrap();
+    touch(&manifest).unwrap();
+    write_file(&manifest, contents).unwrap();
+    try_fsync_dir(dir.path()).unwrap();
     (dir, manifest)
 }
 
 fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let frontmatter = dir.path().join("x");
-    frontmatter.touch().unwrap();
-    frontmatter
-        .write(format!("<frontmatter>\n{}\n</frontmatter>", contents))
-        .unwrap();
-    dir.path().try_fsync_dir().unwrap();
+    touch(&frontmatter).unwrap();
+    write_file(
+        &frontmatter,
+        format!("<frontmatter>\n{}\n</frontmatter>", contents),
+    )
+    .unwrap();
+    try_fsync_dir(dir.path()).unwrap();
     (dir, frontmatter)
 }
 
@@ -459,7 +461,7 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
-    assert_eq!(path, manifest_path.parent().unwrap().normalize().join("xd"));
+    assert_eq!(path, normalize(manifest_path.parent().unwrap()).join("xd"));
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
     assert!(a.alias().is_none());
@@ -473,13 +475,7 @@ dependencies:
     let path = a1.source().url().to_path_buf().unwrap();
     assert_eq!(
         path,
-        manifest_path
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .normalize()
-            .join("xd")
+        normalize(manifest_path.parent().unwrap().parent().unwrap()).join("xd")
     );
     assert!(a1.alias().is_none());
 
@@ -1256,27 +1252,27 @@ fn frontmatter_with_import() {
     let dir = TempDir::new().unwrap();
     let importing = dir.path().join("x");
     let imported = dir.path().join("y");
-    importing.touch().unwrap();
-    importing
-        .write(
-            r#" 
+    touch(&importing).unwrap();
+    write_file(
+        &importing,
+        r#" 
             
 <frontmatter>
 import: y
 </frontmatter>
         "#,
-        )
-        .unwrap();
-    imported.touch().unwrap();
-    imported
-        .write(
-            r#"
+    )
+    .unwrap();
+    touch(&imported).unwrap();
+    write_file(
+        &imported,
+        r#"
 dependencies:
   a:
     version: '1'
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
     let ctx = DuckContext::default();
     let frontmatter = parse_frontmatter(&importing, &ctx).unwrap().0;
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
@@ -1315,14 +1311,14 @@ import: y
 fn frontmatter_after_code_not_read() {
     let dir = TempDir::new().unwrap();
     let script = dir.path().join("x");
-    script.touch().unwrap();
+    touch(&script).unwrap();
     let contents = r#" 
 let a = 5
 <frontmatter>
 import: y
 </frontmatter>
         "#;
-    script.write(contents).unwrap();
+    write_file(&script, contents).unwrap();
     let ctx = DuckContext::default();
     // Check that we don't find a frontmatter...
     assert!(!Script::has_frontmatter(&script).unwrap());
@@ -1336,16 +1332,16 @@ import: y
 fn fail_not_closed_frontmatter() {
     let dir = TempDir::new().unwrap();
     let script = dir.path().join("x");
-    script.touch().unwrap();
-    script
-        .write(
-            r#"
+    touch(&script).unwrap();
+    write_file(
+        &script,
+        r#"
 <frontmatter>
 import: y
 </front-matter>
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
     let ctx = DuckContext::default();
     let err = parse_frontmatter(&script, &ctx).unwrap_err();
     assert_eq!(
@@ -1404,7 +1400,7 @@ venv:
     assert!(!summary.venv().expose_freezefile());
     assert_eq!(
         summary.venv().storage_path(),
-        dir.path().join("storage").normalize(),
+        normalize(dir.path().join("storage"))
     );
 }
 

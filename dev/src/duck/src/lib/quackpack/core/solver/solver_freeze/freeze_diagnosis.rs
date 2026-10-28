@@ -343,15 +343,16 @@ mod test {
     use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops::PathOpsExt;
+    use crate::util::path_ops::{touch, try_fsync_dir, write_file};
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
-        manifest.touch().unwrap();
-        manifest.write(contents).unwrap();
-        dir.path().try_fsync_dir().unwrap();
+
+        touch(&manifest).unwrap();
+        write_file(&manifest, contents).unwrap();
+        try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
     }
 

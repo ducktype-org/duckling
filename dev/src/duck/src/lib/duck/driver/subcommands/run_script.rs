@@ -14,7 +14,7 @@ use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::duckling_consts::DUCKLING_SCRIPT_EXT;
 use crate::util::error::MessageError;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::resolve_with_tilde;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
 
 /// Creates parser for the `run_script` subcommand.
@@ -61,7 +61,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
         .get_one::<PathBuf>("path")
         .expect("guarded by the parser");
-    let path = path.resolve_with_tilde(ctx);
+    let path = resolve_with_tilde(path, ctx);
     check_is_script(&path)?;
     run_script(RunScriptOptions::from_path_and_matches(
         ctx, &path, matches,

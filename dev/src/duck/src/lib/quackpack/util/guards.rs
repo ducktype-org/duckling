@@ -9,7 +9,7 @@
 use tracing::error;
 
 use crate::util::file_locks::LockedFile;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::remove_file;
 use crate::util::set_once::SetOnce;
 
 /// Remove a file on drop, if armed.
@@ -64,7 +64,7 @@ impl Drop for RemoveOnDrop {
         let path = file.path().to_path_buf();
         // Close the file. Otherwise we can fail on Windows.
         drop(file);
-        if let Err(e) = path.rm() {
+        if let Err(e) = remove_file(&path) {
             error!(error = %e, ?path, "failed to remove");
         }
     }
