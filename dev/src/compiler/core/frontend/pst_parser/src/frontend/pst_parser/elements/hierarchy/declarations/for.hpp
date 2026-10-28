@@ -30,7 +30,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit For(LangElementConstructionArgument state): CodeDecl(state) {
+		explicit For(LangElementConstructionData state): CodeDecl(state) {
 			element_kind = ElementKind::For;
 		}
 

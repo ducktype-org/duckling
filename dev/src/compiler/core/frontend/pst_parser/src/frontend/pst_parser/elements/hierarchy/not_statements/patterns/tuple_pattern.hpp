@@ -24,7 +24,7 @@ namespace pst {
 
 	public:
 		// explicit TuplePattern(const dia::SourcePosition& position);
-		explicit TuplePattern(LangElementConstructionArgument state): AnalysisPattern(state) {
+		explicit TuplePattern(LangElementConstructionData state): AnalysisPattern(state) {
 			this->element_kind = ElementKind::TuplePattern;
 		}
 

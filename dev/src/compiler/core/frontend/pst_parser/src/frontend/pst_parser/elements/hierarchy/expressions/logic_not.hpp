@@ -22,7 +22,7 @@ namespace pst::expr {
 		using Self  = LogicNot;
 
 	public:
-		explicit LogicNot(LangElementConstructionArgument state): PrefixOperator(state, 730) {}
+		explicit LogicNot(LangElementConstructionData state): PrefixOperator(state, 730) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

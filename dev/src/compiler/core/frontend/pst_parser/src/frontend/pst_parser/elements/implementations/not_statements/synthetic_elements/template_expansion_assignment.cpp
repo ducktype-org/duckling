@@ -13,7 +13,7 @@ namespace pst {
 	CLONE_SUB_ELEMENTS_DEF(TemplateExpansionAssignment, name, type, value);
 
 	Box<TemplateExpansionAssignment> ElementSynthesizer::templateExpansionAssignment(
-		LangParserElementConstructionData  data,
+		LangElementConstructionData  data,
 		MBox<IdentifierWrapper>&&          name,
 		base::Optional<MBox<ExprHolder>>&& type,
 		MBox<ExprHolder>&&                 value

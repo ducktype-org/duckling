@@ -40,7 +40,7 @@ namespace pst {
 
 		ELEMENT_CLONE_DECL(List)
 
-		explicit List(LangElementConstructionArgument state): NotStmt(state) {}
+		explicit List(LangElementConstructionData state): NotStmt(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

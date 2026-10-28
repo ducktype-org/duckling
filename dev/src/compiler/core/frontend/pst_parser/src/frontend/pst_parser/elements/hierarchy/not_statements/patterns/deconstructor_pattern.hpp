@@ -24,7 +24,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit DeconstructorPattern(LangElementConstructionArgument state):
+		explicit DeconstructorPattern(LangElementConstructionData state):
 			  AnalysisPattern(state) {
 			this->element_kind = ElementKind::DeconstructorPattern;
 		}

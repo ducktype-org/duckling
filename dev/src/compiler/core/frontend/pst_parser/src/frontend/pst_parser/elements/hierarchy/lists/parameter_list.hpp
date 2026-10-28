@@ -18,7 +18,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit ParamList(LangElementConstructionArgument state): List(state) {
+		explicit ParamList(LangElementConstructionData state): List(state) {
 			this->element_kind = ElementKind::ParamList;
 		}
 

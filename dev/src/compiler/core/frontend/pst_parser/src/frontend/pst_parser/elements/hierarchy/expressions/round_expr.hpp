@@ -20,7 +20,7 @@ namespace pst::expr {
 		NAMED_CHILD(expr, ExprElement);
 
 	public:
-		explicit RoundExpr(LangElementConstructionArgument state): ExprElement(state, 200) {}
+		explicit RoundExpr(LangElementConstructionData state): ExprElement(state, 200) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

@@ -35,7 +35,7 @@ namespace pst {
 		ELEMENT_CLONE_DECL(NotStmt);
 
 	public:
-		explicit NotStmt(LangElementConstructionArgument state): LangElement(state) {}
+		explicit NotStmt(LangElementConstructionData state): LangElement(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -135,7 +135,7 @@ namespace pst {
 		Prefixes prefixes;
 		bool     implicit_return{};
 
-		Stmt(StmtKind kind, LangElementConstructionArgument state):
+		Stmt(StmtKind kind, LangElementConstructionData state):
 			  LangElement(state),
 			  kind(kind) {}
 
@@ -250,7 +250,7 @@ namespace pst {
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                                  \
-	class_name(LangElementConstructionArgument state): Stmt(StmtKind::class_name, state) { \
+	class_name(LangElementConstructionData state): Stmt(StmtKind::class_name, state) { \
 		this->element_kind = element_kind_;                                                \
 	}
 }

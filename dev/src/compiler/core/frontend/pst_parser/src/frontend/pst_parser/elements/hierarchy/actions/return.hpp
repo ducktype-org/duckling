@@ -13,7 +13,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Return, Action);
 
 	public:
-		explicit Return(LangElementConstructionArgument state): Action(state) {}
+		explicit Return(LangElementConstructionData state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;

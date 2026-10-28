@@ -13,14 +13,17 @@
 namespace pst {
 	class LangParserState;
 
-	class LangParserElementConstructionData {
+	/**
+	 * @brief Metadata needed for element construction.
+	 */
+	class LangElementConstructionData final {
 	public:
 		HashType            context_hash;
 		dia::SourcePosition source_position;
 
-		LangParserElementConstructionData(const LangParserState& state);
+		LangElementConstructionData(const LangParserState& state);
 
-		LangParserElementConstructionData(HashType context_hash, dia::SourcePosition source_position):
+		LangElementConstructionData(HashType context_hash, dia::SourcePosition source_position):
 			  context_hash(context_hash),
 			  source_position(source_position) {}
 	};

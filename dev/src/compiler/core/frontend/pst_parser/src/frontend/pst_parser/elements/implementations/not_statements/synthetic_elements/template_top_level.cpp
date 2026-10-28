@@ -12,7 +12,7 @@ namespace pst {
 	CLONE_SUB_ELEMENTS_DEF(TemplateTopLevel, assignments, stmt);
 
 	Box<TemplateTopLevel> ElementSynthesizer::templateTopLevel(
-		LangParserElementConstructionData                data,
+		LangElementConstructionData                data,
 		std::vector<MBox<TemplateExpansionAssignment>>&& assignments,
 		MBox<Stmt>&&                                     stmt
 	) {

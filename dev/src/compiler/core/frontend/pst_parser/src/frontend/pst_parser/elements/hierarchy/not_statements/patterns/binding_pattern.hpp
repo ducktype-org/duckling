@@ -22,7 +22,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit BindingPattern(LangElementConstructionArgument state): AnalysisPattern(state) {
+		explicit BindingPattern(LangElementConstructionData state): AnalysisPattern(state) {
 			this->element_kind = ElementKind::BindingPattern;
 		}
 

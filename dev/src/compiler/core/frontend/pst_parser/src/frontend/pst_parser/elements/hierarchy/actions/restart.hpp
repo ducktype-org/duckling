@@ -13,7 +13,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Restart, Action);
 
 	public:
-		explicit Restart(LangElementConstructionArgument state): Action(state) {}
+		explicit Restart(LangElementConstructionData state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;

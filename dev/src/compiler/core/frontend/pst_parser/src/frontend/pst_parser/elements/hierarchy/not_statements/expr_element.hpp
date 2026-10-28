@@ -27,7 +27,7 @@ namespace pst {
 
 		ELEMENT_CLONE_DECL(ExprElement, PRECEDENCE);
 
-		explicit ExprElement(LangElementConstructionArgument state, i64 precedence):
+		explicit ExprElement(LangElementConstructionData state, i64 precedence):
 			  NotStmt(state),
 			  PRECEDENCE(precedence) {
 			this->element_kind = ElementKind::ExprElement;

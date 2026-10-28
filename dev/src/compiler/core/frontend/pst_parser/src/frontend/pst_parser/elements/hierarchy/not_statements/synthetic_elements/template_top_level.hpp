@@ -27,7 +27,7 @@ namespace pst {
 		friend class ElementSynthesizer;
 
 	public:
-		TemplateTopLevel(LangParserElementConstructionData data): NotStmt(data) {}
+		TemplateTopLevel(LangElementConstructionData data): NotStmt(data) {}
 
 		void dprint(std::ostream& out) const final;
 		~TemplateTopLevel() final = default;

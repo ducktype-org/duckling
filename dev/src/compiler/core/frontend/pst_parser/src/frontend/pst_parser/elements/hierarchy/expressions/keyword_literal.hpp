@@ -21,7 +21,7 @@ namespace pst::expr {
 		NAMED_CHILD(keyword, KeywordWrapper);
 
 	public:
-		explicit KeywordLiteral(LangElementConstructionArgument state): ExprElement(state, 300) {}
+		explicit KeywordLiteral(LangElementConstructionData state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

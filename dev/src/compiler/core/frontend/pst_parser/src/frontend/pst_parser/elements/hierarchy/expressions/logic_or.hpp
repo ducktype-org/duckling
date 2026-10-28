@@ -21,7 +21,7 @@ namespace pst::expr {
 		using Self  = LogicOr;
 
 	public:
-		explicit LogicOr(LangElementConstructionArgument state): BinaryOperator(state, 760) {}
+		explicit LogicOr(LangElementConstructionData state): BinaryOperator(state, 760) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

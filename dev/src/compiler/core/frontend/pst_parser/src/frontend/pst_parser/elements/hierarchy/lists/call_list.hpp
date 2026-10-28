@@ -18,7 +18,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit CallList(LangElementConstructionArgument state): List(state) {
+		explicit CallList(LangElementConstructionData state): List(state) {
 			this->element_kind = ElementKind::CallList;
 		}
 

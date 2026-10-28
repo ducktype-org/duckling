@@ -18,7 +18,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit FlowPatternList(LangElementConstructionArgument state): List(state) {
+		explicit FlowPatternList(LangElementConstructionData state): List(state) {
 			this->element_kind = ElementKind::FlowPatternList;
 		}
 

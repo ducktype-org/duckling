@@ -23,7 +23,7 @@ namespace pst {
 		bool                                                    star = false;
 
 	public:
-		explicit DottedName(LangElementConstructionArgument state): NotStmt(state) {
+		explicit DottedName(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::DottedName;
 		}
 

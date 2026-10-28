@@ -4,12 +4,12 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include "lang_parser_element_construction_data.hpp"
+#include "lang_element_construction_data.hpp"
 
 #include "lang_parser_state.hpp"
 
 namespace pst {
-	LangParserElementConstructionData::LangParserElementConstructionData(const LangParserState& state
+	LangElementConstructionData::LangElementConstructionData(const LangParserState& state
 	):
 		  source_position(state.getPosition()) {
 		HashAlg partial_hash;

@@ -29,7 +29,7 @@ namespace pst::expr {
 		static i64 skipToOp(const LangParserState& state, i64 base);
 
 	public:
-		explicit ComparisonChain(LangElementConstructionArgument state): ExprElement(state, 600) {}
+		explicit ComparisonChain(LangElementConstructionData state): ExprElement(state, 600) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

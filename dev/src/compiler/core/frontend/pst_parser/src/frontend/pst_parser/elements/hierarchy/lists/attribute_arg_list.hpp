@@ -18,7 +18,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit AtrArgList(LangElementConstructionArgument state): List(state) {
+		explicit AtrArgList(LangElementConstructionData state): List(state) {
 			this->element_kind = ElementKind::AtrArgList;
 		}
 

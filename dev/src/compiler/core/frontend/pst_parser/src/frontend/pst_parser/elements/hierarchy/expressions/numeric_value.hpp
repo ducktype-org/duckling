@@ -24,7 +24,7 @@ namespace pst::expr {
 			return value;
 		}
 
-		explicit ExprNumericValue(LangElementConstructionArgument state): ExprElement(state, 0) {}
+		explicit ExprNumericValue(LangElementConstructionData state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

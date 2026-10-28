@@ -167,16 +167,6 @@ namespace compiler::helios::templates {
 			auto cloned
 				= template_statement->clone().dynamicCast<pst::TemplateStmt>().toOptBox().value();
 
-			// @TODO: #3110 this is a total hack,
-			// the tokens inside the cloned pst are still pointing to the original source,
-			// this is just a good-ish, but total hack copy of a token source,
-			// so we have a token source to construct the new PST with.
-			auto token_source_hack
-				= tokenizer::makeTokenSource(template_statement->getStablePosition()
-			                                     .getActiveSourcePositionIllegalAccess()
-			                                     .getSource()
-			                                     ->getFile());
-
 			auto baked_pst = pst::TemplateExpansionPST<pst::TemplateStmt>::fromElement(
 				std::move(cloned), std::move(hash_ctx)
 			);

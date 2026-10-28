@@ -12,11 +12,11 @@
 #include "implementations/preamble.hpp"
 
 namespace pst::internal {
-	dia::SourcePosition getPosition(LangElementConstructionArgument state) {
+	dia::SourcePosition getPosition(LangElementConstructionData state) {
 		return state.source_position;
 	}
 
-	HashType getContextHash(LangElementConstructionArgument state) { return state.context_hash; }
+	HashType getContextHash(LangElementConstructionData state) { return state.context_hash; }
 
 	void parseExprIntoHolder(
 		LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length

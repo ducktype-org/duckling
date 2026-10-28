@@ -381,8 +381,7 @@ namespace base {
 		}
 
 		~MBox() {
-			deleter.del(ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
-			                   // https://github.com/ducktype-org/duckling/issues/402
+			reset();
 		}
 	};
 

@@ -24,7 +24,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit ValuePattern(LangElementConstructionArgument state): AnalysisPattern(state) {
+		explicit ValuePattern(LangElementConstructionData state): AnalysisPattern(state) {
 			this->element_kind = ElementKind::ValuePattern;
 		}
 

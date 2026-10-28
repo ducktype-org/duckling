@@ -29,7 +29,7 @@ namespace pst {
 		friend class ElementSynthesizer;
 
 	public:
-		TemplateExpansionAssignment(LangParserElementConstructionData data): NotStmt(data) {}
+		TemplateExpansionAssignment(LangElementConstructionData data): NotStmt(data) {}
 
 		void dprint(std::ostream& out) const final;
 		~TemplateExpansionAssignment() final = default;

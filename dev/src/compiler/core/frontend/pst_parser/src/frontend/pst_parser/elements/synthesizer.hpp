@@ -10,16 +10,19 @@
 #include "hierarchy/not_statements/synthetic_elements/template_top_level.hpp"
 
 namespace pst {
+	/**
+	 * @brief Class with constructors for synthesized (Created outside of normal parsing) elements.
+	 */
 	class ElementSynthesizer final {
 	public:
 		static Box<TemplateExpansionAssignment> templateExpansionAssignment(
-			LangParserElementConstructionData  data,
+			LangElementConstructionData  data,
 			MBox<IdentifierWrapper>&&          name,
 			base::Optional<MBox<ExprHolder>>&& type,
 			MBox<ExprHolder>&&                 value
 		);
 		static Box<TemplateTopLevel> templateTopLevel(
-			LangParserElementConstructionData                data,
+			LangElementConstructionData                data,
 			std::vector<MBox<TemplateExpansionAssignment>>&& assignments,
 			MBox<Stmt>&&                                     stmt
 		);

@@ -33,7 +33,7 @@ namespace pst::expr {
 		};
 
 	public:
-		explicit GeneralBinary(LangElementConstructionArgument state, Operator op):
+		explicit GeneralBinary(LangElementConstructionData state, Operator op):
 			  BinaryOperator(state, op.getGenBinOpPrecedence()) {}
 
 		/**

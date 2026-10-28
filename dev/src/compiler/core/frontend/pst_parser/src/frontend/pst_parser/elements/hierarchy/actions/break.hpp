@@ -13,7 +13,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Break, Action);
 
 	public:
-		explicit Break(LangElementConstructionArgument state): Action(state) {}
+		explicit Break(LangElementConstructionData state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;

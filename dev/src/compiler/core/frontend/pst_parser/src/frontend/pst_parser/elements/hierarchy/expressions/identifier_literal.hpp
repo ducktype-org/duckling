@@ -20,7 +20,7 @@ namespace pst::expr {
 		NAMED_CHILD(name, IdentifierWrapper);
 
 	public:
-		explicit IdentifierLiteral(LangElementConstructionArgument state):
+		explicit IdentifierLiteral(LangElementConstructionData state):
 			  ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);

@@ -11,7 +11,7 @@
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
-#include "lang_parser_element_construction_data.hpp"
+#include "lang_element_construction_data.hpp"
 #include "pst_config.hpp"
 #include "pst_id.hpp"
 #include "source_position_locked.hpp"
@@ -150,7 +150,7 @@ namespace pst {
 
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
-		explicit LangElement(LangElementConstructionArgument state):
+		explicit LangElement(LangElementConstructionData state):
 			  source_position(internal::getPosition(state)),
 			  context_hash(internal::getContextHash(state)),
 			  id(PstID::next()) {}
