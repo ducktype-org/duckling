@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Local manifest schemas.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -37,6 +37,8 @@ pub struct Manifest {
     pub import: Option<PathBuf>,
     /// `venv:` root field.
     pub venv: Option<VenvConfig>,
+    /// Lints configuration.
+    pub lints: Option<Lints>,
 }
 
 impl Manifest {
@@ -47,6 +49,7 @@ impl Manifest {
             && self.dependencies.is_none()
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
+            && self.lints.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -89,12 +92,13 @@ pub struct Metadata {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
 /// Schema of the `dependencies:` table (or its logical variants).
-pub struct Dependencies(pub HashMap<String, Dependency>);
+/// [`BTreeMap`] instead of [`HashMap`] makes itests easier.
+pub struct Dependencies(pub BTreeMap<String, Dependency>);
 
 impl<'a> IntoIterator for &'a Dependencies {
-    type Item = <&'a HashMap<String, Dependency> as IntoIterator>::Item;
+    type Item = <&'a BTreeMap<String, Dependency> as IntoIterator>::Item;
 
-    type IntoIter = <&'a HashMap<String, Dependency> as IntoIterator>::IntoIter;
+    type IntoIter = <&'a BTreeMap<String, Dependency> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
@@ -250,6 +254,14 @@ impl DependencySource {
                         && !detailed_source.has_git()
                         && !detailed_source.has_local())
             }
+        }
+    }
+
+    /// Whether the [`DependencySource`] specifies a name.
+    pub fn has_name(&self) -> bool {
+        match self {
+            DependencySource::Simple(_) => false,
+            DependencySource::Detailed(detailed_source) => detailed_source.name.is_some(),
         }
     }
 }
@@ -432,6 +444,19 @@ pub struct VenvConfig {
     pub ephemeral: Option<bool>,
     pub expose_freezefile: Option<bool>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+/// Schema for configuring lints.
+pub struct Lints {
+    pub duck: Option<DuckLints>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema for configuring duck lints. Maps to the `lints.duck`.
+///
+/// Map is lint name -> lint level.
+pub struct DuckLints(pub HashMap<String, String>);
 
 #[cfg(test)]
 mod tests {

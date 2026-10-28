@@ -38,6 +38,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	Call,
 	VCall,
+	/** Call through a function value: [callee, args...], the callee is a value of a function type */
+	IndirectCall,
 
 	/** Simple byte by byte assignment */
 	Assign,
@@ -158,6 +160,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u32, MetaKind,
 	CreateSlice,
 	CreateTuple,
 	CreateVariant,
+	CreateOptional,
 	Eq,
 	Neq,
 	SizeOf,

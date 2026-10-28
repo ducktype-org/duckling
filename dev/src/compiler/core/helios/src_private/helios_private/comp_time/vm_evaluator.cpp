@@ -67,10 +67,9 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryCtvMaterializingFunction, lir::Function) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
-			const auto& layout
-				= ctx.query<tsl::QuerySymbolTypeLayout>(key.ctv.getTypeOfStoredValue(ctx))
-			          ->valueOrThrow();
-			auto layout_ref = CRef<tsl::TypeLayout>(&layout);
+			const auto  value_type = key.ctv.getTypeOfStoredValue(ctx);
+			const auto& layout = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
+			auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
 
 			lir::Block entry_block;
 			entry_block.terminator = lir::Instruction{
@@ -87,10 +86,15 @@ namespace compiler::helios {
 			return lir::Function{
 				.mangled_name
 				= base::StrID(base::strConcat("comptime_ctv_", mangler::mangleCTV(ctx, key.ctv))),
-				.abi                = { lir::LIRAbi::DefaultAbi{} },
-				.link_once          = false,
-				.ignore_on_dvm      = false,
-				.ignore_on_llvm     = true,
+				.abi            = { lir::LIRAbi::DefaultAbi{} },
+				.link_once      = false,
+				.ignore_on_dvm  = false,
+				.ignore_on_llvm = true,
+				.layout         = &ctx.query<tsl::QueryAbstractTypeLayout>(
+                                  ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+				                                                              .result_type = value_type })
+                )
+				               ->valueOrThrow(),
 				.parameter_layouts  = {},
 				.return_type_layout = layout_ref,
 				.blocks             = std::move(blocks),
@@ -529,7 +533,7 @@ namespace {
 		case compiler::tsh::Kind::Unit:
 			return CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 		case compiler::tsh::Kind::Tuple: {
-			if (CompileTimeValue::TypeTuple::isValid(ctx, type))
+			if (CompileTimeValue::TypeTuple::isValid(type))
 				return CompileTimeValue{
 					typeTupleFromBytes(ctx, type.getType(), vm_value->getBytes())
 				};
@@ -543,6 +547,20 @@ namespace {
 
 	using VmArguments = std::vector<std::variant<Box<vm::IVMValue>, CRef<vm::IVMValue>>>;
 
+	/**
+	 * @brief Frees the built arguments owned by the evaluator (the `Box`es).
+	 * @return False when any of the arguments could not be freed.
+	 */
+	bool freeOwnedArguments(vm::PID pid, const VmArguments& arguments) {
+		bool all_freed = true;
+		for (const auto& arg: arguments) {
+			v_if_matches(arg, Box<vm::IVMValue>, val) {
+				if (!vm::api::freeVMValue(pid, val->refMut())) all_freed = false;
+			}
+		}
+		return all_freed;
+	}
+
 	std::expected<VmArguments, VmEvaluationError> prepareArguments(
 		query::Context&                                     ctx,
 		CompTimeDVM&                                        comptime_dvm,
@@ -552,7 +570,10 @@ namespace {
 		result.reserve(args.size());
 		for (const auto& ctv_arg: args) {
 			auto vm_val = ctvToVMValue(ctx, comptime_dvm, ctv_arg);
-			if (!vm_val) return std::unexpected(vm_val.error());
+			if (!vm_val) {
+				(void) freeOwnedArguments(*comptime_dvm.getPID(), result);
+				return std::unexpected(vm_val.error());
+			}
 			result.push_back(std::move(vm_val.value()));
 		}
 		return result;
@@ -566,19 +587,30 @@ namespace {
 		auto response = vm::api::getVMValue(pid, "opaque_ptr");
 		if (!response.has_value())
 			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ArgConversionFailed,
+				VmEvaluationError::Kind::QueryContextInitFailed,
 				"Failed to fetch an opaque pointer when evaluating on DVM."
 			));
 		auto ctx_vm_value = std::move(response->vm_value);
 		ctx_vm_value->writeBytes(&ctx);
 
-		if (!vm::api::runFunctionAwait(pid, "comptime_set_ctx", { ctx_vm_value.refMut() }))
+		const bool ctx_set
+			= vm::api::runFunctionAwait(pid, "comptime_set_ctx", { ctx_vm_value.refMut() })
+		          .has_value();
+
+		// Freed before looking at the result, so we free it even when the run failed.
+		const bool ctx_freed = vm::api::freeVMValue(pid, ctx_vm_value.refMut()).has_value();
+
+		if (!ctx_set)
 			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::FunctionRunFailed,
+				VmEvaluationError::Kind::QueryContextInitFailed,
 				"Failed to initialize the global context on DVM."
 			));
 
-		ctx_vm_value->freeData();
+		if (!ctx_freed)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::QueryContextInitFailed,
+				"Failed to free the opaque pointer of the global context on DVM."
+			));
 		return {};
 	}
 
@@ -604,6 +636,9 @@ namespace {
 
 		auto maybe_exit_value = vm::api::runFunctionAwait(pid, func_name, args);
 
+		// Freed before looking at the result, so we free it even when the run failed.
+		const bool arguments_freed = freeOwnedArguments(pid, vm_value_args);
+
 		if (!maybe_exit_value.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
@@ -616,10 +651,11 @@ namespace {
 				)
 			));
 
-		// Free the owned arguments.
-		for (auto& arg: vm_value_args) {
-			v_if_matches(arg, Box<vm::IVMValue>, val) { (*val)->freeData(); }
-		}
+		if (!arguments_freed)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ArgFreeFailed,
+				base::strConcat("Failed to free the arguments of function '", func_name, "'.")
+			));
 
 		variant_match(maybe_exit_value.value()) {
 			variant_case(std::vector<Ref<vm::IVMValue>>, values) {

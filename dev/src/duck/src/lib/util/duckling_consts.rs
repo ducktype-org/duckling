@@ -70,7 +70,6 @@ pub const DUCKLING_KEYWORDS: &[&str] = &[
     "match",
     "move",
     "namespace",
-    "none",
     "not",
     "or",
     "pattern",

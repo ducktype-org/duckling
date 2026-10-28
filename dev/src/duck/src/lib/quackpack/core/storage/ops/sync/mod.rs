@@ -31,7 +31,7 @@ use crate::quackpack::core::{
 };
 use crate::util::Pluralize;
 use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{read_from_path_to_string, write_file};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 pub mod load_deps;
@@ -115,12 +115,14 @@ pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResul
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
-        freeze_name(
-            pcx.package()
-                .try_get_package()
-                .context_internal("`expose-freezefile` set on a script")?,
-        )
-        .write(json)?;
+        write_file(
+            freeze_name(
+                pcx.package()
+                    .try_get_package()
+                    .context_internal("`expose-freezefile` set on a script")?,
+            ),
+            json,
+        )?;
     }
     make_success_message(pcx, id)?;
     Ok(SyncOutput {
@@ -221,7 +223,7 @@ fn load_external_freezefile(
     if !freeze_path.is_file() {
         return Ok(None);
     }
-    let content = freeze_path.read_to_string()?;
+    let content = read_from_path_to_string(&freeze_path)?;
 
     serde_json::from_str(&content)
         .with_context(|| format!("malformed freezefile `{}`", freeze_path.display()))

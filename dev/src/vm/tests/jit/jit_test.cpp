@@ -105,7 +105,9 @@ private:
 		vm::api::ProcessConfig config{};
 		config.enable_jit = false;
 		const auto pid    = initProcess(config);
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("mega_test.dbc")) }));
+		assertSucceeded(
+			vm::api::loadFiles(pid, { fs::File(path("mega_test.dbc")) }), "Load of 'mega_test.dbc'"
+		);
 		runTestOnVm(pid, "10", "3333333333333333666666666666121212121212121212121212");
 	}
 #endif

@@ -23,7 +23,7 @@ use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_s
 use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::command_ext::CommandExt;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{is_executable, resolve_with_tilde};
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 /// Run the duck with the given [`DuckContext`].
@@ -87,7 +87,7 @@ pub(super) fn gather_external_subcmds(ctx: &DuckContext) -> HashMap<String, Path
             else {
                 continue;
             };
-            if executable.as_path().is_executable() {
+            if is_executable(executable.as_path()) {
                 commands.insert(String::from(stripped), executable);
             }
         }
@@ -119,8 +119,7 @@ fn run_subcmd(
             .with_context(|| format!("failed to execute the external subcommand `{name}`"));
     }
     if is_name_possible_script_path_subcmd(name) {
-        let path = Path::new(name);
-        let path = path.resolve_with_tilde(ctx);
+        let path = resolve_with_tilde(name, ctx);
         check_is_script(&path)?;
         let args = external_cli_args(args);
         let opts = RunScriptOptions::from_path_and_args_with_defaults(ctx, &path, args)?;

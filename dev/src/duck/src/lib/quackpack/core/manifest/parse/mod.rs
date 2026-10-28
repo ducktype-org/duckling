@@ -15,7 +15,7 @@ use crate::quackpack::core::Package;
 use crate::quackpack::core::lints::errors::{Errors, UnusedKey};
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 mod dependency;
@@ -169,7 +169,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
     let package_root = path.parent().with_context_internal(|| {
         format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
     })?;
-    let content = path.read_to_string()?;
+    let content = read_from_path_to_string(path)?;
     let mut warnings = Warnings::default();
     let mut errors = Errors::default();
     let schema = parse_schema(&content, &mut errors)?;
@@ -196,6 +196,12 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
 pub fn parse_schema(yaml_content: &str, errors: &mut Errors) -> QuackResult<ManifestSchema> {
+    // Reject duplicate keys.
+    // As of 26.10.2026, map-typed fields (`dependencies`, `features`, …) silently keep the last
+    // duplicate when deserialized into `HashMap`/`BTreeMap`.
+    // On the other hand `serde_yaml_ng::Value` errors on them, so we use it for the check.
+    let _: serde_yaml_ng::Value = serde_yaml_ng::from_str(yaml_content)?;
+
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
     let schema = serde_ignored::deserialize(deserializer, |path| {
         let mut buffer = String::new();

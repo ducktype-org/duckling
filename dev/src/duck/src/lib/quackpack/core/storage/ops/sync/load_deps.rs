@@ -25,7 +25,7 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::Pluralize;
 use crate::util::error::ErrorsLogger;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::try_fsync_dir;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 // We want at most 3 calls, therefore we retry 2 times.
@@ -222,7 +222,7 @@ fn mark_cloned_git_as_stored(pkg: PackageId, storage: &Storage) -> QuackResult<(
 
     let url = pkg.url();
     storage.mark_as_stored(pkg)?;
-    storage.git_dir(url, &commit).try_fsync_dir()?;
+    try_fsync_dir(storage.git_dir(url, &commit))?;
     Ok(())
 }
 
@@ -272,7 +272,7 @@ fn unpack_package_blob(pkg: PackageId, storage: &Storage, blob_path: &Path) -> Q
         )
     })?;
     storage.mark_as_stored(pkg)?;
-    pkg_dir.try_fsync_dir()?;
+    try_fsync_dir(pkg_dir)?;
     Ok(())
 }
 

@@ -129,6 +129,10 @@ namespace vm::api {
 		return REQUEST(VMValue{ type_name }).and_then(mapOrWrongResponseMove<response::VMValue>);
 	}
 
+	std::expected<void, ApiError> freeVMValue(PID pid, Ref<IVMValue> vm_value) {
+		return REQUEST(FreeVMValue{ vm_value }).transform(ignoreResponse);
+	}
+
 	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
 		PID pid, ThreadID thread_id
 	) {

@@ -6,16 +6,68 @@
 
 #include "errors.hpp"
 
-#include "coercions.hpp"
-#include "passing.hpp"
+#include <helios/tsh/coercions/coercion.hpp>
+#include <helios/tsh/coercions/coercion_error.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 
-namespace compiler::helios {
+#include <ranges>
+#include <string>
+#include <variant>
+
+namespace compiler::helios::coercions {
+	namespace {
+		using tsh::coercions::CoercionError;
+
+		namespace refusal_reason = tsh::coercions::coercion_error;
+
+		/**
+		 * @brief Get the main error cause from the @p refusal.
+		 * @TODO: #3732 Do it better.
+		 */
+		const CoercionError& mainCause(const CoercionError& refusal) {
+			CRef<CoercionError> cause = &refusal;
+			// Go down the tree until we find the first non-SubPartRefused reason.
+			while (v_matches(cause->reason, refusal_reason::SubPartRefused)) {
+				CORE_ASSERT(
+					not cause->causes.empty(),
+					"A node with SubPartRefused should always have child in the error tree."
+				);
+				cause = &cause->causes.front().error;
+			}
+			return *cause;
+		}
+
+		/**
+		 * @brief Nicely formatted list of all @p candidates for an ambiguous variant coercion @p
+		 * refusal.
+		 */
+		std::string tiedAlternatives(
+			const CoercionError& refusal, const std::vector<usize>& candidates
+		) {
+			CORE_ASSERT(
+				refusal.target.getType().getKind() == tsh::Kind::Variant,
+				"Tied alternatives if only valid for a variant type"
+			);
+
+			const tsh::VariantAbstractType variant{ refusal.target.getType() };
+			return base::strJoin(
+				candidates | std::views::transform([&](const usize candidate) {
+					return base::strConcat(
+						"`", variant.getUnderlyingTypes().at(candidate).toString(), "`"
+					);
+				}),
+				", "
+			);
+		}
+	}
+
 	IncompatibleTypesError::IncompatibleTypesError(
 		dia::StablePosition                 given_position,
 		Box<InteractiveType>                actual_type,
@@ -51,58 +103,125 @@ namespace compiler::helios {
 		this->addExploreLink("accepted_type", std::move(args));
 	}
 
+	const base::Optional<CoercionErrorOverrides::MessageReturner>& CoercionErrorOverrides::overrideFor(
+		const tsh::coercions::CoercionFailure& reason
+	) const {
+		using namespace refusal_reason;
+		using Override = const base::Optional<MessageReturner>&;
+
+		return VARIANT_VISIT(
+			reason,
+			[&](const IncompatibleTypes&) -> Override { return incompatible_types; },
+			[&](const MutabilityMismatch&) -> Override { return mutability_mismatch; },
+			[&](const NotImplemented&) -> Override { return not_implemented; },
+			[&](const AmbiguousCoercion&) -> Override { return ambiguous_coercion; },
+			[&](const TypeNotCopyable&) -> Override { return type_not_copyable; },
+			[&](const RequiresExplicitCopyMove&) -> Override { return requires_explicit_copy_move; },
+			[&](const SubPartRefused&) -> Override {
+				CORE_PANIC("SubPartRefused should not be reported directly");
+			}
+		)
+	}
+
 	Box<dia::MessageBase> getCoercionError(
 		query::Context&                     ctx,
 		const Coercion&                     failed,
 		dia::StablePosition                 source_position,
-		base::Optional<dia::StablePosition> coercion_expects_pos
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		const CoercionErrorOverrides&       error_overrides
 	) {
-		switch (failed.getInvalidReason()) {
-		case InvalidCoercionReason::IncompatibleTypes:
-			return makeBox<IncompatibleTypesError>(
-				source_position,
-				makeBox<InteractiveType>(ctx, failed.validated_from),
-				makeBox<InteractiveType>(ctx, failed.to),
-				coercion_expects_pos
-			);
-		case InvalidCoercionReason::TypeNotCopyable:
-			return makeBox<dia::PlaceholderError>(
-				base::strConcat(
-					"Type `",
-					copiedValueType(failed.validated_from, failed.to).toString(),
-					"` cannot be copied."
-				),
-				source_position
-			);
-		case InvalidCoercionReason::RequiresExplicitCopyMove: {
-			// Reading a value out of a `ref`/`box` copies the pointee. `move` out of ref/box isn't
-			// possible, so suggesting it here is misleading.
-			const bool reads_through
-				= readsThroughReference(failed.validated_from.getRefKind(), failed.to.getRefKind());
+		const CoercionError& cause = mainCause(failed.getError());
 
-			const std::string message
-				= reads_through
-			        ? base::strConcat(
-						  "` out of `",
-						  failed.validated_from.toString(),
-						  "`. Use `copy` to copy it out, `move` cannot move a value out of a "
-						  "reference."
-					  )
-			        : std::string("`. Use `copy` to copy it or `move` to move it.");
+		// Use the caller's override if one is set, otherwise the default message.
+		const base::Optional<CoercionErrorOverrides::MessageReturner>& override
+			= error_overrides.overrideFor(cause.reason);
+		if_opt_some(override, message) { return message(); }
 
-			return makeBox<dia::PlaceholderError>(
-				base::strConcat(
-					"Cannot implicitly copy a value of non-trivially-copyable type `",
-					copiedValueType(failed.validated_from, failed.to).toString(),
-					message
-				),
-				source_position
-			);
-		}
+		using namespace refusal_reason;
+		using Message = Box<dia::MessageBase>;
 
-		default:
-			CORE_UNREACHABLE();
-		}
+		return VARIANT_VISIT(
+			cause.reason,
+			[&](const IncompatibleTypes&) -> Message {
+				return makeBox<IncompatibleTypesError>(
+					source_position,
+					makeBox<InteractiveType>(ctx, failed.getSource().getSymbolType()),
+					makeBox<InteractiveType>(ctx, failed.getTarget()),
+					coercion_expects_pos
+				);
+			},
+			[&](const MutabilityMismatch&) -> Message {
+				return makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"Cannot hand a value of type `",
+						cause.source.toString(),
+						"` over to `",
+						cause.target.toString(),
+						"`, it would allow modifying an immutable value."
+					),
+					source_position
+				);
+			},
+			[&](const SubPartRefused&) -> Message {
+				CORE_PANIC("SubPartRefused should never be errored directly");
+			},
+			[&](const NotImplemented&) -> Message {
+				return makeBox<dia::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Coercing `",
+						cause.source.toString(),
+						"` to `",
+						cause.target.toString(),
+						"`."
+					),
+					source_position
+				);
+			},
+			[&](const AmbiguousCoercion& ambiguous) -> Message {
+				return makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"A value of type `",
+						cause.source.toString(),
+						"` fits equally well into many alternatives of `",
+						cause.target.toString(),
+						"`: ",
+						tiedAlternatives(cause, ambiguous.candidates),
+						"."
+					),
+					source_position
+				);
+			},
+			[&](const TypeNotCopyable& not_copyable) -> Message {
+				return makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"Type `", not_copyable.copied.type.toString(), "` cannot be copied."
+					),
+					source_position
+				);
+			},
+			[&](const RequiresExplicitCopyMove& explicit_copy) -> Message {
+				// Reading a value out of a `ref`/`box` copies the pointee. `move` out of ref/box
+			    // isn't possible.
+				const std::string advice
+					= explicit_copy.copied.is_pointee
+			            ? base::strConcat(
+							  "` out of `",
+							  cause.source.toString(),
+							  "`. Use `copy` to copy it out, `move` cannot move a value out of a "
+							  "reference."
+						  )
+			            : "`. Use `copy` to copy it or `move` to move it.";
+
+				return makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"Cannot implicitly copy a value of non-trivially-copyable type `",
+						explicit_copy.copied.type.toString(),
+						advice
+					),
+					source_position
+				);
+			}
+		)
 	}
 
 	void logCoercionFailure(
@@ -110,27 +229,11 @@ namespace compiler::helios {
 		const Coercion&                     failed,
 		dia::StablePosition                 source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos,
-		CoercionErrorOverrides              error_overrides
+		const CoercionErrorOverrides&       error_overrides
 	) {
-		// Use the caller's override if one is set, otherwise the default message.
-		const base::Optional<CoercionErrorOverrides::Logger>& override = [&]() -> const auto& {
-			switch (failed.getInvalidReason()) {
-			case InvalidCoercionReason::IncompatibleTypes:
-				return error_overrides.incompatible_types;
-			case InvalidCoercionReason::TypeNotCopyable:
-				return error_overrides.type_not_copyable;
-			case InvalidCoercionReason::RequiresExplicitCopyMove:
-				return error_overrides.requires_explicit_copy_move;
-			default:
-				CORE_UNREACHABLE();
-			}
-		}();
-
-		if (override.has_value()) {
-			(*override)(ctx);
-			return;
-		}
-		ctx.logInt(getCoercionError(ctx, failed, source_position, coercion_expects_pos));
+		ctx.logInt(
+			getCoercionError(ctx, failed, source_position, coercion_expects_pos, error_overrides)
+		);
 	}
 
 	void logNoMatchingExpectedTypeFailure(
@@ -141,14 +244,15 @@ namespace compiler::helios {
 		CORE_ASSERT(not failed_coercions.empty(), "Called with empty failed coercions.");
 
 		auto error = makeBox<NoMatchingExpectedTypeError>(
-			source_position, makeBox<InteractiveType>(ctx, failed_coercions.at(0).validated_from)
+			source_position,
+			makeBox<InteractiveType>(ctx, failed_coercions.front().getSource().getSymbolType())
 		);
 
 		// Every accepted type was tried, so each of them gets an explore link pointing to the error
 		// explaining why the coercion to it failed.
-		for (auto& coercion: failed_coercions)
+		for (const Coercion& coercion: failed_coercions)
 			error->addExploreAcceptedType(
-				coercion.to.toString(), getCoercionError(ctx, coercion, source_position)
+				coercion.getTarget().toString(), getCoercionError(ctx, coercion, source_position)
 			);
 
 		ctx.logInt(std::move(error));
