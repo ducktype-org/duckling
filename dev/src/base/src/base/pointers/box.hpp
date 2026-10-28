@@ -249,7 +249,8 @@ namespace base {
 		MBox& operator=(const MBox& other) = delete;
 
 		void reset() noexcept {
-			deleter.del(ptr);
+			deleter.del(ptr); // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
+			                            // https://github.com/ducktype-org/duckling/issues/402
 			ptr = nullptr;
 		}
 
