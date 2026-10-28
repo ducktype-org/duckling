@@ -55,7 +55,7 @@ pub fn parse_frontmatter(
     path: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<(FrontMatter, Warnings, Errors)> {
-    trace!("starting parsing");
+    debug!("parsing the frontmatter of `{}`", path.display());
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the frontmatter of the script at `{}`",
@@ -86,13 +86,13 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warn
 /// Try to capture a frontmatter from the given contents.
 pub fn capture_frontmatter(contents: &str) -> QuackResult<Option<Captures<'_>>> {
     let Some(captures) = FRONTMATTER_REGEX.captures(contents) else {
-        debug!("no frontmatter");
+        trace!("no frontmatter");
         if UNCLOSED_FRONTMATTER_REGEX.captures(contents).is_some() {
             qp_bail!("frontmatter begins but does not end")
         }
         return Ok(None);
     };
-    debug!("has frontmatter");
+    trace!("found a frontmatter");
     Ok(Some(captures))
 }
 
@@ -159,9 +159,8 @@ fn resolve_import_in_schema(
 ) -> QuackResult<ManifestSchema> {
     if let Some(ref import) = schema.import {
         debug!(
-            script = %script_path.display(),
-            import = %import.display(),
-            "imports a frontmatter",
+            "the script imports the frontmatter from `{}`",
+            import.display()
         );
         if !schema.is_just_import_or_empty() {
             let mut err = qp_err!(

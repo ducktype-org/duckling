@@ -39,9 +39,11 @@ pub fn setup_logger() {
     use tracing_subscriber::{EnvFilter, Layer, registry};
     let subscriber = EnvFilter::builder()
         .with_env_var("DUCK_DEBUG")
-        // NOTE: This level determines which logs are _always_ visible, without any filter.
-        // The default is `ERROR`, which means every `error!` log is visible to a user by default.
-        .with_default_directive(LevelFilter::OFF.into())
+        // NOTE: This level is used only when `DUCK_DEBUG` is unset or empty, so every `error!` log
+        // is visible to a user by default. Keep `error!` for problems the user is not told about in
+        // any other way (e.g. a failure in `Drop`): an error that is returned or printed as a
+        // warning should be logged with a lower level, otherwise it shows up twice.
+        .with_default_directive(LevelFilter::ERROR.into())
         .from_env_lossy();
     let layer = layer()
         .with_timer(Uptime::default())
@@ -50,7 +52,7 @@ pub fn setup_logger() {
         .with_filter(subscriber);
 
     registry().with(layer).init();
-    info!(start = %Local::now());
+    info!("started at {}", Local::now());
 }
 
 /// Print returned [`QuackError`] to the appropriate [`Terminal`] and exit.

@@ -21,7 +21,7 @@ use crate::{DuckContext, QuackResult};
 /// The combined state may never have existed in storage as a consistent whole; this function locks each
 /// virtual environment separately. Equivalent to calling [`venv_info`] on all virtual environments present
 /// in the storage.
-#[tracing::instrument(skip_all, fields(root = %storage_root.display()))]
+#[tracing::instrument(level = "debug", skip_all, fields(root = %storage_root.display()))]
 pub fn list_venvs(
     storage_root: &Path,
     ctx: &DuckContext,
@@ -43,7 +43,7 @@ pub fn list_venvs(
 }
 
 /// Retrieve the storage state of a specific virtual environment.
-#[tracing::instrument(skip_all, fields(id = %id.to_venv_id()))]
+#[tracing::instrument(level = "debug", skip_all, fields(id = %id.to_venv_id()))]
 pub fn venv_info(
     storage_root: &Path,
     id: impl ToVenvId,

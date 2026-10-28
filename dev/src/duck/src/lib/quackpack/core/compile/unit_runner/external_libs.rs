@@ -10,8 +10,6 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::ops::ControlFlow;
 
-use tracing::instrument;
-
 use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph, UnitGraphNode};
 use crate::quackpack::core::compile::unit::graph_visitor::GraphVisitor;
@@ -36,7 +34,6 @@ pub struct ExternalLibrariesFound {
     pub links: StrId,
 }
 
-#[instrument(skip_all)]
 /// Check whether subtree rooted at `unit` links against external libraries.
 ///
 /// This function returns _any_ [`Unit`] with external library, if there is one.
@@ -70,7 +67,6 @@ pub fn has_external_libraries(
         .accept(&mut ExternalLibsVisitor {}, graph)
 }
 
-#[instrument(skip_all)]
 /// Validate external libraries against which we are linking.
 /// Right now this checks for duplicates of the same library.
 pub fn validate_external_libraries(
@@ -120,7 +116,6 @@ pub fn validate_external_libraries(
     )
 }
 
-#[instrument(skip_all)]
 /// Gather all external libraries of the subgraph rooted at a given node in the [`UnitGraph`].
 pub fn gather_external_libraries(unit_graph_id: GraphNodeId, graph: &UnitGraph) -> Vec<StrId> {
     #[derive(Default)]

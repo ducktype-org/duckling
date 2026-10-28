@@ -6,7 +6,7 @@
 
 use curl::easy::{self, Easy2};
 use http::header;
-use tracing::{debug, error, warn};
+use tracing::{debug, trace, warn};
 
 use self::handlers::Collector;
 use crate::{DuckContext, QuackResult, qp_bail, try_curl};
@@ -105,11 +105,10 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
         let value = match value.to_str() {
             Ok(value) => value,
             Err(err) => {
-                error!(
+                warn!(
                     error = %err,
-                    %header,
                     ?value,
-                    "failed to convert value to utf8"
+                    "skipping the `{header}` header, its value is not valid UTF-8"
                 );
                 continue;
             }
@@ -207,7 +206,7 @@ fn set_http_version_on_curl<H>(
 /// Helper for checking HTTP status codes.
 pub fn check_http_status_code(response: &Response, path: &http::Uri) -> QuackResult<()> {
     let code = response.status().as_u16();
-    debug!(%code, "got HTTP response");
+    debug!("got an HTTP response with status code {code}");
     let description = match code {
         100..200 => "informational",
         200..300 => return Ok(()),
@@ -227,7 +226,7 @@ pub fn try_parse_header_value(data: &[u8]) -> Option<(&str, &str)> {
     let data = data
         .strip_suffix(HTTP_DELIMITER.as_bytes())
         .unwrap_or_else(|| {
-            debug!(?data, "doesn't end in `\\r\\n`",);
+            trace!(?data, "the header does not end in `\\r\\n`");
             data
         });
     if data.is_empty() {
@@ -259,7 +258,7 @@ macro_rules! try_curl {
         match $expr {
             Ok(value) => value,
             Err(err) => {
-                ::tracing::error!(target = "curl", error = %err, $($ctx)+);
+                ::tracing::debug!(target = "curl", error = %err, $($ctx)+);
                 return Err(err.into());
             }
         }

@@ -8,7 +8,7 @@
 
 use std::collections::VecDeque;
 
-use tracing::debug;
+use tracing::{debug, instrument, trace};
 
 use super::{DependencyGraph, EarlyGraph, HashMap, HashSet, PackagesSet, QuackResult};
 use crate::quackpack::core::FeatureName;
@@ -17,7 +17,6 @@ use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
     /// Same as [`EarlyGraph::remove_disabled_dependencies`].
-    #[tracing::instrument(skip_all)]
     fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
         let mut enabled_deps = HashSet::from([self.root]);
         for (k, v) in self.graph.iter_mut() {
@@ -33,12 +32,15 @@ impl DependencyGraph {
                         missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
                     })
                     .is_enabled_for(this.enabled_features());
-                debug!(
+                trace!(
                     %k,
                     features = ?this.enabled_features(),
                     %dep,
                     dep_enabled = %is_enabled,
                 );
+                if !is_enabled {
+                    debug!("dependency `{dep}` of `{k}` is disabled");
+                }
                 if !is_enabled {
                     to_remove.insert(*dep);
                 } else {
@@ -53,7 +55,6 @@ impl DependencyGraph {
     /// Remove unreachable dependencies.
     ///
     /// When removing disabled dependencies, we might leave some unreachable ones. Get rid of them too.
-    #[tracing::instrument(skip_all)]
     fn remove_unreachable_dependencies(&mut self) {
         let mut reachable_deps = HashSet::new();
         let mut bfs_stack = VecDeque::from([self.root]);
@@ -69,7 +70,7 @@ impl DependencyGraph {
             if reachable_deps.contains(dep) {
                 return true;
             }
-            debug!(?dep, "removing from the graph as it's unreachable");
+            debug!("removing `{dep}` from the graph, as it is unreachable");
             false
         });
     }
@@ -77,7 +78,7 @@ impl DependencyGraph {
 
 impl EarlyGraph {
     /// Recursively populate enabled features, starting from the root of the graph.
-    #[tracing::instrument(skip_all)]
+    #[instrument(level = "debug", skip_all)]
     pub(super) fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
         let root_package = self.package_mut(&self.graph.root());
         let root_features =
@@ -123,7 +124,7 @@ impl EarlyGraph {
                 } else {
                     false
                 };
-                debug!(node = %dep, features = ?enabled_features, was_enabled = %is_enabled, %became_available, "adding features to node");
+                trace!(node = %dep, features = ?enabled_features, was_enabled = %is_enabled, %became_available, "adding features to node");
                 // We shouldn't modify feature flags of disabled dependencies.
                 if !is_enabled {
                     continue;
@@ -153,7 +154,7 @@ impl EarlyGraph {
     /// Removes disabled dependency from the graph.
     ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
-    #[tracing::instrument(skip_all)]
+    #[instrument(level = "debug", skip_all)]
     pub(super) fn remove_disabled_dependencies(&mut self) {
         self.graph.remove_disabled_dependencies(&self.packages);
         self.graph.remove_unreachable_dependencies();
@@ -162,9 +163,9 @@ impl EarlyGraph {
             if self.graph.graph.contains_key(dep) {
                 return true;
             }
-            debug!(
+            trace!(
                 ?dep,
-                "removing from the PackagesSet, as it's unreachable or disabled"
+                "removing from the `PackagesSet`, as it is unreachable or disabled"
             );
             false
         });

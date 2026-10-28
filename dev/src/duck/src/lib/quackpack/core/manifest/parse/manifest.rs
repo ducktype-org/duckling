@@ -30,7 +30,6 @@ use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
-#[tracing::instrument(skip_all)]
 #[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
@@ -128,7 +127,7 @@ pub(crate) fn parse(
             let Some(ref name) = metadata.name else {
                 qp_bail!("missing the obligatory key `metadata.name`")
             };
-            debug!(package_name = %name, package_version = %version);
+            debug!(%name, %version);
 
             {
                 let mut guard1 = scope.push("metadata".to_string());

@@ -13,7 +13,7 @@ use std::rc::Rc;
 
 use russcip::prelude::{cons, var};
 use russcip::{Model, ProblemCreated, Solution, Variable, WithSolutions};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::input::SolverInput;
@@ -391,7 +391,7 @@ pub struct FoundSolution {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
         let solve = self.model.minimize().solve();
         let Some(solution) = solve.best_sol() else {
@@ -417,13 +417,12 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 }
 
 /// Helper for determining which new packages have been chosen by the model.
-#[tracing::instrument(skip_all)]
 fn new_packages(
     package_vars: HashMap<PackageId, Rc<Variable>>,
     preexisting_packages: &HashSet<PackageId>,
     solution: &Solution,
 ) -> HashSet<PackageId> {
-    debug!(?preexisting_packages, ?package_vars);
+    trace!(?preexisting_packages, ?package_vars);
     let new_packages = package_vars
         .into_iter()
         .filter_map(|(pkg, var)| {
@@ -437,12 +436,11 @@ fn new_packages(
         .difference(preexisting_packages)
         .cloned()
         .collect::<HashSet<PackageId>>();
-    debug!(?new_packages);
+    trace!(?new_packages);
     new_packages
 }
 
 /// Helper for determining which new features of all the packages have been chosen by the model.
-#[tracing::instrument(skip_all)]
 fn new_features(
     package_to_feature_vars: &HashMap<PackageId, FeaturesToVars>,
     new_packages: &HashSet<PackageId>,
@@ -477,7 +475,6 @@ fn new_features(
 }
 
 /// Helper for determining what new realizations of any dependencies have been chosen by the model.
-#[tracing::instrument(skip_all)]
 fn new_edges(
     dependency_to_version_vars: HashMap<DependencyEdge, ChildVersionsToVars>,
     solution: &Solution,

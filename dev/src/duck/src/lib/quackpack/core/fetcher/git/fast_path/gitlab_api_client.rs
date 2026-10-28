@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, trace};
 use url::Url;
 
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
@@ -136,7 +136,8 @@ impl<'duck> GitlabApiClient<'duck> {
 
     /// Helper for [`Self::request`].
     fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
-        debug!(%method, %url, ?body, "building a request");
+        debug!("building a `{method}` request to `{url}`");
+        trace!(?body);
         http::Request::builder()
             .uri(url.as_str())
             .method(&method)
