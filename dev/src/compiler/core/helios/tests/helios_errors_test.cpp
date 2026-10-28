@@ -61,6 +61,7 @@ public:
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
+		TESTER_ADD_TEST(testCopyMoveErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
@@ -93,13 +94,23 @@ private:
 	 *
 	 * @param logged_msg_count Expected number of logged error messages.
 	 * @param present_phrases List of phrases that should be present in the logged errors in order.
+	 * @param expect_errors If false, the logged messages must not contain any error.
 	 */
-	void checkForError(const std::vector<std::string_view>& present_phrases, u64 logged_msg_count) {
+	void checkForError(
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count,
+		bool                                 expect_errors = true
+	) {
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
 		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
 		// query errors is ok:
-		assertTrue(logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged.");
+		if (expect_errors)
+			assertTrue(
+				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+			);
+		else
+			assertFalse(logger->hasErrors(), "Expected no errors to be logged.");
 
 		std::stringstream logged_messages;
 		logger->terminalPrint(logged_messages);
@@ -151,6 +162,27 @@ private:
 		if (expect_failure)
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		checkForError(present_phrases, logged_msg_count);
+	}
+
+	/**
+	 * @brief Like `checkForErrorOnCompileModule`, but the module must compile, and only warnings
+	 * may be logged.
+	 *
+	 * @param module_content The content of the module main source file.
+	 * @param present_phrases List of phrases that should be present in the warnings in order.
+	 * @param logged_msg_count Expected number of logged warnings.
+	 */
+	void checkForWarningOnCompileModule(
+		std::string_view                     module_content,
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count
+	) {
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
+		assertFalse(result->hasFailed(), "Expected HOUT query to succeed for module content.");
+		checkForError(present_phrases, logged_msg_count, false);
 	}
 
 	/**
@@ -2320,6 +2352,32 @@ private:
 				}
 			)",
 			{ msg },
+			1
+		);
+	}
+
+	void testCopyMoveErrors() {
+		checkForWarningOnCompileModule(
+			R"(
+				fun copyLocal() -> i64 = {
+					let a: i64 = 5;
+					let b = copy a;
+					return b;
+				}
+			)",
+			{ "Type `const i64` is trivially copyable. No need to use the explicit `copy` "
+		      "keyword." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Res { x: i64; }
+				fun moveTemporary() = {
+					var a = move Res(1);
+				}
+			)",
+			{ "A temporary is moved out of implicitly, `move` is not needed here." },
 			1
 		);
 	}
