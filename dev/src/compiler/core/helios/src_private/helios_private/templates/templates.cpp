@@ -191,7 +191,7 @@ namespace compiler::helios::templates {
 
 			// @TODO: #3072 try to improve this.
 			// We atomically set postponed_data here,
-			// The reason we can't do it in the initial setAdditionalRootData call is because
+			// the reason we can't do it in the initial setAdditionalRootData call is because
 			// we can't call QueryPrimaryCodeScopeFor(baked_root) or
 			// QuerySymbolOfSTMT(baked_statement) without pst_parent_element set (it is needed for
 			// relevant scopes be created). At the same time this scope is needed to generate the
