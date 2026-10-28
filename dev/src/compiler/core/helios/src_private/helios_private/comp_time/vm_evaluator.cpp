@@ -67,10 +67,9 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryCtvMaterializingFunction, lir::Function) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
-			const auto& layout
-				= ctx.query<tsl::QuerySymbolTypeLayout>(key.ctv.getTypeOfStoredValue(ctx))
-			          ->valueOrThrow();
-			auto layout_ref = CRef<tsl::TypeLayout>(&layout);
+			const auto  value_type = key.ctv.getTypeOfStoredValue(ctx);
+			const auto& layout = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
+			auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
 
 			lir::Block entry_block;
 			entry_block.terminator = lir::Instruction{
@@ -87,10 +86,15 @@ namespace compiler::helios {
 			return lir::Function{
 				.mangled_name
 				= base::StrID(base::strConcat("comptime_ctv_", mangler::mangleCTV(ctx, key.ctv))),
-				.abi                = { lir::LIRAbi::DefaultAbi{} },
-				.link_once          = false,
-				.ignore_on_dvm      = false,
-				.ignore_on_llvm     = true,
+				.abi            = { lir::LIRAbi::DefaultAbi{} },
+				.link_once      = false,
+				.ignore_on_dvm  = false,
+				.ignore_on_llvm = true,
+				.layout         = &ctx.query<tsl::QueryAbstractTypeLayout>(
+                                  ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+				                                                              .result_type = value_type })
+                )
+				               ->valueOrThrow(),
 				.parameter_layouts  = {},
 				.return_type_layout = layout_ref,
 				.blocks             = std::move(blocks),

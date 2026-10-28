@@ -11,6 +11,7 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/function_kind.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -222,7 +223,8 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents expression made of a single identifier in HOUT.
+	 * @brief Represents expression made of a single identifier in HOUT. An identifier naming a
+	 * function is a function value, the address of the function.
 	 * @note: This will have to be improved,
 	 * when more complex expressions involving "." operator, local variables, etc
 	 * will be introduced.
@@ -489,6 +491,42 @@ namespace compiler::helios::code {
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
 			std::vector<base::Box<Expr>> subtypes
+		);
+	};
+
+	/**
+	 * @brief Function type constructor inside an expression, for example `funptr(i32) -> bool` (a
+	 * raw function) or `(i32) -> bool` (a closure).
+	 *
+	 * Every parameter and the result are expressions of the meta type.
+	 */
+	struct FunctionTypeExpr final: public Expr {
+		std::vector<base::Box<Expr>> parameters;
+		base::Box<Expr>              result;
+		tsh::FunctionKind            kind;
+
+		FunctionTypeExpr(
+			query::Context&              ctx,
+			ElementOrigin                origin,
+			std::vector<base::Box<Expr>> parameters,
+			base::Box<Expr>              result,
+			tsh::FunctionKind            kind
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		FunctionTypeExpr(
+			tsh::ExpressionType<>        expression_type,
+			ElementOrigin                origin,
+			std::vector<base::Box<Expr>> parameters,
+			base::Box<Expr>              result,
+			tsh::FunctionKind            kind
 		);
 	};
 
