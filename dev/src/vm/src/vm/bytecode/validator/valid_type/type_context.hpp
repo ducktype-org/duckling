@@ -15,24 +15,38 @@
 
 namespace vm::code {
 	/**
-	 * @brief A simple container for types which doesn't allow duplicates. This structure is the
-	 * main entry point for type verification and building.
-	 * @note `TypeContext` always contains a valid set of types if `insertAndValidate` didn't throw
-	 * any errors.
+	 * @brief Stores the declarations of a program and the types built from them.
+	 *
+	 * @note A container only. `TypeResolver` decides what to build and builds it, so that this
+	 * knows neither how a type is declared nor how one is referred to.
 	 */
 	class TypeContext final {
 	public:
 		/**
-		 * @brief Inserts new types.
-		 * If a type is duplicated throws DuplicatedTypeError.
-		 * Throws an exception if inserting new types would invalidate the TypeContext in the
-		 * context of function_signatures.
-		 * @note After an exception is thrown, the TypeContext's state is undefined.
+		 * @brief Stores a declaration, so that the type it names can be built.
+		 * @return Whether the name is new. A declaration already stored verbatim is accepted and
+		 * reported as not new.
+		 * @throws DuplicatedTypeError if the name is already declared with different contents.
 		 */
-		void insertAndValidate(
-			const std::vector<TypeOfData>&                   new_types,
-			const base::HashMap<base::StrID, FuncSignature>& function_signatures
-		);
+		bool addDeclaration(const TypeOfData& type);
+
+		/// @brief The declaration stored under `name`, if any.
+		[[nodiscard]] base::Optional<CRef<TypeOfData>> findDeclaration(base::StrID name) const;
+
+		/**
+		 * @brief Stores a new, not yet defined type for `expr`.
+		 * @pre No type is stored for `expr` yet.
+		 */
+		valid_type::ValidTypeID declare(const TypeExpr& expr);
+
+		/// @brief The type stored under `id`, to define.
+		[[nodiscard]] valid_type::ValidType& forDefinition(valid_type::ValidTypeID id);
+
+		/**
+		 * @brief Finalizes the type stored under `id`.
+		 * @pre Every type it refers to is defined.
+		 */
+		void finalize(valid_type::ValidTypeID id);
 
 		[[nodiscard]] const valid_type::ValidTypeMap& getCurrentTypes() const;
 

@@ -12,6 +12,8 @@ add_files(
     validator/local_stack_database.cpp
     validator/local_stack_database_builder.cpp
     validator/type_validator.cpp
+    validator/type_resolver.cpp
+    validator/type_inserter.cpp
     validator/flag_context.cpp
     validator/valid_type/type_context.cpp
     validator/valid_type/valid_type.cpp
