@@ -136,7 +136,9 @@ namespace compiler::tsh {
 
 	bool FunctionAbstractType::isPure() const { return toCPimpl(pimpl)->isPure(); }
 
-	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
+	FunctionKind FunctionAbstractType::getFunctionKind() const {
+		return toCPimpl(pimpl)->getFunctionKind();
+	}
 
 	SymbolType<> StaticArrayAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();

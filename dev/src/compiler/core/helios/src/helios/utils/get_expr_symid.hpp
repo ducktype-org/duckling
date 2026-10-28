@@ -17,4 +17,10 @@ namespace compiler::helios {
 	 * otherwise returns an empty optional.
 	 */
 	base::Optional<SymID> getIdentifierExprSymID(CRef<code::Expr> expr);
+
+	/**
+	 * If expression is an identifier expression naming a function, returns the function symbol ID,
+	 * otherwise returns an empty optional.
+	 */
+	base::Optional<SymID> getIdentifierExprFunctionID(CRef<code::Expr> expr);
 }
