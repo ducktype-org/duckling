@@ -67,7 +67,7 @@ void fast::FastCompiler::compileNewFunctions(
 		program.functions.insert(
 			vm::fast::FunctionInfo{
 				.name        = function.name,
-				.id          = vm::fast::FunctionID(program.functions.size()),
+				.id          = program.functions.nextID(),
 				.return_size = std::ranges::fold_left(
 					function.signature.result_types | get_sizes, Bytes(0), std::plus()
 				),
