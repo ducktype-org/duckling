@@ -171,6 +171,29 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Checks that @p function_id, read from a function value, references a function
+		 * whose signature is the one of @p function_type.
+		 * @throws exceptions::VMNullFunctionCallException if the function value is null.
+		 * @throws exceptions::VMInvalidFunctionValueException if it references no function or
+		 * a function of another signature.
+		 */
+		static VM_OPFUN_INLINE void checkCallee(
+			const SafeVMThread& thread, usize function_id, TypeCRef function_type
+		) {
+			if (function_id == 0) throw exceptions::VMNullFunctionCallException();
+
+			const auto& functions = thread.process_program->getFunctions();
+			if (!functions.contains(function_id))
+				throw exceptions::VMInvalidFunctionValueException();
+
+			const auto  signature = function_type->get<kind::Function>().value();
+			const auto& function  = functions[function_id];
+			if (function.parameters != signature->parameters
+			    || function.result_types != signature->result_types)
+				throw exceptions::VMInvalidFunctionValueException();
+		}
+
+		/**
 		 * @brief Prepares the execution variables and frames for a call to a function with a
 		 * specified id.
 		 *

@@ -489,15 +489,9 @@ DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
 DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
 /**
- * @brief Checks that the function value in the first argument references a function whose
- * signature is the one of the function type in the second argument. Precedes `call_p64_off`.
- */
-DEF_MICRO_INSTR(checkCallee_p64_type, vm::low::opargs::Place64, vm::low::opargs::Type)
-
-/**
- * @brief Calls the function referenced by the function value in the first argument, which has to
- * be checked by a preceding `checkCallee_p64_type`. The second argument is the local stack
- * distance, see `call_func_off`.
+ * @brief Calls the function referenced by the function value in the first argument. The second
+ * argument is the local stack distance, see `call_func_off`. Requires `ext_type` holding the
+ * function type of the value, the callee's signature is checked against it at runtime.
  * @note Unoptimizable by JIT, listed in non_jittable.def.hpp.
  */
 DEF_MICRO_INSTR(call_p64_off, vm::low::opargs::Place64, vm::low::opargs::Offset)

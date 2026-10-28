@@ -337,29 +337,11 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(checkCallee_p64_type)(FUNCTION_ARGS) {
-		{
-			const auto function_id = static_cast<usize>(READ_FROM_PLACE_ARG(u64, instr->arg0));
-			if (function_id == 0) throw exceptions::VMNullFunctionCallException();
-
-			const auto& functions = thread.process_program->getFunctions();
-			if (!functions.contains(function_id))
-				throw exceptions::VMInvalidFunctionValueException();
-
-			const auto  function_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			const auto& signature     = function_type->get<kind::Function>().value();
-			const auto& function      = functions[function_id];
-			if (function.parameters != signature->parameters
-			    || function.result_types != signature->result_types)
-				throw exceptions::VMInvalidFunctionValueException();
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_p64_off)(FUNCTION_ARGS) {
 		{
 			const auto function_id = static_cast<usize>(READ_FROM_PLACE_ARG(u64, instr->arg0));
-			performFunctionCall(instr, local_stack, frame, thread, function_id, instr->arg1, 1);
+			checkCallee(thread, function_id, READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0));
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr->arg1, 2);
 		}
 		FUNCTION_CONT(0);
 	}

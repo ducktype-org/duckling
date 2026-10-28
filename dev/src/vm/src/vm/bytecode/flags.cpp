@@ -485,8 +485,7 @@ namespace vm::code {
 			}
 			instr_case(ins::Op_call_pfun, i) {
 				rd(i.callee);
-				flags |= Call | InstructionFlag(CallExternal)
-				       | InstructionFlag(ControlFlowModifying) | InstructionFlag(IORead)
+				flags |= Call | InstructionFlag(ControlFlowModifying) | InstructionFlag(IORead)
 				       | InstructionFlag(IOWrite) | InstructionFlag(GlobalRead)
 				       | InstructionFlag(GlobalWrite) | InstructionFlag(Multithread)
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);

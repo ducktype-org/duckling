@@ -41,7 +41,10 @@ public:
 		TESTER_ADD_TEST(unknownFunction);
 		TESTER_ADD_TEST(invalidFunctionCall);
 		TESTER_ADD_TEST(invalidRetTypeInCall);
-		TESTER_ADD_TEST(invalidFunctionValues);
+		TESTER_ADD_TEST(functionValueSignatureMismatch);
+		TESTER_ADD_TEST(functionValueTypeMismatch);
+		TESTER_ADD_TEST(indirectCallInvalidArguments);
+		TESTER_ADD_TEST(indirectCallOfNonFunction);
 
 		// Jump verification
 		TESTER_ADD_TEST(jumpSkipBlock);
@@ -700,19 +703,28 @@ private:
 		);
 	}
 
-	void invalidFunctionValues() {
+	void functionValueSignatureMismatch() {
 		loadInvalidDbc(
 			"wrong/functions/function_value_signature_mismatch.dbc",
 			{ vm::code::FunctionTypeMismatchError::ERR_MSG }
 		);
+	}
+
+	void functionValueTypeMismatch() {
 		loadInvalidDbc(
 			"wrong/functions/function_value_type_mismatch.dbc",
 			{ vm::code::FunctionTypeMismatchError::ERR_MSG }
 		);
+	}
+
+	void indirectCallInvalidArguments() {
 		loadInvalidDbc(
 			"wrong/functions/indirect_call_invalid_arguments.dbc",
 			{ vm::code::InvalidFunctionCallArgumentsError::ERR_MSG }
 		);
+	}
+
+	void indirectCallOfNonFunction() {
 		loadInvalidDbc(
 			"wrong/functions/indirect_call_of_non_function.dbc",
 			{ vm::code::InvalidArgumentTypeError::ERR_MSG }
