@@ -11,7 +11,12 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout_fd.hpp>
 
+#include "base/collections/optional.hpp"
+#include "base/pointers/ref.hpp"
+
 #include <fstream>
+#include <optional>
+#include <ostream>
 
 namespace compiler::driver {
 
@@ -31,13 +36,13 @@ namespace compiler::driver {
 	 * file. Aggregated dumps are prefixed with the representation and module name.
 	 */
 	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
-		query::Context&         ctx,
-		const helios::HOUTUnit& hout_unit,
-		base::StrID             module_id,
-		base::StrID             module_id_human,
-		bool                    dump_lir           = true,
-		std::ostream*           aggregate_mir_dump = nullptr,
-		std::ostream*           aggregate_hir_dump = nullptr
+		query::Context&                         ctx,
+		const helios::HOUTUnit&                 hout_unit,
+		base::StrID                             module_id,
+		base::StrID                             module_id_human,
+		bool                                    dump_lir           = true,
+		base::Optional<base::Ref<std::ostream>> aggregate_mir_dump = std::nullopt,
+		base::Optional<base::Ref<std::ostream>> aggregate_hir_dump = std::nullopt
 	);
 
 	/**

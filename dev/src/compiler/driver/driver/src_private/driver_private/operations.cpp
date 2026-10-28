@@ -41,13 +41,13 @@ namespace compiler::driver {
 	}
 
 	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
-		query::Context&         ctx,
-		const helios::HOUTUnit& hout_unit,
-		base::StrID             module_id,
-		base::StrID             module_id_human,
-		bool                    dump_lir,
-		std::ostream*           aggregate_mir_dump,
-		std::ostream*           aggregate_hir_dump
+		query::Context&                         ctx,
+		const helios::HOUTUnit&                 hout_unit,
+		base::StrID                             module_id,
+		base::StrID                             module_id_human,
+		bool                                    dump_lir,
+		base::Optional<base::Ref<std::ostream>> aggregate_mir_dump,
+		base::Optional<base::Ref<std::ostream>> aggregate_hir_dump
 	) {
 #define DEBUG_DUMP_ARTIFACT(str_id_name, ext) \
 	getDebugDumpArtifact(base::StrID(base::strConcat(str_id_name.strView(), ext)))
@@ -55,8 +55,8 @@ namespace compiler::driver {
 		if (driver::print_ir_options.print_hir) hout_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_hir) {
 			if (aggregate_hir_dump) {
-				*aggregate_hir_dump << "HIR for " << module_id_human.strView() << ":\n";
-				hout_unit.debugPrint(ctx, *aggregate_hir_dump);
+				*aggregate_hir_dump->get() << "HIR for " << module_id_human.strView() << ":\n";
+				hout_unit.debugPrint(ctx, *aggregate_hir_dump->get());
 			} else {
 				auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".hir");
 				hout_unit.debugPrint(ctx, ofstream);
@@ -70,8 +70,8 @@ namespace compiler::driver {
 		if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_mir) {
 			if (aggregate_mir_dump) {
-				*aggregate_mir_dump << "MIR for " << module_id_human.strView() << ":\n";
-				mir_unit.debugPrint(ctx, *aggregate_mir_dump);
+				*aggregate_mir_dump->get() << "MIR for " << module_id_human.strView() << ":\n";
+				mir_unit.debugPrint(ctx, *aggregate_mir_dump->get());
 			} else {
 				auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".mir");
 				mir_unit.debugPrint(ctx, ofstream);

@@ -444,10 +444,10 @@ namespace compiler::driver {
 
 			// Track wrapper symbols to build the synthetic main that runs them in order.
 			// We preserve the original statement order to match script semantics.
-			std::vector<helios::SymID>         wrapper_symbols;
-			std::ostringstream                 aggregate_mir_dump;
-			std::ostringstream                 aggregate_hir_dump;
-			auto                               flush_dumps = [&] {
+			std::vector<helios::SymID> wrapper_symbols;
+			std::ostringstream         aggregate_mir_dump;
+			std::ostringstream         aggregate_hir_dump;
+			auto                       flush_dumps = [&] {
                 if (driver::dump_ir_options.dump_hir && !aggregate_hir_dump.view().empty()) {
                     auto output_file = getDebugDumpArtifact(
                         base::StrID(base::strConcat(merged.module_id_human.strView(), ".hir"))
