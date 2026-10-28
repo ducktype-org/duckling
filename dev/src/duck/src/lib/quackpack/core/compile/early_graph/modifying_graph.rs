@@ -40,8 +40,6 @@ impl DependencyGraph {
                 );
                 if !is_enabled {
                     debug!("dependency `{dep}` of `{k}` is disabled");
-                }
-                if !is_enabled {
                     to_remove.insert(*dep);
                 } else {
                     enabled_deps.insert(*dep);
