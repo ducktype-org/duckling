@@ -205,13 +205,14 @@ namespace compiler::tsh {
 		std::vector<SymbolType<>> parameter_types,
 		const SymbolType<>        result_type,
 		const bool                pure,
-		const bool                free
+		const FunctionKind        function_kind
 	):
 		  parameter_types(std::move(parameter_types)),
 		  result_type(result_type),
 		  pure(pure),
-		  free(free) {
-		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
+		  function_kind(function_kind) {
+		representation = (function_kind == FunctionKind::Closure ? "" : "Function ")
+		               + stringifyTypeVector(this->parameter_types) + " -> ("
 		               + result_type.toString() + ")";
 	}
 

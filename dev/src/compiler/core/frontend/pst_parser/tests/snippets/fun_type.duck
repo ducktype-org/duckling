@@ -1,0 +1,3 @@
+let a: funptr(i32, i64) -> bool = f;
+let b: (i32) -> (i32) -> i32 = f;
+fun apply(k: funptr(i64) -> i64) -> (i64) -> i64 = k;

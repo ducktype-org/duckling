@@ -166,6 +166,12 @@ namespace compiler::helios::code {
 			for (const auto& subtype: e.subtypes) walk(*subtype);
 		}
 
+		void visitFunctionTypeExpr(const FunctionTypeExpr& e) override {
+			handler(e);
+			for (const auto& parameter: e.parameters) walk(*parameter);
+			walk(*e.result);
+		}
+
 		void visitOptionalTypeConstructorExpr(const OptionalTypeConstructorExpr& e) override {
 			handler(e);
 			walk(*e.value_type);

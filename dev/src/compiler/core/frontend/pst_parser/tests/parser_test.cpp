@@ -65,6 +65,7 @@ public:
 		TESTER_ADD_TEST(testFor);
 		TESTER_ADD_TEST(testFun);
 		TESTER_ADD_TEST(testFun2);
+		TESTER_ADD_TEST(testFunType);
 		TESTER_ADD_TEST(testBlock);
 		TESTER_ADD_TEST(testActions);
 		TESTER_ADD_TEST(testImport);
@@ -184,6 +185,8 @@ private:
 	void testPattern() { testJsonRelativePath("pattern.duck", "pattern.json"); }
 
 	void testFun2() { testJsonRelativePath("fun2.duck", "fun2.json"); }
+
+	void testFunType() { testJsonRelativePath("fun_type.duck", "fun_type.json"); }
 
 	void testBlock() { testJsonRelativePath("block.duck", "block.json"); }
 

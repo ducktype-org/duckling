@@ -7,6 +7,7 @@
 #include "get_expr_symid.hpp"
 
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 
 #include <base/collections/optional.hpp>
 
@@ -26,5 +27,11 @@ namespace compiler::helios {
 		HoutExprSymbolVisitor visitor;
 		expr->acceptVisitor(visitor);
 		return visitor.symbol;
+	}
+
+	base::Optional<SymID> getIdentifierExprFunctionID(CRef<code::Expr> expr) {
+		return getIdentifierExprSymID(expr).filter([](SymID symbol) {
+			return isFunctionLike(kind(symbol));
+		});
 	}
 }
