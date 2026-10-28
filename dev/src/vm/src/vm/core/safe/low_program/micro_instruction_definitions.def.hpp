@@ -488,6 +488,13 @@ DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
  */
 DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
+/**
+ * @brief Calls the function referenced by the function value in the first argument. The second
+ * argument is the local stack distance, see `call_func_off`.
+ * @note Unoptimizable by JIT, listed in non_jittable.def.hpp.
+ */
+DEF_MICRO_INSTR(call_p64_off, vm::low::opargs::Place64, vm::low::opargs::Offset)
+
 DEF_MICRO_INSTR(setThreadCtx_func, vm::low::opargs::FunctionID)
 
 // return while performing a tail call
