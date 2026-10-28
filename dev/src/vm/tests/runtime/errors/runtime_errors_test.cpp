@@ -12,7 +12,6 @@
 #include <vm/core/safe/exceptions.hpp>
 
 #include <array>
-#include <cstring>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -72,7 +71,6 @@ public:
 		// Function values
 		TESTER_ADD_TEST(nullFunctionCallFails);
 		TESTER_ADD_TEST(unknownFunctionValueFails);
-		TESTER_ADD_TEST(functionValueOfOtherSignatureFails);
 	}
 
 private:
@@ -329,24 +327,12 @@ private:
 	}
 
 	/**
-	 * @brief Loads a program with a `call_binop` function calling the function value it is given,
-	 * and `get_negate` returning a function value of a different signature.
+	 * @brief Loads a program with a `call_binop` function calling the function value it is given.
 	 */
 	vm::PID spawnAndLoadFunctionValueCallers() {
 		return spawnAndLoad(inlineDbc(
 			"function_value_callers",
 			"type fun: binop { i64, i64 } { i64 }\n"
-			"type fun: unop { i64 } { i64 }\n"
-			"function negate { i64 } -> { i64 } {\n"
-			"    mov_p64_imm ret0, 0;\n"
-			"    sub_p64_p64 ret0, arg0;\n"
-			"    deinit;\n"
-			"    ret;\n"
-			"}\n"
-			"function get_negate {} -> { unop } {\n"
-			"    mov_pfun_func ret0, negate;\n"
-			"    ret;\n"
-			"}\n"
 			"function call_binop { binop } -> { i64 } {\n"
 			"    init_pany_type result, i64;\n"
 			"    init_pany_type lhs, i64;\n"
@@ -376,27 +362,12 @@ private:
 			what,
 			vm::exceptions::VMInvalidFunctionValueException::ERR_MSG
 		);
-		callee->vm_value->freeData();
+		assertSucceeded(vm::api::freeVMValue(pid, callee->vm_value.refMut()), "freeVMValue");
 	}
 
 	void unknownFunctionValueFails() {
 		const auto pid = spawnAndLoadFunctionValueCallers();
 		assertCallOfForgedBinopFails(pid, 1'000'000, "a call of an unknown function ID");
-		(void) vm::api::kill(pid);
-	}
-
-	void functionValueOfOtherSignatureFails() {
-		const auto pid = spawnAndLoadFunctionValueCallers();
-
-		auto negate = vm::api::runFunctionAwait(pid, "get_negate");
-		assertSucceeded(negate, "runFunctionAwait of `get_negate`");
-		const auto& results      = std::get<std::vector<Ref<vm::IVMValue>>>(negate.value());
-		u64         negate_value = 0;
-		std::memcpy(&negate_value, results.at(0)->getBytes(), sizeof(negate_value));
-
-		assertCallOfForgedBinopFails(
-			pid, negate_value, "a call of a function value of a different signature"
-		);
 		(void) vm::api::kill(pid);
 	}
 };

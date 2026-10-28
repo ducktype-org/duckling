@@ -685,11 +685,10 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_mov_pfun_pfun, i) { addLow<Op_mov_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_call_pfun, i) {
-				const TypeCRef callee_type = getPlaceType(i.callee);
 				addLow<Op_call_p64_off>(
-					i.callee, calleeStackDistance(sharedStackSpaceSizeOfFunctionType(callee_type))
+					i.callee,
+					calleeStackDistance(sharedStackSpaceSizeOfFunctionType(getPlaceType(i.callee)))
 				);
-				addLow<Op_ext_type>(opargs::Type(callee_type->getName()));
 			}
 			instr_case(high::Op_setThreadCtx_func, i) { addLow<Op_setThreadCtx_func>(i.function); }
 			instr_case(high::Op_retTailcall_func, i) { addLow<Op_retTailcall_func>(i.function); }
