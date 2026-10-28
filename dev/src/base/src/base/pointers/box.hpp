@@ -380,9 +380,7 @@ namespace base {
 			return Box<T, Deleter>::fromPointerWithCustomDeleter(output, std::move(deleter));
 		}
 
-		~MBox() {
-			reset();
-		}
+		~MBox() { reset(); }
 	};
 
 	// Deduction guide for constructing a MBox from a Box:

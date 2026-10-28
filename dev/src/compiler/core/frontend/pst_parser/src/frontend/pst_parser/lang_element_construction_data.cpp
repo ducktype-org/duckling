@@ -9,8 +9,7 @@
 #include "lang_parser_state.hpp"
 
 namespace pst {
-	LangElementConstructionData::LangElementConstructionData(const LangParserState& state
-	):
+	LangElementConstructionData::LangElementConstructionData(const LangParserState& state):
 		  source_position(state.getPosition()) {
 		HashAlg partial_hash;
 		addToHash(partial_hash, *state.getContext());

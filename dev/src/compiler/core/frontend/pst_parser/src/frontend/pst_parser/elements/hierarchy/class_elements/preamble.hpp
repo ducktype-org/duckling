@@ -6,7 +6,7 @@
 
 #pragma once
 
-#define CLASS_STMT_SPEC_CONSTRUCTOR(class_name)                                                    \
+#define CLASS_STMT_SPEC_CONSTRUCTOR(class_name)                                                \
 	class_name(LangElementConstructionData state): ClassSpecial(StmtKind::class_name, state) { \
-		this->element_kind = ElementKind::ClassSpecial;                                            \
+		this->element_kind = ElementKind::ClassSpecial;                                        \
 	}

@@ -16,13 +16,13 @@ namespace pst {
 	class ElementSynthesizer final {
 	public:
 		static Box<TemplateExpansionAssignment> templateExpansionAssignment(
-			LangElementConstructionData  data,
+			LangElementConstructionData        data,
 			MBox<IdentifierWrapper>&&          name,
 			base::Optional<MBox<ExprHolder>>&& type,
 			MBox<ExprHolder>&&                 value
 		);
 		static Box<TemplateTopLevel> templateTopLevel(
-			LangElementConstructionData                data,
+			LangElementConstructionData                      data,
 			std::vector<MBox<TemplateExpansionAssignment>>&& assignments,
 			MBox<Stmt>&&                                     stmt
 		);
