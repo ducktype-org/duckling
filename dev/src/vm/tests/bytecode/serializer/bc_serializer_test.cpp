@@ -51,21 +51,25 @@ private:
 		// Type 2: data Point { x: i64, y: i64 }
 		auto point = DataType(
 			base::StrID("Point"),
-			{ Field(base::StrID("x"), base::StrID("i32")),
-		      Field(base::StrID("y"), base::StrID("i32")) }
+			{ Field(base::StrID("x"), TypeExpr(base::StrID("i32"))),
+		      Field(base::StrID("y"), TypeExpr(base::StrID("i32"))) }
 		);
 		point.packed      = true;
 		point.assert_size = 8;
 		code.types.emplace_back(std::move(point));
-		code.types.emplace_back(FixedSizeTableType(base::StrID("points"), base::StrID("Point"), 3));
+		code.types.emplace_back(
+			FixedSizeTableType(base::StrID("points"), TypeExpr(base::StrID("Point")), 3)
+		);
 		// C pointers: one typed, one with an unknown pointee (no inner).
-		code.types.emplace_back(CPointerType(base::StrID("point_ptr"), base::StrID("Point")));
+		code.types.emplace_back(
+			CPointerType(base::StrID("point_ptr"), TypeExpr(base::StrID("Point")))
+		);
 		code.types.emplace_back(CPointerType(base::StrID("raw_ptr"), {}));
 
 		// Global data: constant answer i64 with initial_value 42
 		GlobalData global;
 		global.name        = Identifier(base::StrID("answers"));
-		global.type        = Identifier(base::StrID("points"));
+		global.type        = TypeExpr(base::StrID("points"));
 		global.is_constant = true;
 
 		auto constant_immediate     = makeBox<ConstantImmediate>();
@@ -88,8 +92,8 @@ private:
 
 		FFIFunction ffi_func;
 		ffi_func.name = Identifier(base::StrID("sqrt"));
-		ffi_func.signature.parameters.emplace_back(base::StrID("f64"));
-		ffi_func.signature.result_types.emplace_back(base::StrID("f64"));
+		ffi_func.signature.parameters.emplace_back(TypeExpr(base::StrID("f64")));
+		ffi_func.signature.result_types.emplace_back(TypeExpr(base::StrID("f64")));
 		code.ffi_functions.push_back(std::move(ffi_func));
 
 		FFIFunction ffi_void_func;
@@ -98,9 +102,9 @@ private:
 
 		Function func;
 		func.name = Identifier(base::StrID("main"));
-		func.signature.parameters.emplace_back(base::StrID("i64"));
-		func.signature.parameters.emplace_back(base::StrID("ptr_argv"));
-		func.signature.result_types.emplace_back(base::StrID("i64"));
+		func.signature.parameters.emplace_back(TypeExpr(base::StrID("i64")));
+		func.signature.parameters.emplace_back(TypeExpr(base::StrID("ptr_argv")));
+		func.signature.result_types.emplace_back(TypeExpr(base::StrID("i64")));
 		func.body.emplace_back(
 			instructions::Op_mov_p64_imm(opargs::Place64(base::StrID("ret0")), opargs::Immediate(0))
 		);
@@ -149,7 +153,7 @@ private:
 		const auto& typed_cptr = std::get<CPointerType>(parsed.types[3]);
 		assertEqual(typed_cptr.name, base::StrID("point_ptr"), "C pointer name should survive");
 		assertTrue(
-			typed_cptr.inner == base::Optional<base::StrID>(base::StrID("Point")),
+			typed_cptr.inner == base::Optional<TypeExpr>(TypeExpr(base::StrID("Point"))),
 			"C pointer inner should survive round-trip"
 		);
 		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
@@ -162,7 +166,7 @@ private:
 		);
 		const GlobalData& g = parsed.global_data[0];
 		assertEqual(g.name.str, base::StrID("answers"), "Global name should be answer");
-		assertEqual(g.type.str, base::StrID("points"), "Global type should be i64");
+		assertEqual(g.type.expr.canonicalName(), base::StrID("points"), "Global type should be i64");
 		assertTrue(g.is_constant, "Global should be constant");
 		ASSERT_HAS_VALUE(g.initial_value, "Global should have initial_value");
 		auto initial_value = *g.initial_value;

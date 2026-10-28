@@ -177,7 +177,7 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 		ctx.stack_sid                            = stack_ctx.function.stack_states[i];
 		instr_match(instruction) {
 			instr_case(high::Op_init_pany_type, init) {
-				auto type      = high_program.types().at(init.type.type_name);
+				auto type      = high_program.types().at(init.type.expr.canonicalName());
 				auto type_size = getByteSize(type->getSize());
 				PUSH(init_pany_imm, init.var, type_size);
 			}

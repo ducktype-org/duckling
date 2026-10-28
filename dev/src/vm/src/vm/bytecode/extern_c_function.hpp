@@ -79,6 +79,7 @@
 #include <base/preproc/for_each.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/type_expr.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/utils/interpret.hpp>
 
@@ -97,10 +98,11 @@ namespace vm::detail {
 
 }
 
-#define VM_EXT_C_INTO_VM_TYPE_NAME(Type, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
-#define VM_EXT_C_INTO_FIELDS(Type, VmType, Name)       Type Name;
-#define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
-#define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
+#define VM_EXT_C_INTO_VM_TYPE_NAME(Type, VmType, Name) \
+	vm::code::TypeExpr(base::StrID(VM_EXT_C_VM_TYPE_NAME(VmType))),
+#define VM_EXT_C_INTO_FIELDS(Type, VmType, Name) Type Name;
+#define VM_EXT_C_INTO_PARAMS(Type, VmType, Name) , Type Name
+#define VM_EXT_C_INTO_ARGS(Type, VmType, Name)   , func_args->Name
 
 #define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                               \
 	auto tp_##Name = vm::api::getType(pid, VmType);                                 \
@@ -176,7 +178,9 @@ namespace vm::detail {
 			vm::code::FuncSignature signature;                                                          \
 			signature.result_types = {};                                                                \
 			if (base::StrID(VM_EXT_C_VM_TYPE_NAME(ResVmType)) != "void")                                \
-				signature.result_types.emplace_back(VM_EXT_C_VM_TYPE_NAME(ResVmType));                  \
+				signature.result_types.emplace_back(                                                    \
+					vm::code::TypeExpr(base::StrID(VM_EXT_C_VM_TYPE_NAME(ResVmType)))                   \
+				);                                                                                      \
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \

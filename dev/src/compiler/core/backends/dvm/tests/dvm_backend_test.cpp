@@ -225,7 +225,7 @@ private:
 			);
 			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
-				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
+				dvm_variant.value().variant_alternatives, vm::code::TypeExpr(typeName(unit_dvm_type))
 			));
 		});
 	}

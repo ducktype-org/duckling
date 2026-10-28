@@ -22,7 +22,8 @@ namespace compiler::backend_vm::internal {
 
 	void InstructionLowerer::lower(const VariantConstructOperation& op) {
 		const base::StrID alternative_type_name = alternativeTypeNameOf(ctx, op.variant_params);
-		const auto        alternative_type_arg  = vm::opargs::Type(alternative_type_name);
+		const auto        alternative_type_arg
+			= vm::opargs::Type(vm::code::TypeExpr{ alternative_type_name });
 
 		// Activate the alternative, then store the payload through a pointer to the
 		// variant's data.
@@ -58,6 +59,6 @@ namespace compiler::backend_vm::internal {
 		ctx->pushInstruction({ OpKind::variantGetInner,
 		                       op.dest.asArgument(),
 		                       op.variant.asArgument(),
-		                       vm::opargs::Type(alternative_type_name) });
+		                       vm::opargs::Type(vm::code::TypeExpr{ alternative_type_name }) });
 	}
 }

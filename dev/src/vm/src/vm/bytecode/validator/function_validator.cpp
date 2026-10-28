@@ -79,7 +79,7 @@ namespace {
 		valid_type::ValidTypeID                 expected_field_type,
 		Args&&... error_args
 	) {
-		if (type.getName() != field_arg.type_name)
+		if (type.getName() != field_arg.expr.canonicalName())
 			throw StructTypeMismatchError(std::forward<Args>(error_args)...);
 
 		base::StrID                  field_name = field_arg.field_name;
@@ -168,7 +168,7 @@ public:
 		if (bld_ref->contains(stack_state_id, local.var_name))
 			throw DuplicatedLocalNameError(local);
 
-		auto new_state = bld_ref->push(stack_state_id, local.var_name, type.type_name);
+		auto new_state = bld_ref->push(stack_state_id, local.var_name, type.expr.canonicalName());
 		stack_state_id = new_state;
 	}
 
@@ -230,7 +230,7 @@ public:
 		auto bld_ref = std::get<Ref<LocalStackDbBuilder>>(source);
 
 		auto local_name = VISIT(local, l, return l.var_name);
-		auto new_state  = bld_ref->change(stack_state_id, local_name, type.type_name);
+		auto new_state  = bld_ref->change(stack_state_id, local_name, type.expr.canonicalName());
 		stack_state_id  = new_state;
 	}
 
@@ -300,13 +300,13 @@ class FunctionValidator {
 
 		using namespace std::views;
 		for (auto param: params | reverse) {
-			if (local_stack.back().type->getName() != param.str)
+			if (local_stack.back().type->getName() != param.expr.canonicalName())
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
 
 		for (auto [idx, reslt]: enumerate(results | reverse))
-			if (local_stack.back(usize(idx)).type->getName() != reslt.str)
+			if (local_stack.back(usize(idx)).type->getName() != reslt.expr.canonicalName())
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -384,7 +384,7 @@ class FunctionValidator {
 		// incorrect casting
 
 		for (usize i = 0; i < ret_amount; i++)
-			if (local_stack.front(i).type->getName() != returns.at(i).str)
+			if (local_stack.front(i).type->getName() != returns.at(i).expr.canonicalName())
 				throw InvalidRetError(instr);
 	}
 
@@ -413,12 +413,12 @@ class FunctionValidator {
 		for (auto [reslt, stack_elem]:
 		     zip(reslts, local_stack.getStackState() | take(reslts.size())))
 
-			if (stack_elem.type->getName() != reslt.str)
+			if (stack_elem.type->getName() != reslt.expr.canonicalName())
 				throw InvalidTailcallArgumentsError(generic_arg);
 
 		for (auto [param, stack_elem]:
 		     zip(params, local_stack.getStackState() | drop(reslts.size())))
-			if (stack_elem.type->getName() != param.str)
+			if (stack_elem.type->getName() != param.expr.canonicalName())
 				throw InvalidTailcallArgumentsError(generic_arg);
 	}
 
@@ -431,7 +431,7 @@ class FunctionValidator {
 		if (is_local && is_global) throw DuplicatedLocalNameError(place);
 		if (!is_local && !is_global) throw UnknownLocalNameError(place);
 		return is_local ? current_stack.at(place.var_name)
-		                : types_ctx.at(globals.at(place.var_name)->type);
+		                : types_ctx.at(globals.at(place.var_name)->type.expr.canonicalName());
 	}
 
 	template<typename PlaceT>
@@ -439,7 +439,7 @@ class FunctionValidator {
 		const {
 		bool is_local = current_stack.contains(place.var_name);
 		return is_local ? current_stack.at(place.var_name)
-		                : types_ctx.at(globals.at(place.var_name)->type);
+		                : types_ctx.at(globals.at(place.var_name)->type.expr.canonicalName());
 	}
 
 	/**
@@ -501,7 +501,7 @@ class FunctionValidator {
 				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
 				variant_case(CRef<opargs::Type>, type_value) {
-					if (!types_ctx.contains(type_value->type_name))
+					if (!types_ctx.contains(type_value->expr.canonicalName()))
 						throw UnknownTypeError(*type_value);
 				}
 				variant_case(CRef<opargs::FunctionName>, function_value) {
@@ -561,7 +561,7 @@ class FunctionValidator {
 				}
 
 				variant_case(CRef<opargs::Field>, field) {
-					auto type = types_ctx.at(field->type_name);
+					auto type = types_ctx.at(field->expr.canonicalName());
 					variant_match(type->getKind()) {
 						variant_case(valid_type::finalized::Structure, structure) {
 							if (std::ranges::find(
@@ -647,7 +647,7 @@ class FunctionValidator {
 				CRef<valid_type::ValidType> variable = getPlaceType(instr.ptr, current_stack);
 				CRef<valid_type::finalized::Pointer> pointer
 					= variable->getKindAs<valid_type::finalized::Pointer>();
-				if (types_ctx.at(pointer->inner)->getName() != instr.type.type_name)
+				if (types_ctx.at(pointer->inner)->getName() != instr.type.expr.canonicalName())
 					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_upcast_pptr_pptr, instr) {
@@ -1348,7 +1348,7 @@ class FunctionValidator {
 				const auto variant_type = getPlaceType(instr.variant, current_stack)
 				                              ->getKindAs<valid_type::finalized::Variant>();
 				valid_type::ValidTypeID wanted_type
-					= types_ctx.at(instr.inner_type.type_name)->getID();
+					= types_ctx.at(instr.inner_type.expr.canonicalName())->getID();
 
 				if (!variant_type->alternatives_set.contains(wanted_type))
 					throw VariantTypeMismatchError(instr);
@@ -1362,7 +1362,7 @@ class FunctionValidator {
 				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.expected_type != wanted_type->getName())
+				if (instr.expected_type.expr.canonicalName() != wanted_type->getName())
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantSetInner_pptr_type, instr) {
@@ -1373,7 +1373,7 @@ class FunctionValidator {
 					variant_pointer, types_ctx, instr
 				);
 
-				auto wanted_type = types_ctx.at(instr.inner_type.type_name);
+				auto wanted_type = types_ctx.at(instr.inner_type.expr.canonicalName());
 				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 			}
@@ -1392,7 +1392,7 @@ class FunctionValidator {
 				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.expected_type != wanted_type->getName())
+				if (instr.expected_type.expr.canonicalName() != wanted_type->getName())
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_label, Op_jmp_label, Op_jmpIf_label, Op_jmpIfNot_label) {}
@@ -1417,7 +1417,7 @@ class FunctionValidator {
 			instr_case(Op_setVTable_pptr_type, instr) {
 				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
-				if (pointer_type->inner != types_ctx.at(instr.type.type_name)->getID())
+				if (pointer_type->inner != types_ctx.at(instr.type.expr.canonicalName())->getID())
 					throw VTableTypeMismatchError(instr);
 			}
 			instr_case(Op_resetVTable_pptr, instr) {
@@ -1457,7 +1457,8 @@ class FunctionValidator {
 				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				const auto&                 global_entry = globals.at(instr.src.var_name);
-				CRef<valid_type::ValidType> global_type  = types_ctx.at(global_entry->type);
+				CRef<valid_type::ValidType> global_type
+					= types_ctx.at(global_entry->type.expr.canonicalName());
 				if (pointer_type->inner != global_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
@@ -1645,7 +1646,7 @@ class FunctionValidator {
 				);
 
 				valid_type::ValidTypeID allocated_type
-					= types_ctx.at(instr.table_type.type_name)->getID();
+					= types_ctx.at(instr.table_type.expr.canonicalName())->getID();
 				if (allocated_type != table_pointer->inner)
 					throw InvalidArgumentTypeError(instr.table_type);
 			}
@@ -1682,7 +1683,7 @@ class FunctionValidator {
 	 * real data, not an abstract class or an interface.
 	 */
 	void validateArgInstantiable(const opargs::Type& arg) const {
-		auto type = types_ctx.at(arg.type_name);
+		auto type = types_ctx.at(arg.expr.canonicalName());
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
@@ -1723,7 +1724,7 @@ class FunctionValidator {
 	) const {
 		// These are guaranteed to exist by `validateArgTypes`.
 		const auto curr_type      = VISIT(local, l, return getPlaceType(l, current_stack));
-		const auto new_type       = types_ctx.at(type.type_name);
+		const auto new_type       = types_ctx.at(type.expr.canonicalName());
 		const auto curr_primitive = curr_type->getKindAs<valid_type::finalized::Primitive>();
 
 		const auto new_primitive = new_type->maybeGetKindAs<valid_type::finalized::Primitive>()
@@ -1771,12 +1772,16 @@ class FunctionValidator {
 		using namespace std::views;
 		for (auto [idx, ret]: enumerate(function.signature.result_types))
 			start_state = builder.push(
-				start_state, base::StrID(base::strConcat("ret", idx).c_str()), ret.str
+				start_state,
+				base::StrID(base::strConcat("ret", idx).c_str()),
+				ret.expr.canonicalName()
 			);
 
 		for (auto [idx, param]: enumerate(function.signature.parameters))
 			start_state = builder.push(
-				start_state, base::StrID(base::strConcat("arg", idx).c_str()), param.str
+				start_state,
+				base::StrID(base::strConcat("arg", idx).c_str()),
+				param.expr.canonicalName()
 			);
 
 		LocalStack local_stack(
@@ -1907,14 +1912,16 @@ class FunctionValidator {
 		if (function.name.str == base::StrID("main")) {
 			if (function.signature.result_types.size() != 1)
 				throw InvalidMainReturnType(function.signature, false);
-			if (function.signature.result_types[0].str != base::StrID("i64"))
+			if (function.signature.result_types[0].expr.canonicalName() != base::StrID("i64"))
 				throw InvalidMainReturnType(function.signature, true);
 		}
 		for (const auto& param_type: function.signature.parameters)
-			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
+			if (!types_ctx.contains(param_type.expr.canonicalName()))
+				throw UnknownTypeError(opargs::Type{ param_type.expr });
 
 		for (const auto& reslts: function.signature.result_types)
-			if (!types_ctx.contains(reslts)) throw UnknownTypeError(opargs::Type{ reslts });
+			if (!types_ctx.contains(reslts.expr.canonicalName()))
+				throw UnknownTypeError(opargs::Type{ reslts.expr });
 	}
 
 public:

@@ -110,12 +110,12 @@ namespace compiler::backend_vm::internal {
 		base::Optional<vm::code::TypeOfData> called_result_type = {};
 		if (ext_func.signature.result_types.size()) {
 			auto reslt         = ext_func.signature.result_types.at(0);
-			called_result_type = vm::code::getBuiltinTypeByName(reslt).value();
+			called_result_type = vm::code::getBuiltinTypeByName(reslt.expr.canonicalName()).value();
 		}
 
 		std::vector<vm::code::TypeOfData> param_types
-			= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
-				  return vm::code::getBuiltinTypeByName(type_name).value();
+			= ext_func.signature.parameters | std::views::transform([&](const auto& type_ref) {
+				  return vm::code::getBuiltinTypeByName(type_ref.expr.canonicalName()).value();
 			  })
 		    | std::ranges::to<std::vector>();
 

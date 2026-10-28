@@ -32,10 +32,10 @@ namespace vm::code {
 	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
 
-	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
+	std::string toString(opargs::Type arg) { return arg.expr.canonicalName().str(); }
 
 	std::string toString(opargs::Field arg) {
-		return base::strConcat(arg.type_name, ".", arg.field_name);
+		return base::strConcat(arg.expr.canonicalName(), ".", arg.field_name);
 	}
 
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
@@ -87,20 +87,20 @@ namespace vm::code {
 		 * `function` and `ffi function` declarations.
 		 */
 		void serializeSignature(const FuncSignature& signature, std::ostream& out) {
-			auto identifier_list = [&out](const std::vector<Identifier>& identifiers) {
+			auto type_list = [&out](const std::vector<TypeExprUse>& type_refs) {
 				out << "{ ";
 				bool first = true;
-				for (const auto& identifier: identifiers) {
+				for (const auto& type_ref: type_refs) {
 					if (!first) out << ", ";
-					out << identifier.str.strView();
+					out << type_ref.expr.canonicalName().strView();
 					first = false;
 				}
 				out << " }";
 			};
 
-			identifier_list(signature.parameters);
+			type_list(signature.parameters);
 			out << " -> ";
-			identifier_list(signature.result_types);
+			type_list(signature.result_types);
 		}
 	}
 
@@ -164,33 +164,34 @@ namespace vm::code {
 			void operator()(const PointerType& type) const {
 				out << "type pointer: ";
 				out << type.name.strView() << " ";
-				out << type.inner.strView();
+				out << type.inner.canonicalName().strView();
 			}
 
 			void operator()(const CPointerType& type) const {
 				out << "type cpointer: ";
 				out << type.name.strView();
-				if (type.inner.has_value()) out << " " << type.inner->strView();
+				if (type.inner.has_value()) out << " " << type.inner->canonicalName().strView();
 			}
 
 			void operator()(const FixedSizeTableType& type) const {
 				out << "type fixed_size_table: ";
 				out << type.name.strView() << " ";
-				out << type.inner.strView() << " ";
+				out << type.inner.canonicalName().strView() << " ";
 				out << type.table_size;
 			}
 
 			void operator()(const DynamicTableType& type) const {
 				out << "type dynamic_table: ";
 				out << type.name.strView() << " ";
-				out << type.inner.strView();
+				out << type.inner.canonicalName().strView();
 			}
 
 			void operator()(const DataType& type) const {
 				out << "type data: ";
 				out << type.name.strView() << " {\n";
 				for (auto field: type.fields)
-					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
+					out << "    " << field.name.strView() << ": "
+						<< field.type.canonicalName().strView() << ",\n";
 				out << "}";
 				if (type.packed) out << " packed";
 				if (type.assert_size.has_value()) out << " assert_size " << *type.assert_size;
@@ -203,7 +204,7 @@ namespace vm::code {
 				bool first = true;
 				for (const auto& alternative: type.variant_alternatives) {
 					if (!first) out << ", ";
-					out << alternative.strView();
+					out << alternative.canonicalName().strView();
 					first = false;
 				}
 				out << " }";
@@ -216,14 +217,14 @@ namespace vm::code {
 				bool first = true;
 				for (const auto& param: fun.parameters) {
 					if (!first) out << ", ";
-					out << param.strView();
+					out << param.canonicalName().strView();
 					first = false;
 				}
 				out << " } -> { ";
 				first = true;
 				for (const auto& reslts: fun.result) {
 					if (!first) out << ", ";
-					out << reslts.strView();
+					out << reslts.canonicalName().strView();
 					first = false;
 				}
 				out << " }";
@@ -239,13 +240,15 @@ namespace vm::code {
 				out << "type class:  " << clazz.name.strView() << "{\n";
 				out << "    fields: [";
 				for (auto field: clazz.fields)
-					out << field.name.strView() << ": " << field.type.strView() << ", ";
+					out << field.name.strView() << ": " << field.type.canonicalName().strView()
+						<< ", ";
 				out << "]\n";
 				out << "    abstract: " << clazz.is_abstract << ";\n";
 				if (clazz.extends.has_value())
-					out << "    extends: " << clazz.extends.value().strView() << ";\n";
+					out << "    extends: " << clazz.extends.value().canonicalName().strView()
+						<< ";\n";
 				out << "    implements: [";
-				for (auto& iface: clazz.implements) out << iface.strView() << ", ";
+				for (auto& iface: clazz.implements) out << iface.canonicalName().strView() << ", ";
 				out << "]\n";
 				out << "    virtual_methods: [";
 				for (auto method: clazz.virtual_methods)
@@ -257,7 +260,8 @@ namespace vm::code {
 			void operator()(const InterfaceType& interface) const {
 				out << "type interface:  " << interface.name.strView() << "{\n";
 				out << "    implements: [";
-				for (auto& iface: interface.implements) out << iface.strView() << ", ";
+				for (auto& iface: interface.implements)
+					out << iface.canonicalName().strView() << ", ";
 				out << "]\n";
 				out << "    virtual_methods: [";
 				for (auto method: interface.virtual_methods)
@@ -333,7 +337,8 @@ namespace vm::code {
 
 		void display() {
 			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
-			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
+			out << global_data.name.str.strView() << " "
+				<< global_data.type.expr.canonicalName().strView() << " {";
 			bool has_content   = false;
 			auto maybe_newline = [&] {
 				if (has_content) out << ",";

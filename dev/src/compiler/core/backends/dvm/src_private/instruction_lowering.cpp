@@ -57,7 +57,7 @@ DVMPlace compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 	pushInstruction({
 		OpKind::init,
 		temp_local.asAnyArgument(),
-		vm::opargs::Type(typeName(type)),
+		vm::opargs::Type(vm::code::TypeExpr(typeName(type))),
 	});
 	return temp_local;
 }

@@ -344,7 +344,7 @@ namespace vm::loader::parser {
 		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
 			tpc::Identifier type_name, field_name;
 			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
-			auto field         = vm::opargs::Field{ type_name, field_name };
+			auto field = vm::opargs::Field{ code::TypeExpr(type_name.value), field_name.value };
 			field.bytecode_pos = dia::SourcePosition(
 				type_name.position.getLocation(),
 				type_name.position.getStart(),
@@ -362,9 +362,16 @@ namespace vm::loader::parser {
 		return { arg };                                          \
 	}
 
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
+			auto identifier  = parseIdentifier(state);
+			auto arg         = vm::opargs::Type{ code::TypeExpr(identifier.value) };
+			arg.bytecode_pos = identifier.position;
+			return arg;
+		}
+
 		FOR_EACH(
 			HANDLE_STR_ARG,
-			Type,
 			FunctionName,
 			BuiltinFunctionName,
 			ExtCFunctionName,
@@ -754,8 +761,14 @@ namespace vm::loader::parser {
 	}
 
 	namespace {
-		std::vector<code::Field> parseFields(F8ParserState& state) {
-			std::vector<code::Field> out;
+		/**
+		 * @brief Parses a `{ name: value, ... }` group, building each entry with `make`.
+		 * @note The value is a type for fields and virtual methods, but a function name for
+		 * implementations, which is why building an entry is left to the caller.
+		 */
+		template<typename TEntry>
+		std::vector<TEntry> parseNamedPairs(F8ParserState& state, auto make) {
+			std::vector<TEntry> out;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.logInt(makeBox<dia::PlaceholderError>(
@@ -766,11 +779,11 @@ namespace vm::loader::parser {
 
 			state.goDown();
 			while (state.notEmpty()) {
-				tpc::Identifier field_name;
-				tpc::Identifier field_type;
-				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
-				auto& field        = out.emplace_back(field_name.value, field_type.value);
-				field.bytecode_pos = field_name.position;
+				tpc::Identifier entry_name;
+				tpc::Identifier entry_value;
+				state.parse().all(&entry_name, lang_def::NamedOperator::Colon, &entry_value);
+				auto& entry        = out.emplace_back(make(entry_name.value, entry_value.value));
+				entry.bytecode_pos = entry_name.position;
 
 				if (state.empty()) break;
 				if (state[0].is(lang_def::Special::Comma)) {
@@ -785,6 +798,21 @@ namespace vm::loader::parser {
 			state.goUpAndSkip();
 
 			return out;
+		}
+
+		std::vector<code::Field> parseFields(F8ParserState& state) {
+			return parseNamedPairs<code::Field>(state, [](base::StrID name, base::StrID type) {
+				return code::Field(name, code::TypeExpr{ type });
+			});
+		}
+
+		std::vector<code::MethodImpl> parseMethodImpls(F8ParserState& state) {
+			return parseNamedPairs<code::MethodImpl>(
+				state,
+				[](base::StrID name, base::StrID function_name) {
+					return code::MethodImpl(name, function_name);
+				}
+			);
 		}
 	}
 
@@ -822,7 +850,7 @@ namespace vm::loader::parser {
 					"Expected an identifier after here.", state.getPosition()
 				));
 			else {
-				auto tp         = PointerType{ name, pointed_type.getValue() };
+				auto tp         = PointerType{ name, TypeExpr(pointed_type.getValue()) };
 				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
@@ -831,9 +859,9 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCCPointer: {
 			// The pointee is optional: `type cpointer: Name [Inner]`. No inner means a pointer
 			// to an unknown pointee (C's `void*`).
-			base::Optional<base::StrID> inner;
+			base::Optional<TypeExpr> inner;
 			if (state.notEmpty() && state[0].isIdentifier())
-				inner = state.tokens().next().getValue();
+				inner = TypeExpr(state.tokens().next().getValue());
 			if (state.notEmpty() && (state[0].isNumLiteralGroup() || state[0].isString())) {
 				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected an identifier (pointee type) or end of declaration.",
@@ -860,7 +888,7 @@ namespace vm::loader::parser {
 					));
 				} else {
 					auto tp         = FixedSizeTableType{ name,
-                                                  type_name.getValue(),
+                                                  TypeExpr(type_name.getValue()),
                                                   static_cast<usize>(strIDToNum(size.getValue())) };
 					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
@@ -875,7 +903,7 @@ namespace vm::loader::parser {
 					"Expected an identifier after here.", state.getPosition()
 				));
 			else {
-				auto tp         = DynamicTableType{ name, type_name.getValue() };
+				auto tp         = DynamicTableType{ name, TypeExpr(type_name.getValue()) };
 				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
@@ -915,7 +943,7 @@ namespace vm::loader::parser {
 			}
 
 			state.goDown();
-			std::vector<base::StrID> alternatives;
+			std::vector<TypeExpr> alternatives;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
 				state.parse().one(&field_type);
@@ -946,7 +974,7 @@ namespace vm::loader::parser {
 			}
 
 			state.goDown();
-			std::vector<base::StrID> arguments;
+			std::vector<TypeExpr> arguments;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
 				state.parse().one(&field_type);
@@ -971,7 +999,7 @@ namespace vm::loader::parser {
 				return nullptr;
 			}
 
-			std::vector<base::StrID> returned;
+			std::vector<TypeExpr> returned;
 			state.goDown();
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
@@ -1010,13 +1038,13 @@ namespace vm::loader::parser {
 		}
 		case lang_def::Keyword::BCClass:
 		case lang_def::Keyword::BCInterface: {
-			bool                        is_interface = type == lang_def::Keyword::BCInterface;
-			bool                        is_abstract  = false;
-			std::vector<Field>          fields;
-			std::vector<base::StrID>    implements;
-			std::vector<Field>          virtual_methods;
-			std::vector<Field>          implementations;
-			base::Optional<base::StrID> extends;
+			bool                     is_interface = type == lang_def::Keyword::BCInterface;
+			bool                     is_abstract  = false;
+			std::vector<Field>       fields;
+			std::vector<TypeExpr>    implements;
+			std::vector<Field>       virtual_methods;
+			std::vector<MethodImpl>  implementations;
+			base::Optional<TypeExpr> extends;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.logInt(makeBox<dia::PlaceholderError>(
@@ -1040,7 +1068,7 @@ namespace vm::loader::parser {
 						state.parse().all(
 							lang_def::NamedOperator::Colon, &superclass, lang_def::Special::Semicolon
 						);
-						extends.emplace(superclass.value);
+						extends.emplace(TypeExpr(superclass.value));
 					}
 					break;
 				}
@@ -1081,7 +1109,7 @@ namespace vm::loader::parser {
 					while (state.notEmpty()) {
 						tpc::Identifier interface;
 						state.parse().one(&interface);
-						implements.push_back(interface.value);
+						implements.emplace_back(interface.value);
 
 						if (state.empty()) break;
 						if (state[0].is(lang_def::Special::Comma)) {
@@ -1105,7 +1133,7 @@ namespace vm::loader::parser {
 				}
 				case lang_def::Keyword::BCMethodImplementations: {
 					state.parse().one(lang_def::NamedOperator::Colon);
-					implementations = parseFields(state);
+					implementations = parseMethodImpls(state);
 					state.parse().one(lang_def::Special::Semicolon);
 					break;
 				}
@@ -1218,7 +1246,7 @@ namespace vm::loader::parser {
 #undef HANDLE_LOCAL
 
 				variant_case(vm::opargs::Type, type_arg) {
-					out << type_arg.type_name.strView() << " ";
+					out << type_arg.expr.canonicalName().strView() << " ";
 				}
 				variant_case(vm::opargs::FunctionName, function_name_arg) {
 					out << function_name_arg.function_name.strView() << " ";

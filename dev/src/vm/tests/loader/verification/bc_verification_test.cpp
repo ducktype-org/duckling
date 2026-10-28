@@ -168,10 +168,12 @@ private:
 
 	void mainVerification() {
 		loadInvalidDbc(
-			"wrong/functions/invalid_main_ret_type.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
+			"wrong/functions/invalid_main_ret_type.dbc",
+			{ vm::code::InvalidMainReturnType::ERR_MSG, "invalid_main_ret_type.dbc:1:23" }
 		);
 		loadInvalidDbc(
-			"wrong/functions/invalid_main_ret_size.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
+			"wrong/functions/invalid_main_ret_size.dbc",
+			{ vm::code::InvalidMainReturnType::ERR_MSG, "invalid_main_ret_size.dbc:1:23" }
 		);
 	}
 

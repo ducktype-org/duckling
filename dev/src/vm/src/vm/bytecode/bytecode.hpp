@@ -39,6 +39,26 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief One occurrence of a type expression in the bytecode.
+	 * @note `TypeExpr` is interned, so equal expressions share one node and cannot carry the
+	 * position they were written at. This pairs an expression with that position, the way
+	 * `Identifier` pairs a name with it, so diagnostics can still point at the source.
+	 * @note Not named after `Ref`, which in this codebase is a pointer wrapper: this owns its
+	 * expression rather than referring to one.
+	 */
+	struct TypeExprUse final: ElementBase {
+		TypeExprUse() = default;
+
+		TypeExprUse(TypeExpr expr): expr(expr) {}
+
+		TypeExpr expr;
+
+		bool operator==(const TypeExprUse& other) const noexcept { return expr == other.expr; }
+
+		operator TypeExpr() const { return expr; }
+	};
+
+	/**
 	 * @brief Represents a block of instructions.
 	 */
 	using CodeBlock = std::vector<Instruction>;
@@ -47,8 +67,8 @@ namespace vm::code {
 	 * @brief Represents global data, like a constant or a variable.
 	 */
 	struct GlobalData final: ElementBase {
-		Identifier name;
-		Identifier type;
+		Identifier  name;
+		TypeExprUse type;
 
 		base::Optional<Identifier> ctor_name;
 		base::Optional<Identifier> dtor_name;
@@ -61,8 +81,8 @@ namespace vm::code {
 	};
 
 	struct FuncSignature final {
-		std::vector<Identifier> result_types;
-		std::vector<Identifier> parameters;
+		std::vector<TypeExprUse> result_types;
+		std::vector<TypeExprUse> parameters;
 
 		bool operator==(const FuncSignature& other) const noexcept = default;
 	};

@@ -20,7 +20,7 @@ namespace compiler::backend_vm::internal {
 		base::StrID extractPointeeTypeName(const vm::code::TypeOfData& ptr_type) {
 			const auto* pointer = std::get_if<vm::code::PointerType>(&ptr_type);
 			CORE_ASSERT(pointer != nullptr, "DVM builtin expects a `ptr`/`manyptr` operand");
-			return pointer->inner;
+			return pointer->inner.canonicalName();
 		}
 	}
 
@@ -38,7 +38,7 @@ namespace compiler::backend_vm::internal {
 			auto table_type = extractPointeeTypeName(dest->getType());
 			ctx->pushInstruction({ OpKind::dynTableReAlloc,
 			                       dest->asArgument(),
-			                       vm::opargs::Type(table_type),
+			                       vm::opargs::Type(vm::code::TypeExpr{ table_type }),
 			                       count.asArgument() });
 			break;
 		}
@@ -50,7 +50,7 @@ namespace compiler::backend_vm::internal {
 			auto table_type = extractPointeeTypeName(table_ptr.getType());
 			ctx->pushInstruction({ OpKind::dynTableReAlloc,
 			                       table_ptr.asArgument(),
-			                       vm::opargs::Type(table_type),
+			                       vm::opargs::Type(vm::code::TypeExpr{ table_type }),
 			                       count.asArgument() });
 			break;
 		}
@@ -69,9 +69,9 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(dest.has_value(), "dvm_alloc must have a destination");
 
 			auto pointee_type = extractPointeeTypeName(dest->getType());
-			ctx->pushInstruction(
-				{ OpKind::alloc, dest->asArgument(), vm::opargs::Type(pointee_type) }
-			);
+			ctx->pushInstruction({ OpKind::alloc,
+			                       dest->asArgument(),
+			                       vm::opargs::Type(vm::code::TypeExpr{ pointee_type }) });
 			break;
 		}
 		case lir::BuiltinFunctionKind::DvmFree: {

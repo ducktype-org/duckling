@@ -12,6 +12,7 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/element_base.hpp>
+#include <vm/bytecode/type_expr.hpp>
 
 #include <string_view>
 #include <variant>
@@ -85,13 +86,11 @@ namespace vm::opargs {
 
 		Type() = default;
 
-		Type(const base::StrID type_name): type_name(type_name) {}
+		Type(const code::TypeExpr expr): expr(expr) {}
 
-		base::StrID type_name = base::StrID("");
+		code::TypeExpr expr;
 
-		constexpr bool operator==(const Type& other) const noexcept {
-			return type_name == other.type_name;
-		}
+		constexpr bool operator==(const Type& other) const noexcept { return expr == other.expr; }
 	};
 
 	/**
@@ -102,15 +101,15 @@ namespace vm::opargs {
 
 		Field() = default;
 
-		Field(const base::StrID type_name, const base::StrID field_name):
-			  type_name(type_name),
+		Field(const code::TypeExpr expr, const base::StrID field_name):
+			  expr(expr),
 			  field_name(field_name) {}
 
-		base::StrID type_name  = base::StrID("");
-		base::StrID field_name = base::StrID("");
+		code::TypeExpr expr;
+		base::StrID    field_name = base::StrID("");
 
 		constexpr bool operator==(const Field& other) const noexcept {
-			return type_name == other.type_name && field_name == other.field_name;
+			return expr == other.expr && field_name == other.field_name;
 		}
 	};
 

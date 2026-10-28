@@ -27,33 +27,36 @@ namespace {
 				tp.definePrimitive(Bytes(primitive.size));
 			}
 			variant_case(vm::code::PointerType, pointer) {
-				tp.definePointer(types.at(pointer.inner)->getID());
+				tp.definePointer(types.at(pointer.inner.canonicalName())->getID());
 			}
 			variant_case(vm::code::CPointerType, cpointer) {
-				tp.defineCPointer(cpointer.inner.map([&](const base::StrID& inner) {
-					return types.at(inner)->getID();
+				tp.defineCPointer(cpointer.inner.map([&](const TypeExpr& inner) {
+					return types.at(inner.canonicalName())->getID();
 				}));
 			}
 			variant_case(vm::code::FixedSizeTableType, fixed_size_table) {
 				tp.defineFixedSizeTable(
-					types.at(fixed_size_table.inner)->getID(), fixed_size_table.table_size
+					types.at(fixed_size_table.inner.canonicalName())->getID(),
+					fixed_size_table.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, dynamic_table) {
-				tp.defineDynamicTable(types.at(dynamic_table.inner)->getID());
+				tp.defineDynamicTable(types.at(dynamic_table.inner.canonicalName())->getID());
 			}
 			variant_case(vm::code::DataType, data) {
 				std::vector<std::pair<base::StrID, valid_type::ValidTypeID>> field_definitions;
 				field_definitions.reserve(data.fields.size());
 				for (const auto& field: data.fields)
-					field_definitions.emplace_back(field.name, types.at(field.type)->getID());
+					field_definitions.emplace_back(
+						field.name, types.at(field.type.canonicalName())->getID()
+					);
 				tp.defineData(field_definitions, data.packed);
 			}
 			variant_case(vm::code::VariantType, variant) {
 				std::vector<vm::code::valid_type::ValidTypeID> variant_types;
 				variant_types.reserve(variant.variant_alternatives.size());
 				for (const auto& variant_type: variant.variant_alternatives)
-					variant_types.push_back(types.at(variant_type)->getID());
+					variant_types.push_back(types.at(variant_type.canonicalName())->getID());
 				tp.defineVariant(variant_types);
 			}
 			variant_case(vm::code::FunctionType, function) {
@@ -61,9 +64,9 @@ namespace {
 				parameter_types.reserve(function.parameters.size());
 				return_types.reserve(function.result.size());
 				for (const auto& param: function.parameters)
-					parameter_types.push_back(types.at(param)->getID());
+					parameter_types.push_back(types.at(param.canonicalName())->getID());
 				for (const auto& reslt: function.result)
-					return_types.push_back(types.at(reslt)->getID());
+					return_types.push_back(types.at(reslt.canonicalName())->getID());
 				tp.defineFunction(parameter_types, return_types);
 			}
 			variant_case(vm::code::OpaqueType, opaque) { tp.defineOpaque(Bytes(opaque.size)); }
@@ -72,39 +75,41 @@ namespace {
 					fields_definitions;
 				fields_definitions.reserve(clazz.fields.size());
 				for (const auto& field: clazz.fields)
-					fields_definitions.emplace_back(field.name, types.at(field.type)->getID());
+					fields_definitions.emplace_back(
+						field.name, types.at(field.type.canonicalName())->getID()
+					);
 				tp.defineClass(
 					fields_definitions,
 					clazz.is_abstract,
 					clazz.extends ? base::Optional<vm::code::valid_type::ValidTypeID>(
-										types.at(*clazz.extends)->getID()
+										types.at(clazz.extends->canonicalName())->getID()
 									)
 								  : base::Optional<vm::code::valid_type::ValidTypeID>(),
 					clazz.implements | std::views::transform([&](const auto& i) {
-						return types.at(i)->getID();
+						return types.at(i.canonicalName())->getID();
 					}) | std::ranges::to<std::vector>(),
 					clazz.virtual_methods | std::views::transform([&](const auto& method) {
-						return std::make_pair(method.name, types.at(method.type)->getID());
+						return std::make_pair(
+							method.name, types.at(method.type.canonicalName())->getID()
+						);
 					}) | std::ranges::to<std::vector>(),
 					clazz.implementations | std::views::transform([&](const auto& impl) {
-						return std::make_pair(
-							impl.name, impl.type
-						);  // This field is called `type`, though it's actually a name of a function.
+						return std::make_pair(impl.name, impl.function_name);
 					}) | std::ranges::to<std::vector>()
 				);
 			}
 			variant_case(vm::code::InterfaceType, interface) {
 				tp.defineInterface(
 					interface.implements | std::views::transform([&](const auto& i) {
-						return types.at(i)->getID();
+						return types.at(i.canonicalName())->getID();
 					}) | std::ranges::to<std::vector>(),
 					interface.virtual_methods | std::views::transform([&](const auto& method) {
-						return std::make_pair(method.name, types.at(method.type)->getID());
+						return std::make_pair(
+							method.name, types.at(method.type.canonicalName())->getID()
+						);
 					}) | std::ranges::to<std::vector>(),
 					interface.implementations | std::views::transform([&](const auto& impl) {
-						return std::make_pair(
-							impl.name, impl.type
-						);  // This field is called `type`, though it's actually a name of a function.
+						return std::make_pair(impl.name, impl.function_name);
 					}) | std::ranges::to<std::vector>()
 				);
 			}

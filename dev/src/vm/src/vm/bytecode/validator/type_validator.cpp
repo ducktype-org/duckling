@@ -69,17 +69,21 @@ namespace {
 	) {
 		if constexpr (std::is_same_v<FieldableType, ClassType>) {
 			if (fieldable.extends) {
-				const auto& super_class
-					= getType<ClassType>(tod_types, *fieldable.extends, error_context, [&]() {
-						  return InvalidExtendsError(fieldable, *fieldable.extends);
-					  });
+				const auto& super_class = getType<ClassType>(
+					tod_types,
+					fieldable.extends->canonicalName(),
+					error_context,
+					[&]() {
+						return InvalidExtendsError(fieldable, fieldable.extends->canonicalName());
+					}
+				);
 				insertFieldsRecursive(fields, super_class, error_context, tod_types);
 			}
 		}
 		for (const auto& field_type: fieldable.fields) {
 			if (fields.contains(field_type.name))
 				throw DuplicatedFieldError(error_context, field_type.name);
-			fields.put(field_type.name, field_type.type);
+			fields.put(field_type.name, field_type.type.canonicalName());
 		}
 	}
 
@@ -96,17 +100,22 @@ namespace {
 		const vm::ObjIdNameMap<TypeOfData>&      tod_types
 	) {
 		for (const auto& interface_name: inh.implements) {
-			const auto& interface = getType<InterfaceType>(tod_types, interface_name, inh, [&]() {
-				return InvalidImplementsError(inh, interface_name);
-			});
+			const auto& interface = getType<InterfaceType>(
+				tod_types,
+				interface_name.canonicalName(),
+				inh,
+				[&]() { return InvalidImplementsError(inh, interface_name.canonicalName()); }
+			);
 			insertVirtualMethodsRecursive(virtual_methods, interface, error_context_inh, tod_types);
 		}
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
 			if (inh.extends) {
-				const auto& super_class
-					= getType<ClassType>(tod_types, *inh.extends, error_context_inh, [&]() {
-						  return InvalidExtendsError(inh, *inh.extends);
-					  });
+				const auto& super_class = getType<ClassType>(
+					tod_types,
+					inh.extends->canonicalName(),
+					error_context_inh,
+					[&]() { return InvalidExtendsError(inh, inh.extends->canonicalName()); }
+				);
 				insertVirtualMethodsRecursive(
 					virtual_methods, super_class, error_context_inh, tod_types
 				);
@@ -115,7 +124,7 @@ namespace {
 		for (const auto& vmethod: inh.virtual_methods) {
 			if (virtual_methods.contains(vmethod.name))
 				throw DuplicatedVirtualMethodError(error_context_inh, vmethod.name);
-			virtual_methods.put(vmethod.name, vmethod.type);
+			virtual_methods.put(vmethod.name, vmethod.type.canonicalName());
 		}
 	}
 
@@ -131,22 +140,25 @@ namespace {
 		const ErrorContextType&                  error_context_inh,
 		const vm::ObjIdNameMap<TypeOfData>&      tod_types
 	) {
-		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
+		for (const auto& impl: inh.implementations)
+			implementations.put(impl.name, impl.function_name);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
 				tod_types,
-				interface_name,
+				interface_name.canonicalName(),
 				error_context_inh,
-				[&]() { return InvalidImplementsError(inh, interface_name); }
+				[&]() { return InvalidImplementsError(inh, interface_name.canonicalName()); }
 			);
 			insertImplementationsRecursive(implementations, interface, error_context_inh, tod_types);
 		}
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
 			if (inh.extends) {
-				const auto& super_class
-					= getType<ClassType>(tod_types, *inh.extends, error_context_inh, [&]() {
-						  return InvalidExtendsError(inh, *inh.extends);
-					  });
+				const auto& super_class = getType<ClassType>(
+					tod_types,
+					inh.extends->canonicalName(),
+					error_context_inh,
+					[&]() { return InvalidExtendsError(inh, inh.extends->canonicalName()); }
+				);
 				insertImplementationsRecursive(
 					implementations, super_class, error_context_inh, tod_types
 				);
@@ -165,12 +177,13 @@ namespace {
 		const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		if (func_type.parameters.empty()) throw MethodFirstArgumentError(inh, func_type.name);
-		const auto& first_param_type_name = func_type.parameters[0];
+		const auto  first_param_type_name = func_type.parameters[0].canonicalName();
 		const auto& first_param_type
 			= getType<PointerType>(tod_types, first_param_type_name, inh, [&]() {
 				  return MethodFirstArgumentError(inh, func_type.name);
 			  });
-		if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_type.name);
+		if (first_param_type.inner.canonicalName() != inh.name)
+			throw MethodFirstArgumentError(inh, func_type.name);
 	}
 
 	/**
@@ -184,12 +197,13 @@ namespace {
 		const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		if (func_signature.parameters.empty()) throw MethodFirstArgumentError(inh, func_name);
-		const auto& first_param_type_name = func_signature.parameters[0];
+		const auto  first_param_type_name = func_signature.parameters[0].expr.canonicalName();
 		const auto& first_param_type
 			= getType<PointerType>(tod_types, first_param_type_name, inh, [&]() {
 				  return MethodFirstArgumentError(inh, func_name);
 			  });
-		if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_name);
+		if (first_param_type.inner.canonicalName() != inh.name)
+			throw MethodFirstArgumentError(inh, func_name);
 	}
 
 	/**
@@ -206,13 +220,15 @@ namespace {
 		if (vmethod_type.result.size() != impl_signature.result_types.size())
 			throw MethodTypeError(inh, impl_type_name);
 		for (u64 i = 0; i < impl_signature.result_types.size(); i++)
-			if (vmethod_type.result[i] != impl_signature.result_types[i].str)
+			if (vmethod_type.result[i].canonicalName()
+			    != impl_signature.result_types[i].expr.canonicalName())
 				throw MethodTypeError(inh, impl_type_name);
 
 		if (vmethod_type.parameters.size() != impl_signature.parameters.size())
 			throw MethodTypeError(inh, impl_type_name);
 		for (u64 i = 1; i < impl_signature.parameters.size(); i++)
-			if (vmethod_type.parameters[i] != impl_signature.parameters[i].str)
+			if (vmethod_type.parameters[i].canonicalName()
+			    != impl_signature.parameters[i].expr.canonicalName())
 				throw MethodTypeError(inh, impl_type_name);
 	}
 
@@ -224,9 +240,10 @@ namespace {
 		const InheritableType& inh, const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		for (const auto& vmethod: inh.virtual_methods) {
-			const auto& vmethod_type = getType<FunctionType>(tod_types, vmethod.type, inh, [&]() {
-				return TypeIsNotFunctionalError(vmethod.type);
-			});
+			const auto& vmethod_type
+				= getType<FunctionType>(tod_types, vmethod.type.canonicalName(), inh, [&]() {
+					  return TypeIsNotFunctionalError(vmethod.type.canonicalName());
+				  });
 			validateMethodFirstArgument(inh, vmethod_type, tod_types);
 		}
 	}
@@ -251,7 +268,7 @@ namespace {
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
 			const auto& vmethod_name = virtual_methods[implementation.name];
-			const auto& impl_name    = implementation.type;
+			const auto& impl_name    = implementation.function_name;
 			const auto& vmethod_type = getType<FunctionType>(tod_types, vmethod_name, inh, [&]() {
 				return TypeIsNotFunctionalError(vmethod_name);
 			});
@@ -289,7 +306,8 @@ namespace {
 		const FieldableType& fieldable, const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		for (auto& field: fieldable.fields)
-			if (!tod_types.contains(field.type)) throw UnknownSubtypeError(fieldable, field.type);
+			if (!tod_types.contains(field.type.canonicalName()))
+				throw UnknownSubtypeError(fieldable, field.type.canonicalName());
 
 		base::HashMap<base::StrID, base::StrID> fields;
 		insertFieldsRecursive(fields, fieldable, fieldable, tod_types);
@@ -303,8 +321,9 @@ namespace {
 	void validateImplementsDuplicates(const InheritableType& inh) {
 		base::HashMap<base::StrID, base::StrID> interfaces;
 		for (const auto& impl: inh.implements) {
-			if (interfaces.contains(impl)) throw DuplicatedImplementsError(inh, impl);
-			interfaces.put(impl);
+			const auto impl_name = impl.canonicalName();
+			if (interfaces.contains(impl_name)) throw DuplicatedImplementsError(inh, impl_name);
+			interfaces.put(impl_name);
 		}
 	}
 
@@ -321,40 +340,43 @@ namespace {
 				if (primitive.size == Bytes{ 0 }) throw InvalidPrimitiveSizeError(primitive);
 			}
 			variant_case(PointerType, pointer) {
-				if (!tod_types.contains(pointer.inner))
-					throw UnknownSubtypeError(pointer, pointer.inner);
+				if (!tod_types.contains(pointer.inner.canonicalName()))
+					throw UnknownSubtypeError(pointer, pointer.inner.canonicalName());
 			}
 			variant_case(CPointerType, cpointer) {
 				if (cpointer.inner.has_value()) {
-					if (!tod_types.contains(*cpointer.inner))
-						throw UnknownSubtypeError(cpointer, *cpointer.inner);
+					if (!tod_types.contains(cpointer.inner->canonicalName()))
+						throw UnknownSubtypeError(cpointer, cpointer.inner->canonicalName());
 				}
 			}
 			variant_case(FixedSizeTableType, fixed_table) {
-				if (!tod_types.contains(fixed_table.inner))
-					throw UnknownSubtypeError(fixed_table, fixed_table.inner);
+				if (!tod_types.contains(fixed_table.inner.canonicalName()))
+					throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
 			}
 			variant_case(DynamicTableType, dynamic_table) {
-				if (!tod_types.contains(dynamic_table.inner))
-					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
+				if (!tod_types.contains(dynamic_table.inner.canonicalName()))
+					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner.canonicalName());
 			}
 			variant_case(FunctionType, function) {
 				for (auto& param: function.parameters)
-					if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
+					if (!tod_types.contains(param.canonicalName()))
+						throw UnknownSubtypeError(function, param.canonicalName());
 
 				for (auto& reslt: function.result)
-					if (!tod_types.contains(reslt)) throw UnknownSubtypeError(function, reslt);
+					if (!tod_types.contains(reslt.canonicalName()))
+						throw UnknownSubtypeError(function, reslt.canonicalName());
 			}
 			variant_case(VariantType, variant) {
 				if (variant.variant_alternatives.size() < 2)
 					throw TooFewVariantAlternativesError(variant);
 				std::unordered_set<base::StrID> alternative_set;
 				for (auto& alternative: variant.variant_alternatives) {
-					if (!tod_types.contains(alternative))
-						throw UnknownSubtypeError(variant, alternative);
-					if (alternative_set.contains(alternative))
-						throw DuplicatedVariantAlternativeError(variant, alternative);
-					alternative_set.insert(alternative);
+					const auto alternative_name = alternative.canonicalName();
+					if (!tod_types.contains(alternative_name))
+						throw UnknownSubtypeError(variant, alternative_name);
+					if (alternative_set.contains(alternative_name))
+						throw DuplicatedVariantAlternativeError(variant, alternative_name);
+					alternative_set.insert(alternative_name);
 				}
 			}
 			variant_case(DataType, data) {
@@ -406,20 +428,21 @@ namespace {
 			variant_match(type) {
 				variant_case(ClassType, clazz) {
 					if_opt_some(clazz.extends, superclass) {
-						if (!tod_types.contains(superclass))
-							throw InvalidExtendsError(clazz, superclass);
-						self(*tod_types.at(superclass));
+						if (!tod_types.contains(superclass.canonicalName()))
+							throw InvalidExtendsError(clazz, superclass.canonicalName());
+						self(*tod_types.at(superclass.canonicalName()));
 					}
 					for (auto iface: clazz.implements) {
-						if (!tod_types.contains(iface)) throw InvalidImplementsError(clazz, iface);
-						self(*tod_types.at(iface));
+						if (!tod_types.contains(iface.canonicalName()))
+							throw InvalidImplementsError(clazz, iface.canonicalName());
+						self(*tod_types.at(iface.canonicalName()));
 					}
 				}
 				variant_case(InterfaceType, interface) {
 					for (auto iface: interface.implements) {
-						if (!tod_types.contains(iface))
-							throw InvalidImplementsError(interface, iface);
-						self(*tod_types.at(iface));
+						if (!tod_types.contains(iface.canonicalName()))
+							throw InvalidImplementsError(interface, iface.canonicalName());
+						self(*tod_types.at(iface.canonicalName()));
 					}
 				}
 			}
@@ -450,44 +473,49 @@ namespace {
 				// pointers to forward-declared (opaque) types are legal.
 				variant_case(CPointerType, cpointer) {}
 				variant_case(FixedSizeTableType, fixed_table) {
-					if (!tod_types.contains(fixed_table.inner))
-						throw UnknownSubtypeError(fixed_table, fixed_table.inner);
-					self(*tod_types.at(fixed_table.inner));
+					if (!tod_types.contains(fixed_table.inner.canonicalName()))
+						throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
+					self(*tod_types.at(fixed_table.inner.canonicalName()));
 				}
 				variant_case(DynamicTableType, dynamic_table) {
-					if (!tod_types.contains(dynamic_table.inner))
-						throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
-					self(*tod_types.at(dynamic_table.inner));
+					if (!tod_types.contains(dynamic_table.inner.canonicalName()))
+						throw UnknownSubtypeError(
+							dynamic_table, dynamic_table.inner.canonicalName()
+						);
+					self(*tod_types.at(dynamic_table.inner.canonicalName()));
 				}
 				variant_case(InterfaceType, interface) {}
 				variant_case(ClassType, clazz) {
 					for (auto& field: clazz.fields) {
-						if (!tod_types.contains(field.type))
-							throw UnknownSubtypeError(clazz, field.type);
-						self(*tod_types.at(field.type));
+						if (!tod_types.contains(field.type.canonicalName()))
+							throw UnknownSubtypeError(clazz, field.type.canonicalName());
+						self(*tod_types.at(field.type.canonicalName()));
 					}
 				}
 				variant_case(DataType, data) {
 					for (auto& field: data.fields) {
-						if (!tod_types.contains(field.type))
-							throw UnknownSubtypeError(data, field.type);
-						self(*tod_types.at(field.type));
+						if (!tod_types.contains(field.type.canonicalName()))
+							throw UnknownSubtypeError(data, field.type.canonicalName());
+						self(*tod_types.at(field.type.canonicalName()));
 					}
 				}
 				variant_case(FunctionType, function) {
 					for (auto& param: function.parameters)
-						if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
+						if (!tod_types.contains(param.canonicalName()))
+							throw UnknownSubtypeError(function, param.canonicalName());
 					for (auto& reslt: function.result)
-						if (!tod_types.contains(reslt)) throw UnknownSubtypeError(function, reslt);
-					for (auto& param: function.parameters) self(*tod_types.at(param));
-					for (auto& reslt: function.result) self(*tod_types.at(reslt));
+						if (!tod_types.contains(reslt.canonicalName()))
+							throw UnknownSubtypeError(function, reslt.canonicalName());
+					for (auto& param: function.parameters)
+						self(*tod_types.at(param.canonicalName()));
+					for (auto& reslt: function.result) self(*tod_types.at(reslt.canonicalName()));
 				}
 				variant_case(VariantType, variant) {
 					for (auto& alternative: variant.variant_alternatives)
-						if (!tod_types.contains(alternative))
-							throw UnknownSubtypeError(variant, alternative);
+						if (!tod_types.contains(alternative.canonicalName()))
+							throw UnknownSubtypeError(variant, alternative.canonicalName());
 					for (auto& alternative: variant.variant_alternatives)
-						self(*tod_types.at(alternative));
+						self(*tod_types.at(alternative.canonicalName()));
 				}
 				variant_case(OpaqueType, opaque) {}
 				variant_default {
@@ -516,17 +544,17 @@ namespace {
 				variant_case(ClassType, clazz) {
 					for (const auto& vmethod: clazz.virtual_methods) {
 						if (auto method_signature = method_signatures.atMaybe(vmethod.name);
-						    method_signature && **method_signature != vmethod.type)
+						    method_signature && **method_signature != vmethod.type.canonicalName())
 							throw DuplicatedMethodNameError(type, vmethod.name);
-						method_signatures.put(vmethod.name, vmethod.type);
+						method_signatures.put(vmethod.name, vmethod.type.canonicalName());
 					}
 				}
 				variant_case(InterfaceType, interface) {
 					for (const auto& vmethod: interface.virtual_methods) {
 						if (auto method_signature = method_signatures.atMaybe(vmethod.name);
-						    method_signature && **method_signature != vmethod.type)
+						    method_signature && **method_signature != vmethod.type.canonicalName())
 							throw DuplicatedMethodNameError(type, vmethod.name);
-						method_signatures.put(vmethod.name, vmethod.type);
+						method_signatures.put(vmethod.name, vmethod.type.canonicalName());
 					}
 				}
 			}
