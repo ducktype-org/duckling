@@ -180,7 +180,7 @@ fn set_http_version_on_curl<H>(
                 )
             } else {
                 warn!(
-                    target = "curl",
+                    target: "duck::curl",
                     "built without HTTP/2 support, but tried to use it; ignoring"
                 )
             }
@@ -193,12 +193,12 @@ fn set_http_version_on_curl<H>(
                 )
             } else {
                 warn!(
-                    target = "curl",
+                    target: "duck::curl",
                     "built without HTTP/3 support, but tried to use it; ignoring"
                 )
             }
         }
-        _ => warn!(target = "curl", ?version, "unknown HTTP version"),
+        _ => warn!(target: "duck::curl", ?version, "unknown HTTP version"),
     };
     Ok(())
 }
@@ -258,7 +258,7 @@ macro_rules! try_curl {
         match $expr {
             Ok(value) => value,
             Err(err) => {
-                ::tracing::debug!(target = "curl", error = %err, $($ctx)+);
+                ::tracing::debug!(target: "duck::curl", error = %err, $($ctx)+);
                 return Err(err.into());
             }
         }

@@ -169,7 +169,7 @@ impl Worker {
         if let Err(e) = multi.pipelining(
             /* http/1.1 pipelining */ false, /* multiplexing */ true,
         ) {
-            warn!(target = "curl", error = %e, "failed to enable HTTP pipelining");
+            warn!(target: "duck::curl", error = %e, "failed to enable HTTP pipelining");
         }
         Self {
             receiver,
@@ -220,7 +220,7 @@ impl Worker {
                 self.connections.insert(token, (handle, sender));
             }
             Err(err) => {
-                debug!(target = "curl", error = %err, "failed to register a new `Easy2Handle`");
+                debug!(target: "duck::curl", error = %err, "failed to register a new `Easy2Handle`");
                 let _ = sender.send(CompletedRequest { response: Err(err) });
             }
         };
@@ -257,7 +257,7 @@ impl Worker {
             Err(err) => {
                 // We should call `perform` again.
                 if err.is_call_perform() {
-                    trace!(target = "curl", "got `is_call_perform`");
+                    trace!(target: "duck::curl", "got `is_call_perform`");
                     return ShouldCheckForClosedChannel::No;
                 }
                 // An error means that we should remove all pending connections:
@@ -323,7 +323,7 @@ impl Worker {
 
     /// We've got an error when driving a [`Multi`]. Close all opened connections with the given error.
     fn fail_all_connections(&mut self, error: &curl::MultiError) {
-        warn!(target = "curl", %error, "stopping all pending HTTP connections");
+        warn!(target: "duck::curl", %error, "stopping all pending HTTP connections");
         // NOTE: Handles are detached/removed when dropped.
         for (_, (_, sender)) in self.connections.drain() {
             let _ = sender.send(CompletedRequest {
