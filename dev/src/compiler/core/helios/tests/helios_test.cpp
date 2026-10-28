@@ -443,36 +443,40 @@ private:
 					{ .parameter_types = std::move(parameters), .result_type = result, .kind = kind }
 				));
 			};
-			auto const_type = [&](const std::string& name) {
-				return getConstValueAs<compiler::tsh::SymbolType<>>(name, root_scope);
-			};
 
 			ASSERT_EQUAL(
-				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw), const_type("RAW_PAIR")
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_PAIR", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Closure),
-				const_type("CLOSURE_PAIR")
+				getConstValueAs<compiler::tsh::SymbolType<>>("CLOSURE_PAIR", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({ i32_st }, bool_st, FunctionKind::Raw), const_type("RAW_SINGLE")
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_SINGLE", root_scope)
 			);
-			ASSERT_EQUAL(function_of({}, bool_st, FunctionKind::Raw), const_type("RAW_NO_PARAMS"));
+			ASSERT_EQUAL(
+				function_of({}, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_NO_PARAMS", root_scope)
+			);
 			ASSERT_EQUAL(
 				function_of({ i32_st }, st(compiler::tsh::getUnitType()), FunctionKind::Raw),
-				const_type("RAW_UNIT_RESULT")
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_UNIT_RESULT", root_scope)
 			);
 			auto i32_pair
 				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_st, i32_st } }));
 			ASSERT_EQUAL(
-				function_of({ i32_pair }, bool_st, FunctionKind::Raw), const_type("RAW_TUPLE_PARAM")
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_TUPLE_PARAM", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({ i32_st }, bool_st, FunctionKind::Raw),
-				const_type("RAW_ONE_ELEMENT_LIST")
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_ONE_ELEMENT_LIST", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({ i32_pair }, bool_st, FunctionKind::Raw), const_type("RAW_FROM_ALIAS")
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_FROM_ALIAS", root_scope)
 			);
 		}
 	}

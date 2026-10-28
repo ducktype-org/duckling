@@ -1287,6 +1287,7 @@ namespace compiler::lir {
 				tsh::Mutability::Immutable,
 			},
 		});
+
 		auto layouts = getFunctionLayouts(ctx, function_type);
 
 		Block entry_block;
