@@ -34,4 +34,17 @@ namespace vm::code {
 	 * @return The type or empty optional if a type with the given name doesn't exist.
 	 */
 	base::Optional<CRef<TypeOfData>> getBuiltinTypeByName(base::StrID type_name);
+
+	/// @brief `dyntable{byte}`, which the bytecode can also write as `string`.
+	TypeExpr stringTypeExpr();
+
+	/// @brief `dyntable{ptr{string}}`, the program arguments, which the bytecode can also write
+	/// as `argv`.
+	TypeExpr argvTypeExpr();
+
+	/**
+	 * @brief What a builtin alias such as `string` stands for.
+	 * @note An alias is expanded where it is read, so it never names a type of its own.
+	 */
+	base::Optional<TypeExpr> getBuiltinAlias(base::StrID name);
 }

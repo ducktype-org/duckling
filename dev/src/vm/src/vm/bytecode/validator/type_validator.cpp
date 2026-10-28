@@ -168,8 +168,8 @@ namespace {
 
 	/**
 	 * @brief The declared type a cycle through a reference to `expr` would continue into.
-	 * @note None for a pointer: a pointer's size does not depend on its pointee, which is what
-	 * makes self-referential types legal.
+	 * @note None for a pointer or a dynamic table: neither one's size depends on what it is
+	 * built from, which is what makes self-referential types legal.
 	 */
 	base::Optional<base::StrID> recursesInto(const TypeExpr& expr) {
 		return expr.maybeGetKindAs<expr::Named>().map([](CRef<expr::Named> named) {
@@ -179,7 +179,8 @@ namespace {
 
 	/**
 	 * @brief Whether every name an expression is built from is declared.
-	 * @note A pointer needs no declaration of its own, so only its pointee is checked.
+	 * @note A derived type needs no declaration of its own, so only what it is built from is
+	 * checked.
 	 */
 	bool isDeclared(const vm::ObjIdNameMap<TypeOfData>& tod_types, const TypeExpr& expr) {
 		variant_match(expr.getKind()) {
@@ -187,6 +188,9 @@ namespace {
 			variant_case(expr::Pointer, pointer) { return isDeclared(tod_types, pointer.pointee); }
 			variant_case(expr::CPointer, cpointer) {
 				return cpointer.pointee.empty() || isDeclared(tod_types, *cpointer.pointee);
+			}
+			variant_case(expr::DynamicTable, dynamic_table) {
+				return isDeclared(tod_types, dynamic_table.element);
 			}
 		}
 		CORE_UNREACHABLE();
@@ -357,10 +361,6 @@ namespace {
 				if (!isDeclared(tod_types, fixed_table.inner))
 					throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
 			}
-			variant_case(DynamicTableType, dynamic_table) {
-				if (!isDeclared(tod_types, dynamic_table.inner))
-					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner.canonicalName());
-			}
 			variant_case(FunctionType, function) {
 				for (auto& param: function.parameters)
 					if (!isDeclared(tod_types, param))
@@ -476,13 +476,6 @@ namespace {
 					if (!isDeclared(tod_types, fixed_table.inner))
 						throw UnknownSubtypeError(fixed_table, fixed_table.inner.canonicalName());
 					if_opt_some(recursesInto(fixed_table.inner), next) self(*tod_types.at(next));
-				}
-				variant_case(DynamicTableType, dynamic_table) {
-					if (!isDeclared(tod_types, dynamic_table.inner))
-						throw UnknownSubtypeError(
-							dynamic_table, dynamic_table.inner.canonicalName()
-						);
-					if_opt_some(recursesInto(dynamic_table.inner), next) self(*tod_types.at(next));
 				}
 				variant_case(InterfaceType, interface) {}
 				variant_case(ClassType, clazz) {

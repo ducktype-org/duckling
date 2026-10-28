@@ -22,6 +22,7 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
@@ -239,11 +240,11 @@ namespace vm {
 
 		auto        main_return_type = func.result_types;
 		const auto& types            = process_program->getTypes();
-		auto        argv_type        = types.at(base::StrID("argv"));
-		auto        argv_ptr_type    = types.at(base::StrID("ptr{argv}"));
+		auto        argv_type        = types.at(code::argvTypeExpr());
+		auto        argv_ptr_type    = types.at(code::TypeExpr::pointer(code::argvTypeExpr()));
 		auto        i64_type         = types.at(base::StrID("i64"));
-		auto        str_type         = types.at(base::StrID("string"));
-		auto        str_ptr_type     = types.at(base::StrID("ptr{string}"));
+		auto        str_type         = types.at(code::stringTypeExpr());
+		auto        str_ptr_type     = types.at(code::TypeExpr::pointer(code::stringTypeExpr()));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
 		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),

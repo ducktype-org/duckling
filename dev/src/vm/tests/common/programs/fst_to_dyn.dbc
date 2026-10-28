@@ -1,5 +1,4 @@
 type fixed_size_table: fst1_i64 i64 1
-type dynamic_table: dyn_i64 i64
 
 global_data g_arr fst1_i64 {
     initial_value: fixed_size_table [ 0x000000000000002A ]
@@ -7,7 +6,7 @@ global_data g_arr fst1_i64 {
 
 function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type t_fst, ptr{fst1_i64};
-    init_pany_type t_dyn, ptr{dyn_i64};
+    init_pany_type t_dyn, ptr{dyntable{i64}};
     init_pany_type idx, i64;
     init_pany_type val, i64;
 

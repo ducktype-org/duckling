@@ -68,6 +68,10 @@ namespace vm::code {
 					= cpointer.pointee.map([&](const TypeExpr& inner) { return resolve(inner); });
 				context->forDefinition(id).defineCPointer(pointee);
 			}
+			variant_case(expr::DynamicTable, dynamic_table) {
+				const auto element = resolve(dynamic_table.element);
+				context->forDefinition(id).defineDynamicTable(element);
+			}
 			variant_case_novalue(expr::Named) { CORE_UNREACHABLE(); }
 		}
 	}
@@ -101,10 +105,6 @@ namespace vm::code {
 			variant_case(FixedSizeTableType, fixed_size_table) {
 				const auto inner = resolve(fixed_size_table.inner);
 				type().defineFixedSizeTable(inner, fixed_size_table.table_size);
-			}
-			variant_case(DynamicTableType, dynamic_table) {
-				const auto inner = resolve(dynamic_table.inner);
-				type().defineDynamicTable(inner);
 			}
 			variant_case(DataType, data) {
 				const auto fields = resolve_fields(data.fields);

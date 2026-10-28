@@ -133,8 +133,7 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief How a pointer of `kind` to `pointee` is written.
-		 * @note A pointer is not declared, so nothing is kept for it. The dynamic table a
-		 * many-pointer points at is declared, so that one is kept.
+		 * @note A many-pointer points at a dynamic table of `pointee`.
 		 */
 		vm::code::TypeExpr pointerTypeExpr(
 			vm::code::TypeExpr                  pointee,

@@ -70,6 +70,9 @@ public:
 
 		ASSERT_TRUE(TypeExpr::cpointer() == TypeExpr::cpointer());
 		ASSERT_TRUE(!(TypeExpr::cpointer() == TypeExpr::cpointer(dog)));
+
+		ASSERT_TRUE(TypeExpr::dyntable(dog) == TypeExpr::dyntable(dog));
+		ASSERT_TRUE(!(TypeExpr::dyntable(dog) == TypeExpr::pointer(dog)));
 	}
 
 	void testCanonicalNames() {
@@ -82,6 +85,11 @@ public:
 		ASSERT_EQUAL(
 			std::string("ptr{cptr{Dog}}"),
 			spell(TypeExpr::pointer(TypeExpr::cpointer(TypeExpr::type(base::StrID("Dog")))))
+		);
+		ASSERT_EQUAL(std::string("dyntable{i64}"), spell(TypeExpr::dyntable(i64)));
+		ASSERT_EQUAL(
+			std::string("ptr{dyntable{ptr{i64}}}"),
+			spell(TypeExpr::pointer(TypeExpr::dyntable(TypeExpr::pointer(i64))))
 		);
 	}
 
@@ -106,12 +114,16 @@ public:
 		const auto void_ptr = TypeExpr::cpointer();
 		ASSERT_TRUE(void_ptr.isKind<CPointer>());
 		ASSERT_TRUE(void_ptr.getKindAs<CPointer>()->pointee.empty());
+
+		const auto dogs = TypeExpr::dyntable(dog);
+		ASSERT_TRUE(dogs.isKind<DynamicTable>());
+		ASSERT_TRUE(dogs.getKindAs<DynamicTable>()->element == dog);
 	}
 
 	/// A name spelled like a derived expression, or an empty one inside `cptr{}`, would otherwise
 	/// share that expression's node.
 	void testInvalidNamesPanic() {
-		for (const auto* name: { "", "ptr{Dog}", "cptr{}", "Dog}", "two words" }) {
+		for (const auto* name: { "", "ptr{Dog}", "cptr{}", "dyntable{i8}", "Dog}", "two words" }) {
 			bool panicked = false;
 			try {
 				std::ignore = TypeExpr::type(base::StrID(name));

@@ -34,14 +34,6 @@ namespace vm::code {
 			{ base::StrID("i16"), TypeOfData(PrimitiveType(base::StrID("i16"), Bytes{ 2 })) },
 			{ base::StrID("i32"), TypeOfData(PrimitiveType(base::StrID("i32"), Bytes{ 4 })) },
 			{ base::StrID("i64"), TypeOfData(PrimitiveType(base::StrID("i64"), Bytes{ 8 })) },
-			{ base::StrID("string"),
-			  TypeOfData(DynamicTableType(base::StrID("string"), TypeExpr{ base::StrID("byte") })) },
-			// A vector of pointers to strings. Its element type is spelled rather than declared,
-			// like every other pointer.
-			{ base::StrID("argv"),
-			  TypeOfData(DynamicTableType(
-				  base::StrID("argv"), TypeExpr::pointer(TypeExpr{ base::StrID("string") })
-			  )) },
 			{ base::StrID("opaque_ptr"),
 			  TypeOfData(OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 })) },
 			{ base::StrID("VTablePtr"), SpecialTypes::get().vtable_ptr },
@@ -60,5 +52,21 @@ namespace vm::code {
 
 	base::Optional<CRef<TypeOfData>> getBuiltinTypeByName(base::StrID type_name) {
 		return rawBuiltins().atMaybe(type_name);
+	}
+
+	TypeExpr stringTypeExpr() {
+		static const TypeExpr expr = TypeExpr::dyntable(TypeExpr::type(base::StrID("byte")));
+		return expr;
+	}
+
+	TypeExpr argvTypeExpr() {
+		static const TypeExpr expr = TypeExpr::dyntable(TypeExpr::pointer(stringTypeExpr()));
+		return expr;
+	}
+
+	base::Optional<TypeExpr> getBuiltinAlias(base::StrID name) {
+		if (name == base::StrID("string")) return stringTypeExpr();
+		if (name == base::StrID("argv")) return argvTypeExpr();
+		return {};
 	}
 }
