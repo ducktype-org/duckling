@@ -10,7 +10,7 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::debug;
 
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::compile::duckc::Duckc;
@@ -108,11 +108,22 @@ impl BuildData {
     /// generated from the current [`BuildData`] and previous build's [`BuildData`].
     pub fn get_incremental_data(&self, other: Self) -> IncrementalData {
         // Different profile, different layouts or different duckc version, we can't reuse anything.
-        let red_green_data = if self.profile_hash != other.profile_hash
-            || self.artifacts_type != other.artifacts_type
-            || self.duckc_version_hash != other.duckc_version_hash
-        {
-            info!("profile, layout or duckc version changed, rerunning all units");
+        let profile_changed = self.profile_hash != other.profile_hash;
+        let layout_changed = self.artifacts_type != other.artifacts_type;
+        let duckc_changed = self.duckc_version_hash != other.duckc_version_hash;
+        if profile_changed {
+            debug!("the profile changed since the previous build");
+        }
+        if layout_changed {
+            debug!(
+                "the artifacts layout changed from `{}` to `{}`",
+                other.artifacts_type, self.artifacts_type
+            );
+        }
+        if duckc_changed {
+            debug!("the `duckc` version changed since the previous build");
+        }
+        let red_green_data = if profile_changed || layout_changed || duckc_changed {
             RedGreenData::default()
         } else {
             self.unit_graph.get_red_green_data(&other.unit_graph)

@@ -65,7 +65,7 @@ impl Drop for RemoveOnDrop {
         // Close the file. Otherwise we can fail on Windows.
         drop(file);
         if let Err(e) = remove_file(&path) {
-            error!(error = %e, ?path, "failed to remove");
+            error!(error = %e, "failed to remove `{}`", path.display());
         }
     }
 }

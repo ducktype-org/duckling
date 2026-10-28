@@ -35,7 +35,7 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, FetchSuccess};
@@ -222,7 +222,7 @@ impl SolverFreeze {
             .still_satisfies_dep(manifest_dependency, fetcher)
             .await?
         {
-            debug!("was satisfied before, but now is not");
+            debug!(target: "duck::solver", "was satisfied before, but now is not");
             return Ok(false);
         }
         let forced_child_features = manifest_dependency.enabled_features(pkg_features);
@@ -290,7 +290,7 @@ impl SolverFreeze {
                     .retain(|_, realization| still_satisfied_pkgs.contains(realization));
             }
             let is_satisfied = still_satisfied_pkgs.contains(pkg);
-            debug!(?pkg, %is_root_package, %is_satisfied);
+            trace!(target: "duck::solver", ?pkg, %is_root_package, %is_satisfied);
             is_satisfied || is_root_package
         });
         Ok(())

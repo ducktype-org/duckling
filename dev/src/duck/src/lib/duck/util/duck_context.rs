@@ -51,7 +51,7 @@ impl DuckContext {
     /// Create a new [`DuckContext`].
     pub fn new() -> QuackResult<Self> {
         trace!(
-            target = "curl",
+            target: "duck::curl",
             "linked against `{:#?}`",
             curl::Version::get()
         );
@@ -226,7 +226,7 @@ impl Default for DuckContext {
         use crate::duck::util::terminal::Verbosity;
 
         trace!(
-            target = "curl",
+            target: "duck::curl",
             "linked against `{:#?}`",
             curl::Version::get()
         );

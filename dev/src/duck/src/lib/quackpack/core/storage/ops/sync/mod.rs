@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use chrono::Utc;
 use futures::executor::block_on;
 use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
-use tracing::{debug, error, warn};
+use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::lints::emit_diagnostics_and_run_lint_passes;
@@ -57,7 +57,7 @@ pub struct SyncOutput {
 }
 
 /// Synchronize virtual environment for package, and return information required to build it.
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
     emit_diagnostics_and_run_lint_passes(pcx)?;
@@ -138,7 +138,7 @@ pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResul
 /// Checks if the venv for which the sync is run was previously synced from a different location,
 /// and there is a manifest in that location.
 /// This would override that manifest's venv.
-#[tracing::instrument(skip_all, fields(%id))]
+#[tracing::instrument(level = "trace", skip_all, fields(%id))]
 fn check_if_overwrites(
     pcx: &PackageContext<'_>,
     venv: Option<&Venv>,
@@ -167,7 +167,7 @@ fn check_if_overwrites(
             (replaces, context)
         }
         Err(e) => {
-            error!(path = %dir.display(), error = %e, "failed to load the package");
+            debug!(error = %e, "failed to load the package at `{}`", dir.display());
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
                 let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
@@ -232,7 +232,6 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Creates [`Solver`] and runs it.
-#[tracing::instrument(skip_all)]
 fn get_solver_answer(
     pcx: &PackageContext<'_>,
     fetcher: &Fetcher<'_>,

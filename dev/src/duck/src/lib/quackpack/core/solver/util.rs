@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
@@ -105,12 +105,12 @@ impl PackageId {
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
-            debug!("doesn't satisfy versions");
+            trace!(target: "duck::solver", "does not satisfy the versions");
             return Ok(false);
         }
         let source = dependency.source();
         if self.url() != source.url() || self.name() != dependency.name() {
-            debug!(other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
+            trace!(target: "duck::solver", other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
             return Ok(false);
         }
         self.origin()
