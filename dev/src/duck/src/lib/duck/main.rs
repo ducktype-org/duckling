@@ -40,9 +40,7 @@ pub fn setup_logger() {
     let subscriber = EnvFilter::builder()
         .with_env_var("DUCK_DEBUG")
         // NOTE: This level is used only when `DUCK_DEBUG` is unset or empty, so every `error!` log
-        // is visible to a user by default. Keep `error!` for problems the user is not told about in
-        // any other way (e.g. a failure in `Drop`): an error that is returned or printed as a
-        // warning should be logged with a lower level, otherwise it shows up twice.
+        // is visible to a user by default.
         .with_default_directive(LevelFilter::ERROR.into())
         .from_env_lossy();
     let layer = layer()
