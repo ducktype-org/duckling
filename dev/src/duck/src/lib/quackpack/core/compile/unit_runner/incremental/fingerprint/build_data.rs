@@ -112,16 +112,16 @@ impl BuildData {
         let layout_changed = self.artifacts_type != other.artifacts_type;
         let duckc_changed = self.duckc_version_hash != other.duckc_version_hash;
         if profile_changed {
-            debug!("the profile changed since the previous build, rerunning all units");
+            debug!("the profile changed since the previous build");
         }
         if layout_changed {
             debug!(
-                "the artifacts layout changed from `{}` to `{}`, rerunning all units",
+                "the artifacts layout changed from `{}` to `{}`",
                 other.artifacts_type, self.artifacts_type
             );
         }
         if duckc_changed {
-            debug!("the `duckc` version changed since the previous build, rerunning all units");
+            debug!("the `duckc` version changed since the previous build");
         }
         let red_green_data = if profile_changed || layout_changed || duckc_changed {
             RedGreenData::default()
