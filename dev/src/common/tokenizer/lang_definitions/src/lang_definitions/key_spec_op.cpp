@@ -183,7 +183,7 @@ namespace lang_def {
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPtr, "ptr", KeywordFlags() },
-			{ Keyword::BCFixedSizeTable, "fixed_size_table", KeywordFlags() },
+			{ Keyword::BCFixtable, "fixtable", KeywordFlags() },
 			{ Keyword::BCDyntable, "dyntable", KeywordFlags() },
 			{ Keyword::BCData, "data", KeywordFlags() },
 			{ Keyword::BCVariant, "variant", KeywordFlags() },

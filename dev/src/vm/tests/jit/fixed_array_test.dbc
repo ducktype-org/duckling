@@ -2,17 +2,16 @@
 # Function f performs ~40 array operations sequentially (no branches, no calls)
 # Main reads n from STDIN and calls f n times
 
-type fixed_size_table: table_i64 i64 20
 
 function f {} -> { } {
     # Declare local variables
-    init_pany_type arr, ptr{table_i64};
+    init_pany_type arr, ptr{fixtable{i64, 20}};
     init_pany_type idx, i64;
     init_pany_type val, i64;
     init_pany_type tmp, i64;
     
     # Allocate fixed-size array
-    alloc_pptr_type arr, table_i64;
+    alloc_pptr_type arr, fixtable{i64, 20};
     
     # Initialize values
     mov_p64_imm val, 100;

@@ -13,6 +13,8 @@
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <vector>
+
 namespace vm::code {
 	/**
 	 * @brief Stores the declarations of a program and the types built from them.

@@ -7,7 +7,7 @@
 /**
  * @file type_expr.hpp
  * @brief A reference to a type in the bytecode, which is either a name or a type built from
- * another type, such as `ptr{i64}` or `dyntable{i64}`.
+ * other types, such as `ptr{i64}`, `dyntable{i64}`, `fixtable{i64, 4}` or `variant{i64, f64}`.
  *
  * Derived types are not declared. Every spelling of `ptr{Foo}` denotes the same type, so the
  * VM can intern one such type per argument instead of letting two declarations describe the
@@ -26,6 +26,7 @@
 #include <string_id/string_id.hpp>
 
 #include <variant>
+#include <vector>
 
 namespace vm::code {
 	namespace expr {
@@ -33,6 +34,11 @@ namespace vm::code {
 		struct Pointer;
 		struct CPointer;
 		struct DynamicTable;
+		struct FixedSizeTable;
+		struct Variant;
+
+		/// @brief The forms a type expression can take.
+		using Kind = std::variant<Named, Pointer, CPointer, DynamicTable, FixedSizeTable, Variant>;
 	}
 
 	namespace detail {
@@ -72,6 +78,10 @@ namespace vm::code {
 
 		explicit TypeExpr(const expr::DynamicTable& dynamic_table);
 
+		explicit TypeExpr(const expr::FixedSizeTable& fixed_size_table);
+
+		explicit TypeExpr(const expr::Variant& variant);
+
 		/// @brief The expression for a declared type's name, such as `Dog`.
 		[[nodiscard]] static TypeExpr type(base::StrID name);
 
@@ -84,12 +94,17 @@ namespace vm::code {
 		/// @brief A dynamic table of `element`, such as `dyntable{i64}`.
 		[[nodiscard]] static TypeExpr dyntable(TypeExpr element);
 
+		/// @brief A table of `length` elements of `element`, such as `fixtable{i64, 4}`.
+		[[nodiscard]] static TypeExpr fixtable(TypeExpr element, usize length);
+
+		/// @brief A variant of `alternatives`, in order, such as `variant{i64, f64}`.
+		[[nodiscard]] static TypeExpr variant(std::vector<TypeExpr> alternatives);
+
 		/// @brief Whether this expression denotes a type, i.e. was not default constructed.
 		[[nodiscard]] bool isValid() const noexcept { return node != nullptr; }
 
 		/// @brief Which form this expression takes, for `variant_match`.
-		[[nodiscard]] const std::variant<expr::Named, expr::Pointer, expr::CPointer, expr::DynamicTable>& getKind(
-		) const;
+		[[nodiscard]] const expr::Kind& getKind() const;
 
 		template<class T>
 		[[nodiscard]] bool isKind() const;
@@ -146,10 +161,21 @@ namespace vm::code {
 			TypeExpr element;
 		};
 
-		using Variant = std::variant<Named, Pointer, CPointer, DynamicTable>;
+		/// @brief A table of a length known up front, `fixtable{T, N}`.
+		struct FixedSizeTable final {
+			TypeExpr element;
+			usize    length = 0;
+		};
+
+		/// @brief A value of one of several types, `variant{A, B}`. The order of the alternatives
+		/// is part of the type.
+		struct Variant final {
+			std::vector<TypeExpr> alternatives;
+		};
 
 		template<class T>
-		concept ConcreteExpr = base::IsOneOf<T, Named, Pointer, CPointer, DynamicTable>;
+		concept ConcreteExpr
+			= base::IsOneOf<T, Named, Pointer, CPointer, DynamicTable, FixedSizeTable, Variant>;
 	}
 
 	template<class T>

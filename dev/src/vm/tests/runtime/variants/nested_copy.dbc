@@ -1,28 +1,25 @@
 type primitive: i8 1
-type variant: i64_i8 { i64, i8}
-type variant: big_variant {i64_i8, i64}
-type variant: big_big_variant {big_variant, i64}
 
 
 function main { i64, ptr{argv}} -> { i64 } {
-	# Create big_big_variant, set its value to big_variant->i64_i8->i64.
-	init_pany_type v0, big_big_variant;
-	variantSetInner_pvnt_type v0, big_variant;
-	init_pany_type my_ptr, ptr{big_variant};
+	# Create variant{variant{variant{i64, i8}, i64}, i64}, set its value to variant{variant{i64, i8}, i64}->variant{i64, i8}->i64.
+	init_pany_type v0, variant{variant{variant{i64, i8}, i64}, i64};
+	variantSetInner_pvnt_type v0, variant{variant{i64, i8}, i64};
+	init_pany_type my_ptr, ptr{variant{variant{i64, i8}, i64}};
 
-	variantGetInner_pptr_pvnt_type my_ptr, v0, big_variant;
+	variantGetInner_pptr_pvnt_type my_ptr, v0, variant{variant{i64, i8}, i64};
 
-	variantSetInner_pptr_type my_ptr, i64_i8;
+	variantSetInner_pptr_type my_ptr, variant{i64, i8};
 
-	init_pany_type my_ptr2, ptr{i64_i8};
-	variantGetInner_pptr_pptr_type my_ptr2, my_ptr, i64_i8;
+	init_pany_type my_ptr2, ptr{variant{i64, i8}};
+	variantGetInner_pptr_pptr_type my_ptr2, my_ptr, variant{i64, i8};
 
 	variantSetInner_pptr_type my_ptr2, i64;
 
 	init_pany_type my_ptr3, ptr{i64};
 	variantGetInner_pptr_pptr_type my_ptr3, my_ptr2, i64;
 
-	# Read i64 value, and save it in big_big_variant v0.
+	# Read i64 value, and save it in variant{variant{variant{i64, i8}, i64}, i64} v0.
 	init_pany_type value, i64;
 	input_p64 value;
 
@@ -32,9 +29,9 @@ function main { i64, ptr{argv}} -> { i64 } {
 	init_pany_type read_val, i64;
 	load_pany_pptr read_val, my_ptr3;
 
-	# Create another big_big_variant v1 and copy v0 there
-	init_pany_type v1, big_big_variant;
-	init_pany_type ptr_to_first, ptr{big_big_variant};
+	# Create another variant{variant{variant{i64, i8}, i64}, i64} v1 and copy v0 there
+	init_pany_type v1, variant{variant{variant{i64, i8}, i64}, i64};
+	init_pany_type ptr_to_first, ptr{variant{variant{variant{i64, i8}, i64}, i64}};
 	ref_pptr_pany ptr_to_first, v0;
 
 	load_pany_pptr v1, ptr_to_first;
@@ -44,9 +41,9 @@ function main { i64, ptr{argv}} -> { i64 } {
 	store_pptr_pany my_ptr3, read_val;
 	
 	# Print value of v1, it should be what we read firstly.
-	variantGetInner_pptr_pvnt_type my_ptr, v1, big_variant;
+	variantGetInner_pptr_pvnt_type my_ptr, v1, variant{variant{i64, i8}, i64};
 
-	variantGetInner_pptr_pptr_type my_ptr2, my_ptr, i64_i8;
+	variantGetInner_pptr_pptr_type my_ptr2, my_ptr, variant{i64, i8};
 
 	variantGetInner_pptr_pptr_type my_ptr3, my_ptr2, i64;
 

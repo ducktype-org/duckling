@@ -14,8 +14,8 @@ try:
     init_seq = client.send_initialize()
     client.wait_for(responses=[init_seq])
 
-    # Breakpoint 66 - the first free
-    bp_seq = client.send_set_breakpoints(client.program_name, [66])
+    # Breakpoint 62 - the first free
+    bp_seq = client.send_set_breakpoints(client.program_name, [62])
     client.wait_for(responses=[bp_seq])
     client.send_launch()
     client.send_configuration_done()

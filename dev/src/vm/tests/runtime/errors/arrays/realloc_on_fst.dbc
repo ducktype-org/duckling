@@ -1,11 +1,9 @@
-type fixed_size_table: fst1_i64 i64 1
-
-global_data g_arr fst1_i64 {
-    initial_value: fixed_size_table [ 0x000000000000002A ]
+global_data g_arr fixtable{i64, 1} {
+    initial_value: fixtable [ 0x000000000000002A ]
 }
 
 function main { i64, ptr{argv} } -> { i64 } {
-    init_pany_type t_fst, ptr{fst1_i64};
+    init_pany_type t_fst, ptr{fixtable{i64, 1}};
     init_pany_type t_dyn, ptr{dyntable{i64}};
     init_pany_type count, i64;
 

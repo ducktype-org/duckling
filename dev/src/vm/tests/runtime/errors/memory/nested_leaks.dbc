@@ -4,21 +4,19 @@
 # table = MyStruct[3];
 # table[0].field = &ret0;
 
-type variant: MyVariant { ptr{i64}, i64 }
 
 type data: MyStruct {
-    field: MyVariant
+    field: variant{ptr{i64}, i64}
 }
 
-type fixed_size_table: MyTable MyStruct 3
 
 function main { i64, ptr{argv} } -> { i64 } {
 
     init_pany_type int_ptr_ptr, ptr{ptr{i64}};
-    init_pany_type table, MyTable;
+    init_pany_type table, fixtable{MyStruct, 3};
     # table = MyStruct[3];
 
-    init_pany_type table_ptr, ptr{MyTable};
+    init_pany_type table_ptr, ptr{fixtable{MyStruct, 3}};
     ref_pptr_pany table_ptr, table;
     # table_ptr = &MyStruct[0];
 
@@ -26,7 +24,7 @@ function main { i64, ptr{argv} } -> { i64 } {
     fixedSizeTableLea_pptr_pptr_p64 struct_ptr, table_ptr, ret0;  # ret0 == 0
     # struct_ptr = &MyStruct[0];
 
-    init_pany_type variant_ptr, ptr{MyVariant};
+    init_pany_type variant_ptr, ptr{variant{ptr{i64}, i64}};
     structLea_pptr_pptr_field variant_ptr, struct_ptr, MyStruct.field;
     # variant_ptr = &struct_ptr->field;
 

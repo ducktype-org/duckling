@@ -34,26 +34,6 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Represents a fixed-size array of elements of the same type.
-	 */
-	struct FixedSizeTableType final: ElementBase {
-		FixedSizeTableType() = default;
-
-		FixedSizeTableType(base::StrID name, TypeExpr inner, usize table_size):
-			  name(name),
-			  inner(inner),
-			  table_size(table_size) {}
-
-		base::StrID name;
-		TypeExpr    inner;
-		usize       table_size{};
-
-		bool operator==(const FixedSizeTableType& other) const {
-			return name == other.name && inner == other.inner && table_size == other.table_size;
-		}
-	};
-
-	/**
 	 * @brief Field is a building block of a datatype. It represents a storage
 	 * for value of some type.
 	 */
@@ -111,24 +91,6 @@ namespace vm::code {
 		bool operator==(const DataType& other) const {
 			return name == other.name && fields == other.fields && packed == other.packed
 			    && assert_size == other.assert_size;
-		}
-	};
-
-	/**
-	 * @brief Represents a variant of types.
-	 */
-	struct VariantType final: ElementBase {
-		VariantType() = default;
-
-		VariantType(base::StrID name, std::vector<TypeExpr> variant_alternatives):
-			  name(name),
-			  variant_alternatives(std::move(variant_alternatives)) {}
-
-		base::StrID           name;
-		std::vector<TypeExpr> variant_alternatives;
-
-		bool operator==(const VariantType& other) const {
-			return name == other.name && variant_alternatives == other.variant_alternatives;
 		}
 	};
 
@@ -243,15 +205,8 @@ namespace vm::code {
 	/**
 	 * @brief Storage for any type of bytecode data.
 	 */
-	using TypeOfData = std::variant<
-		PrimitiveType,
-		FixedSizeTableType,
-		DataType,
-		VariantType,
-		FunctionType,
-		OpaqueType,
-		ClassType,
-		InterfaceType>;
+	using TypeOfData
+		= std::variant<PrimitiveType, DataType, FunctionType, OpaqueType, ClassType, InterfaceType>;
 
 	constexpr base::StrID typeName(const TypeOfData& type) {
 		return VISIT(type, tp, return tp.name);

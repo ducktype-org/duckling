@@ -1,5 +1,3 @@
-type fixed_size_table: tablei64 i64 8000000
-
 function main { i64, ptr_argv } -> { i64 } {
     # [0, 8) main ret0
     # [8, 16) argc
@@ -15,7 +13,7 @@ function main { i64, ptr_argv } -> { i64 } {
     div_p64_imm         56, 8000000;
 
     # alloc t[42]
-    alloc_pptr_type 64, tablei64;
+    alloc_pptr_type 64, fixtable{i64, 8000000};
     label LoopMain;
 
       # i := 8000000

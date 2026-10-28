@@ -1,9 +1,8 @@
 type primitive: i8 1
-type variant: simple_variant { i64, i8 }
 
 function main { i64, ptr{argv} } -> { i64 } {
-    init_pany_type p, ptr{simple_variant};
-    alloc_pptr_type p, simple_variant;
+    init_pany_type p, ptr{variant{i64, i8}};
+    alloc_pptr_type p, variant{i64, i8};
     variantSetInner_pptr_type p, i64;
 
     init_pany_type inner, ptr{i64};

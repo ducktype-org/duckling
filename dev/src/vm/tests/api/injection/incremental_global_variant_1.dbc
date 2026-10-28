@@ -1,11 +1,10 @@
 type primitive: i8 1
 
-type variant: PersistVariant { i64, i8 }
 
-global_data persisted_variant PersistVariant {}
+global_data persisted_variant variant{i64, i8} {}
 
 function set_global_variant_value {} -> {} {
-    init_pany_type variant_ptr, ptr{PersistVariant};
+    init_pany_type variant_ptr, ptr{variant{i64, i8}};
     ref_pptr_pvnt variant_ptr, persisted_variant;
 
     variantSetInner_pptr_type variant_ptr, i64;

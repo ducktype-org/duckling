@@ -125,7 +125,7 @@ namespace vm::code {
 	 *
 	 * Grammar:
 	 *   <expr> = class { field_name: <expr>, ... }
-	 *   <expr> = fixed_size_table [ <expr>, <expr>, ... ]
+	 *   <expr> = fixtable [ <expr>, <expr>, ... ]
 	 *   <expr> = <immediate value>  (fallback: numeric literal)
 	 */
 	struct ConstantValue final: ElementBase {

@@ -1,19 +1,17 @@
 type primitive: i8 1
-type variant: simple_variant { i64, i8 }
-type variant: nested { simple_variant, i64 }
 
 function main { i64, ptr{argv} } -> { i64 } {
     # let v0: variant<variant<i64, i8>, i64>;
-    init_pany_type v0, nested;
+    init_pany_type v0, variant{variant{i64, i8}, i64};
 
     # v0.setType<variant<i64, i8>>();
-    variantSetInner_pvnt_type v0, simple_variant;
+    variantSetInner_pvnt_type v0, variant{i64, i8};
 
     # let inner_ptr: ptr<variant<i64, i8>>;
-    init_pany_type inner_ptr, ptr{simple_variant};
+    init_pany_type inner_ptr, ptr{variant{i64, i8}};
 
     # inner_ptr = v0.getData<variant<i64, i8>>();
-    variantGetInner_pptr_pvnt_type inner_ptr, v0, simple_variant;
+    variantGetInner_pptr_pvnt_type inner_ptr, v0, variant{i64, i8};
 
     # inner_ptr->setType<i64>();
     variantSetInner_pptr_type inner_ptr, i64;

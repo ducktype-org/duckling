@@ -59,9 +59,6 @@ private:
 		point.packed      = true;
 		point.assert_size = 8;
 		code.types.emplace_back(std::move(point));
-		code.types.emplace_back(
-			FixedSizeTableType(base::StrID("points"), TypeExpr(base::StrID("Point")), 3)
-		);
 		// Pointers are written rather than declared, so they appear in a type that refers to
 		// them. `cptr{}` stands for an unknown pointee.
 		code.types.emplace_back(DataType(
@@ -74,7 +71,7 @@ private:
 		// Global data: constant answer i64 with initial_value 42
 		GlobalData global;
 		global.name        = Identifier(base::StrID("answers"));
-		global.type        = TypeExpr(base::StrID("points"));
+		global.type        = TypeExpr::fixtable(TypeExpr{ base::StrID("Point") }, 3);
 		global.is_constant = true;
 
 		auto constant_immediate     = makeBox<ConstantImmediate>();
@@ -156,8 +153,14 @@ private:
 			"Data type should keep assert_size after round-trip"
 		);
 
+		assertTrue(
+			parsed.global_data.at(0).type.expr
+				== TypeExpr::fixtable(TypeExpr{ base::StrID("Point") }, 3),
+			"`fixtable{Point, 3}` should survive the round-trip"
+		);
+
 		// Pointer expressions must come back as the very same interned expressions.
-		const auto& handles = std::get<DataType>(parsed.types[3]);
+		const auto& handles = std::get<DataType>(parsed.types[2]);
 		assertEqual(handles.name, base::StrID("Handles"), "Data type name should be Handles");
 		assertTrue(
 			handles.fields.at(0).type == TypeExpr::pointer(TypeExpr{ base::StrID("Point") }),
@@ -178,7 +181,6 @@ private:
 		);
 		const GlobalData& g = parsed.global_data[0];
 		assertEqual(g.name.str, base::StrID("answers"), "Global name should be answer");
-		assertEqual(g.type.expr.canonicalName(), base::StrID("points"), "Global type should be i64");
 		assertTrue(g.is_constant, "Global should be constant");
 		ASSERT_HAS_VALUE(g.initial_value, "Global should have initial_value");
 		auto initial_value = *g.initial_value;
@@ -242,18 +244,18 @@ type data: PackedPoint {
     y: i32,
 } packed assert_size 8
 
-type fixed_size_table: point_arr Point 2
 type data: Handles {
     managed: ptr{Point},
     raw: cptr{Point},
     unknown: cptr{},
     many: ptr{dyntable{Point}},
+    either: variant{i32, ptr{Point}},
 }
 
 
-global_data answers point_arr {
+global_data answers fixtable{Point, 2} {
     is_constant: true,
-    initial_value: fixed_size_table [ class { x: 0x12345678, y: 0x87654321, is_ok: 0xFF }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x0A } ]
+    initial_value: fixtable [ class { x: 0x12345678, y: 0x87654321, is_ok: 0xFF }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x0A } ]
 }
 
 ffi object "libm.so.6";

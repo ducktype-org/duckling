@@ -1,0 +1,12 @@
+# Neither type has a size: each one holds the other inside a table or a variant.
+type data: Outer {
+    tables: fixtable{Inner, 2},
+}
+
+type data: Inner {
+    choice: variant{i64, Outer},
+}
+
+function main { i64, ptr{argv} } -> { i64 } {
+	ret;
+}

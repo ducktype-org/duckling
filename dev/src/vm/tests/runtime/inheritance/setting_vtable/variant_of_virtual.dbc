@@ -17,7 +17,6 @@ type class: Dog {
     };
 }
 
-type fixed_size_table: dog_table Dog 2
 
 # ============ METHODS IMPLEMENTATION ============
 
@@ -31,10 +30,9 @@ function dog_year_to_human_years {ptr{Dog}} -> {} {
     ret;
 }
 
-type variant: Dog_or_i64 {Dog, i64}
 
 function main { i64, ptr{argv} } -> { i64 } {
-    init_pany_type              dog_or_i64, Dog_or_i64;
+    init_pany_type              dog_or_i64, variant{Dog, i64};
     variantSetInner_pvnt_type   dog_or_i64, Dog;
 
     init_pany_type              dog_ptr, ptr{Dog};

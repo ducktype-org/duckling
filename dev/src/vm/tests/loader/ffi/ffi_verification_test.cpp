@@ -134,9 +134,7 @@ private:
 		loadInvalidDbc(
 			inlineDbc(
 				"table_by_value",
-				ffiObjectHeader()
-					+ "type fixed_size_table: arr4 i32 4\n"
-					  "ffi function ffi_add { arr4 } -> { i64 };\n"
+				ffiObjectHeader() + "ffi function ffi_add { fixtable{i32, 4} } -> { i64 };\n"
 			),
 			{ "by-value arrays", "fixed-size table" }
 		);
@@ -151,8 +149,7 @@ private:
 			inlineDbc(
 				"zero_length_table_struct",
 				ffiObjectHeader()
-					+ "type fixed_size_table: arr0 i32 0\n"
-					  "type data: WithEmpty { v: arr0 }\n"
+					+ "type data: WithEmpty { v: fixtable{i32, 0} }\n"
 					  "ffi function ffi_add { WithEmpty } -> { i64 };\n"
 			),
 			{ "WithEmpty", "cannot be used in an FFI function signature" }
@@ -170,8 +167,7 @@ private:
 			inlineDbc(
 				"huge_table_struct",
 				ffiObjectHeader()
-					+ "type fixed_size_table: huge i32 100000000\n"
-					  "type data: WithHuge { v: huge }\n"
+					+ "type data: WithHuge { v: fixtable{i32, 100000000} }\n"
 					  "ffi function ffi_add { WithHuge } -> { i64 };\n"
 			),
 			{ "WithHuge", "cannot be used in an FFI function signature" }
@@ -181,8 +177,7 @@ private:
 			inlineDbc(
 				"nested_struct_cap_bypass",
 				ffiObjectHeader()
-					+ "type fixed_size_table: big i32 40000\n"
-					  "type data: Inner { v: big }\n"
+					+ "type data: Inner { v: fixtable{i32, 40000} }\n"
 					  "type data: Outer { a: Inner, b: Inner }\n"
 					  "ffi function ffi_add { Outer } -> { i64 };\n"
 			),

@@ -4,15 +4,13 @@ type data: pair {
 	first: i64,
 	second: i64
 }
-type variant: maybe { i64, i8 }
 type data: pair_with_pointer {
 	first: ptr{i64},
 	second: i64
 }
-type fixed_size_table: pointer_table ptr{i64} 2
 type data: holds_a_variant {
 	tag: i64,
-	choice: maybe
+	choice: variant{i64, i8}
 }
 
 function noop { } -> { } {
@@ -54,7 +52,7 @@ function holds_pointer { } -> { } {
 # A variant owns nested blocks, but it still gets none upfront: they are only reachable through
 # a block place argument, which creates the variant's own block first.
 function owns_nested_blocks { } -> { } {
-	init_pany_type		choice, maybe;
+	init_pany_type		choice, variant{i64, i8};
 	deinit; # choice
 	ret;
 }
@@ -75,7 +73,7 @@ function reuses_a_slot { } -> { } {
 # field or a table element still decides how the variable is deinitialized.
 function nests_pointers { } -> { } {
 	init_pany_type		in_a_struct, pair_with_pointer;
-	init_pany_type		in_a_table, pointer_table;
+	init_pany_type		in_a_table, fixtable{ptr{i64}, 2};
 	deinit; # in_a_table
 	deinit; # in_a_struct
 	ret;

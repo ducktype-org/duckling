@@ -1,7 +1,7 @@
 global_data another_global i64 {}
 
 function read_global_variant_value {} -> {} {
-    init_pany_type variant_ptr, ptr{PersistVariant};
+    init_pany_type variant_ptr, ptr{variant{i64, i8}};
     ref_pptr_pvnt variant_ptr, persisted_variant;
 
     init_pany_type value_ptr, ptr{i64};

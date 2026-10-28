@@ -10,6 +10,7 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_resolver.hpp>
 
+#include <algorithm>
 #include <ranges>
 #include <utility>
 #include <vector>
@@ -72,6 +73,23 @@ namespace vm::code {
 				const auto element = resolve(dynamic_table.element);
 				context->forDefinition(id).defineDynamicTable(element);
 			}
+			variant_case(expr::FixedSizeTable, fixed_size_table) {
+				const auto element = resolve(fixed_size_table.element);
+				context->forDefinition(id).defineFixedSizeTable(element, fixed_size_table.length);
+			}
+			variant_case(expr::Variant, variant) {
+				if (variant.alternatives.size() < 2)
+					throw TooFewVariantAlternativesError(opargs::Type(expr));
+				for (const auto& alternative: variant.alternatives)
+					if (std::ranges::count(variant.alternatives, alternative) > 1)
+						throw DuplicatedVariantAlternativeError(opargs::Type(alternative));
+
+				std::vector<valid_type::ValidTypeID> alternatives;
+				alternatives.reserve(variant.alternatives.size());
+				for (const auto& alternative: variant.alternatives)
+					alternatives.push_back(resolve(alternative));
+				context->forDefinition(id).defineVariant(alternatives);
+			}
 			variant_case_novalue(expr::Named) { CORE_UNREACHABLE(); }
 		}
 	}
@@ -102,17 +120,9 @@ namespace vm::code {
 			variant_case(PrimitiveType, primitive) {
 				type().definePrimitive(Bytes(primitive.size));
 			}
-			variant_case(FixedSizeTableType, fixed_size_table) {
-				const auto inner = resolve(fixed_size_table.inner);
-				type().defineFixedSizeTable(inner, fixed_size_table.table_size);
-			}
 			variant_case(DataType, data) {
 				const auto fields = resolve_fields(data.fields);
 				type().defineData(fields, data.packed);
-			}
-			variant_case(VariantType, variant) {
-				const auto alternatives = resolve_all(variant.variant_alternatives);
-				type().defineVariant(alternatives);
 			}
 			variant_case(FunctionType, function) {
 				const auto parameters = resolve_all(function.parameters);

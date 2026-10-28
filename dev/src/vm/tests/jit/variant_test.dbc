@@ -3,14 +3,13 @@
 # Main reads n from STDIN and calls f n times
 
 type primitive: i8 1
-type variant: var_i64_i8 { i64, i8 }
 
 function f {} -> { } {
     # Declare local variables - multiple variants
-    init_pany_type v1, var_i64_i8;
-    init_pany_type v2, var_i64_i8;
-    init_pany_type v3, var_i64_i8;
-    init_pany_type v4, var_i64_i8;
+    init_pany_type v1, variant{i64, i8};
+    init_pany_type v2, variant{i64, i8};
+    init_pany_type v3, variant{i64, i8};
+    init_pany_type v4, variant{i64, i8};
     init_pany_type ptr1, ptr{i64};
     init_pany_type ptr2, ptr{i64};
     init_pany_type ptr3, ptr{i64};

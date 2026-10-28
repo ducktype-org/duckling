@@ -1,5 +1,4 @@
 type primitive: i8 1
-type variant: simple_variant { i64, i8 }
 
 function main { i64, ptr{argv} } -> { i64 } {
     init_pany_type scenario, i64;
@@ -7,7 +6,7 @@ function main { i64, ptr{argv} } -> { i64 } {
 
     # Scenario 0 - Test should pass.
 
-    init_pany_type v1, simple_variant;  # var v1: variant<i64, i8>;
+    init_pany_type v1, variant{i64, i8};  # var v1: variant<i64, i8>;
 
     # Scenario 1 Do not initialize variant type.
     cmpEq_p64_imm scenario, 1;
