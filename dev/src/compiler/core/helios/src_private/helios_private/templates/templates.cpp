@@ -87,7 +87,7 @@ namespace compiler::helios::templates {
 	struct TemplateBakeStorage final {
 		SymID baked_template_sym_id;
 
-		// @TODO: #3071 see if anything will have to be changed here
+		// @TODO: #3892 see if anything will have to be changed here
 		Box<pst::PST<pst::TemplateStmt>> baked_template_pst;
 	};
 
@@ -159,7 +159,6 @@ namespace compiler::helios::templates {
 			);
 
 
-			// @TODO: #3110 see if this is ok:
 			hashing::ComponentHash hash_ctx
 				= hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
 
