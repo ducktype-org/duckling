@@ -108,9 +108,8 @@ namespace compiler::backend_vm::internal {
 							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
 							const vm::code::TypeExpr source_pointer_type
 								= ctx->programCtx().pointerTypeExpr(
-									vm::code::TypeExpr{ ctx->programCtx().keepTslType(
-										pointer_layout.getPointee(query_ctx)
-									) },
+									ctx->programCtx().keepTslType(pointer_layout.getPointee(query_ctx
+							        )),
 									CPointer
 								);
 							const DVMPlace cptr_source_elem_tmp
@@ -126,9 +125,9 @@ namespace compiler::backend_vm::internal {
 						auto lea_first_element
 							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
 							const vm::code::TypeExpr ptr_to_element_type
-								= ctx->programCtx().pointerTypeExpr(vm::code::TypeExpr{
-									ctx->programCtx().keepTslType(pointer_layout.getPointee(query_ctx
-							        )) });
+								= ctx->programCtx().pointerTypeExpr(ctx->programCtx().keepTslType(
+									pointer_layout.getPointee(query_ctx)
+								));
 
 							auto index_tmp
 								= ctx->forceToPlace(DVMValue(DVMImmediate::u64(0)), "index_tmp");

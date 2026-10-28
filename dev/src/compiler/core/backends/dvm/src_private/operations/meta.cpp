@@ -14,6 +14,8 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/bytecode/builtin_types.hpp>
+
 #include <deque>
 
 /**
@@ -61,7 +63,8 @@ namespace {
 	DVMValue getQueryContext() {
 		return { DVMPlace(
 			base::StrID(comptime_func_names::GLOBAL_QUERY_CONTEXT),
-			vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 }),
+			dvm_type::opaquePtr(),
+			vm::code::getBuiltinTypeByName(dvm_type::opaquePtr().canonicalName()),
 			DVMPlace::AccessKind::Direct
 		) };
 	}
@@ -92,9 +95,7 @@ namespace compiler::backend_vm::internal {
 		};
 
 		auto lower_builder_pattern = [&](const BuilderSequence& builder_sequence) {
-			auto builder = ctx->pushTempLocal(
-				vm::code::TypeExpr{ base::StrID("opaque_ptr") }, "meta_builder"
-			);
+			auto     builder       = ctx->pushTempLocal(dvm_type::opaquePtr(), "meta_builder");
 			DVMPlace builder_place = builder;
 
 			lower_single_call(builder_sequence.new_func, std::deque<DVMValue>(), builder_place);

@@ -43,8 +43,8 @@ namespace {
 	}
 }
 
-valid_type::ValidType valid_type::ValidType::declareType(base::StrID name, ValidTypeID id) {
-	return { name, id };
+valid_type::ValidType valid_type::ValidType::declareType(TypeExpr expr, ValidTypeID id) {
+	return { expr, id };
 }
 
 void valid_type::ValidType::definePrimitive(Bytes size) {
@@ -366,7 +366,9 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 void valid_type::ValidType::finalize(ValidTypeMap& types) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
-			CORE_PANIC("Tried to finalize a type that was not defined: " + base::toString(name));
+			CORE_PANIC(
+				"Tried to finalize a type that was not defined: " + base::toString(getName())
+			);
 		}
 		variant_case_novalue(ValidType::Finalized) { return; }
 		variant_case_novalue(ValidType::Finalizing) {
@@ -380,7 +382,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = valid_type::TypeSize(primitive.size, 0);
 			this->alignment             = valid_type::TypeSize(naturalAlignment(primitive.size), 0);
 			this->is_trivially_copyable = true;
-			this->is_ffi_compliant      = ffiCompliantPrimitive(name, primitive.size);
+			this->is_ffi_compliant      = ffiCompliantPrimitive(getName(), primitive.size);
 			// Plain bytes: nothing to release.
 			this->holds_pointer_references = false;
 			state = Finalized{ .kind = finalized::Primitive{ primitive.size } };
@@ -537,7 +539,9 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 	finalizeInstantiability(types);
 }
 
-[[nodiscard]] base::StrID valid_type::ValidType::getName() const { return name; }
+[[nodiscard]] base::StrID valid_type::ValidType::getName() const { return expr.canonicalName(); }
+
+[[nodiscard]] vm::code::TypeExpr valid_type::ValidType::getExpr() const { return expr; }
 
 [[nodiscard]] valid_type::ValidTypeID valid_type::ValidType::getID() const { return id; }
 
@@ -545,7 +549,7 @@ bool valid_type::ValidType::operator==(const ValidType& other) const { return ot
 
 bool valid_type::ValidType::operator==(const ValidTypeID& other_id) const { return id == other_id; }
 
-valid_type::ValidType::ValidType(base::StrID name, ValidTypeID id): name(name), id(id) {}
+valid_type::ValidType::ValidType(TypeExpr expr, ValidTypeID id): expr(expr), id(id) {}
 
 void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	// This method assumes all dependent types are already finalized, so we can query their

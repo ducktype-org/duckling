@@ -16,8 +16,20 @@
 #include <utility>
 
 namespace compiler::backend_vm::internal {
+	/// @brief The named types the backend spells out itself.
+	namespace dvm_type {
+		vm::code::TypeExpr unit();
+		vm::code::TypeExpr i8();
+		vm::code::TypeExpr i16();
+		vm::code::TypeExpr i32();
+		vm::code::TypeExpr i64();
+		vm::code::TypeExpr f32();
+		vm::code::TypeExpr f64();
+		vm::code::TypeExpr opaquePtr();
+	}
+
 	struct DVMImmediate {
-		DVMImmediate(::u64 value, vm::code::TypeOfData type);
+		DVMImmediate(::u64 value, vm::code::TypeExpr type);
 		// @TODO: #2451 Make DVMImmediate string based
 		static DVMImmediate u8(::u8 value);
 		static DVMImmediate u16(::u16 value);
@@ -32,15 +44,12 @@ namespace compiler::backend_vm::internal {
 		static DVMImmediate boolean(bool value);
 		static DVMImmediate character(char value);
 
-		/// @brief How this immediate's type is written.
-		[[nodiscard]] vm::code::TypeExpr getTypeExpr() const {
-			return vm::code::TypeExpr{ typeName(type) };
-		}
+		[[nodiscard]] vm::code::TypeExpr getTypeExpr() const { return type; }
 
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
-		::u64                value{};
-		vm::code::TypeOfData type;
-		bool                 operator==(const DVMImmediate& other) const = default;
+		::u64              value{};
+		vm::code::TypeExpr type;
+		bool               operator==(const DVMImmediate& other) const = default;
 		operator vm::opargs::OpCodeArg() const;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
@@ -121,31 +130,17 @@ namespace compiler::backend_vm::internal {
 		 */
 		enum class SpecialKind : uint8_t { ReturnValue, ConditionTmp, Normal };
 
-		/// @param type The declaration of the place's type. Pointers have none, so they are
-		/// built with the constructor below.
+		/**
+		 * @param declaration The declaration of the place's type, which picks the operand kind
+		 * its contents need. Absent for a pointer, which is written rather than declared.
+		 */
 		DVMPlace(
-			base::StrID          name,
-			vm::code::TypeOfData type,
-			AccessKind           access_kind,
-			SpecialKind          special_kind = SpecialKind::Normal
-		):
-			  name(name),
-			  expr(vm::code::TypeExpr(typeName(type))),
-			  declaration(std::move(type)),
-			  access_kind(access_kind),
-			  special_kind(special_kind) {}
-
-		/// @brief Builds a place whose type is written rather than declared, i.e. a pointer.
-		DVMPlace(
-			base::StrID        name,
-			vm::code::TypeExpr expr,
-			AccessKind         access_kind,
-			SpecialKind        special_kind = SpecialKind::Normal
-		):
-			  name(name),
-			  expr(expr),
-			  access_kind(access_kind),
-			  special_kind(special_kind) {}
+			base::StrID                                name,
+			vm::code::TypeExpr                         expr,
+			base::Optional<CRef<vm::code::TypeOfData>> declaration,
+			AccessKind                                 access_kind,
+			SpecialKind                                special_kind = SpecialKind::Normal
+		);
 
 		bool operator==(const DVMPlace& other) const = default;
 		operator vm::opargs::OpCodeArg() const;
@@ -154,22 +149,15 @@ namespace compiler::backend_vm::internal {
 
 		[[nodiscard]] AccessKind getAccessKind() const { return access_kind; }
 
-		/**
-		 * @brief The declaration of this place's type.
-		 * @note A pointer is written rather than declared, so it has none; use `getTypeExpr`
-		 * where a place may hold one.
-		 */
-		[[nodiscard]] const vm::code::TypeOfData& getType() const;
-
 		/// @brief What this place's type is written as, which every place has.
 		[[nodiscard]] vm::code::TypeExpr getTypeExpr() const { return expr; }
 
 		[[nodiscard]] DVMPlace withAccessKind(AccessKind kind) const {
-			return { name, expr, declaration, kind, special_kind };
+			return { name, expr, operand_kind, kind, special_kind };
 		}
 
 		[[nodiscard]] DVMPlace withSpecialKind(SpecialKind special) const {
-			return { name, expr, declaration, access_kind, special };
+			return { name, expr, operand_kind, access_kind, special };
 		}
 
 		[[nodiscard]] SpecialKind getSpecialKind() const { return special_kind; }
@@ -178,24 +166,39 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
 
 	private:
+		/// @brief The typed operand a place is passed as.
+		enum class OperandKind : uint8_t {
+			Place8,
+			Place16,
+			Place32,
+			Place64,
+			FixedSizeTable,
+			Structure,
+			Variant,
+			Opaque,
+			Pointer,
+			CPointer,
+			Unsupported
+		};
+
 		DVMPlace(
-			base::StrID                          name,
-			vm::code::TypeExpr                   expr,
-			base::Optional<vm::code::TypeOfData> declaration,
-			AccessKind                           access_kind,
-			SpecialKind                          special_kind
+			base::StrID        name,
+			vm::code::TypeExpr expr,
+			OperandKind        operand_kind,
+			AccessKind         access_kind,
+			SpecialKind        special_kind
 		):
 			  name(name),
 			  expr(expr),
-			  declaration(std::move(declaration)),
+			  operand_kind(operand_kind),
 			  access_kind(access_kind),
 			  special_kind(special_kind) {}
 
-		base::StrID                          name;
-		vm::code::TypeExpr                   expr;
-		base::Optional<vm::code::TypeOfData> declaration;
-		AccessKind                           access_kind;
-		SpecialKind                          special_kind;
+		base::StrID        name;
+		vm::code::TypeExpr expr;
+		OperandKind        operand_kind;
+		AccessKind         access_kind;
+		SpecialKind        special_kind;
 	};
 
 	class DVMValue {
@@ -211,9 +214,6 @@ namespace compiler::backend_vm::internal {
 
 		operator vm::opargs::OpCodeArg() const;
 
-		[[nodiscard]] vm::code::TypeOfData getType() const;
-
-		/// @brief How this value's type is written, which a pointer has and a declaration may not.
 		[[nodiscard]] vm::code::TypeExpr getTypeExpr() const;
 
 		/**

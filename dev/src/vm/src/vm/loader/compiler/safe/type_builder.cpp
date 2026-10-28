@@ -85,7 +85,7 @@ namespace {
 		const std::vector<CRef<vm::code::valid_type::ValidType>>& types
 	) {
 		for (const auto& type: types)
-			type_metadata->addType(vm::Type::declareType(type->getName()));
+			type_metadata->addType(vm::Type::declareType(type->getExpr()));
 	}
 
 	/**

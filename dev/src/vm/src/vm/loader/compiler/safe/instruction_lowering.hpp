@@ -14,6 +14,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/type_resolver.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
@@ -162,9 +163,9 @@ namespace vm::loader::compiler::safe::detail {
 			// executor measure, so there is a single answer to how big a variable is.
 			u64 size = 0;
 			for (const auto& parameter: signature.parameters)
-				size += resolveTypeName(parameter.expr.canonicalName())->getSize().asInt();
+				size += resolveType(parameter.expr)->getSize().asInt();
 			for (const auto& result: signature.result_types)
-				size += resolveTypeName(result.expr.canonicalName())->getSize().asInt();
+				size += resolveType(result.expr)->getSize().asInt();
 
 			return size;
 		}
@@ -198,6 +199,14 @@ namespace vm::loader::compiler::safe::detail {
 			return currentStackSize() - shared_stack_space_size;
 		}
 
+		TypeCRef resolveType(const code::TypeExpr& expr) const {
+			return compiler.getLowProgram()->getTypes().at(TypeID(
+				code::getResolved(compiler.high_program.getTypeContext().getCurrentTypes(), expr)
+					->getID()
+					.asInt()
+			));
+		}
+
 		TypeCRef resolveTypeName(base::StrID type_name) const {
 			return compiler.getLowProgram()->getTypes().at(
 				TypeID(validTypeName(type_name)->getID().asInt())
@@ -207,19 +216,6 @@ namespace vm::loader::compiler::safe::detail {
 		/// The validated type, which is where the per-type capability flags live.
 		CRef<code::valid_type::ValidType> validTypeName(base::StrID type_name) const {
 			return compiler.high_program.getTypeContext().getCurrentTypes().at(type_name);
-		}
-
-		/// @brief The expression denoting `type`. A pointer is built from its pointee, not named.
-		static code::TypeExpr exprOf(TypeCRef type) {
-			if_opt_some(
-				type->get<vm::kind::Pointer>(), pointer
-			) return code::TypeExpr::pointer(exprOf(pointer->inner_type));
-			if_opt_some(type->get<vm::kind::CPointer>(), cpointer) {
-				return code::TypeExpr::cpointer(cpointer->inner_type.map([](TypeCRef inner) {
-					return exprOf(inner);
-				}));
-			}
-			return code::TypeExpr::type(type->getName());
 		}
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
@@ -639,24 +635,24 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_cmpNull_pptr, i) { addLow<Op_cmpNull_pptr>(i.ptr); }
 			instr_case(high::Op_variantSetInner_pvnt_type, i) {
 				addLow<Op_variantSetInner_bvnt_type>(i.variant, i.inner_type);
-				opargs::Type variant_type = exprOf(getPlaceType(i.variant));
+				opargs::Type variant_type = getPlaceType(i.variant)->getExpr();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_pptr_pvnt_type, i) {
 				addLow<Op_variantGetInner_pptr_bvnt>(i.dst_ptr, i.variant);
-				opargs::Type variant_type = exprOf(getPlaceType(i.variant));
+				opargs::Type variant_type = getPlaceType(i.variant)->getExpr();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_variantSetInner_pptr_type, i) {
 				addLow<Op_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
 				opargs::Type variant_type
-					= exprOf(getPlaceType(i.variant_ptr)->getInnerType().value());
+					= getPlaceType(i.variant_ptr)->getInnerType().value()->getExpr();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_pptr_pptr_type, i) {
 				addLow<Op_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
 				opargs::Type variant_type
-					= exprOf(getPlaceType(i.variant_ptr)->getInnerType().value());
+					= getPlaceType(i.variant_ptr)->getInnerType().value()->getExpr();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
@@ -712,7 +708,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_upcast_pptr_pptr, i) { addLow<Op_mov_pptr_pptr>(i.dst, i.src); }
 			instr_case(high::Op_downcast_pptr_pptr, i) {
 				addLow<Op_downcast_pptr_pptr>(i.dst, i.src);
-				opargs::Type variant_type = exprOf(getPlaceType(i.dst)->getInnerType().value());
+				opargs::Type variant_type = getPlaceType(i.dst)->getInnerType().value()->getExpr();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtualCall_pptr_method, i) {
@@ -725,7 +721,7 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
 			instr_case(high::Op_free_pptr, i) {
-				opargs::Type expected_type = exprOf(getPlaceType(i.ptr)->getInnerType().value());
+				opargs::Type expected_type = getPlaceType(i.ptr)->getInnerType().value()->getExpr();
 				addLow<Op_free_pptr_type>(i.ptr, expected_type);
 			}
 			instr_case(high::Op_store_pptr_pany, i) {
@@ -759,8 +755,8 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_ext_field>(i.field);
 			}
 #define TABLE_PTR_ELEM_TYPE(ptr_arg) \
-	exprOf(*(*getPlaceType(ptr_arg)->getInnerType())->getInnerType())
-#define TABLE_VAL_ELEM_TYPE(val_arg) exprOf(*getPlaceType(val_arg)->getInnerType())
+	(*(*getPlaceType(ptr_arg)->getInnerType())->getInnerType())->getExpr()
+#define TABLE_VAL_ELEM_TYPE(val_arg) (*getPlaceType(val_arg)->getInnerType())->getExpr()
 			instr_case(high::Op_fixedSizeTableLea_pptr_pptr_p64, i) {
 				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(

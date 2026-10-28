@@ -59,16 +59,13 @@ namespace compiler::backend_vm::internal {
 
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
-				return DVMValue{ DVMImmediate{ numericValueToU64(numeric),
-					                           *pctx.declarationOf(type).expect(DECLARED) } };
+				return DVMValue{ DVMImmediate{ numericValueToU64(numeric), type } };
 			}
 			variant_case(char, value) {
-				return DVMValue{ DVMImmediate{ translateToU64(value),
-					                           *pctx.declarationOf(type).expect(DECLARED) } };
+				return DVMValue{ DVMImmediate{ translateToU64(value), type } };
 			}
 			variant_case(bool, value) {
-				return DVMValue{ DVMImmediate{ translateToU64(value),
-					                           *pctx.declarationOf(type).expect(DECLARED) } };
+				return DVMValue{ DVMImmediate{ translateToU64(value), type } };
 			}
 			variant_default {
 				return DVMValue{ lowerCTVToNewGlobal(pctx, constant.value, type, true) };
@@ -96,7 +93,7 @@ namespace compiler::backend_vm::internal {
 		global_data.is_constant = is_constant;
 
 		const vm::code::TypeOfData& declaration = *pctx.declarationOf(type).expect(DECLARED);
-		const DVMPlace& inserted_global_place   = pctx.declareGlobal(global_name, declaration);
+		const DVMPlace&             inserted_global_place = pctx.declareGlobal(global_name, type);
 
 		variant_match(constant.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
@@ -169,22 +166,23 @@ namespace compiler::backend_vm::internal {
 		// `{ pointer, len, cap, offset }`. We derive every type we need from the first field, so
 		// the static byte array, the dynamic-table pointer and the `fstToDynTable` cast all agree
 		// on the element type.
-		const auto& struct_data = std::get<vm::code::DataType>(inserted_global_place.getType());
+		const auto& struct_data = v_get(
+			*pctx.declarationOf(inserted_global_place.getTypeExpr()).expect(DECLARED),
+			vm::code::DataType
+		);
 		// The first field is a pointer, so it is written rather than declared.
 		const vm::code::TypeExpr dyn_ptr_type = struct_data.fields.at(0).type;
 
 		// ================ Part 1: insert fixed-size table with string bytes =================
-		auto element_type = DVMImmediate::character('\0').type;
+		const vm::code::TypeExpr element_type = DVMImmediate::character('\0').getTypeExpr();
 
 		const auto  bytes  = content.strView();
 		const usize length = bytes.size();
 
 		// Static fixed-size-table global holding the string bytes.
-		auto array_type_name = base::strConcat("arr_", typeName(element_type), "_", length);
-		vm::code::FixedSizeTableType array_type{ base::StrID(array_type_name),
-			                                     vm::code::TypeExpr(typeName(element_type)),
-			                                     length };
-		pctx.keepVMType(array_type);
+		auto array_type_name = base::strConcat("arr_", element_type.canonicalName(), "_", length);
+		const vm::code::TypeExpr array_type = pctx.keepVMType(vm::code::FixedSizeTableType{
+			base::StrID(array_type_name), element_type, length });
 
 		auto string_table = makeBox<vm::code::ConstantFixedSizeTable>();
 		string_table->elements.reserve(length);
@@ -208,9 +206,8 @@ namespace compiler::backend_vm::internal {
 
 		// ref -> pointer to the static fixed-size table, then reinterpret as a
 		// dynamic-table pointer (the slice's `_0`).
-		const vm::code::TypeExpr ptr_to_array_type
-			= pctx.pointerTypeExpr(vm::code::TypeExpr{ typeName(array_type) });
-		DVMPlace fst_ptr = ctor_ctx.pushTempLocal(ptr_to_array_type, "str_fst_ptr");
+		const vm::code::TypeExpr ptr_to_array_type = pctx.pointerTypeExpr(array_type);
+		DVMPlace                 fst_ptr = ctor_ctx.pushTempLocal(ptr_to_array_type, "str_fst_ptr");
 		ctor_ctx.pushInstruction({ OpKind::ref, fst_ptr.asArgument(), array_global.asAnyArgument() }
 		);
 		DVMPlace dyn_ptr = ctor_ctx.pushTempLocal(dyn_ptr_type, "str_dyn_ptr");
@@ -256,11 +253,12 @@ namespace compiler::backend_vm::internal {
 		FunctionLoweringContext ctor_ctx
 			= FunctionLoweringContext::getVoidParameterLessFunctionContext(pctx, ctor_name);
 
-		const auto& type = inserted_global_place.getType();
-		DVMPlace    local(base::StrID("vm_value"), type, DVMPlace::AccessKind::Direct);
+		const vm::code::TypeExpr type = inserted_global_place.getTypeExpr();
+		const DVMPlace           local
+			= pctx.makePlace(base::StrID("vm_value"), type, DVMPlace::AccessKind::Direct);
 		ctor_ctx.pushInstruction({ OpKind::initFromVMValue,
 		                           local.asAnyArgument(),
-		                           vm::opargs::Type(vm::code::TypeExpr(typeName(type))),
+		                           vm::opargs::Type(type),
 		                           vm::opargs::Immediate{ std::bit_cast<u64>(vm_value.val.get()) } }
 		);
 		ctor_ctx.maybeStoreResult(inserted_global_place, DVMValue{ local });
@@ -289,8 +287,7 @@ namespace compiler::backend_vm::internal {
 			ctor_ctx.pushInstruction({ OpKind::structLea,
 			                           field_ptr,
 			                           destination,
-			                           vm::opargs::Field{ vm::code::TypeExpr(structure_type.name),
-			                                              field.name } });
+			                           vm::opargs::Field{ destination.getTypeExpr(), field.name } });
 
 			ctor_ctx.maybeStoreResult(
 				field_ptr.withAccessKind(DVMPlace::AccessKind::Pointer), field_value
@@ -311,8 +308,7 @@ namespace compiler::backend_vm::internal {
 				variant_case_novalue(ctv::CompileTimeValue::UnitCTV) {}
 				variant_case(compiler::tsh::SymbolType<>, type_val) {
 					CORE_ASSERT(field != data_type.fields.end(), "Too few tuple fields.");
-					const auto& field_type
-						= pctx.type_storage.dvm_types.at(field->type.canonicalName());
+					const auto& field_type = *pctx.declarationOf(field->type).expect(DECLARED);
 					result->fields.emplace_back(
 						field->name,
 						makeBox<vm::code::ConstantImmediate>(
@@ -326,8 +322,7 @@ namespace compiler::backend_vm::internal {
 				}
 				variant_case(ctv::CompileTimeValue::TypeTuple, nested) {
 					CORE_ASSERT(field != data_type.fields.end(), "Too few tuple fields.");
-					const auto& field_type
-						= pctx.type_storage.dvm_types.at(field->type.canonicalName());
+					const auto& field_type = *pctx.declarationOf(field->type).expect(DECLARED);
 					result->fields.emplace_back(
 						field->name,
 						lowerTypeTupleToConstant(pctx, nested, v_get(field_type, vm::code::DataType))

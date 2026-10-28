@@ -46,7 +46,6 @@ namespace vm {
 
 		template<class T>
 		requires std::is_trivially_copy_constructible_v<T> T readBytes() const {
-			CORE_ASSERT(my_type->getName() != "void", "Interpreting VMValueRef bytes of type void!");
 			CORE_ASSERT(
 				sizeof(T) <= static_cast<usize>(my_type->getSize()), "VMValueRef: Out of bounds read"
 			);

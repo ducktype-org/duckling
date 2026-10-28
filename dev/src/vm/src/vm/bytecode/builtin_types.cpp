@@ -58,7 +58,7 @@ namespace vm::code {
 		return types;
 	}
 
-	base::Optional<TypeOfData> getBuiltinTypeByName(base::StrID type_name) {
-		return rawBuiltins().atMaybeCopy(type_name);
+	base::Optional<CRef<TypeOfData>> getBuiltinTypeByName(base::StrID type_name) {
+		return rawBuiltins().atMaybe(type_name);
 	}
 }
