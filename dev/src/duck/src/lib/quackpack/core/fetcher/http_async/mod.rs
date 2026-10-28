@@ -128,7 +128,7 @@ impl Drop for AsyncHttpClient<'_> {
     fn drop(&mut self) {
         drop(self.sender.take().unwrap());
         if self.worker.take().unwrap().join().is_err() {
-            error!("helper thread panicked");
+            error!(target: "duck::curl", "helper thread panicked");
         }
     }
 }
@@ -280,7 +280,7 @@ impl Worker {
         });
         // There are still pending transfers. Wait a bit.
         if transfers_in_progress > 0 {
-            trace!(%transfers_in_progress, "waiting for the transfers in progress");
+            trace!(target: "duck::curl", %transfers_in_progress, "waiting for the transfers in progress");
             let delay = self
                 .multi
                 .get_timeout()
@@ -309,13 +309,13 @@ impl Worker {
     fn check_for_closed_channel(&mut self) -> ControlFlow<()> {
         match self.receiver.recv() {
             Ok(request) => {
-                trace!("got a new request");
+                trace!(target: "duck::curl", "got a new request");
                 self.enqueue_incoming_connection(request);
                 ControlFlow::Continue(())
             }
             // Pipe has been closed. Shut down worker.
             Err(_) => {
-                debug!("all senders are gone, shutting down the HTTP worker");
+                debug!(target: "duck::curl", "all senders are gone, shutting down the HTTP worker");
                 ControlFlow::Break(())
             }
         }

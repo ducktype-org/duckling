@@ -264,7 +264,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         })()
         .with_context(|| format!("failed to compile `{name}`"))?;
         if !status.success() {
-            debug!(%status, "`duckc` failed to compile `{name}`");
+            debug!(target: "duck::duckc", %status, "`duckc` failed to compile `{name}`");
             qp_bail!("failed to compile `{name}`")
         }
         debug!("successfully compiled the unit");

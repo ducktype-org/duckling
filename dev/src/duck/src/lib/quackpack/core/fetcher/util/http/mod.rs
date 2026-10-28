@@ -106,6 +106,7 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
             Ok(value) => value,
             Err(err) => {
                 warn!(
+                    target: "duck::curl",
                     error = %err,
                     ?value,
                     "skipping the `{header}` header, its value is not valid UTF-8"
@@ -206,7 +207,7 @@ fn set_http_version_on_curl<H>(
 /// Helper for checking HTTP status codes.
 pub fn check_http_status_code(response: &Response, path: &http::Uri) -> QuackResult<()> {
     let code = response.status().as_u16();
-    debug!("got an HTTP response with status code {code}");
+    debug!(target: "duck::curl", "got an HTTP response with status code {code}");
     let description = match code {
         100..200 => "informational",
         200..300 => return Ok(()),
@@ -226,7 +227,7 @@ pub fn try_parse_header_value(data: &[u8]) -> Option<(&str, &str)> {
     let data = data
         .strip_suffix(HTTP_DELIMITER.as_bytes())
         .unwrap_or_else(|| {
-            trace!(?data, "the header does not end in `\\r\\n`");
+            trace!(target: "duck::curl", ?data, "the header does not end in `\\r\\n`");
             data
         });
     if data.is_empty() {
