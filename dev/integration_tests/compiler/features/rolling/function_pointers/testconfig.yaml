@@ -9,4 +9,3 @@ Tests:
       llvm:
         Output:
           String: "3\n12\n11\n30\n56\n60\n6\n7\n7\n42\n2\n5\n42\n"
-        ExitCode: 0

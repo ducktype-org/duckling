@@ -706,15 +706,13 @@ namespace compiler::helios {
 					return;
 				}
 
-				result = CompileTimeValue{ tsh::SymbolType<>{
-					ctx.query<tsh::QueryFunctionType>({
+				result = CompileTimeValue{
+					tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = std::move(parameter_types),
 						.result_type = result_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(),
 						.kind        = expr.kind,
-					}),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				} };
+					}))
+				};
 			}
 
 			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr

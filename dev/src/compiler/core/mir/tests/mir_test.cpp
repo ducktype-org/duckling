@@ -1025,10 +1025,6 @@ private:
 	}
 
 	/**
-	 * @brief `and` / `or` lower lazily: the right-hand side sits in its own block, which only one
-	 * of the two outcomes of the left-hand side leads to.
-	 */
-	/**
 	 * @brief A call through a function value lowers to `IndirectCall`, a function used as a value
 	 * lowers to a function literal.
 	 */
@@ -1068,6 +1064,10 @@ private:
 		);
 	}
 
+	/**
+	 * @brief `and` / `or` lower lazily: the right-hand side sits in its own block, which only one
+	 * of the two outcomes of the left-hand side leads to.
+	 */
 	void lazyBooleanShortCircuitTest() {
 		using compiler::mir::Operation;
 		namespace test_utils = compiler::mir::test_utils;

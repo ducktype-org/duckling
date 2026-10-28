@@ -1636,8 +1636,22 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun inc(x: i64) -> i64 = x + 1;
 			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
-			{ "Type `Function (i64) -> (i64)` cannot be converted to type `const Closure (i64) -> "
+			{ "Type `Function (i64) -> (i64)` cannot be converted to type `const (i64) -> "
 		      "(i64)`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( @builtin("size_of") fundecl type_size(v: type) -> i64;
+			fun main() -> i64 = { let f = type_size; return 0; } )",
+			{ "A builtin or non-default ABI function cannot be used as a value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") fundecl abs(n: i32) -> i32;
+			fun main() -> i64 = { let f = abs; return 0; } )",
+			{ "A builtin or non-default ABI function cannot be used as a value." },
 			1
 		);
 

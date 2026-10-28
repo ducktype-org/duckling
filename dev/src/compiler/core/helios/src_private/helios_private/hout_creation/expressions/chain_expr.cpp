@@ -11,8 +11,6 @@
 
 #include "chain_expr.hpp"
 
-#include <helios/symbols/symbol_abi.hpp>
-
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -22,6 +20,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
@@ -131,8 +130,7 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief This error message is used when there are both function symbols and non-function valid
-	 * symbols found during the lookup (like function and class constructor with the same name).
+	 * @brief A builtin or a non-default ABI function is used as a value.
 	 */
 	class FunctionRefBuiltinError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
@@ -147,6 +145,10 @@ namespace compiler::helios::code {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
+	/**
+	 * @brief This error message is used when there are both function symbols and non-function valid
+	 * symbols found during the lookup (like function and class constructor with the same name).
+	 */
 	class CallInvalidCallablesError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
