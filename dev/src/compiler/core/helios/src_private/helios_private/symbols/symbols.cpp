@@ -784,7 +784,7 @@ namespace compiler::helios {
 							 .name = iterator->unwrap(),
 							 .kind = SymbolKind::Variable,
                     },
-                    PstInferredSemantics(scope, for_stmt->getHash())
+                    PstInferredSemantics(scope, iterator->getHash())
                 ) };
 				output(std::move(out));
 			}
@@ -799,7 +799,7 @@ namespace compiler::helios {
 						 .name = name->unwrap(),
 						 .kind = SymbolKind::Variable,
                     },
-                    PstInferredSemantics(scope, pattern->getHash())
+                    PstInferredSemantics(scope, name->getHash())
                 ) };
 				output(std::move(out));
 			}

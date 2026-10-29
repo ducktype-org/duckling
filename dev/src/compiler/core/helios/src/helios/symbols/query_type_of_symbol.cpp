@@ -293,6 +293,7 @@ namespace compiler::helios {
 				variant_case(PstInferredSemantics, data) {
 					PstVisitor_GetTypeOf visitor(ctx);
 					data.getParent(ctx).unlock(ctx)->acceptVisitor(visitor);
+					return visitor.symbol_type_qresult;
 				}
 				variant_case(defgen::Constructor, ctor) {
 					const auto target_type = ctor.type;
