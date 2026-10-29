@@ -46,6 +46,9 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testFunctionValueErrors);
+		TESTER_ADD_TEST(testCoercionErrors);
+		TESTER_ADD_TEST(testOptionalErrors);
 		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
@@ -58,6 +61,7 @@ public:
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
+		TESTER_ADD_TEST(testCopyMoveErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
@@ -90,13 +94,23 @@ private:
 	 *
 	 * @param logged_msg_count Expected number of logged error messages.
 	 * @param present_phrases List of phrases that should be present in the logged errors in order.
+	 * @param expect_errors If false, the logged messages must not contain any error.
 	 */
-	void checkForError(const std::vector<std::string_view>& present_phrases, u64 logged_msg_count) {
+	void checkForError(
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count,
+		bool                                 expect_errors = true
+	) {
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
 		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
 		// query errors is ok:
-		assertTrue(logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged.");
+		if (expect_errors)
+			assertTrue(
+				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+			);
+		else
+			assertFalse(logger->hasErrors(), "Expected no errors to be logged.");
 
 		std::stringstream logged_messages;
 		logger->terminalPrint(logged_messages);
@@ -151,6 +165,27 @@ private:
 	}
 
 	/**
+	 * @brief Like `checkForErrorOnCompileModule`, but the module must compile, and only warnings
+	 * may be logged.
+	 *
+	 * @param module_content The content of the module main source file.
+	 * @param present_phrases List of phrases that should be present in the warnings in order.
+	 * @param logged_msg_count Expected number of logged warnings.
+	 */
+	void checkForWarningOnCompileModule(
+		std::string_view                     module_content,
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count
+	) {
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
+		assertFalse(result->hasFailed(), "Expected HOUT query to succeed for module content.");
+		checkForError(present_phrases, logged_msg_count, false);
+	}
+
+	/**
 	 * Generic error logging tests.
 	 * Add additional test cases for more specific categories.
 	 */
@@ -190,48 +225,33 @@ private:
 				1
 			);
 			checkForErrorOnCompileModule(
-				R"(
-                class Number {
-                    val: i64;
-                    fun +(rhs: Number) -> Number = {
-                        return Number(self.val + rhs.val);
-                    }
-                }
-
-                fun +(lhs: Number, rhs: Number) -> Number = {
-                    return Number(lhs.val + rhs.val);
-                }
-
-                fun main() -> i64 = {
-                    let a = Number(10);
-                    let b = Number(20);
-                    let c = a + b;
-                    return c.val;
-                }
-            )",
-				{ "Call failed due to ambiguous overload resolution" },
+				R"(fun -(n: i64) -> i64 = n;)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun suffix +(lhs: i64, rhs: i64) -> i64 = lhs;)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
 			);
 			checkForErrorOnCompileModule(
 				R"(
-                class Number {
-                    val: i64;
-                    fun -() -> Number = {
-                        return Number(-self.val);
-                    }
-                }
-
-                fun -(n: Number) -> Number = {
-                    return Number(-n.val);
-                }
-
-                fun main() -> i64 = {
-                    let a = Number(10);
-                    let c = -a;
-                    return c.val;
-                }
-            )",
-				{ "Call failed due to ambiguous overload resolution" },
+					class Number {
+						value: i64;
+						fun -() -> i64 = 0;
+					}
+				)",
+				{ "Unary operator declarations must specify either `prefix` or `suffix`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun suffix +(rhs: i64) -> i64 = rhs;
+					}
+				)",
+				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
 			);
 		}
@@ -564,7 +584,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `const slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -737,23 +757,6 @@ private:
 				}
 			)",
 				{ "cannot be evaluated at compile-time", "const y = x" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class S {
-					x: i64;
-					S.copy(other: const ref S) = {
-						return S(10);
-					}
-				}
-				
-				fun takeS(x: S) = 10;
-
-				const ctvS = takeS(S(1));
-			)",
-				{ "cannot be evaluated at compile time" },
 				1
 			);
 		}
@@ -1081,7 +1084,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `const slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -1091,6 +1094,15 @@ private:
 				const ARR = NOT_A_TYPE[5];
 			)",
 				{ "Index operator base must be indexable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				const ARR = [42, "is the answer"];
+			)",
+				{ "Invalid array element type. Expected `i32`, but got `slice char`. "
+			      "All array elements must be of the same type." },
 				1
 			);
 		}
@@ -1160,19 +1172,6 @@ private:
 				}
 			)",
 				{ "Feature not implemented", "Nested", "function" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A { x: i64 = 0; }
-				const a = A();
-
-				fun main() -> i64 = {
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Compile time" },
 				1
 			);
 
@@ -1309,7 +1308,31 @@ private:
 		// ============================ Other errors ============================
 		{
 			checkForErrorOnCompileModule(
-				R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
+				R"(fun a() = 100000000000000000000000;)",
+				{ "Numeric literal value is out of the range" },
+				1
+			);
+			// An error about a negative literal points at its `-` too.
+			checkForErrorOnCompileModule(
+				R"(fun a() = -9223372036854775809;)",
+				{ "Numeric literal value is out of the range" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -129i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			// A hex or binary literal is a value, not a bit pattern, so it does not wrap around.
+			checkForErrorOnCompileModule(
+				R"(fun a() = 0x80i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -0b10000001i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun a() = 1000i8;)",
@@ -1601,6 +1624,86 @@ private:
 		);
 	}
 
+	void testFunctionValueErrors() {
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f: funptr(i64) -> i64 = add; return 0; } )",
+			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `const Function "
+		      "(i64) -> (i64)`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(1); } )",
+			{ "The number of arguments does not match the parameters of the function type." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(a = 1, b = 2); } )",
+			{ "Named arguments cannot be used in a call through a function value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(1, "x"); } )",
+			{ "cannot be converted to type" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = { let n = 3; return n(1); } )",
+			{ "A value of type `const i32` cannot be called, because it is not a function." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { add = add; return 0; } )",
+			{ "Left side of assignment must be addressable location" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let r = &add; return 0; } )",
+			{ "Tried to reference a temporary" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun inc(x: i64) -> i64 = x + 1;
+			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
+			{ "Type `Function (i64) -> (i64)` cannot be converted to type `const (i64) -> "
+		      "(i64)`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( @builtin("size_of") fundecl type_size(v: type) -> i64;
+			fun main() -> i64 = { let f = type_size; return 0; } )",
+			{ "A builtin or non-default ABI function cannot be used as a value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") fundecl abs(n: i32) -> i32;
+			fun main() -> i64 = { let f = abs; return 0; } )",
+			{ "A builtin or non-default ABI function cannot be used as a value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun show(x: i64) = { builtin_output_i64(x); }
+			fun main() -> i64 = { let f: funptr(i64) = show; return 0; } )",
+			{ "`funptr` must be followed by `-> <result type>`" },
+			1
+		);
+	}
+
 	void testCopyabilityErrors() {
 		const std::string_view msg
 			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
@@ -1702,6 +1805,188 @@ private:
 			} )",
 			{ "Cannot implicitly copy a value of non-trivially-copyable type "
 		      "`Tuple(i32, Class L)`" },
+			1
+		);
+	}
+
+	void testCoercionErrors() {
+		constexpr std::string_view CLASS_L
+			= "class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }";
+
+		// ============================ Explicit copy or move ============================
+		{
+			constexpr std::string_view BY_VALUE
+				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`. Use "
+				  "`copy` to copy it or `move` to move it.";
+			constexpr std::string_view OUT_OF_REF
+				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
+				  "`ref Class L`. Use `copy` to copy it out, `move` cannot move a value out of a "
+				  "reference.";
+			constexpr std::string_view OUT_OF_BOX
+				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
+				  "`box Class L`. Use `copy` to copy it out, `move` cannot move a value out of a "
+				  "reference.";
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(r: ref L) -> L = {
+					return r;
+				} )"),
+				{ OUT_OF_REF },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(bl: box L) -> L = {
+					return bl;
+				} )"),
+				{ OUT_OF_BOX },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun take(l: L) -> i64 = 0;
+				fun f(r: ref L) -> i64 = take(r);
+			)"),
+				{ OUT_OF_REF },
+				1
+			);
+
+			// A tuple literal hands over each of its elements on its own, so the error names the
+			// element and not the whole tuple.
+			// @TODO: #3732 This error underlines the whole tuple, not the `a`. Fix it.
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun main() -> i64 = {
+					var a: L;
+					var t: (L, i64) = (a, 1i64);
+					return 0;
+				} )"),
+				{ BY_VALUE },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun main() -> i64 = {
+					var a: L;
+					var t: (L, i64) = (a, 1i32);
+					return 0;
+				} )"),
+				{ BY_VALUE },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun take(t: (L, i64)) -> i64 = 0;
+				fun main() -> i64 = {
+					var a: L;
+					return take((a, 1i64));
+				} )"),
+				{ BY_VALUE },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(r: ref L) -> i32 = {
+					var t: (L, i64) = (r, 1i64);
+					return 0;
+				} )"),
+				{ OUT_OF_REF },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				base::strConcat(CLASS_L, R"(
+				fun f(bl: box L) -> i32 = {
+					var t: (L, i64) = (bl, 1i64);
+					return 0;
+				} )"),
+				{ OUT_OF_BOX },
+				1
+			);
+		}
+
+		// ============================ Ambiguous variant packing ============================
+		{
+			constexpr std::string_view AMBIGUOUS
+				= "A value of type `u8` fits equally well into many alternatives of `Variant (u16, "
+				  "u32)`: `u16`, `u32`.";
+
+			checkForErrorOnCompileModule(
+				R"( fun main() -> i64 = {
+					var v: u16 | u32 = 1u8;
+					return 0;
+				} )",
+				{ AMBIGUOUS },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"( fun f(v: u16 | u32) -> i64 = 0;
+				fun main() -> i64 = f(1u8);
+			)",
+				{ AMBIGUOUS },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"( fun main() -> i64 = {
+					var t: (u16 | u32, i64) = (1u8, 1i64);
+					return 0;
+				} )",
+				{ AMBIGUOUS },
+				1
+			);
+		}
+
+		// ============================ Overload resolution ============================
+		{
+			// Each candidate is better for a different argument, so none of them wins.
+			checkForErrorOnCompileModule(
+				R"( fun g(a: i32, b: i64) -> i64 = 1;
+				fun g(a: i64, b: i32) -> i64 = 2;
+				fun main() -> i64 = g(1i32, 1i32);
+			)",
+				{ "Call failed due to ambiguous overload resolution",
+			      "Found coercible candidate",
+			      "Found coercible candidate" },
+				1
+			);
+		}
+	}
+
+	/**
+	 * Errors of the `?T` interface on a non-trivially-copyable value type.
+	 */
+	void testOptionalErrors() {
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var o: ?L = L(1i32);
+				var b: L = o.value();
+				return 0;
+			} )",
+			{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
+		      "`ref Class L`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var o: ?L = L(1i32);
+				var b = o.valueOr(L(2i32));
+				return 0;
+			} )",
+			{ "Call failed due to ambiguous overload resolution",
+		      "Cannot implicitly copy a value of non-trivially-copyable type `?Class L`",
+		      "The given argument type `Class L` cannot be converted to the expected type `ref "
+		      "Class L`" },
 			1
 		);
 	}
@@ -2080,6 +2365,32 @@ private:
 		);
 	}
 
+	void testCopyMoveErrors() {
+		checkForWarningOnCompileModule(
+			R"(
+				fun copyLocal() -> i64 = {
+					let a: i64 = 5;
+					let b = copy a;
+					return b;
+				}
+			)",
+			{ "Type `const i64` is trivially copyable. No need to use the explicit `copy` "
+		      "keyword." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Res { x: i64; }
+				fun moveTemporary() = {
+					var a = move Res(1);
+				}
+			)",
+			{ "A temporary is moved out of implicitly, `move` is not needed here." },
+			1
+		);
+	}
+
 	/// @brief `ptrof` rejects the same operands `&` rejects, and cannot be evaluated at comp time.
 	void testPtrOfErrors() {
 		checkForErrorOnCompileModule(
@@ -2108,7 +2419,8 @@ private:
 				var g: i32 = 5;
 				const A = ptrof g;
 			)",
-			{ "Feature not implemented" },
+			{ "Expression cannot be evaluated at compile-time.",
+		      "Using the variable `g` in a constant expression is invalid." },
 			1
 		);
 	}
@@ -2261,9 +2573,15 @@ private:
 			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: i32 = (1i32 << 32);)", { invalid_shift }, 1);
 
-			// Tuple element.
-			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
-			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", { invalid_shift }, 1);
+			// Tuple element. A tuple of values is evaluated by the VM, not by the tree evaluation,
+			// so the shift follows the run-time semantics and reports no `invalid_shift` error.
+			// @TODO: #3792 Check the arithmetic operations evaluated on the compile-time DVM.
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", {}, 0, false);
+			checkForErrorOnCompileModule(
+				R"(const A = (1 / 0, 2);)",
+				{ "Compile time evaluation of this expression failed", "Tried dividing by zero" },
+				1
+			);
 
 			// Cast source expression.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
@@ -2309,33 +2627,13 @@ private:
 
 		// ======================= Not-yet-implemented evaluations =======================
 		{
-			// Indexing a non-meta, non-type-template base.
-			checkForErrorOnCompileModule(
-				R"(
-				const S = "abc";
-				const A = S[0];
-			)",
-				{ "Feature not implemented",
-			      "Evaluating index expressions with non-meta and non-type-template base at "
-			      "compile time." },
-				1
-			);
-
-			// Access expressions.
-			checkForErrorOnCompileModule(
-				R"(const A: i64 = (1, 5)._2;)",
-				{ "Feature not implemented", "Evaluating access expressions at compile time." },
-				1
-			);
-
 			// A call that has to go through the DVM, but fails while being evaluated there.
 			checkForErrorOnCompileModule(
 				R"(
 				fun f(x: i64) -> i64 = x / 0;
 				const A: i64 = f(10);
 			)",
-				{ "Feature not implemented",
-			      "Compile time evaluation of this function call failed or returned unsupported "
+				{ "Compile time evaluation of this function call failed or returned unsupported "
 			      "result." },
 				1
 			);

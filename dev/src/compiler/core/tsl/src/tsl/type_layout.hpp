@@ -21,6 +21,7 @@
 #include <string_id/string_id.hpp>
 
 #include <variant>
+#include <vector>
 
 /**
  * @brief The namespace of all definitions of the Lower Type System.
@@ -292,6 +293,8 @@ namespace compiler::tsl {
 
 	/**
 	 * @brief Layout of a variant type.
+	 * @note Alternative indices are zero-based. At runtime, tag 0 denotes no active alternative,
+	 * and an alternative with index `i` is encoded as tag `i + 1`.
 	 */
 	class VariantTypeLayout final: public TypeLayoutABC {
 		Bytes tag_offset;
@@ -329,7 +332,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @return The offset of the actual data held by this variant, in bytes, up to 8.
+		 * @return The offset of the actual data held by this variant, in bytes.
 		 */
 		[[nodiscard]]
 		Bytes getDataOffset() const {
@@ -338,7 +341,7 @@ namespace compiler::tsl {
 
 		/**
 		 * @param key One of the options of the variant.
-		 * @return The index (tag value) of the given option.
+		 * @return The zero-based logical index of the given option.
 		 */
 		[[nodiscard]]
 		usize getIndexOfType(const tsh::SymbolType<> key) const {
@@ -346,7 +349,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @param index An in-bounds index (tag value) of the variant.
+		 * @param index An in-bounds, zero-based logical index of the variant.
 		 * @return The type layout corresponding to that index.
 		 */
 		[[nodiscard]]
@@ -469,18 +472,33 @@ namespace compiler::tsl {
 	};
 
 	/**
-	 * @brief Layout of a functional object or pointer type.
+	 * @brief Layout of a function type. A value of a raw function type is a pointer to the code of
+	 * the function. Closure function types have no layout yet, requesting one reports an error.
+	 *
+	 * The layout also describes the signature of the function: the layouts of its parameters and of
+	 * its result. They are looked up lazily, so that a type may hold a function referring to itself
+	 * (e.g. `class T { f: funptr(T) -> i64; }`) without a query cycle.
 	 */
 	class FunctionalTypeLayout final: public TypeLayoutABC {
-		// @TODO: Add support for function objects
-		explicit FunctionalTypeLayout(
-			const tsh::FunctionAbstractType function_type, query::Context& ctx
-		):
-			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {}
+		explicit FunctionalTypeLayout(tsh::FunctionAbstractType function_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:
+		/**
+		 * @brief Get the layouts of the parameters that carry information, in order. Parameters
+		 * which carry no information (e.g. of unit type) are not passed, so they are skipped.
+		 */
+		[[nodiscard]]
+		std::vector<CRef<TypeLayout>> getParameterLayouts(query::Context& ctx) const;
+
+		/**
+		 * @brief Get the layout of the result. A result which carries no information (e.g. a class
+		 * constructor result) is returned as unit.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getReturnLayout(query::Context& ctx) const;
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Functional : " + base::toString(getSize());

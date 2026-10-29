@@ -109,7 +109,7 @@ private:
 		auto        no_name_module = no_name_builder->finalize();
 		auto        no_name_id     = no_name_module->getModuleID();
 		auto        tree_str2      = printModuleTree(no_name_id);
-		std::string hash_str       = std::to_string(no_name_id.queryUnstablePerfectHash());
+		std::string hash_str       = no_name_id.queryUnstablePerfectHash().toStringHex();
 		assertTrue(
 			tree_str2.find("id:") != std::string::npos, "Output should contain 'id:' for bad name"
 		);

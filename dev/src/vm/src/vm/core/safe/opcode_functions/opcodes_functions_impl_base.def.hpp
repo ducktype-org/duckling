@@ -101,7 +101,7 @@ namespace vm {
 	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(checkStrategy)(FUNCTION_ARGS) {
 		{
 			++instr;
 			if (thread.isBreakRequested())
@@ -202,13 +202,13 @@ namespace vm {
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
-#define DEFINE_INT_N_BITWISE(SIZE)              \
-	DEFINE_BINARY_OP(bit_and, SIZE, u##SIZE, &) \
-	DEFINE_BINARY_OP(bit_or, SIZE, u##SIZE, |)  \
-	DEFINE_BINARY_OP(bit_xor, SIZE, u##SIZE, ^) \
-	DEFINE_BINARY_OP(shl, SIZE, u##SIZE, <<)    \
-	DEFINE_BINARY_OP(shr, SIZE, u##SIZE, >>)    \
-	DEFINE_UNARY_OP(bit_not, SIZE, u##SIZE, ~)
+#define DEFINE_INT_N_BITWISE(SIZE)             \
+	DEFINE_BINARY_OP(bitAnd, SIZE, u##SIZE, &) \
+	DEFINE_BINARY_OP(bitOr, SIZE, u##SIZE, |)  \
+	DEFINE_BINARY_OP(bitXor, SIZE, u##SIZE, ^) \
+	DEFINE_BINARY_OP(shl, SIZE, u##SIZE, <<)   \
+	DEFINE_BINARY_OP(shr, SIZE, u##SIZE, >>)   \
+	DEFINE_UNARY_OP(bitNot, SIZE, u##SIZE, ~)
 
 	FOR_EACH(DEFINE_INT_N_BITWISE, 64, 32, 16, 8)
 
@@ -240,11 +240,11 @@ namespace vm {
 		FUNCTION_CONT(1);                                                        \
 	}
 
-	DEFINE_BOOLEAN_OP(log_and, &&)
-	DEFINE_BOOLEAN_OP(log_or, ||)
-	DEFINE_BOOLEAN_OP(log_xor, !=)
+	DEFINE_BOOLEAN_OP(logAnd, &&)
+	DEFINE_BOOLEAN_OP(logOr, ||)
+	DEFINE_BOOLEAN_OP(logXor, !=)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_p8)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(logNot_p8)(FUNCTION_ARGS) {
 		{
 			bool result = (READ_FROM_PLACE_ARG(u8, instr->arg0) == u8{ 0 });
 			WRITE_TO_PLACE_ARG(u8, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
@@ -319,7 +319,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_off)(FUNCTION_ARGS) {
 		{
 			auto function_id = static_cast<usize>(instr->arg0);
 			CORE_ASSERT(
@@ -334,6 +334,15 @@ namespace vm {
 		// instructions. For future returns, the first instruction that should be executed after
 		// call is saved on frame so that `op_ret`s have to move forward zero instructions after
 		// restoring `instr` from frame.
+		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_p64_off)(FUNCTION_ARGS) {
+		{
+			const auto function_id = static_cast<usize>(READ_FROM_PLACE_ARG(u64, instr->arg0));
+			checkCallee(thread, function_id);
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr->arg1, 1);
+		}
 		FUNCTION_CONT(0);
 	}
 
@@ -576,7 +585,7 @@ namespace vm {
 			}
 			for (auto& vm_value: args) vm_value->freeData();
 
-			// Similar as in call_func, but we deinit the arguments blocks as well,
+			// Similar as in call_func_off, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
@@ -673,7 +682,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setThreadCtx_func)(FUNCTION_ARGS) {
 		{
 			auto& called_func = thread.process_program->getFunctions()[instr->arg0];
 			thread.setThreadCtx(called_func.name.str());
@@ -681,7 +690,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_pptr_method)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(virtualCall_pptr_method)(FUNCTION_ARGS) {
 		{
 			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 
@@ -710,7 +719,7 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(retTailcall_func)(FUNCTION_ARGS) {
 		{
 			auto function_id = static_cast<usize>(instr->arg0);
 			CORE_ASSERT(
@@ -752,7 +761,7 @@ namespace vm {
 			instr       = frame->instr;  // This is already a pointer to next instr.
 			local_stack = frame->local_stack;
 		}
-		// Here the argument is `0` because of the convention defined in the op_call_func.
+		// Here the argument is `0` because of the convention defined in the op_call_func_off.
 		FUNCTION_CONT(0);
 	}
 
@@ -1527,7 +1536,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue_imm_off)(FUNCTION_ARGS) {
 		{
 			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
 			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);

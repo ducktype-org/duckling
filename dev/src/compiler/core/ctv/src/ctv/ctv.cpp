@@ -8,17 +8,58 @@
 
 #include <ctv/numeric_value.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
+
+#include <base/str/str_utils.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <query_framework/context/context.hpp>
 #include <string_id/string_id.hpp>
 
+#include <vm/core/vmvalue/ivmvalue.hpp>
+
+#include <span>
 #include <sstream>
 #include <string>
 
 namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
+
+	CompileTimeValue::TypeTuple::TypeTuple(std::vector<Element> elements):
+		  elements(std::move(elements)) {
+		// We require at least one element to distinguish it from UnitCTV, which has zero
+		// elements. A one element tuple is written `(T,)`, a single CTV in parentheses is not a
+		// tuple.
+		CORE_ASSERT(not this->elements.empty(), "TypeTuple must have at least one element");
+	}
+
+	CompileTimeValue::TypeTuple::Element CompileTimeValue::TypeTuple::elementFromCtv(
+		const CompileTimeValue& ctv
+	) {
+		variant_match(ctv.getStorage()) {
+			variant_case(tsh::SymbolType<>, type) { return type; }
+			variant_case_novalue(UnitCTV) { return UnitCTV{}; }
+			variant_case(TypeTuple, tuple) { return tuple; }
+			variant_default { CORE_PANIC("Only types, units and type tuples are tuple elements."); }
+		}
+		CORE_UNREACHABLE();
+	}
+
+	CompileTimeValue CompileTimeValue::TypeTuple::elementToCtv(const Element& element) {
+		variant_match(element) {
+			variant_case(tsh::SymbolType<>, type) { return CompileTimeValue{ type }; }
+			variant_case_novalue(UnitCTV) { return CompileTimeValue{ UnitCTV{} }; }
+			variant_case(TypeTuple, tuple) { return CompileTimeValue{ tuple }; }
+		}
+		CORE_UNREACHABLE();
+	}
+
+	bool CompileTimeValue::TypeTuple::isValid(const tsh::SymbolType<>& tuple_type) {
+		return tuple_type.getRefKind() == tsh::ReferenceKind::Direct
+		    && tuple_type.getType().getKind() == tsh::Kind::Tuple
+		    && tsh::TupleAbstractType{ tuple_type.getType() }.isTupleOfTypes();
+	}
 
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
 		hashing::SHA256 hasher;
@@ -36,13 +77,25 @@ namespace compiler::ctv {
 			variant_case_novalue(UnitCTV) {
 				// nothing to add to hash
 			}
-			variant_case(TupleCTV, tuple) {
-				throw base::NotYetImplemented(
-					"Tuples are not supported yet in CTV::queryUnstablePerfectHash"
-				);
+			variant_case(TypeTuple, tuple) {
+				hashing::addToHash(hasher, tuple.getElements().size());
+				for (const auto& element: tuple.getElements()) {
+					const auto element_ctv = TypeTuple::elementToCtv(element);
+					hashing::addToHash(hasher, element_ctv.queryUnstablePerfectHash());
+				}
 			}
 			variant_case(tsh::SymbolType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
+			}
+			variant_case(VMValue, vm_value) {
+				hashing::addToHash(hasher, vm_value.type.queryUnstablePerfectHash());
+				hashing::addToHash(
+					hasher,
+					std::span<const byte>(
+						vm_value.val->getBytes(),
+						static_cast<usize>(vm_value.val->getDataSize().asInt())
+					)
+				);
 			}
 			variant_default { CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash"); }
 		}
@@ -62,15 +115,24 @@ namespace compiler::ctv {
 				return "\"" + base::escapeString(val.value.str()) + "\".toString()";
 			}
 			variant_case_novalue(UnitCTV) { return "()"; }
-			variant_case(TupleCTV, tuple) {
+			variant_case(TypeTuple, tuple) {
 				std::stringstream ss;
-				ss << "(" << tuple.getElements().at(0).toString();
-				for (usize i = 1; i < tuple.getElements().size(); i++)
-					ss << ", " << tuple.getElements().at(i).toString();
+				const auto&       elements = tuple.getElements();
+				ss << "(" << TypeTuple::elementToCtv(elements.at(0)).toString();
+				for (usize i = 1; i < elements.size(); i++)
+					ss << ", " << TypeTuple::elementToCtv(elements.at(i)).toString();
+				if (elements.size() == 1) ss << ",";
 				ss << ")";
 				return ss.str();
 			}
 			variant_case(tsh::SymbolType<>, val) { return val.toString(); }
+			variant_case(VMValue, vm_value) {
+				// @TODO: #3774 Pretty print the VMValue instead of dumping it.
+				std::stringstream ss;
+				ss << "type: `" << vm_value.type.toString() << "`\n";
+				vm_value.val->dprint(ss);
+				return ss.str();
+			}
 			variant_default {
 				throw base::NotYetImplemented("Converting other CTV types to string");
 			}
@@ -120,11 +182,13 @@ namespace compiler::ctv {
 					tsh::Mutability::Mutable,
 				};
 			}
-			variant_case(TupleCTV, tuple) {
+			variant_case(TypeTuple, tuple) {
 				std::vector<tsh::SymbolType<>> component_types;
 				component_types.reserve(tuple.getElements().size());
 				for (const auto& element: tuple.getElements())
-					component_types.push_back(element.getTypeOfStoredValue(ctx));
+					component_types.push_back(
+						TypeTuple::elementToCtv(element).getTypeOfStoredValue(ctx)
+					);
 
 				return tsh::SymbolType<>{
 					ctx.query<tsh::QueryTupleType>({ std::move(component_types) }),
@@ -140,6 +204,7 @@ namespace compiler::ctv {
 					tsh::Mutability::Mutable,
 				};
 			}
+			variant_case(VMValue, vm_value) { return vm_value.type; }
 		}
 		CORE_UNREACHABLE();
 	}

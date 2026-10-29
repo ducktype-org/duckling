@@ -7,14 +7,13 @@
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use tracing::debug;
+use tracing::trace;
 use url::Url;
 
 use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases};
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::fetcher;
 use crate::quackpack::schemas::config::{RegistryConfig, SecurityConfig, StorageConfig};
-use crate::quackpack::util::to_url::ToUrl;
 use crate::util::once_lock_ext::OnceLockExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
@@ -42,7 +41,7 @@ impl DuckCfg {
     /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
         let inner = YamlConfig::new(home.user_config().to_path_buf())?;
-        debug!(?inner, "parsed the user config");
+        trace!(?inner, "parsed the user config");
         Ok(Self {
             inner,
             security: OnceLock::new(),
@@ -121,10 +120,8 @@ impl DuckCfg {
     /// Get the default registry url.
     pub fn registry_url(&self) -> QuackResult<Url> {
         let url = self.registry()?.url.clone();
-        match url {
-            Some(url) => Ok(url),
-            None => fetcher::Fetcher::DEFAULT_REGISTRY_URL.to_url(),
-        }
+        let url = url.unwrap_or_else(|| fetcher::DEFAULT_REGISTRY_URL.clone());
+        Ok(url)
     }
 
     /// Get the maximal allowed amount of opened connections.

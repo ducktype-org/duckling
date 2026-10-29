@@ -55,7 +55,6 @@ impl From<SolverPackageFreeze> for PreexistenceData {
 impl SolverInput {
     /// Creates the [`SolverInput`], based on the previous freeze, its packages' manifests
     /// and information gathered in the gathering phase.
-    #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
         mut prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,

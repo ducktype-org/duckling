@@ -13,6 +13,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/mutability.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -87,7 +88,9 @@ namespace compiler::helios::desugaring {
 			// The coercion into the subject's own type looks like a no-op, but it is the check that
 			// makes `match (v)` on an owning variant report "use `copy` or `move`" if the type is
 			// not trivially copyable.
-			UNPACK_QRESULT_MOVE(auto return_expr =, coerceFromBox(ctx, std::move(expr), type, pos));
+			UNPACK_QRESULT_MOVE(
+				auto return_expr =, coercions::coerceFromBox(ctx, std::move(expr), type, pos)
+			);
 
 			bool moves_ownership                  = type.getRefKind() == tsh::ReferenceKind::Direct;
 			tsh::VariantAbstractType variant_type = type.getType();
@@ -182,15 +185,16 @@ namespace compiler::helios::desugaring {
 			if (not match_subject.moves_ownership)
 				source_type = source_type.withReferenceKind(tsh::ReferenceKind::Ref);
 
-			tsh::ExpressionType<> expr_type{
-				source_type, match_subject.expr->expression_type.getValueCategory()
-			};
-
-			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr_type, constraint));
-			if (coercion.isInvalid()) {
-				logCoercionFailure(ctx, coercion, pos, {});
-				return query::Failed();
-			}
+			const auto coercion = coercions::validCoercionOf(
+				ctx,
+				tsh::coercions::ValueSource::singleValueSource({
+					source_type,
+					match_subject.expr->expression_type.getValueCategory(),
+				}),
+				constraint,
+				pos
+			);
+			if (coercion.hasFailed()) return query::Failed();
 			return index;
 		}
 
@@ -366,7 +370,7 @@ namespace compiler::helios::desugaring {
 
 			UNPACK_QRESULT_MOVE(
 				result =,
-				coerceFromBox(
+				coercions::coerceFromBox(
 					ctx, std::move(result), result_type, result_holder->getStablePosition()
 				)
 			);
@@ -404,8 +408,9 @@ namespace compiler::helios::desugaring {
 		for (auto& lowered: lowered_cases) {
 			auto result = std::move(lowered.result);
 			if (result->expression_type.getSymbolType() != common_type.value()) {
-				auto coerced
-					= coerceFromBox(ctx, std::move(result), common_type.value(), lowered.position);
+				auto coerced = coercions::coerceFromBox(
+					ctx, std::move(result), common_type.value(), lowered.position
+				);
 				CORE_ASSERT(coerced.hasValue(), "Coercion from void should always succeed.");
 				result = std::move(coerced).valueOrThrow();
 			}

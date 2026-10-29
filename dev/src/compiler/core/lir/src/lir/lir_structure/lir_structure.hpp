@@ -116,6 +116,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	VariantTryProject,
 
 	Call,
+	/** Call through a function pointer: [callee, args...], the signature is in
+	 * `IndirectCallParameters`. */
+	IndirectCall,
 
 	ReturnVoid,
 	ReturnValue,
@@ -146,6 +149,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
 	CreateSlice,
 	CreateTuple,
 	CreateVariant,
+	CreateOptional,
 	Eq,
 	Neq,
 	SizeOf,
@@ -211,9 +215,15 @@ namespace compiler::lir {
 	 * @brief Reference to a function in LIR.
 	 */
 	struct FunctionLiteral final {
-		base::StrID                                         mangled_name;
-		LIRAbi                                              abi;
-		bool                                                link_once;
+		base::StrID mangled_name;
+		LIRAbi      abi;
+		bool        link_once;
+
+		/**
+		 * The layout of the function type, i.e. the layout of the function used as a value.
+		 */
+		CRef<tsl::TypeLayout> layout;
+
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
 
@@ -227,12 +237,18 @@ namespace compiler::lir {
 	};
 
 	/**
-	 * @brief Metadata for LIR local variables or function arguments.
-	 * Used by the backends for the DebugInfo.
+	 * @brief Metadata for LIR variables: locals, function arguments and globals.
+	 * Used by the backends for the DebugInfo and for positions in error messages.
 	 */
-	struct LIRLocalMetadata {
+	struct LIRVariableMetadata {
 		base::Optional<base::StrID>         source_code_name;
 		base::Optional<dia::StablePosition> position;
+
+		/**
+		 * @brief Builds the metadata (source name and PST position) of a HELIOS symbol.
+		 * The position is left empty when the symbol has no PST element.
+		 */
+		static LIRVariableMetadata fromHeliosId(query::Context& ctx, helios::SymID helios_id);
 	};
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
@@ -256,7 +272,7 @@ namespace compiler::lir {
 		 */
 		base::Optional<u64> parameter_index;
 
-		LIRLocalMetadata metadata;
+		LIRVariableMetadata metadata;
 
 		LIRLocalSpecialKind special_kind;
 
@@ -265,7 +281,7 @@ namespace compiler::lir {
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
 			const base::Optional<u64>           parameter_index,
-			LIRLocalMetadata                    metadata,
+			LIRVariableMetadata                 metadata,
 			LIRLocalSpecialKind                 special_kind = LIRLocalSpecialKind::Normal
 		):
 			  helios_id(helios_id),
@@ -611,10 +627,22 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Parameters of `Operation::IndirectCall`: the signature of the called function.
+	 */
+	struct IndirectCallParameters final {
+		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
+		CRef<tsl::TypeLayout>                               return_type_layout;
+	};
+
+	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
+	using InstrParameters = std::variant<
+		NoInstrParameters,
+		CastParameters,
+		VariantParameters,
+		MetaParameters,
+		IndirectCallParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;
@@ -726,6 +754,11 @@ namespace compiler::lir {
 		 */
 		bool ignore_on_llvm;
 
+		/**
+		 * The layout of the function type, i.e. the layout of the function used as a value.
+		 */
+		CRef<tsl::TypeLayout> layout;
+
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;
 
@@ -785,6 +818,11 @@ namespace compiler::lir {
 
 		LIRGlobal                                         global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+
+		/**
+		 * @brief Source name and position of the global's declaration.
+		 */
+		LIRVariableMetadata metadata;
 
 		/**
 		 * @brief Returns the constructor and destructor pair for the global.

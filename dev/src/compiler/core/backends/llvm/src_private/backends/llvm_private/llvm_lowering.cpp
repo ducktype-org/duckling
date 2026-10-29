@@ -7,6 +7,7 @@
 #include <backends/llvm_private/abi_converter.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <concepts>
 #include <mutex>
 #include <type_traits>
 
@@ -197,11 +198,8 @@ namespace {
 					string_value.value, /*is_string_class=*/true, llvm_type, llvm_module
 				);
 			}
-			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
-				// @TODO: #2506 Implement this
-				throw base::NotYetImplemented(base::strConcat(
-					"Conversion from CTV to LLVM constant for tuples is not implemented yet"
-				));
+			variant_case_novalue(compiler::ctv::CompileTimeValue::TypeTuple) {
+				return llvm::Constant::getNullValue(llvm_type.get());
 			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
@@ -278,6 +276,14 @@ namespace compiler::backend_llvm {
 	 * @note bools in LLVM are just i1 (i8 when stored in memory)
 	 */
 	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
+
+	llvm::IntegerType* variantTagType(
+		llvm::LLVMContext& context, const tsl::VariantTypeLayout& layout
+	) {
+		return llvm::Type::getIntNTy(
+			context, base::safeIntConv<unsigned>(layout.getTagSize().asInt())
+		);
+	}
 
 	/**
 	 * @brief Converts a TypeLayout into its corresponding llvm::Type representation.
@@ -377,6 +383,9 @@ namespace compiler::backend_llvm {
 			variant_case(tsl::PointerTypeLayout, pointer_layout) {
 				return llvm::PointerType::getUnqual(llvm_context);
 			}
+			variant_case_novalue(tsl::FunctionalTypeLayout) {
+				return llvm::PointerType::getUnqual(llvm_context);
+			}
 			variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 				llvm::Type* element_type
 					= typeFromLayout(module, static_array_layout.getElementLayout());
@@ -392,17 +401,18 @@ namespace compiler::backend_llvm {
 			}
 			variant_case(tsl::VariantTypeLayout, variant_layout) {
 				// Variants lower to a packed literal struct (structurally uniqued by LLVM):
-				// { i8 tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
+				// { tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
 				const usize data_offset = variant_layout.getDataOffset().asInt();
+				const usize tag_bytes   = base::bits2bytes(variant_layout.getTagSize()).asInt();
 				const usize total_bytes = base::bits2bytes(layout->getSize()).asInt();
 				const usize data_bytes  = total_bytes - data_offset;
 
 				llvm::Type* i8_type = llvm::Type::getInt8Ty(llvm_context);
 
 				std::vector<llvm::Type*> members;
-				members.push_back(i8_type);  // The tag.
-				if (data_offset > 1)
-					members.push_back(llvm::ArrayType::get(i8_type, data_offset - 1));
+				members.push_back(variantTagType(llvm_context, variant_layout));
+				if (data_offset > tag_bytes)
+					members.push_back(llvm::ArrayType::get(i8_type, data_offset - tag_bytes));
 				members.push_back(llvm::ArrayType::get(i8_type, data_bytes));
 
 				return llvm::StructType::get(llvm_context, members, /*isPacked=*/true);
@@ -785,6 +795,9 @@ namespace compiler::backend_llvm {
 					return builder.CreateLoad(llvm_type, accessed_ptr);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
+				variant_case(lir::FunctionLiteral, func) {
+					return getOrInsertFunctionPrototypeFromLiteral(module, func).getCallee();
+				}
 				variant_default { CORE_PANIC("unknown lir location type"); }
 			}
 			CORE_UNREACHABLE();
@@ -874,6 +887,7 @@ namespace compiler::backend_llvm {
 			variant_match(value.getVariant()) {
 				variant_case(lir::LIRPlace, place) { return place.layout; }
 				variant_case(lir::LIRConstant, constant) { return constant.layout; }
+				variant_case(lir::FunctionLiteral, func) { return func.layout; }
 				variant_default { CORE_PANIC("Cannot get the layout of this LIR value"); }
 			}
 			CORE_UNREACHABLE();
@@ -1295,14 +1309,63 @@ namespace compiler::backend_llvm {
 				"Non default abi lowering."
 			);
 
-			auto signature = lowerDefaultAbiSignature(
-				module, *function_literal.parameter_layouts, function_literal.return_type_layout
+			return lowerDefaultAbiCall(
+				lir_instruction,
+				builder,
+				*function_literal.parameter_layouts,
+				function_literal.return_type_layout,
+				[&](const LoweredDefaultAbiSignature&) {
+					return getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
+				}
 			);
+		}
+
+		/**
+		 * @brief Lowers a LIR `IndirectCall` instruction, a call through a function pointer stored
+		 * in the first argument, using the default ABI.
+		 * @return The call value for a direct result, or null when an indirect result was written
+		 * directly to the LIR output through `sret`.
+		 */
+		llvm::Value* lowerIndirectCallInstruction(
+			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
+		) {
+			const auto& call_params
+				= std::get<lir::IndirectCallParameters>(lir_instruction.extra_params);
+
+			return lowerDefaultAbiCall(
+				lir_instruction,
+				builder,
+				*call_params.parameter_layouts,
+				call_params.return_type_layout,
+				[&](const LoweredDefaultAbiSignature& signature) {
+					return llvm::FunctionCallee(
+						signature.type, loadLIRValue(lir_instruction.arguments.at(0), builder)
+					);
+				}
+			);
+		}
+
+		/**
+		 * @brief Lowers a call with the default ABI. The first argument of @p lir_instruction is
+		 * the callee, the rest are the arguments matching @p parameter_layouts.
+		 * @param get_callee Produces the called function for the lowered signature, it is invoked
+		 * after the arguments are lowered.
+		 * @return The call value for a direct result, or null when an indirect result was written
+		 * directly to the LIR output through `sret`.
+		 */
+		template<std::invocable<const LoweredDefaultAbiSignature&> CalleeGetter>
+		llvm::Value* lowerDefaultAbiCall(
+			const lir::Instruction&                   lir_instruction,
+			llvm::IRBuilder<>&                        builder,
+			const std::vector<CRef<tsl::TypeLayout>>& parameter_layouts,
+			CRef<tsl::TypeLayout>                     return_type_layout,
+			CalleeGetter                              get_callee
+		) {
+			auto signature
+				= lowerDefaultAbiSignature(module, parameter_layouts, return_type_layout);
 
 			std::vector<llvm::Value*> args;
-			args.reserve(
-				function_literal.parameter_layouts->size() + (signature.return_indirect ? 1 : 0)
-			);
+			args.reserve(parameter_layouts.size() + (signature.return_indirect ? 1 : 0));
 
 			if (signature.return_indirect) {
 				if (lir_instruction.output.has_value()) {
@@ -1312,7 +1375,7 @@ namespace compiler::backend_llvm {
 					[[maybe_unused]] llvm::Type* output_type
 						= typeFromLayout(module, lir_instruction.output.value().layout);
 					[[maybe_unused]] llvm::Type* return_type
-						= typeFromLayout(module, function_literal.return_type_layout);
+						= typeFromLayout(module, return_type_layout);
 					CORE_ASSERT(
 						data_layout.getTypeAllocSize(output_type)
 							== data_layout.getTypeAllocSize(return_type),
@@ -1320,13 +1383,13 @@ namespace compiler::backend_llvm {
 					);
 					args.push_back(gepPointerFromLIRPlace(lir_instruction.output.value(), builder));
 				} else {
-					args.push_back(createAllocaForLayout(
-						module, builder, function_literal.return_type_layout, "discarded_sret"
-					));
+					args.push_back(
+						createAllocaForLayout(module, builder, return_type_layout, "discarded_sret")
+					);
 				}
 			}
 
-			for (usize i = 0; i < function_literal.parameter_layouts->size(); ++i) {
+			for (usize i = 0; i < parameter_layouts.size(); ++i) {
 				const auto& argument = lir_instruction.arguments.at(i + 1);
 				if (signature.parameter_is_indirect.at(i))
 					args.push_back(loadLIRValueToPointer(argument, builder));
@@ -1334,7 +1397,7 @@ namespace compiler::backend_llvm {
 					args.push_back(loadLIRValue(argument, builder));
 			}
 
-			auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
+			llvm::FunctionCallee callee = get_callee(signature);
 
 			llvm::CallInst* call_instruction = builder.CreateCall(callee, args);
 			for (const auto& [idx, attr]: signature.attributes)
@@ -1458,10 +1521,10 @@ namespace compiler::backend_llvm {
 				llvm::Value* variant_ptr
 					= gepPointerFromLIRPlace(lir_instruction.output.value(), builder);
 
-				// The tag lives at offset 0.
+				// The tag lives at offset 0 and uses the width specified by the variant layout.
+				llvm::IntegerType* tag_type = variantTagType(builder.getContext(), variant_layout);
 				builder.CreateStore(
-					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
-					variant_ptr
+					llvm::ConstantInt::get(tag_type, params.alternative_index + 1), variant_ptr
 				);
 
 				// An alternative whose payload carries no information (e.g. `()`) has no value to
@@ -1490,13 +1553,13 @@ namespace compiler::backend_llvm {
 				// in the place rather than the place's own address.
 				llvm::Value* variant_ptr = loadLIRValue(lir_instruction.arguments.at(0), builder);
 
-				llvm::Value* tag
-					= builder.CreateLoad(builder.getInt8Ty(), variant_ptr, "variant_tag");
-				llvm::Value* tag_matches = builder.CreateICmpEQ(
-					tag,
-					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
-					"tag_matches"
-				);
+				llvm::IntegerType* tag_type = variantTagType(builder.getContext(), variant_layout);
+				llvm::Value*       tag = builder.CreateLoad(tag_type, variant_ptr, "variant_tag");
+				llvm::Value*       tag_matches = builder.CreateICmpEQ(
+                    tag,
+                    llvm::ConstantInt::get(tag_type, params.alternative_index + 1),
+                    "tag_matches"
+                );
 				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
 					builder.getInt8Ty(),
 					variant_ptr,
@@ -1633,6 +1696,16 @@ namespace compiler::backend_llvm {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
 				llvm::Value* call_value = lowerCallInstruction(lir_instruction, builder);
+
+				if (lir_instruction.output.has_value() && call_value != nullptr)
+					storeOutput(lir_instruction.output.value(), call_value, builder);
+
+				break;
+			}
+			case IndirectCall: {
+				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
+
+				llvm::Value* call_value = lowerIndirectCallInstruction(lir_instruction, builder);
 
 				if (lir_instruction.output.has_value() && call_value != nullptr)
 					storeOutput(lir_instruction.output.value(), call_value, builder);

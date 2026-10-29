@@ -16,7 +16,9 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
+#include <ranges>
 #include <tuple>
 #include <type_traits>
 
@@ -156,16 +158,13 @@ namespace vm::loader::compiler::safe::detail {
 		 */
 		u64 sharedStackSpaceSize(base::StrID function_name) const {
 			const auto& signature = compiler.high_program.functions().at(function_name)->signature;
+			const auto low_types = std::views::transform([this](const code::Identifier& type_name) {
+				return resolveTypeName(type_name.str);
+			});
 
-			// Summed over the low types, the same ones `sharedStackSpaceSizeOfMethod` and the
-			// executor measure, so there is a single answer to how big a variable is.
-			u64 size = 0;
-			for (const auto& parameter: signature.parameters)
-				size += resolveTypeName(parameter.str)->getSize().asInt();
-			for (const auto& result: signature.result_types)
-				size += resolveTypeName(result)->getSize().asInt();
-
-			return size;
+			return sharedStackSpaceSizeOfTypes(
+				signature.parameters | low_types, signature.result_types | low_types
+			);
 		}
 
 		/**
@@ -182,8 +181,29 @@ namespace vm::loader::compiler::safe::detail {
 					method.method_name
 				);
 
-			return method_type->getParametersSize().value().asInt()
-			     + method_type->getResultTypeSize().value().asInt();
+			return sharedStackSpaceSizeOfFunctionType(method_type);
+		}
+
+		/**
+		 * @brief Same as `sharedStackSpaceSize`, for a call of a function of the given function
+		 * type.
+		 */
+		u64 sharedStackSpaceSizeOfFunctionType(TypeCRef function_type) const {
+			const auto function = function_type->get<kind::Function>().value();
+			return sharedStackSpaceSizeOfTypes(function->parameters, function->result_types);
+		}
+
+		/**
+		 * @brief Same as `sharedStackSpaceSize`, for a call with the given parameter and result
+		 * types.
+		 */
+		static u64 sharedStackSpaceSizeOfTypes(
+			std::ranges::input_range auto&& parameters, std::ranges::input_range auto&& results
+		) {
+			u64 size = 0;
+			for (const TypeCRef type: parameters) size += type->getSize().asInt();
+			for (const TypeCRef type: results) size += type->getSize().asInt();
+			return size;
 		}
 
 		/**
@@ -235,7 +255,7 @@ namespace vm::loader::compiler::safe::detail {
 
 			if (is_control_flow) {
 				is_control_flow = false;
-				addLow<Op_check_strategy>();
+				addLow<Op_checkStrategy>();
 			}
 
 			[&]<typename... LowArgs>(std::tuple<LowArgs...>*) {
@@ -297,7 +317,8 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_call_cfunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_ffifunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_func, _) { is_control_flow = true; }
-			instr_case(high::Op_virtual_call_pptr_method, _) { is_control_flow = true; }
+			instr_case(high::Op_call_pfun, _) { is_control_flow = true; }
+			instr_case(high::Op_virtualCall_pptr_method, _) { is_control_flow = true; }
 			instr_default { is_control_flow = false; }
 		}
 		POP_DIAGNOSTIC
@@ -467,57 +488,57 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_udiv_p16_imm, i) { addLow<Op_udiv_p16_imm>(i.dst, i.src); }
 			instr_case(high::Op_udiv_p8_p8, i) { addLow<Op_udiv_p8_p8>(i.dst, i.src); }
 			instr_case(high::Op_udiv_p8_imm, i) { addLow<Op_udiv_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_log_and_p8_p8, i) { addLow<Op_log_and_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_log_and_p8_imm, i) { addLow<Op_log_and_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_log_or_p8_p8, i) { addLow<Op_log_or_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_log_or_p8_imm, i) { addLow<Op_log_or_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_log_xor_p8_p8, i) { addLow<Op_log_xor_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_log_xor_p8_imm, i) { addLow<Op_log_xor_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_log_not_p8, i) { addLow<Op_log_not_p8>(i.dst); }
-			instr_case(high::Op_bit_and_p64_p64, i) { addLow<Op_bit_and_p64_p64>(i.dst, i.src); }
-			instr_case(high::Op_bit_and_p64_imm, i) { addLow<Op_bit_and_p64_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p64_p64, i) { addLow<Op_bit_or_p64_p64>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p64_imm, i) { addLow<Op_bit_or_p64_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p64_p64, i) { addLow<Op_bit_xor_p64_p64>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p64_imm, i) { addLow<Op_bit_xor_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_logAnd_p8_p8, i) { addLow<Op_logAnd_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_logAnd_p8_imm, i) { addLow<Op_logAnd_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_logOr_p8_p8, i) { addLow<Op_logOr_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_logOr_p8_imm, i) { addLow<Op_logOr_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_logXor_p8_p8, i) { addLow<Op_logXor_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_logXor_p8_imm, i) { addLow<Op_logXor_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_logNot_p8, i) { addLow<Op_logNot_p8>(i.dst); }
+			instr_case(high::Op_bitAnd_p64_p64, i) { addLow<Op_bitAnd_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_bitAnd_p64_imm, i) { addLow<Op_bitAnd_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p64_p64, i) { addLow<Op_bitOr_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p64_imm, i) { addLow<Op_bitOr_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p64_p64, i) { addLow<Op_bitXor_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p64_imm, i) { addLow<Op_bitXor_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_shl_p64_p64, i) { addLow<Op_shl_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_shl_p64_imm, i) { addLow<Op_shl_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_shr_p64_p64, i) { addLow<Op_shr_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_shr_p64_imm, i) { addLow<Op_shr_p64_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_not_p64, i) { addLow<Op_bit_not_p64>(i.dst); }
-			instr_case(high::Op_bit_and_p32_p32, i) { addLow<Op_bit_and_p32_p32>(i.dst, i.src); }
-			instr_case(high::Op_bit_and_p32_imm, i) { addLow<Op_bit_and_p32_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p32_p32, i) { addLow<Op_bit_or_p32_p32>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p32_imm, i) { addLow<Op_bit_or_p32_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p32_p32, i) { addLow<Op_bit_xor_p32_p32>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p32_imm, i) { addLow<Op_bit_xor_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitNot_p64, i) { addLow<Op_bitNot_p64>(i.dst); }
+			instr_case(high::Op_bitAnd_p32_p32, i) { addLow<Op_bitAnd_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_bitAnd_p32_imm, i) { addLow<Op_bitAnd_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p32_p32, i) { addLow<Op_bitOr_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p32_imm, i) { addLow<Op_bitOr_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p32_p32, i) { addLow<Op_bitXor_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p32_imm, i) { addLow<Op_bitXor_p32_imm>(i.dst, i.src); }
 			instr_case(high::Op_shl_p32_p32, i) { addLow<Op_shl_p32_p32>(i.dst, i.src); }
 			instr_case(high::Op_shl_p32_imm, i) { addLow<Op_shl_p32_imm>(i.dst, i.src); }
 			instr_case(high::Op_shr_p32_p32, i) { addLow<Op_shr_p32_p32>(i.dst, i.src); }
 			instr_case(high::Op_shr_p32_imm, i) { addLow<Op_shr_p32_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_not_p32, i) { addLow<Op_bit_not_p32>(i.dst); }
-			instr_case(high::Op_bit_and_p16_p16, i) { addLow<Op_bit_and_p16_p16>(i.dst, i.src); }
-			instr_case(high::Op_bit_and_p16_imm, i) { addLow<Op_bit_and_p16_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p16_p16, i) { addLow<Op_bit_or_p16_p16>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p16_imm, i) { addLow<Op_bit_or_p16_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p16_p16, i) { addLow<Op_bit_xor_p16_p16>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p16_imm, i) { addLow<Op_bit_xor_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitNot_p32, i) { addLow<Op_bitNot_p32>(i.dst); }
+			instr_case(high::Op_bitAnd_p16_p16, i) { addLow<Op_bitAnd_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_bitAnd_p16_imm, i) { addLow<Op_bitAnd_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p16_p16, i) { addLow<Op_bitOr_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p16_imm, i) { addLow<Op_bitOr_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p16_p16, i) { addLow<Op_bitXor_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p16_imm, i) { addLow<Op_bitXor_p16_imm>(i.dst, i.src); }
 			instr_case(high::Op_shl_p16_p16, i) { addLow<Op_shl_p16_p16>(i.dst, i.src); }
 			instr_case(high::Op_shl_p16_imm, i) { addLow<Op_shl_p16_imm>(i.dst, i.src); }
 			instr_case(high::Op_shr_p16_p16, i) { addLow<Op_shr_p16_p16>(i.dst, i.src); }
 			instr_case(high::Op_shr_p16_imm, i) { addLow<Op_shr_p16_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_not_p16, i) { addLow<Op_bit_not_p16>(i.dst); }
-			instr_case(high::Op_bit_and_p8_p8, i) { addLow<Op_bit_and_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_bit_and_p8_imm, i) { addLow<Op_bit_and_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p8_p8, i) { addLow<Op_bit_or_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_bit_or_p8_imm, i) { addLow<Op_bit_or_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p8_p8, i) { addLow<Op_bit_xor_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_bit_xor_p8_imm, i) { addLow<Op_bit_xor_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitNot_p16, i) { addLow<Op_bitNot_p16>(i.dst); }
+			instr_case(high::Op_bitAnd_p8_p8, i) { addLow<Op_bitAnd_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_bitAnd_p8_imm, i) { addLow<Op_bitAnd_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p8_p8, i) { addLow<Op_bitOr_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_bitOr_p8_imm, i) { addLow<Op_bitOr_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p8_p8, i) { addLow<Op_bitXor_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_bitXor_p8_imm, i) { addLow<Op_bitXor_p8_imm>(i.dst, i.src); }
 			instr_case(high::Op_shl_p8_p8, i) { addLow<Op_shl_p8_p8>(i.dst, i.src); }
 			instr_case(high::Op_shl_p8_imm, i) { addLow<Op_shl_p8_imm>(i.dst, i.src); }
 			instr_case(high::Op_shr_p8_p8, i) { addLow<Op_shr_p8_p8>(i.dst, i.src); }
 			instr_case(high::Op_shr_p8_imm, i) { addLow<Op_shr_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_bit_not_p8, i) { addLow<Op_bit_not_p8>(i.dst); }
+			instr_case(high::Op_bitNot_p8, i) { addLow<Op_bitNot_p8>(i.dst); }
 			instr_case(high::Op_cmpEq_p64_p64, i) { addLow<Op_cmpEq_p64_p64>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_p64_imm, i) { addLow<Op_cmpEq_p64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_p64_p64, i) { addLow<Op_cmpNeq_p64_p64>(i.lhs, i.rhs); }
@@ -650,15 +671,27 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
 			instr_case(high::Op_call_func, i) {
-				addLow<Op_call_func>(
+				addLow<Op_call_func_off>(
 					i.function, calleeStackDistance(sharedStackSpaceSize(i.function.function_name))
 				);
 			}
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_call_ffifunc, i) { addLow<Op_call_ffifunc>(i.function); }
-			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
-			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
+			instr_case(high::Op_mov_pfun_func, i) {
+				const u64 function_id
+					= compiler.high_program.functions().idOf(i.function.function_name).value();
+				addLow<Op_mov_p64_imm>(i.dst, vm::opargs::Immediate{ function_id });
+			}
+			instr_case(high::Op_mov_pfun_pfun, i) { addLow<Op_mov_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_call_pfun, i) {
+				addLow<Op_call_p64_off>(
+					i.callee,
+					calleeStackDistance(sharedStackSpaceSizeOfFunctionType(getPlaceType(i.callee)))
+				);
+			}
+			instr_case(high::Op_setThreadCtx_func, i) { addLow<Op_setThreadCtx_func>(i.function); }
+			instr_case(high::Op_retTailcall_func, i) { addLow<Op_retTailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) {
 				// The return values sit at the bottom of the local stack and belong to the
 				// caller. Everything above them is still live and has to be popped here, as
@@ -701,8 +734,8 @@ namespace vm::loader::compiler::safe::detail {
 				opargs::Type variant_type = getPlaceType(i.dst)->getInnerType().value()->getName();
 				addLow<Op_ext_type>(variant_type);
 			}
-			instr_case(high::Op_virtual_call_pptr_method, i) {
-				addLow<Op_virtual_call_pptr_method>(i.object_ptr, i.method);
+			instr_case(high::Op_virtualCall_pptr_method, i) {
+				addLow<Op_virtualCall_pptr_method>(i.object_ptr, i.method);
 				// The distance rides an `ext_imm`, whose single argument also carries byte sizes
 				// and plain constants elsewhere, so it cannot be an `Offset` without a second
 				// extension opcode.
@@ -873,7 +906,15 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fpext_p64_p32, i) { addLow<Op_fpext_p64_p32>(i.dst, i.src); }
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
-			instr_case(high::Op_initFromVMValue, i) { addLow<Op_initFromVMValue>(); }
+			instr_case(high::Op_initFromVMValue_pany_type_imm, i) {
+				const auto* safe_vm_value = dynamic_cast<const SafeVMValue*>(
+					std::bit_cast<const IVMValue*>(i.vm_value.value)
+				);
+				CORE_ASSERT(safe_vm_value != nullptr, "Expected a VMValue of the safe VM.");
+				addLow<Op_initFromVMValue_imm_off>(
+					vm::opargs::Immediate{ std::bit_cast<u64>(safe_vm_value) }, byteOffsetOf(i.var)
+				);
+			}
 			instr_case(high::Comment, i) {
 				// Do nothing
 			}

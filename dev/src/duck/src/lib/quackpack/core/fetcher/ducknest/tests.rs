@@ -16,7 +16,7 @@ use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
 use crate::util::file_locks::FileLockManager;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {
@@ -79,7 +79,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg1],
+        dependencies: registry::Dependencies(vec![pkg1]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -93,7 +93,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg2, pkg3],
+        dependencies: registry::Dependencies(vec![pkg2, pkg3]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -107,7 +107,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
             links: None,
         },
-        dependencies: registry::Dependencies::new(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -179,7 +179,7 @@ fn single_metadata() {
     .unwrap();
     assert_eq!(response.metadata.name, "foo");
     assert_eq!(response.metadata.version, Version::new(1, 2, 3));
-    assert_eq!(response.dependencies.len(), 2);
+    assert_eq!(response.dependencies.0.len(), 2);
 
     assert!(
         block_on(client.get_exact_metadata(types::PackageWithUrl {
@@ -220,7 +220,7 @@ fn download_blob() {
     ))
     .unwrap();
     assert_eq!(
-        dir.path().join("target").read_to_string().unwrap(),
+        read_from_path_to_string(dir.path().join("target")).unwrap(),
         "foo-1.2.3"
     );
 }

@@ -19,6 +19,7 @@
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <driver/repl_utils/script_helpers.hpp>
+#include <driver/task/task.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/dbc_linking.hpp>
@@ -67,15 +68,18 @@
 #include <array>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
-		return { module_id.queryUnstablePerfectHash(),
-			     std::to_underlying(backend_type),
-			     build_debug_info };
+		hashing::ComponentHash::HashAlg hasher;
+		hashing::addToHash(hasher, module_id.queryUnstablePerfectHash());
+		hashing::addToHash(hasher, std::to_underlying(backend_type));
+		hashing::addToHash(hasher, build_debug_info);
+		return hasher.finalize();
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
@@ -419,21 +423,51 @@ namespace compiler::driver {
 
 			// Track wrapper symbols to build the synthetic main that runs them in order.
 			// We preserve the original statement order to match script semantics.
-			std::vector<helios::SymID>         wrapper_symbols;
+			std::vector<helios::SymID> wrapper_symbols;
+			std::ostringstream         aggregate_mir_dump;
+			std::ostringstream         aggregate_hir_dump;
+			auto                       flush_dumps = [&] {
+                if (driver::dump_ir_options.dump_hir && !aggregate_hir_dump.view().empty()) {
+                    auto output_file = getDebugDumpArtifact(
+                        base::StrID(base::strConcat(merged.module_id_human.strView(), ".hir"))
+                    );
+                    output_file << aggregate_hir_dump.view();
+                }
+                if (driver::dump_ir_options.dump_mir && !aggregate_mir_dump.view().empty()) {
+                    auto output_file = getDebugDumpArtifact(
+                        base::StrID(base::strConcat(merged.module_id_human.strView(), ".mir"))
+                    );
+                    output_file << aggregate_mir_dump.view();
+                }
+                if (driver::dump_ir_options.dump_lir
+                    && (!merged.lir_unit.lir_functions.empty()
+                        || !merged.lir_unit.lir_globals.empty())) {
+                    auto output_file = getDebugDumpArtifact(
+                        base::StrID(base::strConcat(merged.module_id_human.strView(), ".lir"))
+                    );
+                    merged.debugPrint(ctx, output_file);
+                }
+			};
+			auto fail
+				= [&](std::string message) -> std::expected<LIRUnitWithBackendName, std::string> {
+				flush_dumps();
+				return std::unexpected(std::move(message));
+			};
 			base::Optional<frontend::ModuleID> parent_module_id;
 			u64                                statement_counter = 0;
+			auto                               session_id        = repl::ReplSessionID::next();
 
 			if (split_result->empty()) {
 				// Empty input should still produce a valid synthetic script main wrapper with
 				// no statement calls.
 				auto empty_script_module
-					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_");
+					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_", session_id);
 				parent_module_id = empty_script_module->getModuleID();
 			}
 
 			for (const auto& statement_source: *split_result) {
 				auto module_ref = repl::createSyntheticChainedStatementModule(
-					statement_source, parent_module_id, statement_counter, "script_"
+					statement_source, parent_module_id, statement_counter, "script_", session_id
 				);
 				auto module_id   = module_ref->getModuleID();
 				parent_module_id = module_id;
@@ -443,13 +477,12 @@ namespace compiler::driver {
 					"compile_script: statement #",
 					statement_counter + 1,
 					", module #",
-					module_id.queryUnstablePerfectHash(),
+					module_id.queryUnstablePerfectHash().toStringHex(),
 					"\n"
 				);
 
 				auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
-				if (!statement_info_result.has_value())
-					return std::unexpected(statement_info_result.error());
+				if (!statement_info_result.has_value()) return fail(statement_info_result.error());
 				auto statement_info = statement_info_result.value();
 				auto module_name    = repl::getStatementModuleName(module_id, "script_module_");
 				auto module_name_id = base::StrID(module_name.c_str());
@@ -459,12 +492,18 @@ namespace compiler::driver {
 						CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
 						auto hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
 
-						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
+						if (not hout_unit.has_value()) return fail(hout_unit.error());
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, *hout_unit.value(), module_name_id, module_name_id
+							ctx,
+							*hout_unit.value(),
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
-							return std::unexpected("Failed to compile definition statement to LIR");
+							return fail("Failed to compile definition statement to LIR");
 						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 					}
 					variant_case_novalue(
@@ -474,8 +513,7 @@ namespace compiler::driver {
 						auto wrapper_result = repl::buildStatementWrapper(
 							ctx, statement_info_result.value(), statement_counter
 						);
-						if (!wrapper_result.has_value())
-							return std::unexpected(wrapper_result.error());
+						if (!wrapper_result.has_value()) return fail(wrapper_result.error());
 
 						wrapper_symbols.push_back(
 							wrapper_result->wrapper_function.declaration->original_symbol
@@ -483,14 +521,19 @@ namespace compiler::driver {
 
 						auto hout_unit_result
 							= repl::makeExecutableHOUTUnit(ctx, wrapper_result->wrapper_function);
-						if (not hout_unit_result.has_value())
-							return std::unexpected(hout_unit_result.error());
+						if (not hout_unit_result.has_value()) return fail(hout_unit_result.error());
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, std::move(hout_unit_result).value(), module_name_id, module_name_id
+							ctx,
+							std::move(hout_unit_result).value(),
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
-							return std::unexpected("Failed to compile executable statement to LIR");
+							return fail("Failed to compile executable statement to LIR");
 
 						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 					}
@@ -499,16 +542,21 @@ namespace compiler::driver {
 
 						auto wrapper_result
 							= repl::buildVariableWrapper(ctx, value, statement_counter);
-						if (not wrapper_result.has_value())
-							return std::unexpected(wrapper_result.error());
+						if (not wrapper_result.has_value()) return fail(wrapper_result.error());
 
 						wrapper_symbols.push_back(wrapper_result->initializer_function);
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, wrapper_result->hout_unit, module_name_id, module_name_id
+							ctx,
+							wrapper_result->hout_unit,
+							module_name_id,
+							module_name_id,
+							false,
+							&aggregate_mir_dump,
+							&aggregate_hir_dump
 						);
 						if (lir_result.hasFailed())
-							return std::unexpected("Failed to compile variable statement to LIR");
+							return fail("Failed to compile variable statement to LIR");
 
 						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 					}
@@ -519,7 +567,7 @@ namespace compiler::driver {
 			}
 
 			if (!parent_module_id.has_value())
-				return std::unexpected("Script has no parent module for synthetic main");
+				return fail("Script has no parent module for synthetic main");
 
 			// We use the last (or empty one when script is empty) statement's module
 			// (parent_module_id) because it sits at the end of the REPL-style chain and has a
@@ -530,10 +578,15 @@ namespace compiler::driver {
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
 			auto main_lir = compileHOUTUnitToLIRModuleData(
-				ctx, main_unit, merged.module_id, merged.module_id_human
+				ctx,
+				main_unit,
+				merged.module_id,
+				merged.module_id_human,
+				false,
+				&aggregate_mir_dump,
+				&aggregate_hir_dump
 			);
-			if (main_lir.hasFailed())
-				return std::unexpected("Failed to compile script main to LIR");
+			if (main_lir.hasFailed()) return fail("Failed to compile script main to LIR");
 			repl::appendScriptLIRModuleData(merged, main_lir.valueOrPanic());
 
 			// @TODO: #2694 #2424 come back to this, and maybe remove or adapt this call
@@ -543,6 +596,7 @@ namespace compiler::driver {
 			// solution for now.
 			merged.lir_unit.deduplicateSymbols();
 
+			flush_dumps();
 			return merged;
 		}
 
@@ -594,6 +648,8 @@ namespace compiler::driver {
 						backend_llvm::CompilationOutputType::Object
 					);
 				}
+
+				if (linking_options.no_link) return;
 
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -653,6 +709,8 @@ namespace compiler::driver {
 
 				vm::code::serializeCode(dvm_module.code, module_output_file);
 				module_output_file.close();
+
+				if (linking_options.no_link) return;
 
 				auto& script_context = global_state::getScriptContext();
 				auto  output_file    = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -747,6 +805,8 @@ namespace compiler::driver {
 								  const auto res = vm::api::deinitOrKill(pid);
 								  if (not res)
 									  std::cerr << vm::api::errorToString(res.error()) << '\n';
+								  else if (res->has_value())
+									  std::cerr << res->value().toString();
 							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
@@ -755,7 +815,6 @@ namespace compiler::driver {
 								  })
 				                  .and_then([&] { return vm::api::run(pid); })
 				                  .and_then([&] { return vm::api::join(pid); })
-				                  .and_then([&] { return vm::api::getExitValue(pid); })
 				                  .transform([](vm::api::ExitValue exit_values) {
 									  CORE_ASSERT(
 										  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),
@@ -826,10 +885,10 @@ namespace compiler::driver {
 		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			dvm_objects_by_root_module;
 
-		std::function<void(frontend::ModuleID, BackendType, frontend::ModuleID)> collect_modules
-			= [&](frontend::ModuleID module_id,
-		          BackendType        backend,
-		          frontend::ModuleID package_root_module) -> void {
+		auto collect_modules = [&](this const auto&   self,
+		                           frontend::ModuleID module_id,
+		                           BackendType        backend,
+		                           frontend::ModuleID package_root_module) -> void {
 			// @TODO: #2354 This is temporary.
 			const bool build_debug_info = backend == BackendType::DVM;
 
@@ -838,7 +897,7 @@ namespace compiler::driver {
 			);
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules)
-				collect_modules(sub_module, backend, package_root_module);
+				self(sub_module, backend, package_root_module);
 		};
 
 		for (const auto& task: tasks) {
@@ -927,6 +986,8 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
+					if (target_exe.linking_options.no_link) break;
+
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
 						target_exe.output_file_name
 					);
@@ -951,6 +1012,8 @@ namespace compiler::driver {
 					}
 				}
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
+					if (target_lib.archiving_options.no_link) break;
+
 					auto root_collection = global_state::getRootCollection();
 					if_opt_some(target_lib.custom_art_collection, custom_art_collection) {
 						root_collection = custom_art_collection;
@@ -983,6 +1046,8 @@ namespace compiler::driver {
 					// Do nothing for plain object files
 				}
 				variant_case(BuildTargetDVMLibrary, target_dvm) {
+					if (target_dvm.dvm_linking_options.no_link) break;
+
 					auto root_collection = global_state::getRootCollection();
 					if_opt_some(target_dvm.custom_art_collection, custom_art_collection) {
 						root_collection = custom_art_collection;
@@ -1004,6 +1069,8 @@ namespace compiler::driver {
 						result = base::BAD;
 				}
 				variant_case(BuildTargetDVMExecutable, target_dvm) {
+					if (target_dvm.dvm_linking_options.no_link) break;
+
 					// The standard library (and any other dependency) is linked in through
 					// `dvm_linking_options.link_libraries`.
 					const std::vector<artifacts::FileArtifact>& dbc_arts

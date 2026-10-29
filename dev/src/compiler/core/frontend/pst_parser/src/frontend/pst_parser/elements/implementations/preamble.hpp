@@ -57,4 +57,24 @@ namespace pst {
 			state.logInt(makeBox<BadStatementChoice<Type>>(state.ctokens().peek().getPosition()));
 		return good;
 	}
+
+	/**
+	 * @brief Consumes a contextual operator fixity specifier when it precedes an operator name.
+	 *
+	 * `prefix` and `suffix` remain regular identifiers everywhere else, including as function names.
+	 */
+	inline OperatorFixity parseOperatorFixity(LangParserState& state) {
+		if (!state[0].isIdentifier() || !state[1].isOperatorSymbol()) return OperatorFixity::None;
+
+		const auto fixity = state[0].getStrValue();
+		if (fixity == "prefix") {
+			state.tokens().next();
+			return OperatorFixity::Prefix;
+		}
+		if (fixity == "suffix") {
+			state.tokens().next();
+			return OperatorFixity::Suffix;
+		}
+		return OperatorFixity::None;
+	}
 }

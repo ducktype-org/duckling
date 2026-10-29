@@ -187,70 +187,70 @@ DEF_INSTR(fneg_p32, (vm::opargs::Place32, dst))
 // Evaluate logical operations (AND, OR, etc.) on operands as booleans (non-zero = true)
 // Result is 0 or 1 stored in the first argument
 
-DEF_INSTR(log_and_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
-DEF_INSTR(log_and_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(logAnd_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(logAnd_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(log_or_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
-DEF_INSTR(log_or_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(logOr_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(logOr_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(log_xor_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
-DEF_INSTR(log_xor_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(logXor_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(logXor_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(log_not_p8, (vm::opargs::Place8, dst))
+DEF_INSTR(logNot_p8, (vm::opargs::Place8, dst))
 
 // ========= BITWISE OPERATIONS ========
 
 // 64-bit Bitwise Operations
-DEF_INSTR(bit_and_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
-DEF_INSTR(bit_and_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_or_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
-DEF_INSTR(bit_or_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_xor_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
-DEF_INSTR(bit_xor_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitAnd_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(bitAnd_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitOr_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(bitOr_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitXor_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(bitXor_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shl_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
 DEF_INSTR(shl_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shr_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
 DEF_INSTR(shr_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_not_p64, (vm::opargs::Place64, dst))
+DEF_INSTR(bitNot_p64, (vm::opargs::Place64, dst))
 
 // 32-bit Bitwise Operations
-DEF_INSTR(bit_and_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
-DEF_INSTR(bit_and_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_or_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
-DEF_INSTR(bit_or_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_xor_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
-DEF_INSTR(bit_xor_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitAnd_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(bitAnd_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitOr_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(bitOr_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitXor_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(bitXor_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shl_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
 DEF_INSTR(shl_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shr_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
 DEF_INSTR(shr_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_not_p32, (vm::opargs::Place32, dst))
+DEF_INSTR(bitNot_p32, (vm::opargs::Place32, dst))
 
 // 16-bit Bitwise Operations
-DEF_INSTR(bit_and_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
-DEF_INSTR(bit_and_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_or_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
-DEF_INSTR(bit_or_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_xor_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
-DEF_INSTR(bit_xor_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitAnd_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(bitAnd_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitOr_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(bitOr_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitXor_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(bitXor_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shl_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
 DEF_INSTR(shl_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shr_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
 DEF_INSTR(shr_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_not_p16, (vm::opargs::Place16, dst))
+DEF_INSTR(bitNot_p16, (vm::opargs::Place16, dst))
 
 // 8-bit Bitwise Operations
-DEF_INSTR(bit_and_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
-DEF_INSTR(bit_and_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_or_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
-DEF_INSTR(bit_or_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_xor_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
-DEF_INSTR(bit_xor_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitAnd_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(bitAnd_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitOr_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(bitOr_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bitXor_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(bitXor_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shl_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
 DEF_INSTR(shl_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(shr_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
 DEF_INSTR(shr_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
-DEF_INSTR(bit_not_p8, (vm::opargs::Place8, dst))
+DEF_INSTR(bitNot_p8, (vm::opargs::Place8, dst))
 // ========= LOGICAL OPERATIONS ========
 
 // --- 64-bit Integer Comparisons ---
@@ -426,10 +426,23 @@ DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
 DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
 
-DEF_INSTR(set_threadctx, (vm::opargs::FunctionName, function))
+/// Stores a reference to `function` in `dst`. The function's signature must match the function
+/// type of `dst`.
+DEF_INSTR(mov_pfun_func, (vm::opargs::PlaceFunc, dst), (vm::opargs::FunctionName, function))
+/// Copies a function value; source and destination must have the identical function type.
+DEF_INSTR(mov_pfun_pfun, (vm::opargs::PlaceFunc, dst), (vm::opargs::PlaceFunc, src))
+/**
+ * @brief Calls the function referenced by `callee`, with the same convention as `call_func`. The
+ * parameters and results are those of the function type of `callee`.
+ *
+ * Panics if `callee` is null or references no function.
+ */
+DEF_INSTR(call_pfun, (vm::opargs::PlaceFunc, callee))
+
+DEF_INSTR(setThreadCtx_func, (vm::opargs::FunctionName, function))
 
 // return while performing a tail call
-DEF_INSTR(ret_tailcall_func, (vm::opargs::FunctionName, function))
+DEF_INSTR(retTailcall_func, (vm::opargs::FunctionName, function))
 // return
 DEF_INSTR(ret)
 
@@ -461,7 +474,7 @@ DEF_INSTR(upcast_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, 
 DEF_INSTR(downcast_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src))
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
 DEF_INSTR(
-	virtual_call_pptr_method, (vm::opargs::PlacePtr, object_ptr), (vm::opargs::MethodName, method)
+	virtualCall_pptr_method, (vm::opargs::PlacePtr, object_ptr), (vm::opargs::MethodName, method)
 )
 
 // ========= GENERAL POINTER OPERATIONS ========
@@ -770,11 +783,19 @@ DEF_INSTR(exit)
 
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
- * It is a helper for start functions.
- * @arg0 - pointer to a VMValue.
- * @arg1 - n/a.
+ * Initializes a new local variable with a copy of the data held by a VMValue of the same process.
+ * @arg0 - the initialized local variable.
+ * @arg1 - type of the local variable.
+ * @arg2 - address of the source `vm::IVMValue`.
+ * @TODO: #3750 The address is only valid, because the process owning the `vm::IVMValue` outlives
+ * every use of the bytecode. Replace the raw address once CTV is VMValue based.
  */
-DEF_INSTR(initFromVMValue)
+DEF_INSTR(
+	initFromVMValue_pany_type_imm,
+	(vm::opargs::PlaceAny, var),
+	(vm::opargs::Type, type),
+	(vm::opargs::Immediate, vm_value)
+)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

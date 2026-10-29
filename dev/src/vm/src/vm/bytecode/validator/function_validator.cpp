@@ -38,7 +38,7 @@ namespace {
 	using namespace instructions;
 
 	constexpr std::array VALID_LAST_OPCODES
-		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
+		= { OpCode::Op_ret, OpCode::Op_retTailcall_func, OpCode::Op_jmp_label };
 
 	using DeinitializingInstructions = std::tuple<
 		Op_deinit,
@@ -46,7 +46,8 @@ namespace {
 		Op_call_builtinfunc,
 		Op_call_cfunc,
 		Op_call_ffifunc,
-		Op_virtual_call_pptr_method>;
+		Op_virtualCall_pptr_method,
+		Op_call_pfun>;
 	using CallingInstructions
 		= std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc>;
 
@@ -175,7 +176,7 @@ public:
 	/**
 	 * @brief Pops the top element from the stack state and updates local variable mappings.
 	 * Can be only used with instructions which effectively deinitialize the local stack
-	 * (deinit, call_func, virtual_call and call_builtinfunc)
+	 * (deinit, call_func, virtualCall and call_builtinfunc)
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
@@ -317,13 +318,13 @@ class FunctionValidator {
 	 * - The argument is only the name of the method and we need to find an implementation
 	 *   corresponding to that name.
 	 * - The first argument on the stack should be pointer which points to the same type as the
-	 *   pointer passed as the `obj_ptr` (an argument to `virtual_call_pptr_method`).
+	 *   pointer passed as the `obj_ptr` (an argument to `virtualCall_pptr_method`).
 	 *   Since virtual_method map contains only the signatures of methods, the implementations of
 	 *   them may declare a pointer to a different type (only a pointer to SELF - subclass can
 	 * differ). Validating just the pointer type name like in normal function calls would simply
 	 * don't work.
 	 */
-	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_pptr_method& instr) {
+	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtualCall_pptr_method& instr) {
 		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better
 		// way. EDIT: After valid_type::ValidType was added, it's simpler but still could be improved.
 		CRef<valid_type::finalized::Function> method_signature = [&] {
@@ -370,6 +371,34 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
+	/**
+	 * @brief Validates the stack state at the moment of a call through a function value. The
+	 * signature is the one of the function type of the callee.
+	 */
+	void validateIndirectCallAndPop(LocalStack& local_stack, const Op_call_pfun& instr) {
+		auto generic_arg = opargs::OpCodeArg{ instr.callee };
+
+		const auto signature
+			= getPlaceType(instr.callee, local_stack)->getKindAs<valid_type::finalized::Function>();
+
+		auto& params  = signature->parameters;
+		auto& results = signature->result_types;
+
+		if (params.size() + results.size() > local_stack.size())
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+
+		using namespace std::views;
+		for (auto param_id: params | reverse) {
+			if (local_stack.back().type->getID() != param_id)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+			local_stack.pop(instr);
+		}
+
+		for (auto [idx, result_id]: enumerate(results | reverse))
+			if (local_stack.back(usize(idx)).type->getID() != result_id)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+	}
+
 	void validateRet(
 		const LocalStack& local_stack, const Op_ret& instr, const FuncSignature& current_signature
 	) {
@@ -389,9 +418,9 @@ class FunctionValidator {
 	}
 
 	void validateTailcall(
-		const LocalStack&           local_stack,
-		const Op_ret_tailcall_func& instr,
-		const FuncSignature&        current_signature
+		const LocalStack&          local_stack,
+		const Op_retTailcall_func& instr,
+		const FuncSignature&       current_signature
 	) const {
 		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.function };
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
@@ -479,7 +508,7 @@ class FunctionValidator {
 					bool is_global = globals.contains(place->var_name);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
-						instr_case_novalue(Op_init_pany_type) {
+						instr_case_novalue(Op_init_pany_type, Op_initFromVMValue_pany_type_imm) {
 							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
@@ -497,6 +526,12 @@ class FunctionValidator {
 					CRef<valid_type::ValidType> type
 						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::CPointer>())
+						throw InvalidArgumentTypeError(*place);
+				}
+				variant_case(CRef<opargs::PlaceFunc>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
+					if (!type->isKind<valid_type::finalized::Function>())
 						throw InvalidArgumentTypeError(*place);
 				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
@@ -639,6 +674,9 @@ class FunctionValidator {
 		UNHANDLED_ENUM
 		instr_match(instruction) {
 			instr_case(Op_init_pany_type, instr) { validateArgInstantiable(instr.type); }
+			instr_case(Op_initFromVMValue_pany_type_imm, instr) {
+				validateArgInstantiable(instr.type);
+			}
 			instr_case(Op_alloc_pptr_type, instr) {
 				validateArgInstantiable(instr.type);
 				CRef<valid_type::ValidType> variable = getPlaceType(instr.ptr, current_stack);
@@ -1244,31 +1282,31 @@ class FunctionValidator {
 			}
 			instr_case_novalue(Op_udiv_p8_imm) {}
 
-			instr_case_novalue(Op_log_and_p8_p8) {
+			instr_case_novalue(Op_logAnd_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_log_and_p8_imm) {}
-			instr_case_novalue(Op_log_or_p8_p8) {
+			instr_case_novalue(Op_logAnd_p8_imm) {}
+			instr_case_novalue(Op_logOr_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_log_or_p8_imm) {}
-			instr_case_novalue(Op_log_xor_p8_p8) {
+			instr_case_novalue(Op_logOr_p8_imm) {}
+			instr_case_novalue(Op_logXor_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_log_xor_p8_imm) {}
-			instr_case_novalue(Op_log_not_p8) {}
-			instr_case_novalue(Op_bit_and_p64_p64) {
+			instr_case_novalue(Op_logXor_p8_imm) {}
+			instr_case_novalue(Op_logNot_p8) {}
+			instr_case_novalue(Op_bitAnd_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_and_p64_imm) {}
-			instr_case_novalue(Op_bit_or_p64_p64) {
+			instr_case_novalue(Op_bitAnd_p64_imm) {}
+			instr_case_novalue(Op_bitOr_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_or_p64_imm) {}
-			instr_case_novalue(Op_bit_xor_p64_p64) {
+			instr_case_novalue(Op_bitOr_p64_imm) {}
+			instr_case_novalue(Op_bitXor_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_xor_p64_imm) {}
+			instr_case_novalue(Op_bitXor_p64_imm) {}
 			instr_case_novalue(Op_shl_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -1277,19 +1315,19 @@ class FunctionValidator {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case_novalue(Op_shr_p64_imm) {}
-			instr_case_novalue(Op_bit_not_p64) {}
-			instr_case_novalue(Op_bit_and_p32_p32) {
+			instr_case_novalue(Op_bitNot_p64) {}
+			instr_case_novalue(Op_bitAnd_p32_p32) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_and_p32_imm) {}
-			instr_case_novalue(Op_bit_or_p32_p32) {
+			instr_case_novalue(Op_bitAnd_p32_imm) {}
+			instr_case_novalue(Op_bitOr_p32_p32) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_or_p32_imm) {}
-			instr_case_novalue(Op_bit_xor_p32_p32) {
+			instr_case_novalue(Op_bitOr_p32_imm) {}
+			instr_case_novalue(Op_bitXor_p32_p32) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_xor_p32_imm) {}
+			instr_case_novalue(Op_bitXor_p32_imm) {}
 			instr_case_novalue(Op_shl_p32_p32) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -1298,19 +1336,19 @@ class FunctionValidator {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case_novalue(Op_shr_p32_imm) {}
-			instr_case_novalue(Op_bit_not_p32) {}
-			instr_case_novalue(Op_bit_and_p16_p16) {
+			instr_case_novalue(Op_bitNot_p32) {}
+			instr_case_novalue(Op_bitAnd_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_and_p16_imm) {}
-			instr_case_novalue(Op_bit_or_p16_p16) {
+			instr_case_novalue(Op_bitAnd_p16_imm) {}
+			instr_case_novalue(Op_bitOr_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_or_p16_imm) {}
-			instr_case_novalue(Op_bit_xor_p16_p16) {
+			instr_case_novalue(Op_bitOr_p16_imm) {}
+			instr_case_novalue(Op_bitXor_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_xor_p16_imm) {}
+			instr_case_novalue(Op_bitXor_p16_imm) {}
 			instr_case_novalue(Op_shl_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -1319,19 +1357,19 @@ class FunctionValidator {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case_novalue(Op_shr_p16_imm) {}
-			instr_case_novalue(Op_bit_not_p16) {}
-			instr_case_novalue(Op_bit_and_p8_p8) {
+			instr_case_novalue(Op_bitNot_p16) {}
+			instr_case_novalue(Op_bitAnd_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_and_p8_imm) {}
-			instr_case_novalue(Op_bit_or_p8_p8) {
+			instr_case_novalue(Op_bitAnd_p8_imm) {}
+			instr_case_novalue(Op_bitOr_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_or_p8_imm) {}
-			instr_case_novalue(Op_bit_xor_p8_p8) {
+			instr_case_novalue(Op_bitOr_p8_imm) {}
+			instr_case_novalue(Op_bitXor_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_bit_xor_p8_imm) {}
+			instr_case_novalue(Op_bitXor_p8_imm) {}
 			instr_case_novalue(Op_shl_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -1340,7 +1378,7 @@ class FunctionValidator {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case_novalue(Op_shr_p8_imm) {}
-			instr_case_novalue(Op_bit_not_p8) {}
+			instr_case_novalue(Op_bitNot_p8) {}
 			instr_case(Op_variantSetInner_pvnt_type, instr) {
 				const auto variant_type = getPlaceType(instr.variant, current_stack)
 				                              ->getKindAs<valid_type::finalized::Variant>();
@@ -1393,9 +1431,29 @@ class FunctionValidator {
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_label, Op_jmp_label, Op_jmpIf_label, Op_jmpIfNot_label) {}
-			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc) {}
-			instr_case_novalue(Op_set_threadctx) {}
-			instr_case(Op_virtual_call_pptr_method, instr) {
+			instr_case_novalue(
+				Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc, Op_call_pfun
+			) {}
+			instr_case(Op_mov_pfun_func, instr) {
+				const auto function_type = getPlaceType(instr.dst, current_stack)
+				                               ->getKindAs<valid_type::finalized::Function>();
+				const auto& signature = signatures.at(instr.function.function_name);
+				const auto  type_ids  = std::views::transform([&](const Identifier& type_name) {
+                    return types_ctx.at(type_name.str)->getID();
+                });
+				if (!std::ranges::equal(function_type->parameters, signature.parameters | type_ids)
+				    || !std::ranges::equal(
+						function_type->result_types, signature.result_types | type_ids
+					))
+					throw FunctionTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_pfun_pfun, instr) {
+				if (getPlaceType(instr.src, current_stack)->getID()
+				    != getPlaceType(instr.dst, current_stack)->getID())
+					throw FunctionTypeMismatchError(instr);
+			}
+			instr_case_novalue(Op_setThreadCtx_func) {}
+			instr_case(Op_virtualCall_pptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
 				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
@@ -1409,7 +1467,7 @@ class FunctionValidator {
 				if (!inh_meta.available_methods.contains(instr.method.method_name))
 					throw InvalidVirtualCallError(instr);
 			}
-			instr_case_novalue(Op_ret_tailcall_func, Op_ret, Op_deinit) {}
+			instr_case_novalue(Op_retTailcall_func, Op_ret, Op_deinit) {}
 			instr_case_novalue(Op_input_p64, Op_output_p64, Op_input_p32, Op_output_p32) {}
 			instr_case(Op_setVTable_pptr_type, instr) {
 				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
@@ -1669,7 +1727,7 @@ class FunctionValidator {
 				if (src_table->inner != dst_table->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_initFromVMValue) {}
+			instr_case_novalue(Op_nop, Op_exit) {}
 		}
 		POP_DIAGNOSTIC
 	}
@@ -1804,6 +1862,11 @@ class FunctionValidator {
 					stack_before_instr[index] = local_stack.getStateID();
 					index++;
 				}
+				instr_case(Op_initFromVMValue_pany_type_imm, instr) {
+					local_stack.push(instr.var, instr.type);
+					stack_before_instr[index] = local_stack.getStateID();
+					index++;
+				}
 				instr_case(Op_deinit, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					local_stack.pop(instr);
@@ -1865,12 +1928,17 @@ class FunctionValidator {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				instr_case(Op_virtual_call_pptr_method, instr) {
+				instr_case(Op_virtualCall_pptr_method, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					validateMethodCallAndPop(local_stack, instr);
 					index++;
 				}
-				instr_case(Op_ret_tailcall_func, instr) {
+				instr_case(Op_call_pfun, instr) {
+					stack_before_instr[index] = local_stack.getStateID();
+					validateIndirectCallAndPop(local_stack, instr);
+					index++;
+				}
+				instr_case(Op_retTailcall_func, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					validateTailcall(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();

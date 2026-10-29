@@ -1,4 +1,3 @@
-
 Tests:
   dvm_no_strings:
     Cases:
@@ -6,12 +5,9 @@ Tests:
         Output:
           String: "10\n20\n15\n35\n15\n35\n"
         ExitCode: 0
-  # @TODO: #3421 Enable DVM once the backend lowers pointers to lifted tuple elements
-  # correctly - the produced bytecode fails verification on
-  # `store_pptr_pany` with "Pointer type does not match the expected type".
   pack:
     Cases:
-      llvm:
+      all:
         Output:
           String: "3\n3.5\n3\n1\n4\n"
         ExitCode: 0

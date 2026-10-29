@@ -69,9 +69,11 @@ namespace vm::low::opargs {
 	/** @brief Stores byte offset of 32-bit local on the frame local stack or the global buffer. */
 	DEFINE_MICRO_ARG_TYPE(Place32, "p32", vm::opargs::Place32);
 	/** @brief Stores byte offset of 64-bit local on the frame local stack or the global buffer.
-	 * Also the target of C pointer places: a cpointer is a plain 8-byte value, so its moves
-	 * lower to 64-bit micro operations. */
-	DEFINE_MICRO_ARG_TYPE(Place64, "p64", vm::opargs::Place64, vm::opargs::PlaceCPtr);
+	 * Also the target of C pointer and function value places: both are plain 8-byte values, so
+	 * their moves lower to 64-bit micro operations. */
+	DEFINE_MICRO_ARG_TYPE(
+		Place64, "p64", vm::opargs::Place64, vm::opargs::PlaceCPtr, vm::opargs::PlaceFunc
+	);
 	/** @brief Stores byte offset of local Pointer value on the frame local stack or the global
 	 * buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlacePtr, "pptr", vm::opargs::PlacePtr);
@@ -94,7 +96,7 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockStructure, "bste", vm::opargs::PlaceStructure);
 	/** @brief Stores index of local fixed sized table storage in the frame local slot stack (not a
 	 * byte offset) or the global blocks buffer. */
-	DEFINE_MICRO_ARG_TYPE(PlaceBlockFSTable, "barr", vm::opargs::PlaceFSTable);
+	DEFINE_MICRO_ARG_TYPE(PlaceBlockFSTable, "bfst", vm::opargs::PlaceFSTable);
 	/** @brief Stores index of local variant storage in the frame local slot stack (not a byte
 	 * offset) or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt);

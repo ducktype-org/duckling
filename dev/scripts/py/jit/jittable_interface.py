@@ -23,9 +23,10 @@ def is_stencil(func_name: str) -> bool:
     return func_name.startswith("vm::jit::cnp::stencil")
 
 def nonjittable(func_name: str, nonjittable_opfuncs: list[str]) -> bool:
-    # Exact match on the opcode name: a substring check would e.g. match "ret_tailcall_func"
-    # with "call_func". `func_name` may be fully qualified ("vm::OpFuns::op_call_func(...)",
-    # "vm::jit::cnp::stencil_call_func(...)") or bare ("call_func", as in opcodes.json).
+    # Exact match on the opcode name, not a substring check: one opcode name can contain another
+    # (e.g. "retTailcall_func" contains "call_func"). `func_name` may be fully qualified
+    # ("vm::OpFuns::op_call_func_off(...)", "vm::jit::cnp::stencil_call_func_off(...)") or bare
+    # ("call_func_off", as in opcodes.json).
     short = func_name.split("(")[0].split("::")[-1]
     for prefix in ("op_", "stencil_"):
         short = short.removeprefix(prefix)

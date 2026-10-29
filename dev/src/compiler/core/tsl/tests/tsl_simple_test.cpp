@@ -37,6 +37,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
 		TESTER_ADD_TEST(variantTest);
+		TESTER_ADD_TEST(variantTagWidthTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
@@ -298,6 +299,39 @@ private:
 				variant_default { fail("Layout of variant type should be variant-like."); }
 			}
 			testPrinting(variant_layout, ctx, true);
+		});
+	}
+
+	void variantTagWidthTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			std::vector<SymbolType<>> alternatives;
+			alternatives.reserve(256);
+			for (usize count = 1; count <= 256; ++count) {
+				const StaticArrayAbstractType array_type
+					= ctx.query<QueryStaticArrayType>({ st(getByteType()), count });
+				alternatives.push_back(st(array_type));
+
+				if (count != 255 && count != 256) continue;
+
+				const VariantAbstractType variant_type
+					= ctx.query<QueryVariantType>({ alternatives });
+				const auto layout = queryLayout(ctx, variant_type);
+				variant_match(layout->getVariant()) {
+					variant_case(VariantTypeLayout, variant_layout) {
+						const Bits expected_tag_size = count == 255 ? Bits(8) : Bits(16);
+						assertEqual(
+							variant_layout.getTagSize(),
+							expected_tag_size,
+							"The tag must fit zero and every alternative."
+						);
+						assertTrue(
+							variant_layout.getDataOffset() >= base::bits2bytes(expected_tag_size),
+							"The payload must start after the entire tag."
+						);
+					}
+					variant_default { fail("Layout of variant type should be variant-like."); }
+				}
+			}
 		});
 	}
 

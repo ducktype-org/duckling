@@ -25,7 +25,6 @@
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
@@ -184,6 +183,7 @@ namespace compiler::helios {
 				case pst::ElementKind::If:
 				case pst::ElementKind::While:
 				case pst::ElementKind::For:
+				case pst::ElementKind::Const:
 					return false;
 
 				// For other elements we go up the PST tree:
@@ -198,6 +198,7 @@ namespace compiler::helios {
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
 				case pst::ElementKind::RoundGroupExpr:
+				case pst::ElementKind::ArrayLiteralList:
 				case pst::ElementKind::CallList:
 				case pst::ElementKind::CallArgument:
 				case pst::ElementKind::Action:

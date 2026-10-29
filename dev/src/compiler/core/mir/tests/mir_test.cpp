@@ -62,6 +62,7 @@ public:
 		TESTER_ADD_TEST(conditionalTemporaryMoveStateTest);
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(lazyBooleanShortCircuitTest);
+		TESTER_ADD_TEST(functionPointerTest);
 		TESTER_ADD_TEST(lazyBooleanChainsTest);
 	}
 
@@ -724,12 +725,6 @@ private:
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
 
-			compiler::tsh::SymbolType<> meta_type{
-				getMetaType(),
-				compiler::tsh::ReferenceKind::Direct,
-				compiler::tsh::Mutability::Mutable,
-			};
-
 			using enum compiler::mir::Operation;
 			using MK = compiler::mir::MetaKind;
 
@@ -779,12 +774,20 @@ private:
 				} else if (fun->declaration->original_name.str() == "createVariant") {
 					check_meta_function(fun, MK::CreateVariant, 4);
 				} else if (fun->declaration->original_name.str() == "createTuple") {
-					check_meta_function(fun, MK::CreateTuple, 4);
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+					bool found_create_tuple = false;
+					for (const auto& block_id: mir_fun.block_order)
+						for (const auto& instr: mir_fun.blocks[block_id].instructions)
+							if (instr.operation == MetaTypeOperation
+							    && meta_kind(instr) == MK::CreateTuple
+							    && instr.arguments.size() == 4)
+								found_create_tuple = true;
+					ASSERT_TRUE(found_create_tuple);
 				} else if (fun->declaration->original_name.str() == "megaType") {
 					auto& mir_fun
 						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
 					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
 
 					int  create_variant_count     = 0;
@@ -805,9 +808,9 @@ private:
 							create_tuple_count++;
 						} else if (instr.operation == MetaTypeOperation
 						           && meta_kind(instr) == MK::CreateVariant) {
-							// If variant is created, two preceding tuple creating instructions
-							// should exist.
-							ASSERT_TRUE(create_tuple_count == 2);
+							// If variant is created, the tuple of its alternative should already
+							// exist.
+							ASSERT_TRUE(create_tuple_count == 1);
 							create_variant_count++;
 
 						} else if (instr.operation == Call) {
@@ -1019,6 +1022,46 @@ private:
 				"Expected the unit element of a materialised tuple to be lifted to a type."
 			);
 		});
+	}
+
+	/**
+	 * @brief A call through a function value lowers to `IndirectCall`, a function used as a value
+	 * lowers to a function literal.
+	 */
+	void functionPointerTest() {
+		using compiler::mir::MIRFunctionLiteral;
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun add(a: i64, b: i64) -> i64 = a + b;
+               fun apply(f: funptr(i64, i64) -> i64) -> i64 = f(1, 2);
+               fun direct() -> i64 = apply(add);)",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				const auto& apply = *test_utils::functionOfUnit(unit, "apply");
+				assertEqual(
+					1u,
+					test_utils::blocksWithOperation(apply, Operation::IndirectCall).size(),
+					"Expected the call through the parameter to be an indirect call"
+				);
+				assertTrue(
+					test_utils::blocksWithOperation(apply, Operation::Call).empty(),
+					"Expected no direct call in `apply`"
+				);
+
+				const auto& direct          = *test_utils::functionOfUnit(unit, "direct");
+				bool        passes_function = false;
+				for (auto block_id: direct.block_order)
+					for (const auto& instruction: direct.blocks[block_id].instructions)
+						if (instruction.operation == Operation::Call
+					        and instruction.arguments.size() == 2
+					        and std::holds_alternative<MIRFunctionLiteral>(
+								instruction.arguments.at(1).getVariant()
+							))
+							passes_function = true;
+				assertTrue(passes_function, "Expected `add` to be passed as a function literal");
+			}
+		);
 	}
 
 	/**

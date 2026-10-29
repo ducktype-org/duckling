@@ -6,266 +6,284 @@
 
 #include "coercions.hpp"
 
-#include "errors.hpp"
-#include "passing.hpp"
-
 #include <ctv/numeric_value.hpp>
-#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios/hout/visitors.hpp>
-#include <helios/tsh/coercions/reference_coercion.hpp>
-#include <helios/tsh/queries/implicit_coercibility.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios/tsh/coercions/coercion_node.hpp>
+#include <helios/tsh/coercions/passing.hpp>
+#include <helios/tsh/coercions/queries.hpp>
+#include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
-#include <helios_private/symbols/symbols.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_errors.hpp>
 
-namespace compiler::helios {
+#include <ranges>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace compiler::helios::coercions {
 	namespace {
-		using tsh::ExpressionType;
+		using namespace code;
+		using tsh::coercions::CoercionNode;
+		using tsh::coercions::CoercionStep;
+		using tsh::coercions::ValueSource;
 
-		Box<code::Expr> handleReferenceKindCoercion(
-			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
+		namespace step = tsh::coercions::coercion_step;
+
+		[[noreturn]] void failNotImplemented(
+			query::Context& ctx, std::string what, const Expr& position
 		) {
-			using rk       = tsh::ReferenceKind;
-			auto origin    = expr->origin.generatedFrom();
-			auto from_kind = expr->expression_type.getSymbolType().getRefKind();
-			auto to_kind   = to.getRefKind();
-
-			const bool is_pointer_like = from_kind == rk::Ref or from_kind == rk::Box;
-
-			// Coercions to the the same reference kind are always allowed.
-			if (from_kind == to_kind) return std::move(expr);
-			// We also accept implicit auto deref from `ref` and `box`.
-			else if (is_pointer_like && to_kind == rk::Direct) {
-				// var x: T = ref_T;
-				// var x: T = box_T;
-				return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-			}
-			// All the others shoule be explicit via `new` or `&`.
-			CORE_PANIC(base::strConcat(
-				"Illegal coercion, from: '",
-				expr->expression_type.getSymbolType().toString(),
-				"' to '",
-				to.toString(),
-				"' should be caught earlier"
-			));
-		}
-
-		// Coerces a single tuple element to the i-th component of the target tuple type.
-		Box<code::Expr> coerceTupleElement(
-			query::Context&               ctx,
-			Box<code::Expr>               element,
-			const tsh::TupleAbstractType& to_type,
-			usize                         index
-		) {
-			auto element_coercion
-				= canCoerce(ctx, element->expression_type, to_type.getComponents()[index])
-			          .valueOrThrow();
-			CORE_ASSERT(
-				element_coercion.isValid(), "Coercion should always be valid at this point."
+			ctx.logInt(
+				makeBox<dia::NotYetImplementedCodeError>(std::move(what), position.getPosition())
 			);
-
-			return element_coercion.coerce(ctx, std::move(element));
-		}
-
-		// Performs element by element coercion.
-		Box<code::Expr> handleTupleCoercion(
-			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
-		) {
-			auto source_type = expr->expression_type.getType().as<tsh::TupleAbstractType>();
-			auto to_type     = to.getType().as<tsh::TupleAbstractType>();
-
-			// A tuple literal is coerced element by element in place. Reading the elements back out
-			// of a materialised tuple would lose the shape of the element expressions, which some
-			// coercions still need - lifting a value to a `type` for instance only works on the
-			// original expression. It also avoids materialising the source tuple altogether.
-			if (auto* tuple_literal = dynamic_cast<code::TupleExpr*>(expr.get())) {
-				std::vector<Box<code::Expr>> literal_elements;
-				literal_elements.reserve(tuple_literal->elements.size());
-
-				for (usize i = 0; i < tuple_literal->elements.size(); i++)
-					literal_elements.emplace_back(
-						coerceTupleElement(ctx, std::move(tuple_literal->elements[i]), to_type, i)
-					);
-
-				return makeBox<code::TupleExpr>(
-					ctx, expr->origin.generatedFrom(), std::move(literal_elements)
-				);
-			}
-
-			auto tuple = makeBox<code::ReusableExpr>(ctx, std::move(expr));
-
-			std::vector<Box<code::Expr>> elements;
-			elements.reserve(source_type.getComponents().size());
-
-			for (usize i = 0; i < source_type.getComponents().size(); i++) {
-				// We create a tuple expression with the correct type, and then let the
-				// TupleExpr coercion handler handle the coercion to the target tuple type.
-				auto element = makeBox<code::AccessExpr>(
-					ctx,
-					tuple->origin.generatedFrom(),
-					tuple->clone(),
-					ctx.query<defgen::QueryGeneratedSymbol>(
-						{ .name = base::StrID{ base::strConcat("_", i + 1) },
-				          .generated_symbol_data
-				          = defgen::Field{ .parent_type = source_type, .index = i } }
-					)
-				);
-
-				elements.emplace_back(coerceTupleElement(ctx, std::move(element), to_type, i));
-			}
-
-			return makeBox<code::TupleExpr>(ctx, tuple->origin.generatedFrom(), std::move(elements));
+			query::throwFailed();
 		}
 
 		/**
-		 * @brief The variant alternative a value of type @p from is wrapped into, with its index.
-		 *
-		 * Wrapping a value into a variant copies it into the chosen alternative, so it is that
-		 * alternative - and not the variant itself - that decides how the value is passed. A
-		 * variant may not list one underlying type twice, so at most one alternative matches.
+		 * @brief Creates a `ValueSource` of @p expr. Contains the `ExpressionType`s of the value
+		 * and its sub-`ExpressionType`s if the value needs it (i.e. is a tuple literal, everything
+		 * else is a single value).
 		 */
-		base::Optional<std::pair<usize, tsh::SymbolType<>>> variantAlternativeFor(
-			const tsh::SymbolType<>& from, const tsh::SymbolType<>& to
+		ValueSource valueSourceOf(const CRef<Expr> expr) {
+			const auto* literal = dynamic_cast<const TupleExpr*>(expr.get());
+			if (literal == nullptr || expr->expression_type.getType().getKind() != tsh::Kind::Tuple)
+				return ValueSource::singleValueSource(expr->expression_type);
+
+			std::vector<ValueSource> elements;
+			elements.reserve(literal->elements.size());
+			for (const auto& element: literal->elements)
+				elements.push_back(valueSourceOf(element.ref()));
+
+			return ValueSource::nestedValueSource(expr->expression_type, std::move(elements));
+		}
+
+		Box<Expr> applyNode(query::Context& ctx, const CoercionNode& node, Box<Expr> from);
+
+		/**
+		 * @brief Whether performing @p part on a component read out of an existing tuple would
+		 * take something the tuple owns, which is a partial move which is not yet supported.
+		 */
+		bool takesOwnedComponent(query::Context& ctx, const CoercionNode& part) {
+			// Reading the pointee out of a `ref`/`box` never takes the reference itself.
+			if (part.derefs()) return false;
+
+			// @TODO: #1711 A function type does not know whether it is trivially copyable yet.
+			if (part.source.getType().getKind() == tsh::Kind::Function) return false;
+
+			return not tsh::coercions::isCopiedByBytes(ctx, part.source);
+		}
+
+		/**
+		 * @brief Rebuilds a tuple out of its components, each coerced on its own by @p parts.
+		 */
+		Box<Expr> applyElementwise(
+			query::Context& ctx, const std::vector<CoercionNode>& parts, Box<Expr> whole
 		) {
-			if (to.getType().getKind() != tsh::Kind::Variant) return {};
-			if (from.getType().getKind() == tsh::Kind::Variant) return {};
+			const auto origin = whole->origin.generatedFrom();
 
-			const auto alternatives
-				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
-			for (usize i = 0; i < alternatives.size(); i++)
-				if (tsh::referenceCoercionRule(from.getRefKind(), alternatives[i].getRefKind())
-				        .isLegal()
-				    && alternatives[i].getType() == from.getType())
-					return std::pair{ i, alternatives[i] };
+			// Case 1: We have a tuple literal. We go over the components, coerce them and create a
+			// new tuple.
+			if (auto* literal = dynamic_cast<TupleExpr*>(whole.get())) {
+				CORE_ASSERT(
+					literal->elements.size() == parts.size(),
+					"A tuple literal is coerced by exactly one part per element."
+				);
 
-			return {};
+				std::vector<Box<Expr>> elements;
+				elements.reserve(parts.size());
+				for (auto&& [part, element]: std::views::zip(parts, literal->elements))
+					elements.push_back(applyNode(ctx, part, std::move(element)));
+
+				return makeBox<TupleExpr>(ctx, origin, std::move(elements));
+			}
+
+			// Case 2: We have a tuple value. We have to extract all of its components and create a
+			// new tuple. The first read of a component evaluates the tuple, every read after it
+			// reuses the stored value.
+			for (const CoercionNode& part: parts)
+				if (takesOwnedComponent(ctx, part))
+					failNotImplemented(
+						ctx,
+						base::strConcat(
+							"Taking a component of type `",
+							part.source.toString(),
+							"` out of an existing tuple is not supported yet."
+						),
+						*whole
+					);
+
+			const auto source_tuple = whole->expression_type.getType().as<tsh::TupleAbstractType>();
+			const std::vector<SymID>& fields
+				= ctx.query<QueryTupleTypeData>(source_tuple)->valueOrThrow().members;
+
+			Box<ReusableExpr>      tuple = makeBox<ReusableExpr>(ctx, std::move(whole));
+			std::vector<Box<Expr>> reads
+				= std::views::iota(usize{ 1 }, parts.size())
+			    | std::views::transform([&](usize) -> Box<Expr> { return tuple->nextUse(); })
+			    | std::ranges::to<std::vector>();
+			reads.insert(reads.begin(), std::move(tuple));
+
+			std::vector<Box<Expr>> components;
+			components.reserve(parts.size());
+
+			for (auto&& [part, read, field]: std::views::zip(parts, reads, fields)) {
+				auto component = makeBox<AccessExpr>(ctx, origin, std::move(read), field);
+				components.push_back(applyNode(ctx, part, std::move(component)));
+			}
+
+			return makeBox<TupleExpr>(ctx, origin, std::move(components));
 		}
-	}
 
-	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
-		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
+		Box<Expr> applyStep(
+			query::Context& ctx, const step::RefOf&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<RefOfExpr>(ctx, origin, std::move(from));
+		}
 
-		// An owned rvalue passed to a new owner is implicitly moved.
-		if (transfers_ownership)
-			from = makeBox<code::MoveExpr>(
-				ctx, from->origin.generatedFrom(), std::move(from), code::MoveExpr::MoveKind::Implicit
-			);
+		Box<Expr> applyStep(
+			query::Context& ctx, const step::Deref&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<DerefExpr>(ctx, origin, std::move(from));
+		}
 
-		// Wrapping into a variant happens before the reference kind is adjusted, as the chosen
-		// alternative (and not the variant itself) decides whether the value is dereferenced.
-		if (const auto alternative
-		    = variantAlternativeFor(from->expression_type.getSymbolType(), to)) {
-			const auto& [index, alternative_type] = alternative.value();
+		Box<Expr> applyStep(query::Context&, const step::HandOver&, const tsh::SymbolType<>&, Box<Expr>) {
+			CORE_PANIC("HandOver node should never appear in an `ExpressionType` coercion");
+		}
 
-			auto alternative_expr
-				= handleReferenceKindCoercion(ctx, std::move(from), alternative_type);
-			return makeBox<code::VariantConstructExpr>(
-				ctx, alternative_expr->origin.generatedFrom(), std::move(alternative_expr), to, index
+		Box<Expr> applyStep(
+			query::Context& ctx, const step::ImplicitMove&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<MoveExpr>(ctx, origin, std::move(from), MoveExpr::MoveKind::Implicit);
+		}
+
+		Box<Expr> applyStep(
+			query::Context&, const step::MutabilityChange&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			// Only what may be done with the value changes, the value itself does not.
+			return from;
+		}
+
+		Box<Expr> applyStep(
+			query::Context& ctx, const step::Numeric&, const tsh::SymbolType<>& result, Box<Expr> from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<CastExpr>(ctx, origin, std::move(from), result);
+		}
+
+		Box<Expr> applyStep(
+			query::Context& ctx, const step::ZeroCheck&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			return buildZeroCheck(ctx, std::move(from));
+		}
+
+		Box<Expr> applyStep(
+			query::Context& ctx, const step::LiftToType&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<LiftToTypeExpr>(ctx, origin, std::move(from));
+		}
+
+		Box<Expr> applyStep(
+			query::Context& ctx,
+			const step::RetypeVoid&,
+			const tsh::SymbolType<>& result,
+			Box<Expr>                from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<CastExpr>(ctx, origin, std::move(from), result);
+		}
+
+		Box<Expr> applyStep(
+			query::Context&          ctx,
+			const step::Elementwise& elementwise,
+			const tsh::SymbolType<>&,
+			Box<Expr> from
+		) {
+			return applyElementwise(ctx, elementwise.parts, std::move(from));
+		}
+
+		Box<Expr> applyStep(
+			query::Context&          ctx,
+			const step::VariantPack& packing,
+			const tsh::SymbolType<>& result,
+			Box<Expr>                from
+		) {
+			const auto origin = from->origin.generatedFrom();
+			return makeBox<VariantConstructExpr>(
+				ctx, origin, std::move(from), result, packing.alternative
 			);
 		}
 
-		auto current_expr       = handleReferenceKindCoercion(ctx, std::move(from), to);
-		auto source_symbol_type = current_expr->expression_type.getSymbolType();
+		Box<Expr> applyStep(
+			query::Context& ctx, const step::UserConversion&, const tsh::SymbolType<>&, Box<Expr> from
+		) {
+			// @TODO: #3656 Call the conversion function once anything decides on one.
+			failNotImplemented(ctx, "User defined conversions are not supported yet.", *from);
+		}
 
-		auto source_type = source_symbol_type.getType();
+		/**
+		 * @brief Performs one step @p coercion_step of a coercion.
+		 */
+		Box<Expr> applyStep(query::Context& ctx, const CoercionStep& coercion_step, Box<Expr> from) {
+			return VISIT(coercion_step.kind, kind, {
+				return applyStep(ctx, kind, coercion_step.result, std::move(from));
+			});
+		}
 
-		bool is_source_numeric = source_type.getKind() == tsh::Kind::Integral
-		                      or source_type.getKind() == tsh::Kind::Float;
-		bool is_target_numeric = to.getType().getKind() == tsh::Kind::Integral
-		                      or to.getType().getKind() == tsh::Kind::Float;
-		bool is_source_bool = source_type.getKind() == tsh::Kind::Bool;
-		bool is_target_bool = to.getType().getKind() == tsh::Kind::Bool;
-
-		auto generated_origin = current_expr->origin.generatedFrom();
-		if (source_type == to.getType()) {
-			// No coercion
-			return current_expr;
-		} else if (source_type.getKind() == tsh::Kind::Void) {
-			// We have to wrap the expression in CastExpr to change the inner type,
-			// the cast itself is lowered to no-op.
-			return makeBox<code::CastExpr>(ctx, generated_origin, std::move(current_expr), to);
-		} else if ((is_source_numeric and is_target_numeric)
-		           or (is_source_bool and is_target_numeric)) {
-			// Numeric type promotion
-			return makeBox<code::CastExpr>(ctx, generated_origin, std::move(current_expr), to);
-		} else if (is_source_numeric and is_target_bool) {
-			// Numeric zero-check to bool
-			auto comparison = makeBox<code::BinaryOperatorExpr>(
-				ctx,
-				generated_origin,
-				code::BuiltinBinary::IntegerNeq,
-				std::move(current_expr),
-				makeBox<code::LiteralNumericExpr>(
-					ctx,
-					code::generatedOrigin(),
-					numeric_value::NumericValue::createOfType(source_type)
-						.expect("Failed to create a NumericLiteral with 0 value. "
-			                    "This should never happen.")
+		/**
+		 * @brief Performs every step of @p node on @p from, in order.
+		 */
+		Box<Expr> applyNode(query::Context& ctx, const CoercionNode& node, Box<Expr> from) {
+			CORE_ASSERT(
+				from->expression_type.getSymbolType() == node.source,
+				base::strConcat(
+					"A coercion node of `",
+					node.source.toString(),
+					"` is carried out on an expression of type `",
+					from->expression_type.getSymbolType().toString(),
+					"`."
 				)
 			);
-			return comparison;
-		} else if ((source_type.getKind() == tsh::Kind::Unit
-		            or source_type.getKind() == tsh::Kind::Tuple)
-		           and to.getType().getKind() == tsh::Kind::Meta) {
-			// Lift value to type
-			return makeBox<code::LiftToTypeExpr>(ctx, generated_origin, std::move(current_expr));
-		} else if (source_type.getKind() == tsh::Kind::Tuple
-		           and to.getType().getKind() == tsh::Kind::Tuple) {
-			return handleTupleCoercion(ctx, std::move(current_expr), to);
-		} else {
-			CORE_PANIC("Coercion should always be valid at this point.");
+
+			for (const CoercionStep& coercion_step: node.steps)
+				from = applyStep(ctx, coercion_step, std::move(from));
+			return from;
 		}
 	}
 
-	query::QResult<Coercion> canCoerce(
-		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+	Coercion coercionOf(
+		query::Context&          ctx,
+		const CRef<Expr>         from,
+		const tsh::SymbolType<>& target,
+		const HandOverKind       kind,
+		const CoercionMode       mode
 	) {
-		const tsh::SymbolType<> from_type = from.getSymbolType();
+		const ValueSource source = [&] {
+			ValueSource value = valueSourceOf(from);
 
-		// First check that the type is even coercible to provide a invalid coercion error first.
-		const bool coercible
-			= ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from_type, to });
-		if (!coercible)
-			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
+			// A value built out of parts is a temporary, so there is nothing to consume in it as a
+			// whole. Its parts are handed over into it either way.
+			if (kind == HandOverKind::Regular || value.isBuiltOutOfParts()) return value;
+			return ValueSource::singleValueSource(tsh::coercions::consumed(from->expression_type));
+		}();
 
-		// A `void` value never comes into existence, so there is nothing to copy or hand over:
-		// the coercion only reconciles the types and lowers to nothing at all.
-		if (from_type.getType().getKind() == tsh::Kind::Void)
-			return Coercion::valid(from_type, to, false);
-
-		// Wrapping into a variant copies the value into one alternative, so that alternative is
-		// what the copy is analysed against.
-		const tsh::SymbolType<> copy_target = variantAlternativeFor(from_type, to)
-		                                          .map([](const auto& alt) { return alt.second; })
-		                                          .copyValueOr(to);
-
-		// A coercion that only rebinds a reference never copies, so it is always fine.
-		if (not requiresValueCopy(from_type.getRefKind(), copy_target.getRefKind()))
-			return Coercion::valid(from_type, to, false);
-
-		// Otherwise a value has to be copied.
-		switch (passingMethod(ctx, valueBeingCopied(from, copy_target))) {
-		case PassingMethod::ByteCopy:
-			return Coercion::valid(from_type, to, false);
-		case PassingMethod::ImplicitMove:
-			return Coercion::valid(from_type, to, true);
-		case PassingMethod::ExplicitCopyOrMove:
-			return Coercion::invalid(from_type, to, InvalidCoercionReason::RequiresExplicitCopyMove);
-		case PassingMethod::NotCopyable:
-			return Coercion::invalid(from_type, to, InvalidCoercionReason::TypeNotCopyable);
-		}
-		CORE_UNREACHABLE();
+		return tsh::coercions::coercionOf(ctx, source, target, mode);
 	}
 
-	query::QResult<Coercion> canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from) {
-		return canCoerce(
+	Coercion coercionToMeta(query::Context& ctx, const CRef<Expr> from) {
+		return coercionOf(
 			ctx,
 			from,
 			tsh::SymbolType<>{
@@ -276,28 +294,124 @@ namespace compiler::helios {
 		);
 	}
 
-	BoxOrCRef<code::Expr> Coercion::coerceFromRef(query::Context& ctx, CRef<code::Expr> from) const {
-		CORE_ASSERT(isValidFor(from), "Invalid expression for this coercion.");
-		if (isEmptyCoercion()) return from;
+	query::QResult<Coercion> validCoercionOf(
+		query::Context&                     ctx,
+		const CRef<Expr>                    from,
+		const tsh::SymbolType<>&            target,
+		const dia::StablePosition           source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		const CoercionErrorOverrides&       error_overrides,
+		const HandOverKind                  kind
+	) {
+		Coercion coercion = coercionOf(ctx, from, target, kind);
+		if (coercion.isValid()) return coercion;
 
-		Box<code::Expr> from_box = from->clone();
-		return coerce(ctx, std::move(from_box));
+		logCoercionFailure(ctx, coercion, source_position, coercion_expects_pos, error_overrides);
+		return query::Failed();
 	}
 
-	query::QResult<Box<code::Expr>> coerceFromBox(
+	query::QResult<Coercion> validCoercionOf(
 		query::Context&                     ctx,
-		Box<code::Expr>                     expr,
-		const tsh::SymbolType<>             expected_type,
-		dia::StablePosition                 source_position,
+		const ValueSource&                  from,
+		const tsh::SymbolType<>&            target,
+		const dia::StablePosition           source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos,
-		CoercionErrorOverrides              error_overrides
+		const CoercionErrorOverrides&       error_overrides
 	) {
-		UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr->expression_type, expected_type));
-		if (coercion.isValid()) return coercion.coerce(ctx, std::move(expr));
+		Coercion coercion = coercionOf(ctx, from, target);
+		if (coercion.isValid()) return coercion;
 
-		logCoercionFailure(
-			ctx, coercion, source_position, coercion_expects_pos, std::move(error_overrides)
-		);
+		logCoercionFailure(ctx, coercion, source_position, coercion_expects_pos, error_overrides);
 		return query::Failed();
+	}
+
+	Box<Expr> applyCoercion(query::Context& ctx, const Coercion& coercion, Box<Expr> from) {
+		const auto describe = [&] {
+			std::ostringstream out;
+			coercion.debugPrint(out);
+			return out.str();
+		};
+
+		CORE_ASSERT(
+			coercion.isValid(), base::strConcat("Carrying out a refused coercion: ", describe())
+		);
+		CORE_ASSERT(
+			coercion.getSource().getSymbolType() == from->expression_type.getSymbolType(),
+			base::strConcat(
+				"Carrying out a coercion on an expression it was not decided for: ", describe()
+			)
+		);
+
+		return applyNode(ctx, coercion.getRoot(), std::move(from));
+	}
+
+	BoxOrCRef<Expr> applyCoercionFromRef(
+		query::Context& ctx, const Coercion& coercion, CRef<Expr> from
+	) {
+		if (coercion.isNoOp()) return from;
+		return applyCoercion(ctx, coercion, from->clone());
+	}
+
+	Box<Expr> buildZeroCheck(query::Context& ctx, Box<Expr> value) {
+		const auto              origin = value->origin.generatedFrom();
+		const tsh::AbstractType type   = value->expression_type.getType();
+
+		switch (type.getKind()) {
+		case tsh::Kind::Integral:
+		case tsh::Kind::Float: {
+			auto zero = numeric_value::NumericValue::createOfType(type).expect(
+				"A zero fits into every numeric type."
+			);
+			const BuiltinBinary not_equal = type.getKind() == tsh::Kind::Float
+			                                  ? BuiltinBinary::FloatNeq
+			                                  : BuiltinBinary::IntegerNeq;
+
+			return makeBox<BinaryOperatorExpr>(
+				ctx,
+				origin,
+				not_equal,
+				std::move(value),
+				makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), zero)
+			);
+		}
+		case tsh::Kind::Byte:
+		case tsh::Kind::Char: {
+			// There is no literal of either to compare against, so they are compared as the
+			// unsigned integer of the same width. Both are 8 bits wide.
+			const auto as_integer = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
+			);
+			return buildZeroCheck(ctx, makeBox<CastExpr>(ctx, origin, std::move(value), as_integer));
+		}
+		default:
+			failNotImplemented(
+				ctx,
+				base::strConcat(
+					"Checking a value of type `",
+					value->expression_type.getSymbolType().toString(),
+					"` against zero is not supported yet."
+				),
+				*value
+			);
+		}
+
+		CORE_UNREACHABLE();
+	}
+
+	query::QResult<Box<Expr>> coerceFromBox(
+		query::Context&                     ctx,
+		Box<Expr>                           expr,
+		const tsh::SymbolType<>&            expected_type,
+		const dia::StablePosition           source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		const CoercionErrorOverrides&       error_overrides
+	) {
+		UNPACK_QRESULT(
+			const Coercion coercion =,
+			validCoercionOf(
+				ctx, expr.ref(), expected_type, source_position, coercion_expects_pos, error_overrides
+			)
+		);
+		return applyCoercion(ctx, coercion, std::move(expr));
 	}
 }

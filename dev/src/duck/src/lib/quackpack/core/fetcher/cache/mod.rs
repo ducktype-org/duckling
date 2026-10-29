@@ -15,7 +15,10 @@ use crate::quackpack::schemas::registry;
 #[cfg(test)]
 mod tests;
 
+mod migrations;
+
 use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::sqlite::run_migrations;
 use crate::{QuackResult, QuackResultContext};
 
 const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
@@ -49,6 +52,7 @@ enum Columns {
 
 impl Columns {
     /// Get the SQLite column name.
+    // Important: make sure names match names in the migration.
     const fn name(&self) -> &'static str {
         match self {
             Columns::Name => "name",
@@ -57,19 +61,10 @@ impl Columns {
             Columns::ManifestJson => "manifest_json",
         }
     }
-
-    /// Get the type of the SQLite column.
-    const fn sqlite_type(&self) -> &'static str {
-        match self {
-            Columns::Name => "TEXT NOT NULL",
-            Columns::Version => "TEXT NOT NULL",
-            Columns::Url => "TEXT NOT NULL",
-            Columns::ManifestJson => "TEXT NOT NULL",
-        }
-    }
 }
 
 /// Name of the table where we save metadata.
+// Important: make sure names match names in the migration.
 const TABLE_NAME: &str = "packages_manifests";
 
 #[derive(Debug)]
@@ -122,14 +117,17 @@ impl ManifestCache {
     /// Create a new [ManifestCache] at location pointed by [CacheLocation].
     /// Note that this is a blocking operation.
     pub fn new(location: CacheLocation<'_>) -> QuackResult<Self> {
-        debug!(?location, "initializing fetcher cache");
-        let connection = match location {
+        debug!(target: "duck::sqlite", ?location, "initializing fetcher cache");
+        let mut connection = match location {
             CacheLocation::Memory => rusqlite::Connection::open_in_memory()?,
             CacheLocation::Path(path) => rusqlite::Connection::open(path)?,
         };
-        connection
-            .create_table()
-            .with_context(|| format!("failed to create a manifest cache table in {}", location))?;
+        run_migrations(&mut connection, migrations::MIGRATIONS).with_context(|| {
+            format!(
+                "failed to run migrations for a manifest cache in {}",
+                location
+            )
+        })?;
         Ok(Self { connection })
     }
 
@@ -137,7 +135,6 @@ impl ManifestCache {
     ///
     /// `Ok(Some)` means that manifest has been fetched successful, `Ok(None)`: we didn't have
     /// `package` in a cache, while `Err` indicates, most likely, internal SQL error.
-    #[tracing::instrument(skip(self))]
     pub fn get_manifest(
         &self,
         package: types::PackageWithUrl,
@@ -161,7 +158,6 @@ impl ManifestCache {
     ///
     /// Note that `Ok` allows inner `packages_manifest` to be an empty Vec: it means that we don't
     /// have `package` in a cache.
-    #[tracing::instrument(skip(self))]
     pub fn get_all_manifests(
         &self,
         package: types::PackageWithUrl,
@@ -183,7 +179,6 @@ impl ManifestCache {
     /// Add or replace manifest for package `package`.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
-    #[tracing::instrument(skip(self))]
     pub fn add_or_replace_manifest(
         &self,
         package: types::PackageWithUrl,
@@ -205,7 +200,6 @@ impl ManifestCache {
     /// to inner SQL locking.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
-    #[tracing::instrument(skip(self))]
     pub fn add_or_replace_multiple_manifests(
         &mut self,
         registry_url: InternedUrl,
@@ -256,9 +250,6 @@ trait ConnectionExt {
         package: types::PackageWithUrl,
     ) -> rusqlite::Result<Vec<String>>;
 
-    /// Helper for creating internal cache table.
-    fn create_table(&self) -> rusqlite::Result<()>;
-
     /// Helper for adding or replacing JSON manifest of a `package`.
     fn add_or_replace_manifest_json(
         &self,
@@ -303,31 +294,6 @@ impl ConnectionExt for rusqlite::Connection {
             ],
             |row| row.get(0),
         )
-    }
-
-    fn create_table(&self) -> rusqlite::Result<()> {
-        self.execute(
-            &format!(
-                "CREATE TABLE IF NOT EXISTS {table} (
-                    {name} {name_type},
-                    {version} {version_type},
-                    {url} {url_type},
-                    {manifest} {manifest_type},
-                    PRIMARY KEY ({name}, {version}, {url})
-                );",
-                table = TABLE_NAME,
-                name = Columns::Name.name(),
-                name_type = Columns::Name.sqlite_type(),
-                version = Columns::Version.name(),
-                version_type = Columns::Version.sqlite_type(),
-                url = Columns::Url.name(),
-                url_type = Columns::Url.sqlite_type(),
-                manifest = Columns::ManifestJson.name(),
-                manifest_type = Columns::ManifestJson.sqlite_type(),
-            ),
-            [],
-        )?;
-        Ok(())
     }
 
     fn get_all_manifests_json(

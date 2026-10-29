@@ -8,7 +8,7 @@
 
 use super::{Diagnostic, Lint, LintLevel};
 use crate::util::Pluralize;
-use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]
 struct DiagnosticWithLint {
@@ -39,7 +39,7 @@ impl LintBuffer {
     }
 
     /// Register a new warning to be emitted later.
-    pub fn register_warning<T: Diagnostic + 'static>(&mut self, diag: T, lint: Lint) {
+    fn register_warning<T: Diagnostic + 'static>(&mut self, diag: T, lint: Lint) {
         self.warnings.push(DiagnosticWithLint {
             diagnostic: Box::new(diag),
             lint,
@@ -47,7 +47,7 @@ impl LintBuffer {
     }
 
     /// Register a new error to be emitted later.
-    pub fn register_error<T: Diagnostic + 'static>(&mut self, diag: T, lint: Lint) {
+    fn register_error<T: Diagnostic + 'static>(&mut self, diag: T, lint: Lint) {
         self.errors.push(DiagnosticWithLint {
             diagnostic: Box::new(diag),
             lint,
@@ -55,20 +55,17 @@ impl LintBuffer {
     }
 
     /// Register a new lint with the given level to be emitted later.
-    pub fn register<T: Diagnostic + 'static>(
-        &mut self,
-        diag: T,
-        lint: Lint,
-        level: LintLevel,
-    ) -> QuackResult<()> {
+    pub fn register<T: Diagnostic + 'static>(&mut self, diag: T, lint: Lint, level: LintLevel) {
         match level {
             LintLevel::Warning => self.register_warning(diag, lint),
             LintLevel::Error => self.register_error(diag, lint),
             LintLevel::Allow => {
-                qp_bail_internal!("attempted to register lint with level {level:?}")
+                panic!(
+                    "attempted to register a lint with the level {level:?}; `lint={}` `diag={diag:?}`",
+                    lint.name
+                )
             }
         }
-        Ok(())
     }
 
     /// Emit all collected warnings and errors.

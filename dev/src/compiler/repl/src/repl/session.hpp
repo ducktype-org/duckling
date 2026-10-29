@@ -18,6 +18,7 @@
 #include "helpers.hpp"
 
 #include <backends/dvm/repl_lowering.hpp>
+#include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
@@ -302,10 +303,11 @@ namespace compiler::repl {
 		                     ///< then it is checked by the main run loop.
 		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
 		ResetState                 m_reset_state;      ///< Struct to control reset.
-		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
-		ReplFrontend m_frontend;      ///< Frontend for user interaction
-		bool         m_decorative_output;
+		u64           m_line_counter;  ///< Counter for generating unique wrapper function names
+		ReplSessionID m_session_id;    ///< Part of the names of this session's statement modules
+		vm::PID       m_dvm_pid;       ///< Process ID of the running DVM instance
+		ReplFrontend  m_frontend;      ///< Frontend for user interaction
+		bool          m_decorative_output;
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *

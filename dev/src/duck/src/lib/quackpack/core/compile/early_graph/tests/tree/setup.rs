@@ -10,12 +10,10 @@ use tempfile::TempDir;
 
 use crate::DuckContext;
 use crate::quackpack::core::compile::early_graph::tests::{mock_local_pkg, mock_registry_pkg};
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-use crate::quackpack::core::{PackageId, PackageLoader, Version, storage};
-use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::quackpack::core::{PackageId, PackageLoader, Version, fetcher, storage};
+use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 use crate::util::test_utils::setup_test;
 
 pub fn setup_mock_storage() -> (DuckContext, TempDir) {
@@ -43,30 +41,34 @@ pub fn setup_mock_packages(root: &Path) {
         let pkg_id = PackageId::new(
             FullIdentity::new(
                 (*name).into(),
-                FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap()),
+                FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone()),
             ),
             Version::new(1, 0, 0),
         );
-        root.join("pkg")
-            .join(pkg_id.storage_name())
-            .join("src")
-            .join("main.duck")
-            .touch()
-            .unwrap();
+        touch(
+            root.join("pkg")
+                .join(pkg_id.storage_name())
+                .join("src")
+                .join("main.duck"),
+        )
+        .unwrap();
 
-        root.join("pkg")
-            .join(pkg_id.storage_name())
-            .join(PackageLoader::MANIFEST_NAME)
-            .write(manifest)
-            .unwrap();
+        write_file(
+            root.join("pkg")
+                .join(pkg_id.storage_name())
+                .join(PackageLoader::MANIFEST_NAME),
+            manifest,
+        )
+        .unwrap();
 
-        root.join("pkg")
-            .join(pkg_id.storage_name())
-            .join(storage::paths::OK_FILENAME)
-            .touch()
-            .unwrap();
+        touch(
+            root.join("pkg")
+                .join(pkg_id.storage_name())
+                .join(storage::paths::OK_FILENAME),
+        )
+        .unwrap();
     }
-    root.try_fsync_dir().unwrap();
+    try_fsync_dir(root).unwrap();
 }
 
 /// Creates packages for the following scenario:
@@ -140,10 +142,10 @@ metadata:
 ///
 /// There's also an extra feature `nonexistent`.
 fn setup_mock_root_package(root: &Path) {
-    root.join("src").join("main.duck").touch().unwrap();
-    root.join(PackageLoader::MANIFEST_NAME)
-        .write(
-            "
+    touch(root.join("src").join("main.duck")).unwrap();
+    write_file(
+        root.join(PackageLoader::MANIFEST_NAME),
+        "
 metadata:
   name: root
   version: 1.0.0
@@ -164,9 +166,9 @@ features:
   baz_without_bar: []
   nonexistent: []
         ",
-        )
-        .unwrap();
-    root.try_fsync_dir().unwrap();
+    )
+    .unwrap();
+    try_fsync_dir(root).unwrap();
 }
 
 /// Generate mock [`SolverFreeze`].

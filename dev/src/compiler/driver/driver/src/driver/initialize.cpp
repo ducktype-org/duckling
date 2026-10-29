@@ -12,9 +12,11 @@
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
@@ -24,6 +26,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <diagnostic/logger.hpp>
@@ -34,6 +37,7 @@
 #include <query_framework/external/api.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
+#include <algorithm>
 #include <iostream>
 
 namespace compiler::driver {
@@ -59,6 +63,9 @@ namespace compiler::driver {
 			driver::print_ir_options.print_lir = debug_options.print_lir;
 			driver::print_ir_options.print_mir = debug_options.print_mir;
 			driver::print_ir_options.print_hir = debug_options.print_hir;
+
+			driver::print_query_graph = debug_options.print_graph;
+			driver::print_statistics  = debug_options.print_statistics;
 		}
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
@@ -97,8 +104,27 @@ namespace compiler::driver {
 
 			// Adding standard library packages
 			if (auto path = resolveStdPath(stdlib_options)) {
-				if (addStandardLibraryPackages(packages_info, *path, report).isBad())
-					return base::BAD;
+				for (auto& package_info: packages_info)
+					if (addDependenciesOnStandardLibraryForPackage(package_info, report).isBad())
+						return base::BAD;
+
+				for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
+					if (std::ranges::any_of(packages_info, [&](const auto& package_info) {
+							return package_info.package_id == std_id
+						        or package_info.package_name == std_id;
+						})) {
+						report(
+							base::strConcat("Package with name `", std_id, "` already exist."),
+							"",
+							true
+						);
+						return base::BAD;
+					}
+				}
+
+				auto std_packages = getStandardLibraryPackages(*path, report);
+				if (not std_packages) return base::BAD;
+				base::appendToVector(packages_info, *std_packages);
 			}
 
 			for (const auto& package_info: packages_info) {
@@ -305,6 +331,15 @@ namespace compiler::driver {
 				if (package_success.isBad()) return base::BAD;
 				handleBackendOptions(script_options.backend_options);
 				handleScriptContext(script_options.script_file);
+			}
+			variant_case(CompilerModeOfOperationAndOptions::LanguageServerMode, ls_options) {
+				handleDebugOptions(ls_options.debug_options);
+				handleExecutionOptions(ls_options.execution_options);
+
+				std::vector<compiler::frontend::packages::RawPackageInfo> no_packages_info;
+				auto                                                      package_success
+					= handlePackageOptions(no_packages_info, ls_options.stdlib_options);
+				if (package_success.isBad()) return base::BAD;
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

@@ -8,59 +8,82 @@
 
 use std::collections::VecDeque;
 
-use tracing::debug;
+use tracing::{debug, instrument, trace};
 
-use super::{DependencyGraph, EarlyGraph, HashMap, HashSet, Identity, PackagesSet, QuackResult};
+use super::{DependencyGraph, EarlyGraph, HashMap, HashSet, PackagesSet, QuackResult};
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::compile::missing_depenendcy_in_manifest;
 use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
-    /// Same as [`EarlyGraph::remove_disabled_dependencies`], but return enabled dependencies.
-    #[tracing::instrument(skip_all)]
-    fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) -> HashSet<Identity> {
+    /// Same as [`EarlyGraph::remove_disabled_dependencies`].
+    fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
         let mut enabled_deps = HashSet::from([self.root]);
         for (k, v) in self.graph.iter_mut() {
             let mut to_remove = HashSet::new();
             let this = packages.package(k);
-            for dep in &v.dependencies {
+            for (ename, dep) in &v.dependencies {
                 let is_enabled = this
                     .package()
                     .manifest()
                     .dependencies()
-                    .get_by_name(dep.name())
+                    .get_by_effective_name(*ename)
                     .unwrap_or_else(|| {
                         missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
                     })
                     .is_enabled_for(this.enabled_features());
-                debug!(
+                trace!(
                     %k,
                     features = ?this.enabled_features(),
                     %dep,
                     dep_enabled = %is_enabled,
                 );
                 if !is_enabled {
+                    debug!("dependency `{dep}` of `{k}` is disabled");
                     to_remove.insert(*dep);
                 } else {
                     enabled_deps.insert(*dep);
                 }
             }
-            v.dependencies.retain(|dep| !to_remove.contains(dep));
+            v.dependencies.retain(|(_, dep)| !to_remove.contains(dep));
         }
         self.graph.retain(|dep, _| enabled_deps.contains(dep));
-        enabled_deps
+    }
+
+    /// Remove unreachable dependencies.
+    ///
+    /// When removing disabled dependencies, we might leave some unreachable ones. Get rid of them too.
+    fn remove_unreachable_dependencies(&mut self) {
+        let mut reachable_deps = HashSet::new();
+        let mut bfs_stack = VecDeque::from([self.root]);
+        while let Some(current) = bfs_stack.pop_front() {
+            let inserted_new_node = reachable_deps.insert(current);
+            if !inserted_new_node {
+                continue;
+            }
+            let deps = self.dependencies_for_package(&current).dependencies();
+            bfs_stack.extend(deps.iter().map(|(_, id)| id));
+        }
+        self.graph.retain(|dep, _| {
+            if reachable_deps.contains(dep) {
+                return true;
+            }
+            debug!("removing `{dep}` from the graph, as it is unreachable");
+            false
+        });
     }
 }
 
 impl EarlyGraph {
     /// Recursively populate enabled features, starting from the root of the graph.
-    #[tracing::instrument(skip_all)]
+    #[instrument(level = "debug", skip_all)]
     pub(super) fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
         let root_package = self.package_mut(&self.graph.root());
         let root_features =
             root_package.features_that_would_be_added(root_features.iter().copied())?;
         debug!(?root_features, "starting to expand features");
         let mut added_features = HashMap::from([(self.graph.root, root_features)]);
+        let mut enabled_deps = HashSet::from([self.graph.root]);
         let mut stack = VecDeque::from([self.graph().root]);
 
         // This is an iterative DFS.
@@ -74,14 +97,14 @@ impl EarlyGraph {
                 .graph
                 .get(&current)
                 .expect("we've verified that there are dependencies");
-            for dep in &node.dependencies {
+            for (ename, dep) in &node.dependencies {
                 let this_features = added_features.entry(current).or_default();
-                let enabled_features = {
+                let (enabled_features, is_enabled) = {
                     let entry_in_dep_manifest = this
                         .package()
                         .manifest()
                         .dependencies()
-                        .get_by_name(dep.name())
+                        .get_by_effective_name(*ename)
                         .unwrap_or_else(|| {
                             missing_depenendcy_in_manifest(
                                 &this.package().name(),
@@ -89,13 +112,31 @@ impl EarlyGraph {
                                 this,
                             )
                         });
-                    entry_in_dep_manifest.enabled_features(this_features)
+                    (
+                        entry_in_dep_manifest.enabled_features(this_features),
+                        entry_in_dep_manifest.is_enabled_for(this_features),
+                    )
                 };
-                debug!(node = %dep, features = ?enabled_features, "adding features to node");
+                let became_available = if is_enabled {
+                    enabled_deps.insert(*dep)
+                } else {
+                    false
+                };
+                trace!(node = %dep, features = ?enabled_features, was_enabled = %is_enabled, %became_available, "adding features to node");
+                // We shouldn't modify feature flags of disabled dependencies.
+                if !is_enabled {
+                    continue;
+                }
+
                 let entry = self.packages.package(dep);
                 let expanded_features = entry.features_that_would_be_added(enabled_features)?;
                 let dep_features = added_features.entry(*dep).or_default();
-                if dep_features.extend_and_get_diff_size(expanded_features) > 0 {
+                let new_features_count = dep_features.extend_and_get_diff_size(expanded_features);
+                // We should visit dependency if it is enabled and either of two things have happened:
+                // * it just became enabled or,
+                // * its feature flags have changed.
+                let should_visit = became_available || new_features_count > 0;
+                if should_visit {
                     stack.push_back(*dep);
                 }
             }
@@ -110,16 +151,21 @@ impl EarlyGraph {
 
     /// Removes disabled dependency from the graph.
     ///
-    /// Note that currently they stay as keys in [`DependencyGraph`], although no [`DependencyNode`]
-    /// should point at them.
-    ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
-    #[tracing::instrument(skip_all)]
+    #[instrument(level = "debug", skip_all)]
     pub(super) fn remove_disabled_dependencies(&mut self) {
-        let enabled_deps = self.graph.remove_disabled_dependencies(&self.packages);
+        self.graph.remove_disabled_dependencies(&self.packages);
+        self.graph.remove_unreachable_dependencies();
         // Also clear identity cache.
-        self.packages
-            .inner
-            .retain(|dep, _| enabled_deps.contains(dep));
+        self.packages.inner.retain(|dep, _| {
+            if self.graph.graph.contains_key(dep) {
+                return true;
+            }
+            trace!(
+                ?dep,
+                "removing from the `PackagesSet`, as it is unreachable or disabled"
+            );
+            false
+        });
     }
 }

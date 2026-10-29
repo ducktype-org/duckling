@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
-project(Duckling VERSION 0.2)
+project(Duckling VERSION 0.3)
 
 set(DUCKLING_VERSION_PRERELEASE "alpha")
 
@@ -75,6 +75,7 @@ add_subdirectory(src/common)
 add_subdirectory(src/compiler)
 add_subdirectory(src/vm)
 add_subdirectory(src/playground)
+add_subdirectory(src/tools)
 
 # Scripts:
 add_subdirectory(scripts/cmake)

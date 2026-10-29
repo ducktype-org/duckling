@@ -1,0 +1,12 @@
+Tests:
+  coercions:
+    Cases:
+      all:
+        Output:
+          String: "1\n2\n11\n7\n8\n10\n17\n9\n1\n100\n2\n2\n3\n4\n1\n2\n3\n4\n2\n1\n21\n101\n22\n102\n23\n103\n24\n104\n105\n25\n27\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3
+        Output:
+          String: "1\n2\n11\n7\n8\n10\n17\n9\n1\n100\n2\n2\n3\n4\n1\n2\n3\n4\n2\n1\n21\n101\n22\n102\n23\n103\n24\n104\n105\n25\n27\n"
+        ExitCode: 0

@@ -182,6 +182,7 @@ namespace compiler::helios {
 		case pst::ElementKind::RoundGroupExpr:
 		case pst::ElementKind::CallList:
 		case pst::ElementKind::AtrArgList:
+		case pst::ElementKind::ArrayLiteralList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
@@ -213,7 +214,7 @@ namespace compiler::helios {
 
 		case pst::ElementKind::TemplateStmt:
 			// This defines a non-empty scope only for for baked PST nodes,
-			// @TODO: #3071 probably change it to transparent,
+			// @TODO: #3892 probably change it to transparent,
 			// since this element should not be present in baked PSTs (or will be a trivial node).
 			return ElementScopeKind::Standard;
 
@@ -263,12 +264,6 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
-		/**
-		 * @brief Cache to verify parent scopes are consistent.
-		 * @note It is intentionally thread safe.
-		 */
-		inline static concurrent::ConHashMap<pst::PstID, ScopeID> parent_map;
-
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
 			auto element_scope_kind = getScopeKind(ctx, element_key.element);
@@ -305,14 +300,6 @@ namespace compiler::helios {
 				);
 				return parent.ref->parent->ref->perfectClone();
 			}
-
-
-			// simple parent sanity check:
-			// it is technically not needed anymore, but it left as an additional
-			// layer of bug detection.
-			parent_map.maybePutAndUpdate(element->getID(), parent, [&](CRef<ScopeID> existing) {
-				CORE_ASSERT(*existing == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
-			});
 
 			return ScopeData{
 				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
@@ -613,7 +600,7 @@ namespace compiler::helios {
 				// Scope of "template →(...)← {}"
 				// This also inserts the baked template symbols into this scope.
 
-				// @TODO: #3071 this is a hack, fix it!
+				// @TODO: #3892 this is a hack, fix it!
 				// Here two different cases are handled:
 				// * for pre-bake PST template this defined no symbols, this is a scope in which the
 				// expressions from template "signature" are compiled
@@ -687,7 +674,7 @@ namespace compiler::helios {
 				return out;
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
-				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template
+				// @TODO: #3892 maybe modify this assertion or add a new else-if branch for template
 				// statements
 				CORE_ASSERT(
 					getScopeKind(ctx, base_element) == ElementScopeKind::Standard,
@@ -775,6 +762,7 @@ namespace compiler::helios {
 				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
 				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
 				{ .package = base::StrID("core"), .path = { base::StrID("prints") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("optional") } },
 			};
 			return imports;
 		}
@@ -899,7 +887,7 @@ namespace compiler::helios {
 			CORE_DEV_LOG(
 				REPL,
 				"At root scope, module #",
-				current_module_id.queryUnstablePerfectHash(),
+				current_module_id.queryUnstablePerfectHash().toStringHex(),
 				", isRepl=",
 				is_repl_module,
 				", hasParent=",

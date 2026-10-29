@@ -12,6 +12,10 @@
 
 #include <array>
 
+/**
+ * @brief What belongs here: `StableObjIdNameMap`, the map from names to stable object ids. No
+ * program is run.
+ */
 class ObjIdNameMapTester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ObjIdNameMapTester
@@ -38,14 +42,16 @@ public:
 	void testSimple() {
 		std::array strs = { base::StrID("zero"), base::StrID("one"), base::StrID("two") };
 		vm::ObjIdNameMap<u32> map;
-		auto                  id0 = map.insert(0, strs[0]);
-		ASSERT_EQUAL(0, id0);
+		ASSERT_EQUAL(vm::FIRST_OBJ_ID, map.nextID());
+		auto id0 = map.insert(0, strs[0]);
+		ASSERT_EQUAL(vm::FIRST_OBJ_ID, id0);
 		auto id1 = map.insert(1, strs[1]);
-		ASSERT_EQUAL(1, id1);
+		ASSERT_EQUAL(vm::FIRST_OBJ_ID + 1, id1);
 		auto id2 = map.insert(2, strs[2]);
-		ASSERT_EQUAL(2, id2);
+		ASSERT_EQUAL(vm::FIRST_OBJ_ID + 2, id2);
+		ASSERT_EQUAL(vm::FIRST_OBJ_ID + 3, map.nextID());
 
-		u64 id3 = 3;
+		u64 id3 = vm::FIRST_OBJ_ID + 3;
 		ASSERT_EQUAL(0, *map.at(id0));
 		ASSERT_EQUAL(0, *map.at(strs[0]));
 		ASSERT_EQUAL(1, *map.at(id1));
@@ -54,13 +60,16 @@ public:
 		ASSERT_EQUAL(2, *map.at(strs[2]));
 
 		ASSERT_TRUE(map.nameOf(id3).empty());
+		ASSERT_TRUE(map.nameOf(0).empty());
 
 		u32 v = 0;
 		for (auto& i: map) ASSERT_EQUAL(i, v++);
-		for (u32 i = 0; i < map.size(); i++) ASSERT_EQUAL(i, *map.at(base::safeIntConv<usize>(i)));
-		ASSERT_TRUE(map.contains(0));
+		for (u32 i = 0; i < map.size(); i++)
+			ASSERT_EQUAL(i, *map.at(vm::FIRST_OBJ_ID + base::safeIntConv<usize>(i)));
+		ASSERT_TRUE(!map.contains(0));
+		ASSERT_TRUE(map.contains(id0));
 		ASSERT_TRUE(map.contains(strs[0]));
-		ASSERT_TRUE(!map.contains(3));
+		ASSERT_TRUE(!map.contains(id3));
 		ASSERT_TRUE(!map.contains(base::StrID("three")));
 	}
 
@@ -68,14 +77,15 @@ public:
 		constexpr u32 OVERLOAD_SIZE = 100;
 
 		vm::StableObjIdNameMap<u32> stable_map;
-		assertTrue(0 == stable_map.insert(2 * OVERLOAD_SIZE, getId(0)), "insert to stable map(0)");
-		u32* ptr = stable_map.at(0).get();
+		const auto                  first_id = stable_map.insert(2 * OVERLOAD_SIZE, getId(0));
+		assertTrue(vm::FIRST_OBJ_ID == first_id, "insert to stable map(0)");
+		u32* ptr = stable_map.at(first_id).get();
 		assertTrue(*ptr == 2 * OVERLOAD_SIZE, "access through a pointer(0)");
 
 		for (u32 i = 1; i < OVERLOAD_SIZE; ++i) {
 			stable_map.insert(i, getId(i));
 			std::string msg = "pointer equality(" + std::to_string(i) + ")";
-			assertTrue(ptr == stable_map.at(0).get(), msg);
+			assertTrue(ptr == stable_map.at(first_id).get(), msg);
 		}
 	}
 
@@ -84,12 +94,13 @@ public:
 		constexpr u32 OVERLOAD_SIZE = 100;
 
 		vm::ObjIdNameMap<u32> unstable_map;
-		assertTrue(0 == unstable_map.insert(2 * OVERLOAD_SIZE, getId(0)), "insert to stable map(0)");
-		u32* ptr = unstable_map.at(0).get();
+		const auto            first_id = unstable_map.insert(2 * OVERLOAD_SIZE, getId(0));
+		assertTrue(vm::FIRST_OBJ_ID == first_id, "insert to stable map(0)");
+		u32* ptr = unstable_map.at(first_id).get();
 		assertTrue(*ptr == 2 * OVERLOAD_SIZE, "access through a pointer(0)");
 
 		for (u32 i = 1; i < OVERLOAD_SIZE; ++i) unstable_map.insert(i, getId(i));
-		assertTrue(ptr != unstable_map.at(0).get(), "pointer inequality(0)");
+		assertTrue(ptr != unstable_map.at(first_id).get(), "pointer inequality(0)");
 	}
 };
 

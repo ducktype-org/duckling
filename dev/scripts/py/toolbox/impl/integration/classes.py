@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Self
+from typing import Optional
 
 from .io_data import IOData
 
@@ -71,7 +71,7 @@ class TestNode:
     """
 
     name: str
-    subtests: list[Self]
+    subtests: list["TestNode"]
     tests: list[Test]
     cwd: Path
 

@@ -46,6 +46,9 @@ namespace compiler::driver {
 			bool print_lir = false;
 			bool print_mir = false;
 			bool print_hir = false;
+
+			bool print_graph      = false;
+			bool print_statistics = false;
 		};
 
 		/**
@@ -130,6 +133,11 @@ namespace compiler::driver {
 			 * @brief The paths of the DBC libraries to link into the output.
 			 */
 			std::vector<fs::FilePath> dvm_link_libraries;
+
+			/**
+			 * @brief Skip final linking and archiving and keep compiler object artifacts.
+			 */
+			bool no_link = false;
 		};
 	}
 
@@ -196,12 +204,21 @@ namespace compiler::driver {
 		};
 
 		/**
+		 * Language server mode: the packages are loaded by the language server itself, so only
+		 * the standard library packages are registered during initialization.
+		 */
+		struct LanguageServerMode final {
+			options_types::DebugOptions     debug_options;
+			options_types::ExecutionOptions execution_options;
+			options_types::StdLibOptions    stdlib_options;
+		};
+
+		/**
 		 * @note: in the future this might hold more modes,
-		 * like lsp daemon, etc.
 		 * don't refrain from refactoring this file (and module) if needed.
 		 * We might also want to restrain compiler functionality based on the mode.
 		 */
-		std::variant<BareMode, PackageCompilationMode, ReplMode, ScriptMode> mode;
+		std::variant<BareMode, PackageCompilationMode, ReplMode, ScriptMode, LanguageServerMode> mode;
 
 		CompilerModeOfOperationAndOptions(BareMode bare_mode): mode(bare_mode) {}
 
@@ -211,5 +228,8 @@ namespace compiler::driver {
 		CompilerModeOfOperationAndOptions(ReplMode repl_mode): mode(repl_mode) {}
 
 		CompilerModeOfOperationAndOptions(ScriptMode script_mode): mode(script_mode) {}
+
+		CompilerModeOfOperationAndOptions(LanguageServerMode language_server_mode):
+			  mode(language_server_mode) {}
 	};
 };

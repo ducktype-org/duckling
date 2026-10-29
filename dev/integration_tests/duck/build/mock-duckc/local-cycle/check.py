@@ -101,6 +101,18 @@ text = baz_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
+      "id": "{bar_name}",
+      "name": "bar",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(bar_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{baz_name}"
+        }}
+      ]
+    }},
+    {{
       "id": "{baz_name}",
       "name": "baz",
       "version": "1.0.0",
@@ -121,18 +133,6 @@ expected = f"""{{
       "dependencies": [
         {{
           "id": "{bar_name}"
-        }}
-      ]
-    }},
-    {{
-      "id": "{bar_name}",
-      "name": "bar",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(bar_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{baz_name}"
         }}
       ]
     }}
@@ -159,18 +159,6 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
-      "id": "{foo_name}",
-      "name": "foo",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(foo_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{bar_name}"
-        }}
-      ]
-    }},
-    {{
       "id": "{bar_name}",
       "name": "bar",
       "version": "1.0.0",
@@ -191,6 +179,18 @@ expected = f"""{{
       "dependencies": [
         {{
           "id": "{foo_name}"
+        }}
+      ]
+    }},
+    {{
+      "id": "{foo_name}",
+      "name": "foo",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(foo_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{bar_name}"
         }}
       ]
     }}

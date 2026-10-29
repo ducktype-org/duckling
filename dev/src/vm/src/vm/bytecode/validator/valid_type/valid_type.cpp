@@ -440,11 +440,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			state                          = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
 		variant_case(defined::DefinedFunction, function) {
-			// Function type size is known, so we don't need to do anything here.
-			this->size                  = valid_type::TypeSize::pointer();
-			this->alignment             = valid_type::TypeSize::pointer();
-			this->is_trivially_copyable = false;
-			// A code address, not a block reference.
+			// A function value is the ID of a function: 8 bytes in both pointer modes.
+			this->size = this->alignment = valid_type::TypeSize(Bytes(8), 0);
+			this->is_trivially_copyable  = true;
+			// A function ID, not a block reference.
 			this->holds_pointer_references = false;
 			state                          = Finalized{ .kind = finalized::Function{
 															.parameters   = std::move(function.parameters),
@@ -455,7 +454,8 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 				variant.alternatives.size() >= 2, "Variant must have at least 2 alternatives"
 			);
 			const auto num_alternatives = variant.alternatives.size();
-			const auto needed_bits      = static_cast<usize>(std::bit_width(num_alternatives - 1));
+			// Zero denotes no active alternative, so the largest tag is num_alternatives.
+			const auto needed_bits = static_cast<usize>(std::bit_width(num_alternatives));
 			// Add 7 so we round up to the nearest byte, because we cannot have sub-byte sizes.
 			const auto needed_bytes          = (needed_bits + 7) / 8;
 			const auto rounded_to_power_of_2 = std::bit_ceil(needed_bytes);

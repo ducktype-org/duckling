@@ -12,7 +12,7 @@
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use std::fmt;
 
-use tracing::info;
+use tracing::trace;
 
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
 use self::profiles::Profile;
@@ -79,18 +79,20 @@ impl BuildContext<'_, '_> {
 /// Note:
 /// -----
 /// `pkgs` should be all packages present in the freeze, including the root package.
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn compile(
     bcx: BuildContext<'_, '_>,
     pkgs: Vec<(PackageId, AnyPackage)>,
 ) -> QuackResult<CompilationOutput> {
-    info!(?bcx, "compiling");
+    trace!(?bcx);
     // @TODO: #2900 Unmock this.
     if bcx.pcx.package().is_script() {
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
-    let unit_graph = lower_early_graph(graph);
+    trace!(early_graph = ?graph, "created EarlyGraph");
+    let unit_graph = lower_early_graph(graph)?;
+    trace!(?unit_graph, "created UnitGraph");
     let runner = UnitRunner::new(unit_graph, &bcx);
     runner.run()
 }

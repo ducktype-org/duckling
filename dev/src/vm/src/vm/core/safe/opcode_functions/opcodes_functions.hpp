@@ -89,7 +89,7 @@ namespace vm {
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_MICRO_INSTR(opcode) \
-	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_nop : op_debug_##opcode,
+	low::MicroOpcode::opcode == low::MicroOpcode::checkStrategy ? op_debug_nop : op_debug_##opcode,
 #include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 
 
@@ -171,6 +171,17 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Checks that @p function_id, read from a function value, references a function.
+		 * @throws exceptions::VMNullFunctionCallException if the function value is null.
+		 * @throws exceptions::VMInvalidFunctionValueException if it references no function.
+		 */
+		static VM_OPFUN_INLINE void checkCallee(const SafeVMThread& thread, usize function_id) {
+			if (function_id == 0) throw exceptions::VMNullFunctionCallException();
+			if (!thread.process_program->getFunctions().contains(function_id))
+				throw exceptions::VMInvalidFunctionValueException();
+		}
+
+		/**
 		 * @brief Prepares the execution variables and frames for a call to a function with a
 		 * specified id.
 		 *
@@ -180,8 +191,8 @@ namespace vm {
 		 * `local_stack` should be pointer to the local stack of the new function.
 		 * Old values of `instr` nad `local_stack` should be saved on the frame of the caller.
 		 *
-		 * @note The function has to be inlined since it's used by the `call_func` and
-		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
+		 * @note The function has to be inlined since it's used by the `call_func_off` and
+		 * `virtualCall_pptr_method` opcodes and breaks tailcalling of opcode function otherwise.
 		 */
 		static VM_OPFUN_INLINE void performFunctionCall(
 			const MicroInstruction*& instr,
@@ -261,7 +272,7 @@ namespace vm {
 		 *
 		 * Unlike `init_off_type`, which leaves the slot blockless until something asks for a
 		 * block, this creates one up front. Nothing the lowering emits takes this path any more;
-		 * the only caller left is `initFromVMValue`, i.e. the hand-built start functions.
+		 * the only caller left is `initFromVMValue_imm_off`, i.e. the hand-built start functions.
 		 */
 		static VM_OPFUN_INLINE void performInit(
 			byte*& local_stack, Frame*& frame, SafeVMThread& thread, u64 byte_offset, TypeCRef type
@@ -298,14 +309,20 @@ namespace vm {
 				nested_data_ptr.getBlock(), nested_data_ptr.getOffset(), wanted_type
 			);
 
-			// Find type index
+			// Find the zero-based alternative index. The stored tag is one-based because zero
+			// denotes no active alternative.
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
 
-			// @TODO: #3374 - Make usage of type 0 be accounted here as well
-			// Also, optimize this...
-			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
+			while (alternative_index < alternatives.size()
+			       && alternatives[alternative_index] != wanted_type)
+				++alternative_index;
+
+			CORE_ASSERT(
+				alternative_index < alternatives.size(),
+				"The variant must contain the requested alternative type"
+			);
+			const usize alternative_type_tag = alternative_index + 1;
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -318,16 +335,16 @@ namespace vm {
 			switch (variant_type_tag_size.asInt()) {
 			case 1:
 				// byte, using uint8_t below since byte is not std::integral
-				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_type_tag));
 				break;
 			case 2:
-				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_type_tag));
 				break;
 			case 4:
-				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_type_tag));
 				break;
 			case 8:
-				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_type_tag));
 				break;
 			default:
 				CORE_PANIC("Invalid variant size: ", variant_type_tag_size.asInt());

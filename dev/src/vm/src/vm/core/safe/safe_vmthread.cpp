@@ -189,7 +189,7 @@ namespace vm {
 			const auto& arg_type = func.parameters[static_cast<u64>(i)];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVMValue,
+				initFromVMValue_imm_off,
 				std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)),
 				stack_offset
 			));
@@ -205,7 +205,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				// The start function's whole local stack is the space shared with the callee,
 		        // so the callee's local stack starts at the very same address.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
+				MAKE_BYTECODE_INSTRUCTION(call_func_off, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need
 		        // for any deinits. It's being deinitialized by the thread after obtaining the
 		        // return value/exit_code.
@@ -385,7 +385,7 @@ namespace vm {
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				// `main`'s frame begins at its return value, which the layout above puts at 40.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40),  // call main
+				MAKE_BYTECODE_INSTRUCTION(call_func_off, called_function_id, 40),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
@@ -547,8 +547,7 @@ namespace vm {
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
 			const usize slot_index = orig_slot_stack_size + idx;
 			// A result the callee never took a block for still has to be handed out as a
-			// pointer, so it gets one here. This is the common case, not a rare one -
-			// `vm_sc_unit_test` panics if the block is assumed to exist.
+			// pointer, so it gets one here.
 			Block* block = frame->local_slot_stack_base[slot_index].block;
 			if (block == nullptr)
 				block = createLocalSlotBlock(*frame, process_memory, slot_index).get();

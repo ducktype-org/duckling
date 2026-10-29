@@ -9,12 +9,12 @@ use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 use itertools::Itertools;
-use tracing::trace;
 
 use crate::quackpack::core::Package;
-use crate::quackpack::core::lints::warnings::{UnusedKey, Warnings};
+use crate::quackpack::core::lints::errors::{Errors, UnusedKey};
+use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 mod dependency;
@@ -36,9 +36,8 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
-#[tracing::instrument(skip(ctx))]
-pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings)> {
-    trace!("starting parsing");
+#[tracing::instrument(level = "debug", skip(ctx))]
+pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings, Errors)> {
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the user manifest at `{}`",
@@ -164,17 +163,19 @@ impl DerefMut for ScopeGuard<'_> {
 }
 
 /// Helper for [`parse_manifest`].
-fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings)> {
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings, Errors)> {
     let package_root = path.parent().with_context_internal(|| {
         format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
     })?;
-    let content = path.read_to_string()?;
+    let content = read_from_path_to_string(path)?;
     let mut warnings = Warnings::default();
-    let schema = parse_schema(&content, &mut warnings)?;
+    let mut errors = Errors::default();
+    let schema = parse_schema(&content, &mut errors)?;
     let manifest = manifest::parse(
         &schema,
         ParseMode::Package { package_root },
         &mut warnings,
+        &mut errors,
         ctx,
     )?;
     Ok((
@@ -186,17 +187,24 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
             path.into(),
         ),
         warnings,
+        errors,
     ))
 }
 
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
-pub fn parse_schema(yaml_content: &str, warnings: &mut Warnings) -> QuackResult<ManifestSchema> {
+pub fn parse_schema(yaml_content: &str, errors: &mut Errors) -> QuackResult<ManifestSchema> {
+    // Reject duplicate keys.
+    // As of 26.10.2026, map-typed fields (`dependencies`, `features`, …) silently keep the last
+    // duplicate when deserialized into `HashMap`/`BTreeMap`.
+    // On the other hand `serde_yaml_ng::Value` errors on them, so we use it for the check.
+    let _: serde_yaml_ng::Value = serde_yaml_ng::from_str(yaml_content)?;
+
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
     let schema = serde_ignored::deserialize(deserializer, |path| {
         let mut buffer = String::new();
         stringify_unused_path(&mut buffer, &path);
-        warnings.push(UnusedKey::new(buffer));
+        errors.push(UnusedKey { key: buffer });
     })?;
     Ok(schema)
 }
