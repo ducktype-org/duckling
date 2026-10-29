@@ -18,6 +18,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
@@ -57,17 +58,20 @@ namespace compiler::repl {
 			variant_case(helios::defgen::ReplInputWrapper::Expression, expr) {
 				CORE_DEV_LOG(REPL, "Creating ReturnStmt for value expression\n");
 
+				namespace coercions = helios::coercions;
+
+				// `return <expr>` is the last use of the expression, so a temporary is moved out
+				// implicitly. A value that may not be handed over, like a global of a type that is
+				// not trivially copyable, is returned as it is.
+				const coercions::Coercion coercion = coercions::coercionOf(
+					ctx,
+					expr.expr.ref(),
+					expr.expr->expression_type.getSymbolType(),
+					coercions::HandOverKind::LastUse
+				);
 				BoxOrCRef<helios::code::Expr> hout_expr = expr.expr.ref();
-				// The move <expr> is added in the HOUT and in this case it won't be added
-				// automatically. And we don't want to run destructor of a result temporary,
-				// if it's non-trivially destructible. return <expr>.
-				if (expr.expr->expression_type.getValueCategory().isMovableFrom())
-					hout_expr = makeBox<helios::code::MoveExpr>(
-						ctx,
-						expr.expr->origin.generatedFrom(),
-						expr.expr->clone(),
-						helios::code::MoveExpr::MoveKind::Implicit
-					);
+				if (coercion.isValid())
+					hout_expr = coercions::applyCoercionFromRef(ctx, coercion, expr.expr.ref());
 
 				code_block->statements.emplace_back(base::makeBox<helios::code::ReturnStmt>(
 					helios::code::generatedOrigin(), std::move(hout_expr)

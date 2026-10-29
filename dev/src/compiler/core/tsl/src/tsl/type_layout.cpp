@@ -19,6 +19,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
@@ -26,6 +27,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_errors.hpp>
 
@@ -682,6 +684,47 @@ namespace compiler::tsl {
 	CRef<TypeLayout> PointerTypeLayout::getPointee(query::Context& ctx) const {
 		CORE_ASSERT(pointee_type.has_value(), "Untyped pointer layout has no pointee.");
 		return &ctx.query<QuerySymbolTypeLayout>(*pointee_type)->valueOrThrow();
+	}
+
+	FunctionalTypeLayout::FunctionalTypeLayout(
+		const tsh::FunctionAbstractType function_type, query::Context& ctx
+	):
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {
+		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
+			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				base::strConcat(
+					"Lowering of the closure function type `",
+					function_type.toString(),
+					"` is not supported yet."
+				),
+				"Use a raw function type, for example `funptr(i64) -> i64` instead of `(i64) -> "
+				"i64`."
+			));
+			query::throwFailed();
+		}
+	}
+
+	std::vector<CRef<TypeLayout>> FunctionalTypeLayout::getParameterLayouts(query::Context& ctx
+	) const {
+		const tsh::FunctionAbstractType function_type = getSourceType().getType();
+
+		std::vector<CRef<TypeLayout>> parameter_layouts;
+		parameter_layouts.reserve(function_type.getParameterTypes().size());
+		for (const auto& parameter: function_type.getParameterTypes())
+			if (parameter.getType().carriesInformation(ctx))
+				parameter_layouts.emplace_back(
+					&ctx.query<QuerySymbolTypeLayout>(parameter)->valueOrThrow()
+				);
+		return parameter_layouts;
+	}
+
+	CRef<TypeLayout> FunctionalTypeLayout::getReturnLayout(query::Context& ctx) const {
+		const tsh::FunctionAbstractType function_type = getSourceType().getType();
+
+		const auto result_type = function_type.getResultType();
+		if (result_type.getType().carriesInformation(ctx))
+			return &ctx.query<QuerySymbolTypeLayout>(result_type)->valueOrThrow();
+		return &ctx.query<QueryAbstractTypeLayout>(tsh::getUnitType())->valueOrThrow();
 	}
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }

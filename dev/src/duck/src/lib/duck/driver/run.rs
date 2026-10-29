@@ -9,7 +9,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use clap::ArgMatches;
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::cli;
 use super::cli_args_preprocessing::aliases_expansion::expand_aliases;
@@ -23,7 +23,7 @@ use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_s
 use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::command_ext::CommandExt;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{is_executable, resolve_with_tilde};
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 /// Run the duck with the given [`DuckContext`].
@@ -52,10 +52,7 @@ pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
         return Ok(());
     }
     global_opts.update_context(ctx)?;
-    debug!(
-        subcommand = ?args.subcommand_name(),
-        "after expanding everything"
-    );
+    debug!(subcommand = ?args.subcommand_name(), "expanded aliases and typos");
     run_subcmd(ctx, args, &external)
 }
 
@@ -87,16 +84,13 @@ pub(super) fn gather_external_subcmds(ctx: &DuckContext) -> HashMap<String, Path
             else {
                 continue;
             };
-            if executable.as_path().is_executable() {
+            if is_executable(executable.as_path()) {
                 commands.insert(String::from(stripped), executable);
             }
         }
     }
 
-    debug!(
-        external = ?commands.keys(),
-        "found the external subcommands"
-    );
+    trace!(external = ?commands.keys(), "found the external subcommands");
     commands
 }
 
@@ -119,8 +113,7 @@ fn run_subcmd(
             .with_context(|| format!("failed to execute the external subcommand `{name}`"));
     }
     if is_name_possible_script_path_subcmd(name) {
-        let path = Path::new(name);
-        let path = path.resolve_with_tilde(ctx);
+        let path = resolve_with_tilde(name, ctx);
         check_is_script(&path)?;
         let args = external_cli_args(args);
         let opts = RunScriptOptions::from_path_and_args_with_defaults(ctx, &path, args)?;
@@ -141,9 +134,9 @@ fn external_cli_args(sub_args: &ArgMatches) -> Vec<&OsStr> {
 /// Execute the external subcommand.
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<&OsStr>) -> QuackResult<()> {
     debug!(
-        path = %exec_path.display(),
         ?cli_args,
-        "executing external command"
+        "executing the external command `{}`",
+        exec_path.display()
     );
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);

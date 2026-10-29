@@ -32,7 +32,7 @@ pub struct PackageContext<'duck> {
 
 impl<'duck> PackageContext<'duck> {
     /// Create new [`PackageContext`].
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let (package, warnings, errors) =
             core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
@@ -57,7 +57,7 @@ impl<'duck> PackageContext<'duck> {
     }
 
     /// Create a new [`PackageContext`] for a standalone script.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn new_standalone_script(path: &Path, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let (frontmatter, warnings, errors) = core::parse_frontmatter(path, ctx)?;
         let script = StandaloneScript::new(frontmatter);

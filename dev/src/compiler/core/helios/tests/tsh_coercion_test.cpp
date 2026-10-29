@@ -37,6 +37,7 @@ public:
 		TESTER_ADD_TEST(ownership);
 		TESTER_ADD_TEST(tupleLiterals);
 		TESTER_ADD_TEST(implicitRefOf);
+		TESTER_ADD_TEST(lastUse);
 	}
 
 private:
@@ -293,6 +294,18 @@ private:
 			.steps({ MUTABILITY_CHANGE });
 		plan("()", "type").succeeds().steps({ LIFT_TO_TYPE });
 		plan("((), ())", "type").succeeds().steps({ LIFT_TO_TYPE });
+		plan("ref ((), type)", "type").succeeds().steps({ DEREF, LIFT_TO_TYPE });
+
+		// A tuple is a type when every component can be coerces into a type.
+		const NodeCheck referenced
+			= plan("(ref type, ())", "type").succeeds().steps({ ELEMENTWISE, LIFT_TO_TYPE });
+		referenced.ranks(Rank::LiftToType);
+		referenced.part(0).steps({ DEREF });
+		referenced.part(1).steps({ LIFT_TO_TYPE });
+		const NodeCheck nested
+			= plan("((), (ref type, ()))", "type").succeeds().steps({ ELEMENTWISE, LIFT_TO_TYPE });
+		nested.part(0).steps({ LIFT_TO_TYPE });
+		nested.part(1).steps({ ELEMENTWISE, LIFT_TO_TYPE }).part(0).steps({ DEREF });
 
 		// Void has no value, so it is retyped into anything and nothing is handed over.
 		plan("void", "void").succeeds().steps({});
@@ -313,6 +326,14 @@ private:
 			.succeeds()
 			.doesNothing()
 			.steps({ MUTABILITY_CHANGE });
+		// @TODO: #1488 Change it into an error test.
+		plan(immutable(type("ref i32")), type("ref i32"))
+			.succeeds()
+			.doesNothing()
+			.steps({ MUTABILITY_CHANGE });
+		plan("(const box i32, i32)", "(box i32, i32)")
+			.succeeds()
+			.steps({ HAND_OVER, MUTABILITY_CHANGE });
 		plan("box i32", "box i32").succeeds().steps({ HAND_OVER });
 		plan("Owner", "Owner").succeeds().steps({ HAND_OVER });
 
@@ -359,7 +380,13 @@ private:
 		plan(byte_type, type("u8")).refuses().because<IncompatibleTypes>();
 		plan(immutable_pointer, mutable_pointer).refuses().because<IncompatibleTypes>();
 		plan("()", "i32").refuses().because<IncompatibleTypes>();
-		plan("(i32, i32)", "type").refuses().because<IncompatibleTypes>();
+		plan("(ref type, i32)", "type")
+			.refuses()
+			.because<SubPartRefused>()
+			.aboutTheWholeCoercion()
+			.causes(1)
+			.component(1)
+			.because<IncompatibleTypes>();
 		plan("i32 | bool", "i32").refuses().because<IncompatibleTypes>();
 		plan("i32 | bool", "bool").refuses().because<IncompatibleTypes>();
 		plan(functionOf(type("i32"), type("i32")), type("i32"))
@@ -368,6 +395,8 @@ private:
 		plan(functionOf(type("i32"), type("i32")), functionOf(type("i32"), type("i64")))
 			.refuses()
 			.because<NotImplemented>();
+		plan("funptr(i32) -> i32", "(i32) -> i32").refuses().because<IncompatibleTypes>();
+		plan("(i32) -> i32", "funptr(i32) -> i32").refuses().because<IncompatibleTypes>();
 
 		// A reference is never taken implicitly, and nothing converts behind one.
 		plan("i32", "ref i32").refuses().because<IncompatibleTypes>();
@@ -376,12 +405,6 @@ private:
 		plan("box i32", "ref i32").refuses().because<IncompatibleTypes>();
 		plan("ref i32", "ref i64").refuses().because<IncompatibleTypes>();
 		plan("ref (i32, i32)", "ref (const i32, i32)").refuses().because<IncompatibleTypes>();
-		plan(immutable(type("ref i32")), type("ref i32")).refuses().because<MutabilityMismatch>();
-		plan("(const box i32, i32)", "(box i32, i32)")
-			.refuses()
-			.because<SubPartRefused>()
-			.component(0)
-			.because<MutabilityMismatch>();
 
 		// Every component that refuses is a cause, as deep as the types go.
 		plan("(i32, i32)", "(i64, f64)")
@@ -392,6 +415,20 @@ private:
 			.because<IncompatibleTypes>()
 			.about("i32", "f64");
 		plan("(i32, i32)", "(bool, f64)").refuses().because<SubPartRefused>().causes(2);
+		plan("(i32, i32)", "type")
+			.refuses()
+			.because<SubPartRefused>()
+			.aboutTheWholeCoercion()
+			.causes(2);
+		plan("((), (i32, ()))", "type")
+			.refuses()
+			.because<SubPartRefused>()
+			.causes(1)
+			.component(1)
+			.because<SubPartRefused>()
+			.causes(1)
+			.component(0)
+			.because<IncompatibleTypes>();
 		plan("((i32, i32), i32)", "((i64, f64), i64)")
 			.refuses()
 			.because<SubPartRefused>()
@@ -575,6 +612,33 @@ private:
 		coerce("global_box", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
 		coerce("makeOwner()", "ref Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
 		coerce("r", "ref (box i32, i32)", ImplicitRefOf).succeeds().steps({});
+	}
+
+	void lastUse() {
+		using namespace coercion_error;
+		using enum CoercionMode;
+		using enum HandOverKind;
+
+		// A local dies right after its last use, so it is moved out of implicitly.
+		coerce("o", "Owner", Default, LastUse).succeeds().steps({ IMPLICIT_MOVE });
+		coerce("b", "box i32", Default, LastUse).succeeds().steps({ IMPLICIT_MOVE });
+		coerce("t", "(box i32, i32)", Default, LastUse).succeeds().steps({ IMPLICIT_MOVE });
+		coerce("x", "i64", Default, LastUse).succeeds().steps({ NUMERIC });
+
+		// Only a local the function owns may be moved out of. A global, the pointee of a local
+		// reference and a part of a literal still have to be copied or moved explicitly.
+		coerce("global_box", "box i32", Default, LastUse)
+			.refuses()
+			.because<RequiresExplicitCopyMove>();
+		coerce("r", "(box i32, i32)", Default, LastUse).refuses().because<RequiresExplicitCopyMove>();
+		coerce("(b, 1i64)", "(box i32, i64)", Default, LastUse)
+			.refuses()
+			.because<SubPartRefused>()
+			.component(0)
+			.because<RequiresExplicitCopyMove>();
+
+		// The last use changes nothing about the types, so a value is never taken by `ref`.
+		coerce("x", "ref i32", Default, LastUse).refuses().because<IncompatibleTypes>();
 	}
 };
 

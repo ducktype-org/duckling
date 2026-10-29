@@ -14,31 +14,31 @@ use super::parse_manifest;
 use crate::quackpack::core::lints::{Lint, LintLevel};
 use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
-use crate::quackpack::core::{
-    DependencyKind, GitReference, OptLevel, Profile, Version, capture_frontmatter,
-};
+use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{normalize, touch, try_fsync_dir, write_file};
 use crate::{DuckContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join("x");
-    manifest.touch().unwrap();
-    manifest.write(contents).unwrap();
-    dir.path().try_fsync_dir().unwrap();
+    touch(&manifest).unwrap();
+    write_file(&manifest, contents).unwrap();
+    try_fsync_dir(dir.path()).unwrap();
     (dir, manifest)
 }
 
 fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let frontmatter = dir.path().join("x");
-    frontmatter.touch().unwrap();
-    frontmatter
-        .write(format!("<frontmatter>\n{}\n</frontmatter>", contents))
-        .unwrap();
-    dir.path().try_fsync_dir().unwrap();
+    touch(&frontmatter).unwrap();
+    write_file(
+        &frontmatter,
+        format!("<frontmatter>\n{}\n</frontmatter>", contents),
+    )
+    .unwrap();
+    try_fsync_dir(dir.path()).unwrap();
     (dir, frontmatter)
 }
 
@@ -82,6 +82,33 @@ metadata:
     assert_eq!(
         summary.venv().storage_path(),
         ctx.default_storage_root().not_locked_path()
+    );
+}
+
+#[test]
+fn fail_duplicate_fields_in_maps() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+dependencies:
+  dx:
+    version: '0.1'
+  dx:
+    version: '0.1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let result = parse_manifest(&manifest_path, &ctx);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            ["dependencies: duplicate entry with key \"dx\" at line 6 column 3",]
+        )
     );
 }
 
@@ -434,7 +461,7 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
-    assert_eq!(path, manifest_path.parent().unwrap().normalize().join("xd"));
+    assert_eq!(path, normalize(manifest_path.parent().unwrap()).join("xd"));
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
     assert!(a.alias().is_none());
@@ -448,13 +475,7 @@ dependencies:
     let path = a1.source().url().to_path_buf().unwrap();
     assert_eq!(
         path,
-        manifest_path
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .normalize()
-            .join("xd")
+        normalize(manifest_path.parent().unwrap().parent().unwrap()).join("xd")
     );
     assert!(a1.alias().is_none());
 
@@ -1011,7 +1032,7 @@ profiles:
 }
 
 #[test]
-fn duplicated_names() {
+fn duplicated_effective_names() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
@@ -1021,8 +1042,36 @@ metadata:
 dependencies:
   a:
     version: '1'
-  b:
+dev-dependencies:
+  a:
     version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            ["multiple dependencies (one normal and one dev) are referenced by the same name `a`"]
+        )
+    );
+}
+
+#[test]
+fn duplicated_identities_registry() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: '1'
+dev-dependencies:
+  b:
+    version: '2'
     source:
       name: a
 "#,
@@ -1033,67 +1082,7 @@ dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            ["multiple normal dependencies specify the same name `a`"]
-        )
-    );
-}
-
-#[test]
-fn duplicated_names_in_aliases() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.10'
-
-dependencies:
-  a:
-    version: '1'
-    source:
-      name: c
-  b:
-    version: '1'
-    source:
-      name: c
-"#,
-    );
-    let ctx = DuckContext::default();
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            ["multiple normal dependencies specify the same name `c`"]
-        )
-    );
-}
-
-#[test]
-fn git_exclusive_fields() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.10'
-
-dependencies:
-  a:
-    version: '1'
-    source:
-      name: c
-  b:
-    version: '1'
-    source:
-      name: c
-"#,
-    );
-    let ctx = DuckContext::default();
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            ["multiple normal dependencies specify the same name `c`"]
+            ["dev dependency `b` has the same source as normal dependency `a`"]
         )
     );
 }
@@ -1263,27 +1252,27 @@ fn frontmatter_with_import() {
     let dir = TempDir::new().unwrap();
     let importing = dir.path().join("x");
     let imported = dir.path().join("y");
-    importing.touch().unwrap();
-    importing
-        .write(
-            r#" 
+    touch(&importing).unwrap();
+    write_file(
+        &importing,
+        r#" 
             
 <frontmatter>
 import: y
 </frontmatter>
         "#,
-        )
-        .unwrap();
-    imported.touch().unwrap();
-    imported
-        .write(
-            r#"
+    )
+    .unwrap();
+    touch(&imported).unwrap();
+    write_file(
+        &imported,
+        r#"
 dependencies:
   a:
     version: '1'
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
     let ctx = DuckContext::default();
     let frontmatter = parse_frontmatter(&importing, &ctx).unwrap().0;
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
@@ -1322,14 +1311,14 @@ import: y
 fn frontmatter_after_code_not_read() {
     let dir = TempDir::new().unwrap();
     let script = dir.path().join("x");
-    script.touch().unwrap();
+    touch(&script).unwrap();
     let contents = r#" 
 let a = 5
 <frontmatter>
 import: y
 </frontmatter>
         "#;
-    script.write(contents).unwrap();
+    write_file(&script, contents).unwrap();
     let ctx = DuckContext::default();
     // Check that we don't find a frontmatter...
     assert!(!Script::has_frontmatter(&script).unwrap());
@@ -1343,16 +1332,16 @@ import: y
 fn fail_not_closed_frontmatter() {
     let dir = TempDir::new().unwrap();
     let script = dir.path().join("x");
-    script.touch().unwrap();
-    script
-        .write(
-            r#"
+    touch(&script).unwrap();
+    write_file(
+        &script,
+        r#"
 <frontmatter>
 import: y
 </front-matter>
         "#,
-        )
-        .unwrap();
+    )
+    .unwrap();
     let ctx = DuckContext::default();
     let err = parse_frontmatter(&script, &ctx).unwrap_err();
     assert_eq!(
@@ -1411,7 +1400,7 @@ venv:
     assert!(!summary.venv().expose_freezefile());
     assert_eq!(
         summary.venv().storage_path(),
-        dir.path().join("storage").normalize(),
+        normalize(dir.path().join("storage"))
     );
 }
 
@@ -1763,30 +1752,29 @@ dependencies:
 }
 
 #[test]
-fn dep_and_dev_dep_can_share_name() {
+fn two_deps_can_share_name_if_aliased() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: foo
   version: '1'
-
 dependencies:
   a:
     version: '1'
-dev-dependencies:
-  a:
-    version: '1'
+  b:
+    source:
+      name: a
+      path: ../a
 "#,
     );
     let ctx = DuckContext::default();
     let package = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let deps = package.manifest().dependencies();
     assert_eq!(deps.all_dependencies().len(), 2);
-    let a = deps.filter_by_kind(DependencyKind::Normal).next().unwrap();
-    let a_dev = deps.filter_by_kind(DependencyKind::Dev).next().unwrap();
-    assert_eq!(a.name(), a_dev.name());
-    assert_eq!(a.alias(), a_dev.alias());
-    assert_eq!(a.effective_name(), a_dev.effective_name());
+    let a = deps.get_by_effective_name("a".into()).unwrap();
+    let ab = deps.get_by_effective_name("b".into()).unwrap();
+    assert_eq!(a.name(), "a");
+    assert_eq!(ab.name(), "a");
 }
 
 #[test]
@@ -1796,7 +1784,6 @@ fn valid_lint_levels() {
 metadata:
   name: foo
   version: '1'
-
 lints:
   duck:
     a: error

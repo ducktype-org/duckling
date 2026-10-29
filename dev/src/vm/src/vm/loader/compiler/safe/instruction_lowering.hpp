@@ -18,6 +18,7 @@
 #include <vm/core/safe/low_program/utils.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
+#include <ranges>
 #include <tuple>
 #include <type_traits>
 
@@ -157,16 +158,13 @@ namespace vm::loader::compiler::safe::detail {
 		 */
 		u64 sharedStackSpaceSize(base::StrID function_name) const {
 			const auto& signature = compiler.high_program.functions().at(function_name)->signature;
+			const auto low_types = std::views::transform([this](const code::Identifier& type_name) {
+				return resolveTypeName(type_name.str);
+			});
 
-			// Summed over the low types, the same ones `sharedStackSpaceSizeOfMethod` and the
-			// executor measure, so there is a single answer to how big a variable is.
-			u64 size = 0;
-			for (const auto& parameter: signature.parameters)
-				size += resolveTypeName(parameter.str)->getSize().asInt();
-			for (const auto& result: signature.result_types)
-				size += resolveTypeName(result)->getSize().asInt();
-
-			return size;
+			return sharedStackSpaceSizeOfTypes(
+				signature.parameters | low_types, signature.result_types | low_types
+			);
 		}
 
 		/**
@@ -183,8 +181,29 @@ namespace vm::loader::compiler::safe::detail {
 					method.method_name
 				);
 
-			return method_type->getParametersSize().value().asInt()
-			     + method_type->getResultTypeSize().value().asInt();
+			return sharedStackSpaceSizeOfFunctionType(method_type);
+		}
+
+		/**
+		 * @brief Same as `sharedStackSpaceSize`, for a call of a function of the given function
+		 * type.
+		 */
+		u64 sharedStackSpaceSizeOfFunctionType(TypeCRef function_type) const {
+			const auto function = function_type->get<kind::Function>().value();
+			return sharedStackSpaceSizeOfTypes(function->parameters, function->result_types);
+		}
+
+		/**
+		 * @brief Same as `sharedStackSpaceSize`, for a call with the given parameter and result
+		 * types.
+		 */
+		static u64 sharedStackSpaceSizeOfTypes(
+			std::ranges::input_range auto&& parameters, std::ranges::input_range auto&& results
+		) {
+			u64 size = 0;
+			for (const TypeCRef type: parameters) size += type->getSize().asInt();
+			for (const TypeCRef type: results) size += type->getSize().asInt();
+			return size;
 		}
 
 		/**
@@ -298,6 +317,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_call_cfunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_ffifunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_func, _) { is_control_flow = true; }
+			instr_case(high::Op_call_pfun, _) { is_control_flow = true; }
 			instr_case(high::Op_virtualCall_pptr_method, _) { is_control_flow = true; }
 			instr_default { is_control_flow = false; }
 		}
@@ -658,6 +678,18 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_call_ffifunc, i) { addLow<Op_call_ffifunc>(i.function); }
+			instr_case(high::Op_mov_pfun_func, i) {
+				const u64 function_id
+					= compiler.high_program.functions().idOf(i.function.function_name).value();
+				addLow<Op_mov_p64_imm>(i.dst, vm::opargs::Immediate{ function_id });
+			}
+			instr_case(high::Op_mov_pfun_pfun, i) { addLow<Op_mov_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_call_pfun, i) {
+				addLow<Op_call_p64_off>(
+					i.callee,
+					calleeStackDistance(sharedStackSpaceSizeOfFunctionType(getPlaceType(i.callee)))
+				);
+			}
 			instr_case(high::Op_setThreadCtx_func, i) { addLow<Op_setThreadCtx_func>(i.function); }
 			instr_case(high::Op_retTailcall_func, i) { addLow<Op_retTailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) {

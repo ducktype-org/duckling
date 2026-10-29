@@ -34,7 +34,7 @@ namespace pst {
 
 		static const std::set<Keyword> SPECIFIEIRS_CALL_LIST_REQUIRED;
 
-		explicit StmtSpecifier(const LangParserState& state): NotStmt(state) {
+		explicit StmtSpecifier(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::StmtSpecifier;
 		}
 
