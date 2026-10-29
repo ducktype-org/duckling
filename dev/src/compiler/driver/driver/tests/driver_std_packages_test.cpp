@@ -48,6 +48,7 @@ public:
 		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdDVMLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdSharedLibsDeclaredForCore);
+		TESTER_ADD_TEST(verifyExpPackageIsStandard);
 	}
 
 protected:
@@ -272,6 +273,43 @@ private:
 			ASSERT_EQUAL(expected_libs, target_lib->dvm_linking_options.shared_libraries);
 		}
 		assertTrue(seen_core_dvm_task, "No DVM compilation task for `core`");
+	}
+
+	/**
+	 * @brief Verifies that the experimental `exp` package is a loaded standard library package
+	 * that depends on `core` and `std`, and that it is compiled together with them.
+	 */
+	void verifyExpPackageIsStandard() {
+		const auto exp_id = base::StrID("exp");
+		assertTrue(
+			frontend::packages::isStandardLibraryPackage(exp_id),
+			"`exp` is not a standard library package"
+		);
+
+		const auto& global_packages = global_state::getPackages();
+		auto        exp             = std::ranges::find_if(global_packages, [&](const auto& pkg) {
+            return pkg.getPackageID() == exp_id;
+        });
+		assertTrue(exp != global_packages.end(), "The `exp` package is not loaded");
+
+		std::vector<base::StrID> dependency_ids;
+		for (const auto& dep: exp->getDependencies().illegalAccess())
+			dependency_ids.push_back(dep.illegalAccess().getPackage().illegalAccess().getID());
+		std::ranges::sort(dependency_ids);
+		ASSERT_EQUAL(
+			(std::vector<base::StrID>{ base::StrID("core"), base::StrID("std") }), dependency_ids
+		);
+
+		const auto dvm_artifacts = driver::getStdLibDVMArtifacts();
+		assertTrue(
+			std::ranges::any_of(
+				dvm_artifacts,
+				[](const auto& art) {
+					return art.file.getFilePath().getPath().filename() == "exp.dbc";
+				}
+			),
+			"No DVM artifact for `exp`"
+		);
 	}
 };
 
