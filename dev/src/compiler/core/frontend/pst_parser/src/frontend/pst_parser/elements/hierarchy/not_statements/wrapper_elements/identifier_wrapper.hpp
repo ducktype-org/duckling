@@ -49,7 +49,5 @@ namespace pst {
 		std::string elementType() const override {
 			return "Identifier Wrapper";
 		}
-
-		void acceptVisitor(PstVisitor& visitor) const final;
 	};
 }
