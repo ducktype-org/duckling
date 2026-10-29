@@ -54,7 +54,6 @@
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
-#include <query_framework/q_stats/q_stats.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -441,6 +440,14 @@ namespace debug_options {
 				.addShortDesc("Print selected intermediate representations to stdout.")
 				.addLongDesc("Possible values are: hir, mir, lir, dbc.")
 				.build(),
+			clah::ParamBuilder::ofFlag()
+				.addLongName("print-graph")
+				.addShortDesc("Print the query graph after the compilation.")
+				.build(),
+			clah::ParamBuilder::ofFlag()
+				.addLongName("print-statistics")
+				.addShortDesc("Print execution time statistics.")
+				.build(),
 		};
 	}
 
@@ -464,9 +471,63 @@ namespace debug_options {
 		apply_ir_options("dump-ir", DUMP_IR_OPTIONS);
 		apply_ir_options("print-ir", PRINT_IR_OPTIONS);
 
+		debug_options.print_graph      = parsing_result.isFlag("print-graph");
+		debug_options.print_statistics = parsing_result.isFlag("print-statistics");
+
 		return debug_options;
 	}
 
+}
+
+/**
+ * @brief The CLI interface for the IncrementalOptions part of the driver.
+ */
+namespace incremental_options {
+	using compiler::driver::options_types::IncrementalOptions;
+
+	/**
+	 * @brief Return the array of clah::Parameter for the incremental options of the driver, which
+	 * can be added to a Clah instance.
+	 */
+	auto getClahIncrementalParameters() {
+		return std::array{
+			clah::ParamBuilder::ofFlag()
+				.addLongName("no-incremental")
+				.addShortDesc("Disable incremental compilation (do not load previous query graph).")
+				.build(),
+		};
+	}
+
+	/**
+	 * @brief Given parsing result from clah, extract the incremental options for the driver.
+	 */
+	IncrementalOptions getIncrementalOptionsFromClah(const clah::ParsingResult& parsing_result) {
+		return IncrementalOptions{ .enabled = not parsing_result.isFlag("no-incremental") };
+	}
+
+	/**
+	 * @brief Verify that the incremental options are compatible with the debug options.
+	 */
+	clah::VerificationResult verifyIncrementalOptions(const clah::ParsingResult& parsing_result) {
+		const bool no_incremental = parsing_result.isFlag("no-incremental");
+
+		if ((parsing_result.isParam("dump-ir") || parsing_result.isParam("print-ir"))
+		    && !no_incremental) {
+			return std::unexpected<std::string>(
+				"--dump-ir and --print-ir require --no-incremental, otherwise the modules loaded "
+				"from the incremental cache are not dumped or printed."
+			);
+		}
+
+		if (parsing_result.isFlag("print-graph") && no_incremental) {
+			return std::unexpected<std::string>(
+				"--print-graph requires the query graph, which is disabled by --no-incremental. "
+				"These flags cannot be used together."
+			);
+		}
+
+		return clah::VerificationPassed{};
+	}
 }
 
 /**
@@ -578,12 +639,8 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
 	                     .optional()
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
@@ -608,7 +665,7 @@ clah::Clah getClahForMain() {
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = 1,
 							},
@@ -678,12 +735,8 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
@@ -750,7 +803,7 @@ clah::Clah getClahForMain() {
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = 1,
 							},
@@ -897,36 +950,13 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-statistics")
-	                     .addShortDesc("Print execution time statistics.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-graph")
-	                     .addShortDesc("Print the query graph after the compilation.")
-	                     .build())
-				.addCustomVerification(
-					[](const clah::ParsingResult& options) -> clah::VerificationResult {
-						if (options.isFlag("print-graph") && options.isFlag("no-incremental")) {
-							return std::unexpected<std::string>(
-								"--print-graph requires the query graph, which is disabled by "
-								"--no-incremental. These flags cannot be used together."
-							);
-						}
-						return clah::VerificationPassed{};
-					}
-				)
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
 	                     .addLongName("archiver")
 	                     .addShortDesc("Path to the archiver executable.")
 	                     .optional()
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
 	                     .addLongName("workers")
@@ -944,15 +974,6 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Emit a static library (.a) instead of an executable.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
-						CORE_USER_LOG(
-							"Error: --print-graph requires the query graph, which is "
-							"disabled by --no-incremental. These flags cannot be used "
-							"together.\n"
-						);
-						return 1;
-					}
-
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
                         inferPackageName(path_to_compile)
@@ -986,7 +1007,7 @@ clah::Clah getClahForMain() {
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
@@ -1068,18 +1089,6 @@ clah::Clah getClahForMain() {
 
 					compiler::driver::exit();
 
-					if (options.isFlag("print-statistics")) {
-						if (not query::USE_STATS) {
-							std::cerr << "Warning: Query statistics are disabled at compile time. "
-										 "No query statistics will be printed.\n";
-						}
-						query::printStats();
-						time_stats::prettyPrintTimeStatistics();
-					}
-
-					if (options.isFlag("print-graph"))
-						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
-
 
 					return result.isOk() ? 0 : 1;
 				})
@@ -1106,12 +1115,8 @@ clah::Clah getClahForMain() {
 	                     .addLongName("print-graph")
 	                     .addShortDesc("Print the query graph after the compilation.")
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
 	                     .addLongName("workers")
@@ -1157,7 +1162,7 @@ clah::Clah getClahForMain() {
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
@@ -1209,18 +1214,6 @@ clah::Clah getClahForMain() {
 					total_compilation_time.end();
 
 					compiler::driver::exit();
-
-					if (options.isFlag("print-statistics")) {
-						if (not query::USE_STATS) {
-							std::cerr << "Warning: Query statistics are disabled at compile time. "
-										 "No query statistics will be printed.\n";
-						}
-						query::printStats();
-						time_stats::prettyPrintTimeStatistics();
-					}
-
-					if (options.isFlag("print-graph"))
-						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
 					return result.isOk() ? 0 : 1;
 				})
