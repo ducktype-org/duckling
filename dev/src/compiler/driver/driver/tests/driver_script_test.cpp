@@ -7,9 +7,11 @@
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <driver/options.hpp>
 #include <driver/repl_utils/script_helpers.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/script_context.hpp>
+#include <linker/link.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -82,7 +84,9 @@ private:
 				"fun saved_foo_name() -> i64 = { return 42; }\nvar x = saved_foo_name();"
 			);
 			global_state::setters::setScriptContext(script);
-			ASSERT_TRUE(driver::compileScript(backend, {}, {}, false).isOk());
+			driver::options_types::LinkingOptions linking_options;
+			linking_options.no_link = true;
+			ASSERT_TRUE(driver::compileScript(backend, {}, linking_options).isOk());
 			const auto module_name = repl::getScriptModuleID(script).str();
 			checkDumps(module_name);
 			const auto object_suffix = backend == driver::BackendType::LLVM ? ".o" : ".o.dbc";
@@ -103,7 +107,9 @@ private:
 			"= \"abc\";"
 		);
 		global_state::setters::setScriptContext(script);
-		ASSERT_TRUE(driver::compileScript(driver::BackendType::LLVM, {}, {}, false).isBad());
+		driver::options_types::LinkingOptions linking_options;
+		linking_options.no_link = true;
+		ASSERT_TRUE(driver::compileScript(driver::BackendType::LLVM, {}, linking_options).isBad());
 		const auto module_name = repl::getScriptModuleID(script).str();
 		checkDumps(module_name);
 		ASSERT_TRUE(!std::filesystem::exists(artifacts_path.getPath() / (module_name + ".o")));

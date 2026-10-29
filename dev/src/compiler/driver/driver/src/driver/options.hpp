@@ -130,6 +130,11 @@ namespace compiler::driver {
 			 * @brief The paths of the DBC libraries to link into the output.
 			 */
 			std::vector<fs::FilePath> dvm_link_libraries;
+
+			/**
+			 * @brief Skip the final executable link and keep compiler object artifacts.
+			 */
+			bool no_link = false;
 		};
 	}
 

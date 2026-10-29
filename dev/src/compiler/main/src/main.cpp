@@ -282,9 +282,15 @@ auto getClahArchivingOptions() {
 compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 	const clah::ParsingResult& parsing_result
 ) {
-	compiler::archiver::ArchivingOptions archiving_options;
-	archiving_options.archiver_path = parsing_result.getValue<std::string>("archiver");
-	return archiving_options;
+	return { .archiver_path = parsing_result.getValue<std::string>("archiver"),
+		     .no_link       = parsing_result.isFlag("no-link") };
+}
+
+auto getClahNoLinkParameter() {
+	return clah::ParamBuilder::ofFlag()
+	    .addLongName("no-link")
+	    .addShortDesc("Skip the final executable link and keep compiler object artifacts.")
+	    .build();
 }
 
 auto getClahLinkingOptions() {
@@ -315,6 +321,7 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Paths to the .dbc libraries to link into the output.")
 			.optional()
 			.build(),
+		getClahNoLinkParameter(),
 	};
 }
 
@@ -338,6 +345,8 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 		linking_options.dvm_link_libraries = lib_paths.value();
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
+
+	linking_options.no_link = parsing_result.isFlag("no-link");
 
 	return linking_options;
 }
@@ -384,13 +393,6 @@ namespace debug_options {
 				"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
 				"LLVM IR and assembly require the LLVM backend; DBC requires the DVM backend."
 			)
-		    .build();
-	}
-
-	auto getClahNoExecutableParameter() {
-		return clah::ParamBuilder::ofFlag()
-		    .addLongName("no-executable")
-		    .addShortDesc("Skip the final executable link and keep compiler object artifacts.")
 		    .build();
 	}
 
@@ -616,7 +618,7 @@ clah::Clah getClahForMain() {
 				"and every package depends on all the other ones. "
 				"This mimics the simple case of multi file compilation with GCC/clang which is "
 				"sometimes useful. Note that the package based entry points should be preferred "
-				"when possible. Use --no-executable to compile modules without linking an "
+				"when possible. Use --no-link to compile modules without linking an "
 				"executable."
 			)
 				.addPositional(clah::FileParser::make("module"))
@@ -647,7 +649,6 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
-				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-incremental")
 	                     .addShortDesc(
@@ -659,9 +660,7 @@ clah::Clah getClahForMain() {
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
-					const bool dvm_backend   = options.isFlag("dvm-backend");
-					const bool no_executable = options.isFlag("no-executable");
-
+					const bool                          dvm_backend = options.isFlag("dvm-backend");
 					std::set<base::StrID>               aliases_duplicate_check;
 					base::Map<base::StrID, base::StrID> package_id_aliases;
 					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
@@ -763,21 +762,6 @@ clah::Clah getClahForMain() {
 							continue;
 
 						auto root_module = package.getRootModule().illegalAccess().getID();
-						if (no_executable) {
-							if (package_id == package_ids.front()) main_root_module = root_module;
-							if (dvm_backend) {
-								compilation_tasks.push_back(driver::PackageCompilationTask{
-									.root_module  = root_module,
-									.build_target = driver::BuildTargetDVM{},
-								});
-							} else {
-								compilation_tasks.push_back(driver::PackageCompilationTask{
-									.root_module  = root_module,
-									.build_target = driver::BuildTargetLLVM{},
-								});
-							}
-							continue;
-						}
 						if (package_id == package_ids.front()) {
 							main_root_module = root_module;
 							continue;
@@ -805,20 +789,15 @@ clah::Clah getClahForMain() {
 								},
 							});
 						}
-						auto artifact_file = global_state::getRootCollection()
-			                                     ->fileArtifactAtOrNew(library_name)
-			                                     .file;
-						libraries_to_link.push_back(artifact_file.getFilePath());
+						if (not options.isFlag("no-link")) {
+							auto artifact_file = global_state::getRootCollection()
+				                                     ->fileArtifactAtOrNew(library_name)
+				                                     .file;
+							libraries_to_link.push_back(artifact_file.getFilePath());
+						}
 					}
 
 					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
-					if (no_executable) {
-						base::OkBad result = driver::compilePackages(compilation_tasks);
-
-						compiler::driver::exit();
-
-						return result.isOk() ? 0 : 1;
-					}
 
 					if (dvm_backend) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
@@ -829,8 +808,7 @@ clah::Clah getClahForMain() {
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetDVMExecutable{
 								.output_file_name  = base::StrID(output_file_name),
-								.dvm_linking_options    = driver::constructDVMLinkingOptions(
-									getLinkingOptionsFromClah(options), stdlib_options, false
+								.dvm_linking_options    = driver::constructDVMLinkingOptions(linking_options, stdlib_options, false
 								),
 							},
 						});
@@ -890,7 +868,6 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
-				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("print-statistics")
 	                     .addShortDesc("Print execution time statistics.")
@@ -1004,14 +981,7 @@ clah::Clah getClahForMain() {
 
 
 					compiler::driver::BuildTarget build_target;
-					const bool                    no_executable = options.isFlag("no-executable");
-					const bool emit_static_lib                  = options.isFlag("emit-static-lib");
-					if (no_executable && !emit_static_lib) {
-						if (options.isFlag("dvm-backend"))
-							build_target = compiler::driver::BuildTargetDVM{};
-						else
-							build_target = compiler::driver::BuildTargetLLVM{};
-					} else if (options.isFlag("dvm-backend")) {
+					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
 						auto is_lib              = options.isFlag("emit-static-lib");
@@ -1098,7 +1068,7 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
 	                     .optional()
 	                     .build())
-				.add(debug_options::getClahNoExecutableParameter())
+				.add(getClahNoLinkParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("print-statistics")
 	                     .addShortDesc("Print execution time statistics.")
@@ -1191,20 +1161,27 @@ clah::Clah getClahForMain() {
 						}
 						variant_match(converted->task_data) {
 							variant_case(compiler::driver::PackageCompilationTask, package_task) {
-								auto task = package_task;
-								if (options.isFlag("no-executable")) {
-									if (std::holds_alternative<
-											compiler::driver::BuildTargetLLVMExecutable>(
-											task.build_target
-										))
-										task.build_target = compiler::driver::BuildTargetLLVM{};
-									else if (std::holds_alternative<
-												 compiler::driver::BuildTargetDVMExecutable>(
-												 task.build_target
-											 ))
-										task.build_target = compiler::driver::BuildTargetDVM{};
+								if (options.isFlag("no-link")) {
+									using namespace compiler::driver;
+									variant_match(package_task.build_target) {
+										variant_case(BuildTargetLLVMExecutable, target) {
+											target.linking_options.no_link = true;
+										}
+										variant_case(BuildTargetLLVMStaticLibrary, target) {
+											target.archiving_options.no_link = true;
+										}
+										variant_case(BuildTargetDVMExecutable, target) {
+											target.dvm_linking_options.no_link = true;
+										}
+										variant_case(BuildTargetDVMLibrary, target) {
+											target.dvm_linking_options.no_link = true;
+										}
+										variant_default {
+											// BuildTargetLLVM has no executables
+										}
+									}
 								}
-								compilation_tasks.push_back(std::move(task));
+								compilation_tasks.push_back(package_task);
 							}
 							variant_default { CORE_PANIC("Unsupported task type in manifest"); }
 						}
@@ -1259,7 +1236,6 @@ clah::Clah getClahForMain() {
 							 "Compile to DVM bytecode (.dbc) instead of a native executable."
 						 )
 	                     .build())
-				.add(debug_options::getClahNoExecutableParameter())
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
 	                     .addLongName("workers")
@@ -1305,10 +1281,7 @@ clah::Clah getClahForMain() {
 					}
 
 					auto result = driver::compileScript(
-						backend_type,
-						stdlib_options,
-						getLinkingOptionsFromClah(options),
-						!options.isFlag("no-executable")
+						backend_type, stdlib_options, getLinkingOptionsFromClah(options)
 					);
 
 					compiler::driver::exit();

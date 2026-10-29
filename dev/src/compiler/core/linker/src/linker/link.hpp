@@ -40,6 +40,11 @@ namespace compiler::linker {
 		 * is not handled by the package manager.
 		 */
 		std::vector<std::string> stdlib_link_options;
+
+		/**
+		 * @brief Skip the final executable link and keep compiler object artifacts.
+		 */
+		bool no_link = false;
 	};
 
 	/**

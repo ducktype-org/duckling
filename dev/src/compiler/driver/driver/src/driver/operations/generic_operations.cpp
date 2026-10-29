@@ -19,6 +19,7 @@
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <driver/repl_utils/script_helpers.hpp>
+#include <driver/task/task.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/dbc_linking.hpp>
@@ -90,23 +91,6 @@ namespace compiler::driver {
 	}
 
 	namespace {
-		bool hasRequestedIROutput(BackendType backend) {
-			const auto& dump  = driver::dump_ir_options;
-			const auto& print = driver::print_ir_options;
-			if (dump.dump_hir || dump.dump_mir || dump.dump_lir || print.print_hir
-			    || print.print_mir || print.print_lir)
-				return true;
-
-			switch (backend) {
-			case BackendType::LLVM:
-				return dump.dump_llvm || dump.dump_asm;
-			case BackendType::DVM:
-				return dump.dump_dbc || print.print_dbc;
-			default:
-				CORE_PANIC("bad backend type");
-			}
-		}
-
 		/**
 		 * @brief Handles the `--print-ir=dbc` and `--dump-ir=dbc` debug options for a module
 		 * compiled to DVM bytecode. The dump is written to the `duck_debug_artifacts` directory.
@@ -345,14 +329,9 @@ namespace compiler::driver {
 
 		/**
 		 * Load precompiled artifact from disk without performing any compilation.
-		 * Returns Optional empty if IR output is requested or the underlying file is unavailable.
+		 * Returns Optional empty if the underlying file does not exist anymore.
 		 */
 		static auto loadFromDisk(const QKey& key) -> base::Optional<PResult> {
-			// IR output is emitted by provide(), so a cached object cannot satisfy the request.
-			// @TODO: #3861 Separate IR emission from object compilation so dumps and prints
-			// can be regenerated while reusing valid cached objects.
-			if (hasRequestedIROutput(key.backend_type)) return {};
-
 			auto output_name = getModuleOutputName(key);
 
 			auto collection = getQueryArtifactsCollection();
@@ -621,9 +600,7 @@ namespace compiler::driver {
 			return merged;
 		}
 
-		base::OkBad compileScriptToLLVMExecutable(
-			const linker::LinkingOptions& linking_options, bool link_executable
-		) {
+		base::OkBad compileScriptToLLVMExecutable(const linker::LinkingOptions& linking_options) {
 			auto& script_context = global_state::getScriptContext();
 
 			base::Optional<std::string> error_message;
@@ -672,7 +649,7 @@ namespace compiler::driver {
 					);
 				}
 
-				if (!link_executable) return;
+				if (linking_options.no_link) return;
 
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -703,9 +680,7 @@ namespace compiler::driver {
 			return base::OK;
 		}
 
-		base::OkBad compileScriptToDVMBytecode(
-			const DVMLinkingOptions& linking_options, bool link_executable
-		) {
+		base::OkBad compileScriptToDVMBytecode(const DVMLinkingOptions& linking_options) {
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto script_lir = compileScriptToLIRModuleData(ctx);
@@ -735,7 +710,7 @@ namespace compiler::driver {
 				vm::code::serializeCode(dvm_module.code, module_output_file);
 				module_output_file.close();
 
-				if (!link_executable) return;
+				if (linking_options.no_link) return;
 
 				auto& script_context = global_state::getScriptContext();
 				auto  output_file    = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -769,17 +744,16 @@ namespace compiler::driver {
 	base::OkBad compileScript(
 		BackendType                          backend_type,
 		const options_types::StdLibOptions&  std_lib_opts,
-		const options_types::LinkingOptions& linking_opts,
-		bool                                 link_executable
+		const options_types::LinkingOptions& linking_opts
 	) {
 		switch (backend_type) {
 		case BackendType::LLVM:
 			return compileScriptToLLVMExecutable(
-				constructNativeLinkerOptions(linking_opts, std_lib_opts), link_executable
+				constructNativeLinkerOptions(linking_opts, std_lib_opts)
 			);
 		case BackendType::DVM:
 			return compileScriptToDVMBytecode(
-				constructDVMLinkingOptions(linking_opts, std_lib_opts, false), link_executable
+				constructDVMLinkingOptions(linking_opts, std_lib_opts, false)
 			);
 		default:
 			CORE_PANIC("bad backend type");
@@ -928,9 +902,7 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case_novalue(
-					BuildTargetDVM, BuildTargetDVMLibrary, BuildTargetDVMExecutable
-				) {
+				variant_case_novalue(BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
 				}
 				variant_default {
@@ -1014,6 +986,8 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
+					if (target_exe.linking_options.no_link) break;
+
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
 						target_exe.output_file_name
 					);
@@ -1038,6 +1012,8 @@ namespace compiler::driver {
 					}
 				}
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
+					if (target_lib.archiving_options.no_link) break;
+
 					auto root_collection = global_state::getRootCollection();
 					if_opt_some(target_lib.custom_art_collection, custom_art_collection) {
 						root_collection = custom_art_collection;
@@ -1066,10 +1042,12 @@ namespace compiler::driver {
 						result = base::BAD;
 					}
 				}
-				variant_case_novalue(BuildTargetLLVM, BuildTargetDVM) {
+				variant_case_novalue(BuildTargetLLVM) {
 					// Do nothing for plain object files
 				}
 				variant_case(BuildTargetDVMLibrary, target_dvm) {
+					if (target_dvm.dvm_linking_options.no_link) break;
+
 					auto root_collection = global_state::getRootCollection();
 					if_opt_some(target_dvm.custom_art_collection, custom_art_collection) {
 						root_collection = custom_art_collection;
@@ -1091,6 +1069,8 @@ namespace compiler::driver {
 						result = base::BAD;
 				}
 				variant_case(BuildTargetDVMExecutable, target_dvm) {
+					if (target_dvm.dvm_linking_options.no_link) break;
+
 					// The standard library (and any other dependency) is linked in through
 					// `dvm_linking_options.link_libraries`.
 					const std::vector<artifacts::FileArtifact>& dbc_arts

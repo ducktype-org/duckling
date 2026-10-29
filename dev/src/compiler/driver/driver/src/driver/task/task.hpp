@@ -62,6 +62,11 @@ namespace compiler::driver {
 		 * @brief DBC libraries paths to link to final executable.
 		 */
 		std::vector<fs::FilePath> link_libraries{};
+
+		/**
+		 * @brief Skip the final executable link and keep compiler object artifacts.
+		 */
+		bool no_link = false;
 	};
 
 	/**
@@ -101,11 +106,6 @@ namespace compiler::driver {
 		 */
 		DVMLinkingOptions dvm_linking_options = {};
 	};
-
-	/**
-	 * @brief Package build target for DVM bytecode objects without a package link step.
-	 */
-	struct BuildTargetDVM final {};
 
 	/**
 	 * @brief Package build target for LLVM backend (to object files).
@@ -151,7 +151,6 @@ namespace compiler::driver {
 	using BuildTarget = std::variant<
 		BuildTargetDVMLibrary,
 		BuildTargetDVMExecutable,
-		BuildTargetDVM,
 		BuildTargetLLVM,
 		BuildTargetLLVMExecutable,
 		BuildTargetLLVMStaticLibrary>;

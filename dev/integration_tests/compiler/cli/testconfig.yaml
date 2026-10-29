@@ -61,20 +61,20 @@ Tests:
       two-modules:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
-      two-modules-no-executable:
+      two-modules-no-link:
         Run: >-
           @{duckc_path} compile_modules ./duck_modules/two_modules/b.dk ./duck_modules/two_modules/a.dk
-          --no-executable -O 0 --no-incremental --dump-ir asm -a @{case_build}
+          --no-link -O 0 --no-incremental --dump-ir asm -a @{case_build}
           --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.a.s' | wc -l)" -eq 1
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.b.s' | wc -l)" -eq 1
           && test "$(find @{case_build} -type f -name '*.o' -size +0c | wc -l)" -ge 2
           && test ! -e @{case_build}/package_llvm.exe
         ExitCode: 0
-      two-modules-dvm-no-executable:
+      two-modules-dvm-no-link:
         Run: >-
           @{duckc_path} compile_modules ./duck_modules/two_modules/b.dk ./duck_modules/two_modules/a.dk
-          --dvm-backend --no-executable -O 0 --no-incremental --dump-ir dbc -a @{case_build}
+          --dvm-backend --no-link -O 0 --no-incremental --dump-ir dbc -a @{case_build}
           --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.a.dbc' | wc -l)" -eq 1
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.b.dbc' | wc -l)" -eq 1
@@ -240,7 +240,7 @@ Tests:
     Run: |
       for category in @{print_categories}; do
         @{duckc_path} compile_script ./duck_scripts/foo.dks @{backend_flags} \
-        --no-executable --print-ir "$category" -a @{case_build} \
+        --no-link --print-ir "$category" -a @{case_build} \
         --custom-std-artifacts-path @{case_std_artifacts} > "$DIT_TMP_DIR/printed-ir" || exit 1;
         grep -q 'foo' "$DIT_TMP_DIR/printed-ir" || exit 1;
       done
@@ -252,7 +252,7 @@ Tests:
         backend_flags: "--dvm-backend"
         print_categories: "dbc"
 
-  compile-script-no-executable:
+  compile-script-no-link:
     # Compile the script object/bytecode artifacts but skip the final executable/package link.
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
     TimeOut: 10
@@ -260,7 +260,7 @@ Tests:
       llvm-object:
         Run: >-
           @{duckc_path} compile_script ./duck_scripts/foo.dks
-          --no-executable --dump-ir asm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          --no-link --dump-ir asm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' | wc -l)" -eq 1
           && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' -print -quit)"
           && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -eq 1
@@ -269,7 +269,7 @@ Tests:
       dvm-object:
         Run: >-
           @{duckc_path} compile_script ./duck_scripts/foo.dks
-          --dvm-backend --no-executable --dump-ir dbc -a @{case_build}
+          --dvm-backend --no-link --dump-ir dbc -a @{case_build}
           --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' | wc -l)" -eq 1
           && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' -print -quit)"
@@ -294,13 +294,13 @@ Tests:
         package_path: "./duck_modules/inferred_name/inferred_name.dk"
         ExitCode: 0
 
-  compile-package-no-executable:
+  compile-package-no-link:
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
     TimeOut: 10
     Cases:
       llvm-objects:
         Run: >-
-          @{duckc_path} compile_package ./duck_modules/inferred_name --no-executable -O 0
+          @{duckc_path} compile_package ./duck_modules/inferred_name --no-link -O 0
           --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -gt 0
           && test ! -e @{case_build}/package_llvm.exe
@@ -308,7 +308,7 @@ Tests:
       dvm-objects:
         Run: >-
           @{duckc_path} compile_package ./duck_modules/inferred_name --dvm-backend
-          --no-executable --no-incremental --dump-ir dbc -a @{case_build}
+          --no-link --no-incremental --dump-ir dbc -a @{case_build}
           --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build}/query -type f -name '*.dbc' -size +0c | wc -l)" -eq 1
           && test ! -e @{case_build}/package_dvm.dbc
@@ -328,7 +328,7 @@ Tests:
           && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
         ExitCode: 0
 
-  compile-packages-no-executable:
+  compile-packages-no-link:
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
     TimeOut: 10
     package_manifest: "$DIT_TMP_DIR/packages.json"
@@ -336,7 +336,7 @@ Tests:
       native-and-dvm-tasks:
         Run: >-
           printf '%s' '{"packages":[{"id":"inferred_name","name":"inferred_name","path":"duck_modules/inferred_name"}],"tasks":[{"package":"inferred_name","strategy":"native","output_file":"native_output"},{"package":"inferred_name","strategy":"dvm_exe","output_file":"dvm_output"}]}' > @{package_manifest}
-          && @{duckc_path} compile_packages @{package_manifest} -O 0 --no-incremental --no-executable
+          && @{duckc_path} compile_packages @{package_manifest} -O 0 --no-incremental --no-link
           -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
           && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -gt 0
           && test "$(find @{case_build} -type f -name '*.dbc' | wc -l)" -gt 0
@@ -352,7 +352,7 @@ Tests:
     debug_stem: "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name"
     # Keep the compiler command shared between steps; skip std and linking to focus on module IR.
     compile_manifest: >-
-      @{duckc_path} compile_packages "@{package_manifest}" --no-std --no-executable
+      @{duckc_path} compile_packages "@{package_manifest}" --no-std --no-link
       -O 0 -a "@{case_build}"
     Run: |
       # Write a manifest for the same package with the backend selected by the case below.

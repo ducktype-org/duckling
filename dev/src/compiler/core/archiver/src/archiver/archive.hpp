@@ -19,6 +19,11 @@ namespace compiler::archiver {
 		 * @brief Path to the archiver executable (for example, "ar" or "llvm-ar").
 		 */
 		base::Optional<std::string> archiver_path;
+
+		/**
+		 * @brief Skip the final executable link and keep compiler object artifacts.
+		 */
+		bool no_link = false;
 	};
 
 	/**
