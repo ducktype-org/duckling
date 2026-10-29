@@ -75,8 +75,6 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
-	using DVMCallable = std::variant<DVMFunctionName, DVMExternCFunctionName, DVMFFIFunctionName>;
-
 	/**
 	 * @brief Structure representing a place (L-value) in the generated DVM bytecode (which includes
 	 both locals and globals).
@@ -153,6 +151,13 @@ namespace compiler::backend_vm::internal {
 		AccessKind           access_kind;
 		SpecialKind          special_kind;
 	};
+
+	/**
+	 * @brief The target of a call: a named function, or a direct place holding a function value
+	 * which is called through `call_pfun`.
+	 */
+	using DVMCallable
+		= std::variant<DVMFunctionName, DVMExternCFunctionName, DVMFFIFunctionName, DVMPlace>;
 
 	class DVMValue {
 		using StoredValueVariant

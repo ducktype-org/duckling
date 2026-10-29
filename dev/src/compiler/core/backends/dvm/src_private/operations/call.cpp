@@ -38,8 +38,7 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CallOperation& op) {
 		CORE_ASSERT(
 			op.call_info.param_types.size() == op.args.size(),
-			"Argument count mismatch for function call: ",
-			VISIT(op.call_info.call_target, callable, return callable.name)
+			"Argument count mismatch for function call"
 		);
 
 		auto call_result_storage = [&] -> base::Optional<DVMPlace> {

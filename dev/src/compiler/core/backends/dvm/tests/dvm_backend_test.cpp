@@ -55,6 +55,7 @@ public:
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(bitwiseOperationsTest);
 		TESTER_ADD_TEST(variantUnitAlternativeTest);
+		TESTER_ADD_TEST(functionPointersTest);
 	}
 
 protected:
@@ -84,6 +85,7 @@ protected:
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
 			{ fs::FilePath(path("modules/ffi/")), "ffi" },
 			{ fs::FilePath(path("modules/bitwise_operations/")), "bitwise_operations" },
+			{ fs::FilePath(path("modules/function_pointers/")), "function_pointers" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -340,6 +342,12 @@ private:
 	}
 
 	void bitwiseOperationsTest() { runTest("bitwise_operations", {}, {}, {}, 0); }
+
+	// Function values in locals, arguments, results and class fields, called through `call_pfun`,
+	// including signatures with an aggregate and with no result.
+	void functionPointersTest() {
+		runMultimoduleTest("function_pointers", ALL_CORE_MODULES, {}, "3\n25\n12\n12\n7\n", {}, 42);
+	}
 };
 
 

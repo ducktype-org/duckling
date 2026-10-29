@@ -71,31 +71,56 @@ namespace {
 		}
 		// clang-format on
 	}
+
+	compiler::backend_vm::internal::FunctionCallInfo makeFunctionCallInfo(
+		compiler::backend_vm::internal::DVMCallable             call_target,
+		const std::vector<CRef<tsl::TypeLayout>>&               parameter_layouts,
+		CRef<tsl::TypeLayout>                                   return_type_layout,
+		compiler::backend_vm::internal::ProgramLoweringContext& program_context
+	) {
+		base::Optional<vm::code::TypeOfData> called_result_type
+			= program_context.lowerAndKeepReturnTslType(return_type_layout)
+		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
+
+		std::vector<vm::code::TypeOfData> param_types
+			= parameter_layouts | std::views::transform([&](const auto& layout) {
+				  return *program_context.lowerAndKeepTslType(layout);
+			  })
+		    | std::ranges::to<std::vector>();
+
+		return { .call_target = std::move(call_target),
+			     .return_type = std::move(called_result_type),
+			     .param_types = std::move(param_types) };
+	}
 }
 
 namespace compiler::backend_vm::internal {
 	FunctionCallInfo FunctionCallInfo::fromLirFunction(
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
-		base::Optional<vm::code::TypeOfData> called_result_type
-			= program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
-		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
-
-		std::vector<vm::code::TypeOfData> param_types
-			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-				  return *program_context.lowerAndKeepTslType(layout);
-			  })
-		    | std::ranges::to<std::vector>();
-
-		FunctionCallInfo call_info{ .call_target
-			                        = DVMFunctionName{ .name = func_literal.mangled_name },
-			                        .return_type = called_result_type,
-			                        .param_types = param_types };
-
+		DVMCallable call_target = DVMFunctionName{ .name = func_literal.mangled_name };
 		if (v_matches(func_literal.abi.value, lir::LIRAbi::CAbi))
-			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
+			call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
 
-		return call_info;
+		return makeFunctionCallInfo(
+			std::move(call_target),
+			*func_literal.parameter_layouts,
+			func_literal.return_type_layout,
+			program_context
+		);
+	}
+
+	FunctionCallInfo FunctionCallInfo::fromIndirectCall(
+		const lir::IndirectCallParameters& call_params,
+		DVMPlace                           callee,
+		ProgramLoweringContext&            program_context
+	) {
+		return makeFunctionCallInfo(
+			std::move(callee),
+			*call_params.parameter_layouts,
+			call_params.return_type_layout,
+			program_context
+		);
 	}
 
 	FunctionCallInfo FunctionCallInfo::fromExternCFunction(
@@ -217,6 +242,27 @@ namespace compiler::backend_vm::internal {
 				.call_info = dvm_call_info,
 				.args      = std::move(call_args),
 				.dest      = std::move(dest),
+			};
+		}
+		case IndirectCall: {
+			CORE_ASSERT(
+				!instr.arguments.empty(), "IndirectCall expects at least 1 argument (the callee)"
+			);
+			const auto* call_params = std::get_if<lir::IndirectCallParameters>(&instr.extra_params);
+			CORE_ASSERT(call_params != nullptr, "IndirectCall instruction without parameters");
+
+			DVMPlace callee    = ctx.lowerLirValue(instr.arguments[0]).get<DVMPlace>();
+			auto     call_args = instr.arguments | std::views::drop(1)
+			               | std::views::transform([&](const auto& lir_arg) {
+								 return ctx.lowerLirValue(lir_arg);
+							 })
+			               | std::ranges::to<std::deque>();
+
+			return CallOperation{
+				.call_info
+				= FunctionCallInfo::fromIndirectCall(*call_params, callee, ctx.program_context),
+				.args = std::move(call_args),
+				.dest = lower_opt_dest(),
 			};
 		}
 		case AddressOf: {
