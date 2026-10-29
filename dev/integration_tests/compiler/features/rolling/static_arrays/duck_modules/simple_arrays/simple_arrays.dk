@@ -31,10 +31,7 @@ fun fill_array(a: ref i32[3]) -> () = {
 }
 
 fun get_array_by_val() -> i32[3] = {
-    var tmp: i32[3];
-    tmp[0] = 10;
-    tmp[1] = 20;
-    tmp[2] = 30;
+    var tmp: i32[3] = [10, 20, 30];
     return tmp;
 }
 
