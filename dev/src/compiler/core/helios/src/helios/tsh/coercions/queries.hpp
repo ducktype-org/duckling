@@ -95,8 +95,6 @@ namespace compiler::tsh::coercions {
 	 * In the CoercionMode::ImplicitRefOf mode a direct or boxed value may also be taken by `ref`
 	 * when the target is a `ref`.
 	 *
-	 * @TODO: #3625 Convert array literals into ValueSource when performing coercions.
-	 *
 	 * @return A full coercion that can be performed by HELIoS.
 	 */
 	[[nodiscard]] Coercion coercionOf(
