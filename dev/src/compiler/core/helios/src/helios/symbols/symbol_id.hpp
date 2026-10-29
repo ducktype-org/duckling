@@ -60,6 +60,7 @@ namespace compiler::helios {
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolFromPST;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
+		friend struct ImplementationOf_QueryInferredSymbols;
 		friend struct ImplementationOf_QuerySymbolOfNonSTMT;
 		friend struct defgen::ImplementationOf_QueryGeneratedSymbol;
 		friend struct ImplementationOf_QueryClassSymbolData;

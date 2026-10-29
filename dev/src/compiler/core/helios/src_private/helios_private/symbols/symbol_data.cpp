@@ -201,7 +201,7 @@ namespace compiler::helios {
 
 	bool SymbolData::isPstImplemented() const {
 		return std::holds_alternative<PstImplementedSemantics>(other)
-			or std::holds_alternative<PstInferredSemantics>(other)
+		    or std::holds_alternative<PstInferredSemantics>(other)
 		    or std::holds_alternative<ClassMemberSemantics>(other);
 	}
 
