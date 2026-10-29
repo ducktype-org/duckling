@@ -153,6 +153,7 @@ Tests:
         test -s "$dump" || exit 1
       done
 
+      # Check that HIR/MIR dumps keep statement order.
       for ir in hir mir; do
         dump="$(find @{case_build}/duck_debug_artifacts -type f -name "script_module_*.$ir" -print -quit)"
         test "$(grep -c "^$(echo $ir | tr a-z A-Z) for " "$dump")" -eq 4 || exit 1
