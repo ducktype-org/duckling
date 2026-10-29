@@ -856,7 +856,7 @@ namespace compiler::helios {
 
 			CORE_ASSERT(
 				symbol_infer.out.has_value(), "QueryInferredSymbols: visitor produced no output"
-			)
+			);
 			return std::move(symbol_infer.out.value());
 		}
 
