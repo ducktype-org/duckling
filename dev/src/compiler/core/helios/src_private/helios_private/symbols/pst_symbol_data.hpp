@@ -42,7 +42,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Symbol data for all symbols that are created from PST elements but not directly
-	 * declared. e.g. symbols like loop iterators or function parameters They parent statements
+	 * declared. e.g. symbols like loop iterators. Their parent statements
 	 * usually have some other symbol declared and associated with the parent, so those are sort of
 	 * byproduct symbols. The semantics are very similar to PstImplementedSemantics, but associated
 	 * PST elements are not statements.

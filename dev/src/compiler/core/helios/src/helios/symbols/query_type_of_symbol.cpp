@@ -196,7 +196,7 @@ namespace compiler::helios {
 			}
 
 			/**
-			 * @brief Get the type of a iterator symbol inferred from a for loop.
+			 * @brief Get the type of the iterator symbol inferred from a for loop.
 			 * Note that this is called on a parent of an identifier wrapper - an actual pst node
 			 * associated with the symbol.
 			 */
