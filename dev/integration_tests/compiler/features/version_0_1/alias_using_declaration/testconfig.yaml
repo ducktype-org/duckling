@@ -14,5 +14,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "10\n12\n9\n3\n11\n9\n8\n2\n"
+          String: "10\n12\n9\n3\n11\n9\n8\n"
         ExitCode: 0

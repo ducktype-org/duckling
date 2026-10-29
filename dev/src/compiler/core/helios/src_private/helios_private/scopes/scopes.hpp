@@ -112,19 +112,46 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Performs lookup of single name inside given scope.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({}));
-
-	/**
-	 * @brief Performs lookup of single name inside given scope and its parents.
+	 * @brief Symbols directly inside given scope that may provide the name: symbols of that name
+	 * and `using`/`import` symbols whose selector provides it (wildcard ones only when
+	 * `with_wildcards` is set). The `using`/`import` symbols are not resolved.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({})
+		QueryLookupInScope, KeyOf_LookupInScope, CRef<query::QResult<std::vector<SymID>>>, ({})
+	);
+
+	struct KeyOf_LookupFromScope final {
+		ScopeID     scope;
+		base::StrID name;
+		bool        with_wildcards;
+
+		/**
+		 * @brief Continue the lookup in the enclosing scopes, the REPL history and the prelude.
+		 */
+		bool with_parents;
+
+		LookupMode mode;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
+	/**
+	 * @brief Performs lookup of single name starting from given scope.
+	 *
+	 * Each scope is searched together with everything its `using`/`import` symbols bring in,
+	 * every scope is searched at most once, so recursive `using`/`import` are fine. The enclosing
+	 * scopes are walked in a loop: the parent scopes, then the root scopes of the parent REPL
+	 * modules and finally the implicit prelude. `LookupMode` decides whether the walk stops at the
+	 * first scope that found anything. The found `using`/`import` symbols are resolved, the result
+	 * holds only the symbols they point at.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryLookupFromScope, KeyOf_LookupFromScope, CRef<query::QResult<std::vector<SymID>>>, ({})
 	);
 
 	/**

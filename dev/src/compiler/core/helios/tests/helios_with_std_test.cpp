@@ -372,11 +372,15 @@ private:
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 		auto scope     = getModuleScope(module_id);
 
-		auto result = query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-			{ scope, base::StrID("builtin_output_i64"), true }
+		auto result = query::entryPoint<compiler::helios::QueryLookupFromScope>(
+			{ .scope          = scope,
+		      .name           = base::StrID("builtin_output_i64"),
+		      .with_wildcards = true,
+		      .with_parents   = true,
+		      .mode           = compiler::helios::LookupMode::All }
 		);
 		assertFalse(
-			result->valueOrThrow().isEmpty(),
+			result->valueOrThrow().empty(),
 			"builtin_output_i64 should resolve via the implicit prelude with no explicit import"
 		);
 	}

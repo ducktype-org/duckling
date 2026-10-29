@@ -8,6 +8,10 @@ import submodule_2 as sm2;
 # import cyclic:
 import cyclic.cyclic_1 as c1;
 
+# import cyclic through wildcards:
+import cyclic_wildcard.wildcard_1 as cw1;
+import cyclic_wildcard.wildcard_2 as cw2;
+
 const my_value: i64 = 19923;
 
 
@@ -18,6 +22,8 @@ const it_through_alias: i64 = sm11.it_in_sm11;
 const sm1_through_sm11: i64 = sm11.sm1_in_sm11;
 const sm2_v: i64 = sm2.my_value;
 const cyclic_final: i64 = c1.a6;
+const cyclic_wildcard_final: i64 = cw2.w3;
+const cyclic_wildcard_through: i64 = cw1.w1;
 
 
 import submodule_2.NS as ns;              # a namespace of another module, renamed

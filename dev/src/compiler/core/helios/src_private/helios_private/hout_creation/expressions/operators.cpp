@@ -321,7 +321,7 @@ namespace compiler::helios::code {
 		// Step 2. — Regular lookup and overload resolution
 		const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
 		// @TODO: #1412 fix dealias
-		auto               all_candidates = lookup_result->valueOrThrow().leaves;
+		auto               all_candidates = lookup_result.valueOrThrow().leaves;
 		std::vector<SymID> method_candidates;
 		for (const auto [builtin_operator_sym, _]:
 		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
@@ -338,7 +338,7 @@ namespace compiler::helios::code {
 		if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
-			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			method_candidates = method_lookup_result.valueOrThrow().leaves;
 			filterFunctionsByOperatoriness(
 				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 			);
@@ -393,7 +393,7 @@ namespace compiler::helios::code {
 		// Step 2. — Regular lookup and overload resolution
 		const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
 		// @TODO: #1412 fix dealias
-		auto               all_candidates = lookup_result->valueOrThrow().leaves;
+		auto               all_candidates = lookup_result.valueOrThrow().leaves;
 		std::vector<SymID> method_candidates;
 		for (const auto [builtin_operator_sym, _]:
 		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
@@ -407,7 +407,7 @@ namespace compiler::helios::code {
 		if (inner_type.getKind() == tsh::Kind::Class) {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(inner_type).lookup(ctx, op.value);
-			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			method_candidates = method_lookup_result.valueOrThrow().leaves;
 			filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
 
 			for (const auto method_candidate: method_candidates)

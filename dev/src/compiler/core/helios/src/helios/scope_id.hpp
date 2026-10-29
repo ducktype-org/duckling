@@ -61,6 +61,18 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;
-		friend struct ImplementationOf_QueryLookupInScopeAndParents;
+	};
+}
+
+namespace std {
+	/**
+	 * @brief Hash template specialization so ScopeID can be used in std::unordered_set and
+	 * base::HashMap.
+	 */
+	template<>
+	struct hash<compiler::helios::ScopeID> {
+		std::size_t operator()(const compiler::helios::ScopeID& s) const noexcept {
+			return s.queryUnstablePerfectHash();
+		}
 	};
 }

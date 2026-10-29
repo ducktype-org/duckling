@@ -50,50 +50,91 @@ namespace compiler::helios {
 		}
 	}
 
-	CRef<query::QResult<LookupResult>> HInterface::lookup(
+	namespace {
+		query::QResult<LookupResult> lookupFromScope(
+			query::Context&                   ctx,
+			ScopeID                           scope,
+			base::StrID                       name,
+			const AdditionalLookupParameters& params,
+			bool                              with_parents,
+			LookupMode                        mode
+		) {
+			UNPACK_QRESULT_CREF(
+				const std::vector<SymID>& symbols =,
+				ctx.query<QueryLookupFromScope>({ .scope          = scope,
+			                                      .name           = name,
+			                                      .with_wildcards = params.with_wildcards,
+			                                      .with_parents   = with_parents,
+			                                      .mode           = mode })
+			);
+			return LookupResult{ .leaves = symbols, .inaccessible = {}, .children = {} };
+		}
+
+		/**
+		 * @brief Lookup of @p name among what the `using`/`import` @p symbol brings into its
+		 * scope.
+		 */
+		query::QResult<LookupResult> lookupInUsingImport(
+			query::Context& ctx, SymID symbol, base::StrID name, AdditionalLookupParameters params
+		) {
+			UNPACK_QRESULT(
+				bool provides =, usingImportProvidesName(ctx, symbol, name, params.with_wildcards)
+			);
+			if (not provides) return LookupResult{};
+
+			UNPACK_QRESULT_CREF(
+				const UsingImportTarget& target =, ctx.query<QueryResolveUsingImport>(symbol)
+			);
+			variant_match(target) {
+				variant_case(std::vector<SymID>, pointed) {
+					return LookupResult{ .leaves = pointed, .inaccessible = {}, .children = {} };
+				}
+				variant_case(ScopeID, pointed_scope) {
+					return lookupFromScope(ctx, pointed_scope, name, {}, false, LookupMode::All);
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+	}
+
+	query::QResult<LookupResult> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
-				return ctx.query<QueryLookupInScope>({ scope.scope, name, params.with_wildcards });
+				return lookupFromScope(ctx, scope.scope, name, params, false, LookupMode::All);
 			}
 			variant_case(ScopeWithParentsInterface, scope) {
-				return ctx.query<QueryLookupInScopeAndParents>(
-					{ scope.scope, name, params.with_wildcards }
-				);
+				return lookupFromScope(ctx, scope.scope, name, params, true, scope.mode);
 			}
 			variant_case(ModuleInterface, symbol) {
-				return ctx.query<QueryLookupInNamespaceOrModule>(
-					{ symbol.id, name, params.with_wildcards }
+				return lookupFromScope(
+					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false, LookupMode::All
 				);
 			}
 			variant_case(NamespaceInterface, symbol) {
-				return ctx.query<QueryLookupInNamespaceOrModule>(
-					{ symbol.id, name, params.with_wildcards }
+				return lookupFromScope(
+					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false, LookupMode::All
 				);
 			}
 			variant_case(UsingInterface, symbol) {
-				return ctx.query<QueryLookupInUsingImport>(
-					{ symbol.symbol, name, params.with_wildcards }
-				);
+				return lookupInUsingImport(ctx, symbol.symbol, name, params);
 			}
 			variant_case(ImportInterface, symbol) {
-				return ctx.query<QueryLookupInUsingImport>(
-					{ symbol.symbol, name, params.with_wildcards }
-				);
+				return lookupInUsingImport(ctx, symbol.symbol, name, params);
 			}
 			variant_case(TypeInstanceInterface, type) {
-				return ctx.query<QueryLookupInType>(
+				return *ctx.query<QueryLookupInType>(
 					{ type.type, name, TypeAccessMode::Instance, params.accessing_scope }
 				);
 			}
 			variant_case(TypeMetaInterface, type) {
-				return ctx.query<QueryLookupInType>(
+				return *ctx.query<QueryLookupInType>(
 					{ type.type, name, TypeAccessMode::Meta, params.accessing_scope }
 				);
 			}
 			variant_case(CustomInterface, custom) {
-				return custom.custom->lookup(ctx, name, params);
+				return *custom.custom->lookup(ctx, name, params);
 			}
 		}
 		CORE_UNREACHABLE();
@@ -105,7 +146,7 @@ namespace compiler::helios {
 		base::StrID                name,
 		AdditionalLookupParameters params
 	) const {
-		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
+		UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
 
 		auto get_as_single = lookup_result->getAsSingle();
 

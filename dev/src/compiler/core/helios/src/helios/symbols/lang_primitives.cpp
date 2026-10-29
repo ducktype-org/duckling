@@ -175,7 +175,7 @@ namespace compiler::helios {
 			if (namespaces.empty()) return std::move(current);
 
 			auto lookup_result
-				= current->lookup(ctx, base::StrID{ namespaces.front() })->valueOrThrow();
+				= current->lookup(ctx, base::StrID{ namespaces.front() }).valueOrThrow();
 			if (!lookup_result.isSingle()) return nullptr;
 
 			auto next = std::get<SymbolList>(lookup_result.getAsSingle().valueOrPanic()).back();
@@ -218,7 +218,7 @@ namespace compiler::helios {
 
 			return namespace_interface.value()
 			    ->lookup(ctx, base::StrID(location.element), { .with_wildcards = false })
-			    ->valueOrThrow()
+			    .valueOrThrow()
 			    .leaves;
 		}
 
