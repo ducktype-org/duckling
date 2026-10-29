@@ -153,6 +153,12 @@ Tests:
         test -s "$dump" || exit 1
       done
 
+      for ir in hir mir; do
+        dump="$(find @{case_build}/duck_debug_artifacts -type f -name "script_module_*.$ir" -print -quit)"
+        test "$(grep -c "^$(echo $ir | tr a-z A-Z) for " "$dump")" -eq 4 || exit 1
+        awk '/4242/ && !a {a=NR} /1234/ && !b {b=NR} /7777/ && !c {c=NR} END {exit !(a && b && c && a < b && b < c)}' "$dump" || exit 1
+      done
+
       lir_dump="$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.lir' -print -quit)"
       grep -q 'foo' "$lir_dump" || exit 1
       test -s "@{case_build}/foo.@{output_extension}"
