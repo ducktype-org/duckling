@@ -197,7 +197,7 @@ namespace compiler::helios::templates {
 			auto args = bakeTemplateArgumentsSymbols(
 				ctx, signature, ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }), key
 			);
-			auto baked_sym_id = ctx.query<QuerySymbolFromPST>(baked_statement).valueOrThrow();
+			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
 
 
 			// @TODO: #3072 try to improve this.
