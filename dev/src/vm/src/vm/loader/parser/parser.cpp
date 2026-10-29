@@ -9,6 +9,7 @@
 #include <token_source/source.hpp>
 
 #include <vm/loader/parser/elements.hpp>
+#include <vm/loader/parser/parser.hpp>
 
 #include <expected>
 

@@ -266,7 +266,8 @@ static clah::VerificationResult verifyStdLibOptions(const clah::ParsingResult& p
 	return clah::VerificationPassed{};
 }
 
-auto getClahArchivingOptions() {
+// @TODO: #3905 check whether this function is still needed, delete it if not
+[[maybe_unused]] static auto getClahArchivingOptions() {
 	return std::array{
 		clah::ParamBuilder::ofValue(clah::FilePathParser::make("archiver path"))
 			.addLongName("archiver")

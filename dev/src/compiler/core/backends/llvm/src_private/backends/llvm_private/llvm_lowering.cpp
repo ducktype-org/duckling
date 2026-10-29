@@ -31,6 +31,7 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 #include "call_lowering.hpp"
+#include "llvm_lowering.hpp"
 #include "module_impl.hpp"
 #include "type_from_layout.hpp"
 
@@ -266,16 +267,28 @@ namespace compiler::backend_llvm {
 		return context;
 	}
 
-	auto voidType(llvm::LLVMContext& context) { return llvm::Type::getVoidTy(context); }
+	// @TODO: #3905 check whether this function is still needed, delete it if not
+	[[maybe_unused]] static auto voidType(llvm::LLVMContext& context) {
+		return llvm::Type::getVoidTy(context);
+	}
 
-	auto i64Type(llvm::LLVMContext& context) { return llvm::Type::getInt64Ty(context); }
+	// @TODO: #3905 check whether this function is still needed, delete it if not
+	[[maybe_unused]] static auto i64Type(llvm::LLVMContext& context) {
+		return llvm::Type::getInt64Ty(context);
+	}
 
-	auto i32Type(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
+	// @TODO: #3905 check whether this function is still needed, delete it if not
+	[[maybe_unused]] static auto i32Type(llvm::LLVMContext& context) {
+		return llvm::Type::getInt32Ty(context);
+	}
 
 	/**
 	 * @note bools in LLVM are just i1 (i8 when stored in memory)
 	 */
-	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
+	// @TODO: #3905 check whether this function is still needed, delete it if not
+	[[maybe_unused]] static auto i1Type(llvm::LLVMContext& context) {
+		return llvm::Type::getInt1Ty(context);
+	}
 
 	static llvm::IntegerType* variantTagType(
 		llvm::LLVMContext& context, const tsl::VariantTypeLayout& layout

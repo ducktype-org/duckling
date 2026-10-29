@@ -27,7 +27,7 @@ namespace vm::code {
 	static std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
 
 #define LOCAL_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
+	static std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
 	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING

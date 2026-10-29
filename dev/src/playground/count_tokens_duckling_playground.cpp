@@ -19,9 +19,9 @@
 
 #include <iostream>
 
-int count_tokens(const lexer::Tokens& tokens);
+static int countTokens(const lexer::Tokens& tokens);
 
-int count_token(const lexer::Token& token) {
+static int countToken(const lexer::Token& token) {
 	using lexer::Token;
 	switch (token.getType()) {
 	case Token::Type::Comment:
@@ -30,15 +30,15 @@ int count_token(const lexer::Token& token) {
 	case Token::Type::Sentinel:
 		return 0;
 	case Token::Type::BracketGroup:
-		return 2 + count_tokens(token.getRecursive());
+		return 2 + countTokens(token.getRecursive());
 	default:
 		return 1;
 	}
 }
 
-int count_tokens(const lexer::Tokens& tokens) {
+static int countTokens(const lexer::Tokens& tokens) {
 	int res = 0;
-	for (auto& token: tokens) res += count_token(token);
+	for (auto& token: tokens) res += countToken(token);
 	return res;
 }
 
@@ -71,6 +71,6 @@ int main(int argc, const char** argv) {
 		return -1;
 	}
 
-	std::cout << count_tokens(file->getTokenData().tokens);
+	std::cout << countTokens(file->getTokenData().tokens);
 	return 0;
 }

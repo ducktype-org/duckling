@@ -63,7 +63,8 @@ namespace unicode {
 	/**
 	 * @brief helper function for printing UnicodeSet information
 	 */
-	void printUnicodeSetRanges(icu::UnicodeSet& uset) {
+	// @TODO: #3905 check whether this function is still needed, delete it if not
+	[[maybe_unused]] static void printUnicodeSetRanges(icu::UnicodeSet& uset) {
 		std::cerr << "size: " << uset.size() << "\n";
 		icu::UnicodeString ustring;
 		uset.toPattern(ustring, true);

@@ -373,6 +373,8 @@ namespace compiler::helios::mangler {
 			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
+		static std::string func(query::Context& ctx, SymID symbol_id);
+
 		/**
 		 * @brief Adds the identifier of the name for the ancestor unless it was already added
 		 * before which can happen for template identifiers
@@ -393,7 +395,6 @@ namespace compiler::helios::mangler {
 				auto sym = ctx.template query<QuerySymbolOfSTMT>({ val }).valueOrPanic();
 				ret += unscopedName(ctx, sym);
 
-				std::string func(query::Context&, SymID);
 				ret += func(ctx, sym);
 				return;
 			}
@@ -569,7 +570,7 @@ namespace compiler::helios::mangler {
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string func(query::Context& ctx, SymID symbol_id) {
+		static std::string func(query::Context& ctx, SymID symbol_id) {
 			std::stringstream ret;
 			if (isFunctionLike(kind(symbol_id))) {
 				// @TODO: #2255 Function qualifiers?
