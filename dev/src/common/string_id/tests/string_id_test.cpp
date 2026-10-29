@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/misc/raw_view.hpp>
 
 #include <string_id/string_id.hpp>
@@ -54,7 +55,7 @@ private:
 		assertTrue(map.erase("abc"), "Map element not erased");
 		assertTrue(map.empty(), "Map is not empty");
 
-		base::HashMap<int, A> map2;
+		base::StableHashMap<int, A> map2;
 		A                     a(4, this);
 		map2.put(5, a);
 		map2.put(3, A(3, this));

@@ -11,6 +11,7 @@
 #include <helios/tsh/symbol_type.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/message.hpp>
 #include <query_framework/context/context.hpp>
@@ -25,7 +26,7 @@ namespace compiler::helios {
 	class InteractiveType: public dia::InteractiveElement {
 		tsh::SymbolType<>                                 symbol_type;
 		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
-		base::HashMap<std::string, Box<dia::MessageBase>> linked_messages;
+		base::StableHashMap<std::string, Box<dia::MessageBase>> linked_messages;
 		std::string                                       displayed_name;
 
 		Box<dia::dia_args::Component> getValue(dia::MessageBase& msg) final;
@@ -48,7 +49,7 @@ namespace compiler::helios {
 	class InteractiveFunction final: public dia::InteractiveElement {
 		SymID                                             function_symbol;
 		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
-		base::HashMap<std::string, Box<dia::MessageBase>> linked_messages;
+		base::StableHashMap<std::string, Box<dia::MessageBase>> linked_messages;
 		std::string                                       displayed_name;
 
 		Box<dia::dia_args::Component> getValue(dia::MessageBase& msg) final;

@@ -16,6 +16,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
@@ -86,10 +87,10 @@ namespace dia {
 	if (!node[key]) throw ParsingTemplateFileError(base::strConcat("YAML node missing key: ", key))
 
 	template<typename T>
-	inline base::HashMap<std::string, T> yamlToMap(
+	inline base::StableHashMap<std::string, T> yamlToMap(
 		const YAML::Node& parent_node, const char* field_name
 	) {
-		base::HashMap<std::string, T> result;
+		base::StableHashMap<std::string, T> result;
 		if (const auto map_node = parent_node[field_name]; map_node && map_node.IsMap()) {
 			for (const auto& entry: map_node) {
 				auto key = entry.first.as<std::string>();
@@ -101,10 +102,10 @@ namespace dia {
 
 	// yamlToBox map
 	template<typename T>
-	inline base::HashMap<std::string, Box<T>> yamlToBoxMap(
+	inline base::StableHashMap<std::string, Box<T>> yamlToBoxMap(
 		const YAML::Node& parent_node, const char* field_name
 	) {
-		base::HashMap<std::string, Box<T>> result;
+		base::StableHashMap<std::string, Box<T>> result;
 		if (const auto map_node = parent_node[field_name]; map_node && map_node.IsMap()) {
 			for (const auto& entry: map_node) {
 				auto key = entry.first.as<std::string>();
@@ -122,14 +123,14 @@ namespace dia {
 	 * @param data The `json` element to be converted.
 	 * @param fun `The element transformer. Each element of the converted `json`
 	 * is transformed by this function. Identity by default.
-	 * @return base::HashMap<std::string, V>
+	 * @return base::StableHashMap<std::string, V>
 	 */
 	template<typename V>
-	base::HashMap<std::string, V> jsonToMap(
+	base::StableHashMap<std::string, V> jsonToMap(
 		const json& data, std::function<V(const json&)> fun = [](const json& el) { return el; }
 	) {
 		ASSUME_OBJ(data);
-		base::HashMap<std::string, V> res;
+		base::StableHashMap<std::string, V> res;
 		for (auto& [key, val]: data.items()) res.put(key, fun(val));
 		return res;
 	}

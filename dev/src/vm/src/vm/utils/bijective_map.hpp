@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <functional>
 #include <stdexcept>
@@ -23,8 +24,8 @@ namespace vm::persistent::detail {
 	 */
 	template<typename L, typename R, typename HashL = std::hash<L>, typename HashR = std::hash<R>>
 	class BijectiveMap final {
-		base::HashMap<L, R, HashL> left_right;
-		base::HashMap<R, L, HashR> right_left;
+		base::StableHashMap<L, R, HashL> left_right;
+		base::StableHashMap<R, L, HashR> right_left;
 
 	public:
 		base::Optional<R> atLeftOpt(const L& left) const { return left_right.atMaybeCopy(left); }
@@ -46,7 +47,7 @@ namespace vm::persistent::detail {
 
 		std::pair<bool, R> emplaceByLeft(const L& left, const R& rght) {
 			if (auto it = left_right.find(left); it != left_right.end())
-				return { false, it->second };
+				return { false, it->value };
 
 			if (right_left.find(rght) != right_left.end())
 				throw std::invalid_argument("right element is already bound");
@@ -59,7 +60,7 @@ namespace vm::persistent::detail {
 
 		std::pair<bool, L> emplaceByRight(const L& left, const R& rght) {
 			if (auto it = right_left.find(rght); it != right_left.end())
-				return { false, it->second };
+				return { false, it->value };
 
 			if (left_right.find(left) != left_right.end())
 				throw std::invalid_argument("left element is already bound");
@@ -70,9 +71,9 @@ namespace vm::persistent::detail {
 			return { true, right_left[rght] };
 		}
 
-		const base::HashMap<L, R, HashL>& leftToRight() const { return left_right; }
+		const base::StableHashMap<L, R, HashL>& leftToRight() const { return left_right; }
 
-		const base::HashMap<R, L, HashR>& rightToLeft() const { return right_left; }
+		const base::StableHashMap<R, L, HashR>& rightToLeft() const { return right_left; }
 
 		void clear() {
 			left_right.clear();
@@ -84,8 +85,8 @@ namespace vm::persistent::detail {
 			return (size() == 0);
 		}
 
-		base::HashMap<L, R, HashL>::const_iterator begin() const { return left_right.begin(); }
+		base::StableHashMap<L, R, HashL>::const_iterator begin() const { return left_right.begin(); }
 
-		base::HashMap<L, R, HashL>::const_iterator end() const { return left_right.end(); }
+		base::StableHashMap<L, R, HashL>::const_iterator end() const { return left_right.end(); }
 	};
 }

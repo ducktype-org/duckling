@@ -13,6 +13,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
@@ -43,7 +44,7 @@ namespace dia::term_ui_view {
 	struct CodeSection final {
 		CodeLocation                       location;
 		std::vector<CodeLine>              lines;
-		base::HashMap<u64, PointerMessage> pointers;
+		base::StableHashMap<u64, PointerMessage> pointers;
 	};
 
 	using TextSection = std::string;

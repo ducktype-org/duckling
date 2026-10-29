@@ -14,6 +14,7 @@
 
 #include <ffi.h>
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -224,7 +225,7 @@ namespace vm::low {
 			= 0;
 
 		[[nodiscard]]
-		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
+		virtual const base::StableHashMap<u64, base::StrID>& getMethodNamePool() const
 			= 0;
 
 		/**
@@ -282,7 +283,7 @@ namespace vm::low {
 			return global_data;
 		}
 
-		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
+		const base::StableHashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return method_name_pool;
 		}
 
@@ -303,6 +304,6 @@ namespace vm::low {
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		// @TODO: #2685 This is redundant, u64 is as fast as base::StrID.
-		base::HashMap<u64, base::StrID> method_name_pool{};
+		base::StableHashMap<u64, base::StrID> method_name_pool{};
 	};
 }

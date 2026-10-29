@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
@@ -523,13 +524,13 @@ public:
 
 		HashMap<std::string, std::string> map;
 		auto                              checker
-			= [&](HashMapStateID state, base::HashMap<std::string, std::string> expected) -> void {
+			= [&](HashMapStateID state, base::StableHashMap<std::string, std::string> expected) -> void {
 			ASSERT_EQUAL(expected.size(), map.size(state));
 			auto map_copy = map.toMap(state);
 
 			HashMapStateView state_view(map, state);
 			ASSERT_EQUAL(expected.size(), state_view.size());
-			base::HashMap<std::string, std::string> iterated;
+			base::StableHashMap<std::string, std::string> iterated;
 			for (const auto& [k, v]: state_view) iterated.emplace(k, v);
 			ASSERT_EQUAL(expected.size(), iterated.size());
 
@@ -603,7 +604,7 @@ public:
 		ASSERT_EQUAL(op11, empt);
 
 		auto                                    bulk_map = empt;
-		base::HashMap<std::string, std::string> bulk_expected{};
+		base::StableHashMap<std::string, std::string> bulk_expected{};
 		for (usize i = 0; i < 20; i++) {
 			auto k = "k_" + std::to_string(i);
 			auto v = "v_" + std::to_string(i);

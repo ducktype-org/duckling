@@ -9,6 +9,7 @@
 #include "module_tree.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
@@ -167,8 +168,8 @@ namespace compiler::frontend {
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
 		base::StrID                                       m_package_id;
-		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
+		base::StableHashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
+		base::StableHashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
 		base::StrID m_name;
 		bool        m_finalized;

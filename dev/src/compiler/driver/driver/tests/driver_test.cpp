@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -116,8 +117,8 @@ private:
 		// Build parent map: for each node, list nodes that have it as a child (dependency)
 		auto build_parent_map
 			= [](const query::internal::QueryGraph& graph
-		      ) -> base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> {
-			base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> parents;
+		      ) -> base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> {
+			base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> parents;
 
 			for (const auto& node: graph.getAllNodes())
 				parents.emplace(node, std::vector<query::internal::NodeID>{});
@@ -250,7 +251,7 @@ private:
 
 		// Collect preserved dependencies (transitively) for each preserved node BEFORE
 		// optimization This also includes input dependencies
-		base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>>
+		base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>>
 			preserved_deps_before;
 		for (const auto& preserved_node: preserved_nodes_before) {
 			preserved_deps_before.put(

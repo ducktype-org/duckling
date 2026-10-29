@@ -41,6 +41,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
@@ -880,9 +881,9 @@ namespace compiler::driver {
 		// same modules. Mixing .o (LLVM) and .dbc (DVM) artifacts in one vector
 		// would feed the DVM linker .o files (and vice versa), so the maps are
 		// keyed separately by backend.
-		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+		base::StableHashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			llvm_objects_by_root_module;
-		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+		base::StableHashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			dvm_objects_by_root_module;
 
 		auto collect_modules = [&](this const auto&   self,
@@ -950,9 +951,11 @@ namespace compiler::driver {
 				auto& objects_by_root_module = module.backend == BackendType::DVM
 				                                 ? dvm_objects_by_root_module
 				                                 : llvm_objects_by_root_module;
-				objects_by_root_module
-					.put(module.package_root_module, std::vector<artifacts::FileArtifact>())
-					.first->second.emplace_back(module_result->valueOrPanic().object_art);
+				objects_by_root_module.maybePut(
+					module.package_root_module, std::vector<artifacts::FileArtifact>()
+				);
+				objects_by_root_module.at(module.package_root_module)
+					.emplace_back(module_result->valueOrPanic().object_art);
 
 				// We schedule debug info here, to only schedule it for correctly compiled modules.
 				if (module.build_debug_info) {
@@ -966,16 +969,18 @@ namespace compiler::driver {
 			}
 		}
 
-		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+		base::StableHashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			debug_info_artifacts_by_root_module;
 
 		for (auto [module, handle]: debug_info_handles) {
 			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
-			if (di_result.hasValue())
-				debug_info_artifacts_by_root_module
-					.put(module.package_root_module, std::vector<artifacts::FileArtifact>())
-					.first->second.emplace_back(di_result.valueOrPanic());
-			else {
+			if (di_result.hasValue()) {
+				debug_info_artifacts_by_root_module.maybePut(
+					module.package_root_module, std::vector<artifacts::FileArtifact>()
+				);
+				debug_info_artifacts_by_root_module.at(module.package_root_module)
+					.emplace_back(di_result.valueOrPanic());
+			} else {
 				CORE_USER_LOG("Debug info generation failed for a module.");
 				result = base::BAD;
 			}

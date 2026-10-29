@@ -18,6 +18,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -124,7 +125,7 @@ namespace vm {
 		};
 
 		/// State and the change counter of every VMThread registered in the process.
-		base::HashMap<api::ThreadID, ThreadEntry> threads;
+		base::StableHashMap<api::ThreadID, ThreadEntry> threads;
 
 		/// Set when a stop of the whole process was requested (an API `Stop`, or the first panic
 		/// of any thread). Makes the aggregate state `Stopping`/`Stopped` regardless of the states
@@ -142,7 +143,7 @@ namespace vm {
 
 		/// Adds a thread in the `NotStarted` state with a zeroed counter.
 		void registerThread(api::ThreadID tid) {
-			threads.insert_or_assign(
+			threads.insertOrAssign(
 				tid,
 				ThreadEntry{
 					.state                = thread_state::NotStarted{},
@@ -193,7 +194,7 @@ namespace vm {
 			if (first_panic_err.has_value()) return Panicked{ *first_panic_err };
 
 			const bool any_started_active = std::ranges::any_of(threads, [](const auto& p) {
-				return ts::isActive(p.second.state);
+				return ts::isActive(p.value.state);
 			});
 
 			// Stop in progress.
@@ -201,7 +202,7 @@ namespace vm {
 				return any_started_active ? ProcessState{ Stopping{} } : ProcessState{ Stopped{} };
 
 			const bool any_started = std::ranges::any_of(threads, [](const auto& p) {
-				return ts::hasStarted(p.second.state);
+				return ts::hasStarted(p.value.state);
 			});
 
 			// Nothing started.

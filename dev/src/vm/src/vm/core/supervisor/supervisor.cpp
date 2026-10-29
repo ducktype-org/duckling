@@ -52,7 +52,7 @@ namespace vm {
 
 		{
 			std::unique_lock lock(rw_process_table);
-			process_table.emplace(pid, std::move(process));
+			process_table.put(pid, std::move(process));
 		}
 		return pid;
 	}
@@ -96,8 +96,8 @@ namespace vm {
 			auto             it = process_table.find(pid);
 			if (it == process_table.end()) return std::unexpected(api::ProcessNotFound{});
 
-			dying_process = std::move(it->second);
-			process_table.erase(it);
+			dying_process = std::move(it->value);
+			process_table.erase(pid);
 		}
 		return {};
 	}

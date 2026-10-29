@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/misc/raw_view.hpp>
@@ -137,7 +138,7 @@ namespace vm {
 			};
 
 			std::vector<FieldDesc>            fields;
-			base::HashMap<base::StrID, usize> field_name_map;
+			base::StableHashMap<base::StrID, usize> field_name_map;
 		};
 
 		struct Variant final {

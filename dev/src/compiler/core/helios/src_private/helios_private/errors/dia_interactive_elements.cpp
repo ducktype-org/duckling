@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include "dia_interactive_elements.hpp"
 
 #include <frontend/pst_parser/access.hpp>
@@ -66,7 +67,7 @@ namespace compiler::helios {
 	 */
 	void checkForAliases(
 		query::Context&                                    ctx,
-		base::HashMap<std::string, Box<dia::MessageBase>>& linked_messages,
+		base::StableHashMap<std::string, Box<dia::MessageBase>>& linked_messages,
 		pst::Access<pst::LangElement>                      elem
 	) {
 		auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();

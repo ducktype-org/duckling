@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include "mir_destructors.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
@@ -241,7 +242,7 @@ namespace compiler::mir {
 				base::Optional<std::vector<ScopeRef>>         first_path_ending_scopes;
 				base::Optional<ScopeRef>                      first_path_begin_scope;
 				bool                                          paths_identical = true;
-				base::HashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
+				base::StableHashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
 
 				for (auto succ: successors) {
 					auto succ_begin_scope   = function.blocks[succ].beginScope();
@@ -357,7 +358,7 @@ namespace compiler::mir {
 		query::Context& ctx, Function& function, const LifetimePassArgs& args
 	) {
 		for (auto block_id: function.block_order) {
-			auto& block = *function.blocks.at(block_id);
+			auto& block = function.blocks.at(block_id);
 
 			// Replay move-state through the block, starting from its entry state. Unreachable blocks
 			// have no computed move-state, so default to empty (matching AddDestructorsPass).

@@ -384,7 +384,7 @@ If the key is to be cached on disk, it must additionally implement `queryStableP
 
 @attention
     For ID-like keys, perfect hashing is trivial to implement.
-    For more complex situations, a trick can be used. One can use `base::HashMap` to hash-map keys to IDs.
+    For more complex situations, a trick can be used. One can use `base::StableHashMap` to hash-map keys to IDs.
 
 Requirements of Provider functions {#provider-requirements}
 ----------------------------------
@@ -404,7 +404,7 @@ hash-map-based caching for fast prototyping.
 In order to use it, two requirements must be met:
 
 - Query key type must implement perfect hash (already a requirement of the Query Framework)
-- The hash of a key must implement `operator==`, as well as `std::hash` (same as for `base::HashMap`).
+- The hash of a key must implement `operator==`, as well as `std::hash` (same as for `base::StableHashMap`).
 
 There are currently two automatic-caching mechanisms:
 

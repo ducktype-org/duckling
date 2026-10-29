@@ -10,6 +10,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <vector>
 
@@ -22,7 +23,7 @@ namespace compiler::mir {
 	 */
 	ScopeRef lca(ScopeRef a, ScopeRef b);
 
-	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
+	using LocalsByScopeMap = base::StableHashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
 
 	/**
 	 * @brief Returns list of scopes that lifetime ends between two consecutive instruction,

@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include <diagnostic/core/template_file.hpp>
 #include <diagnostic/core/utils.hpp>
 
@@ -168,7 +169,7 @@ namespace dia::template_file {
 		auto metadata = Metadata::fromYaml(node["metadata"]);
 		auto params   = yamlToMap<Parameter>(node, "params");
 
-		base::HashMap<std::string, Box<Component>> macros;
+		base::StableHashMap<std::string, Box<Component>> macros;
 		if (const auto macros_node = node["macros"]; macros_node && macros_node.IsMap())
 			macros = yamlToBoxMap<Component>(node, "macros");
 

@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <base/collections/stable_hashmap.hpp>
 #include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax it.
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/lang_primitives.hpp>

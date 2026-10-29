@@ -6,6 +6,7 @@
 
 #include "valid_type.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -127,11 +128,11 @@ void valid_type::ValidType::defineClass(
 				structure.field_definitions.emplace_back(defined::DefinedField{
 					.name = field_def.first, .type = field_def.second });
 
-			base::HashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
+			base::StableHashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
 			for (const auto& method: new_virtual_methods)
 				new_virtual_methods_map.put(method.first, method.second);
 
-			base::HashMap<base::StrID, base::StrID> implementations_map;
+			base::StableHashMap<base::StrID, base::StrID> implementations_map;
 			for (const auto& impl: implementations)
 				implementations_map.put(impl.first, impl.second);
 
@@ -157,11 +158,11 @@ void valid_type::ValidType::defineInterface(
 ) {
 	variant_match(state) {
 		variant_case_novalue(Declared) {
-			base::HashMap<base::StrID, ValidTypeID> virtual_methods;
+			base::StableHashMap<base::StrID, ValidTypeID> virtual_methods;
 			for (const auto& method: new_virtual_methods)
 				virtual_methods.put(method.first, method.second);
 
-			base::HashMap<base::StrID, base::StrID> impls;
+			base::StableHashMap<base::StrID, base::StrID> impls;
 			for (const auto& impl: implementations) impls.put(impl.first, impl.second);
 
 			state
@@ -294,10 +295,10 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 						);
 						// Virtual methods
 						for (const auto& method: super_imd.available_methods)
-							imd.available_methods.put(method.first, method.second);
+							imd.available_methods.put(method.key, method.value);
 						// Vtable
 						for (const auto& impl: super_imd.vtable)
-							imd.vtable.put(impl.first, impl.second);
+							imd.vtable.put(impl.key, impl.value);
 					}
 
 
@@ -328,9 +329,9 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			);
 			// Virtual methods
 			for (const auto& method: interface_imd.available_methods)
-				imd.available_methods.put(method.first, method.second);
+				imd.available_methods.put(method.key, method.value);
 			// Vtable
-			for (const auto& impl: interface_imd.vtable) imd.vtable.put(impl.first, impl.second);
+			for (const auto& impl: interface_imd.vtable) imd.vtable.put(impl.key, impl.value);
 		}
 
 		// 3. Add fields from this class and build inheritance metadata for this class.
@@ -340,10 +341,10 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 		// Virtual methods
 		for (const auto& new_virtual_method: new_virtual_methods)
 			imd.available_methods.insertOrAssign(
-				new_virtual_method.first, new_virtual_method.second
+				new_virtual_method.key, new_virtual_method.value
 			);
 		// Vtable
-		for (const auto& impl: implementations) imd.vtable.insertOrAssign(impl.first, impl.second);
+		for (const auto& impl: implementations) imd.vtable.insertOrAssign(impl.key, impl.value);
 
 		inheritance_metadata = std::move(imd);
 	}

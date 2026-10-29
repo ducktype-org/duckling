@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include <diagnostic/core/diagnostic_state.hpp>
 #include <diagnostic/core/term_ui_view.hpp>
 #include <diagnostic/core/view_constructors.hpp>
@@ -110,7 +111,7 @@ namespace dia {
 
 	CodeSection buildCodeSection(
 		const state::CodeBlockComponent&                                     block,
-		const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
+		const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
 		StyleType                                                            style_type
 	) {
 		CodeSection section;
@@ -147,13 +148,13 @@ namespace dia {
 	class MessageBuilder: public state::ComponentVisitor {
 		std::vector<Section>&                                                sections;
 		std::string                                                          current_text;
-		const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs;
+		const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs;
 		StyleType                                                            style_type;
 
 	public:
 		MessageBuilder(
 			std::vector<Section>&                                                sections,
-			const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
+			const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
 			StyleType                                                            style_type
 		):
 			  sections(sections),

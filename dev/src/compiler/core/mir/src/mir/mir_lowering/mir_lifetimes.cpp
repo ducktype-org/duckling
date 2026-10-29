@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include "mir_lifetimes.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
@@ -74,7 +75,7 @@ namespace compiler::mir {
 		// Only locals that are destructed conditionally need a flag.
 		std::set<MIRLocalRef> conditionally_destructed;
 		for (auto block_id: function.block_order)
-			for (const auto& instr: function.blocks.at(block_id)->instructions)
+			for (const auto& instr: function.blocks.at(block_id).instructions)
 				if_opt_some(conditionally_destructed_local(instr), local)
 					conditionally_destructed.insert(local);
 
@@ -115,7 +116,7 @@ namespace compiler::mir {
 		std::vector<MIRLocalRef> parameter_flags;
 
 		for (auto block_id: function.block_order) {
-			auto& block = *function.blocks.at(block_id);
+			auto& block = function.blocks.at(block_id);
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
@@ -206,7 +207,7 @@ namespace compiler::mir {
 		// The parameter flags are opened before anything else, so they are closed on every path
 		// leaving the function, after every other scope of that path has ended.
 		for (auto block_id: function.block_order) {
-			auto& terminator = function.blocks.at(block_id)->terminator;
+			auto& terminator = function.blocks.at(block_id).terminator;
 			if (not getTerminatorSuccessors(terminator).empty()) continue;
 
 			for (auto flag: parameter_flags | std::views::reverse)
@@ -253,7 +254,7 @@ namespace compiler::mir {
 		// preserving block order is important, because of how MIR BlockIDs works
 
 		auto&                                         locals_by_scope = args.locals_by_scope;
-		base::HashMap<BlockID, std::vector<ScopeRef>> starting_scopes_by_block;
+		base::StableHashMap<BlockID, std::vector<ScopeRef>> starting_scopes_by_block;
 
 
 		auto   first_block_id = function.block_order[0];
@@ -338,7 +339,10 @@ namespace compiler::mir {
 		LocalsByScopeMap locals_by_scope;
 		for (const auto& local: function.local_list)
 			if (local.scope.value() != function.no_lifetime_scope)
-				locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
+			{
+				locals_by_scope.maybePut(local.scope.value(), std::vector<MIRLocalRef>{});
+				locals_by_scope.at(local.scope.value()).emplace_back(&local);
+			}
 		return locals_by_scope;
 	}
 
@@ -354,8 +358,10 @@ namespace compiler::mir {
 		for (auto block_id: function.block_order) args.block_predecessors.put(block_id);
 
 		for (auto block_id: function.block_order)
-			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
-				args.block_predecessors.put(succ).first->second.push_back(block_id);
+			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id).terminator)) {
+				args.block_predecessors.maybePut(succ, std::vector<BlockID>{});
+				args.block_predecessors.at(succ).push_back(block_id);
+			}
 
 		args.move_states = MoveStateData::calculateGlobalInMoveStateMap(
 			function, args.block_predecessors, args.locals_by_scope

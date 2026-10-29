@@ -144,7 +144,7 @@ namespace compiler::repl {
 			= [&](frontend::ModuleID module_id) {
 				  modules.push_back(module_id);
 				  auto submodules = ctx.query<frontend::QuerySubmodules>(module_id);
-				  for (const auto& submodule: *submodules) collect_modules(submodule.second);
+				  for (const auto& submodule: *submodules) collect_modules(submodule.value);
 			  };
 		for (const auto root_module: root_modules) collect_modules(root_module);
 

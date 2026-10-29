@@ -11,6 +11,7 @@
 #include <concurrent/base/collections/hash_map.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/box.hpp>
 
 #include <mutex>
@@ -38,7 +39,7 @@ namespace dia {
 	};
 
 	class TemplateRegistryFilesystemProvider final: public TemplateRegistryProvider {
-		base::HashMap<std::string, std::string> templates;
+		base::StableHashMap<std::string, std::string> templates;
 		std::string                             templates_root;
 
 	public:
@@ -49,10 +50,10 @@ namespace dia {
 	};
 
 	class TemplateRegistryTestProvider final: public TemplateRegistryProvider {
-		base::HashMap<std::string, std::string> templates;
+		base::StableHashMap<std::string, std::string> templates;
 
 	public:
-		TemplateRegistryTestProvider(base::HashMap<std::string, std::string> templates):
+		TemplateRegistryTestProvider(base::StableHashMap<std::string, std::string> templates):
 			  templates(std::move(templates)) {}
 
 		base::Optional<std::string_view> loadTemplate(std::string_view path) override;

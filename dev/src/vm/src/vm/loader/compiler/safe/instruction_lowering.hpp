@@ -8,6 +8,7 @@
 
 #include "safe_compiler.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
 
@@ -86,8 +87,8 @@ namespace vm::loader::compiler::safe::detail {
 		safe::SafeCompiler&                                       compiler;
 		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
-		base::HashMap<usize, usize>       label_id_to_offset{};
-		base::HashMap<base::StrID, usize> label_name_to_id{};
+		base::StableHashMap<usize, usize>       label_id_to_offset{};
+		base::StableHashMap<base::StrID, usize> label_name_to_id{};
 		usize                             next_instruction_index = 0;
 
 		low::MicroBytecode result;
