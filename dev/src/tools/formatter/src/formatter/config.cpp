@@ -41,7 +41,7 @@ namespace formatter {
 	 * ignored. A present key with the wrong type or an unrecognized "indentStyle" throws
 	 * nlohmann::json::exception.
 	 */
-	static void from_json(  // NOLINT(readability-identifier-naming)
+	void from_json(  // NOLINT(readability-identifier-naming)
 		const nlohmann::json& json,
 		FormatConfig&         config
 	) {

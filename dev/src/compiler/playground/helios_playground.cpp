@@ -20,75 +20,78 @@
 
 #include <iostream>
 
-static void printContextErrors() {
-	auto logger = query::Context::dumpToOneLoggerAndClear();
-	if (logger->messageCount() > 0) {
-		std::cerr << "Compilation errors logged in context: \n";
-		logger->dumpLog(true, std::cerr);
-	}
-}
-
-static void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {
-	std::cerr << "Dependencies:\n";
-	for (auto& i: deps)
-		std::cerr << "    > query: " << i.q_id.getData().name << ",  key: " << i.hash.val << "\n";
-}
-
-static int notMain(int argc, const char* const* argv) {
-	init::InitObject _;
-
-
-	auto clah = clah::Clah("helios_playground")
-	                .add(clah::ParamBuilder::ofValue(clah::FileParser::make("Path"))
-	                         .addShortName('p')
-	                         .addShortDesc("Path to Duckling source root")
-	                         .required()
-	                         .build());
-
-	clah::ParsingResult options;
-
-	try {
-		options = clah.parse(usize(argc), argv);
-	} catch (clah::exceptions::HelpException& e) {
-		std::cerr << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
-		return 1;
-	} catch (clah::exceptions::ClahException& e) {
-		std::cerr << e.what() << '\n';
-		return 1;
+namespace {
+	void printContextErrors() {
+		auto logger = query::Context::dumpToOneLoggerAndClear();
+		if (logger->messageCount() > 0) {
+			std::cerr << "Compilation errors logged in context: \n";
+			logger->dumpLog(true, std::cerr);
+		}
 	}
 
-	auto path_to_compile = options.getValue<fs::File>('p').value();
-
-	using namespace compiler;
-
-	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
-
-	defer(printContextErrors());
-
-	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
-	query::utils::withContextDo([&](query::Context& ctx) {
-		top_level.debugPrint(ctx, std::cerr);
-		std::cerr << "\n\n";
-	});
-
-	std::cerr << "Inputs of entire hout:\n";
-
-	auto pst_access_id = pst::internal::PSTAccessSideInput::getID();
-	auto deps
-		= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryTopLevelEntities>(
-			root, pst_access_id
-		);
-	printQueryDeps(deps);
-
-	for (auto& i: top_level.functions) {
-		std::cerr << "\nInputs of function: " << i->declaration->original_name.strView() << "\n";
-		auto i_deps
-			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOfFun>(
-				i->declaration->original_symbol, pst_access_id
-			);
-		printQueryDeps(i_deps);
+	void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {
+		std::cerr << "Dependencies:\n";
+		for (auto& i: deps)
+			std::cerr << "    > query: " << i.q_id.getData().name << ",  key: " << i.hash.val
+					  << "\n";
 	}
-	return 0;
+
+	int notMain(int argc, const char* const* argv) {
+		init::InitObject _;
+
+
+		auto clah = clah::Clah("helios_playground")
+		                .add(clah::ParamBuilder::ofValue(clah::FileParser::make("Path"))
+		                         .addShortName('p')
+		                         .addShortDesc("Path to Duckling source root")
+		                         .required()
+		                         .build());
+
+		clah::ParsingResult options;
+
+		try {
+			options = clah.parse(usize(argc), argv);
+		} catch (clah::exceptions::HelpException& e) {
+			std::cerr << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
+			return 1;
+		} catch (clah::exceptions::ClahException& e) {
+			std::cerr << e.what() << '\n';
+			return 1;
+		}
+
+		auto path_to_compile = options.getValue<fs::File>('p').value();
+
+		using namespace compiler;
+
+		auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
+
+		defer(printContextErrors());
+
+		auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
+		query::utils::withContextDo([&](query::Context& ctx) {
+			top_level.debugPrint(ctx, std::cerr);
+			std::cerr << "\n\n";
+		});
+
+		std::cerr << "Inputs of entire hout:\n";
+
+		auto pst_access_id = pst::internal::PSTAccessSideInput::getID();
+		auto deps          = query::Context::getState()
+		                .getGraph()
+		                .getNodeDepsFiltered<helios::QueryTopLevelEntities>(root, pst_access_id);
+		printQueryDeps(deps);
+
+		for (auto& i: top_level.functions) {
+			std::cerr << "\nInputs of function: " << i->declaration->original_name.strView()
+					  << "\n";
+			auto i_deps
+				= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOfFun>(
+					i->declaration->original_symbol, pst_access_id
+				);
+			printQueryDeps(i_deps);
+		}
+		return 0;
+	}
 }
 
 int main(int argc, const char* argv[]) {

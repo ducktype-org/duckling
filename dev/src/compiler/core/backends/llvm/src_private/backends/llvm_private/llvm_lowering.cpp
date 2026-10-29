@@ -218,84 +218,86 @@ namespace compiler::backend_llvm {
 
 	namespace {
 		std::once_flag llvm_init_flag;
-	}
 
-	/**
-	 * @brief Initializes some llvm components.
-	 * @note Thread-safe via std::call_once. LLVM's InitializeNativeTarget() family
-	 *       uses non-thread-safe static bool guards internally, so concurrent calls
-	 *       can register the same target twice, causing "Cannot choose between targets"
-	 *       errors in lookupTarget().
-	 */
-	static void init() {
-		std::call_once(llvm_init_flag, []() {
-			const bool v1 = llvm::InitializeNativeTarget();
-			const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
+		/**
+		 * @brief Initializes some llvm components.
+		 * @note Thread-safe via std::call_once. LLVM's InitializeNativeTarget() family
+		 *       uses non-thread-safe static bool guards internally, so concurrent calls
+		 *       can register the same target twice, causing "Cannot choose between targets"
+		 *       errors in lookupTarget().
+		 */
+		void init() {
+			std::call_once(llvm_init_flag, []() {
+				const bool v1 = llvm::InitializeNativeTarget();
+				const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
 
-			CORE_ASSERT(not v1, "failed to initialize llvm (1)");
-			CORE_ASSERT(not v2, "failed to initialize llvm (2)");
-		});
-	}
+				CORE_ASSERT(not v1, "failed to initialize llvm (1)");
+				CORE_ASSERT(not v2, "failed to initialize llvm (2)");
+			});
+		}
 
-	static void llvmDeinit() {
-		// I'm not sure if this is a proper/stable
-		// way to clean up llvm, but it works.
-		// If it ever breaks, a quick-fix is just to comment it out
-		// and let memory leak.
-		// @note: There is also llvm_shutdown_obj helper object,
-		// but we don't use it here in favor of deinit module.
-		//
-		// Note from LLVM docs:
-		// IMPORTANT: it's only safe to call llvm_shutdown() in single thread, without any other
-		// threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs.
-		llvm::llvm_shutdown();
+		void llvmDeinit() {
+			// I'm not sure if this is a proper/stable
+			// way to clean up llvm, but it works.
+			// If it ever breaks, a quick-fix is just to comment it out
+			// and let memory leak.
+			// @note: There is also llvm_shutdown_obj helper object,
+			// but we don't use it here in favor of deinit module.
+			//
+			// Note from LLVM docs:
+			// IMPORTANT: it's only safe to call llvm_shutdown() in single thread, without any other
+			// threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs.
+			llvm::llvm_shutdown();
+		}
 	}
 
 	RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
 
-	/**
-	 * @brief Returns reference to the llvm context.
-	 * @note as per https://llvm.org/doxygen/classllvm_1_1LLVMContext.html#details
-	 * single context can't be used my multiple threads.
-	 * @note as of 9.11.2024 I did not find the reason, to have more than one context per thread,
-	 * hence this function.
-	 *
-	 * @return llvm::LLVMContext&
-	 */
-	static llvm::LLVMContext& getLLVMContext() {
-		thread_local llvm::LLVMContext context;
-		return context;
-	}
+	namespace {
+		/**
+		 * @brief Returns reference to the llvm context.
+		 * @note as per https://llvm.org/doxygen/classllvm_1_1LLVMContext.html#details
+		 * single context can't be used my multiple threads.
+		 * @note as of 9.11.2024 I did not find the reason, to have more than one context per
+		 * thread, hence this function.
+		 *
+		 * @return llvm::LLVMContext&
+		 */
+		llvm::LLVMContext& getLLVMContext() {
+			thread_local llvm::LLVMContext context;
+			return context;
+		}
 
-	// @TODO: #3905 check whether this function is still needed, delete it if not
-	[[maybe_unused]] static auto voidType(llvm::LLVMContext& context) {
-		return llvm::Type::getVoidTy(context);
-	}
+		// @TODO: #3905 check whether this function is still needed, delete it if not
+		[[maybe_unused]] auto voidType(llvm::LLVMContext& context) {
+			return llvm::Type::getVoidTy(context);
+		}
 
-	// @TODO: #3905 check whether this function is still needed, delete it if not
-	[[maybe_unused]] static auto i64Type(llvm::LLVMContext& context) {
-		return llvm::Type::getInt64Ty(context);
-	}
+		// @TODO: #3905 check whether this function is still needed, delete it if not
+		[[maybe_unused]] auto i64Type(llvm::LLVMContext& context) {
+			return llvm::Type::getInt64Ty(context);
+		}
 
-	// @TODO: #3905 check whether this function is still needed, delete it if not
-	[[maybe_unused]] static auto i32Type(llvm::LLVMContext& context) {
-		return llvm::Type::getInt32Ty(context);
-	}
+		// @TODO: #3905 check whether this function is still needed, delete it if not
+		[[maybe_unused]] auto i32Type(llvm::LLVMContext& context) {
+			return llvm::Type::getInt32Ty(context);
+		}
 
-	/**
-	 * @note bools in LLVM are just i1 (i8 when stored in memory)
-	 */
-	// @TODO: #3905 check whether this function is still needed, delete it if not
-	[[maybe_unused]] static auto i1Type(llvm::LLVMContext& context) {
-		return llvm::Type::getInt1Ty(context);
-	}
+		/**
+		 * @note bools in LLVM are just i1 (i8 when stored in memory)
+		 */
+		// @TODO: #3905 check whether this function is still needed, delete it if not
+		[[maybe_unused]] auto i1Type(llvm::LLVMContext& context) {
+			return llvm::Type::getInt1Ty(context);
+		}
 
-	static llvm::IntegerType* variantTagType(
-		llvm::LLVMContext& context, const tsl::VariantTypeLayout& layout
-	) {
-		return llvm::Type::getIntNTy(
-			context, base::safeIntConv<unsigned>(layout.getTagSize().asInt())
-		);
+		llvm::IntegerType* variantTagType(
+			llvm::LLVMContext& context, const tsl::VariantTypeLayout& layout
+		) {
+			return llvm::Type::getIntNTy(
+				context, base::safeIntConv<unsigned>(layout.getTagSize().asInt())
+			);
+		}
 	}
 
 	/**
@@ -439,84 +441,85 @@ namespace compiler::backend_llvm {
 		CORE_UNREACHABLE();
 	}
 
-	/**
-	 * @brief The alignment guaranteed for any storage holding a value of the given layout.
-	 *
-	 * Storage is created with this alignment (see `createAllocaForLayout` and
-	 * `addGlobalVariable`), which makes it valid to assume it for every place derived from it:
-	 * TSL offsets of fields and of variant payloads are multiples of the alignment of what they
-	 * hold, and LLVM aggregate offsets are checked against the TSL ones in `typeFromLayout`.
-	 *
-	 * @note The LLVM ABI alignment is not enough on its own, because variants lower to packed
-	 * structs of bytes, whose ABI alignment is 1 while their payload does require alignment.
-	 */
-	static auto alignmentFromLayout(
-		const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout
-	) -> llvm::Align {
-		const auto tsl_alignment = llvm::Align(layout->getAlignment().asInt());
-		const auto abi_alignment
-			= module->getDataLayout().getABITypeAlign(typeFromLayout(module, layout));
-		return std::max(tsl_alignment, abi_alignment);
-	}
+	namespace {
+		/**
+		 * @brief The alignment guaranteed for any storage holding a value of the given layout.
+		 *
+		 * Storage is created with this alignment (see `createAllocaForLayout` and
+		 * `addGlobalVariable`), which makes it valid to assume it for every place derived from it:
+		 * TSL offsets of fields and of variant payloads are multiples of the alignment of what they
+		 * hold, and LLVM aggregate offsets are checked against the TSL ones in `typeFromLayout`.
+		 *
+		 * @note The LLVM ABI alignment is not enough on its own, because variants lower to packed
+		 * structs of bytes, whose ABI alignment is 1 while their payload does require alignment.
+		 */
+		auto alignmentFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
+			-> llvm::Align {
+			const auto tsl_alignment = llvm::Align(layout->getAlignment().asInt());
+			const auto abi_alignment
+				= module->getDataLayout().getABITypeAlign(typeFromLayout(module, layout));
+			return std::max(tsl_alignment, abi_alignment);
+		}
 
-	/**
-	 * @brief Creates a stack allocation for a value of the given layout, aligned as
-	 * `alignmentFromLayout` requires.
-	 */
-	static auto createAllocaForLayout(
-		const Ref<llvm::Module>     module,
-		llvm::IRBuilder<>&          builder,
-		const CRef<tsl::TypeLayout> layout,
-		const llvm::Twine&          name
-	) -> llvm::AllocaInst* {
-		auto* alloca = builder.CreateAlloca(typeFromLayout(module, layout), nullptr, name);
-		alloca->setAlignment(alignmentFromLayout(module, layout));
-		return alloca;
-	}
+		/**
+		 * @brief Creates a stack allocation for a value of the given layout, aligned as
+		 * `alignmentFromLayout` requires.
+		 */
+		auto createAllocaForLayout(
+			const Ref<llvm::Module>     module,
+			llvm::IRBuilder<>&          builder,
+			const CRef<tsl::TypeLayout> layout,
+			const llvm::Twine&          name
+		) -> llvm::AllocaInst* {
+			auto* alloca = builder.CreateAlloca(typeFromLayout(module, layout), nullptr, name);
+			alloca->setAlignment(alignmentFromLayout(module, layout));
+			return alloca;
+		}
 
-	/**
-	 * @brief This only inserts a global variable declaration if it doesn't exist.
-	 * It does not set any initializer or linkage.
-	 */
-	static Ref<llvm::Constant> getOrInsertGlobalVariable(
-		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
-	) {
-		const auto mangled_name = lir_global.mangled_name.strView();
+		/**
+		 * @brief This only inserts a global variable declaration if it doesn't exist.
+		 * It does not set any initializer or linkage.
+		 */
+		Ref<llvm::Constant> getOrInsertGlobalVariable(
+			const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		) {
+			const auto mangled_name = lir_global.mangled_name.strView();
 
-		if (const auto global = module->getGlobalVariable(mangled_name)) return global;
+			if (const auto global = module->getGlobalVariable(mangled_name)) return global;
 
-		const auto global_type = typeFromLayout(module, lir_global.layout);
+			const auto global_type = typeFromLayout(module, lir_global.layout);
 
-		return module->getOrInsertGlobal(mangled_name, global_type);
-	}
+			return module->getOrInsertGlobal(mangled_name, global_type);
+		}
 
-	/**
-	 * Adds a global variable to the module based on the LIRGlobal description.
-	 * Sets the initial value to null (this function does not handle constructors and proper
-	 * initialization),
-	 */
-	static Ref<llvm::GlobalVariable> addGlobalVariable(
-		const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global
-	) {
-		getOrInsertGlobalVariable(module, lir_global.global);
+		/**
+		 * Adds a global variable to the module based on the LIRGlobal description.
+		 * Sets the initial value to null (this function does not handle constructors and proper
+		 * initialization),
+		 */
+		Ref<llvm::GlobalVariable> addGlobalVariable(
+			const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global
+		) {
+			getOrInsertGlobalVariable(module, lir_global.global);
 
-		const Ref<llvm::GlobalVariable> global
-			= module->getNamedGlobal(lir_global.global.mangled_name.strView());
+			const Ref<llvm::GlobalVariable> global
+				= module->getNamedGlobal(lir_global.global.mangled_name.strView());
 
-		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
+			CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
-		global->setLinkage(
-			lir_global.global.link_once ? llvm::GlobalValue::LinkOnceODRLinkage
-										: llvm::GlobalValue::ExternalLinkage
-		);
-		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
-		global->setAlignment(alignmentFromLayout(module, lir_global.global.layout));
+			global->setLinkage(
+				lir_global.global.link_once ? llvm::GlobalValue::LinkOnceODRLinkage
+											: llvm::GlobalValue::ExternalLinkage
+			);
+			global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
+			global->setAlignment(alignmentFromLayout(module, lir_global.global.layout));
 
-		// We set null initialization for all globals by default to keep potential uninitialized
-		// memory issues easier to track.
-		global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
+			// We set null initialization for all globals by default to keep potential uninitialized
+			// memory issues easier to track.
+			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 
-		return global;
+			return global;
+		}
 	}
 
 	/**
@@ -1821,11 +1824,13 @@ namespace compiler::backend_llvm {
 		return result;
 	}
 
-	static llvm::Function* addFunctionToModuleInternal(
-		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
-	) {
-		LIRFunction2LLVM lir2llvm{ ctx, lir_function, module->module.refMut() };
-		return lir2llvm.createFunction();
+	namespace {
+		llvm::Function* addFunctionToModuleInternal(
+			query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
+		) {
+			LIRFunction2LLVM lir2llvm{ ctx, lir_function, module->module.refMut() };
+			return lir2llvm.createFunction();
+		}
 	}
 
 	void addFunctionToModuleImpl(

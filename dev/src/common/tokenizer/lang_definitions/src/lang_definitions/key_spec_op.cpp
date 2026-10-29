@@ -31,8 +31,10 @@ namespace lang_def {
 
 	KeywordMode getKeywordMode() { return keyword_mode; }
 
-	static base::StrID makeStrID(std::string_view view) {
-		return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
+	namespace {
+		base::StrID makeStrID(std::string_view view) {
+			return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
+		}
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
@@ -299,25 +301,26 @@ namespace lang_def {
 
 		});
 
-	// Distinct for all keyword modes:
-	static base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;
-	static base::VectorMap<base::StrID, Keyword, false, true> bc_keyword_map;
+	namespace {
+		// Distinct for all keyword modes:
+		base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;
+		base::VectorMap<base::StrID, Keyword, false, true> bc_keyword_map;
 
-	// Single for all
-	static base::VectorMap<Keyword, base::StrID, false, true> rev_keyword_map;
+		// Single for all
+		base::VectorMap<Keyword, base::StrID, false, true> rev_keyword_map;
 
-	// Single for all:
-	static base::VectorMap<Keyword, KeywordFlags, false, true> keyword_flags;
+		// Single for all:
+		base::VectorMap<Keyword, KeywordFlags, false, true> keyword_flags;
 
-	static base::VectorMap<base::StrID, Special, false, true>       special_map;
-	static base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
-	static base::VectorMap<base::StrID, NumericLiteralTypeSpecifier, false, true>
-		numeric_specifier_map;
+		base::VectorMap<base::StrID, Special, false, true>       special_map;
+		base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
+		base::VectorMap<base::StrID, NumericLiteralTypeSpecifier, false, true> numeric_specifier_map;
 
-	static base::VectorMap<Special, base::StrID, false, true>       rev_special_map;
-	static base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
-	static base::VectorMap<NumericLiteralTypeSpecifier, base::StrID, false, true>
-		rev_numeric_specifier_map;
+		base::VectorMap<Special, base::StrID, false, true>       rev_special_map;
+		base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
+		base::VectorMap<NumericLiteralTypeSpecifier, base::StrID, false, true>
+			rev_numeric_specifier_map;
+	}
 
 	void key_spec_op::init() {
 		SIMPLE_INIT_GUARD_BEGIN;

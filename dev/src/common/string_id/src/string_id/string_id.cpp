@@ -52,24 +52,24 @@ namespace base {
 		constinit bool any_buffer_exists = false;
 
 		constinit std::mutex mutex;
-	}
 
-	/**
-	 * @brief Creates a new buffer for storing strings.
-	 * @note It is required to be called under write-lock.
-	 */
-	static void newBuffer() {
-		auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
-		buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
-		size_left = DEFAULT_BUFFER_SIZE;
-		next_pos  = 0;
-	}
+		/**
+		 * @brief Creates a new buffer for storing strings.
+		 * @note It is required to be called under write-lock.
+		 */
+		void newBuffer() {
+			auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
+			buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
+			size_left = DEFAULT_BUFFER_SIZE;
+			next_pos  = 0;
+		}
 
-	/**
-	 * @brief Returns a view to the last buffer.
-	 * @note It is required to be called under lock.
-	 */
-	static base::RawView lastBuffer() { return buffer_list.back().view(); }
+		/**
+		 * @brief Returns a view to the last buffer.
+		 * @note It is required to be called under lock.
+		 */
+		base::RawView lastBuffer() { return buffer_list.back().view(); }
+	}
 
 	/**
 	 * @brief

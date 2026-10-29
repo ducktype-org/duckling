@@ -73,14 +73,16 @@ namespace compiler::helios {
 		return res;
 	}
 
-	template<typename T>
-	static std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
-		std::ranges::sort(a);
-		std::ranges::sort(b);
+	namespace {
+		template<typename T>
+		std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
+			std::ranges::sort(a);
+			std::ranges::sort(b);
 
-		std::vector<T> result;
-		std::ranges::set_union(a, b, std::back_inserter(result));
-		return result;
+			std::vector<T> result;
+			std::ranges::set_union(a, b, std::back_inserter(result));
+			return result;
+		}
 	}
 
 	void LookupResult::merge(LookupResult other) {

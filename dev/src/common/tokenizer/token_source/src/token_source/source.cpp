@@ -14,21 +14,23 @@
 #include <unicode_classification/classifications.hpp>
 
 namespace tokenizer {
-	/**
-	 * @brief Checks for newline at the beginning of a set of characters.
-	 *
-	 * @note It's only CR + LF that combined are only a single newline
-	 *
-	 * @return usize - 0 if there is new line, otherwise number of characters that together form a
-	 * newline
-	 */
-	static usize isNewLine(const std::span<const lexer::Char> where) {
-		auto& newline = unicode::Classifications::newline;
-		if (where.size() > 0 && where[0].is(newline)) {
-			if (where.size() > 1 && where[0].is(0x0D) && where[1].is(0x0A)) return 2;
-			return 1;
+	namespace {
+		/**
+		 * @brief Checks for newline at the beginning of a set of characters.
+		 *
+		 * @note It's only CR + LF that combined are only a single newline
+		 *
+		 * @return usize - 0 if there is new line, otherwise number of characters that together form
+		 * a newline
+		 */
+		usize isNewLine(const std::span<const lexer::Char> where) {
+			auto& newline = unicode::Classifications::newline;
+			if (where.size() > 0 && where[0].is(newline)) {
+				if (where.size() > 1 && where[0].is(0x0D) && where[1].is(0x0A)) return 2;
+				return 1;
+			}
+			return 0;
 		}
-		return 0;
 	}
 
 	TokenSource::TokenSource(const fs::File& path):

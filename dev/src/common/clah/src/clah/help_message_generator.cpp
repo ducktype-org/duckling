@@ -78,90 +78,92 @@ namespace {
 		return usage.str();
 	}
 
-}
+	void appendHelpEntry(
+		std::stringstream& output,
+		const std::string& name,
+		const std::string& description,
+		int                padding
+	) {
+		if (padding < name.size() + 2)
+			output << name << '\n' << std::setw(padding) << std::left << " ";
+		else
+			output << std::setw(padding) << std::left << name;
 
-static void appendHelpEntry(
-	std::stringstream& output, const std::string& name, const std::string& description, int padding
-) {
-	if (padding < name.size() + 2)
-		output << name << '\n' << std::setw(padding) << std::left << " ";
-	else
-		output << std::setw(padding) << std::left << name;
-
-	output << description << '\n';
-}
-
-static std::string generateCommandArgumentsBlock(
-	const std::vector<clah::PositionalParameter>& positional_parameters,
-	int                                           padding = DEFAULT_PADDING
-) {
-	std::stringstream output;
-	bool              header_printed = false;
-
-	for (const auto& positional: positional_parameters) {
-		if (positional.getDescription().empty()) continue;
-
-		if (!header_printed) {
-			output << "\nCommand arguments:\n";
-			header_printed = true;
-		}
-
-		std::string name = "- <" + positional.getValueParser().getTypeName() + ">";
-		appendHelpEntry(output, name, positional.getDescription(), padding);
+		output << description << '\n';
 	}
 
-	return output.str();
-}
+	std::string generateCommandArgumentsBlock(
+		const std::vector<clah::PositionalParameter>& positional_parameters,
+		int                                           padding = DEFAULT_PADDING
+	) {
+		std::stringstream output;
+		bool              header_printed = false;
 
-static std::string generateOptionsBlock(
-	const std::string&                  title,
-	const std::vector<clah::Parameter>& params,
-	int                                 padding = DEFAULT_PADDING
-) {
-	if (params.empty()) return "";
+		for (const auto& positional: positional_parameters) {
+			if (positional.getDescription().empty()) continue;
 
-	std::stringstream output;
-	output << '\n' << title << '\n';
-	for (const auto& param: params) {
-		std::stringstream names_stream;
-		bool              has_short_name = false;
-		names_stream << "  ";
+			if (!header_printed) {
+				output << "\nCommand arguments:\n";
+				header_printed = true;
+			}
 
-		if_opt_some(param.getShortName(), name) {
-			names_stream << "-" << name;
-			has_short_name = true;
+			std::string name = "- <" + positional.getValueParser().getTypeName() + ">";
+			appendHelpEntry(output, name, positional.getDescription(), padding);
 		}
-		if_opt_some(param.getLongName(), name) {
-			if (has_short_name) names_stream << ", ";
-			names_stream << "--" << name.stdString();
-		}
-		if (param.getValueParser() != nullptr)
-			names_stream << " <" + param.getValueParser()->getTypeName() + ">";
-		const auto names = names_stream.str();
-		appendHelpEntry(output, names, param.getShortDesc().stdString(), padding);
 
-		if_opt_some(param.getLongDesc(), long_desc) {
-			std::stringstream input(long_desc.stdString());
-			std::string       line;
-			while (std::getline(input, line))
-				output << std::setw(padding) << std::left << " " << line << '\n';
-		}
+		return output.str();
 	}
-	return output.str();
-}
 
-static std::string generateSubcommandsBlock(
-	const std::vector<clah::Clah>& subcommands, int padding = DEFAULT_PADDING
-) {
-	if (subcommands.empty()) return "";
-	std::stringstream output;
+	std::string generateOptionsBlock(
+		const std::string&                  title,
+		const std::vector<clah::Parameter>& params,
+		int                                 padding = DEFAULT_PADDING
+	) {
+		if (params.empty()) return "";
 
-	output << "\nAvailable Commands:\n";
-	for (const auto& cmd: subcommands) {
-		std::string name = " " + cmd.getName();
-		appendHelpEntry(output, name, cmd.getDescription(), padding);
+		std::stringstream output;
+		output << '\n' << title << '\n';
+		for (const auto& param: params) {
+			std::stringstream names_stream;
+			bool              has_short_name = false;
+			names_stream << "  ";
+
+			if_opt_some(param.getShortName(), name) {
+				names_stream << "-" << name;
+				has_short_name = true;
+			}
+			if_opt_some(param.getLongName(), name) {
+				if (has_short_name) names_stream << ", ";
+				names_stream << "--" << name.stdString();
+			}
+			if (param.getValueParser() != nullptr)
+				names_stream << " <" + param.getValueParser()->getTypeName() + ">";
+			const auto names = names_stream.str();
+			appendHelpEntry(output, names, param.getShortDesc().stdString(), padding);
+
+			if_opt_some(param.getLongDesc(), long_desc) {
+				std::stringstream input(long_desc.stdString());
+				std::string       line;
+				while (std::getline(input, line))
+					output << std::setw(padding) << std::left << " " << line << '\n';
+			}
+		}
+		return output.str();
 	}
-	return output.str();
+
+	std::string generateSubcommandsBlock(
+		const std::vector<clah::Clah>& subcommands, int padding = DEFAULT_PADDING
+	) {
+		if (subcommands.empty()) return "";
+		std::stringstream output;
+
+		output << "\nAvailable Commands:\n";
+		for (const auto& cmd: subcommands) {
+			std::string name = " " + cmd.getName();
+			appendHelpEntry(output, name, cmd.getDescription(), padding);
+		}
+		return output.str();
+	}
 }
 
 namespace clah {

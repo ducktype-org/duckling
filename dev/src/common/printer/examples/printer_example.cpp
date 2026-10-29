@@ -21,26 +21,28 @@
 */
 #include <printer/stream_printer.hpp>
 
-static void testPrinter() {
-	printer::StreamPrinter::print({
-		{ "Hello, World! This is the first message.\n" },
-		{ "R", printer::Color::BrightRed },
-		{ "A", printer::Color::Yellow },
-		{ "I", printer::Color::BrightYellow },
-		{ "N", printer::Color::BrightGreen },
-		{ "B", printer::Color::BrightBlue },
-		{ "O", printer::Color::BrightCyan },
-		{ "W", printer::Color::Magenta },
-		{ "\n" },
-		{ "This message uses a default color. " },
-		{ "I can still manually change it. ", printer::Color::Green },
-		{ "But all messages that do not specify color display it.\n" },
-		{ "It's also possible now to change the " },
-		{ "BACKGROUND", printer::Color::Default, printer::Color::Yellow },
-		{ ". " },
-		{ "How cool is that ?", printer::Color::Red, printer::Color::Cyan },
-		{ "\n" },
-	});
+namespace {
+	void testPrinter() {
+		printer::StreamPrinter::print({
+			{ "Hello, World! This is the first message.\n" },
+			{ "R", printer::Color::BrightRed },
+			{ "A", printer::Color::Yellow },
+			{ "I", printer::Color::BrightYellow },
+			{ "N", printer::Color::BrightGreen },
+			{ "B", printer::Color::BrightBlue },
+			{ "O", printer::Color::BrightCyan },
+			{ "W", printer::Color::Magenta },
+			{ "\n" },
+			{ "This message uses a default color. " },
+			{ "I can still manually change it. ", printer::Color::Green },
+			{ "But all messages that do not specify color display it.\n" },
+			{ "It's also possible now to change the " },
+			{ "BACKGROUND", printer::Color::Default, printer::Color::Yellow },
+			{ ". " },
+			{ "How cool is that ?", printer::Color::Red, printer::Color::Cyan },
+			{ "\n" },
+		});
+	}
 }
 
 int main() { testPrinter(); }

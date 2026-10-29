@@ -27,38 +27,40 @@ namespace vm::code {
 		return instance;
 	}
 
-	const static BuiltinTypesMap& rawBuiltins() {
-		const static BuiltinTypesMap types = {
-			{ base::StrID("byte"), TypeOfData(PrimitiveType(base::StrID("byte"), Bytes{ 1 })) },
-			{ base::StrID("i8"), TypeOfData(PrimitiveType(base::StrID("i8"), Bytes{ 1 })) },
-			{ base::StrID("i16"), TypeOfData(PrimitiveType(base::StrID("i16"), Bytes{ 2 })) },
-			{ base::StrID("i32"), TypeOfData(PrimitiveType(base::StrID("i32"), Bytes{ 4 })) },
-			{ base::StrID("i64"), TypeOfData(PrimitiveType(base::StrID("i64"), Bytes{ 8 })) },
-			{ base::StrID("ptr_i8"),
-			  TypeOfData(PointerType(base::StrID("ptr_i8"), base::StrID("i8"))) },
-			{ base::StrID("ptr_i16"),
-			  TypeOfData(PointerType(base::StrID("ptr_i16"), base::StrID("i16"))) },
-			{ base::StrID("ptr_i32"),
-			  TypeOfData(PointerType(base::StrID("ptr_i32"), base::StrID("i32"))) },
-			{ base::StrID("ptr_i64"),
-			  TypeOfData(PointerType(base::StrID("ptr_i64"), base::StrID("i64"))) },
-			{ base::StrID("string"),
-			  TypeOfData(DynamicTableType(base::StrID("string"), base::StrID("byte"))) },
-			{ base::StrID("ptr_string"),
-			  TypeOfData(PointerType(base::StrID("ptr_string"), base::StrID("string"))) },
-			{ base::StrID("argv"),
-			  TypeOfData(DynamicTableType(base::StrID("argv"), base::StrID("ptr_string"))) },
-			{ base::StrID("ptr_argv"),
-			  TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))) },
-			{ base::StrID("opaque_ptr"),
-			  TypeOfData(OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 })) },
-			{ base::StrID("cptr"), TypeOfData(CPointerType(base::StrID("cptr"), {})) },
-			{ base::StrID("VTablePtr"), SpecialTypes::get().vtable_ptr },
-			{ base::StrID("mutex"), TypeOfData(OpaqueType(base::StrID("mutex"), Bytes{ 8 })) },
-			{ base::StrID("condition_variable"),
-			  TypeOfData(OpaqueType(base::StrID("condition_variable"), Bytes{ 8 })) },
-		};
-		return types;
+	namespace {
+		const BuiltinTypesMap& rawBuiltins() {
+			const static BuiltinTypesMap types = {
+				{ base::StrID("byte"), TypeOfData(PrimitiveType(base::StrID("byte"), Bytes{ 1 })) },
+				{ base::StrID("i8"), TypeOfData(PrimitiveType(base::StrID("i8"), Bytes{ 1 })) },
+				{ base::StrID("i16"), TypeOfData(PrimitiveType(base::StrID("i16"), Bytes{ 2 })) },
+				{ base::StrID("i32"), TypeOfData(PrimitiveType(base::StrID("i32"), Bytes{ 4 })) },
+				{ base::StrID("i64"), TypeOfData(PrimitiveType(base::StrID("i64"), Bytes{ 8 })) },
+				{ base::StrID("ptr_i8"),
+				  TypeOfData(PointerType(base::StrID("ptr_i8"), base::StrID("i8"))) },
+				{ base::StrID("ptr_i16"),
+				  TypeOfData(PointerType(base::StrID("ptr_i16"), base::StrID("i16"))) },
+				{ base::StrID("ptr_i32"),
+				  TypeOfData(PointerType(base::StrID("ptr_i32"), base::StrID("i32"))) },
+				{ base::StrID("ptr_i64"),
+				  TypeOfData(PointerType(base::StrID("ptr_i64"), base::StrID("i64"))) },
+				{ base::StrID("string"),
+				  TypeOfData(DynamicTableType(base::StrID("string"), base::StrID("byte"))) },
+				{ base::StrID("ptr_string"),
+				  TypeOfData(PointerType(base::StrID("ptr_string"), base::StrID("string"))) },
+				{ base::StrID("argv"),
+				  TypeOfData(DynamicTableType(base::StrID("argv"), base::StrID("ptr_string"))) },
+				{ base::StrID("ptr_argv"),
+				  TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))) },
+				{ base::StrID("opaque_ptr"),
+				  TypeOfData(OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 })) },
+				{ base::StrID("cptr"), TypeOfData(CPointerType(base::StrID("cptr"), {})) },
+				{ base::StrID("VTablePtr"), SpecialTypes::get().vtable_ptr },
+				{ base::StrID("mutex"), TypeOfData(OpaqueType(base::StrID("mutex"), Bytes{ 8 })) },
+				{ base::StrID("condition_variable"),
+				  TypeOfData(OpaqueType(base::StrID("condition_variable"), Bytes{ 8 })) },
+			};
+			return types;
+		}
 	}
 
 	const std::vector<TypeOfData>& getBuiltinTypes() {

@@ -55,20 +55,19 @@ namespace {
 	}
 
 #undef TRANSLATOR_ARGUMENTS
-}
 
-/**
- * @brief Relocates an instruction to an executable instruction by translating its
- * arguments.
- */
-static exec::Instruction relocInstruction(
-	const ProgramBase&                  program,
-	const exec::ExecFunctionCollection& exec_functions,
-	const exec::ExecFunction&           current_function,
-	const reloc::RelocFunction&         current_function_reloc,
-	const reloc::Instruction&           instruction
-) {
-	switch (instruction.id) {
+	/**
+	 * @brief Relocates an instruction to an executable instruction by translating its
+	 * arguments.
+	 */
+	exec::Instruction relocInstruction(
+		const ProgramBase&                  program,
+		const exec::ExecFunctionCollection& exec_functions,
+		const exec::ExecFunction&           current_function,
+		const reloc::RelocFunction&         current_function_reloc,
+		const reloc::Instruction&           instruction
+	) {
+		switch (instruction.id) {
 #define ARG_TYPE(type, name)         type
 #define ARG_NAME(type, name)         name
 #define DO_TRANSLATION(INSTR_MEMBER) DO_TRANSLATION_LAST(INSTR_MEMBER),
@@ -94,8 +93,9 @@ static exec::Instruction relocInstruction(
 #undef ARG_NAME
 #undef DO_TRANSLATION
 #undef DO_TRANSLATION_LAST
+		}
+		CORE_UNREACHABLE();
 	}
-	CORE_UNREACHABLE();
 }
 
 exec::ExecFunctionCollection exec::linkFunctions(

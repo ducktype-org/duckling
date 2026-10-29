@@ -29,82 +29,82 @@
 #include <utility>
 
 namespace compiler::tsh {
-	/**
-	 * @brief Gets the default interface for a type, i.e. the methods which should be defined for
-	 * every type, such as `toString`.
-	 * @param ctx Query context for generating symbols.
-	 * @param type The type for which to get the default interface, needed e.g. for method types.
-	 * @return The default interface for the given type.
-	 */
-	static TypeInterface getDefaultTypeInterfaceForType(
-		query::Context& ctx, const AbstractType type
-	) {
-		using helios::defgen::generatedCopyConstructorSymForType;
-		using helios::defgen::generatedDestructSymForType;
-		using helios::defgen::generatedToStringSymForType;
+	namespace {
+		/**
+		 * @brief Gets the default interface for a type, i.e. the methods which should be defined for
+		 * every type, such as `toString`.
+		 * @param ctx Query context for generating symbols.
+		 * @param type The type for which to get the default interface, needed e.g. for method types.
+		 * @return The default interface for the given type.
+		 */
+		TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+			using helios::defgen::generatedCopyConstructorSymForType;
+			using helios::defgen::generatedDestructSymForType;
+			using helios::defgen::generatedToStringSymForType;
 
-		// The generated `toString` returns a `String`, which lives in `core.containers`. It only
-		// exists when a standard library is available, so skip it otherwise (e.g. no-std builds) —
-		// resolving its type would fail to find the `String` language primitive.
-		const bool string_type_present = isStringTypePresent(ctx);
+			// The generated `toString` returns a `String`, which lives in `core.containers`. It
+			// only exists when a standard library is available, so skip it otherwise (e.g. no-std
+			// builds) — resolving its type would fail to find the `String` language primitive.
+			const bool string_type_present = isStringTypePresent(ctx);
 
-		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
-		if (not type.carriesInformation(ctx)) {
-			if (type.getKind() == Kind::Unit && string_type_present) {
-				// The unit type has a `toString` method, even though it doesn't carry information,
-				// because it is a simple type and it's passed by value.
-				return TypeInterface{ std::vector{ InterfaceElement{
+			// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
+			if (not type.carriesInformation(ctx)) {
+				if (type.getKind() == Kind::Unit && string_type_present) {
+					// The unit type has a `toString` method, even though it doesn't carry
+					// information, because it is a simple type and it's passed by value.
+					return TypeInterface{ std::vector{ InterfaceElement{
+						generatedToStringSymForType(ctx, type),
+						type,
+						0,
+						InterfaceElement::InterfaceElementKind::Method,
+						MemberVisibility::Public,
+						MemberSpecialKind::ToString,
+					} } };
+				}
+				return {};
+			}
+
+			std::vector<InterfaceElement> elements;
+
+			// Every type has a `toString` method (when a standard library provides `String`).
+			if (string_type_present) {
+				elements.emplace_back(
 					generatedToStringSymForType(ctx, type),
 					type,
 					0,
 					InterfaceElement::InterfaceElementKind::Method,
 					MemberVisibility::Public,
-					MemberSpecialKind::ToString,
-				} } };
+					MemberSpecialKind::ToString
+				);
 			}
-			return {};
+
+			if (not type.isTriviallyDestructible(ctx)) {
+				elements.emplace_back(
+					generatedDestructSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::Method,
+					MemberVisibility::Public,
+					MemberSpecialKind::Destructor
+				);
+			}
+
+			// A trivially copyable type is copied by copying its bytes, so it needs no copy
+			// constructor. A type that declares its own one keeps it, because the declared
+			// interface wins over the default one for every special kind.
+			if (not type.isTriviallyCopyable(ctx)) {
+				elements.emplace_back(
+					generatedCopyConstructorSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::StaticMethod,
+					MemberVisibility::Public,
+					MemberSpecialKind::CopyConstructor
+				);
+			}
+
+			return TypeInterface(elements);
 		}
-
-		std::vector<InterfaceElement> elements;
-
-		// Every type has a `toString` method (when a standard library provides `String`).
-		if (string_type_present) {
-			elements.emplace_back(
-				generatedToStringSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::Method,
-				MemberVisibility::Public,
-				MemberSpecialKind::ToString
-			);
-		}
-
-		if (not type.isTriviallyDestructible(ctx)) {
-			elements.emplace_back(
-				generatedDestructSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::Method,
-				MemberVisibility::Public,
-				MemberSpecialKind::Destructor
-			);
-		}
-
-		// A trivially copyable type is copied by copying its bytes, so it needs no copy
-		// constructor. A type that declares its own one keeps it, because the declared interface
-		// wins over the default one for every special kind.
-		if (not type.isTriviallyCopyable(ctx)) {
-			elements.emplace_back(
-				generatedCopyConstructorSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::StaticMethod,
-				MemberVisibility::Public,
-				MemberSpecialKind::CopyConstructor
-			);
-		}
-
-		return TypeInterface(elements);
 	}
 
 	/**
@@ -177,19 +177,21 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeInterface)
 
-	/**
-	 * @brief Creates a human-readable string representation of a vector of symbol types.
-	 * @param types Vector of symbol types to stringify.
-	 * @return A human-readable string representing a sequence of symbol types.
-	 */
-	static std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
-		std::stringstream res;
-		res << "(";
-		if (!types.empty()) res << types[0].toString();
-		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
-		res << ")";
+	namespace {
+		/**
+		 * @brief Creates a human-readable string representation of a vector of symbol types.
+		 * @param types Vector of symbol types to stringify.
+		 * @return A human-readable string representing a sequence of symbol types.
+		 */
+		std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
+			std::stringstream res;
+			res << "(";
+			if (!types.empty()) res << types[0].toString();
+			for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
+			res << ")";
 
-		return res.str();
+			return res.str();
+		}
 	}
 
 	CRef<TypeInterface> UnitAbstractTypeImpl::getDeclaredInterface(query::Context&) const {

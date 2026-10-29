@@ -131,93 +131,97 @@ namespace compiler::mir {
 		return function_builder.build();
 	}
 
-	/**
-	 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
-	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable
-	 * ones.
-	 */
-	static Function eliminateUnreachable(Function function) {
-		std::unordered_set<BlockID> reachable;
-		std::stack<BlockID>         stack;
+	namespace {
+		/**
+		 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
+		 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable
+		 * ones.
+		 */
+		Function eliminateUnreachable(Function function) {
+			std::unordered_set<BlockID> reachable;
+			std::stack<BlockID>         stack;
 
-		stack.push(function.block_order[0]);
-		while (!stack.empty()) {
-			BlockID block_id = stack.top();
-			stack.pop();
+			stack.push(function.block_order[0]);
+			while (!stack.empty()) {
+				BlockID block_id = stack.top();
+				stack.pop();
 
-			if (reachable.contains(block_id)) continue;
+				if (reachable.contains(block_id)) continue;
 
-			auto successors = getTerminatorSuccessors(function.blocks[block_id].terminator);
+				auto successors = getTerminatorSuccessors(function.blocks[block_id].terminator);
 
-			reachable.insert(block_id);
-			for (auto successor: successors) stack.push(successor);
+				reachable.insert(block_id);
+				for (auto successor: successors) stack.push(successor);
+			}
+
+			std::vector<BlockID> new_block_order;
+
+			for (auto block_id: function.block_order)
+				if (reachable.contains(block_id))
+					new_block_order.push_back(block_id);
+				else
+					function.blocks.erase(block_id);
+			function.block_order = new_block_order;
+
+			// WEAK_ASSERT candidate
+			CORE_ASSERT(function.validateBlockIDs().isOk(), "Function has invalid block IDs");
+
+			return function;
 		}
 
-		std::vector<BlockID> new_block_order;
+		/**
+		 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a
+		 * mock-up.
+		 *
+		 * This function deals with this terminator:
+		 * * if block doesn't exists it means that it was unreachable, we do nothing
+		 * * if block is reachable, but function returns void it is replaced with ReturnVoid
+		 * * if block is reachable and function returns value, throws missing return error
+		 * @note It is assumed that the last block is the last in the block order.
+		 */
+		query::QResult<Function> finalizeFunctionEnd(query::Context& ctx, Function function) {
+			CORE_ASSERT(
+				function.blocks.size() > 0, "Function should have at least one block after lowering"
+			);
 
-		for (auto block_id: function.block_order)
-			if (reachable.contains(block_id))
-				new_block_order.push_back(block_id);
-			else
-				function.blocks.erase(block_id);
-		function.block_order = new_block_order;
+			// It should be always zero because the last block is generated as the first one.
+			auto last_block_id = BlockID(0);
+			if (not function.blocks.contains(last_block_id)) return function;
 
-		// WEAK_ASSERT candidate
-		CORE_ASSERT(function.validateBlockIDs().isOk(), "Function has invalid block IDs");
+			CORE_ASSERT(
+				function.blocks[last_block_id].terminator.operation == Operation::FunctionEnd,
+				"Last block doesn't have FunctionEnd terminator"
+			);
 
-		return function;
-	}
-
-	/**
-	 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a
-	 * mock-up.
-	 *
-	 * This function deals with this terminator:
-	 * * if block doesn't exists it means that it was unreachable, we do nothing
-	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
-	 * * if block is reachable and function returns value, throws missing return error
-	 * @note It is assumed that the last block is the last in the block order.
-	 */
-	static query::QResult<Function> finalizeFunctionEnd(query::Context& ctx, Function function) {
-		CORE_ASSERT(
-			function.blocks.size() > 0, "Function should have at least one block after lowering"
-		);
-
-		// It should be always zero because the last block is generated as the first one.
-		auto last_block_id = BlockID(0);
-		if (not function.blocks.contains(last_block_id)) return function;
-
-		CORE_ASSERT(
-			function.blocks[last_block_id].terminator.operation == Operation::FunctionEnd,
-			"Last block doesn't have FunctionEnd terminator"
-		);
-
-		if (function.return_type.getType().getKind() == tsh::Kind::Unit) {
-			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
-			return function;
-		} else if (function.return_type.getType().getKind() == tsh::Kind::Void) {
-			// If the return type is `void` despite reachability of the end of the function, then
-			// the user must have written it explicitly (deducing `void` in HELIoS is conservative).
-			ctx.logInt(makeBox<dia::PlaceholderError>(
-				base::strConcat(
-					"The function `",
-					function.name,
-					"` has return type `void`, so it must never return, but it can reach the end "
-					"of its body."
-				),
-				"Provide an explicit `-> ()` return type if it is meant to return."
-			));
-			return query::Failed();
-		} else {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
-				base::strConcat(
-					"The function `",
-					function.name,
-					"` is missing a return statement or does not always return."
-				),
-				""
-			));
-			return query::Failed();
+			if (function.return_type.getType().getKind() == tsh::Kind::Unit) {
+				function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
+				return function;
+			} else if (function.return_type.getType().getKind() == tsh::Kind::Void) {
+				// If the return type is `void` despite reachability of the end of the function,
+				// then the user must have written it explicitly (deducing `void` in HELIoS is
+				// conservative).
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"The function `",
+						function.name,
+						"` has return type `void`, so it must never return, but it can reach the "
+						"end "
+						"of its body."
+					),
+					"Provide an explicit `-> ()` return type if it is meant to return."
+				));
+				return query::Failed();
+			} else {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"The function `",
+						function.name,
+						"` is missing a return statement or does not always return."
+					),
+					""
+				));
+				return query::Failed();
+			}
 		}
 	}
 

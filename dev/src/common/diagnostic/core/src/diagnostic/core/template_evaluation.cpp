@@ -22,10 +22,12 @@
 
 namespace dia {
 
-	template<typename T>
-	static T getNewID() {
-		static T current_id = 1;
-		return current_id++;
+	namespace {
+		template<typename T>
+		T getNewID() {
+			static T current_id = 1;
+			return current_id++;
+		}
 	}
 
 	// --------------------------------------------------------------------------------
@@ -485,12 +487,14 @@ namespace dia {
 		for (size_t i = 0; i < no_links; ++i) current_message_ids.pop_back();
 	}
 
-	// Forward declaration needed for visitEvaluatedTemplateComponent
-	static Box<state::Component> evaluateTemplateIfComponent(
-		DiagnosticEvaluationContext&             thread_ctx,
-		const template_file::DiagnosticTemplate& generic_template,
-		const dia_args::Message&                 message
-	);
+	namespace {
+		// Forward declaration needed for visitEvaluatedTemplateComponent
+		Box<state::Component> evaluateTemplateIfComponent(
+			DiagnosticEvaluationContext&             thread_ctx,
+			const template_file::DiagnosticTemplate& generic_template,
+			const dia_args::Message&                 message
+		);
+	}
 
 	void EvaluateDiagnosticFileVisitor::visitEvaluatedTemplateComponent(
 		const dia_args::EvaluatedTemplateComponent& el
@@ -522,159 +526,165 @@ namespace dia {
 	// Main evaluation Logic
 	// --------------------------------------------------------------------------------
 
-	Box<state::Component> evaluateTemplateIfComponent(
-		DiagnosticEvaluationContext&             thread_ctx,
-		const template_file::DiagnosticTemplate& generic_template,
-		const dia_args::Message&                 message
-	) {
-		return std::visit(
-			[&](auto&& tmpl) -> Box<state::Component> {
-				using T = std::decay_t<decltype(tmpl)>;
-				if constexpr (std::is_same_v<T, template_file::ComponentTemplate>) {
-					MessageEvaluationContext ctx(
-						thread_ctx, message.arguments, tmpl.params, tmpl.macros, {}
-					);
-					return EvaluateTemplateFileVisitor::evaluate(ctx, tmpl.content.ref());
-				} else {
-					throw TemplateEvaluationException("The template is not a component template.");
-				}
-			},
-			generic_template.content
-		);
-	}
-
-	static state::Message evaluateMessage(
-		DiagnosticEvaluationContext&          thread_ctx,
-		const template_file::MessageTemplate& message_template,
-		const dia_args::Message&              message
-	) {
-		MessageEvaluationContext ctx(
-			thread_ctx,
-			message.arguments,
-			message_template.params,
-			message_template.macros,
-			message_template.pointer_messages
-		);
-
-		auto header
-			= EvaluateTemplateFileVisitor::evaluate(ctx, message_template.header_message.ref());
-
-		base::MBox<state::Component> description;
-		if (message_template.description.ref().toOpt().has_value()) {
-			auto desc = EvaluateTemplateFileVisitor::evaluate(
-				ctx, message_template.description.ref().toOpt().value()
-			);
-			description = base::MBox<state::Component>(std::move(desc));
-		}
-
-		std::vector<state::ExploreEdge> evaluated_explore_links;
-		for (const auto& edge_input: message.explore_links) {
-			if (not message_template.explore_links.contains(edge_input.name)) {
-				throw TemplateEvaluationException(
-					base::strConcat("Explore edge '", edge_input.name, "' not defined in template.")
-				);
-			}
-
-			const auto& edge_template = message_template.explore_links.at(edge_input.name);
-
-			MessageEvaluationContext edge_ctx(
-				thread_ctx, edge_input.params, edge_template.params, message_template.macros, {}
-			);
-
-			auto content
-				= EvaluateTemplateFileVisitor::evaluate(edge_ctx, edge_template.content.ref());
-			evaluated_explore_links.emplace_back(state::ExploreEdge{
-				.name = edge_input.name, .content = std::move(content) });
-		}
-
-		state::Message result(
-			message_template.metadata,
-			std::move(header),
-			std::move(description),
-			ctx.getEvaluatedPointerMessages(),
-			std::move(evaluated_explore_links)
-		);
-		return result;
-	}
-
-	/**
-	 * @brief Evaluates a diagnostic message template into a state message if the template is a
-	 * message template.
-	 */
-	static state::Message evaluateTemplateIfMessage(
-		DiagnosticEvaluationContext&             thread_ctx,
-		const template_file::DiagnosticTemplate& generic_template,
-		const dia_args::MessageID&               message_id,
-		const dia_args::Message&                 message
-	) {
-		try {
+	namespace {
+		Box<state::Component> evaluateTemplateIfComponent(
+			DiagnosticEvaluationContext&             thread_ctx,
+			const template_file::DiagnosticTemplate& generic_template,
+			const dia_args::Message&                 message
+		) {
 			return std::visit(
-				[&](auto&& tmpl) -> state::Message {
+				[&](auto&& tmpl) -> Box<state::Component> {
 					using T = std::decay_t<decltype(tmpl)>;
-					if constexpr (std::is_same_v<T, template_file::MessageTemplate>)
-						return evaluateMessage(thread_ctx, tmpl, message);
-					else
-						throw TemplateEvaluationException("The template is not a message template.");
-				},
-				generic_template.content
-			);
-		} catch (const TemplateEvaluationException& e) {
-			throw TemplateEvaluationException(
-				base::strConcat("Error while evaluating message '", message_id, "': ", e.what())
-			);
-		}
-	}
-
-	/**
-	 * @brief Evaluates a diagnostic pointer message template into a state pointer message if the
-	 * template is a pointer message template.
-	 */
-	static state::PointerMessage evaluateTemplateIfPointerMessage(
-		DiagnosticEvaluationContext&             thread_ctx,
-		const template_file::DiagnosticTemplate& generic_template,
-		const dia_args::Message&                 pointer_message,
-		const dia_args::PointerMessageID&        pm_id
-	) {
-		try {
-			return std::visit(
-				[&](auto&& tmpl) -> state::PointerMessage {
-					using T = std::decay_t<decltype(tmpl)>;
-					if constexpr (std::is_same_v<T, template_file::PointerMessageTemplate>) {
+					if constexpr (std::is_same_v<T, template_file::ComponentTemplate>) {
 						MessageEvaluationContext ctx(
-							thread_ctx,
-							pointer_message.arguments,
-							tmpl.params,
-							tmpl.macros,
-							tmpl.pointer_messages
+							thread_ctx, message.arguments, tmpl.params, tmpl.macros, {}
 						);
-						if (!tmpl.pointer_messages.contains(pm_id)) {
-							throw TemplateEvaluationException(base::strConcat(
-								"Pointer message ID '", pm_id, "' not found in template."
-							));
-						}
-
-						auto& dia_args_pointer_message = tmpl.pointer_messages.at(pm_id);
-						auto  content_component        = EvaluateTemplateFileVisitor::evaluate(
-                            ctx, dia_args_pointer_message.content.ref()
-                        );
-						auto text_view = constructTextView(content_component.ref());
-						return state::PointerMessage{
-							.type     = dia_args_pointer_message.type,
-							.content  = std::move(text_view),
-							.priority = static_cast<u32>(dia_args_pointer_message.priority)
-						};
+						return EvaluateTemplateFileVisitor::evaluate(ctx, tmpl.content.ref());
 					} else {
 						throw TemplateEvaluationException(
-							"The template is not a pointer message template."
+							"The template is not a component template."
 						);
 					}
 				},
 				generic_template.content
 			);
-		} catch (const TemplateEvaluationException& e) {
-			throw TemplateEvaluationException(
-				base::strConcat("Error while evaluating pointer message '", pm_id, "': ", e.what())
+		}
+
+		state::Message evaluateMessage(
+			DiagnosticEvaluationContext&          thread_ctx,
+			const template_file::MessageTemplate& message_template,
+			const dia_args::Message&              message
+		) {
+			MessageEvaluationContext ctx(
+				thread_ctx,
+				message.arguments,
+				message_template.params,
+				message_template.macros,
+				message_template.pointer_messages
 			);
+
+			auto header
+				= EvaluateTemplateFileVisitor::evaluate(ctx, message_template.header_message.ref());
+
+			base::MBox<state::Component> description;
+			if (message_template.description.ref().toOpt().has_value()) {
+				auto desc = EvaluateTemplateFileVisitor::evaluate(
+					ctx, message_template.description.ref().toOpt().value()
+				);
+				description = base::MBox<state::Component>(std::move(desc));
+			}
+
+			std::vector<state::ExploreEdge> evaluated_explore_links;
+			for (const auto& edge_input: message.explore_links) {
+				if (not message_template.explore_links.contains(edge_input.name)) {
+					throw TemplateEvaluationException(base::strConcat(
+						"Explore edge '", edge_input.name, "' not defined in template."
+					));
+				}
+
+				const auto& edge_template = message_template.explore_links.at(edge_input.name);
+
+				MessageEvaluationContext edge_ctx(
+					thread_ctx, edge_input.params, edge_template.params, message_template.macros, {}
+				);
+
+				auto content
+					= EvaluateTemplateFileVisitor::evaluate(edge_ctx, edge_template.content.ref());
+				evaluated_explore_links.emplace_back(state::ExploreEdge{
+					.name = edge_input.name, .content = std::move(content) });
+			}
+
+			state::Message result(
+				message_template.metadata,
+				std::move(header),
+				std::move(description),
+				ctx.getEvaluatedPointerMessages(),
+				std::move(evaluated_explore_links)
+			);
+			return result;
+		}
+
+		/**
+		 * @brief Evaluates a diagnostic message template into a state message if the template is a
+		 * message template.
+		 */
+		state::Message evaluateTemplateIfMessage(
+			DiagnosticEvaluationContext&             thread_ctx,
+			const template_file::DiagnosticTemplate& generic_template,
+			const dia_args::MessageID&               message_id,
+			const dia_args::Message&                 message
+		) {
+			try {
+				return std::visit(
+					[&](auto&& tmpl) -> state::Message {
+						using T = std::decay_t<decltype(tmpl)>;
+						if constexpr (std::is_same_v<T, template_file::MessageTemplate>)
+							return evaluateMessage(thread_ctx, tmpl, message);
+						else
+							throw TemplateEvaluationException(
+								"The template is not a message template."
+							);
+					},
+					generic_template.content
+				);
+			} catch (const TemplateEvaluationException& e) {
+				throw TemplateEvaluationException(
+					base::strConcat("Error while evaluating message '", message_id, "': ", e.what())
+				);
+			}
+		}
+
+		/**
+		 * @brief Evaluates a diagnostic pointer message template into a state pointer message if
+		 * the template is a pointer message template.
+		 */
+		state::PointerMessage evaluateTemplateIfPointerMessage(
+			DiagnosticEvaluationContext&             thread_ctx,
+			const template_file::DiagnosticTemplate& generic_template,
+			const dia_args::Message&                 pointer_message,
+			const dia_args::PointerMessageID&        pm_id
+		) {
+			try {
+				return std::visit(
+					[&](auto&& tmpl) -> state::PointerMessage {
+						using T = std::decay_t<decltype(tmpl)>;
+						if constexpr (std::is_same_v<T, template_file::PointerMessageTemplate>) {
+							MessageEvaluationContext ctx(
+								thread_ctx,
+								pointer_message.arguments,
+								tmpl.params,
+								tmpl.macros,
+								tmpl.pointer_messages
+							);
+							if (!tmpl.pointer_messages.contains(pm_id)) {
+								throw TemplateEvaluationException(base::strConcat(
+									"Pointer message ID '", pm_id, "' not found in template."
+								));
+							}
+
+							auto& dia_args_pointer_message = tmpl.pointer_messages.at(pm_id);
+							auto  content_component        = EvaluateTemplateFileVisitor::evaluate(
+                                ctx, dia_args_pointer_message.content.ref()
+                            );
+							auto text_view = constructTextView(content_component.ref());
+							return state::PointerMessage{
+								.type     = dia_args_pointer_message.type,
+								.content  = std::move(text_view),
+								.priority = static_cast<u32>(dia_args_pointer_message.priority)
+							};
+						} else {
+							throw TemplateEvaluationException(
+								"The template is not a pointer message template."
+							);
+						}
+					},
+					generic_template.content
+				);
+			} catch (const TemplateEvaluationException& e) {
+				throw TemplateEvaluationException(base::strConcat(
+					"Error while evaluating pointer message '", pm_id, "': ", e.what()
+				));
+			}
 		}
 	}
 
@@ -713,47 +723,50 @@ namespace dia {
 		}
 	}
 
-	/**
-	 * @brief Get the order of messages to be displayed, starting from the main message.
-	 * This is left to right tree traversal of attaches messages and linkes inside messages.
-	 * First the attached messages are traversed, then the linked messages inside the message.
-	 */
-	static void getMessageOrder(
-		const DiagnosticEvaluationContext& ctx,
-		const std::vector<state::Message>& evaluated_messages,
-		std::vector<state::MessageID>&     output,
-		const dia_args::Message&           msg,
-		const state::Message&              evaluated_msg
-	) {
-		for (auto& msg_id: msg.attached_messages) {
-			auto evaluated_id = ctx.message_mapping.at(msg_id);
-			if (std::ranges::find(output, evaluated_id) != output.end()) continue;
+	namespace {
+		/**
+		 * @brief Get the order of messages to be displayed, starting from the main message.
+		 * This is left to right tree traversal of attaches messages and linkes inside messages.
+		 * First the attached messages are traversed, then the linked messages inside the message.
+		 */
+		void getMessageOrder(
+			const DiagnosticEvaluationContext& ctx,
+			const std::vector<state::Message>& evaluated_messages,
+			std::vector<state::MessageID>&     output,
+			const dia_args::Message&           msg,
+			const state::Message&              evaluated_msg
+		) {
+			for (auto& msg_id: msg.attached_messages) {
+				auto evaluated_id = ctx.message_mapping.at(msg_id);
+				if (std::ranges::find(output, evaluated_id) != output.end()) continue;
 
-			output.push_back(evaluated_id);
-			getMessageOrder(
-				ctx,
-				evaluated_messages,
-				output,
-				ctx.diagnostic.linked_messages.at(msg_id),
-				evaluated_messages[evaluated_id]
-			);
-		}
+				output.push_back(evaluated_id);
+				getMessageOrder(
+					ctx,
+					evaluated_messages,
+					output,
+					ctx.diagnostic.linked_messages.at(msg_id),
+					evaluated_messages[evaluated_id]
+				);
+			}
 
-		for (auto& msg_id: evaluated_msg.getOrderedMessageLinks()) {
-			if (std::ranges::find(output, msg_id) != output.end()) continue;
+			for (auto& msg_id: evaluated_msg.getOrderedMessageLinks()) {
+				if (std::ranges::find(output, msg_id) != output.end()) continue;
 
-			output.push_back(msg_id);
-			getMessageOrder(
-				ctx,
-				evaluated_messages,
-				output,
-				ctx.diagnostic.linked_messages.at(
-					std::ranges::find_if(
-						ctx.message_mapping, [&](const auto& pair) { return pair.second == msg_id; }
-					)->first
-				),
-				evaluated_messages[msg_id]
-			);
+				output.push_back(msg_id);
+				getMessageOrder(
+					ctx,
+					evaluated_messages,
+					output,
+					ctx.diagnostic.linked_messages.at(std::ranges::find_if(
+														  ctx.message_mapping,
+														  [&](const auto& pair) {
+															  return pair.second == msg_id;
+														  }
+					)->first),
+					evaluated_messages[msg_id]
+				);
+			}
 		}
 	}
 

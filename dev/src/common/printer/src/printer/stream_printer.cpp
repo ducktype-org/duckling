@@ -7,12 +7,14 @@
 #include "stream_printer.hpp"
 
 namespace printer {
-	// All background color escape codes are 10 above foregrounds colors.
-	static ColorID calculateBackgroundColorID(const ColorID color_id) {
-		constexpr int8_t BACKGROUND_FONT_COLOR_OFFSET = 10;
-		return static_cast<ColorID>(
-			color_id > 0 ? color_id + BACKGROUND_FONT_COLOR_OFFSET : color_id
-		);
+	namespace {
+		// All background color escape codes are 10 above foregrounds colors.
+		ColorID calculateBackgroundColorID(const ColorID color_id) {
+			constexpr int8_t BACKGROUND_FONT_COLOR_OFFSET = 10;
+			return static_cast<ColorID>(
+				color_id > 0 ? color_id + BACKGROUND_FONT_COLOR_OFFSET : color_id
+			);
+		}
 	}
 
 	void StreamPrinter::print(const std::vector<PrinterContent>& contents, std::ostream& out) {

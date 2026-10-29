@@ -88,11 +88,13 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	/**
-	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
-	 */
-	static base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
-		return builtinNameMapping().atMaybeCopy(name.strView());
+	namespace {
+		/**
+		 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
+		 */
+		base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
+			return builtinNameMapping().atMaybeCopy(name.strView());
+		}
 	}
 
 	BuiltinKind parseBuiltinAttr(

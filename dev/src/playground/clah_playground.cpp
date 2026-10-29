@@ -85,104 +85,105 @@
 #include <iostream>
 #include <string>
 
-static void showConfig(const clah::ParsingResult& result) {
-	std::cout << "Configuration:\n";
-	std::cout << "  Verbose mode: " << std::boolalpha << result.isFlag("verbose") << "\n";
-	if (auto user = result.getValue<std::string>("user"))
-		std::cout << "  Running as user: " << user.value() << "\n";
-	else
-		std::cout << "  Running as default user.\n";
-}
-
-static void greet(i64 n, const std::string& name) {
-	std::cout << n << ": Hello, " << name << "!\n";
-}
-
-// Just a helper to avoid duplication.
-static void multiGreeter(const clah::ParsingResult& result) {
-	if (result.isFlag("verbose")) std::cout << "Verbose mode is on for 'greet'.\n";
-
-	std::vector<std::string> names;
-	names.push_back(result.getPositional<std::string>(0));
-	for (usize i = 0; i < result.getExtraParameterCount(); ++i)
-		names.push_back(result.getExtra<std::string>(i).value());
-
-	clah::RangeParser::Range range = *result.getValue<clah::RangeParser::Range>("range");
-	auto [begin, end]              = range;
-	i64 n                          = result.getValue<i64>("times").copyValueOr(1);
-
-	for (const auto& name: names) {
-		for (i64 i = 0; i < n; i++) {
-			if (result.isFlag("descending"))
-				for (i64 j = end - 1; j >= begin; j--) greet(j, name);
-			else
-				for (i64 j = begin; j < end; j++) greet(j, name);
-		}
+namespace {
+	void showConfig(const clah::ParsingResult& result) {
+		std::cout << "Configuration:\n";
+		std::cout << "  Verbose mode: " << std::boolalpha << result.isFlag("verbose") << "\n";
+		if (auto user = result.getValue<std::string>("user"))
+			std::cout << "  Running as user: " << user.value() << "\n";
+		else
+			std::cout << "  Running as default user.\n";
 	}
-	std::cout << '\n';
-}
 
-static clah::Clah getClahForPlayground() {
-	return clah::Clah("clah_playground", "A cool cli app to demonstrate Clah.")
-	    .setDefaultValueParser(clah::StringParser::make("extra_names"))
-	    .setPreHandler([](const clah::ParsingResult& result) {
-			std::cout << "This is a function which get's invoked before all other handlers. It may "
-						 "be usefull to configure some global state like lexer options.\n";
-			if (result.getValue<std::string>("user").has_value())
-				std::cout << "Running as user: " << result.getValue<std::string>("user").value()
-						  << '\n';
-			else
-				std::cout << "Hi default user\n";
-		})
-	    .add(  // Add a global parameter (visible in all subcommands).
-			clah::ParamBuilder::ofFlag()
-				.addShortName('v')
-				.addLongName("verbose")
-				.addShortDesc("Enable verbose output for all commands.")
-				.build()
-		)
-	    .add(clah::ParamBuilder::ofValue(clah::StringParser::make())
-	             .addLongName("user")
-	             .addShortDesc("Run command as a specific user.")
-	             .required()
-	             .build())
-	    .addSubcommand(                                           // `playground greet` subcommand.
-			clah::Clah("greet", "Greets one or more people.")
-				.addPositional(clah::StringParser::make("name"))  // Positional argument.
-				.add(clah::ParamBuilder::ofValue(clah::RangeParser::make())
-	                     .addShortName('r')
-	                     .addLongName("range")
-	                     .addShortDesc("Range of values to greet.")
-	                     .required()
-	                     .build())
-				.add(  // Optional parameter.
-					clah::ParamBuilder::ofValue(clah::IntParser::make())
-						.addShortName('n')
-						.addLongName("times")
-						.addShortDesc("Number of times to greet.")
-						.build()
-				)
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addShortName('d')
-	                     .addLongName("descending")
-	                     .addShortDesc(
-							 "Whether or not numbers should be print in a descending order."
-						 )
-	                     .addLongDesc("This is a multiline,\nlong comment, that should\n"
-	                                  "explain this parameter with more\ndetail...")
-	                     .build())
-				// A handler for this subcommand, which will be invoked when
-	            // clah.execute(argc, argv) is executed.
-				.setHandler([](const clah::ParsingResult& result) -> int {
-					multiGreeter(result);
-					return 0;
-				})
-		)
-	    .addSubcommand(clah::Clah("config", "Displays the current configuration.")
-	                       .setHandler([](const clah::ParsingResult& result) -> int {
-							   showConfig(result);
-							   return 0;
-						   }));
+	void greet(i64 n, const std::string& name) { std::cout << n << ": Hello, " << name << "!\n"; }
+
+	// Just a helper to avoid duplication.
+	void multiGreeter(const clah::ParsingResult& result) {
+		if (result.isFlag("verbose")) std::cout << "Verbose mode is on for 'greet'.\n";
+
+		std::vector<std::string> names;
+		names.push_back(result.getPositional<std::string>(0));
+		for (usize i = 0; i < result.getExtraParameterCount(); ++i)
+			names.push_back(result.getExtra<std::string>(i).value());
+
+		clah::RangeParser::Range range = *result.getValue<clah::RangeParser::Range>("range");
+		auto [begin, end]              = range;
+		i64 n                          = result.getValue<i64>("times").copyValueOr(1);
+
+		for (const auto& name: names) {
+			for (i64 i = 0; i < n; i++) {
+				if (result.isFlag("descending"))
+					for (i64 j = end - 1; j >= begin; j--) greet(j, name);
+				else
+					for (i64 j = begin; j < end; j++) greet(j, name);
+			}
+		}
+		std::cout << '\n';
+	}
+
+	clah::Clah getClahForPlayground() {
+		return clah::Clah("clah_playground", "A cool cli app to demonstrate Clah.")
+		    .setDefaultValueParser(clah::StringParser::make("extra_names"))
+		    .setPreHandler([](const clah::ParsingResult& result) {
+				std::cout
+					<< "This is a function which get's invoked before all other handlers. It may "
+					   "be usefull to configure some global state like lexer options.\n";
+				if (result.getValue<std::string>("user").has_value())
+					std::cout << "Running as user: " << result.getValue<std::string>("user").value()
+							  << '\n';
+				else
+					std::cout << "Hi default user\n";
+			})
+		    .add(  // Add a global parameter (visible in all subcommands).
+				clah::ParamBuilder::ofFlag()
+					.addShortName('v')
+					.addLongName("verbose")
+					.addShortDesc("Enable verbose output for all commands.")
+					.build()
+			)
+		    .add(clah::ParamBuilder::ofValue(clah::StringParser::make())
+		             .addLongName("user")
+		             .addShortDesc("Run command as a specific user.")
+		             .required()
+		             .build())
+		    .addSubcommand(  // `playground greet` subcommand.
+				clah::Clah("greet", "Greets one or more people.")
+					.addPositional(clah::StringParser::make("name"))  // Positional argument.
+					.add(clah::ParamBuilder::ofValue(clah::RangeParser::make())
+		                     .addShortName('r')
+		                     .addLongName("range")
+		                     .addShortDesc("Range of values to greet.")
+		                     .required()
+		                     .build())
+					.add(  // Optional parameter.
+						clah::ParamBuilder::ofValue(clah::IntParser::make())
+							.addShortName('n')
+							.addLongName("times")
+							.addShortDesc("Number of times to greet.")
+							.build()
+					)
+					.add(clah::ParamBuilder::ofFlag()
+		                     .addShortName('d')
+		                     .addLongName("descending")
+		                     .addShortDesc(
+								 "Whether or not numbers should be print in a descending order."
+							 )
+		                     .addLongDesc("This is a multiline,\nlong comment, that should\n"
+		                                  "explain this parameter with more\ndetail...")
+		                     .build())
+					// A handler for this subcommand, which will be invoked when
+		            // clah.execute(argc, argv) is executed.
+					.setHandler([](const clah::ParsingResult& result) -> int {
+						multiGreeter(result);
+						return 0;
+					})
+			)
+		    .addSubcommand(clah::Clah("config", "Displays the current configuration.")
+		                       .setHandler([](const clah::ParsingResult& result) -> int {
+								   showConfig(result);
+								   return 0;
+							   }));
+	}
 }
 
 int main(int argc, const char** argv) {

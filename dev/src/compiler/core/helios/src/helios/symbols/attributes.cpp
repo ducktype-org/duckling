@@ -224,9 +224,11 @@ namespace compiler::helios {
 	template base::Optional<CRef<attr>> getAttrInVector<attr>(const std::vector<Attribute>& attrs);
 	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
 
-	template<typename Attr>
-	static bool hasAttrInVector(const std::vector<Attribute>& attrs) {
-		return getAttrInVector<Attr>(attrs).has_value();
+	namespace {
+		template<typename Attr>
+		bool hasAttrInVector(const std::vector<Attribute>& attrs) {
+			return getAttrInVector<Attr>(attrs).has_value();
+		}
 	}
 
 	std::expected<std::monostate, std::string> validateAttributes(

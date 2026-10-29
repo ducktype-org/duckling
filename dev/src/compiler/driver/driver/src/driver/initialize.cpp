@@ -246,29 +246,29 @@ namespace compiler::driver {
 		void handleScriptContext(const fs::File& script_file) {
 			global_state::setters::setScriptContext(script_file);
 		}
-	}
 
-	/**
-	 * Creates a dummy "repl_session" package and root module
-	 * This is a hack to make the import from different packages work in the REPL,
-	 * as the module lookup relies on the global package registry.
-	 * The module is otherwise unused.
-	 * @TODO: #2762 probably remove this
-	 */
-	static std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
-		auto package_root_file
-			= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
-		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
-			compiler::frontend::packages::RawPackageInfo{
-				.package_id   = base::StrID("repl_session"),
-				.package_name = base::StrID("repl_session"),
-				.version      = base::StrID("0.1.0"),
-				.package_path = package_root_file.getFilePath(),
-				.features     = {},
-				.dependencies = {},
-			},
-		};
-		return repl_packages_info;
+		/**
+		 * Creates a dummy "repl_session" package and root module
+		 * This is a hack to make the import from different packages work in the REPL,
+		 * as the module lookup relies on the global package registry.
+		 * The module is otherwise unused.
+		 * @TODO: #2762 probably remove this
+		 */
+		std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
+			auto package_root_file
+				= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
+			std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
+				compiler::frontend::packages::RawPackageInfo{
+					.package_id   = base::StrID("repl_session"),
+					.package_name = base::StrID("repl_session"),
+					.version      = base::StrID("0.1.0"),
+					.package_path = package_root_file.getFilePath(),
+					.features     = {},
+					.dependencies = {},
+				},
+			};
+			return repl_packages_info;
+		}
 	}
 
 	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {

@@ -19,27 +19,29 @@
 
 #include <iostream>
 
-static int countTokens(const lexer::Tokens& tokens);
+namespace {
+	int countTokens(const lexer::Tokens& tokens);
 
-static int countToken(const lexer::Token& token) {
-	using lexer::Token;
-	switch (token.getType()) {
-	case Token::Type::Comment:
-	case Token::Type::Empty:
-	case Token::Type::Error:
-	case Token::Type::Sentinel:
-		return 0;
-	case Token::Type::BracketGroup:
-		return 2 + countTokens(token.getRecursive());
-	default:
-		return 1;
+	int countToken(const lexer::Token& token) {
+		using lexer::Token;
+		switch (token.getType()) {
+		case Token::Type::Comment:
+		case Token::Type::Empty:
+		case Token::Type::Error:
+		case Token::Type::Sentinel:
+			return 0;
+		case Token::Type::BracketGroup:
+			return 2 + countTokens(token.getRecursive());
+		default:
+			return 1;
+		}
 	}
-}
 
-static int countTokens(const lexer::Tokens& tokens) {
-	int res = 0;
-	for (auto& token: tokens) res += countToken(token);
-	return res;
+	int countTokens(const lexer::Tokens& tokens) {
+		int res = 0;
+		for (auto& token: tokens) res += countToken(token);
+		return res;
+	}
 }
 
 int main(int argc, const char** argv) {

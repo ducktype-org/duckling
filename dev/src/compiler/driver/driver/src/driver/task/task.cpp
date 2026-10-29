@@ -330,34 +330,37 @@ namespace compiler::driver {
 		};
 	}
 
-	/**
-	 * @brief Helper function that merges global linking options with task-specific linking options
-	 * for a given`BuildTarget`.
-	 */
-	static BuildTarget mergeBuildTargetWithGlobalOptions(
-		const BuildTarget& raw_target, const options_types::StdLibOptions& stdlib_options
-	) {
-		variant_match(raw_target) {
-			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
-				auto linking_options                = llvm_exec_target.linking_options;
-				linking_options.stdlib_link_options = getNativeStdLibLinkingArgs(stdlib_options);
-				return BuildTargetLLVMExecutable{
-					.output_file_name = llvm_exec_target.output_file_name,
-					.linking_options  = std::move(linking_options),
-				};
+	namespace {
+		/**
+		 * @brief Helper function that merges global linking options with task-specific linking
+		 * options for a given`BuildTarget`.
+		 */
+		BuildTarget mergeBuildTargetWithGlobalOptions(
+			const BuildTarget& raw_target, const options_types::StdLibOptions& stdlib_options
+		) {
+			variant_match(raw_target) {
+				variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
+					auto linking_options = llvm_exec_target.linking_options;
+					linking_options.stdlib_link_options
+						= getNativeStdLibLinkingArgs(stdlib_options);
+					return BuildTargetLLVMExecutable{
+						.output_file_name = llvm_exec_target.output_file_name,
+						.linking_options  = std::move(linking_options),
+					};
+				}
+				variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
+					auto dvm_linking_options = dvm_exec_target.dvm_linking_options;
+					base::appendToVector(
+						dvm_linking_options.link_libraries,
+						getStdLibDVMLinkingDependencies(stdlib_options)
+					);
+					return BuildTargetDVMExecutable{
+						.output_file_name    = dvm_exec_target.output_file_name,
+						.dvm_linking_options = std::move(dvm_linking_options),
+					};
+				}
+				variant_default { return raw_target; }
 			}
-			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
-				auto dvm_linking_options = dvm_exec_target.dvm_linking_options;
-				base::appendToVector(
-					dvm_linking_options.link_libraries,
-					getStdLibDVMLinkingDependencies(stdlib_options)
-				);
-				return BuildTargetDVMExecutable{
-					.output_file_name    = dvm_exec_target.output_file_name,
-					.dvm_linking_options = std::move(dvm_linking_options),
-				};
-			}
-			variant_default { return raw_target; }
 		}
 	}
 

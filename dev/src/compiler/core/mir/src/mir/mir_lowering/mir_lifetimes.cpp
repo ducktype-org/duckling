@@ -215,26 +215,28 @@ namespace compiler::mir {
 		}
 	}
 
-	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
-	static void addScopeFlagForScopes(
-		Instruction&                 instr,
-		const LocalsByScopeMap&      locals_by_scope,
-		const std::vector<ScopeRef>& scopes_ordered
-	) {
-		for (auto scope: scopes_ordered) {
-			if (not locals_by_scope.contains(scope)) continue;
+	namespace {
+		template<OperationFlag::Flag scope_flag, bool reverse_local_order>
+		void addScopeFlagForScopes(
+			Instruction&                 instr,
+			const LocalsByScopeMap&      locals_by_scope,
+			const std::vector<ScopeRef>& scopes_ordered
+		) {
+			for (auto scope: scopes_ordered) {
+				if (not locals_by_scope.contains(scope)) continue;
 
-			auto& locals = locals_by_scope.at(scope);
-			auto  proj   = [&]() -> decltype(auto) {
-                if constexpr (reverse_local_order)
-                    return std::views::reverse;
-                else
-                    return std::views::all;
-			}();
+				auto& locals = locals_by_scope.at(scope);
+				auto  proj   = [&]() -> decltype(auto) {
+                    if constexpr (reverse_local_order)
+                        return std::views::reverse;
+                    else
+                        return std::views::all;
+				}();
 
-			for (auto& local: locals | proj) {
-				if (local->lifetime_flags.contains(LifetimeFlag::NoScopeFlags)) continue;
-				instr.flags.push_back(OperationFlag{ .flag = scope_flag, .local = local });
+				for (auto& local: locals | proj) {
+					if (local->lifetime_flags.contains(LifetimeFlag::NoScopeFlags)) continue;
+					instr.flags.push_back(OperationFlag{ .flag = scope_flag, .local = local });
+				}
 			}
 		}
 	}
@@ -342,26 +344,28 @@ namespace compiler::mir {
 		return locals_by_scope;
 	}
 
-	/**
-	 * @brief Constructs LifetimePassArgs for given function.
-	 */
-	static LifetimePassArgs constructLifetimePassArgs(const Function& function) {
-		LifetimePassArgs args;
+	namespace {
+		/**
+		 * @brief Constructs LifetimePassArgs for given function.
+		 */
+		LifetimePassArgs constructLifetimePassArgs(const Function& function) {
+			LifetimePassArgs args;
 
-		args.locals_by_scope = collectLocalsByScope(function);
+			args.locals_by_scope = collectLocalsByScope(function);
 
-		// Predecessor lists.
-		for (auto block_id: function.block_order) args.block_predecessors.put(block_id);
+			// Predecessor lists.
+			for (auto block_id: function.block_order) args.block_predecessors.put(block_id);
 
-		for (auto block_id: function.block_order)
-			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
-				args.block_predecessors.put(succ).first->second.push_back(block_id);
+			for (auto block_id: function.block_order)
+				for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
+					args.block_predecessors.put(succ).first->second.push_back(block_id);
 
-		args.move_states = MoveStateData::calculateGlobalInMoveStateMap(
-			function, args.block_predecessors, args.locals_by_scope
-		);
+			args.move_states = MoveStateData::calculateGlobalInMoveStateMap(
+				function, args.block_predecessors, args.locals_by_scope
+			);
 
-		return args;
+			return args;
+		}
 	}
 
 	Function runAllLifetimePasses(query::Context& ctx, Function function) {

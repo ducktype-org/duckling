@@ -14,16 +14,18 @@
 
 #include <iostream>
 
-static int file_counter = 0;
-static int dir_counter  = 0;
+namespace {
+	int file_counter = 0;
+	int dir_counter  = 0;
 
-// Recursively count files and directories in a ModuleTree
-static void countFiles(const compiler::frontend::ModuleTree& tree) {
-	file_counter += tree.hasMainSourceFile() ? 1 : 0;
-	for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
-	for (const auto& submodule: tree.getSubmodules().illegalAccess()) {
-		countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
-		dir_counter++;
+	// Recursively count files and directories in a ModuleTree
+	void countFiles(const compiler::frontend::ModuleTree& tree) {
+		file_counter += tree.hasMainSourceFile() ? 1 : 0;
+		for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
+		for (const auto& submodule: tree.getSubmodules().illegalAccess()) {
+			countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
+			dir_counter++;
+		}
 	}
 }
 

@@ -7,14 +7,16 @@
 #include "debug_print.hpp"
 
 namespace tpc {
-	static void identifierDprint(base::StrID value, std::ostream& out) {
-		// @TODO: change Name to Identifier
-		out << "{\"Name\": ";
-		if (value.isBad())
-			out << "\"BAD_NAME\"";
-		else
-			out << "\"" << value.strView() << "\"";
-		out << "}";
+	namespace {
+		void identifierDprint(base::StrID value, std::ostream& out) {
+			// @TODO: change Name to Identifier
+			out << "{\"Name\": ";
+			if (value.isBad())
+				out << "\"BAD_NAME\"";
+			else
+				out << "\"" << value.strView() << "\"";
+			out << "}";
+		}
 	}
 
 	void nullAwareDprint(Identifier ident, std::ostream& out) {

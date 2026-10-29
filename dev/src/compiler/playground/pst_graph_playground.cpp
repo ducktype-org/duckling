@@ -70,51 +70,55 @@ struct Handler final {
 	}
 };
 
-static std::string stringPosition(dia::SourcePosition pos) {
-	std::stringstream ss;
-	ss << "(" << pos.getStart() << ", ";
-	ss << pos.getEnd() << ")";
-	return ss.str();
-}
+namespace {
+	std::string stringPosition(dia::SourcePosition pos) {
+		std::stringstream ss;
+		ss << "(" << pos.getStart() << ", ";
+		ss << pos.getEnd() << ")";
+		return ss.str();
+	}
 
-/**
- * @brief Generates graph from a pst element and it's children and tokens.
- *
- * @note Adds information about position and element class
- */
-static Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
-	// std::string name = stringPosition(el->getStablePosition()) + "\n" +
-	// el->elementType() + "\n\""
-	// + el->getComponentHash().str() + "\"";
-	std::string name
-		= stringPosition(el->getSourcePosition().illegalAccess()) + "\n" + el->elementType();
-	auto self = hdl.addNode(name);
+	/**
+	 * @brief Generates graph from a pst element and it's children and tokens.
+	 *
+	 * @note Adds information about position and element class
+	 */
+	Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
+		// std::string name = stringPosition(el->getStablePosition()) + "\n" +
+		// el->elementType() + "\n\""
+		// + el->getComponentHash().str() + "\"";
+		std::string name
+			= stringPosition(el->getSourcePosition().illegalAccess()) + "\n" + el->elementType();
+		auto self = hdl.addNode(name);
 
-	for (auto sub: el->viewSubElements()) {
-		variant_match(sub) {
-			variant_case(pst::LangElement::SubToken, token) {
-				std::string value = { token->getStrValue().data(), token->getStrValue().size() };
-				auto sub_node = hdl.addNode(stringPosition(token->getPosition()) + "\n" + value);
-				hdl.addEdge(self, sub_node);
-				static std::string shape_string = "shape";
-				static std::string box_string   = "box";
-				static std::string empty_string = "";
-				agsafeset(sub_node, shape_string.data(), box_string.data(), empty_string.data());
-			}
+		for (auto sub: el->viewSubElements()) {
+			variant_match(sub) {
+				variant_case(pst::LangElement::SubToken, token) {
+					std::string value
+						= { token->getStrValue().data(), token->getStrValue().size() };
+					auto sub_node
+						= hdl.addNode(stringPosition(token->getPosition()) + "\n" + value);
+					hdl.addEdge(self, sub_node);
+					static std::string shape_string = "shape";
+					static std::string box_string   = "box";
+					static std::string empty_string = "";
+					agsafeset(sub_node, shape_string.data(), box_string.data(), empty_string.data());
+				}
 
-			variant_case(pst::LangElement::Child, child) {
-				auto sub_node = dotElement(hdl, child.illegalAccess().value());
-				hdl.addEdge(self, sub_node);
-			}
+				variant_case(pst::LangElement::Child, child) {
+					auto sub_node = dotElement(hdl, child.illegalAccess().value());
+					hdl.addEdge(self, sub_node);
+				}
 
-			variant_case(pst::LangElement::NamedChild, named_child) {
-				std::string child_name = named_child.name;
-				auto        sub_node = dotElement(hdl, named_child.element.illegalAccess().value());
-				hdl.addEdge(self, sub_node, child_name.data());
+				variant_case(pst::LangElement::NamedChild, named_child) {
+					std::string child_name = named_child.name;
+					auto sub_node = dotElement(hdl, named_child.element.illegalAccess().value());
+					hdl.addEdge(self, sub_node, child_name.data());
+				}
 			}
 		}
+		return self;
 	}
-	return self;
 }
 
 // NOLINTEND(-avoid-c-arrays)

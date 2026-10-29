@@ -13,78 +13,80 @@
 #include <vector>
 
 namespace vm::code {
-	static std::unordered_set<base::StrID> getNewFunctionNames(
-		const std::vector<Function>& new_functions
-	) {
-		std::unordered_set<base::StrID> result;
-		for (const auto& func: new_functions) result.insert(func.name);
-		return result;
-	}
+	namespace {
+		std::unordered_set<base::StrID> getNewFunctionNames(const std::vector<Function>& new_functions
+		) {
+			std::unordered_set<base::StrID> result;
+			for (const auto& func: new_functions) result.insert(func.name);
+			return result;
+		}
 
-	static base::HashMap<base::StrID, std::vector<base::StrID>> getCallGraph(
-		const std::vector<Function>& new_functions
-	) {
-		base::HashMap<base::StrID, std::vector<base::StrID>> result;
+		base::HashMap<base::StrID, std::vector<base::StrID>> getCallGraph(
+			const std::vector<Function>& new_functions
+		) {
+			base::HashMap<base::StrID, std::vector<base::StrID>> result;
 
-		for (const auto& func: new_functions) {
-			std::vector<base::StrID> called_funcs;
-			for (const auto& instruction: func.body) {
-				instr_match(instruction) {
-					instr_case(instructions::Op_call_func, call_func) {
-						called_funcs.push_back(call_func.function.function_name);
-					}
-					// A tail-call is a direct call to a named function, so its callee's flags must
-					// propagate to the caller just like a regular call.
-					instr_case(instructions::Op_retTailcall_func, tailcall) {
-						called_funcs.push_back(tailcall.function.function_name);
-					}
-					// setThreadCtx_func names the function a spawned thread will run; its effects
-					// are caused by the spawner, so it is an edge for flag propagation too.
-					instr_case(instructions::Op_setThreadCtx_func, threadctx) {
-						called_funcs.push_back(threadctx.function.function_name);
-					}
-					instr_default {
-						// Flags of builtins are known on the instruction level.
-						// Similarly, flags of extern C functions are assumed at the instruction level.
+			for (const auto& func: new_functions) {
+				std::vector<base::StrID> called_funcs;
+				for (const auto& instruction: func.body) {
+					instr_match(instruction) {
+						instr_case(instructions::Op_call_func, call_func) {
+							called_funcs.push_back(call_func.function.function_name);
+						}
+						// A tail-call is a direct call to a named function, so its callee's flags
+						// must propagate to the caller just like a regular call.
+						instr_case(instructions::Op_retTailcall_func, tailcall) {
+							called_funcs.push_back(tailcall.function.function_name);
+						}
+						// setThreadCtx_func names the function a spawned thread will run; its effects
+						// are caused by the spawner, so it is an edge for flag propagation too.
+						instr_case(instructions::Op_setThreadCtx_func, threadctx) {
+							called_funcs.push_back(threadctx.function.function_name);
+						}
+						instr_default {
+							// Flags of builtins are known on the instruction level.
+							// Similarly, flags of extern C functions are assumed at the instruction
+							// level.
+						}
 					}
 				}
+				result.put(func.name, std::move(called_funcs));
 			}
-			result.put(func.name, std::move(called_funcs));
+
+			return result;
 		}
 
-		return result;
-	}
+		/// Creates a new graph with the edges reversed relative to the provided call graph, i.e. an
+		/// edge caller -> callee becomes callee -> caller. This lets flag propagation walk from a
+		/// callee up to every (transitive) caller, so a flag found in a callee is attributed to all
+		/// functions that may reach it.
+		base::HashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
+			const base::HashMap<base::StrID, std::vector<base::StrID>>& call_graph
+		) {
+			base::HashMap<base::StrID, std::vector<base::StrID>> result;
 
-	/// Creates a new graph with the edges reversed relative to the provided call graph, i.e. an
-	/// edge caller -> callee becomes callee -> caller. This lets flag propagation walk from a
-	/// callee up to every (transitive) caller, so a flag found in a callee is attributed to all
-	/// functions that may reach it.
-	static base::HashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
-		const base::HashMap<base::StrID, std::vector<base::StrID>>& call_graph
-	) {
-		base::HashMap<base::StrID, std::vector<base::StrID>> result;
+			for (const auto& [caller, callees]: call_graph) {
+				if (!result.contains(caller)) result.put(caller, {});
+				for (const auto& callee: callees)
+					if (result.contains(callee))
+						result[callee].push_back(caller);
+					else
+						result.put(callee, { caller });
+			}
 
-		for (const auto& [caller, callees]: call_graph) {
-			if (!result.contains(caller)) result.put(caller, {});
-			for (const auto& callee: callees)
-				if (result.contains(callee))
-					result[callee].push_back(caller);
-				else
-					result.put(callee, { caller });
+			return result;
 		}
 
-		return result;
-	}
-
-	static InstructionFlag collectFlagsForFunction(
-		const Function&                        func,
-		const ObjIdNameMap<GlobalData>&        globals,
-		const ObjIdNameMap<ExternalCFunction>& ext_c_functions
-	) {
-		InstructionFlag result;
-		for (const auto& instruction: func.body)
-			result |= getFlagsForInstruction(instruction, globals, ext_c_functions);
-		return result;
+		InstructionFlag collectFlagsForFunction(
+			const Function&                        func,
+			const ObjIdNameMap<GlobalData>&        globals,
+			const ObjIdNameMap<ExternalCFunction>& ext_c_functions
+		) {
+			InstructionFlag result;
+			for (const auto& instruction: func.body)
+				result |= getFlagsForInstruction(instruction, globals, ext_c_functions);
+			return result;
+		}
 	}
 
 	// @TODO: #3068 Extend ExecutionConfig and check more flags.

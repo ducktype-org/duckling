@@ -9,8 +9,11 @@
 #include <base/except/exceptions.hpp>
 
 namespace query {
-	static constinit bool track_reverse_graph = false;
-	constinit bool        enable_query_graph  = true;
+	namespace {
+		constinit bool track_reverse_graph = false;
+	}
+
+	constinit bool enable_query_graph = true;
 
 	void setTrackReverseGraph(bool value) {
 		CORE_ASSERT(

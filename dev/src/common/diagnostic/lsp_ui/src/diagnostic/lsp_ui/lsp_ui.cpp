@@ -37,124 +37,127 @@ namespace dia::lsp {
 		Range       range;
 	};
 
-	/**
-	 * @brief Normalizes a path a diagnostic carries to the file it names on disk.
-	 *
-	 * The path arrives as a bare string that has already lost its type, and can be empty, so
-	 * neither conversion may be applied blindly.
-	 */
-	static std::string toPhysicalPathString(const std::string& file) {
-		if (file.empty()) return {};
+	namespace {
+		/**
+		 * @brief Normalizes a path a diagnostic carries to the file it names on disk.
+		 *
+		 * The path arrives as a bare string that has already lost its type, and can be empty, so
+		 * neither conversion may be applied blindly.
+		 */
+		std::string toPhysicalPathString(const std::string& file) {
+			if (file.empty()) return {};
 
-		fs::FilePath path(file);
-		if (path.isVirtual()) return path.toPhysicalPath().string();
-		return path.string();
-	}
-
-	/**
-	 * @brief A zero-length range at the start of a file, for diagnostics with no location.
-	 */
-	static Range wholeFileStart() {
-		return { .start = { .line = 0, .character = 0 }, .end = { .line = 0, .character = 0 } };
-	}
-
-	static DiagnosticSeverity convertSeverity(dia::term_ui_view::StyleType severity) {
-		switch (severity) {
-		case dia::term_ui_view::StyleType::Error:
-			return DiagnosticSeverity::Error;
-		case dia::term_ui_view::StyleType::Warning:
-			return DiagnosticSeverity::Warning;
-		case dia::term_ui_view::StyleType::Note:
-		case dia::term_ui_view::StyleType::Docs:
-			return DiagnosticSeverity::Information;
-		case dia::term_ui_view::StyleType::Hint:
-			return DiagnosticSeverity::Hint;
+			fs::FilePath path(file);
+			if (path.isVirtual()) return path.toPhysicalPath().string();
+			return path.string();
 		}
-		return DiagnosticSeverity::Information;  // Default case
-	}
 
-	/**
-	 * @brief The term ui convention (as well as for example vs code for display)
-	 * is to calculate the columns and lines from 1. The end_line and end_col
-	 * are inclusive. But the LSP protocol uses 0-based indexing and the end
-	 * position is exclusive.
-	 */
-	static SectionLocation extractLocation(const dia::term_ui_view::CodeSection& section) {
-		Range range;
-
-		range.start.line      = static_cast<Uint>(section.location.line - 1);
-		range.start.character = static_cast<Uint>(section.location.column - 1);
-
-		if (section.location.end_line.has_value() && section.location.end_column.has_value()) {
-			range.end.line      = static_cast<Uint>(section.location.end_line.value() - 1);
-			range.end.character = static_cast<Uint>(section.location.end_column.value());
-		} else {
-			range.end = range.start;
+		/**
+		 * @brief A zero-length range at the start of a file, for diagnostics with no location.
+		 */
+		Range wholeFileStart() {
+			return { .start = { .line = 0, .character = 0 }, .end = { .line = 0, .character = 0 } };
 		}
-		return SectionLocation{ .file  = toPhysicalPathString(section.location.file),
-			                    .range = range };
-	}
 
-	/**
-	 * @brief This function serves two purposes:
-	 * It's a heuristic approach to extracting the main message location
-	 * and also adds "related diagnostic" attachments based on the code sections in the description
-	 * (one code section would add one "related diagnostic" attachment).
-	 *
-	 * @param message The message to extract from.
-	 * @param related_information Vector to add related information to.
-	 *
-	 * @return Range of the main message.
-	 */
-	static SectionLocation getMessageLocation(
-		const dia::term_ui_view::Message&          message,
-		std::vector<DiagnosticRelatedInformation>& related_information,
-		const EvaluationContext&                   evaluation_ctx
-	) {
-		std::string     content            = "";
-		bool            found_code_section = false;
-		SectionLocation loc{};
+		DiagnosticSeverity convertSeverity(dia::term_ui_view::StyleType severity) {
+			switch (severity) {
+			case dia::term_ui_view::StyleType::Error:
+				return DiagnosticSeverity::Error;
+			case dia::term_ui_view::StyleType::Warning:
+				return DiagnosticSeverity::Warning;
+			case dia::term_ui_view::StyleType::Note:
+			case dia::term_ui_view::StyleType::Docs:
+				return DiagnosticSeverity::Information;
+			case dia::term_ui_view::StyleType::Hint:
+				return DiagnosticSeverity::Hint;
+			}
+			return DiagnosticSeverity::Information;  // Default case
+		}
 
-		for (const auto& section: message.sections) {
-			variant_match(section) {
-				variant_case(dia::term_ui_view::TextSection, text) { content += text + "\n"; }
-				variant_case(dia::term_ui_view::CodeSection, section) {
-					if (not found_code_section) {
-						loc                = extractLocation(section);
-						found_code_section = true;
-					} else {
-						if (content.empty()) continue;
-						SectionLocation section_loc = extractLocation(section);
+		/**
+		 * @brief The term ui convention (as well as for example vs code for display)
+		 * is to calculate the columns and lines from 1. The end_line and end_col
+		 * are inclusive. But the LSP protocol uses 0-based indexing and the end
+		 * position is exclusive.
+		 */
+		SectionLocation extractLocation(const dia::term_ui_view::CodeSection& section) {
+			Range range{};
 
-						related_information.push_back(DiagnosticRelatedInformation{
-							.location = Location{ .uri   = evaluation_ctx.resolve(section_loc.file),
-						                          .range = section_loc.range },
-							.message  = content });
-						content = "";
+			range.start.line      = static_cast<Uint>(section.location.line - 1);
+			range.start.character = static_cast<Uint>(section.location.column - 1);
+
+			if (section.location.end_line.has_value() && section.location.end_column.has_value()) {
+				range.end.line      = static_cast<Uint>(section.location.end_line.value() - 1);
+				range.end.character = static_cast<Uint>(section.location.end_column.value());
+			} else {
+				range.end = range.start;
+			}
+			return SectionLocation{ .file  = toPhysicalPathString(section.location.file),
+				                    .range = range };
+		}
+
+		/**
+		 * @brief This function serves two purposes:
+		 * It's a heuristic approach to extracting the main message location
+		 * and also adds "related diagnostic" attachments based on the code sections in the
+		 * description (one code section would add one "related diagnostic" attachment).
+		 *
+		 * @param message The message to extract from.
+		 * @param related_information Vector to add related information to.
+		 *
+		 * @return Range of the main message.
+		 */
+		SectionLocation getMessageLocation(
+			const dia::term_ui_view::Message&          message,
+			std::vector<DiagnosticRelatedInformation>& related_information,
+			const EvaluationContext&                   evaluation_ctx
+		) {
+			std::string     content            = "";
+			bool            found_code_section = false;
+			SectionLocation loc{};
+
+			for (const auto& section: message.sections) {
+				variant_match(section) {
+					variant_case(dia::term_ui_view::TextSection, text) { content += text + "\n"; }
+					variant_case(dia::term_ui_view::CodeSection, section) {
+						if (not found_code_section) {
+							loc                = extractLocation(section);
+							found_code_section = true;
+						} else {
+							if (content.empty()) continue;
+							SectionLocation section_loc = extractLocation(section);
+
+							related_information.push_back(DiagnosticRelatedInformation{
+								.location
+								= Location{ .uri   = evaluation_ctx.resolve(section_loc.file),
+							                .range = section_loc.range },
+								.message = content });
+							content = "";
+						}
 					}
 				}
 			}
+			if (not found_code_section)
+				loc = SectionLocation{ .file  = evaluation_ctx.default_error_location,
+					                   .range = wholeFileStart() };
+			return loc;
 		}
-		if (not found_code_section)
-			loc = SectionLocation{ .file  = evaluation_ctx.default_error_location,
-				                   .range = wholeFileStart() };
-		return loc;
-	}
 
-	/**
-	 * @brief If the evaluation of the diagnostic failed, return a diagnostic
-	 * indicating the failure.
-	 */
-	static LSPDiagnosticResult failedResult(
-		const std::string& error_msg, const EvaluationContext& evaluation_ctx
-	) {
-		Diagnostic diag;
-		diag.range    = wholeFileStart();
-		diag.severity = DiagnosticSeverity::Error;
-		diag.source   = "Duckling";
-		diag.message  = "Failed to evaluate diagnostic: " + error_msg;
-		return { .diagnostic = std::move(diag),
-			     .uri        = evaluation_ctx.resolve(evaluation_ctx.default_error_location) };
+		/**
+		 * @brief If the evaluation of the diagnostic failed, return a diagnostic
+		 * indicating the failure.
+		 */
+		LSPDiagnosticResult failedResult(
+			const std::string& error_msg, const EvaluationContext& evaluation_ctx
+		) {
+			Diagnostic diag;
+			diag.range    = wholeFileStart();
+			diag.severity = DiagnosticSeverity::Error;
+			diag.source   = "Duckling";
+			diag.message  = "Failed to evaluate diagnostic: " + error_msg;
+			return { .diagnostic = std::move(diag),
+				     .uri        = evaluation_ctx.resolve(evaluation_ctx.default_error_location) };
+		}
 	}
 
 	LSPDiagnosticResult evaluateToLanguageServerMessage(

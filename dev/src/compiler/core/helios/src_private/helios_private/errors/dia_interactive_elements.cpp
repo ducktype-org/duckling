@@ -58,60 +58,64 @@ namespace compiler::helios {
 		}
 	};
 
-	/**
-	 * @brief Adds the "... is alias of ..." notes for all the aliases in the chain.
-	 * @param ctx Query context.
-	 * @param[out] linked_messages The resulting linked messages we should add to the message.
-	 * @param elem PST element of the original type identifier in the parse tree.
-	 */
-	static void checkForAliases(
-		query::Context&                                    ctx,
-		base::HashMap<std::string, Box<dia::MessageBase>>& linked_messages,
-		pst::Access<pst::LangElement>                      elem
-	) {
-		auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
-		if (!ident_opt.has_value()) return;
-		auto       ident          = ident_opt.value();
-		const auto scope          = ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-		const auto lookup_qresult = HInterface::ofScopeWithParents(scope).lookup(
-			ctx, ident->getName().unlock(ctx)->unwrap()
-		);
-		if (lookup_qresult->hasFailed()) return;
-		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
+	namespace {
+		/**
+		 * @brief Adds the "... is alias of ..." notes for all the aliases in the chain.
+		 * @param ctx Query context.
+		 * @param[out] linked_messages The resulting linked messages we should add to the message.
+		 * @param elem PST element of the original type identifier in the parse tree.
+		 */
+		void checkForAliases(
+			query::Context&                                    ctx,
+			base::HashMap<std::string, Box<dia::MessageBase>>& linked_messages,
+			pst::Access<pst::LangElement>                      elem
+		) {
+			auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
+			if (!ident_opt.has_value()) return;
+			auto       ident          = ident_opt.value();
+			const auto scope          = ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			const auto lookup_qresult = HInterface::ofScopeWithParents(scope).lookup(
+				ctx, ident->getName().unlock(ctx)->unwrap()
+			);
+			if (lookup_qresult->hasFailed()) return;
+			CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 
-		std::function<void(const LookupResult&, const std::string&)> emit_alias_note =
-			[&](const LookupResult& current, const std::string& alias_name) {
-				if (current.children.size() != 1) return;
+			std::function<void(const LookupResult&, const std::string&)> emit_alias_note
+				= [&](const LookupResult& current, const std::string& alias_name) {
+					  if (current.children.size() != 1) return;
 
-				auto nested = current.children[0];
-				if (kind(nested.node) == SymbolKind::Using) {
-					// `using a.b as c;`: the underlying chain is the `a.b` part.
-					auto alias_stmt = getSymRef(nested.node)
-				                          ->maybePstElement()
-				                          .value()
-				                          .unlock(ctx)
-				                          .dynamicCast<pst::Using>()
-				                          .value();
-					auto selector = (*alias_stmt->getSelectors().unlock(ctx)->begin()).unlock(ctx);
-					std::string underlying_chain;
-					for (usize i = 0; i < selector->numberOfNames(); i++) {
-						if (i > 0) underlying_chain += ".";
-						underlying_chain += selector->getNameByIndex(i).unlock(ctx)->unwrap().str();
-					}
+					  auto nested = current.children[0];
+					  if (kind(nested.node) == SymbolKind::Using) {
+						  // `using a.b as c;`: the underlying chain is the `a.b` part.
+						  auto alias_stmt = getSymRef(nested.node)
+					                            ->maybePstElement()
+					                            .value()
+					                            .unlock(ctx)
+					                            .dynamicCast<pst::Using>()
+					                            .value();
+						  auto selector
+							  = (*alias_stmt->getSelectors().unlock(ctx)->begin()).unlock(ctx);
+						  std::string underlying_chain;
+						  for (usize i = 0; i < selector->numberOfNames(); i++) {
+							  if (i > 0) underlying_chain += ".";
+							  underlying_chain
+								  += selector->getNameByIndex(i).unlock(ctx)->unwrap().str();
+						  }
 
-					auto id = MessageBase::getUniqueID();
-					linked_messages.put(
-						id,
-						makeBox<IsAliasCodeNote>(
-							alias_stmt->getStablePosition(), alias_name, underlying_chain
-						)
-					);
+						  auto id = MessageBase::getUniqueID();
+						  linked_messages.put(
+							  id,
+							  makeBox<IsAliasCodeNote>(
+								  alias_stmt->getStablePosition(), alias_name, underlying_chain
+							  )
+						  );
 
-					emit_alias_note(nested.inner, underlying_chain);
-				};
-			};
+						  emit_alias_note(nested.inner, underlying_chain);
+					  };
+				  };
 
-		emit_alias_note(*lookup_result, ident->getName().unlock(ctx)->unwrap().str());
+			emit_alias_note(*lookup_result, ident->getName().unlock(ctx)->unwrap().str());
+		}
 	}
 
 	InteractiveType::InteractiveType(
@@ -160,32 +164,35 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	/**
-	 * @brief Get source position from a PST element of a function-like character
-	 * (pst of a function, function declaration or class method). We want only the
-	 * name and parameters to be included in the source position. @TODO: #2521 fix this
-	 */
-	static dia::StablePosition getFunctionLikeSourcePosition(
-		query::Context& ctx, pst::Access<pst::LangElement> function_like
-	) {
-		switch (function_like->getElementKind()) {
-		case pst::ElementKind::Fun: {
-			auto fun = function_like.dynamicCast<pst::Fun>().value();
-			return fun->getParams().unlock(ctx)->getStablePosition();
-		}
-		case pst::ElementKind::FunDecl: {
-			auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
-			return fun_decl->getParams().unlock(ctx)->getStablePosition();
-		}
-		case pst::ElementKind::ClassMethod: {
-			auto class_method = function_like.dynamicCast<pst::Method>().value();
-			return class_method->getParams().unlock(ctx)->getStablePosition();
-		}
-		default:
-			CORE_PANIC(
-				"Expected a function, function-like or a method expected while getting function "
-				"source position."
-			);
+	namespace {
+		/**
+		 * @brief Get source position from a PST element of a function-like character
+		 * (pst of a function, function declaration or class method). We want only the
+		 * name and parameters to be included in the source position. @TODO: #2521 fix this
+		 */
+		dia::StablePosition getFunctionLikeSourcePosition(
+			query::Context& ctx, pst::Access<pst::LangElement> function_like
+		) {
+			switch (function_like->getElementKind()) {
+			case pst::ElementKind::Fun: {
+				auto fun = function_like.dynamicCast<pst::Fun>().value();
+				return fun->getParams().unlock(ctx)->getStablePosition();
+			}
+			case pst::ElementKind::FunDecl: {
+				auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
+				return fun_decl->getParams().unlock(ctx)->getStablePosition();
+			}
+			case pst::ElementKind::ClassMethod: {
+				auto class_method = function_like.dynamicCast<pst::Method>().value();
+				return class_method->getParams().unlock(ctx)->getStablePosition();
+			}
+			default:
+				CORE_PANIC(
+					"Expected a function, function-like or a method expected while getting "
+					"function "
+					"source position."
+				);
+			}
 		}
 	}
 

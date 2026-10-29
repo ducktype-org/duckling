@@ -17,18 +17,20 @@
 #define REQUEST(VALUE) Supervisor::get().doRequest(pid, api::request::VALUE)
 
 namespace vm::api {
-	static void ignoreResponse([[maybe_unused]] const Response& response) {}
+	namespace {
+		void ignoreResponse([[maybe_unused]] const Response& response) {}
 
-	template<class T>
-	static std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
-		if (std::holds_alternative<T>(response)) return std::get<T>(response);
-		return std::unexpected(WrongResponse{});
-	}
+		template<class T>
+		std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
+			if (std::holds_alternative<T>(response)) return std::get<T>(response);
+			return std::unexpected(WrongResponse{});
+		}
 
-	template<class T>
-	static std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
-		if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
-		return std::unexpected(WrongResponse{});
+		template<class T>
+		std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
+			if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
+			return std::unexpected(WrongResponse{});
+		}
 	}
 
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid) {

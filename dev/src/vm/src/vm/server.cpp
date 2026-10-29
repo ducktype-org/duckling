@@ -31,21 +31,23 @@ namespace {
 	}
 }  // namespace
 
-template<class T, class E>
-static crow::response toResponse(const std::expected<T, E>& x) {
-	static auto convert = []([[maybe_unused]]
-	                         const auto& v) { return crow::response(200, nlohmann::json(v)); };
+namespace {
+	template<class T, class E>
+	crow::response toResponse(const std::expected<T, E>& x) {
+		static auto convert = []([[maybe_unused]]
+		                         const auto& v) { return crow::response(200, nlohmann::json(v)); };
 
-	if (x.has_value()) return convert(x.value());
-	return convertError(x.error());
-}
+		if (x.has_value()) return convert(x.value());
+		return convertError(x.error());
+	}
 
-template<class E>
-static crow::response toResponse(const std::expected<void, E>& x) {
-	static auto convert = []() { return crow::response(200, "{}"); };
+	template<class E>
+	crow::response toResponse(const std::expected<void, E>& x) {
+		static auto convert = []() { return crow::response(200, "{}"); };
 
-	if (x.has_value()) return convert();
-	return convertError(x.error());
+		if (x.has_value()) return convert();
+		return convertError(x.error());
+	}
 }
 
 void server(i32 port) {

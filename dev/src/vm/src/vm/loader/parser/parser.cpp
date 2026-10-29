@@ -15,20 +15,22 @@
 
 namespace vm::loader::parser {
 
-	static Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
-		auto source = tokenizer::makeTokenSource(path);
-		source->tokenize<lang_def::KeywordMode::DuckBC>();
-		return source;
-	}
+	namespace {
+		Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
+			auto source = tokenizer::makeTokenSource(path);
+			source->tokenize<lang_def::KeywordMode::DuckBC>();
+			return source;
+		}
 
-	static MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> int_log) {
-		const lexer::TokenData& td = file->getTokenData();
+		MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> int_log) {
+			const lexer::TokenData& td = file->getTokenData();
 
-		F8ParserState state(
-			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()),
-			int_log
-		);
-		return ParsedFile::parse(state);
+			F8ParserState state(
+				tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()),
+				int_log
+			);
+			return ParsedFile::parse(state);
+		}
 	}
 
 	std::expected<std::vector<ParsedFile>, dia::Logger> parse(const std::vector<fs::File>& files) {

@@ -352,58 +352,63 @@ namespace compiler::helios::code {
 		  inner(inner),
 		  first_use(first_use) {}
 
-	static tsh::AbstractType builtinBinaryOperationToReturnType(
-		query::Context&         ctx,
-		const BuiltinBinary     operation,
-		const tsh::AbstractType lhs_type,
-		const tsh::AbstractType rhs_type
-	) {
-		using enum BuiltinBinary;
-		switch (operation) {
-		case IntegerAdd:
-			if ((lhs_type.getKind() == tsh::Kind::Char && rhs_type.getKind() == tsh::Kind::Integral)
-			    || (lhs_type.getKind() == tsh::Kind::Integral
-			        && rhs_type.getKind() == tsh::Kind::Char))
-				return tsh::getCharType();
-			return lhs_type;
-		case IntegerSub:
-			if (lhs_type.getKind() == tsh::Kind::Char && rhs_type.getKind() == tsh::Kind::Char)
-				return tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned);
-			return lhs_type;
-		case IntegerMul:
-		case IntegerDiv:
-		case IntegerMod:
-		case IntegerBitAnd:
-		case IntegerBitOr:
-		case IntegerBitXor:
-		case IntegerShl:
-		case IntegerShr:
-		case FloatAdd:
-		case FloatSub:
-		case FloatMul:
-		case FloatDiv:
-		case FloatMod:
-			return lhs_type;
-		case IntegerLt:
-		case IntegerGt:
-		case IntegerLteq:
-		case IntegerGteq:
-		case IntegerEq:
-		case IntegerNeq:
-		case FloatLt:
-		case FloatGt:
-		case FloatLteq:
-		case FloatGteq:
-		case FloatEq:
-		case FloatNeq:
-		case MetaEq:
-		case MetaNeq:
-			return tsh::getBoolType();
-		case BooleanAnd:
-		case BooleanOr:
-			return lhs_type;
-		default:
-			CORE_UNREACHABLE();
+	namespace {
+		tsh::AbstractType builtinBinaryOperationToReturnType(
+			query::Context&         ctx,
+			const BuiltinBinary     operation,
+			const tsh::AbstractType lhs_type,
+			const tsh::AbstractType rhs_type
+		) {
+			using enum BuiltinBinary;
+			switch (operation) {
+			case IntegerAdd:
+				if ((lhs_type.getKind() == tsh::Kind::Char
+				     && rhs_type.getKind() == tsh::Kind::Integral)
+				    || (lhs_type.getKind() == tsh::Kind::Integral
+				        && rhs_type.getKind() == tsh::Kind::Char))
+					return tsh::getCharType();
+				return lhs_type;
+			case IntegerSub:
+				if (lhs_type.getKind() == tsh::Kind::Char && rhs_type.getKind() == tsh::Kind::Char)
+					return tsh::getIntegralType(
+						ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned
+					);
+				return lhs_type;
+			case IntegerMul:
+			case IntegerDiv:
+			case IntegerMod:
+			case IntegerBitAnd:
+			case IntegerBitOr:
+			case IntegerBitXor:
+			case IntegerShl:
+			case IntegerShr:
+			case FloatAdd:
+			case FloatSub:
+			case FloatMul:
+			case FloatDiv:
+			case FloatMod:
+				return lhs_type;
+			case IntegerLt:
+			case IntegerGt:
+			case IntegerLteq:
+			case IntegerGteq:
+			case IntegerEq:
+			case IntegerNeq:
+			case FloatLt:
+			case FloatGt:
+			case FloatLteq:
+			case FloatGteq:
+			case FloatEq:
+			case FloatNeq:
+			case MetaEq:
+			case MetaNeq:
+				return tsh::getBoolType();
+			case BooleanAnd:
+			case BooleanOr:
+				return lhs_type;
+			default:
+				CORE_UNREACHABLE();
+			}
 		}
 	}
 
@@ -575,15 +580,16 @@ namespace compiler::helios::code {
 		);
 	}
 
-	/**
-	 * Map a vector of HOUT expressions to their symbol types.
-	 */
-	static std::vector<tsh::SymbolType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs
-	) {
-		std::vector<tsh::SymbolType<>> types;
-		types.reserve(exprs.size());
-		for (const auto& expr: exprs) types.push_back(expr->expression_type.getSymbolType());
-		return types;
+	namespace {
+		/**
+		 * Map a vector of HOUT expressions to their symbol types.
+		 */
+		std::vector<tsh::SymbolType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs) {
+			std::vector<tsh::SymbolType<>> types;
+			types.reserve(exprs.size());
+			for (const auto& expr: exprs) types.push_back(expr->expression_type.getSymbolType());
+			return types;
+		}
 	}
 
 	TupleExpr::TupleExpr(query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> elements):
@@ -918,31 +924,35 @@ namespace compiler::helios::code {
 		);
 	}
 
-	static tsh::AbstractType builtinUnaryOperationToReturnType(
-		[[maybe_unused]] query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
-	) {
-		using enum BuiltinUnary;
-		switch (operation) {
-		case BuiltinUnary::IntegerNegation:
-		case BuiltinUnary::FloatNegation:
-		case BuiltinUnary::IntegerBitNot:
-		case BuiltinUnary::BooleanNot:
-		case BuiltinUnary::Ref:
-		case BuiltinUnary::Box:
-		case BuiltinUnary::Ptr:
-		case BuiltinUnary::CPtr:
-		case BuiltinUnary::ManyPtr:
-		case BuiltinUnary::Slice:
-		case BuiltinUnary::Const:
-			// For most of the unary operators the result is the same as their argument type:
-			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
-			return argument_type;
-		case BuiltinUnary::SizeOf:
-		case BuiltinUnary::AlignOf:
-			// `size_of`/`align_of` map a meta type to an `i64` byte count.
-			return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-		default:
-			CORE_UNREACHABLE();
+	namespace {
+		tsh::AbstractType builtinUnaryOperationToReturnType(
+			[[maybe_unused]] query::Context& ctx,
+			BuiltinUnary                     operation,
+			tsh::AbstractType                argument_type
+		) {
+			using enum BuiltinUnary;
+			switch (operation) {
+			case BuiltinUnary::IntegerNegation:
+			case BuiltinUnary::FloatNegation:
+			case BuiltinUnary::IntegerBitNot:
+			case BuiltinUnary::BooleanNot:
+			case BuiltinUnary::Ref:
+			case BuiltinUnary::Box:
+			case BuiltinUnary::Ptr:
+			case BuiltinUnary::CPtr:
+			case BuiltinUnary::ManyPtr:
+			case BuiltinUnary::Slice:
+			case BuiltinUnary::Const:
+				// For most of the unary operators the result is the same as their argument type:
+				// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
+				return argument_type;
+			case BuiltinUnary::SizeOf:
+			case BuiltinUnary::AlignOf:
+				// `size_of`/`align_of` map a meta type to an `i64` byte count.
+				return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			default:
+				CORE_UNREACHABLE();
+			}
 		}
 	}
 

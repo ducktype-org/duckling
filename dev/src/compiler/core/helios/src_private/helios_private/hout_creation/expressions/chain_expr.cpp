@@ -54,79 +54,87 @@
 
 namespace compiler::helios::code {
 
-	/**
-	 * @brief Bakes a template with the arguments of a square call, as in `List[i64]`.
-	 *
-	 * Each argument is evaluated at compile time, after a coercion to the type of its template
-	 * parameter.
-	 *
-	 * @param template_sym_id The template symbol being baked.
-	 * @param square_call The `[...]` call holding the template arguments.
-	 * @return The symbol of the baked template.
-	 */
-	static query::QResult<SymID> bakeTemplate(
-		query::Context& query_ctx, SymID template_sym_id, pst::Access<pst::expr::Call> square_call
-	) {
-		CORE_ASSERT(
-			kind(template_sym_id) == SymbolKind::Template,
-			"bakeTemplate called on a non-template symbol"
-		);
+	namespace {
+		/**
+		 * @brief Bakes a template with the arguments of a square call, as in `List[i64]`.
+		 *
+		 * Each argument is evaluated at compile time, after a coercion to the type of its template
+		 * parameter.
+		 *
+		 * @param template_sym_id The template symbol being baked.
+		 * @param square_call The `[...]` call holding the template arguments.
+		 * @return The symbol of the baked template.
+		 */
+		query::QResult<SymID> bakeTemplate(
+			query::Context&              query_ctx,
+			SymID                        template_sym_id,
+			pst::Access<pst::expr::Call> square_call
+		) {
+			CORE_ASSERT(
+				kind(template_sym_id) == SymbolKind::Template,
+				"bakeTemplate called on a non-template symbol"
+			);
 
-		templates::TemplateBakeKey key{
-			.template_sym_id    = template_sym_id,
-			.template_arguments = {},
-		};
+			templates::TemplateBakeKey key{
+				.template_sym_id    = template_sym_id,
+				.template_arguments = {},
+			};
 
-		auto template_signature_qr
-			= templates::getTemplateDeclarationSignature(query_ctx, template_sym_id);
-		if (template_signature_qr.hasFailed()) return query::Failed();
-		const auto& template_signature = template_signature_qr.valueOrPanic();
+			auto template_signature_qr
+				= templates::getTemplateDeclarationSignature(query_ctx, template_sym_id);
+			if (template_signature_qr.hasFailed()) return query::Failed();
+			const auto& template_signature = template_signature_qr.valueOrPanic();
 
-		auto argument_list = square_call->getArgs().unlock(query_ctx);
+			auto argument_list = square_call->getArgs().unlock(query_ctx);
 
-		if (template_signature.parameters.size() != argument_list->size()) {
-			query_ctx.logInt(makeBox<dia::PlaceholderError>(
-				"argument count does not match template parameter count",
-				square_call->getStablePosition()
-			));
-			return query::Failed();
-		}
-
-		for (const auto& [arg, parameter]:
-		     std::views::zip(*argument_list, template_signature.parameters)) {
-			auto arg_unlocked = arg.unlock(query_ctx);
-			if (arg_unlocked->isNamedArg()) {
-				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Named template arguments are not yet supported.",
-					arg_unlocked->getStablePosition()
+			if (template_signature.parameters.size() != argument_list->size()) {
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
+					"argument count does not match template parameter count",
+					square_call->getStablePosition()
 				));
 				return query::Failed();
 			}
 
-			auto arg_expr_result
-				= subExprFromPST(query_ctx, arg_unlocked->getArg().unlock(query_ctx)->getExpr());
+			for (const auto& [arg, parameter]:
+			     std::views::zip(*argument_list, template_signature.parameters)) {
+				auto arg_unlocked = arg.unlock(query_ctx);
+				if (arg_unlocked->isNamedArg()) {
+					query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						"Named template arguments are not yet supported.",
+						arg_unlocked->getStablePosition()
+					));
+					return query::Failed();
+				}
 
-			if (arg_expr_result.hasFailed()) return query::Failed();
-			auto arg_expr = std::move(arg_expr_result).valueOrPanic();
-			UNPACK_QRESULT_MOVE(
-				auto coerced_arg_expr =,
-				coercions::coerceFromBox(
-					query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition()
-				)
-			);
+				auto arg_expr_result
+					= subExprFromPST(query_ctx, arg_unlocked->getArg().unlock(query_ctx)->getExpr());
 
-			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_arg_expr.ref() });
+				if (arg_expr_result.hasFailed()) return query::Failed();
+				auto arg_expr = std::move(arg_expr_result).valueOrPanic();
+				UNPACK_QRESULT_MOVE(
+					auto coerced_arg_expr =,
+					coercions::coerceFromBox(
+						query_ctx,
+						std::move(arg_expr),
+						parameter.type,
+						arg_unlocked->getStablePosition()
+					)
+				);
 
-			if (ctv.hasFailed()) return query::Failed();
-			auto ctv_value = std::move(ctv).valueOrPanic();
+				auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_arg_expr.ref() });
 
-			key.template_arguments.emplace_back(std::move(ctv_value));
+				if (ctv.hasFailed()) return query::Failed();
+				auto ctv_value = std::move(ctv).valueOrPanic();
+
+				key.template_arguments.emplace_back(std::move(ctv_value));
+			}
+
+			auto resulting_symbol
+				= query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key });
+
+			if (resulting_symbol.hasFailed()) return query::Failed();
+			return resulting_symbol.valueOrPanic();
 		}
-
-		auto resulting_symbol = query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key });
-
-		if (resulting_symbol.hasFailed()) return query::Failed();
-		return resulting_symbol.valueOrPanic();
 	}
 
 	/**

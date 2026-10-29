@@ -30,35 +30,48 @@
 namespace vm::loader::parser {
 	namespace opargs_parsers {
 		namespace detail {
-			/**
-			 * @brief "Packs" bits of value `V` to 64-bit type`T`.
-			 * 32-bit values are zero-extended to 64-bits and bit casted to T
-			 * 64-bit values are just bit casted to T.
-			 */
-			template<typename T, typename V>
-			static T packValue(V value) {
-				static_assert(sizeof(T) == 8, "T must be a 64-bit type");
-				if constexpr (sizeof(V) == 8) {
-					return std::bit_cast<T>(value);
-				} else if constexpr (sizeof(V) == 4) {
-					auto bits = std::bit_cast<u32>(value);
-					return std::bit_cast<T>(static_cast<u64>(bits));
+			namespace {
+				/**
+				 * @brief "Packs" bits of value `V` to 64-bit type`T`.
+				 * 32-bit values are zero-extended to 64-bits and bit casted to T
+				 * 64-bit values are just bit casted to T.
+				 */
+				template<typename T, typename V>
+				T packValue(V value) {
+					static_assert(sizeof(T) == 8, "T must be a 64-bit type");
+					if constexpr (sizeof(V) == 8) {
+						return std::bit_cast<T>(value);
+					} else if constexpr (sizeof(V) == 4) {
+						auto bits = std::bit_cast<u32>(value);
+						return std::bit_cast<T>(static_cast<u64>(bits));
+					}
 				}
-			}
 
-			/**
-			 * @brief Checks if the value fits in bounds of the given signed type.
-			 * Logs an error otherwise.
-			 */
-			template<typename SignedInt>
-			static bool checkSignedBoundsAndLog(
-				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
-			) {
-				if (sign == 1) {
-					if (raw_val > static_cast<u64>(std::numeric_limits<SignedInt>::max())) {
+				/**
+				 * @brief Checks if the value fits in bounds of the given signed type.
+				 * Logs an error otherwise.
+				 */
+				template<typename SignedInt>
+				bool checkSignedBoundsAndLog(
+					F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
+				) {
+					if (sign == 1) {
+						if (raw_val > static_cast<u64>(std::numeric_limits<SignedInt>::max())) {
+							state.logInt(makeBox<dia::PlaceholderError>(
+								base::strConcat(
+									"Numeric literal overflows a ",
+									base::toString(sizeof(SignedInt) * 8),
+									"-bit signed integer."
+								),
+								token.getPosition()
+							));
+							return false;
+						}
+					} else if (raw_val
+					           > (static_cast<u64>(std::numeric_limits<SignedInt>::max()) + 1ULL)) {
 						state.logInt(makeBox<dia::PlaceholderError>(
 							base::strConcat(
-								"Numeric literal overflows a ",
+								"Numeric literal underflows a ",
 								base::toString(sizeof(SignedInt) * 8),
 								"-bit signed integer."
 							),
@@ -66,152 +79,167 @@ namespace vm::loader::parser {
 						));
 						return false;
 					}
-				} else if (raw_val
-				           > (static_cast<u64>(std::numeric_limits<SignedInt>::max()) + 1ULL)) {
-					state.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"Numeric literal underflows a ",
-							base::toString(sizeof(SignedInt) * 8),
-							"-bit signed integer."
-						),
-						token.getPosition()
-					));
-					return false;
+					return true;
 				}
-				return true;
-			}
 
-			/**
-			 * @brief Checks if the value fits in bounds of the given unsigned type.
-			 * Logs an error otherwise.
-			 */
-			template<typename UnsignedInt>
-			static bool checkUnsignedBoundsAndLog(
-				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
-			) {
-				if (sign == -1) {
-					state.logInt(makeBox<dia::PlaceholderError>(
-						"Unsigned integer literal cannot be negative.", token.getPosition()
-					));
-					return false;
+				/**
+				 * @brief Checks if the value fits in bounds of the given unsigned type.
+				 * Logs an error otherwise.
+				 */
+				template<typename UnsignedInt>
+				bool checkUnsignedBoundsAndLog(
+					F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
+				) {
+					if (sign == -1) {
+						state.logInt(makeBox<dia::PlaceholderError>(
+							"Unsigned integer literal cannot be negative.", token.getPosition()
+						));
+						return false;
+					}
+					if (raw_val > std::numeric_limits<UnsignedInt>::max()) {
+						state.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat(
+								"Numeric literal overflows a ",
+								base::toString(sizeof(UnsignedInt) * 8),
+								"-bit unsigned integer."
+							),
+							token.getPosition()
+						));
+						return false;
+					}
+					return true;
 				}
-				if (raw_val > std::numeric_limits<UnsignedInt>::max()) {
-					state.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"Numeric literal overflows a ",
-							base::toString(sizeof(UnsignedInt) * 8),
-							"-bit unsigned integer."
-						),
-						token.getPosition()
-					));
-					return false;
-				}
-				return true;
 			}
 		}
 
-		/**
-		 * @brief Parses number literal and returns it's bits stored in type T. If it contains a
-		 * type specifier like `i32`, `f64`, etc., it will adjust the parsing behavior accordingly.
-		 * By default, it assumes 64-bit integer or f64 if it has a dot or an `e` (works for hex
-		 * and binary too). T has to be type of size 64bits.
-		 */
-		template<class T>
-		static std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
-			usize literal_length = 0;
-			i32   sign           = 1;
+		namespace {
+			/**
+			 * @brief Parses number literal and returns it's bits stored in type T. If it contains a
+			 * type specifier like `i32`, `f64`, etc., it will adjust the parsing behavior
+			 * accordingly. By default, it assumes 64-bit integer or f64 if it has a dot or an `e`
+			 * (works for hex and binary too). T has to be type of size 64bits.
+			 */
+			template<class T>
+			std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
+				usize literal_length = 0;
+				i32   sign           = 1;
 
-			const auto& maybe_sign_token = state.tokens().peek();
-			if (maybe_sign_token.isOperatorSymbol()) {
-				if (maybe_sign_token.getValue().str() == "-") {
-					sign = -1;
-					state.tokens().next();
-					literal_length++;
-				} else if (maybe_sign_token.getValue().str() == "+") {
-					sign = 1;
-					state.tokens().next();
-					literal_length++;
+				const auto& maybe_sign_token = state.tokens().peek();
+				if (maybe_sign_token.isOperatorSymbol()) {
+					if (maybe_sign_token.getValue().str() == "-") {
+						sign = -1;
+						state.tokens().next();
+						literal_length++;
+					} else if (maybe_sign_token.getValue().str() == "+") {
+						sign = 1;
+						state.tokens().next();
+						literal_length++;
+					}
 				}
-			}
 
-			const auto& token = state.tokens().peek();
-			if (!token.isNumLiteralGroup()) {
-				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected a numeric literal.", token.getPosition()
-				));
-				return { T{ 0 }, 0 };
-			}
-			state.tokens().next();
-			literal_length += token.getValue().strView().length();
+				const auto& token = state.tokens().peek();
+				if (!token.isNumLiteralGroup()) {
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Expected a numeric literal.", token.getPosition()
+					));
+					return { T{ 0 }, 0 };
+				}
+				state.tokens().next();
+				literal_length += token.getValue().strView().length();
 
-			std::string_view number;
-			std::string_view suffix;
+				std::string_view number;
+				std::string_view suffix;
 
-			const auto& sub_tokens = token.getRecursive();
-			number                 = sub_tokens[0].getValue().strView();
-			suffix = sub_tokens.size() > 1 ? sub_tokens[1].getValue().strView() : "";
+				const auto& sub_tokens = token.getRecursive();
+				number                 = sub_tokens[0].getValue().strView();
+				suffix = sub_tokens.size() > 1 ? sub_tokens[1].getValue().strView() : "";
 
-			int base = 10;
-			// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
-			if (number.starts_with("0b") || number.starts_with("0B")) {
-				base = 2;
-				number.remove_prefix(2);
-			} else if (number.starts_with("0o") || number.starts_with("0O")) {
-				base = 8;
-				number.remove_prefix(2);
-			} else if (number.starts_with("0x") || number.starts_with("0X")) {
-				base = 16;
-				number.remove_prefix(2);
-			}
+				int base = 10;
+				// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
+				if (number.starts_with("0b") || number.starts_with("0B")) {
+					base = 2;
+					number.remove_prefix(2);
+				} else if (number.starts_with("0o") || number.starts_with("0O")) {
+					base = 8;
+					number.remove_prefix(2);
+				} else if (number.starts_with("0x") || number.starts_with("0X")) {
+					base = 16;
+					number.remove_prefix(2);
+				}
 
-			T           result = 0;
-			usize       pos    = 0;
-			std::string str(number);
-			try {
-				if (!suffix.empty()) {  // Type specifier exists.
-					if (suffix.starts_with("f") && base != 10) {
-						state.logInt(makeBox<dia::PlaceholderError>(
-							"Floating-point literals must be in decimal base "
-							"for: ",
-							token.getPosition()
-						));
-						return { T{ 0 }, 0 };
+				T           result = 0;
+				usize       pos    = 0;
+				std::string str(number);
+				try {
+					if (!suffix.empty()) {  // Type specifier exists.
+						if (suffix.starts_with("f") && base != 10) {
+							state.logInt(makeBox<dia::PlaceholderError>(
+								"Floating-point literals must be in decimal base "
+								"for: ",
+								token.getPosition()
+							));
+							return { T{ 0 }, 0 };
+						}
+
+						if (suffix == "f32") {
+							f32 value = std::stof(str, &pos) * static_cast<f32>(sign);
+							result    = detail::packValue<T>(value);
+						} else if (suffix == "f64") {
+							f64 value = std::stod(str, &pos) * static_cast<f64>(sign);
+							result    = detail::packValue<T>(value);
+						} else if (suffix == "i32") {
+							u64 raw_val = std::stoull(str, &pos, base);
+							if (detail::checkSignedBoundsAndLog<i32>(state, token, raw_val, sign)) {
+								i32 value = static_cast<i32>(raw_val) * sign;
+								result    = detail::packValue<T>(value);
+							}
+						} else if (suffix == "i64") {
+							u64 raw_val = std::stoull(str, &pos, base);
+							if (detail::checkSignedBoundsAndLog<i64>(state, token, raw_val, sign)) {
+								i64 value = static_cast<i64>(raw_val) * sign;
+								result    = detail::packValue<T>(value);
+							}
+						} else if (suffix == "u32") {
+							u64 raw_val = std::stoull(str, &pos, base);
+							if (detail::checkUnsignedBoundsAndLog<u32>(state, token, raw_val, sign)) {
+								u32 value = static_cast<u32>(raw_val);
+								result    = detail::packValue<T>(value);
+							}
+						} else if (suffix == "u64") {
+							u64 raw_val = std::stoull(str, &pos, base);
+							if (detail::checkUnsignedBoundsAndLog<u64>(state, token, raw_val, sign))
+								result = detail::packValue<T>(raw_val);
+						} else {
+							state.logInt(makeBox<dia::PlaceholderError>(
+								base::strConcat(
+									"Unknown type specifier `",
+									suffix,
+									"` for `",
+									base::typeName<vm::opargs::Immediate>(),
+									"`."
+								),
+								token.getPosition()
+							));
+							return { T{ 0 }, 0 };
+						}
+					} else {
+						// By default, we assume 64-bit integer or a f64 if it has a dot.
+						if (str.find_first_of(".eE") != std::string::npos && base == 10) {
+							f64 value = std::stod(str, &pos) * static_cast<f64>(sign);
+							result    = detail::packValue<T>(value);
+						} else {
+							u64 raw_val = std::stoull(str, &pos, base);
+							i64 value   = static_cast<i64>(raw_val) * sign;
+							result      = detail::packValue<T>(value);
+						}
 					}
 
-					if (suffix == "f32") {
-						f32 value = std::stof(str, &pos) * static_cast<f32>(sign);
-						result    = detail::packValue<T>(value);
-					} else if (suffix == "f64") {
-						f64 value = std::stod(str, &pos) * static_cast<f64>(sign);
-						result    = detail::packValue<T>(value);
-					} else if (suffix == "i32") {
-						u64 raw_val = std::stoull(str, &pos, base);
-						if (detail::checkSignedBoundsAndLog<i32>(state, token, raw_val, sign)) {
-							i32 value = static_cast<i32>(raw_val) * sign;
-							result    = detail::packValue<T>(value);
-						}
-					} else if (suffix == "i64") {
-						u64 raw_val = std::stoull(str, &pos, base);
-						if (detail::checkSignedBoundsAndLog<i64>(state, token, raw_val, sign)) {
-							i64 value = static_cast<i64>(raw_val) * sign;
-							result    = detail::packValue<T>(value);
-						}
-					} else if (suffix == "u32") {
-						u64 raw_val = std::stoull(str, &pos, base);
-						if (detail::checkUnsignedBoundsAndLog<u32>(state, token, raw_val, sign)) {
-							u32 value = static_cast<u32>(raw_val);
-							result    = detail::packValue<T>(value);
-						}
-					} else if (suffix == "u64") {
-						u64 raw_val = std::stoull(str, &pos, base);
-						if (detail::checkUnsignedBoundsAndLog<u64>(state, token, raw_val, sign))
-							result = detail::packValue<T>(raw_val);
-					} else {
+					if (pos == str.length())
+						return std::make_pair(result, literal_length);
+					else {
 						state.logInt(makeBox<dia::PlaceholderError>(
 							base::strConcat(
-								"Unknown type specifier `",
-								suffix,
-								"` for `",
+								"Number not read fully for `",
 								base::typeName<vm::opargs::Immediate>(),
 								"`."
 							),
@@ -219,139 +247,116 @@ namespace vm::loader::parser {
 						));
 						return { T{ 0 }, 0 };
 					}
-				} else {
-					// By default, we assume 64-bit integer or a f64 if it has a dot.
-					if (str.find_first_of(".eE") != std::string::npos && base == 10) {
-						f64 value = std::stod(str, &pos) * static_cast<f64>(sign);
-						result    = detail::packValue<T>(value);
-					} else {
-						u64 raw_val = std::stoull(str, &pos, base);
-						i64 value   = static_cast<i64>(raw_val) * sign;
-						result      = detail::packValue<T>(value);
-					}
-				}
+				} catch (std::logic_error&) {}
 
-				if (pos == str.length())
-					return std::make_pair(result, literal_length);
-				else {
-					state.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"Number not read fully for `",
-							base::typeName<vm::opargs::Immediate>(),
-							"`."
-						),
-						token.getPosition()
-					));
-					return { T{ 0 }, 0 };
-				}
-			} catch (std::logic_error&) {}
-
-			state.logInt(makeBox<dia::PlaceholderError>(
-				base::strConcat(
-					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
-				),
-				token.getPosition()
-			));
-			return { T{ 0 }, 0 };
-		}
-
-		static std::pair<std::array<byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
-			const auto& token = state.tokens().peek();
-
-			if (!token.isNumLiteralGroup()) {
 				state.logInt(makeBox<dia::PlaceholderError>(
-					"Expected a hex numeric literal.", token.getPosition()
+					base::strConcat(
+						"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
+					),
+					token.getPosition()
 				));
-				return { {}, Bits(0) };
-			}
-			state.tokens().next();
-
-			std::string_view raw = token.getValue().strView();
-
-			// -----------------------------
-			// 1. Validate prefix
-			// -----------------------------
-			if (!raw.starts_with("0x") && !raw.starts_with("0X")) {
-				state.logInt(makeBox<dia::PlaceholderError>(
-					"Hex literal must start with 0x.", token.getPosition()
-				));
-				return { {}, Bits(0) };
+				return { T{ 0 }, 0 };
 			}
 
-			raw.remove_prefix(2);
+			std::pair<std::array<byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
+				const auto& token = state.tokens().peek();
 
-			// -----------------------------
-			// 2. Parse via std::stoull
-			// -----------------------------
-			std::string str(raw);
-			std::size_t pos = 0;
-
-			u64 value = 0;
-
-			try {
-				value = std::stoull(str, &pos, 16);
-
-				if (pos != str.size()) {
+				if (!token.isNumLiteralGroup()) {
 					state.logInt(makeBox<dia::PlaceholderError>(
-						"Hex literal not fully consumed.", token.getPosition()
+						"Expected a hex numeric literal.", token.getPosition()
 					));
 					return { {}, Bits(0) };
 				}
-			} catch (...) {
-				state.logInt(
-					makeBox<dia::PlaceholderError>("Invalid hex literal.", token.getPosition())
-				);
-				return { {}, Bits(0) };
+				state.tokens().next();
+
+				std::string_view raw = token.getValue().strView();
+
+				// -----------------------------
+				// 1. Validate prefix
+				// -----------------------------
+				if (!raw.starts_with("0x") && !raw.starts_with("0X")) {
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Hex literal must start with 0x.", token.getPosition()
+					));
+					return { {}, Bits(0) };
+				}
+
+				raw.remove_prefix(2);
+
+				// -----------------------------
+				// 2. Parse via std::stoull
+				// -----------------------------
+				std::string str(raw);
+				std::size_t pos = 0;
+
+				u64 value = 0;
+
+				try {
+					value = std::stoull(str, &pos, 16);
+
+					if (pos != str.size()) {
+						state.logInt(makeBox<dia::PlaceholderError>(
+							"Hex literal not fully consumed.", token.getPosition()
+						));
+						return { {}, Bits(0) };
+					}
+				} catch (...) {
+					state.logInt(
+						makeBox<dia::PlaceholderError>("Invalid hex literal.", token.getPosition())
+					);
+					return { {}, Bits(0) };
+				}
+
+				usize               bit_length = str.size() * 4;
+				std::array<byte, 8> bytes{};
+				std::memcpy(bytes.data(), &value, 8);
+
+				return { bytes, Bits(bit_length) };
 			}
 
-			usize               bit_length = str.size() * 4;
-			std::array<byte, 8> bytes{};
-			std::memcpy(bytes.data(), &value, 8);
-
-			return { bytes, Bits(bit_length) };
-		}
-
-		static tpc::Identifier parseIdentifier(F8ParserState& state) {
-			tpc::Identifier identifier;
-			state.parse().one(&identifier);
-			return identifier;
+			tpc::Identifier parseIdentifier(F8ParserState& state) {
+				tpc::Identifier identifier;
+				state.parse().one(&identifier);
+				return identifier;
+			}
 		}
 
 		template<class T>
 		concept IsOpCodeArg = std::is_constructible_v<vm::opargs::OpCodeArg, T>;
 
-		/**
-		 * @brief Parses opcode argument. Template specializations change only the return type.
-		 */
-		template<IsOpCodeArg ArgType>
-		static auto parseArg(F8ParserState& state) -> ArgType;
+		namespace {
+			/**
+			 * @brief Parses opcode argument. Template specializations change only the return type.
+			 */
+			template<IsOpCodeArg ArgType>
+			auto parseArg(F8ParserState& state) -> ArgType;
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			auto pos            = state.getPosition();
-			auto parsed_literal = parseNumericLiteral<u64>(state);
-			auto value          = parsed_literal.first;
-			// SourcePosition ends are inclusive; a literal of length N ends at start + N - 1.
-			auto length      = std::max<usize>(parsed_literal.second, 1);
-			auto arg         = opargs::Immediate{ value };
-			arg.bytecode_pos = dia::SourcePosition(
-				pos.getLocation(), pos.getStart(), pos.getStart() + length - 1
-			);
-			return arg;
-		}
+			template<>
+			auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
+				auto pos            = state.getPosition();
+				auto parsed_literal = parseNumericLiteral<u64>(state);
+				auto value          = parsed_literal.first;
+				// SourcePosition ends are inclusive; a literal of length N ends at start + N - 1.
+				auto length      = std::max<usize>(parsed_literal.second, 1);
+				auto arg         = opargs::Immediate{ value };
+				arg.bytecode_pos = dia::SourcePosition(
+					pos.getLocation(), pos.getStart(), pos.getStart() + length - 1
+				);
+				return arg;
+			}
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
-			tpc::Identifier type_name, field_name;
-			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
-			auto field         = vm::opargs::Field{ type_name, field_name };
-			field.bytecode_pos = dia::SourcePosition(
-				type_name.position.getLocation(),
-				type_name.position.getStart(),
-				field_name.position.getEnd()
-			);
-			return field;
-		}
+			template<>
+			auto parseArg(F8ParserState& state) -> vm::opargs::Field {
+				tpc::Identifier type_name, field_name;
+				state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
+				auto field         = vm::opargs::Field{ type_name, field_name };
+				field.bytecode_pos = dia::SourcePosition(
+					type_name.position.getLocation(),
+					type_name.position.getStart(),
+					field_name.position.getEnd()
+				);
+				return field;
+			}
 
 #define HANDLE_STR_ARG(TYPE)                                     \
 	template<>                                                   \
@@ -362,35 +367,35 @@ namespace vm::loader::parser {
 		return { arg };                                          \
 	}
 
-		FOR_EACH(
-			HANDLE_STR_ARG,
-			Type,
-			FunctionName,
-			BuiltinFunctionName,
-			ExtCFunctionName,
-			FFIFunctionName,
-			MethodName,
-			Label,
-			VM_OPARG_PLACE_TYPES
-		)
+			FOR_EACH(
+				HANDLE_STR_ARG,
+				Type,
+				FunctionName,
+				BuiltinFunctionName,
+				ExtCFunctionName,
+				FFIFunctionName,
+				MethodName,
+				Label,
+				VM_OPARG_PLACE_TYPES
+			)
 
 #undef HANDLE_STR_ARG
 
-		// Dummy parameter to help with leading commas from macros.
-		template<typename Dummy, typename ArgsHead = void, typename... ArgsTail>
-		static std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
-			// Separate case for no (non-dummy) args passed (first arg defaulted)
-			// to avoid a trailing comma.
-			if constexpr (std::same_as<ArgsHead, void>) {
-				return {};
-			} else {
-				return { parseArg<ArgsHead>(state),
-					     (state.parse().one(lang_def::Special::Comma),
-					      parseArg<ArgsTail>(state))... };
+			// Dummy parameter to help with leading commas from macros.
+			template<typename Dummy, typename ArgsHead = void, typename... ArgsTail>
+			std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
+				// Separate case for no (non-dummy) args passed (first arg defaulted)
+				// to avoid a trailing comma.
+				if constexpr (std::same_as<ArgsHead, void>) {
+					return {};
+				} else {
+					return { parseArg<ArgsHead>(state),
+						     (state.parse().one(lang_def::Special::Comma),
+						      parseArg<ArgsTail>(state))... };
+				}
 			}
-		}
 
-		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
+			const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
 #define ARG_TYPE(type, name) , type
 #define HANDLE_INSTR_ARGS(NAME, ...) \
 	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<void FOR_EACH(ARG_TYPE EXPAND, __VA_ARGS__)>),
@@ -398,7 +403,8 @@ namespace vm::loader::parser {
 #include <vm/bytecode/instruction_definitions.def.hpp>
 #undef HANDLE_INSTR_ARGS
 #undef ARG_TYPE
-		};
+			};
+		}
 	}
 
 #define ERROR_CHECK() \

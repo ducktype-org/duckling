@@ -52,14 +52,16 @@ namespace os_utils {
 
 #elif BASE_TARGET_OS_LINUX
 
-	static std::string getExecutablePathStr() {
-		std::array<char, PATH_MAX> buffer{};
+	namespace {
+		std::string getExecutablePathStr() {
+			std::array<char, PATH_MAX> buffer{};
 
-		ssize_t len = readlink("/proc/self/exe", buffer.data(), buffer.size() - 1);
-		if (len == -1) CORE_PANIC("Failed to get executable path on Linux");
+			ssize_t len = readlink("/proc/self/exe", buffer.data(), buffer.size() - 1);
+			if (len == -1) CORE_PANIC("Failed to get executable path on Linux");
 
-		buffer.at(base::safeIntConv<usize>(len)) = '\0';
-		return { buffer.data() };
+			buffer.at(base::safeIntConv<usize>(len)) = '\0';
+			return { buffer.data() };
+		}
 	}
 
 #else

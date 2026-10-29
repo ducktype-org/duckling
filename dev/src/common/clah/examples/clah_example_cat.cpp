@@ -14,22 +14,24 @@
 
 #include <iostream>
 
-static void printFile(const fs::File& file) {
-	std::cout << file.getContent().view().stdString() << '\n';
-}
+namespace {
+	void printFile(const fs::File& file) {
+		std::cout << file.getContent().view().stdString() << '\n';
+	}
 
-static void catFile(const clah::ParsingResult& result) {
-	i64 times = result.getValue<i64>('n').copyValueOr(1);
-	while (times--) {
-		// Since we are using clah::FileParser, it automatically links
-		// specified input to real files!
-		auto file1 = result.getPositional<fs::File>(0);
-		printFile(file1);
+	void catFile(const clah::ParsingResult& result) {
+		i64 times = result.getValue<i64>('n').copyValueOr(1);
+		while (times--) {
+			// Since we are using clah::FileParser, it automatically links
+			// specified input to real files!
+			auto file1 = result.getPositional<fs::File>(0);
+			printFile(file1);
 
-		// Finally, iterate over 'extra' parameters and print them out as well.
-		// getExtra returns a base::Optional<T>, but we know it has a value.
-		for (usize i = 0; i < result.getExtraParameterCount(); i++)
-			printFile(*result.getExtra<fs::File>(i));
+			// Finally, iterate over 'extra' parameters and print them out as well.
+			// getExtra returns a base::Optional<T>, but we know it has a value.
+			for (usize i = 0; i < result.getExtraParameterCount(); i++)
+				printFile(*result.getExtra<fs::File>(i));
+		}
 	}
 }
 

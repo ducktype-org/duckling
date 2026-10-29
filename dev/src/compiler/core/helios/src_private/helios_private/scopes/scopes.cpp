@@ -49,7 +49,9 @@
 namespace compiler::helios {
 
 
-	static auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	namespace {
+		auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	}
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -90,152 +92,154 @@ namespace compiler::helios {
 		// For examples namespaces don't have primary scopes (which can be counterintuitive)
 	};
 
-	/**
-	 * Determines scope kind for given PST element.
-	 * @TODO: #2407 this could take unlocked access
-	 */
-	static ElementScopeKind getScopeKind(
-		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
-	) {
-		// @TODO: move it to different file?
-		auto element = locked.unlock(ctx);
+	namespace {
+		/**
+		 * Determines scope kind for given PST element.
+		 * @TODO: #2407 this could take unlocked access
+		 */
+		ElementScopeKind getScopeKind(
+			query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
+		) {
+			// @TODO: move it to different file?
+			auto element = locked.unlock(ctx);
 
-		switch (element->getElementKind()) {
-		case pst::ElementKind::TopLevel:
-			return ElementScopeKind::Standard;
-
-		case pst::ElementKind::Import:
-		case pst::ElementKind::Selector:
-		case pst::ElementKind::SelectorList:
-		case pst::ElementKind::NestedSelectorList:
-		case pst::ElementKind::DottedName:
-		// I don't know if this is correct
-		case pst::ElementKind::StmtSpecifier:
-			return ElementScopeKind::Invalid;
-
-
-		// code blocks:
-		case pst::ElementKind::CodeBlock: {
-			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::CodeBlockOrStmt
-			    || parent_kind == pst::ElementKind::SpecifierBlock)
-				return ElementScopeKind::Transparent;
-			else
+			switch (element->getElementKind()) {
+			case pst::ElementKind::TopLevel:
 				return ElementScopeKind::Standard;
-		}
-		case pst::ElementKind::CodeBlockOrStmt:
-			return ElementScopeKind::Standard;
 
-		// I don't know if this is correct
-		case pst::ElementKind::SpecifierBlock:
-			return ElementScopeKind::Transparent;
+			case pst::ElementKind::Import:
+			case pst::ElementKind::Selector:
+			case pst::ElementKind::SelectorList:
+			case pst::ElementKind::NestedSelectorList:
+			case pst::ElementKind::DottedName:
+			// I don't know if this is correct
+			case pst::ElementKind::StmtSpecifier:
+				return ElementScopeKind::Invalid;
 
 
-		case pst::ElementKind::Namespace:
-		case pst::ElementKind::Variable:
-		case pst::ElementKind::Using:
-		case pst::ElementKind::Const:
-		case pst::ElementKind::Class:
-		case pst::ElementKind::Action:
-		case pst::ElementKind::Block:  //< note that Block != CodeBlock
-		case pst::ElementKind::ClassField:
-		case pst::ElementKind::CallArgument:
-		case pst::ElementKind::Attribute:
-			// this is transparent, since we don't need this scope:
-			return ElementScopeKind::Transparent;
-
-		// this has to be transparent, since ClassBlock scopes
-		// contain all symbols in AccessBlock's
-		case pst::ElementKind::ClassSpecifierBlock:
-			return ElementScopeKind::Transparent;
-
-		case pst::ElementKind::If:
-		case pst::ElementKind::While:
-		case pst::ElementKind::For:
-		case pst::ElementKind::Fun:
-		case pst::ElementKind::FunDecl:
-		case pst::ElementKind::ClassMethod:
-		case pst::ElementKind::ClassSpecial:
-			return ElementScopeKind::Standard;
-
-		// The match owns the generated subject local; each case owns the symbols bound
-		// by its pattern.
-		case pst::ElementKind::Match:
-		case pst::ElementKind::MatchCase:
-			return ElementScopeKind::Standard;
-
-		case pst::ElementKind::FlowPattern:
-		case pst::ElementKind::BindingPattern:
-		case pst::ElementKind::WildcardPattern:
-			return ElementScopeKind::Transparent;
-
-		case pst::ElementKind::ClassConstructor:
-		case pst::ElementKind::ClassDestructor:
-			return ElementScopeKind::Standard;
-
-		case pst::ElementKind::ExprStmt:
-			return ElementScopeKind::Transparent;
-		case pst::ElementKind::OperatorWrapper:
-		case pst::ElementKind::IdentifierWrapper:
-		case pst::ElementKind::KeywordWrapper:
-			return ElementScopeKind::Transparent;
-
-		case pst::ElementKind::ExprElement:
-		case pst::ElementKind::RoundGroupExpr:
-		case pst::ElementKind::CallList:
-		case pst::ElementKind::AtrArgList:
-		case pst::ElementKind::ArrayLiteralList:
-			return ElementScopeKind::Transparent;
-
-		case pst::ElementKind::ExprHolder: {
-			auto expr_parent = element->getParent().value().unlockOpt(ctx);
-			if (expr_parent.has_value()
-			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
-				// This is a special case.
-				// Elements in macro expansions should have their scope parent be the grandparent.
-				return ElementScopeKind::ParentTransparent;
+			// code blocks:
+			case pst::ElementKind::CodeBlock: {
+				auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
+				if (parent_kind == pst::ElementKind::CodeBlockOrStmt
+				    || parent_kind == pst::ElementKind::SpecifierBlock)
+					return ElementScopeKind::Transparent;
+				else
+					return ElementScopeKind::Standard;
 			}
-			if (expr_parent.has_value()
-			    && expr_parent.value()->getElementKind() == pst::ElementKind::Match) {
-				// The match subject resolves in the scope surrounding the match. Resolving it
-				// inside the match's own scope would create a query cycle: enumerating the
-				// match scope's symbols requires compiling the subject.
-				return ElementScopeKind::ParentTransparent;
+			case pst::ElementKind::CodeBlockOrStmt:
+				return ElementScopeKind::Standard;
+
+			// I don't know if this is correct
+			case pst::ElementKind::SpecifierBlock:
+				return ElementScopeKind::Transparent;
+
+
+			case pst::ElementKind::Namespace:
+			case pst::ElementKind::Variable:
+			case pst::ElementKind::Using:
+			case pst::ElementKind::Const:
+			case pst::ElementKind::Class:
+			case pst::ElementKind::Action:
+			case pst::ElementKind::Block:  //< note that Block != CodeBlock
+			case pst::ElementKind::ClassField:
+			case pst::ElementKind::CallArgument:
+			case pst::ElementKind::Attribute:
+				// this is transparent, since we don't need this scope:
+				return ElementScopeKind::Transparent;
+
+			// this has to be transparent, since ClassBlock scopes
+			// contain all symbols in AccessBlock's
+			case pst::ElementKind::ClassSpecifierBlock:
+				return ElementScopeKind::Transparent;
+
+			case pst::ElementKind::If:
+			case pst::ElementKind::While:
+			case pst::ElementKind::For:
+			case pst::ElementKind::Fun:
+			case pst::ElementKind::FunDecl:
+			case pst::ElementKind::ClassMethod:
+			case pst::ElementKind::ClassSpecial:
+				return ElementScopeKind::Standard;
+
+			// The match owns the generated subject local; each case owns the symbols bound
+			// by its pattern.
+			case pst::ElementKind::Match:
+			case pst::ElementKind::MatchCase:
+				return ElementScopeKind::Standard;
+
+			case pst::ElementKind::FlowPattern:
+			case pst::ElementKind::BindingPattern:
+			case pst::ElementKind::WildcardPattern:
+				return ElementScopeKind::Transparent;
+
+			case pst::ElementKind::ClassConstructor:
+			case pst::ElementKind::ClassDestructor:
+				return ElementScopeKind::Standard;
+
+			case pst::ElementKind::ExprStmt:
+				return ElementScopeKind::Transparent;
+			case pst::ElementKind::OperatorWrapper:
+			case pst::ElementKind::IdentifierWrapper:
+			case pst::ElementKind::KeywordWrapper:
+				return ElementScopeKind::Transparent;
+
+			case pst::ElementKind::ExprElement:
+			case pst::ElementKind::RoundGroupExpr:
+			case pst::ElementKind::CallList:
+			case pst::ElementKind::AtrArgList:
+			case pst::ElementKind::ArrayLiteralList:
+				return ElementScopeKind::Transparent;
+
+			case pst::ElementKind::ExprHolder: {
+				auto expr_parent = element->getParent().value().unlockOpt(ctx);
+				if (expr_parent.has_value()
+				    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
+					// This is a special case.
+					// Elements in macro expansions should have their scope parent be the grandparent.
+					return ElementScopeKind::ParentTransparent;
+				}
+				if (expr_parent.has_value()
+				    && expr_parent.value()->getElementKind() == pst::ElementKind::Match) {
+					// The match subject resolves in the scope surrounding the match. Resolving it
+					// inside the match's own scope would create a query cycle: enumerating the
+					// match scope's symbols requires compiling the subject.
+					return ElementScopeKind::ParentTransparent;
+				}
+				return ElementScopeKind::Transparent;
 			}
-			return ElementScopeKind::Transparent;
-		}
 
-		case pst::ElementKind::Param:
-		case pst::ElementKind::ParamList:
-			return ElementScopeKind::Transparent;
+			case pst::ElementKind::Param:
+			case pst::ElementKind::ParamList:
+				return ElementScopeKind::Transparent;
 
-		case pst::ElementKind::Expand:
-			// This is a bit of a special case, we treat it as transparent, since it is
-			// basically just a wrapper around the expanded element.
-			return ElementScopeKind::Transparent;
+			case pst::ElementKind::Expand:
+				// This is a bit of a special case, we treat it as transparent, since it is
+				// basically just a wrapper around the expanded element.
+				return ElementScopeKind::Transparent;
 
-		case pst::ElementKind::TemplateStmt:
-			// This defines a non-empty scope only for for baked PST nodes,
-			// @TODO: #3892 probably change it to transparent,
-			// since this element should not be present in baked PSTs (or will be a trivial node).
-			return ElementScopeKind::Standard;
+			case pst::ElementKind::TemplateStmt:
+				// This defines a non-empty scope only for for baked PST nodes,
+				// @TODO: #3892 probably change it to transparent,
+				// since this element should not be present in baked PSTs (or will be a trivial node).
+				return ElementScopeKind::Standard;
 
-		case pst::ElementKind::TemplateDecl:
-			// This is a weird case, this is used to lookup on expressions inside template
-			// declaration before baking.
-			return ElementScopeKind::Transparent;
+			case pst::ElementKind::TemplateDecl:
+				// This is a weird case, this is used to lookup on expressions inside template
+				// declaration before baking.
+				return ElementScopeKind::Transparent;
 
-		case pst::ElementKind::FormatSubExpression:
-		case pst::ElementKind::FormatSubString:
-			return ElementScopeKind::Transparent;
+			case pst::ElementKind::FormatSubExpression:
+			case pst::ElementKind::FormatSubString:
+				return ElementScopeKind::Transparent;
 
-		case pst::ElementKind::KindNotSet:
+			case pst::ElementKind::KindNotSet:
+				CORE_UNREACHABLE();
+
+			default:
+				CORE_PANIC("PST element scope kind for: ", element->elementType());
+			}
 			CORE_UNREACHABLE();
-
-		default:
-			CORE_PANIC("PST element scope kind for: ", element->elementType());
 		}
-		CORE_UNREACHABLE();
 	}
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeData) {

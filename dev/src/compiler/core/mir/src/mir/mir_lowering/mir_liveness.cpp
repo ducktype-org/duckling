@@ -51,55 +51,59 @@ namespace compiler::mir {
 		bool empty() { return stack.empty(); }
 	};
 
-	/**
-	 * @brief Append @p src move sites to @p dst, skipping positions already present.
-	 */
-	static void mergeMoveSites(
-		std::vector<dia::StablePosition>& dst, const std::vector<dia::StablePosition>& src
-	) {
-		for (const auto& pos: src)
-			if (not std::ranges::contains(dst, pos)) dst.push_back(pos);
-	}
-
-	/**
-	 * @brief Joins the status from two predecessor blocks, deciding what is the local status
-	 * at the beginning of the successor block. If the value is not present in the map,
-	 * it should be represented by an empty optional, it means that value is uninitialized.
-	 *
-	 * Merging one uninitialized and one initialized path gives @ref MoveStatus::MaybeMoved with
-	 * no move sites: the value is not usable after the join, but it may still own a resource on
-	 * one of the paths, so the destructor has to be emitted conditionally (`DestructIf`).
-	 */
-	static base::Optional<MoveState> joinStatus(
-		base::Optional<MoveState> a, base::Optional<MoveState> b, ScopeRef into_scope
-	) {
-		CORE_ASSERT(
-			a.empty() or b.empty() or a->local == b->local,
-			"Joining move states of two different locals"
-		);
-
-		if (a.has_value() && not isAliveInScope(a->local, into_scope)) a = {};
-		if (b.has_value() && not isAliveInScope(b->local, into_scope)) b = {};
-
-		if (a.empty() and b.empty()) return {};
-		if (a.empty() or b.empty()) {
-			auto& state = a.empty() ? b.value() : a.value();
-			return MoveState{
-				.local      = state.local,
-				.status     = MoveStatus::MaybeMoved,
-				.move_sites = {},
-			};
+	namespace {
+		/**
+		 * @brief Append @p src move sites to @p dst, skipping positions already present.
+		 */
+		void mergeMoveSites(
+			std::vector<dia::StablePosition>& dst, const std::vector<dia::StablePosition>& src
+		) {
+			for (const auto& pos: src)
+				if (not std::ranges::contains(dst, pos)) dst.push_back(pos);
 		}
 
-		MoveStatus kind = (a->status == b->status) ? a->status : MoveStatus::MaybeMoved;
+		/**
+		 * @brief Joins the status from two predecessor blocks, deciding what is the local status
+		 * at the beginning of the successor block. If the value is not present in the map,
+		 * it should be represented by an empty optional, it means that value is uninitialized.
+		 *
+		 * Merging one uninitialized and one initialized path gives @ref MoveStatus::MaybeMoved with
+		 * no move sites: the value is not usable after the join, but it may still own a resource on
+		 * one of the paths, so the destructor has to be emitted conditionally (`DestructIf`).
+		 */
+		base::Optional<MoveState> joinStatus(
+			base::Optional<MoveState> a, base::Optional<MoveState> b, ScopeRef into_scope
+		) {
+			CORE_ASSERT(
+				a.empty() or b.empty() or a->local == b->local,
+				"Joining move states of two different locals"
+			);
 
-		MoveState result{ .local = a->local, .status = kind, .move_sites = {} };
-		// Collect the reaching move sites from every path that considers the value moved.
-		if (kind != MoveStatus::Alive) {
-			if (a->status != MoveStatus::Alive) mergeMoveSites(result.move_sites, a->move_sites);
-			if (b->status != MoveStatus::Alive) mergeMoveSites(result.move_sites, b->move_sites);
+			if (a.has_value() && not isAliveInScope(a->local, into_scope)) a = {};
+			if (b.has_value() && not isAliveInScope(b->local, into_scope)) b = {};
+
+			if (a.empty() and b.empty()) return {};
+			if (a.empty() or b.empty()) {
+				auto& state = a.empty() ? b.value() : a.value();
+				return MoveState{
+					.local      = state.local,
+					.status     = MoveStatus::MaybeMoved,
+					.move_sites = {},
+				};
+			}
+
+			MoveStatus kind = (a->status == b->status) ? a->status : MoveStatus::MaybeMoved;
+
+			MoveState result{ .local = a->local, .status = kind, .move_sites = {} };
+			// Collect the reaching move sites from every path that considers the value moved.
+			if (kind != MoveStatus::Alive) {
+				if (a->status != MoveStatus::Alive)
+					mergeMoveSites(result.move_sites, a->move_sites);
+				if (b->status != MoveStatus::Alive)
+					mergeMoveSites(result.move_sites, b->move_sites);
+			}
+			return result;
 		}
-		return result;
 	}
 
 	LocalMoveStateMap LocalMoveStateMap::join(
@@ -172,17 +176,19 @@ namespace compiler::mir {
 		prev_instr_scope = instr.scope;
 	}
 
-	/**
-	 * @brief Given LocalMoveStateMap valid at the start of the block,
-	 * return the LocalMoveStateMap valid at the end of the block.
-	 */
-	static LocalMoveStateMap transferBlock(
-		const Block& block, LocalMoveStateMap map, const LocalsByScopeMap& locals_by_scope
-	) {
-		for (const auto& instr: block.instructions)
-			map.updateMoveStateMapByInstr(instr, locals_by_scope);
-		map.updateMoveStateMapByInstr(block.terminator, locals_by_scope);
-		return map;
+	namespace {
+		/**
+		 * @brief Given LocalMoveStateMap valid at the start of the block,
+		 * return the LocalMoveStateMap valid at the end of the block.
+		 */
+		LocalMoveStateMap transferBlock(
+			const Block& block, LocalMoveStateMap map, const LocalsByScopeMap& locals_by_scope
+		) {
+			for (const auto& instr: block.instructions)
+				map.updateMoveStateMapByInstr(instr, locals_by_scope);
+			map.updateMoveStateMapByInstr(block.terminator, locals_by_scope);
+			return map;
+		}
 	}
 
 	MoveStateData MoveStateData::calculateGlobalInMoveStateMap(
@@ -276,55 +282,57 @@ namespace compiler::mir {
 		return result;
 	}
 
-	static void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out);
+	namespace {
+		void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out);
 
-	static void collectPlaceReads(
-		const MIRPlace& place, bool include_base, std::vector<MIRLocalRef>& out
-	) {
-		if (include_base && place.isLocal()) out.push_back(place.getBase<MIRLocalRef>());
-		for (const auto& proj: place.projection_chain) {
-			variant_match(proj.storage) {
-				variant_case(MIRPlace::IndexProjection, index) {
-					collectValueReads(*index.index, out);
+		void collectPlaceReads(
+			const MIRPlace& place, bool include_base, std::vector<MIRLocalRef>& out
+		) {
+			if (include_base && place.isLocal()) out.push_back(place.getBase<MIRLocalRef>());
+			for (const auto& proj: place.projection_chain) {
+				variant_match(proj.storage) {
+					variant_case(MIRPlace::IndexProjection, index) {
+						collectValueReads(*index.index, out);
+					}
+					variant_default {}
 				}
+			}
+		}
+
+		void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out) {
+			variant_match(value.getVariant()) {
+				variant_case(MIRPlace, place) { collectPlaceReads(place, true, out); }
 				variant_default {}
 			}
 		}
-	}
 
-	void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out) {
-		variant_match(value.getVariant()) {
-			variant_case(MIRPlace, place) { collectPlaceReads(place, true, out); }
-			variant_default {}
+		std::vector<MIRLocalRef> instructionReads(const Instruction& instr) {
+			std::vector<MIRLocalRef> reads;
+			for (const auto& arg: instr.arguments) collectValueReads(arg, reads);
+			if (instr.output && instr.output->hasProjections())
+				collectPlaceReads(*instr.output, true, reads);
+			return reads;
 		}
-	}
 
-	static std::vector<MIRLocalRef> instructionReads(const Instruction& instr) {
-		std::vector<MIRLocalRef> reads;
-		for (const auto& arg: instr.arguments) collectValueReads(arg, reads);
-		if (instr.output && instr.output->hasProjections())
-			collectPlaceReads(*instr.output, true, reads);
-		return reads;
-	}
-
-	/**
-	 * Get the vector of locals, to which the instruction writes (excluding those which are
-	 * constructed by this instruction). Don't return locals, where the instruction also read in
-	 * instructionReads. For example `a[1] = ...` both reads and writes to `a`, so it won't be
-	 * returned. we only return direct writes, like `a = ...`.
-	 *
-	 * @note We don't return values with Construct flag in this instruction, as we want to catch the
-	 * values used before construction.
-	 */
-	static std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
-		// If we construct a result, then this is not a write
-		for (auto& flag: instr.flags)
-			if (flag.flag == OperationFlag::Flag::Construct) return {};
-		// The output->hasProjections() doesn't matter, but if there were projections,
-		// then the base would also be read and we would also detect
-		if (instr.output && instr.output->isLocal() && not instr.output->hasProjections())
-			return { instr.output->getBase<MIRLocalRef>() };
-		return {};
+		/**
+		 * Get the vector of locals, to which the instruction writes (excluding those which are
+		 * constructed by this instruction). Don't return locals, where the instruction also read in
+		 * instructionReads. For example `a[1] = ...` both reads and writes to `a`, so it won't be
+		 * returned. we only return direct writes, like `a = ...`.
+		 *
+		 * @note We don't return values with Construct flag in this instruction, as we want to catch
+		 * the values used before construction.
+		 */
+		std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
+			// If we construct a result, then this is not a write
+			for (auto& flag: instr.flags)
+				if (flag.flag == OperationFlag::Flag::Construct) return {};
+			// The output->hasProjections() doesn't matter, but if there were projections,
+			// then the base would also be read and we would also detect
+			if (instr.output && instr.output->isLocal() && not instr.output->hasProjections())
+				return { instr.output->getBase<MIRLocalRef>() };
+			return {};
+		}
 	}
 
 	void InvalidUseCheck::run(query::Context& ctx, Function& fun, const LifetimePassArgs& args) {
