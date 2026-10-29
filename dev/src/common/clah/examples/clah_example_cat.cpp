@@ -14,9 +14,11 @@
 
 #include <iostream>
 
-void printFile(const fs::File& file) { std::cout << file.getContent().view().stdString() << '\n'; }
+static void printFile(const fs::File& file) {
+	std::cout << file.getContent().view().stdString() << '\n';
+}
 
-void catFile(const clah::ParsingResult& result) {
+static void catFile(const clah::ParsingResult& result) {
 	i64 times = result.getValue<i64>('n').copyValueOr(1);
 	while (times--) {
 		// Since we are using clah::FileParser, it automatically links

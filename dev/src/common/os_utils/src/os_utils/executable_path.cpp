@@ -52,7 +52,7 @@ namespace os_utils {
 
 #elif BASE_TARGET_OS_LINUX
 
-	std::string getExecutablePathStr() {
+	static std::string getExecutablePathStr() {
 		std::array<char, PATH_MAX> buffer{};
 
 		ssize_t len = readlink("/proc/self/exe", buffer.data(), buffer.size() - 1);

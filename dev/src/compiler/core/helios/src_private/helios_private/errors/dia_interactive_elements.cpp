@@ -64,7 +64,7 @@ namespace compiler::helios {
 	 * @param[out] linked_messages The resulting linked messages we should add to the message.
 	 * @param elem PST element of the original type identifier in the parse tree.
 	 */
-	void checkForAliases(
+	static void checkForAliases(
 		query::Context&                                    ctx,
 		base::HashMap<std::string, Box<dia::MessageBase>>& linked_messages,
 		pst::Access<pst::LangElement>                      elem
@@ -165,7 +165,7 @@ namespace compiler::helios {
 	 * (pst of a function, function declaration or class method). We want only the
 	 * name and parameters to be included in the source position. @TODO: #2521 fix this
 	 */
-	dia::StablePosition getFunctionLikeSourcePosition(
+	static dia::StablePosition getFunctionLikeSourcePosition(
 		query::Context& ctx, pst::Access<pst::LangElement> function_like
 	) {
 		switch (function_like->getElementKind()) {

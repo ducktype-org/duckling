@@ -225,7 +225,7 @@ namespace compiler::helios {
 	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
 
 	template<typename Attr>
-	bool hasAttrInVector(const std::vector<Attribute>& attrs) {
+	static bool hasAttrInVector(const std::vector<Attribute>& attrs) {
 		return getAttrInVector<Attr>(attrs).has_value();
 	}
 

@@ -83,7 +83,7 @@ namespace compiler::helios::mangler {
 		 * when it has to be mangled. For `extern("C")` it is the `@c_symbol_name` when one is set.
 		 * @note: See mangling-scheme.md for details
 		 */
-		base::Optional<base::StrID> unmangledName(
+		static base::Optional<base::StrID> unmangledName(
 			query::Context& ctx, const KeyOf_MangledSymbol& key
 		) {
 			if (key.kind != ManglingSymbolKind::Standard) {
@@ -110,7 +110,7 @@ namespace compiler::helios::mangler {
 		 * @brief A shorter representation of a number in base-62, used to save space
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string compactNumber(u64 number) {
+		static std::string compactNumber(u64 number) {
 			if (number == 0) return "_";
 
 			constexpr u64 BASE = BASE_62_DIGITS.size();
@@ -126,7 +126,7 @@ namespace compiler::helios::mangler {
 			return ret;
 		}
 
-		constexpr base::Optional<const char> findExtendedChar(std::string_view str) {
+		constexpr static base::Optional<const char> findExtendedChar(std::string_view str) {
 			auto it = std::ranges::find_if_not(str, [](char c) -> bool {
 				return c == '_' || BASE_62_DIGITS.contains(c);
 			});
@@ -137,7 +137,7 @@ namespace compiler::helios::mangler {
 				return std::nullopt;
 		}
 
-		auto quoteExtendedChar(const char c) {
+		static auto quoteExtendedChar(const char c) {
 			if (std::isprint(static_cast<unsigned char>(c)))
 				return base::strConcat(
 					'\'', c, "' (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
@@ -154,7 +154,7 @@ namespace compiler::helios::mangler {
 		 * it will be prefixed with 'U' and punycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
-		void identifier(std::stringstream& ss, std::string_view name) {
+		static void identifier(std::stringstream& ss, std::string_view name) {
 			// @TODO: #3285 add backreferences
 			if (not findExtendedChar(name)) {
 				ss << name.size() << name;
@@ -173,7 +173,7 @@ namespace compiler::helios::mangler {
 		 * it will be prefixed with 'U' and punycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string identifier(std::string_view name) {
+		static std::string identifier(std::string_view name) {
 			std::stringstream ss;
 			identifier(ss, name);
 			return ss.str();
@@ -183,7 +183,7 @@ namespace compiler::helios::mangler {
 		 * @brief Returns package/module/script prefix for the symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string pathPrefix(query::Context& ctx, SymID symbol_id) {
+		static std::string pathPrefix(query::Context& ctx, SymID symbol_id) {
 			// @future: add scripts after #2762
 			std::stringstream ret_ss;
 
@@ -247,7 +247,7 @@ namespace compiler::helios::mangler {
 			return ret;
 		}
 
-		std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
+		static std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
 			// @TODO: #2643 rething compiler-generated symbols
 			// @TODO: #3285 add backreferences
 			return base::strConcat("M", mod_id.id);
@@ -258,7 +258,7 @@ namespace compiler::helios::mangler {
 		 * character, or an empty `Optional` if the codepoint isn't one of them.
 		 * @note: See mangling-scheme.md's `<fixed-operator-tag>` for details
 		 */
-		base::Optional<std::string_view> fixedOperatorTag(UChar32 codepoint) {
+		static base::Optional<std::string_view> fixedOperatorTag(UChar32 codepoint) {
 			switch (codepoint) {
 			case U'!':
 				return std::string_view{ "nt" };
@@ -307,7 +307,7 @@ namespace compiler::helios::mangler {
 		 * `"x" <hex-codepoint> "_"`.
 		 * @note: See mangling-scheme.md's `<translit-unit>` for details
 		 */
-		std::string transliterateOperatorName(std::string_view raw_name) {
+		static std::string transliterateOperatorName(std::string_view raw_name) {
 			const icu::UnicodeString unicode_name = icu::UnicodeString::fromUTF8(
 				icu::StringPiece(raw_name.data(), static_cast<i32>(raw_name.size()))
 			);
@@ -331,7 +331,7 @@ namespace compiler::helios::mangler {
 		 * @brief Returns the mangled `<operator-name>` for an operator function/method.
 		 * @note: See mangling-scheme.md's `<operator-name>` for details.
 		 */
-		std::string operatorNameEncoding(const HOUTFunctionDeclaration& fun_decl) {
+		static std::string operatorNameEncoding(const HOUTFunctionDeclaration& fun_decl) {
 			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
 			const char operatoriness_tag = [&] {
@@ -362,7 +362,7 @@ namespace compiler::helios::mangler {
 		 * `<operator-name>` if the symbol is an operator function/method.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string unscopedName(query::Context& ctx, SymID symbol_id) {
+		static std::string unscopedName(query::Context& ctx, SymID symbol_id) {
 			// @TODO: #3285 add backreferences
 			if (isFunctionLike(kind(symbol_id))) {
 				const auto& fun_decl
@@ -378,7 +378,7 @@ namespace compiler::helios::mangler {
 		 * before which can happen for template identifiers
 		 */
 		template<typename ElemT>
-		auto checkAndAddElem(
+		static auto checkAndAddElem(
 			const auto& it, const auto& ancestors, const auto& ancestor, auto& ret, auto& ctx
 		) {
 			if (std::ranges::any_of(
@@ -408,7 +408,7 @@ namespace compiler::helios::mangler {
 		 * responsible for that.
 		 * @note See mangling-scheme.md for details
 		 */
-		std::string symbolName(query::Context& ctx, SymID symbol_id) {
+		static std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			// fast-path for global symbols that are not templates
 			if (scopeDepth(scope(symbol_id)) == 1) return "G" + unscopedName(ctx, symbol_id);
 
@@ -559,7 +559,7 @@ namespace compiler::helios::mangler {
 		 * and all its enclosing scopes (namespaces, classes, functions, etc.)
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string path(query::Context& ctx, SymID symbol_id) {
+		static std::string path(query::Context& ctx, SymID symbol_id) {
 			auto prefix = pathPrefix(ctx, symbol_id);
 			// @TODO: #3285 add backreferences
 			return base::strConcat(std::move(prefix), symbolName(ctx, symbol_id));
@@ -595,7 +595,7 @@ namespace compiler::helios::mangler {
 		 * @brief Determines what type of symbol we are mangling to choose the right encoding
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string symbolEncoding(query::Context& ctx, const SymID& symbol_id) {
+		static std::string symbolEncoding(query::Context& ctx, const SymID& symbol_id) {
 			switch (kind(symbol_id)) {
 			case SymbolKind::Variable:
 			case SymbolKind::Field:
@@ -695,7 +695,7 @@ namespace compiler::helios::mangler {
 		}
 
 		template<ManglingSymbolKind Kind, class SpecialSymbolKey>
-		std::string specialSymbolEncoding(query::Context& ctx, SpecialSymbolKey key);
+		static std::string specialSymbolEncoding(query::Context& ctx, SpecialSymbolKey key);
 
 		template<>
 		std::string specialSymbolEncoding<
@@ -744,7 +744,7 @@ namespace compiler::helios::mangler {
 		 * @brief Get the encoding of a symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string encoding(query::Context& ctx, const KeyOf_MangledSymbol& key) {
+		static std::string encoding(query::Context& ctx, const KeyOf_MangledSymbol& key) {
 			switch (key.kind) {
 			case ManglingSymbolKind::Standard:
 				return internal::symbolEncoding(ctx, std::get<SymID>(key.symbol_key));
@@ -783,7 +783,7 @@ namespace compiler::helios::mangler {
 		 * @brief Returns formatted metadata that will be added to the mangled name
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string optMetadata(base::Optional<std::string> metadata) {
+		static std::string optMetadata(base::Optional<std::string> metadata) {
 			if (!metadata.has_value()) return "";
 			return "$" + metadata.value();
 		}
@@ -830,7 +830,7 @@ namespace compiler::helios::mangler {
 			}
 		}
 
-		std::string mangleString(std::string_view sv) {
+		static std::string mangleString(std::string_view sv) {
 			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
 			std::string           hex_str;
 			hex_str.reserve(sv.size() * 2);

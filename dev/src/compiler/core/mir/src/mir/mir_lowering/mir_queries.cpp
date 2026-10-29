@@ -136,7 +136,7 @@ namespace compiler::mir {
 	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable
 	 * ones.
 	 */
-	Function eliminateUnreachable(Function function) {
+	static Function eliminateUnreachable(Function function) {
 		std::unordered_set<BlockID> reachable;
 		std::stack<BlockID>         stack;
 
@@ -178,7 +178,7 @@ namespace compiler::mir {
 	 * * if block is reachable and function returns value, throws missing return error
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	query::QResult<Function> finalizeFunctionEnd(query::Context& ctx, Function function) {
+	static query::QResult<Function> finalizeFunctionEnd(query::Context& ctx, Function function) {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);

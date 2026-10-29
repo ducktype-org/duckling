@@ -304,7 +304,7 @@ namespace compiler::helios {
 		return out;
 	}
 
-	std::vector<Attribute> attributesFromPSTStatement(
+	static std::vector<Attribute> attributesFromPSTStatement(
 		query::Context& ctx, pst::Access<pst::Stmt> stmt
 	) {
 		std::vector<Attribute> result;
@@ -370,7 +370,7 @@ namespace compiler::helios {
 	 * @note This has to be consistent with QuerySpecifiersOfSymbol and getScopeKind,
 	 * which treat the same elements as transparent.
 	 */
-	base::Optional<pst::AccessLocked<pst::LangElement>> maybeOwnerClassElement(
+	static base::Optional<pst::AccessLocked<pst::LangElement>> maybeOwnerClassElement(
 		query::Context& ctx, pst::Access<pst::Stmt> stmt
 	) {
 		return std::invoke(
@@ -436,7 +436,7 @@ namespace compiler::helios {
 	 * that is everything about the symbol that depends on the kind of the statement.
 	 * It should use a visitor, or only depend on StmtKind and virtual methods.
 	 */
-	query::QResult<CommonSymbolData> commonSymbolDataFromStatement(
+	static query::QResult<CommonSymbolData> commonSymbolDataFromStatement(
 		query::Context& ctx, pst::Access<pst::Stmt> stmt
 	) {
 		switch (stmt->getStmtKind()) {
@@ -634,7 +634,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	query::QResult<SymbolData> makeSymbolFromStatement(
+	static query::QResult<SymbolData> makeSymbolFromStatement(
 		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
 	) {
 		// Attribute handling
@@ -695,7 +695,7 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	SymbolData makeSymbolFromPSTElement(
+	static SymbolData makeSymbolFromPSTElement(
 		ScopeID scope, pst::Access<pst::LangElement> element, query::Context& ctx
 	) {
 		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {

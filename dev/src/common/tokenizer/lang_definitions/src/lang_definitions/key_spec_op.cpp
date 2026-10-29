@@ -31,7 +31,7 @@ namespace lang_def {
 
 	KeywordMode getKeywordMode() { return keyword_mode; }
 
-	base::StrID makeStrID(std::string_view view) {
+	static base::StrID makeStrID(std::string_view view) {
 		return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
 	}
 

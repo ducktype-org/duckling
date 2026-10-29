@@ -226,7 +226,7 @@ namespace compiler::backend_llvm {
 	 *       can register the same target twice, causing "Cannot choose between targets"
 	 *       errors in lookupTarget().
 	 */
-	void init() {
+	static void init() {
 		std::call_once(llvm_init_flag, []() {
 			const bool v1 = llvm::InitializeNativeTarget();
 			const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
@@ -236,7 +236,7 @@ namespace compiler::backend_llvm {
 		});
 	}
 
-	void llvmDeinit() {
+	static void llvmDeinit() {
 		// I'm not sure if this is a proper/stable
 		// way to clean up llvm, but it works.
 		// If it ever breaks, a quick-fix is just to comment it out
@@ -261,7 +261,7 @@ namespace compiler::backend_llvm {
 	 *
 	 * @return llvm::LLVMContext&
 	 */
-	llvm::LLVMContext& getLLVMContext() {
+	static llvm::LLVMContext& getLLVMContext() {
 		thread_local llvm::LLVMContext context;
 		return context;
 	}
@@ -277,7 +277,7 @@ namespace compiler::backend_llvm {
 	 */
 	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
 
-	llvm::IntegerType* variantTagType(
+	static llvm::IntegerType* variantTagType(
 		llvm::LLVMContext& context, const tsl::VariantTypeLayout& layout
 	) {
 		return llvm::Type::getIntNTy(
@@ -437,8 +437,9 @@ namespace compiler::backend_llvm {
 	 * @note The LLVM ABI alignment is not enough on its own, because variants lower to packed
 	 * structs of bytes, whose ABI alignment is 1 while their payload does require alignment.
 	 */
-	auto alignmentFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
-		-> llvm::Align {
+	static auto alignmentFromLayout(
+		const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout
+	) -> llvm::Align {
 		const auto tsl_alignment = llvm::Align(layout->getAlignment().asInt());
 		const auto abi_alignment
 			= module->getDataLayout().getABITypeAlign(typeFromLayout(module, layout));
@@ -449,7 +450,7 @@ namespace compiler::backend_llvm {
 	 * @brief Creates a stack allocation for a value of the given layout, aligned as
 	 * `alignmentFromLayout` requires.
 	 */
-	auto createAllocaForLayout(
+	static auto createAllocaForLayout(
 		const Ref<llvm::Module>     module,
 		llvm::IRBuilder<>&          builder,
 		const CRef<tsl::TypeLayout> layout,
@@ -464,7 +465,7 @@ namespace compiler::backend_llvm {
 	 * @brief This only inserts a global variable declaration if it doesn't exist.
 	 * It does not set any initializer or linkage.
 	 */
-	Ref<llvm::Constant> getOrInsertGlobalVariable(
+	static Ref<llvm::Constant> getOrInsertGlobalVariable(
 		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
 		const auto mangled_name = lir_global.mangled_name.strView();
@@ -481,7 +482,7 @@ namespace compiler::backend_llvm {
 	 * Sets the initial value to null (this function does not handle constructors and proper
 	 * initialization),
 	 */
-	Ref<llvm::GlobalVariable> addGlobalVariable(
+	static Ref<llvm::GlobalVariable> addGlobalVariable(
 		const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global
 	) {
 		getOrInsertGlobalVariable(module, lir_global.global);
@@ -1807,7 +1808,7 @@ namespace compiler::backend_llvm {
 		return result;
 	}
 
-	llvm::Function* addFunctionToModuleInternal(
+	static llvm::Function* addFunctionToModuleInternal(
 		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
 		LIRFunction2LLVM lir2llvm{ ctx, lir_function, module->module.refMut() };

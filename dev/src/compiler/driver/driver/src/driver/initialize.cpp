@@ -255,7 +255,7 @@ namespace compiler::driver {
 	 * The module is otherwise unused.
 	 * @TODO: #2762 probably remove this
 	 */
-	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
+	static std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
 		auto package_root_file
 			= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
 		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{

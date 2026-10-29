@@ -42,7 +42,7 @@ namespace compiler::helios {
 	 * @return The string literal value, or a query::Failed if extraction fails (there is no string
 	 * literal there).
 	 */
-	query::QResult<base::StrID> getStrFromCallArg(
+	static query::QResult<base::StrID> getStrFromCallArg(
 		query::Context& ctx, pst::AccessLocked<pst::CallArgument> arg
 	) {
 		auto call_arg = arg.unlock(ctx);
@@ -168,7 +168,7 @@ namespace compiler::helios {
 		}
 	}
 
-	QuerySymbolABI_Result getSymbolABI(
+	static QuerySymbolABI_Result getSymbolABI(
 		query::Context& ctx, SymID sym, pst::AccessLocked<pst::CallList> extern_args
 	) {
 		std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args.unlock(ctx)->begin(),

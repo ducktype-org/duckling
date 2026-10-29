@@ -216,7 +216,7 @@ namespace compiler::mir {
 	}
 
 	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
-	void addScopeFlagForScopes(
+	static void addScopeFlagForScopes(
 		Instruction&                 instr,
 		const LocalsByScopeMap&      locals_by_scope,
 		const std::vector<ScopeRef>& scopes_ordered
@@ -345,7 +345,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Constructs LifetimePassArgs for given function.
 	 */
-	LifetimePassArgs constructLifetimePassArgs(const Function& function) {
+	static LifetimePassArgs constructLifetimePassArgs(const Function& function) {
 		LifetimePassArgs args;
 
 		args.locals_by_scope = collectLocalsByScope(function);

@@ -21,7 +21,7 @@
 */
 #include <printer/stream_printer.hpp>
 
-void testPrinter() {
+static void testPrinter() {
 	printer::StreamPrinter::print({
 		{ "Hello, World! This is the first message.\n" },
 		{ "R", printer::Color::BrightRed },

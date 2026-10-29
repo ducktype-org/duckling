@@ -7,7 +7,7 @@
 #include "debug_print.hpp"
 
 namespace tpc {
-	void identifierDprint(base::StrID value, std::ostream& out) {
+	static void identifierDprint(base::StrID value, std::ostream& out) {
 		// @TODO: change Name to Identifier
 		out << "{\"Name\": ";
 		if (value.isBad())

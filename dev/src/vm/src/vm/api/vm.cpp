@@ -17,16 +17,16 @@
 #define REQUEST(VALUE) Supervisor::get().doRequest(pid, api::request::VALUE)
 
 namespace vm::api {
-	void ignoreResponse([[maybe_unused]] const Response& response) {}
+	static void ignoreResponse([[maybe_unused]] const Response& response) {}
 
 	template<class T>
-	std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
+	static std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
 		if (std::holds_alternative<T>(response)) return std::get<T>(response);
 		return std::unexpected(WrongResponse{});
 	}
 
 	template<class T>
-	std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
+	static std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
 		if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
 		return std::unexpected(WrongResponse{});
 	}

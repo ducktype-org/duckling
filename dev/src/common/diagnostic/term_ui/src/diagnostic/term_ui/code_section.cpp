@@ -18,7 +18,7 @@ namespace term_ui {
 
 	enum class HighlightResult { LowerHighlight, LowerMessageMedium, LowerMessageLast, Success };
 
-	HighlightResult fitLoweredMessage(
+	static HighlightResult fitLoweredMessage(
 		Line& str, u64 beg, const dia::term_ui_view::PointerMessage& msg
 	) {
 		if (!str.tryInsert(beg, intoLinePiece(msg, PointerStage::Message))) {
@@ -39,7 +39,7 @@ namespace term_ui {
 	 * @return HighlightResult information about the next state (meaning what to render next) of the
 	 * highlight
 	 */
-	HighlightResult renderHighlightAndMoveToNextState(
+	static HighlightResult renderHighlightAndMoveToNextState(
 		Line&                                                        str,
 		Highlight                                                    highlight,
 		u64                                                          line_no,

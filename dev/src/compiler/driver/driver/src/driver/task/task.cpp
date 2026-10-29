@@ -334,7 +334,7 @@ namespace compiler::driver {
 	 * @brief Helper function that merges global linking options with task-specific linking options
 	 * for a given`BuildTarget`.
 	 */
-	BuildTarget mergeBuildTargetWithGlobalOptions(
+	static BuildTarget mergeBuildTargetWithGlobalOptions(
 		const BuildTarget& raw_target, const options_types::StdLibOptions& stdlib_options
 	) {
 		variant_match(raw_target) {

@@ -34,7 +34,7 @@ namespace compiler::backend_llvm {
 	/**
 	 * @brief Convert our OptimizationLevel enum to LLVM's OptimizationLevel for IR generation.
 	 */
-	llvm::OptimizationLevel toLLVMOptLevel(const LLVMOptimizationLevel level) {
+	static llvm::OptimizationLevel toLLVMOptLevel(const LLVMOptimizationLevel level) {
 		switch (level) {
 		case LLVMOptimizationLevel::O0:
 			return llvm::OptimizationLevel::O0;
@@ -55,7 +55,7 @@ namespace compiler::backend_llvm {
 	/**
 	 * @brief Run LLVM IR optimization passes on the module.
 	 */
-	void runOptimizationPasses(
+	static void runOptimizationPasses(
 		const Ref<llvm::Module>        m,
 		const Ref<llvm::TargetMachine> target_machine,
 		const LLVMOptimizationLevel    level
@@ -85,7 +85,7 @@ namespace compiler::backend_llvm {
 		module_pass_manager.run(*m, module_analysis_manager);
 	}
 
-	void emitCode(
+	static void emitCode(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
 		Ref<llvm::raw_pwrite_stream> output_stream,
@@ -101,7 +101,7 @@ namespace compiler::backend_llvm {
 		output_stream->flush();
 	}
 
-	void emitObject(
+	static void emitObject(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
 		Ref<llvm::raw_pwrite_stream> output_stream
@@ -109,7 +109,7 @@ namespace compiler::backend_llvm {
 		emitCode(m, target_machine, output_stream, llvm::CodeGenFileType::ObjectFile);
 	}
 
-	void emitAssembly(
+	static void emitAssembly(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
 		Ref<llvm::raw_pwrite_stream> output_stream

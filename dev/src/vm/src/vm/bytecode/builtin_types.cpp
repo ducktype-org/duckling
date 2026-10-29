@@ -27,7 +27,7 @@ namespace vm::code {
 		return instance;
 	}
 
-	const BuiltinTypesMap& rawBuiltins() {
+	const static BuiltinTypesMap& rawBuiltins() {
 		const static BuiltinTypesMap types = {
 			{ base::StrID("byte"), TypeOfData(PrimitiveType(base::StrID("byte"), Bytes{ 1 })) },
 			{ base::StrID("i8"), TypeOfData(PrimitiveType(base::StrID("i8"), Bytes{ 1 })) },

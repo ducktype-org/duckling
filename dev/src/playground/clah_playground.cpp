@@ -85,7 +85,7 @@
 #include <iostream>
 #include <string>
 
-void showConfig(const clah::ParsingResult& result) {
+static void showConfig(const clah::ParsingResult& result) {
 	std::cout << "Configuration:\n";
 	std::cout << "  Verbose mode: " << std::boolalpha << result.isFlag("verbose") << "\n";
 	if (auto user = result.getValue<std::string>("user"))
@@ -94,10 +94,12 @@ void showConfig(const clah::ParsingResult& result) {
 		std::cout << "  Running as default user.\n";
 }
 
-void greet(i64 n, const std::string& name) { std::cout << n << ": Hello, " << name << "!\n"; }
+static void greet(i64 n, const std::string& name) {
+	std::cout << n << ": Hello, " << name << "!\n";
+}
 
 // Just a helper to avoid duplication.
-void multiGreeter(const clah::ParsingResult& result) {
+static void multiGreeter(const clah::ParsingResult& result) {
 	if (result.isFlag("verbose")) std::cout << "Verbose mode is on for 'greet'.\n";
 
 	std::vector<std::string> names;
@@ -120,7 +122,7 @@ void multiGreeter(const clah::ParsingResult& result) {
 	std::cout << '\n';
 }
 
-clah::Clah getClahForPlayground() {
+static clah::Clah getClahForPlayground() {
 	return clah::Clah("clah_playground", "A cool cli app to demonstrate Clah.")
 	    .setDefaultValueParser(clah::StringParser::make("extra_names"))
 	    .setPreHandler([](const clah::ParsingResult& result) {

@@ -39,7 +39,7 @@ namespace abi::calling_conv {
 	 * offsets like in the original nested structure. This offset information is lost once we
 	 * flatten the structures.
 	 */
-	std::vector<types::AbiType> flattenType(
+	static std::vector<types::AbiType> flattenType(
 		const TargetABI& target, const types::AbiType& type, layout::ComputedLayout& expanded_layout
 	) {
 		std::vector<types::AbiType> result;
@@ -123,7 +123,7 @@ namespace abi::calling_conv {
 	 * @brief Combine into struct with two fields
 	 * with the algorithm from x86-64 ABI.
 	 */
-	types::AbiType combineToLowHighStruct(
+	static types::AbiType combineToLowHighStruct(
 		const TargetABI&                   target,
 		const std::vector<types::AbiType>& flattened,
 		const layout::ComputedLayout&      expanded_layout
@@ -249,7 +249,7 @@ namespace abi::calling_conv {
 	/**
 	 * @brief Is homogeneous floating-point aggregate" (HFA) for Aarch64.
 	 */
-	bool isHomogeneous(const std::vector<types::AbiType>& types) {
+	static bool isHomogeneous(const std::vector<types::AbiType>& types) {
 		if (types.size() > 4 or types.size() == 0) return false;
 
 		auto& first = types.at(0);

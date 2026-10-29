@@ -23,7 +23,7 @@
 namespace dia {
 
 	template<typename T>
-	T getNewID() {
+	static T getNewID() {
 		static T current_id = 1;
 		return current_id++;
 	}
@@ -486,7 +486,7 @@ namespace dia {
 	}
 
 	// Forward declaration needed for visitEvaluatedTemplateComponent
-	Box<state::Component> evaluateTemplateIfComponent(
+	static Box<state::Component> evaluateTemplateIfComponent(
 		DiagnosticEvaluationContext&             thread_ctx,
 		const template_file::DiagnosticTemplate& generic_template,
 		const dia_args::Message&                 message
@@ -543,7 +543,7 @@ namespace dia {
 		);
 	}
 
-	state::Message evaluateMessage(
+	static state::Message evaluateMessage(
 		DiagnosticEvaluationContext&          thread_ctx,
 		const template_file::MessageTemplate& message_template,
 		const dia_args::Message&              message
@@ -601,7 +601,7 @@ namespace dia {
 	 * @brief Evaluates a diagnostic message template into a state message if the template is a
 	 * message template.
 	 */
-	state::Message evaluateTemplateIfMessage(
+	static state::Message evaluateTemplateIfMessage(
 		DiagnosticEvaluationContext&             thread_ctx,
 		const template_file::DiagnosticTemplate& generic_template,
 		const dia_args::MessageID&               message_id,
@@ -629,7 +629,7 @@ namespace dia {
 	 * @brief Evaluates a diagnostic pointer message template into a state pointer message if the
 	 * template is a pointer message template.
 	 */
-	state::PointerMessage evaluateTemplateIfPointerMessage(
+	static state::PointerMessage evaluateTemplateIfPointerMessage(
 		DiagnosticEvaluationContext&             thread_ctx,
 		const template_file::DiagnosticTemplate& generic_template,
 		const dia_args::Message&                 pointer_message,
@@ -718,7 +718,7 @@ namespace dia {
 	 * This is left to right tree traversal of attaches messages and linkes inside messages.
 	 * First the attached messages are traversed, then the linked messages inside the message.
 	 */
-	void getMessageOrder(
+	static void getMessageOrder(
 		const DiagnosticEvaluationContext& ctx,
 		const std::vector<state::Message>& evaluated_messages,
 		std::vector<state::MessageID>&     output,

@@ -80,7 +80,7 @@ namespace {
 
 }
 
-void appendHelpEntry(
+static void appendHelpEntry(
 	std::stringstream& output, const std::string& name, const std::string& description, int padding
 ) {
 	if (padding < name.size() + 2)
@@ -91,7 +91,7 @@ void appendHelpEntry(
 	output << description << '\n';
 }
 
-std::string generateCommandArgumentsBlock(
+static std::string generateCommandArgumentsBlock(
 	const std::vector<clah::PositionalParameter>& positional_parameters,
 	int                                           padding = DEFAULT_PADDING
 ) {
@@ -113,7 +113,7 @@ std::string generateCommandArgumentsBlock(
 	return output.str();
 }
 
-std::string generateOptionsBlock(
+static std::string generateOptionsBlock(
 	const std::string&                  title,
 	const std::vector<clah::Parameter>& params,
 	int                                 padding = DEFAULT_PADDING
@@ -150,7 +150,7 @@ std::string generateOptionsBlock(
 	return output.str();
 }
 
-std::string generateSubcommandsBlock(
+static std::string generateSubcommandsBlock(
 	const std::vector<clah::Clah>& subcommands, int padding = DEFAULT_PADDING
 ) {
 	if (subcommands.empty()) return "";

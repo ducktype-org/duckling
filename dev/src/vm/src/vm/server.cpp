@@ -32,7 +32,7 @@ namespace {
 }  // namespace
 
 template<class T, class E>
-crow::response toResponse(const std::expected<T, E>& x) {
+static crow::response toResponse(const std::expected<T, E>& x) {
 	static auto convert = []([[maybe_unused]]
 	                         const auto& v) { return crow::response(200, nlohmann::json(v)); };
 
@@ -41,7 +41,7 @@ crow::response toResponse(const std::expected<T, E>& x) {
 }
 
 template<class E>
-crow::response toResponse(const std::expected<void, E>& x) {
+static crow::response toResponse(const std::expected<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
 
 	if (x.has_value()) return convert();

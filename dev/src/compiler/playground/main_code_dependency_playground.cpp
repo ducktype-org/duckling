@@ -20,7 +20,7 @@
 
 #include <iostream>
 
-void printContextErrors() {
+static void printContextErrors() {
 	// Context errors are now handled via the interactive logger.
 }
 
@@ -30,7 +30,7 @@ void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {
 		std::cerr << "    > query: " << i.q_id.getData().name << ",  key: " << i.hash.val << "\n";
 }
 
-int notMain(int argc, const char* const* argv) {
+static int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
 
 

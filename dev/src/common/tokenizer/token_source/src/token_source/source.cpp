@@ -22,7 +22,7 @@ namespace tokenizer {
 	 * @return usize - 0 if there is new line, otherwise number of characters that together form a
 	 * newline
 	 */
-	usize isNewLine(const std::span<const lexer::Char> where) {
+	static usize isNewLine(const std::span<const lexer::Char> where) {
 		auto& newline = unicode::Classifications::newline;
 		if (where.size() > 0 && where[0].is(newline)) {
 			if (where.size() > 1 && where[0].is(0x0D) && where[1].is(0x0A)) return 2;

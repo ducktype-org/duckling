@@ -15,7 +15,7 @@
 
 namespace compiler::mir {
 
-	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
+	static base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
 		base::HashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
 		for (auto& local: fun.local_list) {
 			if (local.helios_id.empty()) continue;

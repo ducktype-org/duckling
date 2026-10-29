@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 	 * @param square_call The `[...]` call holding the template arguments.
 	 * @return The symbol of the baked template.
 	 */
-	query::QResult<SymID> bakeTemplate(
+	static query::QResult<SymID> bakeTemplate(
 		query::Context& query_ctx, SymID template_sym_id, pst::Access<pst::expr::Call> square_call
 	) {
 		CORE_ASSERT(

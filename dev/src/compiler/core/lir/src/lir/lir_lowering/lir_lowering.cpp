@@ -55,7 +55,7 @@ namespace compiler::lir {
 		return function->queryUnstablePerfectHash();
 	}
 
-	LIRAbi getLIRAbi(
+	static LIRAbi getLIRAbi(
 		query::Context& ctx, helios::SymID sym, const tsl::FunctionalTypeLayout& function_layout
 	) {
 		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
@@ -115,7 +115,7 @@ namespace compiler::lir {
 	/**
 	 * @brief Computes the layout of the function type @p type and the layouts of its signature.
 	 */
-	FunctionLayouts getFunctionLayouts(query::Context& ctx, tsh::FunctionAbstractType type) {
+	static FunctionLayouts getFunctionLayouts(query::Context& ctx, tsh::FunctionAbstractType type) {
 		CRef<tsl::TypeLayout> layout
 			= &ctx.query<tsl::QueryAbstractTypeLayout>(type)->valueOrPanicMsg(
 				"layout query failed at LIR stage"
@@ -126,7 +126,9 @@ namespace compiler::lir {
 			     .return_type_layout = functional.getReturnLayout(ctx) };
 	}
 
-	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
+	static FunctionLiteral getFunctionLiteralfromHELIOSID(
+		query::Context& ctx, helios::SymID helios_id
+	) {
 		tsh::FunctionAbstractType type
 			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
 		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
@@ -161,7 +163,7 @@ namespace compiler::lir {
 	 * @param signed_version Whether to use a signed version of the operation, if relevant.
 	 * @return Operation
 	 */
-	Operation mir2lirOperation(const mir::Operation mir_operation, const bool signed_version) {
+	static Operation mir2lirOperation(const mir::Operation mir_operation, const bool signed_version) {
 		switch (mir_operation) {
 		// Variable Assignment
 		case mir::Operation::Assign:
@@ -279,7 +281,7 @@ namespace compiler::lir {
 	/**
 	 * @brief Maps a MIR meta kind to its LIR counterpart (1:1).
 	 */
-	MetaKind mir2lirMetaKind(mir::MetaKind kind) {
+	static MetaKind mir2lirMetaKind(mir::MetaKind kind) {
 		using enum mir::MetaKind;
 		switch (kind) {
 		case CreateBox:
