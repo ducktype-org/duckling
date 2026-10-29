@@ -142,12 +142,11 @@ namespace compiler::helios::code {
 
 		auto arg_pst = (*args->begin()).unlock(ctx)->getArg().unlock(ctx)->getExpr();
 
-		auto meta_res = canCoerceToMeta(ctx, base->expression_type);
-		UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
+		const tsh::coercions::Coercion meta_coercion = coercions::coercionToMeta(ctx, base.ref());
 
 		// If base is coercible to meta, this is an array type creation.
-		if (meta_coercion_res.isValid()) {
-			auto coerced_base = meta_coercion_res.coerce(ctx, std::move(base));
+		if (meta_coercion.isValid()) {
+			auto coerced_base = coercions::applyCoercion(ctx, meta_coercion, std::move(base));
 			return processArrayTypeCreation(ctx, std::move(coerced_base), arg_pst);
 		}
 

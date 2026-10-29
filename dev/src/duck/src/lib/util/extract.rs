@@ -20,7 +20,7 @@ impl<T> Extract<T> for LockResult<T> {
         match self {
             Self::Ok(value) => value,
             Self::Err(poison) => {
-                warn!(error = %poison, "poisoned");
+                warn!(error = %poison, "the mutex is poisoned, using its data anyway");
                 poison.into_inner()
             }
         }

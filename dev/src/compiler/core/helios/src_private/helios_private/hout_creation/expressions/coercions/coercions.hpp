@@ -6,8 +6,7 @@
 
 /**
  * @file coercions.hpp
- * @brief Implicit coercions: deciding whether a value of one type may be handed over where another
- * type is expected, and building the expression that performs it.
+ * @brief Build an expression which performs a coercion which was decided by the type system.
  */
 #pragma once
 
@@ -15,192 +14,115 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/tsh/coercions/coercion_mode.hpp>
+#include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/box_or_ref.hpp>
 
-#include <diagnostic/message.hpp>
-#include <query_framework/context/context.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/query_result.hpp>
 
-namespace compiler::helios {
-	namespace code {
-		// Forward declaration for temporary friend declaration.
-		// @TODO: #3631 Remove the friend and this forward declaration.
-		Box<Expr> castAs(
-			query::Context&                        ctx,
-			Box<Expr>                              value,
-			tsh::SymbolType<>                      as_type,
-			pst::Access<pst::expr::BinaryOperator> stmt
-		);
-	}
+#include <cstdint>
 
-	class Coercion;
-
+namespace compiler::helios::coercions {
+	using tsh::coercions::Coercion;
 	using tsh::coercions::CoercionMode;
 
 	/**
-	 * @brief Checks if a coercion of value described by from `from` to `to` is possible and returns
-	 * a function performing the coercion if it is.
-	 *
-	 * In the CoercionMode::ImplicitRefOf mode a direct or boxed value may also be passed where a
-	 * `ref` is expected, which is how the receiver of a method call is passed as its `self`.
+	 * @brief Whether this is the last use of the returned value (i.e. coercion of a value in a
+	 * return statement).
 	 */
-	query::QResult<Coercion> canCoerce(
-		query::Context&              ctx,
-		const tsh::ExpressionType<>& from,
-		const tsh::SymbolType<>&     to,
-		CoercionMode                 mode = CoercionMode::Default
-	);
-
-	/**
-	 * @brief This struct represents a function that performs a coercion from one expression to
-	 * another. It was added to make sure that the coercion is always valid (by calling
-	 * `canCoerce` first), and it checks if the expression being coerced and desired type
-	 * is the same as the one validated.
-	 */
-	class Coercion final {
-	public:
-		/**
-		 * The symbol type that was validated to be coercible.
-		 */
-		const tsh::SymbolType<> validated_from;
-
-		/**
-		 * The target type of the coercion.
-		 */
-		const tsh::SymbolType<> to;  // target type
-
-		base::Optional<InvalidCoercionReason> invalid_reason;
-
-		/**
-		 * Whether this coercion moves the source value to the new owner implicitly. This has to be
-		 * wrapped by an implicit `MoveExpr`.
-		 */
-		const bool transfers_ownership;
-
-		/**
-		 * Whether the source value is implicitly taken by reference first. This has to be wrapped
-		 * by an implicit `RefOfExpr`.
-		 */
-		const bool implicit_ref_of;
-
-		[[nodiscard]]
-		constexpr bool isValid() const noexcept {
-			return invalid_reason.empty();
-		}
-
-		[[nodiscard]]
-		constexpr bool isInvalid() const {
-			return !isValid();
-		}
-
-		/**
-		 * Check if the provided expression has the same type as the one validated.
-		 */
-		[[nodiscard]] bool isValidFor(CRef<code::Expr> expr) const noexcept {
-			return isValid() && expr->expression_type.getSymbolType() == validated_from;
-		}
-
-		[[nodiscard]] bool isEmptyCoercion() const noexcept {
-			// The implicit `MoveExpr` still has to be inserted, even when the types match.
-			if (transfers_ownership) return false;
-			if (implicit_ref_of) return false;
-			return validated_from == to
-			    || validated_from.withMutability(tsh::Mutability::Immutable) == to;
-		}
-
-		[[nodiscard]]
-		InvalidCoercionReason getInvalidReason() const {
-			CORE_ASSERT(
-				isInvalid(), "Attempting to get the invalid reason from a valid CoercionResult."
-			);
-			return invalid_reason.value();
-		}
-
-		/**
-		 * Main function that creates a coerced expression from the old one.
-		 */
-		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const;
-
-		/**
-		 * Same as `coerce` but accepts a reference to the expression instead of taking ownership.
-		 * This is useful when we don't know if the coercion will actually need to modify the
-		 * expression or not (e.g., in case of empty coercion), so we can avoid unnecessary cloning.
-		 */
-		[[nodiscard]] BoxOrCRef<code::Expr> coerceFromRef(
-			query::Context& ctx, CRef<code::Expr> from
-		) const;
-
-		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
-			return { from_and_to, from_and_to, {}, false, false };
-		}
-
-	private:
-		Coercion(
-			tsh::SymbolType<>                     validated_from,
-			tsh::SymbolType<>                     to,
-			base::Optional<InvalidCoercionReason> invalid,
-			bool                                  transfers_ownership,
-			bool                                  implicit_ref_of
-		):
-			  validated_from(validated_from),
-			  to(to),
-			  invalid_reason(invalid),
-			  transfers_ownership(transfers_ownership),
-			  implicit_ref_of(implicit_ref_of) {}
-
-		static Coercion invalid(
-			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
-		) {
-			return { validated_from, to, invalid, false, false };
-		}
-
-		static Coercion valid(
-			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, bool transfers_ownership
-		) {
-			return { validated_from, to, {}, transfers_ownership, false };
-		}
-
-		friend query::QResult<Coercion> canCoerce(
-			query::Context&              ctx,
-			const tsh::ExpressionType<>& from,
-			const tsh::SymbolType<>&     to,
-			CoercionMode                 mode
-		);
-
-		// @TODO: #3631 Remove the friend
-		friend Box<code::Expr> code::castAs(
-			query::Context&                        ctx,
-			Box<code::Expr>                        value,
-			tsh::SymbolType<>                      as_type,
-			pst::Access<pst::expr::BinaryOperator> stmt
-		);
+	enum class HandOverKind : uint8_t {
+		Regular,
+		/// This is the last use of the value, so it's moved implicitly.
+		LastUse,
 	};
 
 	/**
-	 * @brief Checks if a coercion of the value described by `from` to the meta type is possible and
-	 * returns a function performing the coercion if it is.
-	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
+	 * @brief The coercion of an expression @p from into @p target type.
+	 *
+	 * @param kind Whether this is the last use of the value.
+	 * @param mode Which coercions the location allows (e.g. `self` of a method call, which may be
+	 * implicitly taken by `ref`).
 	 */
-	query::QResult<Coercion> canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from);
+	[[nodiscard]] Coercion coercionOf(
+		query::Context&          ctx,
+		CRef<code::Expr>         from,
+		const tsh::SymbolType<>& target,
+		HandOverKind             kind = HandOverKind::Regular,
+		CoercionMode             mode = CoercionMode::Default
+	);
 
 	/**
-	 * @brief Checks whether `expr` can be coerced to `expected_type`. Returns a coerced expression
-	 * when the coercion is valid, logs an error when `expr` is not coercible to the given type.
-	 * Logs errors via `error_overrides` if ones are provided.
+	 * @brief The coercion of @p from into the meta type.
+	 */
+	[[nodiscard]] Coercion coercionToMeta(query::Context& ctx, CRef<code::Expr> from);
+
+	/**
+	 * @brief The coercion of @p from into @p target type, logging why it was
+	 * refused if it was, see `logCoercionFailure`.
 	 *
-	 * @note This is a convenience wrapper around `canCoerce` + `coercion.coerce()` for the common
-	 * case of coercing expressions with a `Box<code::Expr>` in hand, which is usual when handling
-	 * compiler generated code.
-	 * @return The coerced expression or an failed qresult on error or when coercion was invalid.
+	 * @return The valid coercion, or a failed result when the coercion was refused.
+	 */
+	query::QResult<Coercion> validCoercionOf(
+		query::Context&                     ctx,
+		CRef<code::Expr>                    from,
+		const tsh::SymbolType<>&            target,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		const CoercionErrorOverrides&       error_overrides      = {},
+		HandOverKind                        kind                 = HandOverKind::Regular
+	);
+
+	/**
+	 * @brief Same as above, but for a value that is not an expression (e.g. a variant alternative
+	 * read out by a `match` case), described by @p from `ValueSource`.
+	 */
+	query::QResult<Coercion> validCoercionOf(
+		query::Context&                     ctx,
+		const tsh::coercions::ValueSource&  from,
+		const tsh::SymbolType<>&            target,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		const CoercionErrorOverrides&       error_overrides      = {}
+	);
+
+	/**
+	 * @brief Builds the expression that performs the @p coercion on @p from.
+	 *
+	 * The coercion has to be valid and created for the value @p from produces.
+	 */
+	[[nodiscard]] Box<code::Expr> applyCoercion(
+		query::Context& ctx, const Coercion& coercion, Box<code::Expr> from
+	);
+
+	/**
+	 * @brief Same as above, but for `CRef`.
+	 */
+	[[nodiscard]] BoxOrCRef<code::Expr> applyCoercionFromRef(
+		query::Context& ctx, const Coercion& coercion, CRef<code::Expr> from
+	);
+
+	/**
+	 * @brief Compares a value against zero of its own type, which turns it into a `bool`.
+	 *
+	 * @TODO: #3631 This is currently used by the explicit `as bool` casts of numbers. Remove it
+	 * from the public interface.
+	 */
+	[[nodiscard]] Box<code::Expr> buildZeroCheck(query::Context& ctx, Box<code::Expr> value);
+
+	/**
+	 * @brief Coerces @p expr to @p expected_type, logging the failure if there is one.
+	 *
+	 * Logs errors via @p error_overrides if ones are provided.
+	 * @return The coerced expression, or a failed result when the coercion was refused.
 	 */
 	query::QResult<Box<code::Expr>> coerceFromBox(
 		query::Context&                     ctx,
 		Box<code::Expr>                     expr,
-		const tsh::SymbolType<>             expected_type,
+		const tsh::SymbolType<>&            expected_type,
 		dia::StablePosition                 source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos = {},
-		CoercionErrorOverrides              error_overrides      = {}
+		const CoercionErrorOverrides&       error_overrides      = {}
 	);
 }

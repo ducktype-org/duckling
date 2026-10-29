@@ -35,7 +35,7 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, FetchSuccess};
@@ -222,7 +222,7 @@ impl SolverFreeze {
             .still_satisfies_dep(manifest_dependency, fetcher)
             .await?
         {
-            debug!("was satisfied before, but now is not");
+            debug!(target: "duck::solver", "was satisfied before, but now is not");
             return Ok(false);
         }
         let forced_child_features = manifest_dependency.enabled_features(pkg_features);
@@ -290,7 +290,7 @@ impl SolverFreeze {
                     .retain(|_, realization| still_satisfied_pkgs.contains(realization));
             }
             let is_satisfied = still_satisfied_pkgs.contains(pkg);
-            debug!(?pkg, %is_root_package, %is_satisfied);
+            trace!(target: "duck::solver", ?pkg, %is_root_package, %is_satisfied);
             is_satisfied || is_root_package
         });
         Ok(())
@@ -343,15 +343,16 @@ mod test {
     use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops::PathOpsExt;
+    use crate::util::path_ops::{touch, try_fsync_dir, write_file};
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
-        manifest.touch().unwrap();
-        manifest.write(contents).unwrap();
-        dir.path().try_fsync_dir().unwrap();
+
+        touch(&manifest).unwrap();
+        write_file(&manifest, contents).unwrap();
+        try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
     }
 

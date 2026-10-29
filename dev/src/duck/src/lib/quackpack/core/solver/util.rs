@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
@@ -105,12 +105,12 @@ impl PackageId {
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
-            debug!("doesn't satisfy versions");
+            trace!(target: "duck::solver", "does not satisfy the versions");
             return Ok(false);
         }
         let source = dependency.source();
         if self.url() != source.url() || self.name() != dependency.name() {
-            debug!(other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
+            trace!(target: "duck::solver", other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
             return Ok(false);
         }
         self.origin()
@@ -164,15 +164,15 @@ mod test {
     use crate::quackpack::core::solver::util::get_possible_realizations;
     use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops::PathOpsExt;
+    use crate::util::path_ops::{touch, try_fsync_dir, write_file};
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
-        manifest.touch().unwrap();
-        manifest.write(contents).unwrap();
-        dir.path().try_fsync_dir().unwrap();
+        touch(&manifest).unwrap();
+        write_file(&manifest, contents).unwrap();
+        try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
     }
 

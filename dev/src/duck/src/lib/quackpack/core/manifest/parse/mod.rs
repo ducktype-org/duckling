@@ -9,13 +9,12 @@ use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 use itertools::Itertools;
-use tracing::trace;
 
 use crate::quackpack::core::Package;
 use crate::quackpack::core::lints::errors::{Errors, UnusedKey};
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 mod dependency;
@@ -37,9 +36,8 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
-#[tracing::instrument(skip(ctx))]
+#[tracing::instrument(level = "debug", skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings, Errors)> {
-    trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the user manifest at `{}`",
@@ -169,7 +167,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
     let package_root = path.parent().with_context_internal(|| {
         format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
     })?;
-    let content = path.read_to_string()?;
+    let content = read_from_path_to_string(path)?;
     let mut warnings = Warnings::default();
     let mut errors = Errors::default();
     let schema = parse_schema(&content, &mut errors)?;

@@ -28,7 +28,7 @@ namespace pst::expr {
 	public:
 		ELEMENT_CLONE_DECL(BinaryOperator);
 
-		explicit BinaryOperator(const LangParserState& state, i64 precedence):
+		explicit BinaryOperator(LangElementConstructionData state, i64 precedence):
 			  ExprElement(state, precedence) {}
 
 		~BinaryOperator() override = default;

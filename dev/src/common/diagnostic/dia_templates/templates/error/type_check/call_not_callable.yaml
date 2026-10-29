@@ -1,0 +1,38 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "call_not_callable"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+params:
+  callee_type:
+    description: "The type of the called value."
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+
+
+header_message:
+  - "A value of type `"
+  - param: "callee_type"
+  - "` cannot be called, because it is not a function."
+
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "called here"

@@ -23,7 +23,6 @@
 #include <helios/utils/hout_walker_generic.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -104,7 +103,7 @@ namespace compiler::helios {
 			 * builtin, or `std::nullopt` when the call should fall back to VM evaluation.
 			 */
 			std::optional<TreeEvalResult> tryShortPathCall(const code::CallExpr& expr) {
-				const auto callee_sym = getIdentifierExprSymID(expr.callee.ref());
+				const auto callee_sym = getIdentifierExprFunctionID(expr.callee.ref());
 				if (!callee_sym.has_value()) return std::nullopt;
 
 				const auto builtin = isBuiltin(callee_sym.value());
@@ -616,9 +615,7 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
-				if (not CompileTimeValue::TypeTuple::isValid(
-						ctx, expr.expression_type.getSymbolType()
-					)) {
+				if (not CompileTimeValue::TypeTuple::isValid(expr.expression_type.getSymbolType())) {
 					result = CouldNotShortPath{};
 					return;
 				}
@@ -688,6 +685,34 @@ namespace compiler::helios {
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };
+			}
+
+			void visitFunctionTypeExpr(const code::FunctionTypeExpr& expr) final {
+				std::vector<tsh::SymbolType<>> parameter_types;
+				for (auto& parameter: expr.parameters) {
+					const auto parameter_ctv = evalHoutExpr(ctx, parameter.ref());
+					if (parameter_ctv.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+					parameter_types.emplace_back(
+						parameter_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+					);
+				}
+
+				const auto result_ctv = evalHoutExpr(ctx, expr.result.ref());
+				if (result_ctv.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+
+				result = CompileTimeValue{
+					tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = std::move(parameter_types),
+						.result_type = result_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(),
+						.kind        = expr.kind,
+					}))
+				};
 			}
 
 			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr
@@ -981,11 +1006,10 @@ namespace compiler::helios {
 		static CompTimeEvalResult evaluateFunctionWithVm(
 			query::Context& ctx, CRef<code::CallExpr> call_expr
 		) {
-			const auto* callee_ident
-				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
-			if (!callee_ident) return evaluateExprWithVm(ctx, call_expr);
+			const auto callee_sym = getIdentifierExprFunctionID(call_expr->callee.ref());
+			if (!callee_sym.has_value()) return evaluateExprWithVm(ctx, call_expr);
 
-			const SymID function_sym_id = callee_ident->symbol;
+			const SymID function_sym_id = callee_sym.value();
 
 			auto args_result = evaluateArguments(ctx, call_expr->arguments);
 			if (args_result.hasFailed()) return query::Failed();
@@ -996,7 +1020,7 @@ namespace compiler::helios {
 			const auto& [func_to_call_name, lir_unit] = lir_build_result.valueOrThrow();
 
 			// Retrieve the functions return type.
-			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
+			auto callee_abs_type = call_expr->callee->expression_type.getSymbolType().getType();
 			CORE_ASSERT(
 				callee_abs_type.getKind() == tsh::Kind::Function,
 				"Attempting to call a non_function type during VM compile time evaluation"

@@ -32,7 +32,7 @@ namespace pst::expr {
 		 */
 		[[nodiscard]] lang_def::NumericLiteralTypeSpecifier getTypeSpecifier() const;
 
-		explicit ExprNumericValue(const LangParserState& state): ExprElement(state, 0) {}
+		explicit ExprNumericValue(LangElementConstructionData state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
