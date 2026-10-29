@@ -11,7 +11,7 @@
 #include "module_id.hpp"
 
 #include <frontend/packages/access.hpp>
-#include <frontend/pst_parser/parsed_pst.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>

@@ -8,7 +8,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/lang_parser_context.hpp>
-#include <frontend/pst_parser/template_expansion_pst.hpp>
+#include <frontend/pst_parser/pst/template_expansion_pst.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "elements/hierarchy/not_statements/synthetic_elements/template_top_level.hpp"
+#include "../elements/hierarchy/not_statements/synthetic_elements/template_top_level.hpp"
 #include "pst.hpp"
 
 namespace pst {

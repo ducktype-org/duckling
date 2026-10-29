@@ -21,7 +21,7 @@
 #include <frontend/pst_parser/elements/implementations/preamble.hpp>
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
 #include <frontend/pst_parser/elements/parser_common_errors.hpp>
-#include <frontend/pst_parser/parsed_pst.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <diagnostic/source_position.hpp>

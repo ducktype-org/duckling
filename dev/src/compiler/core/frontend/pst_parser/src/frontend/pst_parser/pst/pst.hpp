@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include "access.hpp"
-#include "elements/hierarchy/declarations/top_level.hpp"
-#include "elements/includes/basic.hpp"  // IWYU pragma: keep
+#include "../access.hpp"
+#include "../elements/hierarchy/declarations/top_level.hpp"
+#include "../elements/includes/basic.hpp"  // IWYU pragma: keep
 
 #include <time_stats/time_stats.hpp>
 

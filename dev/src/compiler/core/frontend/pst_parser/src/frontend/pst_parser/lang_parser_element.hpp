@@ -7,7 +7,7 @@
 #pragma once
 
 #include "access.hpp"
-#include "cloning_decl.hpp"
+#include "cloning/cloning_decl.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "lang_state_unmethods.hpp"
