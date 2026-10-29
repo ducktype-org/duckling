@@ -395,6 +395,8 @@ private:
 		plan(functionOf(type("i32"), type("i32")), functionOf(type("i32"), type("i64")))
 			.refuses()
 			.because<NotImplemented>();
+		plan("funptr(i32) -> i32", "(i32) -> i32").refuses().because<IncompatibleTypes>();
+		plan("(i32) -> i32", "funptr(i32) -> i32").refuses().because<IncompatibleTypes>();
 
 		// A reference is never taken implicitly, and nothing converts behind one.
 		plan("i32", "ref i32").refuses().because<IncompatibleTypes>();

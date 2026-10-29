@@ -54,7 +54,7 @@ namespace compiler::helios::templates {
 	 * This will be passed to PST root as additional root data in type-opaque way, so other helios
 	 * code can retrieve it when needed.
 	 *
-	 * @TODO: #3071 link this to the proper custom root element, like pst::BakedTemplateRoot or
+	 * @TODO: #3892 link this to the proper custom root element, like pst::BakedTemplateRoot or
 	 * something like that.
 	 */
 	struct TemplateBakePSTLinkedData final {

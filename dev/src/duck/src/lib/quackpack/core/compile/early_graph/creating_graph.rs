@@ -7,7 +7,7 @@
 //! Entrypoints for creating a new [`EarlyGraph`] and friends.
 
 use itertools::Itertools;
-use tracing::debug;
+use tracing::trace;
 
 use super::*;
 use crate::qp_bail;
@@ -21,7 +21,6 @@ impl DependencyGraph {
     ///
     /// This method checks that the graph is complete (all edge targets have their neighbors lists),
     /// as well as checking that only local dependencies possibly form cycles.
-    #[tracing::instrument(skip_all)]
     fn new(freeze: &SolverFreeze) -> QuackResult<Self> {
         let mut graph = HashMap::new();
         for (pkg_id, pkg_freeze) in freeze.package_freezes.iter() {
@@ -44,7 +43,7 @@ impl DependencyGraph {
         root: Identity,
         graph: &HashMap<Identity, DependencyNode>,
     ) -> QuackResult<()> {
-        debug!(%root, ?graph, "checking cycles only on local deps");
+        trace!(%root, ?graph, "checking for cycles of local dependencies");
         let sccs = kosaraju_sccs(graph);
         for scc in sccs {
             if scc.len() == 1 {
@@ -89,7 +88,7 @@ impl EarlyGraph {
     /// Also note that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(super) fn new_early(
         bcx: &BuildContext<'_, '_>,
         pkgs: Vec<(PackageId, AnyPackage)>,

@@ -9,7 +9,6 @@ use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 use itertools::Itertools;
-use tracing::trace;
 
 use crate::quackpack::core::Package;
 use crate::quackpack::core::lints::errors::{Errors, UnusedKey};
@@ -37,9 +36,8 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
-#[tracing::instrument(skip(ctx))]
+#[tracing::instrument(level = "debug", skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings, Errors)> {
-    trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the user manifest at `{}`",

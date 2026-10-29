@@ -46,6 +46,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testFunctionValueErrors);
 		TESTER_ADD_TEST(testCoercionErrors);
 		TESTER_ADD_TEST(testOptionalErrors);
 		TESTER_ADD_TEST(testClassErrors);
@@ -60,6 +61,7 @@ public:
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
+		TESTER_ADD_TEST(testCopyMoveErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
@@ -92,13 +94,23 @@ private:
 	 *
 	 * @param logged_msg_count Expected number of logged error messages.
 	 * @param present_phrases List of phrases that should be present in the logged errors in order.
+	 * @param expect_errors If false, the logged messages must not contain any error.
 	 */
-	void checkForError(const std::vector<std::string_view>& present_phrases, u64 logged_msg_count) {
+	void checkForError(
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count,
+		bool                                 expect_errors = true
+	) {
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
 		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
 		// query errors is ok:
-		assertTrue(logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged.");
+		if (expect_errors)
+			assertTrue(
+				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+			);
+		else
+			assertFalse(logger->hasErrors(), "Expected no errors to be logged.");
 
 		std::stringstream logged_messages;
 		logger->terminalPrint(logged_messages);
@@ -150,6 +162,27 @@ private:
 		if (expect_failure)
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		checkForError(present_phrases, logged_msg_count);
+	}
+
+	/**
+	 * @brief Like `checkForErrorOnCompileModule`, but the module must compile, and only warnings
+	 * may be logged.
+	 *
+	 * @param module_content The content of the module main source file.
+	 * @param present_phrases List of phrases that should be present in the warnings in order.
+	 * @param logged_msg_count Expected number of logged warnings.
+	 */
+	void checkForWarningOnCompileModule(
+		std::string_view                     module_content,
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count
+	) {
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
+		assertFalse(result->hasFailed(), "Expected HOUT query to succeed for module content.");
+		checkForError(present_phrases, logged_msg_count, false);
 	}
 
 	/**
@@ -1582,6 +1615,86 @@ private:
 		);
 	}
 
+	void testFunctionValueErrors() {
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f: funptr(i64) -> i64 = add; return 0; } )",
+			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `const Function "
+		      "(i64) -> (i64)`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(1); } )",
+			{ "The number of arguments does not match the parameters of the function type." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(a = 1, b = 2); } )",
+			{ "Named arguments cannot be used in a call through a function value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let f = add; return f(1, "x"); } )",
+			{ "cannot be converted to type" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = { let n = 3; return n(1); } )",
+			{ "A value of type `const i32` cannot be called, because it is not a function." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { add = add; return 0; } )",
+			{ "Left side of assignment must be addressable location" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun add(a: i64, b: i64) -> i64 = a + b;
+			fun main() -> i64 = { let r = &add; return 0; } )",
+			{ "Tried to reference a temporary" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun inc(x: i64) -> i64 = x + 1;
+			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
+			{ "Type `Function (i64) -> (i64)` cannot be converted to type `const (i64) -> "
+		      "(i64)`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( @builtin("size_of") fundecl type_size(v: type) -> i64;
+			fun main() -> i64 = { let f = type_size; return 0; } )",
+			{ "A builtin or non-default ABI function cannot be used as a value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( extern("C") fundecl abs(n: i32) -> i32;
+			fun main() -> i64 = { let f = abs; return 0; } )",
+			{ "A builtin or non-default ABI function cannot be used as a value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun show(x: i64) = { builtin_output_i64(x); }
+			fun main() -> i64 = { let f: funptr(i64) = show; return 0; } )",
+			{ "`funptr` must be followed by `-> <result type>`" },
+			1
+		);
+	}
+
 	void testCopyabilityErrors() {
 		const std::string_view msg
 			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
@@ -2239,6 +2352,32 @@ private:
 				}
 			)",
 			{ msg },
+			1
+		);
+	}
+
+	void testCopyMoveErrors() {
+		checkForWarningOnCompileModule(
+			R"(
+				fun copyLocal() -> i64 = {
+					let a: i64 = 5;
+					let b = copy a;
+					return b;
+				}
+			)",
+			{ "Type `const i64` is trivially copyable. No need to use the explicit `copy` "
+		      "keyword." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Res { x: i64; }
+				fun moveTemporary() = {
+					var a = move Res(1);
+				}
+			)",
+			{ "A temporary is moved out of implicitly, `move` is not needed here." },
 			1
 		);
 	}

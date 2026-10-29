@@ -288,11 +288,11 @@ namespace compiler::tsh {
 		bool pure = false;
 
 		/**
-		 * @brief Whether the function type is free or not.
+		 * @brief Whether the function type is a raw function or a closure.
 		 *
 		 * See documentation of FunctionAbstractType for details.
 		 */
-		bool free = false;
+		FunctionKind kind = FunctionKind::Raw;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryFunctionType&) const
@@ -304,7 +304,7 @@ namespace compiler::tsh {
 			for (const auto& param_type: parameter_types) addToHash(hasher, param_type);
 			addToHash(hasher, result_type);
 			addToHash(hasher, pure);
-			addToHash(hasher, free);
+			addToHash(hasher, kind);
 			return hasher.finalize();
 		}
 	};

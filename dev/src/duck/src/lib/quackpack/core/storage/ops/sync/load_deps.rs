@@ -13,7 +13,7 @@ use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::{StreamExt, stream};
 use tar::Archive;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
@@ -61,14 +61,14 @@ pub struct LoadedFreezePackages {
 /// Note
 /// ----
 /// We use [`ErrorsLogger`] to delay bailing, downloading as many dependencies as possible.
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn load_packages_in_freeze(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkgs: Vec<PackageId>,
 ) -> QuackResult<LoadedFreezePackages> {
     if pkgs.is_empty() {
-        warn!("requested to load 0 packages");
+        debug!("nothing to load");
         return Ok(LoadedFreezePackages::default());
     }
     let count = pkgs.len();
@@ -124,14 +124,13 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
 
 /// Helper for [`load_packages_in_freeze`].
 /// Loads a package, downloading it if not present and loading it from storage (except for local packages).
-#[tracing::instrument(skip_all, fields(?pkg_id))]
+#[tracing::instrument(level = "debug", skip_all, fields(name = %pkg_id.name(), version = %pkg_id.version()))]
 async fn load_package(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkg_id: PackageId,
     logger: &RefCell<ErrorsLogger>,
 ) -> Option<SuccessfullyLoadedPackage> {
-    debug!("fetching package");
     // Logs a result into the `logger`.
     macro_rules! log {
         ($e:expr) => {
@@ -189,7 +188,6 @@ async fn load_package(
 /// Helper for [`load_package`].
 /// Checks if the git package is stored in storage, if not clones it.
 /// Returns path to the package in storage and whether it had to be cloned.
-#[tracing::instrument(skip_all)]
 fn fetch_git(
     pkg_id: PackageId,
     url: InternedUrl,

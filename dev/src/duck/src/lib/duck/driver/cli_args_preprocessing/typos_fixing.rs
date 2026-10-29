@@ -9,7 +9,7 @@ use std::ffi::OsString;
 
 use clap::ArgMatches;
 use itertools::Itertools;
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::duck::driver::cli;
 use crate::duck::driver::cli_args_preprocessing::builtin::{
@@ -39,11 +39,7 @@ pub fn fix_typos(
     }
 
     let targets = possible_targets(ctx, external_cmds)?;
-    debug!(
-        %name,
-        ?targets,
-        "Testing levenshtein",
-    );
+    trace!(?targets, "looking for subcommands close to `{name}`");
     let distance = ctx.duck_cfg().max_fix_dist()? as u32;
     let targets = targets.iter().map(String::as_str).collect::<Vec<_>>();
     let closest_targets = find_all_closest_targets(name, &targets, Some(distance));
@@ -111,7 +107,7 @@ fn make_levenshtein_nofix_msg(bad_cmd: &str, closest_targets: &[&str]) -> String
 ///
 /// Replace it and re-parse the arguments.
 fn fix(bad_cmd: &str, new_subcmd: &str, subcmd_args: &ArgMatches) -> QuackResult<ArgMatches> {
-    debug!(%bad_cmd, %new_subcmd, "changed subcommand");
+    debug!("fixed a typo in the subcommand: `{bad_cmd}` -> `{new_subcmd}`");
     let new_cli_args = make_cli_args(new_subcmd, subcmd_args);
     parse_fixed_args(new_cli_args)
 }
