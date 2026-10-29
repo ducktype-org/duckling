@@ -885,10 +885,10 @@ namespace compiler::driver {
 		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			dvm_objects_by_root_module;
 
-		std::function<void(frontend::ModuleID, BackendType, frontend::ModuleID)> collect_modules
-			= [&](frontend::ModuleID module_id,
-		          BackendType        backend,
-		          frontend::ModuleID package_root_module) -> void {
+		auto collect_modules = [&](this const auto&   self,
+		                           frontend::ModuleID module_id,
+		                           BackendType        backend,
+		                           frontend::ModuleID package_root_module) -> void {
 			// @TODO: #2354 This is temporary.
 			const bool build_debug_info = backend == BackendType::DVM;
 
@@ -897,7 +897,7 @@ namespace compiler::driver {
 			);
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules)
-				collect_modules(sub_module, backend, package_root_module);
+				self(sub_module, backend, package_root_module);
 		};
 
 		for (const auto& task: tasks) {
