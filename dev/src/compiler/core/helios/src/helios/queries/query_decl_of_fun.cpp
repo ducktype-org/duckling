@@ -380,7 +380,8 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void emplaceDeclaration(
-				pst::AccessLocked<pst::ParamList>                  param_list,
+				const std::vector<SymID>&                  params,
+				const code::ElementOrigin&                params_origin,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
@@ -410,38 +411,38 @@ namespace compiler::helios {
 						query::throwFailed();
 					}
 
-					origin = code::multiplePstOriginOrdered({
-						param_list.unlock(ctx),
-						ret.value().unlock(ctx),
-					});
+					origin = code::elementOriginOrdered(
+						params_origin,
+						code::pstOrigin(ret.value().unlock(ctx))
+					);
 				}
 				// A global main without an explicit return type is treated as `main -> i64`.
 				else if (global_main_definition) {
 					ret_type = requiredMainReturnType(ctx);
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = params_origin;
 				}
 				// Deduce return type for ordinary functions.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = params_origin;
 				}
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *param_list.unlock(ctx)) {
-					auto  param_symbol = ctx.query<QuerySymbolFromPST>({ param }).valueOrThrow();
+				for (auto param_symbol: *params) {
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
-					auto value = param.unlock(ctx)->getValue();
+					auto param_pst = maybeSymbolPst(param_symbol)->dynamicCast<pst::Param>();
+					auto value = param_pst.unlock(ctx)->getValue();
 					if (value.empty()) {
 						parameters.emplace_back(
 							param_name,
 							param_type,
 							std::nullopt,
 							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							code::pstOrigin(param_pst.unlock(ctx))
 						);
 					} else {
 						auto initial_value
@@ -455,7 +456,7 @@ namespace compiler::helios {
 							param_type,
 							std::move(initial_value),
 							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							code::pstOrigin(param_pst.unlock(ctx))
 						);
 					}
 				}
@@ -473,14 +474,18 @@ namespace compiler::helios {
 				const auto operatoriness = operatorinessFromNameAndArity(
 					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
+				emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
 				const auto operatoriness = operatorinessFromNameAndArity(
 					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
+				emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
@@ -491,14 +496,18 @@ namespace compiler::helios {
 					const auto operatoriness = operatorinessFromNameAndArity(
 						name(original_symbol), stmt->getParams().unlock(ctx)->size()
 					);
-					emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+					auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+					auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
+					emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 					return;
 				}
 				const auto operatoriness = operatorinessFromNameAndArity(
 					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
 				);
 				// +1 for the implicit `self` parameter.
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
+				emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -520,9 +529,9 @@ namespace compiler::helios {
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
-				emplaceDeclaration(
-					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
-				);
+				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
+				emplaceDeclaration(params, params_origin, {}, HOUTFunctionDeclaration::Operatoriness::None);
 
 				const auto class_type  = classMemberOwner(original_symbol);
 				this->out->return_type = tsh::SymbolType<>{
