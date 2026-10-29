@@ -42,7 +42,7 @@ namespace compiler::linker {
 		std::vector<std::string> stdlib_link_options;
 
 		/**
-		 * @brief Skip the final executable link and keep compiler object artifacts.
+		 * @brief Skip executable linking and keep compiler object artifacts.
 		 */
 		bool no_link = false;
 	};

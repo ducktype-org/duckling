@@ -21,7 +21,7 @@ namespace compiler::archiver {
 		base::Optional<std::string> archiver_path;
 
 		/**
-		 * @brief Skip the final executable link and keep compiler object artifacts.
+		 * @brief Skip archive creation and keep compiler object artifacts.
 		 */
 		bool no_link = false;
 	};

@@ -132,7 +132,7 @@ namespace compiler::driver {
 			std::vector<fs::FilePath> dvm_link_libraries;
 
 			/**
-			 * @brief Skip the final executable link and keep compiler object artifacts.
+			 * @brief Skip final linking and archiving and keep compiler object artifacts.
 			 */
 			bool no_link = false;
 		};

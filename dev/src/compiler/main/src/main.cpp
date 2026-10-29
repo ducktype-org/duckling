@@ -289,7 +289,7 @@ compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 auto getClahNoLinkParameter() {
 	return clah::ParamBuilder::ofFlag()
 	    .addLongName("no-link")
-	    .addShortDesc("Skip the final executable link and keep compiler object artifacts.")
+	    .addShortDesc("Skip final linking and archiving; keep compiler object artifacts.")
 	    .build();
 }
 
@@ -618,8 +618,8 @@ clah::Clah getClahForMain() {
 				"and every package depends on all the other ones. "
 				"This mimics the simple case of multi file compilation with GCC/clang which is "
 				"sometimes useful. Note that the package based entry points should be preferred "
-				"when possible. Use --no-link to compile modules without linking an "
-				"executable."
+				"when possible. Use --no-link to compile modules without producing libraries or "
+				"an executable."
 			)
 				.addPositional(clah::FileParser::make("module"))
 				.setDefaultValueParser(clah::FileParser::make("module"))
