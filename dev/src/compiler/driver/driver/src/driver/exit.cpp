@@ -12,7 +12,11 @@
 #include <global_state/packages.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <query_framework/context/context.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
+
+#include <iostream>
 
 namespace compiler::driver {
 
@@ -25,6 +29,20 @@ namespace compiler::driver {
 		if_opt_some(global_state::getStdArtifactsCollection(), std_art_collection) {
 			std_art_collection->flush();
 		}
+
+		driver_exit_time.end();
+
+		if (driver::print_statistics) {
+			if (not query::USE_STATS) {
+				std::cerr << "Warning: Query statistics are disabled at compile time. "
+							 "No query statistics will be printed.\n";
+			}
+			query::printStats();
+			time_stats::prettyPrintTimeStatistics();
+		}
+
+		if (driver::print_query_graph)
+			query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 	}
 
 }  // namespace compiler::driver
