@@ -42,24 +42,26 @@ namespace compiler::repl {
 		return extractStatementSources(ctx, *root);
 	}
 
-	/**
-	 * @brief Create a minimal ephemeral REPL module for statement splitting.
-	 *
-	 * Marked as a REPL module (no parent) so that SourceFile::getPST() selects
-	 * PSTType::Script, guaranteeing ordered top-level statement parsing.
-	 * The returned Ref must stay alive for the duration of any query over the module.
-	 *
-	 * @note: This is similar to createReplModule, but without parent and history.
-	 */
-	static base::Ref<frontend::ModuleTree> createProbeReplModule(std::string_view input) {
-		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::StrID("repl_session"));
-		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
-		builder->setName(base::StrID(
-			base::strConcat("repl_probe_", std::to_string(ReplSessionID::next().asInt()))
-		));
-		builder->setReplModule(frontend::ReplData{});
-		return builder->finalize();
+	namespace {
+		/**
+		 * @brief Create a minimal ephemeral REPL module for statement splitting.
+		 *
+		 * Marked as a REPL module (no parent) so that SourceFile::getPST() selects
+		 * PSTType::Script, guaranteeing ordered top-level statement parsing.
+		 * The returned Ref must stay alive for the duration of any query over the module.
+		 *
+		 * @note: This is similar to createReplModule, but without parent and history.
+		 */
+		base::Ref<frontend::ModuleTree> createProbeReplModule(std::string_view input) {
+			auto builder = frontend::ModuleTreeBuilder::create();
+			builder->setPackageID(base::StrID("repl_session"));
+			builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
+			builder->setName(base::StrID(
+				base::strConcat("repl_probe_", std::to_string(ReplSessionID::next().asInt()))
+			));
+			builder->setReplModule(frontend::ReplData{});
+			return builder->finalize();
+		}
 	}
 
 	std::expected<std::vector<std::string>, std::string> splitInputIntoStatements(

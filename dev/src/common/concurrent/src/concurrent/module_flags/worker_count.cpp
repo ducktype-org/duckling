@@ -15,7 +15,10 @@ namespace concurrent::worker {
 
 
 	namespace {
-		static constexpr u64       DEFAULT_WORKER_COUNT = 1;
+		namespace {
+			constexpr u64 DEFAULT_WORKER_COUNT = 1;
+		}
+
 		constinit std::atomic<u64> worker_count{ 0 };
 	}
 

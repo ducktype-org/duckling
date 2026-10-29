@@ -39,95 +39,101 @@ enum class WhyHandleError {
 	WaitFailed,
 };
 
-static std::string_view whyHandleErrorToString(WhyHandleError why) {
-	switch (why) {
-	case WhyHandleError::ForkFailed:
-		return "fork failed"sv;
-	case WhyHandleError::ExecFailed:
-		return "exec failed"sv;
-	case WhyHandleError::WaitFailed:
-		return "waiting for a child failed"sv;
-	}
-	CORE_UNREACHABLE();
-}
-
-static void handleRc(
-	system_command::SystemCommand::ExitCodeHandling behaviour,
-	os_rc_t                                         rc,
-	WhyHandleError                                  why,
-	std::string_view                                command
-);
-
-static void behaviourHandleMessage(
-	system_command::SystemCommand::ExitCodeHandling behaviour, std::string_view message
-) {
-	switch (behaviour) {
-	case system_command::SystemCommand::ExitCodeHandling::Panic:
-		CORE_PANIC(message, "\n"sv);
-		break;
-	case system_command::SystemCommand::ExitCodeHandling::Ignore:
-		return;
-		break;
-	case system_command::SystemCommand::ExitCodeHandling::Warn:
-		CORE_USER_LOG("Warning: "sv, message, "\n"sv);
-		break;
-	default:
+namespace {
+	std::string_view whyHandleErrorToString(WhyHandleError why) {
+		switch (why) {
+		case WhyHandleError::ForkFailed:
+			return "fork failed"sv;
+		case WhyHandleError::ExecFailed:
+			return "exec failed"sv;
+		case WhyHandleError::WaitFailed:
+			return "waiting for a child failed"sv;
+		}
 		CORE_UNREACHABLE();
 	}
-}
 
-static void handleRc(
-	system_command::SystemCommand::ExitCodeHandling behaviour,
-	os_rc_t                                         rc,
-	WhyHandleError                                  why,
-	std::string_view                                command
-) {
-	if (rc == 0) return;
-
-	if (rc == -1) {
-		const auto saved_errno = errno;
-		auto       message     = base::strConcat(
-            whyHandleErrorToString(why),
-            "; command: `"sv,
-            command,
-            "`: "sv,
-            std::generic_category().message(saved_errno)
-        );
-		behaviourHandleMessage(behaviour, message);
-		return;
-	}
-	// Waitpid, fork and exec return -1 on error.
-	CORE_UNREACHABLE();
-}
-
-static int handleWaitpidStatus(
-	system_command::SystemCommand::ExitCodeHandling behaviour, int status, std::string_view command
-) {
-	int rc = status;
-	if (WIFSIGNALED(rc)) {
-		auto signal  = WTERMSIG(rc);
-		auto message = base::strConcat(
-			"subcommand `"sv,
-			command,
-			"` terminated by signal: "sv,
-			signal,
-			" ("sv,
-			os_utils::threadSafeStrsignal(signal),
-			")"sv
-		);
-		behaviourHandleMessage(behaviour, message);
-		return -1;
-	}
-	CORE_ASSERT(
-		WIFEXITED(rc), "child neither exited normally nor was terminated by a signal: "sv, command
+	void handleRc(
+		system_command::SystemCommand::ExitCodeHandling behaviour,
+		os_rc_t                                         rc,
+		WhyHandleError                                  why,
+		std::string_view                                command
 	);
-	rc = WEXITSTATUS(rc);
-	if (rc == 0) return 0;
 
-	auto message
-		= base::strConcat("subcommand: `"sv, command, "` exited with a non-zero code: "sv, rc);
-	behaviourHandleMessage(behaviour, message);
-	return rc;
+	void behaviourHandleMessage(
+		system_command::SystemCommand::ExitCodeHandling behaviour, std::string_view message
+	) {
+		switch (behaviour) {
+		case system_command::SystemCommand::ExitCodeHandling::Panic:
+			CORE_PANIC(message, "\n"sv);
+			break;
+		case system_command::SystemCommand::ExitCodeHandling::Ignore:
+			return;
+			break;
+		case system_command::SystemCommand::ExitCodeHandling::Warn:
+			CORE_USER_LOG("Warning: "sv, message, "\n"sv);
+			break;
+		default:
+			CORE_UNREACHABLE();
+		}
+	}
+
+	void handleRc(
+		system_command::SystemCommand::ExitCodeHandling behaviour,
+		os_rc_t                                         rc,
+		WhyHandleError                                  why,
+		std::string_view                                command
+	) {
+		if (rc == 0) return;
+
+		if (rc == -1) {
+			const auto saved_errno = errno;
+			auto       message     = base::strConcat(
+                whyHandleErrorToString(why),
+                "; command: `"sv,
+                command,
+                "`: "sv,
+                std::generic_category().message(saved_errno)
+            );
+			behaviourHandleMessage(behaviour, message);
+			return;
+		}
+		// Waitpid, fork and exec return -1 on error.
+		CORE_UNREACHABLE();
+	}
+
+	int handleWaitpidStatus(
+		system_command::SystemCommand::ExitCodeHandling behaviour,
+		int                                             status,
+		std::string_view                                command
+	) {
+		int rc = status;
+		if (WIFSIGNALED(rc)) {
+			auto signal  = WTERMSIG(rc);
+			auto message = base::strConcat(
+				"subcommand `"sv,
+				command,
+				"` terminated by signal: "sv,
+				signal,
+				" ("sv,
+				os_utils::threadSafeStrsignal(signal),
+				")"sv
+			);
+			behaviourHandleMessage(behaviour, message);
+			return -1;
+		}
+		CORE_ASSERT(
+			WIFEXITED(rc),
+			"child neither exited normally nor was terminated by a signal: "sv,
+			command
+		);
+		rc = WEXITSTATUS(rc);
+		if (rc == 0) return 0;
+
+		auto message
+			= base::strConcat("subcommand: `"sv, command, "` exited with a non-zero code: "sv, rc);
+		behaviourHandleMessage(behaviour, message);
+		return rc;
+	}
 }
 
 namespace system_command {

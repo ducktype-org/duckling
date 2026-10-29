@@ -22,30 +22,33 @@
 #include <vector>
 
 namespace compiler::repl {
-	static constexpr std::string_view TAB_SPACES = "    ";
+	namespace {
+		constexpr std::string_view TAB_SPACES = "    ";
 
-	// ─── Duckling language keywords ──────────────────────────────────────────────
+		// ─── Duckling language keywords ──────────────────────────────────────────────
 
-	// clang-format off
-	static const std::set<std::string> DUCKLING_KEYWORDS = {
-		"and", "as", "assert", "block", "box", "break", "case", "catch",
-		"class", "compile_assert", "const", "continue", "copy", "copyof", "debug", "defer",
-		"dict", "else", "expand", "export", "extends", "extern", "false", "for", "fun",
-		"fundecl", "global", "hides", "if", "implements", "import", "in", "lambda", "let", "loop",
-		"match", "move", "namespace", "not", "or", "pattern", "private",
-		"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
-		"refof", "ptrof", "restart", "return", "set", "sizeof", "str", "switch",
-		"then", "this", "throw", "true", "try", "type", "using", "var",
-		"vec", "while", "with", "xor"
-	};
+		// clang-format off
+		const std::set<std::string> DUCKLING_KEYWORDS = {
+			"and", "as", "assert", "block", "box", "break", "case", "catch",
+			"class", "compile_assert", "const", "continue", "copy", "copyof", "debug", "defer",
+			"dict", "else", "expand", "export", "extends", "extern", "false", "for", "fun",
+			"fundecl", "global", "hides", "if", "implements", "import", "in", "lambda", "let", "loop",
+			"match", "move", "namespace", "not", "or", "pattern", "private",
+			"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
+			"refof", "ptrof", "restart", "return", "set", "sizeof", "str", "switch",
+			"then", "this", "throw", "true", "try", "type", "using", "var",
+			"vec", "while", "with", "xor"
+		};
 
-	static const std::set<std::string> DUCKLING_TYPES = {
-		"i8", "i16", "i32", "i64", "i128",
-		"u8", "u16", "u32", "u64", "u128",
-		"f16", "f32", "f64", "f80", "f128",
-		"char", "bool", "str", "type",
-		"vec", "set", "dict", "array"
-	};
+		const std::set<std::string> DUCKLING_TYPES = {
+			"i8", "i16", "i32", "i64", "i128",
+			"u8", "u16", "u32", "u64", "u128",
+			"f16", "f32", "f64", "f80", "f128",
+			"char", "bool", "str", "type",
+			"vec", "set", "dict", "array"
+		};
+	}
+
 	// clang-format on
 
 	// ─── History file path ───────────────────────────────────────────────────────

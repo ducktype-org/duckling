@@ -75,10 +75,10 @@ namespace compiler::helios::mangler {
 	}
 
 	namespace internal {
-		static constexpr auto BASE_62_DIGITS
-			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
-
 		namespace {
+			constexpr auto BASE_62_DIGITS
+				= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
+
 			/**
 			 * @brief The name a symbol links under when it is not mangled (C/DVM linkage), or none
 			 * when it has to be mangled. For `extern("C")` it is the `@c_symbol_name` when one is
@@ -806,51 +806,49 @@ namespace compiler::helios::mangler {
 				if (!metadata.has_value()) return "";
 				return "$" + metadata.value();
 			}
-		}
 
-		template<typename Float>
-		static auto floatToHex(Float value) {
-			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
+			template<typename Float>
+			auto floatToHex(Float value) {
+				static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
 
-			auto bytes = std::bit_cast<std::array<unsigned char, sizeof(Float)>>(value);
-			if constexpr (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
+				auto bytes = std::bit_cast<std::array<unsigned char, sizeof(Float)>>(value);
+				if constexpr (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
 
-			std::string hex_str;
-			hex_str.reserve(bytes.size() * 2);
+				std::string hex_str;
+				hex_str.reserve(bytes.size() * 2);
 
-			for (const auto byte: bytes) {
-				hex_str += HEX_DIGITS.at(byte >> 4);
-				hex_str += HEX_DIGITS.at(byte & 0x0F);
+				for (const auto byte: bytes) {
+					hex_str += HEX_DIGITS.at(byte >> 4);
+					hex_str += HEX_DIGITS.at(byte & 0x0F);
+				}
+
+				return hex_str;
 			}
 
-			return hex_str;
-		}
+			std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
+				const auto& value = num.getStorage();
 
-		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
-			const auto& value = num.getStorage();
-
-			variant_match(value) {
-				variant_case_novalue(int8_t, i16, i32, i64) {
-					const i64 int_value = std::visit(
-						[&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value
-					);
-					const u64 magnitude = int_value < 0 ? 0u - static_cast<u64>(int_value)
-					                                    : static_cast<u64>(int_value);
-					return base::strConcat((int_value < 0 ? "n" : ""), magnitude, "_");
+				variant_match(value) {
+					variant_case_novalue(int8_t, i16, i32, i64) {
+						const i64 int_value = std::visit(
+							[&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value
+						);
+						const u64 magnitude = int_value < 0 ? 0u - static_cast<u64>(int_value)
+						                                    : static_cast<u64>(int_value);
+						return base::strConcat((int_value < 0 ? "n" : ""), magnitude, "_");
+					}
+					variant_case_novalue(uint8_t, u16, u32, u64) {
+						const u64 uint_value = std::visit(
+							[&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value
+						);
+						return base::strConcat(uint_value, "_");
+					}
+					variant_case(f32, f) { return floatToHex(f); }
+					variant_case(f64, d) { return floatToHex(d); }
+					variant_default { CORE_PANIC("Unknown type in mangleValue()"); }
 				}
-				variant_case_novalue(uint8_t, u16, u32, u64) {
-					const u64 uint_value = std::visit(
-						[&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value
-					);
-					return base::strConcat(uint_value, "_");
-				}
-				variant_case(f32, f) { return floatToHex(f); }
-				variant_case(f64, d) { return floatToHex(d); }
-				variant_default { CORE_PANIC("Unknown type in mangleValue()"); }
 			}
-		}
 
-		namespace {
 			std::string mangleString(std::string_view sv) {
 				static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
 				std::string           hex_str;

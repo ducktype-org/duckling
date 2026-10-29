@@ -100,73 +100,74 @@ namespace compiler::driver {
 			}
 	}
 
-	/**
-	 * @brief Collect all input data (QueryID + hash) from the global packages.
-	 * This includes:
-	 * - Module side inputs for all modules in the package.
-	 * - File side inputs for all source files in the package.
-	 * - PST access side inputs for all PST elements in the package.
-	 * - Source file count and submodule count side inputsW for all modules.
-	 * - Module child side inputs for all module lookups performed in the previous compilation, that
-	 * 	 are still valid in the current module tree.
-	 */
-	static void collectFromModule(
-		const ModulesLookupsMap&                           lookups_map,
-		compiler::frontend::ModuleID                       module_id,
-		base::Ref<std::vector<query::external::InputData>> out
-	) {
-		using namespace compiler::frontend;
-		auto module_ref = getModuleRef(module_id);
-
-		// Collect module side input
-		out->emplace_back(QueryModuleSideInput::getID(), ModuleTree::getModuleHash(module_id));
-
-		auto submodules_count = module_ref->getSubmodules().illegalAccess().size();
-		out->emplace_back(
-			QuerySubmoduleCountSideInput::getID(),
-			KeyOf_SubmoduleCountSideInput::computeHash(module_id, submodules_count)
-				.queryStablePerfectHash()
-		);
-
-		// Collect ModuleChildSideInput for all lookups done on this module
-		auto module_hash = ModuleTree::getModuleHash(module_id);
-		auto lookup_res  = lookups_map.atMaybe(module_hash);
-		if (lookup_res.has_value()) {
-			for (const auto& lookup: *lookup_res.value()) {
-				// Check if the lookup is still valid
-				auto child_ref = module_ref->getSubmoduleByName(lookup.child_name).illegalAccess();
-				bool found     = child_ref.has_value();
-
-				// If the lookup result is the same as before, we can reuse the stored InputData
-				// No need to recalculate the hash since it's already stored in input_data
-				if (found == lookup.found) out->emplace_back(lookup.input_data);
-			}
-		}
-
-		// Process main source file if present
-		if (module_ref->hasMainSourceFile()) {
-			auto sf = module_ref->getMainSourceFile();
-
-			// We using mutable reference for calculating the PST and hashes.
-			// This is done before query-based compilation starts, so it won't break anything.
-			auto sf_mut
-				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					sf.illegalAccess().getID()
-				);
-
-			// Collect file side input
-			out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
-
-			auto pst = sf_mut->getPST();
-			collectQueryInputsFromPst(pst, *out);
-		}
-
-		// Recurse into submodules
-		for (const auto& submodule: module_ref->getSubmodules().illegalAccess())
-			collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
-	}
-
 	namespace {
+		/**
+		 * @brief Collect all input data (QueryID + hash) from the global packages.
+		 * This includes:
+		 * - Module side inputs for all modules in the package.
+		 * - File side inputs for all source files in the package.
+		 * - PST access side inputs for all PST elements in the package.
+		 * - Source file count and submodule count side inputsW for all modules.
+		 * - Module child side inputs for all module lookups performed in the previous compilation,
+		 * that are still valid in the current module tree.
+		 */
+		void collectFromModule(
+			const ModulesLookupsMap&                           lookups_map,
+			compiler::frontend::ModuleID                       module_id,
+			base::Ref<std::vector<query::external::InputData>> out
+		) {
+			using namespace compiler::frontend;
+			auto module_ref = getModuleRef(module_id);
+
+			// Collect module side input
+			out->emplace_back(QueryModuleSideInput::getID(), ModuleTree::getModuleHash(module_id));
+
+			auto submodules_count = module_ref->getSubmodules().illegalAccess().size();
+			out->emplace_back(
+				QuerySubmoduleCountSideInput::getID(),
+				KeyOf_SubmoduleCountSideInput::computeHash(module_id, submodules_count)
+					.queryStablePerfectHash()
+			);
+
+			// Collect ModuleChildSideInput for all lookups done on this module
+			auto module_hash = ModuleTree::getModuleHash(module_id);
+			auto lookup_res  = lookups_map.atMaybe(module_hash);
+			if (lookup_res.has_value()) {
+				for (const auto& lookup: *lookup_res.value()) {
+					// Check if the lookup is still valid
+					auto child_ref
+						= module_ref->getSubmoduleByName(lookup.child_name).illegalAccess();
+					bool found = child_ref.has_value();
+
+					// If the lookup result is the same as before, we can reuse the stored InputData
+					// No need to recalculate the hash since it's already stored in input_data
+					if (found == lookup.found) out->emplace_back(lookup.input_data);
+				}
+			}
+
+			// Process main source file if present
+			if (module_ref->hasMainSourceFile()) {
+				auto sf = module_ref->getMainSourceFile();
+
+				// We using mutable reference for calculating the PST and hashes.
+				// This is done before query-based compilation starts, so it won't break anything.
+				auto sf_mut
+					= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+						sf.illegalAccess().getID()
+					);
+
+				// Collect file side input
+				out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
+
+				auto pst = sf_mut->getPST();
+				collectQueryInputsFromPst(pst, *out);
+			}
+
+			// Recurse into submodules
+			for (const auto& submodule: module_ref->getSubmodules().illegalAccess())
+				collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
+		}
+
 		std::vector<query::external::InputData> collectInputDataFromGlobalPackagesImpl(
 			bool from_previous_metadata
 		) {

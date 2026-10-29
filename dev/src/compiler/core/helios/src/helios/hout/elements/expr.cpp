@@ -251,26 +251,30 @@ namespace compiler::helios::code {
 		return makeBox<IdentifierExpr>(expression_type, origin, symbol);
 	}
 
-	/**
-	 * @brief The `PrimaryCategory` of a reusable expression based on it's `inner` type.
-	 *
-	 * A reusable expression is evaluated once into a hidden local that every use reads afterwards,
-	 * so a `Temporary` (an owned rvalue) becomes a `Local` (an owned lvalue). The hidden local is
-	 * what owns the value now and what gets destroyed at the end of the scope.
-	 *
-	 * We can't just inherit the inner category of a `Temporary` here. As every read of the
-	 * `ReusableExpr` would be an implicit move which would move the same value multiple times.
-	 * Additionally, field reads off the reusable would be treated as partial moves, which are NYI.
-	 *
-	 * Every other category is already an lvalue or owns nothing (`Local`, `Global`, `Dereferenced`,
-	 * `Literal`) so reading it repeatedly is safe (in case of trivially copyable types).
-	 */
-	static tsh::ExpressionType<> reusableExpressionType(const Expr& inner) {
-		const tsh::ExpressionType<> inner_type = inner.expression_type;
-		if (inner_type.getValueCategory().getCategory() != tsh::PrimaryCategory::Temporary)
-			return inner_type;
+	namespace {
+		/**
+		 * @brief The `PrimaryCategory` of a reusable expression based on it's `inner` type.
+		 *
+		 * A reusable expression is evaluated once into a hidden local that every use reads
+		 * afterwards, so a `Temporary` (an owned rvalue) becomes a `Local` (an owned lvalue). The
+		 * hidden local is what owns the value now and what gets destroyed at the end of the scope.
+		 *
+		 * We can't just inherit the inner category of a `Temporary` here. As every read of the
+		 * `ReusableExpr` would be an implicit move which would move the same value multiple times.
+		 * Additionally, field reads off the reusable would be treated as partial moves, which are
+		 * NYI.
+		 *
+		 * Every other category is already an lvalue or owns nothing (`Local`, `Global`,
+		 * `Dereferenced`, `Literal`) so reading it repeatedly is safe (in case of trivially
+		 * copyable types).
+		 */
+		tsh::ExpressionType<> reusableExpressionType(const Expr& inner) {
+			const tsh::ExpressionType<> inner_type = inner.expression_type;
+			if (inner_type.getValueCategory().getCategory() != tsh::PrimaryCategory::Temporary)
+				return inner_type;
 
-		return { inner_type.getSymbolType(), tsh::ValueCategory(tsh::PrimaryCategory::Local) };
+			return { inner_type.getSymbolType(), tsh::ValueCategory(tsh::PrimaryCategory::Local) };
+		}
 	}
 
 	ReusableExpr::ReusableExpr(query::Context& ctx, Box<Expr> inner, const bool first_use):

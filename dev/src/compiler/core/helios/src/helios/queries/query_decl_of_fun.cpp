@@ -312,75 +312,80 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
 
-	/**
-	 * This function verifies if the applied attributes are semantically correct
-	 * on the function. For example we check if the BackendDependent attribute has
-	 * some implementations.
-	 * This is needed, because some attributes can have additional requirements on the function
-	 * declaration and the surrounding code.
-	 */
-	static void verifyFunctionAttributes(
-		query::Context& ctx, pst::Access<pst::Stmt> pst_stmt, const HOUTFunctionDeclaration& fun_decl
-	) {
-		if (pst_stmt->getAttributes().empty()) return;
+	namespace {
+		/**
+		 * This function verifies if the applied attributes are semantically correct
+		 * on the function. For example we check if the BackendDependent attribute has
+		 * some implementations.
+		 * This is needed, because some attributes can have additional requirements on the function
+		 * declaration and the surrounding code.
+		 */
+		void verifyFunctionAttributes(
+			query::Context&                ctx,
+			pst::Access<pst::Stmt>         pst_stmt,
+			const HOUTFunctionDeclaration& fun_decl
+		) {
+			if (pst_stmt->getAttributes().empty()) return;
 
-		if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
-		    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
-			verifyBackendImplAttrUsage(ctx, fun_decl);
-			return;
+			if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
+			    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
+				verifyBackendImplAttrUsage(ctx, fun_decl);
+				return;
+			}
+			if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
+				verifyBackendDependentAttrUsage(ctx, fun_decl);
+				return;
+			}
 		}
-		if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
-			verifyBackendDependentAttrUsage(ctx, fun_decl);
-			return;
-		}
-	}
 
-	/**
-	 * @brief Determines whether a user-declared function or method is an operator and validates its
-	 * fixity.
-	 *
-	 * @param arity Parameter count, including the implicit `self` parameter of non-static methods.
-	 */
-	static HOUTFunctionDeclaration::Operatoriness operatorinessFromDeclaration(
-		query::Context&     ctx,
-		base::StrID         name,
-		u64                 arity,
-		pst::OperatorFixity fixity,
-		dia::StablePosition source_position
-	) {
-		using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+		/**
+		 * @brief Determines whether a user-declared function or method is an operator and validates
+		 * its fixity.
+		 *
+		 * @param arity Parameter count, including the implicit `self` parameter of non-static
+		 * methods.
+		 */
+		HOUTFunctionDeclaration::Operatoriness operatorinessFromDeclaration(
+			query::Context&     ctx,
+			base::StrID         name,
+			u64                 arity,
+			pst::OperatorFixity fixity,
+			dia::StablePosition source_position
+		) {
+			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
-		const bool is_operator = lexer::isOperatorSymbolString(name.strView());
-		if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
-			ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
-			query::throwFailed();
-		}
-		if (!is_operator) return Operatoriness::None;
-
-		switch (arity) {
-		case 1:
-			switch (fixity) {
-			case pst::OperatorFixity::Prefix:
-				return Operatoriness::Prefix;
-			case pst::OperatorFixity::Suffix:
-				return Operatoriness::Suffix;
-			case pst::OperatorFixity::None:
-				ctx.logInt(makeBox<MissingUnaryOperatorFixityError>(source_position));
+			const bool is_operator = lexer::isOperatorSymbolString(name.strView());
+			if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
+				ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
 				query::throwFailed();
 			}
-			CORE_UNREACHABLE();
-		case 2:
-			return Operatoriness::Infix;
-		default:
-			return Operatoriness::None;
+			if (!is_operator) return Operatoriness::None;
+
+			switch (arity) {
+			case 1:
+				switch (fixity) {
+				case pst::OperatorFixity::Prefix:
+					return Operatoriness::Prefix;
+				case pst::OperatorFixity::Suffix:
+					return Operatoriness::Suffix;
+				case pst::OperatorFixity::None:
+					ctx.logInt(makeBox<MissingUnaryOperatorFixityError>(source_position));
+					query::throwFailed();
+				}
+				CORE_UNREACHABLE();
+			case 2:
+				return Operatoriness::Infix;
+			default:
+				return Operatoriness::None;
+			}
 		}
-	}
 
-	static bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
-		const auto required_type = requiredMainReturnType(ctx);
+		bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
+			const auto required_type = requiredMainReturnType(ctx);
 
-		return return_type.getType() == required_type.getType()
-		    && return_type.getRefKind() == required_type.getRefKind();
+			return return_type.getType() == required_type.getType()
+			    && return_type.getRefKind() == required_type.getRefKind();
+		}
 	}
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
