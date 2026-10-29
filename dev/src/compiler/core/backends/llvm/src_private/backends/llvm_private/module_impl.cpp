@@ -34,7 +34,7 @@ namespace compiler::backend_llvm {
 	/**
 	 * @brief Convert our OptimizationLevel enum to LLVM's CodeGenOptLevel for machine code gen.
 	 */
-	llvm::CodeGenOptLevel toLLVMCodeGenOptLevel(const LLVMOptimizationLevel level) {
+	static llvm::CodeGenOptLevel toLLVMCodeGenOptLevel(const LLVMOptimizationLevel level) {
 		switch (level) {
 		case LLVMOptimizationLevel::O0:
 			return llvm::CodeGenOptLevel::None;

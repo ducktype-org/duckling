@@ -49,7 +49,7 @@
 namespace compiler::helios {
 
 
-	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	static auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -94,7 +94,9 @@ namespace compiler::helios {
 	 * Determines scope kind for given PST element.
 	 * @TODO: #2407 this could take unlocked access
 	 */
-	ElementScopeKind getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
+	static ElementScopeKind getScopeKind(
+		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
+	) {
 		// @TODO: move it to different file?
 		auto element = locked.unlock(ctx);
 

@@ -9,18 +9,19 @@
 #include <token_source/source.hpp>
 
 #include <vm/loader/parser/elements.hpp>
+#include <vm/loader/parser/parser.hpp>
 
 #include <expected>
 
 namespace vm::loader::parser {
 
-	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
+	static Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
 		auto source = tokenizer::makeTokenSource(path);
 		source->tokenize<lang_def::KeywordMode::DuckBC>();
 		return source;
 	}
 
-	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> int_log) {
+	static MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> int_log) {
 		const lexer::TokenData& td = file->getTokenData();
 
 		F8ParserState state(

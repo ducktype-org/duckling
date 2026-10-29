@@ -198,7 +198,7 @@ namespace dia {
 	 * @brief Return pointer messages that are within the given snippet position.
 	 * dia::SourcePosition is inclusive as always.
 	 */
-	std::vector<PointerMessage> filterMessages(
+	static std::vector<PointerMessage> filterMessages(
 		const std::vector<PointerMessage>& messages, dia::SourcePosition snippet_position
 	) {
 		std::vector<PointerMessage> result;

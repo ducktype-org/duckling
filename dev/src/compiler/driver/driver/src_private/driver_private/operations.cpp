@@ -38,7 +38,7 @@ namespace compiler::driver {
 	 * @brief Utility function to get an ofstream for dumping debug artifacts.
 	 * The artifact will be created if it does not exist.
 	 */
-	std::ofstream getDebugDumpArtifact(base::StrID artifact_name) {
+	static std::ofstream getDebugDumpArtifact(base::StrID artifact_name) {
 		auto          art = getDebugArtifactCollection()->fileArtifactAtOrNew(artifact_name);
 		std::ofstream output_file(art.file.getFilePath().getPath(), std::ios::binary);
 		return output_file;

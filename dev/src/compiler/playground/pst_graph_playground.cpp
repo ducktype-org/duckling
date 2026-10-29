@@ -70,7 +70,7 @@ struct Handler final {
 	}
 };
 
-std::string stringPosition(dia::SourcePosition pos) {
+static std::string stringPosition(dia::SourcePosition pos) {
 	std::stringstream ss;
 	ss << "(" << pos.getStart() << ", ";
 	ss << pos.getEnd() << ")";
@@ -82,7 +82,7 @@ std::string stringPosition(dia::SourcePosition pos) {
  *
  * @note Adds information about position and element class
  */
-Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
+static Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 	// std::string name = stringPosition(el->getStablePosition()) + "\n" +
 	// el->elementType() + "\n\""
 	// + el->getComponentHash().str() + "\"";

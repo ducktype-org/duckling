@@ -17,7 +17,7 @@
 namespace compiler::helios {
 
 	template<typename Attr>
-	SymID searchForSymbolWithAttributeAndName(
+	static SymID searchForSymbolWithAttributeAndName(
 		query::Context& ctx, SymID scope_source_sym, base::StrID searched_name
 	) {
 		auto symbols = ctx.query<QuerySymbolsInScope>(scope(scope_source_sym))->valueOrThrow();

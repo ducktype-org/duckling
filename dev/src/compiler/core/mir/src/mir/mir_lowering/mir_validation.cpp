@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include "mir_validation.hpp"
+
 #include "../mir_structure/mir_structure.hpp"
 #include "errors.hpp"
 #include "mir_lifetimes.hpp"
@@ -15,7 +17,7 @@
 
 namespace compiler::mir {
 
-	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
+	static base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
 		base::HashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
 		for (auto& local: fun.local_list) {
 			if (local.helios_id.empty()) continue;

@@ -47,7 +47,7 @@ namespace dia {
 
 	using namespace term_ui_view;
 
-	StyleType styleTypeFromString(const std::string& type) {
+	static StyleType styleTypeFromString(const std::string& type) {
 		if (type == "error") return StyleType::Error;
 		if (type == "warning") return StyleType::Warning;
 		if (type == "note") return StyleType::Note;
@@ -108,7 +108,7 @@ namespace dia {
 		void visitCodeLocationComponent(const state::CodeLocationComponent&) override {}
 	};
 
-	CodeSection buildCodeSection(
+	static CodeSection buildCodeSection(
 		const state::CodeBlockComponent&                                     block,
 		const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
 		StyleType                                                            style_type

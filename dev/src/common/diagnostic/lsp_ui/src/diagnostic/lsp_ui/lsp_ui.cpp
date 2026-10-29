@@ -43,7 +43,7 @@ namespace dia::lsp {
 	 * The path arrives as a bare string that has already lost its type, and can be empty, so
 	 * neither conversion may be applied blindly.
 	 */
-	std::string toPhysicalPathString(const std::string& file) {
+	static std::string toPhysicalPathString(const std::string& file) {
 		if (file.empty()) return {};
 
 		fs::FilePath path(file);
@@ -54,11 +54,11 @@ namespace dia::lsp {
 	/**
 	 * @brief A zero-length range at the start of a file, for diagnostics with no location.
 	 */
-	Range wholeFileStart() {
+	static Range wholeFileStart() {
 		return { .start = { .line = 0, .character = 0 }, .end = { .line = 0, .character = 0 } };
 	}
 
-	DiagnosticSeverity convertSeverity(dia::term_ui_view::StyleType severity) {
+	static DiagnosticSeverity convertSeverity(dia::term_ui_view::StyleType severity) {
 		switch (severity) {
 		case dia::term_ui_view::StyleType::Error:
 			return DiagnosticSeverity::Error;
@@ -79,7 +79,7 @@ namespace dia::lsp {
 	 * are inclusive. But the LSP protocol uses 0-based indexing and the end
 	 * position is exclusive.
 	 */
-	SectionLocation extractLocation(const dia::term_ui_view::CodeSection& section) {
+	static SectionLocation extractLocation(const dia::term_ui_view::CodeSection& section) {
 		Range range;
 
 		range.start.line      = static_cast<Uint>(section.location.line - 1);
@@ -106,7 +106,7 @@ namespace dia::lsp {
 	 *
 	 * @return Range of the main message.
 	 */
-	SectionLocation getMessageLocation(
+	static SectionLocation getMessageLocation(
 		const dia::term_ui_view::Message&          message,
 		std::vector<DiagnosticRelatedInformation>& related_information,
 		const EvaluationContext&                   evaluation_ctx
@@ -145,7 +145,7 @@ namespace dia::lsp {
 	 * @brief If the evaluation of the diagnostic failed, return a diagnostic
 	 * indicating the failure.
 	 */
-	LSPDiagnosticResult failedResult(
+	static LSPDiagnosticResult failedResult(
 		const std::string& error_msg, const EvaluationContext& evaluation_ctx
 	) {
 		Diagnostic diag;

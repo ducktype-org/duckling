@@ -36,7 +36,9 @@ namespace compiler::tsh {
 	 * @param type The type for which to get the default interface, needed e.g. for method types.
 	 * @return The default interface for the given type.
 	 */
-	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+	static TypeInterface getDefaultTypeInterfaceForType(
+		query::Context& ctx, const AbstractType type
+	) {
 		using helios::defgen::generatedCopyConstructorSymForType;
 		using helios::defgen::generatedDestructSymForType;
 		using helios::defgen::generatedToStringSymForType;
@@ -180,7 +182,7 @@ namespace compiler::tsh {
 	 * @param types Vector of symbol types to stringify.
 	 * @return A human-readable string representing a sequence of symbol types.
 	 */
-	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
+	static std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
 		std::stringstream res;
 		res << "(";
 		if (!types.empty()) res << types[0].toString();

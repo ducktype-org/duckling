@@ -20,7 +20,7 @@
 
 #include <iostream>
 
-void printContextErrors() {
+static void printContextErrors() {
 	auto logger = query::Context::dumpToOneLoggerAndClear();
 	if (logger->messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
@@ -28,13 +28,13 @@ void printContextErrors() {
 	}
 }
 
-void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {
+static void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {
 	std::cerr << "Dependencies:\n";
 	for (auto& i: deps)
 		std::cerr << "    > query: " << i.q_id.getData().name << ",  key: " << i.hash.val << "\n";
 }
 
-int notMain(int argc, const char* const* argv) {
+static int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
 
 

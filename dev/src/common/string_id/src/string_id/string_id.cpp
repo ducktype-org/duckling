@@ -58,7 +58,7 @@ namespace base {
 	 * @brief Creates a new buffer for storing strings.
 	 * @note It is required to be called under write-lock.
 	 */
-	void newBuffer() {
+	static void newBuffer() {
 		auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
 		buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
 		size_left = DEFAULT_BUFFER_SIZE;
@@ -69,7 +69,7 @@ namespace base {
 	 * @brief Returns a view to the last buffer.
 	 * @note It is required to be called under lock.
 	 */
-	base::RawView lastBuffer() { return buffer_list.back().view(); }
+	static base::RawView lastBuffer() { return buffer_list.back().view(); }
 
 	/**
 	 * @brief

@@ -7,6 +7,7 @@
 #include "pst.hpp"
 
 #include "lang_parser_state.hpp"
+#include "parsed_pst.hpp"
 
 namespace pst::internal {
 	Box<LangParserState> makeState(

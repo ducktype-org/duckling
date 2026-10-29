@@ -139,7 +139,7 @@ constexpr std::array<version::ExtraField, 2> DUCKC_VERSION_FIELDS{
 #endif
 };
 
-clah::Clah getStandardDucklingOptions() {
+static clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
@@ -174,7 +174,7 @@ clah::Clah getStandardDucklingOptions() {
 /**
  * Helper function for setting optimisation level in relevant subcommands.
  */
-clah::Parameter getLlvmOptLevelParam() {
+static clah::Parameter getLlvmOptLevelParam() {
 	std::vector<std::string> llvm_opt_level_values{ "0", "1", "2", "3", "s", "z" };
 	return clah::ParamBuilder::ofValue(clah::CategoryParser::make("level", llvm_opt_level_values))
 	    .addLongName("llvm-opt")
@@ -187,7 +187,9 @@ clah::Parameter getLlvmOptLevelParam() {
 	    .build();
 }
 
-global_state::BackendOptions getBackendOptionsFromClah(const clah::ParsingResult& parsing_result) {
+static global_state::BackendOptions getBackendOptionsFromClah(
+	const clah::ParsingResult& parsing_result
+) {
 	using LLVMOptimizationLevel = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
 	using enum LLVMOptimizationLevel;
 	static const base::HashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
@@ -204,7 +206,7 @@ global_state::BackendOptions getBackendOptionsFromClah(const clah::ParsingResult
 	};
 }
 
-auto getClahStdLibOptions() {
+static auto getClahStdLibOptions() {
 	return std::array{
 		clah::ParamBuilder::ofFlag()
 			.addLongName("no-std")
@@ -232,7 +234,7 @@ auto getClahStdLibOptions() {
 /**
  * Helper function to extract standard library options from clah parsing result.
  */
-compiler::driver::options_types::StdLibOptions getStdLibOptionsFromClah(
+static compiler::driver::options_types::StdLibOptions getStdLibOptionsFromClah(
 	const clah::ParsingResult& parsing_result
 ) {
 	using compiler::driver::options_types::StdLibOptions;
@@ -254,7 +256,7 @@ compiler::driver::options_types::StdLibOptions getStdLibOptionsFromClah(
 	return std_lib_options;
 }
 
-clah::VerificationResult verifyStdLibOptions(const clah::ParsingResult& parsing_result) {
+static clah::VerificationResult verifyStdLibOptions(const clah::ParsingResult& parsing_result) {
 	if (parsing_result.isFlag("no-std") && parsing_result.isParam("custom-std-path")) {
 		return std::unexpected<std::string>(
 			"--no-std and --custom-std-path cannot be used together."
@@ -264,7 +266,8 @@ clah::VerificationResult verifyStdLibOptions(const clah::ParsingResult& parsing_
 	return clah::VerificationPassed{};
 }
 
-auto getClahArchivingOptions() {
+// @TODO: #3905 check whether this function is still needed, delete it if not
+[[maybe_unused]] static auto getClahArchivingOptions() {
 	return std::array{
 		clah::ParamBuilder::ofValue(clah::FilePathParser::make("archiver path"))
 			.addLongName("archiver")
@@ -277,7 +280,7 @@ auto getClahArchivingOptions() {
 /**
  * Helper function to extract archiving options from clah parsing result.
  */
-compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
+static compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 	const clah::ParsingResult& parsing_result
 ) {
 	compiler::archiver::ArchivingOptions archiving_options;
@@ -285,7 +288,7 @@ compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 	return archiving_options;
 }
 
-auto getClahLinkingOptions() {
+static auto getClahLinkingOptions() {
 	return std::array{
 		clah::ParamBuilder::ofValue(clah::FilePathParser::make())
 			.addLongName("linker")
@@ -319,7 +322,7 @@ auto getClahLinkingOptions() {
 /**
  * Helper function to extract local linking options from clah parsing result.
  */
-compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
+static compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 	const clah::ParsingResult& parsing_result
 ) {
 	compiler::driver::options_types::LinkingOptions linking_options;
@@ -346,7 +349,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 namespace debug_options {
 	using compiler::driver::options_types::DebugOptions;
 
-	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
+	static auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
 			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
 			{ "dbc", &DebugOptions::dump_dbc }, { "lir", &DebugOptions::dump_lir },
@@ -355,7 +358,8 @@ namespace debug_options {
 		return dump_field_mapping;
 	}
 
-	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
+	static auto getDebugPrintIROptions()
+		-> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
 			{ "dbc", &DebugOptions::print_dbc },
 			{ "lir", &DebugOptions::print_lir },
@@ -369,7 +373,7 @@ namespace debug_options {
 	 * @brief Return the array of clah::Parameter for the debug options of the driver, which can be
 	 * added to a Clah instance.
 	 */
-	auto getClahDebugParameters() {
+	static auto getClahDebugParameters() {
 		std::vector<std::string> dump_categories = getDebugDumpIROptions() | std::views::keys
 		                                         | std::ranges::to<std::vector<std::string>>();
 		std::vector<std::string> print_categories = getDebugPrintIROptions() | std::views::keys
@@ -406,7 +410,7 @@ namespace debug_options {
 	/**
 	 * @brief Given parsing result from clah, extract the debug options for the driver.
 	 */
-	DebugOptions getDebugOptionsFromClah(const clah::ParsingResult& parsing_result) {
+	static DebugOptions getDebugOptionsFromClah(const clah::ParsingResult& parsing_result) {
 		DebugOptions debug_options{
 			.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
 			                          .copyValueOr(std::vector<std::string>{}),
@@ -437,7 +441,7 @@ namespace incremental_options {
 	 * @brief Return the array of clah::Parameter for the incremental options of the driver, which
 	 * can be added to a Clah instance.
 	 */
-	auto getClahIncrementalParameters() {
+	static auto getClahIncrementalParameters() {
 		return std::array{
 			clah::ParamBuilder::ofFlag()
 				.addLongName("no-incremental")
@@ -449,14 +453,16 @@ namespace incremental_options {
 	/**
 	 * @brief Given parsing result from clah, extract the incremental options for the driver.
 	 */
-	IncrementalOptions getIncrementalOptionsFromClah(const clah::ParsingResult& parsing_result) {
+	static IncrementalOptions getIncrementalOptionsFromClah(const clah::ParsingResult& parsing_result
+	) {
 		return IncrementalOptions{ .enabled = not parsing_result.isFlag("no-incremental") };
 	}
 
 	/**
 	 * @brief Verify that the incremental options are compatible with the debug options.
 	 */
-	clah::VerificationResult verifyIncrementalOptions(const clah::ParsingResult& parsing_result) {
+	static clah::VerificationResult verifyIncrementalOptions(const clah::ParsingResult& parsing_result
+	) {
 		const bool no_incremental = parsing_result.isFlag("no-incremental");
 
 		if ((parsing_result.isParam("dump-ir") || parsing_result.isParam("print-ir"))
@@ -482,7 +488,7 @@ namespace incremental_options {
  * @brief Generate Clah instance with all standard "main" parameters.
  * @return clah::Clah
  */
-clah::Clah getClahForMain() {
+static clah::Clah getClahForMain() {
 	return getStandardDucklingOptions()
 	    .addSubcommand(
 			clah::Clah("lex", "Runs lexer on a single file and prints the result to cout.")

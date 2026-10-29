@@ -74,7 +74,7 @@ namespace compiler::helios {
 	}
 
 	template<typename T>
-	std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
+	static std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
 		std::ranges::sort(a);
 		std::ranges::sort(b);
 

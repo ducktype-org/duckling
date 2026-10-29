@@ -8,7 +8,7 @@
 
 #include <vm/api/api.hpp>
 
-auto runFile(const fs::File& file) -> void {
+static auto runFile(const fs::File& file) -> void {
 	auto process_pid_response = vm::api::spawn();
 	if (!process_pid_response) CORE_PANIC("Spawn failed");
 	auto pid = process_pid_response.value().pid;

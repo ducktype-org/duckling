@@ -30,7 +30,7 @@ namespace query::internal {
 	 * @param new_inputs New inputs to check against.
 	 */
 	template<typename NodePresentCallback, typename NodeRemovedCallback>
-	void checkPresenceOfEveryInput(
+	static void checkPresenceOfEveryInput(
 		NodePresentCallback                     present_callback,
 		NodeRemovedCallback                     not_present_callback,
 		const std::vector<NodeID>&              previous_nodes,

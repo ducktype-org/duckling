@@ -36,7 +36,7 @@ namespace vm::loader::parser {
 			 * 64-bit values are just bit casted to T.
 			 */
 			template<typename T, typename V>
-			T packValue(V value) {
+			static T packValue(V value) {
 				static_assert(sizeof(T) == 8, "T must be a 64-bit type");
 				if constexpr (sizeof(V) == 8) {
 					return std::bit_cast<T>(value);
@@ -51,7 +51,7 @@ namespace vm::loader::parser {
 			 * Logs an error otherwise.
 			 */
 			template<typename SignedInt>
-			bool checkSignedBoundsAndLog(
+			static bool checkSignedBoundsAndLog(
 				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
 			) {
 				if (sign == 1) {
@@ -86,7 +86,7 @@ namespace vm::loader::parser {
 			 * Logs an error otherwise.
 			 */
 			template<typename UnsignedInt>
-			bool checkUnsignedBoundsAndLog(
+			static bool checkUnsignedBoundsAndLog(
 				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
 			) {
 				if (sign == -1) {
@@ -117,7 +117,7 @@ namespace vm::loader::parser {
 		 * and binary too). T has to be type of size 64bits.
 		 */
 		template<class T>
-		std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
+		static std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
 			usize literal_length = 0;
 			i32   sign           = 1;
 
@@ -255,7 +255,7 @@ namespace vm::loader::parser {
 			return { T{ 0 }, 0 };
 		}
 
-		std::pair<std::array<byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
+		static std::pair<std::array<byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
 			const auto& token = state.tokens().peek();
 
 			if (!token.isNumLiteralGroup()) {
@@ -311,7 +311,7 @@ namespace vm::loader::parser {
 			return { bytes, Bits(bit_length) };
 		}
 
-		tpc::Identifier parseIdentifier(F8ParserState& state) {
+		static tpc::Identifier parseIdentifier(F8ParserState& state) {
 			tpc::Identifier identifier;
 			state.parse().one(&identifier);
 			return identifier;
@@ -324,7 +324,7 @@ namespace vm::loader::parser {
 		 * @brief Parses opcode argument. Template specializations change only the return type.
 		 */
 		template<IsOpCodeArg ArgType>
-		auto parseArg(F8ParserState& state) -> ArgType;
+		static auto parseArg(F8ParserState& state) -> ArgType;
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
@@ -378,7 +378,7 @@ namespace vm::loader::parser {
 
 		// Dummy parameter to help with leading commas from macros.
 		template<typename Dummy, typename ArgsHead = void, typename... ArgsTail>
-		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
+		static std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
 			// Separate case for no (non-dummy) args passed (first arg defaulted)
 			// to avoid a trailing comma.
 			if constexpr (std::same_as<ArgsHead, void>) {

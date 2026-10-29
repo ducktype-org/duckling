@@ -39,7 +39,7 @@ namespace unicode {
 	 *
 	 * The pattern is in the icu::UnicodeSet::applyPattern format.
 	 */
-	void createFromPattern(icu::UnicodeSet& set, const std::u8string& pattern) {
+	static void createFromPattern(icu::UnicodeSet& set, const std::u8string& pattern) {
 		icu::ErrorCode err;
 		set.applyPattern(icu::UnicodeString::fromUTF8(pattern), err);
 		if (err.isFailure()) {
@@ -54,7 +54,7 @@ namespace unicode {
 	/**
 	 * @brief Checks whether the intersection of two sets is empty
 	 */
-	bool checkEmptyIntersect(icu::UnicodeSet& a, icu::UnicodeSet& b) {
+	static bool checkEmptyIntersect(icu::UnicodeSet& a, icu::UnicodeSet& b) {
 		icu::UnicodeSet c;
 		c.addAll(a).retainAll(b);
 		return (c.size() == 0);
@@ -63,7 +63,8 @@ namespace unicode {
 	/**
 	 * @brief helper function for printing UnicodeSet information
 	 */
-	void printUnicodeSetRanges(icu::UnicodeSet& uset) {
+	// @TODO: #3905 check whether this function is still needed, delete it if not
+	[[maybe_unused]] static void printUnicodeSetRanges(icu::UnicodeSet& uset) {
 		std::cerr << "size: " << uset.size() << "\n";
 		icu::UnicodeString ustring;
 		uset.toPattern(ustring, true);
@@ -85,7 +86,7 @@ namespace unicode {
 	 * @brief Makes some checks on generated sets that might be useful when making changes or
 	 * changing the icu version
 	 */
-	void sanityChecks() {
+	static void sanityChecks() {
 		using Class = Classifications;
 		for (auto cl: Class::CLASSES) CORE_ASSERT(!cl->isEmpty(), "a classification is empty");
 		for (auto cl: Class::CLASSES) CORE_ASSERT(cl->isFrozen(), "a classification isn't frozen");
@@ -214,7 +215,7 @@ namespace unicode {
 	/**
 	 * A wrapper around u_cleanup macro
 	 */
-	void cleanupICU() { u_cleanup(); }
+	static void cleanupICU() { u_cleanup(); }
 
 	RUN_BEFORE_MAIN(init::registerForDeinit(cleanupICU));
 }

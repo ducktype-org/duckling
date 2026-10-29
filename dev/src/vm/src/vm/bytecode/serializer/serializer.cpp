@@ -24,31 +24,31 @@
 #include <sstream>
 
 namespace vm::code {
-	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
+	static std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
 
 #define LOCAL_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
+	static std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
 	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
 
-	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
+	static std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
-	std::string toString(opargs::Field arg) {
+	static std::string toString(opargs::Field arg) {
 		return base::strConcat(arg.type_name, ".", arg.field_name);
 	}
 
-	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
+	static std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
 
-	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
+	static std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
 
-	std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
+	static std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
 
-	std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
+	static std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
 
-	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
+	static std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
 
-	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
+	static std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
 	std::string argumentToString(const opargs::OpCodeArg& arg) {
 		return VISIT(arg, a, return toString(a));
@@ -58,11 +58,11 @@ namespace vm::code {
 		return VISIT(arg, a, return toString(*a));
 	}
 
-	void displayComment(const std::string_view comment_content, std::ostream& out) {
+	static void displayComment(const std::string_view comment_content, std::ostream& out) {
 		out << '#' << ' ' << comment_content;
 	}
 
-	void displayInstruction(Instruction instruction, std::ostream& out) {
+	static void displayInstruction(Instruction instruction, std::ostream& out) {
 		instr_match(instruction) {
 			instr_case(instructions::Comment, comment) {
 				displayComment(comment.comment.strView(), out);

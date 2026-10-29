@@ -91,7 +91,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
 	 */
-	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
+	static base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
 		return builtinNameMapping().atMaybeCopy(name.strView());
 	}
 

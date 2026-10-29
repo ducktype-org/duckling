@@ -54,7 +54,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Append @p src move sites to @p dst, skipping positions already present.
 	 */
-	void mergeMoveSites(
+	static void mergeMoveSites(
 		std::vector<dia::StablePosition>& dst, const std::vector<dia::StablePosition>& src
 	) {
 		for (const auto& pos: src)
@@ -70,7 +70,7 @@ namespace compiler::mir {
 	 * no move sites: the value is not usable after the join, but it may still own a resource on
 	 * one of the paths, so the destructor has to be emitted conditionally (`DestructIf`).
 	 */
-	base::Optional<MoveState> joinStatus(
+	static base::Optional<MoveState> joinStatus(
 		base::Optional<MoveState> a, base::Optional<MoveState> b, ScopeRef into_scope
 	) {
 		CORE_ASSERT(
@@ -176,7 +176,7 @@ namespace compiler::mir {
 	 * @brief Given LocalMoveStateMap valid at the start of the block,
 	 * return the LocalMoveStateMap valid at the end of the block.
 	 */
-	LocalMoveStateMap transferBlock(
+	static LocalMoveStateMap transferBlock(
 		const Block& block, LocalMoveStateMap map, const LocalsByScopeMap& locals_by_scope
 	) {
 		for (const auto& instr: block.instructions)
@@ -276,9 +276,11 @@ namespace compiler::mir {
 		return result;
 	}
 
-	void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out);
+	static void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out);
 
-	void collectPlaceReads(const MIRPlace& place, bool include_base, std::vector<MIRLocalRef>& out) {
+	static void collectPlaceReads(
+		const MIRPlace& place, bool include_base, std::vector<MIRLocalRef>& out
+	) {
 		if (include_base && place.isLocal()) out.push_back(place.getBase<MIRLocalRef>());
 		for (const auto& proj: place.projection_chain) {
 			variant_match(proj.storage) {
@@ -297,7 +299,7 @@ namespace compiler::mir {
 		}
 	}
 
-	std::vector<MIRLocalRef> instructionReads(const Instruction& instr) {
+	static std::vector<MIRLocalRef> instructionReads(const Instruction& instr) {
 		std::vector<MIRLocalRef> reads;
 		for (const auto& arg: instr.arguments) collectValueReads(arg, reads);
 		if (instr.output && instr.output->hasProjections())
@@ -314,7 +316,7 @@ namespace compiler::mir {
 	 * @note We don't return values with Construct flag in this instruction, as we want to catch the
 	 * values used before construction.
 	 */
-	std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
+	static std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
 		// If we construct a result, then this is not a write
 		for (auto& flag: instr.flags)
 			if (flag.flag == OperationFlag::Flag::Construct) return {};

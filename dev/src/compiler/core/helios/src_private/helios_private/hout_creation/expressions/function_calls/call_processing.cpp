@@ -88,7 +88,9 @@ namespace compiler::helios::code {
 	 * at most relaxes the mutability it is seen with.
 	 * @TODO: #1488 Revisit this.
 	 */
-	bool isExactRank(const CoercionRank rank) { return rank.getRank() <= Rank::MutabilityChange; }
+	static bool isExactRank(const CoercionRank rank) {
+		return rank.getRank() <= Rank::MutabilityChange;
+	}
 
 	struct Match final {
 		/**
@@ -160,7 +162,7 @@ namespace compiler::helios::code {
 	 * @param first_argument_mode The coercion mode of the first positional argument, which allows
 	 * the `self` argument of a method to be implicitly taken by `ref`.
 	 */
-	MatchResult matchOverloadCandidate(
+	static MatchResult matchOverloadCandidate(
 		query::Context&                                        ctx,
 		SymID                                                  fun,
 		const std::vector<Box<Expr>>&                          positional_arguments,
@@ -298,7 +300,7 @@ namespace compiler::helios::code {
 	 *
 	 * @return Box<CallExpr> representing the function call
 	 */
-	Box<Expr> constructCallExpr(
+	static Box<Expr> constructCallExpr(
 		query::Context&                    ctx,
 		SymID                              fun,
 		const CallPstOrigin&               pst_origin,
@@ -354,7 +356,7 @@ namespace compiler::helios::code {
 	 * @note May construct a BinaryOperatorExpr or a CallExpr depending on what the HELIoS operator
 	 * translates to in the lower level.
 	 */
-	Box<Expr> constructHOUTBuiltinOpExpr(
+	static Box<Expr> constructHOUTBuiltinOpExpr(
 		query::Context&          ctx,
 		const CallPstOrigin&     pst_origin,
 		const SymID              fun,
@@ -398,7 +400,7 @@ namespace compiler::helios::code {
 		CORE_UNREACHABLE();
 	}
 
-	void appendExactMatchesErrors(
+	static void appendExactMatchesErrors(
 		query::Context&             ctx,
 		Box<AmbiguousMatchesError>& main_msg,
 		const std::vector<Match>&   exact_matches,
@@ -439,7 +441,7 @@ namespace compiler::helios::code {
 			main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
 	}
 
-	void appendCoercibleMatchesErrors(
+	static void appendCoercibleMatchesErrors(
 		query::Context&             ctx,
 		Box<AmbiguousMatchesError>& main_msg,
 		const std::vector<Match>&   coercible_matches,
@@ -499,7 +501,7 @@ namespace compiler::helios::code {
 			main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
 	}
 
-	void appendFailedMatchesErrors(
+	static void appendFailedMatchesErrors(
 		query::Context&             ctx,
 		Box<AmbiguousMatchesError>& main_msg,
 		const CallPstOrigin&        call_pst_origin,
@@ -560,7 +562,7 @@ namespace compiler::helios::code {
 	 * argument is `self` and may be implicitly taken by `ref`.
 	 * @return The function symbol, the argument origins, and the coercions.
 	 */
-	query::QResult<OverloadResolutionResult> doOverloadResolution(
+	static query::QResult<OverloadResolutionResult> doOverloadResolution(
 		query::Context&           ctx,
 		const std::vector<SymID>& candidates,
 		const CallArguments&      call_arguments,
@@ -670,7 +672,7 @@ namespace compiler::helios::code {
 	 * @param[out] named_arguments Output map for named arguments
 	 * @return A vector of argument origins if successful, or a failure result if validation fails.
 	 */
-	query::QResult<std::vector<ElementOrigin>> fillCallArgs(
+	static query::QResult<std::vector<ElementOrigin>> fillCallArgs(
 		query::Context&                                  ctx,
 		pst::Access<pst::expr::Call>                     call_expr,
 		ElementOrigin                                    whole_call_origin,

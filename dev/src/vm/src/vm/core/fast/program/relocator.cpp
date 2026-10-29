@@ -61,7 +61,7 @@ namespace {
  * @brief Relocates an instruction to an executable instruction by translating its
  * arguments.
  */
-exec::Instruction relocInstruction(
+static exec::Instruction relocInstruction(
 	const ProgramBase&                  program,
 	const exec::ExecFunctionCollection& exec_functions,
 	const exec::ExecFunction&           current_function,

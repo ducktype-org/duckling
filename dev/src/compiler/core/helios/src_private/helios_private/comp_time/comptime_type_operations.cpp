@@ -263,7 +263,7 @@ namespace compiler::helios::comptime_ops {
 		return *left != *right;
 	}
 
-	std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
+	static std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
 		return {
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_box, comptime_create_box, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_ref, comptime_create_ref, pid),

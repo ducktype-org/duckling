@@ -13,13 +13,15 @@
 #include <vector>
 
 namespace vm::code {
-	std::unordered_set<base::StrID> getNewFunctionNames(const std::vector<Function>& new_functions) {
+	static std::unordered_set<base::StrID> getNewFunctionNames(
+		const std::vector<Function>& new_functions
+	) {
 		std::unordered_set<base::StrID> result;
 		for (const auto& func: new_functions) result.insert(func.name);
 		return result;
 	}
 
-	base::HashMap<base::StrID, std::vector<base::StrID>> getCallGraph(
+	static base::HashMap<base::StrID, std::vector<base::StrID>> getCallGraph(
 		const std::vector<Function>& new_functions
 	) {
 		base::HashMap<base::StrID, std::vector<base::StrID>> result;
@@ -57,7 +59,7 @@ namespace vm::code {
 	/// edge caller -> callee becomes callee -> caller. This lets flag propagation walk from a
 	/// callee up to every (transitive) caller, so a flag found in a callee is attributed to all
 	/// functions that may reach it.
-	base::HashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
+	static base::HashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
 		const base::HashMap<base::StrID, std::vector<base::StrID>>& call_graph
 	) {
 		base::HashMap<base::StrID, std::vector<base::StrID>> result;
@@ -74,7 +76,7 @@ namespace vm::code {
 		return result;
 	}
 
-	InstructionFlag collectFlagsForFunction(
+	static InstructionFlag collectFlagsForFunction(
 		const Function&                        func,
 		const ObjIdNameMap<GlobalData>&        globals,
 		const ObjIdNameMap<ExternalCFunction>& ext_c_functions

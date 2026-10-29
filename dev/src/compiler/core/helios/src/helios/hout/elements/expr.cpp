@@ -352,7 +352,7 @@ namespace compiler::helios::code {
 		  inner(inner),
 		  first_use(first_use) {}
 
-	tsh::AbstractType builtinBinaryOperationToReturnType(
+	static tsh::AbstractType builtinBinaryOperationToReturnType(
 		query::Context&         ctx,
 		const BuiltinBinary     operation,
 		const tsh::AbstractType lhs_type,
@@ -578,7 +578,8 @@ namespace compiler::helios::code {
 	/**
 	 * Map a vector of HOUT expressions to their symbol types.
 	 */
-	std::vector<tsh::SymbolType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs) {
+	static std::vector<tsh::SymbolType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs
+	) {
 		std::vector<tsh::SymbolType<>> types;
 		types.reserve(exprs.size());
 		for (const auto& expr: exprs) types.push_back(expr->expression_type.getSymbolType());
@@ -917,7 +918,7 @@ namespace compiler::helios::code {
 		);
 	}
 
-	tsh::AbstractType builtinUnaryOperationToReturnType(
+	static tsh::AbstractType builtinUnaryOperationToReturnType(
 		[[maybe_unused]] query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
 	) {
 		using enum BuiltinUnary;

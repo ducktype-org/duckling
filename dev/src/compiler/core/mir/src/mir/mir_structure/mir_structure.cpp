@@ -152,7 +152,7 @@ namespace compiler::mir {
 		os << "}\n";
 	}
 
-	void debugPrintInstrParameters(std::ostream& os, const InstrParameters& instr_params) {
+	static void debugPrintInstrParameters(std::ostream& os, const InstrParameters& instr_params) {
 		os << " Params{";
 		variant_match(instr_params) {
 			variant_case_novalue(NoInstrParameters) { /* nothing */ }

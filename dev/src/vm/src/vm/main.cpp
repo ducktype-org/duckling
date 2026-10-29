@@ -39,7 +39,7 @@ const std::array<version::ExtraField, 2> EXTRA_VERSION_FIELDS{
 };
 
 
-clah::Clah getVmClah() {
+static clah::Clah getVmClah() {
 	return clah::Clah("VM", "The Duckling Virtual Machine.")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')

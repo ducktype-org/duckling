@@ -38,7 +38,7 @@ const std::regex is_preproc{ R"--(^preproc_.*$)--" };
  * @note Strings are hardcoded to always be 1 token which is more aligned with c++ definitions
  * @note Comments are hardcoded to always be 0 tokens which is more aligned with c++ definitions
  */
-int countTokens(TSNode node) {
+static int countTokens(TSNode node) {
 	u32         count = ts_node_child_count(node);
 	std::string type{ ts_node_type(node) };
 	// std::cout << type << "\n";
