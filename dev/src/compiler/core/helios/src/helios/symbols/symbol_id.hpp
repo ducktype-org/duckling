@@ -59,6 +59,7 @@ namespace compiler::helios {
 		SymID(const CRef<SymbolData> ref): ref(ref) {}
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
+		friend struct ImplementationOf_QueryInferredSymbols;
 		friend struct defgen::ImplementationOf_QueryGeneratedSymbol;
 		friend struct ImplementationOf_QueryClassSymbolData;
 	};

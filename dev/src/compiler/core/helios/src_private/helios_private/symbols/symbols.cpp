@@ -44,6 +44,7 @@
 #include <string_id/string_id.hpp>
 
 #include <functional>
+#include <ranges>
 #include <unordered_set>
 #include <vector>
 
@@ -52,7 +53,9 @@ namespace compiler::helios {
 		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
+			variant_case_novalue(
+				PstImplementedSemantics, PstInferredSemantics, ClassMemberSemantics
+			) {
 				return kind(id) != SymbolKind::FunctionDeclaration;
 			}
 			variant_case(BuiltinSemantics, data) {
@@ -88,6 +91,9 @@ namespace compiler::helios {
 
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstImplementedSemantics, pst_data) {
+				return pst_emission_policy(pst_data.getElement());
+			}
+			variant_case(PstInferredSemantics, pst_data) {
 				return pst_emission_policy(pst_data.getElement());
 			}
 			variant_case(ClassMemberSemantics, member_data) {
@@ -429,6 +435,30 @@ namespace compiler::helios {
 				);
 			return first;
 		}
+
+		/**
+		 * @brief Return the scope, that symbol created from given PST element
+		 * Should be in.
+		 * @note This has to be consistent with QuerySymbolsInScope
+		 * @TODO: #2407 this could take unlocked Access
+		 */
+		ScopeID getPSTElementParentScope(
+			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
+		) {
+			// Note: This has to be consistent with QuerySymbolsInScope logic.
+			// @TODO: #2397 maybe move it into a single place
+
+			auto unlocked = element.unlock(ctx);
+			auto parent   = getPSTElementParent(ctx, unlocked);
+
+			// We should never hit an element without PST parent here,
+			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
+			// have symbols.
+			CORE_ASSERT(
+				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT"
+			);
+			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
+		}
 	}
 
 	/**
@@ -689,80 +719,15 @@ namespace compiler::helios {
 		);
 	}
 
-	/**
-	 * @brief SymbolData Factory,
-	 * Make symbols from PST elements other then statements.
-	 * @todo in the future this function should not use dynamic_casts,
-	 * and should be merged with makeSymbolFromStatement.
-	 */
-	SymbolData makeSymbolFromPSTElement(
-		ScopeID scope, pst::Access<pst::LangElement> element, query::Context& ctx
-	) {
-		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
-			auto parameter = parameter_opt.value();
-			return SymbolData::makePSTSymbolData(
-				{
-					.name = parameter->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Parameter,
-				},
-				PstImplementedSemantics(scope, element->getHash())
-			);
-		}
-
-		if (auto ident_wrapper_opt = element.dynamicCast<pst::IdentifierWrapper>()) {
-			auto ident_wrapper = ident_wrapper_opt.value();
-			auto parent_opt    = ident_wrapper->getParent();
-			CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without parent");
-
-			auto parent_elem = parent_opt.value().unlock(ctx);
-			if (parent_elem.dynamicCast<pst::For>().has_value()
-			    || parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
-				return SymbolData::makePSTSymbolData(
-					{
-						.name = ident_wrapper->unwrap(),
-						.kind = SymbolKind::Variable,
-					},
-					PstImplementedSemantics(scope, element->getHash())
-				);
-			} else {
-				CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
-			}
-		}
-
-		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
-	}
-
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
-		/**
-		 * @brief Return the scope, that symbol created from given PST element
-		 * Should be in.
-		 * @note This has to be consistent with QuerySymbolsInScope
-		 * @TODO: #2407 this could take unlocked Access
-		 */
-		static ScopeID getPSTElementParentScope(
-			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
-		) {
-			// Note: This has to be consistent with QuerySymbolsInScope logic.
-			// @TODO: #2397 maybe move it into a single place
-
-			auto unlocked = element.unlock(ctx);
-			auto parent   = getPSTElementParent(ctx, unlocked);
-
-			// We should never hit an element without PST parent here,
-			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
-			// have symbols.
-			CORE_ASSERT(
-				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT"
-			);
-			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
-		}
-
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()).valueOrThrow() };
-			else
-				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
+			auto stmt  = key.element.unlock(ctx).dynamicCast<pst::Stmt>();
+			CORE_ASSERT(
+				stmt.has_value(), "Invalid PST element in QuerySymbolOfSTMT, statement expected."
+			);
+
+			return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()).valueOrThrow() };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<query::QResult<SymbolData>> presult) -> QResult {
@@ -795,6 +760,140 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
+
+	struct IMPLEMENT_QUERY(QueryInferredSymbols, query::QResult<std::vector<SymbolData>>) {
+		struct SymbolInferVisitor final: pst::PstVisitorPanicky {
+			SymbolInferVisitor(Context& ctx, ScopeID scope): ctx(ctx), scope(scope) {}
+
+			base::Optional<std::vector<SymbolData>> out;
+			Context&                                ctx;
+			ScopeID                                 scope;
+
+			template<class... Args>
+			void output(Args&&... args) {
+				CORE_ASSERT(this->out.empty(), "Output already set");
+				this->out.emplace(std::forward<Args>(args)...);
+			}
+
+			void visitFor(pst::Access<pst::For> for_stmt) override {
+				// For loop only infers iterator variable, other variables created during desugaring
+				// are compiler internal helpers, not user-facing symbols.
+				auto                    iterator = for_stmt->getIteratorIdentifier().unlock(ctx);
+				std::vector<SymbolData> out      = { SymbolData::makePSTInferredSymbolData(
+                    {
+							 .name = iterator->unwrap(),
+							 .kind = SymbolKind::Variable,
+                    },
+                    PstInferredSemantics(scope, iterator->getHash())
+                ) };
+				output(std::move(out));
+			}
+
+			void visitBindingPattern(pst::Access<pst::BindingPattern> pattern) override {
+				// Binding pattern infers all identifiers in the pattern, but for now we only
+				// support a single identifier. In the future we may want to support more complex
+				// patterns, and then this function should return all identifiers in the pattern.
+				auto                    name = pattern->getName().unlock(ctx);
+				std::vector<SymbolData> out  = { SymbolData::makePSTInferredSymbolData(
+                    {
+						 .name = name->unwrap(),
+						 .kind = SymbolKind::Variable,
+                    },
+                    PstInferredSemantics(scope, name->getHash())
+                ) };
+				output(std::move(out));
+			}
+
+			void outputParamList(pst::Access<pst::ParamList> params) {
+				std::vector<SymbolData> out;
+				for (auto param: *params) {
+					out.emplace_back(SymbolData::makePSTSymbolData(
+						{
+							.name = param.unlock(ctx)->getName().unlock(ctx)->unwrap(),
+							.kind = SymbolKind::Parameter,
+						},
+						// Note that parameter has PstImplementedSemantics, not PstInferredSemantics.
+					    // That is because it is not wrapped in a IdentifierWrapper and aside from
+					    // symbol creation it is easier to treat it like a regular symbol.
+						PstImplementedSemantics(scope, param.unlock(ctx)->getHash())
+					));
+				}
+				output(std::move(out));
+			}
+
+			void visitFun(pst::Access<pst::Fun> fun) override {
+				// Functions infer all their parameters
+				auto params = fun->getParams();
+				outputParamList(params.unlock(ctx));
+			}
+
+			void visitFunDecl(pst::Access<pst::FunDecl> fun_decl) override {
+				// Function declarations infer all their parameters
+				auto params = fun_decl->getParams();
+				outputParamList(params.unlock(ctx));
+			}
+
+			void visitMethod(pst::Access<pst::Method> meth) override {
+				// Methods infer all their parameters BUT NOT `self`
+				// `self` is not present in the PST, so it is generated by the compiler instead of
+				// being inferred from the PST
+				auto params = meth->getParams();
+				outputParamList(params.unlock(ctx));
+			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
+				// Copy constructors infer all their parameters
+				auto params = cctor->getParams();
+				outputParamList(params.unlock(ctx));
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto               element = key.element.unlock(ctx);
+			auto               scope   = ctx.query<QueryPrimaryCodeScopeFor>(element);
+			SymbolInferVisitor symbol_infer(ctx, scope);
+			element->acceptVisitor(symbol_infer);
+
+			CORE_ASSERT(
+				symbol_infer.out.has_value(), "QueryInferredSymbols: visitor produced no output"
+			);
+			return std::move(symbol_infer.out.value());
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(
+			[](CRef<query::QResult<std::vector<SymbolData>>> presult) -> QResult {
+				if (presult->hasFailed()) return query::Failed();
+
+				std::vector<SymID> out;
+				for (const auto& data: presult->valueOrPanic()) out.push_back(SymID{ &data });
+				return std::move(out);
+			}
+		)
+
+	private:
+		/**
+		 * @brief This is a helper function for getAllHeliosSymbols.
+		 * Use only inside that function (and only for debug/test purposes)!
+		 */
+		static std::vector<SymID> getAllCachedSymbols() {
+			// This implementation is fragile, adjust if needed.
+
+			std::vector<SymID> out;
+
+			for (auto& [key, cache_entry]: cache) {
+				if (cache_entry.data.hasFailed()) continue;
+
+				for (const auto& data: cache_entry.data.valueOrPanic())
+					out.push_back(SymID{ &data });
+			}
+			return out;
+		}
+
+		// for getAllCachedSymbols:
+		friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInferredSymbols);
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -1038,15 +1137,21 @@ namespace compiler::helios {
 			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);
 
-		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto stmt_symbols     = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto inferred_symbols = ImplementationOf_QueryInferredSymbols::getAllCachedSymbols();
 		auto generated_symbols
 			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 
 		std::vector<SymID> output;
-		output.reserve(pst_symbols.size() + generated_symbols.size());
+		output.reserve(generated_symbols.size() + stmt_symbols.size() + inferred_symbols.size());
 
-		output.insert(output.end(), pst_symbols.begin(), pst_symbols.end());
+		output.insert(output.end(), stmt_symbols.begin(), stmt_symbols.end());
+		output.insert(output.end(), inferred_symbols.begin(), inferred_symbols.end());
 		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
+
+		// remove duplicates
+		std::unordered_set<SymID> s(output.begin(), output.end());
+		output.assign(s.begin(), s.end());
 
 		return output;
 	}

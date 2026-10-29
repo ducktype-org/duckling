@@ -163,24 +163,12 @@ namespace compiler::helios {
 				setTypeOfSymbolByAbstractType(ab_type);
 			}
 
-			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {
-				// @TODO: #2782 Remove this function.
-				auto parent_opt = ident->getParent();
-				CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without in type query");
-
-				auto parent_elem = parent_opt.value().unlock(ctx);
-				if (auto for_stmt_opt = parent_elem.dynamicCast<pst::For>()) {
-					handleForIterator(for_stmt_opt.value());
-					return;
-				}
-				if (auto binding_opt = parent_elem.dynamicCast<pst::BindingPattern>()) {
-					handleMatchBinding(binding_opt.value());
-					return;
-				}
-				CORE_PANIC("IdentifierWrapper with unsupported parent in QueryTypeOfSymbol");
-			}
-
-			void handleMatchBinding(pst::Access<pst::BindingPattern> binding) {
+			/**
+			 * @brief Get the type of a match symbol inferred from a binding pattern.
+			 * Note that this is called on a parent of an identifier wrapper - an actual pst node
+			 * associated with the symbol.
+			 */
+			void visitBindingPattern(pst::Access<pst::BindingPattern> binding) final {
 				// The binding's type is the type constraint of the enclosing flow pattern
 				// (`case x : T`). Bindings without a constraint are not supported yet.
 				auto flow_parent = binding->getParent();
@@ -207,7 +195,12 @@ namespace compiler::helios {
 				setSymbolTypeByTypeExpr(constraint.value().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void handleForIterator(pst::Access<pst::For> stmt) {
+			/**
+			 * @brief Get the type of the iterator symbol inferred from a for loop.
+			 * Note that this is called on a parent of an identifier wrapper - an actual pst node
+			 * associated with the symbol.
+			 */
+			void visitFor(pst::Access<pst::For> stmt) final {
 				// Get the element type from the iterable.
 				auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
 				auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst });
@@ -295,6 +288,11 @@ namespace compiler::helios {
 					PstVisitor_GetTypeOf visitor(ctx);
 					maybeSymbolPst(key)->unlock(ctx)->acceptVisitor(visitor);
 
+					return visitor.symbol_type_qresult;
+				}
+				variant_case(PstInferredSemantics, data) {
+					PstVisitor_GetTypeOf visitor(ctx);
+					data.getParent(ctx).unlock(ctx)->acceptVisitor(visitor);
 					return visitor.symbol_type_qresult;
 				}
 				variant_case(defgen::Constructor, ctor) {

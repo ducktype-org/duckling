@@ -276,8 +276,8 @@ namespace compiler::helios::desugaring {
 					);
 					return query::Failed();
 				}
-				binding_sym = ctx.query<QuerySymbolOfSTMT>({ binding_opt.value()->getName() })
-				                  .valueOrThrow();
+				binding_sym
+					= ctx.query<QueryInferredSymbols>(binding_opt.value()).valueOrThrow().at(0);
 			} else if (not pattern.dynamicCast<pst::WildcardPattern>().has_value()) {
 				logNYI(
 					ctx,
