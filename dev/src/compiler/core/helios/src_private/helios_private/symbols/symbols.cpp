@@ -1125,7 +1125,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveUsedSymbols);
 
-	// @TODO: Adjust for new queries
 	std::vector<SymID> getAllHeliosSymbols() {
 		// this implementation is fragile, adjust if needed
 
