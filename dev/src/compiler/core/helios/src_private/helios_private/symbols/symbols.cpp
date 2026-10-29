@@ -1135,15 +1135,17 @@ namespace compiler::helios {
 			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);
 
-		auto stmt_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto stmt_symbols     = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto inferred_symbols = ImplementationOf_QueryInferredSymbols::getAllCachedSymbols();
 		auto generated_symbols
 			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 
 		std::vector<SymID> output;
-		output.reserve(generated_symbols.size() + stmt_symbols.size());
+		output.reserve(generated_symbols.size() + stmt_symbols.size() + inferred_symbols.size());
 
-		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
 		output.insert(output.end(), stmt_symbols.begin(), stmt_symbols.end());
+		output.insert(output.end(), inferred_symbols.begin(), inferred_symbols.end());
+		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
 
 		// remove duplicates
 		std::unordered_set<SymID> s(output.begin(), output.end());
