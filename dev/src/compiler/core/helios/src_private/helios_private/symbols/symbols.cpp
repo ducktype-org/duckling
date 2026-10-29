@@ -981,13 +981,11 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(
 			[](CRef<query::QResult<std::vector<SymbolData>>> presult) -> QResult {
-				if (presult->hasFailed())
-					return query::Failed();
-				else
-					return &presult->valueOrPanic()
-				         | std::views::transform([](const SymbolData& data) -> SymID {
-							   return SymID{ &data };
-						   });
+				if (presult->hasFailed()) return query::Failed();
+
+				std::vector<SymID> out;
+				for (const auto& data: presult->valueOrPanic()) out.push_back(SymID{ &data });
+				return std::move(out);
 			}
 		)
 
@@ -1004,12 +1002,8 @@ namespace compiler::helios {
 			for (auto& [key, cache_entry]: cache) {
 				if (cache_entry.data.hasFailed()) continue;
 
-				out.append_range(
-					&cache_entry.data.valueOrPanic()
-					| std::views::transform([](const SymbolData& data) -> SymID {
-						  return SymID{ &data };
-					  })
-				);
+				for (const auto& data: cache_entry.data.valueOrPanic())
+					out.push_back(SymID{ &data });
 			}
 			return out;
 		}

@@ -380,8 +380,8 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void emplaceDeclaration(
-				const std::vector<SymID>&                  params,
-				const code::ElementOrigin&                params_origin,
+				const std::vector<SymID>&                          params,
+				const code::ElementOrigin&                         params_origin,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
@@ -412,8 +412,7 @@ namespace compiler::helios {
 					}
 
 					origin = code::elementOriginOrdered(
-						params_origin,
-						code::pstOrigin(ret.value().unlock(ctx))
+						params_origin, code::pstOrigin(ret.value().unlock(ctx))
 					);
 				}
 				// A global main without an explicit return type is treated as `main -> i64`.
@@ -429,13 +428,13 @@ namespace compiler::helios {
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param_symbol: *params) {
-					auto  param_name   = name(param_symbol);
+				for (auto param_symbol: params) {
+					auto  param_name = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
 					auto param_pst = maybeSymbolPst(param_symbol)->dynamicCast<pst::Param>();
-					auto value = param_pst.unlock(ctx)->getValue();
+					auto value     = param_pst.unlock(ctx)->getValue();
 					if (value.empty()) {
 						parameters.emplace_back(
 							param_name,
@@ -474,7 +473,7 @@ namespace compiler::helios {
 				const auto operatoriness = operatorinessFromNameAndArity(
 					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
-				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
 				emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 			}
@@ -483,7 +482,7 @@ namespace compiler::helios {
 				const auto operatoriness = operatorinessFromNameAndArity(
 					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
-				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
 				emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 			}
@@ -496,7 +495,7 @@ namespace compiler::helios {
 					const auto operatoriness = operatorinessFromNameAndArity(
 						name(original_symbol), stmt->getParams().unlock(ctx)->size()
 					);
-					auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+					auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 					auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
 					emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 					return;
@@ -505,7 +504,7 @@ namespace compiler::helios {
 					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
 				);
 				// +1 for the implicit `self` parameter.
-				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
 				emplaceDeclaration(params, params_origin, stmt->getRet(), operatoriness);
 
@@ -529,9 +528,11 @@ namespace compiler::helios {
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
-				auto params = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 				auto params_origin = code::pstOrigin(stmt->getParams().unlock(ctx));
-				emplaceDeclaration(params, params_origin, {}, HOUTFunctionDeclaration::Operatoriness::None);
+				emplaceDeclaration(
+					params, params_origin, {}, HOUTFunctionDeclaration::Operatoriness::None
+				);
 
 				const auto class_type  = classMemberOwner(original_symbol);
 				this->out->return_type = tsh::SymbolType<>{
