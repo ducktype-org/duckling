@@ -63,6 +63,9 @@ namespace compiler::driver {
 			driver::print_ir_options.print_lir = debug_options.print_lir;
 			driver::print_ir_options.print_mir = debug_options.print_mir;
 			driver::print_ir_options.print_hir = debug_options.print_hir;
+
+			driver::print_query_graph = debug_options.print_graph;
+			driver::print_statistics  = debug_options.print_statistics;
 		}
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
@@ -217,24 +220,8 @@ namespace compiler::driver {
 			}
 		}
 
-		/**
-		 * The IR is printed and dumped from inside the `CompileModule` query, so a module loaded
-		 * from the incremental cache prints and dumps nothing.
-		 */
-		bool requiresDisabledIncremental(const options_types::DebugOptions& debug_options) {
-			return debug_options.dump_llvm or debug_options.dump_asm or debug_options.dump_dbc
-			    or debug_options.dump_lir or debug_options.dump_mir or debug_options.dump_hir
-			    or debug_options.print_dbc or debug_options.print_lir or debug_options.print_mir
-			    or debug_options.print_hir;
-		}
-
-		void handleIncrementalOptions(
-			const options_types::IncrementalOptions& inc_options,
-			const options_types::DebugOptions&       debug_options
-		) {
-			bool enabled = inc_options.enabled;
-			enabled      = requiresDisabledIncremental(debug_options) ? false : enabled;
-			if (enabled) {
+		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
+			if (inc_options.enabled) {
 				CORE_ASSERT(
 					!global_state::getPackages().empty(),
 					"Main package must be set before handling incremental compilation"
@@ -321,10 +308,7 @@ namespace compiler::driver {
 				if (package_success.isBad()) return base::BAD;
 
 				handleBackendOptions(package_compilation_options.backend_options);
-				handleIncrementalOptions(
-					package_compilation_options.incremental,
-					package_compilation_options.debug_options
-				);
+				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
 				auto repl_packages_info = getScriptStubPackage();
