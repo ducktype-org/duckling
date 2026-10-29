@@ -110,7 +110,7 @@ private:
 
 			for (size_t i = 0; i < n_body_stmts.size(); i++) {
 				auto stmt        = n_body_stmts.at(i).unlock(ctx);
-				auto stmt_symbol = ctx.query<compiler::helios::QuerySymbolFromPST>(stmt);
+				auto stmt_symbol = ctx.query<compiler::helios::QuerySymbolOfSTMT>(stmt);
 				ASSERT_EQUAL(
 					compiler::helios::name(stmt_symbol.valueOrPanic()),
 					base::StrID(expected_stmt_names.at(i))

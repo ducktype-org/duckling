@@ -459,7 +459,7 @@ namespace compiler::helios {
 				switch (stmt.unlock(ctx)->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
 					// @TODO: #1753 Maybe we should skip the symbol if compiling the symbol failed.
-					auto sym_id = ctx.query<QuerySymbolFromPST>(stmt).valueOrThrow();
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 					symbols.emplace_back(sym_id);
 					break;
 				}
@@ -475,13 +475,13 @@ namespace compiler::helios {
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolFromPST>(stmt).valueOrThrow();
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
 					} else if (auto import_opt
 					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolFromPST>(stmt).valueOrThrow();
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
 					} else {
 						CORE_PANIC(
@@ -541,7 +541,7 @@ namespace compiler::helios {
 					.name = base::StrID("self"),
 					.generated_symbol_data
 					= defgen::SelfParameter{ .method_symbol
-				                             = ctx.query<QuerySymbolFromPST>(meth).valueOrThrow(),
+				                             = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
 				                             .scope = key },
 				}));
 
@@ -556,7 +556,7 @@ namespace compiler::helios {
 					.name = base::StrID("self"),
 					.generated_symbol_data
 					= defgen::SelfParameter{ .method_symbol
-				                             = ctx.query<QuerySymbolFromPST>(dtor).valueOrThrow(),
+				                             = ctx.query<QuerySymbolOfSTMT>(dtor).valueOrThrow(),
 				                             .scope = key },
 				}));
 
@@ -724,7 +724,7 @@ namespace compiler::helios {
 					CORE_ASSERT(
 						scope(sym) == key,
 						base::strConcat(
-							"Scope mismatch in QuerySymbolsInScope and QuerySymbolFromPST\n",
+							"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
 							" for symbol: ",
 							name(sym),
 							"\n\n"

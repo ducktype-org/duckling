@@ -454,8 +454,7 @@ namespace compiler::helios {
 			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
 			// have symbols.
 			CORE_ASSERT(
-				parent.isLangElement(),
-				"PST element without LangElement parent in QuerySymbolFromPST"
+				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT"
 			);
 			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
 		}
@@ -713,88 +712,11 @@ namespace compiler::helios {
 				scope,
 				stmt->getHash(),
 				ctx.query<tsh::QueryClassType>(
-					ctx.query<QuerySymbolFromPST>(owner_class_element.value()).valueOrThrow()
+					ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
 				)
 			)
 		);
 	}
-
-	/**
-	 * @brief SymbolData Factory,
-	 * Make symbols from PST elements other then statements.
-	 * @todo in the future this function should not use dynamic_casts,
-	 * and should be merged with makeSymbolFromStatement.
-	 */
-	SymbolData makeSymbolFromPSTElement(
-		ScopeID scope, pst::Access<pst::LangElement> element, query::Context& ctx
-	) {
-		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
-			auto parameter = parameter_opt.value();
-			return SymbolData::makePSTSymbolData(
-				{
-					.name = parameter->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Parameter,
-				},
-				PstImplementedSemantics(scope, element->getHash())
-			);
-		}
-
-		if (auto ident_wrapper_opt = element.dynamicCast<pst::IdentifierWrapper>()) {
-			auto ident_wrapper = ident_wrapper_opt.value();
-			auto parent_opt    = ident_wrapper->getParent();
-			CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without parent");
-
-			auto parent_elem = parent_opt.value().unlock(ctx);
-			if (parent_elem.dynamicCast<pst::For>().has_value()
-			    || parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
-				return SymbolData::makePSTInferredSymbolData(
-					{
-						.name = ident_wrapper->unwrap(),
-						.kind = SymbolKind::Variable,
-					},
-					PstInferredSemantics(scope, element->getHash())
-				);
-			} else {
-				CORE_PANIC("IdentifierWrapper in QuerySymbolFromPST with unsupported parent");
-			}
-		}
-
-		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
-	}
-
-	struct IMPLEMENT_QUERY(QuerySymbolFromPST, query::QResult<SymID>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return ctx.query<QuerySymbolOfSTMT>(key.element).valueOrThrow();
-			else
-				return ctx.query<QuerySymbolOfNonSTMT>(key.element).valueOrThrow();
-		}
-
-		QUERY_AUTO_CACHE_COPY
-
-	private:
-		/**
-		 * @brief This is a helper function for getAllHeliosSymbols.
-		 * Use only inside that function (and only for debug/test purposes)!
-		 */
-		static std::vector<SymID> getAllCachedSymbols() {
-			// This implementation is fragile, adjust if needed.
-
-			std::vector<SymID> out;
-
-			for (auto& [key, cache_entry]: cache) {
-				if (cache_entry.data.hasFailed()) continue;
-
-				out.emplace_back(cache_entry.data.valueOrPanic());
-			}
-			return out;
-		}
-
-		// for getAllCachedSymbols:
-		friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolFromPST);
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -837,50 +759,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
-
-	struct IMPLEMENT_QUERY(QuerySymbolOfNonSTMT, query::QResult<SymbolData>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto scope = getPSTElementParentScope(ctx, key.element);
-			auto stmt  = key.element.unlock(ctx).dynamicCast<pst::Stmt>();
-			CORE_ASSERT(
-				!stmt.has_value(),
-				"Invalid PST element in `QuerySymbolOfNonSTMT`, non-statement expected. For stmt, "
-				"use `QuerySymbolOfSTMT` instead."
-			);
-
-			return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
-		}
-
-		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<query::QResult<SymbolData>> presult) -> QResult {
-			if (presult->hasFailed())
-				return query::Failed();
-			else
-				return SymID{ &presult->valueOrPanic() };
-		})
-
-	private:
-		/**
-		 * @brief This is a helper function for getAllHeliosSymbols.
-		 * Use only inside that function (and only for debug/test purposes)!
-		 */
-		static std::vector<SymID> getAllCachedSymbols() {
-			// This implementation is fragile, adjust if needed.
-
-			std::vector<SymID> out;
-
-			for (auto& [key, cache_entry]: cache) {
-				if (cache_entry.data.hasFailed()) continue;
-
-				out.emplace_back(SymID{ &cache_entry.data.valueOrPanic() });
-			}
-			return out;
-		}
-
-		// for getAllCachedSymbols:
-		friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfNonSTMT);
 
 	struct IMPLEMENT_QUERY(QueryInferredSymbols, query::QResult<std::vector<SymbolData>>) {
 		struct SymbolInferVisitor final: pst::PstVisitorPanicky {
@@ -1247,6 +1125,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveUsedSymbols);
 
+	// @TODO: Adjust for new queries
 	std::vector<SymID> getAllHeliosSymbols() {
 		// this implementation is fragile, adjust if needed
 
@@ -1256,16 +1135,13 @@ namespace compiler::helios {
 			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);
 
-		auto non_stmt_symbols = ImplementationOf_QuerySymbolOfNonSTMT::getAllCachedSymbols();
-		auto stmt_symbols     = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
-		auto pst_symbols      = ImplementationOf_QuerySymbolFromPST::getAllCachedSymbols();
+		auto stmt_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
 		auto generated_symbols
 			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 
 		std::vector<SymID> output;
-		output.reserve(pst_symbols.size() + generated_symbols.size() + stmt_symbols.size());
+		output.reserve(generated_symbols.size() + stmt_symbols.size());
 
-		output.insert(output.end(), pst_symbols.begin(), pst_symbols.end());
 		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
 		output.insert(output.end(), stmt_symbols.begin(), stmt_symbols.end());
 

@@ -33,13 +33,6 @@ namespace compiler::helios {
 	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
-	 * @brief Query symbol associated with given element in PST
-	 *
-	 * \query_thread_safe_if_cache_and_struct
-	 */
-	DECLARE_QUERY(QuerySymbolFromPST, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
-
-	/**
 	 * @brief Query symbol associated with given statement in PST
 	 *
 	 * \query_thread_safe_if_cache_and_struct
@@ -61,13 +54,6 @@ namespace compiler::helios {
 	DECLARE_QUERY(
 		QueryInferredSymbols, pst::GenericPSTQueryKey<>, query::QResult<std::vector<SymID>>, ({})
 	);
-
-	/**
-	 * @brief Query symbol associated with given element (but not statement) in PST
-	 *
-	 * \query_thread_safe_if_cache_and_struct
-	 */
-	DECLARE_QUERY(QuerySymbolOfNonSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.

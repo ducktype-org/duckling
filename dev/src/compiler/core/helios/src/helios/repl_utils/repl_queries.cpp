@@ -76,7 +76,7 @@ namespace compiler::repl {
 
 			auto var_stmt = element.dynamicCast<pst::Variable>();
 
-			auto symbol = ctx.query<helios::QuerySymbolFromPST>({ var_stmt }).valueOrThrow();
+			auto symbol = ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }).valueOrThrow();
 
 			const auto& global_data
 				= ctx.query<helios::QueryHOUTGlobalData>(symbol)->valueOrThrow();
@@ -146,7 +146,7 @@ namespace compiler::repl {
 	}
 
 	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt) {
-		return ctx.query<helios::QuerySymbolFromPST>({ var_stmt }).valueOrThrow();
+		return ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }).valueOrThrow();
 	}
 
 	helios::SymID queryReplInstructionWrapperSymbol(
