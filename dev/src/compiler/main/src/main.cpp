@@ -329,10 +329,10 @@ auto getClahLinkingOptions() {
 /**
  * @brief If enabled, sets no-link option in appropriate BuildTargets
  */
-static auto updateTaskTargetWithNoLinkOptions(
-	const clah::ParsingResult& options, compiler::driver::PackageCompilationTask& package_task
+void updateTaskTargetWithNoLinkOptions(
+	bool no_link, compiler::driver::PackageCompilationTask& package_task
 ) {
-	if (options.isFlag("no-link")) {
+	if (no_link) {
 		using namespace compiler::driver;
 		variant_match(package_task.build_target) {
 			variant_case(BuildTargetLLVMExecutable, target) {
@@ -1190,7 +1190,9 @@ clah::Clah getClahForMain() {
 						}
 						variant_match(converted->task_data) {
 							variant_case(compiler::driver::PackageCompilationTask, package_task) {
-								updateTaskTargetWithNoLinkOptions(options, package_task);
+								updateTaskTargetWithNoLinkOptions(
+									options.isFlag("no-link"), package_task
+								);
 								compilation_tasks.push_back(package_task);
 							}
 							variant_default { CORE_PANIC("Unsupported task type in manifest"); }
