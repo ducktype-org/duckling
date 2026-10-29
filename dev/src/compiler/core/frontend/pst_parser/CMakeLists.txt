@@ -58,7 +58,7 @@ add_library(PstParser
 	${PST_SRC}/pst_automatic.cpp
 	${PST_SRC}/pst_query/code_dependency.cpp
 	${PST_SRC}/elements/elements_common.cpp
-	${PST_SRC}/elements/lang_state_unmethods.cpp
+	${PST_SRC}/lang_state_unmethods.cpp
 	${StatementElementsImplementationFiles}
 	${DeclarationsElementsImplementationFiles}
 	${ExpressionElementsImplementationFiles}

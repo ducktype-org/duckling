@@ -6,10 +6,10 @@
 
 #include "lang_state_unmethods.hpp"
 
-#include "../lang_parser_state.hpp"
-#include "hierarchy/expr_holders.hpp"
-#include "hierarchy/not_statements/expr_element.hpp"  // IWYU pragma: keep
-#include "implementations/preamble.hpp"
+#include "lang_parser_state.hpp"
+#include "elements/hierarchy/expr_holders.hpp"
+#include "elements/hierarchy/not_statements/expr_element.hpp"  // IWYU pragma: keep
+#include "elements/implementations/preamble.hpp"
 
 namespace pst::internal {
 	dia::SourcePosition getPosition(LangElementConstructionData state) {
