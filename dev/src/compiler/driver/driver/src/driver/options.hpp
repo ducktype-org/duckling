@@ -46,6 +46,9 @@ namespace compiler::driver {
 			bool print_lir = false;
 			bool print_mir = false;
 			bool print_hir = false;
+
+			bool print_graph      = false;
+			bool print_statistics = false;
 		};
 
 		/**
