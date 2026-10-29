@@ -58,3 +58,11 @@ Tests:
       all:
         Output:
           String: "10\n42\n"
+
+  # The experimental `exp` package ships with the standard library and can be imported.
+  uses_exp:
+    module_to_compile: "uses_exp"
+    Cases:
+      all:
+        Output:
+          String: "7\n"

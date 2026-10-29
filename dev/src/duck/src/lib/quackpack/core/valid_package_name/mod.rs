@@ -150,4 +150,19 @@ mod tests {
             assert_eq!(err, validate_package_name(name).unwrap_err());
         }
     }
+
+    #[test]
+    fn std_package_names() {
+        for name in ["core", "exp", "std"] {
+            assert!(is_duckling_std_name(name));
+        }
+        for name in ["", "cor", "expr", "stdlib", "my-package"] {
+            assert!(!is_duckling_std_name(name));
+        }
+    }
+
+    #[test]
+    fn std_package_names_are_sorted() {
+        assert!(DUCKLING_STD_PACKAGES.is_sorted());
+    }
 }
