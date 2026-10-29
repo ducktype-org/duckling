@@ -41,6 +41,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include "clah/parsing_result.hpp"
 #include <clah/clah.hpp>
 #include <clah/value_parser.hpp>
 #include <diagnostic/logger.hpp>
@@ -323,6 +324,34 @@ auto getClahLinkingOptions() {
 			.build(),
 		getClahNoLinkParameter(),
 	};
+}
+
+/**
+ * @brief If enabled, sets no-link option in appropriate BuildTargets
+ */
+static auto updateTaskTargetWithNoLinkOptions(
+	const clah::ParsingResult& options, compiler::driver::PackageCompilationTask& package_task
+) {
+	if (options.isFlag("no-link")) {
+		using namespace compiler::driver;
+		variant_match(package_task.build_target) {
+			variant_case(BuildTargetLLVMExecutable, target) {
+				target.linking_options.no_link = true;
+			}
+			variant_case(BuildTargetLLVMStaticLibrary, target) {
+				target.archiving_options.no_link = true;
+			}
+			variant_case(BuildTargetDVMExecutable, target) {
+				target.dvm_linking_options.no_link = true;
+			}
+			variant_case(BuildTargetDVMLibrary, target) {
+				target.dvm_linking_options.no_link = true;
+			}
+			variant_default {
+				// BuildTargetLLVM has no executables
+			}
+		}
+	}
 }
 
 /**
@@ -1161,26 +1190,7 @@ clah::Clah getClahForMain() {
 						}
 						variant_match(converted->task_data) {
 							variant_case(compiler::driver::PackageCompilationTask, package_task) {
-								if (options.isFlag("no-link")) {
-									using namespace compiler::driver;
-									variant_match(package_task.build_target) {
-										variant_case(BuildTargetLLVMExecutable, target) {
-											target.linking_options.no_link = true;
-										}
-										variant_case(BuildTargetLLVMStaticLibrary, target) {
-											target.archiving_options.no_link = true;
-										}
-										variant_case(BuildTargetDVMExecutable, target) {
-											target.dvm_linking_options.no_link = true;
-										}
-										variant_case(BuildTargetDVMLibrary, target) {
-											target.dvm_linking_options.no_link = true;
-										}
-										variant_default {
-											// BuildTargetLLVM has no executables
-										}
-									}
-								}
+								updateTaskTargetWithNoLinkOptions(options, package_task);
 								compilation_tasks.push_back(package_task);
 							}
 							variant_default { CORE_PANIC("Unsupported task type in manifest"); }
