@@ -209,7 +209,7 @@ class PSTErrorTests: public tester::TestSuite {
         "fun foo(t: type) -> type = if x then {return b;} else 2;"
 	};
 	Example<pst::Fun, false> normal_if_stmt{
-		"fun foo(t: type) -> type = if (x) {return a + b;} else 2 * 4;"
+		"fun foo(t: type) -> type = if (x) {return a;} else 2;"
 	};
 	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
 
