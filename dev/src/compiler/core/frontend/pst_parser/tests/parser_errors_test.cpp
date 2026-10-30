@@ -206,7 +206,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, false>  special_operator_function1{ "fun ->(a: i64) = {}" };
 	Example<pst::Fun, false>  special_operator_function2{ "fun .?(a: i64) = {}" };
 	Example<pst::Fun, true>   ternary_simple_expr{
-        "fun foo(t: type) -> type = if x then {return a + b;} else 2 * 4;"
+        "fun foo(t: type) -> type = if x then {return b;} else 2;"
 	};
 	Example<pst::Fun, false> normal_if_stmt{
 		"fun foo(t: type) -> type = if (x) {return a + b;} else 2 * 4;"
