@@ -1,8 +1,6 @@
-# The experimental `exp` package is part of the standard library, so it can be imported
-# without declaring a dependency on it. It is empty for now.
 import exp;
 
 fun main() -> i64 = {
-    builtin_output_i64(7);
+    exp.c();
     return 0;
 }

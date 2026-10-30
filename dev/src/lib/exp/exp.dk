@@ -1,1 +1,7 @@
-# `exp` - the experimental library. Empty for now.
+import core;
+import std;
+
+fun c() = {
+    core.a();
+    std.b();
+}

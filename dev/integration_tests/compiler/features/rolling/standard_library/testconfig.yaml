@@ -65,4 +65,4 @@ Tests:
     Cases:
       all:
         Output:
-          String: "7\n"
+          String: "42\n42\n"
