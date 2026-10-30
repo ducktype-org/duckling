@@ -54,30 +54,24 @@ namespace compiler::helios {
 	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
-				return ctx.query<QueryLookupFromScope>({ .scope          = scope.scope,
-				                                         .name           = name,
-				                                         .with_wildcards = params.with_wildcards,
-				                                         .with_parents   = false });
+				return ctx.query<QueryLookupFromScope>(
+					{ scope.scope, name, params.with_wildcards, false }
+				);
 			}
 			variant_case(ScopeWithParentsInterface, scope) {
-				return ctx.query<QueryLookupFromScope>({ .scope          = scope.scope,
-				                                         .name           = name,
-				                                         .with_wildcards = params.with_wildcards,
-				                                         .with_parents   = true });
+				return ctx.query<QueryLookupFromScope>(
+					{ scope.scope, name, params.with_wildcards, true }
+				);
 			}
 			variant_case(ModuleInterface, symbol) {
-				return ctx.query<QueryLookupFromScope>({ .scope
-				                                         = scopeOfNamespaceLike(ctx, symbol.id),
-				                                         .name           = name,
-				                                         .with_wildcards = params.with_wildcards,
-				                                         .with_parents   = false });
+				return ctx.query<QueryLookupFromScope>(
+					{ scopeOfNamespaceLike(ctx, symbol.id), name, params.with_wildcards, false }
+				);
 			}
 			variant_case(NamespaceInterface, symbol) {
-				return ctx.query<QueryLookupFromScope>({ .scope
-				                                         = scopeOfNamespaceLike(ctx, symbol.id),
-				                                         .name           = name,
-				                                         .with_wildcards = params.with_wildcards,
-				                                         .with_parents   = false });
+				return ctx.query<QueryLookupFromScope>(
+					{ scopeOfNamespaceLike(ctx, symbol.id), name, params.with_wildcards, false }
+				);
 			}
 			variant_case(TypeInstanceInterface, type) {
 				return ctx.query<QueryLookupInType>(
