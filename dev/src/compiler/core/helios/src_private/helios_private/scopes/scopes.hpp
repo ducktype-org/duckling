@@ -132,8 +132,6 @@ namespace compiler::helios {
 		 */
 		bool with_parents;
 
-		LookupMode mode;
-
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
@@ -144,9 +142,9 @@ namespace compiler::helios {
 	 * Each scope is searched together with everything its `using`/`import` symbols bring in,
 	 * every scope is searched at most once, so recursive `using`/`import` are fine. The enclosing
 	 * scopes are walked in a loop: the parent scopes, then the root scopes of the parent REPL
-	 * modules and finally the implicit prelude. `LookupMode` decides whether the walk stops at the
-	 * first scope that found anything. The found `using`/`import` symbols are resolved, the result
-	 * holds only the symbols they point at.
+	 * modules and finally the implicit prelude, the symbols of the name are collected from all of
+	 * them. The found `using`/`import` symbols are resolved, the result holds only the symbols they
+	 * point at.
 	 *
 	 * \query_thread_safe_if_cache
 	 */

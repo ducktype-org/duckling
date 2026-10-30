@@ -55,14 +55,12 @@ namespace compiler::helios {
 			ScopeID                           scope,
 			base::StrID                       name,
 			const AdditionalLookupParameters& params,
-			bool                              with_parents,
-			LookupMode                        mode
+			bool                              with_parents
 		) {
 			return ctx.query<QueryLookupFromScope>({ .scope          = scope,
 			                                         .name           = name,
 			                                         .with_wildcards = params.with_wildcards,
-			                                         .with_parents   = with_parents,
-			                                         .mode           = mode });
+			                                         .with_parents   = with_parents });
 		}
 	}
 
@@ -71,19 +69,19 @@ namespace compiler::helios {
 	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
-				return lookupFromScope(ctx, scope.scope, name, params, false, LookupMode::All);
+				return lookupFromScope(ctx, scope.scope, name, params, false);
 			}
 			variant_case(ScopeWithParentsInterface, scope) {
-				return lookupFromScope(ctx, scope.scope, name, params, true, scope.mode);
+				return lookupFromScope(ctx, scope.scope, name, params, true);
 			}
 			variant_case(ModuleInterface, symbol) {
 				return lookupFromScope(
-					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false, LookupMode::All
+					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false
 				);
 			}
 			variant_case(NamespaceInterface, symbol) {
 				return lookupFromScope(
-					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false, LookupMode::All
+					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false
 				);
 			}
 			variant_case(TypeInstanceInterface, type) {

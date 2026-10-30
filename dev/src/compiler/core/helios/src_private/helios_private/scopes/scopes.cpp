@@ -884,8 +884,7 @@ namespace compiler::helios {
 			scope.queryUnstablePerfectHash(),
 			std::hash<base::StrID>()(name),
 			static_cast<u64>(with_wildcards),
-			static_cast<u64>(with_parents),
-			static_cast<u64>(mode)
+			static_cast<u64>(with_parents)
 		);
 	}
 
@@ -945,7 +944,6 @@ namespace compiler::helios {
 				result.insert(result.end(), found.begin(), found.end());
 
 				if (not key.with_parents) break;
-				if (key.mode == LookupMode::FirstFound and not result.empty()) break;
 
 				last_module_id = module(current.value());
 				current        = enclosingScope(ctx, current.value());
@@ -953,7 +951,7 @@ namespace compiler::helios {
 
 			// Bring the default prelude modules into scope, as if every module wrote
 			// `import <module>.*;`. A no-op under --no-std or inside the standard library.
-			if (key.with_parents and (key.mode == LookupMode::All or result.empty())) {
+			if (key.with_parents) {
 				for (const ScopeID prelude_scope: implicitPreludeScopes(ctx, last_module_id)) {
 					UNPACK_QRESULT_MOVE(
 						auto found =, searchScopeWithUsings(ctx, key, prelude_scope, visited)

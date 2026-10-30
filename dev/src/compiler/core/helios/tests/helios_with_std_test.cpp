@@ -376,8 +376,7 @@ private:
 			{ .scope          = scope,
 		      .name           = base::StrID("builtin_output_i64"),
 		      .with_wildcards = true,
-		      .with_parents   = true,
-		      .mode           = compiler::helios::LookupMode::All }
+		      .with_parents   = true }
 		);
 		assertFalse(
 			result->valueOrThrow().isEmpty(),

@@ -79,7 +79,6 @@ namespace compiler::helios {
 		 */
 		struct ScopeWithParentsInterface final {
 			helios::ScopeID scope;
-			LookupMode      mode;
 		};
 
 		/**
@@ -181,10 +180,8 @@ namespace compiler::helios {
 			return HInterface{ ScopeInterface{ scope } };
 		}
 
-		static HInterface ofScopeWithParents(
-			const ScopeID scope, const LookupMode mode = LookupMode::All
-		) {
-			return HInterface{ ScopeWithParentsInterface{ scope, mode } };
+		static HInterface ofScopeWithParents(const ScopeID scope) {
+			return HInterface{ ScopeWithParentsInterface{ scope } };
 		}
 
 		static HInterface ofModule(SymID symbol) { return HInterface{ ModuleInterface{ symbol } }; }

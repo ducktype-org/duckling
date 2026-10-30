@@ -18,8 +18,7 @@ Note: This is mostly to list operations, see docs for details.
   `using`/`import` symbols bring in (resolved with `QueryResolveUsingImport`), visiting every scope
   at most once, so recursive usings and imports work. Walks the enclosing scopes in a loop: parent
   scopes, then root scopes of parent REPL modules (symbol visibility across REPL statement history),
-  then the implicit prelude. `LookupMode` decides whether it stops at the first scope that found
-  anything or collects the symbols from all of them.
+  then the implicit prelude, collecting the symbols of the name from all of them.
 
 # Future todos
 

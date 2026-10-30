@@ -39,21 +39,6 @@ namespace compiler::helios {
 
 	struct NestedResult;
 
-	/**
-	 * @brief How far a lookup through the enclosing scopes goes.
-	 */
-	enum class LookupMode : uint8_t {
-		/**
-		 * @brief Stop at the first enclosing scope that has any symbol of the name.
-		 */
-		FirstFound,
-
-		/**
-		 * @brief Collect the symbols of the name from all the enclosing scopes.
-		 */
-		All,
-	};
-
 	using GetAsSingleLookupQResult = query::QResult<
 		std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound, errors::Inaccessible>>;
 
