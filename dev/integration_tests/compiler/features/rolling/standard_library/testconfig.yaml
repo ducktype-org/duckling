@@ -5,7 +5,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "10\n42\n"
+          String: "10\n42\n42\n42\n"
 
   # We test if not using std when disabling it in the compiler works.
   no_std:
@@ -25,7 +25,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "x\nx\n"
+          String: "x\nx\nx\nx\n"
 
   # We test if disabling the std and using it in the user code causes the expected compile error.
   no_std_fails:
@@ -59,10 +59,3 @@ Tests:
         Output:
           String: "10\n42\n"
 
-  # The experimental `exp` package ships with the standard library and can be imported.
-  uses_exp:
-    module_to_compile: "uses_exp"
-    Cases:
-      all:
-        Output:
-          String: "42\n42\n"

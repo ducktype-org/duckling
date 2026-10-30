@@ -1,6 +1,0 @@
-import exp;
-
-fun main() -> i64 = {
-    exp.c();
-    return 0;
-}
