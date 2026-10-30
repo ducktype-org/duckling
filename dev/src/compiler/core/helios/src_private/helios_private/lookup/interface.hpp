@@ -97,20 +97,6 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief Interface of an import.
-		 */
-		struct ImportInterface final {
-			helios::SymID symbol;
-		};
-
-		/**
-		 * @brief Interface of a using.
-		 */
-		struct UsingInterface final {
-			helios::SymID symbol;
-		};
-
-		/**
 		 * @brief The interface of the type instance.
 		 * The behavior depends on the type, but in general it
 		 * represents what `symbol-of-given-type.abc` would do.
@@ -140,8 +126,6 @@ namespace compiler::helios {
 			ScopeWithParentsInterface,
 			ModuleInterface,
 			NamespaceInterface,
-			ImportInterface,
-			UsingInterface,
 			TypeInstanceInterface,
 			TypeMetaInterface,
 			CustomInterface>;
@@ -158,7 +142,7 @@ namespace compiler::helios {
 		/**
 		 * Performs a lookup in a given interface.
 		 */
-		query::QResult<LookupResult> lookup(
+		CRef<query::QResult<LookupResult>> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters = {}
 		) const;
 
@@ -184,11 +168,12 @@ namespace compiler::helios {
 		/**
 		 * @brief The interface of a symbol, i.e. what `sym.something` looks into.
 		 *
-		 * Namespace-like symbols (modules, namespaces, usings, imports) look into their own
-		 * contents, a class looks into its statics (`MyClass.CONST`) and a symbol that holds a
-		 * value looks into the members of its type (`my_var.field`).
+		 * Namespace-like symbols (modules, namespaces) look into their own contents, a class looks
+		 * into its statics (`MyClass.CONST`) and a symbol that holds a value looks into the members
+		 * of its type (`my_var.field`).
 		 *
 		 * @note Fails, with a logged error, for symbol kinds that have no interface.
+		 * @note Panics for `using`/`import` symbols, lookups never return them unresolved.
 		 */
 		static HInterface ofSymbol(query::Context& ctx, SymID symbol);
 
@@ -207,10 +192,6 @@ namespace compiler::helios {
 		static HInterface ofNamespace(SymID symbol) {
 			return HInterface{ NamespaceInterface{ symbol } };
 		}
-
-		static HInterface ofImport(SymID symbol) { return HInterface{ ImportInterface{ symbol } }; }
-
-		static HInterface ofUsing(SymID symbol) { return HInterface{ UsingInterface{ symbol } }; }
 
 		static HInterface ofTypeInstance(const tsh::AbstractType type) {
 			return HInterface{ TypeInstanceInterface{ type } };

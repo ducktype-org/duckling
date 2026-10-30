@@ -889,7 +889,7 @@ namespace compiler::helios {
 		);
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<std::vector<SymID>>) {
+	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupResult>) {
 		/**
 		 * @brief Searches @p start and all the scopes its `using`/`import` symbols lead to,
 		 * skipping the ones in @p visited. Returns the symbols found there.
@@ -964,7 +964,7 @@ namespace compiler::helios {
 
 			std::unordered_set<SymID> seen;
 			std::erase_if(result, [&](SymID sym) { return not seen.insert(sym).second; });
-			return result;
+			return LookupResult{ .leaves = std::move(result), .inaccessible = {}, .children = {} };
 		}
 
 		QUERY_AUTO_CACHE_CREF

@@ -846,22 +846,22 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
-			const LookupResult a_result
-				= h_interface.lookup(ctx, base::StrID("pub_field")).valueOrPanic();
-			ASSERT_TRUE(a_result.isSingle());
-			auto a_symbol = a_result.leaves.at(0);
+			CRef<LookupResult> a_result
+				= &h_interface.lookup(ctx, base::StrID("pub_field"))->valueOrPanic();
+			ASSERT_TRUE(a_result->isSingle());
+			auto a_symbol = a_result->leaves.at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
-			const LookupResult get_a_result
-				= h_interface.lookup(ctx, base::StrID("getPub")).valueOrPanic();
-			ASSERT_TRUE(get_a_result.isSingle());
-			auto get_a_symbol = get_a_result.leaves.at(0);
+			CRef<LookupResult> get_a_result
+				= &h_interface.lookup(ctx, base::StrID("getPub"))->valueOrPanic();
+			ASSERT_TRUE(get_a_result->isSingle());
+			auto get_a_symbol = get_a_result->leaves.at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
 
-			const LookupResult empty_result
-				= h_interface.lookup(ctx, base::StrID("non_existent_symbol")).valueOrPanic();
-			ASSERT_TRUE(empty_result.isEmpty());
+			CRef<LookupResult> empty_result
+				= &h_interface.lookup(ctx, base::StrID("non_existent_symbol"))->valueOrPanic();
+			ASSERT_TRUE(empty_result->isEmpty());
 		});
 	}
 
@@ -880,36 +880,36 @@ private:
 			using compiler::helios::LookupResult;
 			auto str = st(compiler::tsh::getCharSliceType(ctx));
 
-			const LookupResult first_result
-				= h_interface.lookup(ctx, base::StrID("_1")).valueOrPanic();
-			ASSERT_TRUE(first_result.isSingle());
-			auto first_symbol = first_result.leaves.at(0);
+			CRef<LookupResult> first_result
+				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
+			ASSERT_TRUE(first_result->isSingle());
+			auto first_symbol = first_result->leaves.at(0);
 			ASSERT_EQUAL(kind(first_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(first_symbol)->valueOrThrow(), i32
 			);
 
-			const LookupResult second_result
-				= h_interface.lookup(ctx, base::StrID("_2")).valueOrPanic();
-			ASSERT_TRUE(second_result.isSingle());
-			auto second_symbol = second_result.leaves.at(0);
+			CRef<LookupResult> second_result
+				= &h_interface.lookup(ctx, base::StrID("_2"))->valueOrPanic();
+			ASSERT_TRUE(second_result->isSingle());
+			auto second_symbol = second_result->leaves.at(0);
 			ASSERT_EQUAL(kind(second_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(second_symbol)->valueOrThrow(), f32
 			);
 
-			const LookupResult third_result
-				= h_interface.lookup(ctx, base::StrID("_3")).valueOrPanic();
-			ASSERT_TRUE(third_result.isSingle());
-			auto third_symbol = third_result.leaves.at(0);
+			CRef<LookupResult> third_result
+				= &h_interface.lookup(ctx, base::StrID("_3"))->valueOrPanic();
+			ASSERT_TRUE(third_result->isSingle());
+			auto third_symbol = third_result->leaves.at(0);
 			ASSERT_EQUAL(kind(third_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(third_symbol)->valueOrThrow(), str
 			);
 
-			const LookupResult empty_result
-				= h_interface.lookup(ctx, base::StrID("_0")).valueOrPanic();
-			ASSERT_TRUE(empty_result.isEmpty());
+			CRef<LookupResult> empty_result
+				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
+			ASSERT_TRUE(empty_result->isEmpty());
 
 			// Check that the module lowers to HOUT without throwing.
 			[[maybe_unused]] const auto& hout

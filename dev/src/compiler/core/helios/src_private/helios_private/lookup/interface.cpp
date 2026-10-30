@@ -32,9 +32,8 @@ namespace compiler::helios {
 		case SymbolKind::Namespace:
 			return ofNamespace(symbol);
 		case SymbolKind::Using:
-			return ofUsing(symbol);
 		case SymbolKind::Import:
-			return ofImport(symbol);
+			CORE_PANIC("Lookup results never contain unresolved usings and imports");
 		case SymbolKind::Class:
 			return ofTypeMeta(ctx.query<tsh::QueryClassType>(symbol));
 		case SymbolKind::Variable:
@@ -51,7 +50,7 @@ namespace compiler::helios {
 	}
 
 	namespace {
-		query::QResult<LookupResult> lookupFromScope(
+		CRef<query::QResult<LookupResult>> lookupFromScope(
 			query::Context&                   ctx,
 			ScopeID                           scope,
 			base::StrID                       name,
@@ -59,45 +58,15 @@ namespace compiler::helios {
 			bool                              with_parents,
 			LookupMode                        mode
 		) {
-			UNPACK_QRESULT_CREF(
-				const std::vector<SymID>& symbols =,
-				ctx.query<QueryLookupFromScope>({ .scope          = scope,
-			                                      .name           = name,
-			                                      .with_wildcards = params.with_wildcards,
-			                                      .with_parents   = with_parents,
-			                                      .mode           = mode })
-			);
-			return LookupResult{ .leaves = symbols, .inaccessible = {}, .children = {} };
-		}
-
-		/**
-		 * @brief Lookup of @p name among what the `using`/`import` @p symbol brings into its
-		 * scope.
-		 */
-		query::QResult<LookupResult> lookupInUsingImport(
-			query::Context& ctx, SymID symbol, base::StrID name, AdditionalLookupParameters params
-		) {
-			UNPACK_QRESULT(
-				bool provides =, usingImportProvidesName(ctx, symbol, name, params.with_wildcards)
-			);
-			if (not provides) return LookupResult{};
-
-			UNPACK_QRESULT_CREF(
-				const UsingImportTarget& target =, ctx.query<QueryResolveUsingImport>(symbol)
-			);
-			variant_match(target) {
-				variant_case(std::vector<SymID>, pointed) {
-					return LookupResult{ .leaves = pointed, .inaccessible = {}, .children = {} };
-				}
-				variant_case(ScopeID, pointed_scope) {
-					return lookupFromScope(ctx, pointed_scope, name, {}, false, LookupMode::All);
-				}
-			}
-			CORE_UNREACHABLE();
+			return ctx.query<QueryLookupFromScope>({ .scope          = scope,
+			                                         .name           = name,
+			                                         .with_wildcards = params.with_wildcards,
+			                                         .with_parents   = with_parents,
+			                                         .mode           = mode });
 		}
 	}
 
-	query::QResult<LookupResult> HInterface::lookup(
+	CRef<query::QResult<LookupResult>> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
 		variant_match(data) {
@@ -117,24 +86,18 @@ namespace compiler::helios {
 					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false, LookupMode::All
 				);
 			}
-			variant_case(UsingInterface, symbol) {
-				return lookupInUsingImport(ctx, symbol.symbol, name, params);
-			}
-			variant_case(ImportInterface, symbol) {
-				return lookupInUsingImport(ctx, symbol.symbol, name, params);
-			}
 			variant_case(TypeInstanceInterface, type) {
-				return *ctx.query<QueryLookupInType>(
+				return ctx.query<QueryLookupInType>(
 					{ type.type, name, TypeAccessMode::Instance, params.accessing_scope }
 				);
 			}
 			variant_case(TypeMetaInterface, type) {
-				return *ctx.query<QueryLookupInType>(
+				return ctx.query<QueryLookupInType>(
 					{ type.type, name, TypeAccessMode::Meta, params.accessing_scope }
 				);
 			}
 			variant_case(CustomInterface, custom) {
-				return *custom.custom->lookup(ctx, name, params);
+				return custom.custom->lookup(ctx, name, params);
 			}
 		}
 		CORE_UNREACHABLE();
@@ -146,7 +109,7 @@ namespace compiler::helios {
 		base::StrID                name,
 		AdditionalLookupParameters params
 	) const {
-		UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
+		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
 
 		auto get_as_single = lookup_result->getAsSingle();
 

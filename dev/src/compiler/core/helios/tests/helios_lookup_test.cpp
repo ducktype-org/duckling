@@ -253,12 +253,12 @@ private:
 			auto instance_lookup = [&](std::string_view name, ScopeID scope) {
 				return HInterface::ofTypeInstance(fixture.base)
 				    .lookup(ctx, base::StrID(name), { .accessing_scope = scope })
-				    .valueOrThrow();
+				    ->valueOrThrow();
 			};
 			auto meta_lookup = [&](std::string_view name, ScopeID scope) {
 				return HInterface::ofTypeMeta(fixture.base)
 				    .lookup(ctx, base::StrID(name), { .accessing_scope = scope })
-				    .valueOrThrow();
+				    ->valueOrThrow();
 			};
 
 			ASSERT_TRUE(instance_lookup("priv_field", fixture.inside_base).isSingle());

@@ -76,8 +76,8 @@ namespace compiler::helios {
 		const auto lookup_qresult = HInterface::ofScopeWithParents(scope).lookup(
 			ctx, ident->getName().unlock(ctx)->unwrap()
 		);
-		if (lookup_qresult.hasFailed()) return;
-		CRef<LookupResult> lookup_result = &lookup_qresult.valueOrThrow();
+		if (lookup_qresult->hasFailed()) return;
+		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 
 		std::function<void(const LookupResult&, const std::string&)> emit_alias_note =
 			[&](const LookupResult& current, const std::string& alias_name) {

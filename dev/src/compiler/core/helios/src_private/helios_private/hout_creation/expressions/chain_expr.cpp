@@ -504,7 +504,7 @@ namespace compiler::helios::code {
 			case lexer::Token::Round: {
 				const auto lookup_qresult
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
-				UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -694,7 +694,7 @@ namespace compiler::helios::code {
 						  { .accessing_scope
 			                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 					  );
-			UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup_qresult);
+			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
 			// Note that if multiple symbols were found, it results in an error and enters
 			// the following if statement. This is temporary, as symbol ambiguity should be
@@ -835,7 +835,7 @@ namespace compiler::helios::code {
 							  { .accessing_scope
 				                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 						  );
-				UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -902,7 +902,7 @@ namespace compiler::helios::code {
 				auto lookup_qresult
 					= HInterface::ofSymbol(query_ctx, namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
-				UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -966,7 +966,7 @@ namespace compiler::helios::code {
 					expr_access->getName().unlock(query_ctx)->unwrap(),
 					{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 				);
-				UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -1141,7 +1141,7 @@ namespace compiler::helios::code {
 					auto lookup_qresult
 						= HInterface::ofScopeWithParents(scope).lookup(ctx, base::StrID("self"));
 
-					UNPACK_QRESULT(CRef<LookupResult> lookup_result = &, lookup_qresult);
+					UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 					UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result->getAsSingle());
 
 					variant_match(sym_list) {

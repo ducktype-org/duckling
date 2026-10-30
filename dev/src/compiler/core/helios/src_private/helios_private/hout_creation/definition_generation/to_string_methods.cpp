@@ -66,9 +66,9 @@ namespace compiler::helios::defgen {
 		          .withReferenceKind(
 					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
 				  );
-		const auto lookup_result = HInterface::ofTypeInstance(string_abstract_type)
-		                               .lookup(ctx, base::StrID("append"))
-		                               .valueOrThrow();
+		const auto& lookup_result = HInterface::ofTypeInstance(string_abstract_type)
+		                                .lookup(ctx, base::StrID("append"))
+		                                ->valueOrThrow();
 
 
 		for (const SymID candidate: lookup_result.leaves) {

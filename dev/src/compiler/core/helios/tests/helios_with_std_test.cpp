@@ -380,7 +380,7 @@ private:
 		      .mode           = compiler::helios::LookupMode::All }
 		);
 		assertFalse(
-			result->valueOrThrow().empty(),
+			result->valueOrThrow().isEmpty(),
 			"builtin_output_i64 should resolve via the implicit prelude with no explicit import"
 		);
 	}

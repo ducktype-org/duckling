@@ -151,7 +151,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryLookupFromScope, KeyOf_LookupFromScope, CRef<query::QResult<std::vector<SymID>>>, ({})
+		QueryLookupFromScope, KeyOf_LookupFromScope, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	/**
