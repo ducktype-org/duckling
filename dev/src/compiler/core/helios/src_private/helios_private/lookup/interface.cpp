@@ -49,40 +49,35 @@ namespace compiler::helios {
 		}
 	}
 
-	namespace {
-		CRef<query::QResult<LookupResult>> lookupFromScope(
-			query::Context&                   ctx,
-			ScopeID                           scope,
-			base::StrID                       name,
-			const AdditionalLookupParameters& params,
-			bool                              with_parents
-		) {
-			return ctx.query<QueryLookupFromScope>({ .scope          = scope,
-			                                         .name           = name,
-			                                         .with_wildcards = params.with_wildcards,
-			                                         .with_parents   = with_parents });
-		}
-	}
-
 	CRef<query::QResult<LookupResult>> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
-				return lookupFromScope(ctx, scope.scope, name, params, false);
+				return ctx.query<QueryLookupFromScope>({ .scope          = scope.scope,
+				                                         .name           = name,
+				                                         .with_wildcards = params.with_wildcards,
+				                                         .with_parents   = false });
 			}
 			variant_case(ScopeWithParentsInterface, scope) {
-				return lookupFromScope(ctx, scope.scope, name, params, true);
+				return ctx.query<QueryLookupFromScope>({ .scope          = scope.scope,
+				                                         .name           = name,
+				                                         .with_wildcards = params.with_wildcards,
+				                                         .with_parents   = true });
 			}
 			variant_case(ModuleInterface, symbol) {
-				return lookupFromScope(
-					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false
-				);
+				return ctx.query<QueryLookupFromScope>({ .scope
+				                                         = scopeOfNamespaceLike(ctx, symbol.id),
+				                                         .name           = name,
+				                                         .with_wildcards = params.with_wildcards,
+				                                         .with_parents   = false });
 			}
 			variant_case(NamespaceInterface, symbol) {
-				return lookupFromScope(
-					ctx, scopeOfNamespaceLike(ctx, symbol.id), name, params, false
-				);
+				return ctx.query<QueryLookupFromScope>({ .scope
+				                                         = scopeOfNamespaceLike(ctx, symbol.id),
+				                                         .name           = name,
+				                                         .with_wildcards = params.with_wildcards,
+				                                         .with_parents   = false });
 			}
 			variant_case(TypeInstanceInterface, type) {
 				return ctx.query<QueryLookupInType>(

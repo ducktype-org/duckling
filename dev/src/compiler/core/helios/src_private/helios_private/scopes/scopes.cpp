@@ -824,22 +824,21 @@ namespace compiler::helios {
 			auto parent_scope = parent(scope);
 			if (parent_scope.has_value()) return parent_scope;
 
-			auto       current_module_id = module(scope);
-			const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(current_module_id);
+			auto current_module_id = module(scope);
+			if (not ctx.query<frontend::QueryIsReplModule>(current_module_id)) return {};
+
 			auto repl_parent_opt = ctx.query<frontend::QueryReplModuleParent>(current_module_id);
 
 			CORE_DEV_LOG(
 				REPL,
-				"At root scope, module #",
+				"At root scope of REPL module #",
 				current_module_id.queryUnstablePerfectHash().toStringHex(),
-				", isRepl=",
-				is_repl_module,
 				", hasParent=",
 				repl_parent_opt.has_value(),
 				"\n"
 			);
 
-			if (not is_repl_module or not repl_parent_opt.has_value()) return {};
+			if (not repl_parent_opt.has_value()) return {};
 			return queryRootScopeOfMainModuleFile(ctx, repl_parent_opt.value());
 		}
 	}
@@ -866,9 +865,10 @@ namespace compiler::helios {
 						usingImportProvidesName(ctx, sym, key.name, key.with_wildcards)
 					);
 					if (provides) result.push_back(sym);
-				} else if (name(sym) == key.name) {
-					result.push_back(sym);
+					continue;
 				}
+
+				if (name(sym) == key.name) result.push_back(sym);
 			}
 
 			return result;
@@ -934,8 +934,7 @@ namespace compiler::helios {
 			std::unordered_set<ScopeID> visited;
 			std::vector<SymID>          result;
 
-			base::Optional<ScopeID> current        = key.scope;
-			auto                    last_module_id = module(key.scope);
+			base::Optional<ScopeID> current = key.scope;
 
 			while (current.has_value()) {
 				UNPACK_QRESULT_MOVE(
@@ -945,14 +944,13 @@ namespace compiler::helios {
 
 				if (not key.with_parents) break;
 
-				last_module_id = module(current.value());
-				current        = enclosingScope(ctx, current.value());
+				current = enclosingScope(ctx, current.value());
 			}
 
 			// Bring the default prelude modules into scope, as if every module wrote
 			// `import <module>.*;`. A no-op under --no-std or inside the standard library.
 			if (key.with_parents) {
-				for (const ScopeID prelude_scope: implicitPreludeScopes(ctx, last_module_id)) {
+				for (const ScopeID prelude_scope: implicitPreludeScopes(ctx, module(key.scope))) {
 					UNPACK_QRESULT_MOVE(
 						auto found =, searchScopeWithUsings(ctx, key, prelude_scope, visited)
 					);

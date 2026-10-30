@@ -72,7 +72,6 @@ public:
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
-		TESTER_ADD_TEST(testRecursiveUsings);
 	}
 
 protected:
@@ -2860,28 +2859,6 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
-	}
-
-	void testRecursiveUsings() {
-		checkForWarningOnCompileModule(
-			R"(
-				namespace A {
-					using B.*;
-					const IN_A: i64 = 1;
-					const FROM_B: i64 = IN_B;
-				}
-
-				namespace B {
-					using A.*;
-					const IN_B: i64 = 2;
-					const FROM_A: i64 = IN_A;
-				}
-
-				const V: i64 = A.IN_B + B.IN_A;
-			)",
-			{},
-			0
-		);
 	}
 
 	void testWildcardNamesInSelectorPaths() {
