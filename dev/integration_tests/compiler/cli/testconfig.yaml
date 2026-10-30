@@ -61,6 +61,177 @@ Tests:
       two-modules:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
+      two-modules-no-link:
+        Run: >-
+          @{duckc_path} compile_modules ./duck_modules/two_modules/b.dk ./duck_modules/two_modules/a.dk
+          --no-link -O 0 --no-incremental --dump-ir asm -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.a.s' | wc -l)" -eq 1
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.b.s' | wc -l)" -eq 1
+          && test "$(find @{case_build} -type f -name '*.o' -size +0c | wc -l)" -ge 2
+          && test -z "$(find @{case_build} -maxdepth 1 -type f -name '*.a' -print -quit)"
+          && test ! -e @{case_build}/package_llvm.exe
+        ExitCode: 0
+      two-modules-dvm-no-link:
+        Run: >-
+          @{duckc_path} compile_modules ./duck_modules/two_modules/b.dk ./duck_modules/two_modules/a.dk
+          --dvm-backend --no-link -O 0 --no-incremental --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.a.dbc' | wc -l)" -eq 1
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name '*.b.dbc' | wc -l)" -eq 1
+          && test "$(find @{case_build}/query -type f -name '*.dbc' -size +0c | wc -l)" -eq 2
+          && test -z "$(find @{case_build} -maxdepth 1 -type f -name '*.dbc' -print -quit)"
+          && test ! -e @{case_build}/package_dvm.dbc
+        ExitCode: 0
+
+  compile-module-artifact-location:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 5
+    # --name makes the HIR filenames predictable so they can be checked below.
+    # Each case uses @{at_tmp_env} to keep relative ./duck_build output in its own
+    # scratch directory.
+    Cases:
+      explicit-artifact-directory-short:
+        Run: >-
+          @{at_tmp_env} @{duckc_path} compile_module
+          @{ConfigDir}/duck_modules/inferred_name/inferred_name.dk
+          --name artifact_name_short -O 0 --no-incremental --dump-ir hir
+          -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test -s "@{case_build}/duck_debug_artifacts/artifact_name_short.inferred_name.hir"
+          && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
+          && test ! -e @{case_build}/package_llvm.exe
+          && test ! -e "$DIT_TMP_DIR/duck_build"
+        ExitCode: 0
+      explicit-artifact-directory-long:
+        Run: >-
+          @{at_tmp_env} @{duckc_path} compile_module
+          @{ConfigDir}/duck_modules/inferred_name/inferred_name.dk
+          --name artifact_name_long -O 0 --no-incremental --dump-ir hir
+          --artifact-location @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test -s "@{case_build}/duck_debug_artifacts/artifact_name_long.inferred_name.hir"
+          && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
+          && test ! -e "$DIT_TMP_DIR/duck_build"
+        ExitCode: 0
+      # @TODO: #3398 Pre-create ./duck_build because the filesystem code currently panics when it tries
+      # to create a new physical folder beneath the temporary directory.
+      default-artifact-directory:
+        Run: >-
+          mkdir -p "$DIT_TMP_DIR/duck_build" &&
+          @{at_tmp_env} @{duckc_path} compile_module
+          @{ConfigDir}/duck_modules/inferred_name/inferred_name.dk
+          --name artifact_name_default -O 0 --no-incremental --dump-ir hir
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test -s "$DIT_TMP_DIR/duck_build/duck_debug_artifacts/artifact_name_default.inferred_name.hir"
+          && test -s "$(find "$DIT_TMP_DIR/duck_build" -type f -name '*.o' -print -quit)"
+        ExitCode: 0
+
+      dvm-object-artifact:
+        Run: >-
+          @{duckc_path} compile_module ./duck_modules/inferred_name/inferred_name.dk -O 0
+          --dvm-backend --no-incremental --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name '*.dbc' -print -quit)"
+          && test -s "$(find @{case_build} -type f -path '*/query/*' -name '*.dbc' -print -quit)"
+          && test ! -e @{case_build}/package_dvm.dbc
+        ExitCode: 0
+
+  compile-script-dump-ir:
+    # Compile once per backend and check every dump plus the linked output.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Run: |
+      @{duckc_path} compile_script ./duck_scripts/foo.dks @{backend_flags} \
+      --dump-ir @{dump_categories} -a @{case_build} \
+      --custom-std-artifacts-path @{case_std_artifacts} || exit 1
+
+      for extension in @{dump_extensions}; do
+        pattern="script_module_*.$extension"
+        test "$(find @{case_build}/duck_debug_artifacts -type f -name "$pattern" | wc -l)" -eq 1 || exit 1
+        dump="$(find @{case_build}/duck_debug_artifacts -type f -name "$pattern" -print -quit)"
+        test -s "$dump" || exit 1
+      done
+
+      # Check that HIR/MIR dumps keep statement order.
+      for ir in hir mir; do
+        dump="$(find @{case_build}/duck_debug_artifacts -type f -name "script_module_*.$ir" -print -quit)"
+        test "$(grep -c "^$(echo $ir | tr a-z A-Z) for " "$dump")" -eq 4 || exit 1
+        awk '/4242/ && !a {a=NR} /1234/ && !b {b=NR} /7777/ && !c {c=NR} END {exit !(a && b && c && a < b && b < c)}' "$dump" || exit 1
+      done
+
+      lir_dump="$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.lir' -print -quit)"
+      grep -q 'foo' "$lir_dump" || exit 1
+      test -s "@{case_build}/foo.@{output_extension}"
+    Cases:
+      llvm:
+        backend_flags: ""
+        dump_categories: "hir,mir,lir,llvm,asm"
+        dump_extensions: "hir mir lir ll s"
+        output_extension: "exe"
+        ExitCode: 0
+      dvm:
+        backend_flags: "--dvm-backend"
+        dump_categories: "hir,mir,lir,dbc"
+        dump_extensions: "hir mir lir dbc"
+        output_extension: "dbc"
+        ExitCode: 0
+
+  ir-options-help:
+    Cases:
+      compilation-commands:
+        Run: >-
+          for command in compile_module compile_modules compile_package compile_packages compile_script; do
+            @{duckc_path} "$command" --help > "$DIT_TMP_DIR/help" || exit 1;
+            for option in artifact-location dump-ir print-ir; do
+              grep -Eq "^[[:space:]]+(-[[:alnum:]], +)?--$option([[:space:]]|$)" "$DIT_TMP_DIR/help" || exit 1;
+            done;
+            grep -Fq 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc)' "$DIT_TMP_DIR/help" || exit 1;
+          done
+        ExitCode: 0
+
+  compile-script-print-ir:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Run: |
+      for category in @{print_categories}; do
+        @{duckc_path} compile_script ./duck_scripts/foo.dks @{backend_flags} \
+        --no-link --print-ir "$category" -a @{case_build} \
+        --custom-std-artifacts-path @{case_std_artifacts} > "$DIT_TMP_DIR/printed-ir" || exit 1;
+        grep -q 'foo' "$DIT_TMP_DIR/printed-ir" || exit 1;
+      done
+    Cases:
+      llvm:
+        backend_flags: ""
+        print_categories: "hir mir lir"
+      dvm:
+        backend_flags: "--dvm-backend"
+        print_categories: "dbc"
+
+  compile-script-no-link:
+    # Compile the script object/bytecode artifacts but skip the final executable/package link.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Cases:
+      llvm-object:
+        Run: >-
+          @{duckc_path} compile_script ./duck_scripts/foo.dks
+          --no-link --dump-ir asm -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.s' -print -quit)"
+          && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -eq 1
+          && test ! -e @{case_build}/foo.exe
+        ExitCode: 0
+      dvm-object:
+        Run: >-
+          @{duckc_path} compile_script ./duck_scripts/foo.dks
+          --dvm-backend --no-link --dump-ir dbc -a @{case_build}
+          --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' | wc -l)" -eq 1
+          && test -s "$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.dbc' -print -quit)"
+          && test "$(find @{case_build} -type f -name '*.o.dbc' | wc -l)" -eq 1
+          && test ! -e @{case_build}/foo.dbc
+        ExitCode: 0
 
   compile-package-inferred-name:
     # Without -n, compile_package names the package after its directory or root module file.
@@ -79,6 +250,67 @@ Tests:
         package_path: "./duck_modules/inferred_name/inferred_name.dk"
         ExitCode: 0
 
+  compile-package-no-link:
+    # Check the object, every IR layer, and the absence of a linked output in one call.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    Run: |
+      @{duckc_path} compile_package ./duck_modules/inferred_name @{backend_flags} \
+      --no-link -O 0 --no-incremental --dump-ir @{dump_categories} -a @{case_build} \
+      --custom-std-artifacts-path @{case_std_artifacts} || exit 1
+
+      for extension in @{dump_extensions}; do
+        test -s "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.$extension" || exit 1
+      done
+      object="$(find @{case_build}/query -type f -name '*.@{object_extension}' -print -quit)"
+      test -s "$object" || exit 1
+      test ! -e "@{case_build}/@{output_file}"
+    Cases:
+      llvm-objects:
+        backend_flags: ""
+        dump_categories: "hir,mir,lir,llvm,asm"
+        dump_extensions: "hir mir lir ll s"
+        object_extension: "o"
+        output_file: "package_llvm.exe"
+        ExitCode: 0
+      dvm-objects:
+        backend_flags: "--dvm-backend"
+        dump_categories: "hir,mir,lir,dbc"
+        dump_extensions: "hir mir lir dbc"
+        object_extension: "dbc"
+        output_file: "package_dvm.dbc"
+        ExitCode: 0
+
+  compile-packages-dump-ir:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    package_manifest: "$DIT_TMP_DIR/packages.json"
+    Cases:
+      object-task:
+        Run: >-
+          printf '%s' '{"packages":[{"id":"inferred_name","name":"inferred_name","path":"duck_modules/inferred_name"}],"tasks":[{"package":"inferred_name","strategy":"obj"}]}' > @{package_manifest}
+          && @{duckc_path} compile_packages @{package_manifest} -O 0 --no-incremental --dump-ir hir
+          -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test -s "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.hir"
+          && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
+        ExitCode: 0
+
+  compile-packages-no-link:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 10
+    package_manifest: "$DIT_TMP_DIR/packages.json"
+    Cases:
+      executable-and-library-tasks:
+        Run: >-
+          printf '%s' '{"packages":[{"id":"inferred_name","name":"inferred_name","path":"duck_modules/inferred_name"}],"tasks":[{"package":"inferred_name","strategy":"native","output_file":"native_output"},{"package":"inferred_name","strategy":"dvm_exe","output_file":"dvm_output"},{"package":"inferred_name","strategy":"lib","output_file":"native_lib.a"},{"package":"inferred_name","strategy":"dvm_lib","output_file":"dvm_lib.dbc"}]}' > @{package_manifest}
+          && @{duckc_path} compile_packages @{package_manifest} -O 0 --no-incremental --no-link
+          -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
+          && test "$(find @{case_build} -type f -name '*.o' | wc -l)" -gt 0
+          && test "$(find @{case_build} -type f -name '*.dbc' | wc -l)" -gt 0
+          && test ! -e @{case_build}/native_output
+          && test ! -e @{case_build}/dvm_output
+          && test ! -e @{case_build}/native_lib.a
+          && test ! -e @{case_build}/dvm_lib.dbc
   ir-output-after-cached-build:
     # The IR is printed and dumped while a module compiles. The first run fills the incremental
     # cache; the second run asks for IR with --no-incremental, so the module is recompiled.

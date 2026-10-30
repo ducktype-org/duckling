@@ -394,12 +394,11 @@ namespace compiler::driver {
 		const options_types::LinkingOptions& linking_options,
 		const options_types::StdLibOptions&  stdlib_options
 	) {
-		return {
-			.linker_path             = linking_options.native_linker_path,
-			.additional_link_options = linking_options.native_additional_link_options,
-			.link_c_standard_library = linking_options.native_link_c_standard_lib,
-			.stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
-		};
+		return { .linker_path             = linking_options.native_linker_path,
+			     .additional_link_options = linking_options.native_additional_link_options,
+			     .link_c_standard_library = linking_options.native_link_c_standard_lib,
+			     .stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
+			     .no_link                 = linking_options.no_link };
 	}
 
 	DVMLinkingOptions constructDVMLinkingOptions(
@@ -412,6 +411,7 @@ namespace compiler::driver {
 			base::appendToVector(link_libraries, getStdLibDVMLinkingDependencies(stdlib_options));
 
 		return { .shared_libraries = linking_options.dvm_shared_libraries,
-			     .link_libraries   = std::move(link_libraries) };
+			     .link_libraries   = std::move(link_libraries),
+			     .no_link          = linking_options.no_link };
 	}
 }  // namespace compiler::driver
