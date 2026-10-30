@@ -1,0 +1,37 @@
+import core.builtins.*;
+
+fun fromRef() -> type = {
+    var x: type = i64;
+    var r = &x;
+    return (r, i32);
+}
+
+fun fromNestedRef() -> type = {
+    var x: type = i16;
+    var r = &x;
+    return ((), (r, i8));
+}
+
+fun fromExistingTuple() -> type = {
+    var x: type = f64;
+    var t = (&x, ());
+    return t;
+}
+
+fun typesEqual(a: type, b: type) -> bool = a == b;
+
+const FROM_REF: bool = typesEqual(fromRef(), (i64, i32));
+const FROM_NESTED_REF: bool = typesEqual(fromNestedRef(), ((), (i16, i8)));
+const FROM_EXISTING_TUPLE: bool = typesEqual(fromExistingTuple(), (f64, ()));
+const SWAPPED: bool = typesEqual(fromRef(), (i32, i64));
+
+var VALUE: fromRef() = (1, 2);
+
+fun main() -> i64 = {
+    builtin_output_i64(if FROM_REF then 1 else 0);
+    builtin_output_i64(if FROM_NESTED_REF then 1 else 0);
+    builtin_output_i64(if FROM_EXISTING_TUPLE then 1 else 0);
+    builtin_output_i64(if SWAPPED then 1 else 0);
+    builtin_output_i64(VALUE._1 + (VALUE._2 as i64));
+    return 0;
+}

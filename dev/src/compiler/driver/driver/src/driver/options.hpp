@@ -46,6 +46,9 @@ namespace compiler::driver {
 			bool print_lir = false;
 			bool print_mir = false;
 			bool print_hir = false;
+
+			bool print_graph      = false;
+			bool print_statistics = false;
 		};
 
 		/**
@@ -130,6 +133,11 @@ namespace compiler::driver {
 			 * @brief The paths of the DBC libraries to link into the output.
 			 */
 			std::vector<fs::FilePath> dvm_link_libraries;
+
+			/**
+			 * @brief Skip final linking and archiving and keep compiler object artifacts.
+			 */
+			bool no_link = false;
 		};
 	}
 

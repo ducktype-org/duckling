@@ -33,7 +33,7 @@ namespace pst {
 	public:
 		enum class Type { SingleStmt, CodeBlock };
 
-		explicit CodeBlockOrStmt(const LangParserState& state): NotStmt(state) {
+		explicit CodeBlockOrStmt(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
 

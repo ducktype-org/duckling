@@ -7,8 +7,8 @@
 #include "ctv.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -28,10 +28,10 @@ namespace compiler::ctv {
 
 	CompileTimeValue::TypeTuple::TypeTuple(std::vector<Element> elements):
 		  elements(std::move(elements)) {
-		// We require at least two elements to distinguish it from:
-		// - UnitCTV, which has zero elements, and
-		// - a single CTV that happens to appear in parentheses.
-		CORE_ASSERT(this->elements.size() >= 2, "TypeTuple must have at least two elements");
+		// We require at least one element to distinguish it from UnitCTV, which has zero
+		// elements. A one element tuple is written `(T,)`, a single CTV in parentheses is not a
+		// tuple.
+		CORE_ASSERT(not this->elements.empty(), "TypeTuple must have at least one element");
 	}
 
 	CompileTimeValue::TypeTuple::Element CompileTimeValue::TypeTuple::elementFromCtv(
@@ -55,13 +55,10 @@ namespace compiler::ctv {
 		CORE_UNREACHABLE();
 	}
 
-	bool CompileTimeValue::TypeTuple::isValid(
-		query::Context& ctx, const tsh::SymbolType<>& tuple_type
-	) {
+	bool CompileTimeValue::TypeTuple::isValid(const tsh::SymbolType<>& tuple_type) {
 		return tuple_type.getRefKind() == tsh::ReferenceKind::Direct
 		    && tuple_type.getType().getKind() == tsh::Kind::Tuple
-		    && ctx.query<tsh::QueryImplicitCoercibilityOnAbstractType>({ tuple_type.getType(),
-		                                                                 tsh::getMetaType() });
+		    && tsh::TupleAbstractType{ tuple_type.getType() }.isTupleOfTypes();
 	}
 
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
@@ -124,6 +121,7 @@ namespace compiler::ctv {
 				ss << "(" << TypeTuple::elementToCtv(elements.at(0)).toString();
 				for (usize i = 1; i < elements.size(); i++)
 					ss << ", " << TypeTuple::elementToCtv(elements.at(i)).toString();
+				if (elements.size() == 1) ss << ",";
 				ss << ")";
 				return ss.str();
 			}

@@ -59,11 +59,6 @@ namespace compiler::tsh {
 		return pimpl->isTriviallyCopyable(ctx);
 	}
 
-	[[nodiscard]]
-	bool AbstractType::isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const {
-		return pimpl->isImplicitlyCoercible(target, ctx);
-	}
-
 	bool AbstractType::carriesInformation(query::Context& ctx) const {
 		return pimpl->carriesInformation(ctx);
 	}

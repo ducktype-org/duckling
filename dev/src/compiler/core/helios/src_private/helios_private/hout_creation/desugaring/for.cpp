@@ -179,26 +179,25 @@ namespace compiler::helios::desugaring {
 
 			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
 			auto element_sym_type = raw_element->expression_type.getSymbolType();
-			auto element_expr     = coerceFromBox(
+			auto element_expr     = coercions::coerceFromBox(
                 ctx.ctx,
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
                 {},
-                CoercionErrorOverrides{
-						.incompatible_types =
-                        [&](query::Context& error_ctx) {
-                            error_ctx.logInt(makeBox<dia::PlaceholderError>(
-                                base::strConcat(
-                                    "Cannot coerce collection element type '",
-                                    element_sym_type.toString(),
-                                    "' to iterator type '",
-                                    iter_type.toString(),
-                                    "'."
-                                ),
-                                iter_pst_pos
-                            ));
-                        },
+                coercions::CoercionErrorOverrides{
+						.incompatible_types = [&] -> Box<dia::MessageBase> {
+                        return makeBox<dia::PlaceholderError>(
+                            base::strConcat(
+                                "Cannot coerce collection element type '",
+                                element_sym_type.toString(),
+                                "' to iterator type '",
+                                iter_type.toString(),
+                                "'."
+                            ),
+                            iter_pst_pos
+                        );
+                    },
                 }
             );
 			if (element_expr.hasFailed()) return {};

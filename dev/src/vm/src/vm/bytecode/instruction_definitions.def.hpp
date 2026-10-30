@@ -426,6 +426,19 @@ DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
 DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
 
+/// Stores a reference to `function` in `dst`. The function's signature must match the function
+/// type of `dst`.
+DEF_INSTR(mov_pfun_func, (vm::opargs::PlaceFunc, dst), (vm::opargs::FunctionName, function))
+/// Copies a function value; source and destination must have the identical function type.
+DEF_INSTR(mov_pfun_pfun, (vm::opargs::PlaceFunc, dst), (vm::opargs::PlaceFunc, src))
+/**
+ * @brief Calls the function referenced by `callee`, with the same convention as `call_func`. The
+ * parameters and results are those of the function type of `callee`.
+ *
+ * Panics if `callee` is null or references no function.
+ */
+DEF_INSTR(call_pfun, (vm::opargs::PlaceFunc, callee))
+
 DEF_INSTR(setThreadCtx_func, (vm::opargs::FunctionName, function))
 
 // return while performing a tail call

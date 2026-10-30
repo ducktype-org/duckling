@@ -39,6 +39,16 @@ int notMain(int argc, const char* const* argv) {
 	                         .addShortName('p')
 	                         .addShortDesc("Path to Duckling source root")
 	                         .required()
+	                         .build())
+	                .add(clah::ParamBuilder::ofValue(clah::StringParser::make("Name"))
+	                         .addShortName('f')
+	                         .addShortDesc("Name of the global function to inspect (default: main)")
+	                         .optional()
+	                         .build())
+	                .add(clah::ParamBuilder::ofValue(clah::StringParser::make("Query"))
+	                         .addShortName('q')
+	                         .addShortDesc("Inspected query: `code` (default) or `decl`")
+	                         .optional()
 	                         .build());
 
 	clah::ParsingResult options;
@@ -54,8 +64,15 @@ int notMain(int argc, const char* const* argv) {
 	}
 
 	auto path_to_compile = options.getValue<fs::File>('p').value();
+	auto function_name   = base::StrID(options.getValue<std::string>('f').copyValueOr("main"));
+	auto query_name      = options.getValue<std::string>('q').copyValueOr("code");
 
 	using namespace compiler;
+
+	if (query_name != "code" && query_name != "decl") {
+		std::cerr << "Unknown query `" << query_name << "`, expected `code` or `decl`\n";
+		return 1;
+	}
 
 	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
@@ -64,10 +81,17 @@ int notMain(int argc, const char* const* argv) {
 	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
 	for (auto& i: top_level.functions) {
-		if (i->declaration->original_name == base::StrID("main")) {
-			auto positions = pst::queryPositionDependencies<helios::QueryCodeOfFun>(
-				i->declaration->original_symbol
-			);
+		if (i->declaration->original_name == function_name) {
+			auto symbol = i->declaration->original_symbol;
+
+			std::vector<dia::SourcePosition> positions;
+			if (query_name == "decl") {
+				std::ignore = query::entryPoint<helios::QueryDeclOfFun>(symbol);
+				positions   = pst::queryPositionDependencies<helios::QueryDeclOfFun>(symbol);
+			} else {
+				std::ignore = query::entryPoint<helios::QueryCodeOfFun>(symbol);
+				positions   = pst::queryPositionDependencies<helios::QueryCodeOfFun>(symbol);
+			}
 
 			printer::PrinterOStream str;
 			dia::printHighlightedPositions(str, positions);

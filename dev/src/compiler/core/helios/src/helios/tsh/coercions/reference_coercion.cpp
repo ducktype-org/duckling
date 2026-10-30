@@ -9,7 +9,9 @@
 #include <base/except/exceptions.hpp>
 
 namespace compiler::tsh::coercions {
-	ReferenceCoercion referenceCoercionRule(const ReferenceKind from, const ReferenceKind to) {
+	ReferenceCoercion referenceCoercionRule(
+		const ReferenceKind from, const ReferenceKind to, const CoercionMode mode
+	) {
 		using enum ReferenceKind;
 		using enum ReferenceAdjustment;
 
@@ -29,10 +31,14 @@ namespace compiler::tsh::coercions {
 			.points_to_source  = false,
 		};
 
+		const bool implicit_ref_of = mode == CoercionMode::ImplicitRefOf;
+
 		switch (from) {
 		case Direct:
 			// `Direct` -> `Direct` copies and doesn't point to source.
 			if (to == Direct) return legal(None, true, false);
+			// `Direct` -> `Ref` takes the value by reference, points to source.
+			if (to == Ref && implicit_ref_of) return legal(RefOf, false, true);
 			return illegal;
 		case Ref:
 			// `Ref` -> `Direct` reads out the pointee, thus creates a new value, doesn't point to
@@ -48,6 +54,8 @@ namespace compiler::tsh::coercions {
 			// `Box` -> `Box` can either `move` the box or deep copy the existing one, thus it
 			// creates a new value and never points to source.
 			if (to == Box) return legal(None, true, false);
+			// `Box` -> `Ref` reborrows the pointee, points to source.
+			if (to == Ref && implicit_ref_of) return legal(RefOf, false, true);
 			return illegal;
 		}
 
@@ -57,7 +65,19 @@ namespace compiler::tsh::coercions {
 	std::string ReferenceCoercion::toString() const {
 		if (not isLegal()) return "illegal";
 
-		std::string out = adjustment == ReferenceAdjustment::Deref ? "deref" : "none";
+		std::string out = [&]() -> std::string {
+			switch (adjustment) {
+			case ReferenceAdjustment::None:
+				return "none";
+			case ReferenceAdjustment::Deref:
+				return "deref";
+			case ReferenceAdjustment::RefOf:
+				return "ref of";
+			case ReferenceAdjustment::Illegal:
+				break;
+			}
+			CORE_UNREACHABLE();
+		}();
 		if (creates_new_value) out += ", new value";
 		if (points_to_source) out += ", aliases source";
 		return out;

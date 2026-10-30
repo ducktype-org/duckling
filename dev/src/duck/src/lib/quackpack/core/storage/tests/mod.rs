@@ -26,7 +26,7 @@ use crate::quackpack::core::{
 };
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::touch;
 use crate::util::test_utils::setup_test;
 
 mod basic;
@@ -75,16 +75,17 @@ fn setup_mock_storage() -> (DuckContext, TempDir, PathBuf) {
 fn setup_mock_packages(root: &Path) {
     let names = ["foo", "bar", "baz"];
     for name in names {
-        root.join("pkg")
-            .join(storage_name_for_registry(
-                name,
-                Version::new(1, 0, 0),
-                fetcher::DEFAULT_REGISTRY_URL.clone().into(),
-            ))
-            .join("src")
-            .join("main.duck")
-            .touch()
-            .unwrap();
+        touch(
+            root.join("pkg")
+                .join(storage_name_for_registry(
+                    name,
+                    Version::new(1, 0, 0),
+                    fetcher::DEFAULT_REGISTRY_URL.clone().into(),
+                ))
+                .join("src")
+                .join("main.duck"),
+        )
+        .unwrap();
     }
 }
 
@@ -176,34 +177,22 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
 fn setup_mock_locks(root: &Path) {
     let setup_compile_locks = |names: &[&str]| {
         for name in names {
-            root.join("locks")
-                .join("compile")
-                .join(name)
-                .touch()
-                .unwrap();
+            touch(root.join("locks").join("compile").join(name)).unwrap();
         }
     };
 
     let setup_sync_locks = |names: &[&str]| {
         for name in names {
-            root.join("locks")
-                .join("venv_sync")
-                .join(name)
-                .touch()
-                .unwrap();
+            touch(root.join("locks").join("venv_sync").join(name)).unwrap();
         }
     };
 
     let setup_data_locks = |names: &[&str]| {
         for name in names {
-            root.join("locks")
-                .join("venv_data")
-                .join(name)
-                .touch()
-                .unwrap();
+            touch(root.join("locks").join("venv_data").join(name)).unwrap();
         }
     };
-    root.join("locks").join("clean.lock").touch().unwrap();
+    touch(root.join("locks").join("clean.lock")).unwrap();
     let venvs = ["root1", "root2", "root3", "root4"];
     setup_data_locks(&venvs);
     setup_sync_locks(&venvs);

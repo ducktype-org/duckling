@@ -22,7 +22,7 @@
 #include <driver/task/task.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
@@ -42,6 +42,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <clah/parsing_result.hpp>
 #include <clah/value_parser.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/module_flags/module_flags.hpp>
@@ -53,16 +54,16 @@
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
-#include <query_framework/q_stats/q_stats.hpp>
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <array>
-#include <cstdio>
 #include <iostream>
-#include <ranges>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -281,9 +282,23 @@ auto getClahArchivingOptions() {
 compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 	const clah::ParsingResult& parsing_result
 ) {
-	compiler::archiver::ArchivingOptions archiving_options;
-	archiving_options.archiver_path = parsing_result.getValue<std::string>("archiver");
-	return archiving_options;
+	return { .archiver_path = parsing_result.getValue<std::string>("archiver"),
+		     .no_link       = parsing_result.isFlag("no-link") };
+}
+
+auto getClahNoLinkParameter() {
+	return clah::ParamBuilder::ofFlag()
+	    .addLongName("no-link")
+	    .addShortDesc("Skip final linking and archiving; keep compiler object artifacts.")
+	    .build();
+}
+
+auto getClahArtifactLocationParameter() {
+	return clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	    .addShortName('a')
+	    .addLongName("artifact-location")
+	    .addShortDesc("Path to the top-level folder with build artifacts")
+	    .build();
 }
 
 auto getClahLinkingOptions() {
@@ -314,7 +329,36 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Paths to the .dbc libraries to link into the output.")
 			.optional()
 			.build(),
+		getClahNoLinkParameter(),
 	};
+}
+
+/**
+ * @brief If enabled, sets no-link option in appropriate BuildTargets
+ */
+void updateTaskTargetWithNoLinkOptions(
+	bool no_link, compiler::driver::PackageCompilationTask& package_task
+) {
+	if (no_link) {
+		using namespace compiler::driver;
+		variant_match(package_task.build_target) {
+			variant_case(BuildTargetLLVMExecutable, target) {
+				target.linking_options.no_link = true;
+			}
+			variant_case(BuildTargetLLVMStaticLibrary, target) {
+				target.archiving_options.no_link = true;
+			}
+			variant_case(BuildTargetDVMExecutable, target) {
+				target.dvm_linking_options.no_link = true;
+			}
+			variant_case(BuildTargetDVMLibrary, target) {
+				target.dvm_linking_options.no_link = true;
+			}
+			variant_default {
+				// BuildTargetLLVM has no executables
+			}
+		}
+	}
 }
 
 /**
@@ -338,6 +382,8 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
 
+	linking_options.no_link = parsing_result.isFlag("no-link");
+
 	return linking_options;
 }
 
@@ -346,24 +392,44 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
  */
 namespace debug_options {
 	using compiler::driver::options_types::DebugOptions;
+	using IROption = std::pair<std::string_view, bool DebugOptions::*>;
 
-	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
-		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
-			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
-			{ "dbc", &DebugOptions::dump_dbc }, { "lir", &DebugOptions::dump_lir },
-			{ "mir", &DebugOptions::dump_mir }, { "hir", &DebugOptions::dump_hir },
-		};
-		return dump_field_mapping;
+	constexpr std::array<IROption, 6> DUMP_IR_OPTIONS{ {
+		{ "hir", &DebugOptions::dump_hir },
+		{ "mir", &DebugOptions::dump_mir },
+		{ "lir", &DebugOptions::dump_lir },
+		{ "llvm", &DebugOptions::dump_llvm },
+		{ "asm", &DebugOptions::dump_asm },
+		{ "dbc", &DebugOptions::dump_dbc },
+	} };
+	constexpr std::array<IROption, 4> PRINT_IR_OPTIONS{ {
+		{ "hir", &DebugOptions::print_hir },
+		{ "mir", &DebugOptions::print_mir },
+		{ "lir", &DebugOptions::print_lir },
+		{ "dbc", &DebugOptions::print_dbc },
+	} };
+
+	std::vector<std::string> getIRCategories(const auto& options) {
+		std::vector<std::string> categories;
+		categories.reserve(options.size());
+		for (const auto& [name, field]: options) categories.emplace_back(name);
+		return categories;
 	}
 
-	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
-		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
-			{ "dbc", &DebugOptions::print_dbc },
-			{ "lir", &DebugOptions::print_lir },
-			{ "mir", &DebugOptions::print_mir },
-			{ "hir", &DebugOptions::print_hir },
-		};
-		return print_field_mapping;
+	auto getClahDumpIRParameter() {
+		return clah::ParamBuilder::ofValue(
+				   clah::CategoryListParser::make(
+					   "categories", clah::CategoryParser::make(getIRCategories(DUMP_IR_OPTIONS))
+				   )
+		)
+		    .addLongName("dump-ir")
+		    .addShortDesc("Dump selected intermediate representations to files.")
+		    .addLongDesc(
+				"Supported categories and artifact extensions, in compilation order, are "
+				"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
+				"LLVM IR and assembly require the LLVM backend; DBC requires the DVM backend."
+			)
+		    .build();
 	}
 
 	/**
@@ -371,27 +437,24 @@ namespace debug_options {
 	 * added to a Clah instance.
 	 */
 	auto getClahDebugParameters() {
-		std::vector<std::string> dump_categories = getDebugDumpIROptions() | std::views::keys
-		                                         | std::ranges::to<std::vector<std::string>>();
-		std::vector<std::string> print_categories = getDebugPrintIROptions() | std::views::keys
-		                                          | std::ranges::to<std::vector<std::string>>();
-
 		return std::array{
-			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-											"categories", clah::CategoryParser::make(dump_categories)
-										))
-				.addLongName("dump-ir")
-				.addShortDesc("Dump to file the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc "
-			                 "requires --dvm-backend.")
-				.build(),
-			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-											"categories",
-											clah::CategoryParser::make(print_categories)
-										))
+			getClahDumpIRParameter(),
+			clah::ParamBuilder::ofValue(
+				clah::CategoryListParser::make(
+					"categories", clah::CategoryParser::make(getIRCategories(PRINT_IR_OPTIONS))
+				)
+			)
 				.addLongName("print-ir")
-				.addShortDesc("Print to stdout the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: dbc, lir, mir, hir.")
+				.addShortDesc("Print selected intermediate representations to stdout.")
+				.addLongDesc("Possible values are: hir, mir, lir, dbc.")
+				.build(),
+			clah::ParamBuilder::ofFlag()
+				.addLongName("print-graph")
+				.addShortDesc("Print the query graph after the compilation.")
+				.build(),
+			clah::ParamBuilder::ofFlag()
+				.addLongName("print-statistics")
+				.addShortDesc("Print execution time statistics.")
 				.build(),
 		};
 	}
@@ -406,14 +469,72 @@ namespace debug_options {
 			.immediate_print_diagnostics = true,
 		};
 
-		if (auto dump_categories = parsing_result.getValue<std::vector<std::string>>("dump-ir"))
-			for (const auto& category: dump_categories.value())
-				debug_options.*(getDebugDumpIROptions().at(category)) = true;
-		if (auto print_categories = parsing_result.getValue<std::vector<std::string>>("print-ir"))
-			for (const auto& category: print_categories.value())
-				debug_options.*(getDebugPrintIROptions().at(category)) = true;
+		const auto apply_ir_options = [&](const char* flag, const auto& options) {
+			if (auto categories = parsing_result.getValue<std::vector<std::string>>(flag))
+				for (const auto& [category, field]: options)
+					debug_options.*field
+						= std::find(categories->begin(), categories->end(), category)
+					   != categories->end();
+		};
+		apply_ir_options("dump-ir", DUMP_IR_OPTIONS);
+		apply_ir_options("print-ir", PRINT_IR_OPTIONS);
+
+		debug_options.print_graph      = parsing_result.isFlag("print-graph");
+		debug_options.print_statistics = parsing_result.isFlag("print-statistics");
 
 		return debug_options;
+	}
+
+}
+
+/**
+ * @brief The CLI interface for the IncrementalOptions part of the driver.
+ */
+namespace incremental_options {
+	using compiler::driver::options_types::IncrementalOptions;
+
+	/**
+	 * @brief Return the array of clah::Parameter for the incremental options of the driver, which
+	 * can be added to a Clah instance.
+	 */
+	auto getClahIncrementalParameters() {
+		return std::array{
+			clah::ParamBuilder::ofFlag()
+				.addLongName("no-incremental")
+				.addShortDesc("Disable incremental compilation (do not load previous query graph).")
+				.build(),
+		};
+	}
+
+	/**
+	 * @brief Given parsing result from clah, extract the incremental options for the driver.
+	 */
+	IncrementalOptions getIncrementalOptionsFromClah(const clah::ParsingResult& parsing_result) {
+		return IncrementalOptions{ .enabled = not parsing_result.isFlag("no-incremental") };
+	}
+
+	/**
+	 * @brief Verify that the incremental options are compatible with the debug options.
+	 */
+	clah::VerificationResult verifyIncrementalOptions(const clah::ParsingResult& parsing_result) {
+		const bool no_incremental = parsing_result.isFlag("no-incremental");
+
+		if ((parsing_result.isParam("dump-ir") || parsing_result.isParam("print-ir"))
+		    && !no_incremental) {
+			return std::unexpected<std::string>(
+				"--dump-ir and --print-ir require --no-incremental, otherwise the modules loaded "
+				"from the incremental cache are not dumped or printed."
+			);
+		}
+
+		if (parsing_result.isFlag("print-graph") && no_incremental) {
+			return std::unexpected<std::string>(
+				"--print-graph requires the query graph, which is disabled by --no-incremental. "
+				"These flags cannot be used together."
+			);
+		}
+
+		return clah::VerificationPassed{};
 	}
 }
 
@@ -490,21 +611,21 @@ clah::Clah getClahForMain() {
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
 					// @TODO: #1879 Currently defaults to program
-					auto pst = pst::PST(file_to_parse, pst::PSTType::Program);
+					auto pst = pst::ParsedPST<>::fromFile(file_to_parse, pst::PSTType::Program);
 
 					int exit_code = 0;
 
-					if (pst.hasErrors()) exit_code = 1;
+					if (pst->hasErrors()) exit_code = 1;
 
 					std::cout << "Parsed tree:\n";
-					pst.dprint(std::cout);
+					pst->dprint(std::cout);
 					std::cout << "\n";
 
 					return exit_code;
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_module", "Compile given module into a binary.")
+			clah::Clah("compile_module", "Compile one module into backend object artifacts.")
 				.addPositional(clah::FileParser::make("module", true))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
@@ -520,12 +641,9 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(getClahArtifactLocationParameter())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
@@ -545,11 +663,12 @@ clah::Clah getClahForMain() {
 								},
 							},
 							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
+								.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
+								                      .copyValueOr("./duck_build/"),
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = 1,
 							},
@@ -583,11 +702,13 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah(
 				"compile_modules",
-				"Compile given modules into binaries. Every module is placed in its own package "
+				"Compile given modules into backend objects, optionally linking an executable. "
+				"Every module is placed in its own package "
 				"and every package depends on all the other ones. "
 				"This mimics the simple case of multi file compilation with GCC/clang which is "
 				"sometimes useful. Note that the package based entry points should be preferred "
-				"when possible."
+				"when possible. Use --no-link to compile modules without producing libraries or "
+				"an executable."
 			)
 				.addPositional(clah::FileParser::make("module"))
 				.setDefaultValueParser(clah::FileParser::make("module"))
@@ -596,12 +717,7 @@ clah::Clah getClahForMain() {
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
 				.add(getClahLinkingOptions())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-	                     .addShortName('a')
-	                     .addLongName("artifact-location")
-	                     .addShortDesc("Path to the top-level folder with build artifacts")
-	                     .optional()
-	                     .build())
+				.add(getClahArtifactLocationParameter())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
 	                     .addShortName('o')
 	                     .addLongName("output-file-name")
@@ -617,19 +733,14 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
-					const bool dvm_backend = options.isFlag("dvm-backend");
-
+					const bool                          dvm_backend = options.isFlag("dvm-backend");
 					std::set<base::StrID>               aliases_duplicate_check;
 					base::Map<base::StrID, base::StrID> package_id_aliases;
 					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
@@ -690,7 +801,7 @@ clah::Clah getClahForMain() {
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = 1,
 							},
@@ -758,10 +869,12 @@ clah::Clah getClahForMain() {
 								},
 							});
 						}
-						auto artifact_file = global_state::getRootCollection()
-			                                     ->fileArtifactAtOrNew(library_name)
-			                                     .file;
-						libraries_to_link.push_back(artifact_file.getFilePath());
+						if (not options.isFlag("no-link")) {
+							auto artifact_file = global_state::getRootCollection()
+				                                     ->fileArtifactAtOrNew(library_name)
+				                                     .file;
+							libraries_to_link.push_back(artifact_file.getFilePath());
+						}
 					}
 
 					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
@@ -775,8 +888,7 @@ clah::Clah getClahForMain() {
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetDVMExecutable{
 								.output_file_name  = base::StrID(output_file_name),
-								.dvm_linking_options    = driver::constructDVMLinkingOptions(
-									getLinkingOptionsFromClah(options), stdlib_options, false
+								.dvm_linking_options    = driver::constructDVMLinkingOptions(linking_options, stdlib_options, false
 								),
 							},
 						});
@@ -805,7 +917,9 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_package", "Compile given package into a binary.")
+			clah::Clah(
+				"compile_package", "Compile a package and optionally link an executable or library."
+			)
 				.addPositional(
 					clah::FileParser::make("path", true),
 					"Path to the root module of the package or the root module file."
@@ -824,46 +938,18 @@ clah::Clah getClahForMain() {
 						 )
 	                     .optional()
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-	                     .addShortName('a')
-	                     .addLongName("artifact-location")
-	                     .addShortDesc("Path to the top-level folder with build artifacts")
-	                     .optional()
-	                     .build())
+				.add(getClahArtifactLocationParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-statistics")
-	                     .addShortDesc("Print execution time statistics.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-graph")
-	                     .addShortDesc("Print the query graph after the compilation.")
-	                     .build())
-				.addCustomVerification(
-					[](const clah::ParsingResult& options) -> clah::VerificationResult {
-						if (options.isFlag("print-graph") && options.isFlag("no-incremental")) {
-							return std::unexpected<std::string>(
-								"--print-graph requires the query graph, which is disabled by "
-								"--no-incremental. These flags cannot be used together."
-							);
-						}
-						return clah::VerificationPassed{};
-					}
-				)
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
 	                     .addLongName("archiver")
 	                     .addShortDesc("Path to the archiver executable.")
 	                     .optional()
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
 	                     .addLongName("workers")
@@ -881,15 +967,6 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Emit a static library (.a) instead of an executable.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
-						CORE_USER_LOG(
-							"Error: --print-graph requires the query graph, which is "
-							"disabled by --no-incremental. These flags cannot be used "
-							"together.\n"
-						);
-						return 1;
-					}
-
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
                         inferPackageName(path_to_compile)
@@ -923,7 +1000,7 @@ clah::Clah getClahForMain() {
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
@@ -1005,18 +1082,6 @@ clah::Clah getClahForMain() {
 
 					compiler::driver::exit();
 
-					if (options.isFlag("print-statistics")) {
-						if (not query::USE_STATS) {
-							std::cerr << "Warning: Query statistics are disabled at compile time. "
-										 "No query statistics will be printed.\n";
-						}
-						query::printStats();
-						time_stats::prettyPrintTimeStatistics();
-					}
-
-					if (options.isFlag("print-graph"))
-						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
-
 
 					return result.isOk() ? 0 : 1;
 				})
@@ -1025,28 +1090,13 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
 				.addPositional(clah::FileParser::make("manifest"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-	                     .addShortName('a')
-	                     .addLongName("artifact-location")
-	                     .addShortDesc("Path to the top-level folder with build artifacts")
-	                     .optional()
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-statistics")
-	                     .addShortDesc("Print execution time statistics.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("print-graph")
-	                     .addShortDesc("Print the query graph after the compilation.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-incremental")
-	                     .addShortDesc(
-							 "Disable incremental compilation (do not load previous query graph)."
-						 )
-	                     .build())
+				.add(getClahArtifactLocationParameter())
+				.add(getClahNoLinkParameter())
+				.add(incremental_options::getClahIncrementalParameters())
+				.addCustomVerification(incremental_options::verifyIncrementalOptions)
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
 	                     .addLongName("workers")
@@ -1092,7 +1142,7 @@ clah::Clah getClahForMain() {
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
@@ -1125,6 +1175,9 @@ clah::Clah getClahForMain() {
 						}
 						variant_match(converted->task_data) {
 							variant_case(compiler::driver::PackageCompilationTask, package_task) {
+								updateTaskTargetWithNoLinkOptions(
+									options.isFlag("no-link"), package_task
+								);
 								compilation_tasks.push_back(package_task);
 							}
 							variant_default { CORE_PANIC("Unsupported task type in manifest"); }
@@ -1142,34 +1195,21 @@ clah::Clah getClahForMain() {
 
 					compiler::driver::exit();
 
-					if (options.isFlag("print-statistics")) {
-						if (not query::USE_STATS) {
-							std::cerr << "Warning: Query statistics are disabled at compile time. "
-										 "No query statistics will be printed.\n";
-						}
-						query::printStats();
-						time_stats::prettyPrintTimeStatistics();
-					}
-
-					if (options.isFlag("print-graph"))
-						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
-
 					return result.isOk() ? 0 : 1;
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
+			clah::Clah(
+				"compile_script",
+				"Compile a .dks script into backend objects, a .dbc package, or an executable."
+			)
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
 				.add(getClahLinkingOptions())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-	                     .addShortName('a')
-	                     .addLongName("artifact-location")
-	                     .addShortDesc("Path to the top-level folder with build artifacts")
-	                     .optional()
-	                     .build())
+				.add(getClahArtifactLocationParameter())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc(
