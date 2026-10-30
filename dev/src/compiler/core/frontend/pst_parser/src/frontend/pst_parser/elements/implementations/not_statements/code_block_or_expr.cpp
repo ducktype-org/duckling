@@ -37,7 +37,7 @@ namespace pst {
 				state.logInt(makeBox<OnlySimpleExpressionOrCodeBlockAllowed>(state.getPosition()));
 			}
 			MBox<Stmt> stmt;
-			PARSE().one(&stmt);
+			PARSE().with(&stmt, Stmt::parseSimpleExpr);
 			if (!stmt) return nullptr;
 			PARSE().assign(&out->stmt, std::move(stmt));
 		}

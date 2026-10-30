@@ -162,6 +162,7 @@ namespace pst {
 		}
 
 		static MBox<Stmt> parse(LangParserState& state);
+		static MBox<Stmt> parseSimpleExpr(LangParserState& state);
 		bool              trailingSemicolon() override;
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
 

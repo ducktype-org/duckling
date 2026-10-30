@@ -367,6 +367,14 @@ namespace pst {
 		PST_RETURN out;
 	}
 
+	MBox<Stmt> Stmt::parseSimpleExpr(LangParserState& state) {
+		if (state[0].is(Special::Semicolon) || internal::isSentinel(state, 0)) {
+			state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
+			return nullptr;
+		}
+		return internal::parseStmt<ExprStmt>(state);
+	}
+
 	HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
