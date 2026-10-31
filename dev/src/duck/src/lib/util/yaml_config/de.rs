@@ -18,7 +18,7 @@ pub(super) struct YamlDeserializer<'config, 'key> {
     pub(super) key: &'key str,
 }
 
-pub(super) struct QuackErrorWrapper {
+pub struct QuackErrorWrapper {
     error: QuackError,
 }
 
@@ -58,6 +58,7 @@ macro_rules! forward_to_yaml {
             where
                 V: de::Visitor<'de>
             {
+                println!("{:?}", self.config.get(self.key));
                 match self.config.get(self.key)? {
                     Some(v) => v.$name($($param,)* visitor).map_err(|error| {
                         let error: QuackError = error.into();

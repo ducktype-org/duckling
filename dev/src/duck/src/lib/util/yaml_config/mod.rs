@@ -13,10 +13,12 @@ use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
 use tracing::{debug, trace};
 
 use super::DescriptionWithAnArticle;
+use crate::util::env::Env;
 use crate::util::path_ops::read_from_path_to_string;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
+pub mod env_deserializer;
 
 impl DescriptionWithAnArticle for Value {
     fn desc_with_article(&self) -> &'static str {
@@ -137,6 +139,7 @@ impl YamlConfig {
         match self.source {
             Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
             None => {
+                panic!("xd");
                 "You've encountered an internal error: when parsing the default user configuration"
                     .into()
             }
@@ -364,6 +367,20 @@ impl YamlConfig {
         T::deserialize(deserializer).with_context(|| self.make_location_error())
     }
 
+    /// Deserialize a value at the dotted key.
+    /// Any simple value can be overridden by the canonical environmental variable.
+    pub fn deserialize_with_env_overrides<'de, T: Deserialize<'de>>(
+        &'de self,
+        env: &Env,
+        key: &str,
+    ) -> QuackResult<T> {
+        let value = self
+            .get(key)?;
+        let deserializer =
+            env_deserializer::EnvDeserializer::new(value.cloned(), env, key.to_string());
+        T::deserialize(deserializer).with_context(|| self.make_location_error())
+    }
+
     /// Deserialize an optional value at the dotted key.
     pub fn deserialize_optional<'de, T: Deserialize<'de>>(
         &'de self,
@@ -372,12 +389,36 @@ impl YamlConfig {
         self.deserialize::<Option<T>>(key)
     }
 
+    /// Deserialize an optional value at the dotted key.
+    /// Any simple value can be overridden by the canonical environmental variable.
+    pub fn deserialize_optional_with_env_overrides<'de, T: Deserialize<'de>>(
+        &'de self,
+        env: &Env,
+        key: &str,
+    ) -> QuackResult<Option<T>> {
+        self.deserialize_with_env_overrides::<Option<T>>(env, key)
+    }
+
     /// Deserialize an optional value at the dotted key, or return the default.
     pub fn deserialize_optional_or_default<'de, T: Deserialize<'de> + Default>(
         &'de self,
         key: &str,
     ) -> QuackResult<T> {
         self.deserialize::<Option<T>>(key)
+            .map(|value| value.unwrap_or_default())
+    }
+
+    /// Deserialize an optional value at the dotted key, or return the default.
+    /// Any simple value can be overridden by the canonical environmental variable.
+    pub fn deserialize_optional_or_default_with_env_overrides<
+        'de,
+        T: Deserialize<'de> + Default,
+    >(
+        &'de self,
+        env: &Env,
+        key: &str,
+    ) -> QuackResult<T> {
+        self.deserialize_with_env_overrides::<Option<T>>(env, key)
             .map(|value| value.unwrap_or_default())
     }
 }

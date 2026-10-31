@@ -48,7 +48,7 @@ pub fn pass(
     let Some(ref duck) = lints.duck else {
         return Ok(());
     };
-    let max_distance = pcx.ctx().duck_cfg().max_fix_dist()? as u32;
+    let max_distance = pcx.ctx().duck_cfg().max_fix_dist(pcx.ctx().env())? as u32;
     let known_lints = known_lint_names();
     for lint_name in duck.0.keys() {
         if is_known_lint(lint_name) {

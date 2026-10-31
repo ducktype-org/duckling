@@ -1,0 +1,14 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+
+Tests:
+  basic:
+    Description: can configure duck
+    Cases:
+      security-typos-enabled-env-override:
+        test-cmd: export DUCK_SECURITY_TYPOS_ENABLED=true && duck -C foo snc
+        Output:
+          String: |+
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
+            info: successfully synchronized venv \`foo\`

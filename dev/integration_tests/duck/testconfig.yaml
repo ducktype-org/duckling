@@ -46,6 +46,7 @@ SubDirs:
   - add
   - clean_storage
   - cli
+  - configuration
   - sync
   - scripts
   - info

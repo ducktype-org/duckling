@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! Abstraction over the duck configuration file, located at `<duck's home root>/config.yaml`.
+
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -14,11 +16,16 @@ use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Alia
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::fetcher;
 use crate::quackpack::schemas::config::{RegistryConfig, SecurityConfig, StorageConfig};
+use crate::util::env::Env;
 use crate::util::once_lock_ext::OnceLockExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
 
+pub(super) mod duck_home_path;
+
 #[derive(Debug, Default)]
+/// Abstraction over the duck configuration file, located at `<duck's home root>/config.yaml`.
+/// Provides the sensible defaults for fields not present in the file.
 pub struct DuckCfg {
     inner: YamlConfig,
     // Fast config accessors.
@@ -51,27 +58,33 @@ impl DuckCfg {
     }
 
     /// Get the `security:` configuration table.
-    pub fn security(&self) -> QuackResult<&SecurityConfig> {
-        self.security
-            .try_init_with(|| self.inner.deserialize_optional_or_default("security"))
+    pub fn security(&self, env: &Env) -> QuackResult<&SecurityConfig> {
+        self.security.try_init_with(|| {
+            self.inner
+                .deserialize_optional_or_default_with_env_overrides(env, "security")
+        })
     }
 
     /// Get the `registry:` configuration table.
-    pub fn registry(&self) -> QuackResult<&RegistryConfig> {
-        self.registry
-            .try_init_with(|| self.inner.deserialize_optional_or_default("registry"))
+    pub fn registry(&self, env: &Env) -> QuackResult<&RegistryConfig> {
+        self.registry.try_init_with(|| {
+            self.inner
+                .deserialize_optional_or_default_with_env_overrides(env, "registry")
+        })
     }
 
     /// Get the `storage:` configuration table.
-    pub fn storage(&self) -> QuackResult<&StorageConfig> {
-        self.storage
-            .try_init_with(|| self.inner.deserialize_optional_or_default("storage"))
+    pub fn storage(&self, env: &Env) -> QuackResult<&StorageConfig> {
+        self.storage.try_init_with(|| {
+            self.inner
+                .deserialize_optional_or_default_with_env_overrides(env, "storage")
+        })
     }
 
     /// Whether we should autofix unknown subcommands.
-    pub fn fixes_enabled(&self) -> QuackResult<bool> {
+    pub fn fixes_enabled(&self, env: &Env) -> QuackResult<bool> {
         Ok(self
-            .security()?
+            .security(env)?
             .typos
             .as_ref()
             .and_then(|typos| typos.enabled)
@@ -79,9 +92,9 @@ impl DuckCfg {
     }
 
     /// Maximal distance for autofixing unknown subcommands.
-    pub fn max_fix_dist(&self) -> QuackResult<u64> {
+    pub fn max_fix_dist(&self, env: &Env) -> QuackResult<u64> {
         Ok(self
-            .security()?
+            .security(env)?
             .typos
             .as_ref()
             .and_then(|typos| typos.max_distance)
@@ -109,17 +122,17 @@ impl DuckCfg {
     }
 
     /// Get the lifetime of temporary storage venvs.
-    pub fn storage_tmp_lifetime(&self) -> QuackResult<Duration> {
+    pub fn storage_tmp_lifetime(&self, env: &Env) -> QuackResult<Duration> {
         Ok(self
-            .storage()?
+            .storage(env)?
             .temporary_lifetime
             .map(|duration| duration.0)
             .unwrap_or(DEFAULT_STORAGE_LIFETIME))
     }
 
     /// Get the default registry url.
-    pub fn registry_url(&self) -> QuackResult<Url> {
-        let url = self.registry()?.url.clone();
+    pub fn registry_url(&self, env: &Env) -> QuackResult<Url> {
+        let url = self.registry(env)?.url.clone();
         let url = url.unwrap_or_else(|| fetcher::DEFAULT_REGISTRY_URL.clone());
         Ok(url)
     }

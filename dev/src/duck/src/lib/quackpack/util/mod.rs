@@ -9,7 +9,6 @@ pub mod dir_iterator;
 pub mod guards;
 pub mod interned_url;
 pub mod is_local_file;
-pub mod paths;
 pub mod sqlite;
 pub mod str_id;
 pub mod to_path_buf;

@@ -12,9 +12,9 @@ use tracing::trace;
 
 use super::terminal::Verbosity;
 use crate::duck::util::duck_cfg::DuckCfg;
+use crate::duck::util::duck_cfg::duck_home_path::duck_home_path;
 use crate::duck::util::duck_home::DuckHome;
 use crate::duck::util::terminal::Terminal;
-use crate::quackpack::util::paths::duck_home_path;
 use crate::util::env::Env;
 use crate::util::file_locks::FileLockManager;
 use crate::{QuackResult, QuackResultContext};
@@ -27,8 +27,8 @@ pub struct DuckContext {
     cwd: PathBuf,
     user_home: PathBuf,
     duck_home: DuckHome,
-    env: Env,
     offline: bool,
+    env: Env,
 }
 
 macro_rules! forward_printing_helpers {
@@ -55,22 +55,22 @@ impl DuckContext {
             "linked against `{:#?}`",
             curl::Version::get()
         );
-        let env = Env::default();
+        let env = Env::new();
         let stdout = Terminal::stdout();
         let stderr = Terminal::stderr();
         let user_home = home_dir().context("while trying to get user home directory")?;
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
-        let config = DuckCfg::new(&duck_home)?;
+        let cfg = DuckCfg::new(&duck_home)?;
         let cwd = current_dir().context("while trying to get the current working directory")?;
         Ok(Self {
             stdout,
             stderr,
-            duck_cfg: config,
+            duck_cfg: cfg,
             cwd,
             user_home,
             duck_home,
-            env,
             offline: false,
+            env,
         })
     }
 
@@ -94,12 +94,13 @@ impl DuckContext {
         &mut self.stderr
     }
 
-    /// Get the [`DuckCfg`].
+    /// Get the access to [`DuckCfg`].
     pub fn duck_cfg(&self) -> &DuckCfg {
         &self.duck_cfg
     }
 
     #[cfg(test)]
+    /// Get the mutable access to [`DuckCfg`].
     pub fn duck_cfg_mut(&mut self) -> &mut DuckCfg {
         &mut self.duck_cfg
     }
@@ -230,9 +231,10 @@ impl Default for DuckContext {
             "linked against `{:#?}`",
             curl::Version::get()
         );
-        let env = Default::default();
+        let env = Env::empty();
         let user_home = home_dir().unwrap();
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
+        let cfg = DuckCfg::new(&duck_home).unwrap();
         let mut stdout = Terminal::stdout();
         let mut stderr = Terminal::stderr();
         stdout.set_verbosity(Verbosity::Quiet);
@@ -240,12 +242,12 @@ impl Default for DuckContext {
         Self {
             stdout,
             stderr,
-            duck_cfg: DuckCfg::new(&duck_home).unwrap(),
-            env,
+            duck_cfg: cfg,
             cwd: current_dir().unwrap(),
             duck_home,
             user_home,
             offline: false,
+            env,
         }
     }
 }

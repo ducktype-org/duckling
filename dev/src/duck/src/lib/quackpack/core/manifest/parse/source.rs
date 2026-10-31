@@ -38,7 +38,7 @@ pub(crate) fn parse(
     let Some(ref source) = schema.source else {
         trace!("missing the source, falling back to the default registry");
         if schema.version.is_some() {
-            let url = ctx.duck_cfg().registry_url()?;
+            let url = ctx.duck_cfg().registry_url(ctx.env())?;
             return Ok(Source::for_registry(url));
         }
         scope.disarm_and_pop();
@@ -79,7 +79,7 @@ pub(crate) fn parse(
             check_no_registry(source, &mut scope)?;
             if schema.version.is_some() {
                 trace!("found a version, assuming a registry source");
-                let url = ctx.duck_cfg().registry_url()?;
+                let url = ctx.duck_cfg().registry_url(ctx.env())?;
                 Source::for_registry(url)
             } else {
                 scope.pop();
