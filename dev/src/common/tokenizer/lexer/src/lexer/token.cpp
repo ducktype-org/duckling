@@ -363,6 +363,17 @@ namespace lexer {
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 
 	std::string Token::describe() const {
+		// Group tokens are an internal representation; describe their contents in user-facing
+		// terms instead of leaking names like `NumLiteralGroup` or `BracketGroup`.
+		switch (type) {
+		case Type::NumLiteralGroup:
+			return base::strConcat("number literal '", getStrValue(), "'");
+		case Type::BracketGroup:
+			return base::strConcat("brackets '", getStrValue(), "'");
+		default:
+			break;
+		}
+
 		if (type != Type::Sentinel)
 			return base::strConcat(typeToStr(type), " '", getStrValue(), "'");
 

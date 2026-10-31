@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(testSourcePosition);
 		TESTER_ADD_TEST(testLiteralTextIsNotKeyword);
 		TESTER_ADD_TEST(testDescribeSentinelsDoNotLeakInternalNames);
+		TESTER_ADD_TEST(testDescribeGroupsDoNotLeakInternalNames);
 		TESTER_ADD_TEST(testNumberFollowedByRange);
 	}
 
@@ -205,6 +206,44 @@ private:
 				base::strConcat("bracket `", bracket, "`"),
 				lexer::Token::makeSentinel(base::RawView(bracket), pos)
 			);
+	}
+
+	/**
+	 * @brief Group tokens (`NumLiteralGroup`, `BracketGroup`, ...) are an internal representation
+	 * of the token stream. `Token::describe()` feeds parser diagnostics after `but got: `, so it
+	 * must describe their contents in user-facing terms rather than leak those internal names.
+	 * See issue #3765.
+	 */
+	void testDescribeGroupsDoNotLeakInternalNames() {
+		const auto describe_first_token = [&](std::string_view code) -> std::string {
+			auto source = tokenizer::makeTokenSource(
+				fs::FileManager::createRandomVirtualFile(std::string(code))
+			);
+			assertTrue(source->tokenize(), "Tokenization should succeed");
+			const auto& tokens = source->getTokenData().tokens;
+			assertTrue(!tokens.empty(), "Expected at least one top-level token");
+			return tokens.at(0).describe();
+		};
+
+		const std::string number = describe_first_token("1i32");
+		assertTrue(
+			number.find("NumLiteralGroup") == std::string::npos,
+			base::strConcat("`", number, "` leaks the internal token kind")
+		);
+		assertTrue(
+			number.find("1i32") != std::string::npos,
+			base::strConcat("`", number, "` lost the literal text")
+		);
+
+		const std::string bracket = describe_first_token("(x)");
+		assertTrue(
+			bracket.find("BracketGroup") == std::string::npos,
+			base::strConcat("`", bracket, "` leaks the internal token kind")
+		);
+		assertTrue(
+			bracket.find("()") != std::string::npos,
+			base::strConcat("`", bracket, "` lost the bracket text")
+		);
 	}
 
 	/**

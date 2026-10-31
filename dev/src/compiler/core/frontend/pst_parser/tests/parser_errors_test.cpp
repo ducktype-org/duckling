@@ -681,11 +681,47 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	}
 
+	/**
+	 * @brief Group tokens are an internal representation of the token stream. Diagnostics that
+	 * report "what was found instead" must describe their contents, not leak names like
+	 * `NumLiteralGroup` or `BracketGroup`. See issue #3765.
+	 */
+	void tokenGroupMessageTests() {
+		{
+			auto parsed = pst::PST<>::fromContents("fun 1 fun = fun\n", pst::PSTType::Program);
+			const std::string text = renderedDiagnostics(parsed);
+
+			assertTrue(
+				text.find("NumLiteralGroup") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("number literal") != std::string::npos,
+				base::strConcat("a numeric literal should be described, got:\n", text)
+			);
+		}
+
+		{
+			auto parsed = pst::PST<>::fromContents("class () {}\n", pst::PSTType::Program);
+			const std::string text = renderedDiagnostics(parsed);
+
+			assertTrue(
+				text.find("BracketGroup") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("brackets") != std::string::npos,
+				base::strConcat("a bracket group should be described as brackets, got:\n", text)
+			);
+		}
+	}
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(exampleTests);
 		TESTER_ADD_TEST(diagnosticTests);
 		TESTER_ADD_TEST(sentinelMessageTests);
+		TESTER_ADD_TEST(tokenGroupMessageTests);
 	}
 
 public:
