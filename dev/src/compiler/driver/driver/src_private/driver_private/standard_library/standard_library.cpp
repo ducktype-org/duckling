@@ -230,14 +230,14 @@ namespace compiler::driver {
 		// The linker resolves symbols from static libraries in a single left-to-right pass, so
 		// a library must come before the libraries it depends on.
 		auto result = getStdLibArtifacts(".a").artifacts | std::views::reverse
-		     | std::ranges::to<std::vector>();
+		            | std::ranges::to<std::vector>();
 
 		if (result.size() == 3) {
 			// we expect exp, std, core here in good order:
 			CORE_ASSERT(
-				result.at(0).file.getFilePath().stem().find("exp") != std::string::npos &&
-				result.at(1).file.getFilePath().stem().find("std") != std::string::npos &&
-				result.at(2).file.getFilePath().stem().find("core") != std::string::npos,
+				result.at(0).file.getFilePath().stem().find("exp") != std::string::npos
+					&& result.at(1).file.getFilePath().stem().find("std") != std::string::npos
+					&& result.at(2).file.getFilePath().stem().find("core") != std::string::npos,
 				"Unexpected order of standard library native artifacts"
 			);
 		}
