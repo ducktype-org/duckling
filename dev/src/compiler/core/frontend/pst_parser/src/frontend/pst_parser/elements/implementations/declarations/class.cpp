@@ -25,6 +25,9 @@ namespace pst {
 
 		PARSE().all(Keyword::Class, &out->name);
 
+		// After error recovery the name may be missing; nothing sensible can be built without it.
+		if (not out->name.internal()) return nullptr;
+
 		if (PARSE().tryEat(Keyword::Extends)) PARSE().one(&out->base);
 		if (PARSE().tryEat(Keyword::Implements)) PARSE().one(&out->implements);
 
