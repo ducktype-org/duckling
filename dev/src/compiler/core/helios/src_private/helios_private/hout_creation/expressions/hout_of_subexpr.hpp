@@ -48,4 +48,15 @@ namespace compiler::helios::code {
 		base::Optional<dia::StablePosition>      coercion_expects_pos = {},
 		const coercions::CoercionErrorOverrides& error_overrides      = {}
 	);
+
+	/**
+	 * Version of subExprFromPSTWithType for an already unlocked element.
+	 */
+	query::QResult<Box<code::Expr>> subExprFromUnlockedPSTWithType(
+		query::Context&                          ctx,
+		pst::Access<pst::ExprElement>            element,
+		tsh::SymbolType<>                        expected_type,
+		base::Optional<dia::StablePosition>      coercion_expects_pos = {},
+		const coercions::CoercionErrorOverrides& error_overrides      = {}
+	);
 }

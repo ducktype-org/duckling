@@ -983,6 +983,19 @@ namespace compiler::helios::code {
 		};
 	}
 
+	/**
+	 * @brief Version of subExprFromPST for an already unlocked element.
+	 */
+	static ExprConstructionResult subExprFromUnlockedPST(
+		query::Context& ctx, pst::Access<pst::ExprElement> element
+	) {
+		PstExprToHoutExprVisitor visitor(ctx);
+		element->acceptExprVisitor(visitor);
+
+		if_opt_some(visitor.node, expr) return std::move(expr);
+		return query::Failed();
+	}
+
 	ExprConstructionResult subExprFromPST(
 		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 	) {
@@ -992,11 +1005,7 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 
-		PstExprToHoutExprVisitor visitor(ctx);
-		element_unlocked.value()->acceptExprVisitor(visitor);
-
-		if_opt_some(visitor.node, expr) return std::move(expr);
-		return query::Failed();
+		return subExprFromUnlockedPST(ctx, element_unlocked.value());
 	}
 }
 
@@ -1075,9 +1084,27 @@ namespace compiler::helios {
 		base::Optional<dia::StablePosition>      coercion_expects_pos,
 		const coercions::CoercionErrorOverrides& error_overrides
 	) {
-		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
+		auto element_unlocked = element.unlockOpt(ctx);
+		if (element_unlocked.empty()) {
+			// PST should have reported parsing error for this, so we just return failure here.
+			return query::Failed();
+		}
+
+		return code::subExprFromUnlockedPSTWithType(
+			ctx, element_unlocked.value(), expected_type, coercion_expects_pos, error_overrides
+		);
+	}
+
+	query::QResult<Box<code::Expr>> code::subExprFromUnlockedPSTWithType(
+		query::Context&                          ctx,
+		pst::Access<pst::ExprElement>            element,
+		tsh::SymbolType<>                        expected_type,
+		base::Optional<dia::StablePosition>      coercion_expects_pos,
+		const coercions::CoercionErrorOverrides& error_overrides
+	) {
+		auto expr_hout_qresult = code::subExprFromUnlockedPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
-		const auto source_position = element.unlock(ctx)->getStablePosition();
+		const auto source_position = element->getStablePosition();
 
 		return coercions::coerceFromBox(
 			ctx,
