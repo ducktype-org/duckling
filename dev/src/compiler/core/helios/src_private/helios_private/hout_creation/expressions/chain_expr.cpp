@@ -332,6 +332,11 @@ namespace compiler::helios::code {
 		 */
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
 		/**
+		 * Cache of already unlocked chain elements (indexed as @p chain_elements), so that each
+		 * element is unlocked at most once. Use chainElem() to access the elements.
+		 */
+		mutable std::vector<base::Optional<pst::Access<pst::ExprElement>>> unlocked_chain_elements{};
+		/**
 		 * The original PST chain expression that is being processed.
 		 */
 		pst::Access<pst::ExprElement> whole_chain_pst;
@@ -348,12 +353,22 @@ namespace compiler::helios::code {
 		usize index{ 0 };
 
 		/**
+		 * Returns the chain element at @p elem_index, unlocking it only on the first access.
+		 */
+		pst::Access<pst::ExprElement> chainElem(usize elem_index) const {
+			auto& cached = unlocked_chain_elements.at(elem_index);
+			if (not cached.has_value())
+				cached.emplace(chain_elements.at(elem_index).unlock(query_ctx));
+			return cached.value();
+		}
+
+		/**
 		 * Returns the current element given by the "index" object member value.
 		 */
 		base::Optional<pst::Access<pst::ExprElement>> currentElem() {
 			if (this->index >= chain_elements.size()) return {};
 
-			return chain_elements.at(this->index).unlock(query_ctx);
+			return chainElem(this->index);
 		}
 
 		/**
@@ -363,7 +378,7 @@ namespace compiler::helios::code {
 			auto next_index = this->index + 1;
 			if (next_index >= chain_elements.size()) return {};
 
-			return chain_elements.at(next_index).unlock(query_ctx);
+			return chainElem(next_index);
 		}
 
 		/**
@@ -441,9 +456,8 @@ namespace compiler::helios::code {
 
 			// Check error condition and report error.
 			if (looked_up_callees.size() > 1) {
-				auto error = makeBox<CallInvalidCallablesError>(
-					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
-				);
+				auto error
+					= makeBox<CallInvalidCallablesError>(chainElem(index)->getStablePosition());
 				for (const auto& candidate: looked_up_callees) {
 					error->addAttachedMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
 						stmt(query_ctx, candidate).value()->getStablePosition()
@@ -1049,17 +1063,17 @@ namespace compiler::helios::code {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration: {
 				if (isBuiltin(symbol).has_value()) {
-					query_ctx.logInt(makeBox<FunctionRefBuiltinError>(
-						chain_elements.at(index).unlock(query_ctx)->getStablePosition()
-					));
+					query_ctx.logInt(
+						makeBox<FunctionRefBuiltinError>(chainElem(index)->getStablePosition())
+					);
 					return query::Failed();
 				}
 				if (not base::holds<DefaultAbi>(
 						query_ctx.query<QuerySymbolABI>(symbol)->valueOrThrow()
 					)) {
-					query_ctx.logInt(makeBox<FunctionRefBuiltinError>(
-						chain_elements.at(index).unlock(query_ctx)->getStablePosition()
-					));
+					query_ctx.logInt(
+						makeBox<FunctionRefBuiltinError>(chainElem(index)->getStablePosition())
+					);
 					return query::Failed();
 				}
 				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
@@ -1070,7 +1084,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"Unsupported kind of the symbol `", name(symbol), "` in chain expression."
 					),
-					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
+					chainElem(index)->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -1245,7 +1259,7 @@ namespace compiler::helios::code {
 
 			auto round_call = nextElem().value().dynamicCast<pst::expr::Call>().value();
 			// The element naming the template is the callee, as in a call without a bake.
-			auto callee = chain_elements.at(this->index - 1).unlock(query_ctx);
+			auto callee = chainElem(this->index - 1);
 
 			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(std::vector{ baked });
@@ -1354,12 +1368,16 @@ namespace compiler::helios::code {
 			this->chain_elements.emplace_back(expr->getAtom());
 			auto chain = expr->getChain();
 			std::ranges::copy(chain, std::back_inserter(this->chain_elements));
+			this->unlocked_chain_elements.resize(this->chain_elements.size());
 		}
 
 		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> expr):
 			  query_ctx(ctx),
 			  whole_chain_pst(expr) {
 			this->chain_elements.emplace_back(expr);
+			// the element is already unlocked:
+			this->unlocked_chain_elements.resize(1);
+			this->unlocked_chain_elements.at(0).emplace(expr);
 		}
 
 		/**
@@ -1436,7 +1454,7 @@ namespace compiler::helios::code {
 			if (result_sequence.empty()) {
 				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Chain expression resulted in empty expression sequence.",
-					chain_elements[0].unlock(query_ctx)->getStablePosition()
+					chainElem(0)->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -1452,16 +1470,16 @@ namespace compiler::helios::code {
 	};
 
 	ExprConstructionResult fromChainExpr(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
+		query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr
 	) {
-		ChainExprConstruction construction(ctx, expr.unlock(ctx));
+		ChainExprConstruction construction(ctx, expr);
 		return construction.run();
 	}
 
 	query::QResult<Box<code::Expr>> fromIdentifierLiteral(
-		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
+		query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> expr
 	) {
-		ChainExprConstruction construction(ctx, expr.unlock(ctx));
+		ChainExprConstruction construction(ctx, expr);
 		return construction.run();
 	}
 }

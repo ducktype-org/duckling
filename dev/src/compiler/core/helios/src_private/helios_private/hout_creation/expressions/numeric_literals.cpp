@@ -129,11 +129,9 @@ namespace compiler::helios::code {
 		}
 	}
 
-	bool canBeNegative(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr
-	) {
+	bool canBeNegative(pst::Access<pst::expr::ExprNumericValue> literal_expr) {
 		using enum lang_def::NumericLiteralTypeSpecifier;
-		switch (literal_expr.unlock(ctx)->getTypeSpecifier()) {
+		switch (literal_expr->getTypeSpecifier()) {
 		case u8:
 		case u16:
 		case u32:
@@ -146,12 +144,11 @@ namespace compiler::helios::code {
 	}
 
 	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(
-		query::Context&                                ctx,
-		pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr_locked,
-		const dia::StablePosition&                     position,
-		const LiteralSign                              sign
+		query::Context&                          ctx,
+		pst::Access<pst::expr::ExprNumericValue> literal_expr,
+		const dia::StablePosition&               position,
+		const LiteralSign                        sign
 	) {
-		auto literal_expr   = literal_expr_locked.unlock(ctx);
 		auto value          = literal_expr->getValue().value.strView();
 		auto type_specifier = literal_expr->getTypeSpecifier();
 
@@ -172,8 +169,7 @@ namespace compiler::helios::code {
 		std::string negative_value;
 		if (sign == LiteralSign::Negative) {
 			CORE_ASSERT(
-				canBeNegative(ctx, literal_expr_locked),
-				"A literal of an unsigned type is never negative."
+				canBeNegative(literal_expr), "A literal of an unsigned type is never negative."
 			);
 			negative_value = std::string("-").append(value);
 			value          = negative_value;

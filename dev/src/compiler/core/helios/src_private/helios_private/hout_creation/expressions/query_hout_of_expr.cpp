@@ -369,7 +369,7 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::Minus) {
 					const auto literal
 						= stmt->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprNumericValue>();
-					if (literal.has_value() && canBeNegative(ctx, literal.value())) {
+					if (literal.has_value() && canBeNegative(literal.value())) {
 						createNumericLiteral(
 							literal.value(),
 							pstOrigin(stmt),
