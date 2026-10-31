@@ -11,12 +11,17 @@ Note: This is mostly to list operations, see docs for details.
 
 * `QuerySymbolsInScope` -- Get lists of symbols located inside with given scope.
 
-* `LookupInScope` -- Lookups in given scope. Implements main scope-lookup logic.
-  Uses `QuerySymbolsInScope`.
+* `QueryLookupInScope` -- Symbols directly in given scope that may provide the name, including the
+  not yet resolved `using`/`import` symbols. Uses `QuerySymbolsInScope`.
 
-* `QueryLookupInScopeAndParents` -- Special REPL handling: at root scope, checks if module is a REPL module with a parent.
-  If yes, continues lookup in parent module's root scope, enabling symbol visibility across REPL statement history
+* `QueryImplicitPreludeScopes` -- Root scopes of the implicit prelude modules (`core.builtins`, ...)
+  that every module sees as if it wrote `import <module>.*;` (high-gain optimization).
 
+* `QueryLookupFromScope` -- Main scope-lookup logic. Searches a scope together with everything its
+  `using`/`import` symbols bring in (resolved with `QueryResolveUsingImport`), visiting every scope
+  at most once, so recursive usings and imports work. Walks the enclosing scopes in a loop: parent
+  scopes, then root scopes of parent REPL modules (symbol visibility across REPL statement history),
+  then the implicit prelude, collecting the symbols of the name from all of them.
 
 # Future todos
 

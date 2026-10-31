@@ -9,8 +9,6 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/packages/access.hpp>
-#include <frontend/packages/standard_packages.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -37,14 +35,18 @@
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
+#include <query_framework/utils/simple_keys.hpp>
 
+#include <hashing/hash.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace compiler::helios {
 
@@ -759,9 +761,8 @@ namespace compiler::helios {
 	namespace {
 		/**
 		 * @brief A module implicitly imported (as if by `import <package>.<path>.*;`) into every
-		 * module that is not part of the standard library. Re-exports are not supported yet, so the
-		 * prelude is emulated by importing the original source modules directly rather than through
-		 * a dedicated `prelude` module.
+		 * module. Re-exports are not supported yet, so the prelude is emulated by importing the
+		 * original source modules directly rather than through a dedicated `prelude` module.
 		 */
 		struct PreludeImport final {
 			base::StrID              package;
@@ -782,78 +783,89 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief True when @p module_id belongs to the standard library itself. Such modules keep
-		 * their explicit imports and must not receive the implicit prelude — this also breaks the
-		 * self-import cycle that `core.builtins` importing itself would otherwise create.
+		 * @brief The scope a lookup continues in after @p scope: its parent, or for a root scope
+		 * of a REPL module, the root scope of the parent REPL module.
 		 */
-		bool isStandardLibraryModule(query::Context& ctx, frontend::ModuleID module_id) {
-			auto package_id = frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
-			return frontend::packages::isStandardLibraryPackage(package_id);
+		base::Optional<ScopeID> enclosingScope(query::Context& ctx, ScopeID scope) {
+			auto parent_scope = parent(scope);
+			if (parent_scope.has_value()) return parent_scope;
+
+			auto current_module_id = module(scope);
+			if (not ctx.query<frontend::QueryIsReplModule>(current_module_id)) return {};
+
+			auto repl_parent_opt = ctx.query<frontend::QueryReplModuleParent>(current_module_id);
+
+			CORE_DEV_LOG(
+				REPL,
+				"At root scope of REPL module #",
+				current_module_id.queryUnstablePerfectHash().toStringHex(),
+				", hasParent=",
+				repl_parent_opt.has_value(),
+				"\n"
+			);
+
+			if (not repl_parent_opt.has_value()) return {};
+			return queryRootScopeOfMainModuleFile(ctx, repl_parent_opt.value());
 		}
+	}
+	/**
+	 * @brief Root scopes of the implicit prelude modules, searched by every lookup that continues
+	 * into the enclosing scopes, as if every module wrote `import <module>.*;` for each of them.
+	 * Prelude modules missing from the build (e.g. `--no-std`) are skipped.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryImplicitPreludeScopes,
+		query::EmptyKey,
+		CRef<std::vector<ScopeID>>,
+		({ .uses_qresult = false })
+	);
 
-		/**
-		 * @brief Looks up @p name as if every non-stdlib module wrote `import <module>.*;` for each
-		 * configured prelude module, merging the matches into a single result. Returns an empty
-		 * result (never fails) when the standard library is absent (e.g. `--no-std`, or a custom
-		 * std that lacks the module) or when @p module_id is itself a standard-library module.
-		 */
-		query::QResult<LookupResult> lookupImplicitPrelude(
-			query::Context& ctx, frontend::ModuleID module_id, base::StrID name, bool with_wildcards
-		) {
-			LookupResult result{};
-			if (isStandardLibraryModule(ctx, module_id)) return result;
-
+	struct IMPLEMENT_QUERY(QueryImplicitPreludeScopes, std::vector<ScopeID>) {
+		static auto provide(Context& ctx, QKey) -> PResult {
+			std::vector<ScopeID> scopes;
 			for (const auto& prelude_import: preludeImports()) {
 				auto module_opt = frontend::getModuleByAbsolutePath(
 					ctx, prelude_import.package, prelude_import.path
 				);
 				if (module_opt.empty()) continue;
-
-				auto prelude_scope   = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
-				auto prelude_qresult = HInterface::ofScope(prelude_scope)
-				                           .lookup(ctx, name, { .with_wildcards = with_wildcards });
-				UNPACK_QRESULT_CREF(CRef<LookupResult> prelude_result = &, prelude_qresult);
-
-				// The prelude re-exports the contents of the module, but not the modules it
-				// imports itself - otherwise every `import` written in a prelude module would
-				// collide with the same import written by the user.
-				LookupResult exported{ .leaves       = {},
-					                   .inaccessible = {},
-					                   .children     = prelude_result->children };
-				for (const SymID sym: prelude_result->leaves)
-					if (kind(sym) != SymbolKind::Import) exported.leaves.push_back(sym);
-
-				result.merge(exported);
+				scopes.push_back(queryRootScopeOfMainModuleFile(ctx, module_opt.value()));
 			}
-			return result;
+			return scopes;
 		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitPreludeScopes);
+
+	base::Bit256 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
+		auto hash_1 = scope.queryUnstablePerfectHash();
+		auto hash_2 = std::hash<base::StrID>()(name);
+
+		return { hash_1, hash_2, static_cast<u64>(with_wildcards) };
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<LookupResult>) {
+	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<std::vector<SymID>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
-			LookupResult result{};
+			std::vector<SymID> result;
 
 			for (const auto& sym: *symbol_list) {
 				if (isIgnoredByLookup(sym)) continue;
 
 				if (kind(sym) == SymbolKind::Using or kind(sym) == SymbolKind::Import) {
-					UNPACK_QRESULT_CREF(
-						CRef<LookupResult> pointed_result = &,
-						ctx.query<QueryLookupInUsingImport>({ sym, key.name, key.with_wildcards })
+					UNPACK_QRESULT(
+						bool provides =,
+						usingImportProvidesName(ctx, sym, key.name, key.with_wildcards)
 					);
-					// The correct code that works for using is commented out,
-					// to make the import a.*; work correctly.
-					// @TODO: #1412 fix this properly
-					// if (!pointed_result->isEmpty())
-					// 	result.children.push_back(pointed_result->toNode(sym));
-					if (!pointed_result->isEmpty()) result.merge(*pointed_result);
-				} else if (name(sym) == key.name) {
-					result.leaves.push_back(sym);
-				} else {
-					// nothing
+					if (provides) result.push_back(sym);
+					continue;
 				}
+
+				if (name(sym) == key.name) result.push_back(sym);
 			}
 
 			return result;
@@ -864,82 +876,94 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
-	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, query::QResult<LookupResult>) {
-		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			UNPACK_QRESULT_CREF(auto result =, ctx.query<QueryLookupInScope>(key));
+	base::Bit256 KeyOf_LookupFromScope::queryUnstablePerfectHash() const {
+		return hashing::justHash<hashing::SHA256>(
+			scope.queryUnstablePerfectHash(),
+			std::hash<base::StrID>()(name),
+			static_cast<u64>(with_wildcards),
+			static_cast<u64>(with_parents)
+		);
+	}
 
-			if (key.scope.ref->parent.has_value()) {
-				auto parent = key.scope.ref->parent.value();
+	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupResult>) {
+		/**
+		 * @brief Searches @p start and all the scopes its `using`/`import` symbols lead to,
+		 * skipping the ones in @p visited. Returns the symbols found there.
+		 */
+		static query::QResult<std::vector<SymID>> searchScopeWithUsings(
+			Context& ctx, const QKey& key, ScopeID start, std::unordered_set<ScopeID>& visited
+		) {
+			std::vector<SymID>   found;
+			std::vector<ScopeID> pending{ start };
 
-				// Reverse insertion order allow for linear result concatenation instead of
-				// quadratic
+			while (not pending.empty()) {
+				auto current = pending.back();
+				pending.pop_back();
+				if (not visited.insert(current).second) continue;
+
 				UNPACK_QRESULT_CREF(
-					LookupResult parent_result =,
-					ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards })
+					CRef<std::vector<SymID>> symbols = &,
+					ctx.query<QueryLookupInScope>({ current, key.name, key.with_wildcards })
 				);
 
-				parent_result.merge(std::move(result));
+				for (const SymID sym: *symbols) {
+					if (kind(sym) != SymbolKind::Using and kind(sym) != SymbolKind::Import) {
+						found.push_back(sym);
+						continue;
+					}
 
-				return parent_result;
+					UNPACK_QRESULT_CREF(
+						const UsingImportTarget& target =, ctx.query<QueryResolveUsingImport>(sym)
+					);
+					variant_match(target) {
+						variant_case(std::vector<SymID>, pointed) {
+							found.insert(found.end(), pointed.begin(), pointed.end());
+						}
+						variant_case(ScopeID, pointed_scope) { pending.push_back(pointed_scope); }
+					}
+				}
 			}
 
-			// At root scope.
-			auto current_module_id = key.scope.ref->parent_module;
+			return found;
+		}
+
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			std::unordered_set<ScopeID> visited;
+			std::vector<SymID>          result;
+
+			base::Optional<ScopeID> current = key.scope;
+
+			while (current.has_value()) {
+				UNPACK_QRESULT_MOVE(
+					auto found =, searchScopeWithUsings(ctx, key, current.value(), visited)
+				);
+				result.insert(result.end(), found.begin(), found.end());
+
+				if (not key.with_parents) break;
+
+				current = enclosingScope(ctx, current.value());
+			}
 
 			// Bring the default prelude modules into scope, as if every module wrote
-			// `import <module>.*;`. A no-op under --no-std or inside the standard library.
-			UNPACK_QRESULT(
-				LookupResult prelude_result =,
-				lookupImplicitPrelude(ctx, current_module_id, key.name, key.with_wildcards)
-			);
-			result.merge(std::move(prelude_result));
-
-			// Also check whether this is a REPL module with a parent.
-			const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(current_module_id);
-			auto repl_parent_opt = ctx.query<frontend::QueryReplModuleParent>(current_module_id);
-
-			CORE_DEV_LOG(
-				REPL,
-				"At root scope, module #",
-				current_module_id.queryUnstablePerfectHash().toStringHex(),
-				", isRepl=",
-				is_repl_module,
-				", hasParent=",
-				repl_parent_opt.has_value(),
-				"\n"
-			);
-
-			if (is_repl_module && repl_parent_opt.has_value()) {
-				// Query the parent REPL module's TopLevel scope.
-				auto parent_module_id      = repl_parent_opt.value();
-				auto parent_toplevel_scope = queryRootScopeOfMainModuleFile(ctx, parent_module_id);
-
-				UNPACK_QRESULT_CREF(
-					LookupResult parent_result =,
-					ctx.query<QueryLookupInScopeAndParents>(
-						{ parent_toplevel_scope, key.name, key.with_wildcards }
-					)
-				);
-
-				parent_result.merge(std::move(result));
-
-				return parent_result;
+			// `import <module>.*;`. A no-op under --no-std.
+			if (key.with_parents) {
+				for (const ScopeID prelude_scope: *ctx.query<QueryImplicitPreludeScopes>({})) {
+					UNPACK_QRESULT_MOVE(
+						auto found =, searchScopeWithUsings(ctx, key, prelude_scope, visited)
+					);
+					result.insert(result.end(), found.begin(), found.end());
+				}
 			}
 
-			return result;
+			std::unordered_set<SymID> seen;
+			std::erase_if(result, [&](SymID sym) { return not seen.insert(sym).second; });
+			return LookupResult{ .leaves = std::move(result), .inaccessible = {}, .children = {} };
 		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
-
-	base::Bit256 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
-		auto hash_1 = scope.queryUnstablePerfectHash();
-		auto hash_2 = std::hash<base::StrID>()(name);
-
-		return { hash_1, hash_2, static_cast<u64>(with_wildcards) };
-	}
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupFromScope);
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);

@@ -32,9 +32,8 @@ namespace compiler::helios {
 		case SymbolKind::Namespace:
 			return ofNamespace(symbol);
 		case SymbolKind::Using:
-			return ofUsing(symbol);
 		case SymbolKind::Import:
-			return ofImport(symbol);
+			CORE_PANIC("Lookup results never contain unresolved usings and imports");
 		case SymbolKind::Class:
 			return ofTypeMeta(ctx.query<tsh::QueryClassType>(symbol));
 		case SymbolKind::Variable:
@@ -55,31 +54,23 @@ namespace compiler::helios {
 	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
-				return ctx.query<QueryLookupInScope>({ scope.scope, name, params.with_wildcards });
+				return ctx.query<QueryLookupFromScope>(
+					{ scope.scope, name, params.with_wildcards, false }
+				);
 			}
 			variant_case(ScopeWithParentsInterface, scope) {
-				return ctx.query<QueryLookupInScopeAndParents>(
-					{ scope.scope, name, params.with_wildcards }
+				return ctx.query<QueryLookupFromScope>(
+					{ scope.scope, name, params.with_wildcards, true }
 				);
 			}
 			variant_case(ModuleInterface, symbol) {
-				return ctx.query<QueryLookupInNamespaceOrModule>(
-					{ symbol.id, name, params.with_wildcards }
+				return ctx.query<QueryLookupFromScope>(
+					{ scopeOfNamespaceLike(ctx, symbol.id), name, params.with_wildcards, false }
 				);
 			}
 			variant_case(NamespaceInterface, symbol) {
-				return ctx.query<QueryLookupInNamespaceOrModule>(
-					{ symbol.id, name, params.with_wildcards }
-				);
-			}
-			variant_case(UsingInterface, symbol) {
-				return ctx.query<QueryLookupInUsingImport>(
-					{ symbol.symbol, name, params.with_wildcards }
-				);
-			}
-			variant_case(ImportInterface, symbol) {
-				return ctx.query<QueryLookupInUsingImport>(
-					{ symbol.symbol, name, params.with_wildcards }
+				return ctx.query<QueryLookupFromScope>(
+					{ scopeOfNamespaceLike(ctx, symbol.id), name, params.with_wildcards, false }
 				);
 			}
 			variant_case(TypeInstanceInterface, type) {

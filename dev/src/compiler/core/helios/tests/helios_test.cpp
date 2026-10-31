@@ -1352,6 +1352,8 @@ private:
 		test_value("sm1_through_sm11", 123'123);
 		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
+		test_value("cyclic_wildcard_final", 13);
+		test_value("cyclic_wildcard_through", 11);
 
 		test_value("imported_ns_v", 500);
 		test_value("imported_inner_v", 600);
@@ -3467,6 +3469,11 @@ private:
 		// `using x as a;`, which points at the constant itself.
 		ASSERT_EQUAL(getChain("x", root_scope).back(), getChain("b", root_scope).back());
 		ASSERT_EQUAL(1'235, getConstValueAs<i32>("b", root_scope));
+
+		ASSERT_EQUAL(10, getConstValueAs<i32>("ra_through_rb", root_scope));
+		ASSERT_EQUAL(20, getConstValueAs<i32>("rb_through_ra", root_scope));
+		ASSERT_EQUAL(21, getConstValueAs<i32>("ra_from_rb_v", root_scope));
+		ASSERT_EQUAL(12, getConstValueAs<i32>("rb_from_ra_v", root_scope));
 	}
 
 	void testBackendDependentCompTime() {
