@@ -437,18 +437,22 @@ namespace compiler::helios::mangler {
 			}();
 
 			// it's not compiler-generated and it's ancestor is a template statement
-			const bool is_template = maybeSymbolPst(symbol_id).has_value()
-			                      && ancestor_opt.isLangElement()
-			                      && ancestor_opt.getAsLangElement().unlock(ctx)->getElementKind()
-			                             == pst::ElementKind::TemplateStmt;
+			// (computed in the first iteration of the loop below, to unlock the ancestor once)
+			bool is_template = false;
 
 			// for template statements we additionally keep PstID of their inner statement to check
 			// if their identifier was already added before
 			std::vector<std::pair<pst::Access<pst::LangElement>, base::Optional<pst::PstID>>>
 				 ancestors;
-			bool is_nested = false;
+			bool is_nested      = false;
+			bool first_ancestor = true;
 			while (ancestor_opt.isLangElement()) {
 				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+				if (first_ancestor) {
+					is_template = maybeSymbolPst(symbol_id).has_value()
+					           && ancestor->getElementKind() == pst::ElementKind::TemplateStmt;
+					first_ancestor = false;
+				}
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace:

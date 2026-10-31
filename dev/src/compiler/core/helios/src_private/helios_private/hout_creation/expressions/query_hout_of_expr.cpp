@@ -124,16 +124,15 @@ namespace compiler::helios::code {
 		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
 		 */
 		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(
-			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
+			query::Context& ctx, pst::Access<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator().unlock(ctx)->unwrap()
-					== lang_def::NamedOperator::Pipe,
+				expr->getOperator().unlock(ctx)->unwrap() == lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
-			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
-			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
+			getVariantSubExprsInPlace(ctx, expr->getLeftOperand(), sub_exprs);
+			getVariantSubExprsInPlace(ctx, expr->getRightOperand(), sub_exprs);
 			return sub_exprs;
 		}
 
@@ -145,8 +144,9 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> getFunctionTypeParameterExprs(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
 		) {
-			if (expr.unlock(ctx).dynamicCast<pst::expr::UnitExpr>()) return {};
-			auto round = expr.unlock(ctx).dynamicCast<pst::expr::RoundExpr>();
+			const auto unlocked = expr.unlock(ctx);
+			if (unlocked.dynamicCast<pst::expr::UnitExpr>()) return {};
+			auto round = unlocked.dynamicCast<pst::expr::RoundExpr>();
 			if (!round.has_value()) return { expr };
 
 			const auto inner = round.value()->getInner();

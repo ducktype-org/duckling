@@ -231,9 +231,10 @@ namespace compiler::helios::desugaring {
 		bool                                has_wildcard = false;
 		base::Optional<dia::StablePosition> wildcard_position;
 
-		for (auto match_case: match_expr->getCases()) {
-			const auto case_position = match_case.unlock(ctx)->getStablePosition();
-			auto       flow          = match_case.unlock(ctx)->getPattern().unlock(ctx);
+		for (auto match_case_locked: match_expr->getCases()) {
+			const auto match_case    = match_case_locked.unlock(ctx);
+			const auto case_position = match_case->getStablePosition();
+			auto       flow          = match_case->getPattern().unlock(ctx);
 
 			// The wildcard always matches, so the lowering enters it unconditionally and never
 			// reaches whatever is listed after it.
@@ -252,7 +253,7 @@ namespace compiler::helios::desugaring {
 				return query::Failed();
 			}
 
-			auto branches = match_case.unlock(ctx)->getBranches();
+			auto branches = match_case->getBranches();
 			if (branches.size() != 1 || branches.front().condition.has_value()) {
 				logNYI(ctx, case_position, "Guarded match case branches (`case ... if ...`).");
 				return query::Failed();
