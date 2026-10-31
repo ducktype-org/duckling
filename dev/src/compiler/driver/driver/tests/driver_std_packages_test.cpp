@@ -48,7 +48,7 @@ public:
 		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdDVMLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdSharedLibsDeclaredForCore);
-		TESTER_ADD_TEST(verifyExpPackageIsStandard);
+		TESTER_ADD_TEST(verifyStdPackagesMeetTheirDependencies);
 	}
 
 protected:
@@ -276,40 +276,70 @@ private:
 	}
 
 	/**
-	 * @brief Verifies that the experimental `exp` package is a loaded standard library package
-	 * that depends on `core` and `std`, and that it is compiled together with them.
+	 * @brief Verifies that every standard library package is loaded with exactly the dependencies
+	 * it declares, that these are declared before it (which the native linking order relies on),
+	 * and that it is compiled to both a native and a DVM library.
 	 */
-	void verifyExpPackageIsStandard() {
-		const auto exp_id = base::StrID("exp");
-		assertTrue(
-			frontend::packages::isStandardLibraryPackage(exp_id),
-			"`exp` is not a standard library package"
-		);
-
+	void verifyStdPackagesMeetTheirDependencies() {
+		const auto& std_packages    = frontend::packages::standardLibraryPackages();
 		const auto& global_packages = global_state::getPackages();
-		auto        exp             = std::ranges::find_if(global_packages, [&](const auto& pkg) {
-            return pkg.getPackageID() == exp_id;
-        });
-		assertTrue(exp != global_packages.end(), "The `exp` package is not loaded");
 
-		std::vector<base::StrID> dependency_ids;
-		for (const auto& dep: exp->getDependencies().illegalAccess())
-			dependency_ids.push_back(dep.illegalAccess().getPackage().illegalAccess().getID());
-		std::ranges::sort(dependency_ids);
-		ASSERT_EQUAL(
-			(std::vector<base::StrID>{ base::StrID("core"), base::StrID("std") }), dependency_ids
-		);
+		auto file_names = [](const std::vector<artifacts::FileArtifact>& artifacts) {
+			std::vector<std::string> names;
+			names.reserve(artifacts.size());
+			for (const auto& art: artifacts)
+				names.push_back(art.file.getFilePath().getPath().filename().string());
+			return names;
+		};
+		const auto native_artifacts = file_names(driver::getStdLibNativeArtifacts());
+		const auto dvm_artifacts    = file_names(driver::getStdLibDVMArtifacts());
 
-		const auto dvm_artifacts = driver::getStdLibDVMArtifacts();
-		assertTrue(
-			std::ranges::any_of(
-				dvm_artifacts,
-				[](const auto& art) {
-					return art.file.getFilePath().getPath().filename() == "exp.dbc";
-				}
-			),
-			"No DVM artifact for `exp`"
-		);
+		for (auto package = std_packages.begin(); package != std_packages.end(); ++package) {
+			auto loaded = std::ranges::find_if(global_packages, [&](const auto& pkg) {
+				return pkg.getPackageID() == package->id;
+			});
+			assertTrue(
+				loaded != global_packages.end(),
+				base::strConcat("The `", package->id, "` package is not loaded")
+			);
+
+			std::vector<base::StrID> loaded_dependencies;
+			for (const auto& dep: loaded->getDependencies().illegalAccess())
+				loaded_dependencies.push_back(
+					dep.illegalAccess().getPackage().illegalAccess().getID()
+				);
+			auto declared_dependencies = package->dependencies;
+			std::ranges::sort(loaded_dependencies);
+			std::ranges::sort(declared_dependencies);
+			ASSERT_EQUAL(declared_dependencies, loaded_dependencies);
+
+			for (const auto& dependency: package->dependencies) {
+				assertTrue(
+					std::ranges::contains(
+						std_packages.begin(),
+						package,
+						dependency,
+						&frontend::packages::StandardLibraryPackage::id
+					),
+					base::strConcat(
+						"`",
+						package->id,
+						"` depends on `",
+						dependency,
+						"`, which is not declared before it"
+					)
+				);
+			}
+
+			assertTrue(
+				std::ranges::contains(native_artifacts, base::strConcat(package->id, ".a")),
+				base::strConcat("No native artifact for `", package->id, "`")
+			);
+			assertTrue(
+				std::ranges::contains(dvm_artifacts, base::strConcat(package->id, ".dbc")),
+				base::strConcat("No DVM artifact for `", package->id, "`")
+			);
+		}
 	}
 };
 
