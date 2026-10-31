@@ -502,6 +502,18 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 				base::strConcat("arr_", element_name, "_", array_layout.getElementCount())
 			);
 		}
+		variant_case(tsl::FunctionalTypeLayout, function_layout) {
+			const auto  parameter_layouts  = function_layout.getParameterLayouts(**query_ctx);
+			std::string function_type_name = base::strConcat("fun", parameter_layouts.size());
+			for (const auto& parameter_layout: parameter_layouts)
+				function_type_name
+					= base::strConcat(function_type_name, "_", getTslNameInternal(parameter_layout));
+			return base::StrID(base::strConcat(
+				function_type_name,
+				"_ret_",
+				getTslNameInternal(function_layout.getReturnLayout(**query_ctx))
+			));
+		}
 		variant_default {
 			CORE_ASSERT(query_ctx.has_value(), "Query context must be set for error reporting");
 			query_ctx.value()->logInt(makeBox<dia::NotYetImplementedCodeError>(
@@ -586,6 +598,22 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 				keepTslType(array_layout.getElementLayout()),
 				array_layout.getElementCount(),
 			};
+		}
+		variant_case(tsl::FunctionalTypeLayout, function_layout) {
+			std::vector<base::StrID> parameters
+				= function_layout.getParameterLayouts(**query_ctx)
+			    | std::views::transform([&](CRef<tsl::TypeLayout> parameter_layout) {
+					  return keepTslType(parameter_layout);
+				  })
+			    | std::ranges::to<std::vector>();
+
+			std::vector<base::StrID>    result;
+			const CRef<tsl::TypeLayout> return_layout
+				= function_layout.getReturnLayout(**query_ctx);
+			if (not return_layout->is<tsl::EmptyTypeLayout>())
+				result.push_back(keepTslType(return_layout));
+
+			return vm::code::FunctionType{ name, std::move(parameters), std::move(result) };
 		}
 		variant_default { CORE_UNREACHABLE(); }
 	}

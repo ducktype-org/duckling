@@ -511,7 +511,13 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 		}
 		variant_case(lir::BlockRef, block_ref) { return { DVMLabel{ getBlockLabel(block_ref) } }; }
 		variant_case(lir::FunctionLiteral, function) {
-			return { DVMFunctionName{ .name = function.mangled_name } };
+			CORE_ASSERT(v_matches(function.abi.value, lir::LIRAbi::DefaultAbi), "Invalid abi");
+			DVMPlace function_value
+				= pushTempLocal(*program_context.lowerAndKeepTslType(function.layout), "fun_tmp");
+			pushInstruction({ vm::code::builders::OpKind::mov,
+			                  function_value.asArgument(),
+			                  DVMFunctionName{ .name = function.mangled_name }.asArgument() });
+			return { function_value };
 		}
 		variant_default { CORE_PANIC("Unhandled value case"); }
 	}

@@ -210,7 +210,7 @@ namespace vm::code {
 			}
 
 			void operator()(const FunctionType& fun) const {
-				// type fun: main {} int64
+				// type fun: binop { i64, i64 } { i64 }
 				out << "type fun: ";
 				out << fun.name.strView() << " { ";
 				bool first = true;
@@ -219,7 +219,7 @@ namespace vm::code {
 					out << param.strView();
 					first = false;
 				}
-				out << " } -> { ";
+				out << " } { ";
 				first = true;
 				for (const auto& reslts: fun.result) {
 					if (!first) out << ", ";
