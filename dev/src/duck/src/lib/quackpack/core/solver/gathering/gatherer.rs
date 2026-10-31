@@ -12,6 +12,7 @@
 //! > this checks.
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
@@ -395,11 +396,18 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             FullOrigin::for_git(url, cloned_pkg.commit_hash),
         );
         if !self.git_access.is_stored(url, &cloned_pkg.commit_hash)
-            && let Err(e) =
+            && let Err(mut e) =
                 self.git_access
                     .store(url, &cloned_pkg.commit_hash, path_where_cloned.path())
         {
+            // Attempting to store the package resulted in an error.
             debug!(target: "duck::git", error = %e, "failed to store the cloned repository");
+            // Check if the error is caused by renaming something in tmp dir, if so add a hint.
+            if let Some(io_err) = e.downcast_ref_in_chain::<io::Error>()
+                && io_err.kind() == io::ErrorKind::CrossesDevices
+            {
+                e = e.add_hint("potentially your tmp directory has different filesystem than duck's home; if so, modify the `TMPDIR` variable to change the tmp directory");
+            }
             errors.borrow_mut().log(e);
             return Ok(FetchResponse::failed_not_pinned(request.id));
         }
