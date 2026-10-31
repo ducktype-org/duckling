@@ -18,11 +18,11 @@ params:
     description: "The type of list being parsed."
 
 header_message:
-  - "Opening bracket "
+  - "Expected the opening bracket "
   - param: "bracket"
-  - " of a "
+  - " of the "
   - param: "list_type"
-  - " list expected after here."
+  - " list."
 
 description:
   - codeblock:
