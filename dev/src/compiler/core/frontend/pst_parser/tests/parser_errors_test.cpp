@@ -688,7 +688,8 @@ class PSTErrorTests: public tester::TestSuite {
 	 */
 	void tokenGroupMessageTests() {
 		{
-			auto parsed = pst::ParsedPST<>::fromContents("fun 1 fun = fun\n", pst::PSTType::Program);
+			auto parsed
+				= pst::ParsedPST<>::fromContents("fun 1 fun = fun\n", pst::PSTType::Program);
 			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
@@ -702,7 +703,7 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 
 		{
-			auto parsed = pst::ParsedPST<>::fromContents("class () {}\n", pst::PSTType::Program);
+			auto parsed = pst::ParsedPST<>::fromContents("let () = 5;\n", pst::PSTType::Program);
 			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
