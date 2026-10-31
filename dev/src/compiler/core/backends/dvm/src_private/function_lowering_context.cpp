@@ -511,10 +511,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 		}
 		variant_case(lir::BlockRef, block_ref) { return { DVMLabel{ getBlockLabel(block_ref) } }; }
 		variant_case(lir::FunctionLiteral, function) {
-			if (not v_matches(function.abi.value, lir::LIRAbi::DefaultAbi))
-				throw base::NotYetImplemented(base::strConcat(
-					"Function value of the non-default ABI function: ", function.mangled_name
-				));
+			CORE_ASSERT(v_matches(function.abi.value, lir::LIRAbi::DefaultAbi), "Invalid abi");
 			DVMPlace function_value
 				= pushTempLocal(*program_context.lowerAndKeepTslType(function.layout), "fun_tmp");
 			pushInstruction({ vm::code::builders::OpKind::mov,

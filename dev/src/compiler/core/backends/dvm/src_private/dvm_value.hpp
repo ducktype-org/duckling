@@ -145,8 +145,9 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
 
+		base::StrID name;
+
 	private:
-		base::StrID          name;
 		vm::code::TypeOfData type;
 		AccessKind           access_kind;
 		SpecialKind          special_kind;

@@ -251,8 +251,8 @@ namespace compiler::backend_vm::internal {
 			const auto* call_params = std::get_if<lir::IndirectCallParameters>(&instr.extra_params);
 			CORE_ASSERT(call_params != nullptr, "IndirectCall instruction without parameters");
 
-			DVMPlace callee    = ctx.lowerLirValue(instr.arguments[0]).get<DVMPlace>();
-			auto     call_args = instr.arguments | std::views::drop(1)
+			auto callee    = ctx.lowerLirValue(instr.arguments[0]).get<DVMPlace>();
+			auto call_args = instr.arguments | std::views::drop(1)
 			               | std::views::transform([&](const auto& lir_arg) {
 								 return ctx.lowerLirValue(lir_arg);
 							 })

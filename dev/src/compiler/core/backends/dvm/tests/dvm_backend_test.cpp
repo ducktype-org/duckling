@@ -343,8 +343,6 @@ private:
 
 	void bitwiseOperationsTest() { runTest("bitwise_operations", {}, {}, {}, 0); }
 
-	// Function values in locals, arguments, results and class fields, called through `call_pfun`,
-	// including signatures with an aggregate and with no result.
 	void functionPointersTest() {
 		runMultimoduleTest("function_pointers", ALL_CORE_MODULES, {}, "3\n25\n12\n12\n7\n", {}, 42);
 	}
