@@ -46,6 +46,15 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, query::QResult<ctv::CompileTimeValue>, ({}));
 
+	/**
+	 * @brief Cached implementation of isGlobalVar for PST symbols.
+	 * isGlobalVar is called for every use of a variable, so we don't want to walk (and unlock)
+	 * the PST parents of the variable over and over again (#2407).
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryIsGlobalVar, SymID, query::QResult<bool>, ({}));
+
 
 	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
 

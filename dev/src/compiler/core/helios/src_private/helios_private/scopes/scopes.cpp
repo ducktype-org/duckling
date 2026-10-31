@@ -92,11 +92,9 @@ namespace compiler::helios {
 
 	/**
 	 * Determines scope kind for given PST element.
-	 * @TODO: #2407 this could take unlocked access
 	 */
-	ElementScopeKind getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
+	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement> element) {
 		// @TODO: move it to different file?
-		auto element = locked.unlock(ctx);
 
 		switch (element->getElementKind()) {
 		case pst::ElementKind::TopLevel:
@@ -266,7 +264,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
-			auto element_scope_kind = getScopeKind(ctx, element_key.element);
+			auto element_scope_kind = getScopeKind(ctx, element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				[[maybe_unused]] auto element_ptr = &*element;
@@ -374,7 +372,7 @@ namespace compiler::helios {
 				return;
 			}
 
-			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
+			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {
 				// handling lambdas, templates, etc. might be much more tricky and
 				// require a different approach
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
@@ -443,7 +441,7 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				switch (stmt.unlock(ctx)->isDeclaration()) {
+				switch (stmt->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
 					// @TODO: #1753 Maybe we should skip the symbol if compiling the symbol failed.
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -451,21 +449,19 @@ namespace compiler::helios {
 					break;
 				}
 				case pst::DeclKind::Transparent: {
-					if (auto stmt_specifier_opt
-					    = stmt.unlock(ctx).template dynamicCast<pst::SpecifierBlock>()) {
+					if (auto stmt_specifier_opt = stmt.template dynamicCast<pst::SpecifierBlock>()) {
 						auto stmt_specifier = stmt_specifier_opt.value();
 						auto inner_symbols  = filterSymbolsFromStmtList(
-                            ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getBlock())
+                            ctx,
+                            getStmtsFromStmtAggregate(ctx, stmt_specifier->getBlock().unlock(ctx))
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
-					} else if (auto using_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
+					} else if (auto using_opt = stmt.template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
-					} else if (auto import_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+					} else if (auto import_opt = stmt.template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -473,7 +469,7 @@ namespace compiler::helios {
 					} else {
 						CORE_PANIC(
 							"Not handled element ",
-							stmt.unlock(ctx)->elementType(),
+							stmt->elementType(),
 							" with DeclKind::Transparent."
 						);
 					}

@@ -39,12 +39,15 @@ namespace compiler::helios {
 		 * @brief Helper for attributes that take no arguments.
 		 */
 		Attribute expectNoArgs(query::Context& ctx, Attribute attr, AttrArgs args) {
-			if (args.has_value() && args.value().unlock(ctx)->size() > 0) {
+			if_opt_none(args) return attr;
+
+			auto arg_list = args.value().unlock(ctx);
+			if (arg_list->size() > 0) {
 				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
 					),
-					args.value().unlock(ctx)->getStablePosition()
+					arg_list->getStablePosition()
 				));
 				query::throwFailed();
 			}

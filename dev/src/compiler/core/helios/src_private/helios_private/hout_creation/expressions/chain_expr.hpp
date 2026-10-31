@@ -17,10 +17,10 @@ namespace compiler::helios::code {
 	 * @brief Converts a PST ChainExpr to a HOUT Expr.
 	 */
 	query::QResult<Box<code::Expr>> fromChainExpr(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
+		query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr
 	);
 
 	query::QResult<Box<code::Expr>> fromIdentifierLiteral(
-		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
+		query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> expr
 	);
 }

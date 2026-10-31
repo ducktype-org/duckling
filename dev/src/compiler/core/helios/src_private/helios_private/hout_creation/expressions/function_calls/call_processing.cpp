@@ -662,6 +662,17 @@ namespace compiler::helios::code {
 	}
 
 	/**
+	 * @brief Unlocks (each one once) all arguments of the given call expression.
+	 */
+	static std::vector<pst::Access<pst::CallArgument>> unlockCallArgs(
+		query::Context& ctx, pst::Access<pst::expr::Call> call_expr
+	) {
+		std::vector<pst::Access<pst::CallArgument>> args;
+		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) args.push_back(arg.unlock(ctx));
+		return args;
+	}
+
+	/**
 	 * @brief Unwraps and validates call arguments from PST, populating positional and named
 	 * argument collections.
 	 * @param ctx Query context
@@ -680,16 +691,15 @@ namespace compiler::helios::code {
 		usize                      arg_index = 0;
 		std::vector<ElementOrigin> arguments_origin;
 
-		for (auto&& arg: *call_expr->getArgs().unlock(ctx))
-			arguments_origin.emplace_back(pstOrigin(arg.unlock(ctx)));
+		const auto args = unlockCallArgs(ctx, call_expr);
+		for (const auto& arg: args) arguments_origin.emplace_back(pstOrigin(arg));
 
-		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			auto arg_expr_result
-				= subExprFromPST(ctx, arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
+		for (const auto& arg: args) {
+			auto arg_expr_result = subExprFromPST(ctx, arg->getArg().unlock(ctx)->getExpr());
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
-			if (arg.unlock(ctx)->isNamedArg()) {
-				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().unlock(ctx)->unwrap();
+			if (arg->isNamedArg()) {
+				base::StrID arg_name = arg->getArgName().value().unlock(ctx)->unwrap();
 				for (auto&& [existing_name, _]: named_arguments) {
 					if (existing_name == arg_name) {
 						auto error = RepeatedNamedArgument{ arg_index };
@@ -808,12 +818,11 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(callee =, direct_callee);
 		}
 
-		usize argument_count = 0;
-		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			if (arg.unlock(ctx)->isNamedArg()) {
-				ctx.logInt(
-					makeBox<IndirectCallNamedArgumentError>(arg.unlock(ctx)->getStablePosition())
-				);
+		const auto args           = unlockCallArgs(ctx, call_expr);
+		usize      argument_count = 0;
+		for (const auto& arg: args) {
+			if (arg->isNamedArg()) {
+				ctx.logInt(makeBox<IndirectCallNamedArgumentError>(arg->getStablePosition()));
 				return query::Failed();
 			}
 			argument_count++;
@@ -826,9 +835,9 @@ namespace compiler::helios::code {
 
 		std::vector<Box<Expr>> arguments;
 		arguments.reserve(argument_count);
-		for (usize index = 0; auto&& arg: *call_expr->getArgs().unlock(ctx)) {
+		for (usize index = 0; const auto& arg: args) {
 			auto arg_result = subExprFromPSTWithType(
-				ctx, arg.unlock(ctx)->getArg().unlock(ctx)->getExpr(), parameter_types.at(index++)
+				ctx, arg->getArg().unlock(ctx)->getExpr().unlock(ctx), parameter_types.at(index++)
 			);
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_result);
 			arguments.push_back(std::move(arg_expr));

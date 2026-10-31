@@ -124,16 +124,15 @@ namespace compiler::helios::code {
 		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
 		 */
 		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(
-			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
+			query::Context& ctx, pst::Access<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator().unlock(ctx)->unwrap()
-					== lang_def::NamedOperator::Pipe,
+				expr->getOperator().unlock(ctx)->unwrap() == lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
-			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
-			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
+			getVariantSubExprsInPlace(ctx, expr->getLeftOperand(), sub_exprs);
+			getVariantSubExprsInPlace(ctx, expr->getRightOperand(), sub_exprs);
 			return sub_exprs;
 		}
 
@@ -145,8 +144,9 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> getFunctionTypeParameterExprs(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
 		) {
-			if (expr.unlock(ctx).dynamicCast<pst::expr::UnitExpr>()) return {};
-			auto round = expr.unlock(ctx).dynamicCast<pst::expr::RoundExpr>();
+			const auto unlocked = expr.unlock(ctx);
+			if (unlocked.dynamicCast<pst::expr::UnitExpr>()) return {};
+			auto round = unlocked.dynamicCast<pst::expr::RoundExpr>();
 			if (!round.has_value()) return { expr };
 
 			const auto inner = round.value()->getInner();
@@ -369,7 +369,7 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::Minus) {
 					const auto literal
 						= stmt->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprNumericValue>();
-					if (literal.has_value() && canBeNegative(ctx, literal.value())) {
+					if (literal.has_value() && canBeNegative(literal.value())) {
 						createNumericLiteral(
 							literal.value(),
 							pstOrigin(stmt),
@@ -620,7 +620,7 @@ namespace compiler::helios::code {
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
-							ctx, sub_expr, meta_type, op->getStablePosition()
+							ctx, sub_expr.unlock(ctx), meta_type, op->getStablePosition()
 						);
 						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
@@ -675,12 +675,14 @@ namespace compiler::helios::code {
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
-					auto parameter_hout = subExprFromPSTWithType(ctx, parameter, meta_type);
+					auto parameter_hout
+						= subExprFromPSTWithType(ctx, parameter.unlock(ctx), meta_type);
 					if (parameter_hout.hasFailed()) return;
 					parameters.emplace_back(std::move(parameter_hout).valueOrThrow());
 				}
 
-				auto result = subExprFromPSTWithType(ctx, arrow->getRightOperand(), meta_type);
+				auto result
+					= subExprFromPSTWithType(ctx, arrow->getRightOperand().unlock(ctx), meta_type);
 				if (result.hasFailed()) return;
 
 				node = makeBox<FunctionTypeExpr>(
@@ -838,7 +840,8 @@ namespace compiler::helios::code {
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
 				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
-				auto condition_res   = subExprFromPSTWithType(ctx, stmt->getCondition(), bool_type);
+				auto       condition_res
+					= subExprFromPSTWithType(ctx, stmt->getCondition().unlock(ctx), bool_type);
 				auto if_true_res     = subExprFromPST(ctx, stmt->getIfTrue());
 				auto if_false_res    = subExprFromPST(ctx, stmt->getIfFalse());
 
@@ -983,6 +986,19 @@ namespace compiler::helios::code {
 		};
 	}
 
+	/**
+	 * @brief Version of subExprFromPST for an already unlocked element.
+	 */
+	static ExprConstructionResult subExprFromUnlockedPST(
+		query::Context& ctx, pst::Access<pst::ExprElement> element
+	) {
+		PstExprToHoutExprVisitor visitor(ctx);
+		element->acceptExprVisitor(visitor);
+
+		if_opt_some(visitor.node, expr) return std::move(expr);
+		return query::Failed();
+	}
+
 	ExprConstructionResult subExprFromPST(
 		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 	) {
@@ -992,11 +1008,7 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 
-		PstExprToHoutExprVisitor visitor(ctx);
-		element_unlocked.value()->acceptExprVisitor(visitor);
-
-		if_opt_some(visitor.node, expr) return std::move(expr);
-		return query::Failed();
+		return subExprFromUnlockedPST(ctx, element_unlocked.value());
 	}
 }
 
@@ -1070,14 +1082,14 @@ namespace compiler::helios {
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
 		query::Context&                          ctx,
-		pst::AccessLocked<pst::ExprElement>      element,
+		pst::Access<pst::ExprElement>            element,
 		tsh::SymbolType<>                        expected_type,
 		base::Optional<dia::StablePosition>      coercion_expects_pos,
 		const coercions::CoercionErrorOverrides& error_overrides
 	) {
-		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
+		auto expr_hout_qresult = code::subExprFromUnlockedPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
-		const auto source_position = element.unlock(ctx)->getStablePosition();
+		const auto source_position = element->getStablePosition();
 
 		return coercions::coerceFromBox(
 			ctx,
