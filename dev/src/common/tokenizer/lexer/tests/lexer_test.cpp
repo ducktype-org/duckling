@@ -212,7 +212,6 @@ private:
 	 * @brief Group tokens (`NumLiteralGroup`, `BracketGroup`, ...) are an internal representation
 	 * of the token stream. `Token::describe()` feeds parser diagnostics after `but got: `, so it
 	 * must describe their contents in user-facing terms rather than leak those internal names.
-	 * See issue #3765.
 	 */
 	void testDescribeGroupsDoNotLeakInternalNames() {
 		const auto describe_first_token = [&](std::string_view code) -> std::string {

@@ -684,7 +684,7 @@ class PSTErrorTests: public tester::TestSuite {
 	/**
 	 * @brief Group tokens are an internal representation of the token stream. Diagnostics that
 	 * report "what was found instead" must describe their contents, not leak names like
-	 * `NumLiteralGroup` or `BracketGroup`. See issue #3765.
+	 * `NumLiteralGroup` or `BracketGroup`.
 	 */
 	void tokenGroupMessageTests() {
 		{
