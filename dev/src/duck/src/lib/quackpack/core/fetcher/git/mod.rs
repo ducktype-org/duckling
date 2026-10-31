@@ -10,7 +10,7 @@ use std::path::Path;
 
 use git2::build::RepoBuilder;
 use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository};
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 use url::Url;
 
 use crate::quackpack::core::fetcher::types::GitCloneResponse;
@@ -19,6 +19,7 @@ use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 pub mod fast_path;
+mod known_hosts;
 #[cfg(test)]
 mod tests;
 
@@ -144,6 +145,17 @@ impl<'duck> GitClient<'duck> {
                 self.username_and_password_callback()
             } else {
                 Err(git2::Error::from_str("unsupported authentication method"))
+            }
+        });
+        callbacks.certificate_check(|cert, host| {
+            match known_hosts::check_certificate(self.ctx, cert, host) {
+                Ok(status) => Ok(status),
+                Err(e) => {
+                    warn!(target: "duck::git", "failed to check certificates: {e}");
+                    Err(git2::Error::from_str(
+                        "failed to parse ssh known hosts file",
+                    ))
+                }
             }
         });
         callbacks
