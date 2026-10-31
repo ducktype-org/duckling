@@ -6,70 +6,36 @@
 
 /**
  * @file semantic_tokens.hpp
- * @brief Semantic tokens definition
- * @TODO: #3604 bring this back
+ * @brief Classification of the tokens of a source file for the `textDocument/semanticTokens`
+ * requests.
  */
 
 #pragma once
 
 #include <frontend/module_tree/source_file.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <lsp/types.h>
 
-#include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/types/ints.hpp>
 
-#include <string>
+#include <query_framework/context/context_fd.hpp>
 
-MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, StandardTokenType,
-	Namespace,
-	Type,
-	Class,
-	Enum,
-	Interface,
-	Struct,
-	TypeParameter,
-	Parameter,
-	Variable,
-	Property,
-	EnumMember,
-	Event,
-	Function,
-	Method,
-	Macro,
-	Keyword,
-	Modifier,
-	Comment,
-	String,
-	Number,
-	Regexp,
-	Operator,
-	Decorator,
-	Unknown
-)
+namespace duck_ls {
 
-namespace lsp {
+	/**
+	 * @brief The legend the server advertises: the token types in the order the indices of
+	 * `lsp::SemanticTokenTypes` refer to, and no modifiers.
+	 */
+	lsp::SemanticTokensLegend semanticTokensLegend();
 
-	class SemanticToken final {
-	public:
-		// https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
-
-		SemanticToken(CRef<lexer::Token>);
-		SemanticToken(CRef<lexer::Token>, StandardTokenType);
-
-		static StandardTokenType translateType(lexer::Token::Type);
-
-		std::string toJSON();
-
-	private:
-		CRef<lexer::Token> source_token;
-		u64                line;
-		u64                start_character;
-		u64                length;
-		StandardTokenType  type;
-	};
-
-	std::string getSemanticTokens(base::Ref<compiler::frontend::SourceFile>);
-	std::string getSemanticTokens(const std::vector<base::Ref<compiler::frontend::SourceFile>>& files
+	/**
+	 * @brief Classifies every token of `file` and encodes them the way the protocol expects:
+	 * sorted and relative to the previous token.
+	 *
+	 * Without `analyze` the tokens are classified by their lexical kind only. With it, names
+	 * are classified by the declarations and the semantic analysis of the expressions they
+	 * appear in, which is only safe once the whole package parsed.
+	 */
+	lsp::SemanticTokens collectSemanticTokens(
+		query::Context& ctx, base::Ref<compiler::frontend::SourceFile> file, bool analyze
 	);
 }
