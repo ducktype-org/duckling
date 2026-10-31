@@ -359,6 +359,12 @@ namespace query::internal {
 		 */
 		[[nodiscard]] EdgeStats computeEdgeStats() const;
 
+		/**
+		 * @brief Prints edge statistics of the graph (see computeEdgeStats()).
+		 * @param max_rows Maximal number of printed (caller query, callee query) pairs.
+		 */
+		void printEdgeStats(std::ostream& out, usize max_rows = 40) const;
+
 		~QueryGraph() = default;
 	};
 }
