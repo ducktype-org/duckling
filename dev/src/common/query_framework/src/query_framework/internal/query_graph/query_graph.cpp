@@ -356,6 +356,30 @@ namespace query::internal {
 		return !deps_holder->empty();
 	}
 
+	QueryGraph::EdgeStats QueryGraph::computeEdgeStats() const {
+		EdgeStats stats;
+		stats.node_count = node_deps->size();
+
+		std::unordered_set<NodeID> seen;
+		for (const auto& [node, deps]: *node_deps) {
+			auto deps_holder = deps.getHolder();
+			seen.clear();
+			for (const auto& dep: *deps_holder) {
+				const bool is_unique = seen.insert(dep).second;
+				auto&      counts    = stats.per_query_pair[{ node.q_id, dep.q_id }];
+
+				counts.total_edges++;
+				stats.all_edges.total_edges++;
+				if (is_unique) {
+					counts.unique_edges++;
+					stats.all_edges.unique_edges++;
+				}
+			}
+		}
+
+		return stats;
+	}
+
 	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
 	) const {
 		CORE_ASSERT(
