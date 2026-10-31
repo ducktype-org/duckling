@@ -479,27 +479,17 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Compiles a PST code block or statement into a HOUT CodeBlock.
+	 * @brief Compiles (already unlocked) PST statements into a HOUT CodeBlock.
 	 *
-	 * Iterates all statements in the container via HoutStmtMaker and returns the
-	 * resulting CodeBlock by value. Called from the compileCodeOfCodeBlock
-	 * helper and recursively within HoutStmtMaker for nested blocks (if/while bodies).
+	 * Iterates all statements via HoutStmtMaker and returns the resulting CodeBlock by value.
 	 */
-	template<class Container>
-	requires std::same_as<Container, pst::CodeBlock>
-	      || std::same_as<Container, pst::CodeBlockOrStmt>
-	static code::CodeBlock processBlock(
-		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
+	static code::CodeBlock processStmts(
+		query::Context& ctx, const StmtList<>& stmts, tsh::SymbolType<> return_type
 	) {
 		code::CodeBlock block({});
-		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
+		for (const auto& stmt: stmts) {
 			HoutStmtMaker stmt_maker(ctx, return_type);
-			auto          unlocked = stmt.unlockOpt(ctx);
-			if (!unlocked.has_value()) {
-				// @TODO: #1753 change here to grab errors from all statements.
-				query::throwFailed();
-			}
-			unlocked.value()->acceptVisitor(stmt_maker);
+			stmt->acceptVisitor(stmt_maker);
 
 			if (stmt_maker.is_failed) {
 				// @TODO: #1753 change here to grab errors from all statements.
@@ -515,12 +505,29 @@ namespace compiler::helios {
 		return block;
 	}
 
-	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+	/**
+	 * @brief Compiles a PST code block or statement into a HOUT CodeBlock.
+	 *
+	 * Called from the compileCodeOfCodeBlock helper and recursively within HoutStmtMaker for
+	 * nested blocks (if/while bodies).
+	 */
+	template<class Container>
+	requires std::same_as<Container, pst::CodeBlock>
+	      || std::same_as<Container, pst::CodeBlockOrStmt>
+	static code::CodeBlock processBlock(
+		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	) {
-		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
+		return processStmts(ctx, getStmtsFromStmtAggregate(ctx, container), return_type);
+	}
+
+	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
+		query::Context&                   ctx,
+		pst::Access<pst::CodeBlockOrStmt> container,
+		tsh::SymbolType<>                 return_type
+	) {
+		return std::make_shared<const code::CodeBlock>(
+			processStmts(ctx, getStmtsFromStmtAggregate(ctx, container), return_type)
+		);
 	}
 
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(

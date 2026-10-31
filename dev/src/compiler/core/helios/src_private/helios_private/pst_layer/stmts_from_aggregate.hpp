@@ -16,8 +16,11 @@
 #include <vector>
 
 namespace compiler::helios {
+	/**
+	 * @brief List of (already unlocked) statements.
+	 */
 	template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-	using StmtList = std::vector<pst::AccessLocked<Stmt>>;
+	using StmtList = std::vector<pst::Access<Stmt>>;
 
 	/**
 	 * @brief Returns all children statements of given LangElement
@@ -30,8 +33,25 @@ namespace compiler::helios {
 	 *  * For other it panics
 	 *
 	 * @note It expands and handles macros.
+	 * @note All returned statements are already unlocked (the function has to unlock them anyway).
 	 *
 	 * @return StmtList
 	 */
-	StmtList<> getStmtsFromStmtAggregate(query::Context&, pst::AccessLocked<pst::LangElement>);
+	StmtList<> getStmtsFromStmtAggregate(query::Context&, pst::Access<pst::LangElement>);
+
+	/**
+	 * @brief Version of getStmtsFromStmtAggregate for a locked element. Throws (query failure) if
+	 * the element is null.
+	 */
+	StmtList<> getStmtsFromLockedStmtAggregate(query::Context&, pst::AccessLocked<pst::LangElement>);
+
+	/**
+	 * @brief Overload of getStmtsFromStmtAggregate for a locked element. Prefer passing an already
+	 * unlocked element, if the caller has one.
+	 * @note This is a template, so that calls with pst::Access<Derived> are not ambiguous.
+	 */
+	template<std::derived_from<pst::LangElement> Element>
+	StmtList<> getStmtsFromStmtAggregate(query::Context& ctx, pst::AccessLocked<Element> locked) {
+		return getStmtsFromLockedStmtAggregate(ctx, locked);
+	}
 }

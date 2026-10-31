@@ -118,10 +118,7 @@ private:
 																tsh::ReferenceKind::Direct,
 																tsh::Mutability::Mutable,
 															};
-		body_stmts.at(stmt_index)
-			.illegalAccess()
-			.value()
-			->debugPrint(std::cerr);  // value().elementType()();
+		body_stmts.at(stmt_index)->debugPrint(std::cerr);  // value().elementType()();
 		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
 

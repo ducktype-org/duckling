@@ -108,15 +108,22 @@ namespace compiler::helios {
 			}
 		};
 
-		template<class StmtsAggregate>
-		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+		/**
+		 * @brief Whether every path through the (already collected) statements ends in a `return`.
+		 */
+		bool everyPathReturnsInStmts(query::Context& ctx, const StmtList<>& stmts) {
 			// A statement that always returns ends the block, so whatever follows is ignored.
-			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts)) {
+			for (const auto& stmt: stmts) {
 				EveryPathReturnsVisitor visitor(ctx);
-				stmt.unlock(ctx)->acceptVisitor(visitor);
+				stmt->acceptVisitor(visitor);
 				if (visitor.every_path_returns) return true;
 			}
 			return false;
+		}
+
+		template<class StmtsAggregate>
+		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+			return everyPathReturnsInStmts(ctx, getStmtsFromStmtAggregate(ctx, stmts));
 		}
 
 		/**
@@ -166,7 +173,7 @@ namespace compiler::helios {
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
 				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
-					stmt.unlock(ctx)->acceptVisitor(*this);
+					stmt->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -181,13 +188,11 @@ namespace compiler::helios {
 				// once.
 				initial_invocation = false;
 
-				auto fun_body = func_like->getBody();
+				auto fun_body = func_like->getBody().unlock(ctx);
 
-				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
-					auto as_expr = fun_body.unlock(ctx)
-					                   ->getStmt()
-					                   .unlock(ctx)
-					                   .template dynamicCast<pst::ExprStmt>();
+				if (fun_body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+					auto as_expr
+						= fun_body->getStmt().unlock(ctx).template dynamicCast<pst::ExprStmt>();
 					if (as_expr) {
 						auto expr = ctx.query<QueryHoutOfExpr>(
 										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
@@ -205,14 +210,16 @@ namespace compiler::helios {
 					}
 				} else {
 					CORE_ASSERT(
-						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+						fun_body->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
 
-					body_always_returns = everyPathReturns(ctx, fun_body);
+					// Collect the statements once, and use them for both walks:
+					auto stmts = getStmtsFromStmtAggregate(ctx, fun_body);
 
-					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
-						stmt.unlock(ctx)->acceptVisitor(*this);
+					body_always_returns = everyPathReturnsInStmts(ctx, stmts);
+
+					for (const auto& stmt: stmts) stmt->acceptVisitor(*this);
 				}
 			}
 

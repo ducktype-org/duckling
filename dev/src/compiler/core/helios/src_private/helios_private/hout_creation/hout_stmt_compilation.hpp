@@ -38,9 +38,9 @@ namespace compiler::helios {
 	 * constructor API (`std::shared_ptr<const code::CodeBlock>`).
 	 */
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context&                   ctx,
+		pst::Access<pst::CodeBlockOrStmt> container,
+		tsh::SymbolType<>                 return_type
 	);
 
 	/**

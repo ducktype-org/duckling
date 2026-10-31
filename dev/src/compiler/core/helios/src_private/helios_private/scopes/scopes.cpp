@@ -443,7 +443,7 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				switch (stmt.unlock(ctx)->isDeclaration()) {
+				switch (stmt->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
 					// @TODO: #1753 Maybe we should skip the symbol if compiling the symbol failed.
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -451,21 +451,18 @@ namespace compiler::helios {
 					break;
 				}
 				case pst::DeclKind::Transparent: {
-					if (auto stmt_specifier_opt
-					    = stmt.unlock(ctx).template dynamicCast<pst::SpecifierBlock>()) {
+					if (auto stmt_specifier_opt = stmt.template dynamicCast<pst::SpecifierBlock>()) {
 						auto stmt_specifier = stmt_specifier_opt.value();
 						auto inner_symbols  = filterSymbolsFromStmtList(
                             ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getBlock())
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
-					} else if (auto using_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
+					} else if (auto using_opt = stmt.template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
-					} else if (auto import_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+					} else if (auto import_opt = stmt.template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -473,7 +470,7 @@ namespace compiler::helios {
 					} else {
 						CORE_PANIC(
 							"Not handled element ",
-							stmt.unlock(ctx)->elementType(),
+							stmt->elementType(),
 							" with DeclKind::Transparent."
 						);
 					}
