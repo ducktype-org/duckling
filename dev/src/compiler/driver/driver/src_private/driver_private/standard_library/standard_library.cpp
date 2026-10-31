@@ -19,6 +19,7 @@
 #include <os_utils/executable_path.hpp>
 
 #include <algorithm>
+#include <ranges>
 
 namespace compiler::driver {
 
@@ -195,7 +196,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Result of collecting standard library artifacts for an extension.
 		 */
-		struct StdLibArtifacts {
+		struct StdLibArtifacts final {
 			std::vector<artifacts::FileArtifact> artifacts;
 			/// Whether an artifact was found for every standard library package.
 			bool all_present;
@@ -226,7 +227,22 @@ namespace compiler::driver {
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts() {
-		return getStdLibArtifacts(".a").artifacts;
+		// The linker resolves symbols from static libraries in a single left-to-right pass, so
+		// a library must come before the libraries it depends on.
+		auto result = getStdLibArtifacts(".a").artifacts | std::views::reverse
+		     | std::ranges::to<std::vector>();
+
+		if (result.size() == 3) {
+			// we expect exp, std, core here in good order:
+			CORE_ASSERT(
+				result.at(0).file.getFilePath().stem().find("exp") != std::string::npos &&
+				result.at(1).file.getFilePath().stem().find("std") != std::string::npos &&
+				result.at(2).file.getFilePath().stem().find("core") != std::string::npos,
+				"Unexpected order of standard library native artifacts"
+			);
+		}
+
+		return result;
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts() {

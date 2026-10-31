@@ -57,5 +57,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "10\n42\n"
+          String: "10\n42\n42\n42\n"
 
