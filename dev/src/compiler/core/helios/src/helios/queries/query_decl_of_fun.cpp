@@ -402,7 +402,7 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void emplaceDeclaration(
-				pst::AccessLocked<pst::ParamList>                  param_list,
+				pst::Access<pst::ParamList>                        param_list,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
@@ -419,51 +419,49 @@ namespace compiler::helios {
 
 				// Set return type if provided.
 				if (ret.has_value()) {
+					const auto ret_unlocked = ret.value().unlock(ctx);
 					const auto ret_type_ctv
-						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+						= getTypeCTVFromPST(ctx, ret_unlocked->getExpr()).valueOrThrow();
 
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 
 					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
 						ctx.logInt(makeBox<InvalidMainReturnTypeError>(
-							ret.value().unlock(ctx)->getStablePosition(),
+							ret_unlocked->getStablePosition(),
 							makeBox<InteractiveType>(ctx, ret_type)
 						));
 						query::throwFailed();
 					}
 
 					origin = code::multiplePstOriginOrdered({
-						param_list.unlock(ctx),
-						ret.value().unlock(ctx),
+						param_list,
+						ret_unlocked,
 					});
 				}
 				// A global main without an explicit return type is treated as `main -> i64`.
 				else if (global_main_definition) {
 					ret_type = requiredMainReturnType(ctx);
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = code::pstOrigin(param_list);
 				}
 				// Deduce return type for ordinary functions.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = code::pstOrigin(param_list);
 				}
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *param_list.unlock(ctx)) {
+				for (auto param_locked: *param_list) {
+					auto  param        = param_locked.unlock(ctx);
 					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
-					auto value = param.unlock(ctx)->getValue();
+					auto value = param->getValue();
 					if (value.empty()) {
 						parameters.emplace_back(
-							param_name,
-							param_type,
-							std::nullopt,
-							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							param_name, param_type, std::nullopt, param_symbol, code::pstOrigin(param)
 						);
 					} else {
 						auto initial_value
@@ -477,7 +475,7 @@ namespace compiler::helios {
 							param_type,
 							std::move(initial_value),
 							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							code::pstOrigin(param)
 						);
 					}
 				}
@@ -492,51 +490,54 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
+				const auto params        = stmt->getParams().unlock(ctx);
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size(),
+					params->size(),
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
+				const auto params        = stmt->getParams().unlock(ctx);
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size(),
+					params->size(),
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
 				// We can't use the interface directly because the interface
 				// can use the declaration of function query, and we could get a cycle.
-				auto specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				const auto params     = stmt->getParams().unlock(ctx);
 				if (specifiers.is_static) {
 					const auto operatoriness = operatorinessFromDeclaration(
 						ctx,
 						name(original_symbol),
-						stmt->getParams().unlock(ctx)->size(),
+						params->size(),
 						stmt->getOperatorFixity(),
 						stmt->getStablePosition()
 					);
-					emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+					emplaceDeclaration(params, stmt->getRet(), operatoriness);
 					return;
 				}
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size() + 1,
+					params->size() + 1,
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
 				// +1 for the implicit `self` parameter.
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -559,7 +560,7 @@ namespace compiler::helios {
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
 				emplaceDeclaration(
-					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
+					stmt->getParams().unlock(ctx), {}, HOUTFunctionDeclaration::Operatoriness::None
 				);
 
 				const auto class_type  = classMemberOwner(original_symbol);
@@ -674,11 +675,10 @@ namespace compiler::helios {
 						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
 					    ) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
-							auto       expr
-								= getHoutOfExprWithExpectedType(
-									  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
-								)
-						              .valueOrThrow();
+							auto       expr       = getHoutOfExprWithExpectedType(
+                                            ctx, expr_holder.unlock(ctx)->getExpr(), field_type
+                            )
+						                    .valueOrThrow();
 							return expr;
 						}
 					);
