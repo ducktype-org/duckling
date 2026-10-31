@@ -23,7 +23,7 @@ namespace pst {
 		NAMED_CHILD(iterator, IdentifierWrapper);
 		NAMED_CHILD(type, ForTypeExprHolder);
 		NAMED_CHILD(iterable, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrAnyStmt);
 		base::Optional<bool> is_const;
 
 	protected:

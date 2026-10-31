@@ -128,8 +128,8 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Stmt, false> not_all_parsed{ "call(3, 5 + 3 = 7);" };
 
-	Example<pst::CodeBlockOrStmt, true> just_block{ "{}" };
-	Example<pst::CodeBlockOrStmt, true> just_stmt{ "x=y;" };
+	Example<pst::CodeBlockOrAnyStmt, true> just_block{ "{}" };
+	Example<pst::CodeBlockOrAnyStmt, true> just_stmt{ "x=y;" };
 
 	Example<pst::CodeBlock, true>  simple_code_block{ "{}" };
 	Example<pst::CodeBlock, false> no_code_block{ "x=y;" };
@@ -183,6 +183,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
 	Example<pst::Fun, true>      simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
 	Example<pst::Fun, false>     bad_function{ "fun foo(x: i32, y) = {}" };
+	Example<pst::Fun, false>     bad_fun_expr{ "fun foo(t: type) -> type = return t;" };
+	Example<pst::Fun, true>      good_fun_expr{ "fun foo(t: type) -> type = ref t;" };
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
@@ -203,6 +205,13 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, false>  comparison_operator_function1{ "fun <(a: i64) = {}" };
 	Example<pst::Fun, false>  special_operator_function1{ "fun ->(a: i64) = {}" };
 	Example<pst::Fun, false>  special_operator_function2{ "fun .?(a: i64) = {}" };
+
+	Example<pst::Fun, true> ternary_simple_expr{
+		"fun foo(t: type) -> type = if x then {return b;} else 2;"
+	};
+	Example<pst::Fun, false> normal_if_stmt{
+		"fun foo(t: type) -> type = if (x) {return a;} else 2;"
+	};
 	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
 
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
