@@ -40,7 +40,7 @@ pub fn fix_typos(
 
     let targets = possible_targets(ctx, external_cmds)?;
     trace!(?targets, "looking for subcommands close to `{name}`");
-    let distance = ctx.duck_cfg().max_fix_dist()? as u32;
+    let distance = ctx.duck_cfg().max_fix_dist(ctx.env())? as u32;
     let targets = targets.iter().map(String::as_str).collect::<Vec<_>>();
     let closest_targets = find_all_closest_targets(name, &targets, Some(distance));
 
@@ -48,7 +48,7 @@ pub fn fix_typos(
         return Ok(args);
     };
 
-    if ctx.duck_cfg().fixes_enabled()? && rest.is_empty() {
+    if ctx.duck_cfg().fixes_enabled(ctx.env())? && rest.is_empty() {
         let new_args = fix(name, first, subcmd_args)?;
         Ok(new_args)
     } else {
@@ -160,8 +160,8 @@ mod tests {
         )
         .unwrap();
         let ctx = DuckContext::default();
-        assert_eq!(ctx.duck_cfg().max_fix_dist().unwrap(), dist);
-        assert!(ctx.duck_cfg().fixes_enabled().unwrap());
+        assert_eq!(ctx.duck_cfg().max_fix_dist(ctx.env()).unwrap(), dist);
+        assert!(ctx.duck_cfg().fixes_enabled(ctx.env()).unwrap());
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_HOME");
@@ -212,7 +212,7 @@ mod tests {
 
         let args_matches = cli().try_get_matches_from(["duck", "ny_aias"]).unwrap();
         let (mut ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(2));
-        ctx.duck_cfg_mut().cfg_file_mut().set_aliases(fake_aliases);
+        ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = ExternalSubcommands::default();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("my_alias"));

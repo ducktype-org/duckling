@@ -4,135 +4,159 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Module dealing with all of the possible user configuration of `duck`.
-//! The submodules are:
-//! - [`duck_home_path`] for determining the location of duck home;
-//! - [`configuration_file`] abstracting over the configuration file at duck home.
-//!
-//! This module notably contains [`DuckCfg`] which is the primary source of information for determining the configuration.
-//! It joins the configuration from the file with the configuration via environmental variables.
+//! Abstraction over the duck configuration file, located at `<duck's home root>/config.yaml`.
 
-use std::path::Path;
+use std::sync::OnceLock;
 use std::time::Duration;
 
+use tracing::trace;
 use url::Url;
 
-use crate::QuackResult;
 use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases};
-use crate::duck::util::duck_cfg::configuration_file::DuckConfigurationFile;
-use crate::duck::util::duck_cfg::duck_home_path::duck_home_path;
 use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::fetcher;
+use crate::quackpack::schemas::config::{RegistryConfig, SecurityConfig, StorageConfig};
 use crate::util::env::Env;
+use crate::util::once_lock_ext::OnceLockExt;
+use crate::util::yaml_config::YamlConfig;
+use crate::{QuackResult, QuackResultContext};
 
-pub(super) mod configuration_file;
-mod duck_home_path;
+pub(super) mod duck_home_path;
 
-/// Environmental variable for overriding the `security.typos.enabled` field of the configuration file.
-const FIXES_ENABLED_ENV: &str = "DUCK_SECURITY_TYPOS_ENABLED";
-
-/// Environmental variable for overriding the `security.typos.max-distance` field of the configuration file.
-const MAX_FIX_DIST_ENV: &str = "DUCK_SECURITY_TYPOS_MAX_DISTANCE";
-
-/// Environmental variable for overriding the `storage.temporary-lifetime` field of the configuration file.
-const STORAGE_LIFETIME_ENV: &str = "DUCK_STORAGE_TEMPORARY_LIFETIME";
-
-/// Environmental variable for overriding the `registry.url` field of the configuration file.
-const REGISTRY_URL_ENV: &str = "DUCK_REGISTRY_URL";
-
-#[derive(Debug)]
-/// Struct for determining the user configuration of `duck`.
-///
-/// Priority of configuration
-/// -------------------------
-/// For most of the configurable values, the value is determined:
-/// 1. By the appropriate environmental variable.
-/// 2. If the variable is not set, by the [`DuckConfigurationFile`].
-///
-/// An exception are aliases, which cannot be set with an environmental variable.
+#[derive(Debug, Default)]
+/// Abstraction over the duck configuration file, located at `<duck's home root>/config.yaml`.
+/// Provides the sensible defaults for fields not present in the file.
 pub struct DuckCfg {
-    /// Snapshot of the environmental variables (to look for overrides).
-    env: Env,
-    /// Parsed configuration file, with sensible defaults.
-    cfg_file: DuckConfigurationFile,
+    inner: YamlConfig,
+    // Fast config accessors.
+    security: OnceLock<SecurityConfig>,
+    registry: OnceLock<RegistryConfig>,
+    storage: OnceLock<StorageConfig>,
 }
 
+// @TODO: #3318 Use `from_hours(24)`, after bumping rust's version in CI to 1.91.0.
+/// The default lifetime of a temporary venv in a storage.
+const DEFAULT_STORAGE_LIFETIME: Duration = Duration::from_secs(24 * 60 * 60);
+
+/// The default radius in which we'll attempt to autofix a subcommand.
+const DEFAULT_MAXIMAL_AUTOFIX_DISTANCE: u64 = 3;
+
+/// A random, but reasonable(?) value.
+const DEFAULT_NUMBER_OF_OPEN_CONNECTIONS: usize = 64;
+
 impl DuckCfg {
-    /// Get all known aliases.
-    ///
-    /// Important:
-    /// ----------
-    /// The value from [`DuckConfigurationFile`] cannot be overridden by any environmental variable.
-    pub fn aliases(&self) -> QuackResult<Aliases> {
-        self.cfg_file.aliases()
+    /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
+    pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
+        let inner = YamlConfig::new(home.user_config().to_path_buf())?;
+        trace!(?inner, "parsed the user config");
+        Ok(Self {
+            inner,
+            security: OnceLock::new(),
+            registry: OnceLock::new(),
+            storage: OnceLock::new(),
+        })
     }
 
-    /// Get an alias for the given `key`.
-    ///
-    /// Important:
-    /// ----------
-    /// The value from [`DuckConfigurationFile`] cannot be overridden by any environmental variable.
-    pub fn alias_for(&self, key: &str) -> QuackResult<Option<Alias>> {
-        self.cfg_file().alias_for(key)
+    /// Get the `security:` configuration table.
+    pub fn security(&self, env: &Env) -> QuackResult<&SecurityConfig> {
+        self.security.try_init_with(|| {
+            self.inner
+                .deserialize_optional_or_default_with_env_overrides(env, "security")
+        })
+    }
+
+    /// Get the `registry:` configuration table.
+    pub fn registry(&self, env: &Env) -> QuackResult<&RegistryConfig> {
+        self.registry.try_init_with(|| {
+            self.inner
+                .deserialize_optional_or_default_with_env_overrides(env, "registry")
+        })
+    }
+
+    /// Get the `storage:` configuration table.
+    pub fn storage(&self, env: &Env) -> QuackResult<&StorageConfig> {
+        self.storage.try_init_with(|| {
+            self.inner
+                .deserialize_optional_or_default_with_env_overrides(env, "storage")
+        })
     }
 
     /// Whether we should autofix unknown subcommands.
-    pub fn fixes_enabled(&self) -> QuackResult<bool> {
-        self.env
-            .get_bool(FIXES_ENABLED_ENV)?
-            .map(Ok)
-            .unwrap_or_else(|| self.cfg_file.fixes_enabled())
+    pub fn fixes_enabled(&self, env: &Env) -> QuackResult<bool> {
+        Ok(self
+            .security(env)?
+            .typos
+            .as_ref()
+            .and_then(|typos| typos.enabled)
+            .unwrap_or(false))
     }
 
     /// Maximal distance for autofixing unknown subcommands.
-    pub fn max_fix_dist(&self) -> QuackResult<u64> {
-        self.env
-            .get_u64(MAX_FIX_DIST_ENV)?
-            .map(Ok)
-            .unwrap_or_else(|| self.cfg_file.max_fix_dist())
+    pub fn max_fix_dist(&self, env: &Env) -> QuackResult<u64> {
+        Ok(self
+            .security(env)?
+            .typos
+            .as_ref()
+            .and_then(|typos| typos.max_distance)
+            .unwrap_or(DEFAULT_MAXIMAL_AUTOFIX_DISTANCE))
+    }
+
+    /// Get all known aliases.
+    pub fn aliases(&self) -> QuackResult<Aliases> {
+        Ok(self
+            .inner
+            .deserialize_optional("aliases")?
+            .unwrap_or_default())
+    }
+
+    /// Get an alias for the given `key`.
+    pub fn alias_for(&self, key: &str) -> QuackResult<Option<Alias>> {
+        self.inner
+            .deserialize_optional(&format!("aliases.{key}"))
+            .with_context(|| format!("when trying to get the alias expansions of `{key}`"))
+    }
+
+    /// Get the underlying [`YamlConfig`].
+    pub fn yaml_config(&self) -> &YamlConfig {
+        &self.inner
     }
 
     /// Get the lifetime of temporary storage venvs.
-    pub fn storage_tmp_lifetime(&self) -> QuackResult<Duration> {
-        self.env
-            .get_duration(STORAGE_LIFETIME_ENV)?
-            .map(Ok)
-            .unwrap_or_else(|| self.cfg_file.storage_tmp_lifetime())
+    pub fn storage_tmp_lifetime(&self, env: &Env) -> QuackResult<Duration> {
+        Ok(self
+            .storage(env)?
+            .temporary_lifetime
+            .map(|duration| duration.0)
+            .unwrap_or(DEFAULT_STORAGE_LIFETIME))
     }
 
     /// Get the default registry url.
-    pub fn registry_url(&self) -> QuackResult<Url> {
-        self.env
-            .get_url(REGISTRY_URL_ENV)?
-            .map(Ok)
-            .unwrap_or_else(|| self.cfg_file.registry_url())
+    pub fn registry_url(&self, env: &Env) -> QuackResult<Url> {
+        let url = self.registry(env)?.url.clone();
+        let url = url.unwrap_or_else(|| fetcher::DEFAULT_REGISTRY_URL.clone());
+        Ok(url)
     }
 
     /// Get the maximal allowed amount of opened connections.
     pub fn max_open_connections(&self) -> usize {
-        self.cfg_file.max_open_connections()
-    }
-
-    /// Get access to the underlying [`DuckConfigurationFile`].
-    pub fn cfg_file(&self) -> &DuckConfigurationFile {
-        &self.cfg_file
-    }
-
-    /// Get mutable access to the underlying [`DuckConfigurationFile`].
-    pub fn cfg_file_mut(&mut self) -> &mut DuckConfigurationFile {
-        &mut self.cfg_file
-    }
-
-    /// Get access to the underlying [`Env`].
-    pub fn env(&self) -> &Env {
-        &self.env
+        // NOTE: Leaving this as a helper, so that in a future user can configure it.
+        DEFAULT_NUMBER_OF_OPEN_CONNECTIONS
     }
 }
 
-/// Create [`DuckCfg`] and [`DuckHome`].
-pub fn get_duck_cfg_and_home(env: Env, user_home: &Path) -> QuackResult<(DuckCfg, DuckHome)> {
-    // This is joined into one function, because `DuckCfg` needs `DuckHome` and `DuckHome` needs `Env`.
-    let duck_home = DuckHome::new(duck_home_path(&env, user_home));
-    let cfg_file = DuckConfigurationFile::new(&duck_home)?;
-    let cfg = DuckCfg { env, cfg_file };
-    Ok((cfg, duck_home))
+#[cfg(test)]
+mod test_utils {
+    use std::collections::HashMap;
+
+    use super::DuckCfg;
+
+    impl DuckCfg {
+        pub fn set_aliases(&mut self, new_val: HashMap<String, String>) {
+            let val: serde_yaml_ng::Mapping = new_val
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect();
+            self.inner.set_table("aliases", val).expect("test");
+        }
+    }
 }

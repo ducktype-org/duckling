@@ -122,11 +122,11 @@ impl Env {
         })
     }
 
-    /// Get the [`u64`] from an environmental variable.
+    /// Get the [`i64`] from an environmental variable.
     /// Returns [`None`] if no variable is found.
-    pub fn get_u64(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<u64>> {
+    pub fn get_i64(&self, key: impl AsRef<OsStr>) -> QuackResult<Option<i64>> {
         self.get(key.as_ref())?
-            .map(str::parse::<u64>)
+            .map(str::parse::<i64>)
             .transpose()
             .with_context(|| {
                 format!(

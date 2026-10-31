@@ -191,7 +191,7 @@ fn construct_source(
         Ok((Source::for_registry(registry_url), None))
     } else {
         // Registry dependency from default registry.
-        let default_registry_url = ctx.duck_cfg().registry_url()?;
+        let default_registry_url = ctx.duck_cfg().registry_url(ctx.env())?;
         Ok((Source::for_registry(default_registry_url), None))
     }
 }
@@ -330,7 +330,7 @@ fn construct_source_schema(
         SourceKind::Registry => {
             let registry_url = source.url();
             if name.is_none() {
-                if registry_url == ctx.duck_cfg().registry_url()? {
+                if registry_url == ctx.duck_cfg().registry_url(ctx.env())? {
                     Ok(None)
                 } else {
                     Ok(Some(SourceSchema::Simple(registry_url.to_string())))

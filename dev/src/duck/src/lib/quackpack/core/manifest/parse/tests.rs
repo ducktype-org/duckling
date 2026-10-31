@@ -504,7 +504,7 @@ dependencies:
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
     assert!(b.source().is_registry());
-    let default_registry = ctx.duck_cfg().registry_url().unwrap();
+    let default_registry = ctx.duck_cfg().registry_url(ctx.env()).unwrap();
     assert_eq!(b.source().url(), default_registry);
     assert_eq!(b.versions().len(), 1);
     assert_eq!(b.versions()[0].to_string(), "0.1.0");

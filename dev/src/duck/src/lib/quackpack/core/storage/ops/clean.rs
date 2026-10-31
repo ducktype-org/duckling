@@ -64,7 +64,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
 #[tracing::instrument(level = "debug", skip_all, fields(root = %storage_root.display()))]
 pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<CleanOutput> {
-    let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
+    let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime(ctx.env())?;
     let storage = paths::Storage::new(storage_root);
     let mut removed_venvs = vec![];
     let _lock = locks::CleanLock::new(&storage, ctx).context("failed to acquire a clean lock")?;
