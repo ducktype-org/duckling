@@ -688,8 +688,8 @@ class PSTErrorTests: public tester::TestSuite {
 	 */
 	void tokenGroupMessageTests() {
 		{
-			auto parsed = pst::PST<>::fromContents("fun 1 fun = fun\n", pst::PSTType::Program);
-			const std::string text = renderedDiagnostics(parsed);
+			auto parsed = pst::ParsedPST<>::fromContents("fun 1 fun = fun\n", pst::PSTType::Program);
+			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
 				text.find("NumLiteralGroup") == std::string::npos,
@@ -702,8 +702,8 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 
 		{
-			auto parsed = pst::PST<>::fromContents("class () {}\n", pst::PSTType::Program);
-			const std::string text = renderedDiagnostics(parsed);
+			auto parsed = pst::ParsedPST<>::fromContents("class () {}\n", pst::PSTType::Program);
+			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
 				text.find("BracketGroup") == std::string::npos,
