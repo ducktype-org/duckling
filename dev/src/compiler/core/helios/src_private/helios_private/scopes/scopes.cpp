@@ -9,8 +9,6 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/packages/access.hpp>
-#include <frontend/packages/standard_packages.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -39,6 +37,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
+#include <query_framework/utils/simple_keys.hpp>
 
 #include <hashing/hash.hpp>
 #include <query_framework/query_result.hpp>
@@ -762,9 +761,8 @@ namespace compiler::helios {
 	namespace {
 		/**
 		 * @brief A module implicitly imported (as if by `import <package>.<path>.*;`) into every
-		 * module that is not part of the standard library. Re-exports are not supported yet, so the
-		 * prelude is emulated by importing the original source modules directly rather than through
-		 * a dedicated `prelude` module.
+		 * module. Re-exports are not supported yet, so the prelude is emulated by importing the
+		 * original source modules directly rather than through a dedicated `prelude` module.
 		 */
 		struct PreludeImport final {
 			base::StrID              package;
@@ -782,38 +780,6 @@ namespace compiler::helios {
 				{ .package = base::StrID("core"), .path = { base::StrID("optional") } },
 			};
 			return imports;
-		}
-
-		/**
-		 * @brief True when @p module_id belongs to the standard library itself. Such modules keep
-		 * their explicit imports and must not receive the implicit prelude — this also breaks the
-		 * self-import cycle that `core.builtins` importing itself would otherwise create.
-		 */
-		bool isStandardLibraryModule(query::Context& ctx, frontend::ModuleID module_id) {
-			auto package_id = frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
-			return frontend::packages::isStandardLibraryPackage(package_id);
-		}
-
-		/**
-		 * @brief Root scopes of the modules imported into @p module_id as if it wrote
-		 * `import <module>.*;` for each configured prelude module. Empty when the standard library
-		 * is absent (e.g. `--no-std`, or a custom std that lacks the module) or when @p module_id
-		 * is itself a standard-library module.
-		 */
-		std::vector<ScopeID> implicitPreludeScopes(
-			query::Context& ctx, frontend::ModuleID module_id
-		) {
-			if (isStandardLibraryModule(ctx, module_id)) return {};
-
-			std::vector<ScopeID> scopes;
-			for (const auto& prelude_import: preludeImports()) {
-				auto module_opt = frontend::getModuleByAbsolutePath(
-					ctx, prelude_import.package, prelude_import.path
-				);
-				if (module_opt.empty()) continue;
-				scopes.push_back(queryRootScopeOfMainModuleFile(ctx, module_opt.value()));
-			}
-			return scopes;
 		}
 
 		/**
@@ -842,6 +808,37 @@ namespace compiler::helios {
 			return queryRootScopeOfMainModuleFile(ctx, repl_parent_opt.value());
 		}
 	}
+	/**
+	 * @brief Root scopes of the implicit prelude modules, searched by every lookup that continues
+	 * into the enclosing scopes, as if every module wrote `import <module>.*;` for each of them.
+	 * Prelude modules missing from the build (e.g. `--no-std`) are skipped.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryImplicitPreludeScopes,
+		query::EmptyKey,
+		CRef<std::vector<ScopeID>>,
+		({ .uses_qresult = false })
+	);
+
+	struct IMPLEMENT_QUERY(QueryImplicitPreludeScopes, std::vector<ScopeID>) {
+		static auto provide(Context& ctx, QKey) -> PResult {
+			std::vector<ScopeID> scopes;
+			for (const auto& prelude_import: preludeImports()) {
+				auto module_opt = frontend::getModuleByAbsolutePath(
+					ctx, prelude_import.package, prelude_import.path
+				);
+				if (module_opt.empty()) continue;
+				scopes.push_back(queryRootScopeOfMainModuleFile(ctx, module_opt.value()));
+			}
+			return scopes;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitPreludeScopes);
 
 	base::Bit256 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
 		auto hash_1 = scope.queryUnstablePerfectHash();
@@ -948,9 +945,9 @@ namespace compiler::helios {
 			}
 
 			// Bring the default prelude modules into scope, as if every module wrote
-			// `import <module>.*;`. A no-op under --no-std or inside the standard library.
+			// `import <module>.*;`. A no-op under --no-std.
 			if (key.with_parents) {
-				for (const ScopeID prelude_scope: implicitPreludeScopes(ctx, module(key.scope))) {
+				for (const ScopeID prelude_scope: *ctx.query<QueryImplicitPreludeScopes>({})) {
 					UNPACK_QRESULT_MOVE(
 						auto found =, searchScopeWithUsings(ctx, key, prelude_scope, visited)
 					);

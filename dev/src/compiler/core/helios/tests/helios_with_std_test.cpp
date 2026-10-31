@@ -365,7 +365,7 @@ private:
 		});
 	}
 
-	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
+	// The implicit prelude brings `core.builtins` symbols into scope of every module
 	// without an explicit import. The `builtins` module has no import statements at all, yet an
 	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work.
 	void testImplicitPrelude() {

@@ -14,6 +14,9 @@ Note: This is mostly to list operations, see docs for details.
 * `QueryLookupInScope` -- Symbols directly in given scope that may provide the name, including the
   not yet resolved `using`/`import` symbols. Uses `QuerySymbolsInScope`.
 
+* `QueryImplicitPreludeScopes` -- Root scopes of the implicit prelude modules (`core.builtins`, ...)
+  that every module sees as if it wrote `import <module>.*;` (high-gain optimization).
+
 * `QueryLookupFromScope` -- Main scope-lookup logic. Searches a scope together with everything its
   `using`/`import` symbols bring in (resolved with `QueryResolveUsingImport`), visiting every scope
   at most once, so recursive usings and imports work. Walks the enclosing scopes in a loop: parent
