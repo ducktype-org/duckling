@@ -10,7 +10,6 @@
 #include <frontend/pst_parser/pst.hpp>
 #include <helios_private/pst_layer/macros.hpp>
 
-#include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/checked_okbad.hpp>
 
@@ -22,11 +21,6 @@
 
 namespace compiler::helios {
 
-	/**
-	 * Already unlocked PST parent of the element visited by pstForAll, if known.
-	 */
-	using PstForAllParent = base::Optional<pst::Access<pst::LangElement>>;
-
 	namespace internal {
 
 		/**
@@ -37,7 +31,6 @@ namespace compiler::helios {
 		base::OkBad pstForAllAux(
 			query::Context&        ctx,
 			pst::Access<ElementT>  element,
-			const PstForAllParent& parent,
 			const FunctionT&       function,
 			const CutoffFunctionT& cutoff_function
 		) {
@@ -52,14 +45,8 @@ namespace compiler::helios {
 
 				if (expansion_result.hasFailed()) return base::BAD;
 
-				// The PST parent of the expansion root is not the visited parent, so we don't pass
-				// it.
 				auto inner_result = internal::pstForAllAux(
-					ctx,
-					expansion_result.valueOrPanic().unlock(ctx),
-					PstForAllParent{},
-					function,
-					cutoff_function
+					ctx, expansion_result.valueOrPanic().unlock(ctx), function, cutoff_function
 				);
 
 				return inner_result;
@@ -68,15 +55,7 @@ namespace compiler::helios {
 			base::OkBad result = base::OK;
 
 			// Run the function
-			if constexpr (std::is_invocable_v<
-							  const FunctionT&,
-							  pst::Access<ElementT>,
-							  const PstForAllParent&>)
-				function(element, parent);
-			else
-				function(element);
-
-			const PstForAllParent element_as_parent{ pst::Access<pst::LangElement>(element) };
+			function(element);
 
 			for (auto child: element->viewChildren()) {
 				auto child_unlocked = child.unlockOpt(ctx);
@@ -87,9 +66,8 @@ namespace compiler::helios {
 					"View children should only contain valid element (no null ptrs)"
 				);
 
-				auto inner_result = internal::pstForAllAux(
-					ctx, child_unlocked.value(), element_as_parent, function, cutoff_function
-				);
+				auto inner_result
+					= internal::pstForAllAux(ctx, child_unlocked.value(), function, cutoff_function);
 				if (inner_result.isBad()) result = base::BAD;
 			}
 
@@ -113,10 +91,6 @@ namespace compiler::helios {
 	 * Performs recursive calls into macro expansions.
 	 * Skips subtrees for which the cutoff function returns true.
 	 *
-	 * The function can either take just the element, or the element and its (already unlocked)
-	 * PST parent (PstForAllParent), which is empty for the initial element and roots of macro
-	 * expansions. This allows to avoid unlocking the parent again (#2407).
-	 *
 	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns
 	 * base::OK.
 	 */
@@ -124,9 +98,8 @@ namespace compiler::helios {
 		typename ElementT,
 		typename FunctionT,
 		typename CutoffFunctionT = internal::CutoffFunctionTDefault>
-	requires(std::is_invocable_r_v<void, FunctionT, pst::Access<ElementT>>
-	         || std::is_invocable_r_v<void, FunctionT, pst::Access<ElementT>, const PstForAllParent&>)
-	     && std::is_invocable_r_v<bool, CutoffFunctionT, pst::Access<ElementT>> [[nodiscard]]
+	requires std::is_invocable_r_v<void, FunctionT, pst::Access<ElementT>>
+	      && std::is_invocable_r_v<bool, CutoffFunctionT, pst::Access<ElementT>> [[nodiscard]]
 	base::CheckedOkBad pstForAll(
 		query::Context&        ctx,
 		pst::Access<ElementT>  element,
@@ -136,8 +109,7 @@ namespace compiler::helios {
 		base::OkBad result = base::OK;
 
 		auto with_failed_exception = query::runFuncWithQueryFailedHandling([&] {
-			result
-				= internal::pstForAllAux(ctx, element, PstForAllParent{}, function, cutoff_function);
+			result = internal::pstForAllAux(ctx, element, function, cutoff_function);
 		});
 		if (with_failed_exception.status().isBad()) return base::BAD;
 		return result;

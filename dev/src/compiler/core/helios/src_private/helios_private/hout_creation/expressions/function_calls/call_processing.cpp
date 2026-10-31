@@ -837,7 +837,7 @@ namespace compiler::helios::code {
 		arguments.reserve(argument_count);
 		for (usize index = 0; const auto& arg: args) {
 			auto arg_result = subExprFromPSTWithType(
-				ctx, arg->getArg().unlock(ctx)->getExpr(), parameter_types.at(index++)
+				ctx, arg->getArg().unlock(ctx)->getExpr().unlock(ctx), parameter_types.at(index++)
 			);
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_result);
 			arguments.push_back(std::move(arg_expr));

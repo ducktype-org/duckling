@@ -25,9 +25,6 @@ namespace compiler::driver {
 	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION = ".di.json";
 
 	namespace {
-		// @TODO: #2407 this is called for every debug position, so the same PST elements (and
-		// the FileSourcePositionsSideInput) are unlocked many times in a single query. Consider
-		// caching the calculated positions per element hash in the DebugInfoForModule query.
 		debug_info::FilePosition calculateSourcePosition(
 			query::Context& ctx, const debug_info::PstHashPostion& pos
 		) {

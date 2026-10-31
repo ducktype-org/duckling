@@ -15,7 +15,6 @@
 
 #include <query_framework/module_flags/module_flags.hpp>
 
-#include <algorithm>
 #include <cstring>
 #include <iomanip>
 #include <ostream>
@@ -355,78 +354,6 @@ namespace query::internal {
 		auto& deps        = *it.value();
 		auto  deps_holder = deps.getHolder();
 		return !deps_holder->empty();
-	}
-
-	QueryGraph::EdgeStats QueryGraph::computeEdgeStats() const {
-		EdgeStats stats;
-		stats.node_count = node_deps->size();
-
-		std::unordered_set<NodeID> seen;
-		for (const auto& [node, deps]: *node_deps) {
-			auto deps_holder = deps.getHolder();
-			seen.clear();
-			for (const auto& dep: *deps_holder) {
-				const bool is_unique = seen.insert(dep).second;
-				auto&      counts    = stats.per_query_pair[{ node.q_id, dep.q_id }];
-
-				counts.total_edges++;
-				stats.all_edges.total_edges++;
-				if (is_unique) {
-					counts.unique_edges++;
-					stats.all_edges.unique_edges++;
-				}
-			}
-		}
-
-		return stats;
-	}
-
-	void QueryGraph::printEdgeStats(std::ostream& out, usize max_rows) const {
-		const auto stats            = computeEdgeStats();
-		const auto& [total, unique] = stats.all_edges;
-
-		out << "=== Query Graph Edge Statistics ===\n\n";
-		out << "Nodes:            " << stats.node_count << "\n";
-		out << "Edges:            " << total << "\n";
-		out << "Unique edges:     " << unique << "\n";
-		out << "Duplicated edges: " << total - unique << "\n\n";
-
-		// Summary per callee query (e.g. all PST accesses), summed over all callers:
-		std::map<QueryID, EdgeStats::Counts> per_callee;
-		for (const auto& [query_pair, counts]: stats.per_query_pair) {
-			auto& callee_counts = per_callee[query_pair.second];
-			callee_counts.total_edges += counts.total_edges;
-			callee_counts.unique_edges += counts.unique_edges;
-		}
-		out << "Edges per callee query (dup / total):\n";
-		for (const auto& [callee, counts]: per_callee) {
-			if (counts.total_edges == counts.unique_edges) continue;
-			out << "  " << std::setw(9) << std::right << counts.total_edges - counts.unique_edges
-				<< " dup / " << std::setw(9) << counts.total_edges << " total  "
-				<< callee.getData().name << "\n";
-		}
-		out << "\n";
-
-		using Row = std::pair<std::pair<QueryID, QueryID>, EdgeStats::Counts>;
-		std::vector<Row> rows(stats.per_query_pair.begin(), stats.per_query_pair.end());
-		std::ranges::sort(rows, [](const Row& lhs, const Row& rhs) {
-			return lhs.second.total_edges - lhs.second.unique_edges
-			     > rhs.second.total_edges - rhs.second.unique_edges;
-		});
-
-		out << "Most duplicated edges per (caller query -> callee query), "
-			   "ratio = edges / unique edges:\n";
-		for (const auto& [query_pair, counts]: rows | std::views::take(max_rows)) {
-			if (counts.total_edges == counts.unique_edges) break;
-			out << "  " << std::setw(9) << std::right << counts.total_edges - counts.unique_edges
-				<< " dup / " << std::setw(9) << counts.total_edges << " total (ratio " << std::fixed
-				<< std::setprecision(2)
-				<< static_cast<double>(counts.total_edges)
-					   / static_cast<double>(counts.unique_edges)
-				<< ")  " << query_pair.first.getData().name << " -> "
-				<< query_pair.second.getData().name << "\n";
-		}
-		out << "\n";
 	}
 
 	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes

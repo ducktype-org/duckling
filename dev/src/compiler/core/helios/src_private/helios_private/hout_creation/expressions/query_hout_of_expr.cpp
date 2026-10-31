@@ -620,7 +620,7 @@ namespace compiler::helios::code {
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
-							ctx, sub_expr, meta_type, op->getStablePosition()
+							ctx, sub_expr.unlock(ctx), meta_type, op->getStablePosition()
 						);
 						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
@@ -675,12 +675,14 @@ namespace compiler::helios::code {
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
-					auto parameter_hout = subExprFromPSTWithType(ctx, parameter, meta_type);
+					auto parameter_hout
+						= subExprFromPSTWithType(ctx, parameter.unlock(ctx), meta_type);
 					if (parameter_hout.hasFailed()) return;
 					parameters.emplace_back(std::move(parameter_hout).valueOrThrow());
 				}
 
-				auto result = subExprFromPSTWithType(ctx, arrow->getRightOperand(), meta_type);
+				auto result
+					= subExprFromPSTWithType(ctx, arrow->getRightOperand().unlock(ctx), meta_type);
 				if (result.hasFailed()) return;
 
 				node = makeBox<FunctionTypeExpr>(
@@ -838,7 +840,8 @@ namespace compiler::helios::code {
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
 				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
-				auto condition_res   = subExprFromPSTWithType(ctx, stmt->getCondition(), bool_type);
+				auto       condition_res
+					= subExprFromPSTWithType(ctx, stmt->getCondition().unlock(ctx), bool_type);
 				auto if_true_res     = subExprFromPST(ctx, stmt->getIfTrue());
 				auto if_false_res    = subExprFromPST(ctx, stmt->getIfFalse());
 
@@ -1078,24 +1081,6 @@ namespace compiler::helios {
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                          ctx,
-		pst::AccessLocked<pst::ExprElement>      element,
-		tsh::SymbolType<>                        expected_type,
-		base::Optional<dia::StablePosition>      coercion_expects_pos,
-		const coercions::CoercionErrorOverrides& error_overrides
-	) {
-		auto element_unlocked = element.unlockOpt(ctx);
-		if (element_unlocked.empty()) {
-			// PST should have reported parsing error for this, so we just return failure here.
-			return query::Failed();
-		}
-
-		return code::subExprFromUnlockedPSTWithType(
-			ctx, element_unlocked.value(), expected_type, coercion_expects_pos, error_overrides
-		);
-	}
-
-	query::QResult<Box<code::Expr>> code::subExprFromUnlockedPSTWithType(
 		query::Context&                          ctx,
 		pst::Access<pst::ExprElement>            element,
 		tsh::SymbolType<>                        expected_type,

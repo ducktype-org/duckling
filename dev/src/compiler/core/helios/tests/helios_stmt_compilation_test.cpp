@@ -108,7 +108,7 @@ private:
 		// Navigate to its PST body
 		auto fun_pst = getSymRef(fun_sym)->stmtCast(ctx).value().dynamicCast<pst::Fun>().value();
 
-		auto body_stmts = getStmtsFromStmtAggregate(ctx, fun_pst->getBody());
+		auto body_stmts = getStmtsFromStmtAggregate(ctx, fun_pst->getBody().unlock(ctx));
 		CORE_ASSERT(!body_stmts.empty(), "Function body must have at least one statement");
 
 		// Compile the first body statement in isolation

@@ -38,8 +38,6 @@ namespace compiler::driver {
 							 "No query statistics will be printed.\n";
 			}
 			query::printStats();
-			if (query::enable_query_graph)
-				query::Context::getState().getGraph().printEdgeStats(std::cerr);
 			time_stats::prettyPrintTimeStatistics();
 		}
 

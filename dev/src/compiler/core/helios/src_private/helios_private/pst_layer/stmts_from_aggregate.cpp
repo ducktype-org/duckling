@@ -21,18 +21,6 @@ namespace compiler::helios {
 
 	// @TODO: in the future: make some base for all elements that can be used here
 
-	StmtList<> getStmtsFromLockedStmtAggregate(
-		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
-	) {
-		auto elem_optional = locked.unlockOpt(ctx);
-		if (!elem_optional.has_value()) {
-			// @TODO: #1753 this throw may be suboptimal
-			query::throwFailed();
-		}
-
-		return getStmtsFromStmtAggregate(ctx, elem_optional.value());
-	}
-
 	StmtList<> getStmtsFromStmtAggregate(query::Context& ctx, pst::Access<pst::LangElement> elem) {
 		std::vector<pst::AccessLocked<pst::Stmt>> output;
 

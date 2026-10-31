@@ -16,12 +16,9 @@
 #include <base/config/build_type.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/types/ints.hpp>
 
-#include <map>
 #include <ostream>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 namespace query::internal {
@@ -332,38 +329,6 @@ namespace query::internal {
 
 		/** @brief Check if a node has any dependencies. */
 		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
-
-		/**
-		 * @brief Statistics about the edges of the graph. Mostly useful to find duplicated edges,
-		 * e.g. resulting from unlocking the same PST element multiple times in one query (#2407).
-		 */
-		struct EdgeStats final {
-			struct Counts final {
-				u64 total_edges  = 0;
-				u64 unique_edges = 0;
-			};
-
-			u64    node_count = 0;
-			Counts all_edges;
-
-			/**
-			 * Edge counts grouped by (caller query, callee query) pair.
-			 */
-			std::map<std::pair<QueryID, QueryID>, Counts> per_query_pair;
-		};
-
-		/**
-		 * @brief Computes edge statistics of the graph.
-		 * @warning This method should not be used when the query graph is being concurrently
-		 * modified.
-		 */
-		[[nodiscard]] EdgeStats computeEdgeStats() const;
-
-		/**
-		 * @brief Prints edge statistics of the graph (see computeEdgeStats()).
-		 * @param max_rows Maximal number of printed (caller query, callee query) pairs.
-		 */
-		void printEdgeStats(std::ostream& out, usize max_rows = 40) const;
 
 		~QueryGraph() = default;
 	};

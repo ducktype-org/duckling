@@ -67,13 +67,12 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	struct IMPLEMENT_QUERY(QueryPstEmissionPolicy, query::QResult<EmissionPolicy>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// This is a very simple, and very suboptimal heuristic for now, we can improve it
-			// later if needed.
-			// @TODO: #2996 change it to a better implementation.
-			// Symbol should just know this!
-			auto pst_element          = getSymRef(key)->maybePstElement().value();
+	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id) {
+		// This is a very simple, and very suboptimal heuristic for now, we can improve it
+		// later if needed.
+		// @TODO: #2996 change it to a better implementation.
+		// Symbol should just know this!
+		auto pst_emission_policy = [&ctx](pst::AccessLocked<pst::LangElement> pst_element) {
 			auto pst_element_ancestor = getPSTElementParent(ctx, pst_element.unlock(ctx));
 			while (pst_element_ancestor.isLangElement()) {
 				auto element = pst_element_ancestor.getAsLangElement().unlock(ctx);
@@ -85,17 +84,14 @@ namespace compiler::helios {
 			}
 
 			return EmissionPolicy::OwnerOnly;
-		}
+		};
 
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPstEmissionPolicy);
-
-	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id) {
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
-				return ctx.query<QueryPstEmissionPolicy>(id).valueOrThrow();
+			variant_case(PstImplementedSemantics, pst_data) {
+				return pst_emission_policy(pst_data.getElement());
+			}
+			variant_case(ClassMemberSemantics, member_data) {
+				return pst_emission_policy(member_data.getElement());
 			}
 			variant_case(BuiltinSemantics, data) {
 				// Only if HOUT implements the builtin we want to replicate it.
