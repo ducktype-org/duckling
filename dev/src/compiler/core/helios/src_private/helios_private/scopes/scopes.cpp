@@ -92,12 +92,29 @@ namespace compiler::helios {
 
 	/**
 	 * Determines scope kind for given PST element.
-	 * @TODO: #2407 this could take unlocked access
+	 * @param parent_hint Already unlocked PST parent of the element, if the caller has it.
+	 * Allows to avoid unlocking the parent again (#2407).
 	 */
-	ElementScopeKind getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
+	ElementScopeKind getScopeKind(
+		query::Context&               ctx,
+		pst::Access<pst::LangElement> element,
+		const PstForAllParent&        parent_hint = {}
+	) {
 		// @TODO: move it to different file?
-		auto element = locked.unlock(ctx);
 
+		// Returns the PST parent of the element, unlocking it only if needed:
+		auto unlocked_parent = [&]() -> base::Optional<pst::Access<pst::LangElement>> {
+			auto parent = element->getParent();
+			if_opt_none(parent) return {};
+			if_opt_some(parent_hint, hint) {
+				CORE_ASSERT(
+					parent.value().illegalAccess().value()->getID() == hint->getID(),
+					"Parent hint does not match the PST parent of the element."
+				);
+				return hint;
+			}
+			return parent.value().unlockOpt(ctx);
+		};
 		switch (element->getElementKind()) {
 		case pst::ElementKind::TopLevel:
 			return ElementScopeKind::Standard;
@@ -114,7 +131,7 @@ namespace compiler::helios {
 
 		// code blocks:
 		case pst::ElementKind::CodeBlock: {
-			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
+			auto parent_kind = unlocked_parent().value()->getElementKind();
 			if (parent_kind == pst::ElementKind::CodeBlockOrStmt
 			    || parent_kind == pst::ElementKind::SpecifierBlock)
 				return ElementScopeKind::Transparent;
@@ -186,7 +203,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
-			auto expr_parent = element->getParent().value().unlockOpt(ctx);
+			auto expr_parent = unlocked_parent();
 			if (expr_parent.has_value()
 			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
 				// This is a special case.
@@ -266,7 +283,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
-			auto element_scope_kind = getScopeKind(ctx, element_key.element);
+			auto element_scope_kind = getScopeKind(ctx, element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				[[maybe_unused]] auto element_ptr = &*element;
@@ -374,12 +391,13 @@ namespace compiler::helios {
 				return;
 			}
 
-			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
-				// handling lambdas, templates, etc. might be much more tricky and
-				// require a different approach
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
-			};
+			auto grab_scopes_function =
+				[&ctx, &out](pst::Access<pst::LangElement> element, const PstForAllParent& parent) {
+					// handling lambdas, templates, etc. might be much more tricky and
+				    // require a different approach
+					if (getScopeKind(ctx, element, parent) == ElementScopeKind::Standard)
+						out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
+				};
 
 			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
 			// somehow. Note that more custom logic might be needed in the future (to optimize it,
