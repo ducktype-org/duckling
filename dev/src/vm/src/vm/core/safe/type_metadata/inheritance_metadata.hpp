@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 
 #include <string_id/string_id.hpp>
@@ -32,10 +33,10 @@ namespace vm {
 		std::unordered_set<TypeCRef> implements;
 		// Virtual method declarations for this class.
 		// This serves as an interface.
-		base::HashMap<base::StrID, TypeCRef> available_methods;
+		base::StableHashMap<base::StrID, TypeCRef> available_methods;
 		// Contains all the implementations of virtual methods for this class/interface.
 		// Unimplemented methods do not exist in the vtable.
-		base::HashMap<base::StrID, base::StrID> vtable;
+		base::StableHashMap<base::StrID, base::StrID> vtable;
 		// Cached all superclasses.
 		std::unordered_set<TypeID> inherits_from;
 
@@ -43,8 +44,8 @@ namespace vm {
 			TypeCRef                                type,
 			Kind                                    kind,
 			std::unordered_set<TypeCRef>            implements,
-			base::HashMap<base::StrID, TypeCRef>    available_methods,
-			base::HashMap<base::StrID, base::StrID> vtable
+			base::StableHashMap<base::StrID, TypeCRef>    available_methods,
+			base::StableHashMap<base::StrID, base::StrID> vtable
 		):
 			  type{ type },
 			  kind{ kind },

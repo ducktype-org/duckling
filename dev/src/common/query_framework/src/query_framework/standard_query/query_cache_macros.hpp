@@ -6,11 +6,12 @@
 
 #pragma once
 
+#include <base/collections/stable_hashmap.hpp>
 #include <concurrent/base/collections/hash_map.hpp>
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::HashMap and returns copies of results on cache hit.
+ * It caches PResults using base::StableHashMap and returns copies of results on cache hit.
  */
 #define QUERY_AUTO_CACHE_COPY                                                      \
 	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache; \
@@ -36,7 +37,7 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::HashMap and returns directly constructed QResults on cache hit.
+ * It caches PResults using base::StableHashMap and returns directly constructed QResults on cache hit.
  * @note Should not be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \

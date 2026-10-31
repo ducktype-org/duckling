@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <base/collections/stable_hashmap.hpp>
 #include "../ivm_compiler.hpp"
 
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -28,7 +29,7 @@ namespace vm::loader::compiler::safe {
 			 * This is a crucial lookup table used during the instruction lowering phase to
 			 * resolve symbolic method names into numeric IDs.
 			 */
-			base::HashMap<base::StrID, u64> method_name_to_id;
+			base::StableHashMap<base::StrID, u64> method_name_to_id;
 
 			/**
 			 * @brief Count of the global variables compiled up to this point.
@@ -113,7 +114,7 @@ namespace vm::loader::compiler::safe {
 		 * the instructions again and fill out the correct offsets.
 		 */
 		void linkLabelArguments(
-			low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
+			low::MicroBytecode& instructions, const base::StableHashMap<usize, usize>& label_map
 		);
 
 		/**
@@ -148,7 +149,7 @@ namespace vm::loader::compiler::safe {
 		template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
 		u64 lowerArgument(
 			const vm::loader::compiler::detail::FunctionStackContext& local_ctx,
-			base::HashMap<base::StrID, usize>&                        label_id_map,
+			base::StableHashMap<base::StrID, usize>&                        label_id_map,
 			const FromType&                                           opcode_arg,
 			code::StackStateID                                        stack_state_id
 		);

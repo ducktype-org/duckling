@@ -16,6 +16,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>
 
@@ -264,9 +265,9 @@ namespace dia::template_file {
 
 	struct ExploreLink final {
 		Box<Component>                        content;
-		base::HashMap<std::string, Parameter> params;
+		base::StableHashMap<std::string, Parameter> params;
 
-		ExploreLink(Box<Component> content, base::HashMap<std::string, Parameter> params):
+		ExploreLink(Box<Component> content, base::StableHashMap<std::string, Parameter> params):
 			  content(std::move(content)),
 			  params(std::move(params)) {}
 
@@ -288,13 +289,13 @@ namespace dia::template_file {
 
 	struct CommonTemplate {
 		Metadata                                   metadata;
-		base::HashMap<std::string, Parameter>      params;
-		base::HashMap<std::string, Box<Component>> macros;
+		base::StableHashMap<std::string, Parameter>      params;
+		base::StableHashMap<std::string, Box<Component>> macros;
 
 		CommonTemplate(
 			Metadata                                   metadata,
-			base::HashMap<std::string, Parameter>      params,
-			base::HashMap<std::string, Box<Component>> macros
+			base::StableHashMap<std::string, Parameter>      params,
+			base::StableHashMap<std::string, Box<Component>> macros
 		):
 			  metadata(std::move(metadata)),
 			  params(std::move(params)),
@@ -306,15 +307,15 @@ namespace dia::template_file {
 	struct MessageTemplate: public CommonTemplate {
 		Box<Component>                             header_message;
 		base::MBox<Component>                      description;
-		base::HashMap<std::string, ExploreLink>    explore_links;
-		base::HashMap<std::string, PointerMessage> pointer_messages;
+		base::StableHashMap<std::string, ExploreLink>    explore_links;
+		base::StableHashMap<std::string, PointerMessage> pointer_messages;
 
 		MessageTemplate(
 			CommonTemplate                             common,
 			Box<Component>                             header_message,
 			base::MBox<Component>                      description,
-			base::HashMap<std::string, ExploreLink>    explore_links,
-			base::HashMap<std::string, PointerMessage> pointer_messages
+			base::StableHashMap<std::string, ExploreLink>    explore_links,
+			base::StableHashMap<std::string, PointerMessage> pointer_messages
 		):
 			  CommonTemplate(std::move(common)),
 			  header_message(std::move(header_message)),
@@ -336,10 +337,10 @@ namespace dia::template_file {
 	};
 
 	struct PointerMessageTemplate: public CommonTemplate {
-		base::HashMap<std::string, PointerMessage> pointer_messages;
+		base::StableHashMap<std::string, PointerMessage> pointer_messages;
 
 		PointerMessageTemplate(
-			CommonTemplate common, base::HashMap<std::string, PointerMessage> pointer_messages
+			CommonTemplate common, base::StableHashMap<std::string, PointerMessage> pointer_messages
 		):
 			  CommonTemplate(std::move(common)),
 			  pointer_messages(std::move(pointer_messages)) {}

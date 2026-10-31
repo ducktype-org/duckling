@@ -19,6 +19,7 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <hashing/add_to_hash.hpp>
@@ -67,7 +68,7 @@ namespace compiler::helios {
 namespace std {
 	/**
 	 * @brief Hash template specialization so SymID can be used in std::unordered_set and
-	 * base::HashMap.
+	 * base::StableHashMap.
 	 */
 	template<>
 	struct hash<compiler::helios::SymID> {

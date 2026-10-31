@@ -8,6 +8,7 @@
  * @file mir_tests.cpp
  */
 
+#include <base/collections/stable_hashmap.hpp>
 #include "utils/test_utils.hpp"
 
 #include <ctv/ctv.hpp>
@@ -102,11 +103,14 @@ private:
 			ASSERT_HAS_VALUE(a_id);
 
 			// Build predecessor lists, same as constructLifetimePassArgs does.
-			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			base::StableHashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
-				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
-					preds.put(succ).first->second.push_back(block_id);
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator))
+				{
+					preds.maybePut(succ, std::vector<compiler::mir::BlockID>{});
+					preds.at(succ).push_back(block_id);
+				}
 
 			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
 			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
@@ -155,11 +159,14 @@ private:
 
 			auto pre_mir = compiler::mir::lowerToPreMIRFunction(ctx, target.value());
 
-			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			base::StableHashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
-				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
-					preds.put(succ).first->second.push_back(block_id);
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator))
+				{
+					preds.maybePut(succ, std::vector<compiler::mir::BlockID>{});
+					preds.at(succ).push_back(block_id);
+				}
 
 			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
 			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(

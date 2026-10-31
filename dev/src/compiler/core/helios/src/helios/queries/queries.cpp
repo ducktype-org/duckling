@@ -27,6 +27,7 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
@@ -212,7 +213,7 @@ namespace compiler::helios {
 		 */
 		static bool reportIfDuplicate(
 			query::Context&                                  ctx,
-			base::HashMap<base::StrID, dia::StablePosition>& seen_declarations,
+			base::StableHashMap<base::StrID, dia::StablePosition>& seen_declarations,
 			SymID                                            sym_id,
 			base::StrID                                      original_name,
 			dia::StablePosition                              stable_pos
@@ -245,19 +246,22 @@ namespace compiler::helios {
 		 */
 		static bool reportIfNameTaken(
 			query::Context&                                  ctx,
-			base::HashMap<base::StrID, dia::StablePosition>& seen_declarations,
+			base::StableHashMap<base::StrID, dia::StablePosition>& seen_declarations,
 			base::StrID                                      key_name,
 			base::StrID                                      original_name,
 			dia::StablePosition                              stable_pos
 		) {
-			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
-			if (inserted) return false;
+			auto entry = seen_declarations.find(key_name);
+			if (entry == seen_declarations.end()) {
+				seen_declarations.put(key_name, stable_pos);
+				return false;
+			}
 
 			auto error = makeBox<dia::DuplicatedDefinitionError>(original_name.str(), stable_pos);
 
 			// Point the user at the previous declaration.
 			error->addAttachedMessage(
-				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
+				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->value)
 			);
 
 			ctx.logInt(std::move(error));
@@ -283,7 +287,7 @@ namespace compiler::helios {
 				// A class we could not resolve is already diagnosed elsewhere.
 				if (class_data->hasFailed()) continue;
 
-				base::HashMap<base::StrID, dia::StablePosition> seen_fields;
+				base::StableHashMap<base::StrID, dia::StablePosition> seen_fields;
 
 				for (const auto& field:
 				     class_data->valueOrPanic().declared_interface.getAnyFieldsView()) {
@@ -315,7 +319,7 @@ namespace compiler::helios {
 		static base::OkBad duplicatesCheck(
 			query::Context& ctx, const HOUTUnit& unit, const std::vector<SymID>& class_symbols
 		) {
-			base::HashMap<base::StrID, dia::StablePosition> seen_declarations;
+			base::StableHashMap<base::StrID, dia::StablePosition> seen_declarations;
 			bool                                            found_duplicate = false;
 
 			for (const auto& func: unit.functions) {
@@ -428,7 +432,7 @@ namespace compiler::helios {
 
 			for (auto submodule: *submodules) {
 				auto sub_hout
-					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
+					= ctx.query<QueryModuleHOUTRecursively>(submodule.value).valueOrThrow();
 				total_elements += sub_hout.size();
 
 				sub_results.emplace_back(std::move(sub_hout));

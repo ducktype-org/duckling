@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -309,7 +310,7 @@ namespace vm::persistent::detail {
 		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
 		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
 
-		base::HashMap<NodeID, BranchEntry> branch_info{};
+		base::StableHashMap<NodeID, BranchEntry> branch_info{};
 		NodeID                             next_node_id = NodeID{ 1 };
 
 	public:
@@ -460,7 +461,7 @@ namespace vm::persistent::detail {
 			if (!is_new) return node;
 
 			next_node_id++;
-			branch_info.emplace(
+			branch_info.put(
 				node,
 				BranchEntry{
 					.size        = getSize(left) + getSize(right),
@@ -488,7 +489,7 @@ namespace vm::persistent::detail {
 			if (!is_new) return node;
 
 			next_node_id++;
-			branch_info.emplace(
+			branch_info.put(
 				node,
 				BranchEntry{
 					.size        = 1,

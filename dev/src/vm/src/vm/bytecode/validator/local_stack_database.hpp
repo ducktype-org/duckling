@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
@@ -135,7 +136,7 @@ namespace vm::code {
 
 	private:
 		using NameMap = std::map<Lifetime, NameStackID>;
-		base::HashMap<base::StrID, NameMap>              name_to_namestack{};
+		base::StableHashMap<base::StrID, NameMap>              name_to_namestack{};
 		std::vector<NameStackEntry>                      namestack_entries{};
 		std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{};
 		persistent::Vector<base::StrID>                  typestack{};

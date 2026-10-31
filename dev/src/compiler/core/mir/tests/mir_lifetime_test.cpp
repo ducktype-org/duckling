@@ -481,7 +481,7 @@ private:
 			// the entry block instead.
 			auto  param       = getMIRFunctionByName(module, "maybeMoveParam");
 			auto  param_flag  = conditionalDropOf(param, "a")->arguments.at(2).get<MIRPlace>();
-			auto& entry_block = *param->blocks.at(param->block_order.front());
+			auto& entry_block = param->blocks.at(param->block_order.front());
 			auto& first_instr = entry_block.instructions.at(0);
 
 			ASSERT_EQUAL(Operation::Assign, first_instr.operation);
@@ -603,8 +603,8 @@ private:
 		std::vector<const compiler::mir::Instruction*> instructions;
 		for (const auto& block_id: func->block_order) {
 			const auto& block = func->blocks.at(block_id);
-			for (const auto& instr: block->instructions) instructions.push_back(&instr);
-			instructions.push_back(&block->terminator);
+			for (const auto& instr: block.instructions) instructions.push_back(&instr);
+			instructions.push_back(&block.terminator);
 		}
 		return instructions;
 	}
@@ -978,8 +978,8 @@ private:
 		usize intermediate_blocks_count = 0;
 		for (const auto& block_id: func->block_order) {
 			const auto& block = func->blocks.at(block_id);
-			if (block->debug_name.has_value()
-			    && block->debug_name.value() == base::StrID("scope_end.destructors"))
+			if (block.debug_name.has_value()
+			    && block.debug_name.value() == base::StrID("scope_end.destructors"))
 				intermediate_blocks_count++;
 		}
 		return intermediate_blocks_count;

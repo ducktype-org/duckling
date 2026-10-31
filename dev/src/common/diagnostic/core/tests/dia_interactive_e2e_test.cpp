@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
@@ -33,7 +34,7 @@ private:
 	void evaluateSimpleTextTemplate() {
 		// Create a simple text template
 		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
-			base::HashMap<std::string, std::string>{ { "error/type_error/simple_error", R"(
+			base::StableHashMap<std::string, std::string>{ { "error/type_error/simple_error", R"(
 metadata:
   template_type: message
   type: error
@@ -82,7 +83,7 @@ pointer_messages: {}
 	void evaluateComplexComponentTemplate() {
 		// Register templates
 		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
-			base::HashMap<std::string, std::string>{ { "error/type_check/no_match_2op_new", R"(
+			base::StableHashMap<std::string, std::string>{ { "error/type_check/no_match_2op_new", R"(
 metadata:
   template_type: message
   type: error
@@ -302,7 +303,7 @@ content:
 	void evaluatePointerMessageTemplate() {
 		// Register templates
 		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
-			base::HashMap<std::string, std::string>{ { "error/overload/call_failed", R"yaml(
+			base::StableHashMap<std::string, std::string>{ { "error/overload/call_failed", R"yaml(
 metadata:
   template_type: message
   type: error
@@ -560,7 +561,7 @@ pointer_messages:
 		auto it    = diagnostic.messages[1].pointer_messages.find(pm_id);
 		ASSERT_EQUAL(true, it != diagnostic.messages[1].pointer_messages.end());
 
-		const auto& pm = it->second;
+		const auto& pm = it->value;
 		ASSERT_EQUAL("no conversion found from string to i32", pm.content);
 
 		// Verify explore edges

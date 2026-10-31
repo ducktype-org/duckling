@@ -9,6 +9,7 @@
 #include "utils.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>
@@ -322,7 +323,7 @@ namespace dia::dia_args {
 
 	struct ExploreLink final {
 		std::string                                name;
-		base::HashMap<std::string, Box<Component>> params;
+		base::StableHashMap<std::string, Box<Component>> params;
 
 		[[nodiscard]] json toJson() const;
 
@@ -331,7 +332,7 @@ namespace dia::dia_args {
 
 	struct Message final {
 		Metadata                                   metadata;
-		base::HashMap<std::string, Box<Component>> arguments;
+		base::StableHashMap<std::string, Box<Component>> arguments;
 		std::vector<ExploreLink>                   explore_links;
 		std::vector<MessageID>                     attached_messages;
 
@@ -342,7 +343,7 @@ namespace dia::dia_args {
 
 	struct Diagnostic final {
 		Message                           main_message;
-		base::HashMap<MessageID, Message> linked_messages;
+		base::StableHashMap<MessageID, Message> linked_messages;
 
 		[[nodiscard]] json toJson() const;
 

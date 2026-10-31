@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
@@ -51,7 +52,7 @@ namespace vm::code {
 		};
 
 		struct TreeNode final {
-			base::HashMap<Child, NameStackID, ChildHash> children{};
+			base::StableHashMap<Child, NameStackID, ChildHash> children{};
 			persistent::HashMapStateID name_map_id = persistent::HashMap<base::StrID, usize>::EMPTY;
 			persistent::VectorStateID  name_stack_id = persistent::Vector<base::StrID>::EMPTY;
 			usize                      size          = 0;

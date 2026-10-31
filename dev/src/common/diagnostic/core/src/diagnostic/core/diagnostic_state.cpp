@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include "diagnostic_state.hpp"
 
 #include <unordered_set>
@@ -179,7 +180,7 @@ namespace dia::state {
 		template_file::Metadata                         metadata,
 		Box<Component>                                  header,
 		MBox<Component>                                 description,
-		base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
+		base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages,
 		std::vector<ExploreEdge>                        explore_links
 	):
 		  metadata(std::move(metadata)),

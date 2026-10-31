@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <base/collections/stable_hashmap.hpp>
 #include <vm/api/data/execution_config.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/flags.hpp>
@@ -37,6 +38,6 @@ namespace vm::code {
 		// The sum of all InstructionFlags for the instructions which may be executed
 		// (directly or indirectly) by a given function.
 		// @note The use of `InstructionFlag` instead of `FunctionFlag` here is not a mistake.
-		base::HashMap<base::StrID, InstructionFlag> flags_in_functions;
+		base::StableHashMap<base::StrID, InstructionFlag> flags_in_functions;
 	};
 }

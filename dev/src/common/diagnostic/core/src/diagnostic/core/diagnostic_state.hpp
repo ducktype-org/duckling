@@ -9,6 +9,7 @@
 #include "template_file.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>
 
@@ -243,7 +244,7 @@ namespace dia::state {
 		template_file::Metadata                         metadata;
 		Box<Component>                                  header;
 		MBox<Component>                                 description;
-		base::HashMap<PointerMessageID, PointerMessage> pointer_messages;
+		base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages;
 		/// Kept as a list, because a single edge class can have any number of edges.
 		std::vector<ExploreEdge> explore_links;
 
@@ -251,7 +252,7 @@ namespace dia::state {
 			template_file::Metadata                         metadata,
 			Box<Component>                                  header,
 			MBox<Component>                                 description,
-			base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
+			base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages,
 			std::vector<ExploreEdge>                        explore_links
 		);
 

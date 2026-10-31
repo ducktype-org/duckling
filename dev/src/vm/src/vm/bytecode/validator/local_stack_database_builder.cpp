@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/stable_hashmap.hpp>
 #include "local_stack_database_builder.hpp"
 
 using ls_db_bld = vm::code::LocalStackDbBuilder;
@@ -142,11 +143,11 @@ base::Optional<base::StrID> ls_db_bld::getName(StackStateID state, usize idx) co
 vm::code::LocalStackDb ls_db_bld::finalize() {
 	usize order = 0;
 
-	base::HashMap<base::StrID, NameMap> name_to_namestack_id{};
+	base::StableHashMap<base::StrID, NameMap> name_to_namestack_id{};
 	std::vector<NameStackEntry>         namestack_entries(tree.size());
 
 
-	auto dfs = [&](auto&& self, NameStackID node_id, base::HashMap<base::StrID, NameStackID>& names
+	auto dfs = [&](auto&& self, NameStackID node_id, base::StableHashMap<base::StrID, NameStackID>& names
 	           ) -> Lifetime {
 		CORE_ASSERT(node_id < tree.size(), "this should be true");
 		Lifetime node_lifetime{};
@@ -156,7 +157,7 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 		for (auto& [child, next_node]: tree[node_id].children) {
 			CORE_ASSERT(!names.contains(child.name), "we should never have repeating names");
 
-			names.emplace(child.name, next_node);
+			names.put(child.name, next_node);
 
 			auto next_lifetime = self(self, next_node, names);
 
@@ -182,7 +183,7 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 		return node_lifetime;
 	};
 
-	base::HashMap<base::StrID, NameStackID> names = {};
+	base::StableHashMap<base::StrID, NameStackID> names = {};
 
 	auto root_lifetime = dfs(dfs, 0, names);
 

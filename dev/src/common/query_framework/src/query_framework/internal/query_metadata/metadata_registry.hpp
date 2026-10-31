@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #pragma once
+#include <base/collections/stable_hashmap.hpp>
 #include "metadata_storage.hpp"
 
 #include <variant>

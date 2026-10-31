@@ -13,6 +13,7 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -158,7 +159,7 @@ namespace compiler::helios {
 	}
 
 	base::Optional<Attribute> attrFromStr(query::Context& ctx, base::StrID name, AttrArgs args) {
-		static const base::HashMap<std::string_view, AttrParser> mapping = {
+		static const base::StableHashMap<std::string_view, AttrParser> mapping = {
 			{ "dvm_only_impl",
 			  [](query::Context& c, AttrArgs a) { return expectNoArgs(c, DVMOnlyImpl{}, a); } },
 			{ "native_only_impl",
