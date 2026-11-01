@@ -4,78 +4,113 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Parse a known-hosts file.
+//! Parse a `known_hosts` file.
 //! All sections are copied from: <https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT>.
+//! Last access time: 1st of November 2026.
 
 #![expect(dead_code)]
 
 use tracing::{debug, trace};
 
-// The marker is optional, but if it is present then it must be one of “@cert-authority”,
-// to indicate that the line contains a certification authority (CA) key, or “@revoked”,
-// to indicate that the key contained on the line is revoked and must not ever be accepted.
+/// Marker indicating a certification authority (CA) key.
 const CA_MARKER: &str = "@cert-authority";
+/// Marker indicating a revoked key.
 const REVOKED_MARKER: &str = "@revoked";
 
 // https://github.com/openssh/openssh-portable/blob/1fbdcb402516aacce59b4cc7b7d98f06820a1e44/hostfile.h#L59-L60
+/// From libssh internals: the only supported hash algorithm is HMAC SHA1, and libssh checks that
+/// the hostname actually starts with it.
 const HASH_MAGIC: &str = "|1|";
+/// From libssh internals: delimiter used for distinguishing between different parts of hashes.
 const HASH_DELIMITER: char = '|';
+/// Hashed hostnames start with a pipe.
+const HASH_HOSTNAME_START: char = '|';
 
 // Hostnames is a comma-separated list of patterns...
+/// Delimiter used to allow multiple patterns on a single line.
 const HOSTNAMES_DELIMITER: char = ',';
 
 // A pattern may also be preceded by ‘!’ to indicate negation...
+/// If a pattern starts with this symbol, it's negated.
 const NEGATED_HOSTNAME: char = '!';
 
-type ParseResult<T> = Result<T, ParseError>;
+/// If a line starts with this symbol, it's a comment.
+const COMMENT_CHAR: char = '#';
+
+pub type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// Error type indicating failed parsing.
 pub enum ParseError {
+    /// Obligatory field was missing.
     MissingField(MissingFieldType),
+    /// Hashed hostname was missing magic.
     MissingHashMagic,
+    /// Hashed hostname was missing salt or host fields.
     MissingHashSaltOrHost,
+    /// Hashed hostname contains too many delimiters.
     TooManyHashDelims,
 }
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// Which obligatory field was missing.
 pub enum MissingFieldType {
+    /// Hostnames (patterns)
     Hostnames,
+    /// Keytype
     Keytype,
+    /// Key
     Key,
 }
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// A single line in `known_hosts` file.
 pub enum KnownHostsLine {
+    /// This line is a comment.
     Comment,
+    /// This line contains pattern to match against.
     Entry(KnownHostEntry),
 }
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// Optional marker of the line.
 pub enum Marker {
+    /// This line is certification authority key.
     CA,
+    /// This line contains a revoked key.
     Revoked,
 }
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// “Normal” (patternable) single entry.
+///
+/// If the pattern is negated and it matches, _the entire line_ is discarded.
 pub struct NormalHostname {
-    name: String,
+    /// Raw pattern.
+    pattern: String,
+    /// Whether the pattern is negated.
     is_negated: bool,
 }
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// A hashed hostname entry.
+///
+/// Uses HMAC SHA1 algorithm.
 pub struct HashedHostname {
+    /// Salt for the hash.
     salt: String,
     host: String,
 }
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// A single hostname pattern.
 pub enum Hostname {
     Hashed(HashedHostname),
     Normal(NormalHostname),
@@ -83,22 +118,29 @@ pub enum Hostname {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+/// A single entry (line) in the `known_hosts` file.
 pub struct KnownHostEntry {
+    /// Marker of the entry.
     marker: Option<Marker>,
+    /// List of patterns to match against.
     hosts: Vec<Hostname>,
+    /// Keytype.
     key_type: String,
+    /// Base64 decoded key.
     key: String,
 }
 
+/// Parse a `known_hosts` file.
 pub fn parse_known_hosts_file(file: &str) -> ParseResult<Vec<KnownHostsLine>> {
     file.lines().map(parse_known_hosts_line).collect()
 }
 
+/// Parse a single `known_hosts` line.
 pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
     let line = line.trim_ascii();
     trace!(target: "duck::git", ?line, "parsing line");
     // Lines starting with ‘#’ and empty lines are ignored as comments.
-    if line.is_empty() || line.starts_with('#') {
+    if line.is_empty() || line.starts_with(COMMENT_CHAR) {
         return Ok(KnownHostsLine::Comment);
     }
     // Each line in these files contains the following fields: marker (optional), hostnames, keytype,
@@ -108,10 +150,7 @@ pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
         .next()
         .expect("line was trimmed and is nonempty, should yield at least one element");
 
-    // The marker is optional, but if it is present then it must be one of “@cert-authority”,
-    // to indicate that the line contains a certification authority (CA) key, or “@revoked”,
-    // to indicate that the key contained on the line is revoked and must not ever be accepted.
-    // Only one marker should be used on a key line.
+    // Marker is optional.
     let marker = match marker_or_hostnames {
         CA_MARKER => Some(Marker::CA),
         REVOKED_MARKER => Some(Marker::Revoked),
@@ -143,16 +182,18 @@ pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
         key_type: key_type.to_string(),
         key: key.to_string(),
     };
-    trace!(target: "duck::git", ?entry, "parsed known-hosts entry");
+    trace!(target: "duck::git", ?entry, "parsed known_hosts entry");
     Ok(KnownHostsLine::Entry(entry))
 }
 
+/// Parse hostnames pattern(s).
+/// There are two types of patterns:
+/// * hashed: they start with a pipe. They are handled by [`parse_hashed_hostname`].
+/// * _other_: then it is a comma-separated list of patterns. Each pattern can start with an
+///   exclamation mark. Hostnames can also contain widlcards, but for parsing we ignore them.
 fn parse_hostnames(hostnames: &str) -> ParseResult<Vec<Hostname>> {
-    // Alternately, hostnames may be stored in a hashed form which hides host names and addresses
-    // should the file's contents be disclosed. Hashed hostnames start with a ‘|’ character.
-    // Only one hashed hostname may appear on a single line and none of the above negation
-    // or wildcard operators may be applied.
-    if hostnames.starts_with(HASH_DELIMITER) {
+    // This is a hashed hostname.
+    if hostnames.starts_with(HASH_HOSTNAME_START) {
         debug!(target: "duck::git", "detected hashed hostname");
         let hashed = parse_hashed_hostname(hostnames)?;
         trace!(target: "duck::git", ?hashed, "parsed hashed hostname");
@@ -161,13 +202,13 @@ fn parse_hostnames(hostnames: &str) -> ParseResult<Vec<Hostname>> {
     let mut parsed = vec![];
     // Hostnames is a comma-separated list of patterns...
     for hostname in hostnames.split(HOSTNAMES_DELIMITER) {
-        // A pattern may also be preceded by ‘!’ to indicate negation...
+        // If a pattern starts with an exclamation mark, it is negated.
         let (is_negated, hostname) = match hostname.strip_prefix(NEGATED_HOSTNAME) {
             Some(stripped) => (true, stripped),
             None => (false, hostname),
         };
         let host = NormalHostname {
-            name: hostname.to_string(),
+            pattern: hostname.to_string(),
             is_negated,
         };
         trace!(target: "duck::git", ?host, "parsed normal host");
@@ -176,6 +217,17 @@ fn parse_hostnames(hostnames: &str) -> ParseResult<Vec<Hostname>> {
     Ok(parsed)
 }
 
+/// SSHD docs only mention that hashed hostnames:
+/// * start with a pipe,
+/// * there can be only one hashed hostname in a line,
+/// * it cannot be negated nor can it contain wildcards.
+///
+/// However, we somehow need to decode the hostname. Digging into libssh internals we can find out that:
+/// * the only supported hashing algorithm is HMAC SHA1,
+/// * actual (internal format) is `|1|<base64 encoded salt>|<base64 encoded host>`.
+///
+/// So we don't bother checking for negations, wildcards nor multiple hosts: in the worst case
+/// scenario base64 decoding would fail, or we will misinterpret the line.
 fn parse_hashed_hostname(hostname: &str) -> ParseResult<HashedHostname> {
     debug_assert!(
         hostname.starts_with(HASH_DELIMITER),
@@ -207,7 +259,7 @@ mod tests {
 
     fn normal(name: &str, is_negated: bool) -> Hostname {
         Hostname::Normal(NormalHostname {
-            name: name.to_string(),
+            pattern: name.to_string(),
             is_negated,
         })
     }
