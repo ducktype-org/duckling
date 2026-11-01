@@ -18,9 +18,9 @@ params:
     description: "The type of list being parsed."
 
 header_message:
-  - "Expected the opening bracket "
+  - "Expected the opening bracket `"
   - param: "bracket"
-  - " of the "
+  - "` of the "
   - param: "list_type"
   - " list."
 

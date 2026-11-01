@@ -2011,7 +2011,7 @@ private:
 			R"(
 				expand " expand \" fun a \"  ";
 			)",
-			{ "Expected the opening bracket ( of the function parameter list.",
+			{ "Expected the opening bracket `(` of the function parameter list.",
 		      "Code expanded from here.",
 		      "Code expanded from here." },
 			1
