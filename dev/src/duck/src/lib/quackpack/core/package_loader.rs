@@ -18,8 +18,9 @@ use crate::quackpack::core::script::{PackageScript, Script};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::error::MessageError;
 use crate::util::path_ops::resolve;
-use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Is [`PackageLoader`] allowed to return a global package, if it doesn't find any package.
@@ -95,7 +96,8 @@ impl PackageLoader {
     ) -> QuackResult<PackageContext<'duck>> {
         let start = resolve(start, ctx);
         if !start.is_dir() {
-            let err = qp_err!("the path `{}` is not a directory", start.display());
+            let err =
+                MessageError::new(format!("the path `{}` is not a directory", start.display()));
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
         }
         let mut current: &Path = start.as_ref();
@@ -125,12 +127,16 @@ impl PackageLoader {
         ctx: &'duck DuckContext,
     ) -> QuackResult<PackageContext<'duck>> {
         if !path.is_dir() {
-            let err = qp_err!("the path `{}` is not a directory", path.display());
+            let err =
+                MessageError::new(format!("the path `{}` is not a directory", path.display()));
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
         }
         let manifest_path = path.join(PackageLoader::MANIFEST_NAME);
         if !manifest_path.is_file() {
-            let err = qp_err!("the directory `{}` has no manifest", path.display());
+            let err = MessageError::new(format!(
+                "the directory `{}` has no manifest",
+                path.display()
+            ));
             return Err(io::Error::new(io::ErrorKind::NotFound, err).into());
         }
         PackageContext::new(path.to_path_buf(), ctx)

@@ -185,11 +185,12 @@ impl fmt::Display for DuckcProcessBuilder {
     }
 }
 
-fn add_path_hint_to_missing_duckc(error: QuackError) -> QuackError {
+fn add_path_hint_to_missing_duckc(mut error: QuackError) -> QuackError {
     if let Some(io_err) = error.downcast_ref_in_chain::<io::Error>()
         && io_err.kind() == io::ErrorKind::NotFound
     {
-        error.add_hint("try adding duckc to the $PATH")
+        error.add_hint("try adding duckc to the $PATH");
+        error
     } else {
         error
     }
