@@ -59,8 +59,22 @@ namespace lexer {
 		[[nodiscard]]
 		base::Optional<Operator> filterNotReserved() const;
 
+		/**
+		 * @brief Whether the operator is a general binary operator: a not reserved one or the
+		 * function type arrow `->`.
+		 */
+		[[nodiscard]]
+		bool isGenBinOp() const;
+
 		[[nodiscard]]
 		i64 getGenBinOpPrecedence() const;
+
+		/**
+		 * @brief Whether the general binary operator groups from the right, like `->` in
+		 * `i32 -> i32 -> i32`.
+		 */
+		[[nodiscard]]
+		bool isGenBinOpRightAssociative() const;
 
 		[[nodiscard]]
 		std::string str() const {

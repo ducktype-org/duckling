@@ -61,6 +61,14 @@ impl UnitGraph {
         &self.dependencies[id as usize]
     }
 
+    pub fn all_deps(&self) -> &[Vec<GraphNodeId>] {
+        &self.dependencies
+    }
+
+    pub fn all_pkgs(&self) -> &HashMap<Identity, Arc<PackageData>> {
+        &self.packages
+    }
+
     /// Get the root [`Unit`] of this graph.
     /// Panics:
     /// -------
@@ -106,7 +114,7 @@ pub struct UnitGraphNode {
 }
 
 #[derive(Clone, Debug)]
-enum UnitGraphNodeData {
+pub enum UnitGraphNodeData {
     Unit(Unit),
     Input(CompilationInput),
 }
@@ -115,7 +123,7 @@ enum UnitGraphNodeData {
 pub type GraphNodeId = u32;
 
 /// Input on which [`Unit`] can depend.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub enum CompilationInput {
     /// Source code of a package.
     PackageSourceCode(Identity),
@@ -141,6 +149,10 @@ impl UnitGraphNode {
     /// Get the identifier of this node in the graph.
     pub fn id(&self) -> GraphNodeId {
         self.id
+    }
+
+    pub fn node(&self) -> &UnitGraphNodeData {
+        &self.node
     }
 
     /// Unpack this [`UnitGraphNode`] if it is a [`Unit`].
@@ -442,11 +454,11 @@ fn construct_package_data(
     let direct_pkg_deps = graph.dependencies_for_package(&identity).dependencies();
     let direct_pkg_deps = direct_pkg_deps
         .iter()
-        .map(|dep| {
+        .map(|(ename, dep)| {
             let alias = package
                 .manifest()
                 .dependencies()
-                .get_by_name(dep.name())
+                .get_by_effective_name(*ename)
                 .unwrap_or_else(|| panic!("{identity} has no dependency named {}", dep.name()))
                 .alias()
                 .map(|alias| normalise_package_name(&alias).into());

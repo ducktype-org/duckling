@@ -64,13 +64,15 @@ namespace debug_info {
 
 		base::Map<std::string, FunctionMetadata> functions{};
 		base::Map<std::string, TypeMetadata>     types{};
+		/// Global variables and constants, keyed by their mangled name.
+		base::Map<std::string, VariableMetadata> globals{};
 
 		/**
 		 * @brief Resolves every PstHashPostion in this DebugInfo in-place.
 		 *
-		 * Covers the position of every FunctionMetadata entry and every
+		 * Covers the position of every FunctionMetadata entry, every
 		 * InstructionMetadata and VariableMetadata (when present) within each
-		 * function. Positions that are already
+		 * function, and every global's VariableMetadata. Positions that are already
 		 * FilePosition entries are left unchanged. Sets source_positions_type
 		 * to SourcePositionsType::LineColumn.
 		 *
@@ -79,7 +81,8 @@ namespace debug_info {
 		void resolvePositions(const std::function<FilePosition(const PstHashPostion&)>& resolver);
 
 		/**
-		 * @brief Merges another DebugInfo into this one by inserting all its functions and types.
+		 * @brief Merges another DebugInfo into this one by inserting all its functions, types and
+		 * globals.
 		 * Does not perform any assertions.
 		 */
 		void mergeFrom(DebugInfo&& other);

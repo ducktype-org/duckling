@@ -285,4 +285,3 @@ endif()
 add_subdirectory(playground)
 add_subdirectory(tests)
 
-duck_add_test(vm program_builders tests/program_builders_test.cpp USES LibVM)

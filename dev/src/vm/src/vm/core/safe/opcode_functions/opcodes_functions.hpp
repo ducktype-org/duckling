@@ -171,6 +171,17 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Checks that @p function_id, read from a function value, references a function.
+		 * @throws exceptions::VMNullFunctionCallException if the function value is null.
+		 * @throws exceptions::VMInvalidFunctionValueException if it references no function.
+		 */
+		static VM_OPFUN_INLINE void checkCallee(const SafeVMThread& thread, usize function_id) {
+			if (function_id == 0) throw exceptions::VMNullFunctionCallException();
+			if (!thread.process_program->getFunctions().contains(function_id))
+				throw exceptions::VMInvalidFunctionValueException();
+		}
+
+		/**
 		 * @brief Prepares the execution variables and frames for a call to a function with a
 		 * specified id.
 		 *
@@ -261,7 +272,7 @@ namespace vm {
 		 *
 		 * Unlike `init_off_type`, which leaves the slot blockless until something asks for a
 		 * block, this creates one up front. Nothing the lowering emits takes this path any more;
-		 * the only caller left is `initFromVMValue`, i.e. the hand-built start functions.
+		 * the only caller left is `initFromVMValue_imm_off`, i.e. the hand-built start functions.
 		 */
 		static VM_OPFUN_INLINE void performInit(
 			byte*& local_stack, Frame*& frame, SafeVMThread& thread, u64 byte_offset, TypeCRef type

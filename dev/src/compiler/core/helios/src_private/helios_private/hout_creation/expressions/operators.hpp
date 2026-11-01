@@ -16,6 +16,7 @@
 #include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax it.
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/lang_primitives.hpp>
+#include <helios/tsh/coercions/coercion.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
 #include <lexer/token_common.hpp>
@@ -40,7 +41,7 @@ namespace compiler::helios::code {
 	 * @return Returns the operation along with coercions to apply to operands in format
 	 * (builtin_operation, coercion)
 	 */
-	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
+	base::Optional<std::tuple<BuiltinUnary, tsh::coercions::Coercion>> findNumericUnaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
 	);
 
@@ -49,15 +50,17 @@ namespace compiler::helios::code {
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
 	 * @return Returns the operation with proper coercions applied to operands
 	 */
-	base::Optional<std::tuple<BuiltinBinaryOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
-	);
+	base::Optional<
+		std::tuple<BuiltinBinaryOperation, tsh::coercions::Coercion, tsh::coercions::Coercion>>
+		findNumericBinaryBuiltin(
+			query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+		);
 
 	/**
 	 * @brief Finds the appropriate binary operator to call and constructs the corresponding
 	 * HOUT expression. Consumes the provided expressions of the arguments.
 	 * Currently used for all operators other than `As` (type cast), `Pipe` (variant type
-	 * construction), and assignement operators (`X=`). Perhaps they will be moved here later.
+	 * construction), and assignment operators (`X=`). Perhaps they will be moved here later.
 	 * @param ctx The context of the query
 	 * @param op The operator
 	 * @param op_origin The origin of the operator in the PST

@@ -19,7 +19,9 @@ namespace compiler::helios {
 		enum class Kind {
 			VmInitializationFailed,
 			CodeLoadFailed,
+			QueryContextInitFailed,
 			ArgConversionFailed,
+			ArgFreeFailed,
 			FunctionRunFailed,
 			VmJoinFailed,
 			GetExitValueFailed,

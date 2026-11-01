@@ -43,7 +43,7 @@ use core::fmt;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use tracing::{debug, info, warn};
+use tracing::{debug, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
@@ -98,7 +98,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
     pub async fn solve(self) -> QuackResult<SolverAnswer> {
         self.root_pcx
             .ctx()
-            .info("starting solving the dependency graph")?;
+            .info_verbose("starting solving the dependency graph")?;
         let root_pkg = self.root_pcx.local_package_id()?;
 
         let (initial_freeze, empty_input) = self.get_initial_freeze(root_pkg)?;
@@ -135,7 +135,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
             Some(freeze) => match SolverFreeze::try_from_venv_freeze(root_pkg, freeze) {
                 Ok(freeze) => Ok((freeze, false)),
                 Err(malformed) => {
-                    warn!(error = ?malformed, "previous storage freeze is malformed");
+                    debug!(target: "duck::solver", error = ?malformed, "previous storage freeze is malformed");
                     self.root_pcx
                         .ctx()
                         .warning("previous freezefile was malformed, ignoring it")?;
@@ -159,7 +159,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         }
         self.root_pcx
             .ctx()
-            .info("no solution found, retrying without previous freeze")?;
+            .info_verbose("no solution found, retrying without previous freeze")?;
         self.remove_previous_freeze();
         self.solve().await
     }
@@ -227,14 +227,14 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
     /// Main entry point.
     /// Determines if all the direct and transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`SolverEngineData`] for running the engine by running the gathering processs on unsatisfied dependencies.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     async fn prepare_solving<Access: GitAccess>(
         self,
         fetcher: &Fetcher<'_>,
         git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
         let ctx = fetcher.ctx();
-        ctx.info("starting gathering the dependency graph")?;
+        ctx.info_verbose("starting gathering the dependency graph")?;
         let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = Box::new(self.root_pcx.package().manifest().clone());
@@ -258,10 +258,10 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
             )
             .await?;
         if is_root_satisfied {
-            debug!("root has been satisfied");
+            debug!(target: "duck::solver", "the previous freeze still satisfies the root, trimming it");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
-            ctx.info("no need to run the gathering or the solver engine")?;
+            ctx.info_verbose("no need to run the gathering or the solver engine")?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
                 new_freeze: trimmed,
                 pkgs_manifests: prev_freeze_manifests,
@@ -273,7 +273,7 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
         }
 
         let root_path = self.root_pcx.package().root().into();
-        ctx.info("running gathering")?;
+        ctx.info_verbose("running gathering")?;
         let gathered_info = Self::run_solver_gatherer(
             &gatherer,
             root_manifest,
@@ -283,7 +283,7 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
             self.mode,
         )
         .await?;
-        info!(?gathered_info, "finished gathering");
+        trace!(target: "duck::solver", ?gathered_info, "finished gathering");
         let solver_input = SolverInput::from_freeze_and_gathered_info(
             &maximal_valid_freeze,
             prev_freeze_manifests,
@@ -299,7 +299,6 @@ impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
 
     /// Helper for [`Self::prepare_solving`].
     /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
-    #[tracing::instrument(skip_all)]
     async fn run_solver_gatherer<Access: GitAccess>(
         gatherer: &Gatherer<'_, '_, Access>,
         mut root_manifest: Box<Manifest>,
@@ -350,12 +349,12 @@ struct SolverEngineData {
 impl SolverEngineData {
     /// Finds dependency resolution of a given package.
     /// Returns a [`SolverAnswer`].
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
-        ctx.info("starting the solver engine")?;
+        ctx.info_verbose("starting the solver engine")?;
         let (solution, manifests) =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
-        debug!(?solution);
+        debug!(target: "duck::solver", ?solution);
         let new_freeze = self.current_freeze.new_freeze(&manifests, solution)?;
         Ok(SolverAnswer {
             new_freeze,

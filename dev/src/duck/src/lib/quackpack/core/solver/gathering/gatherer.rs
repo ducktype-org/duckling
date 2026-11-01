@@ -18,7 +18,7 @@ use std::pin::Pin;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
 use tempfile::TempDir;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
@@ -62,7 +62,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     /// Main entry point, explores the dependency graph of the root package in a BFS-like manner.
     /// For a given dependency entry in a manifest, fetches the manifests of the potential realizations
     /// and repeats the process for their manifests.
-    #[tracing::instrument(skip_all, fields(mode, offline = self.fetcher.ctx().is_offline()))]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all, fields(?mode, offline = self.fetcher.ctx().is_offline()))]
     pub async fn explore(
         &self,
         root_path: PathBuf,
@@ -85,7 +85,6 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         state.try_into()
     }
 
-    #[tracing::instrument(skip_all, fields(mode, offline = self.fetcher.ctx().is_offline()))]
     async fn explore_deps(
         &self,
         root_fetch_response: FetchResponse,
@@ -144,7 +143,6 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     /// and returns a dummy [`FetchResponse`], to create a starting point for the [`Gatherer::explore()`] function.
     ///
     /// Note: We assume that `root_features` are expanded.
-    #[tracing::instrument(skip_all, fields(root_path))]
     fn fetch_root(
         &self,
         root_path: PathBuf,
@@ -201,13 +199,13 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     ///
     /// After performing the fetch we check that the resulting manifests satisfy the requests.
     /// For registry fetches we also check that repository dependencies do not have local dependencies.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", skip_all)]
     pub async fn fetch(
         &self,
         request: ManifestsRequest,
         errors: &RefCell<ErrorsLogger>,
     ) -> QuackResult<FetchResponse> {
-        debug!(?request);
+        trace!(target: "duck::solver", ?request);
         match request {
             ManifestsRequest::Pinned(pinned_request) => {
                 self.fetch_registry_pinned(pinned_request, errors).await
@@ -247,7 +245,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         request: PinnedRequest,
         errors: &RefCell<ErrorsLogger>,
     ) -> QuackResult<FetchResponse> {
-        trace!("fetching registry (pinned)");
+        trace!(target: "duck::ducknest", "fetching a pinned package from the registry");
         if !matches!(request.id.source.kind(), SourceKind::Registry) {
             qp_bail_internal!(
                 "tried to make pinned registry fetch for a non-registry source: {request:#?}"
@@ -285,7 +283,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 },
             ))),
             Err(e) => {
-                error!(error = %e, "failed to fetch");
+                debug!(target: "duck::ducknest", error = %e, "failed to fetch a pinned package");
                 errors.borrow_mut().log(e);
                 Ok(FetchResponse::failed_pinned(request.id, request.version))
             }
@@ -302,7 +300,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         real_name: StrId,
         errors: &RefCell<ErrorsLogger>,
     ) -> FetchResponse {
-        trace!("fetching registry (not pinned)");
+        trace!(target: "duck::ducknest", "fetching all versions of `{real_name}` from the registry");
         let fetcher_response = match self.fetcher.get_package_all_metadata(url, real_name).await {
             Ok(response) => response,
             Err(e) => {
@@ -335,7 +333,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 }
                 Err(e) => {
                     // We log errors and filter only good manifests.
-                    error!(error = %e, "failed to fetch");
+                    debug!(target: "duck::ducknest", error = %e, "skipping a bad manifest");
                     errors.borrow_mut().log(e);
                 }
             }
@@ -350,7 +348,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
-    #[tracing::instrument(skip_all, fields(?request, %url, ?reference))]
+    #[tracing::instrument(target = "duck::git", level = "debug", skip_all, fields(name = %request.id.name, %url, ?reference))]
     async fn fetch_git(
         &self,
         request: &NotPinnedRequest,
@@ -358,7 +356,6 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         reference: GitReference,
         errors: &RefCell<ErrorsLogger>,
     ) -> QuackResult<FetchResponse> {
-        trace!("fetching git");
         if let Some(cached_response) = self.try_get_cached_git(request, url, reference, errors) {
             return Ok(cached_response);
         }
@@ -402,7 +399,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 self.git_access
                     .store(url, &cloned_pkg.commit_hash, path_where_cloned.path())
         {
-            error!(error = %e, "failed to store a new git");
+            debug!(target: "duck::git", error = %e, "failed to store the cloned repository");
             errors.borrow_mut().log(e);
             return Ok(FetchResponse::failed_not_pinned(request.id));
         }
@@ -434,7 +431,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         if let Some(cached_git) =
             self.try_get_cached_git_inner(request, url, reference, &mut cache_logger)
         {
-            debug!("git request was cached");
+            debug!(target: "duck::git", "found the git package in the cache");
             return Some(FetchResponse::Success(FetchSuccess::NotPinned(cached_git)));
         }
         if !cache_logger.is_empty() {
@@ -505,13 +502,13 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     ) -> QuackResult<Option<FetchResponse>> {
         match self.try_git_fastpath_inner(request, url, reference).await {
             Err(e) => {
-                error!(error = %e, "fast path failed");
+                debug!(target: "duck::git", error = %e, "git fast path failed");
                 // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
                 // as it is well ... a fast path.
                 display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx()).map(|_| None)
             }
             Ok(Some(fast_path_git)) => {
-                debug!("git fast path worked");
+                debug!(target: "duck::git", "git fast path worked");
                 Ok(Some(FetchResponse::Success(FetchSuccess::NotPinned(
                     fast_path_git,
                 ))))

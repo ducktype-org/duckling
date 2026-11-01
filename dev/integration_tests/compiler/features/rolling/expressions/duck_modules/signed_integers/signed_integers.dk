@@ -14,8 +14,9 @@ fun main() -> i64 = {
     let i8_max: i8 = 127i8;
     let i8_min: i8 = i8_max + 1i8;
 
-    # @TODO: #1732 This and INT_MIN of all the other sizes don't work...
-    # let i8_min: i8 = -128u8;
+    if (i8_min != -128i8) {
+        builtin_output_i64(3);
+    }
 
     if (i8_min - 1i8 != 127i8) {
         builtin_output_i64(4);
@@ -38,6 +39,10 @@ fun main() -> i64 = {
 
     if (i16_min - 1i16 != 32767i16) {
         builtin_output_i64(7);
+    }
+
+    if (i16_min != -32768i16) {
+        builtin_output_i64(17);
     }
     
     ### I32 ###
@@ -66,7 +71,46 @@ fun main() -> i64 = {
     if (i32_min - 1i32 != 2147483647i32) {
         builtin_output_i64(12);
     }
+
+    if (i32_min != -2147483648i32) {
+        builtin_output_i64(18);
+    }
+
+    ### I64 ###
+    let i64_max: i64 = 9223372036854775807i64;
+    let i64_min: i64 = i64_max + 1i64;
+
+    if (i64_min != -9223372036854775808i64) {
+        builtin_output_i64(19);
+    }
     
+    ### SMALLEST VALUES ###
+    let i8_min_literal: i8 = -128i8;
+    if (i8_min_literal != i8_min) {
+        builtin_output_i64(22);
+    }
+
+    let i16_min_literal: i16 = -32768i16;
+    if (i16_min_literal != i16_min) {
+        builtin_output_i64(23);
+    }
+
+    let i32_min_literal: i32 = -2147483648i32;
+    if (i32_min_literal != i32_min) {
+        builtin_output_i64(24);
+    }
+
+    let i64_min_literal: i64 = -9223372036854775808i64;
+    if (i64_min_literal != i64_min) {
+        builtin_output_i64(25);
+    }
+
+    var reassigned: i8 = 0i8;
+    reassigned = -128i8;
+    if (reassigned != i8_min) {
+        builtin_output_i64(26);
+    }
+
     ### NUMERIC LITERALS ###
     let bin = 0b010010101;
     if (bin != 149) {
@@ -86,6 +130,19 @@ fun main() -> i64 = {
     let hex2 = 0xEFABC1239;
     if (hex != hex2) {
         builtin_output_i64(16);
+    }
+
+    # A literal that does not fit into `i64` is a `u64`.
+    let u64_max = 18446744073709551615;
+    if (u64_max != 18446744073709551615u64) {
+        builtin_output_i64(20);
+    }
+
+    # A negative literal without a type is an `i32`, or an `i64` if it does not fit into `i32`.
+    let negative = -2147483648;
+    let negative_i32: i32 = negative;
+    if (negative_i32 + 1i32 != -2147483647i32) {
+        builtin_output_i64(21);
     }
     
     return 0i64;

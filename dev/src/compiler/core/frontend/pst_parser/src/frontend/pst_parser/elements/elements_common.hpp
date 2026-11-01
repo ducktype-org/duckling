@@ -96,6 +96,8 @@ namespace pst::internal {
 		static std::string attributeArgList() { return "attribute argument"; }
 
 		static std::string callList() { return "call"; }
+
+		static std::string arrayLiteralList() { return "array literal"; }
 	};
 
 	/**

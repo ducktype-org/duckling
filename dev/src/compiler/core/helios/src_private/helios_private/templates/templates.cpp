@@ -8,7 +8,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/lang_parser_context.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/template_expansion_pst.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -87,8 +87,8 @@ namespace compiler::helios::templates {
 	struct TemplateBakeStorage final {
 		SymID baked_template_sym_id;
 
-		// @TODO: #3071 see if anything will have to be changed here
-		pst::PST<pst::TemplateStmt> baked_template_pst;
+		// @TODO: #3892 see if anything will have to be changed here
+		Box<pst::PST<pst::TemplateStmt>> baked_template_pst;
 	};
 
 	void TemplateBakePSTLinkedData::PostponedDataDeleter::del(std::atomic<MRef<PostponedData>>* ptr
@@ -159,7 +159,6 @@ namespace compiler::helios::templates {
 			);
 
 
-			// @TODO: #3110 see if this is ok:
 			hashing::ComponentHash hash_ctx
 				= hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
 
@@ -167,25 +166,15 @@ namespace compiler::helios::templates {
 			auto cloned
 				= template_statement->clone().dynamicCast<pst::TemplateStmt>().toOptBox().value();
 
-			// @TODO: #3110 this is a total hack,
-			// the tokens inside the cloned pst are still pointing to the original source,
-			// this is just a good-ish, but total hack copy of a token source,
-			// so we have a token source to construct the new PST with.
-			auto token_source_hack
-				= tokenizer::makeTokenSource(template_statement->getStablePosition()
-			                                     .getActiveSourcePositionIllegalAccess()
-			                                     .getSource()
-			                                     ->getFile());
-
-			auto baked_pst = pst::PST<pst::TemplateStmt>::fromClone(
-				std::move(cloned), std::move(token_source_hack), hash_ctx
+			auto baked_pst = pst::TemplateExpansionPST<pst::TemplateStmt>::fromElement(
+				std::move(cloned), std::move(hash_ctx)
 			);
 
 
-			auto baked_root      = baked_pst.getRootElement().unlock(ctx);
+			auto baked_root      = baked_pst->getRootElement().unlock(ctx);
 			auto baked_statement = baked_root->getInnerStatement();
 
-			baked_pst.setAdditionalRootData(pst::AdditionalRootData{
+			baked_pst->setAdditionalRootData(pst::AdditionalRootData{
 				.pst_parent = pst::AdditionalRootData::BakedTemplateParent{
 					.template_bake_data = TemplateBakePSTLinkedData{
 						.pst_parent_element
@@ -202,7 +191,7 @@ namespace compiler::helios::templates {
 
 			// @TODO: #3072 try to improve this.
 			// We atomically set postponed_data here,
-			// The reason we can't do it in the initial setAdditionalRootData call is because
+			// the reason we can't do it in the initial setAdditionalRootData call is because
 			// we can't call QueryPrimaryCodeScopeFor(baked_root) or
 			// QuerySymbolOfSTMT(baked_statement) without pst_parent_element set (it is needed for
 			// relevant scopes be created). At the same time this scope is needed to generate the

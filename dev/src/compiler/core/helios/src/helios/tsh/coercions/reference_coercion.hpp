@@ -12,11 +12,12 @@
 #pragma once
 
 #include "../symbol_type.hpp"
+#include "coercion_mode.hpp"
 
 #include <cstdint>
 #include <string>
 
-namespace compiler::tsh {
+namespace compiler::tsh::coercions {
 	/**
 	 * @brief What has to happen to the reference part of a value to reach the target kind.
 	 */
@@ -25,7 +26,9 @@ namespace compiler::tsh {
 		None,
 		/// `ref`/`box` -> `direct`. Deref.
 		Deref,
-		/// `direct` -> `ref`/`box`, Needs `&` or `new`.
+		/// `direct`/`box` -> `ref`. Implicitly taken by `ref`, only in CoercionMode::ImplicitRefOf.
+		RefOf,
+		/// `direct` -> `ref`/`box`, `ref` -> `box`, `box`-> `ref`. Needs `&` or `new`.
 		Illegal,
 	};
 
@@ -33,6 +36,15 @@ namespace compiler::tsh {
 	 * @brief Everything a coercion needs to know about a reference-kind coercion.
 	 */
 	struct ReferenceCoercion final {
+		[[nodiscard]]
+		static ReferenceCoercion illegal() {
+			return ReferenceCoercion{
+				.adjustment        = ReferenceAdjustment::Illegal,
+				.creates_new_value = false,
+				.points_to_source  = false,
+			};
+		}
+
 		ReferenceAdjustment adjustment;
 
 		/**
@@ -74,6 +86,9 @@ namespace compiler::tsh {
 	 *  TO  Ref     |   No   | Yes | No
 	 *      Box     |   No   | No  | Yes
 	 * ```
+	 * In the CoercionMode::ImplicitRefOf mode `Direct` -> `Ref` and `Box` -> `Ref` are legal too.
 	 */
-	[[nodiscard]] ReferenceCoercion referenceCoercionRule(ReferenceKind from, ReferenceKind to);
+	[[nodiscard]] ReferenceCoercion referenceCoercionRule(
+		ReferenceKind from, ReferenceKind to, CoercionMode mode = CoercionMode::Default
+	);
 }

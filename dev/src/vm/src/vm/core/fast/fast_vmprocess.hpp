@@ -65,8 +65,6 @@ namespace vm::fast {
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;
 
-		std::expected<api::Response, api::StateError> getExitCode() override;
-
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
 		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
@@ -107,9 +105,13 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
+		std::expected<api::Response, api::ApiError> freeVMValue(Ref<IVMValue> vm_value) override;
 
-		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
+		[[nodiscard]] std::vector<api::ThreadID> getAllActiveThreadIDs() const override;
+
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedApiThreadIds() const override;
+
+		void joinFinishedThreads() override;
 
 		FastVMThread& getMainVMThread();
 

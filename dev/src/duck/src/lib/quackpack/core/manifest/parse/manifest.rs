@@ -12,27 +12,30 @@ use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::lints::LintLevel;
+use crate::quackpack::core::lints::errors::Errors;
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    BuildOptions, Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata,
-    ParseMode, Profile, Profiles, ScopeGuard, Version,
+    BuildOptions, Dependencies, DependencyKind, Features, Lints, Manifest, OptLevel,
+    PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
-    Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
-    Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
+    DuckLints as DuckLintsSchema, Lints as LintsSchema, Manifest as ManifestSchema,
+    Metadata as MetadataSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
+    VenvConfig as VenvConfigSchema,
 };
 use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
-#[tracing::instrument(skip_all)]
 #[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
     mode: ParseMode<'_>,
     warnings: &mut Warnings,
+    _errors: &mut Errors,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
@@ -62,6 +65,14 @@ pub(crate) fn parse(
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
+
+    let lints = if let Some(lints) = schema.lints.as_ref() {
+        let guard = scope.push("lints".to_string());
+
+        parse_lints(lints, guard)?
+    } else {
+        Lints::default()
+    };
     match mode {
         ParseMode::FrontMatter { frontmatter_path } => {
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
@@ -99,6 +110,7 @@ pub(crate) fn parse(
                 profiles,
                 VenvConfig::default_for_script(ctx),
                 BuildOptions::default(),
+                lints,
             );
             Ok(manifest)
         }
@@ -115,7 +127,7 @@ pub(crate) fn parse(
             let Some(ref name) = metadata.name else {
                 qp_bail!("missing the obligatory key `metadata.name`")
             };
-            debug!(package_name = %name, package_version = %version);
+            debug!(%name, %version);
 
             {
                 let mut guard1 = scope.push("metadata".to_string());
@@ -145,7 +157,6 @@ pub(crate) fn parse(
             };
 
             let build_options = parse_build_options(metadata);
-
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -155,6 +166,7 @@ pub(crate) fn parse(
                 profiles,
                 venv,
                 build_options,
+                lints,
             ))
         }
     }
@@ -257,4 +269,36 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
 fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
     let links = input.links.as_ref().map(StrId::from);
     BuildOptions { links }
+}
+
+/// Parse [`LintsSchema`] from the schema.
+fn parse_lints(input: &LintsSchema, mut scope: ScopeGuard<'_>) -> QuackResult<Lints> {
+    let duck_lints = if let Some(ref duck_lints) = input.duck {
+        let guard = scope.push("duck".into());
+        parse_duck_lints(duck_lints, guard)?
+    } else {
+        HashMap::default()
+    };
+    Ok(Lints { duck_lints })
+}
+
+fn parse_duck_lints(
+    input: &DuckLintsSchema,
+    mut scope: ScopeGuard<'_>,
+) -> QuackResult<HashMap<String, LintLevel>> {
+    let overrides = input
+        .0
+        .iter()
+        .map(|(name, level)| {
+            let scope = scope.push(name.to_string());
+            let level = parse_single_lint_level(level, scope)?;
+            Ok((name.to_string(), level))
+        })
+        .collect::<QuackResult<_>>()?;
+    Ok(overrides)
+}
+
+/// Parse a single lint level from [`LintsSchema`].
+fn parse_single_lint_level(level: &str, scope: ScopeGuard<'_>) -> QuackResult<LintLevel> {
+    level.parse().with_context(|| scope.make_context_string())
 }

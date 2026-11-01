@@ -21,7 +21,7 @@
 #include <frontend/pst_parser/elements/implementations/preamble.hpp>
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
 #include <frontend/pst_parser/elements/parser_common_errors.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -43,12 +43,12 @@ class PSTErrorTests: public tester::TestSuite {
 
 		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
-		template<typename Element, typename Parser>
+		template<typename Element>
 		[[nodiscard]]
-		static base::OkBad testCloning(const pst::PST<Element, Parser>& pst) {
-			if (not pst.hasErrors()) {
+		static base::OkBad testCloning(CRef<pst::PST<Element>> pst) {
+			if (not pst->hasErrors()) {
 				return pst::testElementCloning(
-					base::CRef(&*pst.getRootElement().illegalAccess().value())
+					base::CRef(&*pst->getRootElement().illegalAccess().value())
 				);
 			}
 			return base::OK;
@@ -67,8 +67,10 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
+			auto parsed = pst::ParsedPST<Element>::template fromContents<Parser>(
+				code, pst::PSTType::Program
+			);
+			return ((not parsed->hasErrors()) == good && testCloning<Element>(parsed.ref()).isOk());
 		}
 
 		[[nodiscard]]
@@ -76,48 +78,6 @@ class PSTErrorTests: public tester::TestSuite {
 			std::stringstream ss;
 			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
 			ss << base::typeName<Element>();
-			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
-			return ss.str();
-		}
-	};
-
-	template<bool good, typename Parser>
-	struct Example<pst::CodeBlock, good, Parser>: public GenExample {
-		Example(std::string code): GenExample(std::move(code)) {}
-
-		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}
-			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
-		}
-
-		[[nodiscard]]
-		std::string message() const override {
-			std::stringstream ss;
-			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
-			ss << base::typeName<pst::CodeBlock>();
-			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
-			return ss.str();
-		}
-	};
-
-	template<bool good, typename Parser>
-	struct Example<pst::CodeBlockOrStmt, good, Parser>: public GenExample {
-		Example(std::string code): GenExample(std::move(code)) {}
-
-		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}
-			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
-		}
-
-		[[nodiscard]]
-		std::string message() const override {
-			std::stringstream ss;
-			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
-			ss << base::typeName<pst::CodeBlockOrStmt>();
 			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
 			return ss.str();
 		}
@@ -134,14 +94,14 @@ class PSTErrorTests: public tester::TestSuite {
 			  class_name(base::StrID(class_name.c_str())) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
+			auto parsed = pst::ParsedPST<Element>::template fromContents<Parser>(
 				this->code,
 				makeBox<pst::LangParserContext>(
 					class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class
 				),
 				hashing::ComponentHash{}
 			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
+			return ((not parsed->hasErrors()) == good && testCloning<Element>(parsed.ref()).isOk());
 		}
 
 		[[nodiscard]]
@@ -226,15 +186,23 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
+	Example<pst::Fun, true>      contextual_fixity_names{
+        "fun prefix(suffix: i64) -> i64 = { return suffix; }"
+	};
+	Example<pst::Fun, false> fixity_on_plain_name{ "fun prefix ordinary(n: i64) -> i64 = n;" };
 
-	Example<pst::Fun, true>      operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
-	Example<pst::FunDecl, true>  operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
-	Example<pst::Class, true>    operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
-	Example<pst::Fun, false>     assignment_operator_function1{ "fun +*=(a: i64) = {}" };
-	Example<pst::Fun, false>     bare_assign_operator_function{ "fun =(a: i64) = {}" };
-	Example<pst::Fun, false>     comparison_operator_function1{ "fun <(a: i64) = {}" };
-	Example<pst::Fun, false>     special_operator_function1{ "fun ->(a: i64) = {}" };
-	Example<pst::Fun, false>     special_operator_function2{ "fun .?(a: i64) = {}" };
+	Example<pst::Fun, true>     operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
+	Example<pst::Fun, true>     prefix_operator_function{ "fun prefix +*(a: i64) -> i64 = {}" };
+	Example<pst::Fun, true>     suffix_operator_function{ "fun suffix +*(a: i64) -> i64 = {}" };
+	Example<pst::FunDecl, true> operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
+	Example<pst::FunDecl, true> suffix_operator_fundecl{ "fundecl suffix +*(a: i64) -> i64" };
+	Example<pst::Class, true>   operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
+	Example<pst::Class, true> suffix_operator_method{ "class Foo { fun suffix +*() -> Foo = {} }" };
+	Example<pst::Fun, false>  assignment_operator_function1{ "fun +*=(a: i64) = {}" };
+	Example<pst::Fun, false>  bare_assign_operator_function{ "fun =(a: i64) = {}" };
+	Example<pst::Fun, false>  comparison_operator_function1{ "fun <(a: i64) = {}" };
+	Example<pst::Fun, false>  special_operator_function1{ "fun ->(a: i64) = {}" };
+	Example<pst::Fun, false>  special_operator_function2{ "fun .?(a: i64) = {}" };
 	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
 
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
@@ -416,8 +384,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
 	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
 	Example<pst::UniversalExprHolder, true> range_operator_from{ "x[1 ..]" };
-	// This is because it's lexed as two floats 1. and .10, not necessarily desired behaviour
-	Example<pst::UniversalExprHolder, false> range_operator_bad{ "x[1..10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_no_spaces{ "x[1..10]" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
 	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };
@@ -615,32 +582,27 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 	/**
-	 * @brief Renders every diagnostic @p parsed logged into a string, so a test can assert on the
-	 * text a user would read. The renderer emits no colour escapes here, so the text is plain.
+	 * @brief Prints the text of the diagnostics into a string.
 	 */
 	template<class Element>
-	static std::string renderedDiagnostics(const pst::PST<Element>& parsed) {
+	static std::string renderedDiagnostics(CRef<pst::ParsedPST<Element>> parsed) {
 		std::stringstream raw;
-		parsed.getLogger()->terminalPrint(raw);
+		parsed->getLogger()->terminalPrint(raw);
 		return raw.str();
 	}
 
 	/**
-	 * @brief The exact text a user reads when the parser runs into a synthetic sentinel, and the
-	 * guard that ordinary tokens keep their rendering. A sentinel marks a boundary and carries no
-	 * source text, so the message must describe the boundary rather than leak
-	 * `Sentinel '<payload>'`, including the by-construction empty payload of the sentinel that
-	 * closes a statement's fallback window. See issue #2151.
+	 * @brief Tests the error messages that reference `Sentinels` (tokens that act as a boundary
+	 * like EOF, end of brackets, etc.). These errors shouldn't directly reference `Sentinel` tokens
+	 * and should describe them properly.
 	 */
 	void sentinelMessageTests() {
-		// The end-of-window sentinel. `var` is followed by a keyword the statement-length heuristic
-		// reads as the start of a new statement, so the window holds only the first `var` and the
-		// identifier slot that must follow it reads the window's boundary instead of a real token.
+		// Tests regarding the end of a fallback window.
 		{
-			auto parsed = pst::PST<>::fromContents(
+			auto parsed = pst::ParsedPST<>::fromContents(
 				"fun main() = {\n    var var = 10;\n}\n", pst::PSTType::Program
 			);
-			const std::string text = renderedDiagnostics(parsed);
+			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
 				text.find("Sentinel") == std::string::npos,
@@ -666,13 +628,11 @@ class PSTErrorTests: public tester::TestSuite {
 			);
 		}
 
-		// The end-of-file sentinel, reached when the parsed fragment simply stops. A whole module
-		// never gets here, because the lexer reports the unbalanced braces first, so this has to be
-		// a fragment parse.
+		// Tests regarding the end of a file.
 		{
 			auto parsed
-				= pst::PST<pst::FlowPattern>::fromContents("(a, b) as", pst::PSTType::Program);
-			const std::string text = renderedDiagnostics(parsed);
+				= pst::ParsedPST<pst::FlowPattern>::fromContents("(a, b) as", pst::PSTType::Program);
+			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
 				text.find("Sentinel") == std::string::npos,
@@ -684,13 +644,13 @@ class PSTErrorTests: public tester::TestSuite {
 			);
 		}
 
-		// The bracket sentinel, reached when the construct is cut by a closing bracket.
+		// Tests regarding the end of a bracketed expression.
 		{
-			auto parsed = pst::PST<>::fromContents(
+			auto parsed = pst::ParsedPST<>::fromContents(
 				"fun main() = {\n    match (x) {\n        case (a, b) as\n    }\n}\n",
 				pst::PSTType::Program
 			);
-			const std::string text = renderedDiagnostics(parsed);
+			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
 				text.find("Sentinel") == std::string::npos,
@@ -704,13 +664,11 @@ class PSTErrorTests: public tester::TestSuite {
 			);
 		}
 
-		// Control: a keyword that really is in the source is not a sentinel and must keep the
-		// ordinary rendering, or the fix did more than describe boundaries.
 		{
-			auto parsed = pst::PST<>::fromContents(
+			auto parsed = pst::ParsedPST<>::fromContents(
 				"fun main() = {\n    var if = 10;\n}\n", pst::PSTType::Program
 			);
-			const std::string text = renderedDiagnostics(parsed);
+			const std::string text = renderedDiagnostics(parsed.ref());
 
 			assertTrue(
 				text.find("Keyword 'if'") != std::string::npos,

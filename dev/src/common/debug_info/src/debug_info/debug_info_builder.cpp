@@ -69,6 +69,16 @@ namespace debug_info {
 		return addType(std::move(mangled_name), TypeMetadata{ .name = std::move(display_name) });
 	}
 
+	DebugInfoBuilder& DebugInfoBuilder::addGlobal(
+		std::string mangled_name, std::string global_name, base::Optional<SourcePosition> position
+	) {
+		info.globals.insertOrAssign(
+			std::move(mangled_name),
+			VariableMetadata{ .name = std::move(global_name), .position = std::move(position) }
+		);
+		return *this;
+	}
+
 	FunctionBuilder DebugInfoBuilder::beginFunction(
 		std::string                    mangled_name,
 		base::Optional<std::string>    function_name,

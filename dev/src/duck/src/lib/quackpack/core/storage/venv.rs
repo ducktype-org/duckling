@@ -62,13 +62,15 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info, trace};
+use tracing::{debug, trace, warn};
 
 use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::hash;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::util::path_ops::{
+    MkdirOptions, copy_file, mkdir, read_from_path_to_string, remove_tree, touch, try_fsync_dir,
+};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -142,12 +144,10 @@ impl VenvData {
     }
 
     /// Load [`VenvData`] from the given path.
-    #[tracing::instrument(skip_all, fields(path = %path.display()))]
     fn load(path: &Path) -> QuackResult<Self> {
-        trace!("loading venv data");
-        let content = path.read_to_string()?;
+        trace!("loading venv data from `{}`", path.display());
+        let content = read_from_path_to_string(path)?;
         let Some((data, found_checksum)) = content.rsplit_once("\n") else {
-            error!("missing a newline");
             return Err(CorruptedVenvError {
                 reason: CorruptedVenvReason::MissingNewLine,
                 path: path.to_path_buf(),
@@ -156,11 +156,6 @@ impl VenvData {
         };
         let expected_checksum = hash::sha256_string(data);
         if expected_checksum != found_checksum {
-            error!(
-                %expected_checksum,
-                %found_checksum,
-                "invalid checksum",
-            );
             return Err(CorruptedVenvError {
                 reason: CorruptedVenvReason::InvalidChecksum {
                     actual: found_checksum.to_string(),
@@ -171,7 +166,6 @@ impl VenvData {
             .into());
         }
         serde_json::from_str(data).map_err(|e| {
-            error!(error = %e, "json error");
             let err = QuackError::from(e);
             err.context(CorruptedVenvError {
                 reason: CorruptedVenvReason::Other,
@@ -181,16 +175,15 @@ impl VenvData {
     }
 
     /// Save to the given path.
-    #[tracing::instrument(skip_all, fields(path = %path.display()))]
     fn save_to(&self, path: &Path) -> QuackResult<()> {
-        trace!("saving venv data");
+        trace!("saving venv data to `{}`", path.display());
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
-        let mut file = path.touch()?;
+        let mut file = touch(path)?;
         file.set_len(0)
             .with_context(|| format!("failed to truncate `{}`", path.display()))?;
         let full_data = format!("{data}\n{checksum}");
-        debug!(%checksum);
+        trace!(%checksum);
         file.write_all(full_data.as_ref())?;
         file.flush()?;
         file.sync_data()?;
@@ -328,13 +321,12 @@ impl Venv {
     /// Convert the state of a virtual environment into canonical form and return its state.
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
-    #[tracing::instrument(skip_all, fields(%id))]
+    #[tracing::instrument(level = "debug", skip_all, fields(%id))]
     pub fn fix_and_load(
         storage: &Storage,
         id: VenvId,
         ctx: &DuckContext,
     ) -> QuackResult<Option<Self>> {
-        trace!("loading venv");
         let _lock = storage
             .data_locks()
             .open_exclusive(id, ctx)
@@ -349,13 +341,12 @@ impl Venv {
     /// this function returns the previous last_access value as well as the loaded venv.
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
-    #[tracing::instrument(skip_all, fields(%id))]
+    #[tracing::instrument(level = "debug", skip_all, fields(%id))]
     pub fn fix_and_load_with_last_access(
         storage: &Storage,
         id: VenvId,
         ctx: &DuckContext,
     ) -> QuackResult<Option<(Self, DateTime<Utc>)>> {
-        trace!("loading venv");
         let _lock = storage
             .data_locks()
             .open_exclusive(id, ctx)
@@ -366,7 +357,6 @@ impl Venv {
     }
 
     /// Helper for [`fix_and_load`](Self::fix_and_load) and [`fix_and_load_with_last_access`](Self::fix_and_load_with_last_access).
-    #[tracing::instrument(skip_all, fields(%id))]
     fn fix_and_load_with_lock_held(
         storage: &Storage,
         id: VenvId,
@@ -374,7 +364,7 @@ impl Venv {
         // NOTE: when external entity changes the storage disregarding the rules, we have
         // toctou here and an exception might be thrown later. We ignore that to keep sanity.
         if !storage.venv_dir(id).is_dir() {
-            debug!("not a directory");
+            debug!("`{}` is not a directory", storage.venv_dir(id).display());
             return Ok(None);
         }
         let metadata = storage.venv_metadata(id);
@@ -385,7 +375,7 @@ impl Venv {
                 Ok(data) => Some(data),
                 Err(e) => {
                     if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
-                        error!(error = %err, "corrupted");
+                        warn!(error = %err, "venv metadata is corrupted, trying the backup");
                         None
                     } else {
                         return Err(e);
@@ -397,8 +387,10 @@ impl Venv {
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(Utc::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
-                    error!(error = %e, "failed to update last atime");
-                    info!(?previous_now, "restoring previous atime");
+                    warn!(
+                        error = %e,
+                        "failed to update the last access time, restoring the previous one: {previous_now}"
+                    );
                     this.data_mut().set_last_access(previous_now);
                 }
                 return Ok(Some((this, previous_now)));
@@ -412,7 +404,7 @@ impl Venv {
                 Ok(data) => Some(data),
                 Err(e) => {
                     if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
-                        error!(error = %err, "corrupted");
+                        warn!(error = %err, "venv backup metadata is corrupted");
                         None
                     } else {
                         return Err(e);
@@ -420,13 +412,15 @@ impl Venv {
                 }
             };
             if let Some(venv) = data {
-                backup_metadata.copy_to(metadata)?;
+                copy_file(backup_metadata, metadata)?;
                 let mut this = Self::new(id, venv);
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(Utc::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
-                    error!(error = %e, "failed to update last atime");
-                    info!(?previous_now, "restoring previous atime");
+                    warn!(
+                        error = %e,
+                        "failed to update the last access time, restoring the previous one: {previous_now}"
+                    );
                     this.data_mut().set_last_access(previous_now);
                 }
                 return Ok(Some((this, previous_now)));
@@ -434,8 +428,9 @@ impl Venv {
         }
         // both files are not valid, so the venv does not exist,
         // put it in the canonical form by deleting its directory
-        storage.venv_dir(id).rmtree()?;
-        storage.venvs_root_dir().try_fsync_dir()?;
+        debug!("no valid venv metadata, removing the venv directory");
+        remove_tree(storage.venv_dir(id))?;
+        try_fsync_dir(storage.venvs_root_dir())?;
         Ok(None)
     }
 
@@ -443,9 +438,8 @@ impl Venv {
     ///
     /// Assumes that the current `metadata` file is valid. This is typically ensured
     /// by calling [`fix_and_load`](Self::fix_and_load) before.
-    #[tracing::instrument(skip_all, fields(id = %self.id))]
+    #[tracing::instrument(level = "debug", skip_all, fields(id = %self.id))]
     pub fn save_to(&self, storage: &Storage, ctx: &DuckContext) -> QuackResult<()> {
-        trace!("saving venv");
         let _lock = storage
             .data_locks()
             .open_exclusive(self.id, ctx)
@@ -459,7 +453,6 @@ impl Venv {
     }
 
     /// Helper for [`save_to`](Self::save_to).
-    #[tracing::instrument(skip_all, fields(id = %self.id))]
     fn save_to_with_lock_held(&self, storage: &Storage) -> QuackResult<()> {
         let metadata = storage.venv_metadata(self.id);
         let backup_metadata = storage.venv_backup_metadata(self.id);
@@ -468,19 +461,19 @@ impl Venv {
             format!("path `{}` does not have a parent?", metadata.display())
         })?;
         if !parent.exists() {
-            parent.mkdir(MkdirOptions::WithParents)?;
+            mkdir(parent, MkdirOptions::WithParents)?;
         }
         if existed {
             // move old current state to backup file, as when error occurs during
             // overwriting the main file, the invariants will be upkept.
             // (the backup file will be valid)
-            metadata.copy_file_to(&backup_metadata)?;
+            copy_file(&metadata, &backup_metadata)?;
         }
         self.data.save_to(&metadata)?;
         // also initialize the `.old` file, such that issues
         // relating to unavailable directory `fsync` are minimized
-        metadata.copy_file_to(&backup_metadata)?;
-        storage.venv_dir(self.id).try_fsync_dir()?;
+        copy_file(metadata, &backup_metadata)?;
+        try_fsync_dir(storage.venv_dir(self.id))?;
         Ok(())
     }
 }

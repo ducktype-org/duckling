@@ -337,6 +337,15 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_p64_off)(FUNCTION_ARGS) {
+		{
+			const auto function_id = static_cast<usize>(READ_FROM_PLACE_ARG(u64, instr->arg0));
+			checkCallee(thread, function_id);
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr->arg1, 1);
+		}
+		FUNCTION_CONT(0);
+	}
+
 #ifdef ENABLE_JIT
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jitFuncEntrypoint)(FUNCTION_ARGS) {
@@ -1527,7 +1536,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue_imm_off)(FUNCTION_ARGS) {
 		{
 			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
 			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);

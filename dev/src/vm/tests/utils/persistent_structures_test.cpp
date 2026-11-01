@@ -27,6 +27,10 @@
 #include <utility>
 #include <vector>
 
+/**
+ * @brief What belongs here: the VM's persistent data structures (vector, hash map, segment tree,
+ * memory, bijective map). No program is run.
+ */
 class PersistentStlTester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS PersistentStlTester

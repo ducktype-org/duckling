@@ -30,7 +30,7 @@ namespace pst::expr {
 		NAMED_CHILD(if_false, ExprElement);
 
 	public:
-		explicit Ternary(const LangParserState& state): ExprElement(state, 800) {}
+		explicit Ternary(LangElementConstructionData state): ExprElement(state, 800) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

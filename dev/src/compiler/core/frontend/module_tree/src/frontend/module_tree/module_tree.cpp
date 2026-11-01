@@ -528,7 +528,7 @@ namespace compiler::frontend {
 	/****************
 	 * getFilePST *
 	 ****************/
-	CRef<pst::PST<>> getFilePST([[maybe_unused]] ::query::Context& ctx, FileID file_id) {
+	CRef<pst::ParsedPST<>> getFilePST([[maybe_unused]] ::query::Context& ctx, FileID file_id) {
 		Ref<SourceFile> file
 			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				file_id

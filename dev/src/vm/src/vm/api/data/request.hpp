@@ -88,6 +88,10 @@ namespace vm::api {
 			std::string type_name;
 		};
 
+		struct FreeVMValue final {
+			Ref<IVMValue> vm_value;
+		};
+
 		struct StatusRequest final {};
 
 		struct Input final {
@@ -102,8 +106,6 @@ namespace vm::api {
 		};
 
 		struct Detach final {};
-
-		struct ExitCodeRequest final {};
 
 		struct DeinitAndValidate final {};
 
@@ -157,6 +159,7 @@ namespace vm::api {
 		request::ExecutionPosition,
 		request::TypeMetadata,
 		request::VMValue,
+		request::FreeVMValue,
 		request::StatusRequest,
 		request::DebuggerGetNumberOfCurrentStackFrames,
 		request::DebuggerGetStackFrameData,
@@ -164,7 +167,6 @@ namespace vm::api {
 		request::Output,
 		request::Attach,
 		request::Detach,
-		request::ExitCodeRequest,
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
 		request::SetExecutionConfig,

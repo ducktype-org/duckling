@@ -10,5 +10,5 @@ from click import command
 
 @command()
 def init():
-    """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc..."""
+    """A general repo setup: creates a python venv and downloads binaries."""
     init_impl()

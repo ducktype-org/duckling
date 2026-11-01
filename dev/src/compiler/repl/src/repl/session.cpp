@@ -456,8 +456,8 @@ namespace compiler::repl {
 		if (!teardown.has_value())
 			std::cerr << "Failed to teardown the DVM process: "
 					  << vm::api::errorToString(teardown.error()) << "\n";
-		else if (teardown->has_value() && !teardown->value())
-			std::cerr << "The DVM process failed its memory validation.\n";
+		else if (teardown->has_value())
+			std::cerr << teardown->value().toString();
 	}
 
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {

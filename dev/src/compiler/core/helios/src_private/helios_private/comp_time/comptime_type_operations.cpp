@@ -24,6 +24,7 @@
 
 #include "meta_type_memory_manager.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <tsl/queries.hpp>
@@ -115,6 +116,17 @@ namespace compiler::helios::comptime_ops {
 	) {
 		auto new_type
 			= tsh::SymbolType<>::withDefaults(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr }));
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		tsh::SymbolType<>*,
+		"opaque_ptr",
+		comptime_create_optional,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = tsh::SymbolType<>::withDefaults(getOptionalType(*ctx_ptr, *type_ptr));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -260,6 +272,7 @@ namespace compiler::helios::comptime_ops {
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_many_ptr, comptime_create_many_ptr, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr, comptime_create_cptr, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_slice, comptime_create_slice, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_create_optional, comptime_create_optional, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_size_of, comptime_size_of, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_align_of, comptime_align_of, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_new, comptime_tuple_builder_new, pid),

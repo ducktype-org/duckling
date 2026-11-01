@@ -15,5 +15,6 @@ SubDirs:
   - errors
   - features
   - local-cycle
+  - same-dep-names-different-sources
   - shared-artifacts
   - workers-count

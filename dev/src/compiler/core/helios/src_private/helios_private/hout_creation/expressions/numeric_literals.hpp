@@ -9,7 +9,25 @@
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/numeric_value.hpp>
 
+#include <diagnostic/stable_position.hpp>
+
 namespace compiler::helios::code {
+	/**
+	 * @brief Whether `-` was written right before a numeric literal.
+	 */
+	enum class LiteralSign : uint8_t {
+		Positive,
+		Negative,
+	};
+
+	/**
+	 * @brief Whether the literal may be parsed as a negative number.
+	 * @return false for unsigned types.
+	 */
+	bool canBeNegative(
+		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr
+	);
+
 	/**
 	 * @brief Parses a PST numeric literal expression into a compile-time numeric value.
 	 * Handles different bases (decimal, hex, binary, octal), type specifiers (e.g., i32,
@@ -23,10 +41,16 @@ namespace compiler::helios::code {
 	 *
 	 * @param ctx The query context for logging errors.
 	 * @param literal_expr An PST expression representing the numeric literal.
+	 * @param position Where the whole literal is written. For negative literals it covers the `-`
+	 * too.
+	 * @param sign Whether the literal is negative. Only a literal that `canBeNegative` may be.
 	 * @return An optional containing the parsed numeric value, or an empty optional if parsing
 	 * failed. Errors are logged to the context.
 	 */
 	base::Optional<numeric_value::NumericValue> fromExprNumericValue(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr
+		query::Context&                                ctx,
+		pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr,
+		const dia::StablePosition&                     position,
+		LiteralSign                                    sign = LiteralSign::Positive
 	);
 }

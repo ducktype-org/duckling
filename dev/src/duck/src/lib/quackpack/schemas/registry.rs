@@ -12,8 +12,6 @@ use serde::{Deserialize, Serialize};
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
 
-pub type Dependencies = Vec<Dependency>;
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(rename_all = "kebab-case")]
@@ -28,6 +26,12 @@ pub struct Manifest {
     /// Package's profiles.
     pub profiles: HashMap<String, Profile>,
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(transparent)]
+/// Registry dependencies schema.
+pub struct Dependencies(pub Vec<Dependency>);
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]

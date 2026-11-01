@@ -426,6 +426,19 @@ DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
 DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
 
+/// Stores a reference to `function` in `dst`. The function's signature must match the function
+/// type of `dst`.
+DEF_INSTR(mov_pfun_func, (vm::opargs::PlaceFunc, dst), (vm::opargs::FunctionName, function))
+/// Copies a function value; source and destination must have the identical function type.
+DEF_INSTR(mov_pfun_pfun, (vm::opargs::PlaceFunc, dst), (vm::opargs::PlaceFunc, src))
+/**
+ * @brief Calls the function referenced by `callee`, with the same convention as `call_func`. The
+ * parameters and results are those of the function type of `callee`.
+ *
+ * Panics if `callee` is null or references no function.
+ */
+DEF_INSTR(call_pfun, (vm::opargs::PlaceFunc, callee))
+
 DEF_INSTR(setThreadCtx_func, (vm::opargs::FunctionName, function))
 
 // return while performing a tail call
@@ -770,11 +783,19 @@ DEF_INSTR(exit)
 
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
- * It is a helper for start functions.
- * @arg0 - pointer to a VMValue.
- * @arg1 - n/a.
+ * Initializes a new local variable with a copy of the data held by a VMValue of the same process.
+ * @arg0 - the initialized local variable.
+ * @arg1 - type of the local variable.
+ * @arg2 - address of the source `vm::IVMValue`.
+ * @TODO: #3750 The address is only valid, because the process owning the `vm::IVMValue` outlives
+ * every use of the bytecode. Replace the raw address once CTV is VMValue based.
  */
-DEF_INSTR(initFromVMValue)
+DEF_INSTR(
+	initFromVMValue_pany_type_imm,
+	(vm::opargs::PlaceAny, var),
+	(vm::opargs::Type, type),
+	(vm::opargs::Immediate, vm_value)
+)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

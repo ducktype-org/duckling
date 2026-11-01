@@ -10,13 +10,11 @@ use tempfile::TempDir;
 
 use crate::DuckContext;
 use crate::quackpack::core::compile::early_graph::tests::{mock_local_pkg, mock_registry_pkg};
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::storage::paths;
-use crate::quackpack::core::{PackageId, PackageLoader, Version};
-use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::quackpack::core::{PackageId, PackageLoader, Version, fetcher};
+use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 use crate::util::test_utils::setup_test;
 
 pub fn setup_mock_storage() -> (DuckContext, TempDir) {
@@ -45,30 +43,34 @@ pub fn setup_mock_packages(root: &Path) {
         let mock_registry_pkg = PackageId::new(
             FullIdentity::new(
                 (*name).into(),
-                FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap()),
+                FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone()),
             ),
             Version::new(1, 0, 0),
         );
-        root.join("pkg")
-            .join(mock_registry_pkg.storage_name())
-            .join("src")
-            .join("main.duck")
-            .touch()
-            .unwrap();
+        touch(
+            root.join("pkg")
+                .join(mock_registry_pkg.storage_name())
+                .join("src")
+                .join("main.duck"),
+        )
+        .unwrap();
 
-        root.join("pkg")
-            .join(mock_registry_pkg.storage_name())
-            .join(PackageLoader::MANIFEST_NAME)
-            .write(manifest)
-            .unwrap();
+        write_file(
+            root.join("pkg")
+                .join(mock_registry_pkg.storage_name())
+                .join(PackageLoader::MANIFEST_NAME),
+            manifest,
+        )
+        .unwrap();
 
-        root.join("pkg")
-            .join(mock_registry_pkg.storage_name())
-            .join(paths::OK_FILENAME)
-            .touch()
-            .unwrap();
+        touch(
+            root.join("pkg")
+                .join(mock_registry_pkg.storage_name())
+                .join(paths::OK_FILENAME),
+        )
+        .unwrap();
     }
-    root.try_fsync_dir().unwrap();
+    try_fsync_dir(root).unwrap();
 }
 
 /// Creates packages for the following scenario:
@@ -143,10 +145,10 @@ metadata:
 fn setup_mock_root_package(root: &Path) {
     let pkg_root = root.join("root");
     let cycle_root = root.join("cycle");
-    pkg_root.join("src").join("main.duck").touch().unwrap();
-    pkg_root
-        .join(PackageLoader::MANIFEST_NAME)
-        .write(format!(
+    touch(pkg_root.join("src").join("main.duck")).unwrap();
+    write_file(
+        pkg_root.join(PackageLoader::MANIFEST_NAME),
+        format!(
             "
 metadata:
   name: root
@@ -178,18 +180,19 @@ features:
   cycle: []
         ",
             cycle_root.display()
-        ))
-        .unwrap();
-    pkg_root.try_fsync_dir().unwrap();
+        ),
+    )
+    .unwrap();
+    try_fsync_dir(pkg_root).unwrap();
 }
 
 fn setup_mock_cycle_package(root: &Path) {
     let pkg_root = root.join("cycle");
     let root_root = root.join("root");
-    pkg_root.join("src").join("main.duck").touch().unwrap();
-    pkg_root
-        .join(PackageLoader::MANIFEST_NAME)
-        .write(format!(
+    touch(pkg_root.join("src").join("main.duck")).unwrap();
+    write_file(
+        pkg_root.join(PackageLoader::MANIFEST_NAME),
+        format!(
             "
 metadata:
   name: cycle
@@ -201,9 +204,10 @@ dependencies:
       path: {}
         ",
             root_root.display()
-        ))
-        .unwrap();
-    pkg_root.try_fsync_dir().unwrap();
+        ),
+    )
+    .unwrap();
+    try_fsync_dir(pkg_root).unwrap();
 }
 
 /// Generate mock [`SolverFreeze`].

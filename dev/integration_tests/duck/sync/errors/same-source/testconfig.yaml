@@ -1,0 +1,48 @@
+
+Tests:
+  same-local-sources:
+    Description: emits errors about same source dependencies
+    Cases:
+      basic:
+        PreCase: |+
+          @{cd-tmp-dir}
+          @{duck-exe} init foo
+          @{duck-exe} init bar
+          echo "dependencies:
+            bar:
+              source:
+                path: ../bar
+            bar2:
+              source:
+                path: ../bar
+                name: bar" >> foo/quackconfig.yaml
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+
+              Caused by:
+                normal dependency \`bar2\` has the same source as normal dependency \`bar\`"
+      one-normal-one-dev:
+        PreCase: |+
+          @{cd-tmp-dir}
+          @{duck-exe} init foo
+          @{duck-exe} init bar
+          echo "dependencies:
+            bar:
+              source:
+                path: ../bar
+          dev-dependencies:
+            bar2:
+              source:
+                path: ../bar
+                name: bar" >> foo/quackconfig.yaml
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+
+              Caused by:
+                dev dependency \`bar2\` has the same source as normal dependency \`bar\`"

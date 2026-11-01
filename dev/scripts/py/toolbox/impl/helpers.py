@@ -67,10 +67,14 @@ class BashCommandError(Exception):
             case Timeout(v):
                 self.reason_string = f"timed out after {v} second(s)"
 
+        location = f"\n\texecuted at `{at.absolute()}` " if at else ""
+        stdout_text = f"\n{stdout}" if stdout else ""
+        stderr_text = f"\n{stderr}" if stderr else ""
+
         super().__init__(
-            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas {self.reason_string}\n"
-            + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
-            + f"[STDERR]:{"\n" + stderr if stderr else ""}"
+            f"\n\tBash command `{command}` {location}\n\thas {self.reason_string}\n"
+            f"[STDOUT]:{stdout_text}\n"
+            f"[STDERR]:{stderr_text}"
         )
         self.command = command
         self.exit_status = exit_status

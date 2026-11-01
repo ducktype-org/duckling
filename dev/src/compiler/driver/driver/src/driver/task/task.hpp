@@ -62,6 +62,11 @@ namespace compiler::driver {
 		 * @brief DBC libraries paths to link to final executable.
 		 */
 		std::vector<fs::FilePath> link_libraries{};
+
+		/**
+		 * @brief Skip linking the final DVM executable or library and keep bytecode objects.
+		 */
+		bool no_link = false;
 	};
 
 	/**

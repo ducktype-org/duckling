@@ -104,9 +104,9 @@ namespace tokenizer {
 		return res;
 	}
 
-	void TokenSource::runLexer() {
+	void TokenSource::runLexer(const lexer::LexOptions& options) {
 		if (int_log.hasErrors()) return;
-		lexer::Lexer lexer{ Ref<TokenSource>(this) };
+		lexer::Lexer lexer{ Ref<TokenSource>(this), options };
 		token_data.emplace(lexer.tokenize());
 	}
 

@@ -142,7 +142,6 @@ To begin, enter the `dev/` directory and then:
 This:
 
 - fetches library dependencies
-- updates git submodules
 - setups virtual environment (important for building docs)
 - downloads binaries, etc...
 

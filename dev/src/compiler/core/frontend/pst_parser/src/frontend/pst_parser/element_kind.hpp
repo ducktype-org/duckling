@@ -89,6 +89,7 @@ namespace pst {
 		DottedName,
 		CallArgument,
 		AtrArgList,
+		ArrayLiteralList,
 
 		TemplateDecl,
 

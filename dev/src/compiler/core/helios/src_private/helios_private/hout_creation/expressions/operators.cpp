@@ -36,6 +36,7 @@ namespace {
 	using namespace compiler;
 	using namespace compiler::helios;
 	using namespace compiler::helios::code;
+	using compiler::tsh::coercions::Coercion;
 
 	/**
 	 * @brief Tries to find a common type for builtin binary operation arguments through implicit
@@ -56,15 +57,15 @@ namespace {
 		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
 
 		// Try to coerce both values to the rhs direct type.
-		auto lhs_to_rhs = canCoerce(ctx, lhs->expression_type, rhs_direct).valueOrThrow();
-		auto rhs_to_rhs = canCoerce(ctx, rhs->expression_type, rhs_direct).valueOrThrow();
+		Coercion lhs_to_rhs = coercions::coercionOf(ctx, lhs, rhs_direct);
+		Coercion rhs_to_rhs = coercions::coercionOf(ctx, rhs, rhs_direct);
 
 		if (lhs_to_rhs.isValid() && rhs_to_rhs.isValid())
 			return std::make_tuple(rhs_direct, std::move(lhs_to_rhs), std::move(rhs_to_rhs));
 
 		// Try to coerce both values to the lhs direct type.
-		auto lhs_to_lhs = canCoerce(ctx, lhs->expression_type, lhs_direct).valueOrThrow();
-		auto rhs_to_lhs = canCoerce(ctx, rhs->expression_type, lhs_direct).valueOrThrow();
+		Coercion lhs_to_lhs = coercions::coercionOf(ctx, lhs, lhs_direct);
+		Coercion rhs_to_lhs = coercions::coercionOf(ctx, rhs, lhs_direct);
 
 		if (lhs_to_lhs.isValid() && rhs_to_lhs.isValid())
 			return std::make_tuple(lhs_direct, std::move(lhs_to_lhs), std::move(rhs_to_lhs));
@@ -184,13 +185,13 @@ namespace compiler::helios::code {
 		return numeric_ops.contains(op.str());
 	}
 
-	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
+	base::Optional<std::tuple<BuiltinUnary, tsh::coercions::Coercion>> findNumericUnaryBuiltin(
 		query::Context& ctx, lexer::Operator op, const CRef<Expr> expr
 	) {
 		auto operation_kind = expr->expression_type.getType().getKind();
 		auto direct_type
 			= expr->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Direct);
-		auto coercion = canCoerce(ctx, expr->expression_type, direct_type).valueOrThrow();
+		tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, expr, direct_type);
 		if (not coercion.isValid()) return {};
 
 		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinUnary> numeric_operators
@@ -209,9 +210,11 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	base::Optional<std::tuple<BuiltinBinaryOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
-	) {
+	base::Optional<
+		std::tuple<BuiltinBinaryOperation, tsh::coercions::Coercion, tsh::coercions::Coercion>>
+		findNumericBinaryBuiltin(
+			query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+		) {
 		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
 		if (!common_type_res.has_value()) return {};
 
@@ -305,8 +308,8 @@ namespace compiler::helios::code {
 				Shorthand s{ ctx };
 
 				auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
-				auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-				auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+				auto coerced_lhs = coercions::applyCoercion(ctx, lhs_coercion, std::move(lhs));
+				auto coerced_rhs = coercions::applyCoercion(ctx, rhs_coercion, std::move(rhs));
 
 				return desugarBuiltinBinaryOperation(
 						   ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
@@ -373,15 +376,14 @@ namespace compiler::helios::code {
 		// Next, we perform typical overload resolution.
 
 		// Step 1. — special path for numeric promotions
-		if (inner->expression_type.getType().isNumeric() && isNumericOperator(op)) {
+		if (operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+		    && inner->expression_type.getType().isNumeric() && isNumericOperator(op)) {
 			auto numeric_builtin_opt = findNumericUnaryBuiltin(ctx, op, inner.ref());
-			auto new_origin = operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
-			                    ? elementOriginOrdered(op_origin, inner->origin)
-			                    : elementOriginOrdered(inner->origin, op_origin);
+			auto new_origin          = elementOriginOrdered(op_origin, inner->origin);
 
 			if_opt_some(numeric_builtin_opt, numeric_builtin) {
 				auto [operation, coercion] = numeric_builtin;
-				auto coerced_inner         = coercion.coerce(ctx, std::move(inner));
+				auto coerced_inner = coercions::applyCoercion(ctx, coercion, std::move(inner));
 				return makeBox<UnaryOperatorExpr>(
 					ctx, new_origin, operation, std::move(coerced_inner)
 				);
@@ -458,7 +460,7 @@ namespace compiler::helios::code {
 		);
 		// @TODO: #3697 Improve dia. Coercions happen in places that are not very clear in compact
 		// `location X= value` form, for dia purposes add message with extended form as needed.
-		auto coerced_value = coerceFromBox(
+		auto coerced_value = coercions::coerceFromBox(
 								 ctx,
 								 std::move(value),
 								 location_deref->expression_type.getSymbolType(),

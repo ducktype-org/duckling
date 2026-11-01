@@ -9,6 +9,8 @@
 use std::collections::{HashMap, HashSet};
 pub mod command_ext;
 pub mod dependency_graph;
+pub mod duckling_consts;
+pub mod edit_distance;
 pub mod env;
 pub mod error;
 pub mod extend;
@@ -17,7 +19,7 @@ pub mod file_locks;
 pub mod hash;
 pub mod hex;
 pub mod once_lock_ext;
-pub mod path_ops_ext;
+pub mod path_ops;
 pub mod set_once;
 pub mod yaml_config;
 

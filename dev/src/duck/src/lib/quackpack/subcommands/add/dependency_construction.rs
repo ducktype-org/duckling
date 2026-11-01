@@ -44,7 +44,7 @@ use crate::quackpack::schemas::manifest::{
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::ErrorsLogger;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{normalize, resolve, resolve_both_and_get_relative};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
@@ -130,7 +130,7 @@ pub fn construct_dependency(
         // Adding registry dependency without versions is treated as adding the dependency in the latest version.
         versions = vec![latest_version];
     }
-    let source = construct_source_schema(source, local_path, &name_spec)?;
+    let source = construct_source_schema(source, local_path, &name_spec, pcx.ctx())?;
     let dep = Dependency {
         version: if versions.is_empty() {
             None
@@ -175,9 +175,9 @@ fn construct_source(
             "guarded by the parser"
         );
         // We take into account that `local_path` is relative to `cwd`, not to `pkg_root`.
-        let from_project_to_cwd = pkg_root.resolve_both_and_get_relative(ctx.cwd(), ctx);
-        let from_project_to_dep = from_project_to_cwd.join(path).normalize();
-        let dep_resolved = from_project_to_dep.resolve(ctx);
+        let from_project_to_cwd = resolve_both_and_get_relative(pkg_root, ctx.cwd(), ctx);
+        let from_project_to_dep = normalize(from_project_to_cwd.join(path));
+        let dep_resolved = resolve(&from_project_to_dep, ctx);
         Ok((Source::for_local(&dep_resolved)?, Some(from_project_to_dep)))
     } else if let Some(git_url) = git_url {
         // Git dependency.
@@ -191,9 +191,7 @@ fn construct_source(
         Ok((Source::for_registry(registry_url), None))
     } else {
         // Registry dependency from default registry.
-        let default_registry_url = Fetcher::DEFAULT_REGISTRY_URL
-            .to_url()
-            .context_internal("default registry url is invalid")?;
+        let default_registry_url = ctx.duck_cfg().registry_url()?;
         Ok((Source::for_registry(default_registry_url), None))
     }
 }
@@ -308,6 +306,7 @@ fn construct_source_schema(
     source: Source,
     local_path: Option<PathBuf>,
     name_spec: &NameSpecification,
+    ctx: &DuckContext,
 ) -> QuackResult<Option<SourceSchema>> {
     let name = name_spec.source_name();
     match source.kind() {
@@ -329,16 +328,16 @@ fn construct_source_schema(
             })))
         }
         SourceKind::Registry => {
-            let registry_url = source.url().to_string();
+            let registry_url = source.url();
             if name.is_none() {
-                if registry_url == Fetcher::DEFAULT_REGISTRY_URL {
+                if registry_url == ctx.duck_cfg().registry_url()? {
                     Ok(None)
                 } else {
-                    Ok(Some(SourceSchema::Simple(registry_url)))
+                    Ok(Some(SourceSchema::Simple(registry_url.to_string())))
                 }
             } else {
                 Ok(Some(SourceSchema::Detailed(DetailedSource {
-                    registry_url: Some(registry_url),
+                    registry_url: Some(registry_url.to_string()),
                     name,
                     path: None,
                     git_url: None,

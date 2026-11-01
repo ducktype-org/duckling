@@ -1,0 +1,12 @@
+# The arguments on the stack do not match the function type of the callee.
+type fun: unop { i64 } { i64 }
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type f, unop;
+    init_pany_type result, i64;
+    init_pany_type arg, ptr_argv;
+    call_pfun f;
+    deinit; # result
+    deinit; # f
+    ret;
+}

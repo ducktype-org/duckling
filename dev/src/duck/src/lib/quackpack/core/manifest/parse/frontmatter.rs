@@ -35,11 +35,12 @@ use tracing::{debug, trace};
 
 use super::parse_schema;
 use crate::quackpack::core::ParseMode;
+use crate::quackpack::core::lints::errors::Errors;
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::parse::manifest::parse;
 use crate::quackpack::core::script::FrontMatter;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
@@ -50,8 +51,11 @@ pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
 /// Parse a frontmatter of a script at a given `path`.
 ///
 /// Script doesn't have to have a frontmatter; in that case, a default will be returned.
-pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
-    trace!("starting parsing");
+pub fn parse_frontmatter(
+    path: &Path,
+    ctx: &DuckContext,
+) -> QuackResult<(FrontMatter, Warnings, Errors)> {
+    debug!("parsing the frontmatter of `{}`", path.display());
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the frontmatter of the script at `{}`",
@@ -62,31 +66,33 @@ pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMa
 
 /// Helper for [`parse_frontmatter`].
 /// First generates the appropriate [`ManifestSchema`] and then parses it into [`FrontMatter`].
-fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings, Errors)> {
     let mut warnings = Warnings::default();
-    let schema = generate_schema(path, &mut warnings)?;
+    let mut errors = Errors::default();
+    let schema = generate_schema(path, &mut errors)?;
     let frontmatter = parse(
         &schema,
         ParseMode::FrontMatter {
             frontmatter_path: path,
         },
         &mut warnings,
+        &mut errors,
         ctx,
     )?;
     FrontMatter::new(path.to_path_buf(), schema, Box::new(frontmatter))
-        .map(|frontmatter| (frontmatter, warnings))
+        .map(|frontmatter| (frontmatter, warnings, errors))
 }
 
 /// Try to capture a frontmatter from the given contents.
 pub fn capture_frontmatter(contents: &str) -> QuackResult<Option<Captures<'_>>> {
     let Some(captures) = FRONTMATTER_REGEX.captures(contents) else {
-        debug!("no frontmatter");
+        trace!("no frontmatter");
         if UNCLOSED_FRONTMATTER_REGEX.captures(contents).is_some() {
             qp_bail!("frontmatter begins but does not end")
         }
         return Ok(None);
     };
-    debug!("has frontmatter");
+    trace!("found a frontmatter");
     Ok(Some(captures))
 }
 
@@ -95,8 +101,8 @@ pub fn capture_frontmatter(contents: &str) -> QuackResult<Option<Captures<'_>>> 
 /// This includes resolving import, meaning that if the frontmatter has the `import` field,
 /// the schema is generated based on the path specified in the import.
 /// If the script does not contain a frontmatter, returns [`ManifestSchema`] with `None`s.
-fn generate_schema(path: &Path, warnings: &mut Warnings) -> QuackResult<ManifestSchema> {
-    let content = path.read_to_string()?;
+fn generate_schema(path: &Path, errors: &mut Errors) -> QuackResult<ManifestSchema> {
+    let content = read_from_path_to_string(path)?;
     // @TODO: #2860 Finalize frontmatters syntax
     // This has a bug when `</frontmatter>` is in a yaml comment (maybe don't care / make it a feature).
     // Moreover the syntax is not yet finalized.
@@ -109,6 +115,7 @@ fn generate_schema(path: &Path, warnings: &mut Warnings) -> QuackResult<Manifest
             profiles: None,
             import: None,
             venv: None,
+            lints: None,
         });
     };
     let frontmatter_content = captures.get(1).unwrap().as_str();
@@ -116,7 +123,7 @@ fn generate_schema(path: &Path, warnings: &mut Warnings) -> QuackResult<Manifest
         path,
         frontmatter_content,
         /* resolve_imports */ true,
-        warnings,
+        errors,
     )
 }
 
@@ -128,11 +135,11 @@ fn generate_schema_from_content(
     path: &Path,
     content: &str,
     resolve_imports: bool,
-    warnings: &mut Warnings,
+    errors: &mut Errors,
 ) -> QuackResult<ManifestSchema> {
-    let schema = parse_schema(content, warnings)?;
+    let schema = parse_schema(content, errors)?;
     if resolve_imports {
-        resolve_import_in_schema(path, schema, warnings)
+        resolve_import_in_schema(path, schema, errors)
     } else if schema.import.is_some() {
         qp_bail!("imported frontmatter cannot have `import` field itself")
     } else {
@@ -148,13 +155,12 @@ fn generate_schema_from_content(
 fn resolve_import_in_schema(
     script_path: &Path,
     schema: ManifestSchema,
-    warnings: &mut Warnings,
+    errors: &mut Errors,
 ) -> QuackResult<ManifestSchema> {
     if let Some(ref import) = schema.import {
         debug!(
-            script = %script_path.display(),
-            import = %import.display(),
-            "imports a frontmatter",
+            "the script imports the frontmatter from `{}`",
+            import.display()
         );
         if !schema.is_just_import_or_empty() {
             let mut err = qp_err!(
@@ -168,7 +174,7 @@ fn resolve_import_in_schema(
             .parent()
             .expect("Script path should point to a file with parent");
         let imported_path = root_path.join(import);
-        let content = imported_path.read_to_string().with_context(|| {
+        let content = read_from_path_to_string(&imported_path).with_context(|| {
             format!(
                 "while reading the file imported by `{}` at `{}`",
                 script_path.display(),
@@ -179,7 +185,7 @@ fn resolve_import_in_schema(
             &imported_path,
             &content,
             /* resolve_imports */ false,
-            warnings,
+            errors,
         )
         .with_context(|| {
             format!(
