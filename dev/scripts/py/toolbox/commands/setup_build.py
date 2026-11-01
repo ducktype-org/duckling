@@ -129,6 +129,13 @@ from click import Choice, option, command, prompt
     is_flag=True,
 )
 @option(
+    "--build-static-icu/--no-build-static-icu",
+    help="Whether to build ICU from source and link it statically (portable release binaries).",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
     "--enable-jit",
     prompt="Enable JIT",
     help="Whether or not to enable JIT compilation.",

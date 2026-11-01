@@ -33,6 +33,7 @@ def setup_build_impl(
     opt_path,
     sanitizer,
     use_replxx,
+    build_static_icu,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -79,6 +80,7 @@ def setup_build_impl(
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
+        f"-D BUILD_STATIC_ICU={'ON' if build_static_icu else 'OFF'}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")

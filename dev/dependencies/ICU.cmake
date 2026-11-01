@@ -1,7 +1,6 @@
 include(FetchContent)
 
-# Set it to true, to link ICU statically and force building it from source
-# set (BUILD_STATIC_ICU true)
+option(BUILD_STATIC_ICU "Whether to force building and linking against a custom-built static version of ICU." OFF)
 
 set(ICU_VERSION_REQUIRED "74.1")
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
@@ -58,7 +57,7 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 			set(ICU_MAKE_EXTRA_FLAGS "-j${CORES}")
 		endif()
 
-		set(ICU_EP_PREFIX ${PROJECT_BINARY_DIR}/_deps/icu-${FindOrBuildICU_VERSION}-build)
+		set(ICU_EP_PREFIX ${PROJECT_BINARY_DIR}/_deps/icu-${ICU_VERSION_REQUIRED}-build)
 
 		set(ICU_EP_LIBICUDATA ${ICU_EP_PREFIX}/lib/libicudata.a)
 		set(ICU_EP_LIBICUI18N ${ICU_EP_PREFIX}/lib/libicui18n.a)
@@ -70,11 +69,11 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 			PREFIX
 				${ICU_EP_PREFIX}
 			DOWNLOAD_DIR
-				${PROJECT_BINARY_DIR}/_deps/icu-${FindOrBuildICU_VERSION}-src
+				${PROJECT_BINARY_DIR}/_deps/icu-${ICU_VERSION_REQUIRED}-src
 			URL
 				${FindOrBuildICU_URL}
 			URL_HASH
-				${FindOrBuildICU_URL_HASH}
+				${ICU_CONTROL}
 			PATCH_COMMAND
 				${ICU_EP_PATCH_COMMAND}
 			CONFIGURE_COMMAND
