@@ -151,11 +151,13 @@ namespace compiler::helios {
 		return name(id) == "main" && isGlobalFun(id);
 	}
 
-	/**
-	 * @brief Actual implementation of isGlobalVar (for symbols with a PST element), cached by
-	 * QueryIsGlobalVar.
-	 */
-	static bool isGlobalVarImpl(query::Context& ctx, SymID id) {
+	bool isGlobalVar(query::Context& ctx, SymID id) {
+		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
+
+		// For now if the symbol doesn't have a PST element it is not global,
+		// Maybe be not true if we have generated globals in the future.
+		if_opt_none(getSymRef(id)->maybePstElement()) return false;
+
 		// We go up the PST until we find a statement that determines whether the variable is global
 		// or not.
 		return std::invoke(
@@ -222,24 +224,6 @@ namespace compiler::helios {
 			},
 			getSymRef(id)->maybePstElement().value().unlock(ctx)
 		);
-	}
-
-	struct IMPLEMENT_QUERY(QueryIsGlobalVar, query::QResult<bool>) {
-		static auto provide(Context& ctx, QKey key) -> PResult { return isGlobalVarImpl(ctx, key); }
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIsGlobalVar);
-
-	bool isGlobalVar(query::Context& ctx, SymID id) {
-		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
-
-		// For now if the symbol doesn't have a PST element it is not global,
-		// Maybe be not true if we have generated globals in the future.
-		if_opt_none(getSymRef(id)->maybePstElement()) return false;
-
-		return ctx.query<QueryIsGlobalVar>(id).valueOrThrow();
 	}
 
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {

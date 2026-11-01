@@ -274,7 +274,7 @@ namespace compiler::helios::code {
 						// - If it's an expression, use its toString() method
 						// - - Parse sub expression and gather data
 						auto sub_expr_hout_qresult = subExprFromPST(
-							ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr()
+							ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr().unlock(ctx)
 						);
 						if (sub_expr_hout_qresult.hasFailed()) {
 							failed = true;
@@ -336,7 +336,7 @@ namespace compiler::helios::code {
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				const auto op    = stmt->getOperator().unlock(ctx);
-				auto       inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				auto       inner = subExprFromPST(ctx, stmt->getExpr().unlock(ctx)).valueOrThrow();
 				// If necessary, this is the place to handle any particularly tricky cases.
 				// Currently, there are none.
 
@@ -380,7 +380,7 @@ namespace compiler::helios::code {
 					}
 				}
 
-				auto inner      = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				auto inner      = subExprFromPST(ctx, stmt->getExpr().unlock(ctx)).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
 				// Handle taking references
@@ -594,7 +594,8 @@ namespace compiler::helios::code {
 					return;
 				}
 				if (op->unwrap() == lang_def::NamedOperator::As) {
-					auto value_expr  = subExprFromPST(ctx, stmt->getLeftOperand()).valueOrThrow();
+					auto value_expr
+						= subExprFromPST(ctx, stmt->getLeftOperand().unlock(ctx)).valueOrThrow();
 					auto type_ctv    = getTypeCTVFromPST(ctx, stmt->getRightOperand());
 					auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 
@@ -602,7 +603,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
+				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand().unlock(ctx));
 				if (lhs_res.hasFailed()) return;
 				auto lhs = std::move(lhs_res).valueOrThrow();
 
@@ -631,7 +632,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand());
+				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand().unlock(ctx));
 				if (rhs_res.hasFailed()) return;
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
@@ -828,7 +829,7 @@ namespace compiler::helios::code {
 			void visitComma(pst::Access<pst::expr::Comma> stmt) override {
 				std::vector<Box<Expr>> expressions;
 				for (auto ex: stmt->getExpressions()) {
-					auto res = subExprFromPST(ctx, ex);
+					auto res = subExprFromPST(ctx, ex.unlock(ctx));
 					if (res.hasFailed()) {
 						// Error has occurred.
 						return;
@@ -842,8 +843,8 @@ namespace compiler::helios::code {
 				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 				auto       condition_res
 					= subExprFromPSTWithType(ctx, stmt->getCondition().unlock(ctx), bool_type);
-				auto if_true_res     = subExprFromPST(ctx, stmt->getIfTrue());
-				auto if_false_res    = subExprFromPST(ctx, stmt->getIfFalse());
+				auto if_true_res  = subExprFromPST(ctx, stmt->getIfTrue().unlock(ctx));
+				auto if_false_res = subExprFromPST(ctx, stmt->getIfFalse().unlock(ctx));
 
 				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
@@ -870,7 +871,7 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
 				for (usize i = 0; i < expr_count; ++i) {
-					auto result = subExprFromPST(ctx, stmt->getSubExpr(i));
+					auto result = subExprFromPST(ctx, stmt->getSubExpr(i).unlock(ctx));
 					if (result.hasFailed()) return;
 					result_exprs.push_back(std::move(result.valueOrThrow()));
 				}
@@ -912,7 +913,7 @@ namespace compiler::helios::code {
 
 				auto var = stmt->getVariables();
 
-				auto location_expr_qresult = subExprFromPST(ctx, var);
+				auto location_expr_qresult = subExprFromPST(ctx, var.unlock(ctx));
 				if (location_expr_qresult.hasFailed()) return;
 				auto location_expr = std::move(location_expr_qresult).valueOrThrow();
 
@@ -947,7 +948,7 @@ namespace compiler::helios::code {
 
 				for (auto elem_holder: *list_unlocked) {
 					auto elem_pst_expr = elem_holder.unlock(ctx)->getExpr();
-					auto elem          = subExprFromPST(ctx, elem_pst_expr);
+					auto elem          = subExprFromPST(ctx, elem_pst_expr.unlock(ctx));
 					if (elem.hasFailed()) return;
 
 					if (auto curr_elem_type = elem.valueOrThrow()->expression_type.getSymbolType();
@@ -986,10 +987,7 @@ namespace compiler::helios::code {
 		};
 	}
 
-	/**
-	 * @brief Version of subExprFromPST for an already unlocked element.
-	 */
-	static ExprConstructionResult subExprFromUnlockedPST(
+	ExprConstructionResult subExprFromPST(
 		query::Context& ctx, pst::Access<pst::ExprElement> element
 	) {
 		PstExprToHoutExprVisitor visitor(ctx);
@@ -998,25 +996,18 @@ namespace compiler::helios::code {
 		if_opt_some(visitor.node, expr) return std::move(expr);
 		return query::Failed();
 	}
-
-	ExprConstructionResult subExprFromPST(
-		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
-	) {
-		auto element_unlocked = element.unlockOpt(ctx);
-		if (element_unlocked.empty()) {
-			// PST should have reported parsing error for this, so we just return failure here.
-			return query::Failed();
-		}
-
-		return subExprFromUnlockedPST(ctx, element_unlocked.value());
-	}
 }
 
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO static assert this is top-expr
-			return code::subExprFromPST(ctx, key.element);
+			auto element = key.element.unlockOpt(ctx);
+			if (element.empty()) {
+				// PST should have reported parsing error for this, so we just return failure here.
+				return query::Failed();
+			}
+			return code::subExprFromPST(ctx, element.value());
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -1087,7 +1078,7 @@ namespace compiler::helios {
 		base::Optional<dia::StablePosition>      coercion_expects_pos,
 		const coercions::CoercionErrorOverrides& error_overrides
 	) {
-		auto expr_hout_qresult = code::subExprFromUnlockedPST(ctx, element);
+		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element->getStablePosition();
 

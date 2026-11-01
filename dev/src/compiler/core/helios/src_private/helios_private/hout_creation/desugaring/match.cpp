@@ -217,7 +217,9 @@ namespace compiler::helios::desugaring {
 		const auto      match_position = match_expr->getStablePosition();
 		auto            subject_pst    = match_expr->getValueToMatch().unlock(ctx);
 
-		UNPACK_QRESULT_MOVE(auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr()));
+		UNPACK_QRESULT_MOVE(
+			auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr().unlock(ctx))
+		);
 		UNPACK_QRESULT_MOVE(
 			auto subject =,
 			validateMatchSubject(ctx, std::move(subject_hout), subject_pst->getStablePosition())
@@ -346,7 +348,9 @@ namespace compiler::helios::desugaring {
 				}
 			}
 			auto result_holder = branches.front().result.unlock(ctx);
-			UNPACK_QRESULT_MOVE(auto result =, code::subExprFromPST(ctx, result_holder->getExpr()));
+			UNPACK_QRESULT_MOVE(
+				auto result =, code::subExprFromPST(ctx, result_holder->getExpr().unlock(ctx))
+			);
 
 			// A match yields one value, so every case has to agree on its type. There is no
 			// common-type inference, so anything else is an error the user has to resolve.

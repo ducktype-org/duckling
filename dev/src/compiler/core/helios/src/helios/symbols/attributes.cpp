@@ -78,7 +78,7 @@ namespace compiler::helios {
 			}
 
 			auto holder      = holders.front().unlock(ctx);
-			auto elem        = code::subExprFromPST(ctx, holder->getExpr()).valueOrThrow();
+			auto elem = code::subExprFromPST(ctx, holder->getExpr().unlock(ctx)).valueOrThrow();
 			auto numeric_opt = dynamic_cast<code::LiteralNumericExpr*>(elem.get());
 
 			base::Optional<i64> value{};

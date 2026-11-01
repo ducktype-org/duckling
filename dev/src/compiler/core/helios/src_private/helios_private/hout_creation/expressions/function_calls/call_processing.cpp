@@ -695,7 +695,8 @@ namespace compiler::helios::code {
 		for (const auto& arg: args) arguments_origin.emplace_back(pstOrigin(arg));
 
 		for (const auto& arg: args) {
-			auto arg_expr_result = subExprFromPST(ctx, arg->getArg().unlock(ctx)->getExpr());
+			auto arg_expr_result
+				= subExprFromPST(ctx, arg->getArg().unlock(ctx)->getExpr().unlock(ctx));
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 			if (arg->isNamedArg()) {

@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 	 * building context or the `QueryHoutOfExpr` entry point.
 	 */
 	query::QResult<Box<code::Expr>> subExprFromPST(
-		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		query::Context& ctx, pst::Access<pst::ExprElement> element
 	);
 
 
