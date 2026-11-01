@@ -18,10 +18,10 @@ pub fn info(pcx: PackageContext) -> QuackResult<()> {
     let Some((mut venv, previous_access)) = venv_info(storage_localization, venv_id, ctx)
         .context("when getting information about the venv")?
     else {
-        let err = qp_err!(HintMessage::new(
+        let mut err = qp_err!(HintMessage::new(
             "make sure that the package is synchronized"
         ));
-        let err = err.context(MessageError::new(format!(
+        err.context(MessageError::new(format!(
             "did not find a venv for the package at `{}`",
             pcx.package().root().display()
         )));
