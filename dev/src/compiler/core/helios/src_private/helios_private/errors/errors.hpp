@@ -5,7 +5,61 @@
 #include <diagnostic/message.hpp>
 #include <diagnostic/stable_position.hpp>
 
+#include <string>
+#include <string_view>
+
 namespace compiler::helios {
+	class NoEnclosingLoopError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "no_enclosing_loop" };
+		}
+
+	public:
+		NoEnclosingLoopError(dia::StablePosition position, std::string_view action):
+			  MessageWithCodeFragmentAndCause(position) {
+			addArgument<dia::TextArgument>("action", std::string(action));
+		}
+	};
+
+	class NoNamedControlFlowTargetError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "no_named_control_flow_target" };
+		}
+
+	public:
+		NoNamedControlFlowTargetError(
+			dia::StablePosition position, std::string_view action, std::string_view name
+		):
+			  MessageWithCodeFragmentAndCause(position) {
+			addArgument<dia::TextArgument>("action", std::string(action));
+			addArgument<dia::TextArgument>("name", std::string(name));
+		}
+	};
+
+	class NoControlFlowKindTargetError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "no_control_flow_kind_target" };
+		}
+
+	public:
+		NoControlFlowKindTargetError(
+			dia::StablePosition position, std::string_view action, std::string_view kind
+		):
+			  MessageWithCodeFragmentAndCause(position) {
+			addArgument<dia::TextArgument>("action", std::string(action));
+			addArgument<dia::TextArgument>("kind", std::string(kind));
+		}
+	};
+
 	class SingleStmtFunctionMustBeExprError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

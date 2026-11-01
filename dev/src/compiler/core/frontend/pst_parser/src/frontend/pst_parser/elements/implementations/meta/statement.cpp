@@ -3,6 +3,7 @@
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
 #include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
 #include "../../hierarchy/statements/all_statements.hpp"
+#include "../statements/statements_errors.hpp"
 #include "meta_errors.hpp"
 #include "preamble.hpp"
 
@@ -113,10 +114,12 @@ namespace pst {
 		struct StmtFinder<Action> {
 			static u64 findStatementLength(LangParserState& state) {
 				if ((state[0].is(Keyword::Break) || state[0].is(Keyword::Continue))
-				    && state.ctokens().size() >= 3 && state[1].isKeyword()
-				    && state[2].is(Special::Semicolon)
-				    && isControlFlowTargetKeyword(state[1].asKeyword()))
-					return 3;
+				    && state.ctokens().size() >= 2 && state[1].isKeyword()
+				    && isControlFlowTargetKeyword(state[1].asKeyword())) {
+					// This keyword is the target, even when its suffix is invalid. Later
+					// statement starts still delimit recovery after a missing semicolon.
+					return 2 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(2);
+				}
 				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(1);
 			}
 		};
@@ -163,6 +166,9 @@ namespace pst {
 			bool could_implicitly_return
 				= !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon)
 			   && state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
+			const bool is_control_flow_action
+				= std::same_as<T, Action>
+			   && (state[0].is(Keyword::Break) || state[0].is(Keyword::Continue));
 
 			fallbackLen(state, length);
 
@@ -172,8 +178,14 @@ namespace pst {
 			if (opt && opt.value()->trailingSemicolon()) {
 				if (could_implicitly_return)
 					makeImplicitReturn(out.refMut());
-				else
+				else {
+					if (is_control_flow_action && !state[0].is(Special::Semicolon)) {
+						state.logInt(
+							makeBox<MissingControlFlowTargetSemicolonError>(state.getPosition())
+						);
+					}
 					state.parse(opt.value()).one(Special::Semicolon);
+				}
 			}
 
 			exitFallback(state);

@@ -18,15 +18,17 @@ namespace pst {
 		}
 	}
 
-	/**
-	 * @note Action may contain an expression or a block-kind target before the semicolon.
-	 */
 	class Action: public Stmt {
 		PARENT_CLASS(Stmt);
 		THIS_CLASS(Action);
 		CLONE_SUBELEMENTS();
 
 	protected:
+		/**
+		 * @note For successfully parsed break/continue statements, the target is either absent,
+		 * a bare IdentifierLiteral in expr, or a block-kind keyword in target_keyword. The two
+		 * fields are mutually exclusive. Other actions keep their ordinary expression in expr.
+		 */
 		NAMED_CHILD_OPT(expr, CommaExprHolder);
 		base::Optional<lang_def::Keyword> target_keyword;
 

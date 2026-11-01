@@ -38,6 +38,7 @@ class HoutStmtCompilationTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testControlFlowStatements);
+		TESTER_ADD_TEST(testActionStatements);
 		TESTER_ADD_TEST(testConstIfStatements);
 		TESTER_ADD_TEST(testVariableDeclarations);
 		TESTER_ADD_TEST(testReturnStatements);
@@ -184,7 +185,11 @@ private:
 				ASSERT_EQUAL(c.if_count, 1u);
 			});
 		}
+	}
 
+	/** @brief Target selection by name, construct kind, or the nearest enclosing loop. */
+	void testActionStatements() {
+		// Named and implicit targets select the same loop using different selectors.
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
@@ -256,6 +261,7 @@ private:
 			});
 		}
 
+		// The nearest matching name wins when nested constructs shadow it.
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
@@ -289,6 +295,7 @@ private:
 				ASSERT_TRUE(break_target->id == inner->control_flow_id.value());
 			});
 		}
+		// Explicit kinds select the requested construct through intervening constructs.
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
@@ -350,6 +357,7 @@ private:
 				ASSERT_TRUE(printed.str().find("break if;") != std::string::npos);
 			});
 		}
+		// An unnamed block can be selected by its kind.
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(fun foo() = { block { break block; } })", "test_pkg"

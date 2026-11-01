@@ -1,0 +1,29 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "control_flow_target_arguments"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code."
+  code_location:
+    description: "The location."
+
+header_message:
+  - "Control-flow targets cannot have arguments or indexing."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content: "remove the arguments or indexing"

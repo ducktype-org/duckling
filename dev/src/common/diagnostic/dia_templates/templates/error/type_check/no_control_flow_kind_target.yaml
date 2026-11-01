@@ -1,0 +1,37 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "no_control_flow_kind_target"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  action:
+    description: "The break or continue keyword."
+  kind:
+    description: "The requested construct keyword."
+  code:
+    description: "The code snippet."
+  code_location:
+    description: "The location of the action."
+
+header_message:
+  - 'No enclosing `'
+  - param: "kind"
+  - '` target for `'
+  - param: "action"
+  - '`.'
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content: "no matching target in this function"

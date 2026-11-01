@@ -1,5 +1,6 @@
 ﻿#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -63,7 +64,7 @@ public:
 		TESTER_ADD_TEST(testFun2);
 		TESTER_ADD_TEST(testBlock);
 		TESTER_ADD_TEST(testActions);
-		TESTER_ADD_TEST(testControlFlowKeywordTargets);
+		TESTER_ADD_TEST(testActionStatements);
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testUsing);
 		TESTER_ADD_TEST(testNamespace);
@@ -186,43 +187,88 @@ private:
 
 	void testActions() { testJsonRelativePath("actions.duck", "actions.json"); }
 
-	void testControlFlowKeywordTargets() {
+	/** Checks the three forms of break/continue targets, including an omitted final semicolon. */
+	void testActionStatements() {
 		struct Case {
-			std::string_view  code;
-			lang_def::Keyword target;
-			bool              is_break;
+			std::string_view                  target;
+			base::Optional<lang_def::Keyword> keyword;
 		};
 
-		constexpr std::array CASES = {
-			Case{ .code = "break while;", .target = lang_def::Keyword::While, .is_break = true },
-			Case{ .code = "break for;", .target = lang_def::Keyword::For, .is_break = true },
-			Case{ .code = "continue if;", .target = lang_def::Keyword::If, .is_break = false },
-			Case{ .code = "continue block;", .target = lang_def::Keyword::Block, .is_break = false },
+		const std::array cases = {
+			Case{ .target = "", .keyword = {} },
+			Case{ .target = "target", .keyword = {} },
+			Case{ .target = "if", .keyword = lang_def::Keyword::If },
+			Case{ .target = "while", .keyword = lang_def::Keyword::While },
+			Case{ .target = "for", .keyword = lang_def::Keyword::For },
+			Case{ .target = "block", .keyword = lang_def::Keyword::Block },
 		};
 
-		for (const auto& test_case: CASES) {
-			auto parsed = pst::PST<>::fromContents(test_case.code, pst::PSTType::Program);
-			assertTrue(
-				parsed.getLogger()->good(), base::strConcat("Failed to parse ", test_case.code)
-			);
+		for (const auto action_name: { "break", "continue" }) {
+			for (const auto& test_case: cases) {
+				for (const auto terminator: { ";", "" }) {
+					const auto code
+						= base::strConcat(action_name, " ", test_case.target, terminator);
+					auto parsed = pst::PST<>::fromContents(code, pst::PSTType::Program);
+					assertTrue(
+						parsed.getLogger()->good(), base::strConcat("Failed to parse ", code)
+					);
 
-			auto statements = parsed.getRootElement().illegalAccess().value()->getStatements();
-			ASSERT_EQUAL(usize{ 1 }, statements.size());
-			auto stmt   = statements[0].illegalAccess().value();
-			auto action = stmt.dynamicCast<pst::Action>();
-			ASSERT_HAS_VALUE(action, test_case.code);
-			auto target = action.value()->getTargetKeyword();
-			ASSERT_HAS_VALUE(target, test_case.code);
-			ASSERT_EQUAL(test_case.target, target.value());
-			ASSERT_NO_VALUE(action.value()->getValue(), test_case.code);
-			if (test_case.is_break)
-				ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Break>(), test_case.code);
-			else
-				ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Continue>(), test_case.code);
-			ASSERT_TRUE(
-				pst::testElementCloning(CRef{ &*parsed.getRootElement().illegalAccess().value() })
-					.isOk()
-			);
+					auto statements
+						= parsed.getRootElement().illegalAccess().value()->getStatements();
+					ASSERT_EQUAL(usize{ 1 }, statements.size());
+					auto stmt   = statements[0].illegalAccess().value();
+					auto action = stmt.dynamicCast<pst::Action>();
+					ASSERT_HAS_VALUE(action, code);
+					auto target = action.value()->getTargetKeyword();
+					ASSERT_EQUAL(test_case.keyword.has_value(), target.has_value());
+					if (test_case.keyword.has_value()) {
+						ASSERT_EQUAL(test_case.keyword.value(), target.value());
+						ASSERT_NO_VALUE(action.value()->getValue(), code);
+					} else if (test_case.target.empty()) {
+						ASSERT_NO_VALUE(action.value()->getValue(), code);
+					} else {
+						auto value = action.value()->getValue();
+						ASSERT_HAS_VALUE(value, code);
+						auto identifier = value.value()
+						                      .illegalAccess()
+						                      .value()
+						                      ->getExpr()
+						                      .illegalAccess()
+						                      .value()
+						                      .dynamicCast<pst::expr::IdentifierLiteral>();
+						ASSERT_HAS_VALUE(identifier, code);
+						ASSERT_EQUAL(
+							std::string_view{ "target" },
+							identifier.value()->getName().illegalAccess().value()->unwrap().strView()
+						);
+					}
+					ASSERT_EQUAL(std::string_view{ terminator }.empty(), stmt->isImplicitReturn());
+					if (std::string_view{ action_name } == "break")
+						ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Break>(), code);
+					else
+						ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Continue>(), code);
+					const auto cloning = pst::testElementCloning(CRef{
+						&*parsed.getRootElement().illegalAccess().value() });
+					ASSERT_TRUE(cloning.isOk());
+				}
+			}
+		}
+
+		// Other actions retain general expressions, including postfix calls and brackets.
+		for (const auto code:
+		     { "return value + 1;", "return make[T]();", "defer cleanup();", "throw error;" }) {
+			auto parsed = pst::PST<>::fromContents(code, pst::PSTType::Program);
+			ASSERT_TRUE(parsed.getLogger()->good());
+			auto action = parsed.getRootElement()
+			                  .illegalAccess()
+			                  .value()
+			                  ->getStatements()[0]
+			                  .illegalAccess()
+			                  .value()
+			                  .dynamicCast<pst::Action>();
+			ASSERT_HAS_VALUE(action);
+			ASSERT_HAS_VALUE(action.value()->getValue());
+			ASSERT_NO_VALUE(action.value()->getTargetKeyword());
 		}
 	}
 

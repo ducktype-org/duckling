@@ -6,7 +6,6 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
@@ -92,55 +91,15 @@ namespace compiler::helios {
 			auto kind = controlFlowKind(target_keyword.value());
 			CORE_ASSERT(kind.has_value(), "Invalid parsed control-flow target keyword.");
 			requested_target = kind.value();
-		}
-
-		if (target_holder.has_value()) {
+		} else if (target_holder.has_value()) {
 			auto target_expr = target_holder.value().unlock(ctx)->getExpr().unlock(ctx);
 			target_position  = target_expr->getStablePosition();
-
-			if (auto identifier = target_expr.template dynamicCast<pst::expr::IdentifierLiteral>()) {
-				if (identifier.value()->getTemplateSpecifier().has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"`", action_name, "` target cannot have a template specifier."
-						),
-						target_position
-					));
-					query::throwFailed();
-				}
-				requested_target = identifier.value()->getName().unlock(ctx)->unwrap();
-			} else if (auto keyword
-			           = target_expr.template dynamicCast<pst::expr::KeywordLiteral>()) {
-				if (keyword.value()->getTemplateSpecifier().has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"`", action_name, "` target cannot have a template specifier."
-						),
-						target_position
-					));
-					query::throwFailed();
-				}
-				auto kind = controlFlowKind(keyword.value()->getKeyword().unlock(ctx)->unwrap());
-				if (!kind.has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat("`", action_name, "` target must be a block kind or a name."),
-						target_position
-					));
-					query::throwFailed();
-				}
-				requested_target = kind.value();
-			} else {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					base::strConcat("`", action_name, "` target must be a block kind or a name."),
-					target_position
-				));
-				query::throwFailed();
-			}
+			auto identifier  = target_expr.template dynamicCast<pst::expr::IdentifierLiteral>();
+			CORE_ASSERT(identifier.has_value(), "Parsed control-flow target must be a bare name.");
+			requested_target = identifier.value()->getName().unlock(ctx)->unwrap();
 		}
 
-		const auto* target_name = std::get_if<base::StrID>(&requested_target);
-		const auto* target_kind = std::get_if<code::ControlFlowKind>(&requested_target);
-		auto        ancestor    = getPSTElementParent(ctx, stmt);
+		auto ancestor = getPSTElementParent(ctx, stmt);
 		while (ancestor.isLangElement()) {
 			auto element                   = ancestor.getAsLangElement().unlock(ctx);
 			bool crossed_callable_boundary = false;
@@ -160,42 +119,50 @@ namespace compiler::helios {
 			auto candidate_kind = controlFlowKind(element->getElementKind());
 			if (candidate_kind.has_value()) {
 				auto ancestor_stmt = element.template dynamicCast<pst::Stmt>().value();
-				if (target_name != nullptr) {
-					auto identifier = ancestor_stmt->getDeclSymbolIdentifier();
-					if (!identifier.has_value()
-					    || identifier.value().unlock(ctx)->unwrap() != *target_name) {
-						ancestor = getPSTElementParent(ctx, element);
-						continue;
+				variant_match(requested_target) {
+					variant_case(base::StrID, target_name) {
+						auto identifier = ancestor_stmt->getDeclSymbolIdentifier();
+						if (identifier.has_value()
+						    && identifier.value().unlock(ctx)->unwrap() == target_name) {
+							auto id = ctx.query<QuerySymbolOfSTMT>(ancestor_stmt).valueOrThrow();
+							CORE_ASSERT(
+								kind(id) == SymbolKind::NamedCodeElement,
+								"Expected a NamedCodeElement symbol."
+							);
+							return code::NamedTarget{ id };
+						}
 					}
-				} else if (target_kind != nullptr && candidate_kind.value() != *target_kind) {
-					ancestor = getPSTElementParent(ctx, element);
-					continue;
+					variant_case(code::ControlFlowKind, target_kind) {
+						if (candidate_kind.value() == target_kind)
+							return code::KindTarget{ target_kind };
+					}
+					variant_case_novalue(code::NearestLoop) {
+						if (candidate_kind == code::ControlFlowKind::While
+						    || candidate_kind == code::ControlFlowKind::For)
+							return code::NearestLoop{};
+					}
 				}
-
-				// Without an explicit name or kind, break and continue target the nearest loop.
-				if (target_name == nullptr && target_kind == nullptr
-				    && candidate_kind != code::ControlFlowKind::While
-				    && candidate_kind != code::ControlFlowKind::For) {
-					ancestor = getPSTElementParent(ctx, element);
-					continue;
-				}
-				if (target_name != nullptr) {
-					auto id = ctx.query<QuerySymbolOfSTMT>(ancestor_stmt).valueOrThrow();
-					CORE_ASSERT(
-						kind(id) == SymbolKind::NamedCodeElement,
-						"Named control-flow PST element must create a NamedCodeElement symbol."
-					);
-					return code::NamedTarget{ id };
-				}
-				if (target_kind != nullptr) return code::KindTarget{ *target_kind };
-				return code::NearestLoop{};
 			}
 			ancestor = getPSTElementParent(ctx, element);
 		}
 
-		ctx.logInt(makeBox<dia::PlaceholderError>(
-			base::strConcat("`", action_name, "` has no enclosing matching target."), target_position
-		));
+		variant_match(requested_target) {
+			variant_case_novalue(code::NearestLoop) {
+				ctx.logInt(makeBox<NoEnclosingLoopError>(target_position, action_name));
+			}
+			variant_case(base::StrID, target_name) {
+				ctx.logInt(makeBox<NoNamedControlFlowTargetError>(
+					target_position, action_name, target_name.strView()
+				));
+			}
+			variant_case_novalue(code::ControlFlowKind) {
+				ctx.logInt(makeBox<NoControlFlowKindTargetError>(
+					target_position,
+					action_name,
+					lang_def::keywordToStr(target_keyword.value()).strView()
+				));
+			}
+		}
 		query::throwFailed();
 	}
 
