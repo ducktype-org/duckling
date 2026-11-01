@@ -226,7 +226,9 @@ namespace compiler::helios {
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
-				variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
+				variant_case_novalue(
+					PstImplementedSemantics, PstInferredSemantics, ClassMemberSemantics
+				) {
 					CORE_ASSERT(
 						isFunctionLike(kind(key)),
 						"Function creation called on non-function, non-method and non-constructor "

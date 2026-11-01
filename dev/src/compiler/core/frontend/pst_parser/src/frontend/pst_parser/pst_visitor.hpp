@@ -35,7 +35,6 @@ namespace pst {
 		Pattern,
 		For,
 		Variable,
-		IdentifierWrapper,  // @TODO: #2782 Remove this.
 		If,
 		While,
 		Method,
