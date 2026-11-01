@@ -37,7 +37,16 @@ namespace compiler::frontend {
 
 		base::Optional<ModuleID> current_module;
 
-		auto maybe_child = getModuleRef(from)->getSubmoduleByName(path.at(0)).unlock(ctx);
+		auto from_module_ref = getModuleRef(from);
+
+		auto maybe_child = from_module_ref->getSubmoduleByName(path.at(0)).unlock(ctx);
+
+		// auto maybe_child = [&]() -> base::Optional<ModuleAccessLocked> {
+		// 	if (from_module_ref->getKind() == ModuleKind::Module)
+		// 		return from_module_ref->getSubmoduleByName(path.at(0)).unlock(ctx);
+		// 	return ModuleChildAccessLocked{from, path.at(0), {}}.unlock(ctx);
+		// }();
+		
 		if (maybe_child.has_value()) current_module = maybe_child.value().unlock(ctx).getID();
 
 		if (not current_module.has_value()) {
@@ -55,7 +64,7 @@ namespace compiler::frontend {
 			// Look up the dependency by alias in the current module's package.
 			// Uses getPackageDependencyByAlias so we register a dependency only on this specific
 			// (package, alias) edge instead of on every dependency of the package.
-			auto owner_pkg_id  = getModuleRef(from)->getPackage().unlock(ctx).getID();
+			auto owner_pkg_id  = from_module_ref->getPackage().unlock(ctx).getID();
 			auto owner_pkg_opt = global_state::getPackageRefOpt(owner_pkg_id);
 			// The only situation where owner_pkg_opt would not have value is in the tests.
 			if (not owner_pkg_opt.has_value()) return {};

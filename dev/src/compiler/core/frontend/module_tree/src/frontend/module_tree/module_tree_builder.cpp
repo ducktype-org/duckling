@@ -240,6 +240,7 @@ namespace compiler::frontend {
 	void ModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(!m_parent.has_value(), "Parent module is already set");
+		CORE_ASSERT(parent->getKind() == ModuleKind::Module, "Parent module must be a standard module");
 		m_parent = parent;
 	}
 

@@ -97,6 +97,7 @@ namespace compiler::frontend {
 		return FileAccessLocked(mainSourceFileSlot()->value()->getFileID());
 	}
 
+	// PR: remove this impl? or add a todo to switch to panic mode in new PR
 	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
 		CORE_PANIC("getSubmodules called on a module that does not support submodules!");
 	}
@@ -106,6 +107,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID) const {
+		// PR: remove this impl?, or add a todo to switch to panic mode in new PR
 		CORE_PANIC("getSubmoduleByName called on a module that does not support submodules!");
 	}
 
@@ -236,6 +238,8 @@ namespace compiler::frontend {
 		// Copy the path component hash to the component hash
 		hashing::ComponentHash::HashAlg partial = m_path_component_hash->partial;
 
+		hashing::addToHash(partial, this->getKind());
+
 		// If a Module has parent
 		hashing::addToHash(partial, m_parent.has_value());
 
@@ -245,15 +249,16 @@ namespace compiler::frontend {
 		// Module kind affects module semantics and therefore must affect module hash.
 		hashing::addToHash(partial, std::to_underlying(getKind()));
 
-		if (isReplModule()) {
-			auto repl_module_parent = getReplModuleParent();
-			hashing::addToHash(partial, repl_module_parent.has_value());
-			if (repl_module_parent.has_value()) {
-				auto repl_parent = repl_module_parent.value();
+		// PR: add protected virtual method addToHashKindSpecificData for kind-specific data
+		// if (isReplModule()) {
+		// 	auto repl_module_parent = getReplModuleParent();
+		// 	hashing::addToHash(partial, repl_module_parent.has_value());
+		// 	if (repl_module_parent.has_value()) {
+		// 		auto repl_parent = repl_module_parent.value();
 
-				hashing::addToHash(partial, ModuleTree::getModuleHash(repl_parent));
-			}
-		}
+		// 		hashing::addToHash(partial, ModuleTree::getModuleHash(repl_parent));
+		// 	}
+		// }
 
 		// We do not need to add source files count or submodule count here,
 		// Because there is a separate SideInput for that
@@ -440,17 +445,21 @@ namespace compiler::frontend {
 	 ***************************/
 	struct IMPLEMENT_QUERY(QueryReplModuleParent, base::Optional<ModuleID>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO: #1389 verify Functor correctness.
+			// @TODO: #1389 verify Functor correctness and fix incremental here.
 
 			auto module_tree = GetModuleID_Functor::get(key);
 			if (!module_tree->isReplModule()) return {};
-			auto repl_parent = module_tree->getReplModuleParent();
+
+			auto repl_parent = dynamic_cast<const SyntheticReplChainModuleTreeNode*>(&*module_tree)->getReplModuleParent();
+			
 			if (repl_parent.has_value()) {
 				// Register dependency on the parent module contents so incremental rebuilds propagate
 				ctx.query<QueryModuleSideInput>(KeyOf_ModuleSideInput{
-					ModuleTree::getModuleHash(repl_parent.value()) });
+					ModuleTree::getModuleHash(repl_parent.value()->getModuleID()) });
 			}
-			return repl_parent;
+			return repl_parent.map([](const auto& node) {
+				return node->getModuleID();
+			});
 		}
 
 		QUERY_AUTO_CACHE_COPY

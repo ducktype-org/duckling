@@ -25,7 +25,7 @@ namespace compiler::frontend {
 		 */
 		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
 
-		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
+		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_parent;
 
 		void makeAbstract() final;
 
@@ -43,6 +43,19 @@ namespace compiler::frontend {
 
 		[[nodiscard]]
 		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const;
+
+		[[nodiscard]]
+		const base::Optional<Ref<SyntheticReplChainModuleTreeNode>>& getReplModuleParent() const;
+
+		SubmodulesAccessLocked getSubmodules() const override {
+			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
+			return SubmodulesAccessLocked{getModuleID(), {}};
+		}
+
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
+			// Script modules have no submodules, so we return an empty ModuleChildAccessLocked.
+			return ModuleChildAccessLocked{getModuleID(), name, {}};
+		}
 	};
 
 	/**
@@ -54,7 +67,10 @@ namespace compiler::frontend {
 	class ScriptModuleTreeNode final: public ModuleTree {
 		base::Optional<fs::File> m_script_file;
 
-		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
+		// We might want to keep refs to all synthetic REPL chain modules associated with this script here
+		// to be able to modify them as needed in the future.
+
+		// base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
 		void makeAbstract() final;
 
@@ -68,7 +84,18 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
 	public:
-		ScriptModuleTreeNode();
+		explicit ScriptModuleTreeNode();
+
+
+		SubmodulesAccessLocked getSubmodules() const override {
+			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
+			return SubmodulesAccessLocked{getModuleID(), {}};
+		}
+
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
+			// Script modules have no submodules, so we return an empty ModuleChildAccessLocked.
+			return ModuleChildAccessLocked{getModuleID(), name, {}};
+		}
 	};
 
 

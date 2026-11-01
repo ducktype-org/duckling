@@ -111,6 +111,10 @@ namespace compiler::frontend {
 		 */
 		void setParent(base::Ref<ModuleTree> parent);
 
+		// PR: 
+		// add * set repl module parent and other script/repl data here
+		// we want to just keep flat optionals of everything and assert in finalize that only the ones we want are set (per module kind)
+
 		/**
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.

@@ -59,6 +59,7 @@ namespace compiler::repl {
 		builder->setName(base::StrID(
 			base::strConcat("repl_probe_", std::to_string(ReplSessionID::next().asInt()))
 		));
+		// Deal with this:
 		// TODO PR?: builder->setParent(std::nullopt);
 		// old code: builder->setReplModule(frontend::ReplData{});
 		return builder->finalize();

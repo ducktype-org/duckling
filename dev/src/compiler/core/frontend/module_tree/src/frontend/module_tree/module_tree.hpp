@@ -241,7 +241,8 @@ namespace compiler::frontend {
 
 		ModuleTree(const ModuleTree&)            = delete;
 		ModuleTree& operator=(const ModuleTree&) = delete;
-		ModuleTree(ModuleTree&&) noexcept        = default;
+		ModuleTree(ModuleTree&&) noexcept        = delete;
+		ModuleTree& operator=(ModuleTree&&) noexcept = delete;
 
 	protected:
 		ModuleTree();
