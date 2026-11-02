@@ -24,8 +24,8 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

@@ -34,9 +34,9 @@
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -337,7 +337,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
-				const auto op    = stmt->getOperator().unlock(ctx);
+				const auto op = stmt->getOperator().unlock(ctx);
 				auto inner = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getExpr())).valueOrThrow();
 				// If necessary, this is the place to handle any particularly tricky cases.
 				// Currently, there are none.
@@ -843,7 +843,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
-				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+				const auto bool_type     = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 				auto       condition_res = subExprFromPSTWithType(
                     ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
                 );

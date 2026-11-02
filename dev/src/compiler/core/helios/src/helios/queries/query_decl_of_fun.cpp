@@ -35,12 +35,12 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

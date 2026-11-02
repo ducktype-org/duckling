@@ -80,9 +80,9 @@ namespace compiler::helios {
 
 			ClassDataParser(query::Context& ctx): ctx(ctx) {}
 
-			base::Optional<base::StrID>                            name;
-			base::Optional<pst::AccessLocked<pst::ExprElement>>    base_class;
-			base::Optional<pst::Access<pst::ImplementsList>>       implements;
+			base::Optional<base::StrID>                         name;
+			base::Optional<pst::AccessLocked<pst::ExprElement>> base_class;
+			base::Optional<pst::Access<pst::ImplementsList>>    implements;
 
 			void visitClass(pst::Access<pst::Class> stmt) final {
 				name = stmt->getName().unlock(ctx)->unwrap();
