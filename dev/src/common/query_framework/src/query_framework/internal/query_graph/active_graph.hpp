@@ -11,6 +11,7 @@
 #include <concurrent/base/collections/hash_map.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/pointers/shared_box.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
@@ -37,7 +38,7 @@ namespace query::internal {
 		struct QueryCycle final {
 			struct NodeCycleInfo final {
 				NodeID                          node_id;
-				std::shared_ptr<query::Context> node_context_ref;
+				SharedBox<query::Context> node_context_ref;
 			};
 
 			std::vector<NodeCycleInfo> cycle_nodes;
@@ -51,7 +52,7 @@ namespace query::internal {
 		struct ActiveData final {
 			base::Optional<NodeID> active_edge;
 
-			std::shared_ptr<query::Context> node_context_ref;
+			SharedBox<query::Context> node_context_ref;
 
 			// @TODO: #1886 we will also need to store key refs here (in type-erased way),
 			// we might want to put in in multiple hash maps, as key operations will be
@@ -59,8 +60,10 @@ namespace query::internal {
 			// We might want to store Ref<void> – maybe we need custom base type?.
 		};
 
+		// Note: there is no separate atomic node counter on purpose. Every query start/end
+		// would update it from all workers, making them fight over one cache line; size() is
+		// only used in assertions, so it is computed from the map instead.
 		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
-		std::atomic<u64>                           active_node_count = 0;
 
 
 	public:
@@ -68,7 +71,7 @@ namespace query::internal {
 		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
 		 */
-		void putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref);
+		void putNode(NodeID node_id, SharedBox<query::Context> node_context_ref);
 
 		/**
 		 * Removes a node from the active query graph.

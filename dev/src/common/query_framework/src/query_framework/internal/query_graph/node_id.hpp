@@ -11,6 +11,7 @@
 #pragma once
 
 #include <base/types/bit256.hpp>
+#include <base/types/hash_mix.hpp>
 
 #include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
 
@@ -51,10 +52,10 @@ namespace query::internal {
 template<>
 struct std::hash<query::internal::NodeID> final {
 	std::size_t operator()(const query::internal::NodeID& key) const {
-		auto l = key.q_id;
-		auto r = key.hash.val;
-
-		// This is questionable
-		return l.asInt() * 9'223'372'036'854'775'783UL + std::hash<base::Bit256>{}(r);
+		// Mix the query id into the key hash. The previous `q_id * (2^63 - 25) + key_hash` shifted
+		// consecutive query ids by only -25, so small key hashes of different queries collided.
+		return base::hashCombine64(
+			std::hash<base::Bit256>{}(key.hash.val), static_cast<u64>(key.q_id.asInt())
+		);
 	}
 };

@@ -8,6 +8,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/noexcept.hpp>
+#include <base/types/hash_mix.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 #include <base/types/monostate.hpp>
 
@@ -105,9 +106,11 @@ namespace std {
 	template<>
 	struct hash<base::Bit256> {
 		std::size_t operator()(const base::Bit256& bit256) const noexcept {
+			// Order-dependent mixing of all words. A plain XOR of the words collapses structured
+			// keys (e.g. {scope id, name id, flag}) into a tiny value space and causes massive
+			// collisions in hash maps.
 			std::size_t hash = 0;
-			for (const auto& value: bit256.data)
-				hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
+			for (const auto& value: bit256.data) hash = base::hashCombine64(hash, value);
 			return hash;
 		}
 	};

@@ -14,6 +14,7 @@
 #include <base/collections/maps.hpp>
 #include <base/memory/single_type_memory_pool_allocator.hpp>
 #include <base/pointers/box.hpp>
+#include <base/types/hash_mix.hpp>
 
 #include <concepts>
 #include <iterator>
@@ -65,16 +66,30 @@ namespace base {
 				  key_value(std::forward<K>(key), std::forward<D>(value)) {}
 		};
 
+	public:
+		/**
+		 * Hash of the key as used by the map: HASH_T result passed through a bit mixer, so that
+		 * weak hashes (identity std::hash<u64> of ids/pointers, XOR-combined words) still spread
+		 * evenly over buckets indexed by the low bits.
+		 * Exposed so that callers (e.g. concurrent::ConHashMap) can compute it only once and use
+		 * the *AssumingHash methods.
+		 */
 		[[nodiscard]]
 		static KeyHash keyHash(const KEY_T& key
 		) noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
-			return HASH_T{}(key);
+			return ::base::hashMix64(static_cast<u64>(HASH_T{}(key)));
 		}
 
+	private:
 		[[nodiscard]]
 		u64 hashToBucket(KeyHash hash) const RELEASE_NOEXCEPT {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
-			auto res = hash % buckets.size();
+			CORE_ASSERT(
+				(buckets.size() & (buckets.size() - 1)) == 0, "Bucket count must be a power of two"
+			);
+			// The bucket count is always a power of two (64 doubled on every rehash), so a mask
+			// replaces the much slower 64-bit division.
+			auto res = hash & (buckets.size() - 1);
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
 			return res;
 		}
@@ -131,11 +146,45 @@ namespace base {
 				rehash();
 		}
 
+	public:
 		/*****************************************************************************************\
 		|  Below is the map interface methods that take calculated hash of a key as a parameter. |
 		|  It is used to ensure that hash is only calculated once when needed.                    |
 		|  For doc comments explaining the interface, see the corresponding public functions.     |
+		|  @p key_hash must be keyHash(key).                                                      |
 		\*****************************************************************************************/
+
+		/**
+		 * See docs of erase() method for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		bool eraseAssumingHash(const KEY_T& key, KeyHash key_hash) RELEASE_NOEXCEPT {
+			u64        bucket_index  = hashToBucket(key_hash);
+			MRef<Node> current_node  = buckets.at(bucket_index);
+			MRef<Node> previous_node = nullptr;
+
+			// iterate over the bucket:
+			while (current_node) {
+				if (current_node->key_value.key == key) {
+					// found the node to erase
+
+					// relink the pointers in the bucket:
+					if (previous_node) {
+						previous_node->next = current_node->next;
+					} else {
+						// erasing first node in bucket
+						buckets.at(bucket_index) = current_node->next;
+					}
+
+					node_allocator.deallocateDestroy(current_node.toOpt().value());
+					element_count--;
+					return true;
+				}
+				previous_node = current_node;
+				current_node  = current_node->next;
+			}
+			return false;
+		}
 
 
 		/**
@@ -487,31 +536,7 @@ namespace base {
 		 * @returns Whether a value was erased.
 		 */
 		bool erase(const KEY_T& key) RELEASE_NOEXCEPT {
-			u64        bucket_index  = keyToBucket(key);
-			MRef<Node> current_node  = buckets.at(bucket_index);
-			MRef<Node> previous_node = nullptr;
-
-			// iterate over the bucket:
-			while (current_node) {
-				if (current_node->key_value.key == key) {
-					// found the node to erase
-
-					// relink the pointers in the bucket:
-					if (previous_node) {
-						previous_node->next = current_node->next;
-					} else {
-						// erasing first node in bucket
-						buckets.at(bucket_index) = current_node->next;
-					}
-
-					node_allocator.deallocateDestroy(current_node.toOpt().value());
-					element_count--;
-					return true;
-				}
-				previous_node = current_node;
-				current_node  = current_node->next;
-			}
-			return false;
+			return eraseAssumingHash(key, keyHash(key));
 		}
 
 		/**

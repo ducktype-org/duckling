@@ -31,7 +31,7 @@ namespace query::internal {
 		  num_workers(worker_manager.getAllWorkers().size()),
 		  worker_pools(num_workers),
 		  is_worker_free(num_workers) {
-		std::ranges::fill(is_worker_free, true);
+		for (auto& is_free: is_worker_free) is_free.value.store(true);
 
 		u64 worker_index = 0;
 		for (auto worker: worker_manager.getAllWorkers()) {
@@ -72,8 +72,9 @@ namespace query::internal {
 
 	void TaskPool::waitForTask(NodeID id) {
 		auto             task_hash  = taskHash(id);
-		auto&            task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
-		auto&            task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
+		auto&            completion = task_completion.at(task_hash % TASK_SHARDS);
+		auto&            task_mutex = completion.mutex;
+		auto&            task_cv    = completion.cv;
 		std::unique_lock lock(task_mutex);
 		task_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
@@ -129,8 +130,9 @@ namespace query::internal {
 			task_status_map.update(task.id, TaskStatus::Done);
 			{
 				auto  task_hash  = taskHash(task.id);
-				auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
-				auto& task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
+				auto& completion = task_completion.at(task_hash % TASK_SHARDS);
+				auto& task_mutex = completion.mutex;
+				auto& task_cv    = completion.cv;
 
 				std::lock_guard lock(task_mutex);
 				task_cv.notify_all();
@@ -208,11 +210,11 @@ namespace query::internal {
 	void TaskPool::onWorkerNoTasks() {
 		auto current_worker = concurrent::worker::Worker::getCurrentWorker();
 		// Set the worker as free
-		is_worker_free[current_worker->getID()].store(true, std::memory_order_seq_cst);
+		is_worker_free[current_worker->getID()].value.store(true, std::memory_order_seq_cst);
 
 		auto set_worker_not_free = [&]() -> bool {
 			bool expected = true;
-			return is_worker_free[current_worker->getID()].compare_exchange_strong(
+			return is_worker_free[current_worker->getID()].value.compare_exchange_strong(
 				expected, false, std::memory_order_seq_cst
 			);
 		};
@@ -266,9 +268,12 @@ namespace query::internal {
 	void TaskHandle::await() { pool.await(task_id); }
 
 	base::Optional<concurrent::worker::WRef> TaskPool::getFreeWorker() {
-		auto it = std::ranges::find_if(is_worker_free, [](std::atomic<bool>& is_free) {
+		auto it = std::ranges::find_if(is_worker_free, [](CacheLinePadded<std::atomic<bool>>& is_free) {
+			// Check with a plain load first: a CAS on a busy worker's flag would still take its
+			// cache line exclusively.
+			if (!is_free.value.load(std::memory_order_relaxed)) return false;
 			bool expected = true;
-			return is_free.compare_exchange_strong(expected, false, std::memory_order_seq_cst);
+			return is_free.value.compare_exchange_strong(expected, false, std::memory_order_seq_cst);
 		});
 		if (it != is_worker_free.end()) {
 			auto index = static_cast<size_t>(std::distance(is_worker_free.begin(), it));

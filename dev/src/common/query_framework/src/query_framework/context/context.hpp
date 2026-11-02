@@ -71,7 +71,6 @@ namespace query {
 		 */
 		std::atomic<bool> is_cyclic_node = false;
 
-		Context(internal::NodeID my_node): my_node(my_node) {}
 		friend struct query::internal::ContextAccess;
 
 		/**
@@ -190,6 +189,17 @@ namespace query {
 		};
 
 	public:
+		/**
+		 * @brief Passkey of the Context constructor. Only ContextAccess can create it, so only
+		 * ContextAccess can construct a Context, also through generic factories like makeSharedBox.
+		 */
+		class ConstructionKey final {
+			ConstructionKey() = default;
+			friend struct query::internal::ContextAccess;
+		};
+
+		Context(ConstructionKey /*key*/, internal::NodeID my_node): my_node(my_node) {}
+
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
 

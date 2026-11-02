@@ -224,13 +224,31 @@ namespace query::internal {
 		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
-		static constexpr usize              TASK_SHARDS = 113;
-		std::array<std::mutex, TASK_SHARDS> task_completed_mutexes;
-		/// Condition variable for signaling task completion.
-		std::array<std::condition_variable, TASK_SHARDS> task_completed_cv;
+		static constexpr usize TASK_SHARDS = 113;
+
+		/**
+		 * Mutex + condition variable for signaling task completion, one per shard.
+		 * Each shard has its own cache line, so locking one shard does not invalidate the
+		 * line of a neighbouring shard used by another core.
+		 */
+		struct alignas(64) CompletionShard final {
+			std::mutex              mutex;
+			std::condition_variable cv;
+		};
+
+		std::array<CompletionShard, TASK_SHARDS> task_completion;
+
+		/**
+		 * Wrapper that gives a value its own cache line.
+		 */
+		template<typename T>
+		struct alignas(64) CacheLinePadded final {
+			T value;
+		};
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
-		std::vector<std::atomic<bool>> is_worker_free;
+		/// Each flag on its own cache line: getFreeWorker() scans all of them from every core.
+		std::vector<CacheLinePadded<std::atomic<bool>>> is_worker_free;
 	};
 
 }  // namespace concurrent

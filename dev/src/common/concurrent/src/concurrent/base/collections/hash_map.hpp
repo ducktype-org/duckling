@@ -14,6 +14,8 @@
 #include <atomic>
 #include <concepts>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace concurrent {
 
@@ -36,31 +38,65 @@ namespace concurrent {
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
-	class ConHashMap final {
+	class alignas(64) ConHashMap final {
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
 		using KeyHash = u64;
 
+		/**
+		 * A single shard: its lock and its map together, aligned to a cache line.
+		 *
+		 * The lock lives next to the data it protects (no extra indirection), and neighbouring
+		 * shards never share a cache line, so locking or modifying one shard does not invalidate
+		 * the lines of other shards on other cores.
+		 */
+		struct alignas(64) Shard final {
+			mutable concurrent::AtomicFlagSpinlock lock;
+			HashMapType                            map;
+
+			Shard() = default;
+
+			explicit Shard(HashMapType&& source_map) noexcept: map(std::move(source_map)) {}
+
+			// Only needed to satisfy std::vector requirements; shards are never relocated (the
+			// vector is created with its final size and never grows).
+			Shard(Shard&& other) noexcept: map(std::move(other.map)) {}
+
+			Shard(const Shard&)            = delete;
+			Shard& operator=(const Shard&) = delete;
+			Shard& operator=(Shard&&)      = delete;
+		};
+
+		/**
+		 * The hash is computed once per operation (by the underlying map's mixed keyHash) and
+		 * reused for both the shard and the bucket selection.
+		 */
 		[[nodiscard]]
-		constexpr u64 keyToShard(const KEY_T& key) const
-			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
-			u64 hash = HASH_T{}(key);
+		static KeyHash keyHash(const KEY_T& key
+		) noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
+			return HashMapType::keyHash(key);
+		}
 
-			u64 result = hash % SHARD_COUNT;
-			CORE_ASSERT(result < SHARD_COUNT, "Shard index out of bounds");
-
+		/**
+		 * Shard index from the high 32 bits of the hash (multiply-shift instead of a division).
+		 * Buckets inside a shard use the low bits, so the two selections are independent.
+		 */
+		[[nodiscard]]
+		static constexpr u64 shardOf(KeyHash hash) noexcept {
+			u64 result = ((hash >> 32) * SHARD_COUNT) >> 32;
 			return result;
 		}
 
 		/**
-		 * Asserts that the number of shards and their corresponding mutexes match.
+		 * Asserts that the number of shards is correct.
 		 * This fails when someone accidentally pushes a new shard to the shards vector.
 		 */
 		void assertCorrectShardsSize() const {
-			CORE_ASSERT(
-				SHARD_COUNT == shard_mutexes.size() and SHARD_COUNT == shards.size(),
-				"Shard count mismatch"
-			);
+			CORE_ASSERT(SHARD_COUNT == shards.size(), "Shard count mismatch");
+		}
+
+		static void assertShardIndex(u64 shard_index) {
+			CORE_ASSERT(shard_index < SHARD_COUNT, "Shard index out of bounds");
 		}
 
 		/**
@@ -76,11 +112,12 @@ namespace concurrent {
 			WithShardLock(const ConHashMap& self, u64 shard_index) noexcept:
 				  shard_index(shard_index),
 				  self(self) {
-				self.shard_mutexes[shard_index]->lock();
+				assertShardIndex(shard_index);
+				self.shards[shard_index].lock.lock();
 				self.assertCorrectShardsSize();
 			}
 
-			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
+			~WithShardLock() noexcept { self.shards[shard_index].lock.unlock(); }
 		};
 
 		/**
@@ -95,26 +132,51 @@ namespace concurrent {
 
 		public:
 			explicit WithAllShardsLock(const ConHashMap& self) noexcept: self(self) {
-				for (u64 i = 0; i < SHARD_COUNT; i++) self.shard_mutexes[i]->lock();
+				for (u64 i = 0; i < SHARD_COUNT; i++) self.shards[i].lock.lock();
 				self.assertCorrectShardsSize();
 			}
 
 			~WithAllShardsLock() noexcept {
-				for (u64 i = 0; i < SHARD_COUNT; i++) self.shard_mutexes[i]->unlock();
+				for (u64 i = 0; i < SHARD_COUNT; i++) self.shards[i].lock.unlock();
 			}
 
 			WithAllShardsLock(const WithAllShardsLock&) = delete;
 			WithAllShardsLock(WithAllShardsLock&&)      = delete;
 		};
 
+		/**
+		 * Moves the content of all shards of @p source out, under a lock of all its shards.
+		 * The source maps are left empty but valid.
+		 */
+		static std::vector<Shard> takeShardsFrom(ConHashMap& source) noexcept {
+			WithAllShardsLock  lock(source);
+			std::vector<Shard> result;
+			result.reserve(SHARD_COUNT);
+			for (u64 i = 0; i < SHARD_COUNT; i++) result.emplace_back(std::move(source.shards[i].map));
+			return result;
+		}
+
+		/**
+		 * Locks the shard of @p key and calls @p f(shard map, key hash).
+		 */
+		template<typename Func>
+		decltype(auto) withShardOf(const KEY_T& key, Func&& f) RELEASE_NOEXCEPT {
+			const KeyHash hash = keyHash(key);
+			WithShardLock lock(*this, shardOf(hash));
+			return std::forward<Func>(f)(shards[lock.shard_index].map, hash);
+		}
+
+		template<typename Func>
+		decltype(auto) withShardOf(const KEY_T& key, Func&& f) const RELEASE_NOEXCEPT {
+			const KeyHash hash = keyHash(key);
+			WithShardLock lock(*this, shardOf(hash));
+			return std::forward<Func>(f)(std::as_const(shards[lock.shard_index].map), hash);
+		}
 
 	public:
 		using KeyValuePair = typename HashMapType::KeyValuePair;
 
-		ConHashMap(): shards(SHARD_COUNT) {
-			for (u64 i = 0; i < SHARD_COUNT; i++)
-				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
-		}
+		ConHashMap(): shards(SHARD_COUNT) {}
 
 		ConHashMap(const ConHashMap&) = delete;
 
@@ -123,34 +185,21 @@ namespace concurrent {
 		 * After this operation, the @p source map is left in an empty but valid state.
 		 *
 		 * Underneath this performs the following:
-		 * * It moves the content of each shard by transferring the ownership,
-		 *   i.e. the shards remain in the same place in memory, and their constructors are
-		 *   not called.
-		 * * It generates new locks for the new map. This way if other threads try to access the
-		 *   source map during the move, they will be properly synchronized and will not
-		 *   cause data races or access to invalid memory.
+		 * * It locks all shards of the source, moves the content of each shard map out (the
+		 *   nodes stay in place in memory, their constructors are not called) and leaves the
+		 *   source maps empty.
+		 * * The new map has its own, fresh locks. This way if other threads try to access the
+		 *   source map during the move, they will be properly synchronized and will not cause
+		 *   data races or access to invalid memory.
 		 *
 		 * @note This operation is thread safe, but beware that moves perform a large lock on the
 		 * map, and may in general be bug prone when done accidentally.
 		 */
-		ConHashMap(ConHashMap&& source) noexcept: ConHashMap() {
-			// No one should access the source map during this operation
-			WithAllShardsLock lock(source);
-
-			// Transfer ownership of each shard's content to the new map.
-			// Note that locks are initialized in the constructor initializer list.
-			// Linter wants the following line to be placed in init-list. We can't do that, since
-			// we need to lock the source map first.
-			shards = std::move(source.shards);  // NOLINT
-			elements_count.store(source.elements_count.load());
-
-			// Leave the source map in an empty but valid state
-			source.shards.clear();
-			source.shards.resize(SHARD_COUNT);
-			source.elements_count.store(0);
-		}
+		ConHashMap(ConHashMap&& source) noexcept: shards(takeShardsFrom(source)) {}
 
 		~ConHashMap() = default;
+
+
 
 		/**
 		 * Inserts key->value into the container.
@@ -161,11 +210,11 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			auto          result
-				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
-			elements_count.fetch_add(1, std::memory_order_relaxed);
-			return result;
+			const KeyHash hash = keyHash(key);
+			WithShardLock lock(*this, shardOf(hash));
+			return shards[lock.shard_index].map.putAssumingHash(
+				std::forward<K>(key), std::forward<D>(value), hash
+			);
 		}
 
 		/**
@@ -179,12 +228,11 @@ namespace concurrent {
 		template<typename K, typename D = DATA_T>
 		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-
-			auto result
-				= shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
-			if (result != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
-			return result;
+			const KeyHash hash = keyHash(key);
+			WithShardLock lock(*this, shardOf(hash));
+			return shards[lock.shard_index].map.maybePutAssumingHash(
+				std::forward<K>(key), std::forward<D>(value), hash
+			);
 		}
 
 		/**
@@ -193,14 +241,15 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void putOrAssign(const K& key, D&& value) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			const KeyHash hash = keyHash(key);
+			WithShardLock lock(*this, shardOf(hash));
+			auto&         map = shards[lock.shard_index].map;
 
-			if (shards[lock.shard_index].contains(key)) {
-				shards[lock.shard_index][key] = std::forward<D>(value);
+			if (auto existing = map.atMaybeAssumingHash(key, hash); existing.has_value()) {
+				*existing.value() = std::forward<D>(value);
 				return;
 			}
-			shards[lock.shard_index].maybePut(key, std::forward<D>(value));
-			elements_count.fetch_add(1, std::memory_order_relaxed);
+			map.maybePutAssumingHash(key, std::forward<D>(value), hash);
 		}
 
 		/**
@@ -213,13 +262,11 @@ namespace concurrent {
 		template<typename K, typename D = DATA_T, typename Func>
 		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
 		MRef<KeyValuePair> maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-
-			auto inserted = shards[lock.shard_index].maybePutAndUpdate(
-				std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f)
+			const KeyHash hash = keyHash(key);
+			WithShardLock lock(*this, shardOf(hash));
+			return shards[lock.shard_index].map.maybePutAndUpdateAssumingHash(
+				std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f), hash
 			);
-			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
-			return inserted;
 		}
 
 		/**
@@ -227,10 +274,10 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename Func>
 		void maybeCallOn(const K& key, Func&& f) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-
-			auto data = shards[lock.shard_index].atMaybe(key);
-			if (data.has_value()) std::forward<Func>(f)(Ref<DATA_T>(data.value()));
+			withShardOf(key, [&](auto& map, KeyHash hash) {
+				auto data = map.atMaybeAssumingHash(key, hash);
+				if (data.has_value()) std::forward<Func>(f)(Ref<DATA_T>(data.value()));
+			});
 		}
 
 		/**
@@ -238,10 +285,10 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename Func>
 		void maybeCallOn(const K& key, Func&& f) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-
-			auto data = shards[lock.shard_index].atMaybe(key);
-			if (data.has_value()) std::forward<Func>(f)(CRef<DATA_T>(data.value()));
+			withShardOf(key, [&](const auto& map, KeyHash hash) {
+				auto data = map.atMaybeAssumingHash(key, hash);
+				if (data.has_value()) std::forward<Func>(f)(CRef<DATA_T>(data.value()));
+			});
 		}
 
 		/**
@@ -250,10 +297,10 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename Func>
 		void callOn(const K& key, Func&& f) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-
-			auto data = shards[lock.shard_index].atMaybe(key);
-			std::forward<Func>(f)(Ref<DATA_T>(data.value()));
+			withShardOf(key, [&](auto& map, KeyHash hash) {
+				auto data = map.atMaybeAssumingHash(key, hash);
+				std::forward<Func>(f)(Ref<DATA_T>(data.value()));
+			});
 		}
 
 		/**
@@ -262,10 +309,10 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename Func>
 		void callOn(const K& key, Func&& f) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-
-			auto data = shards[lock.shard_index].atMaybe(key);
-			std::forward<Func>(f)(CRef<DATA_T>(data.value()));
+			withShardOf(key, [&](const auto& map, KeyHash hash) {
+				auto data = map.atMaybeAssumingHash(key, hash);
+				std::forward<Func>(f)(CRef<DATA_T>(data.value()));
+			});
 		}
 
 		/**
@@ -273,9 +320,9 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			DATA_T        value = shards[lock.shard_index][key];
-			return value;
+			return withShardOf(key, [&](const auto& map, KeyHash hash) -> DATA_T {
+				return **map.atMaybeAssumingHash(key, hash);
+			});
 		}
 
 		/**
@@ -284,8 +331,9 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].atMaybeCopy(key);
+			return withShardOf(key, [&](const auto& map, KeyHash hash) {
+				return map.atMaybeCopyAssumingHash(key, hash);
+			});
 		}
 
 		/**
@@ -296,13 +344,15 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> base::Optional<Ref<DATA_T>> {
-			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].atMaybe(key);
+			return withShardOf(key, [&](auto& map, KeyHash hash) {
+				return map.atMaybeAssumingHash(key, hash);
+			});
 		}
 
 		auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> base::Optional<CRef<DATA_T>> {
-			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].atMaybe(key);
+			return withShardOf(key, [&](const auto& map, KeyHash hash) {
+				return map.atMaybeAssumingHash(key, hash);
+			});
 		}
 
 		[[nodiscard]]
@@ -315,24 +365,25 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void update(K&& key, D&& value) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			shards[lock.shard_index][std::forward<K>(key)] = std::forward<D>(value);
+			withShardOf(key, [&](auto& map, KeyHash hash) {
+				**map.atMaybeAssumingHash(key, hash) = std::forward<D>(value);
+			});
 		}
 
 		[[nodiscard]]
 		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].contains(key);
+			return withShardOf(key, [&](const auto& map, KeyHash hash) {
+				return map.containsAssumingHash(key, hash);
+			});
 		}
 
 		/**
 		 * Atomically erases the given key->value pair from the map.
 		 */
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			bool          erased = shards[lock.shard_index].erase(key);
-			if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);
-			return erased;
+			return withShardOf(key, [&](auto& map, KeyHash hash) {
+				return map.eraseAssumingHash(key, hash);
+			});
 		}
 
 		/**
@@ -340,19 +391,12 @@ namespace concurrent {
 		 */
 		template<typename Predicate>
 		bool eraseIf(const KEY_T& key, Predicate&& pred) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			auto&         shard = shards[lock.shard_index];
-
-			auto opt_ref = shard.atMaybe(key);
-			if (opt_ref.has_value()) {
-				if (std::forward<Predicate>(pred)(opt_ref.value())) {
-					if (shard.erase(key)) {
-						elements_count.fetch_sub(1, std::memory_order_relaxed);
-						return true;
-					}
-				}
-			}
-			return false;
+			return withShardOf(key, [&](auto& map, KeyHash hash) -> bool {
+				auto opt_ref = map.atMaybeAssumingHash(key, hash);
+				if (opt_ref.has_value() && std::forward<Predicate>(pred)(opt_ref.value()))
+					return map.eraseAssumingHash(key, hash);
+				return false;
+			});
 		}
 
 		/**
@@ -361,30 +405,35 @@ namespace concurrent {
 		 * 2. Erases the key->value pair from the map.
 		 */
 		base::Optional<DATA_T> extract(const KEY_T& key) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-
-			auto at_maybe = shards[lock.shard_index].atMaybe(key);
-			if (!at_maybe.has_value()) {
-				// data was already not present
-				return base::Optional<DATA_T>{};
-			} else {
+			return withShardOf(key, [&](auto& map, KeyHash hash) -> base::Optional<DATA_T> {
+				auto at_maybe = map.atMaybeAssumingHash(key, hash);
+				if (!at_maybe.has_value()) {
+					// data was already not present
+					return base::Optional<DATA_T>{};
+				}
 				DATA_T value = std::move(*at_maybe.value());
-				shards[lock.shard_index].erase(key);
-				elements_count.fetch_sub(1, std::memory_order_relaxed);
+				map.eraseAssumingHash(key, hash);
 				return base::Optional<DATA_T>{ std::move(value) };
-			}
+			});
 		}
 
 		/**
 		 * Returns the number of elements currently stored in the map.
 		 *
-		 * @note The value is approximate under concurrent modifications –
-		 *       other operations uses relaxed memory ordering and this one is not synchronized with
-		 *       any particular shard lock.
+		 * @note The value is approximate under concurrent modifications: shards are counted one
+		 * after another, each under its own lock.
+		 * @note There is intentionally no global element counter: updating one shared atomic on
+		 * every insert/erase made all cores fight over a single cache line. This is O(shards),
+		 * so do not call it on hot paths.
 		 */
 		[[nodiscard]]
 		u64 size() const noexcept {
-			return elements_count.load(std::memory_order_seq_cst);
+			u64 result = 0;
+			for (u64 i = 0; i < SHARD_COUNT; i++) {
+				WithShardLock lock(*this, i);
+				result += shards[i].map.size();
+			}
+			return result;
 		}
 
 		/**
@@ -408,10 +457,8 @@ namespace concurrent {
 
 			/// Pointer to the shards vector (const or mutable depending on ValueT).
 			/// This would have to change when number of shards is not compile-time constant
-			using ShardsPtr = std::conditional_t<
-				std::is_const_v<ValueT>,
-				const std::vector<HashMapType>*,
-				std::vector<HashMapType>*>;
+			using ShardsPtr = std::
+				conditional_t<std::is_const_v<ValueT>, const std::vector<Shard>*, std::vector<Shard>*>;
 
 			ShardsPtr shards_ptr;
 
@@ -424,9 +471,9 @@ namespace concurrent {
 			 * advance to the next non-empty shard.
 			 */
 			void advanceToValid() {
-				while (shard_index < SHARD_COUNT && inner == (*shards_ptr)[shard_index].end()) {
+				while (shard_index < SHARD_COUNT && inner == (*shards_ptr)[shard_index].map.end()) {
 					++shard_index;
-					if (shard_index < SHARD_COUNT) inner = (*shards_ptr)[shard_index].begin();
+					if (shard_index < SHARD_COUNT) inner = (*shards_ptr)[shard_index].map.begin();
 				}
 			}
 
@@ -451,7 +498,7 @@ namespace concurrent {
 				  shards_ptr(shards_ptr),
 				  shard_index(shard_index) {
 				if (shard_index < SHARD_COUNT) {
-					inner = (*this->shards_ptr)[shard_index].begin();
+					inner = (*this->shards_ptr)[shard_index].map.begin();
 					advanceToValid();
 				}
 			}
@@ -546,9 +593,6 @@ namespace concurrent {
 	private:
 		/**
 		 * Number of shards used in the map.
-		 * @important In the current implementation GCD(SHARD_COUNT, 2) must be 1.
-		 * Otherwise, the distribution of keys over buckets in individual shards is highly
-		 * non-uniform, as the modulus used to select the buckets are the powers of two.
 		 *
 		 * @note In the future we might want to make SHARD_COUNT configurable, so it can be smaller
 		 * for "small" use cases and larger where it might matter (e.g. cache of highly concurrent
@@ -559,19 +603,8 @@ namespace concurrent {
 		static_assert(SHARD_COUNT > 0, "Shard count must be positive");
 
 		/**
-		 * The shards of the map.
+		 * The shards of the map (lock + map each), created once with SHARD_COUNT elements.
 		 */
-		std::vector<HashMapType> shards;
-
-		/**
-		 * The locks protecting each shard.
-		 */
-		mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
-
-		/**
-		 * Atomic counter tracking the number of elements in the map.
-		 */
-		std::atomic<u64> elements_count{ 0 };
+		std::vector<Shard> shards;
 	};
-
 }

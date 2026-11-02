@@ -10,7 +10,7 @@
 
 namespace query::internal {
 
-	void ActiveGraph::putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref) {
+	void ActiveGraph::putNode(NodeID node_id, SharedBox<query::Context> node_context_ref) {
 		active_nodes.put(
 			node_id,
 			{
@@ -18,19 +18,15 @@ namespace query::internal {
 				.node_context_ref = std::move(node_context_ref),
 			}
 		);
-		active_node_count++;
 	}
 
 	void ActiveGraph::removeNode(NodeID node_id) {
 		auto was_removed = active_nodes.erase(node_id);
 
-		if (was_removed)
-			active_node_count--;
-		else
-			CORE_PANIC("Removing non-existing node from active graph");
+		if (!was_removed) CORE_PANIC("Removing non-existing node from active graph");
 	}
 
-	u64 ActiveGraph::size() const { return active_node_count.load(); }
+	u64 ActiveGraph::size() const { return active_nodes.size(); }
 
 	void ActiveGraph::removeEdge(NodeID node_id) {
 		// Note that callOn will panic here, on a node that does not exist, this is the expected
@@ -63,10 +59,14 @@ namespace query::internal {
 		\***********************************************************/
 
 		// Walks a single edge in the active graph.
+		// Reads only the edge under the shard lock: copying the whole ActiveData would also copy
+		// its SharedBox<Context> (atomic refcount increment + decrement) on every step.
 		auto walk = [this](NodeID node_id) -> base::Optional<NodeID> {
-			auto edge = active_nodes.atMaybeCopy(node_id);
-			if (edge.empty()) return {};
-			return edge.value().active_edge;
+			base::Optional<NodeID> edge;
+			active_nodes.maybeCallOn(node_id, [&edge](CRef<ActiveData> data) {
+				edge = data->active_edge;
+			});
+			return edge;
 		};
 
 		auto double_walk = [walk](NodeID walk_zero) -> base::Optional<NodeID> {

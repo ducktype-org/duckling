@@ -28,8 +28,10 @@ namespace query {
 
 		/**
 		 * Data structure to hold statistics for a single query (not query call).
+		 * Aligned to a cache line, so the counters (written by every call) do not share a line
+		 * with the map node key (read by every lookup) or with another query's counters.
 		 */
-		struct QueryStatsData final {
+		struct alignas(64) QueryStatsData final {
 			std::atomic<u64>      num_calls         = 0;
 			std::atomic<u64>      num_provide_calls = 0;
 			timer::AtomicDuration total_call_time   = timer::Duration::zero();
@@ -46,9 +48,14 @@ namespace query {
 		 * Get the statistics data for a specific query.
 		 */
 		Ref<QueryStatsData> getQueryStatData(internal::QueryID query_id) {
-			auto maybe_inserted = data.maybePut(query_id, QueryStatsDataConstructionTag{});
-			if (maybe_inserted) return &maybe_inserted->value;
-			return data.at(query_id);
+			// Single lock acquisition for both the "insert" and the "already present" case.
+			QueryStatsData* result = nullptr;
+			data.maybePutAndUpdate(
+				query_id, QueryStatsDataConstructionTag{}, [&result](Ref<QueryStatsData> stats) {
+					result = stats.get();
+				}
+			);
+			return result;
 		}
 	}
 

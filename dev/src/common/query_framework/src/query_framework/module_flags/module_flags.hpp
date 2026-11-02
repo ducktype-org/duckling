@@ -10,8 +10,11 @@ namespace query {
 	/**
 	 * Whether the query statistics collection is enabled or not.
 	 * This is a compile-time constant for performance reasons.
+	 *
+	 * @note Disabled by default: collecting them costs a hash map lookup and shared atomic
+	 * counters on every computed query (one hot shard and cache line per query type).
 	 */
-	constexpr bool USE_STATS = true;
+	constexpr bool USE_STATS = false;
 
 
 	/**
