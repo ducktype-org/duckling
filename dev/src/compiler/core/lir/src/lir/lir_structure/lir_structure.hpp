@@ -228,6 +228,13 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout>                               return_type_layout;
 
 		/**
+		 * If true, a call to this function never returns (its result type is `void`).
+		 * Both `void` and `()` have the same return layout, so backends cannot tell them apart
+		 * from the layouts alone.
+		 */
+		bool never_returns;
+
+		/**
 		 * Optional indicates if a function literal is a builtin function.
 		 * Empty value indicates that a function is not a builtin.
 		 */
@@ -761,6 +768,12 @@ namespace compiler::lir {
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;
+
+		/**
+		 * If true, this function never returns (its result type is `void`).
+		 * @see FunctionLiteral::never_returns
+		 */
+		bool never_returns;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LIRLocal> local_list;
