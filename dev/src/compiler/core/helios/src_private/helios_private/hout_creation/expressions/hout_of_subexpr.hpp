@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 	 * building context or the `QueryHoutOfExpr` entry point.
 	 */
 	query::QResult<Box<code::Expr>> subExprFromPST(
-		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		query::Context& ctx, pst::Access<pst::ExprElement> element
 	);
 
 
@@ -43,7 +43,7 @@ namespace compiler::helios::code {
 	 */
 	query::QResult<Box<code::Expr>> subExprFromPSTWithType(
 		query::Context&                          ctx,
-		pst::AccessLocked<pst::ExprElement>      element,
+		pst::Access<pst::ExprElement>            element,
 		tsh::SymbolType<>                        expected_type,
 		base::Optional<dia::StablePosition>      coercion_expects_pos = {},
 		const coercions::CoercionErrorOverrides& error_overrides      = {}
