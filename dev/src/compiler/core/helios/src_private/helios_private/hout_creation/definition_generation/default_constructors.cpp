@@ -74,7 +74,7 @@ namespace compiler::helios::defgen {
 						const auto field_type = field.getType(ctx);
 						auto       field_init_hout
 							= getHoutOfExprWithExpectedType(
-								  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
+								  ctx, field_init.unlock(ctx)->getExpr(), field_type
 							)
 						          .valueOrThrow();
 						field_values.emplace_back(
