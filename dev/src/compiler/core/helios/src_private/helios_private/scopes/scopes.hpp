@@ -165,7 +165,7 @@ namespace compiler::helios {
 		// Does not have a scope:
 		Invalid,
 
-		// @TODO: introduce:
+		// In the future we might introduce:
 		// * TransparentInvalid -- transparent for implementation, but invalid for user
 		// this allows to easily implement scope parents, but disallow to get PrimaryScopes for
 		// elements that don't have it.
@@ -175,5 +175,5 @@ namespace compiler::helios {
 	/**
 	 * Determines scope kind for given PST element.
 	 */
-	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement> locked);
+	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement>);
 }

@@ -99,21 +99,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
 		/**
-		 * @brief Output type for the getScopesInModule function.
-		 */
-		struct ScopesInModuleValue final {
-			struct Success final {
-				std::vector<ScopeID> scopes;
-			};
-
-			struct Failure final {
-				std::vector<ScopeID> partial_scopes;
-			};
-
-			std::variant<Success, Failure> value;
-		};
-
-		/**
 		 * Helper struct used for accumulating the getScopesInModule output.
 		 */
 		struct GetScopesOutput final {
@@ -144,14 +129,14 @@ namespace compiler::helios {
 					// they don't compile directly
 					return true;
 				}
-				if (kind == pst::ElementKind::Action or kind == pst::ElementKind::Import
+				if (kind == pst::ElementKind::Import
 				    or kind == pst::ElementKind::Using) {
 					// @TODO: #3927 more cases might be added here in the future
 					// note that we shouldn't skip expressions, as they will be important once we
 					// have lambdas.
 
 					// We skip elements that cannot contain
-					// any symbols that QueryModuleHout should compile directly.
+					// any symbols that QueryModuleHOUT should compile directly.
 					return true;
 				}
 				return false;
@@ -167,7 +152,7 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief This is a helper functions.
+		 * @brief QueryModuleHOUT helper.
 		 * Its implementation assumes it is a helper for the QueryModuleHOUT query and not directly
 		 * in other contexts.
 		 *
@@ -175,14 +160,14 @@ namespace compiler::helios {
 		 * symbols meaningful for the QueryModuleHOUT query.
 		 *
 		 * @note It returns ScopesInModuleValue which contains all scopes in the module or
-		 * a partial list of scopes that where possible to obtain despite some other failures. The
+		 * a partial list of scopes that were possible to obtain despite some other failures. The
 		 * semantics of this failed state are the same as of a failed QResult (i.e. errors were
 		 * already reported), but we still want to return the scopes that we managed to obtain. This
-		 * is because this query is used by the QueryModuleHOUT and if we just failed here, then
+		 * is because if we just failed here, then
 		 * almost all of the compilation process would be halted and practically no HELIOS
 		 * diagnostics would appear.
 		 */
-		static ScopesInModuleValue getScopesInModule(Context& ctx, QKey key) {
+		static GetScopesOutput getScopesInModule(Context& ctx, QKey key) {
 			// fetch scopes from main module file
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
 
@@ -198,13 +183,9 @@ namespace compiler::helios {
 
 			// validate output:
 			for (auto scope: output.scopes)
-				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
+				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryModuleHOUT\n");
 
-			if (output.failed) {
-				return ScopesInModuleValue{ .value = ScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
-			} else {
-				return ScopesInModuleValue{ .value = ScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
-			}
+			return output;
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -214,20 +195,11 @@ namespace compiler::helios {
 			// and return failure at the end if so.
 			bool is_failed = false;
 
-			MCRef<std::vector<ScopeID>> scopes_to_process;
-
-			auto scopes_in_module = getScopesInModule(ctx, key);
-			variant_match(scopes_in_module.value) {
-				variant_case(ScopesInModuleValue::Success, success) {
-					scopes_to_process = &success.scopes;
-				}
-				variant_case(ScopesInModuleValue::Failure, failure) {
-					scopes_to_process = &failure.partial_scopes;
-					is_failed
-						= true;  // we mark the whole query as failed, even if we have some scopes
-				}
-				variant_default { CORE_UNREACHABLE(); }
-			}
+			std::vector<ScopeID> scopes_to_process = [&is_failed, &ctx, &key]() {
+				auto scopes_in_module = getScopesInModule(ctx, key);
+				is_failed |= scopes_in_module.failed;
+				return std::move(scopes_in_module.scopes);
+			}();
 
 			HOUTUnit out;
 
@@ -238,7 +210,7 @@ namespace compiler::helios {
 			// to check them for duplicates later.
 			std::vector<SymID> class_symbols;
 
-			for (auto scope: *scopes_to_process) {
+			for (auto scope: scopes_to_process) {
 				Ref symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 				if (symbols_in_scope->hasFailed()) {
 					is_failed = true;
