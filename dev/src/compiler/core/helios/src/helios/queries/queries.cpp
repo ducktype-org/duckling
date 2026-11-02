@@ -137,10 +137,6 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
-			// somehow. Note that more custom logic might be needed in the future (to optimize it,
-			// to compile lambdas, etc.)
-
 			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
 				auto kind = element->getElementKind();
 				if (kind == pst::ElementKind::TemplateStmt) {
