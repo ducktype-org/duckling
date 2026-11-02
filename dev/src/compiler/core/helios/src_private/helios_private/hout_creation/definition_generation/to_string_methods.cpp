@@ -19,7 +19,7 @@
 #include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/lookup/lookup_chains.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -71,7 +71,7 @@ namespace compiler::helios::defgen {
 		                                ->valueOrThrow();
 
 
-		for (const SymID candidate: lookup_result.leaves) {
+		for (const SymID candidate: lookup_result.leaves()) {
 			const auto fn_type = ctx.query<QueryTypeOfSymbol>(candidate)
 			                         ->valueOrThrow()
 			                         .getType()

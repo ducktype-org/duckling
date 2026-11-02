@@ -33,7 +33,7 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/lookup/lookup_chains.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>

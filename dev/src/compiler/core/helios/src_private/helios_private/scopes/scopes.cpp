@@ -24,7 +24,7 @@
 #include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/lookup/lookup_chains.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
@@ -47,6 +47,7 @@
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <iterator>
 #include <unordered_set>
 #include <variant>
 
@@ -779,70 +780,96 @@ namespace compiler::helios {
 			     static_cast<u64>(with_parents) };
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupResult>) {
+	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupChains>) {
+		/**
+		 * @brief Moves the nodes, the inaccessible symbols and the storage of @p from into @p into.
+		 */
+		static void append(LookupChains& into, LookupChains from) {
+			into.nodes.insert(into.nodes.end(), from.nodes.begin(), from.nodes.end());
+			into.inaccessible.insert(
+				into.inaccessible.end(), from.inaccessible.begin(), from.inaccessible.end()
+			);
+			for (auto& stored: from.storage) into.storage.push_back(std::move(stored));
+		}
+
+		/**
+		 * @brief The symbols named @p key.name that the wildcard @p wildcard provides, found by a
+		 * lookup in the leaf of its chain.
+		 */
+		static query::QResult<LookupChains> searchWildcard(
+			Context& ctx, const QKey& key, const WildcardExpr& wildcard
+		) {
+			UNPACK_QRESULT_CREF(
+				CRef<LookupChains> inner = &,
+				HInterface::ofSymbol(ctx, wildcard.chain.uniqueLeaf())
+					.lookup(ctx, key.name, { .with_wildcards = key.with_wildcards })
+			);
+			LookupChains found;
+			appendUnderLeaf(found, wildcard.chain, *inner);
+			return found;
+		}
+
 		/**
 		 * @brief Searches @p start and all the scopes its `using`/`import` symbols lead to,
-		 * skipping the ones in @p visited. Adds the symbols found there to @p result.
+		 * skipping the ones in @p visited. Returns the symbols found there.
 		 */
-		static query::QResult<std::monostate> searchScopeWithUsings(
-			Context&                     ctx,
-			const QKey&                  key,
-			ScopeID                      start,
-			std::unordered_set<ScopeID>& visited,
-			LookupResult&                result
+		static query::QResult<LookupChains> searchScopeWithUsings(
+			Context& ctx, const QKey& key, ScopeID start, std::unordered_set<ScopeID>& visited
 		) {
-			std::vector<ScopeID> pending{ start };
+			LookupChains found;
+			if (not visited.insert(start).second) return found;
 
-			while (not pending.empty()) {
-				auto current = pending.back();
-				pending.pop_back();
-				if (not visited.insert(current).second) continue;
+			UNPACK_QRESULT_CREF(
+				CRef<std::vector<SymID>> symbols = &,
+				ctx.query<QueryLookupInScope>({ start, key.name, key.with_wildcards })
+			);
+
+			for (const SymID sym: *symbols) {
+				if (kind(sym) != SymbolKind::Using and kind(sym) != SymbolKind::Import) {
+					found.nodes.push_back(Node::symbol(sym));
+					continue;
+				}
 
 				UNPACK_QRESULT_CREF(
-					CRef<std::vector<SymID>> symbols = &,
-					ctx.query<QueryLookupInScope>({ current, key.name, key.with_wildcards })
+					const UsingImportTarget& target =, ctx.query<QueryResolveUsingImport>(sym)
 				);
-
-				for (const SymID sym: *symbols) {
-					if (kind(sym) != SymbolKind::Using and kind(sym) != SymbolKind::Import) {
-						result.leaves.push_back(sym);
-						continue;
+				variant_match(target) {
+					variant_case(TargetScope, target_scope) {
+						UNPACK_QRESULT_MOVE(
+							auto in_scope =,
+							searchScopeWithUsings(ctx, key, target_scope.scope, visited)
+						);
+						appendUnderLeaf(found, target_scope.chain, in_scope);
+						std::ranges::move(in_scope.storage, std::back_inserter(found.storage));
 					}
-
-					UNPACK_QRESULT_CREF(
-						const UsingImportTarget& target =, ctx.query<QueryResolveUsingImport>(sym)
-					);
-					variant_match(target) {
-						variant_case(std::vector<SymID>, pointed) {
-							result.leaves.insert(
-								result.leaves.end(), pointed.begin(), pointed.end()
-							);
-						}
-						variant_case(ScopeID, pointed_scope) { pending.push_back(pointed_scope); }
-						variant_case(SymID, pointed_symbol) {
-							auto interface = HInterface::ofSymbol(ctx, pointed_symbol);
-							UNPACK_QRESULT_CREF(
-								CRef<LookupResult> pointed_result = &,
-								interface.lookup(ctx, key.name)
-							);
-							result.merge(*pointed_result);
-						}
+					variant_case(TargetExpr, target_expr) {
+						found.nodes.insert(
+							found.nodes.end(),
+							target_expr.chain.nodes.begin(),
+							target_expr.chain.nodes.end()
+						);
+					}
+					variant_case(WildcardExpr, wildcard) {
+						UNPACK_QRESULT_MOVE(auto provided =, searchWildcard(ctx, key, wildcard));
+						append(found, std::move(provided));
 					}
 				}
 			}
 
-			return std::monostate{};
+			return found;
 		}
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			std::unordered_set<ScopeID> visited;
-			LookupResult                result;
+			LookupChains                result;
 
 			base::Optional<ScopeID> current = key.scope;
 
 			while (current.has_value()) {
-				if (searchScopeWithUsings(ctx, key, current.value(), visited, result).hasFailed())
-					return query::Failed();
+				UNPACK_QRESULT_MOVE(
+					auto found =, searchScopeWithUsings(ctx, key, current.value(), visited)
+				);
+				append(result, std::move(found));
 
 				if (not key.with_parents) break;
 
@@ -852,13 +879,20 @@ namespace compiler::helios {
 			// Bring the default prelude modules into scope, as if every module wrote
 			// `import <module>.*;`. A no-op under --no-std.
 			if (key.with_parents) {
-				for (const ScopeID prelude_scope: *ctx.query<QueryImplicitPreludeScopes>({}))
-					if (searchScopeWithUsings(ctx, key, prelude_scope, visited, result).hasFailed())
-						return query::Failed();
+				for (const ScopeID prelude_scope: *ctx.query<QueryImplicitPreludeScopes>({})) {
+					UNPACK_QRESULT_MOVE(
+						auto found =, searchScopeWithUsings(ctx, key, prelude_scope, visited)
+					);
+					append(result, std::move(found));
+				}
 			}
 
 			std::unordered_set<SymID> seen;
-			std::erase_if(result.leaves, [&](SymID sym) { return not seen.insert(sym).second; });
+			std::erase_if(result.nodes, [&](const Node& node) {
+				if (node.passesThroughValue()) return false;
+				auto leaves = node.leaves();
+				return leaves.size() == 1 and not seen.insert(leaves.front()).second;
+			});
 			return result;
 		}
 

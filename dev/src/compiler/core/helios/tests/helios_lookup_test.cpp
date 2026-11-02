@@ -12,8 +12,8 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_chains.hpp>
 #include <helios_private/lookup/lookup_in_type_interface.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -114,7 +114,7 @@ private:
 		);
 	}
 
-	static CRef<LookupResult> lookupInType(
+	static CRef<LookupChains> lookupInType(
 		query::Context&         ctx,
 		AbstractType            type,
 		std::string_view        name,
@@ -139,7 +139,8 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto found = [&](std::string_view name, TypeAccessMode mode) {
 				return lookupInType(ctx, fixture.base, name, mode, fixture.inside_base)
-				    ->leaves.size();
+				    ->leaves()
+				    .size();
 			};
 
 			ASSERT_EQUAL(1u, found("pub_field", TypeAccessMode::Instance));
@@ -170,7 +171,8 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto visible = [&](std::string_view name, base::Optional<ScopeID> scope) {
 				return not lookupInType(ctx, fixture.base, name, TypeAccessMode::Instance, scope)
-				               ->leaves.empty();
+				               ->leaves()
+				               .empty();
 			};
 
 			// A public member is reachable from everywhere, even from a lookup that comes from
@@ -211,26 +213,18 @@ private:
 				ctx, fixture.base, "priv_field", TypeAccessMode::Instance, fixture.outside
 			);
 
-			ASSERT_TRUE(hidden->leaves.empty());
+			ASSERT_TRUE(hidden->isEmpty());
 			ASSERT_EQUAL(1u, hidden->inaccessible.size());
 			ASSERT_TRUE(hidden->hasInaccessible());
 			ASSERT_EQUAL(
 				"priv_field", compiler::helios::name(hidden->inaccessible.front()).strView()
 			);
 
-			// Every candidate being hidden is an error of its own, telling the name apart from
-			// one that does not exist.
-			ASSERT_TRUE(
-				std::holds_alternative<errors::Inaccessible>(hidden->getAsSingle().valueOrThrow())
-			);
-
 			CRef missing = lookupInType(
 				ctx, fixture.base, "nonExistent", TypeAccessMode::Instance, fixture.outside
 			);
 			ASSERT_TRUE(not missing->hasInaccessible());
-			ASSERT_TRUE(std::holds_alternative<errors::SymbolNotFound>(
-				missing->getAsSingle().valueOrThrow()
-			));
+			ASSERT_TRUE(missing->isEmpty());
 
 			// A visible member is returned as usual, nothing is hidden along with it.
 			CRef visible = lookupInType(
@@ -238,7 +232,6 @@ private:
 			);
 			ASSERT_TRUE(not visible->hasInaccessible());
 			ASSERT_TRUE(visible->isSingle());
-			ASSERT_TRUE(std::holds_alternative<SymbolList>(visible->getAsSingle().valueOrThrow()));
 		});
 	}
 
@@ -251,12 +244,13 @@ private:
 		const auto fixture           = makeFixture(root_scope);
 
 		withContextDo([&](query::Context& ctx) {
-			auto instance_lookup = [&](std::string_view name, ScopeID scope) {
+			auto instance_lookup
+				= [&](std::string_view name, ScopeID scope) -> const LookupChains& {
 				return HInterface::ofTypeInstance(fixture.base)
 				    .lookup(ctx, base::StrID(name), { .accessing_scope = scope })
 				    ->valueOrThrow();
 			};
-			auto meta_lookup = [&](std::string_view name, ScopeID scope) {
+			auto meta_lookup = [&](std::string_view name, ScopeID scope) -> const LookupChains& {
 				return HInterface::ofTypeMeta(fixture.base)
 				    .lookup(ctx, base::StrID(name), { .accessing_scope = scope })
 				    ->valueOrThrow();

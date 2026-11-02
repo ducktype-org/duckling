@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "lookup_result.hpp"
+#include "lookup_chains.hpp"
 
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -21,20 +21,43 @@
 
 namespace compiler::helios {
 	/**
-	 * @brief What a `using`/`import` points at:
-	 * * `ScopeID` -- the scope of the module or namespace named by a wildcard selector.
-	 * * `std::vector<SymID>` -- the symbols named by a non-wildcard selector.
-	 * * `SymID` -- any other symbol named by a wildcard selector (`using a.*;` of a variable),
-	 *   names are looked up in its interface.
-	 *
-	 * @TODO: #2791 Turn into a struct once nested selectors in usings and imports
-	 * (`using a.{b.*, c as d}`, `import a.{b.{* hides x}, c as d}`) are supported.
+	 * @brief A wildcard `using`/`import` of a module or namespace. The chain is what its selector
+	 * names, like the `a.N` of `using a.N.*;`, and @p scope holds the contents of its leaf.
 	 */
-	using UsingImportTarget = std::variant<ScopeID, std::vector<SymID>, SymID>;
+	struct TargetScope final {
+		ScopeID      scope;
+		LookupChains chain;
+	};
+
+	/**
+	 * @brief A `using`/`import` without a wildcard. The chain is what its selector names, like the
+	 * `a.b` of `using a.b;`, and its leaf is the provided symbol.
+	 */
+	struct TargetExpr final {
+		LookupChains chain;
+	};
+
+	/**
+	 * @brief A wildcard `using`/`import` of a symbol that is not namespace-like. The chain is what
+	 * its selector names, like the `v` of `using v.*;`, and the wildcard looks into its leaf.
+	 */
+	struct WildcardExpr final {
+		LookupChains chain;
+	};
+
+	/**
+	 * @brief What a `using`/`import` points at:
+	 * * `TargetScope` -- the module or namespace named by a wildcard selector.
+	 * * `TargetExpr` -- the chain named by a non-wildcard selector.
+	 * * `WildcardExpr` -- the chain of a symbol, that is not namespace-like, named by a wildcard
+	 *   selector.
+	 */
+	using UsingImportTarget = std::variant<TargetScope, TargetExpr, WildcardExpr>;
 
 	/**
 	 * @brief Resolves what the selector of a `using`/`import` symbol points at.
-	 * It is independent of the looked-up name, nothing is looked up inside the target.
+	 * It is independent of the looked-up name, nothing is looked up inside the target. Every name
+	 * of the selector has to be found uniquely.
 	 *
 	 * \query_thread_safe_if_cache
 	 */

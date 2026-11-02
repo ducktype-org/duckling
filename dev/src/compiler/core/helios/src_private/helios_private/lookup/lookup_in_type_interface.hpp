@@ -13,7 +13,7 @@
  */
 #pragma once
 
-#include "lookup_result.hpp"
+#include "lookup_chains.hpp"
 
 #include <helios/scope_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
@@ -67,7 +67,7 @@ namespace compiler::helios {
 	 * an instance, that is the static fields, the static methods and the other elements declared
 	 * in the body of the type.
 	 *
-	 * The elements hidden by their visibility are reported in `LookupResult::inaccessible`
+	 * The elements hidden by their visibility are reported in `LookupChains::inaccessible`
 	 * instead of being dropped, so that the error can say that the name exists but cannot be used.
 	 *
 	 * In #1392 this may need to be placed in a more appropriate location.
@@ -77,5 +77,5 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryLookupInType, KeyOf_LookupInType, CRef<query::QResult<LookupResult>>, ({}))
+	DECLARE_QUERY(QueryLookupInType, KeyOf_LookupInType, CRef<query::QResult<LookupChains>>, ({}))
 }

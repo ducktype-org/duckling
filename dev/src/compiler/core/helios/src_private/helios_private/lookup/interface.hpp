@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "lookup_result.hpp"
+#include "lookup_chains.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/access/source_position_locked.hpp>
@@ -54,7 +54,7 @@ namespace compiler::helios {
 		 * @param params Additional parameters for the lookup.
 		 * @return The result of the lookup.
 		 */
-		virtual CRef<query::QResult<LookupResult>> lookup(
+		virtual CRef<query::QResult<LookupChains>> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 		) = 0;
 	};
@@ -141,23 +141,19 @@ namespace compiler::helios {
 		/**
 		 * Performs a lookup in a given interface.
 		 */
-		CRef<query::QResult<LookupResult>> lookup(
+		CRef<query::QResult<LookupChains>> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters = {}
 		) const;
 
 		/**
-		 * A lookup function that performs a most common lookup operation,
-		 * hiding a lot of boilerplate associated with it. It performs the following steps:
-		 * 1. It looks-ups the interface.
-		 * 2. It reports error if more than one symbol is found.
-		 * 3. Return the symbol list. Aliases are already resolved by the lookup itself.
+		 * @brief Performs a lookup that has to find exactly one symbol.
 		 *
-		 * It some error occurs, it will report it in @p error_position.
+		 * If the lookup does not find exactly one symbol, an error is reported at
+		 * @p error_position.
 		 *
-		 * @note This function is intended to be used as a quick placeholder
-		 * that we might one day change to custom code for better compilation errors or logic.
+		 * @return The result of the lookup, owned by the cache of the lookup query.
 		 */
-		query::QResult<SymbolList> lookupExpectUnique(
+		query::QResult<CRef<LookupChains>> lookupExpectUnique(
 			dia::StablePosition error_position,
 			query::Context&     ctx,
 			base::StrID         name,

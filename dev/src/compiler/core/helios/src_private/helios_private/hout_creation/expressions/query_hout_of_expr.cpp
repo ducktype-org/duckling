@@ -800,7 +800,7 @@ namespace compiler::helios::code {
 					);
 
 					node = makeBox<IdentifierExpr>(
-						ctx, pstOrigin(stmt), sym_list.valueOrThrow().back()
+						ctx, pstOrigin(stmt), sym_list.valueOrThrow()->uniqueLeaf()
 					);
 					break;
 				}

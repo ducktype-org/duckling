@@ -12,8 +12,6 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
-#include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -43,81 +41,7 @@ namespace compiler::helios {
 		}
 	};
 
-	class IsAliasCodeNote: public MessageWithCodeFragmentAndCause {
-		Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "note",
-				     .family        = "lookup",
-				     .name          = "is_alias_code" };
-		}
-
-	public:
-		IsAliasCodeNote(dia::StablePosition pos, std::string alias_name, std::string underlying_name):
-			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<TextArgument>("alias_name", std::move(alias_name));
-			addArgument<TextArgument>("underlying_name", std::move(underlying_name));
-		}
-	};
-
 	namespace {
-		/**
-		 * @brief Adds the "... is alias of ..." notes for all the aliases in the chain.
-		 * @param ctx Query context.
-		 * @param[out] linked_messages The resulting linked messages we should add to the message.
-		 * @param elem PST element of the original type identifier in the parse tree.
-		 */
-		void checkForAliases(
-			query::Context&                                    ctx,
-			base::HashMap<std::string, Box<dia::MessageBase>>& linked_messages,
-			pst::Access<pst::LangElement>                      elem
-		) {
-			auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
-			if (!ident_opt.has_value()) return;
-			auto       ident          = ident_opt.value();
-			const auto scope          = ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			const auto lookup_qresult = HInterface::ofScopeWithParents(scope).lookup(
-				ctx, ident->getName().unlock(ctx)->unwrap()
-			);
-			if (lookup_qresult->hasFailed()) return;
-			CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
-
-			std::function<void(const LookupResult&, const std::string&)> emit_alias_note
-				= [&](const LookupResult& current, const std::string& alias_name) {
-					  if (current.children.size() != 1) return;
-
-					  auto nested = current.children[0];
-					  if (kind(nested.node) == SymbolKind::Using) {
-						  // `using a.b as c;`: the underlying chain is the `a.b` part.
-						  auto alias_stmt = getSymRef(nested.node)
-					                            ->maybePstElement()
-					                            .value()
-					                            .unlock(ctx)
-					                            .dynamicCast<pst::Using>()
-					                            .value();
-						  auto selector
-							  = (*alias_stmt->getSelectors().unlock(ctx)->begin()).unlock(ctx);
-						  std::string underlying_chain;
-						  for (usize i = 0; i < selector->numberOfNames(); i++) {
-							  if (i > 0) underlying_chain += ".";
-							  underlying_chain
-								  += selector->getNameByIndex(i).unlock(ctx)->unwrap().str();
-						  }
-
-						  auto id = MessageBase::getUniqueID();
-						  linked_messages.put(
-							  id,
-							  makeBox<IsAliasCodeNote>(
-								  alias_stmt->getStablePosition(), alias_name, underlying_chain
-							  )
-						  );
-
-						  emit_alias_note(nested.inner, underlying_chain);
-					  };
-				  };
-
-			emit_alias_note(*lookup_result, ident->getName().unlock(ctx)->unwrap().str());
-		}
-
 		/**
 		 * @brief Get source position from a PST element of a function-like character
 		 * (pst of a function, function declaration or class method). The position spans only
@@ -151,7 +75,7 @@ namespace compiler::helios {
 	}
 
 	InteractiveType::InteractiveType(
-		query::Context&                               ctx,
+		[[maybe_unused]] query::Context&              ctx,
 		tsh::SymbolType<>                             symbol_type,
 		base::Optional<pst::Access<pst::LangElement>> pst_expr
 	):
@@ -160,7 +84,6 @@ namespace compiler::helios {
 		if (pst_expr.has_value()) {
 			this->displayed_name = pst_expr.value()->getSourcePosition().illegalAccess().content(
 			);  // Here we should use illegalAccess, maybe serialize the PST
-			checkForAliases(ctx, this->linked_messages, pst_expr.value());
 		} else
 			this->displayed_name = symbol_type.toString();
 	}
