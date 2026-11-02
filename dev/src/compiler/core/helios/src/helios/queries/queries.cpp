@@ -42,122 +42,6 @@
 namespace compiler::helios {
 
 	/**
-	 * @brief Value type for the QueryScopesInModule query.
-	 * See the QueryScopesInModule query for details.
-	 */
-	struct QueryScopesInModuleValue final {
-		struct Success final {
-			std::vector<ScopeID> scopes;
-		};
-
-		struct Failure final {
-			std::vector<ScopeID> partial_scopes;
-		};
-
-		std::variant<Success, Failure> value;
-	};
-
-	/**
-	 * @brief This is a helper query for QueryModuleHOUT.
-	 * Its implementation assumes it is a helper for the QueryModuleHOUT query and not directly in other contexts.
-	 * 
-	 * It collects all scopes defined in a given module, that might contain
-	 * symbols meaningful for the QueryModuleHOUT query.
-	 * 
-	 * @note This query returns QueryScopesInModuleValue which contains all scopes in the module or
-	 * a partial list of scopes that where possible to obtain despite some other failures. The
-	 * semantics of this failed state are the same as of a failed QResult (i.e. errors were already
-	 * reported), but we still want to return the scopes that we managed to obtain. This is because
-	 * this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
-	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		QueryScopesInModule,
-		frontend::ModuleID,
-		CRef<QueryScopesInModuleValue>,
-		({ .uses_qresult = false })
-	);
-
-	struct IMPLEMENT_QUERY(QueryScopesInModule, QueryScopesInModuleValue) {
-		/**
-		 * Helper struct used for accumulating the query output.
-		 */
-		struct Output final {
-			std::vector<ScopeID> scopes;
-			bool                 failed = false;
-		};
-
-		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
-			auto root          = getFilePST(ctx, file)->getRootElement();
-			auto root_unlocked = root.unlockOpt(ctx);
-			if (root_unlocked.empty()) {
-				// PST root failed to parse, PST should have already reported the diagnostic.
-				out->failed = true;
-				return;
-			}
-
-			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
-				// handling lambdas, templates, etc. might be much more tricky and
-				// require a different approach
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
-			};
-
-			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
-			// somehow. Note that more custom logic might be needed in the future (to optimize it,
-			// to compile lambdas, etc.)
-
-			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
-				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
-					// we want to skip template bodies, since
-					// they don't compile directly
-					return true;
-				}
-				return false;
-			};
-
-			auto for_all_ok
-				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
-			if (for_all_ok.status().isBad()) {
-				// if the pstForAll failed, we mark the whole query as failed, but we still return
-				// the scopes that we managed to obtain.
-				out->failed = true;
-			}
-		}
-
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// fetch scopes from main module file
-			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-
-			Output output;
-			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
-
-			getScopes(ctx, main_file, &output);
-
-			// eliminate duplicates with sort:
-			std::ranges::sort(output.scopes);
-			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
-			output.scopes.erase(unique_end, output.scopes.end());
-
-			// validate output:
-			for (auto scope: output.scopes)
-				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
-
-			if (output.failed) {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
-			} else {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
-			}
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
-
-	/**
 	 * @brief This function collects all used symbols from the hout unit module
 	 * that should be appended to the module, for example some compiler generated symbols
 	 * or template instantiations in the future.
@@ -214,6 +98,110 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
+
+	   /**
+		* @brief Output type for the getScopesInModule function.
+		*/
+		struct ScopesInModuleValue final {
+			struct Success final {
+				std::vector<ScopeID> scopes;
+			};
+
+			struct Failure final {
+				std::vector<ScopeID> partial_scopes;
+			};
+
+			std::variant<Success, Failure> value;
+		};
+
+
+		/**
+		 * Helper struct used for accumulating the getScopesInModule output.
+		 */
+		struct GetScopesOutput final {
+			std::vector<ScopeID> scopes;
+			bool                 failed = false;
+		};
+
+		static auto getScopes(Context& ctx, frontend::FileID file, Ref<GetScopesOutput> out) {
+			auto root          = getFilePST(ctx, file)->getRootElement();
+			auto root_unlocked = root.unlockOpt(ctx);
+			if (root_unlocked.empty()) {
+				// PST root failed to parse, PST should have already reported the diagnostic.
+				out->failed = true;
+				return;
+			}
+
+			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
+				// handling lambdas, templates, etc. might be much more tricky and
+				// require a different approach
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
+					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
+			};
+
+			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
+			// somehow. Note that more custom logic might be needed in the future (to optimize it,
+			// to compile lambdas, etc.)
+
+			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
+				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
+					// we want to skip template bodies, since
+					// they don't compile directly
+					return true;
+				}
+				return false;
+			};
+
+			auto for_all_ok
+				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
+			if (for_all_ok.status().isBad()) {
+				// if the pstForAll failed, we mark the whole query as failed, but we still return
+				// the scopes that we managed to obtain.
+				out->failed = true;
+			}
+		}
+
+
+		/**
+		* @brief This is a helper functions.
+		* Its implementation assumes it is a helper for the QueryModuleHOUT query and not directly in other contexts.
+		* 
+		* It collects all scopes defined in a given module, that might contain
+		* symbols meaningful for the QueryModuleHOUT query.
+		* 
+		* @note It returns ScopesInModuleValue which contains all scopes in the module or
+		* a partial list of scopes that where possible to obtain despite some other failures. The
+		* semantics of this failed state are the same as of a failed QResult (i.e. errors were already
+		* reported), but we still want to return the scopes that we managed to obtain. This is because
+		* this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
+		* compilation process would be halted and practically no HELIOS diagnostics would appear.
+		*/
+		static ScopesInModuleValue getScopesInModule(Context& ctx, QKey key) {
+			// fetch scopes from main module file
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+
+			GetScopesOutput output;
+			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
+
+			getScopes(ctx, main_file, &output);
+
+			// eliminate duplicates with sort:
+			std::ranges::sort(output.scopes);
+			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
+			output.scopes.erase(unique_end, output.scopes.end());
+
+			// validate output:
+			for (auto scope: output.scopes)
+				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
+
+			if (output.failed) {
+				return ScopesInModuleValue{ .value = ScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
+			} else {
+				return ScopesInModuleValue{ .value = ScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
+			}
+		}
+
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// We want to continue gathering other entities
 			// even if some function queries fail,
@@ -223,12 +211,12 @@ namespace compiler::helios {
 
 			MCRef<std::vector<ScopeID>> scopes_to_process;
 
-			auto scopes_in_module = ctx.query<QueryScopesInModule>(key);
-			variant_match(scopes_in_module->value) {
-				variant_case(QueryScopesInModuleValue::Success, success) {
+			auto scopes_in_module = getScopesInModule(ctx, key);
+			variant_match(scopes_in_module.value) {
+				variant_case(ScopesInModuleValue::Success, success) {
 					scopes_to_process = &success.scopes;
 				}
-				variant_case(QueryScopesInModuleValue::Failure, failure) {
+				variant_case(ScopesInModuleValue::Failure, failure) {
 					scopes_to_process = &failure.partial_scopes;
 					is_failed
 						= true;  // we mark the whole query as failed, even if we have some scopes
