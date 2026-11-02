@@ -406,6 +406,7 @@ namespace compiler::lir {
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
 			.return_type_layout = function.return_type_layout,
+			.never_returns      = function.never_returns,
 			.builtin_kind_opt   = {},
 		};
 	}

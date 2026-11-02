@@ -54,6 +54,7 @@ public:
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(functionPointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
+		TESTER_ADD_TEST(noReturnTest);
 	}
 
 protected:
@@ -592,6 +593,54 @@ private:
 		assertTrue(
 			not std::regex_search(ir, std::regex{ R"(ret i32 10)" }),
 			"dvm_only_impl 'ret i32 10' must not be compiled into the LLVM module"
+		);
+	}
+
+	void noReturnTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/noreturn");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Returns the attributes of the function whose `define`/`declare` line contains @p name.
+		auto function_attributes = [&](const std::string& name) -> std::string {
+			std::smatch header_match;
+			if (not std::regex_search(
+					ir,
+					header_match,
+					std::regex{ R"((define|declare)[^\n]*)" + name + R"([^\n]*#([0-9]+))" }
+				)) {
+				assertTrue(false, "Expected an LLVM function with attributes named " + name);
+				return {};
+			}
+			std::smatch      attributes_match;
+			const std::regex attributes_regex{ "attributes #" + header_match[2].str()
+				                               + R"( = \{([^\n]*)\})" };
+			assertTrue(
+				std::regex_search(ir, attributes_match, attributes_regex),
+				"Expected the attribute group of " + name
+			);
+			return attributes_match[1].str();
+		};
+		auto has_attributes = [&](const std::string& name) {
+			return std::regex_search(
+				ir, std::regex{ R"((define|declare)[^\n]*)" + name + R"([^\n]*#[0-9]+)" }
+			);
+		};
+
+		// `void` is the result type of a function that never returns. LLVM learns it from the
+		// `noreturn` attribute, both on a definition and on a declaration from another package.
+		assertTrue(
+			function_attributes("fails").find("noreturn") != std::string::npos,
+			"Expected 'fails' (returning void) to be noreturn"
+		);
+		assertTrue(
+			function_attributes("panic").find("noreturn") != std::string::npos,
+			"Expected the declaration of 'panic' to be noreturn"
+		);
+		// `()` carries no information, but the function does return.
+		assertTrue(
+			not has_attributes("returnsUnit")
+				or function_attributes("returnsUnit").find("noreturn") == std::string::npos,
+			"'returnsUnit' (returning ()) must not be noreturn"
 		);
 	}
 };
