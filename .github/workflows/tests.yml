@@ -118,7 +118,7 @@ jobs:
             cpus=$((quota / period + 1))
           else
             # This branch will be taken on macOS
-            cpus=8
+            cpus=5
           fi
           echo "jobs=$cpus" >> $GITHUB_OUTPUT
 
