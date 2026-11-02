@@ -85,7 +85,7 @@ Tests:
         ExitCode: 0
 
   compile-module-artifact-location:
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 5
     # --name makes the HIR filenames predictable so they can be checked below.
     # Each case uses @{at_tmp_env} to keep relative ./duck_build output in its own
@@ -114,11 +114,8 @@ Tests:
           && test -s "$(find @{case_build} -type f -name '*.o' -print -quit)"
           && test ! -e "$DIT_TMP_DIR/duck_build"
         ExitCode: 0
-      # @TODO: #3398 Pre-create ./duck_build because the filesystem code currently panics when it tries
-      # to create a new physical folder beneath the temporary directory.
       default-artifact-directory:
         Run: >-
-          mkdir -p "$DIT_TMP_DIR/duck_build" &&
           @{at_tmp_env} @{duckc_path} compile_module
           @{ConfigDir}/duck_modules/inferred_name/inferred_name.dk
           --name artifact_name_default -O 0 --no-incremental --dump-ir hir
@@ -139,7 +136,7 @@ Tests:
 
   compile-script-dump-ir:
     # Compile once per backend and check every dump plus the linked output.
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 10
     Run: |
       @{duckc_path} compile_script ./duck_scripts/foo.dks @{backend_flags} \
@@ -191,7 +188,7 @@ Tests:
         ExitCode: 0
 
   compile-script-print-ir:
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 10
     Run: |
       for category in @{print_categories}; do
@@ -210,7 +207,7 @@ Tests:
 
   compile-script-no-link:
     # Compile the script object/bytecode artifacts but skip the final executable/package link.
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 10
     Cases:
       llvm-object:
@@ -236,7 +233,7 @@ Tests:
   compile-package-inferred-name:
     # Without -n, compile_package names the package after its directory or root module file.
     # The package id is the prefix of the dumped IR file name, so check that file exists.
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 3
     inferred_hir: "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.hir"
     Run: "@{duckc_path} compile_package @{package_path} -O 0 --no-incremental --dvm-backend
@@ -252,7 +249,7 @@ Tests:
 
   compile-package-no-link:
     # Check the object, every IR layer, and the absence of a linked output in one call.
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 10
     Run: |
       @{duckc_path} compile_package ./duck_modules/inferred_name @{backend_flags} \
@@ -282,7 +279,7 @@ Tests:
         ExitCode: 0
 
   compile-packages-dump-ir:
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 10
     package_manifest: "$DIT_TMP_DIR/packages.json"
     Cases:
@@ -296,7 +293,7 @@ Tests:
         ExitCode: 0
 
   compile-packages-no-link:
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 10
     package_manifest: "$DIT_TMP_DIR/packages.json"
     Cases:
@@ -314,7 +311,7 @@ Tests:
   ir-output-after-cached-build:
     # The IR is printed and dumped while a module compiles. The first run fills the incremental
     # cache; the second run asks for IR with --no-incremental, so the module is recompiled.
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 5
     compile_ir_output: "@{duckc_path} compile_package ./duck_modules/ir_output -O 0 --dvm-backend
       -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
@@ -336,7 +333,7 @@ Tests:
   incremental-debug-options:
     # --print-ir and --dump-ir require --no-incremental, --print-graph requires the incremental
     # query graph.
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 5
     Run: "@{duckc_path} compile_package ./duck_modules/ir_output -O 0 --dvm-backend
       -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts} @{debug_args}"
