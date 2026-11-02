@@ -9,6 +9,8 @@
 #include "abi_converter.hpp"
 #include "type_from_layout.hpp"
 
+#include <helios/tsh/types.hpp>
+
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
@@ -53,6 +55,19 @@ namespace compiler::backend_llvm {
 			if (data.sign_ext) return llvm::Attribute::SExt;
 			if (data.zero_ext) return llvm::Attribute::ZExt;
 			return std::nullopt;
+		}
+
+		/**
+		 * @brief Whether a call to @p function_literal never returns, i.e. its result type is
+		 * `void`. Both `void` and `()` lower to the LLVM `void` type, so the LLVM signature alone
+		 * cannot tell LLVM that the function does not return.
+		 */
+		bool neverReturns(const lir::FunctionLiteral& function_literal) {
+			const auto* functional
+				= std::get_if<tsl::FunctionalTypeLayout>(&function_literal.layout->getVariant());
+			if (functional == nullptr) return false;
+			const tsh::FunctionAbstractType function_type = functional->getSourceType().getType();
+			return function_type.getResultType().getType().getKind() == tsh::Kind::Void;
 		}
 
 		LoweredCAbiSignature lowerCAbiSignature(
@@ -246,6 +261,9 @@ namespace compiler::backend_llvm {
 
 			for (const auto& [idx, attr]: attributes) function->addParamAttr(idx, attr);
 			for (const auto& attr: return_attributes) function->addRetAttr(attr);
+
+			// Lets LLVM drop everything after a call to e.g. `panic` and treat the path as cold.
+			if (neverReturns(function_literal)) function->addFnAttr(llvm::Attribute::NoReturn);
 		}
 
 		return callee;
