@@ -59,7 +59,7 @@ namespace compiler::helios {
 			opt_none {
 				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Expected string literal in extern() call argument",
-					arg.unlock(ctx)->getStablePosition()
+					call_arg->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -169,15 +169,15 @@ namespace compiler::helios {
 	}
 
 	QuerySymbolABI_Result getSymbolABI(
-		query::Context& ctx, SymID sym, pst::AccessLocked<pst::CallList> extern_args
+		query::Context& ctx, SymID sym, pst::Access<pst::CallList> extern_args
 	) {
-		std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args.unlock(ctx)->begin(),
-			                                                    extern_args.unlock(ctx)->end() };
+		std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args->begin(),
+			                                                    extern_args->end() };
 
 		if (args.empty()) {
 			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"extern() requires at least one argument specifying the ABI",
-				extern_args.unlock(ctx)->getStablePosition()
+				extern_args->getStablePosition()
 			));
 			return query::Failed();
 		}
@@ -189,8 +189,7 @@ namespace compiler::helios {
 
 			if (args.size() > 2) {
 				ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Too many arguments for C ABI in extern()",
-					extern_args.unlock(ctx)->getStablePosition()
+					"Too many arguments for C ABI in extern()", extern_args->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -226,13 +225,12 @@ namespace compiler::helios {
 			if (args.size() == 1)  // `extern("DVM")` case
 				return DVMAbi{};
 			ctx.logInt(makeBox<dia::PlaceholderError>(
-				"Too many arguments for DVM ABI in extern()",
-				extern_args.unlock(ctx)->getStablePosition()
+				"Too many arguments for DVM ABI in extern()", extern_args->getStablePosition()
 			));
 			return query::Failed();
 		} else {
 			ctx.logInt(makeBox<dia::PlaceholderError>(
-				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getStablePosition()
+				"Unsupported ABI specified in extern()", extern_args->getStablePosition()
 			));
 			return query::Failed();
 		}
@@ -247,15 +245,15 @@ namespace compiler::helios {
 			}
 
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
-			for (auto specifier: *specifiers) {
-				if (specifier.unlock(ctx)->getSpecifier().unlock(ctx)->unwrap()
-				    == pst::Keyword::Extern) {
-					match_optional(specifier.unlock(ctx)->getArgs()) {
-						opt_some(args) { return getSymbolABI(ctx, key, args); }
+			for (auto specifier_locked: *specifiers) {
+				auto specifier = specifier_locked.unlock(ctx);
+				if (specifier->getSpecifier().unlock(ctx)->unwrap() == pst::Keyword::Extern) {
+					match_optional(specifier->getArgs()) {
+						opt_some(args) { return getSymbolABI(ctx, key, args.unlock(ctx)); }
 						opt_none {
 							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"extern symbol requires ABI specification passed as an argument",
-								specifier.unlock(ctx)->getStablePosition()
+								specifier->getStablePosition()
 							));
 							return query::Failed();
 						}

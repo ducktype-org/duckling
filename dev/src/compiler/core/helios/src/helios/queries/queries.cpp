@@ -130,7 +130,7 @@ namespace compiler::helios {
 				return;
 			}
 
-			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
+			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {
 				// handling lambdas, templates, etc. might be much more tricky and
 				// require a different approach
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)

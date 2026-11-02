@@ -21,6 +21,7 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -217,7 +218,9 @@ namespace compiler::helios::desugaring {
 		const auto      match_position = match_expr->getStablePosition();
 		auto            subject_pst    = match_expr->getValueToMatch().unlock(ctx);
 
-		UNPACK_QRESULT_MOVE(auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr()));
+		UNPACK_QRESULT_MOVE(
+			auto subject_hout =, code::subExprFromPST(ctx, unlockOrFail(ctx, subject_pst->getExpr()))
+		);
 		UNPACK_QRESULT_MOVE(
 			auto subject =,
 			validateMatchSubject(ctx, std::move(subject_hout), subject_pst->getStablePosition())
@@ -231,9 +234,10 @@ namespace compiler::helios::desugaring {
 		bool                                has_wildcard = false;
 		base::Optional<dia::StablePosition> wildcard_position;
 
-		for (auto match_case: match_expr->getCases()) {
-			const auto case_position = match_case.unlock(ctx)->getStablePosition();
-			auto       flow          = match_case.unlock(ctx)->getPattern().unlock(ctx);
+		for (auto match_case_locked: match_expr->getCases()) {
+			const auto match_case    = match_case_locked.unlock(ctx);
+			const auto case_position = match_case->getStablePosition();
+			auto       flow          = match_case->getPattern().unlock(ctx);
 
 			// The wildcard always matches, so the lowering enters it unconditionally and never
 			// reaches whatever is listed after it.
@@ -252,7 +256,7 @@ namespace compiler::helios::desugaring {
 				return query::Failed();
 			}
 
-			auto branches = match_case.unlock(ctx)->getBranches();
+			auto branches = match_case->getBranches();
 			if (branches.size() != 1 || branches.front().condition.has_value()) {
 				logNYI(ctx, case_position, "Guarded match case branches (`case ... if ...`).");
 				return query::Failed();
@@ -345,7 +349,9 @@ namespace compiler::helios::desugaring {
 				}
 			}
 			auto result_holder = branches.front().result.unlock(ctx);
-			UNPACK_QRESULT_MOVE(auto result =, code::subExprFromPST(ctx, result_holder->getExpr()));
+			UNPACK_QRESULT_MOVE(
+				auto result =, code::subExprFromPST(ctx, unlockOrFail(ctx, result_holder->getExpr()))
+			);
 
 			// A match yields one value, so every case has to agree on its type. There is no
 			// common-type inference, so anything else is an error the user has to resolve.

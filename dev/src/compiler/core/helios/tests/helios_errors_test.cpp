@@ -72,6 +72,7 @@ public:
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
+		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 	}
 
 protected:
@@ -3127,6 +3128,34 @@ private:
 			{ "Initial value is not allowed here" },
 			1
 		);
+	}
+
+	/**
+	 * A syntax error can leave a null PST element. The PST already reports the error, so
+	 * HELIOS should only fail, without logging a `PST Accessed a nullptr` error.
+	 * The PST errors themselves are not counted here (#2213).
+	 */
+	void testNullElementsAfterSyntaxErrors() {
+		for (const std::string_view statement: {
+				 "let y = (,);",
+				 "let y = f(x = );",
+				 "let y = f( + );",
+				 "if (true) ;",
+			 }) {
+			checkForErrorOnCompileModule(
+				base::strConcat(
+					"fun f(x: i64) -> i64 = { return x; }\n",
+					"fun g() -> i64 = { ",
+					statement,
+					" return 0; }\n",
+					"fun h() = { ",
+					statement,
+					" return 0; }\n"
+				),
+				{},
+				0
+			);
+		}
 	}
 };
 
