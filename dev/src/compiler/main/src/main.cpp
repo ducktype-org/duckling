@@ -127,21 +127,19 @@ namespace {
 	std::string inferPackageName(const fs::File& path) {
 		return path.isDirectory() ? path.name() : path.stem();
 	}
-}
 
-/**
- * @brief The version facts only duckc can report.
- */
-constexpr std::array<version::ExtraField, 2> DUCKC_VERSION_FIELDS{
-	version::ExtraField{ "LLVM", DUCKC_LLVM_VERSION },
+	/**
+	 * @brief The version facts only duckc can report.
+	 */
+	constexpr std::array<version::ExtraField, 2> DUCKC_VERSION_FIELDS{
+		version::ExtraField{ "LLVM", DUCKC_LLVM_VERSION },
 #ifdef ENABLE_JIT
-	version::ExtraField{ "JIT", "enabled" },
+		version::ExtraField{ "JIT", "enabled" },
 #else
-	version::ExtraField{ "JIT", "disabled" },
+		version::ExtraField{ "JIT", "disabled" },
 #endif
-};
+	};
 
-namespace {
 	clah::Clah getStandardDucklingOptions() {
 		return clah::Clah("duckc", "The Duckling compiler")
 		    .add(clah::ParamBuilder::ofFlag()
@@ -395,16 +393,13 @@ namespace {
 		return linking_options;
 	}
 
-}
+	/**
+	 * @brief The CLI interface for the DebugOptions part of the driver.
+	 */
+	namespace debug_options {
+		using compiler::driver::options_types::DebugOptions;
+		using IROption = std::pair<std::string_view, bool DebugOptions::*>;
 
-/**
- * @brief The CLI interface for the DebugOptions part of the driver.
- */
-namespace debug_options {
-	using compiler::driver::options_types::DebugOptions;
-	using IROption = std::pair<std::string_view, bool DebugOptions::*>;
-
-	namespace {
 		constexpr std::array<IROption, 6> DUMP_IR_OPTIONS{ {
 			{ "hir", &DebugOptions::dump_hir },
 			{ "mir", &DebugOptions::dump_mir },
@@ -496,16 +491,14 @@ namespace debug_options {
 			return debug_options;
 		}
 
+
 	}
-}
 
-/**
- * @brief The CLI interface for the IncrementalOptions part of the driver.
- */
-namespace incremental_options {
-	using compiler::driver::options_types::IncrementalOptions;
-
-	namespace {
+	/**
+	 * @brief The CLI interface for the IncrementalOptions part of the driver.
+	 */
+	namespace incremental_options {
+		using compiler::driver::options_types::IncrementalOptions;
 
 		/**
 		 * @brief Return the array of clah::Parameter for the incremental options of the driver,
@@ -555,10 +548,9 @@ namespace incremental_options {
 
 			return clah::VerificationPassed{};
 		}
-	}
-}
 
-namespace {
+	}
+
 	/**
 	 * @brief Generate Clah instance with all standard "main" parameters.
 	 * @return clah::Clah
@@ -1516,7 +1508,6 @@ namespace {
 					})
 			);
 	}
-
 }
 
 int main(int argc, const char* argv[]) {
