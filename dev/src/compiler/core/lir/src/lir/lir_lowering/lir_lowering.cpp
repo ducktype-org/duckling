@@ -106,6 +106,8 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout>              layout;
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;
+		/// The result type is `void`, so a call never returns.
+		bool never_returns;
 
 		[[nodiscard]] const tsl::FunctionalTypeLayout& functional() const {
 			return std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
@@ -123,7 +125,8 @@ namespace compiler::lir {
 		const auto& functional = std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
 		return { .layout             = layout,
 			     .parameter_layouts  = functional.getParameterLayouts(ctx),
-			     .return_type_layout = functional.getReturnLayout(ctx) };
+			     .return_type_layout = functional.getReturnLayout(ctx),
+			     .never_returns = type.getResultType().getType().getKind() == tsh::Kind::Void };
 	}
 
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
@@ -150,6 +153,7 @@ namespace compiler::lir {
 									std::move(layouts.parameter_layouts)
 								),
 			                    .return_type_layout = layouts.return_type_layout,
+			                    .never_returns      = layouts.never_returns,
 			                    .builtin_kind_opt   = builtin_kind_opt };
 	}
 
@@ -1232,6 +1236,7 @@ namespace compiler::lir {
 					             .layout             = layouts.layout,
 					             .parameter_layouts  = std::move(layouts.parameter_layouts),
 					             .return_type_layout = layouts.return_type_layout,
+					             .never_returns      = layouts.never_returns,
 					             .blocks             = std::move(blocks),
 					             .local_list         = std::move(locals),
 					             .block_order        = std::move(block_order),
@@ -1311,6 +1316,7 @@ namespace compiler::lir {
 			             .layout             = layouts.layout,
 			             .parameter_layouts  = std::move(layouts.parameter_layouts),
 			             .return_type_layout = layouts.return_type_layout,
+			             .never_returns      = layouts.never_returns,
 			             .blocks             = std::move(blocks),
 			             .local_list         = {},
 			             .block_order        = { entry_block_ref },
