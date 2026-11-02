@@ -142,9 +142,21 @@ namespace compiler::helios {
 			// to compile lambdas, etc.)
 
 			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
-				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
+				auto kind = element->getElementKind();
+				if (kind == pst::ElementKind::TemplateStmt) {
 					// we want to skip template bodies, since
 					// they don't compile directly
+					return true;
+				}
+				if (kind == pst::ElementKind::Action or 
+					kind == pst::ElementKind::Import or
+					kind == pst::ElementKind::Using
+				) {
+					// @TODO: #3927 more cases might be added here in the future
+					// note that we shouldn't skip expressions, as they will be important once we have lambdas.
+
+					// We skip elements that cannot contain
+					// any symbols that QueryModuleHout should compile directly.
 					return true;
 				}
 				return false;
