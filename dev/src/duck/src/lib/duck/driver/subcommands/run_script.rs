@@ -13,7 +13,6 @@ use clap::{Arg, ArgMatches, Command, ValueHint, value_parser};
 use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::duckling_consts::DUCKLING_SCRIPT_EXT;
-use crate::util::error::MessageError;
 use crate::util::path_ops::resolve_with_tilde;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
 
@@ -80,15 +79,15 @@ pub fn check_is_script(path: &Path) -> QuackResult<()> {
         );
     }
     if path.extension() != Some(OsStr::new(DUCKLING_SCRIPT_EXT)) {
-        qp_bail!(
-            QuackError::hint(format!(
-                "the extension of Duckling scripts is `.{}`",
-                DUCKLING_SCRIPT_EXT
-            ))
-            .context(MessageError(
-                format!("the file at `{}` is not a Duckling script", path.display()).into()
-            ))
-        );
+        let mut err = QuackError::message(format!(
+            "the file at `{}` is not a Duckling script",
+            path.display()
+        ));
+        err.add_hint(format!(
+            "the extension of Duckling scripts is `.{}`",
+            DUCKLING_SCRIPT_EXT
+        ));
+        return Err(err);
     }
     Ok(())
 }

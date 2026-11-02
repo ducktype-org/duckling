@@ -167,7 +167,7 @@ fn resolve_import_in_schema(
                 "script at `{}` imports a frontmatter but also specifies some of the frontmatter fields",
                 script_path.display()
             );
-            err = err.add_hint("either remove the `import` field or all the other fields");
+            err.add_hint("either remove the `import` field or all the other fields");
             qp_bail!(err);
         }
         let root_path = script_path
