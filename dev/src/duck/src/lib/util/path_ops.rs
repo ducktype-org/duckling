@@ -11,7 +11,7 @@ use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::time::SystemTime;
 
-use tracing::warn;
+use tracing::{trace, warn};
 
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
@@ -249,6 +249,27 @@ fn copy_file_inner(from: &Path, to: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// Copy the contents of a single file or of a whole directory.
+fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+    if from.is_file() {
+        copy_file(from, to)
+    } else {
+        for entry in from
+            .read_dir()
+            .with_context(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))?
+        {
+            let entry = entry.with_context(|| {
+                format!("failed to copy `{}` to `{}`", from.display(), to.display())
+            })?;
+            let new_to = to.join(entry.file_name());
+            copy_tree(entry.path(), new_to)?;
+        }
+        Ok(())
+    }
+}
+
 /// Expand `~` into the `ctx.user_home()`.
 pub fn expand_tilde(path: impl AsRef<Path>, ctx: &DuckContext) -> PathBuf {
     expand_tilde_with(path, ctx.user_home())
@@ -306,6 +327,33 @@ fn is_executable_inner(path: &Path) -> bool {
 #[cfg(not(any(unix, windows)))]
 fn is_executable_inner(_path: &Path) -> bool {
     false
+}
+
+/// Move the contents from one path into another one.
+/// This first tries to use [`fs::rename`], and if it fails due to different filesystems,
+/// fallbacks to copying and removing.
+/// Thus in most cases this should be prefered over [`rename`].
+pub fn move_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+    if let Err(io_err) = fs::rename(from, to) {
+        if io_err.kind() == std::io::ErrorKind::CrossesDevices {
+            // Different filesystems, fallback to copy + remove.
+            trace!(from = ?from.display(), to = ?to.display(), "moving files between different filesystems, falling back to copy + remove");
+            copy_tree(from, to)?;
+            remove_tree(from)?;
+        } else {
+            // The error was not caused by different filesystems, simply return it.
+            return Err(io_err).with_context(|| {
+                format!(
+                    "failed to rename `{}` to `{}`",
+                    from.display(),
+                    to.display()
+                )
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Normalize `self` fully, as best as possible.
