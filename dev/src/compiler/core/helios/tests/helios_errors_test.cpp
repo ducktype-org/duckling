@@ -1096,6 +1096,15 @@ private:
 				{ "Index operator base must be indexable." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				const ARR = [42, "is the answer"];
+			)",
+				{ "Invalid array element type. Expected `i32`, but got `slice char`. "
+			      "All array elements must be of the same type." },
+				1
+			);
 		}
 
 		// ========================= Not-yet-implemented errors =========================

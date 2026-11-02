@@ -20,7 +20,6 @@ use crate::quackpack::schemas::manifest::{
     Dependency as DependencySchema, DependencySource as SourceSchema, DetailedSource,
 };
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::error::MessageError;
 use crate::util::path_ops::{expand_tilde, normalize};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
@@ -166,13 +165,12 @@ fn make_could_not_determine_error<const N: usize>(
             source[0], source[1], source[2]
         )
     };
-    QuackError::hint(hint_text).context(MessageError(
-        format!(
-            "couldn't determine the source of the dependency `{}`",
-            scope.format()
-        )
-        .into(),
-    ))
+    let mut err = QuackError::message(format!(
+        "couldn't determine the source of the dependency `{}`",
+        scope.format()
+    ));
+    err.add_hint(hint_text);
+    err
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Git`] source.
@@ -297,10 +295,10 @@ fn parse_git_url(
             Ok(url) => url.to_string(),
             Err(_) => format!("file://{}", path.display()),
         };
-        err = err.add_hint(format!(
-            "either change it to a local dependency or change the URL to `{path_url_hint}`",
-        ));
-        err = err.add_note("git dependency points to a file on the disk");
+        err.add_note("git dependency points to a file on the disk")
+            .add_hint(format!(
+                "either change it to a local dependency or change the URL to `{path_url_hint}`",
+            ));
     }
     Err(err)
 }

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "array_literal_list.hpp"  // IWYU pragma: export
 #include "attribute_arg_list.hpp"  // IWYU pragma: export
 #include "call_list.hpp"           // IWYU pragma: export
 #include "flow_pattern_list.hpp"   // IWYU pragma: export

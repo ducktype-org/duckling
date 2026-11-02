@@ -192,6 +192,7 @@ namespace compiler::helios {
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
 				case pst::ElementKind::RoundGroupExpr:
+				case pst::ElementKind::ArrayLiteralList:
 				case pst::ElementKind::CallList:
 				case pst::ElementKind::CallArgument:
 				case pst::ElementKind::Action:

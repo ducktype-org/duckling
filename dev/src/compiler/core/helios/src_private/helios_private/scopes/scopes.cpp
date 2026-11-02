@@ -182,6 +182,7 @@ namespace compiler::helios {
 		case pst::ElementKind::RoundGroupExpr:
 		case pst::ElementKind::CallList:
 		case pst::ElementKind::AtrArgList:
+		case pst::ElementKind::ArrayLiteralList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
