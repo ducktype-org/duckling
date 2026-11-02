@@ -36,9 +36,6 @@ namespace compiler::mir {
 			{},
 			{ pos },
 		});
-		// `panic` never returns. Ending the block with `Unreachable` (instead of jumping back to
-		// the access) tells the backends so: LLVM then treats the check as a cold exit and can keep
-		// the accessed values in registers and optimize the loop around it.
 		fail_block->setTerminator({ Operation::Unreachable, {}, {}, {}, scope });
 
 		// The index is coerced to a signed integer, so both bounds must be verified:

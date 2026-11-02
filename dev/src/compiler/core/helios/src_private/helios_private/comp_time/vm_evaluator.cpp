@@ -97,6 +97,7 @@ namespace compiler::helios {
 				               ->valueOrThrow(),
 				.parameter_layouts  = {},
 				.return_type_layout = layout_ref,
+				.never_returns      = false,
 				.blocks             = std::move(blocks),
 				.local_list         = {},
 				.block_order        = { entry_block_ref },
