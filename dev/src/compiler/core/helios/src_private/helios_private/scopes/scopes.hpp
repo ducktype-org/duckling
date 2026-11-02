@@ -171,7 +171,7 @@ namespace compiler::helios {
 		// elements that don't have it.
 		// For examples namespaces don't have primary scopes (which can be counterintuitive)
 	};
-	
+
 	/**
 	 * Determines scope kind for given PST element.
 	 * @TODO: #2407 this could take unlocked access

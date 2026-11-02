@@ -65,7 +65,6 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
-	
 	ElementScopeKind getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
 		// @TODO: move it to different file?
 		auto element = locked.unlock(ctx);

@@ -22,11 +22,11 @@
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>
-#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/scopes/scope_data.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/pst_layer/for_all.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
@@ -98,10 +98,9 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
-
-	   /**
-		* @brief Output type for the getScopesInModule function.
-		*/
+		/**
+		 * @brief Output type for the getScopesInModule function.
+		 */
 		struct ScopesInModuleValue final {
 			struct Success final {
 				std::vector<ScopeID> scopes;
@@ -113,7 +112,6 @@ namespace compiler::helios {
 
 			std::variant<Success, Failure> value;
 		};
-
 
 		/**
 		 * Helper struct used for accumulating the getScopesInModule output.
@@ -161,21 +159,22 @@ namespace compiler::helios {
 			}
 		}
 
-
 		/**
-		* @brief This is a helper functions.
-		* Its implementation assumes it is a helper for the QueryModuleHOUT query and not directly in other contexts.
-		* 
-		* It collects all scopes defined in a given module, that might contain
-		* symbols meaningful for the QueryModuleHOUT query.
-		* 
-		* @note It returns ScopesInModuleValue which contains all scopes in the module or
-		* a partial list of scopes that where possible to obtain despite some other failures. The
-		* semantics of this failed state are the same as of a failed QResult (i.e. errors were already
-		* reported), but we still want to return the scopes that we managed to obtain. This is because
-		* this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
-		* compilation process would be halted and practically no HELIOS diagnostics would appear.
-		*/
+		 * @brief This is a helper functions.
+		 * Its implementation assumes it is a helper for the QueryModuleHOUT query and not directly
+		 * in other contexts.
+		 *
+		 * It collects all scopes defined in a given module, that might contain
+		 * symbols meaningful for the QueryModuleHOUT query.
+		 *
+		 * @note It returns ScopesInModuleValue which contains all scopes in the module or
+		 * a partial list of scopes that where possible to obtain despite some other failures. The
+		 * semantics of this failed state are the same as of a failed QResult (i.e. errors were
+		 * already reported), but we still want to return the scopes that we managed to obtain. This
+		 * is because this query is used by the QueryModuleHOUT and if we just failed here, then
+		 * almost all of the compilation process would be halted and practically no HELIOS
+		 * diagnostics would appear.
+		 */
 		static ScopesInModuleValue getScopesInModule(Context& ctx, QKey key) {
 			// fetch scopes from main module file
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
@@ -200,7 +199,6 @@ namespace compiler::helios {
 				return ScopesInModuleValue{ .value = ScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
 			}
 		}
-
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// We want to continue gathering other entities
