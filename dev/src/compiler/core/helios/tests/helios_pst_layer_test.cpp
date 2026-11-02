@@ -109,7 +109,7 @@ private:
 			std::vector<std::string> expected_stmt_names = { "a", "b", "c", "N" };
 
 			for (size_t i = 0; i < n_body_stmts.size(); i++) {
-				auto stmt        = n_body_stmts.at(i).unlock(ctx);
+				auto stmt        = n_body_stmts.at(i);
 				auto stmt_symbol = ctx.query<compiler::helios::QuerySymbolOfSTMT>(stmt);
 				ASSERT_EQUAL(
 					compiler::helios::name(stmt_symbol.valueOrPanic()),

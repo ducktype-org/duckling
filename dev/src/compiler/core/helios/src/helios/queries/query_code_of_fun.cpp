@@ -107,7 +107,7 @@ namespace compiler::helios {
 					"This should not happen"
 				);
 
-				auto output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
+				auto output_body = compileCodeOfCodeBlock(ctx, unlocked_body, decl.return_type);
 
 				const bool ends_with_return
 					= !output_body->statements.empty()
