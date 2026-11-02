@@ -39,6 +39,7 @@ make_module(Driver USES
 )
 
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
+duck_add_test(compiler driver_script tests/driver_script_test.cpp USES Driver Artifacts INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 duck_add_test(compiler manifest_json tests/manifest_json_test.cpp USES Driver)
 duck_add_test(compiler driver_std_packages tests/driver_std_packages_test.cpp USES Driver Artifacts INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 duck_add_test(compiler driver_std_packages_cache tests/driver_std_packages_cache_test.cpp USES Driver Artifacts INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")

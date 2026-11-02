@@ -42,6 +42,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <clah/parsing_result.hpp>
 #include <clah/value_parser.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/module_flags/module_flags.hpp>
@@ -58,10 +59,11 @@
 
 #include <algorithm>
 #include <array>
-#include <cstdio>
 #include <iostream>
-#include <ranges>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -202,10 +204,10 @@ namespace {
 		);
 
 		return global_state::BackendOptions{
-			.llvm_backend = global_state::BackendOptions::LLVMBackend{
-				.llvm_optimization_level = llvm_optimization_level,
-			},
-		};
+		.llvm_backend = global_state::BackendOptions::LLVMBackend{
+			.llvm_optimization_level = llvm_optimization_level,
+		},
+	};
 	}
 
 	auto getClahStdLibOptions() {
@@ -285,9 +287,23 @@ namespace {
 	compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 		const clah::ParsingResult& parsing_result
 	) {
-		compiler::archiver::ArchivingOptions archiving_options;
-		archiving_options.archiver_path = parsing_result.getValue<std::string>("archiver");
-		return archiving_options;
+		return { .archiver_path = parsing_result.getValue<std::string>("archiver"),
+			     .no_link       = parsing_result.isFlag("no-link") };
+	}
+
+	auto getClahNoLinkParameter() {
+		return clah::ParamBuilder::ofFlag()
+		    .addLongName("no-link")
+		    .addShortDesc("Skip final linking and archiving; keep compiler object artifacts.")
+		    .build();
+	}
+
+	auto getClahArtifactLocationParameter() {
+		return clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+		    .addShortName('a')
+		    .addLongName("artifact-location")
+		    .addShortDesc("Path to the top-level folder with build artifacts")
+		    .build();
 	}
 
 	auto getClahLinkingOptions() {
@@ -318,7 +334,36 @@ namespace {
 				.addShortDesc("Paths to the .dbc libraries to link into the output.")
 				.optional()
 				.build(),
+			getClahNoLinkParameter(),
 		};
+	}
+
+	/**
+	 * @brief If enabled, sets no-link option in appropriate BuildTargets
+	 */
+	void updateTaskTargetWithNoLinkOptions(
+		bool no_link, compiler::driver::PackageCompilationTask& package_task
+	) {
+		if (no_link) {
+			using namespace compiler::driver;
+			variant_match(package_task.build_target) {
+				variant_case(BuildTargetLLVMExecutable, target) {
+					target.linking_options.no_link = true;
+				}
+				variant_case(BuildTargetLLVMStaticLibrary, target) {
+					target.archiving_options.no_link = true;
+				}
+				variant_case(BuildTargetDVMExecutable, target) {
+					target.dvm_linking_options.no_link = true;
+				}
+				variant_case(BuildTargetDVMLibrary, target) {
+					target.dvm_linking_options.no_link = true;
+				}
+				variant_default {
+					// BuildTargetLLVM has no executables
+				}
+			}
+		}
 	}
 
 	/**
@@ -345,8 +390,11 @@ namespace {
 		linking_options.native_link_c_standard_lib
 			= not parsing_result.isFlag("no-c-standard-library");
 
+		linking_options.no_link = parsing_result.isFlag("no-link");
+
 		return linking_options;
 	}
+
 }
 
 /**
@@ -354,25 +402,45 @@ namespace {
  */
 namespace debug_options {
 	using compiler::driver::options_types::DebugOptions;
+	using IROption = std::pair<std::string_view, bool DebugOptions::*>;
 
 	namespace {
-		auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
-			static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
-				{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
-				{ "dbc", &DebugOptions::dump_dbc }, { "lir", &DebugOptions::dump_lir },
-				{ "mir", &DebugOptions::dump_mir }, { "hir", &DebugOptions::dump_hir },
-			};
-			return dump_field_mapping;
+		constexpr std::array<IROption, 6> DUMP_IR_OPTIONS{ {
+			{ "hir", &DebugOptions::dump_hir },
+			{ "mir", &DebugOptions::dump_mir },
+			{ "lir", &DebugOptions::dump_lir },
+			{ "llvm", &DebugOptions::dump_llvm },
+			{ "asm", &DebugOptions::dump_asm },
+			{ "dbc", &DebugOptions::dump_dbc },
+		} };
+		constexpr std::array<IROption, 4> PRINT_IR_OPTIONS{ {
+			{ "hir", &DebugOptions::print_hir },
+			{ "mir", &DebugOptions::print_mir },
+			{ "lir", &DebugOptions::print_lir },
+			{ "dbc", &DebugOptions::print_dbc },
+		} };
+
+		std::vector<std::string> getIRCategories(const auto& options) {
+			std::vector<std::string> categories;
+			categories.reserve(options.size());
+			for (const auto& [name, field]: options) categories.emplace_back(name);
+			return categories;
 		}
 
-		auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
-			static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
-				{ "dbc", &DebugOptions::print_dbc },
-				{ "lir", &DebugOptions::print_lir },
-				{ "mir", &DebugOptions::print_mir },
-				{ "hir", &DebugOptions::print_hir },
-			};
-			return print_field_mapping;
+		auto getClahDumpIRParameter() {
+			return clah::ParamBuilder::ofValue(
+					   clah::CategoryListParser::make(
+						   "categories", clah::CategoryParser::make(getIRCategories(DUMP_IR_OPTIONS))
+					   )
+			)
+			    .addLongName("dump-ir")
+			    .addShortDesc("Dump selected intermediate representations to files.")
+			    .addLongDesc(
+					"Supported categories and artifact extensions, in compilation order, are "
+					"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
+					"LLVM IR and assembly require the LLVM backend; DBC requires the DVM backend."
+				)
+			    .build();
 		}
 
 		/**
@@ -380,30 +448,16 @@ namespace debug_options {
 		 * be added to a Clah instance.
 		 */
 		auto getClahDebugParameters() {
-			std::vector<std::string> dump_categories = getDebugDumpIROptions() | std::views::keys
-			                                         | std::ranges::to<std::vector<std::string>>();
-			std::vector<std::string> print_categories = getDebugPrintIROptions() | std::views::keys
-			                                          | std::ranges::to<std::vector<std::string>>();
-
 			return std::array{
-				clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-												"categories",
-												clah::CategoryParser::make(dump_categories)
-											))
-					.addLongName("dump-ir")
-					.addShortDesc("Dump to file the comma separated intermediate representations.")
-					.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc "
-				                 "requires --dvm-backend.")
-					.build(),
-				clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
-												"categories",
-												clah::CategoryParser::make(print_categories)
-											))
-					.addLongName("print-ir")
-					.addShortDesc(
-						"Print to stdout the comma separated intermediate representations."
+				getClahDumpIRParameter(),
+				clah::ParamBuilder::ofValue(
+					clah::CategoryListParser::make(
+						"categories", clah::CategoryParser::make(getIRCategories(PRINT_IR_OPTIONS))
 					)
-					.addLongDesc("Possible values are: dbc, lir, mir, hir.")
+				)
+					.addLongName("print-ir")
+					.addShortDesc("Print selected intermediate representations to stdout.")
+					.addLongDesc("Possible values are: hir, mir, lir, dbc.")
 					.build(),
 				clah::ParamBuilder::ofFlag()
 					.addLongName("print-graph")
@@ -426,19 +480,22 @@ namespace debug_options {
 				.immediate_print_diagnostics = true,
 			};
 
-			if (auto dump_categories = parsing_result.getValue<std::vector<std::string>>("dump-ir"))
-				for (const auto& category: dump_categories.value())
-					debug_options.*(getDebugDumpIROptions().at(category)) = true;
-			if (auto print_categories
-			    = parsing_result.getValue<std::vector<std::string>>("print-ir"))
-				for (const auto& category: print_categories.value())
-					debug_options.*(getDebugPrintIROptions().at(category)) = true;
+			const auto apply_ir_options = [&](const char* flag, const auto& options) {
+				if (auto categories = parsing_result.getValue<std::vector<std::string>>(flag))
+					for (const auto& [category, field]: options)
+						debug_options.*field
+							= std::find(categories->begin(), categories->end(), category)
+						   != categories->end();
+			};
+			apply_ir_options("dump-ir", DUMP_IR_OPTIONS);
+			apply_ir_options("print-ir", PRINT_IR_OPTIONS);
 
 			debug_options.print_graph      = parsing_result.isFlag("print-graph");
 			debug_options.print_statistics = parsing_result.isFlag("print-statistics");
 
 			return debug_options;
 		}
+
 	}
 }
 
@@ -449,6 +506,7 @@ namespace incremental_options {
 	using compiler::driver::options_types::IncrementalOptions;
 
 	namespace {
+
 		/**
 		 * @brief Return the array of clah::Parameter for the incremental options of the driver,
 		 * which can be added to a Clah instance.
@@ -593,7 +651,7 @@ namespace {
 					})
 			)
 		    .addSubcommand(
-				clah::Clah("compile_module", "Compile given module into a binary.")
+				clah::Clah("compile_module", "Compile one module into backend object artifacts.")
 					.addPositional(clah::FileParser::make("module", true))
 					.add(getLlvmOptLevelParam())
 					.add(debug_options::getClahDebugParameters())
@@ -609,6 +667,7 @@ namespace {
 		                     .addLongName("dvm-backend")
 		                     .addShortDesc("Compile to DVM bytecode.")
 		                     .build())
+					.add(getClahArtifactLocationParameter())
 					.add(incremental_options::getClahIncrementalParameters())
 					.addCustomVerification(incremental_options::verifyIncrementalOptions)
 					.setHandler([](const clah::ParsingResult& options) -> int {
@@ -618,29 +677,30 @@ namespace {
                         );
 
 						auto init_result = compiler::driver::initializeTheCompiler(
-							compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-								.packages_info = {
-									compiler::frontend::packages::RawPackageInfo{
-										.package_id   = base::StrID(package_name),
-										.package_name = base::StrID(package_name),
-										.version      = base::StrID("not_supported"),
-										.package_path = fs::FilePath(path_to_compile.getFilePath()),
-										.features     = {},
-										.dependencies  = {},
-									},
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info = {
+								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
+									.package_name = base::StrID(package_name),
+									.version      = base::StrID("not_supported"),
+									.package_path = fs::FilePath(path_to_compile.getFilePath()),
+									.features     = {},
+									.dependencies  = {},
 								},
-								.compilation_artifacts = {
-									.artifacts_path = fs::FilePath("./duck_build/"),
-								},
-								.backend_options   = getBackendOptionsFromClah(options),
-								.debug_options     = debug_options::getDebugOptionsFromClah(options),
-								.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
-								.execution_options = {
-									.worker_count = 1,
-								},
-								.stdlib_options = getStdLibOptionsFromClah(options),
-							}
-						);
+							},
+							.compilation_artifacts = {
+								.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
+								                      .copyValueOr("./duck_build/"),
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
+							.execution_options = {
+								.worker_count = 1,
+							},
+							.stdlib_options = getStdLibOptionsFromClah(options),
+						}
+					);
 
 						if (init_result.status().isBad()) {
 							compiler::driver::exit();
@@ -671,13 +731,15 @@ namespace {
 		    .addSubcommand(
 				clah::Clah(
 					"compile_modules",
-					"Compile given modules into binaries. Every module is placed in its own "
-					"package "
+					"Compile given modules into backend objects, optionally linking an executable. "
+					"Every module is placed in its own package "
 					"and every package depends on all the other ones. "
 					"This mimics the simple case of multi file compilation with GCC/clang which is "
 					"sometimes useful. Note that the package based entry points should be "
 					"preferred "
-					"when possible."
+					"when possible. Use --no-link to compile modules without producing libraries "
+					"or "
+					"an executable."
 				)
 					.addPositional(clah::FileParser::make("module"))
 					.setDefaultValueParser(clah::FileParser::make("module"))
@@ -686,12 +748,7 @@ namespace {
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
 					.add(getClahLinkingOptions())
-					.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-		                     .addShortName('a')
-		                     .addLongName("artifact-location")
-		                     .addShortDesc("Path to the top-level folder with build artifacts")
-		                     .optional()
-		                     .build())
+					.add(getClahArtifactLocationParameter())
 					.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
 		                     .addShortName('o')
 		                     .addLongName("output-file-name")
@@ -715,9 +772,8 @@ namespace {
 						for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 							modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
-						const bool dvm_backend = options.isFlag("dvm-backend");
-
-						std::set<base::StrID>               aliases_duplicate_check;
+						const bool            dvm_backend = options.isFlag("dvm-backend");
+						std::set<base::StrID> aliases_duplicate_check;
 						base::Map<base::StrID, base::StrID> package_id_aliases;
 						std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
 						packages_info.reserve(modules_to_compile.size());
@@ -771,20 +827,20 @@ namespace {
 
 						auto stdlib_options = getStdLibOptionsFromClah(options);
 						auto init_result    = compiler::driver::initializeTheCompiler(
-	                        compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-								.packages_info         = std::move(packages_info),
-								.compilation_artifacts = {
-									.artifacts_path = options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
-								},
-								.backend_options   = getBackendOptionsFromClah(options),
-								.debug_options     = debug_options::getDebugOptionsFromClah(options),
-								.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
-								.execution_options = {
-									.worker_count = 1,
-								},
-								.stdlib_options = stdlib_options,
-	                        }
-	                    );
+                        compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info         = std::move(packages_info),
+							.compilation_artifacts = {
+								.artifacts_path = options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
+							.execution_options = {
+								.worker_count = 1,
+							},
+							.stdlib_options = stdlib_options,
+                        }
+                    );
 
 						if (init_result.status().isBad()) {
 							compiler::driver::exit();
@@ -829,27 +885,29 @@ namespace {
 							);
 							if (dvm_backend) {
 								compilation_tasks.push_back(driver::PackageCompilationTask{
-									.root_module  = root_module,
-									.build_target = driver::BuildTargetDVMLibrary{
-										.output_file_name = library_name,
-										.dvm_linking_options   = driver::constructDVMLinkingOptions(
-										getLinkingOptionsFromClah(options), stdlib_options, true
-									),
-									},
-								});
+								.root_module  = root_module,
+								.build_target = driver::BuildTargetDVMLibrary{
+									.output_file_name = library_name,
+									.dvm_linking_options   = driver::constructDVMLinkingOptions(
+									getLinkingOptionsFromClah(options), stdlib_options, true
+								),
+								},
+							});
 							} else {
 								compilation_tasks.push_back(driver::PackageCompilationTask{
-									.root_module  = root_module,
-									.build_target = driver::BuildTargetLLVMStaticLibrary{
-										.output_file_name  = library_name,
-										.archiving_options = getArchivingOptionsFromClah(options),
-									},
-								});
+								.root_module  = root_module,
+								.build_target = driver::BuildTargetLLVMStaticLibrary{
+									.output_file_name  = library_name,
+									.archiving_options = getArchivingOptionsFromClah(options),
+								},
+							});
 							}
-							auto artifact_file = global_state::getRootCollection()
-				                                     ->fileArtifactAtOrNew(library_name)
-				                                     .file;
-							libraries_to_link.push_back(artifact_file.getFilePath());
+							if (not options.isFlag("no-link")) {
+								auto artifact_file = global_state::getRootCollection()
+					                                     ->fileArtifactAtOrNew(library_name)
+					                                     .file;
+								libraries_to_link.push_back(artifact_file.getFilePath());
+							}
 						}
 
 						CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
@@ -863,14 +921,13 @@ namespace {
 								linking_options.dvm_link_libraries, libraries_to_link
 							);
 							compilation_tasks.push_back(driver::PackageCompilationTask{
-								.root_module  = main_root_module.value(),
-								.build_target = driver::BuildTargetDVMExecutable{
-									.output_file_name  = base::StrID(output_file_name),
-									.dvm_linking_options    = driver::constructDVMLinkingOptions(
-										getLinkingOptionsFromClah(options), stdlib_options, false
-									),
-								},
-							});
+							.root_module  = main_root_module.value(),
+							.build_target = driver::BuildTargetDVMExecutable{
+								.output_file_name  = base::StrID(output_file_name),
+								.dvm_linking_options    = driver::constructDVMLinkingOptions(linking_options, stdlib_options, false
+								),
+							},
+						});
 						} else {
 							auto output_file_name
 								= options.getValue<std::string>("output-file-name")
@@ -880,14 +937,14 @@ namespace {
 								linking_options.native_additional_link_options.push_back(lib.native(
 								));
 							compilation_tasks.push_back(driver::PackageCompilationTask{
-								.root_module  = main_root_module.value(),
-								.build_target = driver::BuildTargetLLVMExecutable{
-									.output_file_name = base::StrID(output_file_name),
-									.linking_options  = driver::constructNativeLinkerOptions(
-										linking_options, stdlib_options
-									),
-								},
-							});
+							.root_module  = main_root_module.value(),
+							.build_target = driver::BuildTargetLLVMExecutable{
+								.output_file_name = base::StrID(output_file_name),
+								.linking_options  = driver::constructNativeLinkerOptions(
+									linking_options, stdlib_options
+								),
+							},
+						});
 						}
 
 						base::OkBad result = driver::compilePackages(compilation_tasks);
@@ -898,7 +955,10 @@ namespace {
 					})
 			)
 		    .addSubcommand(
-				clah::Clah("compile_package", "Compile given package into a binary.")
+				clah::Clah(
+					"compile_package",
+					"Compile a package and optionally link an executable or library."
+				)
 					.addPositional(
 						clah::FileParser::make("path", true),
 						"Path to the root module of the package or the root module file."
@@ -916,12 +976,7 @@ namespace {
 		                                   "or the root module file.")
 		                     .optional()
 		                     .build())
-					.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-		                     .addShortName('a')
-		                     .addLongName("artifact-location")
-		                     .addShortDesc("Path to the top-level folder with build artifacts")
-		                     .optional()
-		                     .build())
+					.add(getClahArtifactLocationParameter())
 					.add(clah::ParamBuilder::ofFlag()
 		                     .addLongName("dvm-backend")
 		                     .addShortDesc("Compile to DVM bytecode instead of exe.")
@@ -966,30 +1021,30 @@ namespace {
 						auto worker_count   = options.getValue<i64>("workers").copyValueOr(1);
 						auto stdlib_options = getStdLibOptionsFromClah(options);
 						auto init_result = compiler::driver::initializeTheCompiler(
-							compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-								.packages_info = {
-									compiler::frontend::packages::RawPackageInfo{
-										.package_id   = base::StrID(package_name),
-										.package_name = base::StrID(package_name),
-										.version      = base::StrID("not_supported"),
-										.package_path = path_to_compile.getFilePath(),
-										.features     = {},
-										.dependencies = {},
-									},
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info = {
+								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
+									.package_name = base::StrID(package_name),
+									.version      = base::StrID("not_supported"),
+									.package_path = path_to_compile.getFilePath(),
+									.features     = {},
+									.dependencies = {},
 								},
-								.compilation_artifacts = {
-									.artifacts_path =
-										options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
-								},
-								.backend_options   = getBackendOptionsFromClah(options),
-								.debug_options     = debug_options::getDebugOptionsFromClah(options),
-								.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
-								.execution_options = {
-									.worker_count = base::safeIntConv<u64>(worker_count),
-								},
-								.stdlib_options = stdlib_options
-							}
-						);
+							},
+							.compilation_artifacts = {
+								.artifacts_path =
+									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
+							.stdlib_options = stdlib_options
+						}
+					);
 						if (init_result.status().isBad()) {
 							compiler::driver::exit();
 							return 1;
@@ -1080,12 +1135,8 @@ namespace {
 					.add(debug_options::getClahDebugParameters())
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
-					.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-		                     .addShortName('a')
-		                     .addLongName("artifact-location")
-		                     .addShortDesc("Path to the top-level folder with build artifacts")
-		                     .optional()
-		                     .build())
+					.add(getClahArtifactLocationParameter())
+					.add(getClahNoLinkParameter())
 					.add(incremental_options::getClahIncrementalParameters())
 					.addCustomVerification(incremental_options::verifyIncrementalOptions)
 					.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
@@ -1125,21 +1176,21 @@ namespace {
 						std::ignore         = manifest->verify(report);
 						auto stdlib_options = getStdLibOptionsFromClah(options);
 						auto init_result = compiler::driver::initializeTheCompiler(
-							compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-								.packages_info = manifest->packages,
-								.compilation_artifacts = {
-									.artifacts_path =
-										options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
-								},
-								.backend_options   = getBackendOptionsFromClah(options),
-								.debug_options     = debug_options::getDebugOptionsFromClah(options),
-								.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
-								.execution_options = {
-									.worker_count = base::safeIntConv<u64>(worker_count),
-								},
-								.stdlib_options = stdlib_options,
-							}
-						);
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info = manifest->packages,
+							.compilation_artifacts = {
+								.artifacts_path =
+									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = incremental_options::getIncrementalOptionsFromClah(options),
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
+							.stdlib_options = stdlib_options,
+						}
+					);
 
 						if (init_result.status().isBad()) {
 							compiler::driver::exit();
@@ -1168,6 +1219,9 @@ namespace {
 								variant_case(
 									compiler::driver::PackageCompilationTask, package_task
 								) {
+									updateTaskTargetWithNoLinkOptions(
+										options.isFlag("no-link"), package_task
+									);
 									compilation_tasks.push_back(package_task);
 								}
 								variant_default { CORE_PANIC("Unsupported task type in manifest"); }
@@ -1189,18 +1243,17 @@ namespace {
 					})
 			)
 		    .addSubcommand(
-				clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
+				clah::Clah(
+					"compile_script",
+					"Compile a .dks script into backend objects, a .dbc package, or an executable."
+				)
 					.addPositional(clah::FileParser::make("script"))
 					.add(getLlvmOptLevelParam())
+					.add(debug_options::getClahDebugParameters())
 					.add(getClahLinkingOptions())
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
-					.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
-		                     .addShortName('a')
-		                     .addLongName("artifact-location")
-		                     .addShortDesc("Path to the top-level folder with build artifacts")
-		                     .optional()
-		                     .build())
+					.add(getClahArtifactLocationParameter())
 					.add(clah::ParamBuilder::ofFlag()
 		                     .addLongName("dvm-backend")
 		                     .addShortDesc(
@@ -1225,18 +1278,18 @@ namespace {
 
 						auto stdlib_options = getStdLibOptionsFromClah(options);
 						auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
-							.script_file     = script_file,
-							.backend_options = getBackendOptionsFromClah(options),
-							.compilation_artifacts = {
-								.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
-								                      .copyValueOr("./duck_build/"),
-							},
-							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.execution_options = {
-								.worker_count = base::safeIntConv<u64>(worker_count),
-							},
-							.stdlib_options = stdlib_options
-						};
+						.script_file     = script_file,
+						.backend_options = getBackendOptionsFromClah(options),
+						.compilation_artifacts = {
+							.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
+							                      .copyValueOr("./duck_build/"),
+						},
+						.debug_options     = debug_options::getDebugOptionsFromClah(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+						.stdlib_options = stdlib_options
+					};
 
 						auto init_result = compiler::driver::initializeTheCompiler(mode);
 						if (init_result.status().isBad()) {
@@ -1288,17 +1341,17 @@ namespace {
 
 						auto stdlib_options = getStdLibOptionsFromClah(options);
 						auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
-							.script_file     = script_file,
-							.backend_options = {}, // only dvm for now.
-							.compilation_artifacts = {
-								.artifacts_path = run_temp_artifacts_path,
-							},
-							.debug_options     = debug_options::getDebugOptionsFromClah(options),
-							.execution_options = {
-								.worker_count = base::safeIntConv<u64>(worker_count),
-							},
-							.stdlib_options = stdlib_options,
-						};
+						.script_file     = script_file,
+						.backend_options = {}, // only dvm for now.
+						.compilation_artifacts = {
+							.artifacts_path = run_temp_artifacts_path,
+						},
+						.debug_options     = debug_options::getDebugOptionsFromClah(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+						.stdlib_options = stdlib_options,
+					};
 
 						auto init_result = compiler::driver::initializeTheCompiler(mode);
 						if (init_result.status().isBad()) {
@@ -1363,14 +1416,14 @@ namespace {
 					.setHandler([](const clah::ParsingResult& options) -> int {
 						auto stdlib_opts = getStdLibOptionsFromClah(options);
 						auto init_result = compiler::driver::initializeTheCompiler(
-									   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
-										   .debug_options = debug_options::getDebugOptionsFromClah(options),
-										   .execution_options = {
-											   .worker_count = 1,
-										   },
-										   .stdlib_options = stdlib_opts
-									   }
-								   );
+								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
+									   .debug_options = debug_options::getDebugOptionsFromClah(options),
+									   .execution_options = {
+										   .worker_count = 1,
+									   },
+									   .stdlib_options = stdlib_opts
+								   }
+							   );
 						if (init_result.status().isBad()) {
 							compiler::driver::exit();
 							return 1;
@@ -1463,6 +1516,7 @@ namespace {
 					})
 			);
 	}
+
 }
 
 int main(int argc, const char* argv[]) {
