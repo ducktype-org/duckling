@@ -55,6 +55,7 @@ public:
 		TESTER_ADD_TEST(functionPointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(noReturnTest);
+		TESTER_ADD_TEST(scalarCopyTest);
 	}
 
 protected:
@@ -130,11 +131,11 @@ private:
 		runTestForModule("modules/variables");
 	}
 
-	void booleansTest() { runTestForModule("modules/booleans", 2, 3); }
+	void booleansTest() { runTestForModule("modules/booleans", 2); }
 
 	void arithmeticTest() { runTestForModule("modules/arithmetic"); }
 
-	void comparisonTest() { runTestForModule("modules/comparison", 1, 3); }
+	void comparisonTest() { runTestForModule("modules/comparison", 1, 2); }
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
@@ -169,7 +170,7 @@ private:
 
 	// Both globals are trivially destructible, so they only get a ctor each, and the module gets a
 	// ctor calling them.
-	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 5); }
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 4); }
 
 	void unitsTest() {
 		runTestForModule("modules/units/unit1", 2, 2);
@@ -641,6 +642,41 @@ private:
 			not has_attributes("returnsUnit")
 				or function_attributes("returnsUnit").find("noreturn") == std::string::npos,
 			"'returnsUnit' (returning ()) must not be noreturn"
+		);
+	}
+
+	void scalarCopyTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/scalar_copies");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Returns the body of the function whose `define` line contains @p name.
+		auto function_body = [&](const std::string& name) -> std::string {
+			std::smatch body_match;
+			assertTrue(
+				std::regex_search(
+					ir, body_match, std::regex{ R"(define[^\n]*)" + name + R"([^\n]*\{([^}]*)\})" }
+				),
+				"Expected an LLVM function named " + name
+			);
+			return body_match[1].str();
+		};
+
+		// A `bool` copied with a 1-byte `memmove` cannot be promoted to a register by SROA. It
+		// stays on the stack and blocks the optimization of conditions like bounds checks.
+		const std::string scalar_body = function_body("isOutOfRange");
+		assertTrue(
+			scalar_body.find("llvm.memmove") == std::string::npos,
+			"Expected scalar copies in 'isOutOfRange' to not use memmove"
+		);
+		assertTrue(
+			std::regex_search(scalar_body, std::regex{ R"(store i1 %[0-9]+, ptr %tmp_)" }),
+			"Expected the copied bool in 'isOutOfRange' to be stored as i1"
+		);
+		// Aggregates still go through `memmove`, so a large one never becomes a huge
+		// first-class load/store.
+		assertTrue(
+			function_body("copyPair").find("llvm.memmove") != std::string::npos,
+			"Expected the copy of 'Pair' in 'copyPair' to use memmove"
 		);
 	}
 };
