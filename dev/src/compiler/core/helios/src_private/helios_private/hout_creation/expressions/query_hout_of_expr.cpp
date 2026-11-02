@@ -36,6 +36,7 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

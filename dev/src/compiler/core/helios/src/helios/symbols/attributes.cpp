@@ -11,6 +11,7 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>

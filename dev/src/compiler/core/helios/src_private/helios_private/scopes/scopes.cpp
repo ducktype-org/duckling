@@ -33,6 +33,7 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/templates/templates.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>

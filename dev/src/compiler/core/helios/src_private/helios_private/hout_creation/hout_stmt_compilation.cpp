@@ -34,6 +34,8 @@
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
+
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>

@@ -12,7 +12,6 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/errors.hpp>
-#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <query_framework/query_int.hpp>
