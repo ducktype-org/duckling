@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../dvm_value.hpp"
 #include "dvm_operation.hpp"
 #include "instruction_lowerer.hpp"
@@ -32,6 +38,7 @@ namespace comptime_func_names {
 	constexpr auto VARIANT_BUILDER_NEW      = "comptime_variant_builder_new";
 	constexpr auto VARIANT_BUILDER_PUSH     = "comptime_variant_builder_push";
 	constexpr auto VARIANT_BUILDER_FINALIZE = "comptime_variant_builder_finalize";
+	constexpr auto CREATE_OPTIONAL          = "comptime_create_optional";
 }
 
 namespace {
@@ -145,6 +152,10 @@ namespace compiler::backend_vm::internal {
 			lower_builder_pattern(builder);
 			break;
 		}
+		case lir::MetaKind::CreateOptional:
+			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateOptional expects 1 argument");
+			lower_ctx_call(base::StrID(comptime_func_names::CREATE_OPTIONAL));
+			break;
 		case lir::MetaKind::Eq:
 			lower_single_call(base::StrID(comptime_func_names::TYPES_EQUAL), op.args, op.dest);
 			break;

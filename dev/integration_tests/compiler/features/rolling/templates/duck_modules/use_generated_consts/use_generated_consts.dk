@@ -5,7 +5,10 @@ namespace M {
     var b = a;
 
     template(c: i64)
-    fun foo() = a + c + 1;
+    fun foo() = {
+        const NestedLocalConst: i64 = a + c + 1;
+        return NestedLocalConst;
+    };
 }
 
 template(a: i64)
@@ -15,24 +18,28 @@ template(a: i64)
 const X = a;
 
 fun main() -> i64 = {
-    builtin_output_i64(M:{1}.b);
-    builtin_output_i64(M:{2}.b);
-    builtin_output_i64(M:{1}.b);
+    const LocalConst: i64 = 10;
 
-    builtin_output_i64(get:{1}());
-    builtin_output_i64(get:{2}());
-    builtin_output_i64(get:{1}());
+    builtin_output_i64(M[1].b);
+    builtin_output_i64(M[2].b);
+    builtin_output_i64(M[1].b);
 
-    builtin_output_i64(M:{3}.foo:{1}());
-    builtin_output_i64(M:{2}.foo:{1}());
-    builtin_output_i64(M:{3}.foo:{2}());
-    builtin_output_i64(M:{2}.foo:{2}());
-    builtin_output_i64(M:{3}.foo:{1}());
-    builtin_output_i64(M:{2}.foo:{1}());
+    builtin_output_i64(get[1]());
+    builtin_output_i64(get[2]());
+    builtin_output_i64(get[1]());
 
-    builtin_output_i64(X:{1});
-    builtin_output_i64(X:{2});
-    builtin_output_i64(X:{1});
+    builtin_output_i64(M[3].foo[1]());
+    builtin_output_i64(M[2].foo[1]());
+    builtin_output_i64(M[3].foo[2]());
+    builtin_output_i64(M[2].foo[2]());
+    builtin_output_i64(M[3].foo[1]());
+    builtin_output_i64(M[2].foo[1]());
+
+    builtin_output_i64(X[1]);
+    builtin_output_i64(X[2]);
+    builtin_output_i64(X[1]);
+
+    builtin_output_i64(LocalConst);
 
     return 0;
 }

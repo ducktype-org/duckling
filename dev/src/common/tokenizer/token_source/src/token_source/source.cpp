@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "source.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -98,9 +104,9 @@ namespace tokenizer {
 		return res;
 	}
 
-	void TokenSource::runLexer() {
+	void TokenSource::runLexer(const lexer::LexOptions& options) {
 		if (int_log.hasErrors()) return;
-		lexer::Lexer lexer{ Ref<TokenSource>(this) };
+		lexer::Lexer lexer{ Ref<TokenSource>(this), options };
 		token_data.emplace(lexer.tokenize());
 	}
 

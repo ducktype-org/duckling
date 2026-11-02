@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * Definition of query Context type.
  */
@@ -337,6 +343,11 @@ namespace query {
 		 * Is thread safe.
 		 */
 		void logInt(Box<dia::MessageBase> diagnostic);
+
+		template<std::derived_from<dia::MessageBase> Msg, typename... Args>
+		void log(Args&&... args) {
+			logInt(makeBox<Msg>(std::forward<Args>(args)...));
+		}
 
 		/**
 		 * @brief Logs and moves all messages from a provided logger

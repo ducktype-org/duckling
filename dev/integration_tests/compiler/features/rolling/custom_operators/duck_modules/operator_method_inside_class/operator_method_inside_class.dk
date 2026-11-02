@@ -1,0 +1,21 @@
+# We make sure that lookup doesn't get confused when it sees a symbol from both:
+# the scope, and the type of the left hand argument.
+
+class Number {
+    val: i64 = 0;
+
+    fun +(rhs: Number) -> Number = {
+        return Number(self.val + rhs.val);
+    }
+
+    fun double() -> Number = {
+        return self + Number(self.val);
+    }
+}
+
+fun main() -> i64 = {
+    var a = Number(21);
+    let d = a.double();
+    builtin_output_i64(d.val);  # 42
+    return 0;
+}

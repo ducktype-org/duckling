@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "type_context.hpp"
 
 #include <string_id/string_id.hpp>
@@ -121,12 +127,7 @@ void TypeContext::insertAndValidate(
 			if (type != *tod_types.at(name)) throw DuplicatedTypeError(type, *tod_types.at(name));
 		} else {
 			tod_types.insert(type, name);
-			types.insert(
-				vm::code::valid_type::ValidType::declareType(
-					name, valid_type::ValidTypeID(types.size())
-				),
-				name
-			);
+			types.insert(vm::code::valid_type::ValidType::declareType(name, types.nextID()), name);
 			really_new_types.emplace_back(&type);
 		}
 	}

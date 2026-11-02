@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../dvm_value.hpp"
@@ -109,10 +115,15 @@ namespace compiler::backend_vm::internal {
 
 	/**
 	 * @brief Represents an AddressOf DVM operation.
+	 *
+	 * When `dest_layout` is a `cptr`, the address is converted into it, whatever pointer the
+	 * place is reached through.
 	 */
 	struct AddressOfOperation {
-		DVMPlace                 src;
-		base::Optional<DVMPlace> dest;
+		DVMPlace                              src;
+		CRef<tsl::TypeLayout>                 src_layout;
+		base::Optional<DVMPlace>              dest;
+		base::Optional<CRef<tsl::TypeLayout>> dest_layout;
 	};
 
 	/**

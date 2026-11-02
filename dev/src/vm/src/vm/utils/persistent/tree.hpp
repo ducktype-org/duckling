@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
@@ -62,7 +68,7 @@ namespace vm::persistent::detail {
 		enum class Dir { Left, Rght };
 
 	private:
-		struct ChildEntry {
+		struct ChildEntry final {
 			NodeID left_child;
 			NodeID right_child;
 
@@ -77,7 +83,7 @@ namespace vm::persistent::detail {
 			}
 		};
 
-		struct LeafEntry {
+		struct LeafEntry final {
 			idxT idx;
 			valT value;
 
@@ -94,7 +100,7 @@ namespace vm::persistent::detail {
 		/**
 		 * @brief Metadata for a branch node, including its size, position, and bounds.
 		 */
-		struct BranchEntry {
+		struct BranchEntry final {
 			usize size;
 			posT  position;
 			idxT  left_bound;
@@ -310,7 +316,7 @@ namespace vm::persistent::detail {
 		/**
 		 * @brief Iterator for traversing the active leaves of a tree.
 		 */
-		struct Path {
+		struct Path final {
 			std::deque<NodeID>      trace;
 			base::CRef<SegmentTree> mem;
 
@@ -500,7 +506,7 @@ namespace vm::persistent::detail {
 		 * @note The result type determines whether the operation rebuilds or only reads the trees.
 		 */
 		template<RebuildRes ResT>
-		struct MergeBuilder {
+		struct MergeBuilder final {
 			std::function<ResT(NodeID, posT)> only_1 = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
@@ -533,7 +539,7 @@ namespace vm::persistent::detail {
 		 * @note The result type determines whether the operation rebuilds or only reads the tree.
 		 */
 		template<RebuildRes ResT>
-		struct RangeBuilder {
+		struct RangeBuilder final {
 			std::function<ResT(NodeID, posT)> in_range = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};

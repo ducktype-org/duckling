@@ -1,0 +1,19 @@
+function main { } -> { i64 } {
+	init_pany_type 		a, i64;
+	init_pany_type 		b, i64;
+	init_pany_type 		c, i64;
+	mov_p64_imm  	a, 0;
+	mov_p64_imm  	b, 0;
+
+	# breakpoint 5;
+	mov_p64_imm  	a, 0;
+	mov_p64_imm  	b, 0;
+	mov_p64_imm 	c, 0;
+
+	# breakpoint 8;
+	mov_p64_imm 	ret0, 7;
+	deinit; # c
+	deinit; # b
+	deinit; # a
+	ret;
+}

@@ -1,0 +1,62 @@
+# A callee creating a block on demand for one of its own locals.
+#
+# Two independent numbers have to agree for the address to come out right: the stack distance
+# the call carries, and the slot the callee's `init` recorded. The mixed-size locals in `main`
+# push the shared region to an offset that is not a multiple of 8, so a distance that was
+# rounded or padded cannot pass by luck.
+
+function helper { i8, i32 } -> { i64 } {
+	init_pany_type		x, i8;
+	init_pany_type		y, i64;
+	init_pany_type		p, ptr_i64;
+	init_pany_type		source, i64;
+
+	mov_p8_imm			x, 9;
+	mov_p64_imm			y, 111;
+	mov_p64_imm			source, 4242;
+
+	# `y` gets its block here, and the write through the pointer must land on `y` alone.
+	ref_pptr_pany		p, y;
+	store_pptr_pany		p, source;
+
+	mov_p64_p64			ret0, y;
+
+	deinit; # source
+	deinit; # p
+	deinit; # y
+	deinit; # x
+	deinit; # arg1
+	deinit; # arg0
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type		a, i8;
+	init_pany_type		b, i32;
+	init_pany_type		c, i8;
+
+	mov_p8_imm			a, 1;
+	mov_p32_imm			b, 2;
+	mov_p8_imm			c, 3;
+
+	init_pany_type		result, i64;
+	init_pany_type		call_arg0, i8;
+	init_pany_type		call_arg1, i32;
+
+	mov_p8_imm			call_arg0, 7;
+	mov_p32_imm			call_arg1, 8;
+
+	call_func			helper;
+
+	output_p64			result;
+	# Nothing the callee did may have touched the caller's own locals.
+	output_p32			b;
+
+	deinit; # result
+	deinit; # c
+	deinit; # b
+	deinit; # a
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

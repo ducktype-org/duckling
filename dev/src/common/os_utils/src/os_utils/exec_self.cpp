@@ -1,8 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "exec_self.hpp"
+
+#include <base/config/target_info.hpp>
 
 #include <cerrno>
 
-#ifdef _WIN32
+#if BASE_TARGET_OS_WINDOWS
 	#include <process.h>
 #else
 	#include <unistd.h>
@@ -10,14 +18,13 @@
 
 namespace os_utils {
 
-	// @TODO: #2308 Once implemented, maybe use it here.
-	ExecSelfResult execSelf(std::vector<std::string>& g_argv) {
-		std::vector<char*> args;
+	ExecSelfResult execSelf(const std::vector<std::string>& g_argv) {
+		std::vector<const char*> args;
 		args.reserve(g_argv.size() + 1);
-		for (auto& arg: g_argv) args.push_back(arg.data());
+		for (const auto& arg: g_argv) args.push_back(arg.c_str());
 		args.push_back(nullptr);
 
-#ifdef _WIN32
+#if BASE_TARGET_OS_WINDOWS
 		intptr_t result = _spawnvp(_P_WAIT, args[0], args.data());
 		if (result == -1) {
 			std::perror("_spawnvp");
@@ -31,7 +38,11 @@ namespace os_utils {
 			.exit_code = static_cast<int>(result),
 		};
 #else
-		execvp(args[0], args.data());
+		// SAFETY: https://pubs.opengroup.org/onlinepubs/9799919799/functions/exec.html, section
+		// “Rationale” about constants (look for “The statement about argv[] and envp[] being
+		// constants”).
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+		execvp(args[0], const_cast<char* const*>(args.data()));
 		std::perror("execvp");
 		return ExecSelfResult{
 			.status     = ExecSelfStatus::Error,

@@ -24,9 +24,7 @@ bin/
 *.dll
 *.exe
 
-# python cache:
-__pycache__/
-
 !.clang-format
 !.clang-tidy
+!.editorconfig
 CLAUDE.local.md

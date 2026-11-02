@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "casts.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
@@ -46,12 +52,39 @@ namespace compiler::helios::code {
 
 		// We first check if we can cover the case by the coercion logic (from bool or to bool for
 		// example).
-		auto coercion = canCoerce(ctx, value->expression_type, to).valueOrThrow();
-		if (coercion.isValid()) return coercion.coerce(ctx, std::move(value));
+		const tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, value.ref(), to);
+		if (coercion.isValid()) {
+			auto coerced = coercions::applyCoercion(ctx, coercion, std::move(value));
+
+			// @TODO: #3853 go back to this once defined
+			if (coerced->expression_type.getSymbolType() != to)
+				return cast_expr(std::move(coerced));
+			return coerced;
+		}
+
+		// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
+		// Casting to bool needs custom handling.
+		//
+		// We use coercion logic here because it's surprisingly complex and handles references
+		// (e.g. ref i64 -> bool).
+		if (auto value_type = value->expression_type.getType();
+		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
+		    && to.getType().getKind() == Kind::Bool) {
+			const tsh::coercions::Coercion to_direct = coercions::coercionOf(
+				ctx, value.ref(), from.withReferenceKind(ReferenceKind::Direct)
+			);
+			CORE_ASSERT(to_direct.isValid(), "Should always be valid");
+			return coercions::buildZeroCheck(
+				ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
+			);
+		}
 
 		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
 		    && from.getRefKind() == ReferenceKind::Direct
 		    && to.getRefKind() == ReferenceKind::Direct)
+			return cast_expr(std::move(value));
+
+		if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
 			return cast_expr(std::move(value));
 
 		struct CastPattern {

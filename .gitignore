@@ -12,3 +12,6 @@ package-lock.json
 *.tsbuildinfo
 
 !.devcontainer/
+
+# python cache
+__pycache__/

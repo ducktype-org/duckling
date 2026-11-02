@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Provides high level storage operations. Access control is provided by [`locks`]
 //! module. Operations for state modification, which preserve coherency, are
 //! provided by [`venv`] module.
@@ -13,27 +19,9 @@ pub mod locks;
 pub mod ops;
 pub mod paths;
 pub mod venv;
-use std::fs::{DirEntry, ReadDir};
 
 pub use ops::*;
 pub mod venv_id;
-
-/// Type of an iterator over contents of a directory.
-pub enum DirContents {
-    Empty,
-    NonEmpty(ReadDir),
-}
-
-impl Iterator for DirContents {
-    type Item = Result<DirEntry, std::io::Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            DirContents::Empty => None,
-            DirContents::NonEmpty(read_dir) => read_dir.next(),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests;

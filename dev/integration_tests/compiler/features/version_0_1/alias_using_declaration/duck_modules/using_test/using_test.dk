@@ -1,5 +1,5 @@
 # Test using declaration - imports symbols into current scope
-# Per docs: using N.x; is equivalent to: alias x = N.x;
+# Per docs: using N.x; is equivalent to: using N.x as x;
 # using N.*; imports all symbols from N
 
 namespace Math {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <vm/core/vmvalue/ivmvalueref.hpp>
@@ -52,7 +58,7 @@ namespace vm::debugger::debug_adapter {
 
 		u64 total_frames = 0;
 
-		struct VarInfo {
+		struct VarInfo final {
 			SharedBox<IVMValueRef> var;
 			// reference to childs, 0 if not necessary
 			u64 var_ref{};
@@ -63,7 +69,7 @@ namespace vm::debugger::debug_adapter {
 		// vector of variables references
 		std::vector<VariablesReferenceState> variables;
 
-		struct SourcePositionInfo {
+		struct SourcePositionInfo final {
 			std::string file_path;
 			u64         start_line   = 0;
 			u64         start_column = 0;

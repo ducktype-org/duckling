@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/hout/hout.hpp>
@@ -13,7 +19,7 @@ namespace compiler::helios::defgen {
 	 * This function always returns SymID, even if the requested type is trivially destructible,
 	 * in which case the SymID might be non-usable.
 	 */
-	SymID destructSymForType(query::Context& ctx, tsh::AbstractType type);
+	SymID generatedDestructSymForType(query::Context& ctx, tsh::AbstractType type);
 
 
 	/**
@@ -26,13 +32,6 @@ namespace compiler::helios::defgen {
 	 * @brief Whether the given symbol is a user-defined destructor.
 	 */
 	bool isUserDefinedDestructor(query::Context& ctx, SymID sym);
-
-	/**
-	 * @brief Finds the user-defined destructor of a class, if it declares one.
-	 * @param class_sym The symbol of the class.
-	 * @return The destructor symbol, or an empty optional if the class doesn't declare one.
-	 */
-	base::Optional<SymID> userDestructorOf(query::Context& ctx, SymID class_sym);
 
 	/**
 	 * @brief Get the compiler-generated HOUT representation of a type's destructor.

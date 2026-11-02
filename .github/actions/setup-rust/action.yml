@@ -1,0 +1,41 @@
+name: Setup Rust
+description: >
+  Prepares the Rust build (dev/src/duck) for the platform the job runs on, by picking the
+  per-platform action below. The build-environment counterpart is setup-build-env.
+
+inputs:
+  platform:
+    description: Platform from the build matrix - "linux" or "macos".
+    required: true
+  sccache-dir:
+    description: >
+      Where sccache caches. Linux only, where the directory lives in the workspace and is carried
+      between runs by actions/cache. On the mac the cache stays on the machine, so the macOS
+      action picks the directory itself and this input is ignored.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # Same reason as in setup-build-env: an unhandled platform must say so here.
+    - name: Check the platform
+      shell: bash
+      run: |
+        case '${{ inputs.platform }}' in
+          linux|macos) ;;
+          *)
+            echo "::error::unknown platform '${{ inputs.platform }}' - add it to .github/actions/setup-rust"
+            exit 1
+            ;;
+        esac
+
+    - name: Setup Rust (Linux)
+      if: ${{ inputs.platform == 'linux' }}
+      uses: ./.github/actions/setup-linux-rust/
+      with:
+        sccache-dir: ${{ inputs.sccache-dir }}
+
+    - name: Setup Rust (macOS)
+      if: ${{ inputs.platform == 'macos' }}
+      uses: ./.github/actions/setup-macos-rust/

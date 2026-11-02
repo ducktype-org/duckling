@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "expr_lowering.hpp"
 
 #include <helios/hout/elements/expr.hpp>
@@ -19,6 +25,7 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
+#include <concepts>
 #include <ranges>
 
 namespace compiler::mir {
@@ -116,6 +123,36 @@ namespace compiler::mir {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
 
+		/**
+		 * @brief Lowers a subexpression whose result has to be addressable.
+		 *
+		 * A result that is not a place (e.g. a constant) is stored in a temporary first.
+		 *
+		 * @return The block beginning the lowered subexpression and the place holding its result.
+		 */
+		std::pair<BlockBuilderRef, MIRPlace> lowerSubExprAsPlace(
+			const hc::Expr& expr, BlockBuilderRef continuation
+		) {
+			auto store_hole = continuation->addHole();
+			auto lowered    = lowerSubExpr(expr, continuation);
+			auto result     = lowered.getResult(function);
+
+			if (const auto* place = std::get_if<MIRPlace>(&result.getVariant())) {
+				store_hole.fillNop(expr_scope);
+				return { lowered.begin, *place };
+			}
+
+			const auto tmp = function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+			store_hole.fill(Instruction{ Operation::Assign,
+			                             MIRPlace(tmp),
+			                             { result },
+			                             { flagConstruct(tmp) },
+			                             expr_scope,
+			                             {},
+			                             { expr.getPosition() } });
+			return { lowered.begin, MIRPlace(tmp) };
+		}
+
 		void visitLiteralUnitExpr(const hc::LiteralUnitExpr&) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
@@ -144,19 +181,27 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+			if (helios::isFunctionLike(helios::kind(expr.symbol))) {
+				valueOutput(continuation, MIRValue{ MIRFunctionLiteral{ expr.symbol } });
+				return;
+			}
+
 			auto optional_local = function.findLocal(expr.symbol);
 
 			if (optional_local.has_value()) {
 				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
-				auto symbol_kind = helios::kind(expr.symbol);
+				auto& ctx         = function.getContext();
+				auto  symbol_kind = helios::kind(expr.symbol);
 				CORE_ASSERT(
 					symbol_kind == helios::SymbolKind::Variable
-						|| symbol_kind == helios::SymbolKind::Const,
-					"IdentifierExpr symbol should be either local variable or global variable or "
-					"constant."
+						|| symbol_kind == helios::SymbolKind::Const
+						|| helios::isStaticField(ctx, expr.symbol),
+					"IdentifierExpr symbol should be a local variable, a global variable, a "
+					"constant or a static field."
 				);
 
+				// A static field is stored the same way a global variable is.
 				MIRGlobal::Kind global_kind = (symbol_kind == helios::SymbolKind::Const)
 				                                ? MIRGlobal::Kind::Constant
 				                                : MIRGlobal::Kind::Variable;
@@ -197,6 +242,64 @@ namespace compiler::mir {
 			valueOutput(lowered_inner.begin, target_location);
 		}
 
+		// @TODO: #1333 The result is always materialized in a temporary, even when the expression
+		// only feeds a branch (`if a and b`). A jumping visitor would lower the operands straight
+		// into the terminators of the enclosing control flow instead.
+		void doLazyBinaryEvaluation(const hc::BinaryOperatorExpr& expr) {
+			CORE_ASSERT(
+				expr.operation == hc::BuiltinBinary::BooleanOr
+					or expr.operation == hc::BuiltinBinary::BooleanAnd,
+				"Invalid call."
+			);
+			bool        is_and       = expr.operation == hc::BuiltinBinary::BooleanAnd;
+			std::string debug_prefix = is_and ? "and" : "or";
+
+			auto boolean_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				boolean_type.getType().getKind() == tsh::Kind::Bool,
+				"Lazily evaluated binary operators are boolean."
+			);
+			const auto result = function.addTmp(boolean_type, expr_scope);
+
+			auto rhs_block = function.newBlock(debug_prefix + ".rhs");
+			rhs_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
+			auto rhs_store_result_hole = rhs_block->addHole();
+			auto lowered_right         = lowerSubExpr(*expr.rhs, rhs_block);
+			lowered_right.storeResultInGivenPlace(
+				MIRPlace(result),
+				rhs_store_result_hole,
+				{ flagReinit(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			auto lhs_block     = function.newBlock(debug_prefix + ".lhs");
+			auto rhs_entry     = lowered_right.begin->getID();
+			auto if_true_cont  = is_and ? rhs_entry : continuation->getID();
+			auto if_false_cont = is_and ? continuation->getID() : rhs_entry;
+			lhs_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ MIRPlace(result), if_true_cont, if_false_cont },
+				{},
+				expr_scope,
+			});
+
+			auto lhs_store_result_hole = lhs_block->addHole();
+			auto lowered_left          = lowerSubExpr(*expr.lhs, lhs_block);
+			lowered_left.storeResultInGivenPlace(
+				MIRPlace(result),
+				lhs_store_result_hole,
+				{ flagConstruct(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			valueOutput(lowered_left.begin, result);
+		}
+
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			IF_BUILD_TYPE_DEV({
 				const bool lhs_trivial
@@ -215,6 +318,10 @@ namespace compiler::mir {
 					"`getResultAndTakeOwnership()` to `getResult()`"
 				);
 			})
+
+			if (expr.operation == hc::BuiltinBinary::BooleanOr
+			    or expr.operation == hc::BuiltinBinary::BooleanAnd)
+				return doLazyBinaryEvaluation(expr);
 
 
 			// Construct the result of the expression in reverse.
@@ -285,32 +392,33 @@ namespace compiler::mir {
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
-			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
-				auto block = function.newBlock();
-				block->setTerminator(
-					{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-				);
-				auto assign_hole = block->addHole();
+			auto build_case_block
+				= [this, &target_location](hc::Expr& case_expr, const std::string_view block_name) {
+					  auto block = function.newBlock(block_name);
+					  block->setTerminator(
+						  { Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+					  );
+					  auto assign_hole = block->addHole();
 
-				auto lowered_block = lowerSubExpr(case_expr, block);
+					  auto lowered_block = lowerSubExpr(case_expr, block);
 
-				lowered_block.storeResultInGivenPlace(
-					MIRPlace(target_location),
-					assign_hole,
-					{ flagConstruct(target_location) },
-					expr_scope,
-					{}
-				);
+					  lowered_block.storeResultInGivenPlace(
+						  MIRPlace(target_location),
+						  assign_hole,
+						  { flagConstruct(target_location) },
+						  expr_scope,
+						  {}
+					  );
 
 
-				return lowered_block.begin;
-			};
+					  return lowered_block.begin;
+				  };
 
-			auto else_block = build_case_block(*ternary_expr.if_false);
-			auto then_block = build_case_block(*ternary_expr.if_true);
+			auto else_block = build_case_block(*ternary_expr.if_false, "ternary.else");
+			auto then_block = build_case_block(*ternary_expr.if_true, "ternary.then");
 
 			// Build branching.
-			auto condition_block   = function.newBlock();
+			auto condition_block   = function.newBlock("ternary.cond");
 			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
@@ -435,8 +543,8 @@ namespace compiler::mir {
 					                           .expect("i64 numeric value creation failed") } } };
 			};
 
-			auto cond_block = function.newBlock();
-			auto body_block = function.newBlock();
+			auto cond_block = function.newBlock("array_fill.cond");
+			auto body_block = function.newBlock("array_fill.body");
 
 			// The body is assembled in reverse execution order, so the increment goes in first.
 			body_block->setTerminator(
@@ -493,7 +601,7 @@ namespace compiler::mir {
 				Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
 			));
 
-			auto entry_block = function.newBlock();
+			auto entry_block = function.newBlock("array_fill.entry");
 			entry_block->addInstruction(Instruction(
 				Operation::Assign,
 				MIRPlace(counter),
@@ -616,6 +724,34 @@ namespace compiler::mir {
 			return;
 		}
 
+		void visitOptionalTypeConstructorExpr(const hc::OptionalTypeConstructorExpr& expr) override {
+			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Optional Type Constructor should be meta"
+			);
+
+			auto hole = continuation->addHole();
+
+			auto value_type_lowered = lowerSubExpr(*expr.value_type, continuation);
+
+			noValueOutput(
+				value_type_lowered.begin,
+				hole,
+				Instruction(
+					Operation::MetaTypeOperation,
+					{},
+					{ value_type_lowered.getResult(function) },
+					{},
+					expr_scope,
+					MetaParameters{ MetaKind::CreateOptional },
+					{ expr.getPosition() }
+				),
+				result_type
+			);
+			return;
+		}
+
 		void visitVariantConstructExpr(const hc::VariantConstructExpr& expr) override {
 			auto result_type = expr.expression_type.getSymbolType();
 			CORE_ASSERT(
@@ -648,6 +784,7 @@ namespace compiler::mir {
 		}
 
 		void visitMatchExpr(const hc::MatchExpr& expr) override {
+			auto&      ctx          = function.getContext();
 			const auto variant_type = expr.subject->expression_type.getSymbolType()
 			                              .getType()
 			                              .as<tsh::VariantAbstractType>();
@@ -674,8 +811,8 @@ namespace compiler::mir {
 				const bool is_last_case = !first_entry.has_value();
 
 				// Result block: evaluate the case's value into the shared result, then join.
-				auto case_scope = function.newScope(expr_scope);
-				auto body_end   = function.newBlock();
+				auto case_scope = expr_scope;
+				auto body_end   = function.newBlock("match.case.result");
 				body_end->setTerminator(
 					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }
 				);
@@ -693,20 +830,22 @@ namespace compiler::mir {
 				);
 				auto case_entry = lowered_result.begin;
 
-				// A match covers its subject exhaustively, so the last case is bound to match and
-				// needs no test.
-				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
-
-				bool projects_payload = tests_alternative || match_case.binding.has_value();
-
-				auto test_block = function.newBlock();
-
 				base::Optional<MIRLocalMutRef>    payload_ptr;
 				base::Optional<tsh::SymbolType<>> alternative_type;
 
 				if_opt_some(match_case.alternative_index, index) {
 					alternative_type = variant_type.getMember(index);
 				}
+
+				// A match covers its subject exhaustively, so the last case is bound to match and
+				// needs no test.
+				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
+				bool binds_to_variable
+					= match_case.binding.has_value() || match_case.shouldBindToTemporary(ctx);
+				bool projects_payload = tests_alternative || binds_to_variable;
+
+				auto test_block = function.newBlock("match.case.test");
+
 
 				if (projects_payload) {
 					const auto pointer_type = tsh::SymbolType<>::withDefaults(
@@ -722,24 +861,29 @@ namespace compiler::mir {
 					});
 				}
 
-				if (match_case.binding.has_value()) {
-					auto binding_local = function.findLocal(match_case.binding.value()).value();
-					binding_local->setLifetimeScope(case_scope);
+				if (binds_to_variable) {
+					auto binding_local = [&] -> MIRLocalRef {
+						if_opt_some(match_case.binding, binding) {
+							auto local = function.findLocal(binding).value();
+							local->setLifetimeScope(case_scope);
+							return local;
+						}
+						return function.addTmp(match_case.constraint_type.value(), case_scope);
+					}();
 
 					MIRValue bound_value = [&](tsh::ReferenceKind binding_ref,
 					                           tsh::ReferenceKind alternative_ref) -> MIRValue {
 						using tsh::ReferenceKind::Direct;
 						using tsh::ReferenceKind::Ref;
-						using tsh::ReferenceKind::Box;
 						if (binding_ref == Direct && alternative_ref == Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref() };
 						if (binding_ref == Direct && alternative_ref != Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref().withDeref() };
-						if (binding_ref == Ref && alternative_ref == Direct)
+						if (binding_ref != Direct && alternative_ref == Direct)
 							return MIRValue{ payload_ptr.value() };
-						if (binding_ref == Ref && alternative_ref != Direct)
+						if (binding_ref != Direct && alternative_ref != Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref() };
-						CORE_PANIC("Binding match case to box unsupported.");
+						CORE_UNREACHABLE();
 					}(binding_local->type.getRefKind(), alternative_type.value().getRefKind());
 
 					case_entry->addInstruction(Instruction(
@@ -780,29 +924,81 @@ namespace compiler::mir {
 
 			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
 
-			// With nothing to project the subject is never read, so it is not evaluated either.
-			if (pending_projections.empty()) {
-				valueOutput(first_entry.value(), MIRValue{ MIRPlace(target_location) });
-				return;
+			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
+			const bool subject_is_direct = subject_type.getRefKind() == tsh::ReferenceKind::Direct;
+
+			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
+			base::Optional<MIRLocalRef>                   ref_subject_local;
+
+			if (subject_is_direct) {
+				assign_ref_subject = first_entry.value()->addHole();
+				ref_subject_local  = function.addTmp(
+                    subject_type.withReferenceKind(tsh::ReferenceKind::Ref), expr_scope
+                );
 			}
 
-			// The subject goes into the block the chain starts at, which dominates every
-			// projection. Its instructions are added after the holes were reserved, so they end
-			// up ahead of them. It is a reference to the variant, which is what the projections
-			// take, so it is passed on without dereferencing.
+			auto       assign_subject = first_entry.value()->addHole();
+			const auto subject_local  = function.addTmp(subject_type, expr_scope);
+
+			// The subject temporary never runs a destructor. That is only sound when the payload
+			// is owned elsewhere (a reference subject), or when every alternative that has one is
+			// handed over to a case.
+			CORE_ASSERT(
+				[&] {
+					if (subject_type.getRefKind() != tsh::ReferenceKind::Direct) return true;
+
+					const auto        num_alternatives = variant_type.getUnderlyingTypes().size();
+					std::vector<bool> consumed(num_alternatives, false);
+					for (const auto& match_case: expr.cases) {
+						if (match_case.alternative_index) {
+							auto index      = match_case.alternative_index.value();
+							consumed[index] = match_case.binding.has_value()
+						                   || match_case.shouldBindToTemporary(ctx);
+						}
+					}
+					for (usize i = 0; i < num_alternatives; i++)
+						if (not consumed[i]
+					        and not variant_type.getMember(i).isTriviallyDestructible(ctx))
+							return false;
+					return true;
+				}(),
+				"An owning `match` has to hand every alternative that has a destructor over to a "
+				"case, otherwise its payload would leak."
+			);
+			subject_local->lifetime_flags |= LifetimeFlag::NoDestructor;
+
+			// The subject goes into the block the chain starts at.
+			// Its instructions are added after the holes were reserved, so they end
+			// up ahead of them.
 			auto lowered_subject
 				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope);
-			auto subject_val = lowered_subject.getResult(function);
-			CORE_ASSERT(
-				std::holds_alternative<MIRPlace>(subject_val.getVariant())
-					&& subject_val.get<MIRPlace>().type.getRefKind() != tsh::ReferenceKind::Direct,
-				"A match subject must lower to a place holding a reference to the variant."
+
+
+			lowered_subject.storeResultInGivenPlace(
+				MIRPlace{ subject_local },
+				assign_subject,
+				{ flagConstruct(subject_local) },
+				expr_scope,
+				{}
 			);
+
+			MIRValue subject_val = MIRPlace{ subject_local };
+
+			if (subject_is_direct) {
+				assign_ref_subject->fill({
+					Operation::AddressOf,
+					*ref_subject_local,
+					{ subject_val },
+					{ flagConstruct(*ref_subject_local) },
+					expr_scope,
+				});
+				subject_val = MIRPlace{ *ref_subject_local };
+			}
 
 			for (auto& projection: pending_projections) {
 				const auto  alternative_type = variant_type.getMember(projection.alternative_index);
 				Instruction project_instr{ Operation::VariantTryProject,
-					                       {},
+					                       { projection.payload_ptr },
 					                       { subject_val },
 					                       { flagConstruct(projection.payload_ptr) },
 					                       expr_scope,
@@ -810,7 +1006,6 @@ namespace compiler::mir {
 											   .alternative_index = projection.alternative_index,
 											   .alternative_type  = alternative_type },
 					                       { expr.getPosition() } };
-				project_instr.output.emplace(projection.payload_ptr);
 				projection.hole.fill(std::move(project_instr));
 			}
 
@@ -866,15 +1061,9 @@ namespace compiler::mir {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 
-				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
-				auto base_val     = lowered_base.getResult(function);
-
-				variant_match(std::move(base_val.getVariant())) {
-					variant_case(MIRPlace, place) {
-						valueOutput(lowered_base.begin, element_place(place, index_val));
-					}
-					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
-				}
+				auto [base_begin, base_place]
+					= lowerSubExprAsPlace(*expr.base, lowered_index.begin);
+				valueOutput(base_begin, element_place(base_place, index_val));
 				return;
 			}
 
@@ -898,35 +1087,29 @@ namespace compiler::mir {
 			};
 
 			// Now, before the index projection, perform the bounds check.
-			auto bounds_check_fail_block = function.newBlock();
-			auto bounds_check_cond_block = function.newBlock();
-			auto entry_block             = function.newBlock();
+			auto bounds_check_fail_block = function.newBlock("bounds_check.fail");
+			auto bounds_check_cond_block = function.newBlock("bounds_check.cond");
+			auto entry_block             = function.newBlock("bounds_check.entry");
 			entry_block->setTerminator(Instruction{
 				Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
 
 			auto lowered_index = lowerSubExpr(*expr.index, entry_block);
 			auto index_val     = lowered_index.getResult(function);
 
-			auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
-			auto base_val     = lowered_base.getResult(function);
+			auto [base_begin, base_place] = lowerSubExprAsPlace(*expr.base, lowered_index.begin);
 
-			variant_match(std::move(base_val.getVariant())) {
-				variant_case(MIRPlace, place) {
-					boundsCheck(
-						{ .condition_block = bounds_check_cond_block,
-					      .fail_block      = bounds_check_fail_block,
-					      .ok_block        = continuation,
-					      .function        = function,
-					      .scope           = expr_scope },
-						index_val,
-						array_length(place),
-						expr.getPosition()
-					);
+			boundsCheck(
+				{ .condition_block = bounds_check_cond_block,
+			      .fail_block      = bounds_check_fail_block,
+			      .ok_block        = continuation,
+			      .function        = function,
+			      .scope           = expr_scope },
+				index_val,
+				array_length(base_place),
+				expr.getPosition()
+			);
 
-					valueOutput(lowered_base.begin, element_place(place, index_val));
-				}
-				variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
-			}
+			valueOutput(base_begin, element_place(base_place, index_val));
 		}
 
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
@@ -941,7 +1124,7 @@ namespace compiler::mir {
 				  };
 
 			// Place for a comparison instruction
-			auto last_comparison_block = function.newBlock();
+			auto last_comparison_block = function.newBlock("chain_cmp.end");
 
 			// After the last comparison, continue regardless of the result.
 			last_comparison_block->setTerminator(Instruction{
@@ -960,7 +1143,7 @@ namespace compiler::mir {
 				// If the comparison is the last one (next_block == continuation), we jump to the
 				// continuation regardless of the result. Otherwise, we branch to the next comparison
 				// if the result is true, and to the continuation if the results is false.
-				auto comparison_block = function.newBlock();
+				auto comparison_block = function.newBlock("chain_cmp");
 				if (next_block->getID() == continuation->getID()) {
 					comparison_block->setTerminator(Instruction{
 						Operation::Jump,
@@ -1003,12 +1186,25 @@ namespace compiler::mir {
 			valueOutput(next_block, boolean_output);
 		}
 
-		void visitCallExpr(const hc::CallExpr& expr) override {
+		/**
+		 * @brief Lowers a call of @p operation with the given @p arguments.
+		 *
+		 * @p lower_callee produces the callee value, which becomes the first argument of the
+		 * instruction. It may lower code before the arguments into the passed continuation, so that
+		 * the callee is evaluated first.
+		 */
+		template<std::invocable<BlockBuilderRef&> CalleeLowering>
+		void lowerCall(
+			const hc::Expr&                   expr,
+			const std::vector<Box<hc::Expr>>& arguments,
+			Operation                         operation,
+			CalleeLowering                    lower_callee
+		) {
 			bool never_returns
 				= expr.expression_type.getSymbolType().getType().getKind() == tsh::Kind::Void;
 
 			if (never_returns) {
-				auto call_block = function.newBlock();
+				auto call_block = function.newBlock("call.diverging");
 				call_block->setTerminator({ Operation::Unreachable, {}, {}, {}, expr_scope, {}, {} }
 				);
 				continuation = call_block;
@@ -1019,29 +1215,21 @@ namespace compiler::mir {
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
 
-			auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
-			if (not function_symid.has_value()) {
-				CORE_PANIC(
-					"Call expression where callee is not an identifier expression is currently not "
-					"supported."
-				);
-			}
-			args.emplace_back(MIRFunctionLiteral{ function_symid.value() });
-
 			std::vector<OperationFlag> flags;
-			for (const auto& arg: expr.arguments | std::views::reverse) {
+			for (const auto& arg: arguments | std::views::reverse) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 				args.push_back(arg_lowered.getResultAndTakeOwnership(function, flags));
 				sub_continuation = arg_lowered.begin;
 			}
-			std::reverse(args.begin() + 1, args.end());
+			std::ranges::reverse(args);
+			args.insert(args.begin(), lower_callee(sub_continuation));
 
 			auto result = ExprLowerRes(
 				sub_continuation,
 				ExprLowerRes::Finalizer(
 					call,
 					Instruction{
-						Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
+						operation, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
 					expr.expression_type.getSymbolType()
 				)
 			);
@@ -1056,27 +1244,33 @@ namespace compiler::mir {
 				output(std::move(result));
 		}
 
-		bool isEmptyCast(const hc::CastExpr& expr) {
-			if (expr.source_expr->expression_type.getSymbolType() == expr.target_type) return true;
-
-			// If cast is from ref T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Ref
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
+		void visitCallExpr(const hc::CallExpr& expr) override {
+			auto callee_symid = helios::getIdentifierExprFunctionID(expr.callee.ref());
+			if (callee_symid.has_value()) {
+				lowerCall(expr, expr.arguments, Operation::Call, [&](BlockBuilderRef&) -> MIRValue {
+					return MIRFunctionLiteral{ callee_symid.value() };
+				});
+				return;
 			}
 
-			// If cast is from box T to ptr T it is empty
-			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
-			        == tsh::ReferenceKind::Box
-			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
-				return true;
-			}
+			lowerCall(
+				expr,
+				expr.arguments,
+				Operation::IndirectCall,
+				[&](BlockBuilderRef& sub_continuation) -> MIRValue {
+					auto callee_lowered = lowerSubExpr(*expr.callee, sub_continuation);
+					auto callee         = callee_lowered.getResult(function);
+					sub_continuation    = callee_lowered.begin;
+					return callee;
+				}
+			);
+		}
 
-			if (expr.source_expr->expression_type.getType().getKind() == tsh::Kind::Void)
-				return true;
-
-			return false;
+		void visitFunctionTypeExpr(const hc::FunctionTypeExpr& expr) override {
+			function.getContext().logInt(makeBox<dia::NotYetImplementedCodeError>(
+				"Creating a function type at runtime is not supported yet.", expr.getPosition()
+			));
+			query::throwFailed();
 		}
 
 		/**
@@ -1094,21 +1288,34 @@ namespace compiler::mir {
 			    && expr.target_type.getRefKind() == tsh::ReferenceKind::Box;
 		}
 
+		/**
+		 * @brief Whether the cast is from a `ref T` into a `cptr U`.
+		 *
+		 * If the source lowers to an `AddressOf`, it is retyped to `cptr U`, which eliminates the
+		 * intermediate duckling pointer temporary: `tmp1: cptr U = addressof val`, instead of
+		 * `tmp1: ref T = addressof val; tmp2: cptr U = cast tmp1`.
+		 */
+		bool isRefToCptrCast(const hc::CastExpr& expr) {
+			return expr.source_expr->expression_type.getSymbolType().getRefKind()
+			        == tsh::ReferenceKind::Ref
+			    && expr.target_type.getType().getKind() == tsh::Kind::CPointer;
+		}
+
 		void visitCastExpr(const hc::CastExpr& expr) override {
-			// Maybe in the future the cast expr can be converted into more specific instructions.
-			if (isEmptyCast(expr)) {
-				// If the cast doesn't change the representation, simply ignore it.
+			// If the cast doesn't involves temporaries, it's safe to just lower the source.
+			if (not expr.castCreatesTemporary()) {
 				output(lowerSubExpr(*expr.source_expr, continuation));
 				return;
 			}
 
+			auto hole    = continuation->addHole();
+			auto lowered = lowerSubExpr(*expr.source_expr, continuation);
+
 			if (isBoxFromPointerCast(expr)) {
-				auto       assign   = continuation->addHole();
-				auto       lowered  = lowerSubExpr(*expr.source_expr, continuation);
 				const auto res_move = lowered.getResult(function);
 				return noValueOutput(
 					lowered.begin,
-					assign,
+					hole,
 					Instruction{ Operation::Assign,
 				                 {},
 				                 { res_move },
@@ -1120,12 +1327,20 @@ namespace compiler::mir {
 				);
 			}
 
-			auto       cast        = continuation->addHole();
-			auto       lowered     = lowerSubExpr(*expr.source_expr, continuation);
+			if (isRefToCptrCast(expr)) {
+				if (auto* val = std::get_if<ExprLowerRes::Finalizer>(&lowered.value);
+				    val && val->instr.operation == Operation::AddressOf) {
+					hole.fillNop(expr_scope);
+					val->type = expr.target_type;
+					output(std::move(lowered));
+					return;
+				}
+			}
+
 			const auto res_lowered = lowered.getResult(function);
 			return noValueOutput(
 				lowered.begin,
-				cast,
+				hole,
 				Instruction{ Operation::Cast,
 			                 {},
 			                 { res_lowered },
@@ -1256,7 +1471,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
-			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
+			auto result = lowerAndLiftToType(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));
 		}
 
@@ -1271,82 +1486,101 @@ namespace compiler::mir {
 
 
 	private:
+		static MIRValue unitTypeConstant() {
+			return MIRValue{ MIRConstant{ tsh::SymbolType<>::withDefaults(tsh::getUnitType()) } };
+		}
+
 		/**
-		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
-		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
-		 * Unit). Other nodes are delegated back to the standard expression lowerer.
+		 * @brief My idea behind this function is - if this needs to be lowered then this is
+		 * comp-time context and the content of the type can't be determined. For example:
+		 * ``` fun foo() = { var x: type = i64; var y = (x, i32); } ```
+		 * So we just do a type construction per element dynamically, without assuming what the
+		 * inner expression is.
 		 */
-		ExprLowerRes lowerAndLiftToTypeRecursively(
-			const hc::Expr& expr, BlockBuilderRef continuation
-		) {
-			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
-				tsh::SymbolType<> unit_sym_type{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+		ExprLowerRes lowerAndLiftToType(const hc::Expr& expr, BlockBuilderRef continuation) {
+			const auto value_type = expr.expression_type.getSymbolType();
 
-				return ExprLowerRes(continuation, MIRValue{ MIRConstant{ unit_sym_type } });
-			} else if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
-				auto                  hole    = continuation->addHole();
-				BlockBuilderRef       current = continuation;
-				std::vector<MIRValue> element_types;
-				element_types.reserve(tuple_expr->elements.size());
-
-				for (const auto& element: tuple_expr->elements | std::views::reverse) {
-					auto elem_result = lowerAndLiftToTypeRecursively(*element, current);
-					element_types.push_back(elem_result.getResult(function));
-					current = elem_result.begin;
-				}
-				std::ranges::reverse(element_types);
-
-				tsh::SymbolType<> result_type{
-					tsh::getMetaType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-
-				return ExprLowerRes(
-					current,
-					ExprLowerRes::Finalizer{
-						.hole  = hole,
-						.instr = Instruction(
-							Operation::MetaTypeOperation,
-							{},
-							element_types,
-							{},
-							expr_scope,
-							MetaParameters{ MetaKind::CreateTuple }
-						),
-						.type = result_type,
-					}
-				);
-			} else if (const auto* reusable_expr
-			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
-			} else if (const auto* move_expr = dynamic_cast<const hc::MoveExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*move_expr->inner, continuation);
-			}
-
-			// Any other expression of unit type (a tuple element, a call, ...) is still lowered
-			// because it may have side effects, but the unit type has a single value, so what it
-			// lifts to is always the unit type itself.
-			if (expr.expression_type.getType().getKind() == tsh::Kind::Unit) {
-				auto lowered = lowerSubExpr(expr, continuation);
-				// Materialise the result so the lowered instructions stay well formed, then drop
-				// it - only its type is of interest here.
+			switch (value_type.getType().getKind()) {
+			case tsh::Kind::Meta:
+				return lowerSubExpr(expr, continuation);
+			case tsh::Kind::Unit: {
+				auto                        lowered    = lowerSubExpr(expr, continuation);
 				[[maybe_unused]] const auto unit_value = lowered.getResult(function);
+				return { lowered.begin, unitTypeConstant() };
+			}
+			case tsh::Kind::Tuple: {
+				auto tuple_tmp = function.addTmp(value_type, expr_scope);
+				auto result    = function.addTmp(
+                    tsh::SymbolType<>::withDefaults(tsh::getMetaType()), expr_scope
+                );
 
-				tsh::SymbolType<> unit_sym_type{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				CORE_ASSERT(
+					value_type.getRefKind() == tsh::ReferenceKind::Direct,
+					"A lifted tuple is dereferenced by its coercion."
+				);
+				emitTupleLiftToType(MIRPlace(tuple_tmp), result, continuation);
 
-				return ExprLowerRes(lowered.begin, MIRValue{ MIRConstant{ unit_sym_type } });
+				auto store_hole = continuation->addHole();
+				auto lowered    = lowerSubExpr(expr, continuation);
+				lowered.storeResultInGivenPlace(
+					MIRPlace(tuple_tmp), store_hole, { flagConstruct(tuple_tmp) }, expr_scope, {}
+				);
+				return { lowered.begin, MIRValue{ result } };
+			}
+			default:
+				CORE_PANIC("Only meta-types, units and tuples of those can be lifted.");
+			}
+		}
+
+		/**
+		 * @brief Adds to `block` the instructions lifting the tuple stored in `tuple_place` to a
+		 * meta-type, written to `result`.
+		 * @note Instructions are added from last to first, so the nested tuples are lifted after
+		 * the `CreateTuple` instruction consuming them is added.
+		 */
+		void emitTupleLiftToType(
+			const MIRPlace& tuple_place, MIRLocalRef result, BlockBuilderRef block
+		) {
+			auto& ctx       = function.getContext();
+			auto  interface = tuple_place.type.getType().getInterface(ctx);
+
+			std::vector<MIRValue>                         element_types;
+			std::vector<std::pair<MIRPlace, MIRLocalRef>> nested_tuples;
+
+			for (const auto& field: interface->getFieldsView()) {
+				const auto field_place = tuple_place.withField(ctx, field.getSymbol());
+
+				switch (field_place.type.getType().getKind()) {
+				case tsh::Kind::Meta:
+					element_types.emplace_back(field_place);
+					break;
+				case tsh::Kind::Unit:
+					element_types.push_back(unitTypeConstant());
+					break;
+				case tsh::Kind::Tuple: {
+					auto nested_result = function.addTmp(
+						tsh::SymbolType<>::withDefaults(tsh::getMetaType()), expr_scope
+					);
+					element_types.emplace_back(nested_result);
+					nested_tuples.emplace_back(field_place, nested_result);
+					break;
+				}
+				default:
+					CORE_PANIC("Only meta-types, units and tuples of those can be lifted.");
+				}
 			}
 
-			return lowerSubExpr(expr, continuation);
+			block->addInstruction(Instruction(
+				Operation::MetaTypeOperation,
+				MIRPlace(result),
+				std::move(element_types),
+				{ flagConstruct(result) },
+				expr_scope,
+				MetaParameters{ MetaKind::CreateTuple }
+			));
+
+			for (const auto& [nested_place, nested_result]: nested_tuples | std::views::reverse)
+				emitTupleLiftToType(nested_place, nested_result, block);
 		}
 
 		static OperationWithParams builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
@@ -1363,9 +1597,6 @@ namespace compiler::mir {
 				return { Operation::IntegerDiv };
 			case IntegerMod:
 				return { Operation::IntegerMod };
-			case IntegerPow:
-				// @TODO: #1610 Implement exponentiation as a function call.
-				throw base::NotYetImplemented("Exponentiation on variables");
 
 			case IntegerBitAnd:
 				return { Operation::IntegerBitAnd };
@@ -1400,9 +1631,6 @@ namespace compiler::mir {
 				return { Operation::FloatMul };
 			case FloatDiv:
 				return { Operation::FloatDiv };
-			case FloatPow:
-				// @TODO: #1610 Implement exponentiation as a function call.
-				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Floating point comparisons ///
 			case FloatLt:

@@ -1,0 +1,35 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "return_without_value"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  expected_type:
+    description: "The return type declared by the function."
+  code:
+    description: "The code snippet."
+  code_location:
+    description: "The location of the return statement."
+
+header_message:
+  - "A `return` without a value is not allowed in a function returning `"
+  - param: "expected_type"
+  - "`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+  - "Only functions returning `()` may use `return;`."
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "a return value is required here"

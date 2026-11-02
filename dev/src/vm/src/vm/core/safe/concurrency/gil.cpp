@@ -1,11 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "gil.hpp"
 
-#include "timed_mutex_recovery.hpp"
+#include <os_utils/timed_mutex_recovery.hpp>
 
 namespace vm {
 	// If a DVM thread was killed while holding the GIL, clear it so the timed_mutex is not
 	// destroyed while locked (see clearAbandonedLock).
-	GIL::~GIL() { clearAbandonedLock(gil); }
+	GIL::~GIL() { os_utils::clearAbandonedLock(gil); }
 
 	void GIL::acquire() {
 		// First, we try to acquire GIL without waiting. If we succeed, we can return immediately.

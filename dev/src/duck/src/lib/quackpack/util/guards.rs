@@ -1,9 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Various drop guards.
 
 use tracing::error;
 
 use crate::util::file_locks::LockedFile;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::remove_file;
 use crate::util::set_once::SetOnce;
 
 /// Remove a file on drop, if armed.
@@ -58,8 +64,8 @@ impl Drop for RemoveOnDrop {
         let path = file.path().to_path_buf();
         // Close the file. Otherwise we can fail on Windows.
         drop(file);
-        if let Err(e) = path.rm() {
-            error!(error = %e, ?path, "failed to remove");
+        if let Err(e) = remove_file(&path) {
+            error!(error = %e, "failed to remove `{}`", path.display());
         }
     }
 }

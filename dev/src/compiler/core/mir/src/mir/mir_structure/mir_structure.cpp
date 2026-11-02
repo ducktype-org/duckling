@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "mir_structure.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -130,6 +136,8 @@ namespace compiler::mir {
 			const auto& block = blocks[block_id];
 
 			os << "  Block " << u64(block.id);
+			if (block.debug_name.has_value())
+				os << " (" << block.debug_name.value().strView() << ")";
 			if (block.id == block_order[0]) os << " [entry]";
 			os << ":\n";
 			for (const auto& instruction: block.instructions) {

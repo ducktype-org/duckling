@@ -1,8 +1,14 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from ..impl.download_llvm import download_llvm_impl
 from .helpers import (
     llvm_version,
 )
-from click import command, option, Choice
+from click import command, confirmation_option, option, Choice
 
 
 @command()
@@ -17,18 +23,16 @@ from click import command, option, Choice
     default="X64",
     type=Choice(["X64", "ARM64"], case_sensitive=False),
 )
-@option(
+@confirmation_option(
     "-c",
     "--confirm",
+    help="Skip the confirmation prompt and download right away",
     prompt=(
         "From LLVM 19 onwards, the releases are compiled with unfavourable compile options, so it is recommended to either:\n"
         " - use the LLVM from your distribution (e.g. apt install llvm-19)\n"
         " - build LLVM from source (see `install-llvm` command)\n"
         "Do you want to continue with the download?"
     ),
-    type=bool,
-    default=True,
-    is_flag=True,
 )
 @option(
     "-o",

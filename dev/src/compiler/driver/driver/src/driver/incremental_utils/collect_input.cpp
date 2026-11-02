@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "collect_input.hpp"
 
 #include <frontend/module_tree/functors.hpp>
@@ -78,7 +84,7 @@ namespace compiler::driver {
 	}
 
 	void collectQueryInputsFromPst(
-		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
+		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
 	) {
 		auto root = pst_ref->getRootElement();
 		if (auto maybe_root = root.illegalAccess()) {

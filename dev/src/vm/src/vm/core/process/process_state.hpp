@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @brief States and events for the VMProcess.
  *
@@ -6,8 +12,8 @@
  * `ProcessStateManager`. Every thread state change goes through the table, which recomputes the
  * aggregate.
  *
- * `ProcessEvent` covers only the two process operations (which actually cause a process state
- * change) -  `Run`, `Stop`. Pause/Resume/Step are per-thread operations.
+ * `ProcessEvent` covers only the process-wide operations (which actually cause a process state
+ * change) - `Run`, `Stop` and `DeinitAndValidate`. Pause/Resume/Step are per-thread operations.
  */
 #pragma once
 
@@ -26,25 +32,26 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace vm {
 	using ThreadState = thread_state::ThreadState;
 
 	namespace process_state {
-		struct NotStarted {};  ///< All VMThreads are in the `NotStarted` state.
+		struct NotStarted final {};  ///< All VMThreads are in the `NotStarted` state.
 
-		struct Running {};     ///< At least one VMThread is actively executing.
+		struct Running final {};     ///< At least one VMThread is actively executing.
 
-		struct Paused {};      ///< All active VMThreads are paused, none are running or sleeping.
+		struct Paused final {};  ///< All active VMThreads are paused, none are running or sleeping.
 
-		struct Sleeping {
+		struct Sleeping final {
 		};  ///< No VMThread is running - at least one is sleeping, none are running.
 
-		struct Stopping {};  ///< A stop has been requested and at least one VMThread has not yet
-		                     ///< reached a terminal state.
+		struct Stopping final {};  ///< A stop has been requested and at least one VMThread
+		                           ///< has not yet reached a terminal state.
 
-		struct Completed {
+		struct Completed final {
 			api::ExitValue exit_value;
 		};  ///< No VMThread is active any more and the main thread finished normally.
 
@@ -53,9 +60,9 @@ namespace vm {
 		 * requested, or the main VMThread never finished (it was stopped, killed or never
 		 * started).
 		 */
-		struct Stopped {};
+		struct Stopped final {};
 
-		struct Panicked {
+		struct Panicked final {
 			std::string err;
 		};  ///< At least one VMThread panicked.
 
@@ -92,11 +99,11 @@ namespace vm {
 	 * they are handled per-thread, so they don't appear here.
 	 */
 	namespace process_event {
-		struct Run {};   ///< Start or re-run the process.
+		struct Run final {};   ///< Start or re-run the process.
 
-		struct Stop {};  ///< Request an orderly stop of all threads.
+		struct Stop final {};  ///< Request an orderly stop of all threads.
 
-		struct DeinitAndValidate {
+		struct DeinitAndValidate final {
 		};  ///< Deinitialize the process down and validate its memory state.
 
 		using ProcessEvent = std::variant<Run, Stop, DeinitAndValidate>;
@@ -107,8 +114,8 @@ namespace vm {
 	 *
 	 * This is the only state a VMProcess has - everything else is derived from it by `aggregate()`.
 	 */
-	struct ProcessStateAggregation {
-		struct ThreadEntry {
+	struct ProcessStateAggregation final {
+		struct ThreadEntry final {
 			ThreadState state;
 
 			/// Incremented on every state change of this thread. Enables to distinguish two
@@ -175,7 +182,7 @@ namespace vm {
 		 *   	5. Any VMThread is Sleeping                  			-> VMProcess Sleeping
 		 *   	6. Any VMThread is Paused 								-> VMProcess Paused
 		 *   	7. Every VMThread is either NotStarted or terminal:
-		 *   		- Main VMThread Completed (not Panicked/Stopped) 	-> VMProcess Completed{exit}
+		 *   		- Main VMThread Completed (joined or not) 				-> Completed{exit}
 		 *   		- Otherwise 										-> VMProcess Stopped
 		 */
 		[[nodiscard]] process_state::ProcessState aggregateState() const {
@@ -220,13 +227,18 @@ namespace vm {
 					);
 			});
 
-			// Nothing is active, so every thread is either NotStarted or terminal.
-			for (const auto& [tid, entry]: threads)
-				// If Main thread completed, VMProcess does as well.
-				if (tid == main_tid)
-					v_if_matches(
-						entry.state, ts::Completed, completed
-					) return Completed{ completed->exit_value };
+			// Nothing is active, so every thread is either NotStarted or terminal. The process
+			// completed iff the main thread completed.
+			const auto main_entry = threads.atMaybe(main_tid);
+			if (!main_entry.has_value()) return Stopped{};
+
+			const base::Optional<ts::TerminalOutcome> main_outcome
+				= ts::terminalOutcome(main_entry.value()->state);
+			if (!main_outcome.has_value()) return Stopped{};
+
+			v_if_matches(
+				*main_outcome, ts::Completed, completed
+			) return Completed{ completed->exit_value };
 			return Stopped{};
 		}
 	};

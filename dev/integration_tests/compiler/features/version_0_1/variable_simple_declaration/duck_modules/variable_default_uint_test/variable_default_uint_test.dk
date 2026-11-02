@@ -1,4 +1,4 @@
-fun main() -> u64 = {
+fun main() -> i64 = {
     var a: u128;
     if (a != 0u128) {
         return 1;

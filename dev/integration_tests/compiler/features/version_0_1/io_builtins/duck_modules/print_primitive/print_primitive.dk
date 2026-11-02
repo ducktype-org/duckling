@@ -1,0 +1,27 @@
+# Test for the print function
+
+fun main() -> i64 = {
+    print(1i8);
+    print(2i16);
+    print(3i32);
+    print(4i64);
+
+    print(6u8);
+    print(7u16);
+    print(8u32);
+    print(9u64);
+
+    print(3.14f32);
+    print(2.718f64);
+
+    print(());
+    print(true);
+    print('A');
+    # print(176 as byte);
+
+    print("Hello");
+    let x = "World";
+    print(x);
+
+    return 0;
+}

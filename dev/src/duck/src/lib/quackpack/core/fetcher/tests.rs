@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 
 use futures::executor::block_on;
@@ -8,6 +14,13 @@ use super::*;
 use crate::quackpack::core::Version;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::test_utils::setup_test;
+
+#[test]
+/// If this test passes (doesn't panic), it means that we successfully initialised the
+/// `LazyLock` with the parsed URL.
+fn default_url_is_valid() {
+    let _ = &*DEFAULT_REGISTRY_URL;
+}
 
 fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
@@ -89,7 +102,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg1],
+        dependencies: registry::Dependencies(vec![pkg1]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -103,7 +116,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![pkg2, pkg3],
+        dependencies: registry::Dependencies(vec![pkg2, pkg3]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -117,7 +130,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: registry::Dependencies::new(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };

@@ -16,6 +16,12 @@ Tests:
       sync:
         test-cmd: duck -C foo sync
         Output:
+          String: |+
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
+            info: successfully synchronized venv \`foo\`
+      sync-verbose:
+        test-cmd: duck --verbose -C foo sync
+        Output:
           Run: |+
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
@@ -24,4 +30,3 @@ Tests:
             info: starting loading 1 package
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`"
-        

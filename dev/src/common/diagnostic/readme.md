@@ -72,7 +72,7 @@ Can expand / hide code elements on the code snippet, for example
 
 ```
  1 | var original_variable = 30;
- 2 | alias alias_variable = original_variable;
+ 2 | using original_variable as alias_variable;
 ...
  20| var x = alias_variable;
 ```
@@ -81,7 +81,7 @@ to:
 
 ```
  1 | var original_variable = 30;
- 2 | alias alias_variable = original_variable;
+ 2 | using original_variable as alias_variable;
 ...
  20| var x = original_variable; # <--- here
 ```

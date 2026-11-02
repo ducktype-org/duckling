@@ -1,12 +1,18 @@
 # Tests for destructor insertion: at the end of a scope, before an assignment overwriting a live
 # value, for the members of a class (including a box and a nested non-trivial member), for values
-# returned by value and passed to a by-value parameter, and for global variables.
+# returned by value and passed to a by-value parameter, for the temporaries of a conditionally
+# evaluated part of an expression, and for global variables.
 Tests:
   destructors:
     Cases:
       all:
         Output:
-          String: "2\n3\n1\n4\n6\n5\n7\n8\n11\n10\n9\n14\n13\n100\n101\n102\n999\n103\n101\n"
+          String: "2\n3\n1\n4\n6\n5\n7\n8\n11\n10\n9\n14\n13\n20\n30\n21\n31\n22\n23\n32\n24\n25\n33\n42\n40\n41\n34\n100\n101\n102\n999\n103\n101\n"
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3
+        Output:
+          String: "2\n3\n1\n4\n6\n5\n7\n8\n11\n10\n9\n14\n13\n20\n30\n21\n31\n22\n23\n32\n24\n25\n33\n42\n40\n41\n34\n100\n101\n102\n999\n103\n101\n"
         ExitCode: 0
 
   conditional_moves:
@@ -20,3 +26,4 @@ Tests:
         Output:
           String: "1\n2\n4\n3\n5\n6\n7\n9\n8\n10\n11\n12\n13\n15\n14\n16\n18\n17\n16\n18\n17\n16\n18\n18\n16\n20\n21\n22\n23\n"
         ExitCode: 0
+

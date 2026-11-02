@@ -1,8 +1,7 @@
 output.dbc
 
-> "Debugger has started"
-> "+\n"
-> "+\n"
+> "Welcome to BeRD - an interactive in-DVM debugger!"
+> "\n"
 
 timeout 0.1
 < "run\n"

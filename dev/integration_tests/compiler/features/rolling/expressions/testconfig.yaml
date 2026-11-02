@@ -28,6 +28,13 @@ Tests:
           String: ""
         ExitCode: 0
 
+  complex_operators:
+    Cases:
+      all:
+        Output:
+          String: "9\n729\n0.137313\n0.167472\n7\n343\n15\n20\n9\n"
+        ExitCode: 0
+
   unit_simple:
     Cases:
       all:
@@ -84,12 +91,33 @@ Tests:
           String: ""
         ExitCode: 0
 
-  coercions:
+  # @TODO: #3631 Numeric coercions to bool temporarily disabled
+  #  coercions:
+  #    Cases:
+  #      all:
+  #        Output:
+  #          String: ""
+  #        ExitCode: 0
+
+  void_coercions:
+    NoParallel: true
     Cases:
-      all:
+      llvm:
+        ExitCode: 134
+      dvm:
+        stderr_regex: "VMThread has panicked: Program panicked"
         Output:
-          String: ""
-        ExitCode: 0
+          String: "-4\nProgram panicked!\n"
+
+  void_diverging_match:
+    NoParallel: true
+    Cases:
+      llvm:
+        ExitCode: 134
+      dvm:
+        stderr_regex: "VMThread has panicked: Program panicked"
+        Output:
+          String: "1\nProgram panicked!\n"
 
   no_output:
     Cases:
@@ -114,6 +142,14 @@ Tests:
         Output:
           String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
           
+  short_circuit:
+    Description: Lazy evaluation of `and` / `or`, including chains of three operands.
+    Cases:
+      all:
+        Output:
+          String: "0\n1\n2\n0\n3\n1\n11\n12\n1\n21\n22\n0\n31\n32\n1\n"
+        ExitCode: 0
+
   bitwise:
     Cases:
       all:

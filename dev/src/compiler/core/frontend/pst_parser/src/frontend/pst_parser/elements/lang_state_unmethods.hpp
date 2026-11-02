@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 // functions that mirror LangParserState methods that can be used without the full definition
 
+#include "../lang_element_construction_data.hpp"
 #include "../pst_config.hpp"
 #include "../pst_state_forward.hpp"
 #include "elements_list.hpp"
@@ -16,8 +23,8 @@ namespace pst {
 
 	// These are needed to not include parser state definition
 	namespace internal {
-		dia::SourcePosition getPosition(const LangParserState& state);
-		HashType            getContextHash(const LangParserState& state);
+		dia::SourcePosition getPosition(LangElementConstructionData state);
+		HashType            getContextHash(LangElementConstructionData state);
 		void                parseExprIntoHolder(
 						   LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
 					   );

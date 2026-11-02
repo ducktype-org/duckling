@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../dvm_value.hpp"
 #include "../function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
@@ -51,22 +57,24 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const ReturnOperation& op) {
+		const bool is_already_in_return_local = op.value.has_value()
+		                                    and op.value.value().is<DVMPlace>()
+		                                    and op.value.value().get<DVMPlace>().getSpecialKind()
+		                                            == DVMPlace::SpecialKind::ReturnValue;
+
+		// Since VM does not support `return X;` operation, we must move the value to
+		// the ret_val local and then return.
+		if (not is_already_in_return_local) {
+			if_opt_some(op.value, ret_val) {
+				ctx->pushInstruction(
+					{ OpKind::mov, ctx->getFunctionReturnValueLocal().asArgument(), ret_val }
+				);
+			}
+		}
+
+		ctx->cleanUpRegisteredTemps();
 		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
-		if (op.value.has_value() and op.value.value().is<DVMPlace>()
-		    and op.value.value().get<DVMPlace>().getSpecialKind()
-		            == DVMPlace::SpecialKind::ReturnValue) {
-			// Since VM does not support `return X;` operation, we must move the value to
-			// the ret_val local and then return.
-			ctx->pushInstruction({ OpKind::ret });
-			return;
-		}
-
-		if_opt_some(op.value, ret_val) {
-			ctx->pushInstruction(
-				{ OpKind::mov, ctx->getFunctionReturnValueLocal().asArgument(), ret_val }
-			);
-		}
 		ctx->pushInstruction({ OpKind::ret });
 	}
 

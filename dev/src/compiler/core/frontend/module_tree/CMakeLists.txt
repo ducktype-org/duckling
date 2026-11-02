@@ -2,6 +2,8 @@ add_library(ModuleTree
 	src/frontend/module_tree/access.cpp
 	src/frontend/module_tree/module_flags/module_flags.cpp
 	src/frontend/module_tree/module_tree.cpp
+	src/frontend/module_tree/module_tree_builder.cpp
+	src/frontend/module_tree/module_tree_modifier.cpp
 	src/frontend/module_tree/queries.cpp
 	src/frontend/module_tree/source_file.cpp
 	src/frontend/module_tree/file_id.cpp

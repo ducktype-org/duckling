@@ -1,9 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
 use crate::quackpack::core::editable_manifest::{DependencyAdded, EditableManifest};
 use crate::quackpack::core::{AllowGlobalPackage, DependencyKind, PackageLoader};
 use crate::quackpack::schemas::manifest::Dependency;
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 mod dependency_construction;
 use dependency_construction::construct_dependency;
@@ -34,6 +40,7 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     } else {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
+    let has_alias = dep_spec.name_spec.alias.is_none();
     let (effective_name, dep) = construct_dependency(dep_spec, &pcx)?;
 
     let pkg = pcx.package().get_package();
@@ -48,11 +55,13 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
         &effective_name,
         dep,
         kind,
+        has_alias,
         pkg_name,
         &pkg_root,
     )?;
-    editable_manifest.save()?;
-    ctx.console().info(format!(
+    editable_manifest.save().with_context(|| format!("when trying to add the {kind} dependency `{effective_name}` to the project `{pkg_name}` at `{}`", pkg_root.display()))?;
+    ctx.info(
+        format!(
         "successfully added {kind} dependency `{effective_name}` to the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
@@ -65,21 +74,30 @@ fn add_dep(
     name: &str,
     dep: Dependency,
     kind: DependencyKind,
+    has_alias: bool,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
     match editable_manifest.add_dependency(name, dep, kind)? {
         DependencyAdded::Yes => Ok(()),
-        DependencyAdded::AlreadyExists => {
-            let err: Result<(), QuackError> = Err(QuackError::hint(
-                "use aliases to have multiple dependencies with the same name",
-            ));
-            err.with_context(|| {
-                format!(
-                    "{kind} dependency `{name}` already exists in the project `{pkg_name}` at `{}`",
+        DependencyAdded::AlreadyExists(other_kind) => {
+            // If no alias, add hint to use them.
+            if has_alias {
+                let err: Result<(), QuackError> = Err(QuackError::hint(
+                    "use aliases to have multiple dependencies with the same name",
+                ));
+                err.with_context(|| {
+                    format!(
+                        "there already is a {other_kind} dependency referred to by `{name}` in the project `{pkg_name}` at `{}`",
+                        pkg_root.display()
+                    )
+                })
+            } else {
+                qp_bail!(
+                    "there already is a {other_kind} dependency referred to by `{name}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
-            })
+            }
         }
     }
 }

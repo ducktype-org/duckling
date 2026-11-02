@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import sys
 from pathlib import Path
 
@@ -36,6 +42,14 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
+      "id": "{bar_name}",
+      "name": "bar",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(bar_path)}/src",
+      "dependencies": []
+    }},
+    {{
       "id": "{foo_name}",
       "name": "foo",
       "version": "1.0.0",
@@ -46,14 +60,6 @@ expected = f"""{{
           "id": "{bar_name}"
         }}
       ]
-    }},
-    {{
-      "id": "{bar_name}",
-      "name": "bar",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(bar_path)}/src",
-      "dependencies": []
     }}
   ],
   "tasks": [

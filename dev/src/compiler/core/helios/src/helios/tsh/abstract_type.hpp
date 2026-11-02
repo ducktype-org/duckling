@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file abstract_type.hpp
  * @brief Interface of the AbstractType class.
@@ -15,6 +21,7 @@
 
 #include <hashing/add_to_hash.hpp>
 #include <query_framework/context/context_fd.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <string>
 
@@ -106,6 +113,15 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getInterface(query::Context& ctx) const;
 
 		/**
+		 * @brief Same as @ref getInterface, but returns the failure of the interface creation
+		 * instead of throwing it.
+		 * @param ctx The Query Context necessary to deduce interfaces.
+		 * @return The TypeInterface of the type described by this object, or a failure.
+		 */
+		[[nodiscard]]
+		CRef<query::QResult<TypeInterface>> getInterfaceResult(query::Context& ctx) const;
+
+		/**
 		 * @brief Check if the type is a simple type, which correlates heavily with the type being
 		 * more efficient to be passed by copy instead of by reference.
 		 * @return Whether the type is a simple type.
@@ -154,6 +170,14 @@ namespace compiler::tsh {
 		 */
 		bool isTriviallyCopyable(query::Context& ctx) const;
 
+		/**
+		 * @brief Check if the type is a numeric type.
+		 * @return Whether the type is numeric.
+		 */
+		[[nodiscard]]
+		bool isNumeric() const {
+			return getKind() == tsh::Kind::Integral or getKind() == tsh::Kind::Float;
+		}
 
 		/**
 		 * @brief The default constructor is deleted.
@@ -209,34 +233,6 @@ namespace compiler::tsh {
 		CRef<AbstractTypeImpl> getPimpl() const {
 			return pimpl;
 		}
-
-		/**
-		 * @brief Determine whether it is legal to consider and implicit coercion
-		 * from a value described by this ExpressionType to one described by target.
-		 *
-		 * An implicit coercion is when, for example, a boolean is expected, but
-		 * and integer is given. A desirable (and common) behaviour may be to
-		 * convert the integer value to true if and only if it is non-zero.
-		 *
-		 * Another context in which implicit coercions are desirable is when
-		 * casting from subclass to superclass.
-		 *
-		 * This method does not determine how to perform a coercion.
-		 * It only determines whether one should be considered.
-		 * A coercion may thus be allowed but not implemented, or implemented
-		 * but not allowed to be used implicitly by the compiler, so the user
-		 * may define a coercion from class A to class B, but not want it
-		 * to ever be used implicitly (in C++ that is achieved by annotating a
-		 * single-argument constructor with the `explicit` keyword).
-		 *
-		 * This is typically determined by rules specific for the Kind of the source type.
-		 *
-		 * @param target The target of a hypothetical implicit coercion.
-		 * @param context Context needed fo the query call.
-		 * @return Whether the implicit coercion is allowed or not.
-		 */
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const;
 
 		/**
 		 * @brief Whether the type carries any information, in an information-theoretic sense. For

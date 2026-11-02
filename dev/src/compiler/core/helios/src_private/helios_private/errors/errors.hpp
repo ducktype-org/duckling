@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios_private/errors/dia_interactive_elements.hpp>
@@ -46,6 +52,81 @@ namespace compiler::helios {
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia::InteractiveArgument>("duplicated_type", std::move(duplicated_type));
+		}
+	};
+
+	class CallNotCallableError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "call_not_callable" };
+		}
+
+	public:
+		CallNotCallableError(dia::StablePosition source_position, Box<InteractiveType> callee_type):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("callee_type", std::move(callee_type));
+		}
+	};
+
+	class InvalidMainReturnTypeError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "invalid_main_return_type" };
+		}
+
+	public:
+		InvalidMainReturnTypeError(
+			dia::StablePosition source_position, Box<InteractiveType> given_type
+		):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("given_type", std::move(given_type));
+		}
+	};
+
+	class MissingUnaryOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "missing_unary_operator_fixity" };
+		}
+
+	public:
+		explicit MissingUnaryOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class InvalidOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "invalid_operator_fixity" };
+		}
+
+	public:
+		explicit InvalidOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class ReturnWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "return_without_value" };
+		}
+
+	public:
+		ReturnWithoutValueError(
+			dia::StablePosition source_position, Box<InteractiveType> expected_type
+		):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("expected_type", std::move(expected_type));
 		}
 	};
 }

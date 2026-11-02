@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../../cloning_automatic.hpp"  // IWYU pragma: export
@@ -50,5 +56,25 @@ namespace pst {
 		if (!good)
 			state.logInt(makeBox<BadStatementChoice<Type>>(state.ctokens().peek().getPosition()));
 		return good;
+	}
+
+	/**
+	 * @brief Consumes a contextual operator fixity specifier when it precedes an operator name.
+	 *
+	 * `prefix` and `suffix` remain regular identifiers everywhere else, including as function names.
+	 */
+	inline OperatorFixity parseOperatorFixity(LangParserState& state) {
+		if (!state[0].isIdentifier() || !state[1].isOperatorSymbol()) return OperatorFixity::None;
+
+		const auto fixity = state[0].getStrValue();
+		if (fixity == "prefix") {
+			state.tokens().next();
+			return OperatorFixity::Prefix;
+		}
+		if (fixity == "suffix") {
+			state.tokens().next();
+			return OperatorFixity::Suffix;
+		}
+		return OperatorFixity::None;
 	}
 }

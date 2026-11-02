@@ -1,9 +1,0 @@
-import lib_b;
-
-fun c_value() -> i64 = {
-    return 20;
-}
-
-fun hello() -> i64 = {
-    return lib_b.hello();
-}

@@ -1,8 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use clap::builder::ValueParser;
-use clap::{Command, ValueHint, crate_name, crate_version};
+use clap::{Command, ValueHint};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
+pub mod external_subcommands;
 pub mod global_options;
 pub mod run;
 pub mod styles;
@@ -17,8 +24,8 @@ fn cli() -> Command {
     let after_help = format!(
         "To run a script you can also use syntax `{style}duck [OPTIONS] <path-to-script>{style:#}`"
     );
-    Command::new(crate_name!())
-        .version(crate_version!())
+    Command::new("duck")
+        .arg(flag("version", "Print version and exit").short('V'))
         .arg(
             flag("verbose", "Use more verbose output")
                 .conflicts_with("quiet")

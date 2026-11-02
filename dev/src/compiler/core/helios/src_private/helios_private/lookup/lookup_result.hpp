@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lookup_result.hpp
  *
@@ -23,12 +29,17 @@ namespace compiler::helios {
 		class Ambiguity final {};
 
 		class SymbolNotFound final {};
+
+		/**
+		 * @brief The name was found, but every symbol of that name is hidden by its visibility.
+		 */
+		class Inaccessible final {};
 	}
 
 	struct NestedResult;
 
-	using GetAsSingleLookupQResult
-		= query::QResult<std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound>>;
+	using GetAsSingleLookupQResult = query::QResult<
+		std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound, errors::Inaccessible>>;
 
 	/**
 	 * @brief Tree like structure storing lookup result.
@@ -42,6 +53,16 @@ namespace compiler::helios {
 		 * Direct symbols found.
 		 */
 		std::vector<SymID> leaves;
+
+		/**
+		 * Symbols found under the looked-up name, that are not accessible from the scope the
+		 * lookup was performed in.
+		 *
+		 * They are kept so that the error can say that the symbol exists but cannot be used,
+		 * instead of saying that no such symbol exists. They are never treated as a result of the
+		 * lookup, so an otherwise successful lookup ignores them.
+		 */
+		std::vector<SymID> inaccessible;
 
 		/**
 		 * Symbols through which results were found.
@@ -61,6 +82,13 @@ namespace compiler::helios {
 		 */
 		[[nodiscard]]
 		bool isSingle() const;
+
+		/**
+		 * Check if the lookup has found any symbol that it had to hide because of its visibility.
+		 * @return True if it has found one, false otherwise.
+		 */
+		[[nodiscard]]
+		bool hasInaccessible() const;
 
 		/**
 		 * Returns a path to the symbol.

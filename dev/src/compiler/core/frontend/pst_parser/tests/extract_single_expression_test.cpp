@@ -1,4 +1,10 @@
-#include <frontend/pst_parser/pst.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>
@@ -18,11 +24,11 @@ public:
 
 private:
 	base::Optional<pst::AccessLocked<pst::ExprStmt>> extract(std::string_view code) {
-		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
 
 		base::Optional<pst::AccessLocked<pst::ExprStmt>> result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			result = pst::extractSingleExpression(ctx, pst.getRootElement());
+			result = pst::extractSingleExpression(ctx, pst->getRootElement());
 		});
 		return result;
 	}
@@ -44,7 +50,7 @@ private:
 		ASSERT_NO_VALUE(extract("namespace Foo {}"), "Expected empty for namespace declaration");
 		ASSERT_NO_VALUE(extract("import X as x;"), "Expected empty for import statement");
 		ASSERT_NO_VALUE(extract("using X;"), "Expected empty for using statement");
-		ASSERT_NO_VALUE(extract("alias X = X;"), "Expected empty for alias declaration");
+		ASSERT_NO_VALUE(extract("using X as Y;"), "Expected empty for `using ... as` declaration");
 		ASSERT_NO_VALUE(extract("while (a) {}"), "Expected empty for while statement");
 		ASSERT_NO_VALUE(extract("throw 123;"), "Expected empty for throw statement");
 	}

@@ -27,10 +27,10 @@ fundecl move_in(pointer: ptr T, value: T) -> ();
 # `value` is stored into the storage under `pointer`, without a call and without destroying what
 # was there before.
 fun writeInto(pointer: ptr i64, value: i64) -> () = {
-    move_in:{i64}(pointer, value);
+    move_in[i64](pointer, value);
 }
 
 # The value under `pointer` is read out, without a call and without touching the storage.
 fun readOut(pointer: ptr i64) -> i64 = {
-    return move_out:{i64}(pointer);
+    return move_out[i64](pointer);
 }

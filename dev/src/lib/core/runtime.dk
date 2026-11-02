@@ -44,7 +44,7 @@ fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: i64) -> i64;
 
 @native_only_impl
 fun float_to_string(value: f64, p: manyptr char, buffer_cap: i64) -> i64 = {
-    let format  = builtins.ptr_from_slice:{char}("%g\0") as cptr char;
+    let format  = builtins.ptr_from_slice[char]("%g\0") as cptr char;
     let written = clib.snprintf(p as cptr char, buffer_cap as u64, format, value);
     return native.writtenLength(written, buffer_cap);
 }
@@ -59,7 +59,7 @@ fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: i64) -> i64;
 
 @native_only_impl
 fun u64_to_string(value: u64, p: manyptr char, buffer_cap: i64) -> i64 = {
-    let format  = builtins.ptr_from_slice:{char}("%lu\0") as cptr char;
+    let format  = builtins.ptr_from_slice[char]("%lu\0") as cptr char;
     let written = clib.snprintf(p as cptr char, buffer_cap as u64, format, value);
     return native.writtenLength(written, buffer_cap);
 }
@@ -74,7 +74,7 @@ fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: i64) -> i64;
 
 @native_only_impl
 fun i64_to_string(value: i64, p: manyptr char, buffer_cap: i64) -> i64 = {
-    let format  = builtins.ptr_from_slice:{char}("%ld\0") as cptr char;
+    let format  = builtins.ptr_from_slice[char]("%ld\0") as cptr char;
     let written = clib.snprintf(p as cptr char, buffer_cap as u64, format, value);
     return native.writtenLength(written, buffer_cap);
 }

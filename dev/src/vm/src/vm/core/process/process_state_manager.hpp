@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -59,7 +65,7 @@ namespace vm {
 			const ProcessStateManager& table;
 		};
 
-		struct ApplyResult {
+		struct ApplyResult final {
 			/**
 			 * @brief true when this thread state change put the process into `Panicked` for the
 			 * first time. The caller must send a Stop request out to all threads.

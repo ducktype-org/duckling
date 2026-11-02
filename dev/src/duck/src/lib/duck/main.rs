@@ -1,4 +1,11 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::backtrace::Backtrace;
+use std::error::Error;
 
 use chrono::Local;
 use tracing::info;
@@ -20,7 +27,7 @@ pub fn main() {
         }
     };
     if let Err(e) = crate::duck::driver::run::run(&mut ctx) {
-        print_error_and_exit(e, ctx.console(), ctx.error_console())
+        print_error_and_exit(e, ctx.stdout(), ctx.stderr())
     }
 }
 
@@ -33,9 +40,9 @@ pub fn setup_logger() {
     use tracing_subscriber::{EnvFilter, Layer, registry};
     let subscriber = EnvFilter::builder()
         .with_env_var("DUCK_DEBUG")
-        // NOTE: This level determines which logs are _always_ visible, without any filter.
-        // The default is `ERROR`, which means every `error!` log is visible to a user by default.
-        .with_default_directive(LevelFilter::OFF.into())
+        // NOTE: This level is used only when `DUCK_DEBUG` is unset or empty, so every `error!` log
+        // is visible to a user by default.
+        .with_default_directive(LevelFilter::ERROR.into())
         .from_env_lossy();
     let layer = layer()
         .with_timer(Uptime::default())
@@ -44,7 +51,7 @@ pub fn setup_logger() {
         .with_filter(subscriber);
 
     registry().with(layer).init();
-    info!(start = %Local::now());
+    info!("started at {}", Local::now());
 }
 
 /// Print returned [`QuackError`] to the appropriate [`Terminal`] and exit.
@@ -66,7 +73,7 @@ fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
         if i > 0 {
             let _ = term.print("");
         }
-        let msg = if let Some(clap_error) = error.context_aware_downcast_ref::<clap::Error>() {
+        let msg = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
             // Clap internally adds a trailing newline, remove it.
             clap_error
                 .render()
@@ -104,21 +111,20 @@ fn print_error(error: &QuackError, term: &Terminal) {
 /// Print stack of [`QuackError`]s.
 fn print_errors_stack(error: &QuackError, term: &Terminal) {
     for (i, error) in error.sources().enumerate() {
-        let (msg, is_clap) =
-            if let Some(clap_error) = error.context_aware_downcast_ref::<clap::Error>() {
-                (
-                    // Clap internally adds a trailing newline, remove it.
-                    clap_error
-                        .render()
-                        .ansi()
-                        .to_string()
-                        .trim_end()
-                        .to_string(),
-                    true,
-                )
-            } else {
-                (error.to_string(), false)
-            };
+        let (msg, is_clap) = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
+            (
+                // Clap internally adds a trailing newline, remove it.
+                clap_error
+                    .render()
+                    .ansi()
+                    .to_string()
+                    .trim_end()
+                    .to_string(),
+                true,
+            )
+        } else {
+            (error.to_string(), false)
+        };
         if i == 0 {
             // Clap errors already start with `error: ` prefix, ignore it.
             if is_clap {
@@ -157,7 +163,7 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
 fn print_internals(error: &QuackError, term: &Terminal) {
     let errors = error
         .sources()
-        .filter_map(ErrorExt::context_aware_downcast_ref::<InternalError>)
+        .filter_map(<dyn Error>::downcast_ref::<InternalError>)
         .collect::<Vec<_>>();
     if errors.is_empty() {
         return;

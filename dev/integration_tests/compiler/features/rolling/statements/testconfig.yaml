@@ -16,7 +16,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
+          String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
         ExitCode: 0
 
   default_initialization:
@@ -31,6 +31,13 @@ Tests:
       all:
         Output:
           String: "888\n1\n2\n888\n123\n123\n888\n1\n2\n888\n100\n200\n888\n1\n2\n888\n1\n1\n2\n2\n1\n2\n888\n1\n2\n3\n4\n888\n1\n0\n888\n1\n3\n1\n2\n"
+        ExitCode: 0
+
+  generated_local_names: # user variables named like the desugared `for` locals
+    Cases:
+      all:
+        Output:
+          String: "60\n3\n9\n"
         ExitCode: 0
 
   # Native only: the case measures the throughput of a 10^8-iteration loop against a
@@ -55,4 +62,11 @@ Tests:
       all:
         Output:
           String: ""
+        ExitCode: 0
+
+  selectors: # `using ... as`, `export using`, `export { ... }`
+    Cases:
+      all:
+        Output:
+          String: "7\n7\n3\n8\n12\n"
         ExitCode: 0

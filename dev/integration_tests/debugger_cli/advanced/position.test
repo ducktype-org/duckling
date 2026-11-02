@@ -1,10 +1,16 @@
 simple.dbc
 
-> "Debugger has started"
-> "+\n"
-> "+\n"
+> "Welcome to BeRD - an interactive in-DVM debugger!"
+> "\n"
 
 timeout 0.1
+
+< "select position.test\n"
+> "No such file in compiled or loaded code"
+
+< "select simple.dbc\n"
+> "Selected simple.dbc"
+
 < "break set 4\n"
 > "Breakpoint in simple.dbc line 4 set."
 

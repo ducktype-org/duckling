@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "abstract_type_impl.hpp"
@@ -98,4 +104,19 @@ namespace compiler::tsh {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryInterfaceOfSlice, SliceAbstractType, CRef<query::QResult<TypeInterface>>, ({}))
+
+	/**
+	 * TSH-private query to get the interface of an optional `?T`.
+	 *
+	 * The methods of an optional are the optional language primitives of `core.optional`, baked
+	 * for the held type `T`.
+	 *
+	 * To access the interface of an optional from outside the TSH module, use
+	 * `AbstractType::getInterface`
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryInterfaceOfOptional, VariantAbstractType, CRef<query::QResult<TypeInterface>>, ({})
+	)
 }

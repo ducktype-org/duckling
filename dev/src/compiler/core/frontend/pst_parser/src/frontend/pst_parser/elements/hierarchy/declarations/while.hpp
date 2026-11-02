@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "preamble.hpp"
@@ -19,7 +25,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit While(const LangParserState& state): CodeDecl(state) {
+		explicit While(LangElementConstructionData state): CodeDecl(state) {
 			element_kind = ElementKind::While;
 		}
 
@@ -33,7 +39,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprHolder> getCondition() const;
+		base::Optional<AccessLocked<ExprHolder>> getCondition() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getBody() const {

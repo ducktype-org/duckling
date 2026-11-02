@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::cmp::Ordering;
 use std::path::PathBuf;
 
@@ -86,7 +92,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         venvs_list.reverse();
     }
 
-    ctx.console().print(format!(
+    ctx.print(format!(
         "Found {} venv{}",
         venvs_list.len(),
         venvs_list.s_if_plural(),

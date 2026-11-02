@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
@@ -11,11 +17,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, int, SymbolKind
 		FunctionDeclaration,
 		Const,
 		Class,
-		Alias,
 		Using,
 		Variable,
 		Import,
 		Parameter,
+		Module,
 
 		Template,
 
@@ -35,6 +41,18 @@ namespace compiler::helios {
 		case SymbolKind::Function:
 		case SymbolKind::FunctionDeclaration:
 		case SymbolKind::Method:
+		case SymbolKind::Constructor:
+		case SymbolKind::Destructor:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	[[nodiscard]] inline bool isClassMember(SymbolKind kind) {
+		switch (kind) {
+		case SymbolKind::Method:
+		case SymbolKind::Field:
 		case SymbolKind::Constructor:
 		case SymbolKind::Destructor:
 			return true;

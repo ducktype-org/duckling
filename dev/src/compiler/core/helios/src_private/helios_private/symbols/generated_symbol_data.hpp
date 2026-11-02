@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/pst_config.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
@@ -9,6 +16,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -204,45 +212,53 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated function wrapper for REPL expressions,
-	 * instructions and global initializers. It's a synthetic function wrapper around them.
-	 *
-	 * @warning counter must never be reused with a different return_type and type.
-	 * The mangled name is based only on counter, so reusing counter with different return_type
-	 * will produce linker symbol collisions. The REPL code path (ReplSession::executeInput)
-	 * enforces this by incrementing m_line_counter per statement, but any manual wrapper
-	 * construction must preserve this rule.
+	 * Represents a compiler-generated function wrapper for REPL expressions, instructions, global
+	 * initializers and comp-time expression evaluation. It's a synthetic function wrapper around
+	 * them.
 	 */
 	struct ReplInputWrapper final {
 		/**
-		 * @brief Which kind of REPL input the wrapper was generated for.
+		 * @brief A PST statement, compiled into a unit-returning body.
 		 */
-		enum class Type { Instruction, Expression, GlobalInitializer };
-		Type type;
+		struct Instruction {
+			pst::HashType stmt;
+		};
 
 		/**
-		 * @brief A unique counter to distinguish different REPL expression wrappers.
+		 * @brief A HOUT expression, returned from the wrapper.
+		 * @note The expression is stored in a `SharedBox` rather than referenced through its PST
+		 * hash, because the coercions create HOUT expressions with no PST counterpart.
 		 */
-		u64 counter;
+		struct Expression {
+			SharedBox<code::Expr> expr;
+		};
+
+		using ElementVariant = std::variant<Instruction, Expression>;
+		ElementVariant element;
 
 		/**
-		 * @brief Return type of the wrapper function.
+		 * @brief A unique counter to distinguish different wrappers in the mangled name. Present
+		 * for the REPL/script wrappers, empty for the comp-time expression wrappers.
 		 */
-		tsh::SymbolType<> return_type;
+		base::Optional<u64> counter;
+
+		ReplInputWrapper(ElementVariant element, base::Optional<u64> counter = {}):
+			  element(std::move(element)),
+			  counter(counter) {}
 
 		/**
-		 * @brief Hash of the PST element (expression statement or instruction statement) that the
-		 * wrapper executes.
+		 * @brief Get the return type of the wrapper function.
 		 */
-		pst::HashType pst_element_hash;
+		[[nodiscard]]
+		tsh::SymbolType<> getReturnType() const;
 
-		ReplInputWrapper(
-			Type type, u64 counter, tsh::SymbolType<> return_type, pst::HashType pst_element_hash
-		):
-			  type(type),
-			  counter(counter),
-			  return_type(return_type),
-			  pst_element_hash(pst_element_hash) {}
+		/**
+		 * @brief Get the identifier distinguishing the wrapper in its mangled name.
+		 * @return The counter if present, otherwise the ID of the wrapped HOUT expression or the
+		 * hash of the wrapped statement.
+		 */
+		[[nodiscard]]
+		std::string getUniqueId() const;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -292,11 +308,24 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * @brief The symbol representing real module from the module tree.
+	 * @note The module is not generated, only the symbol is. It's purpose is
+	 * to unify the Namespace and Module handling by the chain processing `a.b.c`.
+	 */
+	struct Module final {
+		frontend::ModuleID module_id;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
 	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
 		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplInputWrapper,    \
-		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant
+		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant,          \
+		defgen::Module
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

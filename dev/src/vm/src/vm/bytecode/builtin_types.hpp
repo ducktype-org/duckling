@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <vm/bytecode/type_of_data.hpp>
@@ -11,7 +17,7 @@ namespace vm::code {
 	 * we can check that each class has the VTable pointer
 	 * as its first member without relying on type names.
 	 */
-	struct SpecialTypes {
+	struct SpecialTypes final {
 		TypeOfData vtable_ptr;
 
 		static const SpecialTypes& get();

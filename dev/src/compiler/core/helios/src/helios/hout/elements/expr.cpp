@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file expr.cpp
  * @brief Implementation of methods in the Expr hierarchy.
@@ -47,6 +53,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
+	EXPR_VISITOR(FunctionTypeExpr)
+	EXPR_VISITOR(OptionalTypeConstructorExpr)
 	EXPR_VISITOR(VariantConstructExpr)
 	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
@@ -164,11 +172,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::SymbolType{
-					  tsh::getCharSliceType(ctx),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
+				  tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
@@ -369,7 +373,6 @@ namespace compiler::helios::code {
 		case IntegerMul:
 		case IntegerDiv:
 		case IntegerMod:
-		case IntegerPow:
 		case IntegerBitAnd:
 		case IntegerBitOr:
 		case IntegerBitXor:
@@ -380,7 +383,6 @@ namespace compiler::helios::code {
 		case FloatMul:
 		case FloatDiv:
 		case FloatMod:
-		case FloatPow:
 			return lhs_type;
 		case IntegerLt:
 		case IntegerGt:
@@ -473,10 +475,6 @@ namespace compiler::helios::code {
 		case FloatMod:
 			out << "%";
 			break;
-		case IntegerPow:
-		case FloatPow:
-			out << "**";
-			break;
 		case IntegerLt:
 		case FloatLt:
 			out << "<";
@@ -502,6 +500,21 @@ namespace compiler::helios::code {
 		case FloatNeq:
 		case MetaNeq:
 			out << "!=";
+			break;
+		case IntegerBitAnd:
+			out << "&";
+			break;
+		case IntegerBitOr:
+			out << "|";
+			break;
+		case IntegerBitXor:
+			out << "^";
+			break;
+		case IntegerShl:
+			out << "<<";
+			break;
+		case IntegerShr:
+			out << ">>";
 			break;
 		case BooleanAnd:
 			out << "and";
@@ -624,7 +637,6 @@ namespace compiler::helios::code {
 		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> subtypes
 	):
 		  Expr(
-
 			  tsh::ExpressionType{
 				  tsh::SymbolType{
 					  tsh::getMetaType(),
@@ -662,6 +674,92 @@ namespace compiler::helios::code {
 		return makeBox<VariantTypeConstructorExpr>(
 			expression_type, origin, std::move(cloned_subtypes)
 		);
+	}
+
+	FunctionTypeExpr::FunctionTypeExpr(
+		query::Context&,
+		ElementOrigin          origin,
+		std::vector<Box<Expr>> parameters,
+		Box<Expr>              result,
+		tsh::FunctionKind      kind
+	):
+		  Expr(
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  tsh::getMetaType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  },
+			  origin
+		  ),
+		  parameters(std::move(parameters)),
+		  result(std::move(result)),
+		  kind(kind) {}
+
+	FunctionTypeExpr::FunctionTypeExpr(
+		tsh::ExpressionType<>        expression_type,
+		ElementOrigin                origin,
+		std::vector<base::Box<Expr>> parameters,
+		base::Box<Expr>              result,
+		tsh::FunctionKind            kind
+	):
+		  Expr(expression_type, origin),
+		  parameters(std::move(parameters)),
+		  result(std::move(result)),
+		  kind(kind) {}
+
+	void FunctionTypeExpr::debugPrint(std::ostream& out) const {
+		if (kind == tsh::FunctionKind::Raw) out << "funptr";
+		out << "(";
+		for (bool add_comma = false; auto&& parameter: parameters) {
+			if (add_comma) out << ", ";
+			parameter->debugPrint(out);
+			add_comma = true;
+		}
+		out << ") -> ";
+		result->debugPrint(out);
+	}
+
+	Box<Expr> FunctionTypeExpr::clone() const {
+		std::vector<base::Box<Expr>> cloned_parameters;
+		cloned_parameters.reserve(parameters.size());
+		for (const auto& parameter: parameters) cloned_parameters.push_back(parameter->clone());
+		return makeBox<FunctionTypeExpr>(
+			expression_type, origin, std::move(cloned_parameters), result->clone(), kind
+		);
+	}
+
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> value_type
+	):
+		  Expr(
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  tsh::getMetaType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  },
+			  origin
+		  ),
+		  value_type(std::move(value_type)) {}
+
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_type
+	):
+		  Expr(expression_type, origin),
+		  value_type(std::move(value_type)) {}
+
+	void OptionalTypeConstructorExpr::debugPrint(std::ostream& out) const {
+		out << "?";
+		value_type->debugPrint(out);
+	}
+
+	Box<Expr> OptionalTypeConstructorExpr::clone() const {
+		return makeBox<OptionalTypeConstructorExpr>(expression_type, origin, value_type->clone());
 	}
 
 	VariantConstructExpr::VariantConstructExpr(
@@ -745,13 +843,6 @@ namespace compiler::helios::code {
 		  Expr(matchExpressionType(cases), origin),
 		  subject(std::move(subject)),
 		  cases(std::move(cases)) {
-		CORE_ASSERT(
-			this->subject->expression_type.getSymbolType().getRefKind()
-				!= tsh::ReferenceKind::Direct,
-			"A match subject has to be a reference to the matched variant, got: ",
-			this->subject->expression_type.getSymbolType().toString()
-		);
-
 		for (const auto& match_case: this->cases)
 			CORE_ASSERT(
 				!match_case.binding.has_value() || match_case.alternative_index.has_value(),
@@ -818,6 +909,7 @@ namespace compiler::helios::code {
 		cloned_cases.reserve(cases.size());
 		for (const auto& match_case: cases)
 			cloned_cases.emplace_back(Case{ .alternative_index = match_case.alternative_index,
+			                                .constraint_type   = match_case.constraint_type,
 			                                .binding           = match_case.binding,
 			                                .result            = match_case.result->clone() });
 		return makeBox<MatchExpr>(
@@ -1167,9 +1259,15 @@ namespace compiler::helios::code {
 		query::Context&, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type
 	):
 		  Expr(
-			  tsh::ExpressionType<>(
-				  target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
+			  CastExpr::castCreatesTemporary(
+				  source_expr->expression_type.getSymbolType(), target_type
+			  )
+				  ? tsh::ExpressionType<>(
+						target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+					)
+				  : tsh::ExpressionType<>(
+						target_type, source_expr->expression_type.getValueCategory()
+					),
 			  origin
 		  ),
 		  source_expr(std::move(source_expr)),
@@ -1195,26 +1293,58 @@ namespace compiler::helios::code {
 		return makeBox<CastExpr>(expression_type, origin, source_expr->clone(), target_type);
 	}
 
-	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  [](const tsh::ExpressionType<>& inner_type) -> tsh::ValueCategory {
-					  switch (inner_type.getSymbolType().getRefKind()) {
-					  case tsh::ReferenceKind::Direct:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
-					  case tsh::ReferenceKind::Ref:
-						  return inner_type.getValueCategory();
-					  case tsh::ReferenceKind::Box:
-						  return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
-					  }
-					  CORE_UNREACHABLE();
-				  }(inner->expression_type)
+	bool CastExpr::castCreatesTemporary(tsh::SymbolType<> source, tsh::SymbolType<> target) {
+		// @TODO: #3853 go back to this once defined
+		auto is_direct = [](const tsh::SymbolType<>& type) -> bool {
+			return type.getRefKind() == tsh::ReferenceKind::Direct;
+		};
 
-			  ),
-			  origin
-		  ),
+		if (source == target) return false;
+
+		// If cast is from ref T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Ref
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		// If cast is from box T to ptr T it is empty
+		if (source.getRefKind() == tsh::ReferenceKind::Box
+		    && target.getType().getKind() == tsh::Kind::Pointer && is_direct(target)) {
+			return false;
+		}
+
+		if (source.getType().getKind() == tsh::Kind::Void) return false;
+
+		if (is_direct(source) && is_direct(target)) {
+			if (source.getType() == target.getType()) return false;  // const drop
+		}
+		return true;
+	}
+
+	bool CastExpr::castCreatesTemporary() const {
+		return CastExpr::castCreatesTemporary(
+			source_expr->expression_type.getSymbolType(), target_type
+		);
+	}
+
+	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+		  Expr(typeOfRefTo(inner->expression_type), origin),
 		  inner(std::move(inner)) {}
+
+	tsh::ExpressionType<> RefOfExpr::typeOfRefTo(const tsh::ExpressionType<>& inner_type) {
+		return { inner_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
+			     [&]() -> tsh::ValueCategory {
+					 switch (inner_type.getSymbolType().getRefKind()) {
+					 case tsh::ReferenceKind::Direct:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+					 case tsh::ReferenceKind::Ref:
+						 return inner_type.getValueCategory();
+					 case tsh::ReferenceKind::Box:
+						 return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+					 }
+					 CORE_UNREACHABLE();
+				 }() };
+	}
 
 	RefOfExpr::RefOfExpr(
 		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
@@ -1461,5 +1591,10 @@ namespace compiler::helios::code {
 
 	Box<Expr> BlockExpr::clone() const {
 		return makeBox<BlockExpr>(expression_type, origin, block->clone());
+	}
+
+	bool MatchExpr::Case::shouldBindToTemporary(query::Context& ctx) const {
+		return binding.empty() and constraint_type.has_value()
+		   and (not constraint_type->isTriviallyDestructible(ctx));
 	}
 }

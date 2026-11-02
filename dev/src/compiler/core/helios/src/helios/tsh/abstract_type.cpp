@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file abstract_type.cpp
  * @brief Implementation of AbstractType.
@@ -16,6 +22,11 @@ namespace compiler::tsh {
 	[[nodiscard]]
 	CRef<TypeInterface> AbstractType::getInterface(query::Context& ctx) const {
 		return pimpl->getInterface(ctx);
+	}
+
+	[[nodiscard]]
+	CRef<query::QResult<TypeInterface>> AbstractType::getInterfaceResult(query::Context& ctx) const {
+		return pimpl->getInterfaceResult(ctx);
 	}
 
 	[[nodiscard]]
@@ -46,11 +57,6 @@ namespace compiler::tsh {
 	[[nodiscard]]
 	bool AbstractType::isTriviallyCopyable(query::Context& ctx) const {
 		return pimpl->isTriviallyCopyable(ctx);
-	}
-
-	[[nodiscard]]
-	bool AbstractType::isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const {
-		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
 
 	bool AbstractType::carriesInformation(query::Context& ctx) const {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "relocator.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -41,7 +47,7 @@ namespace {
 	 * executable function.
 	 */
 	exec::arg::Function relocateFunction(TRANSLATOR_ARGUMENTS(Function)) {
-		return &exec_functions[reloc_arg.asInt()];
+		return &exec_functions[exec::execFunctionIndex(reloc_arg.asInt())];
 	}
 
 	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
@@ -103,7 +109,8 @@ exec::ExecFunctionCollection exec::linkFunctions(
 	// Relocate the instructions and fill the executable functions with them.
 	for (const auto& [reloc_function, func_info]:
 	     std::views::zip(reloc_functions, program.functions)) {
-		ExecFunction& current_function = exec_functions[func_info.id.asInt()];
+		ExecFunction& current_function
+			= exec_functions[exec::execFunctionIndex(func_info.id.asInt())];
 		current_function.data
 			= reloc_function.data | std::views::transform([&](const reloc::Instruction& instr) {
 				  return relocInstruction(

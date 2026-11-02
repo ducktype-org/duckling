@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>
@@ -8,6 +14,7 @@
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <string_view>
 #include <vector>
 
 namespace compiler::mir {
@@ -26,6 +33,11 @@ namespace compiler::mir {
 	struct BlockBuilder final {
 	private:
 		BlockID id;
+
+		/**
+		 * @brief Debug-only name of the block, see @ref Block::debug_name.
+		 */
+		base::Optional<base::StrID> debug_name;
 
 		/**
 		 * @brief List of instructions kept in revered order.
@@ -57,7 +69,13 @@ namespace compiler::mir {
 			friend struct BlockBuilder;
 		};
 
-		BlockBuilder(usize vector_index);
+		/**
+		 * @brief Creates a builder of a block with the given index.
+		 * @param vector_index index the block has in the function, it becomes its @ref BlockID.
+		 * @param debug_name human readable name of the block, used only when printing the MIR.
+		 * An empty name means the block stays unnamed.
+		 */
+		BlockBuilder(usize vector_index, std::string_view debug_name = {});
 
 		[[nodiscard]]
 		Block build() const;
@@ -197,8 +215,14 @@ namespace compiler::mir {
 		[[nodiscard]]
 		base::Optional<MIRLocalMutRef> findLocal(const helios::SymID helios_id);
 
+		/**
+		 * @brief Adds a new empty block to the function.
+		 * @param debug_name human readable name telling what the block is generated for
+		 * (for example `if.then`). It is only used when printing the MIR, so an empty name is
+		 * fine, but naming the block makes the printed MIR much easier to follow.
+		 */
 		[[nodiscard]]
-		BlockBuilderRef newBlock();
+		BlockBuilderRef newBlock(std::string_view debug_name = {});
 
 		void setEntry(BlockBuilderRef block);
 

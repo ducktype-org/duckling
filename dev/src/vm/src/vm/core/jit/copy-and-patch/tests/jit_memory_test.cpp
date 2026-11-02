@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../memory/memory.hpp"
 #include "../stencils/import_stencils.hpp"
 
@@ -9,35 +15,37 @@
 #include <cstring>
 #include <string>
 
+using vm::jit::cnp::HoleValue;
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
+using vm::jit::cnp::StencilHole;
 using vm::jit::cnp::Stencils;
 
+// NOLINTBEGIN
 PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-constexpr static char FULL_ELF[] = {
-// Linter doesn't actually build mock_stencils-so so it would be unavailable.
+static constexpr char binary[] = {
 #if __has_embed("mock_stencils-so")
 	#embed "mock_stencils-so"
-#else
-	0
 #endif
 };
 POP_DIAGNOSTIC
+// NOLINTEND
 
-static auto stencils
-	= Stencils{ .stencils_binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
-	            .stencils_data = std::array {
-
-// Linter doesn't actually build <mock_stencils-nm> so it would be unavailable.
-#if __has_include(<mock_stencils-nm>)
-	#include <mock_stencils-nm>
+static auto stencils = Stencils{
+// Linter doesn't actually build mock_stencils-cpp so it would be unavailable.
+#if __has_include(<mock_stencils-cpp>)
+			.stencils_binary = std::bit_cast<std::array<byte, sizeof(binary)>>(binary),
+			.stencils_data =
+	#include <mock_stencils-cpp>
 #else
-			StencilData{}
+			// Empty stand-ins so CTAD can deduce Stencils<1, 0>.
+			.stencils_binary = std::array<byte, 1>{},
+			.stencils_data = std::array<StencilData, 0>{},
 #endif
-					}
-				 }.load().value();
+		}
+					  .load()
+					  .value();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -50,6 +58,8 @@ public:
 		TESTER_ADD_TEST(testCallingSimple);
 		TESTER_ADD_TEST(testCallingRecursive);
 		TESTER_ADD_TEST(testCallingLibc);
+		TESTER_ADD_TEST(testPatching);
+		TESTER_ADD_TEST(testCombining);
 	}
 
 private:
@@ -126,6 +136,66 @@ private:
 		auto calling_libc    = memory.intoFunc<int*(int)>();
 		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL(from_jit_memory.get()[i], i);
+	}
+
+	void testPatching() {
+		auto foo_code      = FIND_FUNC("must_patch");
+		auto memory_result = JitFuncMemory::allocate(foo_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
+		stencils.relocate(foo_code, memory.addr);
+		foo_code.patch(memory.addr, [](HoleValue value) {
+			if (value == HoleValue::Arg0)
+				return 9;
+			else
+				CORE_PANIC("Unexpected relocation");
+		});
+		ASSERT_HAS_VALUE(memory.markExecutable());
+
+		auto must_patch = memory.intoFunc<int(int)>();
+		for (int i = 0; i < 100; ++i) ASSERT_EQUAL_PRINT(std::invoke(must_patch, i), i + 9);
+	}
+
+	void testCombining() {
+		auto add_code = FIND_FUNC("mock_add");
+		auto mul_code = FIND_FUNC("mock_mul");
+		auto end_code = FIND_FUNC("mock_end");
+
+		auto memory_result = JitFuncMemory::allocate(add_code.size + mul_code.size + end_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
+
+		auto add_addr = memory.addr;
+		auto mul_addr = stencils.relocate(add_code, add_addr);
+		auto end_addr = stencils.relocate(mul_code, mul_addr);
+		stencils.relocate(end_code, end_addr);
+
+		add_code.patch(add_addr, [&](HoleValue hole) {
+			switch (hole) {
+			case HoleValue::ContinueFn:
+				return std::bit_cast<std::intptr_t>(mul_addr);
+			default:
+				CORE_PANIC("unexpected relocation");
+			}
+		});
+
+		mul_code.patch(mul_addr, [&](HoleValue hole) {
+			switch (hole) {
+			case HoleValue::ContinueFn:
+				return std::bit_cast<std::intptr_t>(end_addr);
+			default:
+				CORE_PANIC("unexpected relocation");
+			}
+		});
+
+		ASSERT_HAS_VALUE(memory.markExecutable());
+		auto build_func = memory.intoFunc<int(int, int)>();  // (a + b) * b
+		for (int a = 0; a < 10; ++a) {
+			for (int b = 0; b < 10; ++b) {
+				auto returned = std::invoke(build_func, a, b);
+				ASSERT_EQUAL_PRINT(returned, (a + b) * b);
+			}
+		}
 	}
 };
 

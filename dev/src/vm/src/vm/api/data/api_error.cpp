@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "api_error.hpp"
 
 #include <cerrno>
@@ -10,7 +16,7 @@ namespace vm::api {
 	int errorToErrno(const ApiError& api_error) {
 		using namespace std;
 
-		struct Visitor {
+		struct Visitor final {
 			int operator()(const ResumeError&) const noexcept { return EINVAL; }
 
 			int operator()(const PauseError&) const noexcept { return EINVAL; }

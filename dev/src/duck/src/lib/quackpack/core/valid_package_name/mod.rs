@@ -1,100 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Utilities for validating a package name.
 
 use thiserror::Error;
 
-/// __Sorted__ list of std Duckling packages.
-const DUCKLING_STD_PACKAGES: &[&str] = &["core", "std"];
-
-/// __Sorted__ list of builtin Duckling keywords.
-const DUCKLING_KEYWORDS: &[&str] = &[
-    "Array",
-    "Dict",
-    "List",
-    "Set",
-    "alias",
-    "and",
-    "assert",
-    "block",
-    "bool",
-    "box",
-    "break",
-    "case",
-    "catch",
-    "char",
-    "compile_assert",
-    "const",
-    "continue",
-    "copy",
-    "copyof",
-    "cptr",
-    "debug",
-    "defer",
-    "destroy",
-    "else",
-    "extern",
-    "f128",
-    "f16",
-    "f32",
-    "f64",
-    "f80",
-    "false",
-    "for",
-    "fun",
-    "fundecl",
-    "hides",
-    "i128",
-    "i16",
-    "i32",
-    "i64",
-    "i8",
-    "if",
-    "implements",
-    "import",
-    "in",
-    "lamba",
-    "lambda",
-    "let",
-    "loop",
-    "manyptr",
-    "match",
-    "move",
-    "namespace",
-    "none",
-    "not",
-    "or",
-    "pattern",
-    "private",
-    "protected",
-    "ptr",
-    "public",
-    "redo",
-    "ref",
-    "refof",
-    "restart",
-    "return",
-    "self",
-    "sizeof",
-    "slice",
-    "static",
-    "str",
-    "switch",
-    "template",
-    "then",
-    "throw",
-    "try",
-    "true",
-    "type",
-    "u128",
-    "u16",
-    "u32",
-    "u64",
-    "u8",
-    "using",
-    "var",
-    "while",
-    "with",
-    "xor",
-];
+use crate::util::duckling_consts::{DUCKLING_KEYWORDS, DUCKLING_STD_PACKAGES};
 
 #[derive(Debug, Error, Clone, Eq, PartialEq)]
 pub enum PackageNameError {

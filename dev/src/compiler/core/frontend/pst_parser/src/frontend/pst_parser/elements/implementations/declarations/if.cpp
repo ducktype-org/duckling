@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/declarations/if.hpp"
 
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
@@ -52,7 +58,13 @@ namespace pst {
 		return partial_hash;
 	}
 
-	AccessLocked<ExprHolder> If::getCondition() const { return condition.internal()->getExpr(); }
+	base::Optional<AccessLocked<ExprHolder>> If::getCondition() const {
+		const auto condition_group = condition.internal().toOpt();
+
+		if (!condition_group.has_value()) return {};
+
+		return condition_group.value()->getExpr();
+	}
 
 	void If::acceptVisitor(PstVisitor& visitor) const { visitor.visitIf(*this); }
 }

@@ -1,8 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "square_call_processing.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -137,12 +142,11 @@ namespace compiler::helios::code {
 
 		auto arg_pst = (*args->begin()).unlock(ctx)->getArg().unlock(ctx)->getExpr();
 
-		auto meta_res = canCoerceToMeta(ctx, base->expression_type);
-		UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
+		const tsh::coercions::Coercion meta_coercion = coercions::coercionToMeta(ctx, base.ref());
 
 		// If base is coercible to meta, this is an array type creation.
-		if (meta_coercion_res.isValid()) {
-			auto coerced_base = meta_coercion_res.coerce(ctx, std::move(base));
+		if (meta_coercion.isValid()) {
+			auto coerced_base = coercions::applyCoercion(ctx, meta_coercion, std::move(base));
 			return processArrayTypeCreation(ctx, std::move(coerced_base), arg_pst);
 		}
 

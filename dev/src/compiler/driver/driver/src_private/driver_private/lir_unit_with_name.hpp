@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 
@@ -19,7 +25,12 @@ namespace compiler::driver {
 		/**
 		 * @brief The module ID is more or less a module name that will be used by the backend.
 		 */
-		base::StrID  module_id;
+		base::StrID module_id;
+		/**
+		 * @brief This is a unique module identifier, but human-readable.
+		 */
+		base::StrID module_id_human;
+
 		lir::LIRUnit lir_unit;
 
 		void debugPrint(query::Context& ctx, std::ostream& os) const;

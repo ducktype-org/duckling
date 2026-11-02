@@ -1,21 +1,25 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
 use super::{registry_url_hash, setup_mock_storage};
 use crate::DuckContext;
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
+use crate::quackpack::core::storage::freeze::{DepIdWithAlias, FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::tests::{
     create_mock_package_at_tmpdir, create_mock_package_with_deps_at_tmpdir,
 };
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::storage::{self, StorageSyncOptions, ops};
-use crate::quackpack::core::{PackageLoader, Version};
-use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
+use crate::quackpack::core::{PackageLoader, Version, fetcher};
+use crate::util::path_ops::{normalize, read_from_path_to_string};
 
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {
@@ -243,8 +247,8 @@ fn assert_can_load_after_save(venv: &Venv, storage: &Storage, ctx: &DuckContext)
     let id = venv.id();
     let metadata = storage.venv_metadata(id);
     let backup = storage.venv_backup_metadata(id);
-    let metadata_contents = metadata.read_to_string().unwrap();
-    let backup_contents = backup.read_to_string().unwrap();
+    let metadata_contents = read_from_path_to_string(&metadata).unwrap();
+    let backup_contents = read_from_path_to_string(&backup).unwrap();
     assert_eq!(
         metadata_contents,
         backup_contents,
@@ -269,7 +273,7 @@ fn save_trims_files() {
     // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
     let number_of_new_packages = 5;
     for _ in 0..number_of_new_packages {
-        let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        let origin = FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone());
         let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
         let package =
             FreezePackage::new(mock_identity("dep"), Version::new(1, 0, 0), vec![], vec![]);
@@ -293,7 +297,13 @@ fn save_trims_files() {
 fn sync() {
     let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -372,7 +382,13 @@ fn sync_overwrite_success() {
     // Create a second package at a different directory.
     let (root2, pcx2) = create_mock_package_at_tmpdir(&ctx, "my-package");
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx2,
         StorageSyncOptions {
             overwrite: true,
@@ -440,7 +456,13 @@ fn can_sync_after_clean() {
 
     storage::ops::delete_venv(&ctx, &storage_root, "my-package").unwrap();
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx2,
         StorageSyncOptions {
             overwrite: false,
@@ -468,17 +490,23 @@ fn sync_with_deps() {
     let (mut ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
 
-    let mock_simple_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+    let mock_simple_dep_identity = |name: &str| {
+        let path = normalize(root.path().join(name));
         let simple_origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), simple_origin)
+        DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+        let path = normalize(root.path().join(name));
         let origin = FullOrigin::for_local(&path).unwrap();
         FullIdentity::new(name.into(), origin)
     };
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -497,7 +525,10 @@ fn sync_with_deps() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
+    assert_eq!(
+        root_package.dependencies(),
+        [mock_simple_dep_identity("dep")],
+    );
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
@@ -513,27 +544,26 @@ fn sync_with_deps() {
 fn sync_with_deps_and_expose_freezefile() {
     let (mut ctx, _home, storage_root) = setup_mock_storage();
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
-    let mock_simple_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+    let mock_simple_dep_identity = |name: &str| {
+        let path = normalize(root.path().join(name));
         let simple_origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), simple_origin)
+        DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+        let path = normalize(root.path().join(name));
         let origin = FullOrigin::for_local(&path).unwrap();
         FullIdentity::new(name.into(), origin)
     };
-    println!("root: {}", root.path().display());
-    root.path()
-        .join("root")
-        .join(PackageLoader::VENV_CONFIG_NAME)
-        .write("expose_freezefile: true")
-        .unwrap();
 
-    // Reload venv config changes
     let pcx = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -552,7 +582,10 @@ fn sync_with_deps_and_expose_freezefile() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
+    assert_eq!(
+        root_package.dependencies(),
+        [mock_simple_dep_identity("dep")],
+    );
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
@@ -562,11 +595,7 @@ fn sync_with_deps_and_expose_freezefile() {
             vec![],
         )]
     );
-    let data = root
-        .path()
-        .join("root")
-        .join(PackageLoader::FREEZE_NAME)
-        .read_to_string()
+    let data = read_from_path_to_string(root.path().join("root").join(PackageLoader::FREEZE_NAME))
         .unwrap();
     println!("{}", data);
     let exposed_freeze = serde_json::from_str::<VenvFreeze>(&data).unwrap();

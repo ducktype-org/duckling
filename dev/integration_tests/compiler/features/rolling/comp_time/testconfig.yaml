@@ -54,3 +54,29 @@ Tests:
         Output:
           String: "String const\nslice const\n"
         ExitCode: 0
+
+  tuples_to_types:
+    Cases:
+      all:
+        Output:
+          String: "1\n1\n1\n0\n3\n"
+        ExitCode: 0
+
+  expressions_in_comp_time:
+    # The temporaries of the constant initializers are destroyed by the compile-time DVM, which
+    # prints on the compiler's stderr. The DVM compilation checks that each destructor runs exactly
+    # once, and that the destructor of the ternary branch that was not taken (`Res(12)`) never runs.
+    compile_dvm_only_cmd: "@{expect_output}
+      --err-regex '^(?![\\s\\S]*dtor 7[\\s\\S]*dtor 7)[\\s\\S]*\\[comp-time\\] dtor 7'
+      --err-regex '^(?![\\s\\S]*dtor 8[\\s\\S]*dtor 8)[\\s\\S]*\\[comp-time\\] dtor 8'
+      --err-regex '^(?![\\s\\S]*dtor 9[\\s\\S]*dtor 9)[\\s\\S]*\\[comp-time\\] dtor 9'
+      --err-regex '^(?![\\s\\S]*dtor 11[\\s\\S]*dtor 11)[\\s\\S]*\\[comp-time\\] dtor 11'
+      --err-regex '^(?![\\s\\S]*dtor 12)'
+      -- @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count}
+      -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag}
+      @{compile_dvm_options} --dvm-backend"
+    Cases:
+      all:
+        Output:
+          String: "3\n30\n5\n35\n15\n42\n42\n97\n100\n9\n1\n0\n7\n3\n9\n11\n579\n16\n42\n"
+        ExitCode: 0

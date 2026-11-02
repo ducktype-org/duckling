@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file low_program.hpp
  */
@@ -16,6 +22,10 @@
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#ifdef ENABLE_JIT
+	#include <vm/core/jit/jit_compiler.hpp>
+#endif
+
 #include <variant>
 
 namespace vm::loader::compiler::safe {
@@ -28,11 +38,17 @@ namespace vm::low {
 	/**
 	 * @brief Micro bytecode representation of function data.
 	 */
-	struct LowFuncData {
+	struct LowFuncData final {
 		base::StrID name;
 		usize       id;
 #ifdef ENABLE_JIT
-		cf::ControlFlowGraph cfg;
+		/// Offset of the JIT function entrypoint in the bytecode (guarded by a `nop` in `bc`).
+		usize jit_func_entrypoint_offset;
+		/// Per-function JIT state (CFGs, compilation thresholds, compiled code).
+		/// Default-constructed empty; filled in by the compiler only when the JIT is enabled.
+		/// Mutable because opcode functions only hold a const reference to the function
+		/// (same precedent as LowFFIFunction::cif).
+		mutable jit::JitFuncData jit_data{};
 #endif
 		MicroBytecode bc;
 		// the copy of original bytecode. Always has the same length as bc
@@ -41,8 +57,8 @@ namespace vm::low {
 
 		/// The maximum size of the local variables on stack required by the function frame.
 		usize local_stack_size;
-		/// The maximum count of blocks required by the function frame.
-		usize local_block_count;
+		/// The maximum count of local variable slots required by the function frame.
+		usize local_slot_count;
 
 		usize arg_size;
 		// The total summed size of all return values.
@@ -54,7 +70,7 @@ namespace vm::low {
 		 * @brief Range of instructions
 		 * @note Represents inclusive-exclusive range [`begin`, `end`)
 		 */
-		struct InstructionRange {
+		struct InstructionRange final {
 			usize begin, end;
 			auto  operator<=>(const InstructionRange&) const = default;
 
@@ -92,9 +108,27 @@ namespace vm::low {
 
 			return {};
 		}
+
+#ifdef ENABLE_JIT
+		/**
+		 * @brief Replaces opcode at the provided bytecode index with the provided opcode.
+		 * @returns Original opcode from the provided location on success and `nullopt` if the
+		 * location does not exist.
+		 */
+		base::Optional<MicroOpcode> replaceOpcode(usize instruction_index, MicroOpcode opcode) {
+			if (bc.size() <= instruction_index) return std::nullopt;
+
+			auto&       instruction     = bc[instruction_index];
+			MicroOpcode original_opcode = getInstructionOpcode(instruction);
+
+			instruction = makeLowInstruction(opcode, instruction.arg0, instruction.arg1);
+
+			return original_opcode;
+		}
+#endif
 	};
 
-	struct LowCodePosition {
+	struct LowCodePosition final {
 		CRef<LowFuncData> function;
 		usize             instruction_index;
 	};
@@ -103,12 +137,12 @@ namespace vm::low {
 	 * @brief Initialization strategy for a global variable.
 	 * Either initialized via constructor/destructor functions or via a constant initial value.
 	 */
-	struct GlobalCtorDtor {
+	struct GlobalCtorDtor final {
 		base::Optional<base::StrID> ctor_name;
 		base::Optional<base::StrID> dtor_name;
 	};
 
-	struct GlobalInitialValue {
+	struct GlobalInitialValue final {
 		code::ConstantValue value;
 	};
 
@@ -117,7 +151,7 @@ namespace vm::low {
 	/**
 	 * @brief Micro bytecode representation of global data.
 	 */
-	struct LowGlobalData {
+	struct LowGlobalData final {
 		/// Type
 		TypeCRef type;
 
@@ -134,9 +168,9 @@ namespace vm::low {
 	/**
 	 * @brief Micro bytecode representation of an extern C function.
 	 */
-	struct LowExternCFunction {
+	struct LowExternCFunction final {
 		base::StrID name;
-		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		void (*function_pointer)(byte*, byte*) = nullptr;
 		usize                 parameter_size_sum;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
@@ -148,7 +182,7 @@ namespace vm::low {
 	 * mutated after `ffi_prep_cif` was performed on them (moving the whole object is fine, as
 	 * the pointed-to storage lives on the heap).
 	 */
-	struct LowFFIFunction {
+	struct LowFFIFunction final {
 		base::StrID name;
 
 		/// Native symbol address resolved from one of the loaded object files.
@@ -199,7 +233,7 @@ namespace vm::low {
 		 *
 		 * Used mainly by the VMProcess to determine the amount of memory to allocate for the globals.
 		 */
-		struct GlobalBufferConfig {
+		struct GlobalBufferConfig final {
 			Bytes buffer_size;   /// The sum of sizes of all the global variables in the program.
 			usize global_count;  /// The count of global variables in the program
 		};

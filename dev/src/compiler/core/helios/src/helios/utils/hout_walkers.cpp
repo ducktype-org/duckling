@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "hout_walkers.hpp"
 
 #include <helios/utils/get_expr_symid.hpp>
@@ -19,9 +25,8 @@ namespace compiler::helios::code {
 				};
 				using Node = std::remove_cvref_t<decltype(node)>;
 				if constexpr (std::same_as<Node, CallExpr>) {
-					if (const auto* callee_ident
-					    = dynamic_cast<const IdentifierExpr*>(node.callee.get())) {
-						add_to_result(callee_ident->symbol);
+					if_opt_some(getIdentifierExprFunctionID(node.callee.ref()), callee) {
+						add_to_result(callee);
 					}
 				} else if constexpr (std::same_as<Node, TupleExpr>) {
 					// A tuple expression lowers to a call to the tuple constructor in MIR.

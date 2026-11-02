@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file cf_analysis.hpp
  * @brief Control-flow analysis utilities for splitting lowered bytecode into basic blocks and CFGs.
@@ -30,4 +36,12 @@ namespace vm::low::cf {
 	 * @return Sorted list of basic-block beginnings.
 	 */
 	[[nodiscard]] std::vector<usize> basicBlockBeginnings(const low::MicroBytecode& bc);
+#ifdef ENABLE_JIT
+	/**
+	 * @brief Finds the first jitFuncEntrypoint instruction in the bytecode.
+	 * @param bc Micro-bytecode of lowered function to analyze.
+	 * @return Offset of the function's jitFuncEntrypoint instruction.
+	 */
+	[[nodiscard]] usize functionEntrypointOffset(const MicroBytecode& bc);
+#endif
 }  // namespace vm::low::cf

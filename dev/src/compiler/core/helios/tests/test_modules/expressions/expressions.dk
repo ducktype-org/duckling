@@ -1,6 +1,6 @@
 const V1: i32 = 1;
 const VM1: i32 = -1;
-const V256: i32 = (3 + 4 - 4 * 16 / 5 % 7) ** 8;
+
 namespace N {
     const V3: i64 = 3;
 }

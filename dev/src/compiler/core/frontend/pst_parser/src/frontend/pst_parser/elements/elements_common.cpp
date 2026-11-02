@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "elements_common.hpp"
 
 #include <token_parser_core/token_stream.hpp>
@@ -9,6 +15,10 @@ namespace pst::internal {
 
 	bool Conditions::isSemicolon(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(lang_def::Special::Semicolon);
+	}
+
+	bool Conditions::isSemicolonOrSentinel(const TokenStream& state, i64 fwd) {
+		return isSemicolon(state, fwd) || isSentinel(state, fwd);
 	}
 
 	bool Conditions::isSentinel(const TokenStream& state, i64 fwd) {

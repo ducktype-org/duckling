@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "mir_lifetime_scope.hpp"
@@ -32,6 +38,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	Call,
 	VCall,
+	/** Call through a function value: [callee, args...], the callee is a value of a function type */
+	IndirectCall,
 
 	/** Simple byte by byte assignment */
 	Assign,
@@ -152,6 +160,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u32, MetaKind,
 	CreateSlice,
 	CreateTuple,
 	CreateVariant,
+	CreateOptional,
 	Eq,
 	Neq,
 	SizeOf,
@@ -195,7 +204,11 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 
 	/// Do not run the use-before-initialization check 
 	// and use-after-free check for this local.
-	NoMoveStatusValidation
+	NoMoveStatusValidation,
+
+	/// Ignore the variable shadowing errors on this local.
+	/// Used in the match cases for the binding variable.
+	NoShadowingValidation
 )
 
 namespace compiler::mir {
@@ -792,6 +805,14 @@ namespace compiler::mir {
 		 * It has to be terminating instruction (branch, return, etc).
 		 */
 		Instruction terminator;
+
+		/**
+		 * @brief Human readable name telling what the block was generated for,
+		 * for example `if.then` or `while.cond`.
+		 * @note It is only used for debugging (it is printed by @ref Function::debugPrint) and
+		 * it is empty for blocks that were not given a name.
+		 */
+		base::Optional<base::StrID> debug_name;
 
 		[[nodiscard]]
 		ScopeRef beginScope() const;

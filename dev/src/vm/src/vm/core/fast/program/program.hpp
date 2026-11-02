@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "ids.hpp"
@@ -7,15 +13,15 @@
 
 namespace vm::fast {
 
-	struct ExternCFunction {
+	struct ExternCFunction final {
 		base::StrID name;
-		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		void (*function_pointer)(byte*, byte*) = nullptr;
 		Bytes                    parameter_size_sum;
 		std::vector<TypeCRef>    parameter_types;
 		base::Optional<TypeCRef> result_type;
 	};
 
-	struct FunctionInfo {
+	struct FunctionInfo final {
 		base::StrID name;
 		FunctionID  id;
 
@@ -26,7 +32,7 @@ namespace vm::fast {
 		std::vector<TypeID> return_types;
 	};
 
-	struct GlobalData {
+	struct GlobalData final {
 		/// The name of the global variable.
 		base::StrID name;
 		/// The type of the global variable.
@@ -41,7 +47,7 @@ namespace vm::fast {
 	 * @note Relocated representation contains pointers to this structure, so after modifications it
 	 * has to be re-relocated.
 	 */
-	struct ProgramBase {
+	struct ProgramBase final {
 		ObjIdNameMap<GlobalData, GlobalDataID> global_data{};
 		TypeCollection                         types{};
 		ObjIdNameMap<ExternCFunction>          extern_c_functions{};

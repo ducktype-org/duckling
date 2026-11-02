@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file extern_c_function.hpp
  * @author Mateusz Kołpa
@@ -80,12 +86,12 @@ namespace vm::detail {
 	// Helper trait to safely get size of types
 	// @TODO: #656 Change this when we figure out how to handle C voids in the VM
 	template<typename T>
-	struct safe_sizeof {
+	struct safe_sizeof final {
 		static constexpr usize VALUE = sizeof(T);
 	};
 
 	template<>
-	struct safe_sizeof<void> {
+	struct safe_sizeof<void> final {
 		static constexpr usize VALUE = 1;
 	};
 
@@ -130,8 +136,8 @@ namespace vm::detail {
  *  EF_VM_EXT_C_FUNC(i64, "i64", add, (i64, "i64", a), (i64, "i64", b)) { return a + b; }
  */
 #define DEF_VM_EXT_C_FUNC(ResCType, ResVmType, FuncName, ...)                                           \
-	struct FuncName {                                                                                   \
-		struct FunctionData {                                                                           \
+	struct FuncName final {                                                                             \
+		struct FunctionData final {                                                                     \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_FIELDS, __VA_ARGS__)                              \
 		} __attribute__((packed));                                                                      \
 		static_assert(                                                                                  \
@@ -139,7 +145,7 @@ namespace vm::detail {
 		);                                                                                              \
 		static ResCType       call([[maybe_unused]] u64 _                                               \
 		                               FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_PARAMS, __VA_ARGS__)); \
-		constexpr static void wrapper(std::byte* storage, std::byte* data) {                            \
+		constexpr static void wrapper(byte* storage, byte* data) {                                      \
 			/* A templated helper, that calls the function and type checks correctly */                 \
 			[&](auto f) {                                                                               \
 				if constexpr (std::is_void_v<ResCType>) {                                               \

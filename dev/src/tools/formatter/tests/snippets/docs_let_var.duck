@@ -1,0 +1,22 @@
+# Examples from docs: writing_code/declarations/let_var.html
+let l1: f32 = 5.0;
+let l2 = 0.1; # Type is deduced
+
+var v1: i32 = 5;
+var v2: i32; # Default constructor is used, so in this case 0
+var v3 = 15; # Type is deduced
+
+fun foo(a: i32) -> i32 = {
+	let l = a * 2; # l cannot change
+
+	var v = l * 2;
+	v = v + 1; # v can change
+
+	return l + v + 42;
+}
+
+fun main() = {
+	let p = Point(1, 2);
+	let Point(x, y) = p;
+	print(x); # prints "1"
+}

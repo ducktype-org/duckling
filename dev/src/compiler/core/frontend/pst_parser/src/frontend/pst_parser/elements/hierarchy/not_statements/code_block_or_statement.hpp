@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../meta.hpp"
@@ -22,7 +28,7 @@ namespace pst {
 	public:
 		enum class Type { SingleStmt, CodeBlock };
 
-		explicit CodeBlockOrStmt(const LangParserState& state): NotStmt(state) {
+		explicit CodeBlockOrStmt(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
 

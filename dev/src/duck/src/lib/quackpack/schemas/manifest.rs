@@ -1,18 +1,21 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Local manifest schemas.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::path::PathBuf;
 
 use itertools::Itertools;
 use serde::{Deserialize, de};
 use serde_untagged::UntaggedEnumVisitor;
-use yaml_edit::path::YamlPath;
 use yaml_edit::{Mapping, MappingBuilder, SequenceBuilder};
 
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
-
-pub type Dependencies = HashMap<String, Dependency>;
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -34,6 +37,8 @@ pub struct Manifest {
     pub import: Option<PathBuf>,
     /// `venv:` root field.
     pub venv: Option<VenvConfig>,
+    /// Lints configuration.
+    pub lints: Option<Lints>,
 }
 
 impl Manifest {
@@ -44,6 +49,7 @@ impl Manifest {
             && self.dependencies.is_none()
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
+            && self.lints.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -84,6 +90,22 @@ pub struct Metadata {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema of the `dependencies:` table (or its logical variants).
+/// [`BTreeMap`] instead of [`HashMap`] makes itests easier.
+pub struct Dependencies(pub BTreeMap<String, Dependency>);
+
+impl<'a> IntoIterator for &'a Dependencies {
+    type Item = <&'a BTreeMap<String, Dependency> as IntoIterator>::Item;
+
+    type IntoIter = <&'a BTreeMap<String, Dependency> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Single dependency of the package.
 pub struct Dependency {
@@ -101,56 +123,17 @@ pub struct Dependency {
 
 impl From<Dependency> for Mapping {
     fn from(value: Dependency) -> Self {
-        let result = Mapping::new();
+        let mut result = MappingBuilder::new();
         if let Some(version) = value.version {
-            result.set("version", version.to_string());
+            result = result.pair("version", version.to_string());
         }
         if let Some(source) = value.source {
             match source {
                 DependencySource::Simple(simple) => {
-                    result.set("source", simple);
+                    result = result.pair("source", simple);
                 }
-                // Desired code.
-                /* DependencySource::Detailed(detailed) => {
-                    result.set("source", Into::<Mapping>::into(detailed));
-                } */
-                // Temporary workaround over a bug in yaml-edit.
                 DependencySource::Detailed(detailed) => {
-                    if let Some(registry_url) = detailed.registry_url {
-                        result
-                            .try_set_path("source.registry-url", registry_url)
-                            .expect("malformed path");
-                    }
-                    if let Some(name) = detailed.name {
-                        result
-                            .try_set_path("source.name", name)
-                            .expect("malformed path");
-                    }
-                    if let Some(path) = detailed.path {
-                        result
-                            .try_set_path("source.path", path.display().to_string())
-                            .expect("malformed path");
-                    }
-                    if let Some(git_url) = detailed.git_url {
-                        result
-                            .try_set_path("source.git-url", git_url)
-                            .expect("malformed path");
-                    }
-                    if let Some(tag) = detailed.tag {
-                        result
-                            .try_set_path("source.tag", tag)
-                            .expect("malformed path");
-                    }
-                    if let Some(branch) = detailed.branch {
-                        result
-                            .try_set_path("source.branch", branch)
-                            .expect("malformed path");
-                    }
-                    if let Some(commit) = detailed.commit {
-                        result
-                            .try_set_path("source.commit", commit)
-                            .expect("malformed path");
-                    }
+                    result = result.insert_mapping("source", detailed.into());
                 }
             }
         }
@@ -162,23 +145,22 @@ impl From<Dependency> for Mapping {
                         features_sequence = features_sequence.item(simple);
                     }
                     DependencyFeature::Detailed(detailed) => {
-                        features_sequence = features_sequence.item(Into::<Mapping>::into(detailed));
+                        features_sequence = features_sequence.insert_mapping(detailed.into());
                     }
                 }
             }
-            let features_sequence = features_sequence
-                .build_document()
-                .as_sequence()
-                .expect("SequenceBuilder should produce a sequence");
-            result.set("features", features_sequence);
+            result = result.insert_sequence("features", features_sequence);
         }
         if let Some(pinned) = value.pinned {
-            result.set("pinned", pinned);
+            result = result.pair("pinned", pinned);
         }
         if let Some(conditions) = value.conditions {
-            result.set("conditions", Into::<Mapping>::into(conditions));
+            result = result.insert_mapping("conditions", conditions.into());
         }
         result
+            .build_document()
+            .as_mapping()
+            .expect("`MappingBuilder` should always produce a mapping")
     }
 }
 
@@ -274,6 +256,14 @@ impl DependencySource {
             }
         }
     }
+
+    /// Whether the [`DependencySource`] specifies a name.
+    pub fn has_name(&self) -> bool {
+        match self {
+            DependencySource::Simple(_) => false,
+            DependencySource::Detailed(detailed_source) => detailed_source.name.is_some(),
+        }
+    }
 }
 
 impl<'de> de::Deserialize<'de> for DependencySource {
@@ -326,29 +316,29 @@ impl DetailedSource {
     }
 }
 
-impl From<DetailedSource> for Mapping {
+impl From<DetailedSource> for MappingBuilder {
     fn from(value: DetailedSource) -> Self {
-        let result = Mapping::new();
+        let mut result = MappingBuilder::new();
         if let Some(registry_url) = value.registry_url {
-            result.set("registry-url", registry_url);
+            result = result.pair("registry-url", registry_url);
         }
         if let Some(name) = value.name {
-            result.set("name", name);
+            result = result.pair("name", name);
         }
         if let Some(path) = value.path {
-            result.set("path", path.display().to_string());
+            result = result.pair("path", path.display().to_string());
         }
         if let Some(git_url) = value.git_url {
-            result.set("git-url", git_url);
+            result = result.pair("git-url", git_url);
         }
         if let Some(tag) = value.tag {
-            result.set("tag", tag);
+            result = result.pair("tag", tag);
         }
         if let Some(branch) = value.branch {
-            result.set("branch", branch);
+            result = result.pair("branch", branch);
         }
         if let Some(commit) = value.commit {
-            result.set("commit", commit);
+            result = result.pair("commit", commit);
         }
         result
     }
@@ -363,7 +353,7 @@ pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,
 }
 
-impl From<DependencyCondition> for Mapping {
+impl From<DependencyCondition> for MappingBuilder {
     fn from(value: DependencyCondition) -> Self {
         let mut result = MappingBuilder::new();
         if let Some(package_features) = value.package_features {
@@ -374,9 +364,6 @@ impl From<DependencyCondition> for Mapping {
             result = result.insert_sequence("package-features", features);
         }
         result
-            .build_document()
-            .as_mapping()
-            .expect("MappingBuilder did not produce a Mapping")
     }
 }
 
@@ -385,11 +372,10 @@ impl From<DependencyCondition> for Mapping {
 /// A feature + its conditions.
 pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
 
-impl From<DetailedFeature> for Mapping {
+impl From<DetailedFeature> for MappingBuilder {
     fn from(value: DetailedFeature) -> Self {
-        let result = Mapping::new();
-        result.set(value.0.key, Into::<Mapping>::into(value.0.value));
-        result
+        let result = MappingBuilder::new();
+        result.insert_mapping(value.0.key, value.0.value.into())
     }
 }
 
@@ -458,6 +444,19 @@ pub struct VenvConfig {
     pub ephemeral: Option<bool>,
     pub expose_freezefile: Option<bool>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+/// Schema for configuring lints.
+pub struct Lints {
+    pub duck: Option<DuckLints>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+/// Schema for configuring duck lints. Maps to the `lints.duck`.
+///
+/// Map is lint name -> lint level.
+pub struct DuckLints(pub HashMap<String, String>);
 
 #[cfg(test)]
 mod tests {

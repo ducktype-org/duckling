@@ -1,6 +1,4 @@
 # Tests for declaration of functions in REPL
-# @TODO: #2245 add option to not print "=>" or duckling,
-# add eventual error ignore.
 
 Tests:
   basic_declarations:
@@ -18,8 +16,9 @@ Tests:
           File: "interactions/nested_calls.rtf"
         Output:
           String: "@{beginning}\n=> 42\n@{end}"
-      # resilience:
-      #   Input:
-      #     File: "interactions/resilience.rtf"
-      #   Output:
-      #     String: "@{beginning}\nduckling> => 4\nduckling> duckling> => 4\n@{end}"
+      resilience:
+        Run: "@{duckc_path} repl --plain-output --custom-std-artifacts-path @{case_std_artifacts}"
+        Input:
+          File: "interactions/resilience.rtf"
+        Output:
+          String: "4\n4\n"

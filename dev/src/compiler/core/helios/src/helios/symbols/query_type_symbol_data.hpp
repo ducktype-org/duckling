@@ -1,8 +1,14 @@
-#pragma once
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#pragma once
 
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -10,6 +16,13 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
+	struct ClassMemberSpecifiersResult {
+		SymID                                 sym;
+		base::Optional<tsh::MemberVisibility> visibility_opt;
+		bool                                  is_static;
+	};
+
+	ClassMemberSpecifiersResult getClassMemberSpecifiers(query::Context& ctx, SymID sym);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -19,22 +32,22 @@ namespace compiler::helios {
 		 * @brief Name of the class in the source code.
 		 */
 		base::StrID name;
+
 		/**
-		 * @brief Class's declared methods.
+		 * @brief Type interface of the class.
 		 */
-		std::vector<SymID> methods;
-		/**
-		 * @brief Class's declared constructors.
-		 */
-		std::vector<SymID> constructors;
-		/**
-		 * @brief Class's declared destructor.
-		 */
-		base::Optional<SymID> destructor;
-		/**
-		 * @brief Class's declared member variables.
-		 */
-		std::vector<SymID> members;
+		tsh::TypeInterface declared_interface;
+
+		// =============== Precomputed type properties ===============
+
+		bool is_trivially_destructible;
+		bool is_default_constructible;
+		bool is_trivially_zero_initializable;
+		bool is_copyable;
+		bool is_trivially_copyable;
+		bool carries_information;
+
+		// =============== Currently unused ===============
 		/**
 		 * @brief Class's base class.
 		 */

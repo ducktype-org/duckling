@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "diagnostics.hpp"
 
 #include "extract.hpp"
 
+#include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <nlohmann/json.hpp>
@@ -155,6 +162,40 @@ namespace js {
 		auto result = extractArray(json, key);
 		if (!result.has_value()) reportFieldError(report, "array", key, error_message, true);
 		return toOpt(std::move(result));
+	}
+
+	base::Optional<std::vector<std::string>> extractListOfStringsFromJsonArray(
+		const nlohmann::json& array, std::string_view key, const DiagnosticLogger& report
+	) {
+		CORE_ASSERT(
+			array.is_array(),
+			std::string("extractListOfStringsFromJsonArray: got `") + array.type_name()
+				+ "`, expected an array"
+		);
+		std::vector<std::string> result{};
+		result.reserve(array.size());
+		bool encountered_errors = false;
+		for (const auto& item: array) {
+			auto maybe_string = getStringFromArray(item, key, report);
+			if (!maybe_string.has_value())
+				encountered_errors = true;
+			else
+				result.push_back(maybe_string->str());
+		}
+		if (encountered_errors) return {};
+		return result;
+	}
+
+	base::Optional<std::vector<std::string>> getArrayOfStrings(
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
+		const DiagnosticLogger& report
+	) {
+		const auto maybe_array = getArray(json, key, error_message, report);
+		if (!maybe_array) return {};
+		const auto& array = *maybe_array;
+		return extractListOfStringsFromJsonArray(array, key, report);
 	}
 
 	base::Optional<nlohmann::json> getObjectWarning(

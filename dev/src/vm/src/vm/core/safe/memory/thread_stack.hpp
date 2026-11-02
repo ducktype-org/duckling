@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "frame.hpp"
@@ -8,9 +14,9 @@ namespace vm {
 	template<typename EntryT>
 	class GenericThreadStack final {
 	private:
-		std::vector<Frame>                 frame_stack;
-		std::vector<EntryT>                local_stack;
-		std::vector<GenericBlock<EntryT>*> block_ref_stack;
+		std::vector<Frame>     frame_stack;
+		std::vector<EntryT>    local_stack;
+		std::vector<LocalSlot> slot_stack;
 
 	public:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
@@ -26,25 +32,23 @@ namespace vm {
 		static constexpr u64 STACK_LENGTH = FRAMES_LENGTH * BYTES_PER_FRAME;
 
 		/**
-		 * Also some heuristic limit on the number of blocks.
+		 * Also some heuristic limit on the number of local variables.
 		 */
-		static constexpr u64 BLOCKS_PER_FRAME = BYTES_PER_FRAME / 8;
+		static constexpr u64 SLOTS_PER_FRAME = BYTES_PER_FRAME / 8;
 
-		static constexpr u64 BLOCK_REF_STACK_LENGTH = FRAMES_LENGTH * BLOCKS_PER_FRAME;
+		static constexpr u64 SLOT_STACK_LENGTH = FRAMES_LENGTH * SLOTS_PER_FRAME;
 
 		GenericThreadStack():
 			  frame_stack(FRAMES_LENGTH),
 			  local_stack(STACK_LENGTH),
-			  block_ref_stack(BLOCK_REF_STACK_LENGTH) {}
+			  slot_stack(SLOT_STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
 		auto getLocalStack() -> Ref<std::vector<EntryT>> { return &local_stack; }
 
-		auto getBlockRefStack() -> Ref<std::vector<GenericBlock<EntryT>*>> {
-			return &block_ref_stack;
-		}
+		auto getSlotStack() -> Ref<std::vector<LocalSlot>> { return &slot_stack; }
 	};
 
-	using ThreadStack = GenericThreadStack<std::byte>;
+	using ThreadStack = GenericThreadStack<byte>;
 }

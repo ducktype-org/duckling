@@ -8,6 +8,7 @@ SubDirs:
   - samples
   - statements
   - functions
+  - function_pointers
   - constants
   - classes
   - extern_c
@@ -21,6 +22,7 @@ SubDirs:
   - pointers
   - globals
   - tuples
+  - coercions
   - templates
   - imports
   - macros

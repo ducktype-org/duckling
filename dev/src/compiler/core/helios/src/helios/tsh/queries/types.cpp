@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "types.hpp"
 
 #include <frontend/module_tree/queries.hpp>
@@ -186,8 +192,8 @@ namespace compiler::tsh {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
 
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Impl) {
-		static auto provide(Context&, const QKey& key) -> PResult {
-			return VariantAbstractTypeImpl(key.underlying_types);
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return { ctx, key.underlying_types, false };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
@@ -195,10 +201,20 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
 
+	struct IMPLEMENT_QUERY(QueryOptionalType, VariantAbstractType::Impl) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return { ctx, { key.value_type, helios::getOptionalNoneType(ctx) }, true };
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryOptionalType)
+
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto [params, result, pure, free] = key;
-			return { params, result, pure, free };
+			const auto [params, result, pure, kind] = key;
+			return { params, result, pure, kind };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF

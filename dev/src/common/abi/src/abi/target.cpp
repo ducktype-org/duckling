@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <abi/target.hpp>
 
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <utility>
@@ -87,17 +94,19 @@ namespace abi {
 	}
 
 	const TargetABI& hostTargetABI() {
-#if defined(__x86_64__) || defined(_M_X64)
-		return x86_64Linux();
-#elif defined(__aarch64__) || defined(_M_ARM64)
-	#if defined(__APPLE__)
-		return aarch64Darwin();
-	#else
-		return aarch64Linux();
-	#endif
-#else
-	#error "abi::layout: unsupported host architecture; add a TargetABI preset for it"
-#endif
-	}
+		constexpr bool IS_X86_64  = base::IS_TARGET_ARCH_X86 && base::IS_TARGET_ARCH_64;
+		constexpr bool IS_AARCH64 = base::IS_TARGET_ARCH_ARM && base::IS_TARGET_ARCH_64;
 
+		static_assert(
+			IS_X86_64 || IS_AARCH64,
+			"abi::layout: unsupported host architecture; add a TargetABI preset for it"
+		);
+
+		if constexpr (IS_X86_64)
+			return x86_64Linux();
+		else if constexpr (base::IS_TARGET_OS_MACOS)
+			return aarch64Darwin();
+		else
+			return aarch64Linux();
+	}
 }
