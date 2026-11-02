@@ -15,6 +15,7 @@
 #include <../src_private/helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
