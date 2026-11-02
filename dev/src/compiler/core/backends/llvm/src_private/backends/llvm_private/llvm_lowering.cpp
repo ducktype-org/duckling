@@ -915,6 +915,16 @@ namespace compiler::backend_llvm {
 				= loadLIRValueToPointer(source, builder, destination_ptr, destination_alignment);
 			if (source_ptr == destination_ptr) return;
 
+			// A scalar is copied with a typed load + store. SROA cannot promote an `i1` alloca
+			// that is copied with a 1-byte `memmove`, so the copy would stay on the stack and
+			// keep conditions like the bounds check of `List.at` alive inside hot loops.
+			if (source_type == destination_type and not destination_type->isAggregateType()) {
+				llvm::Value* value
+					= builder.CreateAlignedLoad(source_type, source_ptr, source_alignment);
+				builder.CreateAlignedStore(value, destination_ptr, destination_alignment);
+				return;
+			}
+
 			builder.CreateMemMove(
 				destination_ptr,
 				destination_alignment,
