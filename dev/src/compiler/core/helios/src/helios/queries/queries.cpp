@@ -148,12 +148,11 @@ namespace compiler::helios {
 					// they don't compile directly
 					return true;
 				}
-				if (kind == pst::ElementKind::Action or 
-					kind == pst::ElementKind::Import or
-					kind == pst::ElementKind::Using
-				) {
+				if (kind == pst::ElementKind::Action or kind == pst::ElementKind::Import
+				    or kind == pst::ElementKind::Using) {
 					// @TODO: #3927 more cases might be added here in the future
-					// note that we shouldn't skip expressions, as they will be important once we have lambdas.
+					// note that we shouldn't skip expressions, as they will be important once we
+					// have lambdas.
 
 					// We skip elements that cannot contain
 					// any symbols that QueryModuleHout should compile directly.
