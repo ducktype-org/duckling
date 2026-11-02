@@ -6,7 +6,7 @@
 
 #include "for.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>

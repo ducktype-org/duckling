@@ -8,7 +8,7 @@
 
 #include "lang_parser_element.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 
 #include <base/pointers/ref.hpp>
 

@@ -16,8 +16,8 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
 #include <frontend/packages/packages.hpp>
+#include <frontend/pst_parser/access/source_position_locked.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/pst_parser/source_position_locked.hpp>
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
 #include <lsp_interface/compiler.hpp>

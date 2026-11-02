@@ -10,7 +10,7 @@
  * semantic tokens in JSON format.
  */
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>

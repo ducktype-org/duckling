@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/tsh/abstract_type.hpp>

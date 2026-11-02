@@ -11,7 +11,7 @@
 
 #include "chain_expr.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>

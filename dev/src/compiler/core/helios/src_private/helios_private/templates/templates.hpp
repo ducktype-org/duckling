@@ -7,7 +7,7 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/symbols/symbol_id.hpp>
 

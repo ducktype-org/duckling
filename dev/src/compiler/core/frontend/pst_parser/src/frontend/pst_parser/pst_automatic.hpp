@@ -24,7 +24,7 @@
  */
 #pragma once
 
-#include "access.hpp"
+#include "access/access_pst.hpp"
 #include "lang_parser_element.hpp"
 
 #include <token_parser_core/automatic.hpp>

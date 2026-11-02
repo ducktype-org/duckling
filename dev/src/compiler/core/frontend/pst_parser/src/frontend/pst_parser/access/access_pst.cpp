@@ -4,9 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include "access.hpp"
+#include "access_pst.hpp"
 
-#include "pst_query/pst_access_side_input.hpp"
+#include "../pst_query/pst_access_side_input.hpp"
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/input_query/query_input_impl.hpp>

@@ -6,7 +6,7 @@
 
 #include "symbol_abi.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/call_argument.hpp>

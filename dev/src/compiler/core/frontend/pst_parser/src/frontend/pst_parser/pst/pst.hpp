@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "../access.hpp"
+#include "../access/access_pst.hpp"
 #include "../elements/hierarchy/declarations/top_level.hpp"
 #include "../elements/includes/basic.hpp"  // IWYU pragma: keep
 

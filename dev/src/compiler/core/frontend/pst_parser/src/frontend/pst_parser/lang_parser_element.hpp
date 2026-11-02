@@ -6,15 +6,15 @@
 
 #pragma once
 
-#include "access.hpp"
+#include "access/access_pst.hpp"
+#include "access/source_position_locked.hpp"
 #include "cloning/cloning_decl.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
-#include "lang_state_unmethods.hpp"
 #include "lang_element_construction_data.hpp"
+#include "lang_state_unmethods.hpp"
 #include "pst_config.hpp"
 #include "pst_id.hpp"
-#include "source_position_locked.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 
