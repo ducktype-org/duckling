@@ -104,7 +104,8 @@ namespace compiler::helios::code {
 			}
 
 			auto arg_expr_result = subExprFromPST(
-				query_ctx, arg_unlocked->getArg().unlock(query_ctx)->getExpr().unlock(query_ctx)
+				query_ctx,
+				unlockOrFail(query_ctx, arg_unlocked->getArg().unlock(query_ctx)->getExpr())
 			);
 
 			if (arg_expr_result.hasFailed()) return query::Failed();

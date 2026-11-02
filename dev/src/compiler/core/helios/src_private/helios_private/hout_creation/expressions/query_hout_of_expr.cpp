@@ -274,7 +274,8 @@ namespace compiler::helios::code {
 						// - If it's an expression, use its toString() method
 						// - - Parse sub expression and gather data
 						auto sub_expr_hout_qresult = subExprFromPST(
-							ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr().unlock(ctx)
+							ctx,
+							unlockOrFail(ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr())
 						);
 						if (sub_expr_hout_qresult.hasFailed()) {
 							failed = true;
@@ -336,7 +337,7 @@ namespace compiler::helios::code {
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				const auto op    = stmt->getOperator().unlock(ctx);
-				auto       inner = subExprFromPST(ctx, stmt->getExpr().unlock(ctx)).valueOrThrow();
+				auto inner = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getExpr())).valueOrThrow();
 				// If necessary, this is the place to handle any particularly tricky cases.
 				// Currently, there are none.
 
@@ -380,7 +381,7 @@ namespace compiler::helios::code {
 					}
 				}
 
-				auto inner      = subExprFromPST(ctx, stmt->getExpr().unlock(ctx)).valueOrThrow();
+				auto inner = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getExpr())).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
 				// Handle taking references
@@ -594,8 +595,8 @@ namespace compiler::helios::code {
 					return;
 				}
 				if (op->unwrap() == lang_def::NamedOperator::As) {
-					auto value_expr
-						= subExprFromPST(ctx, stmt->getLeftOperand().unlock(ctx)).valueOrThrow();
+					auto value_expr = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getLeftOperand()))
+					                      .valueOrThrow();
 					auto type_ctv    = getTypeCTVFromPST(ctx, stmt->getRightOperand());
 					auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 
@@ -603,7 +604,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand().unlock(ctx));
+				auto lhs_res = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getLeftOperand()));
 				if (lhs_res.hasFailed()) return;
 				auto lhs = std::move(lhs_res).valueOrThrow();
 
@@ -621,7 +622,7 @@ namespace compiler::helios::code {
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
-							ctx, sub_expr.unlock(ctx), meta_type, op->getStablePosition()
+							ctx, unlockOrFail(ctx, sub_expr), meta_type, op->getStablePosition()
 						);
 						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
@@ -632,7 +633,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand().unlock(ctx));
+				auto rhs_res = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getRightOperand()));
 				if (rhs_res.hasFailed()) return;
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
@@ -677,13 +678,14 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
 					auto parameter_hout
-						= subExprFromPSTWithType(ctx, parameter.unlock(ctx), meta_type);
+						= subExprFromPSTWithType(ctx, unlockOrFail(ctx, parameter), meta_type);
 					if (parameter_hout.hasFailed()) return;
 					parameters.emplace_back(std::move(parameter_hout).valueOrThrow());
 				}
 
-				auto result
-					= subExprFromPSTWithType(ctx, arrow->getRightOperand().unlock(ctx), meta_type);
+				auto result = subExprFromPSTWithType(
+					ctx, unlockOrFail(ctx, arrow->getRightOperand()), meta_type
+				);
 				if (result.hasFailed()) return;
 
 				node = makeBox<FunctionTypeExpr>(
@@ -829,7 +831,7 @@ namespace compiler::helios::code {
 			void visitComma(pst::Access<pst::expr::Comma> stmt) override {
 				std::vector<Box<Expr>> expressions;
 				for (auto ex: stmt->getExpressions()) {
-					auto res = subExprFromPST(ctx, ex.unlock(ctx));
+					auto res = subExprFromPST(ctx, unlockOrFail(ctx, ex));
 					if (res.hasFailed()) {
 						// Error has occurred.
 						return;
@@ -841,10 +843,11 @@ namespace compiler::helios::code {
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
 				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
-				auto       condition_res
-					= subExprFromPSTWithType(ctx, stmt->getCondition().unlock(ctx), bool_type);
-				auto if_true_res  = subExprFromPST(ctx, stmt->getIfTrue().unlock(ctx));
-				auto if_false_res = subExprFromPST(ctx, stmt->getIfFalse().unlock(ctx));
+				auto       condition_res = subExprFromPSTWithType(
+                    ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
+                );
+				auto if_true_res  = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getIfTrue()));
+				auto if_false_res = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getIfFalse()));
 
 				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
@@ -871,7 +874,7 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
 				for (usize i = 0; i < expr_count; ++i) {
-					auto result = subExprFromPST(ctx, stmt->getSubExpr(i).unlock(ctx));
+					auto result = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getSubExpr(i)));
 					if (result.hasFailed()) return;
 					result_exprs.push_back(std::move(result.valueOrThrow()));
 				}
@@ -913,7 +916,7 @@ namespace compiler::helios::code {
 
 				auto var = stmt->getVariables();
 
-				auto location_expr_qresult = subExprFromPST(ctx, var.unlock(ctx));
+				auto location_expr_qresult = subExprFromPST(ctx, unlockOrFail(ctx, var));
 				if (location_expr_qresult.hasFailed()) return;
 				auto location_expr = std::move(location_expr_qresult).valueOrThrow();
 
@@ -948,7 +951,7 @@ namespace compiler::helios::code {
 
 				for (auto elem_holder: *list_unlocked) {
 					auto elem_pst_expr = elem_holder.unlock(ctx)->getExpr();
-					auto elem          = subExprFromPST(ctx, elem_pst_expr.unlock(ctx));
+					auto elem          = subExprFromPST(ctx, unlockOrFail(ctx, elem_pst_expr));
 					if (elem.hasFailed()) return;
 
 					if (auto curr_elem_type = elem.valueOrThrow()->expression_type.getSymbolType();

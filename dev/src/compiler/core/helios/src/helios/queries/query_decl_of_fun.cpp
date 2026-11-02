@@ -123,7 +123,9 @@ namespace compiler::helios {
 
 		template<class StmtsAggregate>
 		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
-			return everyPathReturnsInStmts(ctx, getStmtsFromStmtAggregate(ctx, stmts.unlock(ctx)));
+			return everyPathReturnsInStmts(
+				ctx, getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts))
+			);
 		}
 
 		/**
@@ -172,7 +174,7 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts.unlock(ctx)))
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts)))
 					stmt->acceptVisitor(*this);
 			}
 

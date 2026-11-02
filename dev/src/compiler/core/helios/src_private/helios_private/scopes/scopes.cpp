@@ -453,7 +453,9 @@ namespace compiler::helios {
 						auto stmt_specifier = stmt_specifier_opt.value();
 						auto inner_symbols  = filterSymbolsFromStmtList(
                             ctx,
-                            getStmtsFromStmtAggregate(ctx, stmt_specifier->getBlock().unlock(ctx))
+                            getStmtsFromStmtAggregate(
+                                ctx, unlockOrFail(ctx, stmt_specifier->getBlock())
+                            )
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
 					} else if (auto using_opt = stmt.template dynamicCast<pst::Using>()) {

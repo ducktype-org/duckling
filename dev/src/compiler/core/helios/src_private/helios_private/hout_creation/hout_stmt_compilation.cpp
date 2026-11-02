@@ -247,8 +247,9 @@ namespace compiler::helios {
 			}
 			// as before, if we encounter an code block expression we want a block statement
 			if (auto block_opt = inner_expr.dynamicCast<pst::expr::BlockExpr>()) {
-				auto block_body
-					= processBlock(ctx, block_opt.value()->getBlock().unlock(ctx), return_type);
+				auto block_body = processBlock(
+					ctx, unlockOrFail(ctx, block_opt.value()->getBlock()), return_type
+				);
 				output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
 				return;
 			}
@@ -282,7 +283,7 @@ namespace compiler::helios {
 			if (taken.valueOrThrow()) {
 				output(code::BlockStmt(
 					code::pstOrigin(stmt),
-					processBlock(ctx, stmt->getThenBody().unlock(ctx), return_type)
+					processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type)
 				));
 				return;
 			}
@@ -290,7 +291,8 @@ namespace compiler::helios {
 			match_optional(stmt->getElseBody()) {
 				opt_some(else_body) {
 					output(code::BlockStmt(
-						code::pstOrigin(stmt), processBlock(ctx, else_body.unlock(ctx), return_type)
+						code::pstOrigin(stmt),
+						processBlock(ctx, unlockOrFail(ctx, else_body), return_type)
 					));
 				}
 				opt_none {
@@ -323,7 +325,7 @@ namespace compiler::helios {
 			)
 			                     .valueOrThrow();
 
-			auto then_body = processBlock(ctx, stmt->getThenBody().unlock(ctx), return_type);
+			auto then_body = processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type);
 
 			match_optional(stmt->getElseBody()) {
 				opt_some(else_body) {
@@ -331,7 +333,7 @@ namespace compiler::helios {
 						code::pstOrigin(stmt),
 						std::move(condition),
 						std::move(then_body),
-						processBlock(ctx, else_body.unlock(ctx), return_type)
+						processBlock(ctx, unlockOrFail(ctx, else_body), return_type)
 					));
 				}
 				opt_none {
@@ -359,7 +361,7 @@ namespace compiler::helios {
 			)
 			                     .valueOrThrow();
 
-			auto body = processBlock(ctx, stmt->getBody().unlock(ctx), return_type);
+			auto body = processBlock(ctx, unlockOrFail(ctx, stmt->getBody()), return_type);
 
 			output(code::WhileStmt(code::pstOrigin(stmt), std::move(condition), std::move(body)));
 		}
@@ -406,7 +408,8 @@ namespace compiler::helios {
 		}
 
 		void visitBlock(pst::Access<pst::Block> stmt) override {
-			auto block_body = processBlock(ctx, stmt->getCodeBlock().unlock(ctx), return_type);
+			auto block_body
+				= processBlock(ctx, unlockOrFail(ctx, stmt->getCodeBlock()), return_type);
 			output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
 		}
 
@@ -462,7 +465,7 @@ namespace compiler::helios {
 				ctx,
 				stmt,
 				[&](pst::AccessLocked<pst::CodeBlockOrStmt> body_pst) -> code::CodeBlock {
-					return processBlock(ctx, body_pst.unlock(ctx), return_type);
+					return processBlock(ctx, unlockOrFail(ctx, body_pst), return_type);
 				}
 			);
 			if (!result.has_value()) {
@@ -526,7 +529,7 @@ namespace compiler::helios {
 		tsh::SymbolType<>                 return_type
 	) {
 		return std::make_shared<const code::CodeBlock>(
-			processBlock(ctx, container.unlock(ctx), return_type)
+			processBlock(ctx, unlockOrFail(ctx, container), return_type)
 		);
 	}
 

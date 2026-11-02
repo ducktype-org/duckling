@@ -692,11 +692,12 @@ namespace compiler::helios::code {
 		std::vector<ElementOrigin> arguments_origin;
 
 		const auto args = unlockCallArgs(ctx, call_expr);
+		arguments_origin.reserve(args.size());
 		for (const auto& arg: args) arguments_origin.emplace_back(pstOrigin(arg));
 
 		for (const auto& arg: args) {
 			auto arg_expr_result
-				= subExprFromPST(ctx, arg->getArg().unlock(ctx)->getExpr().unlock(ctx));
+				= subExprFromPST(ctx, unlockOrFail(ctx, arg->getArg().unlock(ctx)->getExpr()));
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 			if (arg->isNamedArg()) {
@@ -838,7 +839,9 @@ namespace compiler::helios::code {
 		arguments.reserve(argument_count);
 		for (usize index = 0; const auto& arg: args) {
 			auto arg_result = subExprFromPSTWithType(
-				ctx, arg->getArg().unlock(ctx)->getExpr().unlock(ctx), parameter_types.at(index++)
+				ctx,
+				unlockOrFail(ctx, arg->getArg().unlock(ctx)->getExpr()),
+				parameter_types.at(index++)
 			);
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_result);
 			arguments.push_back(std::move(arg_expr));

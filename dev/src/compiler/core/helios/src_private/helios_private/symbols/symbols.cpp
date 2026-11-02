@@ -908,12 +908,11 @@ namespace compiler::helios {
 				auto code_block_parent = code_block.value()->getParent();
 				if_opt_none(code_block_parent) break;
 
-				auto code_block_parent_el = code_block_parent.value().unlock(ctx);
-				auto parent_kind          = code_block_parent_el->getElementKind();
+				pst_element      = code_block_parent.value().unlock(ctx);
+				auto parent_kind = pst_element->getElementKind();
 				if (parent_kind != pst::ElementKind::SpecifierBlock
 				    && parent_kind != pst::ElementKind::Namespace)
 					break;
-				pst_element = std::move(code_block_parent_el);
 			}
 
 			return specifiers;

@@ -12,6 +12,7 @@
 #pragma once
 
 #include <frontend/pst_parser/elements/includes/basic.hpp>  // for pst::Stmt
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <vector>
 
