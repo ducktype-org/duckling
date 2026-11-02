@@ -851,13 +851,13 @@ dependencies:
             make_errors_message(
                 &dir,
                 [
+                    &format!("`{}` is not a valid url", root_dir.path().display()),
+                    "relative URL without a base",
                     "git dependency points to a file on the disk",
                     &format!(
                         "either change it to a local dependency or change the URL to `{}`",
                         file_url,
                     ),
-                    &format!("`{}` is not a valid url", root_dir.path().display()),
-                    "relative URL without a base",
                 ]
             )
         );
@@ -1237,11 +1237,11 @@ dependencies:
         make_errors_message_frontmatter(
             &dir,
             [
-                "either remove the `import` field or all the other fields",
                 &format!(
                     "script at `{}` imports a frontmatter but also specifies some of the frontmatter fields",
                     frontmatter_path.display()
                 ),
+                "either remove the `import` field or all the other fields",
             ]
         )
     );
@@ -1369,11 +1369,11 @@ dependencies:
         make_errors_message_frontmatter(
             &dir,
             [
-                "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
                 &format!(
                     "illegal fields `metadata`, `features` in the frontmatter at `{}`",
                     frontmatter_path.display()
                 ),
+                "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
             ]
         )
     );

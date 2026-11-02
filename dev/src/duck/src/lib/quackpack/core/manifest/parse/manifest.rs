@@ -83,7 +83,7 @@ pub(crate) fn parse(
                     illegal_fields.join("`, `"),
                     frontmatter_path.display()
                 );
-                err = err.add_hint(
+                err.add_hint(
                     "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
                 );
                 qp_bail!(err);

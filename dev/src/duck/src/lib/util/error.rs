@@ -59,7 +59,7 @@ pub enum ErrorType {
 #[derive(Debug)]
 /// Quackpack error type, contains a stack of messages for the user.
 pub struct QuackError {
-    error: BoxError,
+    errors: Vec<BoxError>,
     display_place: DisplayPlace,
 }
 
@@ -79,7 +79,7 @@ impl QuackError {
             DisplayPlace::StdErr
         };
         Self {
-            error: Box::new(err),
+            errors: vec![Box::new(err)],
             display_place,
         }
     }
@@ -92,31 +92,20 @@ impl QuackError {
 
     /// Add a context to this [`QuackError`].
     #[inline]
-    pub fn context<C: Error + Send + Sync + 'static>(self, context: C) -> Self {
-        let context = ContextError {
-            context: Box::new(context),
-            error: self,
-        };
-        Self::new(context)
+    pub fn context<C: Error + Send + Sync + 'static>(&mut self, context: C) -> &mut Self {
+        self.errors.push(Box::new(context));
+        self
     }
 
     /// Try to downcast a reference in errors' chain.
-    /// Any [`ContextError`] is silently *ignored* (it's treated as its context).
     pub fn downcast_ref_in_chain<T: Error + 'static>(&self) -> Option<&T> {
-        self.sources()
-            .filter_map(ErrorExt::context_aware_downcast_ref)
-            .next()
+        self.sources().filter_map(<dyn Error>::downcast_ref).next()
     }
 
     /// Check, if errors' chain contains `T`.
     /// Any [`ContextError`] is silently *ignored* (it's treated as its context).
     pub fn has_in_chain<T: Error + 'static>(&self) -> bool {
         self.downcast_ref_in_chain::<T>().is_some()
-    }
-
-    /// The current root error.
-    pub fn error(&self) -> &(dyn Error + Send + Sync + 'static) {
-        self.error.as_ref()
     }
 
     /// Gets the exit code of the error.
@@ -138,22 +127,27 @@ impl QuackError {
     }
 
     /// Iterates over the messages stack, from the top to the bottom.
-    pub fn sources(&self) -> Sources<'_> {
-        Sources {
-            current: Some(self.error.as_ref()),
-        }
+    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a (dyn Error + 'static)> {
+        self.errors
+            .iter()
+            .rev()
+            .flat_map(|error| (**error).sources())
     }
 
-    /// Add a note on top of this errors' chain.
+    /// Add a note at the bottom of this errors' chain.
     #[inline]
-    pub fn add_note<C: Into<Cow<'static, str>>>(self, note: C) -> Self {
-        self.context(NoteMessage::new(note))
+    pub fn add_note<C: Into<Cow<'static, str>>>(&mut self, note: C) -> &mut Self {
+        let note = NoteMessage::new(note);
+        self.errors.insert(0, Box::new(note));
+        self
     }
 
-    /// Add a hint on top of this errors' chain.
+    /// Add a hint at the bottom of this errors' chain.
     #[inline]
-    pub fn add_hint<C: Into<Cow<'static, str>>>(self, hint: C) -> Self {
-        self.context(HintMessage::new(hint))
+    pub fn add_hint<C: Into<Cow<'static, str>>>(&mut self, hint: C) -> &mut Self {
+        let hint = HintMessage::new(hint);
+        self.errors.insert(0, Box::new(hint));
+        self
     }
 
     /// Create a new note [`QuackError`].
@@ -238,24 +232,23 @@ impl fmt::Display for InternalError {
 
 impl Error for InternalError {}
 
-#[derive(Debug)]
-/// A context with an error.
-///
-/// Displays context, but returns `error` as a source.
-struct ContextError {
-    context: BoxError,
-    error: QuackError,
+pub trait SourcesExt {
+    fn sources(&self) -> Sources<'_>;
 }
 
-impl fmt::Display for ContextError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.context, f)
+impl<T: Error + 'static> SourcesExt for T {
+    fn sources(&self) -> Sources<'_> {
+        Sources {
+            current: Some(self),
+        }
     }
 }
 
-impl Error for ContextError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(self.error.error())
+impl SourcesExt for dyn Error + Send + Sync + 'static {
+    fn sources(&self) -> Sources<'_> {
+        Sources {
+            current: Some(self),
+        }
     }
 }
 
@@ -388,7 +381,11 @@ where
     where
         C: fmt::Display,
     {
-        self.map_err(|e| e.into().context(MessageError::new(ctx.to_string())))
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(MessageError::new(ctx.to_string()));
+            e
+        })
     }
 
     #[inline]
@@ -396,7 +393,11 @@ where
     where
         C: fmt::Display,
     {
-        self.map_err(|e| e.into().context(InternalError::new(ctx.to_string())))
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(InternalError::new(ctx.to_string()));
+            e
+        })
     }
 
     #[inline]
@@ -405,7 +406,11 @@ where
         C: fmt::Display,
         F: FnOnce() -> C,
     {
-        self.map_err(|e| e.into().context(MessageError::new(ctx().to_string())))
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(MessageError::new(ctx().to_string()));
+            e
+        })
     }
 
     #[inline]
@@ -414,7 +419,11 @@ where
         C: fmt::Display,
         F: FnOnce() -> C,
     {
-        self.map_err(|e| e.into().context(InternalError::new(ctx().to_string())))
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(InternalError::new(ctx().to_string()));
+            e
+        })
     }
 }
 
@@ -463,51 +472,28 @@ where
     }
 }
 
-impl From<QuackError> for BoxError {
-    fn from(value: QuackError) -> Self {
-        value.error
-    }
-}
-
 pub trait ErrorExt {
     /// Get the [`ErrorType`] of this error.
     fn error_type(&self) -> ErrorType;
-
-    /// Downcast self to a reference, but if self is [`ContextError`], then also attempt to
-    /// downcast a [`ContextError::context`].
-    fn context_aware_downcast_ref<T: Error + 'static>(&self) -> Option<&T>;
-
-    /// Check, if self is T, but if self is [`ContextError`], then also attempt to
-    /// check a [`ContextError::context`].
-    fn context_aware_is<T: Error + 'static>(&self) -> bool {
-        self.context_aware_downcast_ref::<T>().is_some()
-    }
 }
 
 impl ErrorExt for dyn Error + 'static {
     fn error_type(&self) -> ErrorType {
-        if self.context_aware_is::<InternalError>() {
+        if self.is::<InternalError>() {
             ErrorType::Internal
-        } else if self.context_aware_is::<NoteMessage>() {
+        } else if self.is::<NoteMessage>() {
             ErrorType::Note
-        } else if self.context_aware_is::<HintMessage>() {
+        } else if self.is::<HintMessage>() {
             ErrorType::Hint
-        } else if let Some(clap_err) = self.context_aware_downcast_ref::<clap::Error>()
+        } else if let Some(clap_err) = self.downcast_ref::<clap::Error>()
             && !clap_err.use_stderr()
         {
             ErrorType::BareMessage
-        } else if self.context_aware_is::<BareMessage>() {
+        } else if self.is::<BareMessage>() {
             ErrorType::BareMessage
         } else {
             ErrorType::Error
         }
-    }
-
-    fn context_aware_downcast_ref<T: Error + 'static>(&self) -> Option<&T> {
-        self.downcast_ref::<T>().or_else(|| {
-            self.downcast_ref::<ContextError>()
-                .and_then(|context| context.context.downcast_ref::<T>())
-        })
     }
 }
 
@@ -515,19 +501,11 @@ impl ErrorExt for dyn Error + Send + 'static {
     fn error_type(&self) -> ErrorType {
         <dyn Error + 'static>::error_type(self)
     }
-
-    fn context_aware_downcast_ref<T: Error + 'static>(&self) -> Option<&T> {
-        <dyn Error + 'static>::context_aware_downcast_ref(self)
-    }
 }
 
 impl ErrorExt for dyn Error + Send + Sync + 'static {
     fn error_type(&self) -> ErrorType {
         <dyn Error + 'static>::error_type(self)
-    }
-
-    fn context_aware_downcast_ref<T: Error + 'static>(&self) -> Option<&T> {
-        <dyn Error + 'static>::context_aware_downcast_ref(self)
     }
 }
 
@@ -625,16 +603,17 @@ mod tests {
         let error: QuackResult<()> = Err(QuackError::new(std::io::Error::other("my error")))
             .context("my context")
             .context_internal("my internal context");
-        let error = error.unwrap_err().add_note("my note").add_hint("my hint");
+        let mut error = error.unwrap_err();
+        error.add_note("my note").add_hint("my hint");
 
         assert_eq!(
             error.sources().map(ToString::to_string).collect::<Vec<_>>(),
             [
-                "my hint",
-                "my note",
                 "my internal context",
                 "my context",
-                "my error"
+                "my error",
+                "my note",
+                "my hint",
             ]
         );
         assert!(error.has_in_chain::<InternalError>());
@@ -650,11 +629,11 @@ mod tests {
         assert_eq!(
             types,
             [
-                ErrorType::Hint,
-                ErrorType::Note,
                 ErrorType::Internal,
                 ErrorType::Error,
-                ErrorType::Error
+                ErrorType::Error,
+                ErrorType::Note,
+                ErrorType::Hint,
             ]
         );
     }
