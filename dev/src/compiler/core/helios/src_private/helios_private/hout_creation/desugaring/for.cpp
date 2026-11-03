@@ -8,6 +8,7 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_any_statement.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>

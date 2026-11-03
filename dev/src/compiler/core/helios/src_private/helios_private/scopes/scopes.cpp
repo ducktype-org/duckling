@@ -30,6 +30,7 @@
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/templates/templates.hpp>
@@ -67,179 +68,143 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
-	/**
-	 * @brief A way helios creates scope for given pst element.
-	 */
-	enum class ElementScopeKind {
-		// Has standard scope:
-		Standard,
+	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement> element) {
+		switch (element->getElementKind()) {
+		case pst::ElementKind::TopLevel:
+			return ElementScopeKind::Standard;
 
-		// Inherits scope from its parent:
-		Transparent,
+		case pst::ElementKind::Import:
+		case pst::ElementKind::Selector:
+		case pst::ElementKind::SelectorList:
+		case pst::ElementKind::NestedSelectorList:
+		case pst::ElementKind::DottedName:
+		// I don't know if this is correct
+		case pst::ElementKind::StmtSpecifier:
+			return ElementScopeKind::Invalid;
 
-		// Gets parent scope of what transparent scope would be.
-		// This is used for expand expressions, where the lookup should happen higher than the
-		// expand statement itself.
-		ParentTransparent,
 
-		// Does not have a scope:
-		Invalid,
-
-		// @TODO: introduce:
-		// * TransparentInvalid -- transparent for implementation, but invalid for user
-		// this allows to easily implement scope parents, but disallow to get PrimaryScopes for
-		// elements that don't have it.
-		// For examples namespaces don't have primary scopes (which can be counterintuitive)
-	};
-
-	namespace {
-		/**
-		 * Determines scope kind for given PST element.
-		 * @TODO: #2407 this could take unlocked access
-		 */
-		ElementScopeKind getScopeKind(
-			query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
-		) {
-			// @TODO: move it to different file?
-			auto element = locked.unlock(ctx);
-
-			switch (element->getElementKind()) {
-			case pst::ElementKind::TopLevel:
+		// code blocks:
+		case pst::ElementKind::CodeBlock: {
+			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
+			if (parent_kind == pst::ElementKind::CodeBlockOrStmt
+			    || parent_kind == pst::ElementKind::SpecifierBlock)
+				return ElementScopeKind::Transparent;
+			else
 				return ElementScopeKind::Standard;
-
-			case pst::ElementKind::Import:
-			case pst::ElementKind::Selector:
-			case pst::ElementKind::SelectorList:
-			case pst::ElementKind::NestedSelectorList:
-			case pst::ElementKind::DottedName:
-			// I don't know if this is correct
-			case pst::ElementKind::StmtSpecifier:
-				return ElementScopeKind::Invalid;
-
-
-			// code blocks:
-			case pst::ElementKind::CodeBlock: {
-				auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-				if (parent_kind == pst::ElementKind::CodeBlockOrStmt
-				    || parent_kind == pst::ElementKind::SpecifierBlock)
-					return ElementScopeKind::Transparent;
-				else
-					return ElementScopeKind::Standard;
-			}
-			case pst::ElementKind::CodeBlockOrStmt:
-				return ElementScopeKind::Standard;
-
-			// I don't know if this is correct
-			case pst::ElementKind::SpecifierBlock:
-				return ElementScopeKind::Transparent;
-
-
-			case pst::ElementKind::Namespace:
-			case pst::ElementKind::Variable:
-			case pst::ElementKind::Using:
-			case pst::ElementKind::Const:
-			case pst::ElementKind::Class:
-			case pst::ElementKind::Action:
-			case pst::ElementKind::Block:  //< note that Block != CodeBlock
-			case pst::ElementKind::ClassField:
-			case pst::ElementKind::CallArgument:
-			case pst::ElementKind::Attribute:
-				// this is transparent, since we don't need this scope:
-				return ElementScopeKind::Transparent;
-
-			// this has to be transparent, since ClassBlock scopes
-			// contain all symbols in AccessBlock's
-			case pst::ElementKind::ClassSpecifierBlock:
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::If:
-			case pst::ElementKind::While:
-			case pst::ElementKind::For:
-			case pst::ElementKind::Fun:
-			case pst::ElementKind::FunDecl:
-			case pst::ElementKind::ClassMethod:
-			case pst::ElementKind::ClassSpecial:
-				return ElementScopeKind::Standard;
-
-			// The match owns the generated subject local; each case owns the symbols bound
-			// by its pattern.
-			case pst::ElementKind::Match:
-			case pst::ElementKind::MatchCase:
-				return ElementScopeKind::Standard;
-
-			case pst::ElementKind::FlowPattern:
-			case pst::ElementKind::BindingPattern:
-			case pst::ElementKind::WildcardPattern:
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::ClassConstructor:
-			case pst::ElementKind::ClassDestructor:
-				return ElementScopeKind::Standard;
-
-			case pst::ElementKind::ExprStmt:
-				return ElementScopeKind::Transparent;
-			case pst::ElementKind::OperatorWrapper:
-			case pst::ElementKind::IdentifierWrapper:
-			case pst::ElementKind::KeywordWrapper:
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::ExprElement:
-			case pst::ElementKind::RoundGroupExpr:
-			case pst::ElementKind::CallList:
-			case pst::ElementKind::AtrArgList:
-			case pst::ElementKind::ArrayLiteralList:
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::ExprHolder: {
-				auto expr_parent = element->getParent().value().unlockOpt(ctx);
-				if (expr_parent.has_value()
-				    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
-					// This is a special case.
-					// Elements in macro expansions should have their scope parent be the grandparent.
-					return ElementScopeKind::ParentTransparent;
-				}
-				if (expr_parent.has_value()
-				    && expr_parent.value()->getElementKind() == pst::ElementKind::Match) {
-					// The match subject resolves in the scope surrounding the match. Resolving it
-					// inside the match's own scope would create a query cycle: enumerating the
-					// match scope's symbols requires compiling the subject.
-					return ElementScopeKind::ParentTransparent;
-				}
-				return ElementScopeKind::Transparent;
-			}
-
-			case pst::ElementKind::Param:
-			case pst::ElementKind::ParamList:
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::Expand:
-				// This is a bit of a special case, we treat it as transparent, since it is
-				// basically just a wrapper around the expanded element.
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::TemplateStmt:
-				// This defines a non-empty scope only for for baked PST nodes,
-				// @TODO: #3892 probably change it to transparent,
-				// since this element should not be present in baked PSTs (or will be a trivial node).
-				return ElementScopeKind::Standard;
-
-			case pst::ElementKind::TemplateDecl:
-				// This is a weird case, this is used to lookup on expressions inside template
-				// declaration before baking.
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::FormatSubExpression:
-			case pst::ElementKind::FormatSubString:
-				return ElementScopeKind::Transparent;
-
-			case pst::ElementKind::KindNotSet:
-				CORE_UNREACHABLE();
-
-			default:
-				CORE_PANIC("PST element scope kind for: ", element->elementType());
-			}
-			CORE_UNREACHABLE();
 		}
+		case pst::ElementKind::CodeBlockOrStmt:
+			return ElementScopeKind::Standard;
+
+		// I don't know if this is correct
+		case pst::ElementKind::SpecifierBlock:
+			return ElementScopeKind::Transparent;
+
+
+		case pst::ElementKind::Namespace:
+		case pst::ElementKind::Variable:
+		case pst::ElementKind::Using:
+		case pst::ElementKind::Const:
+		case pst::ElementKind::Class:
+		case pst::ElementKind::Action:
+		case pst::ElementKind::Block:  //< note that Block != CodeBlock
+		case pst::ElementKind::ClassField:
+		case pst::ElementKind::CallArgument:
+		case pst::ElementKind::Attribute:
+			// this is transparent, since we don't need this scope:
+			return ElementScopeKind::Transparent;
+
+		// this has to be transparent, since ClassBlock scopes
+		// contain all symbols in AccessBlock's
+		case pst::ElementKind::ClassSpecifierBlock:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::If:
+		case pst::ElementKind::While:
+		case pst::ElementKind::For:
+		case pst::ElementKind::Fun:
+		case pst::ElementKind::FunDecl:
+		case pst::ElementKind::ClassMethod:
+		case pst::ElementKind::ClassSpecial:
+			return ElementScopeKind::Standard;
+
+		// The match owns the generated subject local; each case owns the symbols bound
+		// by its pattern.
+		case pst::ElementKind::Match:
+		case pst::ElementKind::MatchCase:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::FlowPattern:
+		case pst::ElementKind::BindingPattern:
+		case pst::ElementKind::WildcardPattern:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::ClassConstructor:
+		case pst::ElementKind::ClassDestructor:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ExprStmt:
+			return ElementScopeKind::Transparent;
+		case pst::ElementKind::OperatorWrapper:
+		case pst::ElementKind::IdentifierWrapper:
+		case pst::ElementKind::KeywordWrapper:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::ExprElement:
+		case pst::ElementKind::RoundGroupExpr:
+		case pst::ElementKind::CallList:
+		case pst::ElementKind::AtrArgList:
+		case pst::ElementKind::ArrayLiteralList:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::ExprHolder: {
+			auto expr_parent = element->getParent().value().unlockOpt(ctx);
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
+				// This is a special case.
+				// Elements in macro expansions should have their scope parent be the grandparent.
+				return ElementScopeKind::ParentTransparent;
+			}
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Match) {
+				// The match subject resolves in the scope surrounding the match. Resolving it
+				// inside the match's own scope would create a query cycle: enumerating the
+				// match scope's symbols requires compiling the subject.
+				return ElementScopeKind::ParentTransparent;
+			}
+			return ElementScopeKind::Transparent;
+		}
+
+		case pst::ElementKind::Param:
+		case pst::ElementKind::ParamList:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::Expand:
+			// This is a bit of a special case, we treat it as transparent, since it is
+			// basically just a wrapper around the expanded element.
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::TemplateStmt:
+			// This defines a non-empty scope only for for baked PST nodes,
+			// @TODO: #3892 probably change it to transparent,
+			// since this element should not be present in baked PSTs (or will be a trivial node).
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::TemplateDecl:
+			// This is a weird case, this is used to lookup on expressions inside template
+			// declaration before baking.
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::FormatSubExpression:
+		case pst::ElementKind::FormatSubString:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::KindNotSet:
+			CORE_UNREACHABLE();
+
+		default:
+			CORE_PANIC("PST element scope kind for: ", element->elementType());
+		}
+		CORE_UNREACHABLE();
 	}
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeData) {
@@ -272,7 +237,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
-			auto element_scope_kind = getScopeKind(ctx, element_key.element);
+			auto element_scope_kind = getScopeKind(ctx, element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				[[maybe_unused]] auto element_ptr = &*element;
@@ -362,83 +327,6 @@ namespace compiler::helios {
 		return visitor.out.value();
 	}
 
-	struct IMPLEMENT_QUERY(QueryScopesInModule, QueryScopesInModuleValue) {
-		/**
-		 * Helper struct used for accumulating the query output.
-		 */
-		struct Output final {
-			std::vector<ScopeID> scopes;
-			bool                 failed = false;
-		};
-
-		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
-			auto root          = getFilePST(ctx, file)->getRootElement();
-			auto root_unlocked = root.unlockOpt(ctx);
-			if (root_unlocked.empty()) {
-				// PST root failed to parse, PST should have already reported the diagnostic.
-				out->failed = true;
-				return;
-			}
-
-			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
-				// handling lambdas, templates, etc. might be much more tricky and
-				// require a different approach
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
-			};
-
-			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
-			// somehow. Note that more custom logic might be needed in the future (to optimize it,
-			// to compile lambdas, etc.)
-
-			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
-				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
-					// we want to skip template bodies, since
-					// they don't compile directly
-					return true;
-				}
-				return false;
-			};
-
-			auto for_all_ok
-				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
-			if (for_all_ok.status().isBad()) {
-				// if the pstForAll failed, we mark the whole query as failed, but we still return
-				// the scopes that we managed to obtain.
-				out->failed = true;
-			}
-		}
-
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// fetch scopes from main module file
-			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-
-			Output output;
-			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
-
-			getScopes(ctx, main_file, &output);
-
-			// eliminate duplicates with sort:
-			std::ranges::sort(output.scopes);
-			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
-			output.scopes.erase(unique_end, output.scopes.end());
-
-			// validate output:
-			for (auto scope: output.scopes)
-				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
-
-			if (output.failed) {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
-			} else {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
-			}
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
-
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, query::QResult<std::vector<SymID>>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
@@ -449,7 +337,7 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				switch (stmt.unlock(ctx)->isDeclaration()) {
+				switch (stmt->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
 					// @TODO: #1753 Maybe we should skip the symbol if compiling the symbol failed.
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -457,21 +345,21 @@ namespace compiler::helios {
 					break;
 				}
 				case pst::DeclKind::Transparent: {
-					if (auto stmt_specifier_opt
-					    = stmt.unlock(ctx).template dynamicCast<pst::SpecifierBlock>()) {
+					if (auto stmt_specifier_opt = stmt.template dynamicCast<pst::SpecifierBlock>()) {
 						auto stmt_specifier = stmt_specifier_opt.value();
 						auto inner_symbols  = filterSymbolsFromStmtList(
-                            ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getBlock())
+                            ctx,
+                            getStmtsFromStmtAggregate(
+                                ctx, unlockOrFail(ctx, stmt_specifier->getBlock())
+                            )
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
-					} else if (auto using_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
+					} else if (auto using_opt = stmt.template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
-					} else if (auto import_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+					} else if (auto import_opt = stmt.template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -479,7 +367,7 @@ namespace compiler::helios {
 					} else {
 						CORE_PANIC(
 							"Not handled element ",
-							stmt.unlock(ctx)->elementType(),
+							stmt->elementType(),
 							" with DeclKind::Transparent."
 						);
 					}

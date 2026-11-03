@@ -35,6 +35,7 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
@@ -108,15 +109,24 @@ namespace compiler::helios {
 			}
 		};
 
-		template<class StmtsAggregate>
-		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+		/**
+		 * @brief Whether every path through the (already collected) statements ends in a `return`.
+		 */
+		bool everyPathReturnsInStmts(query::Context& ctx, const StmtList<>& stmts) {
 			// A statement that always returns ends the block, so whatever follows is ignored.
-			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts)) {
+			for (const auto& stmt: stmts) {
 				EveryPathReturnsVisitor visitor(ctx);
-				stmt.unlock(ctx)->acceptVisitor(visitor);
+				stmt->acceptVisitor(visitor);
 				if (visitor.every_path_returns) return true;
 			}
 			return false;
+		}
+
+		template<class StmtsAggregate>
+		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+			return everyPathReturnsInStmts(
+				ctx, getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts))
+			);
 		}
 
 		/**
@@ -165,8 +175,8 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
-					stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts)))
+					stmt->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -181,13 +191,11 @@ namespace compiler::helios {
 				// once.
 				initial_invocation = false;
 
-				auto fun_body = func_like->getBody();
+				auto fun_body = func_like->getBody().unlock(ctx);
 
-				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
-					auto as_expr = fun_body.unlock(ctx)
-					                   ->getStmt()
-					                   .unlock(ctx)
-					                   .template dynamicCast<pst::ExprStmt>();
+				if (fun_body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+					auto as_expr
+						= fun_body->getStmt().unlock(ctx).template dynamicCast<pst::ExprStmt>();
 					if (as_expr) {
 						auto expr = ctx.query<QueryHoutOfExpr>(
 										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
@@ -205,14 +213,16 @@ namespace compiler::helios {
 					}
 				} else {
 					CORE_ASSERT(
-						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+						fun_body->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
 
-					body_always_returns = everyPathReturns(ctx, fun_body);
+					// Collect the statements once, and use them for both walks:
+					auto stmts = getStmtsFromStmtAggregate(ctx, fun_body);
 
-					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
-						stmt.unlock(ctx)->acceptVisitor(*this);
+					body_always_returns = everyPathReturnsInStmts(ctx, stmts);
+
+					for (const auto& stmt: stmts) stmt->acceptVisitor(*this);
 				}
 			}
 
@@ -400,7 +410,7 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void emplaceDeclaration(
-				pst::AccessLocked<pst::ParamList>                  param_list,
+				pst::Access<pst::ParamList>                        param_list,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
@@ -417,51 +427,49 @@ namespace compiler::helios {
 
 				// Set return type if provided.
 				if (ret.has_value()) {
+					const auto ret_unlocked = ret.value().unlock(ctx);
 					const auto ret_type_ctv
-						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+						= getTypeCTVFromPST(ctx, ret_unlocked->getExpr()).valueOrThrow();
 
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 
 					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
 						ctx.logInt(makeBox<InvalidMainReturnTypeError>(
-							ret.value().unlock(ctx)->getStablePosition(),
+							ret_unlocked->getStablePosition(),
 							makeBox<InteractiveType>(ctx, ret_type)
 						));
 						query::throwFailed();
 					}
 
 					origin = code::multiplePstOriginOrdered({
-						param_list.unlock(ctx),
-						ret.value().unlock(ctx),
+						param_list,
+						ret_unlocked,
 					});
 				}
 				// A global main without an explicit return type is treated as `main -> i64`.
 				else if (global_main_definition) {
 					ret_type = requiredMainReturnType(ctx);
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = code::pstOrigin(param_list);
 				}
 				// Deduce return type for ordinary functions.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = code::pstOrigin(param_list);
 				}
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *param_list.unlock(ctx)) {
+				for (auto param_locked: *param_list) {
+					auto  param        = param_locked.unlock(ctx);
 					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
-					auto value = param.unlock(ctx)->getValue();
+					auto value = param->getValue();
 					if (value.empty()) {
 						parameters.emplace_back(
-							param_name,
-							param_type,
-							std::nullopt,
-							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							param_name, param_type, std::nullopt, param_symbol, code::pstOrigin(param)
 						);
 					} else {
 						auto initial_value
@@ -475,7 +483,7 @@ namespace compiler::helios {
 							param_type,
 							std::move(initial_value),
 							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							code::pstOrigin(param)
 						);
 					}
 				}
@@ -490,51 +498,54 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
+				const auto params        = stmt->getParams().unlock(ctx);
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size(),
+					params->size(),
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
+				const auto params        = stmt->getParams().unlock(ctx);
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size(),
+					params->size(),
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
 				// We can't use the interface directly because the interface
 				// can use the declaration of function query, and we could get a cycle.
-				auto specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				const auto params     = stmt->getParams().unlock(ctx);
 				if (specifiers.is_static) {
 					const auto operatoriness = operatorinessFromDeclaration(
 						ctx,
 						name(original_symbol),
-						stmt->getParams().unlock(ctx)->size(),
+						params->size(),
 						stmt->getOperatorFixity(),
 						stmt->getStablePosition()
 					);
-					emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+					emplaceDeclaration(params, stmt->getRet(), operatoriness);
 					return;
 				}
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size() + 1,
+					params->size() + 1,
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
 				// +1 for the implicit `self` parameter.
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -557,7 +568,7 @@ namespace compiler::helios {
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
 				emplaceDeclaration(
-					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
+					stmt->getParams().unlock(ctx), {}, HOUTFunctionDeclaration::Operatoriness::None
 				);
 
 				const auto class_type  = classMemberOwner(original_symbol);
@@ -672,11 +683,10 @@ namespace compiler::helios {
 						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
 					    ) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
-							auto       expr
-								= getHoutOfExprWithExpectedType(
-									  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
-								)
-						              .valueOrThrow();
+							auto       expr       = getHoutOfExprWithExpectedType(
+                                            ctx, expr_holder.unlock(ctx)->getExpr(), field_type
+                            )
+						                    .valueOrThrow();
 							return expr;
 						}
 					);

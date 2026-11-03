@@ -35,6 +35,7 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/templates/templates.hpp>
@@ -55,6 +56,7 @@
 namespace compiler::helios::code {
 
 	namespace {
+
 		/**
 		 * @brief Bakes a template with the arguments of a square call, as in `List[i64]`.
 		 *
@@ -106,8 +108,10 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 
-				auto arg_expr_result
-					= subExprFromPST(query_ctx, arg_unlocked->getArg().unlock(query_ctx)->getExpr());
+				auto arg_expr_result = subExprFromPST(
+					query_ctx,
+					unlockOrFail(query_ctx, arg_unlocked->getArg().unlock(query_ctx)->getExpr())
+				);
 
 				if (arg_expr_result.hasFailed()) return query::Failed();
 				auto arg_expr = std::move(arg_expr_result).valueOrPanic();
@@ -135,11 +139,12 @@ namespace compiler::helios::code {
 			if (resulting_symbol.hasFailed()) return query::Failed();
 			return resulting_symbol.valueOrPanic();
 		}
+
+		/**
+		 * @brief A builtin or a non-default ABI function is used as a value.
+		 */
 	}
 
-	/**
-	 * @brief A builtin or a non-default ABI function is used as a value.
-	 */
 	class FunctionRefBuiltinError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -1460,16 +1465,16 @@ namespace compiler::helios::code {
 	};
 
 	ExprConstructionResult fromChainExpr(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
+		query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr
 	) {
-		ChainExprConstruction construction(ctx, expr.unlock(ctx));
+		ChainExprConstruction construction(ctx, expr);
 		return construction.run();
 	}
 
 	query::QResult<Box<code::Expr>> fromIdentifierLiteral(
-		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
+		query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> expr
 	) {
-		ChainExprConstruction construction(ctx, expr.unlock(ctx));
+		ChainExprConstruction construction(ctx, expr);
 		return construction.run();
 	}
 }

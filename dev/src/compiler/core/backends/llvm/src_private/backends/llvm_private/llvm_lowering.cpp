@@ -932,6 +932,18 @@ namespace compiler::backend_llvm {
 				= loadLIRValueToPointer(source, builder, destination_ptr, destination_alignment);
 			if (source_ptr == destination_ptr) return;
 
+			// A scalar is copied with a typed load + store. LLVM turns a 1-byte `memmove` into an
+			// `i8` load + store, but only bit 0 of a stored `i1` is defined, so SROA may not
+			// replace that `i8` load with the stored `i1`. The bool then stays on the stack and
+			// keeps conditions like the bounds check of `List.at` alive inside hot loops. clang
+			// does not hit this, because a C++ `bool` is an `i8` in memory.
+			if (source_type == destination_type and not destination_type->isAggregateType()) {
+				llvm::Value* value
+					= builder.CreateAlignedLoad(source_type, source_ptr, source_alignment);
+				builder.CreateAlignedStore(value, destination_ptr, destination_alignment);
+				return;
+			}
+
 			builder.CreateMemMove(
 				destination_ptr,
 				destination_alignment,

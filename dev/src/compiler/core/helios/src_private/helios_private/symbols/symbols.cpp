@@ -738,16 +738,14 @@ namespace compiler::helios {
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
 		 * @note This has to be consistent with QuerySymbolsInScope
-		 * @TODO: #2407 this could take unlocked Access
 		 */
 		static ScopeID getPSTElementParentScope(
-			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
+			query::Context& ctx, pst::Access<pst::LangElement> element
 		) {
 			// Note: This has to be consistent with QuerySymbolsInScope logic.
 			// @TODO: #2397 maybe move it into a single place
 
-			auto unlocked = element.unlock(ctx);
-			auto parent   = getPSTElementParent(ctx, unlocked);
+			auto parent = getPSTElementParent(ctx, element);
 
 			// We should never hit an element without PST parent here,
 			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
@@ -759,11 +757,12 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+			auto element = key.element.unlock(ctx);
+			auto scope   = getPSTElementParentScope(ctx, element);
+			if (auto stmt = element.dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()).valueOrThrow() };
 			else
-				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
+				return PResult{ makeSymbolFromPSTElement(scope, element, ctx) };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<query::QResult<SymbolData>> presult) -> QResult {
@@ -902,15 +901,18 @@ namespace compiler::helios {
 						std::make_move_iterator(to_add.end())
 					);
 				}
-				if (auto result_stmt = getAncestor(
-						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
-					))
-					pst_element = *std::move(result_stmt);
-				else if (auto second_result_stmt = getAncestor(
-							 ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::Namespace
-						 ))
-					pst_element = *std::move(second_result_stmt);
-				else
+				// We go up through: CodeBlock -> SpecifierBlock or CodeBlock -> Namespace.
+				// (unlocking each of the ancestors only once)
+				auto code_block = getAncestor(ctx, pst_element, pst::ElementKind::CodeBlock);
+				if_opt_none(code_block) break;
+
+				auto code_block_parent = code_block.value()->getParent();
+				if_opt_none(code_block_parent) break;
+
+				pst_element      = code_block_parent.value().unlock(ctx);
+				auto parent_kind = pst_element->getElementKind();
+				if (parent_kind != pst::ElementKind::SpecifierBlock
+				    && parent_kind != pst::ElementKind::Namespace)
 					break;
 			}
 
