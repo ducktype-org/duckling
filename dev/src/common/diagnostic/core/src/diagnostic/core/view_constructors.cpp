@@ -47,17 +47,6 @@ namespace dia {
 
 	using namespace term_ui_view;
 
-	namespace {
-		StyleType styleTypeFromString(const std::string& type) {
-			if (type == "error") return StyleType::Error;
-			if (type == "warning") return StyleType::Warning;
-			if (type == "note") return StyleType::Note;
-			if (type == "hint") return StyleType::Hint;
-			if (type == "docs") return StyleType::Docs;
-			return StyleType::Error;
-		}
-	}
-
 	class CodeSectionBuilder: public state::ComponentVisitor {
 		std::vector<CodeLine>& lines;
 		std::vector<CodePiece> current_line_pieces;
@@ -145,6 +134,15 @@ namespace dia {
 				}
 			}
 			return section;
+		}
+
+		StyleType styleTypeFromString(const std::string& type) {
+			if (type == "error") return StyleType::Error;
+			if (type == "warning") return StyleType::Warning;
+			if (type == "note") return StyleType::Note;
+			if (type == "hint") return StyleType::Hint;
+			if (type == "docs") return StyleType::Docs;
+			return StyleType::Error;
 		}
 	}
 
