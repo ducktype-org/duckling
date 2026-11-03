@@ -54,8 +54,11 @@ fn exec_replace_inner(command: &mut Command) -> io::Result<Infallible> {
     }
     unsafe {
         if SetConsoleCtrlHandler(Some(handler), TRUE) == FALSE {
-            let kind = io::Error::last_os_error().kind();
-            return Err(io::Error::new(kind, "failed to overwrite ctrl-c handler"));
+            let last_error = io::Error::last_os_error();
+            return Err(io::Error::new(
+                last_error.kind(),
+                format!("failed to overwrite ctrl-c handler: {last_error}"),
+            ));
         }
     }
     let status = command.spawn()?.wait()?;

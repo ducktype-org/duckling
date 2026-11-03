@@ -18,7 +18,6 @@ use crate::quackpack::core::script::{PackageScript, Script};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::util::error::MessageError;
 use crate::util::path_ops::resolve;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
