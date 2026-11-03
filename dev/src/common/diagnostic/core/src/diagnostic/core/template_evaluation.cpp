@@ -686,44 +686,7 @@ namespace dia {
 				));
 			}
 		}
-	}
 
-	state::PointerMessageID MessageEvaluationContext::evaluatePointerMessage(
-		const dia_args::PointerMessage& pm
-	) {
-		if (this->pointer_message_mapping.contains(pm)) return this->pointer_message_mapping.at(pm);
-
-		if (pm.message_id.empty()) {
-			auto& pointer_message_content = pointer_messages.at(pm.pointer_message_id);
-			auto  evaluated_component     = EvaluateTemplateFileVisitor::evaluate(
-                *this, pointer_message_content.content.ref()
-            );
-
-			auto text_view = constructTextView(evaluated_component.ref());
-			auto new_id    = getNewID<state::PointerMessageID>();
-			this->evaluated_pointer_messages.put(
-				new_id,
-				state::PointerMessage{ .type    = pointer_message_content.type,
-			                           .content = std::move(text_view),
-			                           .priority
-			                           = static_cast<u32>(pointer_message_content.priority) }
-			);
-			this->pointer_message_mapping.insert_or_assign(pm, new_id);
-			return new_id;
-		} else {
-			const auto& message = thread_ctx.diagnostic.linked_messages.at(pm.message_id.value());
-			auto&       diagnostic_template = thread_ctx.registry.loadTemplate(message.metadata);
-			auto        evaluated_pointer_message = evaluateTemplateIfPointerMessage(
-                thread_ctx, diagnostic_template, message, pm.pointer_message_id
-            );
-			auto new_id = getNewID<state::PointerMessageID>();
-			this->evaluated_pointer_messages.put(new_id, std::move(evaluated_pointer_message));
-			this->pointer_message_mapping.insert_or_assign(pm, new_id);
-			return new_id;
-		}
-	}
-
-	namespace {
 		/**
 		 * @brief Get the order of messages to be displayed, starting from the main message.
 		 * This is left to right tree traversal of attaches messages and linkes inside messages.
@@ -767,6 +730,41 @@ namespace dia {
 					evaluated_messages[msg_id]
 				);
 			}
+		}
+	}
+
+	state::PointerMessageID MessageEvaluationContext::evaluatePointerMessage(
+		const dia_args::PointerMessage& pm
+	) {
+		if (this->pointer_message_mapping.contains(pm)) return this->pointer_message_mapping.at(pm);
+
+		if (pm.message_id.empty()) {
+			auto& pointer_message_content = pointer_messages.at(pm.pointer_message_id);
+			auto  evaluated_component     = EvaluateTemplateFileVisitor::evaluate(
+                *this, pointer_message_content.content.ref()
+            );
+
+			auto text_view = constructTextView(evaluated_component.ref());
+			auto new_id    = getNewID<state::PointerMessageID>();
+			this->evaluated_pointer_messages.put(
+				new_id,
+				state::PointerMessage{ .type    = pointer_message_content.type,
+			                           .content = std::move(text_view),
+			                           .priority
+			                           = static_cast<u32>(pointer_message_content.priority) }
+			);
+			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			return new_id;
+		} else {
+			const auto& message = thread_ctx.diagnostic.linked_messages.at(pm.message_id.value());
+			auto&       diagnostic_template = thread_ctx.registry.loadTemplate(message.metadata);
+			auto        evaluated_pointer_message = evaluateTemplateIfPointerMessage(
+                thread_ctx, diagnostic_template, message, pm.pointer_message_id
+            );
+			auto new_id = getNewID<state::PointerMessageID>();
+			this->evaluated_pointer_messages.put(new_id, std::move(evaluated_pointer_message));
+			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			return new_id;
 		}
 	}
 
