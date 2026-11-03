@@ -40,6 +40,16 @@ namespace compiler::backend_vm::internal {
 		);
 
 		/**
+		 * @brief Creates call info for a call through the function value held in @p callee, with
+		 * the signature from @p call_params.
+		 */
+		static FunctionCallInfo fromIndirectCall(
+			const lir::IndirectCallParameters& call_params,
+			DVMPlace                           callee,
+			ProgramLoweringContext&            program_context
+		);
+
+		/**
 		 * @brief Creates call info for an extern C function.
 		 * Translates type names from extern C function signatures to corresponding DVM types.
 		 */

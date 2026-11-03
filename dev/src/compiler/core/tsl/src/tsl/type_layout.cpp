@@ -403,7 +403,7 @@ namespace compiler::tsl {
 
 		static Bits requiredTagSize(usize number_of_alternatives) {
 			// Zero denotes no active alternative, so the largest tag equals the count.
-			const usize needed_bits  = std::bit_width(number_of_alternatives);
+			const auto  needed_bits  = static_cast<usize>(std::bit_width(number_of_alternatives));
 			const usize needed_bytes = (needed_bits + 7) / 8;
 			return Bits(8 * std::bit_ceil(needed_bytes));
 		}
