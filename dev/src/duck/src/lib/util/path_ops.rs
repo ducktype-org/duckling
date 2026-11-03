@@ -13,7 +13,7 @@ use std::time::SystemTime;
 
 use tracing::{trace, warn};
 
-use crate::{DuckContext, QuackResult, QuackResultContext, qp_err};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -254,50 +254,46 @@ fn copy_file_inner(from: &Path, to: &Path) -> io::Result<()> {
 /// ----------
 /// 1. Callers should make sure that `to` does not exist/is empty.
 /// 2. On failure, this cleans partial results by removing `to`.
-fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+pub fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
-    if let Err(e) = copy_tree_inner(from, to) {
-        remove_tree(to).with_context(|| {
-            format!(
-                "failed to remove `{}` after unsuccessful attempt to copy `{}` to it",
-                to.display(),
-                from.display()
-            )
-        })?;
+    copy_tree_inner(from, to).with_context(|| {
+        format!(
+            "failed to copy contents from `{}` to `{}`",
+            from.display(),
+            to.display()
+        )
+    })
+}
+
+/// Helper for [`copy_tree`].
+/// Returns pure [`io::Result`], without any context.
+fn copy_tree_inner(from: &Path, to: &Path) -> io::Result<()> {
+    if let Err(e) = copy_tree_rec(from, to) {
+        trace!(error = ?e, from = ?from.display(), to = ?to.display(), "failed to copy, removing partial results");
+        ignore_not_found(fs::remove_dir_all(to))?;
         Err(e)
     } else {
         Ok(())
     }
 }
 
-/// Helper for [`copy_tree`].
-fn copy_tree_inner(from: &Path, to: &Path) -> QuackResult<()> {
+/// Recursive helper for [`copy_tree_inner`].
+/// If `from` is a single file copies it.
+/// If it is a directory, iterates over its contents, calling itself on them.
+fn copy_tree_rec(from: &Path, to: &Path) -> io::Result<()> {
     if from.is_file() {
-        std::fs::copy(from, to)
-            .with_context(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))
-            .map(|_| ())
+        std::fs::copy(from, to).map(|_| ())
     } else {
-        mkdir(to, MkdirOptions::WithoutParents)?;
-        for entry in from
-            .read_dir()
-            .with_context(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))?
-        {
-            let entry = entry.with_context(|| {
-                format!("failed to copy `{}` to `{}`", from.display(), to.display())
-            })?;
-            let entry_type = entry.file_type().with_context(|| {
-                format!("failed to copy `{}` to `{}`", from.display(), to.display())
-            })?;
+        fs::create_dir(to)?;
+        for entry in from.read_dir()? {
+            let entry = entry?;
+            let entry_type = entry.file_type()?;
             let new_to = to.join(entry.file_name());
             if entry_type.is_file() || entry_type.is_dir() {
-                copy_tree_inner(&entry.path(), &new_to)?;
+                copy_tree_rec(&entry.path(), &new_to)?;
             } else {
-                return Err(qp_err!("copying symlinks is unsupported")).context(format!(
-                    "failed to copy `{}` to `{}`",
-                    from.display(),
-                    to.display()
-                ));
+                return Err(io::Error::other("copying symlinks is unsupported"));
             }
         }
         Ok(())
@@ -370,21 +366,27 @@ fn is_executable_inner(_path: &Path) -> bool {
 pub fn move_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
+    move_tree_inner(from, to).with_context(|| {
+        format!(
+            "failed to move contents from `{}` to `{}`",
+            from.display(),
+            to.display()
+        )
+    })
+}
+
+/// Helper for [`move_tree`].
+/// Returns pure [`io::Result`], without any context.
+fn move_tree_inner(from: &Path, to: &Path) -> io::Result<()> {
     if let Err(io_err) = fs::rename(from, to) {
         if io_err.kind() == std::io::ErrorKind::CrossesDevices {
             // Different filesystems, fallback to copy + remove.
             trace!(from = ?from.display(), to = ?to.display(), "moving files between different filesystems, falling back to copy + remove");
-            copy_tree(from, to)?;
-            remove_tree(from)?;
+            copy_tree_inner(from, to)?;
+            fs::remove_dir_all(from)?;
         } else {
             // The error was not caused by different filesystems, simply return it.
-            return Err(io_err).with_context(|| {
-                format!(
-                    "failed to rename `{}` to `{}`",
-                    from.display(),
-                    to.display()
-                )
-            });
+            return Err(io_err);
         }
     }
     Ok(())
