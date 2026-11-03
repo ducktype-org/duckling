@@ -13,7 +13,7 @@ use std::time::SystemTime;
 
 use tracing::{trace, warn};
 
-use crate::{DuckContext, QuackResult, QuackResultContext};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_err};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -250,12 +250,35 @@ fn copy_file_inner(from: &Path, to: &Path) -> io::Result<()> {
 }
 
 /// Copy the contents of a single file or of a whole directory.
+/// Important:
+/// ----------
+/// 1. Callers should make sure that `to` does not exist/is empty.
+/// 2. On failure, this cleans partial results by removing `to`.
 fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
-    if from.is_file() {
-        copy_file(from, to)
+    if let Err(e) = copy_tree_inner(from, to) {
+        remove_tree(to).with_context(|| {
+            format!(
+                "failed to remove `{}` after unsuccessful attempt to copy `{}` to it",
+                to.display(),
+                from.display()
+            )
+        })?;
+        Err(e)
     } else {
+        Ok(())
+    }
+}
+
+/// Helper for [`copy_tree`].
+fn copy_tree_inner(from: &Path, to: &Path) -> QuackResult<()> {
+    if from.is_file() {
+        std::fs::copy(from, to)
+            .with_context(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))
+            .map(|_| ())
+    } else {
+        mkdir(to, MkdirOptions::WithoutParents)?;
         for entry in from
             .read_dir()
             .with_context(|| format!("failed to copy `{}` to `{}`", from.display(), to.display()))?
@@ -263,8 +286,19 @@ fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
             let entry = entry.with_context(|| {
                 format!("failed to copy `{}` to `{}`", from.display(), to.display())
             })?;
+            let entry_type = entry.file_type().with_context(|| {
+                format!("failed to copy `{}` to `{}`", from.display(), to.display())
+            })?;
             let new_to = to.join(entry.file_name());
-            copy_tree(entry.path(), new_to)?;
+            if entry_type.is_file() || entry_type.is_dir() {
+                copy_tree_inner(&entry.path(), &new_to)?;
+            } else {
+                return Err(qp_err!("copying symlinks is unsupported")).context(format!(
+                    "failed to copy `{}` to `{}`",
+                    from.display(),
+                    to.display()
+                ));
+            }
         }
         Ok(())
     }
@@ -331,8 +365,8 @@ fn is_executable_inner(_path: &Path) -> bool {
 
 /// Move the contents from one path into another one.
 /// This first tries to use [`fs::rename`], and if it fails due to different filesystems,
-/// fallbacks to copying and removing.
-/// Thus in most cases this should be prefered over [`rename`].
+/// falls back to copying and removing.
+/// Thus in most cases this should be preferred over [`rename`].
 pub fn move_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
