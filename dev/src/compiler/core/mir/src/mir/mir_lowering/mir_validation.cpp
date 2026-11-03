@@ -56,7 +56,7 @@ namespace compiler::mir {
 								msg->addAttachedMessage(
 									makeBox<ShadowedDeclarationNote>(shadowed_pos)
 								);
-								ctx.logInt(std::move(msg));
+								ctx.log(std::move(msg));
 								return base::BAD;
 							}
 						}

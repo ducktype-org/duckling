@@ -393,7 +393,7 @@ namespace compiler::mir {
 					}
 				}
 
-				ctx.logInt(std::move(msg));
+				ctx.log(std::move(msg));
 				failed = true;
 			}
 			for (auto& local: instructionReinitDirectWrites(instr)) {
@@ -414,7 +414,7 @@ namespace compiler::mir {
 						));
 					}
 				}
-				ctx.logInt(std::move(msg));
+				ctx.log(std::move(msg));
 				failed = true;
 			}
 

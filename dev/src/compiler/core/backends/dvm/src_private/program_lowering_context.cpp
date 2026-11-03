@@ -504,14 +504,14 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 		}
 		variant_default {
 			CORE_ASSERT(query_ctx.has_value(), "Query context must be set for error reporting");
-			query_ctx.value()->logInt(makeBox<dia::NotYetImplementedCodeError>(
+			query_ctx.value()->log<dia::NotYetImplementedCodeError>(
 				base::strConcat(
 					"During TypeLayout lowering in DVM code generation - type not handled "
 					"yet: ",
 					layout->toStringDefinition(*query_ctx.value())
 				),
 				""
-			));
+			);
 			query::throwFailed();
 		}
 	}
