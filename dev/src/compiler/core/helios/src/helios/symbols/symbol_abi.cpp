@@ -34,41 +34,43 @@
 
 namespace compiler::helios {
 
-
-	/**
-	 * @brief Extracts a string literal from an extern() call argument.
-	 * @param ctx The query context.
-	 * @param arg The call argument to extract the string from.
-	 * @return The string literal value, or a query::Failed if extraction fails (there is no string
-	 * literal there).
-	 */
-	query::QResult<base::StrID> getStrFromCallArg(
-		query::Context& ctx, pst::AccessLocked<pst::CallArgument> arg
-	) {
-		auto call_arg = arg.unlock(ctx);
-
-		if (call_arg->getArgName())
-			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
-
-		auto expr_holder = call_arg->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>().value();
-
-		auto str_lit_opt
-			= expr_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
-
-		match_optional(str_lit_opt) {
-			opt_none {
-				ctx.log<dia::PlaceholderError>(
-					"Expected string literal in extern() call argument",
-					call_arg->getStablePosition()
-				);
-				return query::Failed();
-			}
-			opt_some(str_lit) { return str_lit->getValue().value; }
-		}
-		return query::Failed();  // unreachable
-	}
-
 	namespace {
+
+
+		/**
+		 * @brief Extracts a string literal from an extern() call argument.
+		 * @param ctx The query context.
+		 * @param arg The call argument to extract the string from.
+		 * @return The string literal value, or a query::Failed if extraction fails (there is no
+		 * string literal there).
+		 */
+		query::QResult<base::StrID> getStrFromCallArg(
+			query::Context& ctx, pst::AccessLocked<pst::CallArgument> arg
+		) {
+			auto call_arg = arg.unlock(ctx);
+
+			if (call_arg->getArgName())
+				throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
+
+			auto expr_holder
+				= call_arg->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>().value();
+
+			auto str_lit_opt
+				= expr_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
+
+			match_optional(str_lit_opt) {
+				opt_none {
+					ctx.log<dia::PlaceholderError>(
+						"Expected string literal in extern() call argument",
+						call_arg->getStablePosition()
+					);
+					return query::Failed();
+				}
+				opt_some(str_lit) { return str_lit->getValue().value; }
+			}
+			return query::Failed();  // unreachable
+		}
+
 		/**
 		 * @brief Whether a type is valid as variadic parameter type in
 		 * `@cffi_variadic_fixed_params` declaration.
@@ -166,74 +168,75 @@ namespace compiler::helios {
 			}
 			return {};
 		}
-	}
 
-	QuerySymbolABI_Result getSymbolABI(
-		query::Context& ctx, SymID sym, pst::Access<pst::CallList> extern_args
-	) {
-		std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args->begin(),
-			                                                    extern_args->end() };
+		QuerySymbolABI_Result getSymbolABI(
+			query::Context& ctx, SymID sym, pst::Access<pst::CallList> extern_args
+		) {
+			std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args->begin(),
+				                                                    extern_args->end() };
 
-		if (args.empty()) {
-			ctx.log<dia::PlaceholderError>(
-				"extern() requires at least one argument specifying the ABI",
-				extern_args->getStablePosition()
-			);
-			return query::Failed();
-		}
-
-		UNPACK_QRESULT(auto first_arg =, getStrFromCallArg(ctx, args[0]));
-
-		if (first_arg == base::StrID("C")) {
-			CAbi result;
-
-			if (args.size() > 2) {
+			if (args.empty()) {
 				ctx.log<dia::PlaceholderError>(
-					"Too many arguments for C ABI in extern()", extern_args->getStablePosition()
+					"extern() requires at least one argument specifying the ABI",
+					extern_args->getStablePosition()
 				);
 				return query::Failed();
 			}
 
-			if (isFunctionLike(kind(sym))) {
-				UNPACK_QRESULT_CREF(auto& declaration =, ctx.query<QueryDeclOfFun>(sym));
-				// We perform a check here, because unit types are removed from LIR.
-				UNPACK_QRESULT(auto _ =, checkCABIParamTypes(ctx, declaration));
+			UNPACK_QRESULT(auto first_arg =, getStrFromCallArg(ctx, args[0]));
 
+			if (first_arg == base::StrID("C")) {
+				CAbi result;
 
-				if_opt_some(getAttribute<attributes::CFFIVariadicFunction>(sym), variadic) {
-					UNPACK_QRESULT(
-						auto fixed_params =,
-						validateVariadicWithNFixed(ctx, declaration, variadic->fixed_params)
+				if (args.size() > 2) {
+					ctx.log<dia::PlaceholderError>(
+						"Too many arguments for C ABI in extern()", extern_args->getStablePosition()
 					);
-					result.fixed_params = fixed_params;
+					return query::Failed();
 				}
-			}
 
-			// Like `@cffi_variadic_fixed_params`, `@c_symbol_name` only means something for the C
-			// ABI: on a default-ABI or `extern("DVM")` symbol it is ignored.
-			if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
-				result.symbol_name = link_name->name;
-			}
+				if (isFunctionLike(kind(sym))) {
+					UNPACK_QRESULT_CREF(auto& declaration =, ctx.query<QueryDeclOfFun>(sym));
+					// We perform a check here, because unit types are removed from LIR.
+					UNPACK_QRESULT(auto _ =, checkCABIParamTypes(ctx, declaration));
 
-			if (args.size() == 2) {  // `extern("C" "mylib")` case
-				UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
-				result.library = lib_str_lit;
-			}
 
-			return result;
-		} else if (first_arg == base::StrID("DVM")) {
-			if (args.size() == 1)  // `extern("DVM")` case
-				return DVMAbi{};
-			ctx.log<dia::PlaceholderError>(
-				"Too many arguments for DVM ABI in extern()", extern_args->getStablePosition()
-			);
-			return query::Failed();
-		} else {
-			ctx.log<dia::PlaceholderError>(
-				"Unsupported ABI specified in extern()", extern_args->getStablePosition()
-			);
-			return query::Failed();
+					if_opt_some(getAttribute<attributes::CFFIVariadicFunction>(sym), variadic) {
+						UNPACK_QRESULT(
+							auto fixed_params =,
+							validateVariadicWithNFixed(ctx, declaration, variadic->fixed_params)
+						);
+						result.fixed_params = fixed_params;
+					}
+				}
+
+				// Like `@cffi_variadic_fixed_params`, `@c_symbol_name` only means something for the
+				// C ABI: on a default-ABI or `extern("DVM")` symbol it is ignored.
+				if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
+					result.symbol_name = link_name->name;
+				}
+
+				if (args.size() == 2) {  // `extern("C" "mylib")` case
+					UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
+					result.library = lib_str_lit;
+				}
+
+				return result;
+			} else if (first_arg == base::StrID("DVM")) {
+				if (args.size() == 1)  // `extern("DVM")` case
+					return DVMAbi{};
+				ctx.log<dia::PlaceholderError>(
+					"Too many arguments for DVM ABI in extern()", extern_args->getStablePosition()
+				);
+				return query::Failed();
+			} else {
+				ctx.log<dia::PlaceholderError>(
+					"Unsupported ABI specified in extern()", extern_args->getStablePosition()
+				);
+				return query::Failed();
+			}
 		}
+
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {

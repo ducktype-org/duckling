@@ -52,6 +52,13 @@ namespace compiler::helios {
 			};
 			return mapping;
 		}
+
+		/**
+		 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
+		 */
+		base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
+			return builtinNameMapping().atMaybeCopy(name.strView());
+		}
 	}
 
 	base::StrID builtinKindToStr(BuiltinKind type) {
@@ -86,13 +93,6 @@ namespace compiler::helios {
 			return base::StrID("dvm_nullptr");
 		}
 		CORE_UNREACHABLE();
-	}
-
-	/**
-	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
-	 */
-	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
-		return builtinNameMapping().atMaybeCopy(name.strView());
 	}
 
 	BuiltinKind parseBuiltinAttr(
