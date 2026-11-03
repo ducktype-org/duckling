@@ -94,8 +94,7 @@ namespace fs {
 				"Cannot convert relative path to virtual: " + path.string()
 				+ " use absolute() first."
 			);
-		if (type != PathType::Physical)
-			CORE_PANIC("Can only convert physical paths to virtual: " + path.string());
+		CORE_ASSERT(type == PathType::Physical, "Unexpected path type: " + path.string());
 
 		auto root     = target->getRootPath();
 		auto abs_path = std::filesystem::absolute(path);

@@ -20,6 +20,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(getSimpleContentTest);
 		TESTER_ADD_TEST(filePathTest);
+		TESTER_ADD_TEST(isTemporaryTest);
 		TESTER_ADD_TEST(vfsTest);
 		TESTER_ADD_TEST(virtualFileTest);
 		TESTER_ADD_TEST(fileOperationsTest);
@@ -83,6 +84,47 @@ private:
 		fs::FilePath vpath2("vfs:/abs_test");
 		auto         abs_vpath = vpath2.absolute();
 		assertTrue(abs_vpath == vpath2, "absolute() on virtual path should return itself");
+	}
+
+	void isTemporaryTest() {
+		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
+
+		// Inside the temp directory, including the directory itself.
+		assertTrue(fs::FilePath(temp_dir).isTemporary(), "Temp dir itself should be temporary");
+		assertTrue(
+			fs::FilePath(temp_dir / "some" / "file.txt").isTemporary(),
+			"A (non-existent) path under the temp dir should be temporary"
+		);
+
+		// Outside the temp directory.
+		assertTrue(
+			!fs::FilePath(temp_dir.parent_path() / "not_a_temp_dir").isTemporary(),
+			"A path outside the temp dir should not be temporary"
+		);
+		assertTrue(
+			!fs::FilePath(temp_dir.string() + "foo").isTemporary(),
+			"A sibling sharing the temp dir's name as a prefix should not be temporary"
+		);
+		assertTrue(
+			!fs::FilePath("vfs:" + temp_dir.generic_string()).isTemporary(),
+			"A virtual path should never be temporary"
+		);
+
+		// A relative path is resolved against the working directory.
+		auto old_cwd = std::filesystem::current_path();
+		auto tmp_cwd = fs::FileManager::createRandomTempDirectory();
+		std::filesystem::current_path(tmp_cwd.getFilePath().getPath());
+		bool relative_in_temp = fs::FilePath("some_file.txt").isTemporary();
+		std::filesystem::current_path(temp_dir.parent_path());
+		bool relative_outside_temp = fs::FilePath("not_a_temp_dir").isTemporary();
+		std::filesystem::current_path(old_cwd);
+		fs::FileManager::deleteFolder(tmp_cwd, true);
+
+		assertTrue(relative_in_temp, "A relative path with cwd in the temp dir should be temporary");
+		assertTrue(
+			!relative_outside_temp,
+			"A relative path with cwd outside the temp dir should not be temporary"
+		);
 	}
 
 	void vfsTest() {

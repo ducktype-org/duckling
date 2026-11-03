@@ -39,8 +39,8 @@ namespace fs {
 
 	/**
 	 * @class File
-	 * @brief Represents a file or directory in the filesystem, supporting physical, virtual,
-	 * and temporary files.
+	 * @brief Represents a file or directory in the filesystem, supporting physical (including
+	 * temp-dir) and virtual files.
 	 *
 	 * The File class provides a unified interface for managing and processing files and
 	 * directories across two types of filesystems:
@@ -224,6 +224,10 @@ namespace fs {
 		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random
 		 * name.
+		 *
+		 * The system temp directory is part of the physical filesystem, so a file placed there is
+		 * created with the physical factories like any other. Only the *random naming* is specific
+		 * to temporary files, which is all this helper and `createRandomTempFile` add.
 		 * @return A File with the new temporary directory.
 		 */
 		static File createRandomTempDirectory();
@@ -251,6 +255,8 @@ namespace fs {
 
 		/**
 		 * Creates a random-named temporary file in the system's temporary directory.
+		 * Like `createRandomTempDirectory`, it only picks a random name and then creates a
+		 * physical file there.
 		 * @param content The content to write to the file.
 		 * @return The created File object.
 		 */
@@ -262,7 +268,7 @@ namespace fs {
 		 * If override is true, overwrites the file.
 		 * The path must be absolute and on disk; a path under the system temp directory counts
 		 * (physical and temporary are the same filesystem), a virtual one does not.
-		 * @param path The absolute or relative path to the file.
+		 * @param path The absolute path to the file.
 		 * @param content The content to write to the file.
 		 * @param allow_overwrite If true, overwrites the file if it exists.
 		 * @return The created File object.
@@ -277,7 +283,7 @@ namespace fs {
 		 * If override is true, recreates the folder.
 		 * The path must be absolute and on disk; a path under the system temp directory counts
 		 * (physical and temporary are the same filesystem), a virtual one does not.
-		 * @param path The absolute or relative path to the folder.
+		 * @param path The absolute path to the folder.
 		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */

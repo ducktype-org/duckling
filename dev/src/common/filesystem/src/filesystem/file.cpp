@@ -177,9 +177,6 @@ namespace fs {
 		return path;
 	}
 
-	// The system temp directory is part of the physical filesystem, so a file placed there is
-	// created with the physical factories like any other. Only the *random naming* is specific
-	// to temporary files, which is all these two helpers add.
 	File FileManager::createRandomTempDirectory() {
 		FilePath tmp_dir   = FilePath::getDefaultTempDirectoryPath();
 		auto     rand_path = randomName(tmp_dir);
