@@ -275,10 +275,10 @@ namespace compiler::tsl {
 			query::Context&                           ctx
 		) {
 			if (field_elements.empty()) {
-				ctx.logInt(makeBox<compiler::helios::ExternCClassEmptyError>(
+				ctx.log<compiler::helios::ExternCClassEmptyError>(
 					classDiagnosticPosition(class_type.getSymbol(), ctx),
 					std::string(compiler::helios::name(class_type.getSymbol()).strView())
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -292,13 +292,13 @@ namespace compiler::tsl {
 
 				if (!conversion.has_value()) {
 					any_failed = true;
-					ctx.logInt(makeBox<compiler::helios::FieldNotCCompatibleError>(
+					ctx.log<compiler::helios::FieldNotCCompatibleError>(
 						ctx,
 						fieldDiagnosticPosition(element.getSymbol(), class_type.getSymbol(), ctx),
 						std::string(compiler::helios::name(element.getSymbol()).strView()),
 						element.getType(ctx),
 						conversion.error()
-					));
+					);
 					continue;
 				}
 				abi_fields.emplace_back(base::CRef<abi::types::AbiType>(&conversion.value()));
@@ -663,9 +663,7 @@ namespace compiler::tsl {
 		auto& pointee_cabi_type
 			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
 		if (not pointee_cabi_type.has_value()) {
-			ctx.logInt(
-				makeBox<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
-			);
+			ctx.log<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error());
 			query::throwFailed();
 		}
 	}
@@ -691,7 +689,7 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {
 		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(
 					"Lowering of the closure function type `",
 					function_type.toString(),
@@ -699,7 +697,7 @@ namespace compiler::tsl {
 				),
 				"Use a raw function type, for example `funptr(i64) -> i64` instead of `(i64) -> "
 				"i64`."
-			));
+			);
 			query::throwFailed();
 		}
 	}

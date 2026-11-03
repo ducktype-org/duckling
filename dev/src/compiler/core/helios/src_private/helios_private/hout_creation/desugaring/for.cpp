@@ -75,12 +75,12 @@ namespace compiler::helios::desugaring {
 				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
 			if (kind != tsh::Kind::StaticArray) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
 					code::pstOrigin(iterable_pst).getSourcePosition(ctx)
-				));
+				);
 				return {};
 			}
 

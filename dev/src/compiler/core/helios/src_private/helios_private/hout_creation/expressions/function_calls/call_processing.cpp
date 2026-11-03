@@ -569,9 +569,8 @@ namespace compiler::helios::code {
 		const std::vector<SymID>& method_candidates = {}
 	) {
 		if (candidates.empty()) {
-			ctx.logInt(makeBox<NoCandidatesFoundError>(
-				pst_origin.whole_call_origin.getStablePosition().value()
-			));
+			ctx.log<NoCandidatesFoundError>(pst_origin.whole_call_origin.getStablePosition().value()
+			);
 			return query::Failed();
 		}
 
@@ -643,12 +642,12 @@ namespace compiler::helios::code {
 			}
 
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, true);
-			ctx.logInt(std::move(main_msg));
+			ctx.log(std::move(main_msg));
 			return query::Failed();
 		}
 
 		if (candidates.size() == 1) {
-			ctx.logInt(createDetailedCallErrorMessage(
+			ctx.log(createDetailedCallErrorMessage(
 				ctx, pst_origin.whole_call_origin, pst_origin.arguments_origin, no_match[0].reason, false
 			));
 		} else {
@@ -656,7 +655,7 @@ namespace compiler::helios::code {
 				pst_origin.whole_call_origin.getStablePosition().value()
 			);
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, false);
-			ctx.logInt(std::move(main_msg));
+			ctx.log(std::move(main_msg));
 		}
 
 		return query::Failed();
@@ -706,7 +705,7 @@ namespace compiler::helios::code {
 				for (auto&& [existing_name, _]: named_arguments) {
 					if (existing_name == arg_name) {
 						auto error = RepeatedNamedArgument{ arg_index };
-						ctx.logInt(createDetailedCallErrorMessage(
+						ctx.log(createDetailedCallErrorMessage(
 							ctx, whole_call_origin, arguments_origin, error, false
 						));
 						return query::Failed();
@@ -716,7 +715,7 @@ namespace compiler::helios::code {
 			} else {
 				if (!named_arguments.empty()) {
 					auto error = PositionalAfterNamedArgument{ arg_index };
-					ctx.logInt(createDetailedCallErrorMessage(
+					ctx.log(createDetailedCallErrorMessage(
 						ctx, whole_call_origin, arguments_origin, error, false
 					));
 					return query::Failed();
@@ -801,10 +800,10 @@ namespace compiler::helios::code {
 		pst::Access<pst::expr::Call> call_expr
 	) {
 		if (callee->expression_type.getType().getKind() != tsh::Kind::Function) {
-			ctx.logInt(makeBox<CallNotCallableError>(
+			ctx.log<CallNotCallableError>(
 				call_expr->getStablePosition(),
 				makeBox<InteractiveType>(ctx, callee->expression_type.getSymbolType())
-			));
+			);
 			return query::Failed();
 		}
 
@@ -825,14 +824,14 @@ namespace compiler::helios::code {
 		usize      argument_count = 0;
 		for (const auto& arg: args) {
 			if (arg->isNamedArg()) {
-				ctx.logInt(makeBox<IndirectCallNamedArgumentError>(arg->getStablePosition()));
+				ctx.log<IndirectCallNamedArgumentError>(arg->getStablePosition());
 				return query::Failed();
 			}
 			argument_count++;
 		}
 
 		if (argument_count != parameter_types.size()) {
-			ctx.logInt(makeBox<IndirectCallArgumentCountError>(call_expr->getStablePosition()));
+			ctx.log<IndirectCallArgumentCountError>(call_expr->getStablePosition());
 			return query::Failed();
 		}
 

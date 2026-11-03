@@ -201,17 +201,17 @@ namespace compiler::helios::mangler {
 
 				// @TODO: #3286 for now we allow '-' and just treat it as '_'
 				if (raw_package_name.contains('-') && raw_package_name.contains('_'))
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Currently it is not allowed to mix '-' and '_' in package names."
-					));
+					);
 				std::ranges::replace(raw_package_name, '-', '_');
 				auto package_name = identifier(raw_package_name);
 
 				if (const auto c = findExtendedChar(package_name)) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
+					ctx.log<dia::NotYetImplementedCodeError>(base::strConcat(
 						"Name of a package contains a character that is not allowed yet: ",
 						quoteExtendedChar(c.value())
-					)));
+					));
 				}
 				ret_ss << 'P' << package_name;
 			} else {
@@ -238,10 +238,10 @@ namespace compiler::helios::mangler {
 			// @TODO: #3286 for now we allow '-' and just treat it as '_'
 			std::ranges::replace(ret, '-', '_');
 			if (const auto c = findExtendedChar(ret))
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
+				ctx.log<dia::NotYetImplementedCodeError>(base::strConcat(
 					"Name of a module contains a character that is not allowed yet: ",
 					quoteExtendedChar(c.value())
-				)));
+				));
 
 			// @TODO: #3285 add backreferences
 			return ret;
@@ -1103,9 +1103,9 @@ namespace compiler::helios::mangler {
 			case Meta:
 				return mangle(ctx, type.as<tsh::MetaAbstractType>());
 			default:
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat("Cannot mangle type of kind: ", type.getKind()), ""
-				));
+				);
 				return query::Failed();
 			}
 		}
