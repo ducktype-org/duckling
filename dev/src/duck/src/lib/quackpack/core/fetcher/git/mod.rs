@@ -85,18 +85,19 @@ impl<'duck> GitClient<'duck> {
 
         // Prefer specific commits over tags.
         if let GitReference::Rev(commit) = reference {
-            repository.checkout_commit(commit.as_str()).with_context(|| {
-                format!(
-                    "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
-                    url,
-                    commit
-                )
-            })?;
+            repository
+                .checkout_commit(commit.as_str())
+                .with_context(|| {
+                    format!(
+                        "failed to check out the commit `{}` of a repository cloned from `{}`",
+                        commit, url
+                    )
+                })?;
         } else if let GitReference::Tag(tag) = reference {
             repository.checkout_tag(tag.as_str()).with_context(|| {
                 format!(
-                    "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
-                    url, tag
+                    "failed to check out the tag `{}` of a repository cloned from `{}`",
+                    tag, url
                 )
             })?;
         }

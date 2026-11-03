@@ -135,7 +135,7 @@ impl<'duck> Fetcher<'duck> {
             .await
             .with_context(|| {
                 format!(
-                    "while getting a metadata of `{}` version {}",
+                    "failed to get the metadata of `{}` version {}",
                     package.name, package.version
                 )
             })?;
@@ -174,7 +174,7 @@ impl<'duck> Fetcher<'duck> {
             .ducknest_client
             .get_multi_metadata(&url, package_name)
             .await
-            .with_context(|| format!("while getting a multimetadata of `{}`", package_name))?;
+            .with_context(|| format!("failed to get the multimetadata of `{}`", package_name))?;
         self.cache
             .borrow_mut()
             .add_or_replace_multiple_manifests(url, result.packages_metadata.clone())?;
@@ -210,7 +210,7 @@ impl<'duck> Fetcher<'duck> {
             .await
             .with_context(|| {
                 format!(
-                    "while downloading a source of `{}` version {}",
+                    "failed to download the source of `{}` version {}",
                     package.name, package.version
                 )
             })?;

@@ -44,7 +44,7 @@ fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
 
 fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the user manifest at `{}`",
+        "failed to parse the user manifest at `{}`",
         root.path().join("x").display()
     )]
     .to_vec();
@@ -54,7 +54,7 @@ fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> Str
 
 fn make_errors_message_frontmatter<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the frontmatter of the script at `{}`",
+        "failed to parse the frontmatter of the script at `{}`",
         root.path().join("x").display(),
     )]
     .to_vec();
@@ -297,7 +297,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.a`",
+                "failed to parse the field `dependencies.a`",
                 "a registry dependency must provide at least one version",
             ]
         )
@@ -1023,8 +1023,8 @@ profiles:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `profiles`",
-                "when parsing the field `profiles.prof1`",
+                "failed to parse the field `profiles`",
+                "failed to parse the field `profiles.prof1`",
                 "Unknown optimization level `x`. Optimization levels are 0, 1, 2, 3, s (or S), z (or Z)."
             ]
         )
@@ -1296,7 +1296,7 @@ import: y
             &dir,
             [
                 &format!(
-                    "while reading the file imported by `{}` at `{}`",
+                    "failed to read the file imported by `{}` at `{}`",
                     frontmatter_path.display(),
                     dir.path().join("y").display(),
                 ),
@@ -1469,7 +1469,7 @@ metadata:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `metadata.name`",
+                "failed to parse the field `metadata.name`",
                 "package has an invalid name",
                 "package name is empty",
             ]
@@ -1493,7 +1493,7 @@ metadata:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `metadata.name`",
+                "failed to parse the field `metadata.name`",
                 "package has an invalid name",
                 "package name `-a` starts with an illegal character `-`",
             ]
@@ -1517,7 +1517,7 @@ metadata:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `metadata.name`",
+                "failed to parse the field `metadata.name`",
                 "package has an invalid name",
                 "package name `!a` starts with an illegal character `!`",
             ]
@@ -1541,7 +1541,7 @@ metadata:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `metadata.name`",
+                "failed to parse the field `metadata.name`",
                 "package has an invalid name",
                 "package name `an~` contains an illegal character `~`",
             ]
@@ -1569,7 +1569,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.`",
+                "failed to parse the field `dependencies.`",
                 "dependency `` has an invalid name",
                 "package name is empty",
             ]
@@ -1597,7 +1597,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.-a`",
+                "failed to parse the field `dependencies.-a`",
                 "dependency `-a` has an invalid name",
                 "package name `-a` starts with an illegal character `-`",
             ]
@@ -1625,7 +1625,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.!a`",
+                "failed to parse the field `dependencies.!a`",
                 "dependency `!a` has an invalid name",
                 "package name `!a` starts with an illegal character `!`",
             ]
@@ -1653,7 +1653,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.an~`",
+                "failed to parse the field `dependencies.an~`",
                 "dependency `an~` has an invalid name",
                 "package name `an~` contains an illegal character `~`",
             ]
@@ -1683,7 +1683,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.an~`",
+                "failed to parse the field `dependencies.an~`",
                 "aliased dependency `an~` points to a package `!foo` with an invalid name",
                 "package name `!foo` starts with an illegal character `!`",
             ]
@@ -1713,7 +1713,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.an`",
+                "failed to parse the field `dependencies.an`",
                 "aliased dependency `an` points to a package `!foo` with an invalid name",
                 "package name `!foo` starts with an illegal character `!`",
             ]
@@ -1743,7 +1743,7 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `dependencies.an~`",
+                "failed to parse the field `dependencies.an~`",
                 "dependency `foo` has an invalid alias name `an~`",
                 "package name `an~` contains an illegal character `~`",
             ]
@@ -1857,7 +1857,7 @@ lints:
         make_errors_message(
             &dir,
             [
-                "when parsing the field `lints.duck.a`",
+                "failed to parse the field `lints.duck.a`",
                 "invalid lint level: expected one of `allow`, `warning`, `error`, but found `invalid`"
             ]
         )
