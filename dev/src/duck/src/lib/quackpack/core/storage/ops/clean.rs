@@ -143,7 +143,7 @@ fn clean_venv_from_storage(
         warn!("failed to fix and load the venv, removing it anyway");
         remove_tree(dir.path()).with_context(|| {
             format!(
-                "while removing venv `{venv_id}` at `{}`",
+                "failed to remove the venv `{venv_id}` at `{}`",
                 dir.path().display()
             )
         })?;
@@ -175,7 +175,7 @@ fn clean_venv_from_storage(
         debug!("removing the venv, as it is ephemeral and too old");
         remove_tree(dir.path()).with_context(|| {
             format!(
-                "while removing venv `{venv_id}` at `{}`",
+                "failed to remove the venv `{venv_id}` at `{}`",
                 dir.path().display()
             )
         })?;

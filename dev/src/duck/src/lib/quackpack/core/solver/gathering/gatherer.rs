@@ -437,7 +437,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         if !cache_logger.is_empty() {
             let mut err = cache_logger.unwrap_first();
             err.context(MessageError::new(
-                "when trying to get cached git or during fastpath",
+                "failed to get the git package from the local cache",
             ));
             errors.borrow_mut().log(err);
             return Some(FetchResponse::failed_not_pinned(request.id));

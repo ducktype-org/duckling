@@ -56,6 +56,7 @@ public:
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(noReturnTest);
 		TESTER_ADD_TEST(scalarCopyTest);
+		TESTER_ADD_TEST(arrayAlignmentTest);
 	}
 
 protected:
@@ -677,6 +678,31 @@ private:
 		assertTrue(
 			function_body("copyPair").find("llvm.memmove") != std::string::npos,
 			"Expected the copy of 'Pair' in 'copyPair' to use memmove"
+		);
+	}
+
+	void arrayAlignmentTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/array_alignment");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// An `i64` array is only 8-byte aligned by the data layout. Then the 16-byte vector loads
+		// of a vectorized loop over it are misaligned, so its storage is raised to 16 bytes.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca \[1000 x i64\], align 16)" }),
+			"Expected the local i64[1000] to be 16-byte aligned"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(global_array[^\n]*\[4 x i64\][^\n]*align 16)" }),
+			"Expected the global i64[4] to be 16-byte aligned"
+		);
+		// Below 16 bytes, and for classes, the natural alignment is kept.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca \[2 x i32\], align 4)" }),
+			"Expected the local i32[2] to keep its 4-byte alignment"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca %[^\n]*Pair[^\n]*, align 8)" }),
+			"Expected the local Pair to keep its 8-byte alignment"
 		);
 	}
 };

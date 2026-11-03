@@ -238,12 +238,12 @@ namespace compiler::helios::defgen {
 				);
 				break;
 			default:
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"Default copy constructor for type `", owner_type.toString(), "`."
 					),
 					""
-				));
+				);
 				return query::Failed();
 			}
 
