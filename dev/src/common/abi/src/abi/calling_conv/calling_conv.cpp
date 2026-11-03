@@ -201,6 +201,19 @@ namespace abi::calling_conv {
 			}
 			return types::structType(std::move(fields));
 		}
+
+		/**
+		 * @brief Is homogeneous floating-point aggregate" (HFA) for Aarch64.
+		 */
+		bool isHomogeneous(const std::vector<types::AbiType>& types) {
+			if (types.size() > 4 or types.size() == 0) return false;
+
+			auto& first = types.at(0);
+			if (not base::holds<types::FloatType>(first.value)) return false;
+			for (u64 i{ 1 }; i < types.size(); i++)
+				if (first != types.at(i)) return false;
+			return true;
+		}
 	}
 
 #define ARG_ENTRY(arg_info) \
@@ -247,21 +260,6 @@ namespace abi::calling_conv {
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
 			                             | std::ranges::to<std::vector>(),
 			                 .num_fixed_params = ft.num_fixed_params };
-	}
-
-	namespace {
-		/**
-		 * @brief Is homogeneous floating-point aggregate" (HFA) for Aarch64.
-		 */
-		bool isHomogeneous(const std::vector<types::AbiType>& types) {
-			if (types.size() > 4 or types.size() == 0) return false;
-
-			auto& first = types.at(0);
-			if (not base::holds<types::FloatType>(first.value)) return false;
-			for (u64 i{ 1 }; i < types.size(); i++)
-				if (first != types.at(i)) return false;
-			return true;
-		}
 	}
 
 	FunctionInfo AArch64ABIInfo::computeInfo(const FunctionType& ft) const {

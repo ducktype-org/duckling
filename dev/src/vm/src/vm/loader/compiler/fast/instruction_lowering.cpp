@@ -21,10 +21,8 @@ using namespace vm::loader::compiler;
 using namespace vm::fast::reloc;
 
 namespace {
-	namespace {
-		usize getByteSize(const vm::code::valid_type::TypeSize& size) {
-			return static_cast<usize>(size.assumePointerSize(Bytes(8)));
-		}
+	usize getByteSize(const vm::code::valid_type::TypeSize& size) {
+		return static_cast<usize>(size.assumePointerSize(Bytes(8)));
 	}
 
 	struct Context final {

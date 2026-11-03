@@ -29,8 +29,11 @@
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {
-		namespace detail {
-			namespace {
+		template<class T>
+		concept IsOpCodeArg = std::is_constructible_v<vm::opargs::OpCodeArg, T>;
+
+		namespace {
+			namespace detail {
 				/**
 				 * @brief "Packs" bits of value `V` to 64-bit type`T`.
 				 * 32-bit values are zero-extended to 64-bits and bit casted to T
@@ -110,9 +113,7 @@ namespace vm::loader::parser {
 					return true;
 				}
 			}
-		}
 
-		namespace {
 			/**
 			 * @brief Parses number literal and returns it's bits stored in type T. If it contains a
 			 * type specifier like `i32`, `f64`, etc., it will adjust the parsing behavior
@@ -319,12 +320,7 @@ namespace vm::loader::parser {
 				state.parse().one(&identifier);
 				return identifier;
 			}
-		}
 
-		template<class T>
-		concept IsOpCodeArg = std::is_constructible_v<vm::opargs::OpCodeArg, T>;
-
-		namespace {
 			/**
 			 * @brief Parses opcode argument. Template specializations change only the return type.
 			 */

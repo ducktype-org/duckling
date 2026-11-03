@@ -25,17 +25,15 @@ namespace lang_def {
 		 * @TODO: #2943 remove this global state
 		 */
 		thread_local KeywordMode keyword_mode = DEFAULT_MODE;
+
+		base::StrID makeStrID(std::string_view view) {
+			return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
+		}
 	}
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
 
 	KeywordMode getKeywordMode() { return keyword_mode; }
-
-	namespace {
-		base::StrID makeStrID(std::string_view view) {
-			return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
-		}
-	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	constexpr auto LANG_KEYWORDS_ARRAY

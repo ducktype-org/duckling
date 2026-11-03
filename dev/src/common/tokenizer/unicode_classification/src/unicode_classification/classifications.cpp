@@ -167,6 +167,11 @@ namespace unicode {
 				"Whitespace characters and syntax characters should be disjoint."
 			);
 		}
+
+		/**
+		 * A wrapper around u_cleanup macro
+		 */
+		void cleanupICU() { u_cleanup(); }
 	}
 
 	void Classifications::init() {
@@ -218,13 +223,6 @@ namespace unicode {
 	// since it strictly realted to Classifications class
 	// which is implemented here.
 	RUN_BEFORE_MAIN(init::registerForInit(Classifications::init));
-
-	namespace {
-		/**
-		 * A wrapper around u_cleanup macro
-		 */
-		void cleanupICU() { u_cleanup(); }
-	}
 
 	RUN_BEFORE_MAIN(init::registerForDeinit(cleanupICU));
 }

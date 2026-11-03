@@ -29,9 +29,7 @@ namespace {
 			nlohmann::json(api_error),
 		};
 	}
-}  // namespace
 
-namespace {
 	template<class T, class E>
 	crow::response toResponse(const std::expected<T, E>& x) {
 		static auto convert = []([[maybe_unused]]
