@@ -10,7 +10,7 @@
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/element_kind.hpp>
+#include <frontend/pst_parser/elements/common/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <global_state/packages.hpp>

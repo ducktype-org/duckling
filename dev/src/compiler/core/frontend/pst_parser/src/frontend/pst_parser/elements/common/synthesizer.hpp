@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "hierarchy/not_statements/synthetic_elements/template_expansion_assignment.hpp"
-#include "hierarchy/not_statements/synthetic_elements/template_top_level.hpp"
+#include "../hierarchy/not_statements/synthetic_elements/template_expansion_assignment.hpp"
+#include "../hierarchy/not_statements/synthetic_elements/template_top_level.hpp"
 
 namespace pst {
 	/**

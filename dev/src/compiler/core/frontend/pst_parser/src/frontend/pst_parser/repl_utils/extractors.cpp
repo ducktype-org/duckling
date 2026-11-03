@@ -7,7 +7,7 @@
 #include "extractors.hpp"
 
 #include "../base_element/lang_parser_element.hpp"
-#include "../element_kind.hpp"
+#include "../elements/common/element_kind.hpp"
 #include "../elements/hierarchy/statements/expr_stmt.hpp"
 #include "../elements/includes/basic.hpp"
 
