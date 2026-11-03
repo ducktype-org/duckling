@@ -116,6 +116,36 @@ namespace compiler::helios {
 
 			emit_alias_note(*lookup_result, ident->getName().unlock(ctx)->unwrap().str());
 		}
+
+		/**
+		 * @brief Get source position from a PST element of a function-like character
+		 * (pst of a function, function declaration or class method). We want only the
+		 * name and parameters to be included in the source position. @TODO: #2521 fix this
+		 */
+		dia::StablePosition getFunctionLikeSourcePosition(
+			query::Context& ctx, pst::Access<pst::LangElement> function_like
+		) {
+			switch (function_like->getElementKind()) {
+			case pst::ElementKind::Fun: {
+				auto fun = function_like.dynamicCast<pst::Fun>().value();
+				return fun->getParams().unlock(ctx)->getStablePosition();
+			}
+			case pst::ElementKind::FunDecl: {
+				auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
+				return fun_decl->getParams().unlock(ctx)->getStablePosition();
+			}
+			case pst::ElementKind::ClassMethod: {
+				auto class_method = function_like.dynamicCast<pst::Method>().value();
+				return class_method->getParams().unlock(ctx)->getStablePosition();
+			}
+			default:
+				CORE_PANIC(
+					"Expected a function, function-like or a method expected while getting "
+					"function "
+					"source position."
+				);
+			}
+		}
 	}
 
 	InteractiveType::InteractiveType(
@@ -163,38 +193,6 @@ namespace compiler::helios {
 		FunctionDeclaredHereNote(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
-
-	namespace {
-		/**
-		 * @brief Get source position from a PST element of a function-like character
-		 * (pst of a function, function declaration or class method). We want only the
-		 * name and parameters to be included in the source position. @TODO: #2521 fix this
-		 */
-		dia::StablePosition getFunctionLikeSourcePosition(
-			query::Context& ctx, pst::Access<pst::LangElement> function_like
-		) {
-			switch (function_like->getElementKind()) {
-			case pst::ElementKind::Fun: {
-				auto fun = function_like.dynamicCast<pst::Fun>().value();
-				return fun->getParams().unlock(ctx)->getStablePosition();
-			}
-			case pst::ElementKind::FunDecl: {
-				auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
-				return fun_decl->getParams().unlock(ctx)->getStablePosition();
-			}
-			case pst::ElementKind::ClassMethod: {
-				auto class_method = function_like.dynamicCast<pst::Method>().value();
-				return class_method->getParams().unlock(ctx)->getStablePosition();
-			}
-			default:
-				CORE_PANIC(
-					"Expected a function, function-like or a method expected while getting "
-					"function "
-					"source position."
-				);
-			}
-		}
-	}
 
 	InteractiveFunction::InteractiveFunction(
 		query::Context&                               ctx,

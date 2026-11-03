@@ -55,6 +55,21 @@ namespace compiler::lir {
 		return function->queryUnstablePerfectHash();
 	}
 
+	/**
+	 * @brief The layout of a function type together with the layouts of its signature.
+	 */
+	struct FunctionLayouts final {
+		CRef<tsl::TypeLayout>              layout;
+		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
+		CRef<tsl::TypeLayout>              return_type_layout;
+		/// The result type is `void`, so a call never returns.
+		bool never_returns;
+
+		[[nodiscard]] const tsl::FunctionalTypeLayout& functional() const {
+			return std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
+		}
+	};
+
 	namespace {
 		LIRAbi getLIRAbi(
 			query::Context& ctx, helios::SymID sym, const tsl::FunctionalTypeLayout& function_layout
@@ -100,24 +115,6 @@ namespace compiler::lir {
 				= abi::calling_conv::computeCallingConv(abi::hostTargetABI(), abi_fun_type) } };
 		}
 
-		/**
-		 * @brief The layout of a function type together with the layouts of its signature.
-		 */
-	}
-
-	struct FunctionLayouts final {
-		CRef<tsl::TypeLayout>              layout;
-		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
-		CRef<tsl::TypeLayout>              return_type_layout;
-		/// The result type is `void`, so a call never returns.
-		bool never_returns;
-
-		[[nodiscard]] const tsl::FunctionalTypeLayout& functional() const {
-			return std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
-		}
-	};
-
-	namespace {
 		/**
 		 * @brief Computes the layout of the function type @p type and the layouts of its signature.
 		 */

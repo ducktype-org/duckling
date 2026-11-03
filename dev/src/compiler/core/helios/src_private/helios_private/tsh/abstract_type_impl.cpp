@@ -105,6 +105,21 @@ namespace compiler::tsh {
 
 			return TypeInterface(elements);
 		}
+
+		/**
+		 * @brief Creates a human-readable string representation of a vector of symbol types.
+		 * @param types Vector of symbol types to stringify.
+		 * @return A human-readable string representing a sequence of symbol types.
+		 */
+		std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
+			std::stringstream res;
+			res << "(";
+			if (!types.empty()) res << types[0].toString();
+			for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
+			res << ")";
+
+			return res.str();
+		}
 	}
 
 	/**
@@ -176,23 +191,6 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeInterface)
-
-	namespace {
-		/**
-		 * @brief Creates a human-readable string representation of a vector of symbol types.
-		 * @param types Vector of symbol types to stringify.
-		 * @return A human-readable string representing a sequence of symbol types.
-		 */
-		std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
-			std::stringstream res;
-			res << "(";
-			if (!types.empty()) res << types[0].toString();
-			for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
-			res << ")";
-
-			return res.str();
-		}
-	}
 
 	CRef<TypeInterface> UnitAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed

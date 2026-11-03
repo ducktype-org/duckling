@@ -158,9 +158,6 @@ namespace compiler::helios::code {
 
 	using MatchResult = std::variant<Match, NoMatch>;
 
-	using OverloadResolutionResult
-		= std::tuple<SymID, std::vector<ArgumentOrigin>, ArgumentCoercions>;
-
 	namespace {
 		/**
 		 * Checks if a function can be called with the given arguments for overload resolution
@@ -565,6 +562,9 @@ namespace compiler::helios::code {
 			else
 				main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
 		}
+
+		using OverloadResolutionResult
+			= std::tuple<SymID, std::vector<ArgumentOrigin>, ArgumentCoercions>;
 
 		/**
 		 * @brief Performs overload resolution for a function call, taking into account coercions,
