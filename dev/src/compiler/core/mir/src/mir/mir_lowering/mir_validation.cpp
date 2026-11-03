@@ -49,7 +49,7 @@ namespace compiler::mir {
 
 							auto msg = makeBox<VariableShadowingError>(shadowing_pos);
 							msg->addAttachedMessage(makeBox<ShadowedDeclarationNote>(shadowed_pos));
-							ctx.logInt(std::move(msg));
+							ctx.log(std::move(msg));
 							return base::BAD;
 						}
 					}

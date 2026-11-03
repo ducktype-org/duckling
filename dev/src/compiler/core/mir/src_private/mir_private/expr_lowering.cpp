@@ -1267,9 +1267,9 @@ namespace compiler::mir {
 		}
 
 		void visitFunctionTypeExpr(const hc::FunctionTypeExpr& expr) override {
-			function.getContext().logInt(makeBox<dia::NotYetImplementedCodeError>(
+			function.getContext().log<dia::NotYetImplementedCodeError>(
 				"Creating a function type at runtime is not supported yet.", expr.getPosition()
-			));
+			);
 			query::throwFailed();
 		}
 
@@ -1382,9 +1382,9 @@ namespace compiler::mir {
 			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
 			// mark, so just forward the value unchanged.
 			if (not inner_val.isLocal() or inner_val.get<mir::MIRPlace>().hasProjections()) {
-				function.getContext().logInt(makeBox<dia::NotYetImplementedCodeError>(
+				function.getContext().log<dia::NotYetImplementedCodeError>(
 					"Moving from a non-local place is not supported yet.", expr.inner->getPosition()
-				));
+				);
 				query::throwFailed();
 				return;
 			}

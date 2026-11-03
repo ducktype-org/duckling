@@ -25,23 +25,23 @@ namespace compiler::helios {
 		for (auto s: symbols)
 			if (name(s) == searched_name && hasAttribute<Attr>(s)) results.push_back(s);
 		if (results.size() > 1) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+			ctx.log<dia::PlaceholderError>(base::strConcat(
 				"Multiple symbols with name `",
 				searched_name,
 				"` and attribute `",
 				attrNameStr(Attr{}),
 				"` found. Expected at most one."
-			)));
+			));
 			query::throwFailed();
 		}
 		if (results.empty()) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+			ctx.log<dia::PlaceholderError>(base::strConcat(
 				"No symbol with name `",
 				searched_name,
 				"` and attribute `",
 				attrNameStr(Attr{}),
 				"` found. Expected exactly one."
-			)));
+			));
 			query::throwFailed();
 		}
 		return results.at(0);
