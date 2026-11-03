@@ -23,7 +23,7 @@ namespace pst {
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);
 		OperatorFixity operator_fixity = OperatorFixity::None;
 
 	protected:

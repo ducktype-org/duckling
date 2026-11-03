@@ -68,10 +68,10 @@ namespace compiler::helios::templates {
 			);
 
 			if (param_unlocked->getValue().has_value()) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"Default values for template parameters are not yet supported",
 					param_unlocked->getStablePosition()
-				));
+				);
 				return query::Failed();
 			}
 
