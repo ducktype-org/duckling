@@ -459,9 +459,39 @@ namespace compiler::backend_llvm {
 			return std::max(tsl_alignment, abi_alignment);
 		}
 
+		/// Arrays of at least this many bytes get `LARGE_ARRAY_ALIGNMENT` when they own their
+		/// storage.
+		constexpr u64 LARGE_ARRAY_MIN_SIZE = 16;
+		/// The alignment of a large array's own storage: the width of an SSE / NEON vector.
+		constexpr u64 LARGE_ARRAY_ALIGNMENT = 16;
+
+		/**
+		 * @brief The alignment of storage that holds a value of the given layout on its own (a
+		 * local variable or a global): `alignmentFromLayout`, raised to 16 bytes for arrays of 16
+		 * bytes or more.
+		 *
+		 * The data layout aligns an array only as much as its element, so an `i64` array may start
+		 * at an 8-byte boundary. Then every 16-byte vector load of a vectorized loop is misaligned,
+		 * and one in four splits a cache line, which makes summing an `i64[100000]` ~20% slower.
+		 * clang aligns such arrays to 16 bytes for the same reason. Places derived from the storage
+		 * keep assuming only `alignmentFromLayout`, because an array inside a class is not raised.
+		 */
+		auto storageAlignmentFromLayout(
+			const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout
+		) -> llvm::Align {
+			const auto  alignment   = alignmentFromLayout(module, layout);
+			auto*       llvm_type   = typeFromLayout(module, layout);
+			const auto& data_layout = module->getDataLayout();
+			if (llvm_type->isArrayTy()
+			    && data_layout.getTypeAllocSize(llvm_type) >= LARGE_ARRAY_MIN_SIZE) {
+				return std::max(alignment, llvm::Align(LARGE_ARRAY_ALIGNMENT));
+			}
+			return alignment;
+		}
+
 		/**
 		 * @brief Creates a stack allocation for a value of the given layout, aligned as
-		 * `alignmentFromLayout` requires.
+		 * `storageAlignmentFromLayout` requires.
 		 */
 		auto createAllocaForLayout(
 			const Ref<llvm::Module>     module,
@@ -470,7 +500,7 @@ namespace compiler::backend_llvm {
 			const llvm::Twine&          name
 		) -> llvm::AllocaInst* {
 			auto* alloca = builder.CreateAlloca(typeFromLayout(module, layout), nullptr, name);
-			alloca->setAlignment(alignmentFromLayout(module, layout));
+			alloca->setAlignment(storageAlignmentFromLayout(module, layout));
 			return alloca;
 		}
 
@@ -510,7 +540,7 @@ namespace compiler::backend_llvm {
 											: llvm::GlobalValue::ExternalLinkage
 			);
 			global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
-			global->setAlignment(alignmentFromLayout(module, lir_global.global.layout));
+			global->setAlignment(storageAlignmentFromLayout(module, lir_global.global.layout));
 
 			// We set null initialization for all globals by default to keep potential uninitialized
 			// memory issues easier to track.
