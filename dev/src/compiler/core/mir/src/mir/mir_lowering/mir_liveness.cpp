@@ -104,6 +104,70 @@ namespace compiler::mir {
 			}
 			return result;
 		}
+
+		/**
+		 * @brief Given LocalMoveStateMap valid at the start of the block,
+		 * return the LocalMoveStateMap valid at the end of the block.
+		 */
+		LocalMoveStateMap transferBlock(
+			const Block& block, LocalMoveStateMap map, const LocalsByScopeMap& locals_by_scope
+		) {
+			for (const auto& instr: block.instructions)
+				map.updateMoveStateMapByInstr(instr, locals_by_scope);
+			map.updateMoveStateMapByInstr(block.terminator, locals_by_scope);
+			return map;
+		}
+
+		void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out);
+
+		void collectPlaceReads(
+			const MIRPlace& place, bool include_base, std::vector<MIRLocalRef>& out
+		) {
+			if (include_base && place.isLocal()) out.push_back(place.getBase<MIRLocalRef>());
+			for (const auto& proj: place.projection_chain) {
+				variant_match(proj.storage) {
+					variant_case(MIRPlace::IndexProjection, index) {
+						collectValueReads(*index.index, out);
+					}
+					variant_default {}
+				}
+			}
+		}
+
+		void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out) {
+			variant_match(value.getVariant()) {
+				variant_case(MIRPlace, place) { collectPlaceReads(place, true, out); }
+				variant_default {}
+			}
+		}
+
+		std::vector<MIRLocalRef> instructionReads(const Instruction& instr) {
+			std::vector<MIRLocalRef> reads;
+			for (const auto& arg: instr.arguments) collectValueReads(arg, reads);
+			if (instr.output && instr.output->hasProjections())
+				collectPlaceReads(*instr.output, true, reads);
+			return reads;
+		}
+
+		/**
+		 * Get the vector of locals, to which the instruction writes (excluding those which are
+		 * constructed by this instruction). Don't return locals, where the instruction also read in
+		 * instructionReads. For example `a[1] = ...` both reads and writes to `a`, so it won't be
+		 * returned. we only return direct writes, like `a = ...`.
+		 *
+		 * @note We don't return values with Construct flag in this instruction, as we want to catch
+		 * the values used before construction.
+		 */
+		std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
+			// If we construct a result, then this is not a write
+			for (auto& flag: instr.flags)
+				if (flag.flag == OperationFlag::Flag::Construct) return {};
+			// The output->hasProjections() doesn't matter, but if there were projections,
+			// then the base would also be read and we would also detect
+			if (instr.output && instr.output->isLocal() && not instr.output->hasProjections())
+				return { instr.output->getBase<MIRLocalRef>() };
+			return {};
+		}
 	}
 
 	LocalMoveStateMap LocalMoveStateMap::join(
@@ -174,21 +238,6 @@ namespace compiler::mir {
 			}
 		}
 		prev_instr_scope = instr.scope;
-	}
-
-	namespace {
-		/**
-		 * @brief Given LocalMoveStateMap valid at the start of the block,
-		 * return the LocalMoveStateMap valid at the end of the block.
-		 */
-		LocalMoveStateMap transferBlock(
-			const Block& block, LocalMoveStateMap map, const LocalsByScopeMap& locals_by_scope
-		) {
-			for (const auto& instr: block.instructions)
-				map.updateMoveStateMapByInstr(instr, locals_by_scope);
-			map.updateMoveStateMapByInstr(block.terminator, locals_by_scope);
-			return map;
-		}
 	}
 
 	MoveStateData MoveStateData::calculateGlobalInMoveStateMap(
@@ -280,59 +329,6 @@ namespace compiler::mir {
 		})
 
 		return result;
-	}
-
-	namespace {
-		void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out);
-
-		void collectPlaceReads(
-			const MIRPlace& place, bool include_base, std::vector<MIRLocalRef>& out
-		) {
-			if (include_base && place.isLocal()) out.push_back(place.getBase<MIRLocalRef>());
-			for (const auto& proj: place.projection_chain) {
-				variant_match(proj.storage) {
-					variant_case(MIRPlace::IndexProjection, index) {
-						collectValueReads(*index.index, out);
-					}
-					variant_default {}
-				}
-			}
-		}
-
-		void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out) {
-			variant_match(value.getVariant()) {
-				variant_case(MIRPlace, place) { collectPlaceReads(place, true, out); }
-				variant_default {}
-			}
-		}
-
-		std::vector<MIRLocalRef> instructionReads(const Instruction& instr) {
-			std::vector<MIRLocalRef> reads;
-			for (const auto& arg: instr.arguments) collectValueReads(arg, reads);
-			if (instr.output && instr.output->hasProjections())
-				collectPlaceReads(*instr.output, true, reads);
-			return reads;
-		}
-
-		/**
-		 * Get the vector of locals, to which the instruction writes (excluding those which are
-		 * constructed by this instruction). Don't return locals, where the instruction also read in
-		 * instructionReads. For example `a[1] = ...` both reads and writes to `a`, so it won't be
-		 * returned. we only return direct writes, like `a = ...`.
-		 *
-		 * @note We don't return values with Construct flag in this instruction, as we want to catch
-		 * the values used before construction.
-		 */
-		std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
-			// If we construct a result, then this is not a write
-			for (auto& flag: instr.flags)
-				if (flag.flag == OperationFlag::Flag::Construct) return {};
-			// The output->hasProjections() doesn't matter, but if there were projections,
-			// then the base would also be read and we would also detect
-			if (instr.output && instr.output->isLocal() && not instr.output->hasProjections())
-				return { instr.output->getBase<MIRLocalRef>() };
-			return {};
-		}
 	}
 
 	void InvalidUseCheck::run(query::Context& ctx, Function& fun, const LifetimePassArgs& args) {

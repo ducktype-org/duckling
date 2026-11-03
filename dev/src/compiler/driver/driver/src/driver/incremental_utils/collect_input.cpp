@@ -81,26 +81,7 @@ namespace compiler::driver {
 			}
 			return lookups_map;
 		}
-	}
 
-	void collectQueryInputsFromPst(
-		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
-	) {
-		auto root = pst_ref->getRootElement();
-		if (auto maybe_root = root.illegalAccess()) {
-			auto root_unlocked = maybe_root.value();
-			out.emplace_back(pst::internal::PSTAccessSideInput::getID(), root_unlocked->getHash());
-		}
-
-		auto elems = pst::viewAllSubTreeElements(root);
-		for (auto& el: elems)
-			if (auto maybe_elem = el.illegalAccess()) {
-				auto ptr = maybe_elem.value();
-				out.emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
-			}
-	}
-
-	namespace {
 		/**
 		 * @brief Collect all input data (QueryID + hash) from the global packages.
 		 * This includes:
@@ -200,6 +181,23 @@ namespace compiler::driver {
 
 			return out;
 		}
+	}
+
+	void collectQueryInputsFromPst(
+		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
+	) {
+		auto root = pst_ref->getRootElement();
+		if (auto maybe_root = root.illegalAccess()) {
+			auto root_unlocked = maybe_root.value();
+			out.emplace_back(pst::internal::PSTAccessSideInput::getID(), root_unlocked->getHash());
+		}
+
+		auto elems = pst::viewAllSubTreeElements(root);
+		for (auto& el: elems)
+			if (auto maybe_elem = el.illegalAccess()) {
+				auto ptr = maybe_elem.value();
+				out.emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
+			}
 	}
 
 	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromPrevMetadata() {

@@ -139,12 +139,11 @@ namespace compiler::helios::code {
 			if (resulting_symbol.hasFailed()) return query::Failed();
 			return resulting_symbol.valueOrPanic();
 		}
-
-		/**
-		 * @brief A builtin or a non-default ABI function is used as a value.
-		 */
 	}
 
+	/**
+	 * @brief A builtin or a non-default ABI function is used as a value.
+	 */
 	class FunctionRefBuiltinError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
