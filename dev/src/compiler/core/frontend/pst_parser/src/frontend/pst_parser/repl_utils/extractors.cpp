@@ -4,13 +4,12 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include "utility.hpp"
+#include "extractors.hpp"
 
-#include "element_kind.hpp"
-#include "lang_parser_element.hpp"
-
-#include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/elements/includes/basic.hpp>
+#include "../element_kind.hpp"
+#include "../elements/hierarchy/statements/expr_stmt.hpp"
+#include "../elements/includes/basic.hpp"
+#include "../lang_parser_element.hpp"
 
 namespace pst {
 	base::Optional<AccessLocked<Stmt>> extractSingleStatement(

@@ -54,7 +54,7 @@ add_library(PstParser
 	${PST_SRC}/test_utils/pst_test_utils.cpp
 	${PST_SRC}/access/source_position_locked.cpp
 	${PST_SRC}/access/access_pst.cpp
-	${PST_SRC}/utility.cpp
+	${PST_SRC}/repl_utils/extractors.cpp
 	${PST_SRC}/pst/pst.cpp
 	${PST_SRC}/pst_automatic.cpp
 	${PST_SRC}/pst_query/code_dependency.cpp
