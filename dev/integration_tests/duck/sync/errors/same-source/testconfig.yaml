@@ -20,7 +20,7 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+            echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
 
               Caused by:
                 normal dependency \`bar2\` has the same source as normal dependency \`bar\`"
@@ -42,7 +42,7 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+            echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
 
               Caused by:
                 dev dependency \`bar2\` has the same source as normal dependency \`bar\`"
