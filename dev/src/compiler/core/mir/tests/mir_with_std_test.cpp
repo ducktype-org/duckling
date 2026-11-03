@@ -73,6 +73,17 @@ private:
 			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
 			// 4 blocks per slice access are from the conditions of its bounds check
 			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 9);
+
+			// `panic` never returns, so each failed bounds check must end the control flow
+			// instead of jumping back to the access.
+			usize unreachable_after_panic = 0;
+			for (const auto& [id, block]: mir_unit.mir_functions[0]->blocks) {
+				if (block.terminator.operation != compiler::mir::Operation::Unreachable) continue;
+				if (block.instructions.empty()) continue;
+				if (block.instructions.back().operation == compiler::mir::Operation::Call)
+					unreachable_after_panic++;
+			}
+			ASSERT_EQUAL_PRINT(unreachable_after_panic, usize(2));
 		});
 	}
 

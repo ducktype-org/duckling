@@ -11,6 +11,7 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -39,12 +40,15 @@ namespace compiler::helios {
 		 * @brief Helper for attributes that take no arguments.
 		 */
 		Attribute expectNoArgs(query::Context& ctx, Attribute attr, AttrArgs args) {
-			if (args.has_value() && args.value().unlock(ctx)->size() > 0) {
+			if_opt_none(args) return attr;
+
+			auto arg_list = args.value().unlock(ctx);
+			if (arg_list->size() > 0) {
 				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
 					),
-					args.value().unlock(ctx)->getStablePosition()
+					arg_list->getStablePosition()
 				));
 				query::throwFailed();
 			}
@@ -74,8 +78,9 @@ namespace compiler::helios {
 				query::throwFailed();
 			}
 
-			auto holder      = holders.front().unlock(ctx);
-			auto elem        = code::subExprFromPST(ctx, holder->getExpr()).valueOrThrow();
+			auto holder = holders.front().unlock(ctx);
+			auto elem
+				= code::subExprFromPST(ctx, unlockOrFail(ctx, holder->getExpr())).valueOrThrow();
 			auto numeric_opt = dynamic_cast<code::LiteralNumericExpr*>(elem.get());
 
 			base::Optional<i64> value{};
