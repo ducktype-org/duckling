@@ -692,7 +692,7 @@ namespace compiler::helios {
 		/**
 		 * @brief SymbolData Factory,
 		 * Make symbols from PST elements other then statements.
-		 * @todo in the future this function should not use dynamic_casts,
+		 * @future in the future this function should not use dynamic_casts,
 		 * and should be merged with makeSymbolFromStatement.
 		 */
 		SymbolData makeSymbolFromPSTElement(

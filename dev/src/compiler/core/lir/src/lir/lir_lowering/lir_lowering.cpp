@@ -273,7 +273,7 @@ namespace compiler::lir {
 				return Operation::VariantTryProject;
 			case mir::Operation::BranchIfNull:
 				return Operation::BranchIfNull;
-			// @TODO: add more cases
+			// @future: add more cases
 			default:
 				CORE_PANIC(base::strConcat(
 					"Operation without direct counterpart", base::enumToStr(mir_operation)

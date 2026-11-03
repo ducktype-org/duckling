@@ -9,7 +9,7 @@
 namespace tpc {
 	namespace {
 		void identifierDprint(base::StrID value, std::ostream& out) {
-			// @TODO: change Name to Identifier
+			// @future: change Name to Identifier
 			out << "{\"Name\": ";
 			if (value.isBad())
 				out << "\"BAD_NAME\"";

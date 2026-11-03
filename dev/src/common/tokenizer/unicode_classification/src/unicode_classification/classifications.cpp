@@ -137,7 +137,7 @@ namespace unicode {
 			CORE_ASSERT(
 				Class::operator_continue.containsAll(Class::operator_start),
 				"Set of characters continuing an operator should include all the characters "
-			    "starting an operator."
+				"starting an operator."
 			);
 
 			CORE_ASSERT(
