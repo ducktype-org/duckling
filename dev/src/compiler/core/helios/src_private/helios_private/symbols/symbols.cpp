@@ -210,14 +210,14 @@ namespace compiler::helios {
 					return self(pst_parent.getAsLangElement().unlock(ctx));
 				}
 				default:
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						base::strConcat(
 							"Global variable detection is not implemented for variables inside "
 							"elements of kind: ",
 							el->elementType()
 						),
 						el->getStablePosition()
-					));
+					);
 					query::throwFailed();
 					CORE_UNREACHABLE();
 				}
@@ -313,9 +313,9 @@ namespace compiler::helios {
 			auto pst_attr_value = pst_attr->getName().unlock(ctx);
 
 			if (pst_attr_value->numberOfNames() != 1) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Attribute is not supported", pst_attr_value->getStablePosition()
-				));
+				);
 				query::throwFailed();
 			}
 			auto ident = pst_attr_value->getNameByIndex(0);
@@ -329,20 +329,20 @@ namespace compiler::helios {
 
 			auto attr_opt = attrFromStr(ctx, name, args);
 			if_opt_none(attr_opt) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					base::strConcat("Attribute name '", name, "' is not recognized"),
 					pst_attr_value->getStablePosition()
-				));
+				);
 				query::throwFailed();
 			}
 
 			auto attr = attr_opt.value();
 
 			if (not isValidForStmt(attr, stmt->getStmtKind())) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Attribute is not supported on this type of statement.",
 					pst_attr_value->getStablePosition()
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -350,11 +350,8 @@ namespace compiler::helios {
 		}
 
 		auto validation_result = validateAttributes(result);
-		if (not validation_result.has_value()) {
-			ctx.logInt(
-				makeBox<dia::PlaceholderError>(validation_result.error(), stmt->getStablePosition())
-			);
-		}
+		if (not validation_result.has_value())
+			ctx.log<dia::PlaceholderError>(validation_result.error(), stmt->getStablePosition());
 
 		return result;
 	}
@@ -407,9 +404,9 @@ namespace compiler::helios {
 		void logSelectorNotSupported(
 			query::Context& ctx, pst::Access<pst::Selector> selector, std::string_view what
 		) {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(what, " is not supported yet."), selector->getStablePosition()
-			));
+			);
 		}
 
 		/**
@@ -604,11 +601,11 @@ namespace compiler::helios {
 			    && inner_statement_kind != pst::StmtKind::Class
 			    && inner_statement_kind != pst::StmtKind::Namespace
 			    && inner_statement_kind != pst::StmtKind::Const) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"Templates are only supported for functions, classes, namespaces and "
 					"consts",
 					template_decl->getStablePosition()
-				));
+				);
 				return query::Failed();
 			}
 
@@ -671,9 +668,9 @@ namespace compiler::helios {
 
 		auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
 		if_opt_none(owner_class_element) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				"Class member declared outside of a class.", stmt->getStablePosition()
-			));
+			);
 			return query::Failed();
 		}
 

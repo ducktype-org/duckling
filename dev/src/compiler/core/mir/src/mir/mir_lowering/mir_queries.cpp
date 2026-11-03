@@ -198,7 +198,7 @@ namespace compiler::mir {
 		} else if (function.return_type.getType().getKind() == tsh::Kind::Void) {
 			// If the return type is `void` despite reachability of the end of the function, then
 			// the user must have written it explicitly (deducing `void` in HELIoS is conservative).
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(
 					"The function `",
 					function.name,
@@ -206,17 +206,17 @@ namespace compiler::mir {
 					"of its body."
 				),
 				"Provide an explicit `-> ()` return type if it is meant to return."
-			));
+			);
 			return query::Failed();
 		} else {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(
 					"The function `",
 					function.name,
 					"` is missing a return statement or does not always return."
 				),
 				""
-			));
+			);
 			return query::Failed();
 		}
 	}

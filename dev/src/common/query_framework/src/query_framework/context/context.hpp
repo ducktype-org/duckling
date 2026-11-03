@@ -142,7 +142,7 @@ namespace query {
 						// Log cyclic diagnostic with cycle information.
 						// @TODO: #2615 move and improve this diagnostic.
 
-						this_context.logInt(makeBox<dia::PlaceholderError>(
+						this_context.log<dia::PlaceholderError>(
 							base::strConcat(
 								"Query cycle detected involving query node:",
 								caller.q_id.asInt(),
@@ -166,7 +166,7 @@ namespace query {
 									return result;
 								}()
 							)
-						));
+						);
 
 						// We have to repeat destructor logic here, since it will not be called
 						// after a throw here.
@@ -339,14 +339,19 @@ namespace query {
 		}
 
 		/**
-		 * @brief Logs a diagnostic message for the current query node.
+		 * @brief Logs an already built diagnostic message for the current query node.
+		 * Prefer `log<Msg>(args...)` unless the message needs more work (e.g. notes) before it
+		 * is logged. Is thread safe.
+		 */
+		void log(Box<dia::MessageBase> diagnostic);
+
+		/**
+		 * @brief Builds a `Msg` from `args` and logs it for the current query node.
 		 * Is thread safe.
 		 */
-		void logInt(Box<dia::MessageBase> diagnostic);
-
 		template<std::derived_from<dia::MessageBase> Msg, typename... Args>
 		void log(Args&&... args) {
-			logInt(makeBox<Msg>(std::forward<Args>(args)...));
+			log(makeBox<Msg>(std::forward<Args>(args)...));
 		}
 
 		/**

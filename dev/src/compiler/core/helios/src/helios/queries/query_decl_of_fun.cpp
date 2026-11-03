@@ -308,11 +308,11 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
 					fun->getStablePosition()
-				));
+				);
 				return query::Failed();
 			}
 		}
@@ -362,7 +362,7 @@ namespace compiler::helios {
 
 		const bool is_operator = lexer::isOperatorSymbolString(name.strView());
 		if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
-			ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
+			ctx.log<InvalidOperatorFixityError>(source_position);
 			query::throwFailed();
 		}
 		if (!is_operator) return Operatoriness::None;
@@ -375,7 +375,7 @@ namespace compiler::helios {
 			case pst::OperatorFixity::Suffix:
 				return Operatoriness::Suffix;
 			case pst::OperatorFixity::None:
-				ctx.logInt(makeBox<MissingUnaryOperatorFixityError>(source_position));
+				ctx.log<MissingUnaryOperatorFixityError>(source_position);
 				query::throwFailed();
 			}
 			CORE_UNREACHABLE();
@@ -429,10 +429,10 @@ namespace compiler::helios {
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 
 					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
-						ctx.logInt(makeBox<InvalidMainReturnTypeError>(
+						ctx.log<InvalidMainReturnTypeError>(
 							ret_unlocked->getStablePosition(),
 							makeBox<InteractiveType>(ctx, ret_type)
-						));
+						);
 						query::throwFailed();
 					}
 

@@ -223,10 +223,10 @@ namespace compiler::helios::code {
 		}
 		if (found_match) return cast_expr(std::move(value));
 
-		ctx.logInt(makeBox<dia::PlaceholderError>(
+		ctx.log<dia::PlaceholderError>(
 			base::strConcat("Invalid cast from type ", from.toString(), " to type ", to.toString()),
 			stmt->getStablePosition()
-		));
+		);
 		query::throwFailed();
 		CORE_UNREACHABLE();
 	}
