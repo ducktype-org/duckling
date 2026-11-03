@@ -45,7 +45,7 @@ namespace compiler::helios {
 					b.origin.getStablePosition(),
 					base::strConcat("Return type is `", b.return_type.toString(), "`.")
 				));
-				ctx.logInt(std::move(err));
+				ctx.log(std::move(err));
 			}
 			return false;
 		}
@@ -66,7 +66,7 @@ namespace compiler::helios {
 					base::strConcat("Other function has ", b.parameters.size(), " parameter(s)."),
 					b.origin.getStablePosition()
 				));
-				ctx.logInt(std::move(err));
+				ctx.log(std::move(err));
 			}
 			return false;
 		}
@@ -93,7 +93,7 @@ namespace compiler::helios {
 						pb.origin.getStablePosition(),
 						base::strConcat("Parameter type is `", pb.type.toString(), "`.")
 					));
-					ctx.logInt(std::move(err));
+					ctx.log(std::move(err));
 				}
 				return false;
 			}
@@ -112,7 +112,7 @@ namespace compiler::helios {
 						pb.origin.getStablePosition(),
 						base::strConcat("Parameter is named `", pb.name, "`.")
 					));
-					ctx.logInt(std::move(err));
+					ctx.log(std::move(err));
 				}
 				return false;
 			}
@@ -130,7 +130,7 @@ namespace compiler::helios {
 					base::strConcat("Initial value is not allowed here. ", reason),
 					expr->origin.getStablePosition()
 				);
-				ctx.logInt(std::move(err));
+				ctx.log(std::move(err));
 				return base::BAD;
 			}
 		}

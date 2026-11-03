@@ -231,9 +231,9 @@ namespace compiler::helios::coercions {
 		base::Optional<dia::StablePosition> coercion_expects_pos,
 		const CoercionErrorOverrides&       error_overrides
 	) {
-		ctx.logInt(
-			getCoercionError(ctx, failed, source_position, coercion_expects_pos, error_overrides)
-		);
+		auto error
+			= getCoercionError(ctx, failed, source_position, coercion_expects_pos, error_overrides);
+		ctx.log(std::move(error));
 	}
 
 	void logNoMatchingExpectedTypeFailure(
@@ -255,6 +255,6 @@ namespace compiler::helios::coercions {
 				coercion.getTarget().toString(), getCoercionError(ctx, coercion, source_position)
 			);
 
-		ctx.logInt(std::move(error));
+		ctx.log(std::move(error));
 	}
 }

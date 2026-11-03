@@ -50,7 +50,9 @@
 namespace compiler::helios {
 
 
-	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	namespace {
+		auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	}
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -457,11 +459,11 @@ namespace compiler::helios {
 				// parsed but nothing compiles them yet, so report it instead of falling through
 				// to the panicky visitor default. Leaving `out` unset fails the query.
 				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
 					"`T(...)` and `T.name(...)` declare a constructor.\n"
-				));
+				);
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {

@@ -41,9 +41,7 @@ namespace compiler::helios::code {
 				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
 					index_pst->getStablePosition()
 				);
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Index operator base must be indexable.", error_pos
-				));
+				ctx.log<dia::PlaceholderError>("Index operator base must be indexable.", error_pos);
 				return query::Failed();
 			}
 
@@ -134,9 +132,9 @@ namespace compiler::helios::code {
 		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				"Array index/size must be exactly one expression.", call_expr->getStablePosition()
-			));
+			);
 			return query::Failed();
 		}
 

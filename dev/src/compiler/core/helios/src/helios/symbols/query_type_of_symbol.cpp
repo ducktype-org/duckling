@@ -185,19 +185,19 @@ namespace compiler::helios {
 				CORE_ASSERT(flow_parent.has_value(), "BindingPattern without parent");
 				auto flow_opt = flow_parent.value().unlock(ctx).dynamicCast<pst::FlowPattern>();
 				if (!flow_opt.has_value()) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Pattern bindings outside of a flow pattern.", binding->getStablePosition()
-					));
+					);
 					setFailed();
 					return;
 				}
 
 				auto constraint = flow_opt.value()->getTypeConstraint();
 				if (!constraint.has_value()) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Match pattern bindings without a type constraint (`case x : T`).",
 						binding->getStablePosition()
-					));
+					);
 					setFailed();
 					return;
 				}
