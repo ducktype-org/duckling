@@ -40,6 +40,7 @@
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <map>
 #include <type_traits>
 #include <utility>
 
@@ -56,6 +57,74 @@ namespace compiler::lir {
 	}
 
 	/**
+	 * @brief Caches type layouts and whether types carry information, so that each is queried
+	 * once per query. The same types are used many times in one function, and every query call
+	 * adds a query graph edge (#2407).
+	 * @note Must only be used in the query that created it.
+	 */
+	class TypeInfoCache final {
+		using LayoutResult = CRef<query::QResult<tsl::TypeLayout>>;
+
+		query::Context&                           ctx;
+		std::map<tsh::SymbolType<>, LayoutResult> layouts;
+		std::map<tsh::AbstractType, bool>         carries_information;
+		base::Optional<LayoutResult>              unit_layout;
+
+		[[nodiscard]]
+		LayoutResult layoutResultOf(const tsh::SymbolType<>& type) {
+			auto it = layouts.find(type);
+			if (it == layouts.end())
+				it = layouts.emplace(type, ctx.query<tsl::QuerySymbolTypeLayout>(type)).first;
+			return it->second;
+		}
+
+	public:
+		explicit TypeInfoCache(query::Context& ctx): ctx(ctx) {}
+
+		[[nodiscard]]
+		CRef<tsl::TypeLayout> layoutOf(const tsh::SymbolType<>& type) {
+			return &layoutResultOf(type)->valueOrPanicMsg("layout query failed at LIR stage");
+		}
+
+		/**
+		 * @brief Whether the type carries information, see tsh::AbstractType.
+		 */
+		[[nodiscard]]
+		bool carriesInformation(const tsh::AbstractType& type) {
+			auto it = carries_information.find(type);
+			if (it == carries_information.end())
+				it = carries_information.emplace(type, type.carriesInformation(ctx)).first;
+			return it->second;
+		}
+
+		/**
+		 * @brief Same as tsl::FunctionalTypeLayout::getParameterLayouts.
+		 */
+		[[nodiscard]]
+		std::vector<CRef<tsl::TypeLayout>> parameterLayouts(const tsh::FunctionAbstractType& type) {
+			std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
+			parameter_layouts.reserve(type.getParameterTypes().size());
+			for (const auto& parameter: type.getParameterTypes())
+				if (carriesInformation(parameter.getType()))
+					parameter_layouts.emplace_back(&layoutResultOf(parameter)->valueOrThrow());
+			return parameter_layouts;
+		}
+
+		/**
+		 * @brief Same as tsl::FunctionalTypeLayout::getReturnLayout.
+		 */
+		[[nodiscard]]
+		CRef<tsl::TypeLayout> returnLayout(const tsh::FunctionAbstractType& type) {
+			const auto result_type = type.getResultType();
+			if (carriesInformation(result_type.getType()))
+				return &layoutResultOf(result_type)->valueOrThrow();
+			if (!unit_layout)
+				unit_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType());
+			return &(*unit_layout)->valueOrThrow();
+		}
+	};
+
+	/**
 	 * @brief The layout of a function type together with the layouts of its signature.
 	 */
 	struct FunctionLayouts final {
@@ -64,16 +133,10 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout>              return_type_layout;
 		/// The result type is `void`, so a call never returns.
 		bool never_returns;
-
-		[[nodiscard]] const tsl::FunctionalTypeLayout& functional() const {
-			return std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
-		}
 	};
 
 	namespace {
-		LIRAbi getLIRAbi(
-			query::Context& ctx, helios::SymID sym, const tsl::FunctionalTypeLayout& function_layout
-		) {
+		LIRAbi getLIRAbi(query::Context& ctx, helios::SymID sym, const FunctionLayouts& layouts) {
 			auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
 				"Handling errors in MIR is not supported yet"
 			);
@@ -104,9 +167,8 @@ namespace compiler::lir {
 			};
 
 			abi::calling_conv::FunctionType abi_fun_type{
-				.return_type = return_abi_or_empty(function_layout.getReturnLayout(ctx)),
-				.param_types = function_layout.getParameterLayouts(ctx)
-				             | std::views::transform(abi_type_or_panic)
+				.return_type = return_abi_or_empty(layouts.return_type_layout),
+				.param_types = layouts.parameter_layouts | std::views::transform(abi_type_or_panic)
 				             | std::ranges::to<std::vector>(),
 				.num_fixed_params = c_abi_info.fixed_params,
 			};
@@ -118,19 +180,22 @@ namespace compiler::lir {
 		/**
 		 * @brief Computes the layout of the function type @p type and the layouts of its signature.
 		 */
-		FunctionLayouts getFunctionLayouts(query::Context& ctx, tsh::FunctionAbstractType type) {
+		FunctionLayouts getFunctionLayouts(
+			query::Context& ctx, TypeInfoCache& types, tsh::FunctionAbstractType type
+		) {
 			CRef<tsl::TypeLayout> layout
 				= &ctx.query<tsl::QueryAbstractTypeLayout>(type)->valueOrPanicMsg(
 					"layout query failed at LIR stage"
 				);
-			const auto& functional = std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
 			return { .layout             = layout,
-				     .parameter_layouts  = functional.getParameterLayouts(ctx),
-				     .return_type_layout = functional.getReturnLayout(ctx),
+				     .parameter_layouts  = types.parameterLayouts(type),
+				     .return_type_layout = types.returnLayout(type),
 				     .never_returns = type.getResultType().getType().getKind() == tsh::Kind::Void };
 		}
 
-		FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
+		FunctionLiteral getFunctionLiteralfromHELIOSID(
+			query::Context& ctx, TypeInfoCache& types, helios::SymID helios_id
+		) {
 			tsh::FunctionAbstractType type
 				= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
 			          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
@@ -142,8 +207,8 @@ namespace compiler::lir {
 			base::Optional<BuiltinFunctionKind> builtin_kind_opt
 				= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
 
-			auto layouts    = getFunctionLayouts(ctx, type);
-			auto symbol_abi = getLIRAbi(ctx, helios_id, layouts.functional());
+			auto layouts    = getFunctionLayouts(ctx, types, type);
+			auto symbol_abi = getLIRAbi(ctx, helios_id, layouts);
 
 			return FunctionLiteral{ .mangled_name = mangled_name,
 				                    .abi          = std::move(symbol_abi),
@@ -349,7 +414,52 @@ namespace compiler::lir {
 
 			std::vector<BlockRef> block_order;
 
+			// Per-function caches (#2407). The same types, globals and functions are used many
+			// times in one function, and each query call adds a query graph edge.
+			mutable TypeInfoCache                            types{ ctx };
+			mutable std::map<helios::SymID, LIRGlobal>       globals;
+			mutable std::map<helios::SymID, FunctionLiteral> function_literals;
+
 			// helper functions:
+
+			[[nodiscard]]
+			CRef<tsl::TypeLayout> layoutOf(const tsh::SymbolType<>& type) const {
+				return types.layoutOf(type);
+			}
+
+			[[nodiscard]]
+			bool carriesInformation(const tsh::AbstractType& type) const {
+				return types.carriesInformation(type);
+			}
+
+			[[nodiscard]]
+			bool carriesInformation(const mir::MIRLocal& local) const {
+				return carriesInformation(local.type.getType());
+			}
+
+			[[nodiscard]]
+			bool carriesInformation(const mir::MIRPlace& place) const {
+				return carriesInformation(place.type.getType());
+			}
+
+			[[nodiscard]]
+			bool carriesInformation(const mir::MIRValue& value) const {
+				if (const auto* place = std::get_if<mir::MIRPlace>(&value.getVariant()))
+					return carriesInformation(*place);
+				return value.carriesInformation(ctx);
+			}
+
+			[[nodiscard]]
+			FunctionLiteral functionLiteral(const helios::SymID helios_id) const {
+				auto it = function_literals.find(helios_id);
+				if (it == function_literals.end())
+					it = function_literals
+					         .emplace(
+								 helios_id, getFunctionLiteralfromHELIOSID(ctx, types, helios_id)
+							 )
+					         .first;
+				return it->second;
+			}
 
 			/**
 			 * @brief Returns LIR local associated with given MIR local.
@@ -381,7 +491,11 @@ namespace compiler::lir {
 
 			[[nodiscard]]
 			LIRGlobal getGlobal(const mir::MIRGlobal& mir_global) const {
-				return LIRGlobal::fromMIR(ctx, mir_global);
+				auto it = globals.find(mir_global.helios_id);
+				if (it == globals.end())
+					it = globals.emplace(mir_global.helios_id, LIRGlobal::fromMIR(ctx, mir_global))
+					         .first;
+				return it->second;
 			}
 
 			[[nodiscard]]
@@ -434,7 +548,7 @@ namespace compiler::lir {
 			[[nodiscard]]
 			base::Optional<LIRPlace> getOutput(const base::Optional<mir::MIRPlace>& output) const {
 				if (!output.has_value()) return {};
-				if (!output->carriesInformation(ctx)) return {};
+				if (!carriesInformation(*output)) return {};
 				return getPlace(*output);
 			}
 
@@ -446,19 +560,14 @@ namespace compiler::lir {
 			 */
 			[[nodiscard]] base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) const {
 				// Discard information-less location.
-				if (!loc.carriesInformation(ctx)) return {};
+				if (!carriesInformation(loc)) return {};
 
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MIRConstant, value) {
 						if (value.value.has<ctv::CompileTimeValue::UnitCTV>())
 							CORE_PANIC("Cannot get location of MIR unit.");
 
-						auto layout = CRef<tsl::TypeLayout>(
-							&ctx.query<tsl::QuerySymbolTypeLayout>(
-									value.value.getTypeOfStoredValue(ctx)
-							)
-								 ->valueOrPanicMsg("layout query failed at LIR stage")
-						);
+						auto layout = layoutOf(value.value.getTypeOfStoredValue(ctx));
 						return LIRValue{ LIRConstant{ .value = value.value, .layout = layout } };
 					}
 					variant_case(mir::MIRPlace, place) { return LIRValue{ getPlace(place) }; }
@@ -466,7 +575,7 @@ namespace compiler::lir {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
 					}
 					variant_case(mir::MIRFunctionLiteral, func) {
-						return getFunctionLiteralfromHELIOSID(ctx, func.helios_id);
+						return functionLiteral(func.helios_id);
 					}
 				}
 
@@ -486,7 +595,7 @@ namespace compiler::lir {
 				{
 					usize lir_param_index = 0;
 					for (const auto& mir_param_type: key.function->parameter_types)
-						if (!mir_param_type.getType().carriesInformation(ctx))
+						if (!carriesInformation(mir_param_type.getType()))
 							mir_to_lir_parameter_indices.emplace_back();
 						else
 							mir_to_lir_parameter_indices.emplace_back(lir_param_index++);
@@ -494,11 +603,12 @@ namespace compiler::lir {
 
 				for (const auto& mir_local: key.function->local_list) {
 					// Discard data-less variables.
-					if (!mir_local.carriesInformation(ctx)) continue;
+					if (!carriesInformation(mir_local)) continue;
 
 					auto lir_local = LIRLocal::fromMIR(
 						ctx,
 						&mir_local,
+						layoutOf(mir_local.type),
 						mir_local.parameter_index.flatMap(
 							[&mir_to_lir_parameter_indices](const usize mir_index) {
 								return mir_to_lir_parameter_indices[mir_index];
@@ -627,7 +737,7 @@ namespace compiler::lir {
 				std::vector<ScopeFlag> result;
 				for (const auto& [flag, local]: mir_instruction.flags) {
 					// Discard flags for information-less locals.
-					if (!local->carriesInformation(ctx)) continue;
+					if (!carriesInformation(*local)) continue;
 
 					[[maybe_unused]]
 					//< temporary for linter
@@ -693,7 +803,7 @@ namespace compiler::lir {
 				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 
 				CORE_ASSERT(
-					to_destruct.carriesInformation(ctx),
+					carriesInformation(to_destruct),
 					"The destructred place does not carry information. This probably means a "
 					"Destruct of a ZST class got here. Adjust this code accordingly."
 				);
@@ -705,7 +815,9 @@ namespace compiler::lir {
 				if (type.getRefKind() == tsh::ReferenceKind::Direct) {
 					// The destructor takes `self: ref T`, so the address of the destructed
 					// place is materialized first.
-					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
+					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(
+						layoutOf(type.withReferenceKind(tsh::ReferenceKind::Ref))
+					));
 					LIRPlace    addr_place{ addr_local };
 
 					auto& address_instr = block->instructions.emplace_back(
@@ -788,7 +900,7 @@ namespace compiler::lir {
 				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 
 				// With nothing to destroy there is nothing to branch over either.
-				if (not to_destruct.carriesInformation(ctx)) {
+				if (not carriesInformation(to_destruct)) {
 					hold_flags(curr_block->instructions, std::move(flags));
 					return curr_block;
 				}
@@ -984,7 +1096,7 @@ namespace compiler::lir {
 					}
 
 					auto layouts
-						= getFunctionLayouts(ctx, callee.get<mir::MIRPlace>().type.getType());
+						= getFunctionLayouts(ctx, types, callee.get<mir::MIRPlace>().type.getType());
 					curr_block->instructions.emplace_back(
 						Operation::IndirectCall,
 						output,
@@ -1013,14 +1125,10 @@ namespace compiler::lir {
 						std::move(args),
 						mir_instruction.metadata,
 						CastParameters{
-							.source_type = cast_parameters->source_type,
-							.target_type = cast_parameters->target_type,
-							.source_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type)
-					               ->valueOrPanicMsg("layout query failed at LIR stage"),
-							.target_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type)
-					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+							.source_type   = cast_parameters->source_type,
+							.target_type   = cast_parameters->target_type,
+							.source_layout = layoutOf(cast_parameters->source_type),
+							.target_layout = layoutOf(cast_parameters->target_type),
 						}
 					);
 					break;
@@ -1049,16 +1157,10 @@ namespace compiler::lir {
 						std::move(args),
 						mir_instruction.metadata,
 						VariantParameters{
-							.alternative_index = variant_parameters->alternative_index,
-							.alternative_type  = variant_parameters->alternative_type,
-							.alternative_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(
-									  variant_parameters->alternative_type
-							)
-					               ->valueOrPanicMsg("layout query failed at LIR stage"),
-							.variant_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(variant_type)
-					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+							.alternative_index  = variant_parameters->alternative_index,
+							.alternative_type   = variant_parameters->alternative_type,
+							.alternative_layout = layoutOf(variant_parameters->alternative_type),
+							.variant_layout     = layoutOf(variant_type),
 						}
 					);
 					break;
@@ -1159,6 +1261,7 @@ namespace compiler::lir {
 			Function get() && {
 				auto layouts = getFunctionLayouts(
 					ctx,
+					types,
 					ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = key.function->parameter_types,
 						.result_type     = key.function->return_type,
@@ -1168,7 +1271,7 @@ namespace compiler::lir {
 				auto abi = [&]() -> LIRAbi {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return getLIRAbi(ctx, name.id, layouts.functional());
+							return getLIRAbi(ctx, name.id, layouts);
 						}
 						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return { LIRAbi::DefaultAbi{} };
@@ -1295,7 +1398,8 @@ namespace compiler::lir {
 			},
 		});
 
-		auto layouts = getFunctionLayouts(ctx, function_type);
+		TypeInfoCache types(ctx);
+		auto          layouts = getFunctionLayouts(ctx, types, function_type);
 
 		Block entry_block;
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };
