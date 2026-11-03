@@ -26,33 +26,33 @@
 #endif
 
 namespace os_utils {
-
+	namespace {
 #if BASE_TARGET_OS_WINDOWS
 
-	std::string getExecutablePathStr() {
-		std::array<char, MAX_PATH> buffer{};
+		std::string getExecutablePathStr() {
+			std::array<char, MAX_PATH> buffer{};
 
-		DWORD len = GetModuleFileNameA(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-		if (len == 0) CORE_PANIC("Failed to get executable path on Windows");
+			DWORD len
+				= GetModuleFileNameA(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+			if (len == 0) CORE_PANIC("Failed to get executable path on Windows");
 
-		return std::string(buffer.data(), len);
-	}
+			return std::string(buffer.data(), len);
+		}
 
 #elif BASE_TARGET_OS_MACOS
 
-	std::string getExecutablePathStr() {
-		std::array<char, 1'024> buffer{};
-		uint32_t                size = static_cast<uint32_t>(buffer.size());
+		std::string getExecutablePathStr() {
+			std::array<char, 1'024> buffer{};
+			uint32_t                size = static_cast<uint32_t>(buffer.size());
 
-		if (_NSGetExecutablePath(buffer.data(), &size) != 0)
-			CORE_PANIC("Failed to get executable path on macOS");
+			if (_NSGetExecutablePath(buffer.data(), &size) != 0)
+				CORE_PANIC("Failed to get executable path on macOS");
 
-		return std::string(buffer.data());
-	}
+			return std::string(buffer.data());
+		}
 
 #elif BASE_TARGET_OS_LINUX
 
-	namespace {
 		std::string getExecutablePathStr() {
 			std::array<char, PATH_MAX> buffer{};
 
@@ -62,11 +62,11 @@ namespace os_utils {
 			buffer.at(base::safeIntConv<usize>(len)) = '\0';
 			return { buffer.data() };
 		}
-	}
 
 #else
 	#error "Unsupported target operating system."
 #endif
+	}
 
 	fs::FilePath getExecutablePath() { return { getExecutablePathStr() }; }
 

@@ -249,11 +249,9 @@ namespace compiler::backend_llvm {
 			// threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs.
 			llvm::llvm_shutdown();
 		}
-	}
 
-	RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
+		RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
 
-	namespace {
 		/**
 		 * @brief Returns reference to the llvm context.
 		 * @note as per https://llvm.org/doxygen/classllvm_1_1LLVMContext.html#details
