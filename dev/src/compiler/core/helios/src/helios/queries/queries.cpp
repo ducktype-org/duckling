@@ -7,6 +7,9 @@
 #include "queries.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/namespace.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -22,6 +25,7 @@
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -107,13 +111,20 @@ namespace compiler::helios {
 		};
 
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<GetScopesOutput> out) {
-			auto root          = getFilePST(ctx, file)->getRootElement();
+			auto file_pst      = getFilePST(ctx, file);
+			auto root          = file_pst->getRootElement();
 			auto root_unlocked = root.unlockOpt(ctx);
 			if (root_unlocked.empty()) {
 				// PST root failed to parse, PST should have already reported the diagnostic.
 				out->failed = true;
 				return;
 			}
+
+			// The parser recovers from errors and still builds a partial tree, so the root can be
+			// fine while some statements are broken or missing. Any parse error is a hard error
+			// for the module: the PST has already reported it, we only fail here. We still walk
+			// the partial tree to report as many HELIOS diagnostics as possible.
+			if (file_pst->hasErrors()) out->failed = true;
 
 			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {
 				// handling lambdas, templates, etc. might be much more tricky and
@@ -151,6 +162,52 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Reports every statement in `statements` that can only run inside a function
+		 * body: expression statements, `return`/`break`/`continue`, `if`, `while` and `for`.
+		 * Nothing would ever execute them at module level, so they are errors there. Namespace
+		 * and specifier block bodies are module level too, so they are checked recursively.
+		 *
+		 * @return `true` if at least one such statement was found.
+		 */
+		static bool reportStatementsOutsideFunctions(Context& ctx, auto&& statements) {
+			bool found = false;
+			for (pst::AccessLocked<pst::Stmt> stmt_locked: statements) {
+				// A null statement is a parse error that the PST has already reported.
+				auto stmt_opt = stmt_locked.unlockOpt(ctx);
+				if (stmt_opt.empty()) continue;
+				auto stmt = stmt_opt.value();
+
+				switch (stmt->getElementKind()) {
+				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::Action:
+				case pst::ElementKind::If:
+				case pst::ElementKind::While:
+				case pst::ElementKind::For:
+					ctx.logInt(makeBox<StatementOutsideFunctionError>(stmt->getStablePosition()));
+					found = true;
+					break;
+				case pst::ElementKind::Namespace: {
+					auto body
+						= stmt.dynamicCast<pst::Namespace>().value()->getBody().unlockOpt(ctx);
+					if (body.has_value())
+						found |= reportStatementsOutsideFunctions(ctx, *body.value());
+					break;
+				}
+				case pst::ElementKind::SpecifierBlock: {
+					auto specifier_block = stmt.dynamicCast<pst::SpecifierBlock>().value();
+					auto block           = specifier_block->getBlock().unlockOpt(ctx);
+					if (block.has_value())
+						found |= reportStatementsOutsideFunctions(ctx, *block.value());
+					break;
+				}
+				default:
+					break;
+				}
+			}
+			return found;
+		}
+
+		/**
 		 * @brief QueryModuleHOUT helper.
 		 * Its implementation assumes it is a helper for the QueryModuleHOUT query and not directly
 		 * in other contexts.
@@ -174,6 +231,14 @@ namespace compiler::helios {
 			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
 
 			getScopes(ctx, main_file, &output);
+
+			// REPL and script modules run their top-level statements, so they are allowed there.
+			if (not ctx.query<frontend::QueryIsReplModule>(key)) {
+				auto root = getFilePST(ctx, main_file)->getRootElement().unlockOpt(ctx);
+				if (root.has_value()
+				    and reportStatementsOutsideFunctions(ctx, root.value()->getStatements()))
+					output.failed = true;
+			}
 
 			// eliminate duplicates with sort:
 			std::ranges::sort(output.scopes);
