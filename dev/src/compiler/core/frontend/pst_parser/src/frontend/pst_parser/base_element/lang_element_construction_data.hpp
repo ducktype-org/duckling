@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "pst_config.hpp"
+#include "../pst_config.hpp"
 
 #include <diagnostic/source_position.hpp>
 

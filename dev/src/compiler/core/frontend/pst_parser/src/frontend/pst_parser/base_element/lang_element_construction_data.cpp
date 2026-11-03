@@ -6,7 +6,7 @@
 
 #include "lang_element_construction_data.hpp"
 
-#include "state/lang_parser_state.hpp"
+#include "../state/lang_parser_state.hpp"
 
 namespace pst {
 	LangElementConstructionData::LangElementConstructionData(const LangParserState& state):

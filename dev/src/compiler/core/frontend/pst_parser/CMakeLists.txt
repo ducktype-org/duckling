@@ -47,10 +47,10 @@ set_source_files_properties(${OtherElementsImplementationFiles}
 )
 
 add_library(PstParser
-	${PST_SRC}/lang_parser_element.cpp
 	${PST_SRC}/state/lang_parser_state.cpp
 	${PST_SRC}/state/lang_state_unmethods.cpp
-	${PST_SRC}/lang_element_construction_data.cpp
+	${PST_SRC}/base_element/lang_parser_element.cpp
+	${PST_SRC}/base_element/lang_element_construction_data.cpp
 	${PST_SRC}/test_utils/pst_test_utils.cpp
 	${PST_SRC}/access/source_position_locked.cpp
 	${PST_SRC}/access/access_pst.cpp

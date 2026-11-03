@@ -8,7 +8,7 @@
 
 #include "mir_lifetimes.hpp"
 
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 

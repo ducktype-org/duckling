@@ -9,7 +9,7 @@
 #include <debug_info/debug_info_io.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <global_state/artifacts_location.hpp>
 
 #include <hashing/hash.hpp>

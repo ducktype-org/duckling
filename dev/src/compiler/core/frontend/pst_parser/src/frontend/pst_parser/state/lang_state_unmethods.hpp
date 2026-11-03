@@ -7,8 +7,8 @@
 #pragma once
 // functions that mirror LangParserState methods that can be used without the full definition
 
+#include "../base_element/lang_element_construction_data.hpp"
 #include "../elements/elements_list.hpp"
-#include "../lang_element_construction_data.hpp"
 #include "../pst_config.hpp"
 #include "pst_state_forward.hpp"
 

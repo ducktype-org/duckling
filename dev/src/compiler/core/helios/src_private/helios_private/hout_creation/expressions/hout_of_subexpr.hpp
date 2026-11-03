@@ -8,7 +8,7 @@
 
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
-#include <frontend/pst_parser/generic_query_key.hpp>
+#include <frontend/pst_parser/pst_query/generic_query_key.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/errors.hpp>

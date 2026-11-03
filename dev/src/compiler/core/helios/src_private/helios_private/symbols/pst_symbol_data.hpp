@@ -7,7 +7,7 @@
 #pragma once
 
 #include <frontend/pst_parser/access/access_pst.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>

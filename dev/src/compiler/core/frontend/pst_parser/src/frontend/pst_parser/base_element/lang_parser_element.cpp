@@ -6,9 +6,8 @@
 
 #include "lang_parser_element.hpp"
 
-#include "access/access_pst.hpp"
-#include "elements/includes/basic.hpp"
-#include "state/lang_parser_state.hpp"
+#include "../elements/includes/basic.hpp"
+#include "../state/lang_parser_state.hpp"
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
