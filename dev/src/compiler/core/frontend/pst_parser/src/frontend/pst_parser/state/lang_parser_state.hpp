@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include "lang_parser_context.hpp"
-#include "lang_parser_element.hpp"
-#include "pst_automatic.hpp"
+#include "../lang_parser_context.hpp"
+#include "../lang_parser_element.hpp"
+#include "../pst_automatic.hpp"
 #include "pst_state_forward.hpp"  // IWYU pragma: keep
 
 #include <base/extend_cpp/strongly_typed_id.hpp>

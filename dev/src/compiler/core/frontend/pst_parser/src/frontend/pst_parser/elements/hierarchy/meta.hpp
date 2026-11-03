@@ -8,8 +8,8 @@
 
 #include "../../elements/elements_list.hpp"
 #include "../../lang_parser_element.hpp"
-#include "../../lang_state_unmethods.hpp"
-#include "../../pst_state_forward.hpp"
+#include "../../state/lang_state_unmethods.hpp"
+#include "../../state/pst_state_forward.hpp"
 #include "../elements_common.hpp"
 #include "stmt_kind_fd.hpp"
 

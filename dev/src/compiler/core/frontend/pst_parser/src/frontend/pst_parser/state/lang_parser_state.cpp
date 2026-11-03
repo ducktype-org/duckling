@@ -6,7 +6,7 @@
 
 #include "lang_parser_state.hpp"
 
-#include "utility.hpp"
+#include "../utility.hpp"
 
 namespace pst {
 	bool LangParserState::isSkipping() const { return skip_till_fallback; }
