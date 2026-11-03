@@ -1,0 +1,17 @@
+# A copied scalar is lowered to a typed load + store, so SROA can keep it in a register.
+# A copied aggregate still goes through `memmove`.
+
+class Pair {
+    a: i64;
+    b: i64;
+}
+
+fun isOutOfRange(i: i64, len: i64) -> bool = {
+    let out = i < 0i64 or i >= len;
+    return out;
+}
+
+fun copyPair(p: Pair) -> Pair = {
+    var q = p;
+    return q;
+}

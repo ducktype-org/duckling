@@ -36,8 +36,7 @@ namespace compiler::mir {
 			{},
 			{ pos },
 		});
-		// Maybe we should end the Function here.
-		fail_block->setTerminator({ Operation::Jump, {}, { ok_block->getID() }, {}, scope });
+		fail_block->setTerminator({ Operation::Unreachable, {}, {}, {}, scope });
 
 		// The index is coerced to a signed integer, so both bounds must be verified:
 		// index < length alone lets negative indices through (signed comparison).

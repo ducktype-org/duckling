@@ -50,7 +50,9 @@
 namespace compiler::helios {
 
 
-	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	namespace {
+		auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	}
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -66,37 +68,7 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
-	/**
-	 * @brief A way helios creates scope for given pst element.
-	 */
-	enum class ElementScopeKind {
-		// Has standard scope:
-		Standard,
-
-		// Inherits scope from its parent:
-		Transparent,
-
-		// Gets parent scope of what transparent scope would be.
-		// This is used for expand expressions, where the lookup should happen higher than the
-		// expand statement itself.
-		ParentTransparent,
-
-		// Does not have a scope:
-		Invalid,
-
-		// @TODO: introduce:
-		// * TransparentInvalid -- transparent for implementation, but invalid for user
-		// this allows to easily implement scope parents, but disallow to get PrimaryScopes for
-		// elements that don't have it.
-		// For examples namespaces don't have primary scopes (which can be counterintuitive)
-	};
-
-	/**
-	 * Determines scope kind for given PST element.
-	 */
 	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement> element) {
-		// @TODO: move it to different file?
-
 		switch (element->getElementKind()) {
 		case pst::ElementKind::TopLevel:
 			return ElementScopeKind::Standard;
@@ -355,83 +327,6 @@ namespace compiler::helios {
 		return visitor.out.value();
 	}
 
-	struct IMPLEMENT_QUERY(QueryScopesInModule, QueryScopesInModuleValue) {
-		/**
-		 * Helper struct used for accumulating the query output.
-		 */
-		struct Output final {
-			std::vector<ScopeID> scopes;
-			bool                 failed = false;
-		};
-
-		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
-			auto root          = getFilePST(ctx, file)->getRootElement();
-			auto root_unlocked = root.unlockOpt(ctx);
-			if (root_unlocked.empty()) {
-				// PST root failed to parse, PST should have already reported the diagnostic.
-				out->failed = true;
-				return;
-			}
-
-			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {
-				// handling lambdas, templates, etc. might be much more tricky and
-				// require a different approach
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
-			};
-
-			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
-			// somehow. Note that more custom logic might be needed in the future (to optimize it,
-			// to compile lambdas, etc.)
-
-			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
-				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
-					// we want to skip template bodies, since
-					// they don't compile directly
-					return true;
-				}
-				return false;
-			};
-
-			auto for_all_ok
-				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
-			if (for_all_ok.status().isBad()) {
-				// if the pstForAll failed, we mark the whole query as failed, but we still return
-				// the scopes that we managed to obtain.
-				out->failed = true;
-			}
-		}
-
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// fetch scopes from main module file
-			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-
-			Output output;
-			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
-
-			getScopes(ctx, main_file, &output);
-
-			// eliminate duplicates with sort:
-			std::ranges::sort(output.scopes);
-			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
-			output.scopes.erase(unique_end, output.scopes.end());
-
-			// validate output:
-			for (auto scope: output.scopes)
-				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
-
-			if (output.failed) {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
-			} else {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
-			}
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
-
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, query::QResult<std::vector<SymID>>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
@@ -564,11 +459,11 @@ namespace compiler::helios {
 				// parsed but nothing compiles them yet, so report it instead of falling through
 				// to the panicky visitor default. Leaving `out` unset fails the query.
 				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
 					"`T(...)` and `T.name(...)` declare a constructor.\n"
-				));
+				);
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
