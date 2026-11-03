@@ -7,14 +7,12 @@
 //! A cross-platform trait extension for replacing the current process with an another.
 
 use std::convert::Infallible;
-use std::fmt;
 use std::process::Command;
+use std::{fmt, io};
 
 use itertools::Itertools;
 
-use crate::QuackResult;
-#[cfg(not(windows))]
-use crate::QuackResultContext;
+use crate::{QuackResult, QuackResultContext};
 
 /// Adds a portable [`exec_replace`](CommandExt::exec_replace) method to the [`Command`].
 pub trait CommandExt {
@@ -35,35 +33,38 @@ impl CommandExt for Command {
         CommandDisplay { command: self }
     }
 
-    #[cfg(unix)]
     fn exec_replace(&mut self) -> QuackResult<Infallible> {
-        use std::os::unix::process::CommandExt;
-        Err(self.exec()).with_context(|| format!("failed to execute `{}`", self.display()))
+        exec_replace_inner(self).with_context(|| format!("failed to execute `{}`", self.display()))
     }
+}
 
-    #[cfg(windows)]
-    fn exec_replace(&mut self) -> QuackResult<Infallible> {
-        use std::io;
+#[cfg(unix)]
+fn exec_replace_inner(command: &mut Command) -> io::Result<Infallible> {
+    use std::os::unix::process::CommandExt;
+    Err(command.exec())
+}
 
-        use windows_sys::Win32::Foundation::{FALSE, TRUE};
-        use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
-        use windows_sys::core::BOOL;
-        unsafe extern "system" fn handler(_: u32) -> BOOL {
-            TRUE
+#[cfg(windows)]
+fn exec_replace_inner(command: &mut Command) -> io::Result<Infallible> {
+    use windows_sys::Win32::Foundation::{FALSE, TRUE};
+    use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
+    use windows_sys::core::BOOL;
+    unsafe extern "system" fn handler(_: u32) -> BOOL {
+        TRUE
+    }
+    unsafe {
+        if SetConsoleCtrlHandler(Some(handler), TRUE) == FALSE {
+            let kind = io::Error::last_os_error().kind();
+            return Err(io::Error::new(kind, "failed to overwrite ctrl-c handler"));
         }
-        unsafe {
-            if SetConsoleCtrlHandler(Some(handler), TRUE) == FALSE {
-                return Err(io::Error::other("failed to overwrite ctrl-c handler").into());
-            }
-        }
-        let status = self.spawn()?.wait()?;
-        std::process::exit(status.code().unwrap_or(1))
     }
+    let status = command.spawn()?.wait()?;
+    std::process::exit(status.code().unwrap_or(1))
+}
 
-    #[cfg(not(any(unix, windows)))]
-    fn exec_replace(&mut self) -> QuackResult<Infallible> {
-        compile_error!("implement `exec_replace`")
-    }
+#[cfg(not(any(unix, windows)))]
+fn exec_replace_inner(command: &mut Command) -> io::Result<Infallible> {
+    compile_error!("implement `exec_replace_inner`")
 }
 
 struct CommandDisplay<'a> {

@@ -96,9 +96,11 @@ impl PackageLoader {
     ) -> QuackResult<PackageContext<'duck>> {
         let start = resolve(start, ctx);
         if !start.is_dir() {
-            let err =
-                MessageError::new(format!("the path `{}` is not a directory", start.display()));
-            return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
+            return Err(io::Error::new(
+                io::ErrorKind::NotADirectory,
+                format!("the path `{}` is not a directory", start.display()),
+            )
+            .into());
         }
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
@@ -127,17 +129,19 @@ impl PackageLoader {
         ctx: &'duck DuckContext,
     ) -> QuackResult<PackageContext<'duck>> {
         if !path.is_dir() {
-            let err =
-                MessageError::new(format!("the path `{}` is not a directory", path.display()));
-            return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
+            return Err(io::Error::new(
+                io::ErrorKind::NotADirectory,
+                format!("the path `{}` is not a directory", path.display()),
+            )
+            .into());
         }
         let manifest_path = path.join(PackageLoader::MANIFEST_NAME);
         if !manifest_path.is_file() {
-            let err = MessageError::new(format!(
-                "the directory `{}` has no manifest",
-                path.display()
-            ));
-            return Err(io::Error::new(io::ErrorKind::NotFound, err).into());
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("the directory `{}` has no manifest", path.display()),
+            )
+            .into());
         }
         PackageContext::new(path.to_path_buf(), ctx)
     }
