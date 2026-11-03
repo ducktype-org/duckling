@@ -68,26 +68,26 @@ namespace compiler::driver {
 			driver::print_statistics  = debug_options.print_statistics;
 		}
 
+		/**
+		 * @brief Creates the artifacts folder at `path` if it is missing.
+		 * @param path The artifacts folder; it must be on disk, not virtual.
+		 * @param what Name of the folder used in error messages (e.g. "Artifacts path").
+		 * @throws base::LogicError If `path` is missing and virtual.
+		 */
+		void ensureArtifactsFolder(const fs::FilePath& path, std::string_view what) {
+			if (path.exists()) return;
+			if (path.isVirtual())
+				throw base::LogicError(base::strConcat(
+					what, " must be on disk, but got a virtual one: ", path.string()
+				));
+			auto file = fs::FileManager::createPhysicalFolder(path.absolute());
+			CORE_ASSERT(
+				file.exists(), base::strConcat(what, " could not be created: ", path.string())
+			);
+		}
+
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
-			auto path = artifacts_options.artifacts_path;
-			if (not path.exists()) {
-				if (path.isPhysical() || path.isRelative()) {
-					auto file = fs::FileManager::createPhysicalFolder(path.absolute());
-					CORE_ASSERT(
-						file.exists(), "Failed to create artifacts folder: " + path.string()
-					);
-				} else if (path.isTemporary()) {
-					auto file = fs::FileManager::createTempFolder(path);
-					CORE_ASSERT(
-						file.exists(), "Failed to create artifacts folder: " + path.string()
-					);
-				} else {
-					throw base::LogicError(
-						"Artifacts path must be either physical or temporary, but got: "
-						+ path.string()
-					);
-				}
-			}
+			ensureArtifactsFolder(artifacts_options.artifacts_path, "Artifacts path");
 			global_state::setters::setRootCollection(
 				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path.getPath())
 			);
@@ -138,24 +138,7 @@ namespace compiler::driver {
 			}
 
 			if_opt_some(stdlib_options.std_artifacts_path, path) {
-				if (not path.exists()) {
-					if (path.isPhysical() || path.isRelative()) {
-						auto file = fs::FileManager::createPhysicalFolder(path.absolute());
-						CORE_ASSERT(
-							file.exists(), "Failed to create artifacts folder: " + path.string()
-						);
-					} else if (path.isTemporary()) {
-						auto file = fs::FileManager::createTempFolder(path);
-						CORE_ASSERT(
-							file.exists(), "Failed to create artifacts folder: " + path.string()
-						);
-					} else {
-						throw base::LogicError(
-							"Artifacts path must be either physical or temporary, but got: "
-							+ path.string()
-						);
-					}
-				}
+				ensureArtifactsFolder(path, "Std artifacts path");
 				global_state::setters::setCustomStdArtifactsCollection(
 					makeBox<artifacts::ArtifactCollection>(path)
 				);
