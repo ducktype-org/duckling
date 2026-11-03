@@ -4,16 +4,16 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include "../../hierarchy/expressions/access.hpp"
+#include "../../hierarchy/expressions/access_expr.hpp"
 
 #include "expressions_errors.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {
 
-	CLONE_SUB_ELEMENTS_DEF(Access, type, name);
+	CLONE_SUB_ELEMENTS_DEF(AccessExpr, type, name);
 
-	MBox<ExprElement> Access::parse(LangParserState& state) {
+	MBox<ExprElement> AccessExpr::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
 		i64 length = base::safeIntConv<i64>(state.ctokens().size());
@@ -24,7 +24,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<Access>(state);
+		auto out = makeBox<AccessExpr>(state);
 
 		// This should never occur if access parsing is called well
 		if (!state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
@@ -39,7 +39,7 @@ namespace pst::expr {
 		PST_RETURN out;
 	}
 
-	void Access::dprint(std::ostream& out) const {
+	void AccessExpr::dprint(std::ostream& out) const {
 		out << "{";
 
 		out << R"("type": )";
@@ -50,9 +50,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	HashAlg& Access::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& AccessExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 
-	void Access::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitAccess(*this); }
+	void AccessExpr::acceptExprVisitor(PstExprVisitor& visitor) const {
+		visitor.visitAccessExpr(*this);
+	}
 }

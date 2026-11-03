@@ -14,8 +14,8 @@ namespace pst::expr {
 	 * @brief This represents a single access expression of type `[expression operator like . or
 	 * .?][name]`
 	 */
-	class Access final: public ExprElement {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Access, ExprElement);
+	class AccessExpr final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(AccessExpr, ExprElement);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -23,11 +23,11 @@ namespace pst::expr {
 		NAMED_CHILD(name, IdentifierWrapper);
 
 	public:
-		explicit Access(LangElementConstructionData state): ExprElement(state, 300) {}
+		explicit AccessExpr(LangElementConstructionData state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
-		~Access() override = default;
+		~AccessExpr() override = default;
 		void     dprint(std::ostream& out) const final;
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;

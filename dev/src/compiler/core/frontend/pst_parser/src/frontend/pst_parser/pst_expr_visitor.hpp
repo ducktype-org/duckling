@@ -24,7 +24,7 @@ namespace pst::expr {
 		ExprFormatStrValue,
 		IdentifierLiteral,
 		KeywordLiteral,
-		Access,
+		AccessExpr,
 		Call,
 		ChainExpr,
 		RoundExpr,

@@ -100,7 +100,7 @@ namespace pst {
 		class Literal;
 		class IdentifierLiteral;
 		class KeywordLiteral;
-		class Access;
+		class AccessExpr;
 		class Call;
 		class Atom;
 		class ChainExpr;
