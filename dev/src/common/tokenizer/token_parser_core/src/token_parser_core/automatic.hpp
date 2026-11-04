@@ -31,10 +31,7 @@
 
 #include "base_element.hpp"
 #include "common_elements.hpp"
-
-#include <diagnostic/message.hpp>
-#include <diagnostic/source_position.hpp>
-#include <lang_definitions/key_spec_op.hpp>
+#include "automatic_errors.hpp"
 
 #include <concepts>
 
@@ -43,11 +40,6 @@ namespace tpc {
 	using lang_def::NamedOperator;
 	using lang_def::Special;
 	using lexer::Operator;
-
-	class BadKeywordError;
-	class BadSpecialError;
-	class BadOperatorError;
-	class NoIdentifierError;
 
 	template<typename State>
 	class GenericAutomatic {
@@ -187,117 +179,6 @@ namespace tpc {
 			one(t, true);
 			parseRest(q...);
 		}
-	};
-
-	class BadKeywordError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_keyword" };
-		}
-
-	public:
-		BadKeywordError(dia::SourcePosition pos, Keyword key):
-			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia::TextArgument>("keyword", lang_def::keywordToStr(key).str());
-		}
-	};
-
-	class BadSpecialError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_special" };
-		}
-
-	public:
-		BadSpecialError(dia::SourcePosition pos, Special spec):
-			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia::TextArgument>("special", lang_def::specialToStr(spec).str());
-		}
-	};
-
-	class BadOperatorError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_operator" };
-		}
-
-	public:
-		BadOperatorError(dia::SourcePosition pos, Operator opr):
-			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia::TextArgument>("operator", opr.str());
-		}
-	};
-
-	class NoIdentifierError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return {
-				.template_type = "message",
-				.type          = "error",
-				.family        = "parser",
-				.name          = "no_identifier",
-			};
-		}
-
-	public:
-		NoIdentifierError(dia::SourcePosition pos, std::string_view but_got);
-	};
-
-	class NoKeywordError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return {
-				.template_type = "message",
-				.type          = "error",
-				.family        = "parser",
-				.name          = "no_keyword",
-			};
-		}
-
-	public:
-		NoKeywordError(dia::SourcePosition pos, std::string_view but_got);
-	};
-
-	class NoOperatorError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return {
-				.template_type = "message",
-				.type          = "error",
-				.family        = "parser",
-				.name          = "no_operator",
-			};
-		}
-
-	public:
-		NoOperatorError(dia::SourcePosition pos, std::string_view but_got);
-	};
-
-	class NoStringError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "no_string" };
-		}
-
-	public:
-		NoStringError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class NoNumericValueError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "no_numeric_value" };
-		}
-
-	public:
-		NoNumericValueError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 }

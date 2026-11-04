@@ -6,7 +6,6 @@
 
 #include "source_position_locked.hpp"
 
-#include <query_framework/external/api.hpp>
 #include <query_framework/input_query/query_input.hpp>
 #include <query_framework/input_query/query_input_impl.hpp>
 

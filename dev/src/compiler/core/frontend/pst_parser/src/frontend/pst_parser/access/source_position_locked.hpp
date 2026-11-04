@@ -44,7 +44,7 @@ namespace pst {
 	/**
 	 * @brief Helper class that can resolve to a SourcePosition, either from a StablePosition or
 	 * from a custom resolver function. This is useful when we are writing a function that needs to
-	 * report and error and has the position of the error as a parameter, but we only want to mark
+	 * report an error and has the position of the error as a parameter, but we only want to mark
 	 * the dependency on the position when we actually need to report the error (the function may
 	 * not always report an error).
 	 */
