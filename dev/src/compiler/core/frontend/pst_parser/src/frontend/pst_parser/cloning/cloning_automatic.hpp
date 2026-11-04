@@ -15,8 +15,7 @@
  */
 #pragma once
 
-#include "../automatic/pst_automatic.hpp"
-#include "cloning_decl.hpp"
+#include "../base_element/lang_parser_element.hpp"
 
 namespace pst {
 	class CloningUtils final {
