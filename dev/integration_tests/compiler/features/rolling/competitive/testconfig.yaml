@@ -9,6 +9,13 @@ Tests:
           String: "106\ntrue\ntrue\ntrue\n-7\nB\n5\n300\n44\n7\n"
         ExitCode: 0
 
+  char_to_bool: # A `char` coerces to `bool` by checking it against '\0'.
+    Cases:
+      all:
+        Output:
+          String: "true"
+        ExitCode: 0
+
   cp_signed_shift: # The DVM has no arithmetic shift yet, so only LLVM is checked.
     Cases:
       llvm:

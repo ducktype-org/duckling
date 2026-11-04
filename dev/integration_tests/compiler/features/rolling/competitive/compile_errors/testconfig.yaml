@@ -24,7 +24,3 @@ Tests:
     Cases:
       llvm:
         ExitCode: 1
-  char_to_bool: # `char` does not coerce to `bool`.
-    Cases:
-      llvm:
-        ExitCode: 1
