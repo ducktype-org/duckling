@@ -21,6 +21,7 @@
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
 #include <lsp_interface/compiler.hpp>
+#include <lsp_interface/semantic_tokens.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <diagnostic/core/common_classes.hpp>
@@ -443,6 +444,26 @@ namespace duck_ls {
 			session->pushDiagnostics(published_uri, diagnostics);
 
 		last_published_diagnostics = std::move(published);
+	}
+
+	base::Optional<lsp::SemanticTokens> Compiler::semanticTokens(const lsp::Uri& uri) {
+		auto cache_path = files->cachePathFor(uri);
+		if (cache_path.empty()) return {};
+
+		auto path
+			= files->isOpened(uri) ? cache_path.value() : files->sourcePath(cache_path.value());
+
+		auto source_files = SourceFile::getSourceFilesFromPath(path);
+		if (source_files.empty()) return {};
+
+		auto root_module = findLoadedPackageOf(path);
+		bool analyze     = root_module.has_value() && isModuleTreeParsedSuccessfully(*root_module);
+
+		lsp::SemanticTokens result;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			result = collectSemanticTokens(ctx, source_files.back(), analyze);
+		});
+		return result;
 	}
 
 	bool Compiler::stdActive() const { return options.stdlib_options.stdActive(); }

@@ -108,6 +108,16 @@ namespace duck_ls {
 		 */
 		virtual void publishDiagnostics(const base::Optional<lsp::Uri>& queried_file_opt);
 
+		/**
+		 * @brief Classifies the tokens of the document for highlighting.
+		 *
+		 * Names are classified semantically only when the package the document belongs to
+		 * parses; otherwise every token gets its lexical kind.
+		 *
+		 * @return Empty when the document is not part of any loaded package.
+		 */
+		virtual base::Optional<lsp::SemanticTokens> semanticTokens(const lsp::Uri& uri);
+
 	private:
 		friend class ::LspCompilerTest;
 

@@ -6,6 +6,7 @@
 
 #include <lsp/error.h>
 #include <lsp_interface/compiler.hpp>
+#include <lsp_interface/semantic_tokens.hpp>
 #include <lsp_interface/server_session.hpp>
 #include <version/version.hpp>
 
@@ -102,6 +103,10 @@ namespace duck_ls {
 								.openClose = true,
 								.change    = lsp::TextDocumentSyncKind::Incremental,
 							},
+							.semanticTokensProvider = lsp::SemanticTokensOptions{
+								.legend = semanticTokensLegend(),
+								.full   = true,
+							},
 						},
 						.serverInfo = lsp::ServerInfo{
 							.name    = "duck_ls",
@@ -138,6 +143,18 @@ namespace duck_ls {
 					compiler.publishDiagnostics(params.textDocument.uri);
 				});
 			})
+			.onTextDocumentSemanticTokensFull(
+				[this, &compiler](lsp::SemanticTokensParams&& params
+		        ) -> lsp::TextDocumentSemanticTokensFullResult {
+					return orAbort(*endpoint, "textDocument/semanticTokens/full", [&] {
+						lsp::TextDocumentSemanticTokensFullResult result;
+						if_opt_some(compiler.semanticTokens(params.textDocument.uri), tokens) {
+							result = std::move(tokens);
+						}
+						return result;
+					});
+				}
+			)
 			// @TODO: #3607 watched-file notifications are best-effort: clients are not required
 		    // to support file watching, so creations and deletions on disk can go unnoticed.
 			.onWorkspaceDidChangeWatchedFiles(
