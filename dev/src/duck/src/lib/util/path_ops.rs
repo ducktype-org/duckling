@@ -250,10 +250,9 @@ fn copy_file_inner(from: &Path, to: &Path) -> io::Result<()> {
 }
 
 /// Copy the contents of a single file or of a whole directory.
-/// Important:
-/// ----------
-/// 1. Callers should make sure that `to` does not exist/is empty.
-/// 2. On failure, this cleans partial results by removing `to`.
+/// Important
+/// ---------
+/// This may override contents of `to`.
 pub fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
@@ -269,13 +268,7 @@ pub fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()
 /// Helper for [`copy_tree`].
 /// Returns pure [`io::Result`], without any context.
 fn copy_tree_inner(from: &Path, to: &Path) -> io::Result<()> {
-    if let Err(e) = copy_tree_rec(from, to) {
-        trace!(error = ?e, from = ?from.display(), to = ?to.display(), "failed to copy, removing partial results");
-        ignore_not_found(fs::remove_dir_all(to))?;
-        Err(e)
-    } else {
-        Ok(())
-    }
+    copy_tree_rec(from, to)
 }
 
 /// Recursive helper for [`copy_tree_inner`].
@@ -363,6 +356,9 @@ fn is_executable_inner(_path: &Path) -> bool {
 /// This first tries to use [`fs::rename`], and if it fails due to different filesystems,
 /// falls back to copying and removing.
 /// Thus in most cases this should be preferred over [`rename`].
+/// Important
+/// ---------
+/// If this ends in an error, the contents of `to` might be arbitrary partial results.
 pub fn move_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
     let from = from.as_ref();
     let to = to.as_ref();
@@ -382,6 +378,7 @@ fn move_tree_inner(from: &Path, to: &Path) -> io::Result<()> {
         if io_err.kind() == std::io::ErrorKind::CrossesDevices {
             // Different filesystems, fallback to copy + remove.
             trace!(from = ?from.display(), to = ?to.display(), "moving files between different filesystems, falling back to copy + remove");
+            ignore_not_found(fs::remove_dir_all(to))?;
             copy_tree_inner(from, to)?;
             fs::remove_dir_all(from)?;
         } else {
