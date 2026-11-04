@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Querying a storage's data.
 use std::collections::HashMap;
 use std::path::Path;
@@ -15,7 +21,7 @@ use crate::{DuckContext, QuackResult};
 /// The combined state may never have existed in storage as a consistent whole; this function locks each
 /// virtual environment separately. Equivalent to calling [`venv_info`] on all virtual environments present
 /// in the storage.
-#[tracing::instrument(skip_all, fields(root = %storage_root.display()))]
+#[tracing::instrument(level = "debug", skip_all, fields(root = %storage_root.display()))]
 pub fn list_venvs(
     storage_root: &Path,
     ctx: &DuckContext,
@@ -37,7 +43,7 @@ pub fn list_venvs(
 }
 
 /// Retrieve the storage state of a specific virtual environment.
-#[tracing::instrument(skip_all, fields(id = %id.to_venv_id()))]
+#[tracing::instrument(level = "debug", skip_all, fields(id = %id.to_venv_id()))]
 pub fn venv_info(
     storage_root: &Path,
     id: impl ToVenvId,
@@ -58,7 +64,7 @@ pub fn display_venv_info(ctx: &DuckContext, venv: Venv) -> QuackResult<()> {
     let last_synchronization_string = last_synchronization_date
         .format("%Y-%m-%d %H:%M:%S")
         .to_string();
-    ctx.console().print(format!(
+    ctx.print(format!(
         "{}:
   last-location: {}
   last-access: {}

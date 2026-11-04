@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "function_queries.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -14,20 +20,22 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/utils/main_return_type.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
@@ -43,7 +51,92 @@
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
+#include <set>
+
 namespace compiler::helios {
+	namespace {
+		/**
+		 * @brief Whether every path through @p stmts ends in a `return`.
+		 * See EveryPathReturnsVisitor for what this does and does not recognise.
+		 */
+		template<class Stmts>
+		bool everyPathReturns(query::Context& ctx, const Stmts& stmts);
+
+		/**
+		 * @brief Whether every path through one statement ends in a `return`.
+		 *
+		 * This is conservative and purely structural. If there isn't an obvious return on every
+		 * path, it answers `false`. Proper reachability and dead code analysis live in MIR.
+		 */
+		class EveryPathReturnsVisitor final: public pst::PstVisitorEmpty {
+		public:
+			query::Context& ctx;
+
+			/**
+			 * @brief The answer for the visited statement. False until something proves otherwise.
+			 */
+			bool every_path_returns = false;
+
+			explicit EveryPathReturnsVisitor(query::Context& ctx): ctx(ctx) {}
+
+			void visitReturn(pst::Access<pst::Return>) final { every_path_returns = true; }
+
+			void visitIf(pst::Access<pst::If> stmt) final {
+				if (stmt->isConst()) {
+					// Only the taken branch is ever compiled, so only it has a say.
+					auto condition_holder = stmt->getCondition();
+					if (!condition_holder.has_value()) query::throwFailed();
+
+					const auto taken
+						= getBoolCTVFromPST(ctx, condition_holder.value().unlock(ctx)->getExpr())
+					          .valueOrThrow();
+
+					if (taken)
+						every_path_returns = everyPathReturns(ctx, stmt->getThenBody());
+					else if (stmt->getElseBody().has_value())
+						every_path_returns = everyPathReturns(ctx, stmt->getElseBody().value());
+
+					return;
+				}
+
+				// Without an `else` the condition may be false and the body skipped entirely, so
+				// there is always a path around this statement.
+				if (!stmt->getElseBody().has_value()) return;
+
+				every_path_returns = everyPathReturns(ctx, stmt->getThenBody())
+				                  && everyPathReturns(ctx, stmt->getElseBody().value());
+			}
+		};
+
+		/**
+		 * @brief Whether every path through the (already collected) statements ends in a `return`.
+		 */
+		bool everyPathReturnsInStmts(query::Context& ctx, const StmtList<>& stmts) {
+			// A statement that always returns ends the block, so whatever follows is ignored.
+			for (const auto& stmt: stmts) {
+				EveryPathReturnsVisitor visitor(ctx);
+				stmt->acceptVisitor(visitor);
+				if (visitor.every_path_returns) return true;
+			}
+			return false;
+		}
+
+		template<class StmtsAggregate>
+		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+			return everyPathReturnsInStmts(
+				ctx, getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts))
+			);
+		}
+
+		/**
+		 * @brief Whether a deduction candidate is the uninhabited `void` type.
+		 */
+		bool isVoid(const tsh::SymbolType<>& type) {
+			return type.getType().getKind() == tsh::Kind::Void;
+		}
+	}
+
 	/**
 	 * @brief Query function return type, deduced based on return statements in its body.
 	 */
@@ -62,6 +155,12 @@ namespace compiler::helios {
 
 			std::set<tsh::SymbolType<>> out;
 
+			/**
+			 * @brief Whether every path through the function body ends in a `return`, i.e.
+			 * whether the body cannot fall off its end and return implicitly.
+			 */
+			bool body_always_returns = false;
+
 			ReturnTypeCollector(query::Context& ctx, SymID symbol, bool initial_invocation = false):
 				  ctx(ctx),
 				  original_symbol(symbol),
@@ -76,8 +175,8 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
-					stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts)))
+					stmt->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -92,13 +191,11 @@ namespace compiler::helios {
 				// once.
 				initial_invocation = false;
 
-				auto fun_body = func_like->getBody();
+				auto fun_body = func_like->getBody().unlock(ctx);
 
-				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
-					auto as_expr = fun_body.unlock(ctx)
-					                   ->getStmt()
-					                   .unlock(ctx)
-					                   .template dynamicCast<pst::ExprStmt>();
+				if (fun_body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+					auto as_expr
+						= fun_body->getStmt().unlock(ctx).template dynamicCast<pst::ExprStmt>();
 					if (as_expr) {
 						auto expr = ctx.query<QueryHoutOfExpr>(
 										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
@@ -106,6 +203,9 @@ namespace compiler::helios {
 						                ->valueOrThrow()
 						                .ref();
 						output(expr->expression_type.getSymbolType());
+
+						// The body expression is the returned value, so there is no way around it.
+						body_always_returns = true;
 					} else {
 						CORE_PANIC(
 							"Function body in single-statement function must be an expression stmt"
@@ -113,12 +213,16 @@ namespace compiler::helios {
 					}
 				} else {
 					CORE_ASSERT(
-						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+						fun_body->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
 
-					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
-						stmt.unlock(ctx)->acceptVisitor(*this);
+					// Collect the statements once, and use them for both walks:
+					auto stmts = getStmtsFromStmtAggregate(ctx, fun_body);
+
+					body_always_returns = everyPathReturnsInStmts(ctx, stmts);
+
+					for (const auto& stmt: stmts) stmt->acceptVisitor(*this);
 				}
 			}
 
@@ -146,8 +250,12 @@ namespace compiler::helios {
 				if (stmt->isConst()) {
 					// Only the taken branch takes part in the return type deduction, the other
 					// one is never compiled.
-					auto taken = getBoolCTVFromPST(ctx, stmt->getCondition().unlock(ctx)->getExpr())
-					                 .valueOrThrow();
+					auto condition_holder = stmt->getCondition();
+					if (!condition_holder.has_value()) query::throwFailed();
+
+					auto taken
+						= getBoolCTVFromPST(ctx, condition_holder.value().unlock(ctx)->getExpr())
+					          .valueOrThrow();
 
 					if (taken)
 						visitRecursion(stmt->getThenBody());
@@ -171,6 +279,20 @@ namespace compiler::helios {
 			ReturnTypeCollector return_collector(ctx, key, true);
 			auto                fun = stmt(ctx, key).value();
 			fun->acceptVisitor(return_collector);
+
+			// First, we check if the function never returns, i.e. it always returns `void`
+			// and there is no path to the end of the function's body.
+			// Note: returning `void` does not *actually* ever happen, because creating
+			// a `void` value is not possible. However, the typesystem handles it well.
+			const bool never_returns = !return_collector.out.empty()
+			                        && return_collector.body_always_returns
+			                        && std::ranges::all_of(return_collector.out, isVoid);
+
+			// If there exists a non-void return possibility, we ignore all void return types for
+			// return type deduction. In other words, `void` submits to all other types.
+			// Otherwise, only `void` return types exist, and we keep them for the deduction.
+			if (!never_returns) std::erase_if(return_collector.out, isVoid);
+
 			switch (return_collector.out.size()) {
 			case 0:
 				// there are no returns to deduce the type
@@ -181,15 +303,16 @@ namespace compiler::helios {
 					tsh::Mutability::Mutable,
 				};
 			case 1:
-				// deduced type is conclusive
+				// deduced type is conclusive (albeit there might still be a fallthrough to the
+				// end of the function, but it then does not contribute to return type deduction).
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
 					fun->getStablePosition()
-				));
+				);
 				return query::Failed();
 			}
 		}
@@ -199,52 +322,79 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
 
-	/**
-	 * This function verifies if the applied attributes are semantically correct
-	 * on the function. For example we check if the BackendDependent attribute has
-	 * some implementations.
-	 * This is needed, because some attributes can have additional requirements on the function
-	 * declaration and the surrounding code.
-	 */
-	static void verifyFunctionAttributes(
-		query::Context& ctx, pst::Access<pst::Stmt> pst_stmt, const HOUTFunctionDeclaration& fun_decl
-	) {
-		if (pst_stmt->getAttributes().empty()) return;
+	namespace {
+		/**
+		 * This function verifies if the applied attributes are semantically correct
+		 * on the function. For example we check if the BackendDependent attribute has
+		 * some implementations.
+		 * This is needed, because some attributes can have additional requirements on the function
+		 * declaration and the surrounding code.
+		 */
+		void verifyFunctionAttributes(
+			query::Context&                ctx,
+			pst::Access<pst::Stmt>         pst_stmt,
+			const HOUTFunctionDeclaration& fun_decl
+		) {
+			if (pst_stmt->getAttributes().empty()) return;
 
-		if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
-		    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
-			verifyBackendImplAttrUsage(ctx, fun_decl);
-			return;
+			if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
+			    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
+				verifyBackendImplAttrUsage(ctx, fun_decl);
+				return;
+			}
+			if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
+				verifyBackendDependentAttrUsage(ctx, fun_decl);
+				return;
+			}
 		}
-		if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
-			verifyBackendDependentAttrUsage(ctx, fun_decl);
-			return;
+
+		/**
+		 * @brief Determines whether a user-declared function or method is an operator and validates
+		 * its fixity.
+		 *
+		 * @param arity Parameter count, including the implicit `self` parameter of non-static
+		 * methods.
+		 */
+		HOUTFunctionDeclaration::Operatoriness operatorinessFromDeclaration(
+			query::Context&     ctx,
+			base::StrID         name,
+			u64                 arity,
+			pst::OperatorFixity fixity,
+			dia::StablePosition source_position
+		) {
+			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+
+			const bool is_operator = lexer::isOperatorSymbolString(name.strView());
+			if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
+				ctx.log<InvalidOperatorFixityError>(source_position);
+				query::throwFailed();
+			}
+			if (!is_operator) return Operatoriness::None;
+
+			switch (arity) {
+			case 1:
+				switch (fixity) {
+				case pst::OperatorFixity::Prefix:
+					return Operatoriness::Prefix;
+				case pst::OperatorFixity::Suffix:
+					return Operatoriness::Suffix;
+				case pst::OperatorFixity::None:
+					ctx.log<MissingUnaryOperatorFixityError>(source_position);
+					query::throwFailed();
+				}
+				CORE_UNREACHABLE();
+			case 2:
+				return Operatoriness::Infix;
+			default:
+				return Operatoriness::None;
+			}
 		}
-	}
 
-	/**
-	 * @brief Deduces the operatoriness of a user-declared function/method from its name and arity
-	 * (parameter count, including an implicit `self` for methods).
-	 *
-	 * @note There is no dedicated syntax yet to declare fixity (prefix vs. suffix), so a
-	 * single-parameter operator name is assumed to be a prefix operator. Suffix stays unreachable
-	 * from user code until that syntax exists.
-	 * @TODO: #3131 Extract fixity in unary operators from keywords used in PST.
-	 */
-	static HOUTFunctionDeclaration::Operatoriness operatorinessFromNameAndArity(
-		base::StrID name, u64 arity
-	) {
-		using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+		bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
+			const auto required_type = requiredMainReturnType(ctx);
 
-		if (!lexer::isOperatorSymbolString(name.strView())) return Operatoriness::None;
-
-		switch (arity) {
-		case 1:
-			return Operatoriness::Prefix;
-		case 2:
-			return Operatoriness::Infix;
-		default:
-			return Operatoriness::None;
+			return return_type.getType() == required_type.getType()
+			    && return_type.getRefKind() == required_type.getRefKind();
 		}
 	}
 
@@ -260,10 +410,13 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void emplaceDeclaration(
-				pst::AccessLocked<pst::ParamList>                  param_list,
+				pst::Access<pst::ParamList>                        param_list,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
+				const bool global_main_definition = isGlobalMain(original_symbol)
+				                                 && kind(original_symbol) == SymbolKind::Function;
+
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
 					tsh::getUnitType(),
@@ -274,34 +427,49 @@ namespace compiler::helios {
 
 				// Set return type if provided.
 				if (ret.has_value()) {
+					const auto ret_unlocked = ret.value().unlock(ctx);
 					const auto ret_type_ctv
-						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+						= getTypeCTVFromPST(ctx, ret_unlocked->getExpr()).valueOrThrow();
+
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
-					                                            ret.value().unlock(ctx) });
+
+					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
+						ctx.log<InvalidMainReturnTypeError>(
+							ret_unlocked->getStablePosition(),
+							makeBox<InteractiveType>(ctx, ret_type)
+						);
+						query::throwFailed();
+					}
+
+					origin = code::multiplePstOriginOrdered({
+						param_list,
+						ret_unlocked,
+					});
 				}
-				// Deduce return type if not provided.
+				// A global main without an explicit return type is treated as `main -> i64`.
+				else if (global_main_definition) {
+					ret_type = requiredMainReturnType(ctx);
+					origin   = code::pstOrigin(param_list);
+				}
+				// Deduce return type for ordinary functions.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = code::pstOrigin(param_list);
 				}
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *param_list.unlock(ctx)) {
+				for (auto param_locked: *param_list) {
+					auto  param        = param_locked.unlock(ctx);
 					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
-					auto value = param.unlock(ctx)->getValue();
+					auto value = param->getValue();
 					if (value.empty()) {
 						parameters.emplace_back(
-							param_name,
-							param_type,
-							std::nullopt,
-							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							param_name, param_type, std::nullopt, param_symbol, code::pstOrigin(param)
 						);
 					} else {
 						auto initial_value
@@ -315,7 +483,7 @@ namespace compiler::helios {
 							param_type,
 							std::move(initial_value),
 							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							code::pstOrigin(param)
 						);
 					}
 				}
@@ -330,25 +498,54 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				const auto operatoriness = operatorinessFromNameAndArity(
-					name(original_symbol), stmt->getParams().unlock(ctx)->size()
+				const auto params        = stmt->getParams().unlock(ctx);
+				const auto operatoriness = operatorinessFromDeclaration(
+					ctx,
+					name(original_symbol),
+					params->size(),
+					stmt->getOperatorFixity(),
+					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				const auto operatoriness = operatorinessFromNameAndArity(
-					name(original_symbol), stmt->getParams().unlock(ctx)->size()
+				const auto params        = stmt->getParams().unlock(ctx);
+				const auto operatoriness = operatorinessFromDeclaration(
+					ctx,
+					name(original_symbol),
+					params->size(),
+					stmt->getOperatorFixity(),
+					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				// +1 for the implicit `self` parameter.
-				const auto operatoriness = operatorinessFromNameAndArity(
-					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
+				// We can't use the interface directly because the interface
+				// can use the declaration of function query, and we could get a cycle.
+				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				const auto params     = stmt->getParams().unlock(ctx);
+				if (specifiers.is_static) {
+					const auto operatoriness = operatorinessFromDeclaration(
+						ctx,
+						name(original_symbol),
+						params->size(),
+						stmt->getOperatorFixity(),
+						stmt->getStablePosition()
+					);
+					emplaceDeclaration(params, stmt->getRet(), operatoriness);
+					return;
+				}
+				const auto operatoriness = operatorinessFromDeclaration(
+					ctx,
+					name(original_symbol),
+					params->size() + 1,
+					stmt->getOperatorFixity(),
+					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				// +1 for the implicit `self` parameter.
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -371,11 +568,10 @@ namespace compiler::helios {
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
 				emplaceDeclaration(
-					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
+					stmt->getParams().unlock(ctx), {}, HOUTFunctionDeclaration::Operatoriness::None
 				);
 
-				const auto class_type
-					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				const auto class_type  = classMemberOwner(original_symbol);
 				this->out->return_type = tsh::SymbolType<>{
 					class_type,
 					tsh::ReferenceKind::Direct,
@@ -487,11 +683,10 @@ namespace compiler::helios {
 						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
 					    ) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
-							auto       expr
-								= getHoutOfExprWithExpectedType(
-									  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
-								)
-						              .valueOrThrow();
+							auto       expr       = getHoutOfExprWithExpectedType(
+                                            ctx, expr_holder.unlock(ctx)->getExpr(), field_type
+                            )
+						                    .valueOrThrow();
 							return expr;
 						}
 					);
@@ -576,7 +771,9 @@ namespace compiler::helios {
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor: {
 				variant_match(getSymRef(key)->other) {
-					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+					variant_case_novalue(
+						PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+					) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						auto result = std::move(decl_maker.out).value();
@@ -618,10 +815,7 @@ namespace compiler::helios {
 						);
 					}
 					variant_case(defgen::BuiltinOperator, builtin_op) {
-						// Currently, all builtins *participating in lookup* are unary or binary
-						// operators.
-						// @TODO: #3092 Do not use BuiltinOperator for any other purposes, such as
-						// to denote C++-implemented builtin functions.
+						// All builtins are unary or binary operators.
 						return funDeclFromType(ctx, key, builtin_op.operatoriness);
 					}
 					variant_default {

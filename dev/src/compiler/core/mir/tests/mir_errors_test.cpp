@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "utils/test_utils.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
@@ -27,6 +33,8 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);
+		TESTER_ADD_TEST(testShortCircuitMoveState);
+		TESTER_ADD_TEST(testMaybeUninitialized);
 	}
 
 private:
@@ -68,6 +76,42 @@ private:
                })",
 			{ "is used after it has been moved out of.", "Value moved here." },
 			1
+		);
+	}
+
+	/**
+	 * @brief The right-hand side of a lazily evaluated `or` runs on only one of the paths, so a
+	 * move performed there reaches the later use on some paths only.
+	 */
+	void testShortCircuitMoveState() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun eat(x: i64) = x;
+               fun movedInRhs(a: bool, x: i64) -> bool = {
+                   let c = a or eat(move x) == 0;
+                   eat(x);
+                   return c;
+               })",
+			{ "may have been moved out of on some", "Value moved here." },
+			1
+		);
+	}
+
+	/**
+	 * @brief A local that is initialized on one branch only is reported as uninitialized on some
+	 * paths, not as possibly moved: nothing ever moved it, so there is no move site to point at.
+	 */
+	void testMaybeUninitialized() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun maybeUninit(x: i64) -> i64 = {
+                   if (x > 0) { c = 1; }
+                   let y = c;
+                   var c: i64 = 20;
+                   return c + y;
+               })",
+			{ "is used before it is initialized",
+		      "is not initialized on some control-flow paths reaching this use.",
+		      "Variable declared here." },
+			2
 		);
 	}
 

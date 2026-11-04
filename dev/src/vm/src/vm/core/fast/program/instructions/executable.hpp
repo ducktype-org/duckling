@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../ids.hpp"  // IWYU pragma: keep
@@ -8,6 +14,7 @@
 
 #include <vm/core/fast/eval/dispatcher.hpp>
 #include <vm/core/fast/program/type.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::fast {
 	struct FunctionInfo;
@@ -52,10 +59,15 @@ namespace vm::fast::exec {
 #undef MAKE_MAKERS_JUST_DEF
 #undef MAKE_MAKERS_FULL
 
-	struct ExecFunction {
+	struct ExecFunction final {
 		std::vector<Instruction> data;
 		const FunctionInfo*      info;
 	};
 
 	using ExecFunctionCollection = std::vector<ExecFunction>;
+
+	/**
+	 * @brief Returns the index in an `ExecFunctionCollection` of the function of the given ID.
+	 */
+	constexpr usize execFunctionIndex(u64 function_id) { return function_id - vm::FIRST_OBJ_ID; }
 }

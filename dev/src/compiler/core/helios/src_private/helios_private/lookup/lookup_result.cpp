@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "lookup_result.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -20,8 +26,19 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
+	bool LookupResult::hasInaccessible() const {
+		if (!inaccessible.empty()) return true;
+		for (auto&& [node, inner]: children)
+			if (inner.hasInaccessible()) return true;
+		return false;
+	}
+
 	GetAsSingleLookupQResult LookupResult::getAsSingle() const {
-		if (isEmpty()) return errors::SymbolNotFound();
+		// The name exists, it just cannot be used from here, which is worth saying explicitly.
+		if (isEmpty()) {
+			if (hasInaccessible()) return errors::Inaccessible();
+			return errors::SymbolNotFound();
+		}
 		if (!isSingle()) return errors::Ambiguity();
 
 		// The following line must work, since at this point we know that
@@ -44,6 +61,7 @@ namespace compiler::helios {
 			}
 			variant_case(errors::Ambiguity, _) { return errors::Ambiguity(); }
 			variant_case(errors::SymbolNotFound, _) { return errors::SymbolNotFound(); }
+			variant_case(errors::Inaccessible, _) { return errors::Inaccessible(); }
 			variant_default { CORE_PANIC("Invalid state"); }
 		}
 		CORE_UNREACHABLE();
@@ -55,18 +73,21 @@ namespace compiler::helios {
 		return res;
 	}
 
-	template<typename T>
-	std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
-		std::ranges::sort(a);
-		std::ranges::sort(b);
+	namespace {
+		template<typename T>
+		std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
+			std::ranges::sort(a);
+			std::ranges::sort(b);
 
-		std::vector<T> result;
-		std::ranges::set_union(a, b, std::back_inserter(result));
-		return result;
+			std::vector<T> result;
+			std::ranges::set_union(a, b, std::back_inserter(result));
+			return result;
+		}
 	}
 
 	void LookupResult::merge(LookupResult other) {
-		leaves = mergeSet(std::move(leaves), std::move(other.leaves));
+		leaves       = mergeSet(std::move(leaves), std::move(other.leaves));
+		inaccessible = mergeSet(std::move(inaccessible), std::move(other.inaccessible));
 
 		children.insert(
 			children.end(),
@@ -76,7 +97,7 @@ namespace compiler::helios {
 	}
 
 	NestedResult LookupResult::toNode(SymID node) const {
-		return { node, { .leaves = leaves, .children = children } };
+		return { node, { .leaves = leaves, .inaccessible = inaccessible, .children = children } };
 	}
 
 }

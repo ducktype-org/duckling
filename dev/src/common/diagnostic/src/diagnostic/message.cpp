@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/collections/maps.hpp>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
@@ -188,23 +194,25 @@ namespace dia {
 		}
 	}
 
-	/**
-	 * @brief Return pointer messages that are within the given snippet position.
-	 * dia::SourcePosition is inclusive as always.
-	 */
-	std::vector<PointerMessage> filterMessages(
-		const std::vector<PointerMessage>& messages, dia::SourcePosition snippet_position
-	) {
-		std::vector<PointerMessage> result;
-		for (const auto& msg: messages) {
-			if (msg.position.getStart() >= snippet_position.getStart()
-			    && msg.position.getEnd() <= snippet_position.getEnd()
-			    && msg.position.getLocation()->getSourceFile()
-			           == snippet_position.getLocation()->getSourceFile()) {
-				result.push_back(msg);
+	namespace {
+		/**
+		 * @brief Return pointer messages that are within the given snippet position.
+		 * dia::SourcePosition is inclusive as always.
+		 */
+		std::vector<PointerMessage> filterMessages(
+			const std::vector<PointerMessage>& messages, dia::SourcePosition snippet_position
+		) {
+			std::vector<PointerMessage> result;
+			for (const auto& msg: messages) {
+				if (msg.position.getStart() >= snippet_position.getStart()
+				    && msg.position.getEnd() <= snippet_position.getEnd()
+				    && msg.position.getLocation()->getSourceFile()
+				           == snippet_position.getLocation()->getSourceFile()) {
+					result.push_back(msg);
+				}
 			}
+			return result;
 		}
-		return result;
 	}
 
 	Box<dia_args::Component> CodeArgument::getValue(MessageBase& diag) {

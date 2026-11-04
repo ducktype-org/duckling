@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/repl_utils/repl_split_helpers.hpp>
 
 #include <base/types/ints.hpp>
@@ -39,7 +45,9 @@ private:
 		check_single("namespace Foo {}");
 		check_single("import Foo as foo;");
 		check_single("using Foo;");
-		check_single("alias Bar = Foo;");
+		check_single("using Foo as Bar;");
+		check_single("using a.b.{c, d as e};");
+		check_single("import a.* hides {b, c};");
 		check_single("const LIMIT: i32 = 100;");
 	}
 

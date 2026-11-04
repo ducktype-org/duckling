@@ -1,0 +1,57 @@
+# Tests that `and` / `or` evaluate their right-hand side only when its value can still change
+# the result, and that chains of three operands stop at the operand that decides the result.
+#
+# Every operand prints its own id, so the printed ids say which operands were evaluated. The id
+# `9` marks an operand that must never be evaluated: seeing a `9` in the output means the
+# short-circuit was lost.
+
+fun probe(id: i64, result: bool) -> bool = {
+    builtin_output_i64(id);
+    return result;
+}
+
+fun report(value: bool) = {
+    if (value) {
+        builtin_output_i64(1i64);
+    }
+    if (not value) {
+        builtin_output_i64(0i64);
+    }
+}
+
+fun skippedRhs() = {
+    # The left-hand side decides on its own, so the right-hand side is not evaluated.
+    report(false and probe(9i64, true));
+    report(true or probe(9i64, false));
+}
+
+fun evaluatedRhs() = {
+    # The left-hand side decides nothing, so the right-hand side gives the result.
+    report(true and probe(2i64, false));
+    report(false or probe(3i64, true));
+}
+
+fun orChain() = {
+    # Stops at the first operand that is true.
+    report(probe(11i64, false) or probe(12i64, true) or probe(9i64, true));
+}
+
+fun andChain() = {
+    # Stops at the first operand that is false.
+    report(probe(21i64, true) and probe(22i64, false) and probe(9i64, true));
+}
+
+fun mixedChain() = {
+    # `and` binds tighter than `or`, so this is `(31 and 9) or 32`.
+    report(probe(31i64, false) and probe(9i64, true) or probe(32i64, true));
+}
+
+fun main() -> i64 = {
+    skippedRhs();
+    evaluatedRhs();
+    orChain();
+    andChain();
+    mixedChain();
+
+    return 0i64;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "preamble.hpp"
@@ -16,15 +22,15 @@ namespace pst {
 	protected:
 		NAMED_CHILD(condition, RoundGroupExpr);
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
-		NAMED_CHILD(then_body, CodeBlockOrStmt);
-		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
+		NAMED_CHILD(then_body, CodeBlockOrAnyStmt);
+		NAMED_CHILD_OPT(else_body, CodeBlockOrAnyStmt);
 		bool is_const = false;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit If(const LangParserState& state): CodeDecl(state) {
+		explicit If(LangElementConstructionData state): CodeDecl(state) {
 			element_kind = ElementKind::If;
 		}
 
@@ -45,7 +51,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprHolder> getCondition() const;
+		base::Optional<AccessLocked<ExprHolder>> getCondition() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getThenBody() const {
@@ -53,9 +59,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const {
-			return else_body.map([](const auto& access) { return access.give(); });
-		}
+		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const;
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {

@@ -2,34 +2,17 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Attach",
-			"port": 6009,
-			"request": "attach",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"type": "node"
-		},
-		{
 			"type": "extensionHost",
 			"request": "launch",
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/dev/src/DucklingLS"],
-			"outFiles": ["${workspaceRoot}/dev/src/DucklingLS/client/out/**/*.js"],
-			"preLaunchTask": "npm: watch"
-		},
-		{
-			"name": "Language Server E2E Test",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}/dev/src/DucklingLS",
-				"--extensionTestsPath=${workspaceRoot}/dev/src/DucklingLS/client/out/test/index",
-				"${workspaceRoot}/dev/src/DucklingLS/client/testFixture"
+				"--extensionDevelopmentPath=${workspaceRoot}/dev/src/DucklingLS"
 			],
-			"outFiles": ["${workspaceRoot}/dev/src/DucklingLS/client/out/test/**/*.js"]
+			"outFiles": [
+				"${workspaceRoot}/dev/src/DucklingLS/client/out/**/*.js"
+			],
+			"preLaunchTask": "npm: watch"
 		}
 	]
 }

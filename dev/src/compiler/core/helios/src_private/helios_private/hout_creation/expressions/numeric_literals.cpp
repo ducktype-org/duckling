@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "numeric_literals.hpp"
 
 #include "errors.hpp"
@@ -10,6 +16,7 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <charconv>
+#include <string>
 #include <string_view>
 #include <system_error>
 
@@ -30,9 +37,9 @@ namespace compiler::helios::code {
 				if (result.ec
 				    == std::errc::invalid_argument) {  // Not a number at all. This will be returned
 					                                   // when trying to parse "abc".
-					ctx.logInt(makeBox<InvalidNumericLiteralError>(position));
+					ctx.log<InvalidNumericLiteralError>(position);
 				} else if (result.ec == std::errc::result_out_of_range) {
-					ctx.logInt(makeBox<NumericLiteralTooLargeError>(position));
+					ctx.log<NumericLiteralTooLargeError>(position);
 				}
 				return false;
 			}
@@ -42,7 +49,7 @@ namespace compiler::helios::code {
 			// "123" literal and stop on the first non numeric char. Here we check that the whole
 			// string was parsed.
 			if (result.ptr != value.data() + value.size()) {
-				ctx.logInt(makeBox<InvalidNumericLiteralError>(position));
+				ctx.log<InvalidNumericLiteralError>(position);
 				return false;
 			}
 			return true;
@@ -59,7 +66,7 @@ namespace compiler::helios::code {
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 
 			if (!base::fitsIn<TargetInt>(parsed_value)) {
-				ctx.logInt(makeBox<LiteralDoesNotFitError>(position, "signed integer type"));
+				ctx.log<LiteralDoesNotFitError>(position, "signed integer type");
 				return {};
 			}
 
@@ -76,7 +83,7 @@ namespace compiler::helios::code {
 
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			if (!base::fitsIn<TargetUInt>(parsed_value)) {
-				ctx.logInt(makeBox<LiteralDoesNotFitError>(position, "unsigned integer type"));
+				ctx.log<LiteralDoesNotFitError>(position, "unsigned integer type");
 				return {};
 			}
 			return numeric_value::NumericValue(static_cast<TargetUInt>(parsed_value));
@@ -94,14 +101,22 @@ namespace compiler::helios::code {
 			return numeric_value::NumericValue(static_cast<TargetFloat>(parsed_value));
 		}
 
-		base::Optional<numeric_value::NumericValue> deduceIntegerType(
+		template<typename ParsedInt>
+		base::Optional<numeric_value::NumericValue> deduceIntegerTypeAs(
 			std::string_view value, int base, const dia::StablePosition& position, query::Context& ctx
 		) {
-			i64  parsed_value = 0;
-			auto result
+			ParsedInt parsed_value = 0;
+			auto      result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
+		}
+
+		base::Optional<numeric_value::NumericValue> deduceIntegerType(
+			std::string_view value, int base, const dia::StablePosition& position, query::Context& ctx
+		) {
+			if (value.starts_with('-')) return deduceIntegerTypeAs<i64>(value, base, position, ctx);
+			return deduceIntegerTypeAs<u64>(value, base, position, ctx);
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceFloatType(
@@ -114,15 +129,28 @@ namespace compiler::helios::code {
 		}
 	}
 
+	bool canBeNegative(pst::Access<pst::expr::ExprNumericValue> literal_expr) {
+		using enum lang_def::NumericLiteralTypeSpecifier;
+		switch (literal_expr->getTypeSpecifier()) {
+		case u8:
+		case u16:
+		case u32:
+		case u64:
+		case u128:
+			return false;
+		default:
+			return true;
+		}
+	}
+
 	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr_locked
+		query::Context&                          ctx,
+		pst::Access<pst::expr::ExprNumericValue> literal_expr,
+		const dia::StablePosition&               position,
+		const LiteralSign                        sign
 	) {
-		auto literal_expr = literal_expr_locked.unlock(ctx);
-		auto value        = literal_expr->getValue().value.strView();
-		auto type_specifier_strid
-			= literal_expr->getValue().type_specifier.copyValueOr(base::StrID(""));
-		auto type_specifier = lang_def::strAsNumericLiteralTypeSpecifier(type_specifier_strid);
-		auto position       = literal_expr->getStablePosition();
+		auto value          = literal_expr->getValue().value.strView();
+		auto type_specifier = literal_expr->getTypeSpecifier();
 
 		int base = 10;
 		if (value.starts_with("0b") || value.starts_with("0B")) {
@@ -134,6 +162,17 @@ namespace compiler::helios::code {
 		} else if (value.starts_with("0x") || value.starts_with("0X")) {
 			base = 16;
 			value.remove_prefix(2);
+		}
+
+		// A negative literal is parsed with its sign, so that the smallest value of a signed type
+		// fits into it, like `-128i8`.
+		std::string negative_value;
+		if (sign == LiteralSign::Negative) {
+			CORE_ASSERT(
+				canBeNegative(literal_expr), "A literal of an unsigned type is never negative."
+			);
+			negative_value = std::string("-").append(value);
+			value          = negative_value;
 		}
 
 		switch (type_specifier) {

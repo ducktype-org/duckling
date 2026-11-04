@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 
@@ -22,7 +28,7 @@ namespace compiler::helios::code {
 	 * building context or the `QueryHoutOfExpr` entry point.
 	 */
 	query::QResult<Box<code::Expr>> subExprFromPST(
-		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		query::Context& ctx, pst::Access<pst::ExprElement> element
 	);
 
 
@@ -36,10 +42,10 @@ namespace compiler::helios::code {
 	 * building context or the `QueryHoutOfExpr` entry point.
 	 */
 	query::QResult<Box<code::Expr>> subExprFromPSTWithType(
-		query::Context&                     ctx,
-		pst::AccessLocked<pst::ExprElement> element,
-		tsh::SymbolType<>                   expected_type,
-		base::Optional<dia::StablePosition> coercion_expects_pos = {},
-		CoercionErrorOverrides              error_overrides      = {}
+		query::Context&                          ctx,
+		pst::Access<pst::ExprElement>            element,
+		tsh::SymbolType<>                        expected_type,
+		base::Optional<dia::StablePosition>      coercion_expects_pos = {},
+		const coercions::CoercionErrorOverrides& error_overrides      = {}
 	);
 }

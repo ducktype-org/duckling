@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "ivm_compiler.hpp"
 
 #include <base/collections/optional.hpp>
@@ -30,17 +36,17 @@ namespace vm::loader::compiler {
 		detail::FunctionStackContext ctx(function);
 
 		code::valid_type::TypeSize max_stack_size{ Bytes{ 0 }, Bytes{ 0 } };
-		usize                      max_block_count = 0;
+		usize                      max_slot_count = 0;
 
 		auto& db = ctx.function.local_stack;
 
 		for (const auto& state: ctx.function.stack_states) {
-			max_block_count = std::max(max_block_count, db.size(state));
-			max_stack_size  = max_stack_size.fieldMax(db.byteSize(state));
+			max_slot_count = std::max(max_slot_count, db.size(state));
+			max_stack_size = max_stack_size.fieldMax(db.byteSize(state));
 		}
 
-		ctx.local_stack_size  = max_stack_size;
-		ctx.local_block_count = max_block_count;
+		ctx.local_stack_size = max_stack_size;
+		ctx.local_slot_count = max_slot_count;
 
 		return ctx;
 	}

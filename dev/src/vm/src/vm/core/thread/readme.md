@@ -38,9 +38,9 @@ provides a executor architectures :
   the previous strategies.
       ```cpp
       // instr_t *instr - instruction pointer
-      // std::byte *stack - local stack
+      // byte *stack - local stack
       // frame_t *frame - current frame
-      static u64 op_mov_p64_imm(const MicroInstruction*& instr, std::byte*& stack, Frame*& frame, VMThread& thread) {
+      static u64 op_mov_p64_imm(const MicroInstruction*& instr, byte*& stack, Frame*& frame, VMThread& thread) {
         deref<u64>(stack, instr->arg0) = instr->arg1;
         // instr[1].fn is a pointer to the implementation of the next instruction.
         return instr[1].fn(&instr[1], stack, frame, thread);
@@ -160,8 +160,8 @@ not just simple byte streams.
         `getVMValue()` endpoint are owned by the caller. This means they are expected to be freed by the caller.
         If not freed, they will be counted as memory leaks when calling `vm::api::deinitAndValidate()`.
     *   **Receiving Results:** After execution completes, the function's return value (or the entire program's
-        exit code) is packaged into a `VMValue` which can be read with the `vm::api::getExitCode()` endpoint
-        and interpreted. Note that `VMValues` returned by the `vm::api::getExitCode()` are owned by the
+        exit code) is packaged into a `VMValue` which is returned by the `vm::api::join()` endpoint
+        and interpreted. Note that `VMValues` returned by the `vm::api::join()` are owned by the
         `VMProcess` and are automatically freed when the process is destroyed.
     Some may ask: why aren't all `VMValue` objects owned by the process. This is done to improve performance.
     When calling functions in the VM multiple times we want to avoid the memory bloat which we may encounter

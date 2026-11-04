@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "queries.hpp"
 
 #include <frontend/module_tree/queries.hpp>
@@ -7,7 +13,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/attributes.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -17,6 +22,8 @@
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>
+#include <helios_private/pst_layer/for_all.hpp>
+#include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -91,6 +98,95 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
+		/**
+		 * Helper struct used for accumulating the getScopesInModule output.
+		 */
+		struct GetScopesOutput final {
+			std::vector<ScopeID> scopes;
+			bool                 failed = false;
+		};
+
+		static auto getScopes(Context& ctx, frontend::FileID file, Ref<GetScopesOutput> out) {
+			auto root          = getFilePST(ctx, file)->getRootElement();
+			auto root_unlocked = root.unlockOpt(ctx);
+			if (root_unlocked.empty()) {
+				// PST root failed to parse, PST should have already reported the diagnostic.
+				out->failed = true;
+				return;
+			}
+
+			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {
+				// handling lambdas, templates, etc. might be much more tricky and
+				// require a different approach
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
+					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
+			};
+
+			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
+				auto kind = element->getElementKind();
+				if (kind == pst::ElementKind::TemplateStmt) {
+					// we want to skip template bodies, since
+					// they don't compile directly
+					return true;
+				}
+				if (kind == pst::ElementKind::Import or kind == pst::ElementKind::Using) {
+					// @TODO: #3927 more cases might be added here in the future
+					// note that we shouldn't skip expressions, as they will be important once we
+					// have lambdas.
+
+					// We skip elements that cannot contain
+					// any symbols that QueryModuleHOUT should compile directly.
+					return true;
+				}
+				return false;
+			};
+
+			auto for_all_ok
+				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
+			if (for_all_ok.status().isBad()) {
+				// if the pstForAll failed, we mark the whole query as failed, but we still return
+				// the scopes that we managed to obtain.
+				out->failed = true;
+			}
+		}
+
+		/**
+		 * @brief QueryModuleHOUT helper.
+		 * Its implementation assumes it is a helper for the QueryModuleHOUT query and not directly
+		 * in other contexts.
+		 *
+		 * It collects all scopes defined in a given module, that might contain
+		 * symbols meaningful for the QueryModuleHOUT query.
+		 *
+		 * @note It returns ScopesInModuleValue which contains all scopes in the module or
+		 * a partial list of scopes that were possible to obtain despite some other failures. The
+		 * semantics of this failed state are the same as of a failed QResult (i.e. errors were
+		 * already reported), but we still want to return the scopes that we managed to obtain. This
+		 * is because if we just failed here, then
+		 * almost all of the compilation process would be halted and practically no HELIOS
+		 * diagnostics would appear.
+		 */
+		static GetScopesOutput getScopesInModule(Context& ctx, QKey key) {
+			// fetch scopes from main module file
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+
+			GetScopesOutput output;
+			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
+
+			getScopes(ctx, main_file, &output);
+
+			// eliminate duplicates with sort:
+			std::ranges::sort(output.scopes);
+			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
+			output.scopes.erase(unique_end, output.scopes.end());
+
+			// validate output:
+			for (auto scope: output.scopes)
+				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryModuleHOUT\n");
+
+			return output;
+		}
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// We want to continue gathering other entities
 			// even if some function queries fail,
@@ -98,20 +194,11 @@ namespace compiler::helios {
 			// and return failure at the end if so.
 			bool is_failed = false;
 
-			MCRef<std::vector<ScopeID>> scopes_to_process;
-
-			auto scopes_in_module = ctx.query<QueryScopesInModule>(key);
-			variant_match(scopes_in_module->value) {
-				variant_case(QueryScopesInModuleValue::Success, success) {
-					scopes_to_process = &success.scopes;
-				}
-				variant_case(QueryScopesInModuleValue::Failure, failure) {
-					scopes_to_process = &failure.partial_scopes;
-					is_failed
-						= true;  // we mark the whole query as failed, even if we have some scopes
-				}
-				variant_default { CORE_UNREACHABLE(); }
-			}
+			std::vector<ScopeID> scopes_to_process = [&is_failed, &ctx, &key]() {
+				auto scopes_in_module = getScopesInModule(ctx, key);
+				is_failed |= scopes_in_module.failed;
+				return std::move(scopes_in_module.scopes);
+			}();
 
 			HOUTUnit out;
 
@@ -122,7 +209,7 @@ namespace compiler::helios {
 			// to check them for duplicates later.
 			std::vector<SymID> class_symbols;
 
-			for (auto scope: *scopes_to_process) {
+			for (auto scope: scopes_to_process) {
 				Ref symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 				if (symbols_in_scope->hasFailed()) {
 					is_failed = true;
@@ -255,7 +342,7 @@ namespace compiler::helios {
 				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
 			);
 
-			ctx.logInt(std::move(error));
+			ctx.log(std::move(error));
 
 			return true;
 		}
@@ -280,7 +367,9 @@ namespace compiler::helios {
 
 				base::HashMap<base::StrID, dia::StablePosition> seen_fields;
 
-				for (SymID field_sym: class_data->valueOrPanic().members) {
+				for (const auto& field:
+				     class_data->valueOrPanic().declared_interface.getAnyFieldsView()) {
+					const SymID field_sym = field.getSymbol();
 					if_opt_some(maybeSymbolPst(field_sym), pst) {
 						if (reportIfNameTaken(
 								ctx,
@@ -353,45 +442,50 @@ namespace compiler::helios {
 		 * Append the methods and static variables of a class.
 		 */
 		static base::OkBad appendClassTasks(
-			std::vector<query::TaskHandle>&                  out_function_code_tasks,
-			[[maybe_unused]] std::vector<query::TaskHandle>& out_global_data_tasks,
-			const SymID                                      class_sym,
-			Context&                                         ctx
+			std::vector<query::TaskHandle>& out_function_code_tasks,
+			std::vector<query::TaskHandle>& out_global_data_tasks,
+			const SymID                     class_sym,
+			Context&                        ctx
 		) {
 			CORE_ASSERT(
 				kind(class_sym) == SymbolKind::Class,
 				"Invalid argument exception: expected class symbol"
 			);
 
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
+			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
+			// The interface of a class we could not resolve is already diagnosed by the query
+			// that builds it, and `provide` must not let its failure escape as an exception.
+			Ref interface_result = class_type.getInterfaceResult(ctx);
+			if (interface_result->hasFailed()) return base::BAD;
+			Ref interface = &interface_result->valueOrPanic();
 
 
-			auto methods = class_type.getInterface(ctx)->getMethodsView();
-
-			for (const auto& method: methods) {
+			for (const auto& method: interface->getAnyMethodsView()) {
 				auto method_sym = method.getSymbol();
+				// We only here add the methods that are owner only.
+				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
 				// llvm panics. This check is put inside the for, to only check it if the methods
 				// are actually present, and to provide a more specific error location.
 				if (not class_type.carriesInformation(ctx)) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
 						"being properly supported yet.",
 						maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
 							return pst.unlock(ctx)->getStablePosition();
 						})
-					));
+					);
 					return base::BAD;
 				}
-				// We only here add the methods that are owner only.
-				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
+			}
+
+			for (const auto& field: interface->getStaticFieldsView()) {
+				auto sym = field.getSymbol();
+				out_global_data_tasks.push_back(ctx.schedule<QueryHOUTGlobalData>(sym));
 			}
 			return base::OK;
 		}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <llvm_helpers/llvm_helpers.hpp>
@@ -9,7 +15,7 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 /**
- * @brief Registers absolute symbols for unjitable opfunctions to work.
+ * @brief Registers absolute symbols for non-jittable opfunctions to work.
  * @details Absolute symbols are constants used by jit, that origin from VM.
  * For example addresses of VM functions or variables (not currently).
  * In most cases jit uses functions which are created and independent from

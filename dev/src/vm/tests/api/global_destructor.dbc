@@ -1,0 +1,19 @@
+global_data g ptr_i64 {
+	constructor: g_ctor,
+	destructor: g_dtor
+}
+
+function g_ctor {} -> {} {
+	alloc_pptr_type			g, i64;
+	ret;
+}
+
+function g_dtor {} -> {} {
+	free_pptr				g;
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	mov_p64_imm				ret0, 0;
+	ret;
+}

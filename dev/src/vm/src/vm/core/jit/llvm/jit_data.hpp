@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <llvm_helpers/llvm_helpers.hpp>
@@ -18,7 +24,7 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-struct LlvmData {
+struct LlvmData final {
 	/**
 	 * @brief Context of llvmInit.
 	 * @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single
@@ -47,12 +53,13 @@ struct LlvmData {
 	 */
 	std::unordered_map<vm::low::MicroOpcode, std::string> opcode_name_map;
 
-	struct LlvmTypes {
+	struct LlvmTypes final {
 		Ref<llvm::StructType>   frame;
 		Ref<llvm::StructType>   flag_data;
 		Ref<llvm::StructType>   microinstruction;
 		Ref<llvm::StructType>   vm_thread;
 		Ref<llvm::FunctionType> opfun;
+		Ref<llvm::FunctionType> compiled;
 	};
 
 	/**

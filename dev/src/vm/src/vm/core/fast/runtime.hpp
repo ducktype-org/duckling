@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/pointers/box.hpp>
@@ -12,7 +18,7 @@ namespace vm::fast {
 		struct Instruction;
 	}
 
-	struct Frame {
+	struct Frame final {
 		bool flag = false;
 		/// Instruction pointer, has to live in frame for easy function calls
 		const exec::Instruction* ip = nullptr;
@@ -32,7 +38,7 @@ namespace vm::fast {
 		constexpr static usize LOCAL_STACK_SIZE = 8 * 1'024 * 1'024;  // 8 MB
 
 	private:
-		struct AlignedStackMemory {
+		struct AlignedStackMemory final {
 			alignas(8) std::array<byte, LOCAL_STACK_SIZE> data;
 		};
 
@@ -45,14 +51,13 @@ namespace vm::fast {
 		Frame* top_frame = frame_stack.data();
 
 	public:
-		std::byte* const local_stack_base
+		byte* const local_stack_base
 			= local_stack_memory->data.data();  /// Pointer to the start of the local stack.
-		std::byte* const local_stack_end
-			= local_stack_memory->data.data()
-		    + LOCAL_STACK_SIZE;  /// Pointer to the end of the local stack.
+		byte* const local_stack_end = local_stack_memory->data.data()
+		                            + LOCAL_STACK_SIZE;  /// Pointer to the end of the local stack.
 
 		// @TODO: #2729 This should be a valid pointer.
-		std::byte* const global_data_buffer_base = nullptr;
+		byte* const global_data_buffer_base = nullptr;
 
 		Frame* pushFrame(const exec::ExecFunction* function, byte* local_stack_base) {
 			top_frame++;

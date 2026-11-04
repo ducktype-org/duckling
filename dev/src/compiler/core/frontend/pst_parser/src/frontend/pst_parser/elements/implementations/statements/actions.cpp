@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/actions/all_actions.hpp"
 #include "../../hierarchy/expr_holders.hpp"
 #include "preamble.hpp"
@@ -39,9 +45,8 @@ namespace pst {
 		}
 		state.parse(out.toOpt().value()).eatOne();
 
-		// @TODO: for now we assume if there is no expression there is a semicolon
-		// @TODO: #1535 Change to not parsing expression when no tokens are left
-		if (!state[0].is(Special::Semicolon)) state.parse(out.toOpt().value()).one(&out->expr);
+		if (!state[0].is(Special::Semicolon) && state.notEmpty())
+			state.parse(out.toOpt().value()).one(&out->expr);
 
 		PST_RETURN out;
 	}

@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include "mir_destructors.hpp"
 #include "mir_liveness.hpp"
 
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
@@ -8,16 +15,6 @@
 #include <query_framework/context/context_fd.hpp>
 
 namespace compiler::mir {
-
-	/**
-	 * @brief Helper lowest common ancestor of @p a and @p b
-	 */
-	ScopeRef lca(ScopeRef a, ScopeRef b);
-
-
-	struct Function;
-
-	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
 
 	struct LifetimePassArgs {
 		LocalsByScopeMap                             locals_by_scope;
@@ -120,6 +117,11 @@ namespace compiler::mir {
 	public:
 		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};
+
+	/**
+	 * @brief Groups the locals of @p function by their lifetime scope.
+	 */
+	LocalsByScopeMap collectLocalsByScope(const Function& function);
 
 	Function runAllLifetimePasses(query::Context& ctx, Function function);
 }

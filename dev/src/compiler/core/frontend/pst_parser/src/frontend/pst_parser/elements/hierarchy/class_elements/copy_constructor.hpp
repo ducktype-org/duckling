@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../lists/parameter_list.hpp"
@@ -14,7 +20,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);  // Only expression allowed as statement
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);

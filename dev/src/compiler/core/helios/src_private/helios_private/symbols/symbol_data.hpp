@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "generated_symbol_data.hpp"
@@ -47,21 +53,6 @@ namespace compiler::helios {
 		 */
 		SymbolKind kind;
 
-		/**
-		 * Whether the symbol is a wildcard symbol.
-		 * When lookup encounter a wildcard symbol it
-		 * looks-up into that symbol instead of considering the symbol itself.
-		 * e.g.: `using a.*`
-		 */
-		bool is_wildcard = false;
-
-		/**
-		 * Whether the symbol is an alias.
-		 * Aliases are symbols that are not "real" symbols, but are just a reference to another
-		 * symbol. e.g.: `using a = b;`
-		 */
-		bool is_alias = false;
-
 		/** Whether the symbol is a dependent symbol.
 		 * Dependent symbols are symbols that can't be used in actual execution without some
 		 * context, e.g. class fields.
@@ -85,8 +76,11 @@ namespace compiler::helios {
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using SymbolSemantics
-			= std::variant<PstImplementedSemantics, BuiltinSemantics, GENERATED_SYMBOL_SEMANTICS_LIST>;
+		using SymbolSemantics = std::variant<
+			PstImplementedSemantics,
+			ClassMemberSemantics,
+			BuiltinSemantics,
+			GENERATED_SYMBOL_SEMANTICS_LIST>;
 
 		SymbolData(CommonSymbolData common, SymbolSemantics other);
 
@@ -100,6 +94,10 @@ namespace compiler::helios {
 
 		static SymbolData makePSTSymbolData(
 			CommonSymbolData common_data, PstImplementedSemantics pst_data
+		);
+
+		static SymbolData makeClassMemberSymbolData(
+			CommonSymbolData common_data, ClassMemberSemantics class_member_data
 		);
 
 		static SymbolData makeGeneratedSymbolData(
@@ -129,6 +127,13 @@ namespace compiler::helios {
 			if (auto ptr = std::get_if<T>(&other)) return CRef<T>{ ptr };
 			return std::nullopt;
 		}
+
+		/**
+		 * @brief Whether the symbol was created from a PST element written by the user,
+		 * that is a plain PST symbol or a class member.
+		 */
+		[[nodiscard]]
+		bool isPstImplemented() const;
 
 		[[nodiscard]]
 		base::Optional<pst::AccessLocked<pst::LangElement>> maybePstElement() const;

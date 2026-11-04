@@ -15,7 +15,7 @@ class xxx extends aaa implements bbb, cccc {
 	using std.math;
 
 	public {
-		alias sqrt=std.math.sqrt;
+		using std.math.sqrt as sqrt;
 
 		xxx.create(c:i64) = {
 			x = c;

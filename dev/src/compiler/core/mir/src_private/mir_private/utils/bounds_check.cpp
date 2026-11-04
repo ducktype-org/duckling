@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "bounds_check.hpp"
 
 #include <helios/symbols/lang_primitives.hpp>
@@ -30,8 +36,7 @@ namespace compiler::mir {
 			{},
 			{ pos },
 		});
-		// Maybe we should end the Function here.
-		fail_block->setTerminator({ Operation::Jump, {}, { ok_block->getID() }, {}, scope });
+		fail_block->setTerminator({ Operation::Unreachable, {}, {}, {}, scope });
 
 		// The index is coerced to a signed integer, so both bounds must be verified:
 		// index < length alone lets negative indices through (signed comparison).

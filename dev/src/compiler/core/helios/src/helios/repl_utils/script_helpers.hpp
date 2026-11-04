@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
@@ -12,12 +18,12 @@ namespace compiler::repl {
 	/**
 	 * @brief Resolve the canonical root scope used for generated script `main`.
 	 *
-	 * Script compilation creates a chain of ephemeral REPL modules, one per statement,
+	 * Script compilation creates a chain of synthetic REPL modules, one per statement,
 	 * where each next module points to the previous one as REPL parent. The last module
 	 * in that chain represents the full accumulated script context.
 	 *
-	 * Even though these modules are ephemeral, each of them still has a real main source file:
-	 * createEphemeralChainedStatementModule() assigns one via createRandomVirtualFile(input).
+	 * Even though these modules are synthetic, each of them still has a real main source file:
+	 * createSyntheticChainedStatementModule() assigns one via createRandomVirtualFile(input).
 	 * That virtual file is parsed into PST just like regular files, so querying
 	 * queryRootScopeOfMainModuleFile() is the correct way to obtain the module's top-level scope.
 	 *

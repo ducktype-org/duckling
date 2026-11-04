@@ -1,2 +1,4 @@
 SubDirs:
-  - unused-keys
+  - alias_equals_name
+  - self_implying_features
+  - unknown_lints

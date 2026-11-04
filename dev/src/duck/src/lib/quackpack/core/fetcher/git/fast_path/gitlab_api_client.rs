@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Module for using parts of Gitlab's API.
 //! The whole documentation can be found here: <https://docs.gitlab.com/api/api_resources/>.
 //!
@@ -16,7 +22,7 @@ use std::sync::Arc;
 
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, trace};
 use url::Url;
 
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
@@ -130,7 +136,8 @@ impl<'duck> GitlabApiClient<'duck> {
 
     /// Helper for [`Self::request`].
     fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
-        debug!(%method, %url, ?body, "building a request");
+        debug!(target: "duck::git", "building a `{method}` request to `{url}`");
+        trace!(target: "duck::git", ?body);
         http::Request::builder()
             .uri(url.as_str())
             .method(&method)

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "instruction_lowering.hpp"
 
 #include <base/preproc/equal.hpp>
@@ -15,11 +21,11 @@ using namespace vm::loader::compiler;
 using namespace vm::fast::reloc;
 
 namespace {
-	static usize getByteSize(const vm::code::valid_type::TypeSize& size) {
+	usize getByteSize(const vm::code::valid_type::TypeSize& size) {
 		return static_cast<usize>(size.assumePointerSize(Bytes(8)));
 	}
 
-	struct Context {
+	struct Context final {
 		const vm::code::ValidProgram&       high_program;
 		const vm::fast::ProgramBase&        program;
 		const detail::FunctionStackContext& stack_ctx;

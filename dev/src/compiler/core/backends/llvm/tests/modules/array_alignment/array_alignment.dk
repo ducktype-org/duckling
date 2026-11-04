@@ -1,0 +1,24 @@
+# An array of 16 bytes or more gets 16-byte aligned storage, so vectorized loops over it never
+# split a cache line. Smaller arrays and classes keep their natural alignment.
+
+var global_array: i64[4];
+
+class Pair {
+    a: i64;
+    b: i64;
+}
+
+fun largeArray() -> i64 = {
+    var big: i64[1000];
+    return big[999];
+}
+
+fun smallArray() -> i32 = {
+    var small: i32[2];
+    return small[1];
+}
+
+fun pairCopy(p: Pair) -> i64 = {
+    var dup = p;
+    return dup.a + global_array[0];
+}

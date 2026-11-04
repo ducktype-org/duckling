@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 """
 GitHub creates no runs for a workflow whose file does not parse as YAML —
 no failure, no annotation on the PR, other workflows keep running. The
@@ -16,7 +22,9 @@ from .helpers import (
 )
 
 # impl/ -> toolbox/ -> py/ -> scripts/ -> dev/ -> repo root
-_WORKFLOWS_DIR = Path(__file__).resolve().parents[5] / ".github" / "workflows"
+_GITHUB_DIR = Path(__file__).resolve().parents[5] / ".github"
+_WORKFLOWS_DIR = _GITHUB_DIR / "workflows"
+_ACTIONS_DIR = _GITHUB_DIR / "actions"
 
 
 def workflows_lint_impl() -> bool:
@@ -35,6 +43,8 @@ def workflows_lint_impl() -> bool:
         for path in _WORKFLOWS_DIR.iterdir()
         if path.suffix in (".yml", ".yaml") and path.is_file()
     )
+    workflow_files += sorted(_ACTIONS_DIR.glob("*/action.yml"))
+    workflow_files += sorted(_ACTIONS_DIR.glob("*/action.yaml"))
 
     ok = True
     for path in workflow_files:
@@ -45,5 +55,5 @@ def workflows_lint_impl() -> bool:
             ok = False
 
     if ok:
-        log_good(f"All {len(workflow_files)} workflow file(s) parsed successfully")
+        log_good(f"All {len(workflow_files)} workflow/action file(s) parsed successfully")
     return ok

@@ -1,0 +1,39 @@
+# @TODO: #3856 Think about this test.
+
+import core.builtins.*;
+
+class Num {
+    val: i64;
+    fun +(rhs: Num) -> Num = { return Num(self.val + rhs.val + 1000); }
+    fun prefix -() -> Num = { return Num(-self.val - 1000); }
+}
+fun +(lhs: Num, rhs: Num) -> Num = { return Num(lhs.val + rhs.val); }
+fun prefix -(n: Num) -> Num = { return Num(-n.val); }
+
+class Big {
+    b: box i64;
+    fun +(rhs: Big) -> i64 = 1000;
+}
+fun +(lhs: Big, rhs: Big) -> i64 = 1;
+
+class Foo {
+    v: i64;
+    fun foo(x: i32) -> i64 = 32;
+    fun foo(x: i64) -> i64 = 64;
+}
+
+fun main() -> i64 = {
+    var a = Num(10);
+    var b = Num(20);
+    builtin_output_i64((a + b).val);
+    builtin_output_i64((-a).val);
+
+    var x = Big(new 1i64);
+    var y = Big(new 2i64);
+    builtin_output_i64(x + (move y));
+
+    var f = Foo(0);
+    builtin_output_i64(f.foo(10i32));
+    builtin_output_i64(f.foo(10i64));
+    return 0;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
@@ -13,7 +19,7 @@ namespace vm::loader::compiler {
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
 		 * @TODO: #2898 This structure's name is outdated
 		 */
-		struct FunctionStackContext {
+		struct FunctionStackContext final {
 			FunctionStackContext(const code::valid_function::ValidFunction& func): function(func) {}
 
 			/// The high level function definition.
@@ -21,7 +27,7 @@ namespace vm::loader::compiler {
 
 			/// Total required size for the local stack frame, in bytes.
 			code::valid_type::TypeSize local_stack_size{};
-			usize                      local_block_count = 0;
+			usize                      local_slot_count = 0;
 		};
 	}
 
@@ -29,7 +35,7 @@ namespace vm::loader::compiler {
 	 * @brief A structure holding the size information for the program.
 	 * Used to determine the size of various internal data structures for incremental compilation.
 	 */
-	struct ProgramSize {
+	struct ProgramSize final {
 		usize function_count       = 0;
 		usize global_count         = 0;
 		usize type_count           = 0;

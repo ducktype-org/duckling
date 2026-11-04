@@ -1,0 +1,18 @@
+# Check that a match expression correctly coerces a `void` expression to the expected type.
+
+import core.panicking;
+
+fun getI32(v: i32|f64) -> i32 = match(v) {
+    case i: i32 = i;
+    # `void` is coerced to `i32`.
+    case f: f64 = panicking.panic();
+}
+
+fun main() -> i64 = {
+    var v1: i32|f64 = -4;
+    var v2: i32|f64 = 3.14;
+
+    print(getI32(v1));  # -4
+    print(getI32(v2));  # panics, so nothing past this point runs
+    return 0i64;
+}

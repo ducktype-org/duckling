@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "access.hpp"
 
 #include "pst_query/pst_access_side_input.hpp"
@@ -15,11 +21,11 @@ namespace pst::internal {
 	}
 
 	void notifyBadAccess(query::Context& ctx) {
-		ctx.logInt(makeBox<dia::PlaceholderError>(
+		ctx.log<dia::PlaceholderError>(
 			"PST Accessed a nullptr LangElement.",
 			"To check the location of the bad access, enable "
 			"query dev logs (Query, QueryStacktraces)."
-		));
+		);
 		query::throwFailed();
 	}
 }

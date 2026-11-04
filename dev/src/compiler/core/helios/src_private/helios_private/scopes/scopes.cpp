@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "scopes.hpp"
 
 #include <frontend/module_tree/functors.hpp>
@@ -19,10 +25,12 @@
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/templates/templates.hpp>
@@ -42,7 +50,9 @@
 namespace compiler::helios {
 
 
-	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	namespace {
+		auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	}
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -58,47 +68,15 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
-	/**
-	 * @brief A way helios creates scope for given pst element.
-	 */
-	enum class ElementScopeKind {
-		// Has standard scope:
-		Standard,
-
-		// Inherits scope from its parent:
-		Transparent,
-
-		// Gets parent scope of what transparent scope would be.
-		// This is used for expand expressions, where the lookup should happen higher than the
-		// expand statement itself.
-		ParentTransparent,
-
-		// Does not have a scope:
-		Invalid,
-
-		// @TODO: introduce:
-		// * TransparentInvalid -- transparent for implementation, but invalid for user
-		// this allows to easily implement scope parents, but disallow to get PrimaryScopes for
-		// elements that don't have it.
-		// For examples namespaces don't have primary scopes (which can be counterintuitive)
-	};
-
-	/**
-	 * Determines scope kind for given PST element.
-	 * @TODO: #2407 this could take unlocked access
-	 */
-	ElementScopeKind getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
-		// @TODO: move it to different file?
-		auto element = locked.unlock(ctx);
-
+	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement> element) {
 		switch (element->getElementKind()) {
 		case pst::ElementKind::TopLevel:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Import:
-		case pst::ElementKind::ImportIdentifierAs:
-		case pst::ElementKind::ImportStarHides:
-		case pst::ElementKind::ImportNested:
+		case pst::ElementKind::Selector:
+		case pst::ElementKind::SelectorList:
+		case pst::ElementKind::NestedSelectorList:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -125,7 +103,6 @@ namespace compiler::helios {
 		case pst::ElementKind::Namespace:
 		case pst::ElementKind::Variable:
 		case pst::ElementKind::Using:
-		case pst::ElementKind::Alias:
 		case pst::ElementKind::Const:
 		case pst::ElementKind::Class:
 		case pst::ElementKind::Action:
@@ -176,6 +153,7 @@ namespace compiler::helios {
 		case pst::ElementKind::RoundGroupExpr:
 		case pst::ElementKind::CallList:
 		case pst::ElementKind::AtrArgList:
+		case pst::ElementKind::ArrayLiteralList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
@@ -198,7 +176,6 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
-		case pst::ElementKind::TemplateList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::Expand:
@@ -208,7 +185,7 @@ namespace compiler::helios {
 
 		case pst::ElementKind::TemplateStmt:
 			// This defines a non-empty scope only for for baked PST nodes,
-			// @TODO: #3071 probably change it to transparent,
+			// @TODO: #3892 probably change it to transparent,
 			// since this element should not be present in baked PSTs (or will be a trivial node).
 			return ElementScopeKind::Standard;
 
@@ -258,15 +235,9 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
-		/**
-		 * @brief Cache to verify parent scopes are consistent.
-		 * @note It is intentionally thread safe.
-		 */
-		inline static concurrent::ConHashMap<pst::PstID, ScopeID> parent_map;
-
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
-			auto element_scope_kind = getScopeKind(ctx, element_key.element);
+			auto element_scope_kind = getScopeKind(ctx, element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				[[maybe_unused]] auto element_ptr = &*element;
@@ -300,14 +271,6 @@ namespace compiler::helios {
 				);
 				return parent.ref->parent->ref->perfectClone();
 			}
-
-
-			// simple parent sanity check:
-			// it is technically not needed anymore, but it left as an additional
-			// layer of bug detection.
-			parent_map.maybePutAndUpdate(element->getID(), parent, [&](CRef<ScopeID> existing) {
-				CORE_ASSERT(*existing == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
-			});
 
 			return ScopeData{
 				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
@@ -364,83 +327,6 @@ namespace compiler::helios {
 		return visitor.out.value();
 	}
 
-	struct IMPLEMENT_QUERY(QueryScopesInModule, QueryScopesInModuleValue) {
-		/**
-		 * Helper struct used for accumulating the query output.
-		 */
-		struct Output final {
-			std::vector<ScopeID> scopes;
-			bool                 failed = false;
-		};
-
-		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
-			auto root          = getFilePST(ctx, file)->getRootElement();
-			auto root_unlocked = root.unlockOpt(ctx);
-			if (root_unlocked.empty()) {
-				// PST root failed to parse, PST should have already reported the diagnostic.
-				out->failed = true;
-				return;
-			}
-
-			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
-				// handling lambdas, templates, etc. might be much more tricky and
-				// require a different approach
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
-			};
-
-			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
-			// somehow. Note that more custom logic might be needed in the future (to optimize it,
-			// to compile lambdas, etc.)
-
-			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
-				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
-					// we want to skip template bodies, since
-					// they don't compile directly
-					return true;
-				}
-				return false;
-			};
-
-			auto for_all_ok
-				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
-			if (for_all_ok.status().isBad()) {
-				// if the pstForAll failed, we mark the whole query as failed, but we still return
-				// the scopes that we managed to obtain.
-				out->failed = true;
-			}
-		}
-
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// fetch scopes from main module file
-			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-
-			Output output;
-			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
-
-			getScopes(ctx, main_file, &output);
-
-			// eliminate duplicates with sort:
-			std::ranges::sort(output.scopes);
-			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
-			output.scopes.erase(unique_end, output.scopes.end());
-
-			// validate output:
-			for (auto scope: output.scopes)
-				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
-
-			if (output.failed) {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
-			} else {
-				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
-			}
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
-
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, query::QResult<std::vector<SymID>>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
@@ -451,7 +337,7 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				switch (stmt.unlock(ctx)->isDeclaration()) {
+				switch (stmt->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
 					// @TODO: #1753 Maybe we should skip the symbol if compiling the symbol failed.
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -459,21 +345,21 @@ namespace compiler::helios {
 					break;
 				}
 				case pst::DeclKind::Transparent: {
-					if (auto stmt_specifier_opt
-					    = stmt.unlock(ctx).template dynamicCast<pst::SpecifierBlock>()) {
+					if (auto stmt_specifier_opt = stmt.template dynamicCast<pst::SpecifierBlock>()) {
 						auto stmt_specifier = stmt_specifier_opt.value();
 						auto inner_symbols  = filterSymbolsFromStmtList(
-                            ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getBlock())
+                            ctx,
+                            getStmtsFromStmtAggregate(
+                                ctx, unlockOrFail(ctx, stmt_specifier->getBlock())
+                            )
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
-					} else if (auto using_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
+					} else if (auto using_opt = stmt.template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
-					} else if (auto import_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+					} else if (auto import_opt = stmt.template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
@@ -481,7 +367,7 @@ namespace compiler::helios {
 					} else {
 						CORE_PANIC(
 							"Not handled element ",
-							stmt.unlock(ctx)->elementType(),
+							stmt->elementType(),
 							" with DeclKind::Transparent."
 						);
 					}
@@ -573,11 +459,11 @@ namespace compiler::helios {
 				// parsed but nothing compiles them yet, so report it instead of falling through
 				// to the panicky visitor default. Leaving `out` unset fails the query.
 				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
 					"`T(...)` and `T.name(...)` declare a constructor.\n"
-				));
+				);
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
@@ -622,7 +508,7 @@ namespace compiler::helios {
 				// Scope of "template →(...)← {}"
 				// This also inserts the baked template symbols into this scope.
 
-				// @TODO: #3071 this is a hack, fix it!
+				// @TODO: #3892 this is a hack, fix it!
 				// Here two different cases are handled:
 				// * for pre-bake PST template this defined no symbols, this is a scope in which the
 				// expressions from template "signature" are compiled
@@ -696,7 +582,7 @@ namespace compiler::helios {
 				return out;
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
-				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template
+				// @TODO: #3892 maybe modify this assertion or add a new else-if branch for template
 				// statements
 				CORE_ASSERT(
 					getScopeKind(ctx, base_element) == ElementScopeKind::Standard,
@@ -783,6 +669,8 @@ namespace compiler::helios {
 			static const std::vector<PreludeImport> imports{
 				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
 				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("prints") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("optional") } },
 			};
 			return imports;
 		}
@@ -806,7 +694,7 @@ namespace compiler::helios {
 		query::QResult<LookupResult> lookupImplicitPrelude(
 			query::Context& ctx, frontend::ModuleID module_id, base::StrID name, bool with_wildcards
 		) {
-			LookupResult result{ .leaves = {}, .children = {} };
+			LookupResult result{};
 			if (isStandardLibraryModule(ctx, module_id)) return result;
 
 			for (const auto& prelude_import: preludeImports()) {
@@ -823,7 +711,9 @@ namespace compiler::helios {
 				// The prelude re-exports the contents of the module, but not the modules it
 				// imports itself - otherwise every `import` written in a prelude module would
 				// collide with the same import written by the user.
-				LookupResult exported{ .leaves = {}, .children = prelude_result->children };
+				LookupResult exported{ .leaves       = {},
+					                   .inaccessible = {},
+					                   .children     = prelude_result->children };
 				for (const SymID sym: prelude_result->leaves)
 					if (kind(sym) != SymbolKind::Import) exported.leaves.push_back(sym);
 
@@ -837,26 +727,22 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
-			LookupResult result{ .leaves = {}, .children = {} };
+			LookupResult result{};
 
 			for (const auto& sym: *symbol_list) {
 				if (isIgnoredByLookup(sym)) continue;
 
-				if (isWildcard(sym)) {
-					if (key.with_wildcards) {
-						auto wild_result_qresult
-							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
-						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						// The correct code that works for using is commented out,
-						// to make the import a.*; work correctly.
-						// @TODO: #1412 fix this properly
-						// if (!wild_result->isEmpty())
-						// 	result.children.push_back(wild_result->toNode(sym));
-						if (!wild_result->isEmpty()) result.merge(*wild_result);
-					}
-				} else if (isAlias(sym) && name(sym) == key.name) {
-					// @TODO: #1412 fix dealias
-					result.leaves.push_back(sym);
+				if (kind(sym) == SymbolKind::Using or kind(sym) == SymbolKind::Import) {
+					UNPACK_QRESULT_CREF(
+						CRef<LookupResult> pointed_result = &,
+						ctx.query<QueryLookupInUsingImport>({ sym, key.name, key.with_wildcards })
+					);
+					// The correct code that works for using is commented out,
+					// to make the import a.*; work correctly.
+					// @TODO: #1412 fix this properly
+					// if (!pointed_result->isEmpty())
+					// 	result.children.push_back(pointed_result->toNode(sym));
+					if (!pointed_result->isEmpty()) result.merge(*pointed_result);
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
 				} else {
@@ -909,7 +795,7 @@ namespace compiler::helios {
 			CORE_DEV_LOG(
 				REPL,
 				"At root scope, module #",
-				current_module_id.queryUnstablePerfectHash(),
+				current_module_id.queryUnstablePerfectHash().toStringHex(),
 				", isRepl=",
 				is_repl_module,
 				", hasParent=",

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/hout/elements.hpp>
@@ -158,6 +164,17 @@ namespace compiler::helios::code {
 		void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr& e) override {
 			handler(e);
 			for (const auto& subtype: e.subtypes) walk(*subtype);
+		}
+
+		void visitFunctionTypeExpr(const FunctionTypeExpr& e) override {
+			handler(e);
+			for (const auto& parameter: e.parameters) walk(*parameter);
+			walk(*e.result);
+		}
+
+		void visitOptionalTypeConstructorExpr(const OptionalTypeConstructorExpr& e) override {
+			handler(e);
+			walk(*e.value_type);
 		}
 
 		void visitVariantConstructExpr(const VariantConstructExpr& e) override {

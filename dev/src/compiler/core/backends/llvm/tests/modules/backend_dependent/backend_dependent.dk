@@ -11,7 +11,7 @@ fun getValue() = {
 	return 20;
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
 	# The LLVM (native) backend must compile the `@native_only_impl` implementation
 	# (returning 20), not the `@dvm_only_impl` one (returning 10).
 	return getValue();

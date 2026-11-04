@@ -1,0 +1,31 @@
+metadata:
+  type: "note"
+  family: "lookup"
+  name: "lookup_inaccessible_declaration"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+params:
+  code:
+    description: "Declaration snippet of the inaccessible member."
+  code_location:
+    description: "Location of the declaration snippet."
+
+
+header_message:
+  - "Found declaration:"
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "note"
+    content: "declared here"

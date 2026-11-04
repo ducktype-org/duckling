@@ -1,5 +1,13 @@
 # Tests for static array types
 Tests:
+  aggregate_values:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "30\n99\n30\n30\n"
+        ExitCode: 0
+
   simple_arrays:
     Cases:
       all:
@@ -81,3 +89,7 @@ Tests:
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
+  literals:
+    Cases:
+      all:
+        ExitCode: 0

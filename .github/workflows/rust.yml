@@ -12,7 +12,6 @@ on:
   workflow_dispatch:
 
 env:
-  CARGO_DIR: ~/.cargo
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
@@ -50,14 +49,16 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
-      - name: Add Rust components to PATH
-        run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
-
-      # This has to be before restoring cache, so the env is set.
-      - name: Setup duck dependencies
-        uses: ./.github/actions/setup-duck-dependencies/
+      # This has to be before restoring cache, so the env is set. It also puts the toolchain on
+      # PATH.
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
+        with:
+          # This job is Linux-only: clippy runs once, not per platform.
+          platform: linux
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Restore sccache cache
         uses: actions/cache/restore@v5
@@ -73,11 +74,6 @@ jobs:
       - name: Run cargo clippy
         working-directory: ${{ matrix.project.path }}
         run: cargo clippy --no-deps --locked -- -D warnings
-
-      - name: Remove sccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        id: sccache-main-rm
-        run: rm -rf ${{ env.SCCACHE_DIR }}
 
   rustfmt:
     if: github.event.pull_request.draft == false
@@ -104,10 +100,11 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
-      - name: Add Rust components to PATH
-        run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
+      # The only job here that does not go through a setup-*-rust action.
+      - name: Put the toolchain on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Run cargo fmt
         working-directory: ${{ matrix.project.path }}
@@ -116,21 +113,23 @@ jobs:
   test:
     if: github.event.pull_request.draft == false
     needs: determine-runners
-    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[0] }}
-    name: cargo test / (${{ matrix.project.name }}, ${{ matrix.project.path }})
+    # Unlike the Linux jobs this does not reach the mac through determine-runners.
+    runs-on: ${{ matrix.platform == 'macos' && fromJson('{"group":"SelfHostedRunners","labels":"macOS"}') || fromJson(needs.determine-runners.outputs.runners)[0] }}
+    name: cargo test / (${{ matrix.project.name }}, ${{ matrix.project.path }}${{ matrix.platform == 'macos' && ', macOS' || '' }})
 
     strategy:
       matrix:
         project:
           - name: duck & quackpack
             path: dev/src/duck/
+        platform: [linux, macos]
       fail-fast: false
 
     timeout-minutes: 10
 
     steps:
       - name: Clean workspace (self-hosted only)
-        if: contains(fromJson(needs.determine-runners.outputs.runners)[0].group, 'SelfHostedRunners')
+        if: ${{ matrix.platform == 'macos' || contains(fromJson(needs.determine-runners.outputs.runners)[0].group, 'SelfHostedRunners') }}
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
           rm -rf ${{ github.workspace }}
@@ -138,16 +137,20 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
-      - name: Add Rust components to PATH
-        run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
+      # This has to be before restoring cache, so the env is set. It also puts the toolchain on
+      # PATH.
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
+        with:
+          platform: ${{ matrix.platform }}
+          # macOS ignores this: there the cache lives on the machine, outside the workspace.
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
 
-      # This has to be before restoring cache, so the env is set.
-      - name: Setup duck dependencies
-        uses: ./.github/actions/setup-duck-dependencies/
-
+      # macOS keeps its sccache on the machine instead.
       - name: Restore sccache cache
+        if: ${{ matrix.platform != 'macos' }}
         uses: actions/cache/restore@v5
         with:
           path: |
@@ -161,8 +164,3 @@ jobs:
       - name: Run cargo test
         working-directory: ${{ matrix.project.path }}
         run: cargo --locked test
-
-      - name: Remove sccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        id: sccache-main-rm
-        run: rm -rf ${{ env.SCCACHE_DIR }}

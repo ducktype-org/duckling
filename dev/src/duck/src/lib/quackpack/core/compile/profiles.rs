@@ -1,11 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::LazyLock;
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::manifest;
-use crate::util::error::MessageError;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId};
 
 pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::new(|| {
@@ -139,9 +144,8 @@ macro_rules! determine_field {
         /// -----
         /// Field in [`manifest::Profile`] should implement [`Into::into`] for the appropriate [`Profile`] field type.
         /// It should also implement [`std::marker::Copy`].
-        #[tracing::instrument(skip_all)]
         fn $fun_name(profile_name: StrId, profiles: &manifest::Profiles) -> QuackResult<$ret> {
-            debug!(profile = %profile_name, ?profiles, "getting a profile from manifest");
+            trace!(profile = %profile_name, "getting a profile field from the manifest");
             // The profile should be either defined in the manifest or predefined.
             // We always prioritize the manifest, since a predefined profile can be redefined in the manifest.
             let Some(starting_profile) = profiles.get_profiles().get(&profile_name) else {
@@ -149,25 +153,21 @@ macro_rules! determine_field {
                     .get(&profile_name)
                     .map(|prof| prof.$name)
                     .ok_or_else(|| {
-                        QuackError::hint(
-                            "In order to use a profile you have to define it in the manifest first",
-                        )
-                        .context(MessageError(
-                            format!("Unknown profile `{}`", profile_name).into(),
-                        ))
+                        let mut err = QuackError::message(format!("unknown profile `{}`", profile_name));
+                        err.add_hint("in order to use a profile you have to define it in the manifest first");
+                        err
                     });
             };
             $fun_name_help(profile_name, starting_profile, profiles)
         }
 
         #[doc = concat!("Recursive helper for [`", stringify!($fun_name),"`]")]
-        #[tracing::instrument(skip_all)]
         fn $fun_name_help(
             cur_profile_name: StrId,
             cur_profile: &manifest::Profile,
             profiles: &manifest::Profiles,
         ) -> QuackResult<$ret> {
-            debug!(profile.name = %cur_profile_name, profile = ?cur_profile, ?profiles, "getting a profile from manifest");
+            trace!(profile = %cur_profile_name, "getting a profile field from the manifest");
             if let Some(result) = cur_profile.$name {
                 // Manifest profile `cur_profile` has the field defined, so it overwrites all of its ancestors.
                 // Since we have got here, none of the descendants defines this field.
@@ -232,12 +232,12 @@ determine_field!(
 impl Profile {
     /// Constructs a [`Profile`], given the profile's name and [`manifest::Profiles`].
     /// Unwinds the inheritance structure to determine each field of the profile.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "debug", skip_all, fields(profile = %profile_name))]
     pub fn construct_profile(
         profile_name: StrId,
         manifest_profiles: &manifest::Profiles,
     ) -> QuackResult<Self> {
-        debug!(profile = %profile_name, profiles = ?manifest_profiles, "getting a profile from manifest");
+        trace!(profiles = ?manifest_profiles);
         Ok(Self {
             name: profile_name,
             opt_level: determine_opt_level(profile_name, manifest_profiles)?,
@@ -338,7 +338,7 @@ mod test {
         let error = Profile::construct_profile("a".into(), &profiles).unwrap_err();
         assert_eq!(
             error.to_string(),
-            "Unknown profile `a`\nIn order to use a profile you have to define it in the manifest first",
+            "unknown profile `a`\nin order to use a profile you have to define it in the manifest first",
         )
     }
 

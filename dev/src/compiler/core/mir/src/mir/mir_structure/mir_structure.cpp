@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "mir_structure.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -130,6 +136,8 @@ namespace compiler::mir {
 			const auto& block = blocks[block_id];
 
 			os << "  Block " << u64(block.id);
+			if (block.debug_name.has_value())
+				os << " (" << block.debug_name.value().strView() << ")";
 			if (block.id == block_order[0]) os << " [entry]";
 			os << ":\n";
 			for (const auto& instruction: block.instructions) {
@@ -144,20 +152,22 @@ namespace compiler::mir {
 		os << "}\n";
 	}
 
-	void debugPrintInstrParameters(std::ostream& os, const InstrParameters& instr_params) {
-		os << " Params{";
-		variant_match(instr_params) {
-			variant_case_novalue(NoInstrParameters) { /* nothing */ }
-			variant_case(CastParameters, params) {
-				os << "from:" << params.source_type.toString()
-				   << ", to:" << params.target_type.toString();
+	namespace {
+		void debugPrintInstrParameters(std::ostream& os, const InstrParameters& instr_params) {
+			os << " Params{";
+			variant_match(instr_params) {
+				variant_case_novalue(NoInstrParameters) { /* nothing */ }
+				variant_case(CastParameters, params) {
+					os << "from:" << params.source_type.toString()
+					   << ", to:" << params.target_type.toString();
+				}
+				variant_case(VariantParameters, params) {
+					os << "alt:" << params.alternative_index << " ("
+					   << params.alternative_type.toString() << ")";
+				}
 			}
-			variant_case(VariantParameters, params) {
-				os << "alt:" << params.alternative_index << " ("
-				   << params.alternative_type.toString() << ")";
-			}
+			os << "}";
 		}
-		os << "}";
 	}
 
 	void Instruction::debugPrint(std::ostream& os) const {

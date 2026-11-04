@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../../../lang_parser_context.hpp"
@@ -27,7 +33,7 @@ namespace pst {
 			  ParentClass(dummy, other),
 			  context(makeBox<LangParserContext>(other.context.ref())) {}
 
-		Expand(const LangParserState& state, CRef<LangParserContext> context):
+		explicit Expand(LangElementConstructionData state, CRef<LangParserContext> context):
 			  Stmt(StmtKind::Expand, state),
 			  context(makeBox<LangParserContext>(context)) {
 			this->element_kind = ElementKind::Expand;

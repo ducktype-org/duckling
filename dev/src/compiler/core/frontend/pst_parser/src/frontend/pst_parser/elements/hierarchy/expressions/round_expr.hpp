@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "expr_common.hpp"
@@ -14,7 +20,7 @@ namespace pst::expr {
 		NAMED_CHILD(expr, ExprElement);
 
 	public:
-		explicit RoundExpr(const LangParserState& state): ExprElement(state, 200) {}
+		explicit RoundExpr(LangElementConstructionData state): ExprElement(state, 200) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

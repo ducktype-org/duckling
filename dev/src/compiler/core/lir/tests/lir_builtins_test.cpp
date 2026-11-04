@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lir_builtins_test.cpp
  * @brief LIR tests over the `function_calls` file, which declares the LIR-implemented builtins
@@ -80,12 +86,12 @@ private:
 			return function->block_order.front()->instructions.front();
 		};
 
-		// move_in:{i64}(pointer, value) -> `(*pointer) := Assign value`
+		// move_in[i64](pointer, value) -> `(*pointer) := Assign value`
 		auto store = first_instruction(module.lirFunc("writeInto"));
 		ASSERT_TRUE(store.operation == Operation::Assign);
 		ASSERT_TRUE(is_deref(store.output.value()));
 
-		// move_out:{i64}(pointer) -> `<result> := Assign (*pointer)`
+		// move_out[i64](pointer) -> `<result> := Assign (*pointer)`
 		auto read = first_instruction(module.lirFunc("readOut"));
 		ASSERT_TRUE(read.operation == Operation::Assign);
 		ASSERT_TRUE(is_deref(read.arguments.at(0).get<LIRPlace>()));

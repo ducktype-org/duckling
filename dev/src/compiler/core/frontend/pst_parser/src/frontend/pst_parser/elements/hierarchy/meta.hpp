@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../../elements/elements_list.hpp"
@@ -29,7 +35,7 @@ namespace pst {
 		ELEMENT_CLONE_DECL(NotStmt);
 
 	public:
-		explicit NotStmt(const LangParserState& state): LangElement(state) {}
+		explicit NotStmt(LangElementConstructionData state): LangElement(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -45,10 +51,10 @@ namespace pst {
 	 * * None - This statement doesn't introduce any symbols. For example an expression statement or
 	 * a return statement.
 	 * * Symbol - This statement introduces a symbol. For example a function
-	 * declaration, import, using a specific symbol and variable declaration.
+	 * declaration, variable declaration, or an import/using that binds exactly one name.
 	 * * Transparent - This statement contains or
 	 * links somewhere where there might be introduced. For example a macro expansion, specifier
-	 * block or using with a star.
+	 * block, or an import/using with a star, a nested list or several selectors.
 	 */
 	enum class DeclKind {
 		None,
@@ -56,10 +62,15 @@ namespace pst {
 		Transparent,
 	};
 
+	enum class OperatorFixity {
+		None,
+		Prefix,
+		Suffix,
+	};
+
 	enum class StmtKind : int {
 		Import,
 		Using,
-		Alias,
 		Fun,
 		FunDecl,
 		Pattern,
@@ -124,7 +135,7 @@ namespace pst {
 		Prefixes prefixes;
 		bool     implicit_return{};
 
-		Stmt(StmtKind kind, const LangParserState& state): LangElement(state), kind(kind) {}
+		Stmt(StmtKind kind, LangElementConstructionData state): LangElement(state), kind(kind) {}
 
 		static PrefixBoxes collectPrefixes(LangParserState& state);
 
@@ -151,6 +162,7 @@ namespace pst {
 		}
 
 		static MBox<Stmt> parse(LangParserState& state);
+		static MBox<Stmt> parseSimpleExpr(LangParserState& state);
 		bool              trailingSemicolon() override;
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
 
@@ -195,7 +207,7 @@ namespace pst {
 		 * For example declarations are:
 		 * * functions
 		 * * classes
-		 * * aliases and usings
+		 * * usings and imports that bind exactly one name
 		 * * ifs, whiles with a name
 		 * * variable declaration
 		 *
@@ -226,6 +238,9 @@ namespace pst {
 
 		/**
 		 * @brief Get the identifier declared by a given statement if it exists.
+		 *
+		 * @pre Only meaningful when `isDeclaration() == DeclKind::Symbol`. For `None` and
+		 * `Transparent` statements (e.g. `using a.b.*;`) it returns an empty optional.
 		 */
 		[[nodiscard]]
 		virtual base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const {
@@ -233,9 +248,9 @@ namespace pst {
 		}
 	};
 
-#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                         \
-	class_name(const LangParserState& state): Stmt(StmtKind::class_name, state) { \
-		this->element_kind = element_kind_;                                       \
+#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                              \
+	class_name(LangElementConstructionData state): Stmt(StmtKind::class_name, state) { \
+		this->element_kind = element_kind_;                                            \
 	}
 }
 

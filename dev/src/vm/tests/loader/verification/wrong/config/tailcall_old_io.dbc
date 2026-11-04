@@ -1,7 +1,7 @@
 # Loaded after io_lib under no_io: tail_caller reaches the old does_io only
 # through a tail call, so the IO effect must propagate across the tail-call edge.
 function tail_caller {} -> {} {
-	ret_tailcall_func	does_io;
+	retTailcall_func	does_io;
 }
 
 function main {  } -> { i64 } {

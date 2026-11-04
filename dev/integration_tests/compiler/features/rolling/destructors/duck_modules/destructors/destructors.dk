@@ -62,11 +62,76 @@ fun returnedAndPassed() = {
     builtin_output_i64(14);             # 14
 }                                       # 13
 
+# ===== Temporaries of conditionally evaluated parts of an expression =====
+# Such a temporary belongs to the scope of the whole expression, not of the branch that built it,
+# so it is destroyed where that expression ends and only on the paths that actually built it.
+
+fun make(id: i64) -> Res = Res(id);
+
+# The right-hand side runs only when the left-hand side does not already decide the result.
+fun lazyOr(c: bool) -> bool = { return c or make(20i64).id == 0i64; }
+fun lazyAnd(c: bool) -> bool = { return c and make(21i64).id == 0i64; }
+
+# Each branch of the ternary builds its own temporary, only the taken one is destroyed.
+fun ternary(c: bool) -> i64 = { return if c then make(22i64).id else make(23i64).id; }
+
+# The same holds for the cases of a match, which share the scope of the match itself.
+fun matchExpr(v: i32 | f32) -> i64 = {
+    return match (v) {
+        case x : i32 = make(24i64).id;
+        case _ = make(25i64).id;
+    };
+}
+
+# `Borrowed.destroy` clobbers the field the reference points at, so the value printed by `borrow`
+# tells whether the temporary was still alive while the call ran.
+class Borrowed {
+    x: i64 = 0;
+
+    Borrowed.destroy() = {
+        builtin_output_i64(40);
+        x = -1i64;
+    }
+
+    fun getX() -> ref i64 = &x;
+}
+
+fun makeBorrowed(x: i64) -> Borrowed = Borrowed(x);
+fun borrow(x: ref i64) = { builtin_output_i64(x); }
+
+fun conditionalTemporaries() = {
+    lazyOr(true);               # short-circuited, nothing is built
+    lazyOr(false);              # 20
+    builtin_output_i64(30);     # 30
+
+    lazyAnd(false);             # short-circuited, nothing is built
+    lazyAnd(true);              # 21
+    builtin_output_i64(31);     # 31
+
+    ternary(true);              # 22
+    ternary(false);             # 23
+    builtin_output_i64(32);     # 32
+
+    var i: i32 | f32 = 7i32;
+    matchExpr(i);               # 24
+    var f: i32 | f32 = (3.5 as f32);
+    matchExpr(f);               # 25
+    builtin_output_i64(33);     # 33
+
+    # The call reads through a reference into the temporary, so the temporary has to outlive it:
+    # its destructor runs at the end of the whole expression, after the call has returned.
+    var fallback: i64 = 41i64;
+    borrow(if true then makeBorrowed(42i64).getX() else &fallback);    # 42, then 40
+    borrow(if false then makeBorrowed(42i64).getX() else &fallback);   # 41
+    builtin_output_i64(34);     # 34
+}
+
 fun main() -> i64 = {
     scoped();
     assigned();
     nested();
     returnedAndPassed();
+    conditionalTemporaries();
 
     # Reading a global class member through its box and its non-trivial member.
     var global_boxed: i64 = g_holder.boxed;

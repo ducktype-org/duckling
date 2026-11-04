@@ -1,10 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "script_helpers.hpp"
 
 #include <frontend/module_tree/functors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/type_interface.hpp>
+#include <helios/utils/main_return_type.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -55,12 +60,7 @@ namespace compiler::repl {
 			}
 
 			// Return i64 zero to satisfy the VM/LLVM main contract used by the toolchain.
-			// This is exactly same return type as in symbol_data.cpp for the ScriptMainWrapper case.
-			const auto return_type = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			const auto return_type = helios::requiredMainReturnType(ctx);
 			auto zero_value = numeric_value::NumericValue::createOfType(return_type.getType(), 0);
 			CORE_ASSERT(zero_value.has_value(), "Failed to create script main return literal");
 			auto return_expr = base::makeBox<helios::code::LiteralNumericExpr>(

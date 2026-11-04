@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "dvm_value.hpp"
 
 #include "common.hpp"
@@ -22,6 +28,7 @@ using namespace compiler::backend_vm::internal;
 		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
 		variant_case(vm::code::VariantType, variant) { return vm::opargs::PlaceVnt(name); }
 		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
+		variant_case(vm::code::FunctionType, function) { return vm::opargs::PlaceFunc(name); }
 		variant_default {
 			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));
 		}

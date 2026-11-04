@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
@@ -6,11 +12,9 @@ use clap::{Arg, ArgMatches, Command, ValueHint, value_parser};
 
 use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
-use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::duckling_consts::DUCKLING_SCRIPT_EXT;
+use crate::util::path_ops::resolve_with_tilde;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
-
-pub const DUCKLING_SCRIPT_EXT: &str = "dks";
 
 /// Creates parser for the `run_script` subcommand.
 pub fn get_parser() -> Command {
@@ -56,7 +60,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
         .get_one::<PathBuf>("path")
         .expect("guarded by the parser");
-    let path = path.resolve_with_tilde(ctx);
+    let path = resolve_with_tilde(path, ctx);
     check_is_script(&path)?;
     run_script(RunScriptOptions::from_path_and_matches(
         ctx, &path, matches,
@@ -75,27 +79,17 @@ pub fn check_is_script(path: &Path) -> QuackResult<()> {
         );
     }
     if path.extension() != Some(OsStr::new(DUCKLING_SCRIPT_EXT)) {
-        qp_bail!(
-            QuackError::hint(format!(
-                "the extension of Duckling scripts is `.{}`",
-                DUCKLING_SCRIPT_EXT
-            ))
-            .context(MessageError(
-                format!("the file at `{}` is not a Duckling script", path.display()).into()
-            ))
-        );
+        let mut err = QuackError::message(format!(
+            "the file at `{}` is not a Duckling script",
+            path.display()
+        ));
+        err.add_hint(format!(
+            "the extension of Duckling scripts is `.{}`",
+            DUCKLING_SCRIPT_EXT
+        ));
+        return Err(err);
     }
     Ok(())
-}
-
-/// Guess whether the user meant to provide a path to a script to run.
-pub fn possible_script_path_subcmd(args: &ArgMatches) -> Option<&str> {
-    let sub_cmd = args.subcommand_name()?;
-    if is_name_possible_script_path_subcmd(sub_cmd) {
-        Some(sub_cmd)
-    } else {
-        None
-    }
 }
 
 /// Guess whether name could be a path to a script to run.

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Synchronize a given venv.
 //! This includes: creating a venv, resolving dependencies, downloading them.
 use std::io;
@@ -5,20 +11,18 @@ use std::path::PathBuf;
 
 use chrono::Utc;
 use futures::executor::block_on;
-use tracing::{debug, error, warn};
+use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
+use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::lints::emit_diagnostics_and_run_lint_passes;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, SolverGathererData};
+use crate::quackpack::core::solver::{Solver, SolverAnswer};
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
-use crate::quackpack::core::storage::ops::sync::load_deps::{
-    LoadedFreezePackages, load_packages_in_freeze,
-};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
@@ -27,10 +31,10 @@ use crate::quackpack::core::{
 };
 use crate::util::Pluralize;
 use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{read_from_path_to_string, write_file};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
-mod load_deps;
+pub mod load_deps;
 
 #[derive(Debug, Clone, Copy)]
 /// Options passed to [`sync`].
@@ -43,15 +47,21 @@ pub struct StorageSyncOptions {
     pub strict_errors: bool,
 }
 
+#[derive(Debug)]
+pub struct SyncOutput {
+    pub new_freeze: SolverFreeze,
+    pub loaded_packages: Vec<(PackageId, AnyPackage)>,
+    pub sync_lock: TrySyncLock,
+    pub new_venv: Venv,
+    pub storage: Storage,
+}
+
 /// Synchronize virtual environment for package, and return information required to build it.
-#[tracing::instrument(skip_all)]
-pub fn sync(
-    pcx: &PackageContext<'_>,
-    options: StorageSyncOptions,
-) -> QuackResult<(TrySyncLock, Venv, Storage)> {
+#[tracing::instrument(level = "debug", skip_all)]
+pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
-    pcx.emit_warnings()?;
-    pcx.ctx().console().info(format!(
+    emit_diagnostics_and_run_lint_passes(pcx)?;
+    pcx.ctx().info_verbose(format!(
         "starting synchronization of the {}",
         pcx.package().display()
     ))?;
@@ -94,7 +104,7 @@ pub fn sync(
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
     let LoadedFreezePackages {
-        _pkgs,
+        pkgs,
         freshly_downloaded_num,
         already_present_num,
     } = load_packages_in_freeze(&storage, &fetcher, pkgs)?;
@@ -105,22 +115,30 @@ pub fn sync(
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
-        freeze_name(
-            pcx.package()
-                .try_get_package()
-                .context_internal("`expose-freezefile` set on a script")?,
-        )
-        .write(json)?;
+        write_file(
+            freeze_name(
+                pcx.package()
+                    .try_get_package()
+                    .context_internal("`expose-freezefile` set on a script")?,
+            ),
+            json,
+        )?;
     }
     make_success_message(pcx, id)?;
-    Ok((_sync_lock, venv, storage))
+    Ok(SyncOutput {
+        new_freeze: solver_answer.new_freeze,
+        loaded_packages: pkgs,
+        sync_lock: _sync_lock,
+        new_venv: venv,
+        storage,
+    })
 }
 
 /// Helper for [`sync`].
 /// Checks if the venv for which the sync is run was previously synced from a different location,
 /// and there is a manifest in that location.
 /// This would override that manifest's venv.
-#[tracing::instrument(skip_all, fields(%id))]
+#[tracing::instrument(level = "trace", skip_all, fields(%id))]
 fn check_if_overwrites(
     pcx: &PackageContext<'_>,
     venv: Option<&Venv>,
@@ -149,7 +167,7 @@ fn check_if_overwrites(
             (replaces, context)
         }
         Err(e) => {
-            error!(path = %dir.display(), error = %e, "failed to load the package");
+            debug!(error = %e, "failed to load the package at `{}`", dir.display());
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
                 let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
@@ -167,15 +185,15 @@ fn check_if_overwrites(
         }
     };
     if replaces {
-        let mut error = QuackError::hint("use `--overwrite` to force an overwrite");
         let same_ids_message = format!("the packages share the same name `{id}`");
-        error = error.context(MessageError::new(same_ids_message));
+        let mut error = QuackError::message(same_ids_message);
+        error.add_hint("use `--overwrite` to force an overwrite");
         if let Some(context) = context {
-            error = error.context(MessageError::new(context));
+            error.context(MessageError::new(context));
         }
         let tried_to_override_message =
             "tried to overwrite an existing virtual environment from another location";
-        error = error.context(MessageError::new(tried_to_override_message));
+        error.context(MessageError::new(tried_to_override_message));
         Err(error)
     } else {
         Ok(())
@@ -205,7 +223,7 @@ fn load_external_freezefile(
     if !freeze_path.is_file() {
         return Ok(None);
     }
-    let content = freeze_path.read_to_string()?;
+    let content = read_from_path_to_string(&freeze_path)?;
 
     serde_json::from_str(&content)
         .with_context(|| format!("malformed freezefile `{}`", freeze_path.display()))
@@ -213,8 +231,7 @@ fn load_external_freezefile(
 }
 
 /// Helper for [`sync`].
-/// Prepares the input and runs [`SolverGathererData::prepare_solving`].
-#[tracing::instrument(skip_all)]
+/// Creates [`Solver`] and runs it.
 fn get_solver_answer(
     pcx: &PackageContext<'_>,
     fetcher: &Fetcher<'_>,
@@ -223,26 +240,8 @@ fn get_solver_answer(
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
-    pcx.ctx()
-        .console()
-        .info("starting solving the dependency graph")?;
-    let root_origin = FullOrigin::for_local(pcx.package().root())?;
-    let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
-    let root_pkg = PackageId::new(root_identity, pcx.package().version());
-    let solver_freeze = match input_freeze {
-        Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
-        None => SolverFreeze::empty_with_root(root_pkg)?,
-    };
-    let solver = SolverGathererData::new(pcx, solver_freeze, mode)
-        .context("failed to start gathering packages")?;
-    let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
-    let should_run_engine = block_on(solver.prepare_solving(fetcher, &git_access))?;
-    drop(fetcher_lock);
-    debug!(%should_run_engine);
-    match should_run_engine {
-        ShouldRunSolverEngine::No(answer) => Ok(answer),
-        ShouldRunSolverEngine::Yes(solver) => solver.solve(pcx.ctx()),
-    }
+    let solver = Solver::new(pcx, input_freeze, fetcher, git_access, mode);
+    block_on(solver.solve())
 }
 
 fn make_after_fetch_message(
@@ -251,7 +250,7 @@ fn make_after_fetch_message(
     downloaded: usize,
 ) -> QuackResult<()> {
     let total = already_present + downloaded;
-    ctx.console().info(format!(
+    ctx.info(format!(
         "loaded source code{} of {} package{}, {} {} downloaded, {} {} already present",
         total.s_if_plural(),
         total,
@@ -296,13 +295,12 @@ fn update_venv(
 /// Prints to the user a message that synchronization was successful.
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
-        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(
+        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().info(format!(
             "successfully synchronized the venv of the script with a frontmatter at `{}`",
             script.frontmatter().script_file().display()
         )),
         AnyPackage::Package(_) | AnyPackage::Script(Script::Associated(_)) => pcx
             .ctx()
-            .console()
             .info(format!("successfully synchronized venv `{id}`")),
     }
 }

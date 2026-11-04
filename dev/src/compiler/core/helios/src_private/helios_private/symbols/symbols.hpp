@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file symbols.hpp
  * @brief This file defines Queries responsible for creation of Symbols and operations on them.
@@ -33,53 +39,12 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
 
-	struct KeyOf_LookupInSymbol {
-		/**
-		 * @brief Symbol to lookup in
-		 */
-		SymID symbol;
-
-		/**
-		 * @brief Name to lookup
-		 */
-		base::StrID name;
-
-		/**
-		 * @brief Should wildcards be included in lookup
-		 */
-		bool follow_wildcards;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	/**
-	 * @brief Query result of lookup of single name within the symbol.
-	 * It essentially implements "symbol.name" operation.
-	 *
-	 * \query_thread_safe_if_cache_and_struct
-	 */
-	DECLARE_QUERY(
-		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<query::QResult<LookupResult>>, ({})
-	);
-
-	using QueryDealias_Result = query::QResult<SymbolList>;
-
-	/**
-	 * A query that returns dealiased symbol list of a given alias symbol.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>, ({}));
-
-	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue>;
-
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result, ({}));
+	DECLARE_QUERY(QueryConstValueOf, SymID, query::QResult<ctv::CompileTimeValue>, ({}));
 
 
 	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;

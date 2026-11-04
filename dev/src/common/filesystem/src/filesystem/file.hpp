@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "file_path.hpp"
@@ -33,8 +39,8 @@ namespace fs {
 
 	/**
 	 * @class File
-	 * @brief Represents a file or directory in the filesystem, supporting physical, virtual,
-	 * and temporary files.
+	 * @brief Represents a file or directory in the filesystem, supporting physical (including
+	 * temp-dir) and virtual files.
 	 *
 	 * The File class provides a unified interface for managing and processing files and
 	 * directories across two types of filesystems:
@@ -234,6 +240,10 @@ namespace fs {
 		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random
 		 * name.
+		 *
+		 * The system temp directory is part of the physical filesystem, so a file placed there is
+		 * created with the physical factories like any other. Only the *random naming* is specific
+		 * to temporary files, which is all this helper and `createRandomTempFile` add.
 		 * @return A File with the new temporary directory.
 		 */
 		static File createRandomTempDirectory();
@@ -241,40 +251,40 @@ namespace fs {
 		/**
 		 * Creates a virtual directory inside the root folder of virtual file system. The directory
 		 * has a random name.
+		 * @param vfs The virtual filesystem to create the directory in.
 		 * @return A File with the new virtual directory.
 		 */
-		static File createRandomVirtualDirectory();
+		static File createRandomVirtualDirectory(base::Ref<VFS> vfs = VFS::getInstance());
 
 		/**
 		 * Creates a random-named virtual file in the virtual filesystem's root directory.
 		 * @param content The content to write to the file.
 		 * @param suffix Optional suffix to append to the filename (e.g., ".dk").
+		 * @param vfs The virtual filesystem to create the file in.
 		 * @return The created File object.
 		 */
 		static File createRandomVirtualFile(
-			std::string_view content = "", base::Optional<std::string_view> suffix = {}
+			std::string_view                 content = "",
+			base::Optional<std::string_view> suffix  = {},
+			base::Ref<VFS>                   vfs     = VFS::getInstance()
 		);
 
 		/**
 		 * Creates a random-named temporary file in the system's temporary directory.
+		 * Like `createRandomTempDirectory`, it only picks a random name and then creates a
+		 * physical file there.
 		 * @param content The content to write to the file.
 		 * @return The created File object.
 		 */
 		static File createRandomTempFile(std::string_view content = "");
-
-
-		/**
-		 * @brief Gets the virtual filesystem root directory as a File object.
-		 *
-		 * @return Root directory of the virtual filesystem.
-		 */
-		static File getVirtualRootDirectory();
 
 		/**
 		 * @brief Creates a physical file, reporting failure instead of panicking.
 		 *
 		 * This is the default because creating a file can fail for reasons that have nothing to
 		 * do with the caller being wrong: no write permission, a read-only mount, a full disk.
+		 * The path must be absolute and on disk; a path under the system temp directory counts
+		 * (physical and temporary are the same filesystem), a virtual one does not.
 		 * @param path The absolute on-disk path to the file.
 		 * @param content The content to write to the file.
 		 * @param allow_overwrite If true, overwrites the file if it exists.

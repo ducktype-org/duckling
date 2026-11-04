@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debug_info_builder.hpp"
 
 namespace debug_info {
@@ -61,6 +67,16 @@ namespace debug_info {
 
 	DebugInfoBuilder& DebugInfoBuilder::addType(std::string mangled_name, std::string display_name) {
 		return addType(std::move(mangled_name), TypeMetadata{ .name = std::move(display_name) });
+	}
+
+	DebugInfoBuilder& DebugInfoBuilder::addGlobal(
+		std::string mangled_name, std::string global_name, base::Optional<SourcePosition> position
+	) {
+		info.globals.insertOrAssign(
+			std::move(mangled_name),
+			VariableMetadata{ .name = std::move(global_name), .position = std::move(position) }
+		);
+		return *this;
 	}
 
 	FunctionBuilder DebugInfoBuilder::beginFunction(

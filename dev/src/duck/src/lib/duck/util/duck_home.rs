@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! This file represents a layout of global Duck home directory.
 //! <Duck home root>
 //! ├── cache
@@ -37,7 +43,7 @@ impl fmt::Debug for DuckHome {
 impl DuckHome {
     /// Create a new [`DuckHome`] rooted at `root`.
     pub fn new(root: PathBuf) -> Self {
-        debug!(?root, "duck home");
+        debug!("using the duck home at `{}`", root.display());
         Self {
             root: FileLockManager::new(root),
         }

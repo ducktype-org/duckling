@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
@@ -117,7 +123,7 @@ private:
 			ASSERT_EQUAL(6UL, result.size());
 			ASSERT_EQUAL(std::string("import X as x;"), result[0]);
 			ASSERT_EQUAL(std::string("using X;"), result[1]);
-			ASSERT_EQUAL(std::string("alias X = X;"), result[2]);
+			ASSERT_EQUAL(std::string("using X as Y;"), result[2]);
 			ASSERT_EQUAL(std::string("class Foo {}"), result[3]);
 			ASSERT_EQUAL(std::string("namespace Math {}"), result[4]);
 			assertTrue(

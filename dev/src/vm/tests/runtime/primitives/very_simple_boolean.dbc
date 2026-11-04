@@ -1,0 +1,75 @@
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type tmp, byte;
+    init_pany_type tmp2, byte;
+
+    # 1 is for true, 0 false
+    # so 1 1 means the tests for both true values
+
+    # 1 1
+    mov_p8_imm tmp, 1;
+    mov_p8_imm tmp2, 1;
+
+    logAnd_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 1;
+    jmpIfNot_label Finish;
+
+    logOr_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 1;
+    jmpIfNot_label Finish;
+
+    logXor_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 0;
+    jmpIfNot_label Finish;
+
+    # 0 1
+    mov_p8_imm tmp, 0;
+    mov_p8_imm tmp2, 1;
+
+    logAnd_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 0;
+    jmpIfNot_label Finish;
+
+    logOr_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 1;
+    jmpIfNot_label Finish;
+
+    mov_p8_imm tmp, 0;
+    logXor_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 1;
+    jmpIfNot_label Finish;
+
+
+    # 0 0
+    mov_p8_imm tmp, 0;
+    mov_p8_imm tmp2, 0;
+
+    logAnd_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 0;
+    jmpIfNot_label Finish;
+    
+    logXor_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 0;
+    jmpIfNot_label Finish;
+
+    logOr_p8_p8 tmp, tmp2;
+    cmpEq_p8_imm tmp, 0;
+    jmpIfNot_label Finish;
+
+    # not
+    logNot_p8 tmp;
+    cmpEq_p8_imm tmp, 1;
+    jmpIfNot_label Finish;
+
+    logNot_p8 tmp;
+    cmpEq_p8_imm tmp, 0;
+    jmpIfNot_label Finish;
+
+    # output
+    init_pany_type out, i64;
+    mov_p64_imm out, 1;
+    output_p64 out;
+    deinit; # out
+
+    label Finish;
+    ret;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 namespace compiler::driver {
@@ -5,6 +11,7 @@ namespace compiler::driver {
 	struct DumpIROptions {
 		bool dump_llvm = false;
 		bool dump_asm  = false;
+		bool dump_dbc  = false;
 		bool dump_lir  = false;
 		bool dump_mir  = false;
 		bool dump_hir  = false;
@@ -18,6 +25,7 @@ namespace compiler::driver {
 	extern constinit DumpIROptions dump_ir_options;
 
 	struct PrintIROptions {
+		bool print_dbc = false;
 		bool print_lir = false;
 		bool print_mir = false;
 		bool print_hir = false;
@@ -29,6 +37,18 @@ namespace compiler::driver {
 	 * in the `compileModule` query.
 	 */
 	extern constinit PrintIROptions print_ir_options;
+
+	/**
+	 * This is a debug option.
+	 * If set, the query graph is printed to stderr in driver::exit.
+	 */
+	extern constinit bool print_query_graph;
+
+	/**
+	 * This is a debug option.
+	 * If set, the query and time statistics are printed in driver::exit.
+	 */
+	extern constinit bool print_statistics;
 
 	/**
 	 * If set, incremental compilation is enabled.

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
@@ -61,7 +67,7 @@ namespace vm {
 		GenericBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
 	};
 
-	using Block = GenericBlock<std::byte>;
+	using Block = GenericBlock<byte>;
 }
 
 ID_STD_HASH(vm::BlockID);

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "default_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -68,7 +74,7 @@ namespace compiler::helios::defgen {
 						const auto field_type = field.getType(ctx);
 						auto       field_init_hout
 							= getHoutOfExprWithExpectedType(
-								  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
+								  ctx, field_init.unlock(ctx)->getExpr(), field_type
 							)
 						          .valueOrThrow();
 						field_values.emplace_back(
@@ -274,9 +280,9 @@ namespace compiler::helios::defgen {
 		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
-			));
+			);
 			return query::Failed();
 		}
 

@@ -1,6 +1,11 @@
-#include <filesystem_private/vfs.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <filesystem/file.hpp>
+#include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
 #include <algorithm>
@@ -15,11 +20,13 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(getSimpleContentTest);
 		TESTER_ADD_TEST(filePathTest);
+		TESTER_ADD_TEST(isTemporaryTest);
 		TESTER_ADD_TEST(vfsTest);
 		TESTER_ADD_TEST(virtualFileTest);
 		TESTER_ADD_TEST(fileOperationsTest);
 		TESTER_ADD_TEST(fileManagerTest);
 		TESTER_ADD_TEST(fileTest);
+		TESTER_ADD_TEST(vfsBindingTest);
 	}
 
 private:
@@ -77,6 +84,47 @@ private:
 		fs::FilePath vpath2("vfs:/abs_test");
 		auto         abs_vpath = vpath2.absolute();
 		assertTrue(abs_vpath == vpath2, "absolute() on virtual path should return itself");
+	}
+
+	void isTemporaryTest() {
+		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
+
+		// Inside the temp directory, including the directory itself.
+		assertTrue(fs::FilePath(temp_dir).isTemporary(), "Temp dir itself should be temporary");
+		assertTrue(
+			fs::FilePath(temp_dir / "some" / "file.txt").isTemporary(),
+			"A (non-existent) path under the temp dir should be temporary"
+		);
+
+		// Outside the temp directory.
+		assertTrue(
+			!fs::FilePath(temp_dir.parent_path() / "not_a_temp_dir").isTemporary(),
+			"A path outside the temp dir should not be temporary"
+		);
+		assertTrue(
+			!fs::FilePath(temp_dir.string() + "foo").isTemporary(),
+			"A sibling sharing the temp dir's name as a prefix should not be temporary"
+		);
+		assertTrue(
+			!fs::FilePath("vfs:" + temp_dir.generic_string()).isTemporary(),
+			"A virtual path should never be temporary"
+		);
+
+		// A relative path is resolved against the working directory.
+		auto old_cwd = std::filesystem::current_path();
+		auto tmp_cwd = fs::FileManager::createRandomTempDirectory();
+		std::filesystem::current_path(tmp_cwd.getFilePath().getPath());
+		bool relative_in_temp = fs::FilePath("some_file.txt").isTemporary();
+		std::filesystem::current_path(temp_dir.parent_path());
+		bool relative_outside_temp = fs::FilePath("not_a_temp_dir").isTemporary();
+		std::filesystem::current_path(old_cwd);
+		fs::FileManager::deleteFolder(tmp_cwd, true);
+
+		assertTrue(relative_in_temp, "A relative path with cwd in the temp dir should be temporary");
+		assertTrue(
+			!relative_outside_temp,
+			"A relative path with cwd outside the temp dir should not be temporary"
+		);
 	}
 
 	void vfsTest() {
@@ -274,12 +322,6 @@ private:
 			"Default temp dir lives on the physical filesystem"
 		);
 		assertTrue(temp_default.isTemporary(), "Default temp dir should report itself as temporary");
-
-		fs::File virtual_default = fs::FilePath::getDefaultVirtualDirectoryPath();
-		assertTrue(
-			virtual_default.getType() == fs::FileType::Virtual,
-			"Default virtual dir should be virtual"
-		);
 
 		// Test createFileIn with random name generation
 		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
@@ -592,6 +634,59 @@ private:
 
 		// Cleanup
 		std::filesystem::remove_all(physical_folder_path);
+	}
+
+	void vfsBindingTest() {
+		fs::VFS other;
+
+		fs::FilePath in_singleton("vfs:/binding/a.dk");
+		fs::FilePath in_other("vfs:/binding/a.dk", &other);
+
+		assertTrue(in_singleton != in_other, "Same spelling in two VFS instances must differ");
+		assertTrue(
+			std::hash<fs::FilePath>{}(in_singleton) != std::hash<fs::FilePath>{}(in_other),
+			"Same spelling in two VFS instances must hash differently"
+		);
+
+		fs::FileManager::createVirtualFile(in_other, "other content", true);
+		assertTrue(in_other.exists(), "File must exist in the explicitly bound VFS");
+		assertTrue(!in_singleton.exists(), "File must not leak into the singleton VFS");
+		assertTrue(
+			fs::File(in_other).getContent().view().stringView() == "other content",
+			"Content must be read back from the bound VFS"
+		);
+
+		// Derived paths keep the binding.
+		assertTrue(
+			in_other.parentPath().getVfs().value().get() == &other,
+			"parentPath must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.parentPath().join("b.dk").getVfs().value().get() == &other,
+			"join must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.absolute().getVfs().value().get() == &other,
+			"absolute must keep the VFS binding"
+		);
+		assertTrue(
+			in_other.lexicallyNormal().getVfs().value().get() == &other,
+			"lexicallyNormal must keep the VFS binding"
+		);
+
+		// Physical paths carry no binding and hash on the path alone.
+		fs::FilePath physical(path("a_file.txt"));
+		assertTrue(physical.getVfs().empty(), "Physical paths must carry no VFS binding");
+		assertTrue(
+			std::hash<fs::FilePath>{}(physical) == std::filesystem::hash_value(physical.getPath()),
+			"Physical path hash must stay the plain path hash"
+		);
+
+		// toVirtualPath can target an explicit VFS.
+		auto as_virtual = physical.absolute().toVirtualPath(&other);
+		assertTrue(
+			as_virtual.getVfs().value().get() == &other, "toVirtualPath must honour its target"
+		);
 	}
 };
 

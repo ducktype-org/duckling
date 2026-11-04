@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/maps.hpp>
@@ -11,13 +17,13 @@
 #include <variant>
 
 namespace vm {
-	struct InheritanceMetadata {
-		struct Class {
+	struct InheritanceMetadata final {
+		struct Class final {
 			bool                     is_abstract;
 			base::Optional<TypeCRef> extends;
 		};
 
-		struct Interface {};
+		struct Interface final {};
 
 		using Kind = std::variant<Interface, Class>;
 

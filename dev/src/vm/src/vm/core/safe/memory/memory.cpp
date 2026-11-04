@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "memory.hpp"
 
 #include <iostream>
@@ -17,6 +23,16 @@ namespace vm {
 		}
 		return true;
 #undef TEST_HERE
+	}
+
+	template<typename EntryT, typename BlockT>
+	void GenericMemory<EntryT, BlockT>::freeAllocatedBlockData() {
+		for (auto& block: blocks_pool) {
+			if (!block.deallocated && !block.parent) {
+				block.data.allocator->deallocate(&block.data);
+				block.deallocated = true;
+			}
+		}
 	}
 
 	template<typename EntryT, typename BlockT>
@@ -40,5 +56,5 @@ namespace vm {
 	}
 
 	// Explicit instantiation for the real memory module
-	template class GenericMemory<std::byte>;
+	template class GenericMemory<byte>;
 }

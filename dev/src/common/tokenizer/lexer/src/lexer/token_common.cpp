@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "token_common.hpp"
 
 #include <unicode_classification/classifications.hpp>
@@ -35,6 +41,7 @@ namespace lexer {
 		return comparisons.contains(asNamed());
 	}
 
+	// @TODO: #3702 Handle custom operators ending with `=`
 	bool Operator::isAssignment() const { return !isComparison() && value.strView().back() == '='; }
 
 	bool Operator::isSpecialOp() const {
@@ -63,6 +70,10 @@ namespace lexer {
 		return {};
 	}
 
+	bool Operator::isGenBinOp() const {
+		return isNotReserved() || asNamed() == lang_def::NamedOperator::SingleArrow;
+	}
+
 	i64 Operator::getGenBinOpPrecedence() const {
 		using namespace lang_def;
 		static const std::unordered_map<lang_def::NamedOperator, i64> precedences
@@ -71,10 +82,15 @@ namespace lexer {
 			    { NamedOperator::Pipe, 540 },       { NamedOperator::Exponentiate, 550 },
 			    { NamedOperator::Multiply, 560 },   { NamedOperator::Divide, 560 },
 			    { NamedOperator::Remainder, 560 },  { NamedOperator::Plus, 570 },
-			    { NamedOperator::Minus, 570 },      { NamedOperator::As, 400 } };
+			    { NamedOperator::Minus, 570 },      { NamedOperator::SingleArrow, 580 },
+			    { NamedOperator::As, 400 } };
 		if (precedences.contains(asNamed()))
 			return precedences.at(asNamed());
 		else
 			return 500;
+	}
+
+	bool Operator::isGenBinOpRightAssociative() const {
+		return asNamed() == lang_def::NamedOperator::SingleArrow;
 	}
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <frontend/pst_parser/access.hpp>
@@ -32,9 +38,9 @@ namespace compiler::helios {
 	 * constructor API (`std::shared_ptr<const code::CodeBlock>`).
 	 */
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context&                   ctx,
+		pst::Access<pst::CodeBlockOrStmt> container,
+		tsh::SymbolType<>                 return_type
 	);
 
 	/**

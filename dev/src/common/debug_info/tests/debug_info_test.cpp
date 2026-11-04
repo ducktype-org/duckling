@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <debug_info/debug_info.hpp>
 #include <debug_info/debug_info_builder.hpp>
 #include <debug_info/debug_info_io.hpp>
@@ -18,6 +24,8 @@ public:
 		TESTER_ADD_TEST(serializationRoundTripTest);
 		TESTER_ADD_TEST(invalidJsonTest);
 		TESTER_ADD_TEST(resolvePositionsTest);
+		TESTER_ADD_TEST(mergeGlobalsTest);
+		TESTER_ADD_TEST(missingGlobalsFailsTest);
 	}
 
 private:
@@ -58,6 +66,8 @@ private:
 
 		return debug_info_builder.addType("_TMyType", "MyType")
 		    .addType("_TOther", TypeMetadata{ .name = "Other" })
+		    .addGlobal("_Gcounter", "counter", func_pos)
+		    .addGlobal("_Gno_pos", "no_pos", std::nullopt)
 		    .beginFunction("_Zfoo", "foo", func_pos)
 		    .addParameter(0, "param_a", instr0_pos)
 		    .addParameter(1, "param_b", std::nullopt)
@@ -84,6 +94,18 @@ private:
 
 		assertTrue(info.types.size() == 2, "Expected 2 types");
 		assertTrue(info.functions.size() == 1, "Expected 1 function");
+		assertTrue(info.globals.size() == 2, "Expected 2 globals");
+
+		const auto& counter = info.globals.at("_Gcounter");
+		assertTrue(counter.name == "counter", "Global name incorrect");
+		ASSERT_HAS_VALUE(counter.position, "Global position should be present");
+		assertTrue(
+			std::get<FilePosition>(counter.position->line_col_position).start_line == 1,
+			"Global: start_line incorrect"
+		);
+		ASSERT_NO_VALUE(
+			info.globals.at("_Gno_pos").position, "Global without position should have none"
+		);
 
 		const auto& func = info.functions.at("_Zfoo");
 		ASSERT_HAS_VALUE(func.function_name, "Function name should be present");
@@ -148,6 +170,16 @@ private:
 		assertTrue(result->module_path == "test.dbc", "Round-trip: module_path incorrect");
 		assertTrue(result->types.size() == 2, "Round-trip: wrong number of types");
 		assertTrue(result->functions.size() == 1, "Round-trip: wrong number of functions");
+		assertTrue(result->globals.size() == 2, "Round-trip: wrong number of globals");
+		assertTrue(
+			result->globals.at("_Gcounter").name == "counter", "Round-trip: global name incorrect"
+		);
+		ASSERT_HAS_VALUE(
+			result->globals.at("_Gcounter").position, "Round-trip: global position missing"
+		);
+		ASSERT_NO_VALUE(
+			result->globals.at("_Gno_pos").position, "Round-trip: global position should be absent"
+		);
 		assertTrue(
 			result->functions.at("_Zfoo").parameter_indexes_to_metadata.size() == 2,
 			"Round-trip: wrong number of parameters"
@@ -191,7 +223,7 @@ private:
 		// Valid JSON but missing required field "target"
 		{
 			std::istringstream iss(R"({"module_path": "x.dk", "source_positions_type": "DBC",
-                "functions": {}, "types": {}})");
+                "functions": {}, "types": {}, "globals": {}})");
 			auto               result = debug_info::loadFromStream(iss);
 			ASSERT_NO_VALUE(result, "JSON missing 'target' field should fail");
 		}
@@ -200,7 +232,7 @@ private:
 		{
 			std::istringstream iss(
 				R"({"target": 42, "module_path": "x.dk", "source_positions_type": "LineColumn",
-                "functions": {}, "types": {}})"
+                "functions": {}, "types": {}, "globals": {}})"
 			);
 
 			auto _ = debug_info::loadFromStream(iss);
@@ -231,7 +263,8 @@ private:
             ]
         }
     },
-    "types": {}
+    "types": {},
+    "globals": {}
 })");
 			auto               result = debug_info::loadFromStream(iss);
 			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_metadata should fail");
@@ -254,7 +287,8 @@ private:
 			]
 		}
 	},
-	"types": {}
+	"types": {},
+	"globals": {}
 })");
 			auto               result = debug_info::loadFromStream(iss);
 			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_variable_init should fail");
@@ -273,6 +307,7 @@ private:
 		};
 
 		DebugInfo info = DebugInfoBuilder(Target::DBC, SourcePositionsType::PstHash)
+		                     .addGlobal("_Gglobal", "global", make_hash_pos(5, 50))
 		                     .beginFunction("_Zfoo", "foo", make_hash_pos(1, 10))
 		                     .addParameter(0, "arg_foo", make_hash_pos(10, 100))
 		                     .addVariableInit(7, "local_foo", make_hash_pos(11, 110))
@@ -329,6 +364,33 @@ private:
 		assertTrue(param_fp.file_path == "resolved.duck", "Parameter: file_path incorrect");
 		assertTrue(param_fp.start_line == 10, "Parameter: start_line incorrect");
 		assertTrue(param_fp.start_column == 100, "Parameter: start_column incorrect");
+
+		const auto& global = info.globals.at("_Gglobal");
+		ASSERT_HAS_VALUE(global.position, "Global position should be present after resolve");
+		const auto& global_fp = std::get<FilePosition>(global.position->line_col_position);
+		assertTrue(global_fp.file_path == "resolved.duck", "Global: file_path incorrect");
+		assertTrue(global_fp.start_line == 5, "Global: start_line incorrect");
+		assertTrue(global_fp.start_column == 50, "Global: start_column incorrect");
+	}
+
+	void mergeGlobalsTest() {
+		DebugInfo info = DebugInfoBuilder(Target::DBC, SourcePositionsType::LineColumn)
+		                     .addGlobal("_Ga", "a", std::nullopt)
+		                     .build();
+		info.mergeFrom(DebugInfoBuilder(Target::DBC, SourcePositionsType::LineColumn)
+		                   .addGlobal("_Gb", "b", std::nullopt)
+		                   .build());
+
+		assertTrue(info.globals.size() == 2, "Merged debug info should have both globals");
+		assertTrue(info.globals.at("_Ga").name == "a", "Merge: first global name incorrect");
+		assertTrue(info.globals.at("_Gb").name == "b", "Merge: second global name incorrect");
+	}
+
+	void missingGlobalsFailsTest() {
+		std::istringstream iss(R"({"target": "DBC", "module_path": "x.dk",
+            "source_positions_type": "LineColumn", "functions": {}, "types": {}})");
+		auto               result = debug_info::loadFromStream(iss);
+		ASSERT_NO_VALUE(result, "JSON missing 'globals' field should fail");
 	}
 };
 

@@ -1,0 +1,14 @@
+# Panics the main thread almost immediately with an integer division by zero.
+
+function main { } -> { i64 } {
+	init_pany_type		a, i32;
+	init_pany_type		b, i32;
+
+	mov_p32_imm			a, 13;
+	mov_p32_imm			b, 0;
+	div_p32_p32			a, b;  # division by zero -> VMRuntimeException -> Panicked
+
+	deinit; # b
+	deinit; # a
+	ret;
+}

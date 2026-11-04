@@ -1,8 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Managing all dependencies of the root package.
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use super::{DependencyKind, Selector};
 use crate::quackpack::core::Dependency;
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, QuackResult, StrId, qp_bail};
 
@@ -15,18 +22,48 @@ impl Dependencies {
     /// Create a new [`Dependencies`].
     pub fn new(dependencies: Vec<Dependency>) -> QuackResult<Self> {
         Self::bail_if_has_duplicated_names(&dependencies)?;
+        Self::bail_if_has_duplicated_identities(&dependencies)?;
         Ok(Self(dependencies))
     }
 
-    /// Bail, if some dependencies have the same name.
+    /// Bail, if some dependencies have the same effective name.
+    /// Effective name is how source code accesses the package, so having duplicates would make code ambiguous.
     fn bail_if_has_duplicated_names(deps: &[Dependency]) -> QuackResult<()> {
-        let mut seen_names = HashSet::new();
+        let mut seen_names = HashMap::new();
         for dep in deps {
             let kind = dep.kind();
-            let name = dep.name();
-            let was_present = !seen_names.insert((kind, name));
-            if was_present {
-                qp_bail!("multiple {kind} dependencies specify the same name `{name}`",)
+            let name = dep.effective_name();
+            let maybe_overriden_kind = seen_names.insert(name, kind);
+            if let Some(overriden_kind) = maybe_overriden_kind {
+                qp_bail!(
+                    "multiple dependencies (one {overriden_kind} and one {kind}) are referenced by the same name `{name}`",
+                )
+            }
+        }
+        Ok(())
+    }
+
+    /// Bail, if some dependencies specify packages with same [`identities`](crate::quackpack::core::identity::Identity).
+    /// Observe that this prohibits having two versions of the same package as dependencies.
+    /// Note:
+    /// -----
+    /// [`Identity`] contains the name, so the user _can_ add dependencies for the same git or local package
+    /// and not trigger the error here, but at least one of those entries will have not matching name,
+    /// triggering error during [`gathering`](crate::quackpack::core::solver::gathering).
+    fn bail_if_has_duplicated_identities(deps: &[Dependency]) -> QuackResult<()> {
+        let mut dependencies_ids: HashMap<Identity, (StrId, DependencyKind)> = HashMap::new();
+        for dep in deps {
+            let identity = dep.identity();
+            if let Some((other_dep_name, other_dep_kind)) = dependencies_ids.get(&identity) {
+                qp_bail!(
+                    "{} dependency `{}` has the same source as {} dependency `{}`",
+                    dep.kind(),
+                    dep.effective_name(),
+                    other_dep_kind,
+                    other_dep_name
+                );
+            } else {
+                dependencies_ids.insert(identity, (dep.effective_name(), dep.kind()));
             }
         }
         Ok(())
@@ -39,7 +76,7 @@ impl Dependencies {
 
     /// Get a dependency by a name.
     pub fn get_by_name(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(&Selector::Name(name)).next()
+        self.select(&Selector::Name(name)).next()
     }
 
     /// Check if a dependency exists by an alias.
@@ -49,7 +86,7 @@ impl Dependencies {
 
     /// Get a dependency by an alias.
     pub fn get_by_alias(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(&Selector::Alias(name)).next()
+        self.select(&Selector::Alias(name)).next()
     }
 
     /// Check if a dependency exists by an effective name.
@@ -59,17 +96,17 @@ impl Dependencies {
 
     /// Get a dependency by a compilation name.
     pub fn get_by_effective_name(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(&Selector::EffectiveName(name)).next()
+        self.select(&Selector::EffectiveName(name)).next()
     }
 
     /// Get a dependency by a given [`Selector`].
-    pub fn get_by_selector(&self, selector: &Selector) -> impl Iterator<Item = &Dependency> {
+    pub fn select(&self, selector: &Selector) -> impl Iterator<Item = &Dependency> {
         self.0.iter().filter(|dep| selector.selects(dep))
     }
 
     /// Get a dependency by a given [`Selector`].
     pub fn has_by_selector(&self, selector: &Selector) -> bool {
-        self.get_by_selector(selector).next().is_some()
+        self.select(selector).next().is_some()
     }
 
     /// Filter by [`DependencyKind`].
@@ -94,6 +131,7 @@ impl TryFrom<registry::Dependencies> for Dependencies {
 
     fn try_from(value: registry::Dependencies) -> Result<Self, Self::Error> {
         let deps = value
+            .0
             .into_iter()
             .map(Dependency::try_from)
             .collect::<Result<_, _>>()?;
@@ -110,5 +148,6 @@ impl TryFrom<Dependencies> for registry::Dependencies {
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()
+            .map(registry::Dependencies)
     }
 }

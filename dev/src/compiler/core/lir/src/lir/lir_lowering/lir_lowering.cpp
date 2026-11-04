@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file lir_lowering.cpp
  * @brief File implementing process of creating LIR function from MIR function
@@ -50,263 +56,270 @@ namespace compiler::lir {
 	}
 
 	/**
-	 * @brief Converts the MIR function type to a LIR layout. Changes the return type to Unit if the
-	 * function returns a type which doesn't carry information (e.g. for class/array constructors
-	 * which don't carry information).
+	 * @brief The layout of a function type together with the layouts of its signature.
 	 */
-	CRef<tsl::TypeLayout> mirReturnType2LirLayout(query::Context& ctx, tsh::SymbolType<> type) {
-		if (type.getType().carriesInformation(ctx))
-			return &ctx.query<tsl::QuerySymbolTypeLayout>(type)->valueOrPanicMsg(
-				"layout query failed at LIR stage"
+	struct FunctionLayouts final {
+		CRef<tsl::TypeLayout>              layout;
+		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
+		CRef<tsl::TypeLayout>              return_type_layout;
+		/// The result type is `void`, so a call never returns.
+		bool never_returns;
+
+		[[nodiscard]] const tsl::FunctionalTypeLayout& functional() const {
+			return std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
+		}
+	};
+
+	namespace {
+		LIRAbi getLIRAbi(
+			query::Context& ctx, helios::SymID sym, const tsl::FunctionalTypeLayout& function_layout
+		) {
+			auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
+				"Handling errors in MIR is not supported yet"
 			);
-		else
-			// Change the return type to Unit if the function returns a type which doesn't carry
-			// information (e.g. for class/array constructors which don't carry information).
-			return &ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType())
-			            ->valueOrPanicMsg("layout query failed at LIR stage");
-	}
+			if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
+				return { LIRAbi::DefaultAbi{} };
 
-	LIRAbi getLIRAbi(
-		query::Context&                           ctx,
-		helios::SymID                             sym,
-		CRef<tsl::TypeLayout>                     return_type,
-		const std::vector<CRef<tsl::TypeLayout>>& parameter_types
-	) {
-		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
-			"Handling errors in MIR is not supported yet"
-		);
-		if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
-			return { LIRAbi::DefaultAbi{} };
+			CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
+			const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
 
-		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
-		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
+			auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
+				auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
+				                   ->valueOrPanicMsg("Query failure.");
+				if (not result.has_value())
+					CORE_PANIC(base::strConcat(
+						"Function type is not compatible with CABI: `",
+						result.error(),
+						"` in symbol `",
+						helios::name(sym),
+						"`."
+					));
+				return &result.value();
+			};
 
-		auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
-			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
-			                   ->valueOrPanicMsg("Query failure.");
-			if (not result.has_value())
-				CORE_PANIC(base::strConcat(
-					"Function type is not compatible with CABI: `",
-					result.error(),
-					"` in symbol `",
-					helios::name(sym),
-					"`."
-				));
-			return &result.value();
-		};
+			auto return_abi_or_empty
+				= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
+				if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
+				return abi_type_or_panic(type);
+			};
 
-		auto return_abi_or_empty
-			= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
-			if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
-			return abi_type_or_panic(type);
-		};
+			abi::calling_conv::FunctionType abi_fun_type{
+				.return_type = return_abi_or_empty(function_layout.getReturnLayout(ctx)),
+				.param_types = function_layout.getParameterLayouts(ctx)
+				             | std::views::transform(abi_type_or_panic)
+				             | std::ranges::to<std::vector>(),
+				.num_fixed_params = c_abi_info.fixed_params,
+			};
+			return { LIRAbi::CAbi{
+				.function_info
+				= abi::calling_conv::computeCallingConv(abi::hostTargetABI(), abi_fun_type) } };
+		}
 
-		abi::calling_conv::FunctionType abi_fun_type{
-			.return_type = return_abi_or_empty(return_type),
-			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
-			             | std::ranges::to<std::vector>(),
-			.num_fixed_params = c_abi_info.fixed_params,
-		};
-		return { LIRAbi::CAbi{
-			.function_info
-			= abi::calling_conv::computeCallingConv(abi::hostTargetABI(), abi_fun_type) } };
-	}
-
-	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
-		tsh::FunctionAbstractType type
-			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
-		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
-		          .getType();
-
-		auto link_once
-			= helios::emissionPolicy(ctx, helios_id) == helios::EmissionPolicy::Replicated;
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
-		base::Optional<BuiltinFunctionKind> builtin_kind_opt
-			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
-
-		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
-		std::vector<CRef<tsl::TypeLayout>> parameter_types;
-		parameter_types.reserve(type.getParameterTypes().size());
-		for (const auto& param: type.getParameterTypes())
-			// Discard information-less parameters from LIR function parameter lists.
-			if (param.getType().carriesInformation(ctx))
-				parameter_types.emplace_back(
-					&ctx.query<tsl::QuerySymbolTypeLayout>(param)->valueOrPanicMsg(
-						"layout query failed at LIR stage"
-					)
+		/**
+		 * @brief Computes the layout of the function type @p type and the layouts of its signature.
+		 */
+		FunctionLayouts getFunctionLayouts(query::Context& ctx, tsh::FunctionAbstractType type) {
+			CRef<tsl::TypeLayout> layout
+				= &ctx.query<tsl::QueryAbstractTypeLayout>(type)->valueOrPanicMsg(
+					"layout query failed at LIR stage"
 				);
-		auto symbol_abi = getLIRAbi(ctx, helios_id, return_type, parameter_types);
-
-		return FunctionLiteral{
-			.mangled_name = mangled_name,
-			.abi          = std::move(symbol_abi),
-			.link_once    = link_once,
-			.parameter_layouts
-			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
-			.return_type_layout = return_type,
-			.builtin_kind_opt   = builtin_kind_opt
-		};
-	}
-
-	/**
-	 * @brief Maps MIR operation to LIR operation for those
-	 * that have direct counterpart.
-	 *
-	 * @param mir_operation The MIR operation to convert.
-	 * @param signed_version Whether to use a signed version of the operation, if relevant.
-	 * @return Operation
-	 */
-	Operation mir2lirOperation(const mir::Operation mir_operation, const bool signed_version) {
-		switch (mir_operation) {
-		// Variable Assignment
-		case mir::Operation::Assign:
-			return Operation::Assign;
-		case mir::Operation::AddressOf:
-			return Operation::AddressOf;
-		case mir::Operation::ZeroInitialize:
-			return Operation::ZeroInitialize;
-
-		// Control Flow
-		case mir::Operation::ReturnValue:
-			return Operation::ReturnValue;
-		case mir::Operation::ReturnVoid:
-			return Operation::ReturnVoid;
-		case mir::Operation::Unreachable:
-			return Operation::Unreachable;
-		case mir::Operation::Jump:
-			return Operation::Jump;
-		case mir::Operation::Branch:
-			return Operation::Branch;
-
-		// Integer Arithmetic
-		case mir::Operation::IntegerAdd:
-			return Operation::IntegerAdd;
-		case mir::Operation::IntegerSub:
-			return Operation::IntegerSub;
-		case mir::Operation::IntegerMul:
-			return Operation::IntegerMul;
-		case mir::Operation::IntegerDiv:
-			return signed_version ? Operation::IntegerSDiv : Operation::IntegerUDiv;
-		case mir::Operation::IntegerMod:
-			return signed_version ? Operation::IntegerSMod : Operation::IntegerUMod;
-		case mir::Operation::IntegerNeg:
-			return Operation::IntegerNeg;
-
-		case mir::Operation::IntegerBitAnd:
-			return Operation::IntegerBitAnd;
-		case mir::Operation::IntegerBitOr:
-			return Operation::IntegerBitOr;
-		case mir::Operation::IntegerBitXor:
-			return Operation::IntegerBitXor;
-		case mir::Operation::IntegerBitNot:
-			return Operation::IntegerBitNot;
-		case mir::Operation::IntegerShl:
-			return Operation::IntegerShl;
-		case mir::Operation::IntegerShr:
-			return Operation::IntegerShr;
-		// Integer Comparison
-		case mir::Operation::IntegerLt:
-			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
-		case mir::Operation::IntegerGt:
-			return signed_version ? Operation::IntegerSGt : Operation::IntegerUGt;
-		case mir::Operation::IntegerLteq:
-			return signed_version ? Operation::IntegerSLteq : Operation::IntegerULteq;
-		case mir::Operation::IntegerGteq:
-			return signed_version ? Operation::IntegerSGteq : Operation::IntegerUGteq;
-		case mir::Operation::IntegerEq:
-			return Operation::IntegerEq;
-		case mir::Operation::IntegerNeq:
-			return Operation::IntegerNeq;
-
-		/// Floating point arithmetic ///
-		case mir::Operation::FloatAdd:
-			return Operation::FloatAdd;
-		case mir::Operation::FloatSub:
-			return Operation::FloatSub;
-		case mir::Operation::FloatMul:
-			return Operation::FloatMul;
-		case mir::Operation::FloatDiv:
-			return Operation::FloatDiv;
-		case mir::Operation::FloatNeg:
-			return Operation::FloatNeg;
-
-		/// Floating point comparisons ///
-		case mir::Operation::FloatLt:
-			return Operation::FloatLt;
-		case mir::Operation::FloatGt:
-			return Operation::FloatGt;
-		case mir::Operation::FloatLteq:
-			return Operation::FloatLteq;
-		case mir::Operation::FloatGteq:
-			return Operation::FloatGteq;
-		case mir::Operation::FloatEq:
-			return Operation::FloatEq;
-		case mir::Operation::FloatNeq:
-			return Operation::FloatNeq;
-
-		/// Meta type operations ///
-		case mir::Operation::MetaTypeOperation:
-			return Operation::MetaTypeOperation;
-
-		/// Logic ///
-		case mir::Operation::BooleanAnd:
-			return Operation::BooleanAnd;
-		case mir::Operation::BooleanOr:
-			return Operation::BooleanOr;
-		case mir::Operation::BooleanNot:
-			return Operation::BooleanNot;
-
-		/// Variants ///
-		case mir::Operation::VariantConstruct:
-			return Operation::VariantConstruct;
-		case mir::Operation::VariantTryProject:
-			return Operation::VariantTryProject;
-		case mir::Operation::BranchIfNull:
-			return Operation::BranchIfNull;
-		// @TODO: add more cases
-		default:
-			CORE_PANIC(base::strConcat(
-				"Operation without direct counterpart", base::enumToStr(mir_operation)
-			));
+			const auto& functional = std::get<tsl::FunctionalTypeLayout>(layout->getVariant());
+			return { .layout             = layout,
+				     .parameter_layouts  = functional.getParameterLayouts(ctx),
+				     .return_type_layout = functional.getReturnLayout(ctx),
+				     .never_returns = type.getResultType().getType().getKind() == tsh::Kind::Void };
 		}
-	}
 
-	/**
-	 * @brief Maps a MIR meta kind to its LIR counterpart (1:1).
-	 */
-	MetaKind mir2lirMetaKind(mir::MetaKind kind) {
-		using enum mir::MetaKind;
-		switch (kind) {
-		case CreateBox:
-			return lir::MetaKind::CreateBox;
-		case CreateRef:
-			return lir::MetaKind::CreateRef;
-		case CreateConst:
-			return lir::MetaKind::CreateConst;
-		case CreatePtr:
-			return lir::MetaKind::CreatePtr;
-		case CreateManyPtr:
-			return lir::MetaKind::CreateManyPtr;
-		case CreateCPtr:
-			return lir::MetaKind::CreateCPtr;
-		case CreateSlice:
-			return lir::MetaKind::CreateSlice;
-		case CreateTuple:
-			return lir::MetaKind::CreateTuple;
-		case CreateVariant:
-			return lir::MetaKind::CreateVariant;
-		case Eq:
-			return lir::MetaKind::Eq;
-		case Neq:
-			return lir::MetaKind::Neq;
-		case SizeOf:
-			return lir::MetaKind::SizeOf;
-		case AlignOf:
-			return lir::MetaKind::AlignOf;
-		case COUNT:
-			CORE_PANIC("Unknown meta type operation: ", base::enumToStr(kind));
+		FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
+			tsh::FunctionAbstractType type
+				= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
+			          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
+			          .getType();
+
+			auto link_once
+				= helios::emissionPolicy(ctx, helios_id) == helios::EmissionPolicy::Replicated;
+			auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
+			base::Optional<BuiltinFunctionKind> builtin_kind_opt
+				= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
+
+			auto layouts    = getFunctionLayouts(ctx, type);
+			auto symbol_abi = getLIRAbi(ctx, helios_id, layouts.functional());
+
+			return FunctionLiteral{ .mangled_name = mangled_name,
+				                    .abi          = std::move(symbol_abi),
+				                    .link_once    = link_once,
+				                    .layout       = layouts.layout,
+				                    .parameter_layouts
+				                    = std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(
+										std::move(layouts.parameter_layouts)
+									),
+				                    .return_type_layout = layouts.return_type_layout,
+				                    .never_returns      = layouts.never_returns,
+				                    .builtin_kind_opt   = builtin_kind_opt };
 		}
-		CORE_UNREACHABLE();
+
+		/**
+		 * @brief Maps MIR operation to LIR operation for those
+		 * that have direct counterpart.
+		 *
+		 * @param mir_operation The MIR operation to convert.
+		 * @param signed_version Whether to use a signed version of the operation, if relevant.
+		 * @return Operation
+		 */
+		Operation mir2lirOperation(const mir::Operation mir_operation, const bool signed_version) {
+			switch (mir_operation) {
+			// Variable Assignment
+			case mir::Operation::Assign:
+				return Operation::Assign;
+			case mir::Operation::AddressOf:
+				return Operation::AddressOf;
+			case mir::Operation::ZeroInitialize:
+				return Operation::ZeroInitialize;
+
+			// Control Flow
+			case mir::Operation::ReturnValue:
+				return Operation::ReturnValue;
+			case mir::Operation::ReturnVoid:
+				return Operation::ReturnVoid;
+			case mir::Operation::Unreachable:
+				return Operation::Unreachable;
+			case mir::Operation::Jump:
+				return Operation::Jump;
+			case mir::Operation::Branch:
+				return Operation::Branch;
+
+			// Integer Arithmetic
+			case mir::Operation::IntegerAdd:
+				return Operation::IntegerAdd;
+			case mir::Operation::IntegerSub:
+				return Operation::IntegerSub;
+			case mir::Operation::IntegerMul:
+				return Operation::IntegerMul;
+			case mir::Operation::IntegerDiv:
+				return signed_version ? Operation::IntegerSDiv : Operation::IntegerUDiv;
+			case mir::Operation::IntegerMod:
+				return signed_version ? Operation::IntegerSMod : Operation::IntegerUMod;
+			case mir::Operation::IntegerNeg:
+				return Operation::IntegerNeg;
+
+			case mir::Operation::IntegerBitAnd:
+				return Operation::IntegerBitAnd;
+			case mir::Operation::IntegerBitOr:
+				return Operation::IntegerBitOr;
+			case mir::Operation::IntegerBitXor:
+				return Operation::IntegerBitXor;
+			case mir::Operation::IntegerBitNot:
+				return Operation::IntegerBitNot;
+			case mir::Operation::IntegerShl:
+				return Operation::IntegerShl;
+			case mir::Operation::IntegerShr:
+				return Operation::IntegerShr;
+			// Integer Comparison
+			case mir::Operation::IntegerLt:
+				return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
+			case mir::Operation::IntegerGt:
+				return signed_version ? Operation::IntegerSGt : Operation::IntegerUGt;
+			case mir::Operation::IntegerLteq:
+				return signed_version ? Operation::IntegerSLteq : Operation::IntegerULteq;
+			case mir::Operation::IntegerGteq:
+				return signed_version ? Operation::IntegerSGteq : Operation::IntegerUGteq;
+			case mir::Operation::IntegerEq:
+				return Operation::IntegerEq;
+			case mir::Operation::IntegerNeq:
+				return Operation::IntegerNeq;
+
+			/// Floating point arithmetic ///
+			case mir::Operation::FloatAdd:
+				return Operation::FloatAdd;
+			case mir::Operation::FloatSub:
+				return Operation::FloatSub;
+			case mir::Operation::FloatMul:
+				return Operation::FloatMul;
+			case mir::Operation::FloatDiv:
+				return Operation::FloatDiv;
+			case mir::Operation::FloatNeg:
+				return Operation::FloatNeg;
+
+			/// Floating point comparisons ///
+			case mir::Operation::FloatLt:
+				return Operation::FloatLt;
+			case mir::Operation::FloatGt:
+				return Operation::FloatGt;
+			case mir::Operation::FloatLteq:
+				return Operation::FloatLteq;
+			case mir::Operation::FloatGteq:
+				return Operation::FloatGteq;
+			case mir::Operation::FloatEq:
+				return Operation::FloatEq;
+			case mir::Operation::FloatNeq:
+				return Operation::FloatNeq;
+
+			/// Meta type operations ///
+			case mir::Operation::MetaTypeOperation:
+				return Operation::MetaTypeOperation;
+
+			/// Logic ///
+			case mir::Operation::BooleanAnd:
+				return Operation::BooleanAnd;
+			case mir::Operation::BooleanOr:
+				return Operation::BooleanOr;
+			case mir::Operation::BooleanNot:
+				return Operation::BooleanNot;
+
+			/// Variants ///
+			case mir::Operation::VariantConstruct:
+				return Operation::VariantConstruct;
+			case mir::Operation::VariantTryProject:
+				return Operation::VariantTryProject;
+			case mir::Operation::BranchIfNull:
+				return Operation::BranchIfNull;
+			// @future: add more cases
+			default:
+				CORE_PANIC(base::strConcat(
+					"Operation without direct counterpart", base::enumToStr(mir_operation)
+				));
+			}
+		}
+
+		/**
+		 * @brief Maps a MIR meta kind to its LIR counterpart (1:1).
+		 */
+		MetaKind mir2lirMetaKind(mir::MetaKind kind) {
+			using enum mir::MetaKind;
+			switch (kind) {
+			case CreateBox:
+				return lir::MetaKind::CreateBox;
+			case CreateRef:
+				return lir::MetaKind::CreateRef;
+			case CreateConst:
+				return lir::MetaKind::CreateConst;
+			case CreatePtr:
+				return lir::MetaKind::CreatePtr;
+			case CreateManyPtr:
+				return lir::MetaKind::CreateManyPtr;
+			case CreateCPtr:
+				return lir::MetaKind::CreateCPtr;
+			case CreateSlice:
+				return lir::MetaKind::CreateSlice;
+			case CreateTuple:
+				return lir::MetaKind::CreateTuple;
+			case CreateVariant:
+				return lir::MetaKind::CreateVariant;
+			case CreateOptional:
+				return lir::MetaKind::CreateOptional;
+			case Eq:
+				return lir::MetaKind::Eq;
+			case Neq:
+				return lir::MetaKind::Neq;
+			case SizeOf:
+				return lir::MetaKind::SizeOf;
+			case AlignOf:
+				return lir::MetaKind::AlignOf;
+			case COUNT:
+				CORE_PANIC("Unknown meta type operation: ", base::enumToStr(kind));
+			}
+			CORE_UNREACHABLE();
+		}
 	}
 
 	struct IMPLEMENT_QUERY(LowerToLIRFunction, Function) {
@@ -403,10 +416,10 @@ namespace compiler::lir {
 
 				variant_match(mir_place.base) {
 					variant_case(mir::MIRLocalRef, local) {
-						return { getLocal(local), std::move(lir_projection_chain) };
+						return { ctx, getLocal(local), std::move(lir_projection_chain) };
 					}
 					variant_case(mir::MIRGlobal, global) {
-						return { getGlobal(global), std::move(lir_projection_chain) };
+						return { ctx, getGlobal(global), std::move(lir_projection_chain) };
 					}
 				}
 				CORE_UNREACHABLE();
@@ -638,9 +651,7 @@ namespace compiler::lir {
 
 			static bool isArgSigned(const mir::MIRValue& location) {
 				variant_match(location.getVariant()) {
-					variant_case(
-						mir::MIRConstant, value
-					) {  // @TODO: #899 Remove this visit once CTV is VMValue based and stores it's type.
+					variant_case(mir::MIRConstant, value) {
 						match_optional(value.value.get<numeric_value::NumericValue>()) {
 							opt_some(numeric) {
 								return std::visit(
@@ -695,7 +706,7 @@ namespace compiler::lir {
 					// The destructor takes `self: ref T`, so the address of the destructed
 					// place is materialized first.
 					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
-					LIRPlace    addr_place{ addr_local, {} };
+					LIRPlace    addr_place{ addr_local };
 
 					auto& address_instr = block->instructions.emplace_back(
 						Operation::AddressOf,
@@ -960,6 +971,35 @@ namespace compiler::lir {
 					);
 					break;
 				}
+				case mir::Operation::IndirectCall: {
+					auto output = getOutput(mir_instruction.output);
+					auto args   = getLocations(mir_instruction.arguments);
+
+					const auto& callee = mir_instruction.arguments.at(0);
+					if (std::holds_alternative<mir::MIRFunctionLiteral>(callee.getVariant())) {
+						curr_block->instructions.emplace_back(
+							Operation::Call, output, std::move(args), mir_instruction.metadata
+						);
+						break;
+					}
+
+					auto layouts
+						= getFunctionLayouts(ctx, callee.get<mir::MIRPlace>().type.getType());
+					curr_block->instructions.emplace_back(
+						Operation::IndirectCall,
+						output,
+						std::move(args),
+						mir_instruction.metadata,
+						IndirectCallParameters{
+							.parameter_layouts
+							= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(
+								std::move(layouts.parameter_layouts)
+							),
+							.return_type_layout = layouts.return_type_layout,
+						}
+					);
+					break;
+				}
 				case mir::Operation::Cast: {
 					auto cast_parameters
 						= std::get_if<mir::CastParameters>(&mir_instruction.extra_params);
@@ -1117,23 +1157,18 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
-				auto return_type = mirReturnType2LirLayout(ctx, key.function->return_type);
-				std::vector<CRef<tsl::TypeLayout>> parameter_types;
-				parameter_types.reserve(key.function->parameter_types.size());
-				for (const auto& param: key.function->parameter_types)
-					// Discard information-less parameters from LIR function parameter lists.
-					if (param.getType().carriesInformation(ctx))
-						parameter_types.emplace_back(
-							&ctx.query<tsl::QuerySymbolTypeLayout>(param)->valueOrPanicMsg(
-								"layout query failed at LIR stage"
-							)
-						);
-
+				auto layouts = getFunctionLayouts(
+					ctx,
+					ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = key.function->parameter_types,
+						.result_type     = key.function->return_type,
+					})
+				);
 
 				auto abi = [&]() -> LIRAbi {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return getLIRAbi(ctx, name.id, return_type, parameter_types);
+							return getLIRAbi(ctx, name.id, layouts.functional());
 						}
 						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return { LIRAbi::DefaultAbi{} };
@@ -1200,8 +1235,10 @@ namespace compiler::lir {
 					             .link_once          = link_once,
 					             .ignore_on_dvm      = ignore_on_dvm,
 					             .ignore_on_llvm     = ignore_on_llvm,
-					             .parameter_layouts  = std::move(parameter_types),
-					             .return_type_layout = return_type,
+					             .layout             = layouts.layout,
+					             .parameter_layouts  = std::move(layouts.parameter_layouts),
+					             .return_type_layout = layouts.return_type_layout,
+					             .never_returns      = layouts.never_returns,
 					             .blocks             = std::move(blocks),
 					             .local_list         = std::move(locals),
 					             .block_order        = std::move(block_order),
@@ -1258,10 +1295,7 @@ namespace compiler::lir {
 			},
 		});
 
-		auto return_type = CRef<tsl::TypeLayout>(
-			&ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType())
-				 ->valueOrPanicMsg("layout query failed at LIR stage")
-		);
+		auto layouts = getFunctionLayouts(ctx, function_type);
 
 		Block entry_block;
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };
@@ -1281,8 +1315,10 @@ namespace compiler::lir {
 			             .link_once          = false,
 			             .ignore_on_dvm      = false,
 			             .ignore_on_llvm     = false,
-			             .parameter_layouts  = {},
-			             .return_type_layout = return_type,
+			             .layout             = layouts.layout,
+			             .parameter_layouts  = std::move(layouts.parameter_layouts),
+			             .return_type_layout = layouts.return_type_layout,
+			             .never_returns      = layouts.never_returns,
 			             .blocks             = std::move(blocks),
 			             .local_list         = {},
 			             .block_order        = { entry_block_ref },

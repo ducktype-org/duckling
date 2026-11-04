@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "compile_llvm.hpp"
 #include "llvm_includes/cloning.hpp"
 #include "llvm_includes/filesystem.hpp"
@@ -10,8 +16,12 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/query_errors.hpp>
 
 #include <iostream>
 
@@ -56,7 +66,25 @@ namespace compiler::backend_llvm {
 					}
 				}
 				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-					mod.setGlobalConstantInitializer(global.global.mangled_name, ctv_initial_value);
+					try {
+						mod.setGlobalConstantInitializer(
+							global.global.mangled_name, ctv_initial_value
+						);
+					} catch (const base::NotYetImplemented& nyi) {
+						// Point the user at the global whose initial value cannot be lowered.
+						ctx.log<dia::NotYetImplementedCodeError>(
+							base::strConcat(
+								"Lowering the initial value of global '",
+								global.metadata.source_code_name
+									.copyValueOr(global.global.mangled_name)
+									.strView(),
+								"' to LLVM: ",
+								nyi.what()
+							),
+							global.metadata.position
+						);
+						query::throwFailed();
+					}
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}

@@ -1,0 +1,16 @@
+# The main thread blocks on input and then keeps spinning, so it stays alive and pausable instead
+# of completing the moment the input arrives.
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type			x, i64;
+	init_pany_type			tmp, i64;
+
+	input_p64				x;
+
+	mov_p64_imm				tmp, 0;
+	label MainLoop;
+		cmpEq_p64_imm		tmp, 0;
+		jmpIf_label			MainLoop;
+
+	ret;
+}

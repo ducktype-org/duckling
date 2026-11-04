@@ -1,0 +1,17 @@
+type primitive: i8 1
+type variant: simple_variant { i64, i8 }
+type pointer: ptr_simple_variant simple_variant
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type ptr, ptr_simple_variant;
+    alloc_pptr_type ptr, simple_variant;
+    variantSetInner_pptr_type ptr, i64;
+
+    init_pany_type inner, ptr_i64;
+    variantGetInner_pptr_pptr_type inner, ptr, i64;
+
+    # The payload is a view into the variant, not an allocation of its own.
+    free_pptr inner;
+
+    ret;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -174,9 +180,10 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class FreeAutomatic;
 		friend class CloningUtils;
 
-		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
+		template<std::derived_from<LangElement>>
 		friend class PST;
 
 		template<typename E>
@@ -234,6 +241,7 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class FreeAutomatic;
 		friend class CloningUtils;
 
 		template<typename E>

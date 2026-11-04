@@ -1,10 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "nop_wait.hpp"
-// @TODO: #2308 Use the mentioned flags here
-#if defined(__x86_64__) || defined(__i386__)
+
+#include <base/config/target_info.hpp>
+
+#if BASE_TARGET_ARCH_X86
 	#include <immintrin.h>
-#elif defined(__aarch64__) || defined(__arm__)
-	#if defined(_MSC_VER)
+#elif BASE_TARGET_ARCH_ARM
+	#if BASE_TARGET_COMPILER_MSVC
 		// Microsoft Visual C++ on ARM
 		#include <intrin.h>
 		#define _mm_pause() __yield()

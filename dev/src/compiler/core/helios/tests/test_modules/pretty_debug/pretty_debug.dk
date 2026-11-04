@@ -6,6 +6,6 @@ namespace n1 {
             x1: i32 = 0;
         }
     }
-    alias n3 = n2;
+    using n2 as n3;
     using n3.*;
 }

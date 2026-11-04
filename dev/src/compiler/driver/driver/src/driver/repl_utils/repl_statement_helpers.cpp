@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "repl_statement_helpers.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/utility.hpp>
@@ -18,17 +25,20 @@
 
 namespace compiler::repl {
 
-	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
+	base::Ref<frontend::ModuleTree> createSyntheticChainedStatementModule(
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,
-		std::string_view                          module_name_prefix
+		std::string_view                          module_name_prefix,
+		ReplSessionID                             session_id
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
-		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
+		auto module_name = base::strConcat(
+			module_name_prefix, std::to_string(session_id.asInt()), "_", std::to_string(line_counter)
+		);
 		builder->setName(base::StrID(module_name));
 
 		frontend::ReplData repl_data;
@@ -168,9 +178,12 @@ namespace compiler::repl {
 	std::expected<VariableBuildResult, std::string> buildVariableWrapper(
 		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
 	) {
-		auto initializer_symbol
+		auto initializer_symbol_result
 			= queryReplGlobalInitializerWrapperSymbol(ctx, statement_info.variable_stmt, counter);
-		const auto& function_result = ctx.query<helios::QueryCodeOfFun>(initializer_symbol);
+		if (initializer_symbol_result.hasFailed())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+		const auto  initializer_symbol = initializer_symbol_result.valueOrPanic();
+		const auto& function_result    = ctx.query<helios::QueryCodeOfFun>(initializer_symbol);
 		if (function_result->hasFailed())
 			return std::unexpected("Failed to build REPL variable wrapper.");
 

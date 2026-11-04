@@ -1,9 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
 
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
@@ -17,24 +24,28 @@ LLVM_INCLUDE_END()
 
 #include <base/pointers/ref.hpp>
 
+#include <utility>
 #include <vector>
 
 namespace compiler::backend_llvm {
 
+	struct LoweredDefaultAbiSignature {
+		llvm::FunctionType*                          type;
+		bool                                         return_indirect;
+		std::vector<bool>                            parameter_is_indirect;
+		std::vector<std::pair<u32, llvm::Attribute>> attributes;
+	};
+
 	/**
-	 * @brief Get the LLVM function type based on the layouts of its parameters and return type.
+	 * @brief Lowers Duckling's default ABI to an LLVM signature.
 	 *
-	 * @param module The LLVM module in which the function type will be used.
-	 * @param parameters The layouts of the parameters of the function.
-	 * @param return_type The layout of the return type of the function.
-	 * @param abi The ABI to conform to.
-	 * @return The LLVM function type.
+	 * Aggregates larger than two pointer-sized words are kept in memory: parameters become
+	 * "ptr byval(T)", while a return value uses a hidden "ptr sret(T)" parameter.
 	 */
-	llvm::FunctionType* getFunType(
+	LoweredDefaultAbiSignature lowerDefaultAbiSignature(
 		Ref<llvm::Module>                         module,
 		const std::vector<CRef<tsl::TypeLayout>>& parameters,
-		CRef<tsl::TypeLayout>                     return_type,
-		const lir::LIRAbi&                        abi = lir::LIRAbi{ lir::LIRAbi::DefaultAbi{} }
+		CRef<tsl::TypeLayout>                     return_type
 	);
 
 	/**
