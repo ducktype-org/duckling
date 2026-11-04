@@ -8,6 +8,7 @@
 
 #include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_any_statement.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
@@ -74,12 +75,12 @@ namespace compiler::helios::desugaring {
 				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
 			if (kind != tsh::Kind::StaticArray) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
 					code::pstOrigin(iterable_pst).getSourcePosition(ctx)
-				));
+				);
 				return {};
 			}
 

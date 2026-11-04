@@ -9,17 +9,19 @@
 #include <unordered_set>
 
 namespace dia::state {
-	static std::string expandTabs(const std::string& s, usize tab_width = 4) {
-		std::string out;
-		out.reserve(s.size());  // small optimization
+	namespace {
+		std::string expandTabs(const std::string& s, usize tab_width = 4) {
+			std::string out;
+			out.reserve(s.size());  // small optimization
 
-		for (char c: s)
-			if (c == '\t')
-				out.append(tab_width, ' ');  // append N spaces
-			else
-				out.push_back(c);
+			for (char c: s)
+				if (c == '\t')
+					out.append(tab_width, ' ');  // append N spaces
+				else
+					out.push_back(c);
 
-		return out;
+			return out;
+		}
 	}
 
 	void TextComponent::debugPrint(std::ostream& out, usize indent) const {

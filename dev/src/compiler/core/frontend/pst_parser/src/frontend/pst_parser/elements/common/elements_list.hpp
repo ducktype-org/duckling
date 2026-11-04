@@ -18,6 +18,7 @@ namespace pst {
 	class FlowPatternList;
 	class SelectorList;
 	class NestedSelectorList;
+	class ArrayLiteralList;
 	// Not Statements
 	class Param;
 	class DottedName;
@@ -26,6 +27,8 @@ namespace pst {
 	class CallArgument;
 	class CodeBlock;
 	class CodeBlockOrStmt;
+	class CodeBlockOrAnyStmt;
+	class CodeBlockOrExpr;
 	class StmtSpecifier;
 	class RoundGroupExpr;
 	class ExprElement;
@@ -107,6 +110,7 @@ namespace pst {
 		class RoundExpr;
 		class UnitExpr;
 		class BlockExpr;
+		class ArrayLiteral;
 		class MatchExpr;
 		class GeneralPrefix;
 		class GeneralSuffix;

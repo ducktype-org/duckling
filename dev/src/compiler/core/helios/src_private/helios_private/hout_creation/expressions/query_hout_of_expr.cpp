@@ -21,6 +21,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/value_category.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -33,6 +34,7 @@
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -123,16 +125,15 @@ namespace compiler::helios::code {
 		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
 		 */
 		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(
-			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
+			query::Context& ctx, pst::Access<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator().unlock(ctx)->unwrap()
-					== lang_def::NamedOperator::Pipe,
+				expr->getOperator().unlock(ctx)->unwrap() == lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
-			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
-			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
+			getVariantSubExprsInPlace(ctx, expr->getLeftOperand(), sub_exprs);
+			getVariantSubExprsInPlace(ctx, expr->getRightOperand(), sub_exprs);
 			return sub_exprs;
 		}
 
@@ -144,8 +145,9 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> getFunctionTypeParameterExprs(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
 		) {
-			if (expr.unlock(ctx).dynamicCast<pst::expr::UnitExpr>()) return {};
-			auto round = expr.unlock(ctx).dynamicCast<pst::expr::RoundExpr>();
+			const auto unlocked = expr.unlock(ctx);
+			if (unlocked.dynamicCast<pst::expr::UnitExpr>()) return {};
+			auto round = unlocked.dynamicCast<pst::expr::RoundExpr>();
 			if (!round.has_value()) return { expr };
 
 			const auto inner = round.value()->getInner();
@@ -208,15 +210,11 @@ namespace compiler::helios::code {
 							node
 								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
 						} else {
-							ctx.logInt(
-								makeBox<InvalidCharacterLiteralError>(stmt->getStablePosition())
-							);
+							ctx.log<InvalidCharacterLiteralError>(stmt->getStablePosition());
 						}
 					}
 					opt_err(error) {
-						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getStablePosition(), error.value
-						));
+						ctx.log<UnknownEscapeSequenceError>(stmt->getStablePosition(), error.value);
 					}
 				}
 			}
@@ -231,9 +229,7 @@ namespace compiler::helios::code {
 						);
 					}
 					opt_err(error) {
-						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getStablePosition(), error.value
-						));
+						ctx.log<UnknownEscapeSequenceError>(stmt->getStablePosition(), error.value);
 					}
 				}
 			}
@@ -264,16 +260,17 @@ namespace compiler::helios::code {
 								next_string = s.litStrObj(base::StrID(result.value));
 							}
 							opt_err(error) {
-								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+								ctx.log<UnknownEscapeSequenceError>(
 									stmt->getStablePosition(), error.value
-								));
+								);
 							}
 						}
 					} else if (const auto sub_expr = sub.dynamicCast<pst::FormatSubExpression>()) {
 						// - If it's an expression, use its toString() method
 						// - - Parse sub expression and gather data
 						auto sub_expr_hout_qresult = subExprFromPST(
-							ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr()
+							ctx,
+							unlockOrFail(ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr())
 						);
 						if (sub_expr_hout_qresult.hasFailed()) {
 							failed = true;
@@ -334,8 +331,8 @@ namespace compiler::helios::code {
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
-				const auto op    = stmt->getOperator().unlock(ctx);
-				auto       inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				const auto op = stmt->getOperator().unlock(ctx);
+				auto inner = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getExpr())).valueOrThrow();
 				// If necessary, this is the place to handle any particularly tricky cases.
 				// Currently, there are none.
 
@@ -354,11 +351,11 @@ namespace compiler::helios::code {
 				const auto op = stmt->getOperator().unlock(ctx);
 
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::FunPtr)) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"`funptr` must be followed by `-> <result type>`, for example "
 						"`funptr(i64) -> ()`.",
 						stmt->getStablePosition()
-					));
+					);
 					return;
 				}
 
@@ -368,7 +365,7 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::Minus) {
 					const auto literal
 						= stmt->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprNumericValue>();
-					if (literal.has_value() && canBeNegative(ctx, literal.value())) {
+					if (literal.has_value() && canBeNegative(literal.value())) {
 						createNumericLiteral(
 							literal.value(),
 							pstOrigin(stmt),
@@ -379,7 +376,7 @@ namespace compiler::helios::code {
 					}
 				}
 
-				auto inner      = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				auto inner = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getExpr())).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
 				// Handle taking references
@@ -388,18 +385,18 @@ namespace compiler::helios::code {
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						ctx.log<dia::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
 							"supported yet.",
 							stmt->getStablePosition()
-						));
+						);
 						return;  // failed
 					}
 					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
 					if (not inner->expression_type.getValueCategory().addressable()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
@@ -421,17 +418,17 @@ namespace compiler::helios::code {
 					// This is a temporary check to prevent us from taking the address of types that
 					// do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						ctx.log<dia::NotYetImplementedCodeError>(
 							"Taking a pointer to a type that does not carry information is not "
 							"supported yet.",
 							stmt->getStablePosition()
-						));
+						);
 						return;  // failed
 					}
 					if (not inner->expression_type.getValueCategory().addressable()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Tried to take a pointer to a temporary", stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 					node = makeBox<PtrOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
@@ -442,9 +439,9 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
 					if (not(tsh::isPointerKind(inner_type.getType().getKind())
 					        or inner_type.getRefKind() != tsh::ReferenceKind::Direct)) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Tried to dereference an invalid type", stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
@@ -454,20 +451,20 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
 					// `move x` is only valid on an owned lvalue (a local variable).
 					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"`move` can only be applied to an owned local variable.",
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
 					if (inner->expression_type.getValueCategory().getCategory()
 					    == tsh::PrimaryCategory::Temporary) {
 						// The move is not needed, and should be discouraged.
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"A temporary is moved out of implicitly, `move` is not needed here.",
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
@@ -505,7 +502,7 @@ namespace compiler::helios::code {
 						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
 
 					if (copied_type.isTriviallyCopyable(ctx)) {
-						ctx.logInt(makeBox<dia::PlaceholderWarning>(
+						ctx.log<dia::PlaceholderWarning>(
 							base::strConcat(
 								"Type `",
 								copied_type.toString(),
@@ -513,7 +510,7 @@ namespace compiler::helios::code {
 								"keyword."
 							),
 							stmt->getStablePosition()
-						));
+						);
 						// Trivially copyable, so we just deref.
 						if (is_indirect)
 							node = s.deref(std::move(inner));
@@ -522,10 +519,10 @@ namespace compiler::helios::code {
 						return;
 					}
 					if (not copied_type.getType().isCopyable(ctx)) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat("Type `", copied_type.toString(), "` cannot be copied."),
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
@@ -557,10 +554,10 @@ namespace compiler::helios::code {
 					// `SymbolType::isCopyable` answers this for the value as a whole: a `ref` is
 					// always copyable (the reference is copied), while a `box` follows its pointee.
 					if (not inner_type.isCopyable(ctx)) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
@@ -593,7 +590,8 @@ namespace compiler::helios::code {
 					return;
 				}
 				if (op->unwrap() == lang_def::NamedOperator::As) {
-					auto value_expr  = subExprFromPST(ctx, stmt->getLeftOperand()).valueOrThrow();
+					auto value_expr = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getLeftOperand()))
+					                      .valueOrThrow();
 					auto type_ctv    = getTypeCTVFromPST(ctx, stmt->getRightOperand());
 					auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 
@@ -601,7 +599,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
+				auto lhs_res = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getLeftOperand()));
 				if (lhs_res.hasFailed()) return;
 				auto lhs = std::move(lhs_res).valueOrThrow();
 
@@ -619,7 +617,7 @@ namespace compiler::helios::code {
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
-							ctx, sub_expr, meta_type, op->getStablePosition()
+							ctx, unlockOrFail(ctx, sub_expr), meta_type, op->getStablePosition()
 						);
 						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
@@ -630,7 +628,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand());
+				auto rhs_res = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getRightOperand()));
 				if (rhs_res.hasFailed()) return;
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
@@ -674,12 +672,15 @@ namespace compiler::helios::code {
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
-					auto parameter_hout = subExprFromPSTWithType(ctx, parameter, meta_type);
+					auto parameter_hout
+						= subExprFromPSTWithType(ctx, unlockOrFail(ctx, parameter), meta_type);
 					if (parameter_hout.hasFailed()) return;
 					parameters.emplace_back(std::move(parameter_hout).valueOrThrow());
 				}
 
-				auto result = subExprFromPSTWithType(ctx, arrow->getRightOperand(), meta_type);
+				auto result = subExprFromPSTWithType(
+					ctx, unlockOrFail(ctx, arrow->getRightOperand()), meta_type
+				);
 				if (result.hasFailed()) return;
 
 				node = makeBox<FunctionTypeExpr>(
@@ -815,9 +816,9 @@ namespace compiler::helios::code {
 					break;
 				}
 				default:
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Keyword not yet handled.", stmt->getStablePosition()
-					));
+					);
 					return;  // failed
 				}
 			}
@@ -825,7 +826,7 @@ namespace compiler::helios::code {
 			void visitComma(pst::Access<pst::expr::Comma> stmt) override {
 				std::vector<Box<Expr>> expressions;
 				for (auto ex: stmt->getExpressions()) {
-					auto res = subExprFromPST(ctx, ex);
+					auto res = subExprFromPST(ctx, unlockOrFail(ctx, ex));
 					if (res.hasFailed()) {
 						// Error has occurred.
 						return;
@@ -836,10 +837,12 @@ namespace compiler::helios::code {
 			}
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
-				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
-				auto condition_res   = subExprFromPSTWithType(ctx, stmt->getCondition(), bool_type);
-				auto if_true_res     = subExprFromPST(ctx, stmt->getIfTrue());
-				auto if_false_res    = subExprFromPST(ctx, stmt->getIfFalse());
+				const auto bool_type     = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+				auto       condition_res = subExprFromPSTWithType(
+                    ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
+                );
+				auto if_true_res  = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getIfTrue()));
+				auto if_false_res = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getIfFalse()));
 
 				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
@@ -866,7 +869,7 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
 				for (usize i = 0; i < expr_count; ++i) {
-					auto result = subExprFromPST(ctx, stmt->getSubExpr(i));
+					auto result = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getSubExpr(i)));
 					if (result.hasFailed()) return;
 					result_exprs.push_back(std::move(result.valueOrThrow()));
 				}
@@ -908,7 +911,7 @@ namespace compiler::helios::code {
 
 				auto var = stmt->getVariables();
 
-				auto location_expr_qresult = subExprFromPST(ctx, var);
+				auto location_expr_qresult = subExprFromPST(ctx, unlockOrFail(ctx, var));
 				if (location_expr_qresult.hasFailed()) return;
 				auto location_expr = std::move(location_expr_qresult).valueOrThrow();
 
@@ -921,33 +924,72 @@ namespace compiler::helios::code {
 
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"Left side of assignment can't be immutable.", stmt->getStablePosition()
-					));
+					);
 					return;
 				}
 
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
 					),
 					stmt->getStablePosition()
-				));
+				);
+			}
+
+			void visitArrayLiteral(pst::Access<pst::expr::ArrayLiteral> stmt) override {
+				auto                   list_unlocked = stmt->getList().unlock(ctx);
+				std::vector<Box<Expr>> elems;
+				elems.reserve(list_unlocked->size());
+				base::Optional<tsh::SymbolType<>> elem_type;
+
+				for (auto elem_holder: *list_unlocked) {
+					auto elem_pst_expr = elem_holder.unlock(ctx)->getExpr();
+					auto elem          = subExprFromPST(ctx, unlockOrFail(ctx, elem_pst_expr));
+					if (elem.hasFailed()) return;
+
+					if (auto curr_elem_type = elem.valueOrThrow()->expression_type.getSymbolType();
+					    elem_type && curr_elem_type != *elem_type) {
+						ctx.log<dia::PlaceholderError>(
+							base::strConcat(
+								"Invalid array element type. Expected `",
+								elem_type->toString(),
+								"`, but got `",
+								curr_elem_type.toString(),
+								"`. All array elements must be of the same type."
+							),
+							elem_pst_expr.unlock(ctx)->getStablePosition()
+						);
+						return;
+					}
+
+					elems.emplace_back(std::move(elem).valueOrThrow());
+					if (!elem_type) elem_type = elems.back()->expression_type.getSymbolType();
+				}
+
+				// Some type had to be chosen. `void` would perhaps make more sense,
+				// but it seemed to break some assumptions of the compiler and cause panics.
+				// @TODO: #3707 When fixed, think about making this `void`.
+				auto elem_type_of_empty_array = tsh::SymbolType<>{
+					tsh::getUnitType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				auto type = ctx.query<tsh::QueryStaticArrayType>(
+					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }
+				);
+				node = makeBox<CreateAggregateExpr>(ctx, pstOrigin(stmt), type, std::move(elems));
 			}
 		};
 	}
 
 	ExprConstructionResult subExprFromPST(
-		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		query::Context& ctx, pst::Access<pst::ExprElement> element
 	) {
-		auto element_unlocked = element.unlockOpt(ctx);
-		if (element_unlocked.empty()) {
-			// PST should have reported parsing error for this, so we just return failure here.
-			return query::Failed();
-		}
-
 		PstExprToHoutExprVisitor visitor(ctx);
-		element_unlocked.value()->acceptExprVisitor(visitor);
+		element->acceptExprVisitor(visitor);
 
 		if_opt_some(visitor.node, expr) return std::move(expr);
 		return query::Failed();
@@ -958,7 +1000,12 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO static assert this is top-expr
-			return code::subExprFromPST(ctx, key.element);
+			auto element = key.element.unlockOpt(ctx);
+			if (element.empty()) {
+				// PST should have reported parsing error for this, so we just return failure here.
+				return query::Failed();
+			}
+			return code::subExprFromPST(ctx, element.value());
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -1024,14 +1071,14 @@ namespace compiler::helios {
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
 		query::Context&                          ctx,
-		pst::AccessLocked<pst::ExprElement>      element,
+		pst::Access<pst::ExprElement>            element,
 		tsh::SymbolType<>                        expected_type,
 		base::Optional<dia::StablePosition>      coercion_expects_pos,
 		const coercions::CoercionErrorOverrides& error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
-		const auto source_position = element.unlock(ctx)->getStablePosition();
+		const auto source_position = element->getStablePosition();
 
 		return coercions::coerceFromBox(
 			ctx,

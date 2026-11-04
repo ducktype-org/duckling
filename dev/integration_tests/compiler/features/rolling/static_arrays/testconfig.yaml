@@ -89,3 +89,7 @@ Tests:
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
+  literals:
+    Cases:
+      all:
+        ExitCode: 0

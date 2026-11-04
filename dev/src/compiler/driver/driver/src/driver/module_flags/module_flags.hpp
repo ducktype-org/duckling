@@ -39,6 +39,18 @@ namespace compiler::driver {
 	extern constinit PrintIROptions print_ir_options;
 
 	/**
+	 * This is a debug option.
+	 * If set, the query graph is printed to stderr in driver::exit.
+	 */
+	extern constinit bool print_query_graph;
+
+	/**
+	 * This is a debug option.
+	 * If set, the query and time statistics are printed in driver::exit.
+	 */
+	extern constinit bool print_statistics;
+
+	/**
 	 * If set, incremental compilation is enabled.
 	 * This flag is set during driver initialization based on user options.
 	 * --no-incremental will disable it.

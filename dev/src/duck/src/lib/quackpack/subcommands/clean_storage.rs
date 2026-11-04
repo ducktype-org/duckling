@@ -46,7 +46,7 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
                 removed_packages,
                 encountered_errors,
             } = storage::clean_storage(ctx, &storage_path)
-                .context("when trying to clean the storage")?;
+                .context("failed to clean the storage")?;
             ctx.print(format!(
                 "Removed {} venv{}",
                 removed_venvs.len(),

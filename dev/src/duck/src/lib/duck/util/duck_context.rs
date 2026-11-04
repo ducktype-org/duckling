@@ -58,10 +58,10 @@ impl DuckContext {
         let env = Env::default();
         let stdout = Terminal::stdout();
         let stderr = Terminal::stderr();
-        let user_home = home_dir().context("while trying to get user home directory")?;
+        let user_home = home_dir().context("failed to get the user home directory")?;
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
         let config = DuckCfg::new(&duck_home)?;
-        let cwd = current_dir().context("while trying to get the current working directory")?;
+        let cwd = current_dir().context("failed to get the current working directory")?;
         Ok(Self {
             stdout,
             stderr,
@@ -116,7 +116,7 @@ impl DuckContext {
 
     /// Reload the current working directory.
     pub fn reload_cwd(&mut self) -> QuackResult<()> {
-        self.cwd = current_dir().context("while trying to get current working directory")?;
+        self.cwd = current_dir().context("failed to get the current working directory")?;
         Ok(())
     }
 

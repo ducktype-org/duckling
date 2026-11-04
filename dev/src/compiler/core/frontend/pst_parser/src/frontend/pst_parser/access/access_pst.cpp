@@ -21,11 +21,11 @@ namespace pst::internal {
 	}
 
 	void notifyBadAccess(query::Context& ctx) {
-		ctx.logInt(makeBox<dia::PlaceholderError>(
+		ctx.log<dia::PlaceholderError>(
 			"PST Accessed a nullptr LangElement.",
 			"To check the location of the bad access, enable "
 			"query dev logs (Query, QueryStacktraces)."
-		));
+		);
 		query::throwFailed();
 	}
 }

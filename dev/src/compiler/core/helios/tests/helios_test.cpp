@@ -12,7 +12,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
@@ -101,6 +101,7 @@ public:
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testVoidReturnType);
 		TESTER_ADD_TEST(testStaticArrays);
+		TESTER_ADD_TEST(testArrayLiterals);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testVoidReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -2039,6 +2040,29 @@ private:
 			auto static_arr_inner
 				= static_arr.getElementType().getType().as<compiler::tsh::StaticArrayAbstractType>();
 			ASSERT_EQUAL(static_arr_inner.getSize(), 2);
+		}
+	}
+
+	void testArrayLiterals() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/array_literals")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(0);
+
+		auto& statements = function->body->statements;
+
+		using namespace compiler::helios::code;
+
+		{
+			// let magic_square = LITERAL;
+			auto& def = dynamic_cast<const VariableStmt&>(*statements.at(0));
+			auto  agg = dynamic_cast<const CreateAggregateExpr*>(def.initial_value.get());
+			// [2, 7, 6]
+			auto first_row = dynamic_cast<const CreateAggregateExpr*>(agg->values.at(0).get());
+			auto elem      = dynamic_cast<const LiteralNumericExpr*>(first_row->values.at(1).get());
+			auto inner     = elem->value.get<i32>();
+			ASSERT_TRUE(inner.has_value());
+			ASSERT_EQUAL(*inner, 7);
 		}
 	}
 
