@@ -58,7 +58,7 @@ impl SolverFreeze {
                 )
             };
             parent.dependencies_realization.insert(
-                dependency_edge.manifest_child_ename,
+                dependency_edge.dep_ename,
                 PackageId::new(dependency_edge.dep_identity, destination),
             );
         }
@@ -290,7 +290,7 @@ metadata:
                 DependencyEdge {
                     parent: pkg_a,
                     dep_identity: identity_c,
-                    manifest_child_ename: StrId::new("c"),
+                    dep_ename: StrId::new("c"),
                 },
                 Version::new(3, 0, 0),
             )]),

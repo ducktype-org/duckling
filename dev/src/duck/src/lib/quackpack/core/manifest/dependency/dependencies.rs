@@ -36,7 +36,7 @@ impl Dependencies {
             let maybe_overriden_kind = seen_enames.insert(ename, kind);
             if let Some(overriden_kind) = maybe_overriden_kind {
                 qp_bail!(
-                    "{kind} dependency `{}` has the same name as a {overriden_kind} dependency",
+                    "multiple dependencies (one {overriden_kind} and one {kind}) named `{}`",
                     dep.diagnostic_name(),
                 )
             }

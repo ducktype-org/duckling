@@ -1053,7 +1053,7 @@ dev-dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            ["dev dependency `a` has the same name as a normal dependency"]
+            ["multiple dependencies (one normal and one dev) named `a`"]
         )
     );
 }

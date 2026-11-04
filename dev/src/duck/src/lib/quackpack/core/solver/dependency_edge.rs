@@ -15,7 +15,7 @@ use crate::quackpack::core::{Dependency, PackageId, Source};
 pub struct DependencyEdge {
     pub parent: PackageId,
     pub dep_identity: FullIdentity,
-    pub manifest_child_ename: StrId,
+    pub dep_ename: StrId,
 }
 
 impl DependencyEdge {
@@ -31,7 +31,7 @@ impl DependencyEdge {
             .map(|child_origin| Self {
                 parent,
                 dep_identity: FullIdentity::new(manifest_dependency.name(), *child_origin),
-                manifest_child_ename: manifest_dependency.effective_name(),
+                dep_ename: manifest_dependency.effective_name(),
             })
     }
 }
