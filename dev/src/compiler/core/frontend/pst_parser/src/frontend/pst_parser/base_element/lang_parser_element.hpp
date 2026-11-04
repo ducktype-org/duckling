@@ -18,9 +18,7 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 
-#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/misc/anycast.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -88,43 +86,14 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+		/*********************************************************
+		 * Subtype definitions and friend declarations
+		 ********************************************************/
+
+	private:
 		THIS_CLASS(LangElement);
 
-	protected:
-		/**
-		 * @TODO: #2938 Change position handling
-		 * @TODO: #2938 Consider what should happen with context hash
-		 * @TODO: #2938 Consider what should happen with token ownership
-		 */
-		explicit LangElement(pst::CloneDummy, const LangElement& other):
-			  source_position(other.source_position),
-			  context_hash(),
-			  element_kind(other.element_kind),
-			  id(PstID::next()) {}
-
-		/**
-		 * @brief Virtual function cloneElement that calls all of the parts of cloning that need to
-		 * be done.
-		 *
-		 * The implementation is should only be defined in final elements.
-		 */
-		virtual CLONE_SIGNATURE() = 0;
-
-		/**
-		 * @brief A non-virtual function that is performed on each inheritance level of elements to
-		 * clone the children elements.
-		 */
-		void cloneSubElements(const LangElement&) { return; }
-
 	public:
-		/**
-		 * @brief Returns a clone of the PST subtree starting in the current element.
-		 */
-		[[nodiscard]]
-		MBox<LangElement> clone() const;
-
-		using SubToken = base::CRef<lexer::Token>;
-
 		/**
 		 * @brief Needed for access to element path methods.
 		 */
@@ -141,15 +110,120 @@ namespace pst {
 		friend class FreeAutomatic;
 		friend class CloningUtils;
 
-		using Child = AccessLocked<LangElement>;
-
 		struct NamedChild final {
 			std::string               name;
 			AccessLocked<LangElement> element;
 		};
 
+		using SubToken   = base::CRef<lexer::Token>;
+		using Child      = AccessLocked<LangElement>;
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
+	protected:
+		struct InternalNamedChild final {
+			std::string      name;
+			Ref<LangElement> element;
+		};
+
+		using InternalChild      = Ref<LangElement>;
+		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
+
+		/**************************\
+		|   STATIC ELEMENT DATA    |
+		\**************************/
+
+	protected:
+		/**
+		 * @brief Map from stable hash to lang element for all created elements.
+		 * @note Used to view dependent tokens of node in the query graph and for HELIOS PST origin.
+		 */
+		static concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
+
+		/************************\
+		|   LANG ELEMENT DATA    |
+		\************************/
+
+	protected:
+		dia::SourcePosition source_position;
+		HashType            context_hash;
+
+		/**
+		 * All of the children elements meant for generic analysis of the tree.
+		 */
+		std::vector<InternalSubElement> sub_elements;
+
+		/**
+		 * Parent element in PST if element is not root.
+		 */
+		base::Optional<AccessLocked<LangElement>> parent;
+
+		/**
+		 * The Path that uniquely identifies the
+		 * element and allows to conserve some
+		 * information between compilations. Has
+		 * no value if it's incalculable.
+		 */
+		base::Optional<hashing::ComponentHash> element_path_hash;
+
+		/**
+		 * The Hash that encodes the element path and data and allows to conserve some
+		 * information between compilations. Has no value if it's incalculable.
+		 */
+		base::Optional<HashType> hash;
+
+		// @TODO: #2404 We should have a RootElement that stores this information instead of storing
+		// it in each element, but for now it is easier to keep it here.
+		base::Optional<AdditionalRootData> additional_root_data;
+
+		/**
+		 * @brief Kind of the element.
+		 * @note This is mostly for HELIOS to decide how to create scopes.
+		 */
+		ElementKind element_kind = ElementKind::KindNotSet;
+
+		/******************************************
+		 * Cloning infrastructure
+		 ******************************************/
+
+	protected:
+		/**
+		 * @brief Cloning constructor. Should only be used by the cloning mechanism of the parser.
+		 * @TODO: #2938 Change position handling
+		 * @TODO: #2938 Consider what should happen with context hash
+		 * @TODO: #2938 Consider what should happen with token ownership
+		 */
+		explicit LangElement(pst::CloneDummy, const LangElement& other):
+			  source_position(other.source_position),
+			  context_hash(),
+			  element_kind(other.element_kind),
+			  id(PstID::next()) {}
+
+		/**
+		 * @brief Virtual function cloneElement that calls all of the parts of cloning that need to
+		 * be done.
+		 *
+		 * The implementation should only be defined in final elements.
+		 */
+		virtual CLONE_SIGNATURE() = 0;
+
+		/**
+		 * @brief A non-virtual function that is performed on each inheritance level of elements to
+		 * clone the children elements.
+		 */
+		void cloneSubElements(const LangElement&) { return; }
+
+	public:
+		/**
+		 * @brief Returns a clone of the PST subtree starting in the current element.
+		 */
+		[[nodiscard]]
+		MBox<LangElement> clone() const;
+
+		/****************************************
+		 * Normal Constructors
+		 ****************************************/
+
+	public:
 		explicit LangElement(LangElementConstructionData state):
 			  source_position(internal::getPosition(state)),
 			  context_hash(internal::getContextHash(state)),
@@ -158,40 +232,11 @@ namespace pst {
 		LangElement(const LangElement&) = delete;
 		LangElement(LangElement&&)      = delete;
 
-		/**
-		 * @brief Position covering the whole element.
-		 */
-		[[nodiscard]]
-		SourcePositionLocked getSourcePosition() const;
+		/*****************************************
+		 * Children views
+		 ****************************************/
 
-		/**
-		 * @brief The stable position of an element.
-		 */
-		[[nodiscard]]
-		dia::StablePosition getStablePosition() const;
-
-		/**
-		 * @brief Given a StablePosition of an element, returns the source position of the element.
-		 */
-		static dia::SourcePosition getActiveSourcePosition(
-			query::Context& ctx, const dia::StablePosition& pos
-		);
-
-		/**
-		 * @brief Given a StablePosition of an element, returns the source position of the element,
-		 * bypasses the query graph.
-		 */
-		static dia::SourcePosition getActiveSourcePositionIllegalAccess(const dia::StablePosition& pos
-		);
-
-		/**
-		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
-		 * @note should not be used in query, currently used by by `queryPositionDependencies`
-		 * machinery for test/insight purposes.
-		 */
-		[[nodiscard]]
-		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
-
+	public:
 		/**
 		 * @brief View all sub-elements.
 		 */
@@ -243,69 +288,42 @@ namespace pst {
 			     | transform(base::choose<SubToken, SubElement>);
 		}
 
-		[[nodiscard]]
-		PstID getID() const {
-			return id;
-		}
+		/*****************************************
+		 * Position methods
+		 *****************************************/
 
-		[[nodiscard]]
-		HashType getHash() const {
-			CORE_ASSERT(hash.has_value(), "Hash not calculated for this: " + elementType());
-			return hash.value();
-		}
-
+	public:
 		/**
-		 * @return Whether an element is just a statement aggregate.
-		 * As of 11.12.2024 there are 4 statement aggregates:
-		 * * CodeBlock
-		 * * CodeBlockOrStmt
-		 * * TopLevel
-		 * *
+		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
-		virtual bool isStatementAggregate() const {
-			return false;
-		}
+		SourcePositionLocked getSourcePosition() const;
 
 		/**
-		 * @return if element is a statements
+		 * @brief The stable position of an element.
 		 */
 		[[nodiscard]]
-		virtual bool isStatement() const {
-			return false;
-		}
-
-		[[nodiscard]]
-		base::Optional<AccessLocked<LangElement>> getParent() const;
+		dia::StablePosition getStablePosition() const;
 
 		/**
-		 * @brief Returns a string of element type.
-		 *
-		 * Mostly for debugging and visualization.
-		 * @todo add element type the stringifiable enum
-		 * @note it is used by helios as a hacky way to check if given element in an expression
+		 * @brief Given a StablePosition of an element, returns the source position of the element.
 		 */
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Element";
-		}
+		static dia::SourcePosition getActiveSourcePosition(
+			query::Context& ctx, const dia::StablePosition& pos
+		);
 
 		/**
-		 * @brief Returns the kind of the element.
-		 * This is mostly to decide how HELIOS will create scopes for this element.
-		 * We might change it to "ScopeKind" in the future.
-		 * For now we keep logic of deciding on ScopeKinds in HELIOS
-		 * for consistency.
+		 * @brief Given a StablePosition of an element, returns the source position of the element,
+		 * bypasses the query graph.
 		 */
-		[[nodiscard]]
-		ElementKind getElementKind() const {
-			CORE_ASSERT(
-				element_kind != ElementKind::KindNotSet,
-				base::strConcat("Element kind not set. Element type: ", elementType())
-			);
-			return element_kind;
-		}
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(const dia::StablePosition& pos
+		);
 
+		/*************************************************
+		 * Calculating element paths
+		 ************************************************/
+
+	public:
 		[[nodiscard]]
 		const hashing::ComponentHash& getElementPathHash() const {
 			CORE_ASSERT(
@@ -315,90 +333,7 @@ namespace pst {
 			return element_path_hash.value();
 		}
 
-		virtual void acceptVisitor(PstVisitor& visitor) const;
-
-		[[nodiscard]]
-		const AdditionalRootData& getAdditionalRootData() const {
-			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
-			return additional_root_data.value();
-		}
-
-		/**
-		 * @brief Returns whether the element has additional root data.
-		 * @TODO: #2996 Remove this in favor of some kind of having more proper
-		 * knowledge of PST origin (bake/expand/user/etc).
-		 * This is currently used to hack-in the check for whether a template is baked or not, which
-		 * is not a good solution.
-		 */
-		[[nodiscard]]
-		bool hasAdditionalRootData() const {
-			return additional_root_data.has_value();
-		}
-
 	protected:
-		/**
-		 * @brief Map from stable hash to lang element for all created elements.
-		 * @note Used to view dependent tokens of node in the query graph and for HELIOS PST origin.
-		 */
-		static concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
-
-		using InternalChild = Ref<LangElement>;
-
-		struct InternalNamedChild final {
-			std::string      name;
-			Ref<LangElement> element;
-		};
-
-		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
-
-		/************************\
-		|   LANG ELEMENT DATA    |
-		\************************/
-
-		dia::SourcePosition source_position;
-		HashType            context_hash;
-
-		/**
-		 * All of the children elements meant for generic analysis of the tree.
-		 */
-		std::vector<InternalSubElement> sub_elements;
-
-		/**
-		 * Parent element in PST if element is not root.
-		 */
-		base::Optional<AccessLocked<LangElement>> parent;
-
-		/**
-		 * The Path that uniquely identifies the
-		 * element and allows to conserve some
-		 * information between compilations. Has
-		 * no value if it's incalculable.
-		 */
-		base::Optional<hashing::ComponentHash> element_path_hash;
-
-		/**
-		 * The Hash that encodes the element path and data and allows to conserve some
-		 * information between compilations. Has no value if it's incalculable.
-		 */
-		base::Optional<HashType> hash;
-
-		// @TODO: #2404 We should have a RootElement that stores this information instead of storing
-		// it in each element, but for now it is easier to keep it here.
-		base::Optional<AdditionalRootData> additional_root_data;
-
-		/**
-		 * @brief Kind of the element.
-		 * @note This is mostly for HELIOS to decide how to create scopes.
-		 */
-		ElementKind element_kind = ElementKind::KindNotSet;
-
-		void dprintPrefix(std::ostream& out) const override {
-			tpc::Element::dprintPrefix(out);
-			out << R"("position": )";
-			source_position.printToJson(out);
-			out << ", ";
-		}
-
 		/**
 		 * @brief Calculates the Element paths for children of this element, has to be overriden for
 		 * elements that have unnamed children.
@@ -456,6 +391,26 @@ namespace pst {
 		 */
 		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::ComponentHash&);
 
+		/**********************************************
+		 * Hashes and signing
+		 *********************************************/
+
+	public:
+		[[nodiscard]]
+		HashType getHash() const {
+			CORE_ASSERT(hash.has_value(), "Hash not calculated for this: " + elementType());
+			return hash.value();
+		}
+
+		/**
+		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
+		 * @note should not be used in query, currently used by by `queryPositionDependencies`
+		 * machinery for test/insight purposes.
+		 */
+		[[nodiscard]]
+		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
+
+	protected:
 		/**
 		 * @brief Calculates the hashes recursively for the element and all children.
 		 */
@@ -511,6 +466,11 @@ namespace pst {
 		 */
 		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const = 0;
 
+		/*******************************************
+		 * Element construction methods
+		 ******************************************/
+
+	protected:
 		void addToken(const lexer::Token& token);
 		void addToken(const Box<lexer::Token>& token);
 		void addToken(CRef<lexer::Token> token);
@@ -558,6 +518,96 @@ namespace pst {
 		 * @note This should only be used for root elements of the PST.
 		 */
 		void setAdditionalRootData(AdditionalRootData data);
+
+		/****************************************
+		 * Misc
+		 ****************************************/
+
+	public:
+		[[nodiscard]]
+		PstID getID() const {
+			return id;
+		}
+
+		/**
+		 * @return Whether an element is just a statement aggregate.
+		 * As of 11.12.2024 there are 4 statement aggregates:
+		 * * CodeBlock
+		 * * CodeBlockOrStmt
+		 * * TopLevel
+		 * *
+		 */
+		[[nodiscard]]
+		virtual bool isStatementAggregate() const {
+			return false;
+		}
+
+		/**
+		 * @return if element is a statements
+		 */
+		[[nodiscard]]
+		virtual bool isStatement() const {
+			return false;
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<LangElement>> getParent() const;
+
+		/**
+		 * @brief Returns a string of element type.
+		 *
+		 * Mostly for debugging and visualization.
+		 * @todo add element type the stringifiable enum
+		 * @note it is used by helios as a hacky way to check if given element in an expression
+		 */
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Element";
+		}
+
+		/**
+		 * @brief Returns the kind of the element.
+		 * This is mostly to decide how HELIOS will create scopes for this element.
+		 * We might change it to "ScopeKind" in the future.
+		 * For now we keep logic of deciding on ScopeKinds in HELIOS
+		 * for consistency.
+		 */
+		[[nodiscard]]
+		ElementKind getElementKind() const {
+			CORE_ASSERT(
+				element_kind != ElementKind::KindNotSet,
+				base::strConcat("Element kind not set. Element type: ", elementType())
+			);
+			return element_kind;
+		}
+
+		virtual void acceptVisitor(PstVisitor& visitor) const;
+
+		[[nodiscard]]
+		const AdditionalRootData& getAdditionalRootData() const {
+			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
+			return additional_root_data.value();
+		}
+
+		/**
+		 * @brief Returns whether the element has additional root data.
+		 * @TODO: #2996 Remove this in favor of some kind of having more proper
+		 * knowledge of PST origin (bake/expand/user/etc).
+		 * This is currently used to hack-in the check for whether a template is baked or not, which
+		 * is not a good solution.
+		 */
+		[[nodiscard]]
+		bool hasAdditionalRootData() const {
+			return additional_root_data.has_value();
+		}
+
+	protected:
+		void dprintPrefix(std::ostream& out) const override {
+			tpc::Element::dprintPrefix(out);
+			out << R"("position": )";
+			source_position.printToJson(out);
+			out << ", ";
+		}
 
 	private:
 		PstID id = PstID::next();

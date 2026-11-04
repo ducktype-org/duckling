@@ -29,9 +29,9 @@
  */
 #pragma once
 
+#include "automatic_errors.hpp"
 #include "base_element.hpp"
 #include "common_elements.hpp"
-#include "automatic_errors.hpp"
 
 #include <concepts>
 

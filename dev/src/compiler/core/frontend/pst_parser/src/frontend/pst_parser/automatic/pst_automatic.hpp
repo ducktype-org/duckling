@@ -27,8 +27,6 @@
 #include "../access/access_pst.hpp"
 #include "../base_element/lang_parser_element.hpp"
 
-#include <token_parser_core/parser_state.hpp>
-
 #define PST_AUTOMATIC_SKIP(ret) \
 	if (state.isSkipping()) { return ret; }
 
