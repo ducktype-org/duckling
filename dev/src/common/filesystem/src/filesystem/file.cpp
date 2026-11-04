@@ -41,12 +41,27 @@ namespace {
 		if (!path.isVirtual()) CORE_PANIC("Path is not a virtual path: " + path.string());
 	}
 
-	// Best-effort reason for a stream that would not open. `std::ofstream` reports no
-	// error_code, so errno - which the implementation sets on a failed open - is all there is.
-	std::string openFailureReason(const fs::FilePath& path) {
+	// Best-effort reason for a failed stream operation. `std::ofstream` reports no error_code, so
+	// errno - which the implementation sets when the underlying open or write fails - is all there
+	// is. Callers zero errno right before the operation; if it is still zero, the platform told us
+	// nothing more than `fallback`.
+	std::string streamFailureReason(const fs::FilePath& path, std::string_view fallback) {
 		auto reason = errno != 0 ? std::error_code(errno, std::generic_category()).message()
-		                         : std::string("could not be opened for writing");
+		                         : std::string(fallback);
 		return path.string() + ": " + reason;
+	}
+
+	// Writes `content` to an open stream and closes it. The close is part of the check: a stream
+	// buffers small writes, so a failure such as a full disk often surfaces only when the buffer
+	// is flushed on close - and a close left to the destructor swallows it.
+	std::expected<void, std::string> writeAndClose(
+		std::ofstream& ofs, const fs::FilePath& path, std::string_view content
+	) {
+		errno = 0;
+		ofs << content;
+		ofs.close();
+		if (!ofs) return std::unexpected(streamFailureReason(path, "could not be written"));
+		return {};
 	}
 
 	fs::FilePath randomName(const fs::FilePath& prefix_path, const size_t name_len = 16) {
@@ -137,13 +152,10 @@ namespace fs {
 
 		errno = 0;
 		std::ofstream ofs(abs_path.getPath(), allow_overwrite ? std::ios::trunc : std::ios::out);
-		// A stream carries no error_code, so the reason has to come from errno, which the
-		// implementation sets on a failed open. It is best effort: a zero errno just means the
-		// platform told us nothing more than "it failed".
-		if (!ofs) return std::unexpected(openFailureReason(abs_path));
-		ofs << content;
-		ofs.close();
-		if (!ofs) return std::unexpected("failed to write to " + abs_path.string());
+		if (!ofs)
+			return std::unexpected(streamFailureReason(abs_path, "could not be opened for writing"));
+		if (auto written = writeAndClose(ofs, abs_path, content); !written)
+			return std::unexpected(written.error());
 		return abs_path;
 	}
 
@@ -334,10 +346,9 @@ namespace fs {
 		errno                   = 0;
 		std::ios::openmode mode = append ? (std::ios::out | std::ios::app) : std::ios::out;
 		std::ofstream      ofs(path.getPath(), mode);
-		if (!ofs) return std::unexpected(openFailureReason(path));
-		ofs << new_content;
-		if (ofs.fail()) return std::unexpected("failed to write to " + path.string());
-		return {};
+		if (!ofs)
+			return std::unexpected(streamFailureReason(path, "could not be opened for writing"));
+		return writeAndClose(ofs, path, new_content);
 	}
 
 	void File::writeToFileUnsafe(std::string_view new_content, bool append) const {

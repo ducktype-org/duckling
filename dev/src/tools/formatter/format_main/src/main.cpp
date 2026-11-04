@@ -90,9 +90,14 @@ namespace {
 			return 1;
 		}
 
-		if (options.isFlag("in-place"))
-			file_to_format.writeToFileUnsafe(formatted);
-		else
+		if (options.isFlag("in-place")) {
+			// A file that cannot be written - read-only, a full disk - is the user's to hear about,
+			// not a reason to crash; the error already names the file.
+			if (auto written = file_to_format.writeToFile(formatted); not written) {
+				std::cerr << "Error: cannot write the formatted file: " << written.error() << "\n";
+				return 1;
+			}
+		} else
 			std::cout << formatted;
 
 		return 0;

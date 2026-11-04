@@ -27,6 +27,7 @@ public:
 		TESTER_ADD_TEST(fileManagerTest);
 		TESTER_ADD_TEST(fileTest);
 		TESTER_ADD_TEST(vfsBindingTest);
+		TESTER_ADD_TEST(writeFailureTest);
 	}
 
 private:
@@ -687,6 +688,28 @@ private:
 		assertTrue(
 			as_virtual.getVfs().value().get() == &other, "toVirtualPath must honour its target"
 		);
+	}
+
+	void writeFailureTest() {
+		// `/dev/full` opens fine but fails every write with ENOSPC - a full disk on demand. It is
+		// Linux-only, so elsewhere there is nothing to check.
+		const fs::FilePath dev_full("/dev/full");
+		if (!dev_full.exists()) return;
+
+		// A write small enough to sit in the stream's buffer only fails when that buffer is
+		// flushed on close, so these catch a check made before the close.
+		const fs::File full(dev_full);
+		for (const bool append: { false, true }) {
+			auto written = full.writeToFile("small", append);
+			assertTrue(!written.has_value(), "A buffered write to a full device must fail");
+			assertTrue(
+				written.error().find("No space left on device") != std::string::npos,
+				"The failure should carry the reason, got: " + written.error()
+			);
+		}
+
+		auto created = fs::FileManager::createPhysicalFile(dev_full, "small", true);
+		assertTrue(!created.has_value(), "Creating a file on a full device must fail");
 	}
 };
 
