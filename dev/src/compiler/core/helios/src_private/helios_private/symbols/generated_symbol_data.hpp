@@ -60,9 +60,8 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated method shared by all types (the destructor, `length` and
-	 * `toString`), or a generated comparison operator of an aggregate type (`==`, `!=`, `<`, `<=`,
-	 * `>`, `>=`). The concrete method is distinguished by `kind`.
+	 * Represents a compiler-generated method shared by all types (the destructor, `length`, and
+	 * `toString`, or comparison operator). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
 		enum class Kind {
@@ -102,14 +101,14 @@ namespace compiler::helios::defgen {
 		case Method::Kind::ToString:
 			return false;
 		}
-		return false;
+		CORE_UNREACHABLE();
 	}
 
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
 		tsh::FunctionAbstractType operator_type;
 
-		HOUTFunctionDeclaration::Operatoriness operatoriness;
+		HOUTFunctionDeclaration::Operatoriness operatoriness{};
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

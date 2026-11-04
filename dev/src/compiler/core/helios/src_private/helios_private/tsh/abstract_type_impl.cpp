@@ -14,6 +14,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
@@ -38,6 +39,8 @@ namespace compiler::tsh {
 		 * @return The default interface for the given type.
 		 */
 		TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+			using helios::defgen::COMPARISON_METHODS;
+			using helios::defgen::generatedComparisonSymForType;
 			using helios::defgen::generatedCopyConstructorSymForType;
 			using helios::defgen::generatedDestructSymForType;
 			using helios::defgen::generatedToStringSymForType;
@@ -75,6 +78,19 @@ namespace compiler::tsh {
 					InterfaceElement::InterfaceElementKind::Method,
 					MemberVisibility::Public,
 					MemberSpecialKind::ToString
+				);
+			}
+
+			// Every type has the comparison operators. When they can't be generated for the type,
+			// it is reported once they are used.
+			for (const auto& comparison: COMPARISON_METHODS) {
+				elements.emplace_back(
+					generatedComparisonSymForType(ctx, type, comparison.kind),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::Method,
+					MemberVisibility::Public,
+					comparison.special_kind
 				);
 			}
 
@@ -364,7 +380,9 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		CORE_PANIC("Meta type interface does not exist yet.");
+		// A type has only the default interface, so for example it can be compared as a field.
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getDeclaredInterface(query::Context&) const {

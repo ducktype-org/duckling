@@ -7,9 +7,9 @@ This includes:
 - Default constructors
 - Destructors
 - Stringification
-- Comparison operators of tuples and classes
+- Comparison operators (`==`, `!=`, `<`, `<=`, `>`, `>=`)
 
 This does not include:
-- User-defined constructors / destructors / stringification
+- User-defined constructors / destructors / stringification / comparison operators
 - Typical compilation, such as converting user-defined functions into HOUT.  
   It technically generates function definitions in HOUT form, but it is not to be confused with the generation happening in this directory, which procedurally generates definitions where the user has not provided them.

@@ -10,234 +10,168 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
-#include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/except/exceptions.hpp>
+
+#include <diagnostic/placeholder.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
 #include <ranges>
 
 namespace compiler::helios::defgen {
 	using namespace code::shorthands;
 
-	namespace {
-		lexer::Operator equalOp() {
-			static const lexer::Operator equal_op{ base::StrID("==") };
-			return equal_op;
-		}
-
-		lexer::Operator lessOp() {
-			static const lexer::Operator less_op{ base::StrID("<") };
-			return less_op;
-		}
-
-		bool isEqualityKind(const Method::Kind kind) {
-			return kind == Method::Kind::Equal or kind == Method::Kind::NotEqual;
-		}
-
-		/**
-		 * @brief Whether a field of type @p field_type supports @p base_kind, which is either
-		 * `Equal` or `Less` — the only two operators a generated body applies to fields.
-		 */
-		bool fieldSupports(
-			query::Context& ctx, const tsh::AbstractType field_type, const Method::Kind base_kind
-		) {
-			switch (field_type.getKind()) {
-			case tsh::Kind::Integral:
-			case tsh::Kind::Float:
-			case tsh::Kind::Char:
-				return true;
-			case tsh::Kind::Bool:
-			case tsh::Kind::Meta:
-				return base_kind == Method::Kind::Equal;
-			case tsh::Kind::Tuple:
-			case tsh::Kind::Class:
-				return canGenerateComparison(ctx, field_type, base_kind);
-			default:
-				return false;
-			}
-		}
+	const ComparisonMethodInfo& comparisonMethodInfo(const Method::Kind kind) {
+		const auto* const info
+			= std::ranges::find(COMPARISON_METHODS, kind, &ComparisonMethodInfo::kind);
+		CORE_ASSERT(info != COMPARISON_METHODS.end(), "Expected a comparison method kind.");
+		return *info;
 	}
 
-	base::Optional<Method::Kind> comparisonKindForOperator(const lexer::Operator op) {
-		const auto spelling = op.value.strView();
-		if (spelling == "==") return Method::Kind::Equal;
-		if (spelling == "!=") return Method::Kind::NotEqual;
-		if (spelling == "<") return Method::Kind::Less;
-		if (spelling == "<=") return Method::Kind::LessEqual;
-		if (spelling == ">") return Method::Kind::Greater;
-		if (spelling == ">=") return Method::Kind::GreaterEqual;
-		return {};
+	SymID comparisonSymForType(
+		query::Context& ctx, const tsh::AbstractType type, const Method::Kind kind
+	) {
+		const auto comparison
+			= type.getInterface(ctx)->getSpecialElement(comparisonMethodInfo(kind).special_kind);
+		CORE_ASSERT(
+			comparison.has_value(), "Every type carrying information should have comparisons."
+		);
+		return comparison.value()->getSymbol();
 	}
 
 	SymID generatedComparisonSymForType(
 		query::Context& ctx, const tsh::AbstractType type, const Method::Kind kind
 	) {
-		CORE_ASSERT(isComparisonMethodKind(kind), "Expected a comparison method kind.");
-		const auto spelling = [&] {
-			switch (kind) {
-			case Method::Kind::Equal:
-				return "==";
-			case Method::Kind::NotEqual:
-				return "!=";
-			case Method::Kind::Less:
-				return "<";
-			case Method::Kind::LessEqual:
-				return "<=";
-			case Method::Kind::Greater:
-				return ">";
-			case Method::Kind::GreaterEqual:
-				return ">=";
-			default:
-				CORE_UNREACHABLE();
-			}
-		}();
 		return ctx.query<QueryGeneratedSymbol>({
-			.name                  = base::StrID(spelling),
+			.name                  = base::StrID(comparisonMethodInfo(kind).spelling),
 			.generated_symbol_data = Method{ .owner_type = type, .kind = kind },
 		});
 	}
 
-	bool canGenerateComparison(
-		query::Context& ctx, const tsh::AbstractType type, const Method::Kind kind
-	) {
-		if (type.getKind() != tsh::Kind::Tuple and type.getKind() != tsh::Kind::Class) return false;
-		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
-		if (not type.carriesInformation(ctx)) return false;
-
-		const auto base_kind = isEqualityKind(kind) ? Method::Kind::Equal : Method::Kind::Less;
-		// A derived operator is built from its base operator only.
-		if (kind != base_kind) return canGenerateComparison(ctx, type, base_kind);
-
-		return std::ranges::all_of(
-			type.getInterface(ctx)->getFieldsView(),
-			[&](const tsh::InterfaceElement& field) {
-				return fieldSupports(ctx, field.getType(ctx).getType(), base_kind);
-			}
-		);
-	}
-
-	struct IMPLEMENT_QUERY(QueryComparisonMethod, query::QResult<HOUTFunction>) {
+	namespace {
 		/**
-		 * @brief `a == b` for every field, joined with `and`.
+		 * @brief The value of the operand at @p idx of a comparison operator. Operands of simple
+		 * types are passed by value, the others by reference.
 		 */
-		static Box<code::Expr> generateEqual(
-			Context&                            ctx,
-			const std::vector<Box<code::Expr>>& lhs_fields,
-			const std::vector<Box<code::Expr>>& rhs_fields
+		Box<code::Expr> operandValue(
+			const Shorthand& s, const HOUTFunctionDeclaration& decl, const usize idx
+		) {
+			const auto& param = decl.parameters.at(idx);
+			auto        ident = s.ident(param.helios_symbol);
+			if (param.type.getRefKind() == tsh::ReferenceKind::Direct) return ident;
+			return s.deref(std::move(ident));
+		}
+
+		/**
+		 * @brief Calls the comparison operator @p kind of @p type, which may be user-defined.
+		 */
+		Box<code::Expr> callComparison(
+			query::Context&         ctx,
+			const tsh::AbstractType type,
+			const Method::Kind      kind,
+			Box<code::Expr>         lhs,
+			Box<code::Expr>         rhs
 		) {
 			const Shorthand s{ ctx };
-			Box<code::Expr> result = code::resolveBinaryOperatorInGeneratedCode(
-				ctx, equalOp(), lhs_fields.back()->clone(), rhs_fields.back()->clone()
+			const SymID     comparison_sym = comparisonSymForType(ctx, type, kind);
+			// The right-hand side of a user-defined operator may be taken by value.
+			const auto rhs_type = ctx.query<QueryTypeOfSymbol>(comparison_sym)
+			                          ->valueOrThrow()
+			                          .getType()
+			                          .as<tsh::FunctionAbstractType>()
+			                          .getParameterTypes()
+			                          .at(1);
+			return s.call(
+				s.ident(comparison_sym),
+				s.prepToPassSelf(std::move(lhs)),
+				s.coerce(s.prepToPassSelf(std::move(rhs)), rhs_type)
 			);
-			for (usize idx = lhs_fields.size() - 1; idx-- > 0;) {
-				auto fields_equal = code::resolveBinaryOperatorInGeneratedCode(
-					ctx, equalOp(), lhs_fields[idx]->clone(), rhs_fields[idx]->clone()
-				);
-				result = s.binOp(
-					std::move(fields_equal), code::BuiltinBinary::BooleanAnd, std::move(result)
-				);
-			}
-			return result;
 		}
 
 		/**
-		 * @brief Lexicographic `<`: the first field where one side is less decides. Uses only `<`
-		 * on the fields, so `a < b or (not (b < a) and <the rest>)`.
+		 * @brief The fields taking part in the comparison of an aggregate. Fields which don't
+		 * carry information are always equal, so they are skipped.
 		 */
-		static Box<code::Expr> generateLess(
-			Context&                            ctx,
-			const std::vector<Box<code::Expr>>& lhs_fields,
-			const std::vector<Box<code::Expr>>& rhs_fields
+		std::vector<tsh::InterfaceElement> comparedFields(
+			query::Context& ctx, const tsh::AbstractType aggregate_type
 		) {
-			const Shorthand s{ ctx };
-			auto            less = [&](const usize idx, const bool swapped) {
-                const auto& lhs = swapped ? rhs_fields[idx] : lhs_fields[idx];
-                const auto& rhs = swapped ? lhs_fields[idx] : rhs_fields[idx];
-                return code::resolveBinaryOperatorInGeneratedCode(
-                    ctx, lessOp(), lhs->clone(), rhs->clone()
-                );
-			};
-
-			Box<code::Expr> result = less(lhs_fields.size() - 1, false);
-			for (usize idx = lhs_fields.size() - 1; idx-- > 0;) {
-				auto not_greater = s.unOp(code::BuiltinUnary::BooleanNot, less(idx, true));
-				auto rest        = s.binOp(
-                    std::move(not_greater), code::BuiltinBinary::BooleanAnd, std::move(result)
-                );
-				result = s.binOp(less(idx, false), code::BuiltinBinary::BooleanOr, std::move(rest));
-			}
-			return result;
+			return aggregate_type.getInterface(ctx)->getFieldsView()
+			     | std::views::filter([&](const tsh::InterfaceElement& field) {
+					   return field.getType(ctx).getType().carriesInformation(ctx);
+				   })
+			     | std::ranges::to<std::vector>();
 		}
 
 		/**
-		 * @brief The boolean expression computing the comparison @p method of `self` and `other`.
+		 * @brief Calls the comparison operator @p kind on the field @p field of the operands
+		 * at @p lhs_idx and @p rhs_idx.
 		 */
-		static Box<code::Expr> generateResult(
-			Context& ctx, const Method& method, const HOUTFunctionDeclaration& decl
+		Box<code::Expr> compareFields(
+			query::Context&                ctx,
+			const HOUTFunctionDeclaration& decl,
+			const tsh::InterfaceElement&   field,
+			const Method::Kind             kind,
+			const usize                    lhs_idx,
+			const usize                    rhs_idx
 		) {
 			const Shorthand s{ ctx };
-			const SymID     self_sym  = decl.parameters.at(0).helios_symbol;
-			const SymID     other_sym = decl.parameters.at(1).helios_symbol;
-			auto            self      = [&] { return s.deref(s.ident(self_sym)); };
-			auto            other     = [&] { return s.deref(s.ident(other_sym)); };
-
-			switch (method.kind) {
-			case Method::Kind::NotEqual:
-				return s.unOp(
-					code::BuiltinUnary::BooleanNot,
-					code::resolveBinaryOperatorInGeneratedCode(ctx, equalOp(), self(), other())
-				);
-			case Method::Kind::Greater:
-				return code::resolveBinaryOperatorInGeneratedCode(ctx, lessOp(), other(), self());
-			case Method::Kind::LessEqual:
-				return s.unOp(
-					code::BuiltinUnary::BooleanNot,
-					code::resolveBinaryOperatorInGeneratedCode(ctx, lessOp(), other(), self())
-				);
-			case Method::Kind::GreaterEqual:
-				return s.unOp(
-					code::BuiltinUnary::BooleanNot,
-					code::resolveBinaryOperatorInGeneratedCode(ctx, lessOp(), self(), other())
-				);
-			case Method::Kind::Equal:
-			case Method::Kind::Less: {
-				std::vector<Box<code::Expr>> lhs_fields;
-				std::vector<Box<code::Expr>> rhs_fields;
-				for (const auto& field: method.owner_type.getInterface(ctx)->getFieldsView()) {
-					lhs_fields.emplace_back(s.access(self(), field.getSymbol()));
-					rhs_fields.emplace_back(s.access(other(), field.getSymbol()));
-				}
-				CORE_ASSERT(not lhs_fields.empty(), "A type carrying information has a field.");
-				return method.kind == Method::Kind::Equal
-				         ? generateEqual(ctx, lhs_fields, rhs_fields)
-				         : generateLess(ctx, lhs_fields, rhs_fields);
-			}
-			default:
-				CORE_UNREACHABLE();
-			}
-		}
-
-		static PResult provide(Context& ctx, const QKey comparison_sym) {
-			const auto* method = std::get_if<Method>(&getSymRef(comparison_sym)->other);
-			CORE_ASSERT(
-				method != nullptr and isComparisonMethodKind(method->kind),
-				"QueryComparisonMethod expects a generated comparison symbol."
+			return callComparison(
+				ctx,
+				field.getType(ctx).getType(),
+				kind,
+				s.access(operandValue(s, decl, lhs_idx), field.getSymbol()),
+				s.access(operandValue(s, decl, rhs_idx), field.getSymbol())
 			);
-			const auto& decl = ctx.query<QueryDeclOfFun>(comparison_sym)->valueOrThrow();
+		}
 
-			const Shorthand              s{ ctx };
-			std::vector<Box<code::Stmt>> body{};
-			// The analyzer loses track of the `Box` moved into the statement: a false positive.
-			// NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-			body.emplace_back(s.ret(generateResult(ctx, *method, decl)));
+		/**
+		 * @brief `return self <op> other;`, for types compared with a builtin operation.
+		 */
+		void compareBuiltin(
+			query::Context&                ctx,
+			const HOUTFunctionDeclaration& decl,
+			std::vector<Box<code::Stmt>>&  body,
+			const code::BuiltinBinary      operation
+		) {
+			const Shorthand s{ ctx };
+			body.emplace_back(
+				s.ret(s.binOp(operandValue(s, decl, 0), operation, operandValue(s, decl, 1)))
+			);
+		}
 
+		[[noreturn]] void comparisonNotYetImplemented(
+			query::Context& ctx, const Method::Kind kind, const tsh::AbstractType type
+		) {
+			ctx.log<dia::NotYetImplementedCodeError>(
+				base::strConcat(
+					"The `",
+					comparisonMethodInfo(kind).spelling,
+					"` operator is not yet implemented for the type `",
+					type.toString(),
+					"`."
+				),
+				"Comparison operators are generated for numbers, characters, booleans, pointers, "
+				"tuples and classes. Pointers and values of type `type` can only be compared for "
+				"equality."
+			);
+			query::throwFailed();
+			CORE_UNREACHABLE();
+		}
+
+		HOUTFunction makeComparisonFunction(
+			const HOUTFunctionDeclaration& decl, std::vector<Box<code::Stmt>> body
+		) {
 			return HOUTFunction(
 				code::generatedOrigin(),
 				&decl,
@@ -246,9 +180,183 @@ namespace compiler::helios::defgen {
 				})
 			);
 		}
+	}
+
+	struct IMPLEMENT_QUERY(QueryEqualMethod, query::QResult<HOUTFunction>) {
+		/**
+		 * @brief The fields are compared in order, and the first unequal one decides.
+		 */
+		static void compareAggregate(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& decl,
+			std::vector<Box<code::Stmt>>&  body,
+			const tsh::AbstractType        aggregate_type
+		) {
+			const Shorthand s{ ctx };
+			for (const auto& field: comparedFields(ctx, aggregate_type)) {
+				auto fields_equal = compareFields(ctx, decl, field, Method::Kind::Equal, 0, 1);
+				body.emplace_back(s.ifStmt(
+					s.unOp(code::BuiltinUnary::BooleanNot, std::move(fields_equal)),
+					{ s.ret(s.litBool(false)) }
+				));
+			}
+			body.emplace_back(s.ret(s.litBool(true)));
+		}
+
+		static PResult provide(Context& ctx, const QKey owner_type) {
+			const auto equal_sym
+				= generatedComparisonSymForType(ctx, owner_type, Method::Kind::Equal);
+			const auto& decl = ctx.query<QueryDeclOfFun>(equal_sym)->valueOrThrow();
+
+			std::vector<Box<code::Stmt>> body{};
+
+			switch (owner_type.getKind()) {
+			case tsh::Kind::Byte:
+			case tsh::Kind::Bool:
+			case tsh::Kind::Char:
+			case tsh::Kind::Integral:
+			case tsh::Kind::RawPointer:
+			case tsh::Kind::Pointer:
+			case tsh::Kind::ManyPointer:
+			case tsh::Kind::CPointer: {
+				compareBuiltin(ctx, decl, body, code::BuiltinBinary::IntegerEq);
+				break;
+			}
+			case tsh::Kind::Float: {
+				compareBuiltin(ctx, decl, body, code::BuiltinBinary::FloatEq);
+				break;
+			}
+			case tsh::Kind::Meta: {
+				compareBuiltin(ctx, decl, body, code::BuiltinBinary::MetaEq);
+				break;
+			}
+			case tsh::Kind::Tuple:
+			case tsh::Kind::Class: {
+				compareAggregate(ctx, decl, body, owner_type);
+				break;
+			}
+			default: {
+				comparisonNotYetImplemented(ctx, Method::Kind::Equal, owner_type);
+			}
+			}
+
+			return makeComparisonFunction(decl, std::move(body));
+		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryComparisonMethod);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEqualMethod);
+
+	struct IMPLEMENT_QUERY(QueryLessMethod, query::QResult<HOUTFunction>) {
+		/**
+		 * @brief Lexicographic order: the first field in which the operands differ decides.
+		 * Only `<` is used on the fields.
+		 */
+		static void compareAggregate(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& decl,
+			std::vector<Box<code::Stmt>>&  body,
+			const tsh::AbstractType        aggregate_type
+		) {
+			const Shorthand s{ ctx };
+			for (const auto& field: comparedFields(ctx, aggregate_type)) {
+				body.emplace_back(s.ifStmt(
+					compareFields(ctx, decl, field, Method::Kind::Less, 0, 1),
+					{ s.ret(s.litBool(true)) }
+				));
+				body.emplace_back(s.ifStmt(
+					compareFields(ctx, decl, field, Method::Kind::Less, 1, 0),
+					{ s.ret(s.litBool(false)) }
+				));
+			}
+			body.emplace_back(s.ret(s.litBool(false)));
+		}
+
+		static PResult provide(Context& ctx, const QKey owner_type) {
+			const auto less_sym
+				= generatedComparisonSymForType(ctx, owner_type, Method::Kind::Less);
+			const auto& decl = ctx.query<QueryDeclOfFun>(less_sym)->valueOrThrow();
+
+			std::vector<Box<code::Stmt>> body{};
+
+			switch (owner_type.getKind()) {
+			case tsh::Kind::Byte:
+			case tsh::Kind::Bool:
+			case tsh::Kind::Char:
+			case tsh::Kind::Integral: {
+				compareBuiltin(ctx, decl, body, code::BuiltinBinary::IntegerLt);
+				break;
+			}
+			case tsh::Kind::Float: {
+				compareBuiltin(ctx, decl, body, code::BuiltinBinary::FloatLt);
+				break;
+			}
+			case tsh::Kind::Tuple:
+			case tsh::Kind::Class: {
+				compareAggregate(ctx, decl, body, owner_type);
+				break;
+			}
+			default: {
+				comparisonNotYetImplemented(ctx, Method::Kind::Less, owner_type);
+			}
+			}
+
+			return makeComparisonFunction(decl, std::move(body));
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLessMethod);
+
+	struct IMPLEMENT_QUERY(QueryDerivedComparisonMethod, query::QResult<HOUTFunction>) {
+		/**
+		 * @brief How a comparison is computed from `==` or `<`, e.g. `a >= b` is `not (a < b)`.
+		 */
+		struct Derivation final {
+			Method::Kind base_kind;
+			bool         swap_operands;
+			bool         negate;
+		};
+
+		static PResult provide(Context& ctx, const QKey comparison_sym) {
+			static const base::Map<Method::Kind, Derivation> derivations = {
+				{ Method::Kind::NotEqual,
+				  { .base_kind = Method::Kind::Equal, .swap_operands = false, .negate = true } },
+				{ Method::Kind::Greater,
+				  { .base_kind = Method::Kind::Less, .swap_operands = true, .negate = false } },
+				{ Method::Kind::LessEqual,
+				  { .base_kind = Method::Kind::Less, .swap_operands = true, .negate = true } },
+				{ Method::Kind::GreaterEqual,
+				  { .base_kind = Method::Kind::Less, .swap_operands = false, .negate = true } },
+			};
+
+			const auto& method     = std::get<Method>(getSymRef(comparison_sym)->other);
+			const auto& derivation = derivations.at(method.kind);
+			const auto& decl       = ctx.query<QueryDeclOfFun>(comparison_sym)->valueOrThrow();
+
+			const Shorthand s{ ctx };
+			const usize     lhs_idx = derivation.swap_operands ? 1 : 0;
+			const usize     rhs_idx = derivation.swap_operands ? 0 : 1;
+
+			Box<code::Expr> result = callComparison(
+				ctx,
+				method.owner_type,
+				derivation.base_kind,
+				operandValue(s, decl, lhs_idx),
+				operandValue(s, decl, rhs_idx)
+			);
+			if (derivation.negate)
+				result = s.unOp(code::BuiltinUnary::BooleanNot, std::move(result));
+
+			std::vector<Box<code::Stmt>> body{};
+			body.emplace_back(s.ret(std::move(result)));
+			return makeComparisonFunction(decl, std::move(body));
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDerivedComparisonMethod);
 }

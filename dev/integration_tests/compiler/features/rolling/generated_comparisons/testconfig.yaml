@@ -1,4 +1,4 @@
-# Tests for the comparison operators the compiler generates for tuples and classes
+# Tests for the comparison operators the compiler generates, and for user-defined ones replacing them
 
 Tests:
   tuple_comparisons:
@@ -15,3 +15,18 @@ Tests:
           String: "1\n0\n1\n1\n0\n1\n1\n0\n0\n1\n0\n"
         ExitCode: 0
 
+  custom_comparisons:
+    Description: User-defined comparison operators replace the generated ones.
+    Cases:
+      all:
+        Output:
+          String: "1\n1\n0\n0\n1\n0\n1\n1\n1\n1\n1\n"
+        ExitCode: 0
+
+  string_comparisons:
+    Description: Strings compare their characters, also as fields of tuples and classes.
+    Cases:
+      all:
+        Output:
+          String: "1\n1\n1\n0\n1\n1\n1\n1\n0\n"
+        ExitCode: 0

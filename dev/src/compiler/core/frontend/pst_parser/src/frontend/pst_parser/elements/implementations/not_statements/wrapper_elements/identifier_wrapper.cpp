@@ -30,14 +30,16 @@ namespace pst {
 	}
 
 	/**
-	 * @brief Parses a function name: an identifier or a non-reserved operator symbol.
+	 * @brief Parses a function name: an identifier, a non-reserved operator symbol or a comparison
+	 * operator. Comparisons have their own precedence in expressions, but they may still be
+	 * user-defined.
 	 */
 	MBox<IdentifierWrapper> IdentifierWrapper::parseFunctionName(LangParserState& state) {
 		if (!state[0].isOperatorSymbol()) return IdentifierWrapper::parse(state);
 
 		auto op = state[0].asBinaryOperator().value();
 
-		if (!op.isNotReserved()) {
+		if (!op.isNotReserved() && !op.isComparison()) {
 			// Plain `=` has no base operator to suggest, so it counts as reserved.
 			if (op.isAssignment() && op.asNamed() != lang_def::NamedOperator::Assign)
 				state.logInt(makeBox<AssignmentOperatorFunNameError>(state.getPosition(), op.str()));

@@ -1,0 +1,49 @@
+# A class can define its own comparison operators. They replace the generated ones, so they are
+# also used by the generated `!=`, `<=`, `>` and `>=`, and when the class is compared as a field.
+
+# Compared by value, which is not the lexicographic order of the fields.
+class Fraction {
+    num: i64 = 0;
+    den: i64 = 1;
+
+    fun ==(rhs: const ref Fraction) -> bool = {
+        return num * rhs.den == rhs.num * den;
+    }
+
+    fun <(rhs: const ref Fraction) -> bool = {
+        return num * rhs.den < rhs.num * den;
+    }
+}
+
+class Measurement {
+    value: Fraction;
+    unit: char = 'm';
+}
+
+fun show(value: bool) = {
+    if (value) builtin_output_i64(1);
+    else builtin_output_i64(0);
+}
+
+fun main() -> i64 = {
+    var half = Fraction(1, 2);
+    var third = Fraction(1, 3);
+
+    # The user-defined operators.
+    show(half == Fraction(2, 4));  # 1
+    show(third < half);            # 1
+    show(half < third);            # 0
+
+    # The generated operators defined in terms of the user-defined ones.
+    show(half != Fraction(2, 4));  # 0
+    show(half > third);            # 1
+    show(third >= half);           # 0
+    show(half <= Fraction(3, 6));  # 1
+
+    # Fields of tuples and classes are compared with the user-defined operators.
+    show((half, 1) == (Fraction(2, 4), 1));   # 1
+    show((third, 2) < (half, 1));             # 1
+    show(Measurement(half, 'm') == Measurement(Fraction(4, 8), 'm'));  # 1
+    show(Measurement(half, 'm') < Measurement(Fraction(2, 4), 's'));   # 1
+    return 0;
+}

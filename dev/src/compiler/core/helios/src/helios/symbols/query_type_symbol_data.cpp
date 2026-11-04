@@ -16,6 +16,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/errors.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -145,6 +146,30 @@ namespace compiler::helios {
 			}
 		}
 
+		/**
+		 * @brief The special kind of a user-defined comparison operator, like `fun ==(rhs: T)`,
+		 * which replaces the generated one. The right-hand side has to be of the class type.
+		 */
+		static tsh::MemberSpecialKind comparisonSpecialKind(query::Context& ctx, SymID sym) {
+			const auto* const comparison = std::ranges::find(
+				defgen::COMPARISON_METHODS,
+				name(sym).strView(),
+				&defgen::ComparisonMethodInfo::spelling
+			);
+			if (comparison == defgen::COMPARISON_METHODS.end()) return tsh::MemberSpecialKind::None;
+
+			const auto method_type
+				= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+			if (method_type.getKind() != tsh::Kind::Function) return tsh::MemberSpecialKind::None;
+			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
+			const auto& params  = fn_type.getParameterTypes();
+			// The parameters are `self` and the right-hand side.
+			if (params.size() == 2 && params.at(1).getType() == params.at(0).getType()
+			    && fn_type.getResultType().getType() == tsh::getBoolType())
+				return comparison->special_kind;
+			return tsh::MemberSpecialKind::None;
+		}
+
 		static tsh::MemberSpecialKind specialKind(query::Context& ctx, SymID sym) {
 			switch (kind(sym)) {
 			case SymbolKind::Destructor:
@@ -168,7 +193,7 @@ namespace compiler::helios {
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}
-				return tsh::MemberSpecialKind::None;
+				return comparisonSpecialKind(ctx, sym);
 			default:
 				return tsh::MemberSpecialKind::None;
 			}
