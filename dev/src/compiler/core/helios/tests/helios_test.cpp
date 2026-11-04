@@ -12,7 +12,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
@@ -101,6 +101,7 @@ public:
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testVoidReturnType);
 		TESTER_ADD_TEST(testStaticArrays);
+		TESTER_ADD_TEST(testArrayLiterals);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testVoidReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -419,6 +420,64 @@ private:
 			ASSERT_EQUAL(
 				expected_nested,
 				getConstValueAs<compiler::tsh::SymbolType<>>("NESTED_TYPE_TUPLE", root_scope)
+			);
+
+			auto single_tuple
+				= getConstValueAs<CompileTimeValue::TypeTuple>("SINGLE_TYPE_TUPLE", root_scope);
+			ASSERT_EQUAL(single_tuple.getElements().size(), 1);
+			ASSERT_EQUAL(
+				st(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::SymbolType<>)
+			);
+		}
+
+		// Function types.
+		{
+			using compiler::tsh::FunctionKind;
+			using compiler::tsh::QueryFunctionType;
+
+			auto i32_st      = st(i32_type);
+			auto bool_st     = st(compiler::tsh::getBoolType());
+			auto function_of = [&](std::vector<compiler::tsh::SymbolType<>> parameters,
+			                       compiler::tsh::SymbolType<>              result,
+			                       FunctionKind                             kind) {
+				return st(query::entryPoint<QueryFunctionType>(
+					{ .parameter_types = std::move(parameters), .result_type = result, .kind = kind }
+				));
+			};
+
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_PAIR", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Closure),
+				getConstValueAs<compiler::tsh::SymbolType<>>("CLOSURE_PAIR", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_SINGLE", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({}, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_NO_PARAMS", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, st(compiler::tsh::getUnitType()), FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_UNIT_RESULT", root_scope)
+			);
+			auto i32_pair
+				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_st, i32_st } }));
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_TUPLE_PARAM", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_ONE_ELEMENT_LIST", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_FROM_ALIAS", root_scope)
 			);
 		}
 	}
@@ -1981,6 +2040,29 @@ private:
 			auto static_arr_inner
 				= static_arr.getElementType().getType().as<compiler::tsh::StaticArrayAbstractType>();
 			ASSERT_EQUAL(static_arr_inner.getSize(), 2);
+		}
+	}
+
+	void testArrayLiterals() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/array_literals")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(0);
+
+		auto& statements = function->body->statements;
+
+		using namespace compiler::helios::code;
+
+		{
+			// let magic_square = LITERAL;
+			auto& def = dynamic_cast<const VariableStmt&>(*statements.at(0));
+			auto  agg = dynamic_cast<const CreateAggregateExpr*>(def.initial_value.get());
+			// [2, 7, 6]
+			auto first_row = dynamic_cast<const CreateAggregateExpr*>(agg->values.at(0).get());
+			auto elem      = dynamic_cast<const LiteralNumericExpr*>(first_row->values.at(1).get());
+			auto inner     = elem->value.get<i32>();
+			ASSERT_TRUE(inner.has_value());
+			ASSERT_EQUAL(*inner, 7);
 		}
 	}
 

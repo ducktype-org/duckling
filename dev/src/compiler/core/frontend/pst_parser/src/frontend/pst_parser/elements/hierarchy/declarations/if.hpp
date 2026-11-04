@@ -22,15 +22,15 @@ namespace pst {
 	protected:
 		NAMED_CHILD(condition, RoundGroupExpr);
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
-		NAMED_CHILD(then_body, CodeBlockOrStmt);
-		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
+		NAMED_CHILD(then_body, CodeBlockOrAnyStmt);
+		NAMED_CHILD_OPT(else_body, CodeBlockOrAnyStmt);
 		bool is_const = false;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit If(const LangParserState& state): CodeDecl(state) {
+		explicit If(LangElementConstructionData state): CodeDecl(state) {
 			element_kind = ElementKind::If;
 		}
 
@@ -59,9 +59,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const {
-			return else_body.map([](const auto& access) { return access.give(); });
-		}
+		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const;
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {

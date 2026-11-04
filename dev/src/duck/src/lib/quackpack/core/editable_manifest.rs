@@ -19,7 +19,7 @@ use crate::quackpack::core::{
 };
 use crate::quackpack::schemas::manifest::Dependency;
 use crate::util::DescriptionWithAnArticle;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::write_file;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
 
 /// Desired order of the top-level keys in a manifest.
@@ -79,7 +79,7 @@ impl<'duck> EditableManifest<'duck> {
         let pkg = pcx.package().get_package();
         let content = YamlFile::from_str(pkg.original_content()).with_context(|| {
             format!(
-                "when trying to editably read the manifest at `{}`",
+                "failed to create an editable manifest at `{}`",
                 pkg.manifest_path().display()
             )
         })?;
@@ -252,7 +252,7 @@ impl<'duck> EditableManifest<'duck> {
         let new_manifest = self
             .check_if_parses()
             .context("the modified manifest would fail to parse")?;
-        self.manifest_path().write(new_manifest).with_context(|| {
+        write_file(self.manifest_path(), new_manifest).with_context(|| {
             format!(
                 "failed to write the new manifest into file at `{}`",
                 self.manifest_path().display()

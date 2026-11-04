@@ -8,7 +8,7 @@
 
 use std::sync::OnceLock;
 
-use tracing::error;
+use tracing::debug;
 
 use super::Duckc;
 use crate::util::hash::sha256_string;
@@ -53,7 +53,7 @@ impl Duckc {
         let output = this.process_builder().ask_for_verbose_version().output()?;
         let status = output.status;
         if !status.success() {
-            error!(%status, "invoking duckc failed, status is not success");
+            debug!(target: "duck::duckc", %status, "`duckc --version-verbose` failed");
             // We captured stderr, so print it with the error.
             qp_bail_internal!("failed to run `duckc --version-verbose`: {output:?}")
         }

@@ -21,10 +21,12 @@
 #include <helios/tsh/coercions/coercion.hpp>
 #include <helios/tsh/coercions/coercion_error.hpp>
 #include <helios/tsh/coercions/coercion_node.hpp>
+#include <helios/tsh/coercions/passing.hpp>
 #include <helios/tsh/coercions/queries.hpp>
 #include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/ref.hpp>
@@ -49,6 +51,7 @@
 namespace coercion_testing {
 	using namespace compiler::tsh;
 	using namespace compiler::tsh::coercions;
+	using compiler::helios::coercions::HandOverKind;
 
 	class CoercionTestSuite;
 
@@ -366,7 +369,8 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		[[nodiscard]] CoercionCheck coerce(
 			const std::string_view value,
 			const std::string_view into,
-			const CoercionMode     mode = CoercionMode::Default
+			const CoercionMode     mode = CoercionMode::Default,
+			const HandOverKind     kind = HandOverKind::Regular
 		) {
 			const std::string function = base::strConcat(
 				"fun coercion_case(into: ",
@@ -381,11 +385,24 @@ var global_pair: (box i32, i32) = (new 1, 2);
 				using namespace compiler::helios::test_utils;
 
 				const SymbolType<> target = getSymbolTypeOf("into", body);
-				const ValueSource  source
+				ValueSource        source
 					= describeValue(*getExprOfVariable(getChain("value", body).back()));
+
+				// The same as HOUT does for a value at its last use, like a returned value.
+				if (kind == HandOverKind::LastUse && not source.isBuiltOutOfParts())
+					source = ValueSource::singleValueSource(consumed(source.getValue()));
+
 				return CoercionCheck{
 					*this,
-					base::strConcat("`", value, "` into `", into, "`"),
+					base::strConcat(
+						"`",
+						value,
+						"`",
+						kind == HandOverKind::LastUse ? " at its last use" : "",
+						" into `",
+						into,
+						"`"
+					),
 					inContext([&](query::Context& ctx) {
 						return coercionOf(ctx, source, target, mode);
 					}),

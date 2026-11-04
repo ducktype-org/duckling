@@ -46,7 +46,8 @@ namespace {
 		Op_call_builtinfunc,
 		Op_call_cfunc,
 		Op_call_ffifunc,
-		Op_virtualCall_pptr_method>;
+		Op_virtualCall_pptr_method,
+		Op_call_pfun>;
 	using CallingInstructions
 		= std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc>;
 
@@ -370,6 +371,34 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
+	/**
+	 * @brief Validates the stack state at the moment of a call through a function value. The
+	 * signature is the one of the function type of the callee.
+	 */
+	void validateIndirectCallAndPop(LocalStack& local_stack, const Op_call_pfun& instr) {
+		auto generic_arg = opargs::OpCodeArg{ instr.callee };
+
+		const auto signature
+			= getPlaceType(instr.callee, local_stack)->getKindAs<valid_type::finalized::Function>();
+
+		auto& params  = signature->parameters;
+		auto& results = signature->result_types;
+
+		if (params.size() + results.size() > local_stack.size())
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+
+		using namespace std::views;
+		for (auto param_id: params | reverse) {
+			if (local_stack.back().type->getID() != param_id)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+			local_stack.pop(instr);
+		}
+
+		for (auto [idx, result_id]: enumerate(results | reverse))
+			if (local_stack.back(usize(idx)).type->getID() != result_id)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+	}
+
 	void validateRet(
 		const LocalStack& local_stack, const Op_ret& instr, const FuncSignature& current_signature
 	) {
@@ -497,6 +526,12 @@ class FunctionValidator {
 					CRef<valid_type::ValidType> type
 						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::CPointer>())
+						throw InvalidArgumentTypeError(*place);
+				}
+				variant_case(CRef<opargs::PlaceFunc>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
+					if (!type->isKind<valid_type::finalized::Function>())
 						throw InvalidArgumentTypeError(*place);
 				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
@@ -1396,7 +1431,27 @@ class FunctionValidator {
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_label, Op_jmp_label, Op_jmpIf_label, Op_jmpIfNot_label) {}
-			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc) {}
+			instr_case_novalue(
+				Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc, Op_call_pfun
+			) {}
+			instr_case(Op_mov_pfun_func, instr) {
+				const auto function_type = getPlaceType(instr.dst, current_stack)
+				                               ->getKindAs<valid_type::finalized::Function>();
+				const auto& signature = signatures.at(instr.function.function_name);
+				const auto  type_ids  = std::views::transform([&](const Identifier& type_name) {
+                    return types_ctx.at(type_name.str)->getID();
+                });
+				if (!std::ranges::equal(function_type->parameters, signature.parameters | type_ids)
+				    || !std::ranges::equal(
+						function_type->result_types, signature.result_types | type_ids
+					))
+					throw FunctionTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_pfun_pfun, instr) {
+				if (getPlaceType(instr.src, current_stack)->getID()
+				    != getPlaceType(instr.dst, current_stack)->getID())
+					throw FunctionTypeMismatchError(instr);
+			}
 			instr_case_novalue(Op_setThreadCtx_func) {}
 			instr_case(Op_virtualCall_pptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
@@ -1876,6 +1931,11 @@ class FunctionValidator {
 				instr_case(Op_virtualCall_pptr_method, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					validateMethodCallAndPop(local_stack, instr);
+					index++;
+				}
+				instr_case(Op_call_pfun, instr) {
+					stack_before_instr[index] = local_stack.getStateID();
+					validateIndirectCallAndPop(local_stack, instr);
 					index++;
 				}
 				instr_case(Op_retTailcall_func, instr) {

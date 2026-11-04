@@ -95,10 +95,23 @@ fun compTime() -> () = {
 	check(w.isEmpty(), true, "precedence 2");
 }
 
+# ===== A value read out of a temporary optional =====
+
+fun makeCls() -> ?Cls = Cls(4);
+fun makeNonTrivial() -> ?NonTrivialCls = NonTrivialCls("abc".toString());
+
+fun temporaries() -> () = {
+	check(makeCls().value().x, 4, "temporary 1");
+	var moved: NonTrivialCls = makeNonTrivial().value();
+	check(moved.x.length(), 3, "temporary 2");
+	check(makeNonTrivial().valueOr(NonTrivialCls("".toString())).x.length(), 3, "temporary 3");
+}
+
 fun main() -> i64 = {
 	intro();
 	advanced();
 	compTime();
+	temporaries();
 
 	return 0i64;
 }

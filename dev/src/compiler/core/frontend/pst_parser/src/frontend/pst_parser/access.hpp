@@ -180,9 +180,10 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class FreeAutomatic;
 		friend class CloningUtils;
 
-		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
+		template<std::derived_from<LangElement>>
 		friend class PST;
 
 		template<typename E>
@@ -240,6 +241,7 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class FreeAutomatic;
 		friend class CloningUtils;
 
 		template<typename E>

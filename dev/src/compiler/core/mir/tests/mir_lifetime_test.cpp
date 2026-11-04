@@ -707,9 +707,16 @@ private:
 
 		// Reading the pointee out of the moved box does not hand the box over.
 		assertMovedIntoDestructedTemporary(getMIRFunctionByName(module, "readThrough"), "a");
-		assertMovedIntoDestructedTemporary(
-			getMIRFunctionByName(module, "readThroughImplicitly"), "a"
-		);
+
+		// The same as above but without an explicit `move`. The `return` doesn't insert a naive
+		// move of the whole returned expression, but lets the coercion decide to insert it if it's
+		// needed. Thus the temporary which will get destructed will never be created here, cause
+		// reading a trivial `i64` out of the box doesn't need it since it can be just byte copied.
+		{
+			auto func = getMIRFunctionByName(module, "readThroughImplicitly");
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Move, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+		}
 
 		// An implicitly moved argument goes straight to the callee.
 		{

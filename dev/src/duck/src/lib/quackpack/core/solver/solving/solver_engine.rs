@@ -29,7 +29,7 @@ pub struct SolverEngine<'a> {
 impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     pub(in crate::quackpack::core::solver) fn run_engine(
         input: SolverInput,
         main_pkg: &(PackageId, HashSet<FeatureName>),
@@ -381,14 +381,14 @@ mod test {
     use crate::quackpack::core::solver::solving::input::{PackageData, PreexistenceData};
     use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
-        manifest.touch().unwrap();
-        manifest.write(contents).unwrap();
-        dir.path().try_fsync_dir().unwrap();
+        touch(&manifest).unwrap();
+        write_file(&manifest, contents).unwrap();
+        try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
     }
 

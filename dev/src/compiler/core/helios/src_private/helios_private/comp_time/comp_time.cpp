@@ -23,7 +23,6 @@
 #include <helios/utils/hout_walker_generic.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -104,7 +103,7 @@ namespace compiler::helios {
 			 * builtin, or `std::nullopt` when the call should fall back to VM evaluation.
 			 */
 			std::optional<TreeEvalResult> tryShortPathCall(const code::CallExpr& expr) {
-				const auto callee_sym = getIdentifierExprSymID(expr.callee.ref());
+				const auto callee_sym = getIdentifierExprFunctionID(expr.callee.ref());
 				if (!callee_sym.has_value()) return std::nullopt;
 
 				const auto builtin = isBuiltin(callee_sym.value());
@@ -202,9 +201,9 @@ namespace compiler::helios {
 					auto maybe_u64_size = maybe_size.coerceTo<u64>();
 					// @TODO: #2754 With flexible literals it should work
 					if (!maybe_u64_size.has_value()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Static array size must be a non-negative integral value.", ""
-						));
+						);
 						return query::Failed();
 					}
 					auto size = static_cast<usize>(maybe_u64_size.value());
@@ -361,11 +360,11 @@ namespace compiler::helios {
 											if (rhs_val < 0
 									            || static_cast<u64>(rhs_val)
 									                   >= sizeof(ResultT) * 8) {
-												ctx.logInt(makeBox<dia::PlaceholderError>(
+												ctx.log<dia::PlaceholderError>(
 													"Invalid shift amount in compile-time "
 													"expression evaluation.",
 													expr.origin.getStablePosition().value()
-												));
+												);
 												return query::Failed();
 											}
 											set_num_result(static_cast<ResultT>(lhs_val << rhs_val));
@@ -376,11 +375,11 @@ namespace compiler::helios {
 											if (rhs_val < 0
 									            || static_cast<u64>(rhs_val)
 									                   >= sizeof(ResultT) * 8) {
-												ctx.logInt(makeBox<dia::PlaceholderError>(
+												ctx.log<dia::PlaceholderError>(
 													"Invalid shift amount in compile-time "
 													"expression evaluation.",
 													expr.origin.getStablePosition().value()
-												));
+												);
 												return query::Failed();
 											}
 											set_num_result(static_cast<ResultT>(lhs_val >> rhs_val));
@@ -389,11 +388,11 @@ namespace compiler::helios {
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia::PlaceholderError>(
+											ctx.log<dia::PlaceholderError>(
 												"Division by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
-											));
+											);
 											return query::Failed();
 										}
 										set_num_result(lhs_val / rhs_val);
@@ -401,11 +400,11 @@ namespace compiler::helios {
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia::PlaceholderError>(
+											ctx.log<dia::PlaceholderError>(
 												"Modulo by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
-											));
+											);
 											return query::Failed();
 										}
 										if constexpr (std::is_integral_v<ResultT>)
@@ -616,9 +615,7 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
-				if (not CompileTimeValue::TypeTuple::isValid(
-						ctx, expr.expression_type.getSymbolType()
-					)) {
+				if (not CompileTimeValue::TypeTuple::isValid(expr.expression_type.getSymbolType())) {
 					result = CouldNotShortPath{};
 					return;
 				}
@@ -671,12 +668,12 @@ namespace compiler::helios {
 							// The duplicate is of the underlying type, so that is what gets named:
 							// in `i32 | ref i32` neither alternative is written twice, but they
 							// still describe the same one.
-							ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+							ctx.log<DuplicateVariantAlternativeError>(
 								position.value(),
 								makeBox<InteractiveType>(
 									ctx, tsh::SymbolType<>::withDefaults(subtypes[i].getType())
 								)
-							));
+							);
 							result = query::Failed();
 							return;
 						}
@@ -688,6 +685,34 @@ namespace compiler::helios {
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };
+			}
+
+			void visitFunctionTypeExpr(const code::FunctionTypeExpr& expr) final {
+				std::vector<tsh::SymbolType<>> parameter_types;
+				for (auto& parameter: expr.parameters) {
+					const auto parameter_ctv = evalHoutExpr(ctx, parameter.ref());
+					if (parameter_ctv.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+					parameter_types.emplace_back(
+						parameter_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+					);
+				}
+
+				const auto result_ctv = evalHoutExpr(ctx, expr.result.ref());
+				if (result_ctv.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+
+				result = CompileTimeValue{
+					tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = std::move(parameter_types),
+						.result_type = result_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(),
+						.kind        = expr.kind,
+					}))
+				};
 			}
 
 			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr
@@ -710,12 +735,12 @@ namespace compiler::helios {
 					CORE_ASSERT(
 						position.has_value(), "Optional type constructor without a source position"
 					);
-					ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+					ctx.log<DuplicateVariantAlternativeError>(
 						position.value(),
 						makeBox<InteractiveType>(
 							ctx, tsh::SymbolType<>::withDefaults(value_type.getType())
 						)
-					));
+					);
 					result = query::Failed();
 					return;
 				}
@@ -981,11 +1006,10 @@ namespace compiler::helios {
 		static CompTimeEvalResult evaluateFunctionWithVm(
 			query::Context& ctx, CRef<code::CallExpr> call_expr
 		) {
-			const auto* callee_ident
-				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
-			if (!callee_ident) return evaluateExprWithVm(ctx, call_expr);
+			const auto callee_sym = getIdentifierExprFunctionID(call_expr->callee.ref());
+			if (!callee_sym.has_value()) return evaluateExprWithVm(ctx, call_expr);
 
-			const SymID function_sym_id = callee_ident->symbol;
+			const SymID function_sym_id = callee_sym.value();
 
 			auto args_result = evaluateArguments(ctx, call_expr->arguments);
 			if (args_result.hasFailed()) return query::Failed();
@@ -996,7 +1020,7 @@ namespace compiler::helios {
 			const auto& [func_to_call_name, lir_unit] = lir_build_result.valueOrThrow();
 
 			// Retrieve the functions return type.
-			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
+			auto callee_abs_type = call_expr->callee->expression_type.getSymbolType().getType();
 			CORE_ASSERT(
 				callee_abs_type.getKind() == tsh::Kind::Function,
 				"Attempting to call a non_function type during VM compile time evaluation"
@@ -1019,12 +1043,12 @@ namespace compiler::helios {
 			);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Compile time evaluation of this function call failed or "
 					"returned unsupported result.",
 					call_expr->origin.getStablePosition(),
 					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
-				));
+				);
 				return query::Failed();
 			}
 			return vm_eval_result.value();
@@ -1050,7 +1074,7 @@ namespace compiler::helios {
 					if (symbol_kind != SymbolKind::Variable and symbol_kind != SymbolKind::Parameter)
 						return;
 					if (declared_inside.contains(node.symbol)) return;
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"Expression cannot be evaluated at compile-time.",
 						node.origin.getStablePosition(),
 						base::strConcat(
@@ -1058,7 +1082,7 @@ namespace compiler::helios {
 							name(node.symbol),
 							"` in a constant expression is invalid."
 						)
-					));
+					);
 					result = base::BAD;
 				}
 			});
@@ -1082,11 +1106,11 @@ namespace compiler::helios {
 			auto vm_eval_result = executeInVm(ctx, func_to_call_name, lir_unit, {}, return_type);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Compile time evaluation of this expression failed.",
 					expr->origin.getStablePosition(),
 					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
-				));
+				);
 				return query::Failed();
 			}
 			return vm_eval_result.value();

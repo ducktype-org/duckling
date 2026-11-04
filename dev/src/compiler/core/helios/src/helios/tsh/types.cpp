@@ -21,6 +21,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <algorithm>
 #include <concepts>
 #include <sstream>
 
@@ -106,6 +107,17 @@ namespace compiler::tsh {
 		return component_types;
 	}
 
+	bool TupleAbstractType::isTupleOfTypes() const {
+		return std::ranges::all_of(getComponents(), [](const SymbolType<>& component) {
+			if (component.getRefKind() != ReferenceKind::Direct) return false;
+
+			const Kind kind = component.getType().getKind();
+			if (kind == Kind::Tuple)
+				return TupleAbstractType{ component.getType() }.isTupleOfTypes();
+			return kind == Kind::Meta || kind == Kind::Unit;
+		});
+	}
+
 	struct FunctionConstructionRecord {
 		std::vector<AbstractType> parameter_types;
 		ExpressionType<>          result_type;
@@ -124,7 +136,9 @@ namespace compiler::tsh {
 
 	bool FunctionAbstractType::isPure() const { return toCPimpl(pimpl)->isPure(); }
 
-	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
+	FunctionKind FunctionAbstractType::getFunctionKind() const {
+		return toCPimpl(pimpl)->getFunctionKind();
+	}
 
 	SymbolType<> StaticArrayAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();

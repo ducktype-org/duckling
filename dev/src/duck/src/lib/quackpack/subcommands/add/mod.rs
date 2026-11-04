@@ -59,8 +59,9 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
         pkg_name,
         &pkg_root,
     )?;
-    editable_manifest.save().with_context(|| format!("when trying to add the {kind} dependency named `{ename}` to the project `{pkg_name}` at `{}`", pkg_root.display()))?;
-    ctx.info(format!(
+    editable_manifest.save().with_context(|| format!("failed to add the {kind} dependency named `{ename}` to the project `{pkg_name}` at `{}`", pkg_root.display()))?;
+    ctx.info(
+        format!(
         "successfully added {kind} dependency named `{ename}` to the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;

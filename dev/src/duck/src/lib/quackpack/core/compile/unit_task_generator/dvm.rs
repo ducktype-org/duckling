@@ -7,8 +7,6 @@
 //! An implementation of [`UnitTaskGenerator`], which invokes duckc only once, for a root package with
 //! `dvm` task.
 
-use tracing::instrument;
-
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
@@ -26,7 +24,6 @@ use crate::{QuackResult, qp_bail};
 pub struct DvmTaskGenerator;
 
 impl UnitTaskGenerator for DvmTaskGenerator {
-    #[instrument(skip_all)]
     #[track_caller]
     fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> QuackResult<()> {
         let root = graph.root_unit();
@@ -47,7 +44,6 @@ impl UnitTaskGenerator for DvmTaskGenerator {
         Ok(())
     }
 
-    #[instrument(skip_all)]
     fn create_tasks(
         &self,
         unit: &Unit,
@@ -66,7 +62,6 @@ impl UnitTaskGenerator for DvmTaskGenerator {
 }
 
 /// Create a task for a single [`Unit`].
-#[instrument(skip_all)]
 fn create_task(
     unit: &Unit,
     unit_id_in_graph: GraphNodeId,

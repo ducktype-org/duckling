@@ -67,6 +67,10 @@ public:
 
 		// Inheritance
 		TESTER_ADD_TEST(unsetVtable);
+
+		// Function values
+		TESTER_ADD_TEST(nullFunctionCallFails);
+		TESTER_ADD_TEST(unknownFunctionValueFails);
 	}
 
 private:
@@ -303,6 +307,68 @@ private:
 
 		for (auto& [filename, error]: invalid_filename_and_error)
 			assertExecutionPanickedWithAndKill(runTestOnVmGetResult(filename, "", ""), error);
+	}
+
+	// Function values
+
+	void nullFunctionCallFails() {
+		const auto pid = spawnAndLoad(inlineDbc(
+			"null_function_call",
+			"type fun: thunk {} {}\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type f, thunk;\n"
+			"    call_pfun f;\n"
+			"    ret;\n"
+			"}\n"
+		));
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult(pid), vm::exceptions::VMNullFunctionCallException::ERR_MSG
+		);
+	}
+
+	/**
+	 * @brief Loads a program with a `call_binop` function calling the function value it is given.
+	 */
+	vm::PID spawnAndLoadFunctionValueCallers() {
+		return spawnAndLoad(inlineDbc(
+			"function_value_callers",
+			"type fun: binop { i64, i64 } { i64 }\n"
+			"function call_binop { binop } -> { i64 } {\n"
+			"    init_pany_type result, i64;\n"
+			"    init_pany_type lhs, i64;\n"
+			"    init_pany_type rhs, i64;\n"
+			"    call_pfun arg0;\n"
+			"    mov_p64_p64 ret0, result;\n"
+			"    deinit;\n"
+			"    deinit;\n"
+			"    ret;\n"
+			"}\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    ret;\n"
+			"}\n"
+		));
+	}
+
+	/**
+	 * @brief Runs `call_binop` with a function value holding @p function_value and asserts the
+	 * call is refused as an invalid function value.
+	 */
+	void assertCallOfForgedBinopFails(vm::PID pid, u64 function_value, std::string_view what) {
+		auto callee = vm::api::getVMValue(pid, "binop");
+		assertSucceeded(callee, "getVMValue(binop)");
+		callee->vm_value->writeBytes<u64>(function_value);
+		assertRefusedWith<vm::api::Panicked>(
+			vm::api::runFunctionAwait(pid, "call_binop", { callee->vm_value.refMut() }),
+			what,
+			vm::exceptions::VMInvalidFunctionValueException::ERR_MSG
+		);
+		assertSucceeded(vm::api::freeVMValue(pid, callee->vm_value.refMut()), "freeVMValue");
+	}
+
+	void unknownFunctionValueFails() {
+		const auto pid = spawnAndLoadFunctionValueCallers();
+		assertCallOfForgedBinopFails(pid, 1'000'000, "a call of an unknown function ID");
+		(void) vm::api::kill(pid);
 	}
 };
 
