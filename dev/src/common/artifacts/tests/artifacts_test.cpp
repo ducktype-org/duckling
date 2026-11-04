@@ -176,6 +176,11 @@ private:
 			collection.flush();
 		}
 		ASSERT_TRUE(hasCurrentBuildId(root));
+		// The build id is the cache's own bookkeeping, not an artifact.
+		ASSERT_TRUE(
+			readFile(root / artifacts::ArtifactCollection::OWNED_LIST_FILE).find(".build_id")
+			== std::string::npos
+		);
 	}
 
 	void missingBuildIdRemovesOwnedArtifacts() {

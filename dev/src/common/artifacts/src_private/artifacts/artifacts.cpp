@@ -267,16 +267,14 @@ void artifacts::ArtifactCollection::discardOwnedContents() {
 }
 
 void artifacts::ArtifactCollection::writeBuildIdFile() {
-	if (flush_build_id) {
-		const auto name     = base::StrID(std::string(BUILD_ID_FILE));
-		const auto artifact = fileArtifactAtOrNewNoLock(name);
-		// Losing the marker is self-correcting rather than dangerous: the next build finds no
-		// build id, says so and clears the folder, which costs one full rebuild. So warn and
-		// let this build finish.
-		const auto written = artifact.file.writeToFile(BUILD_ID);
-		if (!written.has_value())
-			reportCacheWriteFailure(artifact.file.getFilePath(), written.error());
-	}
+	if (!flush_build_id) return;
+	// Written directly rather than as a file artifact: it is the cache's own bookkeeping, like
+	// the `.artc`, so it does not belong in the owned list.
+	//
+	// Losing it is self-correcting rather than dangerous: the next build finds no build id, says
+	// so and removes the cached artifacts, which costs one full rebuild. So
+	// `writeFileAtomically` only warns and lets this build finish.
+	writeFileAtomically(PATH / BUILD_ID_FILE, [](std::ostream& file) { file << BUILD_ID; });
 }
 
 void artifacts::ArtifactCollection::flush() {
