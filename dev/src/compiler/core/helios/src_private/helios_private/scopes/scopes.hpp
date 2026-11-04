@@ -114,7 +114,8 @@ namespace compiler::helios {
 	/**
 	 * @brief Symbols directly inside given scope that may provide the name: symbols of that name
 	 * and `using`/`import` symbols whose selector provides it (wildcard ones only when
-	 * `with_wildcards` is set). The `using`/`import` symbols are not resolved.
+	 * `with_wildcards` is set). The `using`/`import` symbols are not resolved, they are returned
+	 * as-is.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
@@ -125,7 +126,12 @@ namespace compiler::helios {
 	struct KeyOf_LookupFromScope final {
 		ScopeID     scope;
 		base::StrID name;
-		bool        with_wildcards;
+
+		/**
+		 * @brief Include the wildcard usings and imports (`using a.*`). Disabled for the lookup
+		 * of the using target - the `a` in the example above - otherwise it would cycle.
+		 */
+		bool with_wildcards;
 
 		/**
 		 * @brief Continue the lookup in the enclosing scopes, the REPL history and the prelude.

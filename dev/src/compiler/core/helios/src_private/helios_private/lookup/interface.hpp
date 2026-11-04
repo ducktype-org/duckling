@@ -172,7 +172,7 @@ namespace compiler::helios {
 		 * of its type (`my_var.field`).
 		 *
 		 * @note Fails, with a logged error, for symbol kinds that have no interface.
-		 * @note Panics for `using`/`import` symbols, lookups never return them unresolved.
+		 * @note Panics for `using`/`import` symbols, we should never lookup in them directly.
 		 */
 		static HInterface ofSymbol(query::Context& ctx, SymID symbol);
 

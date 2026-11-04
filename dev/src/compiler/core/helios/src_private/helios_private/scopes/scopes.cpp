@@ -37,12 +37,12 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
-#include <query_framework/utils/simple_keys.hpp>
 
 #include <hashing/hash.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
+#include <query_framework/utils/simple_keys.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
@@ -808,6 +808,7 @@ namespace compiler::helios {
 			return queryRootScopeOfMainModuleFile(ctx, repl_parent_opt.value());
 		}
 	}
+
 	/**
 	 * @brief Root scopes of the implicit prelude modules, searched by every lookup that continues
 	 * into the enclosing scopes, as if every module wrote `import <module>.*;` for each of them.

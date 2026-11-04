@@ -33,7 +33,9 @@ namespace compiler::helios {
 			return ofNamespace(symbol);
 		case SymbolKind::Using:
 		case SymbolKind::Import:
-			CORE_PANIC("Lookup results never contain unresolved usings and imports");
+			CORE_PANIC(
+				"Lookup inside usings and imports should never be done by their symbols directly"
+			);
 		case SymbolKind::Class:
 			return ofTypeMeta(ctx.query<tsh::QueryClassType>(symbol));
 		case SymbolKind::Variable:
