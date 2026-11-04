@@ -156,7 +156,7 @@ pub(crate) fn parse(
                 description: metadata.description.as_ref().map(<&String>::into),
             };
 
-            let build_options = parse_build_options(metadata);
+            let build_options = parse_build_options(metadata)?;
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -266,9 +266,33 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
 }
 
 /// Parse a [`BuildOptions`] from the schema.
-fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
-    let links = input.links.as_ref().map(StrId::from);
-    BuildOptions { links }
+fn parse_build_options(input: &MetadataSchema) -> QuackResult<BuildOptions> {
+    if input.links.is_some() {
+        let mut err = qp_err!("`metadata.links` is no longer supported");
+        err.add_hint("list the library names in `metadata.external-libs` instead");
+        qp_bail!(err);
+    }
+    let external_libs = input
+        .external_libs
+        .iter()
+        .flatten()
+        .map(StrId::from)
+        .collect::<Vec<_>>();
+    for lib in &external_libs {
+        if lib.as_str().is_empty() || lib.as_str().contains(['/', '\\']) {
+            let mut err =
+                qp_err!("invalid external library name `{lib}` in `metadata.external-libs`");
+            err.add_hint(
+                "use the bare library name (e.g. `sqlite3`) and put its directory in `metadata.external-lib-paths`",
+            );
+            qp_bail!(err);
+        }
+    }
+    let external_lib_paths = input.external_lib_paths.clone().unwrap_or_default();
+    Ok(BuildOptions {
+        external_libs,
+        external_lib_paths,
+    })
 }
 
 /// Parse [`LintsSchema`] from the schema.

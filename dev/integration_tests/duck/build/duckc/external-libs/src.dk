@@ -1,0 +1,9 @@
+import core.builtins.*;
+
+extern("C") {
+    fundecl duck_answer() -> i32;
+}
+
+fun main() = {
+    return duck_answer();
+}

@@ -97,8 +97,9 @@ expected = f"""{{
       "output_file": "{str(layout / "foo")}",
       "linking_options": [
         "{str(bar_artifacts / f"{bar_name}.a")}",
-        "lib1",
-        "lib2"
+        "{str(foo_path / "libs" / "liblib1.a")}",
+        "-llib2",
+        "-llib3"
       ]
     }}
   ]

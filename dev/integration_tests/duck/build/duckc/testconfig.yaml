@@ -13,6 +13,7 @@ SubDirs:
   - diamond
   - dvm-deps
   - errors
+  - external-libs
   - features
   - local-cycle
   - same-dep-names-different-sources

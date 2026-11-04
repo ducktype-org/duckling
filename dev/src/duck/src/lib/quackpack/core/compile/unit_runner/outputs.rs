@@ -96,9 +96,7 @@ pub fn get_linker_options(
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
     let outputs = get_deps_outputs(unit_id_in_graph, graph, layout, bcx)?;
-    let external_libs = gather_external_libraries(unit_id_in_graph, graph)
-        .into_iter()
-        .map(|x| x.to_string());
+    let external_libs = gather_external_libraries(unit_id_in_graph, graph);
     let args = outputs
         .into_iter()
         .map(|output| output.display().to_string())

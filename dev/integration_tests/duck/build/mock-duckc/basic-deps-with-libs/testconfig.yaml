@@ -4,8 +4,10 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "  links: lib1" >> foo/quackconfig.yaml
-  echo "  links: lib2" >> bar/quackconfig.yaml
+  echo "  external-libs: [lib1]
+    external-lib-paths: [empty, libs]" >> foo/quackconfig.yaml
+  mkdir -p foo/empty foo/libs && touch foo/libs/liblib1.a
+  echo "  external-libs: [lib2, lib3]" >> bar/quackconfig.yaml
   @{duck-exe} -C foo add --local ../bar bar
 
 Tests:

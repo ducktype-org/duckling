@@ -161,7 +161,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             license,
             name,
             description,
-            links,
+            external_libs,
+            external_lib_paths,
         } = metadata;
         let authors = authors.into_iter().collect();
         let metadata = PackageMetadata {
@@ -181,7 +182,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             profiles.into(),
             VenvConfig::default_for_package(ctx),
             BuildOptions {
-                links: links.map(Into::into),
+                external_libs: external_libs.into_iter().map(Into::into).collect(),
+                external_lib_paths,
             },
             lints,
         ))
@@ -212,7 +214,12 @@ impl TryFrom<Manifest> for registry::Manifest {
             license,
             name: name.into(),
             description,
-            links: build_options.links.map(Into::into),
+            external_libs: build_options
+                .external_libs
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            external_lib_paths: build_options.external_lib_paths,
         };
         Ok(Self {
             metadata,
