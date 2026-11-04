@@ -12,6 +12,8 @@
 
 #include <expected>
 #include <filesystem>
+#include <functional>
+#include <ostream>
 #include <string>
 
 namespace fs {
@@ -378,6 +380,39 @@ namespace fs {
 		 * @return True if the folder was deleted, false otherwise.
 		 */
 		static bool deleteFolder(const File& folder, bool force = false);
+
+		/**
+		 * @brief Writes a physical file through a sibling temporary file that is renamed into
+		 * place, reporting failure instead of panicking.
+		 *
+		 * A rename inside one directory is atomic, so a reader sees either the previous file or
+		 * the new one, never a half of each, and a write that fails or dies partway (a full disk,
+		 * a killed process) leaves the previous file untouched. Each call writes its own
+		 * temporary file, named `<file name>.<random>.tmp`, so concurrent writers cannot mix
+		 * their bytes either: the last rename wins, whole. A process killed mid-write can leave
+		 * that temporary file behind; nothing else does.
+		 *
+		 * @param path The file to write; it must be on disk (absolute or relative), not virtual.
+		 * It does not have to exist yet.
+		 * @param write_content Writes the file's content to the given stream.
+		 * @return Nothing on success, or a message describing why the write failed.
+		 */
+		static std::expected<void, std::string> writeFileAtomically(
+			const FilePath& path, const std::function<void(std::ostream&)>& write_content
+		);
+
+		/**
+		 * @brief Removes a physical file, symlink or empty folder, reporting failure instead of
+		 * throwing.
+		 *
+		 * Takes a `FilePath`, not a `File`, on purpose: a `File` resolves symlinks when it is
+		 * made, so removing one would remove the link's target. This removes the link itself.
+		 *
+		 * @param path The entry to remove; it must be on disk (absolute or relative), not virtual.
+		 * @return True if the entry was removed, false if there was nothing to remove, or a
+		 * message describing why it could not be removed (e.g. a folder that is not empty).
+		 */
+		static std::expected<bool, std::string> removeEntry(const FilePath& path);
 	};
 }
 

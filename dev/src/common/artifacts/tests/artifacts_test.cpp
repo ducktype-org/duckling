@@ -32,6 +32,11 @@ public:
 		TESTER_ADD_TEST(unflushedArtifactsAreRemoved);
 		TESTER_ADD_TEST(truncatedListLineIsIgnored);
 		TESTER_ADD_TEST(artcWithoutOwnedListIsNotLoaded);
+		TESTER_ADD_TEST(dotEntryIsIgnored);
+		TESTER_ADD_TEST(normalizedNamesAreOwned);
+		TESTER_ADD_TEST(artifactOutsideTheCacheIsNotOwned);
+		TESTER_ADD_TEST(entriesThroughSymlinksAreSkipped);
+		TESTER_ADD_TEST(relativeRootWorks);
 		TESTER_ADD_TEST(listEntriesOutsideTheCacheAreIgnored);
 	}
 
@@ -256,6 +261,9 @@ private:
 		buildCache(root);
 		const auto temp_name = artcOf(root).filename().string() + ".leftover.tmp";
 		writeFile(root / temp_name, "half a cache");
+		const auto build_id_temp_name
+			= std::string(artifacts::ArtifactCollection::BUILD_ID_FILE) + ".leftover.tmp";
+		writeFile(root / build_id_temp_name, "half a build id");
 
 		{
 			artifacts::ArtifactCollection collection(root);
@@ -265,6 +273,7 @@ private:
 		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
 		artifacts::ArtifactCollection collection(root);
 		ASSERT_TRUE(!std::filesystem::exists(root / temp_name));
+		ASSERT_TRUE(!std::filesystem::exists(root / build_id_temp_name));
 	}
 
 	// Entries are recorded when they are created, so a build that dies before flushing still
@@ -315,6 +324,120 @@ private:
 		artifacts::ArtifactCollection collection(root);
 		auto                          sub = collection.subCollectionNew(base::StrID("s0"));
 		ASSERT_TRUE(sub->blobArtifactAtMaybe(base::StrID("b0")).empty());
+	}
+
+	// `.` names the collection's own folder: taken for a sub-collection, it would recurse into
+	// itself until the path got too long, and the build would crash on every run.
+	void dotEntryIsIgnored() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		for (const auto* name: { ".", "./", "s0/..", "./." }) {
+			writeFile(
+				root / artifacts::ArtifactCollection::OWNED_LIST_FILE,
+				std::string("duckling-artifacts 1\nc s0\nc ") + name + "\n"
+			);
+			{
+				artifacts::ArtifactCollection collection(root);
+				collection.flush();
+			}
+			// The discard path walks the list too.
+			std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+			artifacts::ArtifactCollection collection(root);
+			collection.flush();
+		}
+	}
+
+	// A name that only looks different (`./f0`) is still ours.
+	void normalizedNamesAreOwned() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		{
+			artifacts::ArtifactCollection collection(root);
+			collection.fileArtifactNew(base::StrID("./f0"));
+			collection.flush();
+		}
+		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
+	}
+
+	// An output asked for outside the artifacts folder (`--output-file-name ../app`) is written
+	// there, but clearing the cache must not remove it.
+	void artifactOutsideTheCacheIsNotOwned() {
+		std::filesystem::path outer
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto root = outer / "cache";
+		std::filesystem::create_directory(root);
+		{
+			artifacts::ArtifactCollection collection(root);
+			writeFile(
+				collection.fileArtifactNew(base::StrID("../app")).file.getFilePath().getPath(),
+				"user binary"
+			);
+			collection.flush();
+		}
+		ASSERT_TRUE(
+			readFile(root / artifacts::ArtifactCollection::OWNED_LIST_FILE).find("app")
+			== std::string::npos
+		);
+		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(readFile(outer / "app") == "user binary");
+	}
+
+	// The system follows a symlink in the middle of a path silently, so `link/victim` with `link`
+	// pointing out of the cache names a file outside it. Entries reached through a symlink are
+	// not ours, wherever the symlink sits in the path.
+	void entriesThroughSymlinksAreSkipped() {
+		std::filesystem::path outer
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto root = outer / "cache";
+		std::filesystem::create_directory(root);
+		std::filesystem::create_directory(outer / "elsewhere");
+		writeFile(outer / "elsewhere" / "victim", "keep me");
+		writeFile(outer / "target", "keep me");
+		std::filesystem::create_directory_symlink(outer / "elsewhere", root / "link");
+		std::filesystem::create_symlink(outer / "target", root / "file_link");
+		std::filesystem::create_directory_symlink(outer / "elsewhere", root / "dir_link");
+		writeFile(
+			root / artifacts::ArtifactCollection::OWNED_LIST_FILE,
+			"duckling-artifacts 1\nf link/victim\nf file_link\nc dir_link\n"
+		);
+
+		{
+			artifacts::ArtifactCollection collection(root);
+			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("link/victim")).empty());
+			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("file_link")).empty());
+			ASSERT_TRUE(collection.subCollectionAtMaybe(base::StrID("dir_link")).empty());
+		}
+		// No build id: the cleanup runs over the list, and must leave all of it alone.
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(readFile(outer / "elsewhere" / "victim") == "keep me");
+		ASSERT_TRUE(readFile(outer / "target") == "keep me");
+		ASSERT_TRUE(std::filesystem::is_symlink(root / "file_link"));
+		ASSERT_TRUE(std::filesystem::is_symlink(root / "dir_link"));
+	}
+
+	// The default artifacts folder is relative (`./duck_build/`), so every path the cache builds
+	// is relative too.
+	void relativeRootWorks() {
+		std::filesystem::path outer
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto old_cwd = std::filesystem::current_path();
+		std::filesystem::current_path(outer);
+		std::filesystem::create_directory("cache");
+		const std::filesystem::path root("./cache/");
+		buildCache(root);
+		writeFile(artcOf(root), "5;");
+		{
+			artifacts::ArtifactCollection collection(root);
+			collection.flush();
+		}
+		const bool has_build_id = hasCurrentBuildId(root);
+		std::filesystem::current_path(old_cwd);
+		ASSERT_TRUE(has_build_id);
+		ASSERT_TRUE(!std::filesystem::exists(outer / "cache" / "f0"));
 	}
 
 	// Names are read back from disk, so the cleanup must not follow one out of the cache.

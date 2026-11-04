@@ -17,7 +17,6 @@
 #include <string_id/string_id.hpp>
 
 #include <cstring>
-#include <functional>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -145,6 +144,11 @@ namespace artifacts {
 		 * cleared; everything else is left alone. The list cannot be replaced by a marker inside
 		 * each artifact, because most artifacts are files whose format is not ours to extend:
 		 * executables, archives, object files, LLVM IR.
+		 *
+		 * An entry is never owned if it leads out of the directory (absolute, `..`), back to the
+		 * directory itself (`.`), or through a symlink at any part of its path. The compiler
+		 * creates none of those, so such an entry is skipped, like the module tree builder
+		 * skips symlinks among source files.
 		 *
 		 * Format: the header line `duckling-artifacts 1`, then one entry per line - `f <name>`
 		 * for a file artifact, `c <name>` for a sub-collection.
@@ -341,7 +345,7 @@ namespace artifacts {
 
 		/**
 		 * @brief Writes this collection's blob cache to its `.artc` file with
-		 * `writeFileAtomically`.
+		 * `fs::FileManager::writeFileAtomically`; a failure is reported, not fatal.
 		 *
 		 * That matters more than it looks: a torn `.artc` sitting next to a *matching*
 		 * `.build_id` is not cleared by the build-id check, so it used to break every later build
@@ -368,36 +372,6 @@ namespace artifacts {
 		 * @param kind `'f'` for a file artifact, `'c'` for a sub-collection.
 		 */
 		void recordOwnedEntry(char kind, std::string_view name);
-
-		/**
-		 * @brief Writes a file through a sibling temporary file that is renamed into place.
-		 *
-		 * A rename inside one directory is atomic, so a reader sees either the previous file or
-		 * the new one, never a half of each, and a write that dies partway (a full disk, a killed
-		 * build) leaves the previous file untouched. Each call gets its own temporary file, so
-		 * concurrent writers cannot mix their bytes either: the last rename wins, whole.
-		 *
-		 * A failure is reported to the user and otherwise ignored - see
-		 * `reportCacheWriteFailure`.
-		 *
-		 * @param path The file to write.
-		 * @param write_content Writes the file's content to the given stream.
-		 */
-		static void writeFileAtomically(
-			const std::filesystem::path&              path,
-			const std::function<void(std::ostream&)>& write_content
-		);
-
-		/**
-		 * @brief Tells the user that the artifacts cache could not be saved, and why.
-		 *
-		 * A failure here is not fatal: everything this build produced is already on disk, so
-		 * only the next build's incremental reuse is lost.
-		 *
-		 * @param path The cache file that could not be written.
-		 * @param reason Human-readable cause, e.g. an `std::error_code` message.
-		 */
-		static void reportCacheWriteFailure(const fs::FilePath& path, std::string_view reason);
 
 		/**
 		 * @brief Construct a new ArtifactCollection and sets the parent variable.

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <sstream>
 
 class SimpleFileSystemTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -28,6 +29,8 @@ public:
 		TESTER_ADD_TEST(fileTest);
 		TESTER_ADD_TEST(vfsBindingTest);
 		TESTER_ADD_TEST(writeFailureTest);
+		TESTER_ADD_TEST(writeFileAtomicallyTest);
+		TESTER_ADD_TEST(removeEntryTest);
 	}
 
 private:
@@ -710,6 +713,80 @@ private:
 
 		auto created = fs::FileManager::createPhysicalFile(dev_full, "small", true);
 		assertTrue(!created.has_value(), "Creating a file on a full device must fail");
+	}
+
+	static std::string readWhole(const std::filesystem::path& path) {
+		std::ifstream     in(path, std::ios::binary);
+		std::stringstream ss;
+		ss << in.rdbuf();
+		return ss.str();
+	}
+
+	void writeFileAtomicallyTest() {
+		const auto dir    = fs::FileManager::createRandomTempDirectory().getFilePath();
+		const auto target = dir / fs::FilePath("cache");
+		const auto write  = [&](std::string_view text) {
+            return fs::FileManager::writeFileAtomically(target, [&](std::ostream& out) {
+                out << text;
+            });
+		};
+
+		assertTrue(write("first").has_value(), "Writing a new file must succeed");
+		assertTrue(readWhole(target.getPath()) == "first", "The new file must hold the content");
+		assertTrue(write("second").has_value(), "Overwriting must succeed");
+		assertTrue(readWhole(target.getPath()) == "second", "The file must hold the new content");
+		// Only the target is left: the temporary file was renamed into place.
+		const auto entries = fs::File(dir).listFilePaths();
+		assertTrue(entries.size() == 1, "No temporary file may be left behind");
+
+		// A relative path, like the default `./duck_build/`, is resolved against the working
+		// directory.
+		const auto old_cwd = std::filesystem::current_path();
+		std::filesystem::current_path(dir.getPath());
+		const auto relative_written = fs::FileManager::writeFileAtomically(
+			fs::FilePath("./relative"), [](std::ostream& out) { out << "relative"; }
+		);
+		const auto relative_removed = fs::FileManager::removeEntry(fs::FilePath("./relative"));
+		std::filesystem::current_path(old_cwd);
+		assertTrue(relative_written.has_value(), "Writing to a relative path must succeed");
+		assertTrue(
+			relative_removed.has_value() && relative_removed.value(),
+			"Removing a relative path must succeed"
+		);
+
+		const auto missing_dir = dir / fs::FilePath("missing") / fs::FilePath("cache");
+		auto       failed      = fs::FileManager::writeFileAtomically(missing_dir, [](auto&) {});
+		assertTrue(!failed.has_value(), "Writing into a missing folder must fail");
+		assertTrue(
+			failed.error().find("missing") != std::string::npos,
+			"The failure should name the path, got: " + failed.error()
+		);
+	}
+
+	void removeEntryTest() {
+		const auto dir  = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto file = dir / "file";
+		std::ofstream(file) << "content";
+
+		auto removed = fs::FileManager::removeEntry(fs::FilePath(file));
+		assertTrue(removed.has_value() && removed.value(), "An existing file must be removed");
+		removed = fs::FileManager::removeEntry(fs::FilePath(file));
+		assertTrue(removed.has_value() && !removed.value(), "A missing entry is not an error");
+
+		// A symlink is removed itself; what it points to stays.
+		const auto target = dir / "target";
+		std::ofstream(target) << "keep me";
+		std::filesystem::create_symlink(target, dir / "link");
+		removed = fs::FileManager::removeEntry(fs::FilePath(dir / "link"));
+		assertTrue(removed.has_value() && removed.value(), "The symlink must be removed");
+		assertTrue(readWhole(target) == "keep me", "The symlink's target must stay");
+
+		// A folder with something in it is not removed, and the reason is reported.
+		std::filesystem::create_directory(dir / "full_dir");
+		std::ofstream(dir / "full_dir" / "inside") << "x";
+		removed = fs::FileManager::removeEntry(fs::FilePath(dir / "full_dir"));
+		assertTrue(!removed.has_value(), "A non-empty folder must not be removed");
+		assertTrue(std::filesystem::exists(dir / "full_dir" / "inside"), "Its content must stay");
 	}
 };
 

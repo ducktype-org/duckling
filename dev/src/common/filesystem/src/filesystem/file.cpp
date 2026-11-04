@@ -282,6 +282,52 @@ namespace fs {
 		}
 	}
 
+	std::expected<void, std::string> FileManager::writeFileAtomically(
+		const FilePath& path, const std::function<void(std::ostream&)>& write_content
+	) {
+		// On disk, but relative paths (the default `./duck_build/`) are fine.
+		const auto abs_path = path.absolute();
+		requirePhysicalPath(abs_path);
+		const auto tmp_path = randomName(
+			abs_path.parentPath(), abs_path.getPath().filename().string() + ".", ".tmp"
+		);
+		const auto discard_tmp = [&tmp_path] {
+			std::error_code ec;
+			std::filesystem::remove(tmp_path.getPath(), ec);
+		};
+
+		errno = 0;
+		std::ofstream file(tmp_path.getPath(), std::ios::binary | std::ios::trunc);
+		if (!file) return std::unexpected(streamFailureReason(tmp_path, "could not be opened"));
+		errno = 0;
+		write_content(file);
+		file.close();
+		// Only a fully written temporary file earns the rename; anything else is thrown away,
+		// which is what keeps the previous file intact.
+		if (!file) {
+			auto reason = streamFailureReason(tmp_path, "could not be written");
+			discard_tmp();
+			return std::unexpected(std::move(reason));
+		}
+
+		std::error_code ec;
+		std::filesystem::rename(tmp_path.getPath(), abs_path.getPath(), ec);
+		if (ec) {
+			discard_tmp();
+			return std::unexpected(abs_path.string() + ": " + ec.message());
+		}
+		return {};
+	}
+
+	std::expected<bool, std::string> FileManager::removeEntry(const FilePath& path) {
+		const auto abs_path = path.absolute();
+		requirePhysicalPath(abs_path);
+		std::error_code ec;
+		const bool      removed = std::filesystem::remove(abs_path.getPath(), ec);
+		if (ec) return std::unexpected(abs_path.string() + ": " + ec.message());
+		return removed;
+	}
+
 	// --- File methods (non-static, formerly FilePath) ---
 
 	base::SharedView File::getContent() const {
