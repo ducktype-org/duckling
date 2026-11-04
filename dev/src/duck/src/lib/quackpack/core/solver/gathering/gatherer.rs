@@ -435,10 +435,11 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             return Some(FetchResponse::Success(FetchSuccess::NotPinned(cached_git)));
         }
         if !cache_logger.is_empty() {
-            let err = cache_logger.unwrap_first();
-            errors.borrow_mut().log(err.context(MessageError::new(
-                "when trying to get cached git or during fastpath",
-            )));
+            let mut err = cache_logger.unwrap_first();
+            err.context(MessageError::new(
+                "failed to get the git package from the local cache",
+            ));
+            errors.borrow_mut().log(err);
             return Some(FetchResponse::failed_not_pinned(request.id));
         }
         None

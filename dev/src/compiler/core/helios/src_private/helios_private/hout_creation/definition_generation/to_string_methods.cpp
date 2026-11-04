@@ -79,14 +79,14 @@ namespace compiler::helios::defgen {
 			const auto& params = fn_type.getParameterTypes();
 			if (params.size() == 2 && params.at(1) == expected_arg_type) return candidate;
 		}
-		ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+		ctx.log<dia::NotYetImplementedCodeError>(
 			base::strConcat(
 				"The String class language primitive doesn't have the `append(",
 				arg_by_reference ? "ref " : "",
 				"String)` method."
 			),
 			"This method is required for the compiler to work."
-		));
+		);
 		query::throwFailed();
 		CORE_UNREACHABLE();
 	}

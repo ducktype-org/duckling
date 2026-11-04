@@ -146,7 +146,7 @@ async fn load_package(
             if result.is_err() {
                 logger.log_result(storage.try_remove_pkg(pkg_id).with_context(|| {
                     format!(
-                        "when trying to remove a malformed dependency {} {} from its storage",
+                        "failed to remove a malformed dependency {} {} from its storage",
                         pkg_id.name(),
                         pkg_id.version()
                     )
@@ -160,7 +160,7 @@ async fn load_package(
         FullKind::Local => (
             log!(
                 url.to_path_buf()
-                    .with_context(|| format!("when loading a local dependency {}", pkg_id.name()))
+                    .with_context(|| format!("failed to load local dependency {}", pkg_id.name()))
             ),
             true,
         ),

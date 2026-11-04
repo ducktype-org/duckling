@@ -121,7 +121,7 @@ namespace compiler::helios {
 						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
 					}
 				}
-				ctx.logInt(std::move(msg));
+				ctx.log(std::move(msg));
 				return query::Failed();
 			}
 			variant_case(errors::Inaccessible, _) {
@@ -132,16 +132,16 @@ namespace compiler::helios {
 						msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
 					}
 				}
-				ctx.logInt(std::move(msg));
+				ctx.log(std::move(msg));
 				return query::Failed();
 			}
 			variant_case(errors::SymbolNotFound, _) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					base::strConcat("Symbol '", name, "' not found in lookup"),
 					error_position,
 					"",
 					"symbol lookup here"
-				));
+				);
 				return query::Failed();
 			}
 			variant_default { CORE_PANIC("Invalid state"); }

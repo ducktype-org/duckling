@@ -79,7 +79,7 @@ impl<'duck> EditableManifest<'duck> {
         let pkg = pcx.package().get_package();
         let content = YamlFile::from_str(pkg.original_content()).with_context(|| {
             format!(
-                "when trying to editably read the manifest at `{}`",
+                "failed to create an editable manifest at `{}`",
                 pkg.manifest_path().display()
             )
         })?;

@@ -58,7 +58,7 @@ pub fn parse_frontmatter(
     debug!("parsing the frontmatter of `{}`", path.display());
     parse_inner(path, ctx).with_context(|| {
         format!(
-            "when trying to parse the frontmatter of the script at `{}`",
+            "failed to parse the frontmatter of the script at `{}`",
             path.display()
         )
     })
@@ -167,7 +167,7 @@ fn resolve_import_in_schema(
                 "script at `{}` imports a frontmatter but also specifies some of the frontmatter fields",
                 script_path.display()
             );
-            err = err.add_hint("either remove the `import` field or all the other fields");
+            err.add_hint("either remove the `import` field or all the other fields");
             qp_bail!(err);
         }
         let root_path = script_path
@@ -176,7 +176,7 @@ fn resolve_import_in_schema(
         let imported_path = root_path.join(import);
         let content = read_from_path_to_string(&imported_path).with_context(|| {
             format!(
-                "while reading the file imported by `{}` at `{}`",
+                "failed to read the file imported by `{}` at `{}`",
                 script_path.display(),
                 imported_path.display(),
             )
@@ -189,7 +189,7 @@ fn resolve_import_in_schema(
         )
         .with_context(|| {
             format!(
-                "while generating schema from the file imported by `{}` at `{}`",
+                "failed to generate a schema from the file imported by `{}` at `{}`",
                 script_path.display(),
                 imported_path.display(),
             )

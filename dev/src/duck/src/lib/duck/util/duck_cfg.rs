@@ -100,7 +100,7 @@ impl DuckCfg {
     pub fn alias_for(&self, key: &str) -> QuackResult<Option<Alias>> {
         self.inner
             .deserialize_optional(&format!("aliases.{key}"))
-            .with_context(|| format!("when trying to get the alias expansions of `{key}`"))
+            .with_context(|| format!("failed to get the alias expansions of `{key}`"))
     }
 
     /// Get the underlying [`YamlConfig`].
