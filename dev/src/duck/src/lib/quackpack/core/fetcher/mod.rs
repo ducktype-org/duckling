@@ -48,8 +48,6 @@ pub struct Fetcher<'duck> {
     cache: RefCell<cache::ManifestCache>,
     downloads: downloads::Downloads,
     locks_path: FileLockManager,
-    #[allow(unused)] // @TODO: #1905 Remove this
-    artifacts_cache_path: FileLockManager,
 }
 
 /// URL of the default Ducknest instance.
@@ -76,15 +74,12 @@ impl<'duck> Fetcher<'duck> {
     /// 3. failed to initialize cache manager.
     pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
         let metadata_path = ctx.duck_home().get_metadata_db_path();
-        let artifacts_cache_path = ctx.duck_home().artifacts();
-        artifacts_cache_path.mkdir()?;
         let download_cache_path = ctx.duck_home().downloads();
         let downloads = downloads::Downloads::new(download_cache_path)?;
         let locks = ctx.duck_home().cache().join("locks");
         locks.mkdir()?;
         trace!(
             metadata = %metadata_path.display(),
-            artifacts = %artifacts_cache_path.display(),
             locks = %locks.display()
         );
         let http_client = Arc::new(AsyncHttpClient::new(ctx));
@@ -104,7 +99,6 @@ impl<'duck> Fetcher<'duck> {
             git_client,
             git_fastpath_client,
             cache: RefCell::new(cache),
-            artifacts_cache_path,
             downloads,
             locks_path: locks,
         })
