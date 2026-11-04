@@ -66,14 +66,14 @@ pub fn run_migrations(
                 rusqlite::params![migration.version, migration.name],
             )?;
 
-            trace!(migration.version = %migration.version, migration.name = %migration.name, "executed migration");
+            trace!(target: "duck::sqlite", version = %migration.version, name = %migration.name, "executed migration");
             applied_count += 1;
         }
     }
 
     tx.commit()?;
 
-    trace!(%applied_count, "finished migrations");
+    trace!(target: "duck::sqlite", %applied_count, "finished migrations");
 
     Ok(())
 }

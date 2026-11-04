@@ -62,15 +62,32 @@ namespace compiler::tsh::coercions {
 		};
 
 		/**
+		 * @brief The value whose copy causes an error.
+		 * @note This is needed to provide more meaningful error messages (e.g. when a value being
+		 * dereferenced is the one that needs the copy) and for this information not to be retrieved
+		 * again when rendering the message.
+		 */
+		struct CopiedValue final {
+			/// The type of the copied value.
+			SymbolType<> type;
+			/// Whether the value is the pointee read out of a `ref`/`box`.
+			bool is_pointee;
+		};
+
+		/**
 		 * @brief The coercion needed a copy of a value whose type is not copyable.
 		 */
-		struct TypeNotCopyable final {};
+		struct TypeNotCopyable final {
+			CopiedValue copied;
+		};
 
 		/**
 		 * @brief The coercion required a copy of a non-trivially copyable type, it has to be done
 		 * explicitly by `copy` or `move`.
 		 */
-		struct RequiresExplicitCopyMove final {};
+		struct RequiresExplicitCopyMove final {
+			CopiedValue copied;
+		};
 	}
 
 	using CoercionFailure = std::variant<

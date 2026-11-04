@@ -12,6 +12,7 @@
 #pragma once
 
 #include "../symbol_type.hpp"
+#include "coercion_mode.hpp"
 
 #include <cstdint>
 #include <string>
@@ -25,6 +26,8 @@ namespace compiler::tsh::coercions {
 		None,
 		/// `ref`/`box` -> `direct`. Deref.
 		Deref,
+		/// `direct`/`box` -> `ref`. Implicitly taken by `ref`, only in CoercionMode::ImplicitRefOf.
+		RefOf,
 		/// `direct` -> `ref`/`box`, `ref` -> `box`, `box`-> `ref`. Needs `&` or `new`.
 		Illegal,
 	};
@@ -83,6 +86,9 @@ namespace compiler::tsh::coercions {
 	 *  TO  Ref     |   No   | Yes | No
 	 *      Box     |   No   | No  | Yes
 	 * ```
+	 * In the CoercionMode::ImplicitRefOf mode `Direct` -> `Ref` and `Box` -> `Ref` are legal too.
 	 */
-	[[nodiscard]] ReferenceCoercion referenceCoercionRule(ReferenceKind from, ReferenceKind to);
+	[[nodiscard]] ReferenceCoercion referenceCoercionRule(
+		ReferenceKind from, ReferenceKind to, CoercionMode mode = CoercionMode::Default
+	);
 }

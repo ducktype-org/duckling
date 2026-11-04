@@ -1,0 +1,161 @@
+# Tests calls through function values: held in a local, copied, passed as an argument, returned
+# from a function, held in a global and in a struct field, and of a function with no results.
+# input = a b
+# output = a+b, a*b, a*b, a+b, a*b, a
+
+type fun: binop { i64, i64 } { i64 }
+type fun: consumer { i64 } {}
+
+type data: holder {
+	op: binop
+}
+type pointer: ptr_holder holder
+
+global_data global_op binop {}
+
+function add { i64, i64 } -> { i64 } {
+	mov_p64_p64         ret0, arg0;
+	add_p64_p64         ret0, arg1;
+	deinit; # arg1
+	deinit; # arg0
+	ret;
+}
+
+function mul { i64, i64 } -> { i64 } {
+	mov_p64_p64         ret0, arg0;
+	mul_p64_p64         ret0, arg1;
+	deinit; # arg1
+	deinit; # arg0
+	ret;
+}
+
+function show { i64 } -> {} {
+	output_p64          arg0;
+	deinit; # arg0
+	ret;
+}
+
+# ret0 = arg0(arg1, arg2)
+function apply { binop, i64, i64 } -> { i64 } {
+	init_pany_type      result, i64;
+	init_pany_type      lhs, i64;
+	mov_p64_p64         lhs, arg1;
+	init_pany_type      rhs, i64;
+	mov_p64_p64         rhs, arg2;
+	call_pfun           arg0;
+
+	mov_p64_p64         ret0, result;
+	deinit; # result
+	deinit; # arg2
+	deinit; # arg1
+	deinit; # arg0
+	ret;
+}
+
+# ret0 = arg0 == 0 ? add : mul
+function pick { i64 } -> { binop } {
+	cmpEq_p64_imm       arg0, 0;
+	jmpIf_label         use_add;
+	mov_pfun_func       ret0, mul;
+	jmp_label           done;
+	label               use_add;
+	mov_pfun_func       ret0, add;
+	label               done;
+	deinit; # arg0
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type      a, i64;
+	input_p64           a;
+	init_pany_type      b, i64;
+	input_p64           b;
+
+	# A copied local.
+	init_pany_type      f, binop;
+	mov_pfun_func       f, add;
+	init_pany_type      g, binop;
+	mov_pfun_pfun       g, f;
+	init_pany_type      r1, i64;
+	init_pany_type      r1_lhs, i64;
+	mov_p64_p64         r1_lhs, a;
+	init_pany_type      r1_rhs, i64;
+	mov_p64_p64         r1_rhs, b;
+	call_pfun           g;
+	output_p64          r1;
+
+	# An argument.
+	init_pany_type      r2, i64;
+	init_pany_type      r2_op, binop;
+	mov_pfun_func       r2_op, mul;
+	init_pany_type      r2_lhs, i64;
+	mov_p64_p64         r2_lhs, a;
+	init_pany_type      r2_rhs, i64;
+	mov_p64_p64         r2_rhs, b;
+	call_func           apply;
+	output_p64          r2;
+
+	# A result.
+	init_pany_type      picked, binop;
+	init_pany_type      pick_arg, i64;
+	mov_p64_imm         pick_arg, 1;
+	call_func           pick;
+	init_pany_type      r3, i64;
+	init_pany_type      r3_lhs, i64;
+	mov_p64_p64         r3_lhs, a;
+	init_pany_type      r3_rhs, i64;
+	mov_p64_p64         r3_rhs, b;
+	call_pfun           picked;
+	output_p64          r3;
+
+	# A global.
+	mov_pfun_func       global_op, add;
+	init_pany_type      r4, i64;
+	init_pany_type      r4_lhs, i64;
+	mov_p64_p64         r4_lhs, a;
+	init_pany_type      r4_rhs, i64;
+	mov_p64_p64         r4_rhs, b;
+	call_pfun           global_op;
+	output_p64          r4;
+
+	# A struct field.
+	init_pany_type      h, holder;
+	init_pany_type      h_ptr, ptr_holder;
+	ref_pptr_pany       h_ptr, h;
+	structStore_pptr_pany_field h_ptr, picked, holder.op;
+	init_pany_type      loaded, binop;
+	structLoad_pany_pptr_field loaded, h_ptr, holder.op;
+	init_pany_type      r5, i64;
+	init_pany_type      r5_lhs, i64;
+	mov_p64_p64         r5_lhs, a;
+	init_pany_type      r5_rhs, i64;
+	mov_p64_p64         r5_rhs, b;
+	call_pfun           loaded;
+	output_p64          r5;
+
+	# A function with no results.
+	init_pany_type      s, consumer;
+	mov_pfun_func       s, show;
+	init_pany_type      s_arg, i64;
+	mov_p64_p64         s_arg, a;
+	call_pfun           s;
+
+	mov_p64_imm         ret0, 0;
+	deinit; # s
+	deinit; # r5
+	deinit; # loaded
+	deinit; # h_ptr
+	deinit; # h
+	deinit; # r4
+	deinit; # r3
+	deinit; # picked
+	deinit; # r2
+	deinit; # r1
+	deinit; # g
+	deinit; # f
+	deinit; # b
+	deinit; # a
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

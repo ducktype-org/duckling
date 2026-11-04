@@ -29,6 +29,12 @@ namespace compiler::frontend::packages {
 				.dependencies    = { base::StrID("core") },
 				.dvm_shared_libs = {},
 			},
+			// `exp` (experimental) holds library code that is not stable enough for `std` yet.
+			{
+				.id              = base::StrID("exp"),
+				.dependencies    = { base::StrID("core"), base::StrID("std") },
+				.dvm_shared_libs = {},
+			},
 		};
 		return packages;
 	}

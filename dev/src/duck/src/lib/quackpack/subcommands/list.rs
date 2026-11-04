@@ -74,7 +74,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
     } = opts;
     let storage = Storage::new(storage_path);
     let venvs_list: Vec<(Venv, DateTime<Utc>)> = list_venvs(storage.root(), ctx)
-        .context("when listing the venvs")?
+        .context("failed to list the venvs")?
         .into_values()
         .collect();
     // This list operation counts as access to the venv, modyfying the last_access to now.

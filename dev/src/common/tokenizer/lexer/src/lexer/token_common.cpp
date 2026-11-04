@@ -70,6 +70,10 @@ namespace lexer {
 		return {};
 	}
 
+	bool Operator::isGenBinOp() const {
+		return isNotReserved() || asNamed() == lang_def::NamedOperator::SingleArrow;
+	}
+
 	i64 Operator::getGenBinOpPrecedence() const {
 		using namespace lang_def;
 		static const std::unordered_map<lang_def::NamedOperator, i64> precedences
@@ -78,10 +82,15 @@ namespace lexer {
 			    { NamedOperator::Pipe, 540 },       { NamedOperator::Exponentiate, 550 },
 			    { NamedOperator::Multiply, 560 },   { NamedOperator::Divide, 560 },
 			    { NamedOperator::Remainder, 560 },  { NamedOperator::Plus, 570 },
-			    { NamedOperator::Minus, 570 },      { NamedOperator::As, 400 } };
+			    { NamedOperator::Minus, 570 },      { NamedOperator::SingleArrow, 580 },
+			    { NamedOperator::As, 400 } };
 		if (precedences.contains(asNamed()))
 			return precedences.at(asNamed());
 		else
 			return 500;
+	}
+
+	bool Operator::isGenBinOpRightAssociative() const {
+		return asNamed() == lang_def::NamedOperator::SingleArrow;
 	}
 }

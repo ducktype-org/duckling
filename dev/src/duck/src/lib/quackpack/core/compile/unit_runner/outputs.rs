@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 
-use tracing::{debug, instrument, trace};
+use tracing::{debug, trace};
 
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
@@ -17,7 +17,6 @@ use crate::quackpack::core::compile::unit::{Unit, UnitType};
 use crate::quackpack::core::compile::unit_runner::CompilationOutput;
 use crate::quackpack::core::compile::unit_runner::external_libs::gather_external_libraries;
 
-#[instrument(skip_all)]
 /// Get the output of this [`run`] pass.
 ///
 /// Right now, this is deterministic (i.e. can be determined from the [`UnitGraph`] and
@@ -38,7 +37,6 @@ pub fn get_compiler_output(
 }
 
 /// Get a path to the output artifact of this [`Unit`].
-#[instrument(skip_all)]
 pub fn unit_output(
     unit: &Unit,
     unit_id_in_graph: GraphNodeId,
@@ -47,14 +45,17 @@ pub fn unit_output(
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<PathBuf> {
     let is_root = graph.is_root(unit);
-    debug!(%is_root, "generating output");
     let out = if is_root {
         layout.root_directory().join(unit.output_file_name(bcx))
     } else {
         let layout = layout.for_dependency(unit_id_in_graph, graph)?;
         layout.root_directory().join(unit.output_file_name(bcx))
     };
-    debug!(out = %out.display(), "generated output");
+    trace!(
+        "output of `{}` is `{}`",
+        unit.package().name(),
+        out.display()
+    );
     Ok(out)
 }
 
@@ -64,12 +65,10 @@ pub fn unit_output(
 /// Each dependency is present exactly once.
 ///
 /// We currently do this by looking at unit's dependencies which are source code inputs.
-#[instrument(skip_all)]
 pub fn collect_packages(
     unit_id_in_graph: GraphNodeId,
     graph: &UnitGraph,
 ) -> QuackResult<Vec<multipackage_schema::Package>> {
-    trace!("getting packages");
     let mut packages = vec![];
     for dep in graph.deps_for(unit_id_in_graph) {
         let dep = graph.node_for(*dep);
@@ -80,7 +79,7 @@ pub fn collect_packages(
         let pkg = graph.package_data(*identity);
         packages.push(pkg.multipackage_schema_package(graph)?);
     }
-    debug!(?packages);
+    trace!(?packages);
     Ok(packages)
 }
 
@@ -90,14 +89,12 @@ pub fn collect_packages(
 /// 1. returns `None` if there are no dependencies,
 /// 2. creates a [`multipackage_schema::LinkerOptions::RawLinkerArgs`] only for
 ///    [`UnitType::Dependency`] dependencies (which _should_ be only `.a` files).
-#[instrument(skip_all)]
 pub fn get_linker_options(
     unit_id_in_graph: GraphNodeId,
     graph: &UnitGraph,
     layout: &dyn ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
-    trace!("getting linker options");
     let outputs = get_deps_outputs(unit_id_in_graph, graph, layout, bcx)?;
     let external_libs = gather_external_libraries(unit_id_in_graph, graph)
         .into_iter()
@@ -109,7 +106,6 @@ pub fn get_linker_options(
         .collect::<Vec<_>>();
     debug!(?args, "raw linker args");
     if args.is_empty() {
-        debug!("empty linker options");
         return Ok(None);
     }
     Ok(Some(multipackage_schema::LinkerOptions::RawLinkerArgs(
@@ -121,14 +117,12 @@ pub fn get_linker_options(
 /// Note:
 /// -----
 /// This collects outputs of only [`UnitType::Dependency`] dependencies.
-#[instrument(skip_all)]
 fn get_deps_outputs(
     unit_id_in_graph: GraphNodeId,
     graph: &UnitGraph,
     layout: &dyn ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<Vec<PathBuf>> {
-    trace!("getting output");
     let mut outputs = vec![];
     for dep_id in graph.deps_for(unit_id_in_graph) {
         let Some(dep) = graph.node_for(*dep_id).as_unit() else {
@@ -139,6 +133,6 @@ fn get_deps_outputs(
         }
         outputs.push(unit_output(dep, *dep_id, graph, layout, bcx)?)
     }
-    debug!(?outputs);
+    trace!(?outputs);
     Ok(outputs)
 }

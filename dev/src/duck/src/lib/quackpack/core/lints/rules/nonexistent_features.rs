@@ -38,11 +38,12 @@ dependencies:
 };
 
 /// Run the pass for [`LINT`].
-pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let level = LINT.level;
-    if level == LintLevel::Allow {
-        return Ok(());
-    }
+pub fn pass(
+    manifest: &Manifest,
+    _: &DuckContext,
+    level: LintLevel,
+    buffer: &mut LintBuffer,
+) -> QuackResult<()> {
     walk_conditions(manifest, |conds| {
         let Some(required_features) = conds.conds().required_root_package_features() else {
             return;

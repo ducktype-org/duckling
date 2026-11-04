@@ -10,7 +10,7 @@
 use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
-use tracing::debug;
+use tracing::trace;
 use url::Url;
 
 use super::{ParseMode, Scope, ScopeGuard};
@@ -20,14 +20,12 @@ use crate::quackpack::schemas::manifest::{
     Dependency as DependencySchema, DependencySource as SourceSchema, DetailedSource,
 };
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{expand_tilde, normalize};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].
 ///
 /// It's the most important and complex part of current parsing process.
-#[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: &DependencySchema,
     mode: ParseMode<'_>,
@@ -35,9 +33,9 @@ pub(crate) fn parse(
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Source> {
-    debug!(?schema);
+    trace!(?schema);
     let Some(ref source) = schema.source else {
-        debug!("missing the source, falling back to the default registry");
+        trace!("missing the source, falling back to the default registry");
         if schema.version.is_some() {
             let url = ctx.duck_cfg().registry_url()?;
             return Ok(Source::for_registry(url));
@@ -74,12 +72,12 @@ pub(crate) fn parse(
         source.git_url.as_ref(),
     ) {
         (None, None, None) => {
-            debug!("didn't find any source");
+            trace!("no source fields found");
             check_no_git(source, &mut scope)?;
             check_no_local(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             if schema.version.is_some() {
-                debug!("...but has a version, assuming registry source");
+                trace!("found a version, assuming a registry source");
                 let url = ctx.duck_cfg().registry_url()?;
                 Source::for_registry(url)
             } else {
@@ -94,17 +92,16 @@ pub(crate) fn parse(
             }
         }
         (Some(registry_url), None, None) => {
-            debug!("found a registry source");
+            trace!("found a registry source");
             check_no_git(source, &mut scope)?;
             check_no_local(source, &mut scope)?;
             let url = registry_url.as_str().to_url()?;
             Source::for_registry(url)
         }
         (None, Some(root), None) => {
-            debug!("found a local path source");
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
-            debug!(path_in_manifest = %root.display(), "path specified in the manifest");
+            trace!("found a local source with path `{}`", root.display());
             let package_root = mode.package_root().with_context(|| {
                 format!("local dependencies are disallowed in {}", mode.mode_name())
             })?;
@@ -112,7 +109,7 @@ pub(crate) fn parse(
             Source::for_local(&dir_root)?
         }
         (None, None, Some(manifest_git_url)) => {
-            debug!("found a git source");
+            trace!("found a git source");
             check_no_local(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             let reference = resolve_git_reference(source, &scope)?;
@@ -168,17 +165,15 @@ fn make_could_not_determine_error<const N: usize>(
             source[0], source[1], source[2]
         )
     };
-    QuackError::hint(hint_text).context(MessageError(
-        format!(
-            "couldn't determine the source of the dependency `{}`",
-            scope.format()
-        )
-        .into(),
-    ))
+    let mut err = QuackError::message(format!(
+        "couldn't determine the source of the dependency `{}`",
+        scope.format()
+    ));
+    err.add_hint(hint_text);
+    err
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Git`] source.
-#[tracing::instrument(skip_all)]
 fn check_no_git(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> QuackResult<()> {
     let fields = [
         (source.git_url.as_ref(), "git-url"),
@@ -199,7 +194,6 @@ fn check_no_git(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> QuackRes
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Local`] source.
-#[tracing::instrument(skip_all)]
 fn check_no_local(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> QuackResult<()> {
     let fields = [(source.path.as_ref(), "path")];
     for (field, name) in fields {
@@ -215,7 +209,6 @@ fn check_no_local(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> QuackR
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Registry`] source.
-#[tracing::instrument(skip_all)]
 fn check_no_registry(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> QuackResult<()> {
     let fields = [(source.registry_url.as_ref(), "registry-url")];
     for (field, name) in fields {
@@ -231,7 +224,6 @@ fn check_no_registry(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> Qua
 }
 
 /// Resolve [`BranchOrTag`] from the given `source`.
-#[tracing::instrument(skip_all)]
 fn resolve_git_reference(source: &DetailedSource, scope: &Scope) -> QuackResult<GitReference> {
     let mutually_exclusive_fields_error = |names: &'static [&'static str]| {
         let formatted = scope.format();
@@ -269,8 +261,8 @@ pub(super) fn resolve_path_maybe_relative_to_dir(
     root: &Path,
     ctx: &DuckContext,
 ) -> PathBuf {
-    let expanded = path.expand_tilde(ctx);
-    root.join(expanded).normalize()
+    let expanded = expand_tilde(path, ctx);
+    normalize(root.join(expanded))
 }
 
 /// Parse a url of a git dependency.
@@ -303,10 +295,10 @@ fn parse_git_url(
             Ok(url) => url.to_string(),
             Err(_) => format!("file://{}", path.display()),
         };
-        err = err.add_hint(format!(
-            "either change it to a local dependency or change the URL to `{path_url_hint}`",
-        ));
-        err = err.add_note("git dependency points to a file on the disk");
+        err.add_note("git dependency points to a file on the disk")
+            .add_hint(format!(
+                "either change it to a local dependency or change the URL to `{path_url_hint}`",
+            ));
     }
     Err(err)
 }

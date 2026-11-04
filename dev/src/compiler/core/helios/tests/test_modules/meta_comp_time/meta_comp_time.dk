@@ -106,3 +106,16 @@ fun getFromTuple(t: type) -> type = {
     return (a, a);
 }
 const NESTED_TYPE_TUPLE = getFromTuple(i32);
+const SINGLE_TYPE_TUPLE = (i32,);
+
+
+### Function types.
+const RAW_PAIR = funptr(i32, i32) -> bool;
+const CLOSURE_PAIR = (i32, i32) -> bool;
+const RAW_SINGLE = funptr i32 -> bool;
+const RAW_NO_PARAMS = funptr() -> bool;
+const RAW_UNIT_RESULT = funptr(i32) -> ();
+const RAW_TUPLE_PARAM = funptr((i32, i32)) -> bool;
+const RAW_ONE_ELEMENT_LIST = funptr(i32,) -> bool;
+const PAIR_ALIAS = (i32, i32);
+const RAW_FROM_ALIAS = funptr PAIR_ALIAS -> bool;

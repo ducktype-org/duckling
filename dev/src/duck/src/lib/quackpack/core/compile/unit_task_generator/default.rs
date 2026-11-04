@@ -6,8 +6,6 @@
 
 //! An implementation of [`UnitTaskGenerator`], which creates a single task per package.
 
-use tracing::instrument;
-
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
@@ -24,7 +22,6 @@ use crate::quackpack::core::compile::unit_task_generator::UnitTaskGenerator;
 pub struct DefaultTaskGenerator;
 
 impl UnitTaskGenerator for DefaultTaskGenerator {
-    #[instrument(skip_all)]
     #[track_caller]
     fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> QuackResult<()> {
         let root = graph.root_unit();
@@ -38,7 +35,6 @@ impl UnitTaskGenerator for DefaultTaskGenerator {
         Ok(())
     }
 
-    #[instrument(skip_all)]
     fn create_tasks(
         &self,
         unit: &Unit,
@@ -57,7 +53,6 @@ impl UnitTaskGenerator for DefaultTaskGenerator {
 }
 
 /// Create a task for a single [`Unit`].
-#[instrument(skip_all)]
 fn create_task(
     unit: &Unit,
     unit_id_in_graph: GraphNodeId,

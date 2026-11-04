@@ -67,30 +67,24 @@ pub fn expand_aliases(
 ) -> QuackResult<ArgMatches> {
     // User hasn't provided a subcommand, ignore...
     let Some((subcmd, subcmd_args)) = args.subcommand() else {
-        debug!("no subcommand");
         return Ok(args);
     };
-    debug!(?subcmd);
     if is_builtin_subcommand(subcmd) {
-        debug!("builtin subcommand");
         return Ok(args);
     }
     if let Some(builtin) = get_builtin_alias_expansion(subcmd) {
-        debug!(?builtin, "got builtin alias");
+        debug!("expanding the builtin alias `{subcmd}` to `{builtin}`");
         return expand_builtin_alias(builtin, subcmd_args);
     }
     let alias = ctx.duck_cfg().alias_for(subcmd)?;
     match alias {
         Some(new) => {
-            debug!(expanded = ?new, "expanding user alias");
+            debug!(expansion = ?new, "expanding the user alias `{subcmd}`");
             // This is the actually interesting part.
             let new_args = expand_single_alias(subcmd, subcmd_args, &new, &mut visited)?;
             expand_aliases(new_args, ctx, visited)
         }
-        None => {
-            debug!("no alias");
-            Ok(args)
-        }
+        None => Ok(args),
     }
 }
 
@@ -98,9 +92,7 @@ pub fn expand_aliases(
 ///
 /// `builtin` is __expanded__ builtin alias (for example, for alias `b` we expect `build` to be
 /// passed as `builtin`), and `args` are parsed [`ArgMatches`] __with the builtin subcommand__.
-#[tracing::instrument(skip_all)]
 fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatches> {
-    debug!(%builtin);
     let builtin = OsString::from(builtin);
     Ok(cli().no_binary_name(true).try_get_matches_from(chain(
         [&builtin],
@@ -113,14 +105,13 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
 /// `alias` is alias we're expanding, `alias_args` are [`ArgMatches`] for that `alias`, `alias_expansion`
 /// is expanded alias (taken from [`DuckContext`]), and `visited` is a vector of already expanded
 /// aliases (in order to detect cycles).
-#[tracing::instrument(skip_all, fields(%alias, ?alias_expansion))]
 fn expand_single_alias(
     alias: &str,
     alias_args: &ArgMatches,
     alias_expansion: &Alias,
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
-    debug!(?visited);
+    trace!(?visited);
     let new_cli_args = args_from_alias(alias_expansion, alias_args);
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
@@ -154,9 +145,7 @@ fn parse_alias_args(new_cli_args: impl Iterator<Item = OsString>) -> QuackResult
 }
 
 /// Check for an aliases cycle.
-#[tracing::instrument]
 fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResult<()> {
-    trace!("checking alias cycle");
     if visited.contains(&next.into()) {
         qp_bail!(
             "user-defined alias `{current}` cycles: {} -> {next}",

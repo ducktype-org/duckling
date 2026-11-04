@@ -75,7 +75,7 @@ namespace compiler::helios {
 				));
 				return block;
 			} else {
-				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getStablePosition()));
+				ctx.log<SingleStmtFunctionMustBeExprError>(stmt->getStablePosition());
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}
@@ -108,7 +108,7 @@ namespace compiler::helios {
 					"This should not happen"
 				);
 
-				auto output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
+				auto output_body = compileCodeOfCodeBlock(ctx, unlocked_body, decl.return_type);
 
 				const bool ends_with_return
 					= !output_body->statements.empty()
@@ -154,9 +154,9 @@ namespace compiler::helios {
 			}
 
 			void visitConstructor(pst::Access<pst::Constructor>) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"Support for user defined constructors will be deleted."
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -191,11 +191,11 @@ namespace compiler::helios {
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
 				if (decl.parameters.size() != 1) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"A copy constructor must declare exactly one parameter: a reference to "
 						"the object being copied.",
 						params_source
-					));
+					);
 					query::throwFailed();
 				}
 
@@ -208,7 +208,7 @@ namespace compiler::helios {
 				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
 				// resolves to an immutable reference.
 				if (!is_reference || !is_matching_class) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						base::strConcat(
 							"A copy constructor's parameter must be a reference to its own "
 							"class `",
@@ -216,7 +216,7 @@ namespace compiler::helios {
 							"`."
 						),
 						params_source
-					));
+					);
 					query::throwFailed();
 				}
 			}

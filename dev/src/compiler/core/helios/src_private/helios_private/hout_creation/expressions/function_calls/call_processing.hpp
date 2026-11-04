@@ -37,15 +37,32 @@ namespace compiler::helios::code {
 	);
 
 	/**
-	 * @brief Same as above, but for methods. It finds the "self" argument and then calls the same
-	 * overload resolution as for normal function calls.
+	 * @brief Creates a call through @p callee, a value of a function type, like `f(1, 2)` where `f`
+	 * is a variable. Only positional arguments are allowed, each is coerced to the corresponding
+	 * parameter type of the function type. Logs an error if @p callee is not of a function type.
+	 *
+	 * @param callee The expression producing the called value.
+	 * @param whole_call_origin The origin of the whole call expression.
+	 * @param call_expr The PST call expression (the `(...)` part).
+	 */
+	query::QResult<Box<Expr>> processIndirectCall(
+		query::Context&              ctx,
+		Box<Expr>                    callee,
+		ElementOrigin                whole_call_origin,
+		pst::Access<pst::expr::Call> call_expr
+	);
+
+	/**
+	 * @brief Same as above, but for methods. The "self" argument is passed as the first argument,
+	 * and it is implicitly taken by `ref` when the selected overload expects a `ref`.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param callee_element The PST element representing the identifier of the function being
 	 * called, like `foo` in `object.foo(10)`.
 	 * @param call_expr The PST call expression representing the function call. (the `(...)` part
 	 * and not the callee)
-	 * @param self_arg The processed "self" argument of the method call.
+	 * @param self_arg The processed "self" argument of the method call, with its original value
+	 * category.
 	 */
 	query::QResult<Box<Expr>> processMethodCall(
 		query::Context&               ctx,
@@ -64,8 +81,8 @@ namespace compiler::helios::code {
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
-	 * @param method_candidates The subset of candidates that require the left-hand side to be
-	 * prepared as a method's `self` argument.
+	 * @param method_candidates The subset of candidates which are methods, so the left-hand side
+	 * is their `self` argument and may be implicitly taken by `ref`.
 	 * @param lhs The preprocessed left-hand side argument of the operator call.
 	 * @param rhs The preprocessed right-hand side argument of the operator call.
 	 * @param op_origin Operator origin used for callee origin.
@@ -88,8 +105,8 @@ namespace compiler::helios::code {
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
-	 * @param method_candidates The subset of candidates that require the operand to be prepared as
-	 * a method's `self` argument.
+	 * @param method_candidates The subset of candidates which are methods, so the operand is their
+	 * `self` argument and may be implicitly taken by `ref`.
 	 * @param inner The preprocessed argument of the operator call.
 	 * @param op_origin Operator origin used for callee origin.
 	 * @param operatoriness Whether we're dealing with a prefix or suffix operator.

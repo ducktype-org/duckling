@@ -2,6 +2,8 @@
 # which incremental builds need to find to reuse a unit.
 before-cmd: export PATH="@{ConfigDir}/mock:$PATH"
 
+# Builds `foo` which depends on `bar`.
+# All tests build `foo` again, with different scenarios.
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
@@ -56,4 +58,13 @@ Tests:
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
             info: reusing previous build artifacts for \`bar\`
+            info: compiling \`foo\`...
+      duckc-version-changed:
+        # Set mock duckc version to `2.0.0` (in Precase it is `1.0.0`).
+        test-cmd: MOCK_DUCKC_VERSION=2.0.0 duck -C foo build
+        Output:
+          String: |+
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`bar\`...
             info: compiling \`foo\`...

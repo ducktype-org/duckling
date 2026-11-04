@@ -127,12 +127,7 @@ void TypeContext::insertAndValidate(
 			if (type != *tod_types.at(name)) throw DuplicatedTypeError(type, *tod_types.at(name));
 		} else {
 			tod_types.insert(type, name);
-			types.insert(
-				vm::code::valid_type::ValidType::declareType(
-					name, valid_type::ValidTypeID(types.size())
-				),
-				name
-			);
+			types.insert(vm::code::valid_type::ValidType::declareType(name, types.nextID()), name);
 			really_new_types.emplace_back(&type);
 		}
 	}

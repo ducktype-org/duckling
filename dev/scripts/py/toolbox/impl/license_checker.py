@@ -16,7 +16,6 @@ syntax of its language. Only a shebang line (and a UTF-8 BOM) may come before it
 """
 
 import datetime
-import os
 import re
 from enum import Enum
 
@@ -186,13 +185,12 @@ def get_files_to_check(all: bool, branch: str, no_merge_base: bool) -> list[str]
         branch=branch,
         no_merge_base=no_merge_base,
         include_untracked=True,
+        filter_deleted=True,
     )  # type: ignore
     return sorted(
         file
         for file in set(files)
-        # The diff also lists files the branch deleted
-        if os.path.isfile(file)
-        and file not in EXCLUDED_FILES
+        if file not in EXCLUDED_FILES
         and get_comment_prefix(file) is not None
     )
 
