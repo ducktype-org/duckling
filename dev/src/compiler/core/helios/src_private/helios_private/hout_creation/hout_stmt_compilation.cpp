@@ -115,7 +115,9 @@ namespace compiler::helios {
 				auto kind = controlFlowKind(keyword.value()->getKeyword().unlock(ctx)->unwrap());
 				if (!kind.has_value()) {
 					ctx.log<dia::PlaceholderError>(
-						base::strConcat("`", action_name, "` target must be a block kind or a name."),
+						base::strConcat(
+							"`", action_name, "` target must be a block kind or a name."
+						),
 						target_position
 					);
 					query::throwFailed();
