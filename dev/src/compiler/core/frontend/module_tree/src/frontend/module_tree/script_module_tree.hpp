@@ -25,6 +25,9 @@ namespace compiler::frontend {
 		 */
 		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
 
+		/**
+		 * TODO: (issue?) the parent less structure is sub optimal, but it has to wait for future PRs to address it.
+		 */
 		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_parent;
 
 		void makeAbstract() final;

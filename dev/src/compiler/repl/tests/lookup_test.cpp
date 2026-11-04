@@ -40,8 +40,7 @@ private:
 		builder->setMainSourceFile(virtual_file);
 		builder->setName(base::StrID("test_repl_module"));
 
-		// PR: change this to the builder method to set repl module parent
-		// builder->setParent(parent.value());
+		builder->setReplModuleData({ .parent = parent });
 
 		return builder->finalize()->getModuleID();
 	}

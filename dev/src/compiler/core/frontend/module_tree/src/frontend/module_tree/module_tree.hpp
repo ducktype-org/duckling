@@ -67,7 +67,27 @@ namespace compiler::frontend {
 	/**
 	 * @brief Enumerates the different kinds of module tree nodes.
 	 */
-	enum class ModuleKind { Invalid, Module, Script, ReplChain };
+	enum class ModuleKind {
+		/**
+		 * Uninitialized state.
+		 */
+		Invalid,
+		
+		/**
+		 * Standard module.
+		 */
+		Module,
+		
+		/**
+		 * Script module.
+		 */
+		Script,
+		
+		/**
+		 * Synthetic REPL chain module.
+		 */
+		ReplChain
+	};
 
 	/**
 	 * @brief Represents a single module tree node in the Duckling project tree.

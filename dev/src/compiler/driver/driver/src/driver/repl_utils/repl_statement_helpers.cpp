@@ -42,8 +42,7 @@ namespace compiler::repl {
 		);
 		builder->setName(base::StrID(module_name));
 
-		// PR:
-		builder->setReplModuleParent(parent_module_id);
+		builder->setReplModuleData({ .parent = parent_module_id });
 
 		return builder->finalize();
 	}

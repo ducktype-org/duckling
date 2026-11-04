@@ -112,8 +112,18 @@ namespace compiler::frontend {
 		void setParent(base::Ref<ModuleTree> parent);
 
 		// PR: 
-		// add * set repl module parent and other script/repl data here
 		// we want to just keep flat optionals of everything and assert in finalize that only the ones we want are set (per module kind)
+
+		struct ReplModuleData final {
+			/**
+			 * @note: TODO PR? we keep ModuleID (vs ref to module) here for convenience
+			 * as existing code sometimes only has the ModuleID available
+			 */
+			base::Optional<ModuleID> parent;
+		};
+
+		// TODO: PR: panic here on bad kind
+		void setReplModuleData(const ReplModuleData& data);
 
 		/**
 		 * Builds the module tree from a single file (single-file module).
