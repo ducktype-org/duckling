@@ -40,7 +40,7 @@ pub fn missing_depenendcy_in_manifest(
     context: &dyn fmt::Debug,
 ) -> ! {
     panic!(
-        "malformed manifest of `{root_name}`: missing dependency named `{dep_ename}` in the manifest {context:#?}"
+        "malformed manifest of `{root_name}`: missing dependency `{dep_ename}` in the manifest {context:#?}"
     )
 }
 

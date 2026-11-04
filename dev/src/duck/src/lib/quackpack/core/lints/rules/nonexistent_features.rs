@@ -84,7 +84,7 @@ macros::make_diagnostic! {
         undeclared_feature_name: StrId,
     }
     display(
-       "{} dependency named `{}` is conditioned on a nonexistent feature `{}`",
+       "{} dependency `{}` is conditioned on a nonexistent feature `{}`",
        dep_kind, dep, undeclared_feature_name
     )
 }
@@ -97,7 +97,7 @@ macros::make_diagnostic! {
         undeclared_feature_name: StrId,
     }
     display(
-       "feature `{}` of {} dependency named `{}` is conditioned on a nonexistent feature `{}`",
+       "feature `{}` of {} dependency `{}` is conditioned on a nonexistent feature `{}`",
        feature, dep_kind, dep, undeclared_feature_name
     )
 }
