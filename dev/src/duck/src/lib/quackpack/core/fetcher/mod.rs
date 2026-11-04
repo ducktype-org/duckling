@@ -27,6 +27,7 @@ use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 pub mod cache;
+pub mod downloads;
 pub mod ducknest;
 pub mod git;
 pub mod http;
@@ -45,7 +46,7 @@ pub struct Fetcher<'duck> {
     git_client: git::GitClient<'duck>,
     git_fastpath_client: git::fast_path::GitFastPathClient<'duck>,
     cache: RefCell<cache::ManifestCache>,
-    download_cache_path: FileLockManager,
+    downloads: downloads::Downloads,
     locks_path: FileLockManager,
     #[allow(unused)] // @TODO: #1905 Remove this
     artifacts_cache_path: FileLockManager,
@@ -63,9 +64,6 @@ pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
 });
 
 impl<'duck> Fetcher<'duck> {
-    /// Filename of the default package's compressed source.
-    const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
-
     /// Filename of the per-package lock.
     const PER_PACKAGE_LOCK: &'static str = ".duck.package.lock";
 
@@ -81,13 +79,12 @@ impl<'duck> Fetcher<'duck> {
         let artifacts_cache_path = ctx.duck_home().artifacts();
         artifacts_cache_path.mkdir()?;
         let download_cache_path = ctx.duck_home().downloads();
-        download_cache_path.mkdir()?;
+        let downloads = downloads::Downloads::new(download_cache_path)?;
         let locks = ctx.duck_home().cache().join("locks");
         locks.mkdir()?;
         trace!(
             metadata = %metadata_path.display(),
             artifacts = %artifacts_cache_path.display(),
-            downloads = %download_cache_path.display(),
             locks = %locks.display()
         );
         let http_client = Arc::new(AsyncHttpClient::new(ctx));
@@ -108,7 +105,7 @@ impl<'duck> Fetcher<'duck> {
             git_fastpath_client,
             cache: RefCell::new(cache),
             artifacts_cache_path,
-            download_cache_path,
+            downloads,
             locks_path: locks,
         })
     }
@@ -187,21 +184,11 @@ impl<'duck> Fetcher<'duck> {
         // Otherwise, under the same global fetcher lock, we can start two downloads of the same package,
         // and one can see existing but empty path.
         let _lock = self.acquire_package_lock(package.into())?;
-        let destination = self
-            .download_cache_path
-            .join(package.name)
-            .join(package.version.to_string());
-
-        let blob_path = destination
-            .not_locked_path()
-            .join(Self::DEFAULT_BLOB_FILENAME);
-
-        if blob_path.exists() {
-            debug!(target: "duck::ducknest", "blob cache hit at `{}`", blob_path.display());
-            return Ok(blob_path);
-        }
-
-        let blob = destination.open_exclusive(Self::DEFAULT_BLOB_FILENAME, self.ctx)?;
+        let entry = self.downloads.get(package, self.ctx)?;
+        let blob = match entry {
+            downloads::DownloadedEntry::Present(path) => return Ok(path),
+            downloads::DownloadedEntry::Vacant(blob) => blob,
+        };
 
         let mut guard = guards::RemoveOnDrop::new(blob);
 
@@ -215,7 +202,7 @@ impl<'duck> Fetcher<'duck> {
                 )
             })?;
         guard.disarm();
-        Ok(blob_path)
+        Ok(guard.file().path().to_path_buf())
     }
 
     fn acquire_package_lock(&self, pkg: types::Package) -> QuackResult<LockedFile> {
