@@ -16,7 +16,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>

@@ -11,7 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>

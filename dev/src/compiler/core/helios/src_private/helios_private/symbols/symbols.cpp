@@ -12,7 +12,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/function_queries.hpp>

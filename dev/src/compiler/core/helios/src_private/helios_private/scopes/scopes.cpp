@@ -20,7 +20,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/desugaring/match.hpp>

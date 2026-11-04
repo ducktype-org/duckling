@@ -7,9 +7,9 @@
 #pragma once
 
 #include "../../cloning/cloning_automatic.hpp"  // IWYU pragma: export
-#include "../../pst_expr_visitor.hpp"           // IWYU pragma: export
-#include "../../pst_visitor.hpp"                // IWYU pragma: export
 #include "../../state/lang_parser_state.hpp"
+#include "../../visitors/pst_expr_visitor.hpp"  // IWYU pragma: export
+#include "../../visitors/pst_visitor.hpp"       // IWYU pragma: export
 #include "../common/parser_common_errors.hpp"   // IWYU pragma: export
 #include "../includes/basic.hpp"                // IWYU pragma: export
 
