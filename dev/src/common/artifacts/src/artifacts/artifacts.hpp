@@ -17,8 +17,11 @@
 #include <string_id/string_id.hpp>
 
 #include <cstring>
+#include <functional>
 #include <sstream>
+#include <string>
 #include <type_traits>
+#include <unordered_set>
 
 namespace artifacts {
 	/**
@@ -133,12 +136,28 @@ namespace artifacts {
 		static constexpr std::string_view BUILD_ID_FILE = ".build_id";
 
 		/**
+		 * @brief Name of the file, kept in every collection's directory, that lists the file
+		 * artifacts and sub-collections this collection created there.
+		 *
+		 * The artifacts folder is chosen by the user and may well be a folder with their own
+		 * files in it (`-a .`), so the cache never assumes that what it finds there is its own.
+		 * Only what this list names is ever loaded as an artifact or removed when the cache is
+		 * cleared; everything else is left alone. The list cannot be replaced by a marker inside
+		 * each artifact, because most artifacts are files whose format is not ours to extend:
+		 * executables, archives, object files, LLVM IR.
+		 *
+		 * Format: the header line `duckling-artifacts 1`, then one entry per line - `f <name>`
+		 * for a file artifact, `c <name>` for a sub-collection.
+		 */
+		static constexpr std::string_view OWNED_LIST_FILE = ".duck_artifacts";
+
+		/**
 		 * @brief Constructs ArtifactCollection, looks into `root` and restores previously saved
 		 * `ArtifactCollection`s at `root` (if any).
 		 *
-		 * If a stored build id exists at `root/.build_id` and it does not match the current
-		 * compiler's build id, the directory contents are wiped before loading (controlled by
-		 * the compile-time flag `artifacts::CHECK_BUILD_ID`).
+		 * If the build id stored at `root/.build_id` is missing or does not match the current
+		 * compiler's build id, the artifacts the cache owns there are removed before loading
+		 * (controlled by the compile-time flag `artifacts::CHECK_BUILD_ID`).
 		 */
 		ArtifactCollection(std::filesystem::path root);
 
@@ -298,6 +317,12 @@ namespace artifacts {
 		 * @}
 		 */
 
+		/**
+		 * @brief Names already recorded in this directory's `OWNED_LIST_FILE`, so that an entry
+		 * is appended to it only once.
+		 */
+		std::unordered_set<std::string> listed_names;
+
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
 
 
@@ -315,14 +340,53 @@ namespace artifacts {
 		void flushDown();
 
 		/**
-		 * @brief Writes this collection's blob cache to its `.artc` file, atomically.
+		 * @brief Writes this collection's blob cache to its `.artc` file with
+		 * `writeFileAtomically`.
 		 *
-		 * Goes through a sibling temporary file that is renamed into place, so a write that
-		 * fails or dies partway leaves the previous `.artc` intact rather than a torn one. A
-		 * failure is reported to the user and otherwise ignored - see
-		 * `reportCacheWriteFailure`.
+		 * That matters more than it looks: a torn `.artc` sitting next to a *matching*
+		 * `.build_id` is not cleared by the build-id check, so it used to break every later build
+		 * in that directory until someone deleted the folder by hand.
 		 */
 		void writeArtcFile() const;
+
+		/**
+		 * @brief Rewrites this collection's `OWNED_LIST_FILE`, atomically, so that it names
+		 * exactly the owned entries that are still on disk.
+		 *
+		 * Entries other processes appended in the meantime are kept, and those whose file is
+		 * gone (e.g. through `deleteFileArtifact`) are dropped, so the list does not grow without
+		 * bound.
+		 */
+		void writeOwnedList();
+
+		/**
+		 * @brief Records `name` in `OWNED_LIST_FILE`, unless it is already there.
+		 *
+		 * Called before the entry is created on disk, so that even a build killed right after
+		 * leaves nothing behind that the next cleanup would not know about.
+		 *
+		 * @param kind `'f'` for a file artifact, `'c'` for a sub-collection.
+		 */
+		void recordOwnedEntry(char kind, std::string_view name);
+
+		/**
+		 * @brief Writes a file through a sibling temporary file that is renamed into place.
+		 *
+		 * A rename inside one directory is atomic, so a reader sees either the previous file or
+		 * the new one, never a half of each, and a write that dies partway (a full disk, a killed
+		 * build) leaves the previous file untouched. Each call gets its own temporary file, so
+		 * concurrent writers cannot mix their bytes either: the last rename wins, whole.
+		 *
+		 * A failure is reported to the user and otherwise ignored - see
+		 * `reportCacheWriteFailure`.
+		 *
+		 * @param path The file to write.
+		 * @param write_content Writes the file's content to the given stream.
+		 */
+		static void writeFileAtomically(
+			const std::filesystem::path&              path,
+			const std::function<void(std::ostream&)>& write_content
+		);
 
 		/**
 		 * @brief Tells the user that the artifacts cache could not be saved, and why.
@@ -342,23 +406,27 @@ namespace artifacts {
 
 		/**
 		 * @brief If the stored build id at `<PATH>/.build_id` differs from the current
-		 * compiler's `artifacts::BUILD_ID`, or the file is missing entirely, wipes
-		 * `PATH`'s contents (but not `PATH` itself) and logs a user-visible message.
+		 * compiler's `artifacts::BUILD_ID`, or the file is missing entirely, removes the
+		 * artifacts the cache owns in `PATH` (see `OWNED_LIST_FILE`) and, if there were any,
+		 * logs a user-visible message.
 		 */
 		void validateOrWipeBuildId();
 
 		/**
-		 * @brief Removes everything inside `PATH`, leaving `PATH` itself, so that the next
-		 * build starts from an empty cache. Entries it fails to remove are reported as
-		 * warnings and skipped - a cache that cannot be cleared is not worth aborting over.
+		 * @brief Removes what the cache owns in `PATH` - the entries `OWNED_LIST_FILE` names,
+		 * recursively, and the cache's own bookkeeping files - and forgets it in memory, so the
+		 * build carries on from an empty cache. Files the list does not name are left alone.
+		 *
+		 * Entries it fails to remove are reported as warnings and skipped - a cache that cannot
+		 * be cleared is not worth aborting over.
 		 */
-		void clearCacheFolder();
+		void discardOwnedContents();
 
 		/**
-		 * @brief Gives up on the cache in `PATH`: tells the user why, drops the blobs loaded so
-		 * far and clears the folder, so the build carries on from an empty cache.
+		 * @brief Gives up on the cache in `PATH`: tells the user why and discards it with
+		 * `discardOwnedContents`.
 		 *
-		 * @param what_is_wrong Fills in "Artifacts at '<path>' <what_is_wrong>.", e.g.
+		 * @param what_is_wrong Fills in "The artifacts cache at '<path>' <what_is_wrong>.", e.g.
 		 * "is corrupted".
 		 */
 		void discardUnusableCache(std::string_view what_is_wrong);
@@ -385,7 +453,9 @@ namespace artifacts {
 		base::OkBad parseBlobsFromBytes(std::stringstream& content);
 
 		/**
-		 * @brief Iterates over `PATH` files and directories, attaches artifacts and sub-collections.
+		 * @brief Restores the blobs from the `.artc` file, and attaches the file artifacts and
+		 * sub-collections that `OWNED_LIST_FILE` names and that are still on disk. Nothing else
+		 * in `PATH` is attached.
 		 */
 		void loadData();
 

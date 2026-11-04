@@ -238,6 +238,22 @@ namespace fs {
 	class FileManager final {
 	public:
 		/**
+		 * @brief Picks a path `<directory>/<prefix><random><suffix>` that does not exist yet.
+		 *
+		 * Only the name is picked - nothing is created - so another process can still take the
+		 * same path before the caller does. The random part is long enough that this does not
+		 * happen in practice; it is meant for names that only need to differ between concurrent
+		 * writers, such as a temporary file renamed into place afterwards.
+		 * @param directory The directory the path is placed in.
+		 * @param prefix Text put in front of the random part.
+		 * @param suffix Text put after the random part, e.g. ".tmp".
+		 * @return The chosen path.
+		 */
+		static FilePath randomName(
+			const FilePath& directory, std::string_view prefix = "", std::string_view suffix = ""
+		);
+
+		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random
 		 * name.
 		 *

@@ -64,23 +64,6 @@ namespace {
 		return {};
 	}
 
-	fs::FilePath randomName(const fs::FilePath& prefix_path, const size_t name_len = 16) {
-		static std::random_device device;
-		static std::mt19937       rng(device());
-		static std::string        name_chars
-			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRQSTUVWXYZ";
-		static std::uniform_int_distribution<size_t> dist(0, name_chars.length() - 1);
-
-		// This is 64, but usually it will not loop more than once.
-		for (size_t try_no = 0; try_no < 64; try_no++) {
-			std::string name;
-			for (int i = 0; i < name_len; i++) name.push_back(name_chars[dist(rng)]);
-			auto candidate = prefix_path / name;
-			if (!exists(candidate.getPath())) return candidate;
-		}
-		CORE_PANIC("Couldn't create a new name in: " + prefix_path.absolute().string());
-	}
-
 	/**
 	 * @brief Generates a file or directory path inside the given directory.
 	 *
@@ -98,7 +81,7 @@ namespace {
 		fs::FilePath dir_path = directory.getFilePath();
 
 		if (custom_name.empty()) {
-			return randomName(dir_path);
+			return fs::FileManager::randomName(dir_path);
 		} else {
 			auto candidate = dir_path / custom_name;
 
@@ -229,6 +212,28 @@ namespace fs {
 		}
 		vfs->createDirectory(path.getPath());
 		return path;
+	}
+
+	FilePath FileManager::randomName(
+		const FilePath& directory, std::string_view prefix, std::string_view suffix
+	) {
+		// Thread-local: now that this is public, callers on different threads must not share
+		// (and race on) one generator.
+		thread_local std::mt19937         rng(std::random_device{}());
+		static constexpr std::string_view NAME_CHARS
+			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRQSTUVWXYZ";
+		std::uniform_int_distribution<size_t> dist(0, NAME_CHARS.length() - 1);
+		constexpr size_t                      RANDOM_PART_LEN = 16;
+
+		// This is 64, but usually it will not loop more than once.
+		for (size_t try_no = 0; try_no < 64; try_no++) {
+			std::string name(prefix);
+			for (size_t i = 0; i < RANDOM_PART_LEN; i++) name.push_back(NAME_CHARS[dist(rng)]);
+			name.append(suffix);
+			auto candidate = directory / name;
+			if (!exists(candidate.getPath())) return candidate;
+		}
+		CORE_PANIC("Couldn't create a new name in: " + directory.absolute().string());
 	}
 
 	File FileManager::createRandomTempDirectory() {

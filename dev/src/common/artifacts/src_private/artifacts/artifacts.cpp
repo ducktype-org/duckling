@@ -14,6 +14,7 @@
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 
+#include <algorithm>
 #include <charconv>
 #include <filesystem>
 #include <fstream>
@@ -21,7 +22,9 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 constexpr char ARTC_DELIM = ';';
 
@@ -51,6 +54,147 @@ namespace {
 
 		out = static_cast<u32>(value);
 		return true;
+	}
+
+	/**
+	 * @brief Whether `n_bytes` more bytes can still be read from `content`.
+	 *
+	 * Size fields come straight from the file, so a corrupted one can claim up to 4 GiB. Checking
+	 * it against what is actually left keeps such a field from becoming an allocation that size.
+	 */
+	bool fitsInRemaining(std::stringstream& content, u32 n_bytes) {
+		const auto pos = content.tellg();
+		if (pos < 0) return false;
+		return n_bytes <= content.view().size() - static_cast<usize>(pos);
+	}
+
+	/// The first line of every `OWNED_LIST_FILE`: says what the file is and its format version.
+	constexpr std::string_view OWNED_LIST_HEADER = "duckling-artifacts 1";
+
+	constexpr char OWNED_FILE       = 'f';
+	constexpr char OWNED_COLLECTION = 'c';
+
+	struct OwnedEntry final {
+		char        kind;
+		std::string name;
+	};
+
+	std::string ownedListLine(char kind, std::string_view name) {
+		return std::string{ kind, ' ' } + std::string(name) + '\n';
+	}
+
+	/**
+	 * @brief Whether `name`, joined to a collection's directory, stays inside that directory.
+	 *
+	 * The list is read back from disk, so it is not trusted to keep a cleanup inside the cache:
+	 * an absolute name or a `..` would point it at files that are not ours.
+	 */
+	bool staysInsideCollection(std::string_view name) {
+		if (name.empty() || name.find('\n') != std::string_view::npos) return false;
+		const std::filesystem::path path(name);
+		if (path.has_root_path()) return false;
+		return std::none_of(path.begin(), path.end(), [](const auto& part) { return part == ".."; });
+	}
+
+	/**
+	 * @brief Reads the entries of `dir`'s `OWNED_LIST_FILE`.
+	 * @return Nothing if the file is missing or is not a list we know how to read - then `dir`
+	 * is not a collection of ours.
+	 */
+	base::Optional<std::vector<OwnedEntry>> readOwnedList(const std::filesystem::path& dir) {
+		std::ifstream file(dir / artifacts::ArtifactCollection::OWNED_LIST_FILE, std::ios::binary);
+		std::string   line;
+		if (!std::getline(file, line) || line != OWNED_LIST_HEADER) return {};
+
+		std::vector<OwnedEntry>         entries;
+		std::unordered_set<std::string> seen;
+		while (std::getline(file, line)) {
+			// A last line without its newline was cut short by a killed build, and a cut name
+			// can be the name of some other file - so it is not trusted.
+			if (file.eof()) break;
+			const bool well_formed = line.size() > 2 && line[1] == ' '
+			                      && (line[0] == OWNED_FILE || line[0] == OWNED_COLLECTION);
+			if (!well_formed) continue;
+			auto name = line.substr(2);
+			if (!staysInsideCollection(name) || !seen.insert(name).second) continue;
+			entries.push_back({ .kind = line[0], .name = std::move(name) });
+		}
+		return entries;
+	}
+
+	/// The `.artc` blob cache of the collection kept in `dir`.
+	std::filesystem::path artcPathOf(const std::filesystem::path& dir) {
+		return dir / (dir.filename().string() + ".artc");
+	}
+
+	/// Whether `file_name` is a temporary file `writeFileAtomically` makes when writing `target`.
+	bool isTempFileOf(std::string_view file_name, std::string_view target) {
+		return file_name.size() > target.size() + 1 && file_name.starts_with(target)
+		    && file_name[target.size()] == '.' && file_name.ends_with(".tmp");
+	}
+
+	/**
+	 * @brief Removes `path`, warning if that fails.
+	 * @return False if `path` could not be removed; a missing `path` counts as removed.
+	 */
+	bool removeOrWarn(const std::filesystem::path& path) {
+		std::error_code ec;
+		std::filesystem::remove(path, ec);
+		if (!ec) return true;
+		CORE_USER_LOG(
+			"Warning: failed to remove stale artifact entry '",
+			path.string(),
+			"': ",
+			ec.message(),
+			"\n"
+		);
+		return false;
+	}
+
+	/**
+	 * @brief Removes what the cache owns in `dir`, and nothing else: the entries its
+	 * `OWNED_LIST_FILE` names (descending into owned sub-collections), then the cache's own
+	 * files - the `.artc`, the build id, leftover temporary files and the list itself.
+	 *
+	 * @return False if something owned could not be removed. The list is then kept, so the
+	 * next cleanup still knows about it.
+	 */
+	bool removeOwnedContents(const std::filesystem::path& dir) {
+		bool all_removed = true;
+		for (const auto& entry: readOwnedList(dir).copyValueOrDefault()) {
+			const auto      path = dir / entry.name;
+			std::error_code ec;
+			// `symlink_status`, so that a link is removed rather than followed out of the cache.
+			const auto status = std::filesystem::symlink_status(path, ec);
+			if (ec || !std::filesystem::exists(status)) continue;
+
+			if (entry.kind == OWNED_COLLECTION) {
+				if (!std::filesystem::is_directory(status)) continue;
+				all_removed &= removeOwnedContents(path);
+				// Fails if something is left inside - which is not ours, so the folder stays.
+				std::filesystem::remove(path, ec);
+			} else if (!std::filesystem::is_directory(status)) {
+				all_removed &= removeOrWarn(path);
+			}
+		}
+
+		const auto                         artc_name = artcPathOf(dir).filename().string();
+		std::vector<std::filesystem::path> temp_files;
+		std::error_code                    iter_ec;
+		for (const auto& entry: std::filesystem::directory_iterator(dir, iter_ec)) {
+			const auto name = entry.path().filename().string();
+			if (isTempFileOf(name, artc_name)
+			    || isTempFileOf(name, artifacts::ArtifactCollection::OWNED_LIST_FILE))
+				temp_files.push_back(entry.path());
+		}
+		for (const auto& temp_file: temp_files) removeOrWarn(temp_file);
+
+		all_removed &= removeOrWarn(dir / artc_name);
+		all_removed &= removeOrWarn(dir / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		// The list goes last: while anything it names is still there, it has to stay.
+		if (all_removed)
+			all_removed = removeOrWarn(dir / artifacts::ArtifactCollection::OWNED_LIST_FILE);
+		return all_removed;
 	}
 }
 
@@ -89,49 +233,37 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 
 	if (has_file) {
 		CORE_USER_LOG(
-			"Artifacts at '",
+			"The artifacts cache at '",
 			PATH.string(),
-			"' were produced by a different build of the compiler (stored build id: ",
+			"' was produced by a different build of the compiler (stored build id: ",
 			stored_id.empty() ? std::string("<empty>") : stored_id.substr(0, 12) + "...",
 			", current build id: ",
 			std::string(BUILD_ID).substr(0, 12),
-			"...). Clearing whole cache folder and starting fresh.\n"
+			"...). Removing the cached artifacts and starting fresh.\n"
 		);
-	} else if (fs::File(PATH).listFilePaths().size() > 0) {
+	} else if (std::filesystem::exists(PATH / OWNED_LIST_FILE)) {
 		CORE_USER_LOG(
-			"Artifacts at '",
+			"The artifacts cache at '",
 			PATH.string(),
-			"' do not contain a build-id marker. Clearing whole cache folder and starting fresh.\n"
+			"' has no build id. Removing the cached artifacts and starting fresh.\n"
 		);
 	}
 
-	clearCacheFolder();
+	discardOwnedContents();
 }
 
-void artifacts::ArtifactCollection::clearCacheFolder() {
-	std::error_code iter_ec;
-	for (const auto& entry: std::filesystem::directory_iterator(PATH, iter_ec)) {
-		std::error_code remove_ec;
-		std::filesystem::remove_all(entry.path(), remove_ec);
-		if (remove_ec) {
-			CORE_USER_LOG(
-				"Warning: failed to remove stale artifact entry '",
-				entry.path().string(),
-				"': ",
-				remove_ec.message(),
-				"\n"
-			);
-		}
-	}
-	if (iter_ec) {
-		CORE_USER_LOG(
-			"Warning: failed to iterate artifacts directory '",
-			PATH.string(),
-			"' while clearing cache: ",
-			iter_ec.message(),
-			"\n"
-		);
-	}
+void artifacts::ArtifactCollection::discardOwnedContents() {
+	removeOwnedContents(PATH);
+	// Whatever was loaded so far describes a cache that is now gone, so it must not stay in
+	// memory - it would be flushed straight back onto disk at exit.
+	blob_artifacts.clear();
+	blob_data.clear();
+	file_artifacts.clear();
+	sub_collections.clear();
+	listed_names.clear();
+	// The build id went with the rest; without this, a build that found a matching one would
+	// not write it back, and the next build would discard the fresh cache all over again.
+	flush_build_id = true;
 }
 
 void artifacts::ArtifactCollection::writeBuildIdFile() {
@@ -266,7 +398,8 @@ base::OkBad artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream
 		u32 name_size = 0;
 		if (!readDelimitedU32(content, name_size)) return base::BAD;
 
-		// Get the name. A short read means the file ends mid-name.
+		// Get the name. A size larger than what is left means the file ends mid-name.
+		if (!fitsInRemaining(content, name_size)) return base::BAD;
 		std::string blob_name(name_size, 'a');
 		content.read(blob_name.data(), name_size);
 		if (content.gcount() != std::streamsize(name_size)) return base::BAD;
@@ -276,6 +409,7 @@ base::OkBad artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream
 		if (!readDelimitedU32(content, blob_data_size)) return base::BAD;
 
 		// Get the data.
+		if (!fitsInRemaining(content, blob_data_size)) return base::BAD;
 		std::vector<byte> blob_data(blob_data_size);
 		content.read(reinterpret_cast<char*>(blob_data.data()), blob_data_size);
 		if (content.gcount() != std::streamsize(blob_data_size)) return base::BAD;
@@ -291,54 +425,62 @@ base::OkBad artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream
 }
 
 void artifacts::ArtifactCollection::loadData() {
+	// Without a list this folder is not a collection of ours, so whatever is in it - an `.artc`
+	// included - is not ours to load. Such an `.artc` can be a leftover from a cache older than
+	// the list, written by another build of the compiler; flushing overwrites it.
+	const auto maybe_owned = readOwnedList(PATH);
+	if (!maybe_owned.has_value()) return;
+	const auto& owned = maybe_owned.value();
+	for (const auto& entry: owned) listed_names.insert(entry.name);
+
 	// Read blob data.
 	auto artc_file_path = getArtcFile();
-	if (!artc_file_path.exists()) return;
+	if (artc_file_path.exists()) {
+		std::ifstream artc_file(artc_file_path.getPath());
+		if (!artc_file) {
+			discardUnusableCache("cannot be read");
+			return;
+		}
 
-	std::ifstream artc_file(artc_file_path.getPath());
-	if (!artc_file) {
-		discardUnusableCache("cannot be read");
-		return;
+		std::stringstream content;
+		content << artc_file.rdbuf();
+		const auto parsed = parseBlobsFromBytes(content);
+		artc_file.close();
+
+		if (parsed.isBad()) {
+			discardUnusableCache("is corrupted");
+			return;
+		}
 	}
 
-	std::stringstream content;
-	content << artc_file.rdbuf();
-	const auto parsed = parseBlobsFromBytes(content);
-	artc_file.close();
-
-	if (parsed.isBad()) {
-		discardUnusableCache("is corrupted");
-		return;
-	}
-
-	// Read file artifacts and other sub-collections.
-	for (const auto& inner_path: std::filesystem::directory_iterator(PATH)) {
-		const auto filename = inner_path.path().filename().string();
-		const auto name     = base::StrID(filename);
-		if (inner_path.is_directory())
+	// Attach the file artifacts and sub-collections. Only what the list names is ours: anything
+	// else in the folder belongs to the user or to another tool.
+	for (const auto& entry: owned) {
+		std::error_code ec;
+		const auto      status = std::filesystem::symlink_status(PATH / entry.name, ec);
+		if (ec) continue;
+		const auto name = base::StrID(entry.name);
+		if (entry.kind == OWNED_COLLECTION && std::filesystem::is_directory(status))
 			subCollectionNew(name);
-		else if (inner_path.is_regular_file())
+		else if (entry.kind == OWNED_FILE && std::filesystem::is_regular_file(status))
 			fileArtifactNew(name);
 	}
 }
 
 void artifacts::ArtifactCollection::discardUnusableCache(std::string_view what_is_wrong) {
 	CORE_USER_LOG(
-		"Artifacts at '",
+		"The artifacts cache at '",
 		PATH.string(),
 		"' ",
 		what_is_wrong,
-		". Clearing whole cache folder and starting fresh.\n"
+		". Removing the cached artifacts and starting fresh.\n"
 	);
-	// Whatever was parsed before the failure describes a cache that is about to be deleted, so
-	// it must not stay in memory - it would be flushed straight back onto disk at exit.
-	blob_artifacts.clear();
-	blob_data.clear();
-	clearCacheFolder();
+	discardOwnedContents();
 }
 
 void artifacts::ArtifactCollection::flushDown() {
 	writeArtcFile();
+	writeOwnedList();
 
 	// Every sub-collection gets its turn whatever happened above: one directory we cannot write
 	// to must not cost the whole tree its cache.
@@ -354,36 +496,91 @@ void artifacts::ArtifactCollection::writeArtcFile() const {
 		"\n"
 	);
 
-	// The cache is written to a sibling temporary file and renamed into place. A rename inside
-	// one directory is atomic, so a reader sees either the previous cache or the new one, never
-	// a half of each - and a write that dies partway (a full disk, a killed build) leaves the
-	// old, valid `.artc` untouched instead of a torn one. That matters more than it looks: a
-	// torn `.artc` sitting next to a *matching* `.build_id` is not wiped by the build-id check,
-	// so it used to break every later build in that directory until someone deleted the folder
-	// by hand.
-	const auto tmp_file_path = fs::FilePath(artc_file_path.string() + ".tmp");
+	writeFileAtomically(artc_file_path.getPath(), [this](std::ostream& file) {
+		file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
+		for (const auto& [blob_name, blob]: blob_artifacts) {
+			const auto& data = blob_data[blob_name];
+			// Name
+			file << blob_name.strView().size() << ARTC_DELIM << blob_name.strView();
+			// Content
+			file << data->size() << ARTC_DELIM;
+			file.write(
+				reinterpret_cast<const char*>(data->data()), base::safeIntConv<u32>(data->size())
+			);
+		}
+	});
+}
+
+void artifacts::ArtifactCollection::writeOwnedList() {
+	std::vector<OwnedEntry> entries;
+	for (const auto& [name, _]: file_artifacts)
+		entries.push_back({ .kind = OWNED_FILE, .name = std::string(name.strView()) });
+	for (const auto& [name, _]: sub_collections)
+		entries.push_back({ .kind = OWNED_COLLECTION, .name = std::string(name.strView()) });
+	// Another process sharing this folder may have created entries this one never loaded.
+	for (auto& entry: readOwnedList(PATH).copyValueOrDefault()) entries.push_back(std::move(entry));
+
+	std::unordered_set<std::string> kept;
+	std::string                     content = std::string(OWNED_LIST_HEADER) + '\n';
+	for (const auto& entry: entries) {
+		if (!staysInsideCollection(entry.name) || kept.contains(entry.name)) continue;
+		// An entry whose file is gone (e.g. through `deleteFileArtifact`) has nothing left to
+		// own, so it is dropped here instead of piling up.
+		std::error_code ec;
+		if (!std::filesystem::exists(std::filesystem::symlink_status(PATH / entry.name, ec)))
+			continue;
+		kept.insert(entry.name);
+		content += ownedListLine(entry.kind, entry.name);
+	}
+
+	writeFileAtomically(PATH / OWNED_LIST_FILE, [&content](std::ostream& file) { file << content; });
+	listed_names = std::move(kept);
+}
+
+void artifacts::ArtifactCollection::recordOwnedEntry(char kind, std::string_view name) {
+	if (!staysInsideCollection(name) || listed_names.contains(std::string(name))) return;
+
+	const auto list_path = fs::FilePath(PATH / OWNED_LIST_FILE);
+	// Appending, not rewriting: each entry is one short write, so entries that concurrent
+	// processes append to the same list do not overwrite each other.
+	std::ofstream list(list_path.getPath(), std::ios::binary | std::ios::app);
+	if (!list) {
+		reportCacheWriteFailure(list_path, "could not be opened for writing");
+		return;
+	}
+	// A new list starts with its header. Two processes may both find the list empty and both
+	// write one; a reader skips the second as a malformed entry.
+	list.seekp(0, std::ios::end);
+	if (list.tellp() == 0) list << OWNED_LIST_HEADER << '\n';
+	list << ownedListLine(kind, name);
+	list.close();
+	if (!list) {
+		reportCacheWriteFailure(list_path, "could not be written");
+		return;
+	}
+	listed_names.insert(std::string(name));
+}
+
+void artifacts::ArtifactCollection::writeFileAtomically(
+	const std::filesystem::path& path, const std::function<void(std::ostream&)>& write_content
+) {
+	// Every writer gets its own temporary file. With a shared name, two processes flushing the
+	// same folder would write into the same file, and the first rename would publish their
+	// bytes mixed together.
+	const auto tmp_file_path = fs::FileManager::randomName(
+		fs::FilePath(path.parent_path()), path.filename().string() + ".", ".tmp"
+	);
 
 	std::ofstream file(tmp_file_path.getPath(), std::ios::binary | std::ios::trunc);
 	if (!file) {
 		reportCacheWriteFailure(tmp_file_path, "could not be opened for writing");
 		return;
 	}
-
-	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
-	for (const auto& [blob_name, blob]: blob_artifacts) {
-		const auto& data = blob_data[blob_name];
-		// Name
-		file << blob_name.strView().size() << ARTC_DELIM << blob_name.strView();
-		// Content
-		file << data->size() << ARTC_DELIM;
-		file.write(
-			reinterpret_cast<const char*>(data->data()), base::safeIntConv<u32>(data->size())
-		);
-	}
+	write_content(file);
 	file.close();
 
 	// Only a fully written temporary file earns the rename; anything else is thrown away, which
-	// is what keeps the previous cache intact.
+	// is what keeps the previous file intact.
 	if (!file) {
 		reportCacheWriteFailure(tmp_file_path, "could not be written");
 		std::error_code remove_ec;
@@ -392,9 +589,9 @@ void artifacts::ArtifactCollection::writeArtcFile() const {
 	}
 
 	std::error_code rename_ec;
-	std::filesystem::rename(tmp_file_path.getPath(), artc_file_path.getPath(), rename_ec);
+	std::filesystem::rename(tmp_file_path.getPath(), path, rename_ec);
 	if (rename_ec) {
-		reportCacheWriteFailure(artc_file_path, rename_ec.message());
+		reportCacheWriteFailure(fs::FilePath(path), rename_ec.message());
 		std::error_code remove_ec;
 		std::filesystem::remove(tmp_file_path.getPath(), remove_ec);
 	}
@@ -416,9 +613,7 @@ void artifacts::ArtifactCollection::reportCacheWriteFailure(
 	);
 }
 
-fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {
-	return PATH / (PATH.filename().string() + ".artc");
-}
+fs::FilePath artifacts::ArtifactCollection::getArtcFile() const { return artcPathOf(PATH); }
 
 void artifacts::ArtifactCollection::flushNoLock() {
 	if (PARENT) {
@@ -436,6 +631,7 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 		!sub_collections.contains(collection_name), "Sub-collection with this name already exists"
 	);
 	auto new_path = PATH / collection_name.strView();
+	recordOwnedEntry(OWNED_COLLECTION, collection_name.strView());
 	if (!std::filesystem::exists(new_path)) std::filesystem::create_directory(new_path);
 	sub_collections.put(
 		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this))
@@ -472,6 +668,7 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNewNoLock(bas
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	auto file_path = PATH / artifact_name.strView();
 
+	recordOwnedEntry(OWNED_FILE, artifact_name.strView());
 	if (!std::filesystem::exists(file_path)) std::ofstream(file_path).close();  // create the file
 
 	file_artifacts.put(

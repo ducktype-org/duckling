@@ -12,6 +12,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 constexpr int VALUE = 42;
 
@@ -22,7 +23,16 @@ class ArtifactsTester: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
-		TESTER_ADD_TEST(buildIdMismatchWipesArtifacts);
+		TESTER_ADD_TEST(buildIdMismatchRemovesOnlyOwnedArtifacts);
+		TESTER_ADD_TEST(missingBuildIdRemovesOwnedArtifacts);
+		TESTER_ADD_TEST(foreignFolderIsLeftAlone);
+		TESTER_ADD_TEST(corruptedArtcIsDiscarded);
+		TESTER_ADD_TEST(oversizedSizeFieldIsRejected);
+		TESTER_ADD_TEST(leftoverTempFilesAreNotAdopted);
+		TESTER_ADD_TEST(unflushedArtifactsAreRemoved);
+		TESTER_ADD_TEST(truncatedListLineIsIgnored);
+		TESTER_ADD_TEST(artcWithoutOwnedListIsNotLoaded);
+		TESTER_ADD_TEST(listEntriesOutsideTheCacheAreIgnored);
 	}
 
 private:
@@ -88,44 +98,234 @@ private:
 		}
 	}
 
-	void buildIdMismatchWipesArtifacts() {
-		fs::File              fs_root_path = fs::FileManager::createRandomTempDirectory();
-		std::filesystem::path root         = fs_root_path.getFilePath().getPath();
+	static void writeFile(const std::filesystem::path& path, std::string_view content) {
+		std::ofstream out(path, std::ios::binary);
+		out << content;
+	}
 
-		// Write a stale build id file.
-		{
-			std::ofstream out(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
-			out << "stale-build-id-that-cannot-match-a-real-sha256";
-		}
-
-		// Drop a stray file and a stray sub-directory that should be wiped.
-		{
-			std::ofstream out(root / "stray_file");
-			out << "should be deleted";
-		}
-		const auto stray_dir = root / "stray_dir";
-		std::filesystem::create_directory(stray_dir);
-		{
-			std::ofstream out(stray_dir / "inside");
-			out << "should be deleted";
-		}
-
-		// Construct root - should wipe stale contents.
-		{
-			artifacts::ArtifactCollection collection(root);
-			ASSERT_TRUE(!std::filesystem::exists(root / "stray_file"));
-			ASSERT_TRUE(!std::filesystem::exists(stray_dir));
-			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("stray_file")).empty());
-
-			// Flush should (re)write the .build_id with the current BUILD_ID.
-			collection.flush();
-		}
-
-		std::ifstream in(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
-		ASSERT_TRUE(in.is_open());
+	static std::string readFile(const std::filesystem::path& path) {
+		std::ifstream     in(path, std::ios::binary);
 		std::stringstream ss;
 		ss << in.rdbuf();
-		ASSERT_TRUE(ss.str() == std::string(artifacts::BUILD_ID));
+		return ss.str();
+	}
+
+	static std::filesystem::path artcOf(const std::filesystem::path& dir) {
+		return dir / (dir.filename().string() + ".artc");
+	}
+
+	static bool hasCurrentBuildId(const std::filesystem::path& root) {
+		return readFile(root / artifacts::ArtifactCollection::BUILD_ID_FILE)
+		    == std::string(artifacts::BUILD_ID);
+	}
+
+	/**
+	 * Builds and flushes a cache with one of each kind of artifact: blob `b0`, file `f0`, and
+	 * sub-collection `s0` holding blob `b0` and file `f1`.
+	 */
+	static void buildCache(const std::filesystem::path& root) {
+		artifacts::ArtifactCollection collection(root);
+		collection.blobArtifactNew(base::StrID("b0")).setData(VALUE);
+		writeFile(collection.fileArtifactNew(base::StrID("f0")).file.getFilePath().getPath(), "f0");
+		auto sub = collection.subCollectionNew(base::StrID("s0"));
+		sub->blobArtifactNew(base::StrID("b0")).setData(VALUE + 1);
+		writeFile(sub->fileArtifactNew(base::StrID("f1")).file.getFilePath().getPath(), "f1");
+		collection.flush();
+	}
+
+	/// Puts files the cache does not own next to the ones it does, at both levels.
+	static void addUserFiles(const std::filesystem::path& root) {
+		writeFile(root / "user_file", "keep me");
+		std::filesystem::create_directory(root / "user_dir");
+		writeFile(root / "user_dir" / "inside", "keep me");
+		writeFile(root / "s0" / "user_file", "keep me");
+	}
+
+	void assertUserFilesKept(const std::filesystem::path& root) {
+		ASSERT_TRUE(readFile(root / "user_file") == "keep me");
+		ASSERT_TRUE(readFile(root / "user_dir" / "inside") == "keep me");
+		ASSERT_TRUE(readFile(root / "s0" / "user_file") == "keep me");
+	}
+
+	void assertOwnedArtifactsRemoved(
+		const std::filesystem::path& root, artifacts::ArtifactCollection& collection
+	) {
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1"));
+		ASSERT_TRUE(!std::filesystem::exists(artcOf(root / "s0")));
+		ASSERT_TRUE(collection.blobArtifactAtMaybe(base::StrID("b0")).empty());
+		ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("f0")).empty());
+		ASSERT_TRUE(collection.subCollectionAtMaybe(base::StrID("s0")).empty());
+	}
+
+	void buildIdMismatchRemovesOnlyOwnedArtifacts() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		addUserFiles(root);
+		writeFile(
+			root / artifacts::ArtifactCollection::BUILD_ID_FILE,
+			"stale-build-id-that-cannot-match-a-real-sha256"
+		);
+
+		{
+			artifacts::ArtifactCollection collection(root);
+			assertOwnedArtifactsRemoved(root, collection);
+			assertUserFilesKept(root);
+			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("user_file")).empty());
+			collection.flush();
+		}
+		ASSERT_TRUE(hasCurrentBuildId(root));
+	}
+
+	void missingBuildIdRemovesOwnedArtifacts() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		addUserFiles(root);
+		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+
+		artifacts::ArtifactCollection collection(root);
+		assertOwnedArtifactsRemoved(root, collection);
+		assertUserFilesKept(root);
+	}
+
+	// The `-a .` case: the artifacts folder is a folder of the user's own files.
+	void foreignFolderIsLeftAlone() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		writeFile(root / "main.dk", "source");
+		std::filesystem::create_directory(root / "src");
+		writeFile(root / "src" / "lib.dk", "source");
+
+		for (int build = 0; build < 3; build++) {
+			artifacts::ArtifactCollection collection(root);
+			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("main.dk")).empty());
+			ASSERT_TRUE(collection.subCollectionAtMaybe(base::StrID("src")).empty());
+			collection.flush();
+		}
+		ASSERT_TRUE(readFile(root / "main.dk") == "source");
+		ASSERT_TRUE(readFile(root / "src" / "lib.dk") == "source");
+		// The user's folders are never taken for sub-collections, so nothing is written there.
+		ASSERT_TRUE(!std::filesystem::exists(artcOf(root / "src")));
+	}
+
+	void corruptedArtcIsDiscarded() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		addUserFiles(root);
+		writeFile(artcOf(root), "5;");
+
+		{
+			artifacts::ArtifactCollection collection(root);
+			assertOwnedArtifactsRemoved(root, collection);
+			assertUserFilesKept(root);
+			collection.blobArtifactNew(base::StrID("b0")).setData(VALUE);
+			collection.flush();
+		}
+		// The build id went with the corrupted cache and has to be written back; otherwise the
+		// next build would discard the fresh cache again.
+		ASSERT_TRUE(hasCurrentBuildId(root));
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(
+			collection.blobArtifactAt(base::StrID("b0")).getData<decltype(VALUE)>() == VALUE
+		);
+	}
+
+	// A size field that claims more bytes than the file has must be rejected before anything
+	// that size is allocated.
+	void oversizedSizeFieldIsRejected() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		writeFile(artcOf(root), "1;4000000000;");
+
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(collection.blobArtifactAtMaybe(base::StrID("b0")).empty());
+	}
+
+	void leftoverTempFilesAreNotAdopted() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		const auto temp_name = artcOf(root).filename().string() + ".leftover.tmp";
+		writeFile(root / temp_name, "half a cache");
+
+		{
+			artifacts::ArtifactCollection collection(root);
+			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID(temp_name)).empty());
+		}
+		// Clearing the cache also takes the leftover with it.
+		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(!std::filesystem::exists(root / temp_name));
+	}
+
+	// Entries are recorded when they are created, so a build that dies before flushing still
+	// leaves nothing the next cleanup does not know about.
+	void unflushedArtifactsAreRemoved() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		{
+			artifacts::ArtifactCollection collection(root);
+			collection.fileArtifactNew(base::StrID("f0"));
+			collection.subCollectionNew(base::StrID("s0"))->fileArtifactNew(base::StrID("f1"));
+		}
+		ASSERT_TRUE(std::filesystem::exists(root / "f0"));
+
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0"));
+	}
+
+	// A list cut short mid-line by a killed build must not have its last, cut name trusted:
+	// `main.o` cut to `main` would point at a file that is not ours.
+	void truncatedListLineIsIgnored() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		writeFile(
+			root / artifacts::ArtifactCollection::OWNED_LIST_FILE, "duckling-artifacts 1\nf main"
+		);
+		writeFile(root / "main", "user binary");
+
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(readFile(root / "main") == "user binary");
+	}
+
+	// A cache older than the owned list has no list anywhere. When it is cleared, its
+	// sub-collection folders are left alone - but the `.artc` in them was written by another
+	// build of the compiler and must not be loaded into a collection of that name.
+	void artcWithoutOwnedListIsNotLoaded() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		std::filesystem::remove(root / artifacts::ArtifactCollection::OWNED_LIST_FILE);
+		std::filesystem::remove(root / "s0" / artifacts::ArtifactCollection::OWNED_LIST_FILE);
+		writeFile(
+			root / artifacts::ArtifactCollection::BUILD_ID_FILE,
+			"stale-build-id-that-cannot-match-a-real-sha256"
+		);
+
+		artifacts::ArtifactCollection collection(root);
+		auto                          sub = collection.subCollectionNew(base::StrID("s0"));
+		ASSERT_TRUE(sub->blobArtifactAtMaybe(base::StrID("b0")).empty());
+	}
+
+	// Names are read back from disk, so the cleanup must not follow one out of the cache.
+	void listEntriesOutsideTheCacheAreIgnored() {
+		std::filesystem::path outer
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto root = outer / "cache";
+		std::filesystem::create_directory(root);
+		writeFile(outer / "outside", "keep me");
+		writeFile(
+			root / artifacts::ArtifactCollection::OWNED_LIST_FILE,
+			"duckling-artifacts 1\nf ../outside\nf " + (outer / "outside").string() + "\n"
+		);
+
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(readFile(outer / "outside") == "keep me");
 	}
 };
 

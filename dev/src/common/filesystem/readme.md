@@ -77,8 +77,9 @@ auto config_file = virtual_root.createSubFile(
 auto content = config_file.getContent();
 std::cout << "Config: " << content.view().stringView() << std::endl;
 
-// Modify the file content at any time
-config_file.writeToFile("debug=false\nversion=1.1");
+// Modify the file content at any time; a failed write is reported, not thrown
+if (auto written = config_file.writeToFile("debug=false\nversion=1.1"); !written)
+    std::cerr << "Write failed: " << written.error() << std::endl;
 
 // Filesystem structure
 auto files = virtual_root.listFilePaths();
@@ -121,8 +122,14 @@ auto physical_path = virtual_path.toPhysicalPath();
 These conversions are particularly useful when you need to map between real files and their virtual representations:
 
 ```cpp
-// Start with a physical file
-auto physical_file = fs::FileManager::createPhysicalFile("./test.txt", "original content");
+// Start with a physical file; creation can fail (permissions, a full disk), so it returns
+// `std::expected` - use `createPhysicalFileUnsafe` only where a failure is a broken invariant
+auto created = fs::FileManager::createPhysicalFile("./test.txt", "original content");
+if (!created) {
+    std::cerr << "Cannot create the file: " << created.error() << std::endl;
+    return;
+}
+auto physical_file = *created;
 
 // Copy physical file content to virtual filesystem
 auto physical_content = physical_file.getContent();
@@ -159,7 +166,8 @@ auto main_file = src_dir.createSubFile(
 
 // Query and modify
 auto files = src_dir.listFilePaths();
-main_file.writeToFile("#include <iostream>\n\nint main() {\n    std::cout << \"Hello!\";\n    return 0;\n}");
+if (auto written = main_file.writeToFile("#include <iostream>\n\nint main() {\n    std::cout << \"Hello!\";\n    return 0;\n}"); !written)
+    std::cerr << "Write failed: " << written.error() << std::endl;
 
 // Access content
 auto updated_content = main_file.getContent();
