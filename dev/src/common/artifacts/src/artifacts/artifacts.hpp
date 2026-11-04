@@ -357,9 +357,12 @@ namespace artifacts {
 		 * @brief Rewrites this collection's `OWNED_LIST_FILE`, atomically, so that it names
 		 * exactly the owned entries that are still on disk.
 		 *
-		 * Entries other processes appended in the meantime are kept, and those whose file is
-		 * gone (e.g. through `deleteFileArtifact`) are dropped, so the list does not grow without
-		 * bound.
+		 * Entries whose file is gone (e.g. through `deleteFileArtifact`) are dropped, so the list
+		 * does not grow without bound. Entries other processes appended are kept, unless one is
+		 * appended between this rewrite's read and its rename. Its owner restores it on its own
+		 * flush; only if that process is killed first does the entry stay lost. Its file is then
+		 * left on disk unowned: never removed by mistake, and recorded again the next time it is
+		 * created.
 		 */
 		void writeOwnedList();
 
@@ -417,12 +420,13 @@ namespace artifacts {
 		 * A `.artc` can be torn in half by a write that ran out of disk or a build that was
 		 * killed, and its tail then decodes into nonsense. That is a reason to drop the cache,
 		 * never to bring the compiler down, so every field is validated and a malformed file
-		 * is reported rather than asserted on.
+		 * is reported.
 		 *
 		 * @note It is a helper method for `loadData()`.
-		 * @return `base::BAD` if `content` is not a whole, well-formed `.artc` body. Blobs
-		 * parsed before the failure may already be in the collection; the caller is expected
-		 * to discard them.
+		 * @return `base::BAD` if `content` is not a whole, well-formed `.artc` body. Each blob
+		 * is added to the collection as soon as it is read, so on failure the blobs that came
+		 * before the bad field are already in it; the caller discards them (see
+		 * `discardUnusableCache`).
 		 */
 		base::OkBad parseBlobsFromBytes(std::stringstream& content);
 
