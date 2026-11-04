@@ -129,6 +129,12 @@ namespace compiler::frontend {
 		}
 	}
 
+	void ModuleTreeBuilder::setReplModuleData(const ReplModuleData& data) {
+		CORE_ASSERT(kind.has_value(), "Module kind must be set before setting ReplModuleData");
+		CORE_ASSERT(kind.value() == ModuleKind::ReplChain, "ReplModuleData can only be set for ReplChain modules");
+		m_repl_module_data = data;
+	}
+
 	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
 		base::StrID stem      = base::StrID(file.stem());
 		std::string extension = file.extension();
@@ -292,6 +298,10 @@ namespace compiler::frontend {
 
 		for (const auto& [name, submodule]: m_submodules)
 			ModuleTreeModifier::addSubmodule(module_ref, submodule);
+
+		// PR: set repl module data
+
+		// PR: make this function more pretty
 
 		return module_ref;
 	}

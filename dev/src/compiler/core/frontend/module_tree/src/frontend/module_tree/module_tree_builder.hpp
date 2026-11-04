@@ -122,7 +122,6 @@ namespace compiler::frontend {
 			base::Optional<ModuleID> parent;
 		};
 
-		// TODO: PR: panic here on bad kind
 		void setReplModuleData(const ReplModuleData& data);
 
 		/**
@@ -181,8 +180,9 @@ namespace compiler::frontend {
 		base::StrID                                       m_package_id;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-
 		base::StrID m_name;
+		base::Optional<ReplModuleData>                        m_repl_module_data;
+
 		bool        m_finalized;
 	};
 }
