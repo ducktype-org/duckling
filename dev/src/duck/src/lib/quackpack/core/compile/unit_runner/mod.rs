@@ -13,8 +13,9 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitStatus;
+use std::time::SystemTime;
 
-use tracing::{debug, error, info, instrument, trace};
+use tracing::{debug, instrument, trace};
 
 use self::incremental::ExclusiveFingerprintGuard;
 use crate::quackpack::core::compile::BuildContext;
@@ -33,7 +34,7 @@ use crate::quackpack::core::compile::unit_task_generator::UnitTaskGenerator;
 use crate::quackpack::core::compile::unit_task_generator::default::DefaultTaskGenerator;
 use crate::quackpack::core::compile::unit_task_generator::dvm::DvmTaskGenerator;
 use crate::util::file_locks::LockedFile;
-use crate::{QuackResult, QuackResultContext, qp_bail};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 pub mod external_libs;
 pub mod incremental;
@@ -70,15 +71,19 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         }
     }
 
-    #[instrument(skip_all)]
+    /// Get the underlying [`DuckContext`].
+    fn ctx(&self) -> &DuckContext {
+        self.bcx.pcx.ctx()
+    }
+
+    #[instrument(level = "debug", skip_all)]
     /// Drive the compilation with [`UnitRunner`].
     pub fn run(self) -> QuackResult<CompilationOutput> {
         let mut manager = self.profile_layout.fingerprint();
-        let guard = manager.lock(self.bcx.pcx.ctx())?;
+        let guard = manager.lock(self.ctx())?;
         self.run_with_locked_fprint(guard)
     }
 
-    #[instrument(skip_all)]
     /// Drive the compilation with [`UnitRunner`], with locked fingerprint.
     fn run_with_locked_fprint(
         self,
@@ -87,11 +92,12 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         let (mut build_data, mut incremental_data) = self.manage_fingerprint(&guard)?;
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         self.run_all_needed_units(&mut incremental_data, &mut build_data)?;
+        let end = SystemTime::now();
         let output = outputs::get_compiler_output(&self.graph, &*self.profile_layout, self.bcx)?;
         // Update timestamp, so all produced artifacts have earlier modification time that the timestamp.
-        build_data.set_end_timestamp();
+        build_data.set_end_timestamp(end);
         if let Err(e) = guard.write_build_data(build_data) {
-            self.bcx.pcx.ctx().warning(format!(
+            self.ctx().warning(format!(
                 "failed to update fingerprint at `{}`: {e}",
                 guard.fingerprint_path().display()
             ))?;
@@ -99,7 +105,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         Ok(output)
     }
 
-    #[instrument(skip_all)]
+    #[instrument(level = "debug", skip_all)]
     /// Read the previous build fingerprint, generating [`RedGreenData`] from it.
     /// Saving the new fingerprint is postponed to the end of the whole builds, so this function returns a tuple,
     /// consisting of:
@@ -116,37 +122,45 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     ) -> QuackResult<(BuildData, IncrementalData)> {
         let fprint_path = guard.fingerprint_path();
         let prev_fingerprint_exists = fprint_path.exists();
-        let cur_build_data =
-            BuildData::for_current_build(&self.graph, self.bcx.profile, &*self.artifacts_layout);
-        if !prev_fingerprint_exists || !self.bcx.profile.incremental {
-            // It makes no sense to attempt incremental.
+        let cur_build_data = BuildData::for_current_build(
+            self.ctx(),
+            &self.graph,
+            self.bcx.profile,
+            &*self.artifacts_layout,
+        )?;
+        trace!(?cur_build_data);
+        if !self.bcx.profile.incremental {
+            debug!("the profile disables incremental compilation, rebuilding everything");
+            return Ok((cur_build_data, IncrementalData::default()));
+        }
+        if !prev_fingerprint_exists {
+            debug!(
+                "no previous fingerprint at `{}`, rebuilding everything",
+                fprint_path.display()
+            );
             return Ok((cur_build_data, IncrementalData::default()));
         }
         let incremental_data = match guard.read_build_data() {
             Ok(prev_build_data) => {
-                debug!(previous_build_data = ?prev_build_data);
+                trace!(?prev_build_data);
                 // Previous fingerprint is well-formed, we can use it.
-                self.bcx
-                    .pcx
-                    .ctx()
+                self.ctx()
                     .info_verbose("successfully loaded previous build fingerprint")?;
                 cur_build_data.get_incremental_data(prev_build_data)
             }
             Err(e) => {
                 // Previous fingerprint was malformed, so return empty result.
-                self.bcx.pcx.ctx().warning(format!(
+                self.ctx().warning(format!(
                     "previous fingerprint at {} is malformed: {e}",
                     fprint_path.display()
                 ))?;
                 IncrementalData::default()
             }
         };
-        debug!(?incremental_data);
-        debug!(?cur_build_data);
+        trace!(?incremental_data);
         Ok((cur_build_data, incremental_data))
     }
 
-    #[instrument(skip_all)]
     /// Compile all needed [`Unit`]s, as determined by [`should_run`].
     ///
     /// [`should_run`]: UnitTaskGenerator::should_run
@@ -169,15 +183,14 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                 continue;
             };
             if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
-                info!(?unit, "skipping compilation of the unit");
+                debug!("skipping compilation of `{}`", unit.package().name());
                 // Nothing truly depends on this unit (since task_generator skips it, even units having it as dependency do not use its artifacts).
                 // So we can safely make it green, potentially making more units green.
                 incremental_data.mark_as_green(node_id);
                 continue;
             }
             if is_green {
-                info!(?unit, "reusing previous build artifacts for the unit");
-                self.bcx.pcx.ctx().info(format!(
+                self.ctx().info(format!(
                     "reusing previous build artifacts for `{}`",
                     unit.package().name()
                 ))?;
@@ -192,13 +205,13 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         Ok(())
     }
 
-    #[instrument(skip_all, fields(id = %id_in_graph, name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
+    #[instrument(level = "debug", skip_all, fields(id = %id_in_graph, name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
     /// Compile a single [`Unit`].
     /// May panic, if this [`Unit`] shouldn't be compiled ([`should_run`] returned `false`).
     ///
     /// [`should_run`]: UnitTaskGenerator::should_run
     fn compile_unit(&self, unit: &Unit, id_in_graph: GraphNodeId) -> QuackResult<()> {
-        info!("starting compilation of a unit");
+        debug!("starting compilation of the unit");
         self.set_unit_status(id_in_graph, unit, UnitStatus::InProgress);
         let tasks = self.task_generator.create_tasks(
             unit,
@@ -213,7 +226,6 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     }
 
     /// Compile a single [`Unit`] with its finished tasks.
-    #[instrument(skip_all)]
     fn compile_unit_with_tasks(
         &self,
         unit: &Unit,
@@ -228,7 +240,6 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     }
 
     /// Compile a single [`Unit`] with its finished schema.
-    #[instrument(skip_all)]
     fn compile_unit_with_schema(
         &self,
         unit: &Unit,
@@ -242,9 +253,9 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
                 .for_dependency(unit_id_in_graph, &self.graph)?;
             let builder =
                 self.finished_builder_for_layout_and_profile(&*unit_layout, self.bcx.profile);
-            let _lock = unit_layout.acquire_lock(self.bcx.pcx.ctx())?;
+            let _lock = unit_layout.acquire_lock(self.ctx())?;
             let locked_manifest_file = unit_layout
-                .dependency_json(self.bcx.pcx.ctx())
+                .dependency_json(self.ctx())
                 .context("failed to open `deps.json`")?;
             write_schema(schema, &locked_manifest_file)?;
             // Ensure we flush, by dropping the inner `File`.
@@ -253,10 +264,10 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         })()
         .with_context(|| format!("failed to compile `{name}`"))?;
         if !status.success() {
-            error!(%status, "compilation failed, status is not success");
+            debug!(target: "duck::duckc", %status, "`duckc` failed to compile `{name}`");
             qp_bail!("failed to compile `{name}`")
         }
-        info!("successfully compiled a unit");
+        debug!("successfully compiled the unit");
         Ok(())
     }
 
@@ -266,7 +277,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         layout: &dyn DependencyLayout,
         profile: Profile,
     ) -> process_builder::DuckcProcessBuilder {
-        let mut builder = Duckc::new(self.bcx.pcx.ctx()).process_builder();
+        let mut builder = Duckc::new(self.ctx()).process_builder();
         builder
             .set_subcommand(DuckcSubcommand::CompilePackages)
             .set_manifest_path(&layout.dependency_json_path())
@@ -279,17 +290,13 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     }
 
     /// Execute a builder, and print messages.
-    #[instrument(skip_all)]
     fn compile_and_print(
         &self,
         mut builder: process_builder::DuckcProcessBuilder,
         name: impl fmt::Display,
     ) -> QuackResult<ExitStatus> {
-        self.bcx.pcx.ctx().info(format!("compiling `{name}`..."))?;
-        self.bcx
-            .pcx
-            .ctx()
-            .info_verbose(format!("Running `{}`", builder))?;
+        self.ctx().info(format!("compiling `{name}`..."))?;
+        self.ctx().info_verbose(format!("Running `{}`", builder))?;
         builder.execute()
     }
 
@@ -344,7 +351,6 @@ impl CompilationTarget {
 }
 
 /// Write a manifest into a file.
-#[instrument(skip_all)]
 fn write_schema(
     schema: multipackage_schema::MultiPackage,
     locked_manifest_file: &LockedFile,
@@ -374,10 +380,10 @@ impl BuildContext<'_, '_> {
     /// Get an appropriate [`UnitTaskGenerator`].
     pub fn task_generator(&self) -> Box<dyn UnitTaskGenerator> {
         if self.targets_dvm() {
-            debug!("returning DvmTaskGenerator");
+            debug!("using `DvmTaskGenerator`");
             return Box::new(DvmTaskGenerator);
         }
-        debug!("returning DefaultTaskGenerator");
+        debug!("using `DefaultTaskGenerator`");
         Box::new(DefaultTaskGenerator)
     }
 
@@ -385,7 +391,7 @@ impl BuildContext<'_, '_> {
     pub fn artifacts_layout(&self, graph: &UnitGraph) -> Box<dyn ArtifactsLayout> {
         let root_package = graph.root_unit().package().get_package();
         let root_package_artifacts = root_package.artifacts_directory().to_path_buf();
-        debug!(uses_shared_artifacts = %self.shared);
+        debug!(shared_artifacts = %self.shared);
         if self.shared {
             Box::new(SharedArtifactsLayout::new(root_package_artifacts))
         } else {

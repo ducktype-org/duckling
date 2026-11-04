@@ -13,7 +13,7 @@ A clear and concise description of what the bug is.
 
 ## To Reproduce
 
-Steps to reproduce the behavior, keep it simple, provide Duckling source code if relevant
+Describe the steps to reproduce the issue and include a reduced Duckling example where relevant. If possible, share the example as a [Compiler Explorer](https://duckling.godbolt.org/) link.
 
 ## Expected behavior
 

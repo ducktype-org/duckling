@@ -2,6 +2,7 @@ duckc_dir: "@{build_dir}/bin"
 dvm_dir: "@{duckc_dir}"
 duckc_path: "@{duckc_dir}/duckc"
 dvm_path: "@{dvm_dir}/VM"
+duckfmt_path: "@{duckc_dir}/duckfmt"
 duck_ls_path: "@{duckc_dir}/duck_ls"
 
 compile_duckc: "cmake --build @{build_dir} -j -- duckc"
@@ -67,6 +68,7 @@ TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo
 SubDirs:
     - dit
     - compiler
+    - tools
     - duck
     - repl
     - debug_adapter

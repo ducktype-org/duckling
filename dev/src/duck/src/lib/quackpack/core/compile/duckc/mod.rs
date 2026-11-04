@@ -18,6 +18,7 @@
 mod compilation_type;
 pub mod multipackage_schema;
 pub mod process_builder;
+mod version;
 
 use std::convert::Infallible;
 

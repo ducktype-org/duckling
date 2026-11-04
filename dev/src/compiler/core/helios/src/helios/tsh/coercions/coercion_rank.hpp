@@ -27,6 +27,8 @@ namespace compiler::tsh::coercions {
 		Identity = 0,
 		/// Only the mutability the value is seen with changes. Nothing happens to the value itself.
 		MutabilityChange,
+		/// The value is implicitly taken by `ref`.
+		RefOf,
 		/// The pointee is read out of a `ref`/`box`.
 		Deref,
 		/// A widening conversion(i.e. `i32` -> `i64`)

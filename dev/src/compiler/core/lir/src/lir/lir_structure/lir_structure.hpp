@@ -119,6 +119,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	VariantTryProject,
 
 	Call,
+	/** Call through a function pointer: [callee, args...], the signature is in
+	 * `IndirectCallParameters`. */
+	IndirectCall,
 
 	ReturnVoid,
 	ReturnValue,
@@ -149,6 +152,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
 	CreateSlice,
 	CreateTuple,
 	CreateVariant,
+	CreateOptional,
 	Eq,
 	Neq,
 	SizeOf,
@@ -214,11 +218,24 @@ namespace compiler::lir {
 	 * @brief Reference to a function in LIR.
 	 */
 	struct FunctionLiteral final {
-		base::StrID                                         mangled_name;
-		LIRAbi                                              abi;
-		bool                                                link_once;
+		base::StrID mangled_name;
+		LIRAbi      abi;
+		bool        link_once;
+
+		/**
+		 * The layout of the function type, i.e. the layout of the function used as a value.
+		 */
+		CRef<tsl::TypeLayout> layout;
+
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
+
+		/**
+		 * If true, a call to this function never returns (its result type is `void`).
+		 * Both `void` and `()` have the same return layout, so backends cannot tell them apart
+		 * from the layouts alone.
+		 */
+		bool never_returns;
 
 		/**
 		 * Optional indicates if a function literal is a builtin function.
@@ -620,10 +637,22 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Parameters of `Operation::IndirectCall`: the signature of the called function.
+	 */
+	struct IndirectCallParameters final {
+		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
+		CRef<tsl::TypeLayout>                               return_type_layout;
+	};
+
+	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
+	using InstrParameters = std::variant<
+		NoInstrParameters,
+		CastParameters,
+		VariantParameters,
+		MetaParameters,
+		IndirectCallParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;
@@ -735,8 +764,19 @@ namespace compiler::lir {
 		 */
 		bool ignore_on_llvm;
 
+		/**
+		 * The layout of the function type, i.e. the layout of the function used as a value.
+		 */
+		CRef<tsl::TypeLayout> layout;
+
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;
+
+		/**
+		 * If true, this function never returns (its result type is `void`).
+		 * @see FunctionLiteral::never_returns
+		 */
+		bool never_returns;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LIRLocal> local_list;

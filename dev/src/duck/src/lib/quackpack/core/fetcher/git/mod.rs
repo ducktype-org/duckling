@@ -10,7 +10,7 @@ use std::path::Path;
 
 use git2::build::RepoBuilder;
 use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository};
-use tracing::{debug, error};
+use tracing::{debug, trace, warn};
 use url::Url;
 
 use crate::quackpack::core::fetcher::types::GitCloneResponse;
@@ -19,6 +19,7 @@ use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 pub mod fast_path;
+mod known_hosts;
 #[cfg(test)]
 mod tests;
 
@@ -38,7 +39,7 @@ impl<'duck> GitClient<'duck> {
     }
 
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
-    #[tracing::instrument(skip(self, url) fields(url = url.as_str(), ?reference, ?destination))]
+    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url))]
     #[track_caller]
     pub fn clone_blocking(
         &self,
@@ -58,7 +59,7 @@ impl<'duck> GitClient<'duck> {
         let repository = match builder.clone(url.as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
-                error!(error = %e, "failed to clone the repository");
+                debug!(target: "duck::git", error = %e, "failed to clone the repository");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
                 // @TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
                 if matches!(e.code(), git2::ErrorCode::Auth) {
@@ -67,7 +68,7 @@ impl<'duck> GitClient<'duck> {
                 if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
-                debug!("will attempt a full clone");
+                debug!(target: "duck::git", "falling back to a full clone");
                 // We print this only here because otherwise the user gets information from the error.
                 self.ctx.warning(format!(
                     "failed to shallow clone the repository at `{url}`: {e}"
@@ -84,18 +85,19 @@ impl<'duck> GitClient<'duck> {
 
         // Prefer specific commits over tags.
         if let GitReference::Rev(commit) = reference {
-            repository.checkout_commit(commit.as_str()).with_context(|| {
-                format!(
-                    "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
-                    url,
-                    commit
-                )
-            })?;
+            repository
+                .checkout_commit(commit.as_str())
+                .with_context(|| {
+                    format!(
+                        "failed to check out the commit `{}` of a repository cloned from `{}`",
+                        commit, url
+                    )
+                })?;
         } else if let GitReference::Tag(tag) = reference {
             repository.checkout_tag(tag.as_str()).with_context(|| {
                 format!(
-                    "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
-                    url, tag
+                    "failed to check out the tag `{}` of a repository cloned from `{}`",
+                    tag, url
                 )
             })?;
         }
@@ -115,7 +117,7 @@ impl<'duck> GitClient<'duck> {
     fn fetch_options_for(&self, url: &Url, reference: GitReference) -> FetchOptions<'_> {
         let mut fetch_options = FetchOptions::new();
         if can_shallow_clone(url, reference) {
-            debug!("can shallow clone");
+            trace!(target: "duck::git", "using a shallow clone");
             fetch_options.depth(1);
         }
 
@@ -144,6 +146,17 @@ impl<'duck> GitClient<'duck> {
                 self.username_and_password_callback()
             } else {
                 Err(git2::Error::from_str("unsupported authentication method"))
+            }
+        });
+        callbacks.certificate_check(|cert, host| {
+            match known_hosts::check_certificate(self.ctx, cert, host) {
+                Ok(status) => Ok(status),
+                Err(e) => {
+                    warn!(target: "duck::git", "failed to check certificates: {e}");
+                    Err(git2::Error::from_str(
+                        "failed to parse ssh known hosts file",
+                    ))
+                }
             }
         });
         callbacks
@@ -187,7 +200,7 @@ trait RepositoryExt {
 }
 
 impl RepositoryExt for Repository {
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(target = "duck::git", level = "debug", skip(self))]
     fn checkout_commit(&self, commit: &str) -> QuackResult<()> {
         let oid =
             Oid::from_str(commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
@@ -200,7 +213,7 @@ impl RepositoryExt for Repository {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(target = "duck::git", level = "debug", skip(self))]
     fn checkout_tag(&self, tag: &str) -> QuackResult<()> {
         let refname = format!("refs/tags/{}", tag);
         let reference = self

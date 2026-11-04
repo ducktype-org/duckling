@@ -24,6 +24,7 @@
 
 #include "meta_type_memory_manager.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <tsl/queries.hpp>
@@ -115,6 +116,17 @@ namespace compiler::helios::comptime_ops {
 	) {
 		auto new_type
 			= tsh::SymbolType<>::withDefaults(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr }));
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		tsh::SymbolType<>*,
+		"opaque_ptr",
+		comptime_create_optional,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = tsh::SymbolType<>::withDefaults(getOptionalType(*ctx_ptr, *type_ptr));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -251,32 +263,39 @@ namespace compiler::helios::comptime_ops {
 		return *left != *right;
 	}
 
-	std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
-		return {
-			VM_INSTANCE_EXT_C_FUNC(comptime_create_box, comptime_create_box, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_create_ref, comptime_create_ref, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_create_const, comptime_create_const, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_create_ptr, comptime_create_ptr, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_create_many_ptr, comptime_create_many_ptr, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr, comptime_create_cptr, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_create_slice, comptime_create_slice, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_size_of, comptime_size_of, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_align_of, comptime_align_of, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_new, comptime_tuple_builder_new, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_push, comptime_tuple_builder_push, pid),
-			VM_INSTANCE_EXT_C_FUNC(
-				comptime_tuple_builder_finalize, comptime_tuple_builder_finalize, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(comptime_variant_builder_new, comptime_variant_builder_new, pid),
-			VM_INSTANCE_EXT_C_FUNC(
-				comptime_variant_builder_push, comptime_variant_builder_push, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(
-				comptime_variant_builder_finalize, comptime_variant_builder_finalize, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(comptime_types_equal, comptime_types_equal, pid),
-			VM_INSTANCE_EXT_C_FUNC(comptime_types_not_equal, comptime_types_not_equal, pid),
-		};
+	namespace {
+		std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
+			return {
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_box, comptime_create_box, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_ref, comptime_create_ref, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_const, comptime_create_const, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_ptr, comptime_create_ptr, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_many_ptr, comptime_create_many_ptr, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr, comptime_create_cptr, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_slice, comptime_create_slice, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_optional, comptime_create_optional, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_size_of, comptime_size_of, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_align_of, comptime_align_of, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_new, comptime_tuple_builder_new, pid),
+				VM_INSTANCE_EXT_C_FUNC(
+					comptime_tuple_builder_push, comptime_tuple_builder_push, pid
+				),
+				VM_INSTANCE_EXT_C_FUNC(
+					comptime_tuple_builder_finalize, comptime_tuple_builder_finalize, pid
+				),
+				VM_INSTANCE_EXT_C_FUNC(
+					comptime_variant_builder_new, comptime_variant_builder_new, pid
+				),
+				VM_INSTANCE_EXT_C_FUNC(
+					comptime_variant_builder_push, comptime_variant_builder_push, pid
+				),
+				VM_INSTANCE_EXT_C_FUNC(
+					comptime_variant_builder_finalize, comptime_variant_builder_finalize, pid
+				),
+				VM_INSTANCE_EXT_C_FUNC(comptime_types_equal, comptime_types_equal, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_types_not_equal, comptime_types_not_equal, pid),
+			};
+		}
 	}
 
 	vm::code::CodeCollection getComptimeTypeOperations(vm::PID pid) {

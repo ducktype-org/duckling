@@ -8,6 +8,7 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_any_statement.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
@@ -131,14 +132,14 @@ namespace compiler::helios::desugaring {
 
 			auto iterable_info = getForIterableInfo(ctx, iterable_type);
 			if_opt_none(iterable_info) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements over type: ",
 						iterable_type.toString(),
 						". Only static arrays, ranges (`n..m`) and `List` are supported."
 					),
 					code::pstOrigin(iterable_pst).getSourcePosition(ctx)
-				));
+				);
 				return {};
 			}
 
@@ -227,7 +228,7 @@ namespace compiler::helios::desugaring {
 			}
 
 			if_opt_none(member) {
-				ctx.ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.ctx.log<dia::PlaceholderError>(
 					base::strConcat(
 						"`for` over '",
 						ctx.iterable_type.toString(),
@@ -236,7 +237,7 @@ namespace compiler::helios::desugaring {
 						is_method ? "` method." : "` field."
 					),
 					ctx.iterable_origin.getSourcePosition(ctx.ctx)
-				));
+				);
 			}
 			return member;
 		}
@@ -283,14 +284,14 @@ namespace compiler::helios::desugaring {
 				// reference implicitly, so the copy is spelled out here.
 				const auto& element_type = ctx.iterable_info.element_type;
 				if (not element_type.isCopyable(ctx.ctx)) {
-					ctx.ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.ctx.log<dia::PlaceholderError>(
 						base::strConcat(
 							"`for` over a `List` copies every element, but `",
 							element_type.toString(),
 							"` cannot be copied."
 						),
 						ctx.iterable_origin.getSourcePosition(ctx.ctx)
-					));
+					);
 					return {};
 				}
 				auto element_ref = s.call(
@@ -349,26 +350,25 @@ namespace compiler::helios::desugaring {
 			// The iterator is a copy of the element, so changing it doesn't change the iterable.
 			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
 			auto element_sym_type = raw_element->expression_type.getSymbolType();
-			auto element_expr     = coerceFromBox(
+			auto element_expr     = coercions::coerceFromBox(
                 ctx.ctx,
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
                 {},
-                CoercionErrorOverrides{
-						.incompatible_types =
-                        [&](query::Context& error_ctx) {
-                            error_ctx.logInt(makeBox<dia::PlaceholderError>(
-                                base::strConcat(
-                                    "Cannot coerce collection element type '",
-                                    element_sym_type.toString(),
-                                    "' to iterator type '",
-                                    iter_type.toString(),
-                                    "'."
-                                ),
-                                iter_pst_pos
-                            ));
-                        },
+                coercions::CoercionErrorOverrides{
+						.incompatible_types = [&] -> Box<dia::MessageBase> {
+                        return makeBox<dia::PlaceholderError>(
+                            base::strConcat(
+                                "Cannot coerce collection element type '",
+                                element_sym_type.toString(),
+                                "' to iterator type '",
+                                iter_type.toString(),
+                                "'."
+                            ),
+                            iter_pst_pos
+                        );
+                    },
                 }
             );
 			if (element_expr.hasFailed()) return {};

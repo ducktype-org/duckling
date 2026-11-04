@@ -1,0 +1,19 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  mkdir dep1
+  mkdir dep2
+  @{duck-exe} -C dep1 init dep
+  @{duck-exe} -C dep2 init dep
+  @{duck-exe} init root
+  @{duck-exe} -C root add --local ../dep1/dep --alias dep1 dep
+  @{duck-exe} -C root add --local ../dep2/dep --alias dep2 dep
+Tests:
+  package-names:
+    Description: Checks that dependencies with same names but different sources and effective names are ok
+    Cases:
+      basic:
+        test-cmd: duck -C root sync
+        Output:
+          String: |+
+            info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present
+            info: successfully synchronized venv \`root\`

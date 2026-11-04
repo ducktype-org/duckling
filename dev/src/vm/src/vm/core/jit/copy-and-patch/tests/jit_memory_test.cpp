@@ -21,31 +21,33 @@ using vm::jit::cnp::StencilData;
 using vm::jit::cnp::StencilHole;
 using vm::jit::cnp::Stencils;
 
-// NOLINTBEGIN
-PUSH_DIAGNOSTIC
-ALLOW_EXTENSIONS
-static constexpr char binary[] = {
+namespace {
+	// NOLINTBEGIN
+	PUSH_DIAGNOSTIC
+	ALLOW_EXTENSIONS
+	constexpr char binary[] = {
 #if __has_embed("mock_stencils-so")
 	#embed "mock_stencils-so"
 #endif
-};
-POP_DIAGNOSTIC
-// NOLINTEND
+	};
+	POP_DIAGNOSTIC
+	// NOLINTEND
 
-static auto stencils = Stencils{
-// Linter doesn't actually build mock_stencils-cpp so it would be unavailable.
+	auto stencils = Stencils{
+	// Linter doesn't actually build mock_stencils-cpp so it would be unavailable.
 #if __has_include(<mock_stencils-cpp>)
-			.stencils_binary = std::bit_cast<std::array<byte, sizeof(binary)>>(binary),
-			.stencils_data =
+				.stencils_binary = std::bit_cast<std::array<byte, sizeof(binary)>>(binary),
+				.stencils_data =
 	#include <mock_stencils-cpp>
 #else
-			// Empty stand-ins so CTAD can deduce Stencils<1, 0>.
-			.stencils_binary = std::array<byte, 1>{},
-			.stencils_data = std::array<StencilData, 0>{},
+				// Empty stand-ins so CTAD can deduce Stencils<1, 0>.
+				.stencils_binary = std::array<byte, 1>{},
+				.stencils_data = std::array<StencilData, 0>{},
 #endif
-		}
-					  .load()
-					  .value();
+			}
+						  .load()
+						  .value();
+}
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS

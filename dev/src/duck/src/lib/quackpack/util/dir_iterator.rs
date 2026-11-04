@@ -35,7 +35,8 @@ pub fn create_dir_iterator(path: &Path) -> QuackResult<DirContents> {
         Ok(read_dir) => Ok(DirContents::NonEmpty(read_dir)),
         Err(e) => match e.kind() {
             std::io::ErrorKind::NotFound => Ok(DirContents::Empty),
-            _ => Err(e).with_context(|| format!("when reading entries in `{}`", path.display())),
+            _ => Err(e)
+                .with_context(|| format!("failed to read the entries in `{}`", path.display())),
         },
     }
 }

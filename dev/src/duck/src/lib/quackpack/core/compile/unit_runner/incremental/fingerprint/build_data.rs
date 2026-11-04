@@ -7,19 +7,21 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
+use std::time::SystemTime;
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
+use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
 use crate::quackpack::core::compile::unit_runner::incremental::{IncrementalData, RedGreenData};
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
-use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext};
+use crate::util::path_ops::{read_from_path, touch};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -27,9 +29,12 @@ use crate::{QuackResult, QuackResultContext};
 /// This information is stored on the disk, to be used for incremental compilation in the future builds.
 pub struct BuildData {
     /// Time of the start of the build.
-    build_start: DateTime<Utc>,
+    build_start: SystemTime,
     /// Time of the end of the build. If yet unknown (the build is ongoing), set to UNIX epoch.
-    build_end: DateTime<Utc>,
+    build_end: SystemTime,
+    /// Hash of the version of `duckc` used in the build.
+    /// It is important to use the verbose version, so that for example changing LLVM version forces recompilation in the incremental setting.
+    duckc_version_hash: String,
     /// Unit graph of the build (in an easily serializable version).
     unit_graph: SerializableUnitGraph,
     /// Hash of the profile of the build.
@@ -47,26 +52,29 @@ impl BuildData {
     /// Should be used for getting [`BuildData`] for the current build process.
     /// `number_of_source_files` is empty and should be filled up during local checks for source code inputs.
     pub fn for_current_build(
+        ctx: &DuckContext,
         graph: &UnitGraph,
         profile: Profile,
         layout: &dyn ArtifactsLayout,
-    ) -> Self {
+    ) -> QuackResult<Self> {
+        let duckc_version = Duckc::get_version(ctx)?;
         let profile_hash = sha256_string(profile.serialize_raw());
-        Self {
-            build_start: Utc::now(),
+        Ok(Self {
+            build_start: SystemTime::now(),
             // Unknown so UNIX epoch.
-            build_end: DateTime::UNIX_EPOCH,
+            build_end: SystemTime::UNIX_EPOCH,
+            duckc_version_hash: duckc_version.hash_sha256(),
             unit_graph: graph.into(),
             profile_hash,
             artifacts_type: layout.name().to_string(),
             number_of_source_files: BTreeMap::new(),
-        }
+        })
     }
 
     /// Get a [`BuildData`] from serialized artifacts.
     /// Should be used for getting [`BuildData`] for the previous build process.
     pub(super) fn from_fingerprint(fingerprint: &Path) -> QuackResult<Self> {
-        let fingerprint_content = fingerprint.read().with_context(|| {
+        let fingerprint_content = read_from_path(fingerprint).with_context(|| {
             format!(
                 "failed to read the previous fingerprint at `{}`",
                 fingerprint.display()
@@ -86,23 +94,36 @@ impl BuildData {
     /// Store a fingerprint with [`BuildData`] on the disk.
     /// Should be called on [`BuildData`] generated for the current build.
     pub(super) fn write_fingerprint(&self, fingerprint: &Path) -> QuackResult<()> {
-        let fingerprint_json = serde_json::to_string_pretty(self).with_context_internal(|| {
+        let fingerprint_json = serde_json::to_vec(self).with_context_internal(|| {
             format!("failed to convert fingerprint into a JSON string: {self:#?}")
         })?;
-        let mut file = fingerprint.touch()?;
+        let mut file = touch(fingerprint)?;
         file.set_len(0)
             .with_context(|| format!("failed to truncate `{}`", fingerprint.display()))?;
-        file.write_all(fingerprint_json.as_bytes())
+        file.write_all(fingerprint_json.as_slice())
             .with_context(|| format!("failed to write fingerprint to `{}`", fingerprint.display()))
     }
 
     /// Get [`RedGreenData`] (information about which graph nodes are common and their artifacts can be reused)
     /// generated from the current [`BuildData`] and previous build's [`BuildData`].
     pub fn get_incremental_data(&self, other: Self) -> IncrementalData {
-        // Different profile or different layouts, we can't reuse anything.
-        let red_green_data = if self.profile_hash != other.profile_hash
-            || self.artifacts_type != other.artifacts_type
-        {
+        // Different profile, different layouts or different duckc version, we can't reuse anything.
+        let profile_changed = self.profile_hash != other.profile_hash;
+        let layout_changed = self.artifacts_type != other.artifacts_type;
+        let duckc_changed = self.duckc_version_hash != other.duckc_version_hash;
+        if profile_changed {
+            debug!("the profile changed since the previous build");
+        }
+        if layout_changed {
+            debug!(
+                "the artifacts layout changed from `{}` to `{}`",
+                other.artifacts_type, self.artifacts_type
+            );
+        }
+        if duckc_changed {
+            debug!("the `duckc` version changed since the previous build");
+        }
+        let red_green_data = if profile_changed || layout_changed || duckc_changed {
             RedGreenData::default()
         } else {
             self.unit_graph.get_red_green_data(&other.unit_graph)
@@ -115,9 +136,9 @@ impl BuildData {
         )
     }
 
-    /// Update the `build_end` timestamp to the current time.
-    pub fn set_end_timestamp(&mut self) {
-        self.build_end = Utc::now();
+    /// Set the timestamp of the end of compilation.
+    pub fn set_end_timestamp(&mut self, timestamp: SystemTime) {
+        self.build_end = timestamp;
     }
 
     pub fn add_number_of_source_files(&mut self, package: Identity, number_of_source_files: u32) {

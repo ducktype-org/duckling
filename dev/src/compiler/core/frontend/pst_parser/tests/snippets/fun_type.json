@@ -1,0 +1,546 @@
+{
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 123
+	},
+	"Top Level": [
+		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 35
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 4,
+						"sourceEnd": 4
+					},
+					"Identifier Wrapper": {
+						"value": "a"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 7,
+						"sourceEnd": 30
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 7,
+								"sourceEnd": 30
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 7,
+										"sourceEnd": 22
+									},
+									"Prefix Operator": {
+										"operator": {
+											"position": {
+												"sourceStart": 7,
+												"sourceEnd": 12
+											},
+											"Operator Wrapper": {
+												"value": "funptr"
+											}
+										},
+										"expression": {
+											"position": {
+												"sourceStart": 13,
+												"sourceEnd": 22
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 14,
+														"sourceEnd": 21
+													},
+													"Comma Expr": {
+														"sub-expressions": [
+															{
+																"position": {
+																	"sourceStart": 14,
+																	"sourceEnd": 16
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 14,
+																			"sourceEnd": 16
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i32"
+																		}
+																	}
+																}
+															},
+															{
+																"position": {
+																	"sourceStart": 19,
+																	"sourceEnd": 21
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 19,
+																			"sourceEnd": 21
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
+																}
+															}
+														]
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 24,
+										"sourceEnd": 25
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 27,
+										"sourceEnd": 30
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 27,
+												"sourceEnd": 30
+											},
+											"Keyword Wrapper": {
+												"value": "bool"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 34,
+						"sourceEnd": 34
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 34,
+								"sourceEnd": 34
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 34,
+										"sourceEnd": 34
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 37,
+				"sourceEnd": 69
+			},
+			"Let": {
+				"name": {
+					"position": {
+						"sourceStart": 41,
+						"sourceEnd": 41
+					},
+					"Identifier Wrapper": {
+						"value": "b"
+					}
+				},
+				"mutable": false,
+				"type": {
+					"position": {
+						"sourceStart": 44,
+						"sourceEnd": 64
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 44,
+								"sourceEnd": 64
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 44,
+										"sourceEnd": 48
+									},
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 45,
+												"sourceEnd": 47
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 45,
+														"sourceEnd": 47
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 50,
+										"sourceEnd": 51
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 53,
+										"sourceEnd": 64
+									},
+									"Binary Operator": {
+										"left_expr": {
+											"position": {
+												"sourceStart": 53,
+												"sourceEnd": 57
+											},
+											"Round Group Expression": {
+												"inner_expr": {
+													"position": {
+														"sourceStart": 54,
+														"sourceEnd": 56
+													},
+													"Keyword Expression": {
+														"keyword": {
+															"position": {
+																"sourceStart": 54,
+																"sourceEnd": 56
+															},
+															"Keyword Wrapper": {
+																"value": "i32"
+															}
+														}
+													}
+												}
+											}
+										},
+										"operator": {
+											"position": {
+												"sourceStart": 59,
+												"sourceEnd": 60
+											},
+											"Operator Wrapper": {
+												"value": "->"
+											}
+										},
+										"right_expr": {
+											"position": {
+												"sourceStart": 62,
+												"sourceEnd": 64
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 62,
+														"sourceEnd": 64
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"value": {
+					"position": {
+						"sourceStart": 68,
+						"sourceEnd": 68
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 68,
+								"sourceEnd": 68
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 68,
+										"sourceEnd": 68
+									},
+									"Identifier Wrapper": {
+										"value": "f"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 71,
+				"sourceEnd": 123
+			},
+			"Function": {
+				"name": {
+					"position": {
+						"sourceStart": 75,
+						"sourceEnd": 79
+					},
+					"Identifier Wrapper": {
+						"value": "apply"
+					}
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 80,
+						"sourceEnd": 102
+					},
+					"function parameter list": [
+						{
+							"position": {
+								"sourceStart": 81,
+								"sourceEnd": 101
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 81,
+											"sourceEnd": 81
+										},
+										"Identifier Wrapper": {
+											"value": "k"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 84,
+											"sourceEnd": 101
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 84,
+													"sourceEnd": 101
+												},
+												"Binary Operator": {
+													"left_expr": {
+														"position": {
+															"sourceStart": 84,
+															"sourceEnd": 94
+														},
+														"Prefix Operator": {
+															"operator": {
+																"position": {
+																	"sourceStart": 84,
+																	"sourceEnd": 89
+																},
+																"Operator Wrapper": {
+																	"value": "funptr"
+																}
+															},
+															"expression": {
+																"position": {
+																	"sourceStart": 90,
+																	"sourceEnd": 94
+																},
+																"Round Group Expression": {
+																	"inner_expr": {
+																		"position": {
+																			"sourceStart": 91,
+																			"sourceEnd": 93
+																		},
+																		"Keyword Expression": {
+																			"keyword": {
+																				"position": {
+																					"sourceStart": 91,
+																					"sourceEnd": 93
+																				},
+																				"Keyword Wrapper": {
+																					"value": "i64"
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													},
+													"operator": {
+														"position": {
+															"sourceStart": 96,
+															"sourceEnd": 97
+														},
+														"Operator Wrapper": {
+															"value": "->"
+														}
+													},
+													"right_expr": {
+														"position": {
+															"sourceStart": 99,
+															"sourceEnd": 101
+														},
+														"Keyword Expression": {
+															"keyword": {
+																"position": {
+																	"sourceStart": 99,
+																	"sourceEnd": 101
+																},
+																"Keyword Wrapper": {
+																	"value": "i64"
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					]
+				},
+				"return": {
+					"position": {
+						"sourceStart": 107,
+						"sourceEnd": 118
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 107,
+								"sourceEnd": 118
+							},
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 107,
+										"sourceEnd": 111
+									},
+									"Round Group Expression": {
+										"inner_expr": {
+											"position": {
+												"sourceStart": 108,
+												"sourceEnd": 110
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 108,
+														"sourceEnd": 110
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								},
+								"operator": {
+									"position": {
+										"sourceStart": 113,
+										"sourceEnd": 114
+									},
+									"Operator Wrapper": {
+										"value": "->"
+									}
+								},
+								"right_expr": {
+									"position": {
+										"sourceStart": 116,
+										"sourceEnd": 118
+									},
+									"Keyword Expression": {
+										"keyword": {
+											"position": {
+												"sourceStart": 116,
+												"sourceEnd": 118
+											},
+											"Keyword Wrapper": {
+												"value": "i64"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"body": {
+					"position": {
+						"sourceStart": 122,
+						"sourceEnd": 123
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 122,
+							"sourceEnd": 123
+						},
+						"Expr Stmt": {
+							"position": {
+								"sourceStart": 122,
+								"sourceEnd": 122
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 122,
+										"sourceEnd": 122
+									},
+									"Identifier Expression": {
+										"name": {
+											"position": {
+												"sourceStart": 122,
+												"sourceEnd": 122
+											},
+											"Identifier Wrapper": {
+												"value": "k"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}

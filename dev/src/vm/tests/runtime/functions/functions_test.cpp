@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(checkMultipleRetVals);
+		TESTER_ADD_TEST(testFunctionPointers);
 	}
 
 private:
@@ -90,6 +91,11 @@ private:
 	}
 
 	void checkMultipleRetVals() { runTestOnVm("multiple_retvals.dbc", "", "21373315", {}); }
+
+	void testFunctionPointers() {
+		runTestOnVm("function_pointers.dbc", "3 5", "815158153", {}, 0);
+		runTestOnVm("function_pointers.dbc", "2 7", "914149142", {}, 0);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/runtime/functions/");

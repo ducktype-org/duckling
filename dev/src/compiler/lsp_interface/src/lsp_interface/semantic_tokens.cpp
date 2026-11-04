@@ -413,6 +413,11 @@ namespace lsp {
 			for (const auto& arg: elem.subtypes) arg->acceptVisitor(*this);
 		}
 
+		void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& elem
+		) override {
+			elem.value_type->acceptVisitor(*this);
+		}
+
 		void visitCallExpr(const code::CallExpr& elem) override {
 			elem.callee->acceptVisitor(*this);
 			for (const auto& arg: elem.arguments) arg->acceptVisitor(*this);

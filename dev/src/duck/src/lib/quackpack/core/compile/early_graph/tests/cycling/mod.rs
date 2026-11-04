@@ -61,18 +61,21 @@ fn creates_valid_initial_graph() {
             (
                 mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    mock_local_identity(root.path(), "cycle").into(),
-                    mock_registry_identity("foo").into(),
-                    mock_registry_identity("bar").into(),
+                    (
+                        "cycle".into(),
+                        mock_local_identity(root.path(), "cycle").into()
+                    ),
+                    ("foo".into(), mock_registry_identity("foo").into()),
+                    ("bar".into(), mock_registry_identity("bar").into()),
                 ])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
@@ -80,7 +83,10 @@ fn creates_valid_initial_graph() {
             ),
             (
                 mock_local_identity(root.path(), "cycle").into(),
-                DependencyNode::new(vec![mock_local_identity(root.path(), "root").into()]),
+                DependencyNode::new(vec![(
+                    "root".into(),
+                    mock_local_identity(root.path(), "root").into()
+                )]),
             ),
         ])
     );
@@ -306,7 +312,7 @@ fn errors_with_nonexistent_features() {
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
-        "while expanding features of the direct dependency `foo`
+        "failed to expand the features of the direct dependency `foo`
 there is no such feature as `nonexistent`"
     );
 }
@@ -353,8 +359,8 @@ fn removes_inactive_deps1() {
             (
                 mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    mock_registry_identity("foo").into(),
-                    mock_registry_identity("bar").into()
+                    ("foo".into(), mock_registry_identity("foo").into()),
+                    ("bar".into(), mock_registry_identity("bar").into())
                 ])
             ),
             (
@@ -432,13 +438,13 @@ fn removes_inactive_deps2() {
             (
                 mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    mock_registry_identity("foo").into(),
-                    mock_registry_identity("bar").into()
+                    ("foo".into(), mock_registry_identity("foo").into()),
+                    ("bar".into(), mock_registry_identity("bar").into())
                 ])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
@@ -521,8 +527,8 @@ fn removes_inactive_deps3() {
             (
                 mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    mock_registry_identity("foo").into(),
-                    mock_registry_identity("bar").into()
+                    ("foo".into(), mock_registry_identity("foo").into()),
+                    ("bar".into(), mock_registry_identity("bar").into())
                 ])
             ),
             (
@@ -531,7 +537,7 @@ fn removes_inactive_deps3() {
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
@@ -610,17 +616,17 @@ fn removes_inactive_deps4() {
             (
                 mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    mock_registry_identity("foo").into(),
-                    mock_registry_identity("bar").into()
+                    ("foo".into(), mock_registry_identity("foo").into()),
+                    ("bar".into(), mock_registry_identity("bar").into())
                 ])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
@@ -702,9 +708,12 @@ fn cycle() {
             (
                 mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    mock_registry_identity("foo").into(),
-                    mock_registry_identity("bar").into(),
-                    mock_local_identity(root.path(), "cycle").into(),
+                    ("foo".into(), mock_registry_identity("foo").into()),
+                    ("bar".into(), mock_registry_identity("bar").into()),
+                    (
+                        "cycle".into(),
+                        mock_local_identity(root.path(), "cycle").into()
+                    ),
                 ])
             ),
             (
@@ -717,7 +726,10 @@ fn cycle() {
             ),
             (
                 mock_local_identity(root.path(), "cycle").into(),
-                DependencyNode::new(vec![mock_local_identity(root.path(), "root").into()])
+                DependencyNode::new(vec![(
+                    "root".into(),
+                    mock_local_identity(root.path(), "root").into()
+                )])
             )
         ])
     );

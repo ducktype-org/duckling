@@ -39,7 +39,6 @@ impl<'duck> HttpClient<'duck> {
     }
 
     /// Perform a generic HTTP request.
-    #[tracing::instrument(skip_all)]
     pub fn request(&self, request: Request) -> QuackResult<Response> {
         let mut easy = self.create_easy(Collector::default(), &request)?;
         let (parts, body) = request.into_parts();

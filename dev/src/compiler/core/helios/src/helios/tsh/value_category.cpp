@@ -22,6 +22,9 @@ namespace compiler::tsh {
 			return compiler::helios::isGlobalVar(ctx, symbol) ? PrimaryCategory::Global
 			                                                  : PrimaryCategory::Local;
 
+		// A function names its address, a value written in the code.
+		if (compiler::helios::isFunctionLike(symbol_kind)) return PrimaryCategory::Literal;
+
 		// Everything else is a global.
 		return PrimaryCategory::Global;
 	}

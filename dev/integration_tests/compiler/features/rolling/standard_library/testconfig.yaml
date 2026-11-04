@@ -5,7 +5,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "10\n42\n"
+          String: "10\n42\n42\n42\n"
 
   # We test if not using std when disabling it in the compiler works.
   no_std:
@@ -25,12 +25,12 @@ Tests:
     Cases:
       all:
         Output:
-          String: "x\nx\n"
+          String: "x\nx\nx\nx\n"
 
   # We test if disabling the std and using it in the user code causes the expected compile error.
   no_std_fails:
     module_to_compile: "uses_std"
-    PreCase: "mkdir -p @{case_build}"
+    PreCase: ""
     Cases:
       dvm:
         Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a @{case_build} -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --dvm-backend"
@@ -41,7 +41,7 @@ Tests:
 
   both_options_fail:
     module_to_compile: "no_std"
-    PreCase: "mkdir -p @{case_build}"
+    PreCase: ""
     Cases:
       dvm:
         Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a @{case_build} -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std --dvm-backend"
@@ -57,7 +57,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "10\n42\n"
+          String: "10\n42\n42\n42\n"
 
   # `exp.containers`: `Stack`, `Queue` and `Deque`, all built on `List`.
   exp_stack:

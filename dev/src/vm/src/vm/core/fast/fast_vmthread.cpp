@@ -44,7 +44,7 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 		);
 
 	CRef<FunctionInfo>        func_info = program->functions.at(base::StrID(func_name.data()));
-	const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
+	const exec::ExecFunction& func = functions->at(exec::execFunctionIndex(func_info->id.asInt()));
 
 	exit_value = createStartAndExecuteFunction(func, args);
 	applyEvent(thread_event::Finish{ exit_value });

@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::solver::solving::FoundSolution;
@@ -18,7 +18,7 @@ impl SolverFreeze {
     /// Generates a new freeze from the previous one and the solution found by solver.
     /// Trims the resulting freeze to contain only the necessary packages and features.
     /// The new freeze assumes that the main package is compiled with all its manifest-listed features.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     pub fn new_freeze(
         mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
@@ -70,7 +70,7 @@ impl SolverFreeze {
     /// This can be used to either generate:
     ///     * the new freeze (main_pkg_features equals to all manifest-specified main package features).
     ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     pub fn find_minimal_dep_solution(
         self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
@@ -108,7 +108,7 @@ impl SolverFreeze {
         let base_pkg_features = self
             .current_pkg_features(new_pkg_freezes, base_pkg)?
             .clone();
-        debug!(?base_pkg);
+        trace!(target: "duck::solver", ?base_pkg);
 
         for dependency in base_manifest
             .dependencies()
@@ -209,15 +209,15 @@ mod test {
     use crate::quackpack::core::solver::solving::FoundSolution;
     use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops::{touch, try_fsync_dir, write_file};
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
-        manifest.touch().unwrap();
-        manifest.write(contents).unwrap();
-        dir.path().try_fsync_dir().unwrap();
+        touch(&manifest).unwrap();
+        write_file(&manifest, contents).unwrap();
+        try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
     }
 

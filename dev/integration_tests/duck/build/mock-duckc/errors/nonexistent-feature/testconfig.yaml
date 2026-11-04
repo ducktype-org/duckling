@@ -14,7 +14,7 @@ Tests:
             info: successfully synchronized venv \`foo\`
         Err:
           String: |+
-            error: while expanding features of the root package \`foo\`
+            error: failed to expand the features of the root package \`foo\`
 
               Caused by:
                 there is no such feature as \`aaa\`

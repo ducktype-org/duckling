@@ -1,1 +1,7 @@
-# Empty `exp` package: every custom std must provide one, like `core` and `std`.
+import core;
+import std;
+
+fun c() = {
+    core.a();
+    std.b();
+}
