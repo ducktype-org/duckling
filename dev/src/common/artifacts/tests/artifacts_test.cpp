@@ -400,6 +400,9 @@ private:
 		std::filesystem::create_directory_symlink(outer / "elsewhere", root / "link");
 		std::filesystem::create_symlink(outer / "target", root / "file_link");
 		std::filesystem::create_directory_symlink(outer / "elsewhere", root / "dir_link");
+		// A matching build id, so that the first block really goes through `loadData`; without
+		// one, the cleanup would remove the list before `loadData` ever saw it.
+		buildCache(root);
 		writeFile(
 			root / artifacts::ArtifactCollection::OWNED_LIST_FILE,
 			"duckling-artifacts 1\nf link/victim\nf file_link\nc dir_link\n"
@@ -412,6 +415,7 @@ private:
 			ASSERT_TRUE(collection.subCollectionAtMaybe(base::StrID("dir_link")).empty());
 		}
 		// No build id: the cleanup runs over the list, and must leave all of it alone.
+		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
 		artifacts::ArtifactCollection collection(root);
 		ASSERT_TRUE(readFile(outer / "elsewhere" / "victim") == "keep me");
 		ASSERT_TRUE(readFile(outer / "target") == "keep me");
