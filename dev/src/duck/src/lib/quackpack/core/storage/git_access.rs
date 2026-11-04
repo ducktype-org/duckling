@@ -11,7 +11,7 @@ use super::paths::Storage;
 use crate::QuackResult;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::util::interned_url::InternedUrl;
-use crate::util::path_ops::{MkdirOptions, mkdir, remove_tree, rename};
+use crate::util::path_ops::{MkdirOptions, mkdir, move_tree, remove_tree};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {
@@ -42,7 +42,7 @@ impl GitAccess for StorageGitAccess<'_> {
         if let Some(parent) = dir.parent() {
             mkdir(parent, MkdirOptions::WithParents)?;
         }
-        rename(source_path, &dir)?;
+        move_tree(source_path, &dir)?;
         self.paths.mark_git_stored(url, commit)?;
         Ok(())
     }
