@@ -15,7 +15,7 @@
  */
 #pragma once
 
-#include "../pst_automatic.hpp"
+#include "../automatic/pst_automatic.hpp"
 #include "cloning_decl.hpp"
 
 namespace pst {

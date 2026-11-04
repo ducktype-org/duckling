@@ -6,7 +6,7 @@
 
 #include "pst_automatic.hpp"
 
-#include "state/lang_parser_state.hpp"
+#include "../state/lang_parser_state.hpp"
 
 namespace pst {
 	void fallbackLen(LangParserState& state, u64 length) {
