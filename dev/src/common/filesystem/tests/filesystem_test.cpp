@@ -33,6 +33,7 @@ public:
 		TESTER_ADD_TEST(removeEntryTest);
 		TESTER_ADD_TEST(touchTest);
 		TESTER_ADD_TEST(produceFileAtomicallyTest);
+		TESTER_ADD_TEST(reportedFailuresTest);
 	}
 
 private:
@@ -857,6 +858,46 @@ private:
 				== std::string_view("app.").size() + fs::FileManager::RANDOM_NAME_LENGTH
 					   + std::string_view(".tmp").size(),
 			"The random part must be RANDOM_NAME_LENGTH long, got: " + name.string()
+		);
+	}
+
+	// Failures the environment can cause are reported with a reason, not panicked on.
+	void reportedFailuresTest() {
+		const auto dir = fs::FileManager::createRandomTempDirectory().getFilePath();
+
+		const fs::FilePath virtual_path("vfs:/not_on_disk");
+		assertTrue(
+			!fs::FileManager::createPhysicalFile(virtual_path, "x").has_value(),
+			"A virtual path cannot become a physical file"
+		);
+		assertTrue(
+			!fs::FileManager::createPhysicalFolder(virtual_path).has_value(),
+			"A virtual path cannot become a physical folder"
+		);
+
+		const auto sub = dir / fs::FilePath("sub");
+		assertTrue(fs::FileManager::createPhysicalFolder(sub).has_value(), "A new folder is made");
+		auto again = fs::FileManager::createPhysicalFolder(sub);
+		assertTrue(!again.has_value(), "An existing folder is not replaced unless asked");
+		assertTrue(
+			again.error().find("already exists") != std::string::npos,
+			"The reason is given, got: " + again.error()
+		);
+
+		// The folder of a file is removed under it: writing to it reports why.
+		auto file = fs::FileManager::createPhysicalFile(sub / fs::FilePath("f"), "content");
+		assertTrue(file.has_value(), "A new file is made");
+		std::filesystem::remove_all(sub.getPath());
+		auto written = file->writeToFile("new content");
+		assertTrue(!written.has_value(), "Writing into a removed folder must fail");
+
+		// A virtual file removed meanwhile is reported the same way.
+		auto       vdir    = fs::FileManager::createRandomVirtualDirectory();
+		auto       vfile   = vdir.createSubFile("content", "f.txt");
+		const bool deleted = fs::FileManager::deleteFile(vfile);
+		assertTrue(deleted, "The virtual file is deleted");
+		assertTrue(
+			!vfile.writeToFile("new content").has_value(), "Writing a removed virtual file must fail"
 		);
 	}
 };

@@ -361,8 +361,10 @@ namespace fs {
 		// only write permission. `std::filesystem::last_write_time` passes an explicit time,
 		// which only the file's owner may set.
 		if (utimensat(AT_FDCWD, abs_path.getPath().c_str(), nullptr, 0) != 0) {
+			// Saved first: building the message below may run code that sets `errno`.
+			const int error = errno;
 			return std::unexpected(
-				abs_path.string() + ": " + std::error_code(errno, std::generic_category()).message()
+				abs_path.string() + ": " + std::error_code(error, std::generic_category()).message()
 			);
 		}
 #endif

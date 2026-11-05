@@ -1504,44 +1504,13 @@ namespace {
 					.setHandler([](const clah::ParsingResult& options) -> int {
 						const auto path = options.getValue<fs::FilePath>("artifact-location")
 			                                  .copyValueOr("./duck_build/");
-						if (!path.exists()) {
-							std::cout << "Nothing to clean: \"" << path.string()
-									  << "\" does not exist.\n";
-							return 0;
-						}
-						if (!std::filesystem::is_directory(path.getPath())) {
-							std::cerr << "Error: \"" << path.string() << "\" is not a folder.\n";
-							return 1;
-						}
-						// Without the list, nothing in the folder is known to be ours - most
-			            // likely it was made by a duckc from before the list existed. Saying so
-			            // beats a success message for a folder that is left as it was.
-						if (!std::filesystem::exists(
-								path.getPath() / artifacts::ArtifactCollection::OWNED_LIST_FILE
-							)) {
-							std::error_code ec;
-							if (std::filesystem::is_empty(path.getPath(), ec)) {
-								std::cout << "Nothing to clean: \"" << path.string()
-										  << "\" is empty.\n";
-								return 0;
-							}
-							std::cout << "Nothing was removed from \"" << path.string()
-									  << "\": it has no list of the artifacts duckc created ("
-									  << artifacts::ArtifactCollection::OWNED_LIST_FILE
-									  << "), so it was not made by this version of duckc. Delete "
-										 "the folder by hand if you do not need it.\n";
-							return 0;
-						}
-						// Removes only what the cache owns, so pointing `-a` at a folder of one's
-			            // own files (`-a .`) is safe here too.
-						if (artifacts::ArtifactCollection::removeCache(path.getPath()).isBad()) {
-							std::cerr << "Error: some artifacts in \"" << path.string()
-									  << "\" could not be removed; see the warnings above.\n";
-							return 1;
-						}
-						std::cout << "Removed the build artifacts in \"" << path.string()
-								  << "\".\n";
-						return 0;
+						using artifacts::ArtifactCollection;
+						const auto result = ArtifactCollection::removeCache(path.getPath());
+						const bool failed = ArtifactCollection::isRemoveCacheFailure(result);
+						(failed ? std::cerr : std::cout)
+							<< ArtifactCollection::describeRemoveCache(result, path.string())
+							<< "\n";
+						return failed ? 1 : 0;
 					})
 			)
 		    .addSubcommand(

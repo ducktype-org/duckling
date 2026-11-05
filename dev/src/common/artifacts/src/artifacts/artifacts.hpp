@@ -178,16 +178,38 @@ namespace artifacts {
 		 */
 		void flush();
 
+		/// What `removeCache` did.
+		enum class RemoveCacheResult {
+			/// Everything the cache owned is gone.
+			Removed,
+			/// `root` is missing, or holds nothing of the cache's (no `OWNED_LIST_FILE`).
+			NothingToRemove,
+			/// `root` is not a folder.
+			NotAFolder,
+			/// Something owned could not be removed; that was reported to the user, and the
+			/// rest was removed anyway.
+			Incomplete,
+		};
+
 		/**
 		 * @brief Removes the whole cache at `root`: every artifact and sub-collection it owns
 		 * (see `OWNED_LIST_FILE`), and its own bookkeeping files. Nothing else in `root` is
-		 * touched. Meant for an explicit request such as `duckc clean`; a build using `root` at
-		 * the same time loses its cache and can fail.
-		 *
-		 * @return `base::BAD` if something owned could not be removed; that is reported to the
-		 * user, and the rest is removed anyway.
+		 * touched, so pointing it at a folder of the user's own files is safe. Meant for an
+		 * explicit request such as `duckc clean`; a build using `root` at the same time loses
+		 * its cache and can fail.
 		 */
-		static base::OkBad removeCache(const std::filesystem::path& root);
+		static RemoveCacheResult removeCache(const std::filesystem::path& root);
+
+		/**
+		 * @brief The sentence `duckc clean` prints for a `removeCache` result.
+		 * @param root The folder as the user gave it.
+		 */
+		[[nodiscard]]
+		static std::string describeRemoveCache(RemoveCacheResult result, std::string_view root);
+
+		/// Whether a `removeCache` result is a failure, i.e. `duckc clean` exits with an error.
+		[[nodiscard]]
+		static bool isRemoveCacheFailure(RemoveCacheResult result);
 
 		/**
 		 * @brief Removes the file artifacts of this collection and of its sub-collections that

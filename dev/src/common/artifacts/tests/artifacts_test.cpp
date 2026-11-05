@@ -44,6 +44,11 @@ public:
 		TESTER_ADD_TEST(reuseOfRemovedFileIsAMiss);
 		TESTER_ADD_TEST(removeCacheRemovesOnlyOwned);
 		TESTER_ADD_TEST(removeCacheRemovesLeftoverTempFiles);
+		TESTER_ADD_TEST(removeCacheWithoutCache);
+		TESTER_ADD_TEST(removeCacheIsDescribed);
+		TESTER_ADD_TEST(removeCacheThatCannotFinish);
+		TESTER_ADD_TEST(deleteFileArtifactThatCannotBeRemoved);
+		TESTER_ADD_TEST(flushIntoRemovedFolderIsReported);
 		TESTER_ADD_TEST(staleTempFilesAreRemoved);
 		TESTER_ADD_TEST(listEntriesOutsideTheCacheAreIgnored);
 	}
@@ -315,9 +320,9 @@ private:
 		ASSERT_TRUE(readFile(root / "main") == "user binary");
 	}
 
-	// A cache older than the owned list has no list anywhere. When it is cleared, its
-	// sub-collection folders are left alone - but the `.artc` in them was written by another
-	// build of the compiler and must not be loaded into a collection of that name.
+	// Without its owned list, a folder is not a collection of ours - not even with an `.artc` in
+	// it. Here the lists are lost; the sub-collection folder is left alone by the cleanup, and
+	// its `.artc` must not be loaded into a new collection of that name.
 	void artcWithoutOwnedListIsNotLoaded() {
 		std::filesystem::path root
 			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
@@ -547,13 +552,109 @@ private:
 		buildCache(root);
 		addUserFiles(root);
 
-		ASSERT_TRUE(artifacts::ArtifactCollection::removeCache(root).isOk());
+		ASSERT_TRUE(
+			artifacts::ArtifactCollection::removeCache(root)
+			== artifacts::ArtifactCollection::RemoveCacheResult::Removed
+		);
 		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
 		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1"));
 		ASSERT_TRUE(!std::filesystem::exists(artcOf(root)));
 		ASSERT_TRUE(!std::filesystem::exists(root / artifacts::ArtifactCollection::BUILD_ID_FILE));
 		ASSERT_TRUE(!std::filesystem::exists(root / artifacts::ArtifactCollection::OWNED_LIST_FILE));
 		assertUserFilesKept(root);
+	}
+
+	// `duckc clean` on a folder that holds nothing of the cache's - missing, empty, or the user's
+	// own files (`-a .`) - removes nothing; a file is reported as not a folder.
+	void removeCacheWithoutCache() {
+		using Result = artifacts::ArtifactCollection::RemoveCacheResult;
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+
+		ASSERT_TRUE(
+			artifacts::ArtifactCollection::removeCache(root / "missing") == Result::NothingToRemove
+		);
+		ASSERT_TRUE(artifacts::ArtifactCollection::removeCache(root) == Result::NothingToRemove);
+
+		writeFile(root / "main.dk", "source");
+		writeFile(root / artifacts::ArtifactCollection::BUILD_ID_FILE, "not ours without a list");
+		ASSERT_TRUE(artifacts::ArtifactCollection::removeCache(root) == Result::NothingToRemove);
+		ASSERT_TRUE(readFile(root / "main.dk") == "source");
+		ASSERT_TRUE(std::filesystem::exists(root / artifacts::ArtifactCollection::BUILD_ID_FILE));
+
+		ASSERT_TRUE(
+			artifacts::ArtifactCollection::removeCache(root / "main.dk") == Result::NotAFolder
+		);
+	}
+
+	void removeCacheIsDescribed() {
+		using artifacts::ArtifactCollection;
+		using Result = ArtifactCollection::RemoveCacheResult;
+		ASSERT_TRUE(
+			ArtifactCollection::describeRemoveCache(Result::Removed, "b")
+			== "Removed the build artifacts in \"b\"."
+		);
+		ASSERT_TRUE(
+			ArtifactCollection::describeRemoveCache(Result::NothingToRemove, ".")
+			== "Nothing to clean in \".\"."
+		);
+		ASSERT_TRUE(
+			ArtifactCollection::describeRemoveCache(Result::NotAFolder, "x.dk")
+			== "Error: \"x.dk\" is not a folder."
+		);
+		ASSERT_TRUE(ArtifactCollection::describeRemoveCache(Result::Incomplete, "b")
+		                .starts_with("Error: some artifacts in \"b\" could not be removed"));
+		ASSERT_TRUE(!ArtifactCollection::isRemoveCacheFailure(Result::Removed));
+		ASSERT_TRUE(!ArtifactCollection::isRemoveCacheFailure(Result::NothingToRemove));
+		ASSERT_TRUE(ArtifactCollection::isRemoveCacheFailure(Result::NotAFolder));
+		ASSERT_TRUE(ArtifactCollection::isRemoveCacheFailure(Result::Incomplete));
+	}
+
+	// Something owned that cannot be removed is reported and skipped; the rest still goes, and
+	// the list stays so that a later cleanup still knows about what is left.
+	void removeCacheThatCannotFinish() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		// The `.artc` turned into a folder with something in it: removing it fails.
+		std::filesystem::remove(artcOf(root));
+		std::filesystem::create_directory(artcOf(root));
+		writeFile(artcOf(root) / "inside", "x");
+
+		ASSERT_TRUE(
+			artifacts::ArtifactCollection::removeCache(root)
+			== artifacts::ArtifactCollection::RemoveCacheResult::Incomplete
+		);
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
+		ASSERT_TRUE(std::filesystem::exists(root / artifacts::ArtifactCollection::OWNED_LIST_FILE));
+	}
+
+	// A file artifact that cannot be removed is reported, and stays an artifact.
+	void deleteFileArtifactThatCannotBeRemoved() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+
+		artifacts::ArtifactCollection collection(root);
+		std::filesystem::remove(root / "f0");
+		std::filesystem::create_directory(root / "f0");
+		writeFile(root / "f0" / "inside", "x");
+		ASSERT_TRUE(!collection.deleteFileArtifact(base::StrID("f0")));
+		ASSERT_TRUE(std::filesystem::exists(root / "f0" / "inside"));
+		ASSERT_TRUE(!collection.deleteFileArtifact(base::StrID("never_created")));
+	}
+
+	// A cache that cannot be saved costs the next build its speed-up, not this build: the
+	// failure is reported and the flush carries on.
+	void flushIntoRemovedFolderIsReported() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		artifacts::ArtifactCollection collection(root);
+		collection.blobArtifactNew(base::StrID("b0")).setData(VALUE);
+		std::filesystem::remove_all(root);
+
+		collection.flush();
+		ASSERT_TRUE(!std::filesystem::exists(root));
 	}
 
 	// A killed write leaves `<name>.<random>.tmp` next to an artifact; it belongs to the artifact.
@@ -570,7 +671,10 @@ private:
 		// The user's backup of our artifact: the part between the dots is not our random part.
 		writeFile(root / "f0.backup.tmp", "keep me");
 
-		ASSERT_TRUE(artifacts::ArtifactCollection::removeCache(root).isOk());
+		ASSERT_TRUE(
+			artifacts::ArtifactCollection::removeCache(root)
+			== artifacts::ArtifactCollection::RemoveCacheResult::Removed
+		);
 		ASSERT_TRUE(!std::filesystem::exists(root / "f0.Killed1234567890.tmp"));
 		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.Killed4567890123.tmp"));
 		ASSERT_TRUE(readFile(root / "user_file.Killed7890123456.tmp") == "keep me");

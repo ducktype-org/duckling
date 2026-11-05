@@ -7,6 +7,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <artifacts/build_id.hpp>
@@ -486,8 +487,39 @@ usize artifacts::ArtifactCollection::removeTemporaryFilesOlderThan(std::chrono::
 	return removed;
 }
 
-base::OkBad artifacts::ArtifactCollection::removeCache(const std::filesystem::path& root) {
-	return removeOwnedContents(root) ? base::OK : base::BAD;
+artifacts::ArtifactCollection::RemoveCacheResult artifacts::ArtifactCollection::removeCache(
+	const std::filesystem::path& root
+) {
+	std::error_code ec;
+	if (!std::filesystem::exists(root, ec)) return RemoveCacheResult::NothingToRemove;
+	if (!std::filesystem::is_directory(root, ec)) return RemoveCacheResult::NotAFolder;
+	// Without the list nothing in the folder is the cache's, so nothing is touched at all.
+	if (!std::filesystem::exists(cacheFilePath(root, CacheFile::OwnedList), ec))
+		return RemoveCacheResult::NothingToRemove;
+	return removeOwnedContents(root) ? RemoveCacheResult::Removed : RemoveCacheResult::Incomplete;
+}
+
+std::string artifacts::ArtifactCollection::describeRemoveCache(
+	RemoveCacheResult result, std::string_view root
+) {
+	const auto quoted = base::strConcat("\"", root, "\"");
+	switch (result) {
+	case RemoveCacheResult::Removed:
+		return base::strConcat("Removed the build artifacts in ", quoted, ".");
+	case RemoveCacheResult::NothingToRemove:
+		return base::strConcat("Nothing to clean in ", quoted, ".");
+	case RemoveCacheResult::NotAFolder:
+		return base::strConcat("Error: ", quoted, " is not a folder.");
+	case RemoveCacheResult::Incomplete:
+		return base::strConcat(
+			"Error: some artifacts in ", quoted, " could not be removed; see the warnings above."
+		);
+	}
+	CORE_UNREACHABLE();
+}
+
+bool artifacts::ArtifactCollection::isRemoveCacheFailure(RemoveCacheResult result) {
+	return result == RemoveCacheResult::NotAFolder || result == RemoveCacheResult::Incomplete;
 }
 
 artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
@@ -595,8 +627,7 @@ base::OkBad artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream
 
 void artifacts::ArtifactCollection::loadData() {
 	// Without a list this folder is not a collection of ours, so whatever is in it - an `.artc`
-	// included - is not ours to load. Such an `.artc` can be a leftover from a cache older than
-	// the list, written by another build of the compiler; flushing overwrites it.
+	// included - is not ours to load. Flushing writes this collection's own `.artc` over it.
 	const auto maybe_owned = readOwnedList(PATH);
 	if (!maybe_owned.has_value()) return;
 	const auto& owned = maybe_owned.value();
