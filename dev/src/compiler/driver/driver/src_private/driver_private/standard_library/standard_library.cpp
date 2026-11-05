@@ -219,7 +219,7 @@ namespace compiler::driver {
 				auto opt_artifact = root_collection->fileArtifactAtMaybe(
 					base::StrID(base::strConcat(std_id, extension))
 				);
-				if_opt_some(opt_artifact, art) { artifacts.push_back(*art); }
+				if_opt_some(opt_artifact, art) { artifacts.push_back(art); }
 				if_opt_none(opt_artifact) { all_present = false; }
 			}
 			return { .artifacts = std::move(artifacts), .all_present = all_present };

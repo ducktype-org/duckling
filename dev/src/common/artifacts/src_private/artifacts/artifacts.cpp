@@ -450,30 +450,6 @@ bool artifacts::ArtifactCollection::deleteFileArtifact(base::StrID artifact_name
 	return deleteFileArtifactNoLock(artifact_name);
 }
 
-base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtifactForReuse(
-	base::StrID artifact_name
-) {
-	WithLock lock(*this);
-	auto     maybe_artifact = fileArtifactAtMaybeNoLock(artifact_name);
-	if (!maybe_artifact.has_value()) return {};
-	FileArtifact artifact = *maybe_artifact.value();
-
-	const auto path    = PATH / artifact_name.strView();
-	const auto touched = fs::FileManager::touch(fs::FilePath(path));
-	if (!touched.has_value()) {
-		// Only a file that is gone - e.g. removed by another build - is a miss. One that merely
-		// cannot be marked as used (a read-only mount, no write permission) is still a valid
-		// cache entry; at worst it is removed early as unused, and rebuilt.
-		std::error_code ec;
-		if (!std::filesystem::exists(path, ec)) {
-			file_artifacts.erase(artifact_name);
-			return {};
-		}
-		CORE_DEV_LOG(Artifacts, "Could not mark an artifact as used: ", touched.error(), "\n");
-	}
-	return artifact;
-}
-
 usize artifacts::ArtifactCollection::removeFileArtifactsUnusedFor(std::chrono::seconds max_age) {
 	WithLock   lock(*this);
 	const auto cutoff = std::filesystem::file_time_type::clock::now() - max_age;
@@ -520,17 +496,18 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base:
 	return fileArtifactAtOrNewNoLock(artifact_name);
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name
-) const {
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name) {
 	WithLock lock(*this);
-	return fileArtifactAtNoLock(artifact_name);
+	auto     artifact = fileArtifactInUseNoLock(artifact_name);
+	CORE_ASSERT(artifact.has_value(), "No file artifact named ", artifact_name.strView());
+	return artifact.value();
 }
 
-base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybe(
+base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtifactAtMaybe(
 	base::StrID artifact_name
-) const {
+) {
 	WithLock lock(*this);
-	return fileArtifactAtMaybeNoLock(artifact_name);
+	return fileArtifactInUseNoLock(artifact_name);
 }
 
 artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNew(base::StrID artifact_name) {
@@ -828,11 +805,31 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNewNoLock(bas
 artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNewNoLock(
 	base::StrID artifact_name
 ) {
-	match_optional(fileArtifactAtMaybeNoLock(artifact_name)) {
-		opt_some(artifact) return *artifact;
-		opt_none return fileArtifactNewNoLock(artifact_name);
+	if_opt_some(fileArtifactInUseNoLock(artifact_name), artifact) { return artifact; }
+	return fileArtifactNewNoLock(artifact_name);
+}
+
+base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtifactInUseNoLock(
+	base::StrID artifact_name
+) {
+	auto maybe_artifact = fileArtifactAtMaybeNoLock(artifact_name);
+	if (!maybe_artifact.has_value()) return {};
+	FileArtifact artifact = *maybe_artifact.value();
+
+	const auto path    = PATH / artifact_name.strView();
+	const auto touched = fs::FileManager::touch(fs::FilePath(path));
+	if (!touched.has_value()) {
+		// Only a file that is gone - e.g. removed by another build - is a miss. One that merely
+		// cannot be marked as used (a read-only mount, no write permission) is still a valid
+		// cache entry; at worst it is removed early as unused, and rebuilt.
+		std::error_code ec;
+		if (!std::filesystem::exists(path, ec)) {
+			file_artifacts.erase(artifact_name);
+			return {};
+		}
+		CORE_DEV_LOG(Artifacts, "Could not mark an artifact as used: ", touched.error(), "\n");
 	}
-	CORE_UNREACHABLE();
+	return artifact;
 }
 
 artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtNoLock(base::StrID artifact_name

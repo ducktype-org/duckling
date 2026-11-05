@@ -39,7 +39,8 @@ public:
 		TESTER_ADD_TEST(entriesThroughSymlinksAreSkipped);
 		TESTER_ADD_TEST(relativeRootWorks);
 		TESTER_ADD_TEST(unusedFileArtifactsAreRemoved);
-		TESTER_ADD_TEST(reusedArtifactsAreKept);
+		TESTER_ADD_TEST(lookedUpArtifactsAreKept);
+		TESTER_ADD_TEST(atOrNewRecreatesRemovedFile);
 		TESTER_ADD_TEST(reuseOfRemovedFileIsAMiss);
 		TESTER_ADD_TEST(removeCacheRemovesOnlyOwned);
 		TESTER_ADD_TEST(removeCacheRemovesLeftoverTempFiles);
@@ -485,19 +486,44 @@ private:
 		);
 	}
 
-	// Reusing an artifact marks it as used, which keeps it from the cleanup.
-	void reusedArtifactsAreKept() {
+	// Every way of getting hold of an existing artifact marks it as used, so none of them can
+	// leave an artifact in use looking unused to the cleanup.
+	void lookedUpArtifactsAreKept() {
 		std::filesystem::path root
 			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
 		buildCache(root);
-		makeUnusedFor(root / "f0", std::chrono::days(8));
+		writeFile(root / "s0" / "f2", "f2");
+		{
+			artifacts::ArtifactCollection collection(root);
+			collection.subCollectionAt(base::StrID("s0"))->fileArtifactNew(base::StrID("f2"));
+			collection.flush();
+		}
+		for (const auto& file: { root / "f0", root / "s0" / "f1", root / "s0" / "f2" })
+			makeUnusedFor(file, std::chrono::days(8));
 
 		artifacts::ArtifactCollection collection(root);
-		auto                          reused = collection.fileArtifactForReuse(base::StrID("f0"));
-		ASSERT_HAS_VALUE(reused);
+		auto                          sub = collection.subCollectionAt(base::StrID("s0"));
+		ASSERT_HAS_VALUE(collection.fileArtifactAtMaybe(base::StrID("f0")));
+		std::ignore = sub->fileArtifactAt(base::StrID("f1"));
+		std::ignore = sub->fileArtifactAtOrNew(base::StrID("f2"));
 		ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(std::chrono::days(7)) == 0);
 		ASSERT_TRUE(readFile(root / "f0") == "f0");
-		ASSERT_TRUE(collection.fileArtifactForReuse(base::StrID("missing")).empty());
+		ASSERT_TRUE(readFile(root / "s0" / "f1") == "f1");
+		ASSERT_TRUE(readFile(root / "s0" / "f2") == "f2");
+		ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("missing")).empty());
+	}
+
+	// `fileArtifactAtOrNew` on an artifact whose file another build removed creates it again,
+	// instead of handing out an artifact that points at nothing.
+	void atOrNewRecreatesRemovedFile() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+
+		artifacts::ArtifactCollection collection(root);
+		std::filesystem::remove(root / "f0");
+		const auto artifact = collection.fileArtifactAtOrNew(base::StrID("f0"));
+		ASSERT_TRUE(std::filesystem::exists(artifact.file.getFilePath().getPath()));
 	}
 
 	// A file another build removed after this one loaded the collection is a cache miss, not a
@@ -509,7 +535,7 @@ private:
 
 		artifacts::ArtifactCollection collection(root);
 		std::filesystem::remove(root / "f0");
-		ASSERT_TRUE(collection.fileArtifactForReuse(base::StrID("f0")).empty());
+		ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("f0")).empty());
 		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
 		ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("f0")).empty());
 	}

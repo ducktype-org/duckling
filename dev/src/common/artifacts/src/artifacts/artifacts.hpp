@@ -191,7 +191,7 @@ namespace artifacts {
 
 		/**
 		 * @brief Removes the file artifacts of this collection and of its sub-collections that
-		 * have not been written or reused (see `fileArtifactForReuse`) for `max_age`.
+		 * have not been written or looked up (see `fileArtifactAtMaybe`) for `max_age`.
 		 *
 		 * This is how a cache shared by several builds is kept from growing forever. Every build
 		 * marks what it uses, so whatever any build still needs is fresh, and only what none of
@@ -230,26 +230,33 @@ namespace artifacts {
 
 		FileArtifact fileArtifactNew(base::StrID artifact_name);
 
-		FileArtifact fileArtifactAtOrNew(base::StrID artifact_name);
-
-		FileArtifact fileArtifactAt(base::StrID artifact_name) const;
-
-		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybe(base::StrID artifact_name
-		) const;
+		/*
+		 * Every lookup below that hands out an existing file artifact also marks it as used:
+		 * it sets the file's modification time to now. That is what keeps the artifact from
+		 * being removed by `removeFileArtifactsUnusedFor`, in this build or in any other build
+		 * sharing the folder - so there is no way to use an artifact without marking it. A file
+		 * that cannot be marked (e.g. on a read-only mount) is still handed out.
+		 */
 
 		/**
-		 * @brief Looks up a file artifact in order to reuse it, e.g. a previous build's output
-		 * that is still up to date.
-		 *
-		 * Unlike `fileArtifactAtMaybe`, it marks the artifact as used by setting its file's
-		 * modification time to now. That is what keeps the artifact from being removed by
-		 * `removeFileArtifactsUnusedFor`, in this build or in any other build sharing the folder.
-		 * A file that cannot be marked (e.g. on a read-only mount) is still returned.
+		 * @brief Returns the file artifact `artifact_name`, marked as used, or creates it with
+		 * `fileArtifactNew` if it is not there - or if its file is gone.
+		 */
+		FileArtifact fileArtifactAtOrNew(base::StrID artifact_name);
+
+		/**
+		 * @brief Returns the file artifact `artifact_name`, marked as used. It must be there.
+		 */
+		FileArtifact fileArtifactAt(base::StrID artifact_name);
+
+		/**
+		 * @brief Looks up a file artifact, e.g. a previous build's output that is still up to
+		 * date, and marks it as used.
 		 *
 		 * @return The artifact, or nothing if it is not in the collection or its file is gone
 		 * (e.g. removed by another build). Either way, the caller has a cache miss.
 		 */
-		base::Optional<FileArtifact> fileArtifactForReuse(base::StrID artifact_name);
+		base::Optional<FileArtifact> fileArtifactAtMaybe(base::StrID artifact_name);
 
 		/**
 		 * @brief Removes a file artifact and its file.
@@ -308,6 +315,13 @@ namespace artifacts {
 
 		FileArtifact fileArtifactAtOrNewNoLock(base::StrID artifact_name);
 
+		/**
+		 * @brief The marking lookup behind the public `fileArtifactAt*` methods; see
+		 * `fileArtifactAtMaybe`.
+		 */
+		base::Optional<FileArtifact> fileArtifactInUseNoLock(base::StrID artifact_name);
+
+		/// Plain lookup, which does not mark the artifact as used - for internal use only.
 		FileArtifact fileArtifactAtNoLock(base::StrID artifact_name) const;
 
 		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybeNoLock(base::StrID artifact_name

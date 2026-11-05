@@ -361,10 +361,10 @@ namespace compiler::driver {
 			auto output_name = getModuleOutputName(key);
 
 			auto collection = getQueryArtifactsCollection();
-			// `fileArtifactForReuse` also marks the files as used, which keeps the unused-artifact
-			// cleanup (see `saveArtifacts`) from removing them.
+			// The lookup also marks the files as used, which keeps the unused-artifact cleanup
+			// (see `saveArtifacts`) from removing them.
 			auto output_maybe
-				= collection->fileArtifactForReuse(base::StrID(output_name.object_file.c_str()));
+				= collection->fileArtifactAtMaybe(base::StrID(output_name.object_file.c_str()));
 
 			if (!output_maybe.has_value()) {
 				moduleLog(key, "artifact not found in artifacts collection");
@@ -376,7 +376,7 @@ namespace compiler::driver {
 
 			if_opt_some(output_name.debug_info_file, di_file) {
 				auto debug_info_maybe
-					= collection->fileArtifactForReuse(base::StrID(di_file.c_str()));
+					= collection->fileArtifactAtMaybe(base::StrID(di_file.c_str()));
 
 				if (!debug_info_maybe.has_value()) {
 					moduleLog(key, "debug info artifact not found in artifacts collection");
