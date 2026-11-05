@@ -117,7 +117,7 @@ int main(int argc, const char** argv) {
 	}
 
 	auto              path          = input.getPositional<fs::File>(0);
-	auto              file_contents = path.getContent();
+	auto              file_contents = base::valueOrPanic(path.getContent());
 	const std::string source_code   = file_contents.view().stdString();
 
 	CppParser parser(source_code);
