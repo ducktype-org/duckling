@@ -15,8 +15,6 @@
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <hashing/hash.hpp>
-#include <hashing/hashing_algorithms.hpp>
 
 namespace pst {
 	using ExprParseFun = MBox<ExprElement>(LangParserState&);
