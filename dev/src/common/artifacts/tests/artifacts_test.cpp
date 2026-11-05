@@ -35,6 +35,7 @@ public:
 		TESTER_ADD_TEST(unflushedArtifactsAreRemoved);
 		TESTER_ADD_TEST(truncatedListLineIsIgnored);
 		TESTER_ADD_TEST(artcWithoutOwnedListIsNotLoaded);
+		TESTER_ADD_TEST(absoluteOutputNameIsNotOwned);
 		TESTER_ADD_TEST(dotEntryIsIgnored);
 		TESTER_ADD_TEST(normalizedNamesAreOwned);
 		TESTER_ADD_TEST(artifactOutsideTheCacheIsNotOwned);
@@ -365,6 +366,33 @@ private:
 		artifacts::ArtifactCollection collection(root);
 		auto                          sub = collection.subCollectionAtOrNew(base::StrID("s0"));
 		ASSERT_TRUE(sub->blobArtifactAtMaybe(base::StrID("b0")).empty());
+	}
+
+	// `duck` asks for outputs by absolute path. Such an artifact is written there, but never
+	// owned: flushing, the temporary-file cleanup and clearing the cache leave it alone.
+	void absoluteOutputNameIsNotOwned() {
+		std::filesystem::path outer
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
+		const auto root = outer / "cache";
+		std::filesystem::create_directory(root);
+		const auto app = outer / "elsewhere_app";
+		{
+			artifacts::ArtifactCollection collection(root);
+			const auto artifact = collection.fileArtifactAtOrNew(base::StrID(app.string()));
+			ASSERT_TRUE(artifact.path.getPath() == app);
+			writeFile(artifact.path.getPath(), "user binary");
+			ASSERT_TRUE(collection.removeTemporaryFilesOlderThan(timer::Duration::fromDays(1)) == 0);
+			collection.flush();
+		}
+		ASSERT_TRUE(
+			readFile(root / artifacts::ArtifactCollection::OWNED_LIST_FILE).find("elsewhere_app")
+			== std::string::npos
+		);
+		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(readFile(app) == "user binary");
 	}
 
 	// `.` names the collection's own folder: taken for a sub-collection, it would recurse into

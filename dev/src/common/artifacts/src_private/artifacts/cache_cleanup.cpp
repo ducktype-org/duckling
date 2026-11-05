@@ -28,6 +28,9 @@ namespace artifacts::detail {
 	) {
 		std::map<fs::FilePath, std::set<std::string>> targets_by_folder;
 		for (const auto& name: names) {
+			// Only what stays inside the collection can be the cache's; an absolute output name
+			// is written where it was asked for and left alone.
+			if (!staysInsideCollection(name)) continue;
 			const auto path = dir / fs::FilePath(name);
 			targets_by_folder[path.parentPath()].insert(path.fileName());
 		}

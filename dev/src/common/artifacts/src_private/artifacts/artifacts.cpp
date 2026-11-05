@@ -386,7 +386,12 @@ void artifacts::ArtifactCollection::recordOwnedEntry(char kind, std::string_view
 ////////////////////////// NO LOCK INTERNALS //////////////////////////
 
 fs::FilePath artifacts::ArtifactCollection::entryPath(std::string_view name) const {
-	return PATH / fs::FilePath(std::string(name));
+	// An output can be asked for anywhere, e.g. `--output-file-name /abs/path/app` from `duck`:
+	// such a name is its own path. It is never owned (see `staysInsideCollection`), so the cache
+	// writes it but does not remove it later.
+	fs::FilePath path{ std::string(name) };
+	if (path.hasRoot() || !path.isRelative()) return path;
+	return PATH / path;
 }
 
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNewNoLock(
