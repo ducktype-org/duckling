@@ -31,6 +31,15 @@ namespace compiler::driver {
 		constexpr std::chrono::days UNUSED_QUERY_ARTIFACT_MAX_AGE{ 7 };
 
 		/**
+		 * @brief How old a temporary file left by a killed write must be to be removed.
+		 *
+		 * Such a file is always garbage, and can be large (an executable, an archive), so it goes
+		 * sooner than unused artifacts - but no single write takes a day, so a write still in
+		 * progress in another build sharing the folder keeps its file.
+		 */
+		constexpr std::chrono::days STALE_TEMPORARY_FILE_MAX_AGE{ 1 };
+
+		/**
 		 * @brief Removes the query artifacts that no build has written or reused for
 		 * `UNUSED_QUERY_ARTIFACT_MAX_AGE`.
 		 *
@@ -75,6 +84,12 @@ namespace compiler::driver {
 		}
 	}
 
+	void removeStaleTemporaryFiles(Ref<artifacts::ArtifactCollection> collection) {
+		const usize removed
+			= collection->removeTemporaryFilesOlderThan(STALE_TEMPORARY_FILE_MAX_AGE);
+		CORE_DEV_LOG(Artifacts, "Removed ", removed, " stale temporary file(s)\n");
+	}
+
 	void saveArtifacts() {
 		Ref root = global_state::getRootCollection();
 
@@ -82,6 +97,7 @@ namespace compiler::driver {
 		// Without incremental compilation the query artifacts are still written, so they are
 		// cleaned up either way.
 		removeUnusedQueryArtifacts(root);
+		removeStaleTemporaryFiles(root);
 
 		// Flush all artifacts to disk.
 		root->flush();

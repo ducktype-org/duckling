@@ -15,12 +15,14 @@
 #include <logger/logger.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -210,10 +212,65 @@ namespace {
 		return entries;
 	}
 
-	/// Whether `file_name` is a temporary file `writeFileAtomically` makes when writing `target`.
-	bool isTempFileOf(std::string_view file_name, std::string_view target) {
-		return file_name.size() > target.size() + 1 && file_name.starts_with(target)
-		    && file_name[target.size()] == '.' && file_name.ends_with(".tmp");
+	/**
+	 * @brief If `file_name` is a temporary file `produceFileAtomically` makes - named
+	 * `<target>.<random>.tmp`, the random part being letters and digits only - returns `target`.
+	 *
+	 * The random part is matched exactly, so that a user's `app.backup.tmp` next to our `app` is
+	 * not taken for ours.
+	 */
+	base::Optional<std::string_view> tempFileTarget(std::string_view file_name) {
+		constexpr std::string_view SUFFIX = ".tmp";
+		if (!file_name.ends_with(SUFFIX)) return {};
+		const auto without_suffix = file_name.substr(0, file_name.size() - SUFFIX.size());
+		const auto dot            = without_suffix.rfind('.');
+		if (dot == std::string_view::npos || dot == 0) return {};
+		const auto random    = without_suffix.substr(dot + 1);
+		const bool is_random = !random.empty() && std::ranges::all_of(random, [](char c) {
+			return std::isalnum(static_cast<unsigned char>(c)) != 0;
+		});
+		if (!is_random) return {};
+		return without_suffix.substr(0, dot);
+	}
+
+	/// Names of all the cache's own files (see `CacheFile`) in `dir`.
+	std::vector<std::string> cacheFileNames(const std::filesystem::path& dir) {
+		std::vector<std::string> names;
+		names.reserve(static_cast<usize>(CacheFile::COUNT));
+		for (int i = 0; i < static_cast<int>(CacheFile::COUNT); i++)
+			names.push_back(cacheFilePath(dir, CacheFile(i)).filename().string());
+		return names;
+	}
+
+	/**
+	 * @brief Finds the temporary files a killed write left of the files `names` in `dir`.
+	 *
+	 * Every file the cache writes - an artifact or one of its own - is written to
+	 * `<name>.<random>.tmp` next to it and renamed into place (see `produceFileAtomically`), so
+	 * such a file belongs to whoever owns `<name>`.
+	 *
+	 * @param names Paths relative to `dir`; a name like `bin/app` is looked for in `dir/bin`.
+	 */
+	std::vector<std::filesystem::path> findTempFiles(
+		const std::filesystem::path& dir, const std::vector<std::string>& names
+	) {
+		std::map<std::filesystem::path, std::unordered_set<std::string>> targets_by_folder;
+		for (const auto& name: names) {
+			const auto path = dir / name;
+			targets_by_folder[path.parent_path()].insert(path.filename().string());
+		}
+
+		std::vector<std::filesystem::path> temp_files;
+		for (const auto& [folder, targets]: targets_by_folder) {
+			std::error_code iter_ec;
+			for (const auto& entry: std::filesystem::directory_iterator(folder, iter_ec)) {
+				const auto file_name = entry.path().filename().string();
+				const auto target    = tempFileTarget(file_name);
+				if (target.has_value() && targets.contains(std::string(target.value())))
+					temp_files.push_back(entry.path());
+			}
+		}
+		return temp_files;
 	}
 
 	/**
@@ -236,9 +293,11 @@ namespace {
 	 * next cleanup still knows about it.
 	 */
 	bool removeOwnedContents(const std::filesystem::path& dir) {
-		bool all_removed = true;
+		bool                     all_removed   = true;
+		std::vector<std::string> written_names = cacheFileNames(dir);
 		for (const auto& entry: readOwnedList(dir).copyValueOrDefault()) {
 			if (!isOwnable(dir, entry.name)) continue;
+			if (entry.kind == OWNED_FILE) written_names.push_back(entry.name);
 			const auto      path = dir / entry.name;
 			std::error_code ec;
 			const auto      status = std::filesystem::symlink_status(path, ec);
@@ -254,21 +313,8 @@ namespace {
 			}
 		}
 
-		std::vector<std::string> cache_file_names;
-		cache_file_names.reserve(static_cast<usize>(CacheFile::COUNT));
-		for (int i = 0; i < static_cast<int>(CacheFile::COUNT); i++)
-			cache_file_names.push_back(cacheFilePath(dir, CacheFile(i)).filename().string());
-
-		std::vector<std::filesystem::path> temp_files;
-		std::error_code                    iter_ec;
-		for (const auto& entry: std::filesystem::directory_iterator(dir, iter_ec)) {
-			const auto name = entry.path().filename().string();
-			if (std::ranges::any_of(cache_file_names, [&](const auto& cache_file_name) {
-					return isTempFileOf(name, cache_file_name);
-				}))
-				temp_files.push_back(entry.path());
-		}
-		for (const auto& temp_file: temp_files) removeOrWarn(temp_file);
+		// Whatever killed writes left of the artifacts and of the cache's own files.
+		for (const auto& temp_file: findTempFiles(dir, written_names)) removeOrWarn(temp_file);
 
 		for (int i = 0; i < static_cast<int>(CacheFile::COUNT); i++) {
 			// The list goes last: while anything it names is still there, it has to stay.
@@ -434,6 +480,24 @@ usize artifacts::ArtifactCollection::removeFileArtifactsUnusedFor(std::chrono::s
 	for (const auto& name: unused) removed += deleteFileArtifactNoLock(name) ? 1 : 0;
 	for (auto&& [_, sub_collection]: sub_collections)
 		removed += sub_collection->removeFileArtifactsUnusedFor(max_age);
+	return removed;
+}
+
+usize artifacts::ArtifactCollection::removeTemporaryFilesOlderThan(std::chrono::seconds max_age) {
+	WithLock   lock(*this);
+	const auto cutoff = std::filesystem::file_time_type::clock::now() - max_age;
+
+	std::vector<std::string> written_names = cacheFileNames(PATH);
+	for (const auto& [name, _]: file_artifacts) written_names.emplace_back(name.strView());
+
+	usize removed = 0;
+	for (const auto& temp_file: findTempFiles(PATH, written_names)) {
+		std::error_code ec;
+		const auto      last_written = std::filesystem::last_write_time(temp_file, ec);
+		if (!ec && last_written < cutoff && removeOrWarn(temp_file)) removed++;
+	}
+	for (auto&& [_, sub_collection]: sub_collections)
+		removed += sub_collection->removeTemporaryFilesOlderThan(max_age);
 	return removed;
 }
 

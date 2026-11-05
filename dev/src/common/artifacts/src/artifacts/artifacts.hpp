@@ -202,6 +202,20 @@ namespace artifacts {
 		 */
 		usize removeFileArtifactsUnusedFor(std::chrono::seconds max_age);
 
+		/**
+		 * @brief Removes the temporary files, older than `max_age`, that killed writes left of
+		 * this collection's files and of its sub-collections' files.
+		 *
+		 * Every file is written to `<name>.<random>.tmp` next to it and renamed into place (see
+		 * `fs::FileManager::produceFileAtomically`). A process killed meanwhile - e.g. Ctrl+C
+		 * during linking - leaves that file behind, and nothing else would ever remove it.
+		 * `max_age` keeps the files of writes still in progress in other builds sharing the
+		 * folder, so it should be far longer than any single write takes.
+		 *
+		 * @return How many temporary files were removed.
+		 */
+		usize removeTemporaryFilesOlderThan(std::chrono::seconds max_age);
+
 		/////////////////////////// SUB COLLECTIONS /////////////////////////
 
 		Ref<ArtifactCollection> subCollectionNew(base::StrID collection_name);

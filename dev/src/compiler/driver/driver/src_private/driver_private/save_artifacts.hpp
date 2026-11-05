@@ -6,10 +6,19 @@
 
 #pragma once
 
+#include <artifacts/artifacts.hpp>
+
 namespace compiler::driver {
 	/**
-	 * @brief Save compilation artifacts to disk: serializes the query graph and metadata, reclaims
-	 * on-disk caches orphaned by this compilation, and flushes everything to disk.
+	 * @brief Save compilation artifacts to disk: serializes the query graph and metadata, removes
+	 * query artifacts no build has used for a while and stale temporary files, and flushes
+	 * everything to disk.
 	 */
 	void saveArtifacts();
+
+	/**
+	 * @brief Removes the temporary files that killed writes left in `collection`'s tree and that
+	 * are too old to belong to a write still in progress.
+	 */
+	void removeStaleTemporaryFiles(Ref<artifacts::ArtifactCollection> collection);
 }

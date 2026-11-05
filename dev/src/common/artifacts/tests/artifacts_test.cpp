@@ -42,6 +42,8 @@ public:
 		TESTER_ADD_TEST(reusedArtifactsAreKept);
 		TESTER_ADD_TEST(reuseOfRemovedFileIsAMiss);
 		TESTER_ADD_TEST(removeCacheRemovesOnlyOwned);
+		TESTER_ADD_TEST(removeCacheRemovesLeftoverTempFiles);
+		TESTER_ADD_TEST(staleTempFilesAreRemoved);
 		TESTER_ADD_TEST(listEntriesOutsideTheCacheAreIgnored);
 	}
 
@@ -526,6 +528,47 @@ private:
 		ASSERT_TRUE(!std::filesystem::exists(root / artifacts::ArtifactCollection::BUILD_ID_FILE));
 		ASSERT_TRUE(!std::filesystem::exists(root / artifacts::ArtifactCollection::OWNED_LIST_FILE));
 		assertUserFilesKept(root);
+	}
+
+	// A killed write leaves `<name>.<random>.tmp` next to an artifact; it belongs to the artifact.
+	// Files that only look similar, or sit next to the user's files, are not ours.
+	void removeCacheRemovesLeftoverTempFiles() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		addUserFiles(root);
+		writeFile(root / "f0.Killed123.tmp", "half");
+		writeFile(root / "s0" / "f1.Killed456.tmp", "half");
+		writeFile(root / "user_file.Killed789.tmp", "keep me");
+		writeFile(root / "f0.backup.copy.tmp", "keep me");
+
+		ASSERT_TRUE(artifacts::ArtifactCollection::removeCache(root).isOk());
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0.Killed123.tmp"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.Killed456.tmp"));
+		ASSERT_TRUE(readFile(root / "user_file.Killed789.tmp") == "keep me");
+		ASSERT_TRUE(readFile(root / "f0.backup.copy.tmp") == "keep me");
+	}
+
+	// In a normal build, only leftovers too old to belong to a write still in progress go.
+	void staleTempFilesAreRemoved() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		addUserFiles(root);
+		writeFile(root / "f0.Old1.tmp", "half");
+		writeFile(root / "s0" / "f1.Old2.tmp", "half");
+		writeFile(root / "f0.Fresh.tmp", "in progress");
+		writeFile(root / "user_file.Old3.tmp", "keep me");
+		for (const auto& old:
+		     { root / "f0.Old1.tmp", root / "s0" / "f1.Old2.tmp", root / "user_file.Old3.tmp" })
+			makeUnusedFor(old, std::chrono::days(2));
+
+		artifacts::ArtifactCollection collection(root);
+		ASSERT_TRUE(collection.removeTemporaryFilesOlderThan(std::chrono::days(1)) == 2);
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0.Old1.tmp"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.Old2.tmp"));
+		ASSERT_TRUE(readFile(root / "f0.Fresh.tmp") == "in progress");
+		ASSERT_TRUE(readFile(root / "user_file.Old3.tmp") == "keep me");
 	}
 
 	// Names are read back from disk, so the cleanup must not follow one out of the cache.

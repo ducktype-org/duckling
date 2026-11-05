@@ -27,6 +27,7 @@ namespace compiler::driver {
 		// @TODO: #3158 Validate the std artifacts collection here as well. A more generic
 		// system will likely be needed to manage this with multipackage builds.
 		if_opt_some(global_state::getStdArtifactsCollection(), std_art_collection) {
+			removeStaleTemporaryFiles(std_art_collection);
 			std_art_collection->flush();
 		}
 
