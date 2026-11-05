@@ -11,6 +11,7 @@
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/placeholder.hpp>
+#include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <system_command/system_command.hpp>
@@ -42,15 +43,29 @@ namespace compiler::linker {
 			command.addArg("-lm");                     // Link the C math library.
 		}
 
-		command.addArg("-o");
-		command.addArg(output.file.getFilePath().native());
-
 		CORE_USER_LOG("Linking executable: ", output.file.getFilePath().name(), "\n");
 
-		auto exit_code = command.execute(system_command::SystemCommand::ExitCodeHandling::Warn);
-		auto linking_result = exit_code == 0 ? base::OK : base::BAD;
+		// The linker writes a temporary file that is renamed into place, so another build
+		// sharing the folder - or a user running the executable - never sees a half-written
+		// one, and a failed link leaves the previous executable intact.
+		bool linker_failed = false;
+		auto produced      = fs::FileManager::produceFileAtomically(
+            output.file.getFilePath(),
+            [&](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
+                command.addArg("-o");
+                command.addArg(temp_path.native());
+                const auto exit_code
+                    = command.execute(system_command::SystemCommand::ExitCodeHandling::Warn);
+                if (exit_code == 0) return {};
+                linker_failed = true;
+                return std::unexpected("the linker failed");
+            }
+        );
+		if (!produced.has_value() && !linker_failed)
+			CORE_USER_LOG("Error: could not put the executable in place: ", produced.error(), "\n");
+		auto linking_result = produced.has_value() ? base::OK : base::BAD;
 
-		if (linking_result.isBad()) {
+		if (linker_failed) {
 			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
 				global_state::getGlobalLogger()->log(makeBox<dia::PlaceholderError>(
 					"Linking of the final executable failed. See the linker output above. ",

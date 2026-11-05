@@ -12,7 +12,9 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <global_state/artifacts_location.hpp>
 
+#include <filesystem/file.hpp>
 #include <hashing/hash.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/input_query/query_input.hpp>
 #include <query_framework/input_query/query_input_impl.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
@@ -99,13 +101,16 @@ namespace compiler::driver {
 				base::StrID(outputArtifactName(key).c_str())
 			);
 
-			std::ofstream output_file(output.file.getFilePath().getPath(), std::ios::binary);
-			if (!output_file.is_open()) {
-				CORE_USER_LOG("Failed to open resolved debug-info artifact for writing\n");
+			// Written atomically, so that another build sharing the folder never reads a
+			// half-written file.
+			auto written = fs::FileManager::writeFileAtomically(
+				output.file.getFilePath(),
+				[&](std::ostream& out) { debug_info::saveToStream(debug_info, out); }
+			);
+			if (!written.has_value()) {
+				CORE_USER_LOG("Error: could not write a debug-info file: ", written.error(), "\n");
 				return query::Failed();
 			}
-
-			debug_info::saveToStream(debug_info, output_file);
 			return output;
 		}
 

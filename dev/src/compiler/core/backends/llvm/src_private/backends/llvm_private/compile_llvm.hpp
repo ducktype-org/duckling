@@ -15,8 +15,9 @@ namespace compiler::backend_llvm {
 	 * @param module_impl The module to compile.
 	 * @param output_file Path where the output file will be saved.
 	 * @param output_type Type of the output file (object or assembly).
+	 * @return Nothing on success, or a message describing why the file could not be written.
 	 */
-	void compileModuleToObject(
+	std::expected<void, std::string> compileModuleToObject(
 		Ref<ModuleImpl>              module_impl,
 		const std::filesystem::path& output_file,
 		CompilationOutputType        output_type

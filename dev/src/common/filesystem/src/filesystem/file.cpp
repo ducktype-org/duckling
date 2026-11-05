@@ -282,8 +282,8 @@ namespace fs {
 		}
 	}
 
-	std::expected<void, std::string> FileManager::writeFileAtomically(
-		const FilePath& path, const std::function<void(std::ostream&)>& write_content
+	std::expected<void, std::string> FileManager::produceFileAtomically(
+		const FilePath& path, const FileProducer& produce
 	) {
 		// On disk, but relative paths (the default `./duck_build/`) are fine.
 		const auto abs_path = path.absolute();
@@ -296,18 +296,11 @@ namespace fs {
 			std::filesystem::remove(tmp_path.getPath(), ec);
 		};
 
-		errno = 0;
-		std::ofstream file(tmp_path.getPath(), std::ios::binary | std::ios::trunc);
-		if (!file) return std::unexpected(streamFailureReason(tmp_path, "could not be opened"));
-		errno = 0;
-		write_content(file);
-		file.close();
-		// Only a fully written temporary file earns the rename; anything else is thrown away,
+		// Only a fully produced temporary file earns the rename; anything else is thrown away,
 		// which is what keeps the previous file intact.
-		if (!file) {
-			auto reason = streamFailureReason(tmp_path, "could not be written");
+		if (auto produced = produce(tmp_path); !produced.has_value()) {
 			discard_tmp();
-			return std::unexpected(std::move(reason));
+			return produced;
 		}
 
 		std::error_code ec;
@@ -317,6 +310,26 @@ namespace fs {
 			return std::unexpected(abs_path.string() + ": " + ec.message());
 		}
 		return {};
+	}
+
+	std::expected<void, std::string> FileManager::writeFileAtomically(
+		const FilePath& path, const std::function<void(std::ostream&)>& write_content
+	) {
+		return produceFileAtomically(
+			path,
+			[&](const FilePath& tmp_path) -> std::expected<void, std::string> {
+				errno = 0;
+				std::ofstream file(tmp_path.getPath(), std::ios::binary | std::ios::trunc);
+				if (!file)
+					return std::unexpected(streamFailureReason(tmp_path, "could not be opened"));
+				errno = 0;
+				write_content(file);
+				file.close();
+				if (!file)
+					return std::unexpected(streamFailureReason(tmp_path, "could not be written"));
+				return {};
+			}
+		);
 	}
 
 	std::expected<bool, std::string> FileManager::removeEntry(const FilePath& path) {

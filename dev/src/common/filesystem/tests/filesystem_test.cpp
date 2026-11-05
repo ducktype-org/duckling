@@ -32,6 +32,7 @@ public:
 		TESTER_ADD_TEST(writeFileAtomicallyTest);
 		TESTER_ADD_TEST(removeEntryTest);
 		TESTER_ADD_TEST(touchTest);
+		TESTER_ADD_TEST(produceFileAtomicallyTest);
 	}
 
 private:
@@ -807,6 +808,47 @@ private:
 		const auto missing = fs::FileManager::touch(fs::FilePath(dir / "missing"));
 		assertTrue(!missing.has_value(), "Touching a missing file must fail");
 		assertTrue(!std::filesystem::exists(dir / "missing"), "Touch must not create the file");
+	}
+
+	// The way the linker and `ar` write their outputs: a tool creates the file at the path it is
+	// given, and only a successful run replaces the previous file.
+	void produceFileAtomicallyTest() {
+		const auto dir    = fs::FileManager::createRandomTempDirectory().getFilePath();
+		const auto target = dir / fs::FilePath("app");
+		std::ofstream(target.getPath()) << "previous";
+
+		auto produced = fs::FileManager::produceFileAtomically(
+			target,
+			[](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
+				std::ofstream(temp_path.getPath()) << "new";
+				return {};
+			}
+		);
+		assertTrue(produced.has_value(), "A successful producer must succeed");
+		assertTrue(readWhole(target.getPath()) == "new", "The produced file must be in place");
+
+		// A failing tool may leave a partial file; it must not replace the previous one.
+		auto failed = fs::FileManager::produceFileAtomically(
+			target,
+			[](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
+				std::ofstream(temp_path.getPath()) << "half";
+				return std::unexpected("the tool failed");
+			}
+		);
+		assertTrue(!failed.has_value(), "A failing producer must fail");
+		assertTrue(failed.error() == "the tool failed", "Its own error must be returned");
+		assertTrue(readWhole(target.getPath()) == "new", "The previous file must stay");
+
+		// A producer that reports success without creating anything is a failure too.
+		auto nothing = fs::FileManager::produceFileAtomically(
+			target, [](const fs::FilePath&) -> std::expected<void, std::string> { return {}; }
+		);
+		assertTrue(!nothing.has_value(), "Producing nothing must fail");
+		assertTrue(readWhole(target.getPath()) == "new", "The previous file must stay");
+
+		assertTrue(
+			fs::File(dir).listFilePaths().size() == 1, "No temporary file may be left behind"
+		);
 	}
 };
 

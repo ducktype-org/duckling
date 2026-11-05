@@ -16,6 +16,7 @@
 #include <base/extend_cpp/vector_utils.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
 
@@ -115,9 +116,18 @@ namespace compiler::driver {
 		deduplicateCodeCollection(merged_code);
 
 
-		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
-		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
-		vm::code::serializeCode(merged_code, out);
+		// Written atomically, so that another build sharing the folder never reads a half-written
+		// package.
+		auto written = fs::FileManager::writeFileAtomically(
+			output_file.file.getFilePath(),
+			[&](std::ostream& out) { vm::code::serializeCode(merged_code, out); }
+		);
+		if (!written.has_value()) {
+			CORE_USER_LOG(
+				"DVM linking failed: could not write the package: ", written.error(), "\n"
+			);
+			return base::BAD;
+		}
 
 		std::vector<fs::FilePath> debug_info_paths;
 		debug_info_paths.reserve(debug_info_artifacts.size());
@@ -166,10 +176,18 @@ namespace compiler::driver {
 				auto di_output = output_file.parent->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
 				);
-				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
-				if (!di_out.is_open())
-					CORE_PANIC("Failed to open DVM package debug info output file for writing");
-				debug_info::saveToStream(*merged_debug_info, di_out);
+				auto di_written = fs::FileManager::writeFileAtomically(
+					di_output.file.getFilePath(),
+					[&](std::ostream& out) { debug_info::saveToStream(*merged_debug_info, out); }
+				);
+				if (!di_written.has_value()) {
+					CORE_USER_LOG(
+						"DVM linking failed: could not write the package debug info: ",
+						di_written.error(),
+						"\n"
+					);
+					return base::BAD;
+				}
 			}
 		}
 

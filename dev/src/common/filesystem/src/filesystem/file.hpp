@@ -382,15 +382,35 @@ namespace fs {
 		static bool deleteFolder(const File& folder, bool force = false);
 
 		/**
-		 * @brief Writes a physical file through a sibling temporary file that is renamed into
-		 * place, reporting failure instead of panicking.
+		 * @brief Creates the file at a given path, e.g. by writing it or by running a tool that
+		 * writes it. Returns a message describing the failure, if it failed.
+		 */
+		using FileProducer
+			= std::function<std::expected<void, std::string>(const FilePath& temp_path)>;
+
+		/**
+		 * @brief Has `produce` create a physical file at a temporary path next to `path`, then
+		 * renames it into place, reporting failure instead of panicking.
 		 *
 		 * A rename inside one directory is atomic, so a reader sees either the previous file or
-		 * the new one, never a half of each, and a write that fails or dies partway (a full disk,
-		 * a killed process) leaves the previous file untouched. Each call writes its own
-		 * temporary file, named `<file name>.<random>.tmp`, so concurrent writers cannot mix
-		 * their bytes either: the last rename wins, whole. A process killed mid-write can leave
-		 * that temporary file behind; nothing else does.
+		 * the new one, never a half of each, and a producer that fails or dies partway (a full
+		 * disk, a killed process, a failing linker) leaves the previous file untouched. Each call
+		 * gets its own temporary path, named `<file name>.<random>.tmp`, so concurrent producers
+		 * cannot mix their bytes either: the last rename wins, whole. A process killed midway can
+		 * leave that temporary file behind; nothing else does.
+		 *
+		 * @param path The file to produce; it must be on disk (absolute or relative), not
+		 * virtual. It does not have to exist yet.
+		 * @param produce Creates the file at the temporary path it is given.
+		 * @return Nothing on success. Otherwise `produce`'s own failure, or a message describing
+		 * why the produced file could not be put in place.
+		 */
+		static std::expected<void, std::string> produceFileAtomically(
+			const FilePath& path, const FileProducer& produce
+		);
+
+		/**
+		 * @brief `produceFileAtomically` for a file written through a stream.
 		 *
 		 * @param path The file to write; it must be on disk (absolute or relative), not virtual.
 		 * It does not have to exist yet.

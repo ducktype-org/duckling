@@ -13,6 +13,7 @@
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/placeholder.hpp>
+#include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <system_command/system_command.hpp>
@@ -25,34 +26,10 @@ namespace compiler::archiver {
 	) {
 		time_stats::TrackCategoryTime linking_time(time_stats::TimeCategories::Linking);
 
-		// Artifact Manager can pre-create an empty file for this artifact path.
-		// Also remove any existing .a so `ar rcs` builds a clean archive from current objects,
-		// instead of updating/reusing members from a previous archive.
-		if (output.file.exists()) {
-			auto deleted = fs::FileManager::deleteFile(output.file);
-			if (!deleted && output.file.exists()) {
-				if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
-					global_state::getGlobalLogger()->log(makeBox<dia::PlaceholderError>(
-						"Archiving of the static library failed.",
-						"Could not remove existing output file before invoking the archiver. "
-						"Check filesystem permissions for the artifacts directory."
-					));
-				} else {
-					CORE_USER_LOG(
-						"\nERROR: Could not remove existing output file before invoking the "
-						"archiver. "
-						"Check filesystem permissions for the artifacts directory.\n"
-					);
-				}
-				return base::BAD;
-			}
-		}
-
 		// `ar rcs <archive> <objs...>` — standard POSIX archive tool invocation.
 		// r: insert with replace, c: silently create missing archive, s: write symbol index.
 		system_command::SystemCommand command(options.archiver_path.copyValueOr("ar"));
 		command.addArg("rcs");
-		command.addArg(output.file.getFilePath().native());
 
 #if BASE_TARGET_OS_MACOS
 		// Apple's cctools `ar` stamps each member with its mtime and the current uid/gid, so
@@ -62,15 +39,31 @@ namespace compiler::archiver {
 		command.addEnv("ZERO_AR_DATE", "1");
 #endif
 
-		for (const auto& object_file_path: inputs)
-			command.addArg(object_file_path.file.getFilePath().native());
-
 		CORE_USER_LOG("Archiving static library: ", output.file.getFilePath().name(), "\n");
 
-		auto exit_code = command.execute(system_command::SystemCommand::ExitCodeHandling::Warn);
-		auto result    = exit_code == 0 ? base::OK : base::BAD;
+		// `ar` writes a fresh temporary archive that is renamed into place. A fresh file is what
+		// keeps `ar r` from updating members of a previous archive - it used to be deleted first
+		// for that - and the rename means another build sharing the folder never reads a
+		// half-written archive, while a failed `ar` leaves the previous one intact.
+		bool archiver_failed = false;
+		auto produced        = fs::FileManager::produceFileAtomically(
+            output.file.getFilePath(),
+            [&](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
+                command.addArg(temp_path.native());
+                for (const auto& object_file_path: inputs)
+                    command.addArg(object_file_path.file.getFilePath().native());
+                const auto exit_code
+                    = command.execute(system_command::SystemCommand::ExitCodeHandling::Warn);
+                if (exit_code == 0) return {};
+                archiver_failed = true;
+                return std::unexpected("the archiver failed");
+            }
+        );
+		if (!produced.has_value() && !archiver_failed)
+			CORE_USER_LOG("Error: could not put the archive in place: ", produced.error(), "\n");
+		auto result = produced.has_value() ? base::OK : base::BAD;
 
-		if (result.isBad()) {
+		if (archiver_failed) {
 			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
 				global_state::getGlobalLogger()->log(makeBox<dia::PlaceholderError>(
 					"Archiving of the static library failed. See the archiver output above.",
