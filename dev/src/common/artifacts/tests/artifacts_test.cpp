@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/types/expected_utils.hpp>
+
 #include <artifacts/artifacts.hpp>
 #include <artifacts/build_id.hpp>
 #include <tester/tester.hpp>
@@ -61,8 +63,8 @@ private:
 	};
 
 	void simpleTest() {
-		fs::File              fs_root_path = fs::FileManager::createRandomTempDirectory();
-		std::filesystem::path root         = fs_root_path.getFilePath().getPath();
+		fs::File fs_root_path = base::valueOrPanic(fs::FileManager::createRandomTempDirectory());
+		std::filesystem::path root = fs_root_path.getFilePath().getPath();
 
 		const auto b0 = base::StrID("b0");
 		const auto b1 = base::StrID("b1");
@@ -178,7 +180,9 @@ private:
 
 	void buildIdMismatchRemovesOnlyOwnedArtifacts() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		addUserFiles(root);
 		writeFile(
@@ -203,7 +207,9 @@ private:
 
 	void missingBuildIdRemovesOwnedArtifacts() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		addUserFiles(root);
 		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
@@ -216,7 +222,9 @@ private:
 	// The `-a .` case: the artifacts folder is a folder of the user's own files.
 	void foreignFolderIsLeftAlone() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		writeFile(root / "main.dk", "source");
 		std::filesystem::create_directory(root / "src");
 		writeFile(root / "src" / "lib.dk", "source");
@@ -235,7 +243,9 @@ private:
 
 	void corruptedArtcIsDiscarded() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		addUserFiles(root);
 		writeFile(artcOf(root), "5;");
@@ -260,7 +270,9 @@ private:
 	// that size is allocated.
 	void oversizedSizeFieldIsRejected() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		writeFile(artcOf(root), "1;4000000000;");
 
@@ -270,7 +282,9 @@ private:
 
 	void leftoverTempFilesAreNotAdopted() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		const auto temp_name = artcOf(root).filename().string() + ".Leftover12345678.tmp";
 		writeFile(root / temp_name, "half a cache");
@@ -293,7 +307,9 @@ private:
 	// leaves nothing the next cleanup does not know about.
 	void unflushedArtifactsAreRemoved() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		{
 			artifacts::ArtifactCollection collection(root);
 			collection.fileArtifactNew(base::StrID("f0"));
@@ -310,7 +326,9 @@ private:
 	// `main.o` cut to `main` would point at a file that is not ours.
 	void truncatedListLineIsIgnored() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		writeFile(
 			root / artifacts::ArtifactCollection::OWNED_LIST_FILE, "duckling-artifacts 1\nf main"
 		);
@@ -325,7 +343,9 @@ private:
 	// its `.artc` must not be loaded into a new collection of that name.
 	void artcWithoutOwnedListIsNotLoaded() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		std::filesystem::remove(root / artifacts::ArtifactCollection::OWNED_LIST_FILE);
 		std::filesystem::remove(root / "s0" / artifacts::ArtifactCollection::OWNED_LIST_FILE);
@@ -343,7 +363,9 @@ private:
 	// itself until the path got too long, and the build would crash on every run.
 	void dotEntryIsIgnored() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		for (const auto* name: { ".", "./", "s0/..", "./." }) {
 			writeFile(
@@ -364,7 +386,9 @@ private:
 	// A name that only looks different (`./f0`) is still ours.
 	void normalizedNamesAreOwned() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		{
 			artifacts::ArtifactCollection collection(root);
 			collection.fileArtifactNew(base::StrID("./f0"));
@@ -379,7 +403,9 @@ private:
 	// there, but clearing the cache must not remove it.
 	void artifactOutsideTheCacheIsNotOwned() {
 		std::filesystem::path outer
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		const auto root = outer / "cache";
 		std::filesystem::create_directory(root);
 		{
@@ -404,7 +430,9 @@ private:
 	// not ours, wherever the symlink sits in the path.
 	void entriesThroughSymlinksAreSkipped() {
 		std::filesystem::path outer
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		const auto root = outer / "cache";
 		std::filesystem::create_directory(root);
 		std::filesystem::create_directory(outer / "elsewhere");
@@ -440,7 +468,9 @@ private:
 	// is relative too.
 	void relativeRootWorks() {
 		std::filesystem::path outer
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		const auto old_cwd = std::filesystem::current_path();
 		std::filesystem::current_path(outer);
 		std::filesystem::create_directory("cache");
@@ -465,7 +495,9 @@ private:
 	// too; recently used ones, and files that are not ours, stay.
 	void unusedFileArtifactsAreRemoved() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		addUserFiles(root);
 		makeUnusedFor(root / "f0", std::chrono::days(8));
@@ -495,7 +527,9 @@ private:
 	// leave an artifact in use looking unused to the cleanup.
 	void lookedUpArtifactsAreKept() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		writeFile(root / "s0" / "f2", "f2");
 		{
@@ -522,7 +556,9 @@ private:
 	// instead of handing out an artifact that points at nothing.
 	void atOrNewRecreatesRemovedFile() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 
 		artifacts::ArtifactCollection collection(root);
@@ -535,7 +571,9 @@ private:
 	// file artifact pointing at nothing.
 	void reuseOfRemovedFileIsAMiss() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 
 		artifacts::ArtifactCollection collection(root);
@@ -548,7 +586,9 @@ private:
 	// `duckc clean`: everything the cache owns goes, nothing else does.
 	void removeCacheRemovesOnlyOwned() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		addUserFiles(root);
 
@@ -569,7 +609,9 @@ private:
 	void removeCacheWithoutCache() {
 		using Result = artifacts::ArtifactCollection::RemoveCacheResult;
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 
 		ASSERT_TRUE(
 			artifacts::ArtifactCollection::removeCache(root / "missing") == Result::NothingToRemove
@@ -614,7 +656,9 @@ private:
 	// the list stays so that a later cleanup still knows about what is left.
 	void removeCacheThatCannotFinish() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		// The `.artc` turned into a folder with something in it: removing it fails.
 		std::filesystem::remove(artcOf(root));
@@ -632,7 +676,9 @@ private:
 	// A file artifact that cannot be removed is reported, and stays an artifact.
 	void deleteFileArtifactThatCannotBeRemoved() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 
 		artifacts::ArtifactCollection collection(root);
@@ -648,7 +694,9 @@ private:
 	// failure is reported and the flush carries on.
 	void flushIntoRemovedFolderIsReported() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		artifacts::ArtifactCollection collection(root);
 		collection.blobArtifactNew(base::StrID("b0")).setData(VALUE);
 		std::filesystem::remove_all(root);
@@ -661,7 +709,9 @@ private:
 	// Files that only look similar, or sit next to the user's files, are not ours.
 	void removeCacheRemovesLeftoverTempFiles() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		addUserFiles(root);
 		writeFile(root / "f0.Killed1234567890.tmp", "half");
@@ -685,7 +735,9 @@ private:
 	// In a normal build, only leftovers too old to belong to a write still in progress go.
 	void staleTempFilesAreRemoved() {
 		std::filesystem::path root
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		buildCache(root);
 		addUserFiles(root);
 		writeFile(root / "f0.OldWrite00000001.tmp", "half");
@@ -711,7 +763,9 @@ private:
 	// Names are read back from disk, so the cleanup must not follow one out of the cache.
 	void listEntriesOutsideTheCacheAreIgnored() {
 		std::filesystem::path outer
-			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		          .getFilePath()
+		          .getPath();
 		const auto root = outer / "cache";
 		std::filesystem::create_directory(root);
 		writeFile(outer / "outside", "keep me");

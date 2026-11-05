@@ -18,6 +18,8 @@
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
 
+#include <base/types/expected_utils.hpp>
+
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -40,7 +42,8 @@ class DriverTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DriverTest
 
-	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath artifacts_path
+		= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -442,8 +445,7 @@ private:
 
 			ASSERT_TRUE(artifacts.object_art.file.exists());
 			ASSERT_TRUE(artifacts.debug_info.empty());
-
-			fs::FileManager::deleteFile(artifacts.object_art.file);
+			std::ignore = fs::FileManager::deleteFile(artifacts.object_art.file);
 		});
 	}
 
@@ -461,9 +463,8 @@ private:
 
 			ASSERT_TRUE(artifacts.object_art.file.exists());
 			ASSERT_HAS_VALUE(artifacts.debug_info);
-
-			fs::FileManager::deleteFile(artifacts.object_art.file);
-			fs::FileManager::deleteFile(
+			std::ignore = fs::FileManager::deleteFile(artifacts.object_art.file);
+			std::ignore = fs::FileManager::deleteFile(
 				artifacts.object_art.file.getFilePath().parentPath()
 				/ artifacts.object_art.file.stem().append(driver::DEBUG_INFO_STABLE_EXTENSION)
 			);

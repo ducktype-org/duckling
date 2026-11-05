@@ -16,6 +16,7 @@
 #include <lsp_interface/server_session.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/types/expected_utils.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
@@ -42,7 +43,7 @@ namespace {
 	};
 
 	std::string content(const fs::File& file) {
-		return std::string(file.getContent().view().stringView());
+		return std::string(base::valueOrPanic(file.getContent()).view().stringView());
 	}
 }
 

@@ -148,7 +148,7 @@ private:
 		std::stringstream ss;
 		pst->dprint(ss);
 
-		auto             correct_content = fs::File(json_file).getContent();
+		auto             correct_content = base::valueOrPanic(fs::File(json_file).getContent());
 		std::string_view correct_string  = correct_content.view().stringView();
 
 		if (no_errors) {

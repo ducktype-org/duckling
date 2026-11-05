@@ -431,9 +431,12 @@ namespace compiler::driver {
 		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
 			query::Context& ctx
 		) {
-			auto& script_context = global_state::getScriptContext();
-			auto  script_source  = script_context.script_file.getContent().view().stdString();
-			auto  split_result   = repl::splitInputIntoStatements(ctx, script_source);
+			auto&      script_context = global_state::getScriptContext();
+			const auto content        = script_context.script_file.getContent();
+			if (!content.has_value())
+				return std::unexpected("Cannot read the script: " + content.error());
+			auto script_source = content->view().stdString();
+			auto split_result  = repl::splitInputIntoStatements(ctx, script_source);
 			if (!split_result.has_value())
 				return std::unexpected(
 					base::strConcat("Script parsing failed: ", split_result.error())

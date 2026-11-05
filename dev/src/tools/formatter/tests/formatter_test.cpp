@@ -70,7 +70,7 @@ namespace {
 	}
 
 	std::string readFile(const std::string& path) {
-		return std::string(fs::File(path).getContent().view().stringView());
+		return std::string(base::valueOrPanic(fs::File(path).getContent()).view().stringView());
 	}
 
 	/** One golden case: the source to format and the output it must produce. */

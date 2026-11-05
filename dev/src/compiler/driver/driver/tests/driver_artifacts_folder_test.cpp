@@ -31,7 +31,9 @@ private:
 	// environment's fault, not a compiler bug: initialization fails with a reason instead of
 	// panicking, and nothing is left to flush at exit.
 	void folderThatCannotBeCreatedFailsCleanly() {
-		const auto dir  = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto dir = base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		                     .getFilePath()
+		                     .getPath();
 		const auto file = dir / "a_file";
 		std::ofstream(file) << "in the way";
 

@@ -89,7 +89,9 @@ private:
 	void fileParserTest() {
 		ASSERT_EQUAL(
 			"awesome_content\n",
-			parseFile(path("test_file.txt"), std::regex(".*\\.txt")).getContent().view().stdString()
+			base::valueOrPanic(parseFile(path("test_file.txt"), std::regex(".*\\.txt")).getContent())
+				.view()
+				.stdString()
 		);
 
 		assertThrows<clah::exceptions::ValueParsingException>(
@@ -101,8 +103,9 @@ private:
 	void filePathParserTest() {
 		ASSERT_EQUAL(
 			"awesome_content\n",
-			fs::File(parseFilePath(path("test_file.txt"), std::regex(".*\\.txt")))
-				.getContent()
+			base::valueOrPanic(
+				fs::File(parseFilePath(path("test_file.txt"), std::regex(".*\\.txt"))).getContent()
+			)
 				.view()
 				.stdString()
 		);

@@ -353,8 +353,9 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 	std::string        stored_id;
 	const bool         has_file = build_id_path.exists();
 	if (has_file) {
+		// An unreadable build id is as good as a wrong one: the cache cannot be trusted.
 		const auto content = fs::File(build_id_path).getContent();
-		stored_id          = content.view().stdString();
+		if (content.has_value()) stored_id = content->view().stdString();
 	}
 
 	if (has_file && stored_id == BUILD_ID) {

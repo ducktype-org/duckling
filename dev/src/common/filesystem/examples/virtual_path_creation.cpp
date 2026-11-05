@@ -19,12 +19,12 @@ int main() {
 	std::cout << "virtual_dir path: " << temp_dir.getFilePath().native() << '\n';
 
 	// Create a new file in `temp_dir` with content: "f1".
-	const auto f1 = temp_dir.createSubFile("f1");
+	const auto f1 = base::valueOrPanic(temp_dir.createSubFile("f1"));
 	std::cout << "f1 content: " << f1.getContent().view().stringView() << '\n';
 	std::cout << "f1 path: " << f1.getFilePath().native() << '\n';
 
 	// Create a new file in `temp_dir` named "customName" with content: "f2".
-	const auto f2 = temp_dir.createSubFile("f2", "customName");
+	const auto f2 = base::valueOrPanic(temp_dir.createSubFile("f2", "customName"));
 	std::cout << "f2 content: " << f2.getContent().view().stringView() << '\n';
 	std::cout << "f2 path: " << f2.getFilePath().native() << '\n';
 }

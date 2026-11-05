@@ -82,7 +82,9 @@ private:
 
 	template<typename Element>
 	auto fromContents(const std::string& filename) {
-		std::string contents{ fs::File(filename).getContent().view().stringView() };
+		std::string contents{
+			base::valueOrPanic(fs::File(filename).getContent()).view().stringView()
+		};
 		return pst::ParsedPST<Element>::fromContents(contents, pst::PSTType::Program);
 	}
 

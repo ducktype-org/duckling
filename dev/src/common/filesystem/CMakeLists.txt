@@ -5,7 +5,7 @@ add_library(Filesystem
 	src/filesystem/encoding.hpp
 )
 
-make_module(Filesystem USES Base FilepathUtils)
+make_module(Filesystem USES Base FilepathUtils Timer)
 
 duck_add_test(common filesystem tests/filesystem_test.cpp USES Filesystem)
 

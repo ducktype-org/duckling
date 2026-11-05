@@ -21,6 +21,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/expected_utils.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/module_flags/module_flags.hpp>
@@ -60,7 +61,8 @@ class PackagesTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS PackagesTest
 
-	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath artifacts_path
+		= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 	driver::PackageCompilationManifest manifest{};
 
 public:
@@ -247,7 +249,7 @@ private:
 	}
 
 	void archiverFailurePaths() {
-		auto temp_dir  = fs::FileManager::createRandomTempDirectory();
+		auto temp_dir  = base::valueOrPanic(fs::FileManager::createRandomTempDirectory());
 		auto temp_path = temp_dir.getFilePath().getPath();
 
 		auto collection = makeBox<artifacts::ArtifactCollection>(temp_path);

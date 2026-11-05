@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <base/comptime/type_traits.hpp>
+#include <base/types/expected_utils.hpp>
 
 #include <tester/tester.hpp>
 
@@ -62,8 +63,9 @@ private:
 	}
 
 	void loadDefaultTest() {
-		fs::FilePath package = fs::FileManager::createRandomTempDirectory().getFilePath();
-		fs::FilePath build   = package / "duck_build";
+		fs::FilePath package
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+		fs::FilePath build = package / "duck_build";
 
 		vm::debugger::Debugger debugger;
 		ASSERT_TRUE(!debugger.loadDefault(package).has_value());
@@ -90,8 +92,7 @@ private:
 		ASSERT_EQUAL_PRINT(debugger.getLoadedFiles().size(), usize(1));
 		ASSERT_TRUE(debugger.isFileAvailable(source));
 		ASSERT_TRUE(!debugger.isFileAvailable(fs::File(path("../common/programs/while_true.dbc"))));
-
-		fs::FileManager::deleteFolder(package, true);
+		std::ignore = fs::FileManager::deleteFolder(package, true);
 	}
 
 	void noRunTest() {

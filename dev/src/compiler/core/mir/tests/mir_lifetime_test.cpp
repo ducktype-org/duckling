@@ -62,8 +62,9 @@ protected:
 	 * loaded. The modules themselves are still built as standalone trees by `getModule`.
 	 */
 	void beforeAll() override {
-		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
-		auto         init_result
+		fs::FilePath artifacts_path
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests({}, artifacts_path);
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}

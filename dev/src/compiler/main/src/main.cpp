@@ -1143,7 +1143,13 @@ namespace {
 						auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
 						auto manifest_content = manifest_file.getContent();
-						auto file_content     = manifest_content.view();
+						if (!manifest_content.has_value()) {
+							std::cerr
+								<< "Error: cannot read the manifest: " << manifest_content.error()
+								<< "\n";
+							return 1;
+						}
+						auto file_content = manifest_content->view();
 
 						nlohmann::json manifest_json;
 						try {
@@ -1329,8 +1335,14 @@ namespace {
 			            // changed later by for example adding option to save compiled
 			            // bytecode. Also, ScriptMode requires artifacts path, maybe this
 			            // will be refactored later.
-						auto run_temp_artifacts_path
-							= fs::FileManager::createRandomTempDirectory().getFilePath();
+						auto run_temp_artifacts_folder
+							= fs::FileManager::createRandomTempDirectory();
+						if (!run_temp_artifacts_folder.has_value()) {
+							std::cerr << "Error: cannot create a temporary folder: "
+									  << run_temp_artifacts_folder.error() << "\n";
+							return 1;
+						}
+						auto run_temp_artifacts_path = run_temp_artifacts_folder->getFilePath();
 
 						auto stdlib_options = getStdLibOptionsFromClah(options);
 						auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{

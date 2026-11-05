@@ -14,6 +14,7 @@
 #include <filesystem/vfs.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <filesystem>
 #include <fstream>
@@ -78,29 +79,25 @@ namespace {
 	 *
 	 * @param directory The parent directory as a File.
 	 * @param custom_name Optional custom name for the file or directory
-	 * @return The generated path inside the directory.
+	 * @return The generated path inside the directory, or a message saying the name is taken.
 	 */
-	fs::FilePath genPathInDirectory(const fs::File& directory, std::string_view custom_name = "") {
+	std::expected<fs::FilePath, std::string> genPathInDirectory(
+		const fs::File& directory, std::string_view custom_name = ""
+	) {
 		requireDirectory(directory);
+		const fs::FilePath dir_path = directory.getFilePath();
+		if (custom_name.empty()) return fs::FileManager::randomName(dir_path);
 
-		auto         type     = directory.getType();
-		fs::FilePath dir_path = directory.getFilePath();
-
-		if (custom_name.empty()) {
-			return fs::FileManager::randomName(dir_path);
-		} else {
-			auto candidate = dir_path / custom_name;
-
-			if ((type == fs::FileType::Virtual && vfsOf(candidate)->exists(candidate.getPath()))
-			    || (type != fs::FileType::Virtual && exists(candidate.getPath())))
-				CORE_PANIC(base::strConcat(
-					"Cannot create a file/dir with name \"",
-					custom_name,
-					"\", because there already is a file/dir with this name in "
-						+ directory.getFilePath().native()
-				));
-			return candidate;
+		auto candidate = dir_path / custom_name;
+		if (candidate.exists()) {
+			return std::unexpected(base::strConcat(
+				"cannot create \"",
+				custom_name,
+				"\": there already is a file or folder with this name in ",
+				dir_path.native()
+			));
 		}
+		return candidate;
 	}
 }
 
@@ -119,11 +116,19 @@ namespace fs {
 			this->category
 				= vfsOf(path)->isDirectory(path) ? FileCategory::Directory : FileCategory::File;
 		} else {
-			this->path     = path.canonical();
+			this->path     = base::valueOrPanic(path.canonical(), "resolving an existing file");
 			this->type     = FileType::Physical;
-			this->category = std::filesystem::is_directory(path.getPath()) ? FileCategory::Directory
-			                                                               : FileCategory::File;
+			this->category = path.isDirectory() ? FileCategory::Directory : FileCategory::File;
 		}
+	}
+
+	std::expected<File, std::string> File::open(const FilePath& path) {
+		if (!path.exists()) return std::unexpected(path.string() + ": no such file or folder");
+		if (path.isPhysical() || path.getType() == PathType::Relative) {
+			if (auto resolved = path.canonical(); !resolved.has_value())
+				return std::unexpected(resolved.error());
+		}
+		return File(path);
 	}
 
 	// --- FileManager static methods ---
@@ -148,16 +153,6 @@ namespace fs {
 		return abs_path;
 	}
 
-	File FileManager::createPhysicalFileUnsafe(
-		const FilePath& path, std::string_view content, bool allow_overwrite
-	) {
-		requirePhysicalPath(path);
-
-		auto file = createPhysicalFile(path, content, allow_overwrite);
-		if (!file) CORE_PANIC("Failed to create physical file: " + file.error());
-		return *file;
-	}
-
 	std::expected<File, std::string> FileManager::createPhysicalFolder(
 		const FilePath& path, bool allow_overwrite
 	) {
@@ -177,14 +172,6 @@ namespace fs {
 		std::filesystem::create_directories(abs_path.getPath(), ec);
 		if (ec) return std::unexpected(ec.message());
 		return abs_path;
-	}
-
-	File FileManager::createPhysicalFolderUnsafe(const FilePath& path, bool allow_overwrite) {
-		requirePhysicalPath(path);
-
-		auto folder = createPhysicalFolder(path, allow_overwrite);
-		if (!folder) CORE_PANIC("Failed to create physical folder: " + folder.error());
-		return *folder;
 	}
 
 	File FileManager::createVirtualFile(
@@ -241,10 +228,8 @@ namespace fs {
 		CORE_PANIC("Couldn't create a new name in: " + directory.absolute().string());
 	}
 
-	File FileManager::createRandomTempDirectory() {
-		FilePath tmp_dir   = FilePath::getDefaultTempDirectoryPath();
-		auto     rand_path = randomName(tmp_dir);
-		return createPhysicalFolderUnsafe(rand_path);
+	std::expected<File, std::string> FileManager::createRandomTempDirectory() {
+		return createPhysicalFolder(randomName(FilePath::getDefaultTempDirectoryPath()));
 	}
 
 	File FileManager::createRandomVirtualDirectory(base::Ref<VFS> vfs) {
@@ -264,27 +249,39 @@ namespace fs {
 		return createVirtualFile(rand_path, content);
 	}
 
-	File FileManager::createRandomTempFile(std::string_view content) {
-		FilePath tmp_dir   = FilePath::getDefaultTempDirectoryPath();
-		auto     rand_path = randomName(tmp_dir);
-		return createPhysicalFileUnsafe(rand_path, content);
+	std::expected<File, std::string> FileManager::createRandomTempFile(std::string_view content) {
+		return createPhysicalFile(randomName(FilePath::getDefaultTempDirectoryPath()), content);
 	}
 
-	bool FileManager::deleteFile(const File& file) {
+	std::expected<bool, std::string> FileManager::deleteFile(const File& file) {
 		if (file.type == FileType::Virtual) return vfsOf(file.path)->deleteFile(file.path);
-		return std::filesystem::remove(file.path);
+		return removeEntry(file.path);
 	}
 
-	bool FileManager::deleteFolder(const File& folder, bool force) {
+	std::expected<bool, std::string> FileManager::deleteFolder(const File& folder, bool force) {
 		if (folder.type == FileType::Virtual)
 			return vfsOf(folder.path)->deleteDirectory(folder.path, force);
-		if (force) {
-			std::error_code ec;
-			std::filesystem::remove_all(folder.path, ec);
-			return !ec;
-		} else {
-			return std::filesystem::remove(folder.path);
-		}
+		if (!force) return removeEntry(folder.path);
+		std::error_code ec;
+		const auto      removed = std::filesystem::remove_all(folder.path.getPath(), ec);
+		if (ec) return std::unexpected(folder.path.string() + ": " + ec.message());
+		return removed > 0;
+	}
+
+	base::Optional<FilePath> FileManager::temporaryFileTarget(const FilePath& path) {
+		constexpr std::string_view SUFFIX = ".tmp";
+		const auto                 name   = path.getPath().filename().string();
+		if (!name.ends_with(SUFFIX)) return {};
+		const std::string_view without_suffix(name.data(), name.size() - SUFFIX.size());
+		const auto             dot = without_suffix.rfind('.');
+		if (dot == std::string_view::npos || dot == 0) return {};
+		const auto random = without_suffix.substr(dot + 1);
+		const bool is_random
+			= random.size() == RANDOM_NAME_LENGTH && std::ranges::all_of(random, [](char c) {
+				  return std::isalnum(static_cast<unsigned char>(c)) != 0;
+			  });
+		if (!is_random) return {};
+		return path.parentPath() / FilePath(std::string(without_suffix.substr(0, dot)));
 	}
 
 	std::expected<void, std::string> FileManager::produceFileAtomically(
@@ -373,42 +370,35 @@ namespace fs {
 
 	// --- File methods (non-static, formerly FilePath) ---
 
-	base::SharedView File::getContent() const {
+	std::expected<base::SharedView, std::string> File::getContent() const {
 		if (type == FileType::Virtual) {
+			if (!exists()) return std::unexpected(path.string() + ": no such virtual file");
 			auto content = vfsOf(path)->readFile(path);
 
 			auto r_array = new byte[content.size()];
 			std::ranges::copy(content, reinterpret_cast<char*>(r_array));
 
-			return { r_array, content.size() };
-		} else {
-			std::ifstream file(path.getPath(), std::ios::in | std::ios::binary);
-			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string() + ", error: ");
-
-			file.unsetf(std::ios::skipws);
-
-			auto fpos = file.tellg();
-			file.seekg(0, std::ios::end);
-			std::streamoff fsize     = file.tellg() - fpos;
-			auto           file_size = static_cast<usize>(fsize);
-			file.seekg(0, std::ios::beg);
-
-			// should read full file:
-			auto r_array = new byte[file_size];
-			file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
-
-			return { r_array, file_size };
+			return base::SharedView{ r_array, content.size() };
 		}
-		CORE_UNREACHABLE();
-	}
 
-	std::expected<base::SharedView, std::string> File::getContentSafe() const {
-		if (!exists()) {
-			return std::unexpected(base::strConcat(
-				"Error: cannot get content of file `", path.native(), "` - file does not exist"
-			));
+		errno = 0;
+		std::ifstream file(path.getPath(), std::ios::in | std::ios::binary);
+		if (!file) return std::unexpected(streamFailureReason(path, "could not be opened"));
+
+		file.unsetf(std::ios::skipws);
+		file.seekg(0, std::ios::end);
+		const auto end = file.tellg();
+		if (end < 0) return std::unexpected(streamFailureReason(path, "could not be read"));
+		const auto file_size = static_cast<usize>(end);
+		file.seekg(0, std::ios::beg);
+
+		auto r_array = new byte[file_size];
+		file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
+		if (file.gcount() != std::streamsize(file_size)) {
+			delete[] r_array;
+			return std::unexpected(streamFailureReason(path, "could not be read"));
 		}
-		return getContent();
+		return base::SharedView{ r_array, file_size };
 	}
 
 	bool File::exists() const { return path.exists(); }
@@ -445,60 +435,53 @@ namespace fs {
 		return writeAndClose(ofs, path, new_content);
 	}
 
-	void File::writeToFileUnsafe(std::string_view new_content, bool append) const {
-		auto written = writeToFile(new_content, append);
-		if (!written) CORE_PANIC("Failed to write to file: " + written.error());
-	}
-
-	File File::createSubFile(std::string_view new_file_content, std::string_view custom_name) const {
+	std::expected<File, std::string> File::createSubFile(
+		std::string_view new_file_content, std::string_view custom_name
+	) const {
 		requireDirectory(*this);
-		FilePath file_path = genPathInDirectory(*this, custom_name);
+		auto file_path = genPathInDirectory(*this, custom_name);
+		if (!file_path.has_value()) return std::unexpected(file_path.error());
 
 		switch (type) {
 		case FileType::Virtual:
-			FileManager::createVirtualFile(file_path, new_file_content);
-			break;
+			return FileManager::createVirtualFile(*file_path, new_file_content);
 		case FileType::Physical:
-			FileManager::createPhysicalFileUnsafe(file_path, new_file_content);
-			break;
+			return FileManager::createPhysicalFile(*file_path, new_file_content);
 		default:
 			CORE_PANIC("Unsupported directory type for file creation");
 		}
-		return file_path;
 	}
 
-	File File::createSubDirectory(std::string_view custom_name) const {
+	std::expected<File, std::string> File::createSubDirectory(std::string_view custom_name) const {
 		requireDirectory(*this);
-		FilePath dir_path = genPathInDirectory(*this, custom_name);
+		auto dir_path = genPathInDirectory(*this, custom_name);
+		if (!dir_path.has_value()) return std::unexpected(dir_path.error());
 
 		switch (type) {
 		case FileType::Virtual:
-			FileManager::createVirtualFolder(dir_path);
-			break;
+			return FileManager::createVirtualFolder(*dir_path);
 		case FileType::Physical:
-			FileManager::createPhysicalFolderUnsafe(dir_path);
-			break;
+			return FileManager::createPhysicalFolder(*dir_path);
 		default:
 			CORE_PANIC("Unsupported directory type for directory creation");
 		}
-		return dir_path;
 	}
 
-	std::vector<FilePath> File::listFilePaths() const {
-		if (!isDirectory())
-			CORE_PANIC("Cannot list contents: not a directory (" + path.native() + ")");
+	std::expected<std::vector<FilePath>, std::string> File::listFilePaths() const {
+		if (!isDirectory()) return std::unexpected(path.string() + ": not a directory");
 
 		std::vector<FilePath> result;
-
 		if (type == FileType::Virtual) {
-			// Virtual filesystem
-			auto entries = vfsOf(path)->listDirectory(path);
-			for (const auto& entry: entries) result.emplace_back(path / entry);
-		} else {
-			for (const auto& entry: std::filesystem::directory_iterator(path.getPath()))
-				result.emplace_back(entry.path());
+			for (const auto& entry: vfsOf(path)->listDirectory(path))
+				result.emplace_back(path / entry);
+			return result;
 		}
 
+		std::error_code ec;
+		for (std::filesystem::directory_iterator it(path.getPath(), ec), end; !ec && it != end;
+		     it.increment(ec))
+			result.emplace_back(it->path());
+		if (ec) return std::unexpected(path.string() + ": " + ec.message());
 		return result;
 	}
 }

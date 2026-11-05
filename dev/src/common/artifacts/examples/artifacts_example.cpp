@@ -19,8 +19,8 @@ struct SimpleStruct {
 };
 
 int main() {
-	fs::File              fs_root_file = fs::FileManager::createRandomTempDirectory();
-	std::filesystem::path root         = fs_root_file.getFilePath().getPath();
+	fs::File fs_root_file      = base::valueOrPanic(fs::FileManager::createRandomTempDirectory());
+	std::filesystem::path root = fs_root_file.getFilePath().getPath();
 
 	const auto b0 = base::StrID("b0");
 	const auto b1 = base::StrID("b1");

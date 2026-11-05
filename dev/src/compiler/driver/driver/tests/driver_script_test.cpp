@@ -30,7 +30,8 @@ class DriverScriptTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DriverScriptTest
 
-	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath artifacts_path
+		= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {

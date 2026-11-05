@@ -309,7 +309,9 @@ namespace coercion_testing {
 			assertTrue(condition, what);
 		}
 
-		~CoercionTestSuite() override { fs::FileManager::deleteFolder(modules_root, true); }
+		~CoercionTestSuite() override {
+			std::ignore = fs::FileManager::deleteFolder(modules_root, true);
+		}
 
 	protected:
 		/**
@@ -523,11 +525,11 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		) {
 			using namespace compiler::helios::test_utils;
 
-			const std::string               source = base::strConcat(PRELUDE, "\n", function);
-			const std::string               name   = base::strConcat("coercion_case_", next_case++);
-			const fs::File                  directory = modules_root.createSubDirectory(name);
+			const std::string source    = base::strConcat(PRELUDE, "\n", function);
+			const std::string name      = base::strConcat("coercion_case_", next_case++);
+			const fs::File    directory = base::valueOrPanic(modules_root.createSubDirectory(name));
 			[[maybe_unused]] const fs::File file
-				= directory.createSubFile(source, base::strConcat(name, ".dk"));
+				= base::valueOrPanic(directory.createSubFile(source, base::strConcat(name, ".dk")));
 
 			try {
 				auto [module, root_scope] = getModule(directory);

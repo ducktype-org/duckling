@@ -19,7 +19,13 @@
 #include <filesystem/file.hpp>
 
 namespace {
-
+	/**
+	 * @brief Reads a source file the compiler is already working on. One that cannot be read
+	 * any more - removed or made unreadable mid-build - leaves no way to carry on.
+	 */
+	base::SharedView readSource(const fs::File& file) {
+		return base::valueOrPanic(file.getContent(), "reading a source file");
+	}
 
 	/**
 	 * @brief A value pair storing the information about a file.
@@ -136,13 +142,13 @@ namespace compiler::frontend {
 
 		path_registry.maybePutAndUpdate(
 			abs_path,
-			PathState{ .instances = {}, .content = file.getContent() },
+			PathState{ .instances = {}, .content = readSource(file) },
 			[&](Ref<PathState> state) {
 				if (!state->content.has_value()) {
-					state->content = file.getContent();
+					state->content = readSource(file);
 				} else {
 					CORE_ASSERT(
-						state->content->view() == file.getContent().view(),
+						state->content->view() == readSource(file).view(),
 						base::strConcat(
 							"SourceFile with path '",
 							abs_path.string(),

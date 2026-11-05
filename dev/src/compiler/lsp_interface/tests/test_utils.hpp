@@ -91,7 +91,8 @@ namespace duck_ls_test {
 		}
 
 		VfsWorkspace& remove(std::string_view relative) {
-			fs::FileManager::deleteFile(fs::File(root_path.join(std::string(relative))));
+			std::ignore
+				= fs::FileManager::deleteFile(fs::File(root_path.join(std::string(relative))));
 			return *this;
 		}
 

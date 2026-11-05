@@ -35,7 +35,9 @@ namespace tokenizer {
 
 	TokenSource::TokenSource(const fs::File& path):
 		  location(makeBox<dia::FileLocation>(Ref<TokenSource>(this), path)) {
-		content.emplace(path.getContent());
+		// A source the compiler is already working on that cannot be read any more leaves no way
+		// to carry on.
+		content.emplace(base::valueOrPanic(path.getContent(), "reading a source file"));
 	}
 
 	TokenSource::TokenSource(dia::StablePosition parent, const std::string_view contents):

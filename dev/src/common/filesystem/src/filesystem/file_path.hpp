@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <timer/timer.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
@@ -13,9 +15,11 @@
 
 #include <filesystem/vfs.hpp>
 
+#include <expected>
 #include <filesystem>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 /**
  * @brief Represents the type of a file path.
@@ -155,17 +159,32 @@ namespace fs {
 		[[nodiscard]] std::string stem() const { return path.stem().string(); }
 
 		/**
-		 * @brief Gets the canonical path.
-		 * @return FilePath representing the canonical path.
-		 * @throws std::filesystem::filesystem_error if the path does not exist or cannot be resolved.
+		 * @brief Gets the canonical path: absolute, with every symlink, `.` and `..` resolved.
+		 * @note The path must not be virtual.
+		 * @return The canonical path, or a message describing why it could not be resolved (e.g.
+		 * the path does not exist).
 		 */
-		[[nodiscard]] FilePath canonical() const;
+		[[nodiscard]] std::expected<FilePath, std::string> canonical() const;
 
 		/**
-		 * @brief Checks if the path is a symbolic link.
-		 * @return True if the path is a symbolic link, false otherwise.
+		 * @brief Checks if the path is a symbolic link. The link itself is checked, not its
+		 * target.
+		 * @return True if the path is a symbolic link; false otherwise, also when it cannot be
+		 * checked.
 		 */
 		[[nodiscard]] bool isSymlink() const;
+
+		/**
+		 * @brief Checks whether `relative`, joined to this path, goes through a symbolic link at
+		 * any of its parts - not only the last one.
+		 *
+		 * The system follows a symlink in the middle of a path silently, so `link/file` with
+		 * `link` pointing elsewhere names a file somewhere else entirely, although the file itself
+		 * is not a link. Parts that do not exist are not links.
+		 *
+		 * @param relative A relative path below this one.
+		 */
+		[[nodiscard]] bool passesThroughSymlink(const FilePath& relative) const;
 
 		/**
 		 * @brief Safely joins this path with another FilePath.
@@ -268,17 +287,44 @@ namespace fs {
 		[[nodiscard]] bool empty() const noexcept { return path.empty(); }
 
 		/**
+		 * @brief Checks if the path has a root (`/`, or e.g. `C:` on Windows). Unlike
+		 * `isAbsolute`, this is purely about how the path is written.
+		 */
+		[[nodiscard]] bool hasRoot() const { return path.has_root_path(); }
+
+		/**
+		 * @brief The parts of the path as written, e.g. `{"a", "..", "b"}` for `a/../b`. A path
+		 * ending with a separator has an empty last part.
+		 */
+		[[nodiscard]] std::vector<std::string> parts() const;
+
+		/**
 		 * @brief Checks if the path exists.
-		 * @return True if the path exists, false otherwise.
+		 * @return True if the path exists; false otherwise, also when it cannot be checked.
 		 */
 		[[nodiscard]] bool exists() const;
 
 		/**
 		 * @brief Checks if the path points to an existing regular file.
 		 * @return True if the path is a regular file, false otherwise (a directory, a special
-		 * file, or a path that does not exist).
+		 * file, a path that does not exist, or one that cannot be checked).
 		 */
 		[[nodiscard]] bool isRegularFile() const;
+
+		/**
+		 * @brief Checks if the path points to an existing directory.
+		 * @return True if the path is a directory; false otherwise, also when it cannot be
+		 * checked.
+		 */
+		[[nodiscard]] bool isDirectory() const;
+
+		/**
+		 * @brief How long ago the file at this path was last modified.
+		 * @note The path must not be virtual.
+		 * @return The time since the last modification, or a message describing why it could not
+		 * be read (e.g. the file does not exist).
+		 */
+		[[nodiscard]] std::expected<timer::Duration, std::string> timeSinceModified() const;
 
 		[[nodiscard]] std::string uri() const;
 

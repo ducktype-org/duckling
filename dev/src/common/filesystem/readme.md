@@ -57,6 +57,22 @@ if (path.isVirtual()) {
 }
 ```
 
+## Failures Are Results
+
+Every operation that touches the disk can fail for reasons outside the program - a missing file,
+no permission, a full disk. Such an operation reports the failure in its result
+(`std::expected<T, std::string>`, with the reason) instead of throwing or panicking, and the
+caller decides what it means. Queries such as `exists()` or `isDirectory()` just answer `false`
+when they cannot tell. Where a failure really is a broken invariant - e.g. scratch space a test
+needs - `base::valueOrPanic` gives up on it, visibly at the call site:
+
+```cpp
+auto dir = base::valueOrPanic(fs::FileManager::createRandomTempDirectory(), "test scratch space");
+```
+
+Only misuse, such as a virtual path where a physical one is required, panics on its own. Virtual
+files live in memory, so creating them cannot fail for environmental reasons.
+
 ## Virtual Filesystem Usage
 
 The Virtual Filesystem (VFS) is particularly useful for scenarios where you need a legitimate filesystem that can handle queries and modifications without touching the actual disk:
@@ -68,13 +84,13 @@ The Virtual Filesystem (VFS) is particularly useful for scenarios where you need
 auto virtual_root = fs::FileManager::createRandomVirtualDirectory();
 
 // Add a file at a specific path within the virtual filesystem
-auto config_file = virtual_root.createSubFile(
-    "debug=true\nversion=1.0", 
+auto config_file = base::valueOrPanic(virtual_root.createSubFile(
+    "debug=true\nversion=1.0",
     "config.txt"
-);
+));
 
 // Read the file content at any time
-auto content = config_file.getContent();
+auto content = base::valueOrPanic(config_file.getContent());
 std::cout << "Config: " << content.view().stringView() << std::endl;
 
 // Modify the file content at any time; a failed write is reported, not thrown
@@ -82,7 +98,7 @@ if (auto written = config_file.writeToFile("debug=false\nversion=1.1"); !written
     std::cerr << "Write failed: " << written.error() << std::endl;
 
 // Filesystem structure
-auto files = virtual_root.listFilePaths();
+auto files = base::valueOrPanic(virtual_root.listFilePaths());
 for (const auto& file : files) {
     std::cout << "Found file: " << file.name() << std::endl;
 }
@@ -123,7 +139,7 @@ These conversions are particularly useful when you need to map between real file
 
 ```cpp
 // Start with a physical file; creation can fail (permissions, a full disk), so it returns
-// `std::expected` - use `createPhysicalFileUnsafe` only where a failure is a broken invariant
+// `std::expected` with the reason
 auto created = fs::FileManager::createPhysicalFile("./test.txt", "original content");
 if (!created) {
     std::cerr << "Cannot create the file: " << created.error() << std::endl;
@@ -133,7 +149,11 @@ auto physical_file = *created;
 
 // Copy physical file content to virtual filesystem
 auto physical_content = physical_file.getContent();
-auto content_string = physical_content.view().stringView();
+if (!physical_content) {
+    std::cerr << "Cannot read the file: " << physical_content.error() << std::endl;
+    return;
+}
+auto content_string = physical_content->view().stringView();
 auto virtual_file = fs::FileManager::createVirtualFile(physical_file.getPath(.toVirtualPath()), content_string);
 
 // Now both files exist independently - physical and virtual
@@ -158,19 +178,19 @@ This separation ensures that:
 auto vfs_root = fs::FileManager::createRandomVirtualDirectory();
 
 // Create nested directory structure
-auto src_dir = vfs_root.createSubDirectory("src");
-auto main_file = src_dir.createSubFile(
-    "#include <iostream>\nint main() { return 0; }", 
+auto src_dir = base::valueOrPanic(vfs_root.createSubDirectory("src"));
+auto main_file = base::valueOrPanic(src_dir.createSubFile(
+    "#include <iostream>\nint main() { return 0; }",
     "main.cpp"
-);
+));
 
 // Query and modify
-auto files = src_dir.listFilePaths();
+auto files = base::valueOrPanic(src_dir.listFilePaths());
 if (auto written = main_file.writeToFile("#include <iostream>\n\nint main() {\n    std::cout << \"Hello!\";\n    return 0;\n}"); !written)
     std::cerr << "Write failed: " << written.error() << std::endl;
 
 // Access content
-auto updated_content = main_file.getContent();
+auto updated_content = base::valueOrPanic(main_file.getContent());
 std::cout << "Updated source:\n" << updated_content.view().stringView() << std::endl;
 ```
 

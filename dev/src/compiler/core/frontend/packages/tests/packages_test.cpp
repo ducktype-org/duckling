@@ -256,7 +256,7 @@ private:
 			ASSERT_NO_VALUE(missing);
 		});
 
-		fs::FileManager::deleteFile(main_file);
+		std::ignore = fs::FileManager::deleteFile(main_file);
 	}
 
 	void filterUndeclaredDependenciesDropsMissing() {
@@ -316,7 +316,7 @@ private:
 		ASSERT_EQUAL(deps[0].illegalAccess().getAlias().str(), std::string("dep"));
 		ASSERT_EQUAL(reporter.errors, 0);
 
-		fs::FileManager::deleteFile(main_file);
+		std::ignore = fs::FileManager::deleteFile(main_file);
 	}
 
 	void createPackageInfoMissingMainFails() {
@@ -335,7 +335,7 @@ private:
 		ASSERT_NO_VALUE(pkg_info);
 		ASSERT_TRUE(reporter.errors > 0);
 
-		fs::FileManager::deleteFolder(empty_dir, true);
+		std::ignore = fs::FileManager::deleteFolder(empty_dir, true);
 	}
 
 public:

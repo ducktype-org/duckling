@@ -8,7 +8,9 @@
 
 #include "file_path.hpp"
 
+#include <base/collections/optional.hpp>
 #include <base/misc/shared_view.hpp>
+#include <base/types/expected_utils.hpp>
 
 #include <expected>
 #include <filesystem>
@@ -110,7 +112,20 @@ namespace fs {
 		File(File&&)                 = default;
 		~File()                      = default;
 
+		/**
+		 * @brief Makes a `File` for an existing file or directory.
+		 * @note Panics if nothing exists at `path`; use `open` where it may be missing.
+		 */
 		File(const FilePath& path);
+
+		/**
+		 * @brief Makes a `File` for an existing file or directory, reporting failure instead of
+		 * panicking.
+		 * @return The file, or a message describing why it could not be opened (e.g. it does
+		 * not exist).
+		 */
+		[[nodiscard]]
+		static std::expected<File, std::string> open(const FilePath& path);
 
 		bool operator==(const File& oth) const {
 			bool are_equal = path == oth.path;
@@ -123,10 +138,12 @@ namespace fs {
 			return are_equal;
 		}
 
+		/**
+		 * @brief Reads the whole file.
+		 * @return The content, or a message describing why it could not be read.
+		 */
 		[[nodiscard]]
-		base::SharedView getContent() const;
-		[[nodiscard]]
-		std::expected<base::SharedView, std::string> getContentSafe() const;
+		std::expected<base::SharedView, std::string> getContent() const;
 
 		[[nodiscard]] FilePath getFilePath() const { return path; }
 
@@ -157,10 +174,8 @@ namespace fs {
 		/**
 		 * @brief Writes content to the file, reporting failure instead of panicking.
 		 *
-		 * The default, for the same reason as `FileManager::createPhysicalFile`: a write that
-		 * fails usually says something about the machine - no space left, a read-only mount -
-		 * and that is for the user to hear, not for the compiler to abort on. Use
-		 * `writeToFileUnsafe` only where a failure would mean a broken invariant.
+		 * A write that fails usually says something about the machine - no space left, a
+		 * read-only mount - and that is for the user to hear, not for the compiler to abort on.
 		 *
 		 * This method works for both file types (physical and virtual).
 		 *
@@ -174,21 +189,15 @@ namespace fs {
 		) const;
 
 		/**
-		 * @brief `writeToFile` that panics instead of reporting failure.
-		 *
-		 * See `FileManager::createPhysicalFileUnsafe` for when opting in is justified.
-		 */
-		void writeToFileUnsafe(std::string_view new_content, bool append = false) const;
-
-		/**
 		 * @brief Returns the contents of a directory as a vector of FilePath objects.
 		 *
 		 * This method works for both physical and virtual directories.
 		 *
-		 * @return A vector of FilePath objects representing the contents of the directory.
+		 * @return The paths of the directory's entries, or a message describing why they could not
+		 * be listed (e.g. this is not a directory).
 		 */
 		[[nodiscard]]
-		std::vector<FilePath> listFilePaths() const;
+		std::expected<std::vector<FilePath>, std::string> listFilePaths() const;
 
 		/**
 		 * @brief Creates a subdirectory inside this directory.
@@ -196,10 +205,11 @@ namespace fs {
 		 * This method works for all file types (physical, virtual, temporary).
 		 *
 		 * @param custom_name A custom name. If left default then creates a new random name.
-		 * @return A File representing the newly created subdirectory.
+		 * @return The new subdirectory, or a message describing why it could not be created (e.g.
+		 * the name is taken).
 		 */
 		[[nodiscard]]
-		File createSubDirectory(std::string_view custom_name = "") const;
+		std::expected<File, std::string> createSubDirectory(std::string_view custom_name = "") const;
 
 		/**
 		 * @brief Creates a file inside this directory.
@@ -208,11 +218,13 @@ namespace fs {
 		 *
 		 * @param new_file_content Content of the file to be created
 		 * @param custom_name A custom name. If left default then creates a new random name.
-		 * @return A File representing the newly created file.
+		 * @return The new file, or a message describing why it could not be created (e.g. the
+		 * name is taken).
 		 */
 		[[nodiscard]]
-		File createSubFile(std::string_view new_file_content, std::string_view custom_name = "")
-			const;
+		std::expected<File, std::string> createSubFile(
+			std::string_view new_file_content, std::string_view custom_name = ""
+		) const;
 
 		/**
 		 * @brief Checks if this file or directory exists.
@@ -236,6 +248,12 @@ namespace fs {
 	 *
 	 * This class contains helper and factory methods for creating, managing, and generating paths
 	 * for files and directories.
+	 *
+	 * Every operation that touches the disk reports failure - a missing file, no permission, a
+	 * full disk - in its result instead of throwing or panicking; the caller decides what a
+	 * failure means. Where it really is a broken invariant, `base::valueOrPanic` gives up on it
+	 * visibly. Only misuse - e.g. a virtual path where a physical one is required - panics.
+	 * Virtual files live in memory, so creating them cannot fail for such reasons.
 	 */
 	class FileManager final {
 	public:
@@ -269,9 +287,10 @@ namespace fs {
 		 * The system temp directory is part of the physical filesystem, so a file placed there is
 		 * created with the physical factories like any other. Only the *random naming* is specific
 		 * to temporary files, which is all this helper and `createRandomTempFile` add.
-		 * @return A File with the new temporary directory.
+		 * @return The new temporary directory, or a message describing why it could not be made.
 		 */
-		static File createRandomTempDirectory();
+		[[nodiscard]]
+		static std::expected<File, std::string> createRandomTempDirectory();
 
 		/**
 		 * Creates a virtual directory inside the root folder of virtual file system. The directory
@@ -299,15 +318,16 @@ namespace fs {
 		 * Like `createRandomTempDirectory`, it only picks a random name and then creates a
 		 * physical file there.
 		 * @param content The content to write to the file.
-		 * @return The created File object.
+		 * @return The new temporary file, or a message describing why it could not be made.
 		 */
-		static File createRandomTempFile(std::string_view content = "");
+		[[nodiscard]]
+		static std::expected<File, std::string> createRandomTempFile(std::string_view content = "");
 
 		/**
 		 * @brief Creates a physical file, reporting failure instead of panicking.
 		 *
-		 * This is the default because creating a file can fail for reasons that have nothing to
-		 * do with the caller being wrong: no write permission, a read-only mount, a full disk.
+		 * Creating a file can fail for reasons that have nothing to do with the caller being
+		 * wrong: no write permission, a read-only mount, a full disk.
 		 * The path must be absolute and on disk; a path under the system temp directory counts
 		 * (physical and temporary are the same filesystem), a virtual one does not.
 		 * @param path The absolute on-disk path to the file.
@@ -315,42 +335,25 @@ namespace fs {
 		 * @param allow_overwrite If true, overwrites the file if it exists.
 		 * @return The created File, or a message describing why it could not be created.
 		 */
+		[[nodiscard]]
 		static std::expected<File, std::string> createPhysicalFile(
-			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
-		);
-
-		/**
-		 * @brief `createPhysicalFile` that panics instead of reporting failure.
-		 *
-		 * Opt in to this only when a failure would mean the program's own assumptions are
-		 * broken, so that there is nothing useful to tell the user and no way to carry on -
-		 * creating the scratch space a test needs, for instance. Anywhere the environment can
-		 * plausibly say no, use `createPhysicalFile` and report the reason it gave.
-		 */
-		static File createPhysicalFileUnsafe(
 			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
 		);
 
 		/**
 		 * @brief Creates a physical folder, reporting failure instead of panicking.
 		 *
-		 * The default, for the same reason as `createPhysicalFile`: a folder that cannot be
-		 * created is usually a fact about the machine, not a bug in the caller.
+		 * A folder that cannot be created is usually a fact about the machine, not a bug in the
+		 * caller.
 		 *
 		 * @param path The absolute on-disk path to the folder.
 		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File, or a message describing why it could not be created.
 		 */
+		[[nodiscard]]
 		static std::expected<File, std::string> createPhysicalFolder(
 			const FilePath& path, bool allow_overwrite = false
 		);
-
-		/**
-		 * @brief `createPhysicalFolder` that panics instead of reporting failure.
-		 *
-		 * See `createPhysicalFileUnsafe` for when opting in is justified.
-		 */
-		static File createPhysicalFolderUnsafe(const FilePath& path, bool allow_overwrite = false);
 
 		/**
 		 * @brief Creates a virtual file in the virtual filesystem's root directory or at the given
@@ -376,17 +379,31 @@ namespace fs {
 		/**
 		 * @brief Deletes a file specified by a File object, according to its type.
 		 * @param file The File object to delete (const reference).
-		 * @return True if the file was deleted, false otherwise.
+		 * @return True if the file was deleted, false if it was already gone, or a message
+		 * describing why it could not be deleted.
 		 */
-		static bool deleteFile(const File& file);
+		[[nodiscard]]
+		static std::expected<bool, std::string> deleteFile(const File& file);
 
 		/**
 		 * @brief Deletes a folder specified by a File object, according to its type.
 		 * @param folder The File object representing the folder (const reference).
 		 * @param force If true, deletes recursively. If false, only deletes empty directories.
-		 * @return True if the folder was deleted, false otherwise.
+		 * @return True if the folder was deleted, false if it was already gone, or a message
+		 * describing why it could not be deleted (e.g. it is not empty).
 		 */
-		static bool deleteFolder(const File& folder, bool force = false);
+		[[nodiscard]]
+		static std::expected<bool, std::string> deleteFolder(const File& folder, bool force = false);
+
+		/**
+		 * @brief If `path` is a temporary file `produceFileAtomically` makes - named
+		 * `<target>.<random>.tmp` - returns the path of its `<target>`, next to it.
+		 *
+		 * The random part is matched exactly (`RANDOM_NAME_LENGTH` letters and digits), so a
+		 * user's `app.backup.tmp` next to an `app` is not taken for one.
+		 */
+		[[nodiscard]]
+		static base::Optional<FilePath> temporaryFileTarget(const FilePath& path);
 
 		/**
 		 * @brief Creates the file at a given path, e.g. by writing it or by running a tool that
@@ -412,6 +429,7 @@ namespace fs {
 		 * @return Nothing on success. Otherwise `produce`'s own failure, or a message describing
 		 * why the produced file could not be put in place.
 		 */
+		[[nodiscard]]
 		static std::expected<void, std::string> produceFileAtomically(
 			const FilePath& path, const FileProducer& produce
 		);
@@ -424,6 +442,7 @@ namespace fs {
 		 * @param write_content Writes the file's content to the given stream.
 		 * @return Nothing on success, or a message describing why the write failed.
 		 */
+		[[nodiscard]]
 		static std::expected<void, std::string> writeFileAtomically(
 			const FilePath& path, const std::function<void(std::ostream&)>& write_content
 		);
@@ -439,6 +458,7 @@ namespace fs {
 		 * @return True if the entry was removed, false if there was nothing to remove, or a
 		 * message describing why it could not be removed (e.g. a folder that is not empty).
 		 */
+		[[nodiscard]]
 		static std::expected<bool, std::string> removeEntry(const FilePath& path);
 
 		/**
@@ -452,6 +472,7 @@ namespace fs {
 		 * @param path The file to touch; it must be on disk (absolute or relative), not virtual.
 		 * @return Nothing on success, or a message describing why the time could not be set.
 		 */
+		[[nodiscard]]
 		static std::expected<void, std::string> touch(const FilePath& path);
 	};
 }

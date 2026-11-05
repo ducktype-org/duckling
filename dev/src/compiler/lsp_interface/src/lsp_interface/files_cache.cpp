@@ -215,8 +215,13 @@ namespace duck_ls {
 			return base::BAD;
 		}
 
-		auto        file = fs::File(cache_path);
-		std::string text{ file.getContent().view().stringView() };
+		auto       file    = fs::File(cache_path);
+		const auto content = file.getContent();
+		if (!content.has_value()) {
+			std::cerr << "duck_ls: cannot read the buffer " << content.error() << "\n";
+			return base::BAD;
+		}
+		std::string text{ content->view().stringView() };
 
 		for (const auto& change: changes)
 			if (!applyChange(text, change)) {
@@ -226,7 +231,10 @@ namespace duck_ls {
 				return base::BAD;
 			}
 
-		file.writeToFileUnsafe(text);
+		if (auto written = file.writeToFile(text); !written.has_value()) {
+			std::cerr << "duck_ls: cannot write the buffer " << written.error() << "\n";
+			return base::BAD;
+		}
 		document.value()->version     = version;
 		document.value()->out_of_sync = false;
 		return base::OK;
@@ -236,7 +244,12 @@ namespace duck_ls {
 		auto cache_path = cachePathFor(uri);
 		if (cache_path.empty()) return base::BAD;
 
-		if (cache_path.value().exists()) fs::FileManager::deleteFile(fs::File(cache_path.value()));
+		if (cache_path.value().exists()) {
+			// A buffer left behind is only memory; the document is closed either way.
+			if (auto deleted = fs::FileManager::deleteFile(fs::File(cache_path.value()));
+			    !deleted.has_value())
+				std::cerr << "duck_ls: cannot delete the buffer " << deleted.error() << "\n";
+		}
 		return documents.erase(cache_path.value()) > 0 ? base::OK : base::BAD;
 	}
 
