@@ -14,8 +14,14 @@ The dump categories are listed in compilation order:
 | `mir`    | `.mir`    | Either |
 | `lir`    | `.lir`    | Either |
 | `llvm`   | `.ll`     | LLVM |
+| `llvm-opt` | `.opt.ll` | LLVM |
 | `asm`    | `.s`      | LLVM |
 | `dbc`    | `.dbc`    | DVM |
+
+`llvm` contains the raw LLVM IR before LLVM optimization. `llvm-opt` contains IR after applying
+the selected `-O` level and before code generation. They can be requested together, for example
+`--dump-ir asm,llvm,llvm-opt`, without changing the assembly's optimization level. At `-O 0`,
+the optimized-stage dump is still available, with LLVM optimization disabled.
 
 The same artifact location and dump options apply to these commands:
 

@@ -123,9 +123,10 @@ namespace compiler::backend_llvm {
 	 * @brief Compiles the module to an object file or assembly file.
 	 */
 	void compileModuleToObject(
-		const Ref<ModuleImpl>        module_impl,
-		const std::filesystem::path& output_file,
-		const CompilationOutputType  output_type
+		const Ref<ModuleImpl>                        module_impl,
+		const std::filesystem::path&                 output_file,
+		const CompilationOutputType                  output_type,
+		const base::Optional<std::filesystem::path>& llvm_opt_output
 	) {
 		const auto m              = module_impl->module.refMut();
 		const auto target_machine = module_impl->getTargetMachine().toOpt().value();
@@ -136,6 +137,8 @@ namespace compiler::backend_llvm {
 			target_machine,
 			global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
 		);
+
+		if (llvm_opt_output.has_value()) module_impl->dumpLLVMToFile(llvm_opt_output.value());
 
 		std::error_code error_code;
 

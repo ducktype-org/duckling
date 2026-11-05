@@ -16,6 +16,8 @@ LLVM_INCLUDE_END()
 
 #include <base/pointers/box.hpp>
 
+#include <filesystem>
+
 namespace compiler::backend_llvm {
 
 	/**
@@ -29,6 +31,8 @@ namespace compiler::backend_llvm {
 		explicit ModuleImpl(Box<llvm::Module> module);
 
 		~ModuleImpl() = default;
+
+		void dumpLLVMToFile(const std::filesystem::path& output_file) const;
 
 		[[nodiscard]]
 		MRef<llvm::TargetMachine> getTargetMachine() const {

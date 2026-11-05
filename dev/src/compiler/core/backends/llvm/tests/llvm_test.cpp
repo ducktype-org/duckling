@@ -14,6 +14,7 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/module_flags/module_flags.hpp>
@@ -40,6 +41,7 @@ public:
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(castsLoweringTest);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
+		TESTER_ADD_TEST(optimizedDumpPreservesObjectCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
@@ -67,7 +69,9 @@ protected:
             {},
             artifacts_path,
             { compiler::driver::options_types::StdLibOptions::DefaultStd{} },
-            { .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
+            { .llvm_backend = global_state::BackendOptions::LLVMBackend{
+                .llvm_optimization_level = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel::O2,
+            } }
         );
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 
@@ -75,6 +79,48 @@ protected:
 	}
 
 private:
+	void optimizedDumpPreservesObjectCodeTest() {
+		using namespace compiler;
+		// With optimization disabled, dumping before or after the passes would look the same.
+		assertTrue(
+			global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
+				== global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel::O2,
+			"This test requires LLVM optimization level O2"
+		);
+
+		const auto directory = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		defer(std::filesystem::remove_all(directory););
+		auto module       = backend_llvm::Module::fromIRCode(R"(
+define i64 @saved(i64 %value) {
+entry:
+  %slot = alloca i64
+  store i64 %value, ptr %slot
+  %loaded = load i64, ptr %slot
+  ret i64 %loaded
+}
+)");
+		auto without_dump = module.clone();
+		auto with_dump    = module.clone();
+		without_dump.compile(
+			directory / "without_dump.o", backend_llvm::CompilationOutputType::Object
+		);
+		with_dump.compile(
+			directory / "with_dump.o",
+			backend_llvm::CompilationOutputType::Object,
+			directory / "saved.opt.ll"
+		);
+
+		const auto optimized = fs::File(directory / "saved.opt.ll").getContent();
+		ASSERT_TRUE(optimized.view().stringView().find("ret i64") != std::string::npos);
+		ASSERT_TRUE(optimized.view().stringView().find("alloca") == std::string::npos);
+		const auto original_object = fs::File(directory / "without_dump.o").getContent();
+		const auto dumped_object   = fs::File(directory / "with_dump.o").getContent();
+		assertTrue(
+			original_object.view().stringView() == dumped_object.view().stringView(),
+			"Optimized LLVM dump changed object code"
+		);
+	}
+
 	compiler::backend_llvm::Module getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
