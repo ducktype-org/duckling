@@ -305,7 +305,7 @@ namespace compiler::helios {
 						    ->valueOrThrow();
 					case defgen::Method::Kind::Equal:
 						return ctx.query<defgen::QueryEqualMethod>(method.owner_type)->valueOrThrow();
-					case defgen::Method::Kind::Less:
+					case defgen::Method::Kind::Lesser:
 						return ctx.query<defgen::QueryLessMethod>(method.owner_type)->valueOrThrow();
 					case defgen::Method::Kind::NotEqual:
 					case defgen::Method::Kind::LessEqual:

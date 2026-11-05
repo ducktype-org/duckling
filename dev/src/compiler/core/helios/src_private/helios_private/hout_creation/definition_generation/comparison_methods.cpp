@@ -262,11 +262,11 @@ namespace compiler::helios::defgen {
 			const Shorthand s{ ctx };
 			for (const auto& field: comparedFields(ctx, aggregate_type)) {
 				body.emplace_back(s.ifStmt(
-					compareFields(ctx, decl, field, Method::Kind::Less, 0, 1),
+					compareFields(ctx, decl, field, Method::Kind::Lesser, 0, 1),
 					{ s.ret(s.litBool(true)) }
 				));
 				body.emplace_back(s.ifStmt(
-					compareFields(ctx, decl, field, Method::Kind::Less, 1, 0),
+					compareFields(ctx, decl, field, Method::Kind::Lesser, 1, 0),
 					{ s.ret(s.litBool(false)) }
 				));
 			}
@@ -275,7 +275,7 @@ namespace compiler::helios::defgen {
 
 		static PResult provide(Context& ctx, const QKey owner_type) {
 			const auto less_sym
-				= generatedComparisonSymForType(ctx, owner_type, Method::Kind::Less);
+				= generatedComparisonSymForType(ctx, owner_type, Method::Kind::Lesser);
 			const auto& decl = ctx.query<QueryDeclOfFun>(less_sym)->valueOrThrow();
 
 			std::vector<Box<code::Stmt>> body{};
@@ -298,7 +298,7 @@ namespace compiler::helios::defgen {
 				break;
 			}
 			default: {
-				comparisonNotYetImplemented(ctx, Method::Kind::Less, owner_type);
+				comparisonNotYetImplemented(ctx, Method::Kind::Lesser, owner_type);
 			}
 			}
 
@@ -325,11 +325,11 @@ namespace compiler::helios::defgen {
 				{ Method::Kind::NotEqual,
 				  { .base_kind = Method::Kind::Equal, .swap_operands = false, .negate = true } },
 				{ Method::Kind::Greater,
-				  { .base_kind = Method::Kind::Less, .swap_operands = true, .negate = false } },
+				  { .base_kind = Method::Kind::Lesser, .swap_operands = true, .negate = false } },
 				{ Method::Kind::LessEqual,
-				  { .base_kind = Method::Kind::Less, .swap_operands = true, .negate = true } },
+				  { .base_kind = Method::Kind::Lesser, .swap_operands = true, .negate = true } },
 				{ Method::Kind::GreaterEqual,
-				  { .base_kind = Method::Kind::Less, .swap_operands = false, .negate = true } },
+				  { .base_kind = Method::Kind::Lesser, .swap_operands = false, .negate = true } },
 			};
 
 			const auto& method     = std::get<Method>(getSymRef(comparison_sym)->other);

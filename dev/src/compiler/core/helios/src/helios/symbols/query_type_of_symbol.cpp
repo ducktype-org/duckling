@@ -360,7 +360,7 @@ namespace compiler::helios {
 								                        tsh::Mutability::Immutable } };
 						case defgen::Method::Kind::Equal:
 						case defgen::Method::Kind::NotEqual:
-						case defgen::Method::Kind::Less:
+						case defgen::Method::Kind::Lesser:
 						case defgen::Method::Kind::LessEqual:
 						case defgen::Method::Kind::Greater:
 						case defgen::Method::Kind::GreaterEqual:

@@ -677,7 +677,7 @@ namespace compiler::helios::mangler {
 								return "Heq" + func(ctx, symbol_id) + "E";
 							case defgen::Method::Kind::NotEqual:
 								return "Hne" + func(ctx, symbol_id) + "E";
-							case defgen::Method::Kind::Less:
+							case defgen::Method::Kind::Lesser:
 								return "Hlt" + func(ctx, symbol_id) + "E";
 							case defgen::Method::Kind::LessEqual:
 								return "Hle" + func(ctx, symbol_id) + "E";

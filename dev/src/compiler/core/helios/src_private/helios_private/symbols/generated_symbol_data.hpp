@@ -70,7 +70,7 @@ namespace compiler::helios::defgen {
 			ToString,
 			Equal,
 			NotEqual,
-			Less,
+			Lesser,
 			LessEqual,
 			Greater,
 			GreaterEqual,
@@ -91,7 +91,7 @@ namespace compiler::helios::defgen {
 		switch (kind) {
 		case Method::Kind::Equal:
 		case Method::Kind::NotEqual:
-		case Method::Kind::Less:
+		case Method::Kind::Lesser:
 		case Method::Kind::LessEqual:
 		case Method::Kind::Greater:
 		case Method::Kind::GreaterEqual:

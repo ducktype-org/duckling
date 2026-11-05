@@ -3764,10 +3764,10 @@ private:
 		// `<` on a tuple decides on the first field in which the operands differ, using `<` of
 		// the fields only: two `if`s per field, then `return false`.
 		const SymID tuple_less = operator_called_from(getChain("tupleLess", root_scope).back());
-		expect_generated(tuple_less, Kind::Less, OwnerKind::Tuple);
+		expect_generated(tuple_less, Kind::Lesser, OwnerKind::Tuple);
 		ASSERT_EQUAL(5, body_of(tuple_less).size());
-		expect_generated(called(condition_at(tuple_less, 0)), Kind::Less, OwnerKind::Integral);
-		expect_generated(called(condition_at(tuple_less, 1)), Kind::Less, OwnerKind::Integral);
+		expect_generated(called(condition_at(tuple_less, 0)), Kind::Lesser, OwnerKind::Integral);
+		expect_generated(called(condition_at(tuple_less, 1)), Kind::Lesser, OwnerKind::Integral);
 		expect_returns(tuple_less, false);
 
 		// `==` on a class returns `false` at the first unequal field.
@@ -3784,7 +3784,7 @@ private:
 			= operator_called_from(getChain("classGreaterEqual", root_scope).back());
 		expect_generated(class_greater_equal, Kind::GreaterEqual, OwnerKind::Class);
 		const SymID class_less = called(negated(returned_value(class_greater_equal)));
-		expect_generated(class_less, Kind::Less, OwnerKind::Class);
+		expect_generated(class_less, Kind::Lesser, OwnerKind::Class);
 
 		// A user-defined `==` replaces the generated one, and the generated `!=` calls it.
 		const SymID custom_not_equal
@@ -3800,7 +3800,7 @@ private:
 		const SymID pointer_tuple_less
 			= operator_called_from(getChain("pointerLess", root_scope).back());
 		const SymID pointer_less = called(condition_at(pointer_tuple_less, 0));
-		expect_generated(pointer_less, Kind::Less, OwnerKind::Pointer);
+		expect_generated(pointer_less, Kind::Lesser, OwnerKind::Pointer);
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
 				ctx.query<compiler::helios::QueryCodeOfFun>({ pointer_less })->hasFailed(),

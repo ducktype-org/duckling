@@ -43,7 +43,7 @@ namespace compiler::tsh {
 		ToString,
 		Equal,
 		NotEqual,
-		Less,
+		Lesser,
 		LessEqual,
 		Greater,
 		GreaterEqual,
