@@ -153,6 +153,12 @@ namespace fs {
 		[[nodiscard]] std::string extension() const { return path.extension().string(); }
 
 		/**
+		 * @brief The last part of the path as written - empty for a path ending with a
+		 * separator. Unlike `name`, nothing is resolved against the working directory.
+		 */
+		[[nodiscard]] std::string fileName() const { return path.filename().string(); }
+
+		/**
 		 * @brief Gets the stem (filename without extension).
 		 * @return String representing the stem.
 		 */

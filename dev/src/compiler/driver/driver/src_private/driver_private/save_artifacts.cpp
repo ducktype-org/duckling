@@ -16,7 +16,6 @@
 #include <query_framework/external/api.hpp>
 #include <string_id/string_id.hpp>
 
-#include <chrono>
 #include <vector>
 
 namespace compiler::driver {
@@ -28,7 +27,7 @@ namespace compiler::driver {
 		 * Far longer than any build takes, so that no build - this one or another sharing the
 		 * folder - loses a file it is still using.
 		 */
-		constexpr std::chrono::days UNUSED_QUERY_ARTIFACT_MAX_AGE{ 7 };
+		constexpr timer::Duration UNUSED_QUERY_ARTIFACT_MAX_AGE = timer::Duration::fromDays(7);
 
 		/**
 		 * @brief How old a temporary file left by a killed write must be to be removed.
@@ -37,7 +36,7 @@ namespace compiler::driver {
 		 * sooner than unused artifacts - but no single write takes a day, so a write still in
 		 * progress in another build sharing the folder keeps its file.
 		 */
-		constexpr std::chrono::days STALE_TEMPORARY_FILE_MAX_AGE{ 1 };
+		constexpr timer::Duration STALE_TEMPORARY_FILE_MAX_AGE = timer::Duration::fromDays(1);
 
 		/**
 		 * @brief Removes the query artifacts that no build has written or reused for

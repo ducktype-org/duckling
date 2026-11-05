@@ -7,6 +7,7 @@
 #pragma once
 
 #include <concurrent/base/locks/atomic_flag_spinlock.hpp>
+#include <timer/timer.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
@@ -16,9 +17,7 @@
 #include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
 
-#include <chrono>
 #include <cstring>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_set>
@@ -165,7 +164,7 @@ namespace artifacts {
 		 * compiler's build id, the artifacts the cache owns there are removed before loading
 		 * (controlled by the compile-time flag `artifacts::CHECK_BUILD_ID`).
 		 */
-		ArtifactCollection(std::filesystem::path root);
+		ArtifactCollection(fs::FilePath root);
 
 		ArtifactCollection(const ArtifactCollection&)            = delete;
 		ArtifactCollection(ArtifactCollection&&)                 = delete;
@@ -199,7 +198,7 @@ namespace artifacts {
 		 * explicit request such as `duckc clean`; a build using `root` at the same time loses
 		 * its cache and can fail.
 		 */
-		static RemoveCacheResult removeCache(const std::filesystem::path& root);
+		static RemoveCacheResult removeCache(const fs::FilePath& root);
 
 		/**
 		 * @brief The sentence `duckc clean` prints for a `removeCache` result.
@@ -223,7 +222,7 @@ namespace artifacts {
 		 *
 		 * @return How many file artifacts were removed.
 		 */
-		usize removeFileArtifactsUnusedFor(std::chrono::seconds max_age);
+		usize removeFileArtifactsUnusedFor(timer::Duration max_age);
 
 		/**
 		 * @brief Removes the temporary files, older than `max_age`, that killed writes left of
@@ -237,7 +236,7 @@ namespace artifacts {
 		 *
 		 * @return How many temporary files were removed.
 		 */
-		usize removeTemporaryFilesOlderThan(std::chrono::seconds max_age);
+		usize removeTemporaryFilesOlderThan(timer::Duration max_age);
 
 		/////////////////////////// SUB COLLECTIONS /////////////////////////
 
@@ -325,7 +324,7 @@ namespace artifacts {
 		///////////////////////// OBJECT STATE //////////////////////
 
 
-		const std::filesystem::path PATH;
+		const fs::FilePath PATH;
 
 		mutable concurrent::AtomicFlagSpinlock lock;
 
@@ -399,12 +398,13 @@ namespace artifacts {
 		 * @brief Rewrites this collection's `OWNED_LIST_FILE`, atomically, so that it names
 		 * exactly the owned entries that are still on disk.
 		 *
-		 * Entries whose file is gone (e.g. through `deleteFileArtifact`) are dropped, so the list
-		 * does not grow without bound. Entries other processes appended are kept, unless one is
-		 * appended between this rewrite's read and its rename. Its owner restores it on its own
-		 * flush; only if that process is killed first does the entry stay lost. Its file is then
-		 * left on disk unowned: never removed by mistake, and recorded again the next time it is
-		 * created.
+		 * Entries whose file is gone (e.g. through `deleteFileArtifact`, or never written) are
+		 * dropped, so the list does not grow without bound - unless a killed write left the
+		 * file's temporary file, which the entry has to keep owning. Entries other processes
+		 * appended are kept, unless one is appended between this rewrite's read and its rename. Its
+		 * owner restores it on its own flush; only if that process is killed first does the entry
+		 * stay lost. Its file is then left on disk unowned: never removed by mistake, and recorded
+		 * again the next time it is created.
 		 */
 		void writeOwnedList();
 
@@ -421,7 +421,7 @@ namespace artifacts {
 		/**
 		 * @brief Construct a new ArtifactCollection and sets the parent variable.
 		 */
-		ArtifactCollection(std::filesystem::path path, Ref<ArtifactCollection> parent);
+		ArtifactCollection(fs::FilePath path, Ref<ArtifactCollection> parent);
 
 		/**
 		 * @brief If the stored build id at `<PATH>/.build_id` differs from the current
@@ -457,32 +457,13 @@ namespace artifacts {
 		void writeBuildIdFile();
 
 		/**
-		 * @brief Parses blobs from `content` and inserts them to the collection.
-		 *
-		 * A `.artc` can be torn in half by a write that ran out of disk or a build that was
-		 * killed, and its tail then decodes into nonsense. That is a reason to drop the cache,
-		 * never to bring the compiler down, so every field is validated and a malformed file
-		 * is reported.
-		 *
-		 * @note It is a helper method for `loadData()`.
-		 * @return `base::BAD` if `content` is not a whole, well-formed `.artc` body. Each blob
-		 * is added to the collection as soon as it is read, so on failure the blobs that came
-		 * before the bad field are already in it; the caller discards them (see
-		 * `discardUnusableCache`).
-		 */
-		base::OkBad parseBlobsFromBytes(std::stringstream& content);
-
-		/**
 		 * @brief Restores the blobs from the `.artc` file, and attaches the file artifacts and
 		 * sub-collections that `OWNED_LIST_FILE` names and that are still on disk. Nothing else
 		 * in `PATH` is attached.
 		 */
 		void loadData();
 
-		/**
-		 * @brief Return path to a `.artc` file with blob content.
-		 * .artc file is the file which stores blob data.
-		 */
-		fs::FilePath getArtcFile() const;
+		/// Where the entry `name` of this collection is.
+		[[nodiscard]] fs::FilePath entryPath(std::string_view name) const;
 	};
 }

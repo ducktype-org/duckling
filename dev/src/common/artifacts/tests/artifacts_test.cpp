@@ -513,7 +513,7 @@ private:
 		{
 			artifacts::ArtifactCollection collection(root);
 			writeFile(collection.fileArtifactAtOrNew(base::StrID("fresh")).path.getPath(), "x");
-			ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(std::chrono::days(7)) == 2);
+			ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(timer::Duration::fromDays(7)) == 2);
 			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("f0")).empty());
 			collection.flush();
 		}
@@ -552,7 +552,7 @@ private:
 		ASSERT_HAS_VALUE(collection.fileArtifactAtMaybe(base::StrID("f0")));
 		std::ignore = sub->fileArtifactAtMaybe(base::StrID("f1")).value();
 		std::ignore = sub->fileArtifactAtOrNew(base::StrID("f2"));
-		ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(std::chrono::days(7)) == 0);
+		ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(timer::Duration::fromDays(7)) == 0);
 		ASSERT_TRUE(readFile(root / "f0") == "f0");
 		ASSERT_TRUE(readFile(root / "s0" / "f1") == "f1");
 		ASSERT_TRUE(readFile(root / "s0" / "f2") == "f2");
@@ -765,7 +765,7 @@ private:
 			makeUnusedFor(old, std::chrono::days(2));
 
 		artifacts::ArtifactCollection collection(root);
-		ASSERT_TRUE(collection.removeTemporaryFilesOlderThan(std::chrono::days(1)) == 2);
+		ASSERT_TRUE(collection.removeTemporaryFilesOlderThan(timer::Duration::fromDays(1)) == 2);
 		ASSERT_TRUE(!std::filesystem::exists(root / "f0.OldWrite00000001.tmp"));
 		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.OldWrite00000002.tmp"));
 		ASSERT_TRUE(readFile(root / "f0.FreshWrite000001.tmp") == "in progress");

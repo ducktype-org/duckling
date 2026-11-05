@@ -1516,7 +1516,7 @@ namespace {
 						const auto path = options.getValue<fs::FilePath>("artifact-location")
 			                                  .copyValueOr("./duck_build/");
 						using artifacts::ArtifactCollection;
-						const auto result = ArtifactCollection::removeCache(path.getPath());
+						const auto result = ArtifactCollection::removeCache(path);
 						const bool failed = ArtifactCollection::isRemoveCacheFailure(result);
 						(failed ? std::cerr : std::cout)
 							<< ArtifactCollection::describeRemoveCache(result, path.string())
