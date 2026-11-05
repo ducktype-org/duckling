@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <frontend/pst_parser/pst_query/generic_query_key.hpp>
+#include <frontend/pst_parser/pst_query/generic_pst_query_key.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>

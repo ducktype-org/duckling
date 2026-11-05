@@ -80,15 +80,13 @@ namespace pst::internal {
 	public:
 		NameGetters() = delete;
 
-		static std::string parameterList() { return "function parameter"; }
+		static std::string parameterList() { return "parameter"; }
 
 		static std::string selectorList() { return "selector"; }
 
 		static std::string nestedSelectorList() { return "nested selector"; }
 
 		static std::string flowPatternList() { return "flow pattern"; }
-
-		static std::string returnList() { return "function return type"; }
 
 		static std::string inheritanceList() { return "inheritance"; }
 
@@ -101,7 +99,7 @@ namespace pst::internal {
 
 	/**
 	 * @brief Borrow Iterator for Containers of Box (like std::vector<Box<T> >).
-	 * It is needed because Box beeing Box cannot be "copied".
+	 * It is needed because Box being Box cannot be "copied".
 	 *
 	 * @tparam ParserElement Element contained in the reference
 	 * @tparam Container Container that of Boxs to the @p ParserElement .

@@ -4,8 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include "../../../hierarchy/not_statements/synthetic_elements/template_top_level.hpp"
+
 #include "../../../common/synthesizer.hpp"
-#include "../../../hierarchy/not_statements/synthetic_elements/template_expansion_assignment.hpp"
 #include "../preamble.hpp"
 
 namespace pst {

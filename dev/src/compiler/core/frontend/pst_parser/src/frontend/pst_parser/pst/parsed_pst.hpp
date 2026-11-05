@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../context/lang_parser_context.hpp"
+#include "../elements/hierarchy/declarations/top_level.hpp"
 #include "../state/pst_state_forward.hpp"
 #include "pst.hpp"
 #include "pst_type.hpp"
