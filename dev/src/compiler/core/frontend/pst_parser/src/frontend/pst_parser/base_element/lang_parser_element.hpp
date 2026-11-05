@@ -14,6 +14,7 @@
 #include "../pst_config.hpp"
 #include "../pst_id.hpp"
 #include "../state/lang_state_unmethods.hpp"
+#include "additional_root_data.hpp"
 #include "lang_element_construction_data.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -27,7 +28,6 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 
-#include <any>
 #include <ranges>
 #include <variant>
 
@@ -36,51 +36,10 @@ namespace dia {
 }
 
 namespace pst {
-	class Import;
 
 	template<typename State>
 	class PSTAutomatic;
-
 	class PstVisitor;
-
-
-	class LangParserState;
-
-	/**
-	 * @brief Additional data optionally stored in root elements of the PST.
-	 * @TODO: #2397 probably move or remove it.
-	 */
-	struct AdditionalRootData final {
-		struct MacroExpansionParent final {
-			/**
-			 * @brief Optional source element of macro expansion the PST was generated from.
-			 */
-			AccessLocked<LangElement> expand_element;
-		};
-
-		struct ModuleParent final {
-			/**
-			 * @brief frontend::ModuleID the PST was generated from.
-			 */
-			std::any module_id;
-		};
-
-		struct BakedTemplateParent final {
-			std::any template_bake_data;
-		};
-
-		/**
-		 * @brief Source of PST.
-		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
-		 */
-		std::variant<MacroExpansionParent, ModuleParent, BakedTemplateParent> pst_parent;
-
-		template<class T>
-		[[nodiscard]]
-		const T& getAs() const {
-			return std::get<T>(pst_parent);
-		}
-	};
 
 	/**
 	 * @brief Base Element for all of the PST elements.
@@ -181,6 +140,50 @@ namespace pst {
 		 */
 		ElementKind element_kind = ElementKind::KindNotSet;
 
+		/****************************************
+		 * Normal Constructors
+		 ****************************************/
+
+	public:
+		explicit LangElement(LangElementConstructionData state):
+			  source_position(internal::getPosition(state)),
+			  context_hash(internal::getContextHash(state)),
+			  id(PstID::next()) {}
+
+		LangElement(const LangElement&) = delete;
+		LangElement(LangElement&&)      = delete;
+
+		/*****************************************
+		 * Position methods
+		 *****************************************/
+
+	public:
+		/**
+		 * @brief Position covering the whole element.
+		 */
+		[[nodiscard]]
+		SourcePositionLocked getSourcePosition() const;
+
+		/**
+		 * @brief The stable position of an element.
+		 */
+		[[nodiscard]]
+		dia::StablePosition getStablePosition() const;
+
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element.
+		 */
+		static dia::SourcePosition getActiveSourcePosition(
+			query::Context& ctx, const dia::StablePosition& pos
+		);
+
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element,
+		 * bypasses the query graph.
+		 */
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(const dia::StablePosition& pos
+		);
+
 		/******************************************
 		 * Cloning infrastructure
 		 ******************************************/
@@ -218,19 +221,6 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		MBox<LangElement> clone() const;
-
-		/****************************************
-		 * Normal Constructors
-		 ****************************************/
-
-	public:
-		explicit LangElement(LangElementConstructionData state):
-			  source_position(internal::getPosition(state)),
-			  context_hash(internal::getContextHash(state)),
-			  id(PstID::next()) {}
-
-		LangElement(const LangElement&) = delete;
-		LangElement(LangElement&&)      = delete;
 
 		/*****************************************
 		 * Children views
@@ -287,37 +277,6 @@ namespace pst {
 			return viewSubElements() | filter(base::holds<SubToken, SubElement>)
 			     | transform(base::choose<SubToken, SubElement>);
 		}
-
-		/*****************************************
-		 * Position methods
-		 *****************************************/
-
-	public:
-		/**
-		 * @brief Position covering the whole element.
-		 */
-		[[nodiscard]]
-		SourcePositionLocked getSourcePosition() const;
-
-		/**
-		 * @brief The stable position of an element.
-		 */
-		[[nodiscard]]
-		dia::StablePosition getStablePosition() const;
-
-		/**
-		 * @brief Given a StablePosition of an element, returns the source position of the element.
-		 */
-		static dia::SourcePosition getActiveSourcePosition(
-			query::Context& ctx, const dia::StablePosition& pos
-		);
-
-		/**
-		 * @brief Given a StablePosition of an element, returns the source position of the element,
-		 * bypasses the query graph.
-		 */
-		static dia::SourcePosition getActiveSourcePositionIllegalAccess(const dia::StablePosition& pos
-		);
 
 		/*************************************************
 		 * Calculating element paths
