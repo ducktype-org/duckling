@@ -43,14 +43,13 @@ impl Downloads {
     }
 
     /// Try to get a cached package.
-    pub fn get(
-        &self,
-        package: types::PackageWithUrl,
-        ctx: &DuckContext,
-    ) -> QuackResult<DownloadedEntry> {
+    ///
+    /// Per package lock ([`Locks::lock`]) should be held while performing this operation.
+    ///
+    /// [`Locks::lock`]: super::locks::Locks::lock
+    pub fn get(&self, package: types::Package, ctx: &DuckContext) -> QuackResult<DownloadedEntry> {
         let destination = self
             .root
-            .join(package.url.as_str())
             .join(package.name)
             .join(package.version.to_string());
 

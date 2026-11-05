@@ -170,8 +170,8 @@ impl<'duck> Fetcher<'duck> {
         // Firstly acquire a "global" per package lock.
         // Otherwise, under the same global fetcher lock, we can start two downloads of the same package,
         // and one can see existing but empty path.
-        let _lock = self.locks.lock(package.into(), self.ctx)?;
-        let entry = self.downloads.get(package, self.ctx)?;
+        let _lock = self.locks.lock(package.as_package(), self.ctx)?;
+        let entry = self.downloads.get(package.as_package(), self.ctx)?;
         let blob = match entry {
             downloads::DownloadedEntry::Present(path) => return Ok(path),
             downloads::DownloadedEntry::Vacant(blob) => blob,
