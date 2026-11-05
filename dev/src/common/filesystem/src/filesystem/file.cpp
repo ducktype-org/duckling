@@ -165,12 +165,12 @@ namespace fs {
 			if (!allow_overwrite)
 				return std::unexpected("physical folder already exists: " + abs_path.string());
 			std::filesystem::remove_all(abs_path.getPath(), ec);
-			if (ec) return std::unexpected(ec.message());
+			if (ec) return std::unexpected(abs_path.string() + ": " + ec.message());
 		}
 		// The bool result only says whether a directory was created, which is false both for a
 		// path that already exists and for a failure; the error code is what distinguishes them.
 		std::filesystem::create_directories(abs_path.getPath(), ec);
-		if (ec) return std::unexpected(ec.message());
+		if (ec) return std::unexpected(abs_path.string() + ": " + ec.message());
 		return abs_path;
 	}
 

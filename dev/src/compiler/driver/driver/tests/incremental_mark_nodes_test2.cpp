@@ -209,7 +209,7 @@ private:
 		ASSERT_HAS_VALUE(maybe_art);
 
 		const auto& art  = maybe_art.value();
-		auto        path = art.file.getFilePath().getPath();
+		auto        path = art.path.getPath();
 		ASSERT_TRUE(std::filesystem::exists(path));
 		ASSERT_TRUE(std::filesystem::file_size(path) > 0);
 

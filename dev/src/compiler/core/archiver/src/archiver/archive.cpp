@@ -39,7 +39,7 @@ namespace compiler::archiver {
 		command.addEnv("ZERO_AR_DATE", "1");
 #endif
 
-		CORE_USER_LOG("Archiving static library: ", output.file.getFilePath().name(), "\n");
+		CORE_USER_LOG("Archiving static library: ", output.path.name(), "\n");
 
 		// `ar` writes a fresh temporary archive that is renamed into place. A fresh file is what
 		// keeps `ar r` from updating members of a previous archive - it used to be deleted first
@@ -47,11 +47,11 @@ namespace compiler::archiver {
 		// half-written archive, while a failed `ar` leaves the previous one intact.
 		bool archiver_failed = false;
 		auto produced        = fs::FileManager::produceFileAtomically(
-            output.file.getFilePath(),
+            output.path,
             [&](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
                 command.addArg(temp_path.native());
                 for (const auto& object_file_path: inputs)
-                    command.addArg(object_file_path.file.getFilePath().native());
+                    command.addArg(object_file_path.path.native());
                 const auto exit_code
                     = command.execute(system_command::SystemCommand::ExitCodeHandling::Warn);
                 if (exit_code == 0) return {};

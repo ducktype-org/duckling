@@ -33,8 +33,7 @@ namespace compiler::linker {
 		// https://github.com/rust-lang/rust/blob/c62239aeb3ba7781a6d7f7055523c1e8c22b409c/compiler/rustc_codegen_ssa/src/back/link.rs#L1442
 		system_command::SystemCommand command(options.linker_path.copyValueOr("gcc"));
 
-		for (const auto& object_file_path: inputs)
-			command.addArg(object_file_path.file.getFilePath().native());
+		for (const auto& object_file_path: inputs) command.addArg(object_file_path.path.native());
 
 		command.addArgs(options.additional_link_options);
 		command.addArgs(options.stdlib_link_options);  // Link the Duckling standard library.
@@ -43,14 +42,14 @@ namespace compiler::linker {
 			command.addArg("-lm");                     // Link the C math library.
 		}
 
-		CORE_USER_LOG("Linking executable: ", output.file.getFilePath().name(), "\n");
+		CORE_USER_LOG("Linking executable: ", output.path.name(), "\n");
 
 		// The linker writes a temporary file that is renamed into place, so another build
 		// sharing the folder - or a user running the executable - never sees a half-written
 		// one, and a failed link leaves the previous executable intact.
 		bool linker_failed = false;
 		auto produced      = fs::FileManager::produceFileAtomically(
-            output.file.getFilePath(),
+            output.path,
             [&](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
                 command.addArg("-o");
                 command.addArg(temp_path.native());

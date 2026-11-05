@@ -80,10 +80,17 @@ namespace compiler::driver {
 	) {
 		vm::loader::Loader dvm_linker;
 
-		using std::ranges::to;
-		using std::ranges::views::transform;
-
-		auto object_files = objects | transform(&artifacts::FileArtifact::file) | to<std::vector>();
+		std::vector<fs::File> object_files;
+		for (const auto& object: objects) {
+			auto file = fs::File::open(object.path);
+			if (!file.has_value()) {
+				CORE_USER_LOG(
+					"DVM linking failed: cannot open the module bytecode ", file.error(), "\n"
+				);
+				return base::BAD;
+			}
+			object_files.push_back(std::move(file).value());
+		}
 		for (const auto& link_library: dvm_linking_options.link_libraries) {
 			if (!link_library.isRegularFile()) {
 				CORE_USER_LOG(
@@ -119,8 +126,7 @@ namespace compiler::driver {
 		// Written atomically, so that another build sharing the folder never reads a half-written
 		// package.
 		auto written = fs::FileManager::writeFileAtomically(
-			output_file.file.getFilePath(),
-			[&](std::ostream& out) { vm::code::serializeCode(merged_code, out); }
+			output_file.path, [&](std::ostream& out) { vm::code::serializeCode(merged_code, out); }
 		);
 		if (!written.has_value()) {
 			CORE_USER_LOG(
@@ -131,7 +137,7 @@ namespace compiler::driver {
 
 		std::vector<fs::FilePath> debug_info_paths;
 		debug_info_paths.reserve(debug_info_artifacts.size());
-		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.file.getFilePath());
+		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.path);
 		for (const auto& link_library: dvm_linking_options.link_libraries)
 			if_opt_some(findLinkLibraryDebugInfoPath(link_library.string()), debug_info_path) {
 				debug_info_paths.push_back(debug_info_path);
@@ -165,9 +171,9 @@ namespace compiler::driver {
 			}
 
 			if (merged_debug_info.has_value()) {
-				merged_debug_info->module_path = output_file.file.getFilePath().string();
+				merged_debug_info->module_path = output_file.path.string();
 
-				auto output_file_stem = output_file.file.stem();
+				auto output_file_stem = output_file.path.stem();
 				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
 				if (output_file_stem.ends_with(".dbc"))
 					output_file_stem.resize(output_file_stem.size() - 4);
@@ -176,10 +182,10 @@ namespace compiler::driver {
 				auto di_output = output_file.parent->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
 				);
-				auto di_written = fs::FileManager::writeFileAtomically(
-					di_output.file.getFilePath(),
-					[&](std::ostream& out) { debug_info::saveToStream(*merged_debug_info, out); }
-				);
+				auto di_written
+					= fs::FileManager::writeFileAtomically(di_output.path, [&](std::ostream& out) {
+						  debug_info::saveToStream(*merged_debug_info, out);
+					  });
 				if (!di_written.has_value()) {
 					CORE_USER_LOG(
 						"DVM linking failed: could not write the package debug info: ",

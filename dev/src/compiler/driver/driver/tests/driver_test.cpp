@@ -443,9 +443,9 @@ private:
 				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
 			          ->valueOrPanic();
 
-			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.object_art.path.exists());
 			ASSERT_TRUE(artifacts.debug_info.empty());
-			std::ignore = fs::FileManager::deleteFile(artifacts.object_art.file);
+			std::ignore = fs::FileManager::removeEntry(artifacts.object_art.path);
 		});
 	}
 
@@ -461,12 +461,12 @@ private:
 				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, true })
 			          ->valueOrPanic();
 
-			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.object_art.path.exists());
 			ASSERT_HAS_VALUE(artifacts.debug_info);
-			std::ignore = fs::FileManager::deleteFile(artifacts.object_art.file);
+			std::ignore = fs::FileManager::removeEntry(artifacts.object_art.path);
 			std::ignore = fs::FileManager::deleteFile(
-				artifacts.object_art.file.getFilePath().parentPath()
-				/ artifacts.object_art.file.stem().append(driver::DEBUG_INFO_STABLE_EXTENSION)
+				artifacts.object_art.path.parentPath()
+				/ artifacts.object_art.path.stem().append(driver::DEBUG_INFO_STABLE_EXTENSION)
 			);
 		});
 	}
@@ -593,9 +593,9 @@ private:
 
 		// Load an independent ArtifactCollection from disk and read the blob back
 		artifacts::ArtifactCollection loaded_root(root_path);
-		auto                          query_col = loaded_root.subCollectionAt(base::StrID("query"));
-		const auto&                   blob = query_col->blobArtifactAt(base::StrID("query_graph"));
-		auto                          view = query_col->getBlobDataView(blob);
+		auto query_col = loaded_root.subCollectionAtMaybe(base::StrID("query")).value();
+		auto blob      = query_col->blobArtifactAtMaybe(base::StrID("query_graph")).value();
+		auto view      = blob.getDataView();
 
 		// Deserialize the blob into a QueryGraph and compare with the in-memory graph
 		std::span<const byte> span(view.getBegin(), view.size());

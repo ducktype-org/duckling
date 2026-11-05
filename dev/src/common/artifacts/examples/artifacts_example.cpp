@@ -33,22 +33,22 @@ int main() {
 		artifacts::ArtifactCollection collection(root);
 
 		// Create a simple blob artifact
-		auto blob0 = collection.blobArtifactNew(b0);
+		auto blob0 = collection.blobArtifactAtOrNew(b0);
 		blob0.setData<decltype(VALUE)>(VALUE);
 		assert(blob0.getData<decltype(VALUE)>() == VALUE);
 
 		// Save struct
-		auto blob1 = collection.blobArtifactNew(b1);
+		auto blob1 = collection.blobArtifactAtOrNew(b1);
 		blob1.setData(simple_struct);
 
 		// Create a file artifact
-		auto          file0 = collection.fileArtifactNew(f0);
-		std::ofstream file(file0.file.getFilePath().getPath());
+		auto          file0 = collection.fileArtifactAtOrNew(f0);
+		std::ofstream file(file0.path.getPath());
 		file << "Hello!\n";
 		file.close();
 
-		auto sub_collection = collection.subCollectionNew(s0);
-		auto sub_blob0      = sub_collection->blobArtifactNew(b0);
+		auto sub_collection = collection.subCollectionAtOrNew(s0);
+		auto sub_blob0      = sub_collection->blobArtifactAtOrNew(b0);
 		sub_blob0.setData(VALUE + 1);
 
 		// Flush the collection before removing the object to save the blobs.
@@ -58,19 +58,19 @@ int main() {
 		// Restore a collection
 		artifacts::ArtifactCollection collection(root);
 
-		assert(collection.blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE);
+		assert(collection.blobArtifactAtMaybe(b0).value().getData<decltype(VALUE)>() == VALUE);
 
-		assert(collection.blobArtifactAt(b1).getData<SimpleStruct>() == simple_struct);
+		assert(collection.blobArtifactAtMaybe(b1).value().getData<SimpleStruct>() == simple_struct);
 
-		auto          file0 = collection.fileArtifactAt(f0);
-		std::ifstream file(file0.file.getFilePath().getPath());
+		auto          file0 = collection.fileArtifactAtMaybe(f0).value();
+		std::ifstream file(file0.path.getPath());
 		std::string   data;
 		file >> data;
 		file.close();
 		assert(data == "Hello!");
 
-		auto sub = collection.subCollectionAt(s0);
-		assert(sub->blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE + 1);
+		auto sub = collection.subCollectionAtMaybe(s0).value();
+		assert(sub->blobArtifactAtMaybe(b0).value().getData<decltype(VALUE)>() == VALUE + 1);
 	}
 
 	return 0;

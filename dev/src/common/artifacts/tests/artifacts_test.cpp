@@ -42,7 +42,7 @@ public:
 		TESTER_ADD_TEST(relativeRootWorks);
 		TESTER_ADD_TEST(unusedFileArtifactsAreRemoved);
 		TESTER_ADD_TEST(lookedUpArtifactsAreKept);
-		TESTER_ADD_TEST(atOrNewRecreatesRemovedFile);
+		TESTER_ADD_TEST(newArtifactIsOnlyAPath);
 		TESTER_ADD_TEST(reuseOfRemovedFileIsAMiss);
 		TESTER_ADD_TEST(removeCacheRemovesOnlyOwned);
 		TESTER_ADD_TEST(removeCacheRemovesLeftoverTempFiles);
@@ -77,22 +77,22 @@ private:
 			artifacts::ArtifactCollection collection(root);
 
 			// Create a simple blob artifact
-			auto blob0 = collection.blobArtifactNew(b0);
+			auto blob0 = collection.blobArtifactAtOrNew(b0);
 			blob0.setData<decltype(VALUE)>(VALUE);
 			ASSERT_TRUE(blob0.getData<decltype(VALUE)>() == VALUE);
 
 			// Save struct
-			auto blob1 = collection.blobArtifactNew(b1);
+			auto blob1 = collection.blobArtifactAtOrNew(b1);
 			blob1.setData(simple_struct);
 
 			// Create a file artifact
-			auto          file0 = collection.fileArtifactNew(f0);
-			std::ofstream file(file0.file.getFilePath().getPath());
+			auto          file0 = collection.fileArtifactAtOrNew(f0);
+			std::ofstream file(file0.path.getPath());
 			file << "Hello!\n";
 			file.close();
 
-			auto sub_collection = collection.subCollectionNew(s0);
-			auto sub_blob0      = sub_collection->blobArtifactNew(b0);
+			auto sub_collection = collection.subCollectionAtOrNew(s0);
+			auto sub_blob0      = sub_collection->blobArtifactAtOrNew(b0);
 			sub_blob0.setData(VALUE + 1);
 
 			// Flush the collection before removing the object to save the blobs.
@@ -106,15 +106,17 @@ private:
 
 			ASSERT_TRUE(collection.blobArtifactAtOrNew(b1).getData<SimpleStruct>() == simple_struct);
 
-			auto          file0 = collection.fileArtifactAt(f0);
-			std::ifstream file(file0.file.getFilePath().getPath());
+			auto          file0 = collection.fileArtifactAtMaybe(f0).value();
+			std::ifstream file(file0.path.getPath());
 			std::string   data;
 			file >> data;
 			file.close();
 			ASSERT_TRUE(data == "Hello!");
 
-			auto sub = collection.subCollectionAt(s0);
-			ASSERT_TRUE(sub->blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE + 1);
+			auto sub = collection.subCollectionAtMaybe(s0).value();
+			ASSERT_TRUE(
+				sub->blobArtifactAtMaybe(b0).value().getData<decltype(VALUE)>() == VALUE + 1
+			);
 		}
 	}
 
@@ -145,11 +147,11 @@ private:
 	 */
 	static void buildCache(const std::filesystem::path& root) {
 		artifacts::ArtifactCollection collection(root);
-		collection.blobArtifactNew(base::StrID("b0")).setData(VALUE);
-		writeFile(collection.fileArtifactNew(base::StrID("f0")).file.getFilePath().getPath(), "f0");
-		auto sub = collection.subCollectionNew(base::StrID("s0"));
-		sub->blobArtifactNew(base::StrID("b0")).setData(VALUE + 1);
-		writeFile(sub->fileArtifactNew(base::StrID("f1")).file.getFilePath().getPath(), "f1");
+		collection.blobArtifactAtOrNew(base::StrID("b0")).setData(VALUE);
+		writeFile(collection.fileArtifactAtOrNew(base::StrID("f0")).path.getPath(), "f0");
+		auto sub = collection.subCollectionAtOrNew(base::StrID("s0"));
+		sub->blobArtifactAtOrNew(base::StrID("b0")).setData(VALUE + 1);
+		writeFile(sub->fileArtifactAtOrNew(base::StrID("f1")).path.getPath(), "f1");
 		collection.flush();
 	}
 
@@ -254,7 +256,7 @@ private:
 			artifacts::ArtifactCollection collection(root);
 			assertOwnedArtifactsRemoved(root, collection);
 			assertUserFilesKept(root);
-			collection.blobArtifactNew(base::StrID("b0")).setData(VALUE);
+			collection.blobArtifactAtOrNew(base::StrID("b0")).setData(VALUE);
 			collection.flush();
 		}
 		// The build id went with the corrupted cache and has to be written back; otherwise the
@@ -262,7 +264,8 @@ private:
 		ASSERT_TRUE(hasCurrentBuildId(root));
 		artifacts::ArtifactCollection collection(root);
 		ASSERT_TRUE(
-			collection.blobArtifactAt(base::StrID("b0")).getData<decltype(VALUE)>() == VALUE
+			collection.blobArtifactAtMaybe(base::StrID("b0")).value().getData<decltype(VALUE)>()
+			== VALUE
 		);
 	}
 
@@ -312,8 +315,13 @@ private:
 		          .getPath();
 		{
 			artifacts::ArtifactCollection collection(root);
-			collection.fileArtifactNew(base::StrID("f0"));
-			collection.subCollectionNew(base::StrID("s0"))->fileArtifactNew(base::StrID("f1"));
+			writeFile(collection.fileArtifactAtOrNew(base::StrID("f0")).path.getPath(), "f0");
+			writeFile(
+				collection.subCollectionAtOrNew(base::StrID("s0"))
+					->fileArtifactAtOrNew(base::StrID("f1"))
+					.path.getPath(),
+				"f1"
+			);
 		}
 		ASSERT_TRUE(std::filesystem::exists(root / "f0"));
 
@@ -355,7 +363,7 @@ private:
 		);
 
 		artifacts::ArtifactCollection collection(root);
-		auto                          sub = collection.subCollectionNew(base::StrID("s0"));
+		auto                          sub = collection.subCollectionAtOrNew(base::StrID("s0"));
 		ASSERT_TRUE(sub->blobArtifactAtMaybe(base::StrID("b0")).empty());
 	}
 
@@ -391,7 +399,7 @@ private:
 		          .getPath();
 		{
 			artifacts::ArtifactCollection collection(root);
-			collection.fileArtifactNew(base::StrID("./f0"));
+			collection.fileArtifactAtOrNew(base::StrID("./f0"));
 			collection.flush();
 		}
 		std::filesystem::remove(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
@@ -411,8 +419,7 @@ private:
 		{
 			artifacts::ArtifactCollection collection(root);
 			writeFile(
-				collection.fileArtifactNew(base::StrID("../app")).file.getFilePath().getPath(),
-				"user binary"
+				collection.fileArtifactAtOrNew(base::StrID("../app")).path.getPath(), "user binary"
 			);
 			collection.flush();
 		}
@@ -505,9 +512,7 @@ private:
 		makeUnusedFor(root / "user_file", std::chrono::days(8));
 		{
 			artifacts::ArtifactCollection collection(root);
-			writeFile(
-				collection.fileArtifactNew(base::StrID("fresh")).file.getFilePath().getPath(), "x"
-			);
+			writeFile(collection.fileArtifactAtOrNew(base::StrID("fresh")).path.getPath(), "x");
 			ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(std::chrono::days(7)) == 2);
 			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("f0")).empty());
 			collection.flush();
@@ -534,16 +539,18 @@ private:
 		writeFile(root / "s0" / "f2", "f2");
 		{
 			artifacts::ArtifactCollection collection(root);
-			collection.subCollectionAt(base::StrID("s0"))->fileArtifactNew(base::StrID("f2"));
+			collection.subCollectionAtMaybe(base::StrID("s0"))
+				.value()
+				->fileArtifactAtOrNew(base::StrID("f2"));
 			collection.flush();
 		}
 		for (const auto& file: { root / "f0", root / "s0" / "f1", root / "s0" / "f2" })
 			makeUnusedFor(file, std::chrono::days(8));
 
 		artifacts::ArtifactCollection collection(root);
-		auto                          sub = collection.subCollectionAt(base::StrID("s0"));
+		auto sub = collection.subCollectionAtMaybe(base::StrID("s0")).value();
 		ASSERT_HAS_VALUE(collection.fileArtifactAtMaybe(base::StrID("f0")));
-		std::ignore = sub->fileArtifactAt(base::StrID("f1"));
+		std::ignore = sub->fileArtifactAtMaybe(base::StrID("f1")).value();
 		std::ignore = sub->fileArtifactAtOrNew(base::StrID("f2"));
 		ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(std::chrono::days(7)) == 0);
 		ASSERT_TRUE(readFile(root / "f0") == "f0");
@@ -552,9 +559,10 @@ private:
 		ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("missing")).empty());
 	}
 
-	// `fileArtifactAtOrNew` on an artifact whose file another build removed creates it again,
-	// instead of handing out an artifact that points at nothing.
-	void atOrNewRecreatesRemovedFile() {
+	// A new file artifact is only a place in the cache: nothing is on disk until it is written.
+	// `fileArtifactAtOrNew` on one whose file another build removed hands it out for writing,
+	// while `fileArtifactAtMaybe` treats it as a cache miss.
+	void newArtifactIsOnlyAPath() {
 		std::filesystem::path root
 			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
 		          .getFilePath()
@@ -562,9 +570,14 @@ private:
 		buildCache(root);
 
 		artifacts::ArtifactCollection collection(root);
+		const auto                    fresh = collection.fileArtifactAtOrNew(base::StrID("fresh"));
+		ASSERT_TRUE(!fresh.path.exists());
+		ASSERT_TRUE(fresh.path.isAbsolute());
+
 		std::filesystem::remove(root / "f0");
-		const auto artifact = collection.fileArtifactAtOrNew(base::StrID("f0"));
-		ASSERT_TRUE(std::filesystem::exists(artifact.file.getFilePath().getPath()));
+		const auto removed = collection.fileArtifactAtOrNew(base::StrID("f0"));
+		ASSERT_TRUE(removed.path.getPath().filename() == "f0");
+		ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("fresh")).empty());
 	}
 
 	// A file another build removed after this one loaded the collection is a cache miss, not a
@@ -698,7 +711,7 @@ private:
 		          .getFilePath()
 		          .getPath();
 		artifacts::ArtifactCollection collection(root);
-		collection.blobArtifactNew(base::StrID("b0")).setData(VALUE);
+		collection.blobArtifactAtOrNew(base::StrID("b0")).setData(VALUE);
 		std::filesystem::remove_all(root);
 
 		collection.flush();

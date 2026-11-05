@@ -36,7 +36,7 @@ namespace compiler::driver {
 
 	std::ofstream getDebugDumpArtifact(base::StrID artifact_name) {
 		auto          art = getDebugArtifactCollection()->fileArtifactAtOrNew(artifact_name);
-		std::ofstream output_file(art.file.getFilePath().getPath(), std::ios::binary);
+		std::ofstream output_file(art.path.getPath(), std::ios::binary);
 		return output_file;
 	}
 

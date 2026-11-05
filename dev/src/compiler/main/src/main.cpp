@@ -896,10 +896,9 @@ namespace {
 							});
 							}
 							if (not options.isFlag("no-link")) {
-								auto artifact_file = global_state::getRootCollection()
-					                                     ->fileArtifactAtOrNew(library_name)
-					                                     .file;
-								libraries_to_link.push_back(artifact_file.getFilePath());
+								libraries_to_link.push_back(global_state::getRootCollection()
+					                                            ->fileArtifactAtOrNew(library_name)
+					                                            .path);
 							}
 						}
 

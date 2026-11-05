@@ -185,8 +185,7 @@ namespace compiler::driver {
 	) {
 		if_opt_some(resolveStdPath(linking_options), _) {
 			std::vector<std::string> result{};
-			for (const auto& art: getStdLibNativeArtifacts())
-				result.push_back(art.file.getFilePath().string());
+			for (const auto& art: getStdLibNativeArtifacts()) result.push_back(art.path.string());
 			return result;
 		}
 		return {};
@@ -235,9 +234,9 @@ namespace compiler::driver {
 		if (result.size() == 3) {
 			// we expect exp, std, core here in good order:
 			CORE_ASSERT(
-				result.at(0).file.getFilePath().stem().find("exp") != std::string::npos
-					&& result.at(1).file.getFilePath().stem().find("std") != std::string::npos
-					&& result.at(2).file.getFilePath().stem().find("core") != std::string::npos,
+				result.at(0).path.stem().find("exp") != std::string::npos
+					&& result.at(1).path.stem().find("std") != std::string::npos
+					&& result.at(2).path.stem().find("core") != std::string::npos,
 				"Unexpected order of standard library native artifacts"
 			);
 		}
@@ -258,8 +257,7 @@ namespace compiler::driver {
 		);
 
 		std::vector<fs::FilePath> dependencies;
-		for (const auto& art: getStdLibDVMArtifacts())
-			dependencies.push_back(art.file.getFilePath());
+		for (const auto& art: getStdLibDVMArtifacts()) dependencies.push_back(art.path);
 		return dependencies;
 	}
 

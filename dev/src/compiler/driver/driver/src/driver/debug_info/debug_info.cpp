@@ -104,8 +104,7 @@ namespace compiler::driver {
 			// Written atomically, so that another build sharing the folder never reads a
 			// half-written file.
 			auto written = fs::FileManager::writeFileAtomically(
-				output.file.getFilePath(),
-				[&](std::ostream& out) { debug_info::saveToStream(debug_info, out); }
+				output.path, [&](std::ostream& out) { debug_info::saveToStream(debug_info, out); }
 			);
 			if (!written.has_value()) {
 				CORE_USER_LOG("Error: could not write a debug-info file: ", written.error(), "\n");

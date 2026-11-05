@@ -87,15 +87,8 @@ namespace compiler::driver {
 				));
 			auto folder = fs::FileManager::createPhysicalFolder(path.absolute());
 			if (not folder.has_value()) {
-				CORE_USER_LOG(
-					"Error: cannot create the ",
-					what,
-					" \"",
-					path.string(),
-					"\": ",
-					folder.error(),
-					"\n"
-				);
+				// The reason already names the folder.
+				CORE_USER_LOG("Error: cannot create the ", what, " ", folder.error(), "\n");
 				return base::BAD;
 			}
 			return base::OK;
@@ -184,7 +177,7 @@ namespace compiler::driver {
 				// Load previous query graph
 				auto maybe_blob = query_col->blobArtifactAtMaybe(base::StrID("query_graph"));
 				if (maybe_blob.has_value()) {
-					auto                  view = maybe_blob.value()->getDataView();
+					auto                  view = maybe_blob.value().getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
 					query::external::setPreviousGraphFromRawBytes(span);
 				} else {
@@ -204,7 +197,7 @@ namespace compiler::driver {
 					"This indicates a corrupted state in artifacts."
 				);
 
-				auto                  view = maybe_metadata_blob.value()->getDataView();
+				auto                  view = maybe_metadata_blob.value().getDataView();
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
 

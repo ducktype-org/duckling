@@ -414,37 +414,74 @@ void artifacts::ArtifactCollection::flush() {
 	this->flushNoLock();
 }
 
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(
-	base::StrID collection_name
-) {
-	WithLock lock(*this);
-	return subCollectionNewNoLock(collection_name);
-}
-
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNew(
 	base::StrID collection_name
 ) {
 	WithLock lock(*this);
-	return subCollectionAtOrNewNoLock(collection_name);
-}
-
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(
-	base::StrID collection_name
-) {
-	WithLock lock(*this);
-	return subCollectionAtNoLock(collection_name);
+	if_opt_some(
+		sub_collections.atMaybe(collection_name).map([](const auto& ref) { return ref->refMut(); }),
+		collection
+	) {
+		return collection;
+	}
+	return subCollectionNewNoLock(collection_name);
 }
 
 base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybe(
 	base::StrID collection_name
 ) {
 	WithLock lock(*this);
-	return subCollectionAtMaybeNoLock(collection_name);
+	return sub_collections.atMaybe(collection_name).map([](const auto& ref) {
+		return ref->refMut();
+	});
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(base::StrID artifact_name) {
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
+) {
 	WithLock lock(*this);
+	// For writing: a file another build removed meanwhile is simply written again.
+	if (auto existing = file_artifacts.atMaybe(artifact_name); existing.has_value()) {
+		std::ignore = fs::FileManager::touch(existing.value()->path);
+		return *existing.value();
+	}
 	return fileArtifactNewNoLock(artifact_name);
+}
+
+base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtifactAtMaybe(
+	base::StrID artifact_name
+) {
+	WithLock lock(*this);
+	return findAndMarkUsedNoLock(artifact_name);
+}
+
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(base::StrID artifact_name
+) {
+	WithLock lock(*this);
+	if (auto existing = blob_artifacts.atMaybe(artifact_name); existing.has_value())
+		return *existing.value();
+	return blobArtifactNewNoLock(artifact_name);
+}
+
+base::Optional<artifacts::BlobArtifact> artifacts::ArtifactCollection::blobArtifactAtMaybe(
+	base::StrID artifact_name
+) const {
+	WithLock lock(*this);
+	return blob_artifacts.atMaybe(artifact_name).map([](const auto& blob) { return *blob; });
+}
+
+void artifacts::ArtifactCollection::setBlobData(
+	const BlobArtifact& blob, const byte* ptr, usize n_bytes
+) {
+	WithLock lock(*this);
+	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
+	blob_data[blob.name] = makeBox<Bytes>(ptr, ptr + n_bytes);
+}
+
+base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact& blob) const {
+	WithLock lock(*this);
+	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
+	const auto& data = blob_data[blob.name];
+	return { data->data(), data->size() };
 }
 
 bool artifacts::ArtifactCollection::deleteFileArtifact(base::StrID artifact_name) {
@@ -523,62 +560,6 @@ bool artifacts::ArtifactCollection::isRemoveCacheFailure(RemoveCacheResult resul
 	return result == RemoveCacheResult::NotAFolder || result == RemoveCacheResult::Incomplete;
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
-) {
-	WithLock lock(*this);
-	return fileArtifactAtOrNewNoLock(artifact_name);
-}
-
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name) {
-	WithLock lock(*this);
-	auto     artifact = fileArtifactInUseNoLock(artifact_name);
-	CORE_ASSERT(artifact.has_value(), "No file artifact named ", artifact_name.strView());
-	return artifact.value();
-}
-
-base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtifactAtMaybe(
-	base::StrID artifact_name
-) {
-	WithLock lock(*this);
-	return fileArtifactInUseNoLock(artifact_name);
-}
-
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNew(base::StrID artifact_name) {
-	WithLock lock(*this);
-	return blobArtifactNewNoLock(artifact_name);
-}
-
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(base::StrID artifact_name
-) {
-	WithLock lock(*this);
-	return blobArtifactAtOrNewNoLock(artifact_name);
-}
-
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name
-) const {
-	WithLock lock(*this);
-	return blobArtifactAtNoLock(artifact_name);
-}
-
-base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollection::blobArtifactAtMaybe(
-	base::StrID artifact_name
-) const {
-	WithLock lock(*this);
-	return blobArtifactAtMaybeNoLock(artifact_name);
-}
-
-void artifacts::ArtifactCollection::setBlobData(
-	const BlobArtifact& blob, const byte* ptr, usize n_bytes
-) {
-	WithLock lock(*this);
-	setBlobDataNoLock(blob, ptr, n_bytes);
-}
-
-base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact& blob) const {
-	WithLock lock(*this);
-	return getBlobDataViewNoLock(blob);
-}
-
 /////////////////////// INTERNAL METHODS //////////////////////
 
 
@@ -617,7 +598,7 @@ base::OkBad artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream
 		if (content.gcount() != std::streamsize(blob_data_size)) return base::BAD;
 
 		// Save the blob.
-		auto blob = blobArtifactNew(base::StrID(blob_name.data()));
+		auto blob = blobArtifactNewNoLock(base::StrID(blob_name.data()));
 		blob.setData(blob_data.data(), blob_data.size());
 
 		read_blobs++;
@@ -663,9 +644,9 @@ void artifacts::ArtifactCollection::loadData() {
 		if (ec) continue;
 		const auto name = base::StrID(entry.name);
 		if (entry.kind == OWNED_COLLECTION && std::filesystem::is_directory(status))
-			subCollectionNew(name);
+			subCollectionNewNoLock(name);
 		else if (entry.kind == OWNED_FILE && std::filesystem::is_regular_file(status))
-			fileArtifactNew(name);
+			fileArtifactNewNoLock(name);
 	}
 }
 
@@ -722,15 +703,28 @@ void artifacts::ArtifactCollection::writeOwnedList() {
 	// Another process sharing this folder may have created entries this one never loaded.
 	for (auto& entry: readOwnedList(PATH).copyValueOrDefault()) entries.push_back(std::move(entry));
 
+	// A file whose write was killed has only its temporary file; the entry has to stay, or
+	// nothing would own - and ever remove - that leftover.
+	std::vector<std::string> file_names;
+	for (const auto& entry: entries)
+		if (entry.kind == OWNED_FILE) file_names.push_back(entry.name);
+	std::unordered_set<std::string> with_leftovers;
+	for (const auto& temp_file: findTempFiles(PATH, file_names)) {
+		if_opt_some(fs::FileManager::temporaryFileTarget(fs::FilePath(temp_file)), target) {
+			with_leftovers.insert(target.getPath().lexically_normal().string());
+		}
+	}
+
 	std::unordered_set<std::string> kept;
 	std::string                     content = std::string(OWNED_LIST_HEADER) + '\n';
 	for (const auto& entry: entries) {
 		if (kept.contains(entry.name) || !isOwnable(PATH, entry.name)) continue;
-		// An entry whose file is gone (e.g. through `deleteFileArtifact`) has nothing left to
-		// own, so it is dropped here instead of piling up.
+		// An entry whose file is gone (e.g. through `deleteFileArtifact`, or never written) has
+		// nothing left to own, so it is dropped here instead of piling up.
+		const auto      path = PATH / entry.name;
 		std::error_code ec;
-		if (!std::filesystem::exists(std::filesystem::symlink_status(PATH / entry.name, ec)))
-			continue;
+		const bool on_disk = std::filesystem::exists(std::filesystem::symlink_status(path, ec));
+		if (!on_disk && !with_leftovers.contains(path.lexically_normal().string())) continue;
 		kept.insert(entry.name);
 		content += ownedListLine(entry.kind, entry.name);
 	}
@@ -782,80 +776,51 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 	CORE_ASSERT(
 		!sub_collections.contains(collection_name), "Sub-collection with this name already exists"
 	);
-	auto new_path = PATH / collection_name.strView();
+	const auto new_path = PATH / collection_name.strView();
 	recordOwnedEntry(OWNED_COLLECTION, collection_name.strView());
-	if (!std::filesystem::exists(new_path)) std::filesystem::create_directory(new_path);
-	sub_collections.put(
-		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this))
-	);
-	return subCollectionAtNoLock(collection_name);
-}
-
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNewNoLock(
-	base::StrID collection_name
-) {
-	match_optional(subCollectionAtMaybeNoLock(collection_name)) {
-		opt_some(collection) return collection;
-		opt_none return subCollectionNewNoLock(collection_name);
+	if (!std::filesystem::exists(new_path)) {
+		// A folder that cannot be made - no permission, a read-only mount - costs this build its
+		// cache there, nothing more: whatever is written to the collection fails and is reported
+		// by the writer.
+		const auto created
+			= fs::FileManager::createPhysicalFolder(fs::FilePath(new_path).absolute());
+		if (!created.has_value())
+			CORE_USER_LOG("Warning: cannot create the artifacts folder ", created.error(), "\n");
 	}
-	CORE_UNREACHABLE();
-}
-
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtNoLock(
-	base::StrID collection_name
-) {
-	return sub_collections.at(collection_name).refMut();
-}
-
-base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybeNoLock(
-	base::StrID collection_name
-) {
-	return sub_collections.atMaybe(collection_name).map([](const auto& ref) {
-		return ref->refMut();
-	});
+	auto collection = Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this));
+	Ref<ArtifactCollection> result = collection.refMut();
+	sub_collections.put(collection_name, std::move(collection));
+	return result;
 }
 
 artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNewNoLock(base::StrID artifact_name
 ) {
-	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
-	auto file_path = PATH / artifact_name.strView();
-
+	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated file artifact");
 	recordOwnedEntry(OWNED_FILE, artifact_name.strView());
-	if (!std::filesystem::exists(file_path)) std::ofstream(file_path).close();  // create the file
-
-	file_artifacts.put(
-		artifact_name,
-		FileArtifact{
-			.parent = this,
-			.name   = artifact_name,
-			.file   = fs::File(file_path),
-		}
-	);
-	return fileArtifactAtNoLock(artifact_name);
+	FileArtifact artifact{
+		.parent = this,
+		.name   = artifact_name,
+		// Absolute: the path is handed to tools and recorded in debug info, which must not depend
+		// on the working directory.
+		.path = fs::FilePath(PATH / artifact_name.strView()).absolute(),
+	};
+	file_artifacts.put(artifact_name, artifact);
+	return artifact;
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNewNoLock(
+base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::findAndMarkUsedNoLock(
 	base::StrID artifact_name
 ) {
-	if_opt_some(fileArtifactInUseNoLock(artifact_name), artifact) { return artifact; }
-	return fileArtifactNewNoLock(artifact_name);
-}
-
-base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtifactInUseNoLock(
-	base::StrID artifact_name
-) {
-	auto maybe_artifact = fileArtifactAtMaybeNoLock(artifact_name);
+	auto maybe_artifact = file_artifacts.atMaybe(artifact_name);
 	if (!maybe_artifact.has_value()) return {};
 	FileArtifact artifact = *maybe_artifact.value();
 
-	const auto path    = PATH / artifact_name.strView();
-	const auto touched = fs::FileManager::touch(fs::FilePath(path));
+	const auto touched = fs::FileManager::touch(artifact.path);
 	if (!touched.has_value()) {
 		// Only a file that is gone - e.g. removed by another build - is a miss. One that merely
 		// cannot be marked as used (a read-only mount, no write permission) is still a valid
 		// cache entry; at worst it is removed early as unused, and rebuilt.
-		std::error_code ec;
-		if (!std::filesystem::exists(path, ec)) {
+		if (!artifact.path.exists()) {
 			file_artifacts.erase(artifact_name);
 			return {};
 		}
@@ -864,28 +829,10 @@ base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtif
 	return artifact;
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtNoLock(base::StrID artifact_name
-) const {
-	return file_artifacts.at(artifact_name);
-}
-
-base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybeNoLock(
-	base::StrID artifact_name
-) const {
-	return file_artifacts.atMaybe(artifact_name);
-}
-
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(base::StrID artifact_name
-) {
-	CORE_ASSERT(!blob_artifacts.contains(artifact_name), "Duplicated blob artifact");
-	blob_artifacts.put(artifact_name, BlobArtifact{ .parent = this, .name = artifact_name });
-	blob_data.put(artifact_name, makeBox<Bytes>());
-	return blobArtifactAtNoLock(artifact_name);
-}
-
 bool artifacts::ArtifactCollection::deleteFileArtifactNoLock(base::StrID artifact_name) {
-	if (!file_artifacts.contains(artifact_name)) return false;
-	const auto removed = fs::FileManager::removeEntry(fs::FilePath(PATH / artifact_name.strView()));
+	auto maybe_artifact = file_artifacts.atMaybe(artifact_name);
+	if (!maybe_artifact.has_value()) return false;
+	const auto removed = fs::FileManager::removeEntry(maybe_artifact.value()->path);
 	if (!removed.has_value()) {
 		// Still on disk, so still ours: keep it, and the list keeps naming it.
 		CORE_USER_LOG("Warning: failed to remove artifact ", removed.error(), "\n");
@@ -895,36 +842,11 @@ bool artifacts::ArtifactCollection::deleteFileArtifactNoLock(base::StrID artifac
 	return removed.value();
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNewNoLock(
-	base::StrID artifact_name
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(base::StrID artifact_name
 ) {
-	match_optional(blobArtifactAtMaybeNoLock(artifact_name)) {
-		opt_some(artifact) return *artifact;
-		opt_none return blobArtifactNewNoLock(artifact_name);
-	}
-	CORE_UNREACHABLE();
-}
-
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtNoLock(base::StrID artifact_name
-) const {
-	return blob_artifacts.at(artifact_name);
-}
-
-base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollection::blobArtifactAtMaybeNoLock(
-	base::StrID artifact_name
-) const {
-	return blob_artifacts.atMaybe(artifact_name);
-}
-
-void artifacts::ArtifactCollection::setBlobDataNoLock(
-	const BlobArtifact& blob, const byte* ptr, usize n_bytes
-) {
-	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
-	blob_data[blob.name] = makeBox<Bytes>(ptr, ptr + n_bytes);
-}
-
-base::RawView artifacts::ArtifactCollection::getBlobDataViewNoLock(const BlobArtifact& blob) const {
-	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
-	const auto& data = blob_data[blob.name];
-	return { data->data(), data->size() };
+	CORE_ASSERT(!blob_artifacts.contains(artifact_name), "Duplicated blob artifact");
+	BlobArtifact blob{ .parent = this, .name = artifact_name };
+	blob_artifacts.put(artifact_name, blob);
+	blob_data.put(artifact_name, makeBox<Bytes>());
+	return blob;
 }

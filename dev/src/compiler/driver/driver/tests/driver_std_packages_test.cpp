@@ -182,20 +182,18 @@ private:
 		// Verify expected artifacts
 		for (const auto& art: driver::getStdLibNativeArtifacts()) {
 			assertTrue(
-				std::filesystem::exists(art.file.getFilePath().getPath()),
+				std::filesystem::exists(art.path.getPath()),
 				base::strConcat(
-					"Missing standard library static library artifact: ",
-					art.file.getFilePath().getPath().string()
+					"Missing standard library static library artifact: ", art.path.getPath().string()
 				)
 			);
 		}
 
 		for (const auto& art: driver::getStdLibDVMArtifacts()) {
 			assertTrue(
-				std::filesystem::exists(art.file.getFilePath().getPath()),
+				std::filesystem::exists(art.path.getPath()),
 				base::strConcat(
-					"Missing standard library DVM artifact: ",
-					art.file.getFilePath().getPath().string()
+					"Missing standard library DVM artifact: ", art.path.getPath().string()
 				)
 			);
 		}
@@ -290,7 +288,7 @@ private:
 			std::vector<std::string> names;
 			names.reserve(artifacts.size());
 			for (const auto& art: artifacts)
-				names.push_back(art.file.getFilePath().getPath().filename().string());
+				names.push_back(art.path.getPath().filename().string());
 			return names;
 		};
 		const auto native_artifacts = file_names(driver::getStdLibNativeArtifacts());

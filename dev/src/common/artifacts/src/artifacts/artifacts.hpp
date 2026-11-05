@@ -73,9 +73,10 @@ namespace artifacts {
 		const base::StrID             name;
 
 		/**
-		 * @brief File that stores this `FileArtifact`'s data.
+		 * @brief Where this artifact's file is. The file exists once someone has written it;
+		 * a new artifact is only a place in the cache.
 		 */
-		const fs::File file;
+		const fs::FilePath path;
 	};
 
 	/**
@@ -240,17 +241,16 @@ namespace artifacts {
 
 		/////////////////////////// SUB COLLECTIONS /////////////////////////
 
-		Ref<ArtifactCollection> subCollectionNew(base::StrID collection_name);
-
+		/**
+		 * @brief Returns the sub-collection `collection_name`, creating it - and its folder - if
+		 * it is not there. A folder that cannot be created is reported; the collection is still
+		 * returned, and what is written to it fails and is reported by the writer.
+		 */
 		Ref<ArtifactCollection> subCollectionAtOrNew(base::StrID collection_name);
-
-		Ref<ArtifactCollection> subCollectionAt(base::StrID collection_name);
 
 		base::Optional<Ref<ArtifactCollection>> subCollectionAtMaybe(base::StrID collection_name);
 
 		/////////////////////////// FILE ARTIFACTS /////////////////////////
-
-		FileArtifact fileArtifactNew(base::StrID artifact_name);
 
 		/*
 		 * Every lookup below that hands out an existing file artifact also marks it as used:
@@ -261,15 +261,10 @@ namespace artifacts {
 		 */
 
 		/**
-		 * @brief Returns the file artifact `artifact_name`, marked as used, or creates it with
-		 * `fileArtifactNew` if it is not there - or if its file is gone.
+		 * @brief Returns the file artifact `artifact_name`, marked as used, or a new one if it is
+		 * not there. Meant for writing: the caller writes the file at the artifact's path.
 		 */
 		FileArtifact fileArtifactAtOrNew(base::StrID artifact_name);
-
-		/**
-		 * @brief Returns the file artifact `artifact_name`, marked as used. It must be there.
-		 */
-		FileArtifact fileArtifactAt(base::StrID artifact_name);
 
 		/**
 		 * @brief Looks up a file artifact, e.g. a previous build's output that is still up to
@@ -289,90 +284,43 @@ namespace artifacts {
 
 		/////////////////////////// BLOB ARTIFACTS /////////////////////////
 
-		BlobArtifact blobArtifactNew(base::StrID artifact_name);
-
+		/// Returns the blob artifact `artifact_name`, or a new, empty one if it is not there.
 		BlobArtifact blobArtifactAtOrNew(base::StrID artifact_name);
 
-		BlobArtifact blobArtifactAt(base::StrID artifact_name) const;
-
-		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybe(base::StrID artifact_name
-		) const;
-
-		void setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
-
-		template<SerdeType T>
-		void setBlobData(const BlobArtifact& blob, const T& data) {
-			// lock will happen in the call bellow:
-			setBlobData(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
-		}
-
-		base::RawView getBlobDataView(const BlobArtifact& blob) const;
-
-		template<SerdeType T>
-		const T getBlobData(const BlobArtifact& blob) const {
-			// lock will happen in the call bellow:
-			return deserialize<T>(getBlobDataView(blob));
-		}
+		base::Optional<BlobArtifact> blobArtifactAtMaybe(base::StrID artifact_name) const;
 
 		/////////////////////////// PRIVATE /////////////////////////
 
 	private:
-		/////////////////// NO LOCK INTERNALL API ///////////////////
+		// A blob's data is set and read through the blob itself.
+		friend struct BlobArtifact;
 
-		/**
-		 * @brief Flushes ArtifactCollection tree data to the disk.
-		 */
+		void setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
+
+		base::RawView getBlobDataView(const BlobArtifact& blob) const;
+
+		/////////////////// NO LOCK INTERNAL API ///////////////////
+		// Called with the collection's lock held, or from the constructor.
+
 		void flushNoLock();
 
 		Ref<ArtifactCollection> subCollectionNewNoLock(base::StrID collection_name);
 
-		Ref<ArtifactCollection> subCollectionAtOrNewNoLock(base::StrID collection_name);
-
-		Ref<ArtifactCollection> subCollectionAtNoLock(base::StrID collection_name);
-
-		base::Optional<Ref<ArtifactCollection>> subCollectionAtMaybeNoLock(base::StrID collection_name
-		);
-
 		FileArtifact fileArtifactNewNoLock(base::StrID artifact_name);
 
-		FileArtifact fileArtifactAtOrNewNoLock(base::StrID artifact_name);
-
 		/**
-		 * @brief The marking lookup behind the public `fileArtifactAt*` methods; see
-		 * `fileArtifactAtMaybe`.
+		 * @brief Finds the file artifact `artifact_name` and marks it as used: sets its file's
+		 * modification time to now. Never throws.
+		 *
+		 * @return The artifact - also when its file is there but cannot be marked (e.g. a
+		 * read-only mount). Nothing if there is no such artifact, or if its file is gone (e.g.
+		 * removed by another build); a gone file's artifact is forgotten.
 		 */
-		base::Optional<FileArtifact> fileArtifactInUseNoLock(base::StrID artifact_name);
-
-		/// Plain lookup, which does not mark the artifact as used - for internal use only.
-		FileArtifact fileArtifactAtNoLock(base::StrID artifact_name) const;
-
-		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybeNoLock(base::StrID artifact_name
-		) const;
+		base::Optional<FileArtifact> findAndMarkUsedNoLock(base::StrID artifact_name);
 
 		bool deleteFileArtifactNoLock(base::StrID artifact_name);
 
 		BlobArtifact blobArtifactNewNoLock(base::StrID artifact_name);
-
-		BlobArtifact blobArtifactAtOrNewNoLock(base::StrID artifact_name);
-
-		BlobArtifact blobArtifactAtNoLock(base::StrID artifact_name) const;
-
-		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybeNoLock(base::StrID artifact_name
-		) const;
-
-		void setBlobDataNoLock(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
-
-		template<SerdeType T>
-		void setBlobDataNoLock(const BlobArtifact& blob, const T& data) {
-			setBlobDataNoLock(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
-		}
-
-		base::RawView getBlobDataViewNoLock(const BlobArtifact& blob) const;
-
-		template<SerdeType T>
-		const T getBlobDataNoLock(const BlobArtifact& blob) const {
-			return deserialize<T>(getBlobDataViewNoLock(blob));
-		}
 
 		///////////////////////// OBJECT STATE //////////////////////
 
