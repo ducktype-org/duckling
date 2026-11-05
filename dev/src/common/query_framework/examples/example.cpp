@@ -65,8 +65,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// Log something, with example file path.
-		context.logInt(makeBox<ExampleDocs>("Duckling"));
-		context.logInt(makeBox<ExampleError>(dia::SourcePosition::fakePosition(), "wrong type"));
+		context.log<ExampleDocs>("Duckling");
+		context.log<ExampleError>(dia::SourcePosition::fakePosition(), "wrong type");
 		return squareValue(context, key.v);
 	}
 

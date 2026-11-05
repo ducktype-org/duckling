@@ -82,10 +82,10 @@ namespace compiler::helios {
 
 				return pst;
 			} else {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"The expression in expand statements did not evaluate to a string value.",
 					expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getStablePosition()
-				));
+				);
 				return query::Failed();
 			}
 		}

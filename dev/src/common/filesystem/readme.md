@@ -4,10 +4,14 @@ The **Filesystem Module** represents the final abstraction layer in Duckling bet
 
 ## Overview
 
-The `File` class abstracts and unifies operations across three different file types:
+The `File` class abstracts and unifies operations across two different file types:
 - **Physical files**: Files that exist on the actual filesystem
-- **Virtual files**: Files managed by the internal Virtual Filesystem (VFS)  
-- **Temporary files**: System-managed temporary files
+- **Virtual files**: Files managed by the internal Virtual Filesystem (VFS)
+
+A file in the system's temporary directory is a physical file - the temp directory is an
+ordinary part of the physical filesystem, which is why the compiler can run and build inside
+it. `File::isTemporary()` and `FilePath::isTemporary()` answer whether a file sits there (i.e.
+whether the system may reclaim it); they say nothing about how to create or write it.
 
 The key design principle is that `File` provides the same operations regardless of which type of file it represents, creating a seamless experience for file manipulation.
 
@@ -28,7 +32,7 @@ The `FileManager` provides static factory methods and utilities for:
 
 ### FilePath Class
 The `FilePath` class provides a safe wrapper around `std::filesystem::path` with enhanced functionality for different filesystem types:
-- **Type-aware paths**: Automatically detects and tracks whether a path is Physical, Virtual, or Temporary
+- **Type-aware paths**: Automatically detects and tracks whether a path is Physical, Virtual or Relative
 - **Safe path operations**: Provides path manipulation without dangerous canonicalization
 - **Cross-filesystem conversion**: Convert between virtual and physical path representations
 - **Unified interface**: Same API regardless of the underlying path type

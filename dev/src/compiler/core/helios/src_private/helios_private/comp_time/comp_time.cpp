@@ -201,9 +201,9 @@ namespace compiler::helios {
 					auto maybe_u64_size = maybe_size.coerceTo<u64>();
 					// @TODO: #2754 With flexible literals it should work
 					if (!maybe_u64_size.has_value()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Static array size must be a non-negative integral value.", ""
-						));
+						);
 						return query::Failed();
 					}
 					auto size = static_cast<usize>(maybe_u64_size.value());
@@ -360,11 +360,11 @@ namespace compiler::helios {
 											if (rhs_val < 0
 									            || static_cast<u64>(rhs_val)
 									                   >= sizeof(ResultT) * 8) {
-												ctx.logInt(makeBox<dia::PlaceholderError>(
+												ctx.log<dia::PlaceholderError>(
 													"Invalid shift amount in compile-time "
 													"expression evaluation.",
 													expr.origin.getStablePosition().value()
-												));
+												);
 												return query::Failed();
 											}
 											set_num_result(static_cast<ResultT>(lhs_val << rhs_val));
@@ -375,11 +375,11 @@ namespace compiler::helios {
 											if (rhs_val < 0
 									            || static_cast<u64>(rhs_val)
 									                   >= sizeof(ResultT) * 8) {
-												ctx.logInt(makeBox<dia::PlaceholderError>(
+												ctx.log<dia::PlaceholderError>(
 													"Invalid shift amount in compile-time "
 													"expression evaluation.",
 													expr.origin.getStablePosition().value()
-												));
+												);
 												return query::Failed();
 											}
 											set_num_result(static_cast<ResultT>(lhs_val >> rhs_val));
@@ -388,11 +388,11 @@ namespace compiler::helios {
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia::PlaceholderError>(
+											ctx.log<dia::PlaceholderError>(
 												"Division by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
-											));
+											);
 											return query::Failed();
 										}
 										set_num_result(lhs_val / rhs_val);
@@ -400,11 +400,11 @@ namespace compiler::helios {
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia::PlaceholderError>(
+											ctx.log<dia::PlaceholderError>(
 												"Modulo by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
-											));
+											);
 											return query::Failed();
 										}
 										if constexpr (std::is_integral_v<ResultT>)
@@ -668,12 +668,12 @@ namespace compiler::helios {
 							// The duplicate is of the underlying type, so that is what gets named:
 							// in `i32 | ref i32` neither alternative is written twice, but they
 							// still describe the same one.
-							ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+							ctx.log<DuplicateVariantAlternativeError>(
 								position.value(),
 								makeBox<InteractiveType>(
 									ctx, tsh::SymbolType<>::withDefaults(subtypes[i].getType())
 								)
-							));
+							);
 							result = query::Failed();
 							return;
 						}
@@ -735,12 +735,12 @@ namespace compiler::helios {
 					CORE_ASSERT(
 						position.has_value(), "Optional type constructor without a source position"
 					);
-					ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+					ctx.log<DuplicateVariantAlternativeError>(
 						position.value(),
 						makeBox<InteractiveType>(
 							ctx, tsh::SymbolType<>::withDefaults(value_type.getType())
 						)
-					));
+					);
 					result = query::Failed();
 					return;
 				}
@@ -1043,12 +1043,12 @@ namespace compiler::helios {
 			);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Compile time evaluation of this function call failed or "
 					"returned unsupported result.",
 					call_expr->origin.getStablePosition(),
 					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
-				));
+				);
 				return query::Failed();
 			}
 			return vm_eval_result.value();
@@ -1074,7 +1074,7 @@ namespace compiler::helios {
 					if (symbol_kind != SymbolKind::Variable and symbol_kind != SymbolKind::Parameter)
 						return;
 					if (declared_inside.contains(node.symbol)) return;
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"Expression cannot be evaluated at compile-time.",
 						node.origin.getStablePosition(),
 						base::strConcat(
@@ -1082,7 +1082,7 @@ namespace compiler::helios {
 							name(node.symbol),
 							"` in a constant expression is invalid."
 						)
-					));
+					);
 					result = base::BAD;
 				}
 			});
@@ -1106,11 +1106,11 @@ namespace compiler::helios {
 			auto vm_eval_result = executeInVm(ctx, func_to_call_name, lir_unit, {}, return_type);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Compile time evaluation of this expression failed.",
 					expr->origin.getStablePosition(),
 					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
-				));
+				);
 				return query::Failed();
 			}
 			return vm_eval_result.value();
