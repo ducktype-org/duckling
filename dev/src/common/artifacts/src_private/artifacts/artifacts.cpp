@@ -214,7 +214,8 @@ namespace {
 
 	/**
 	 * @brief If `file_name` is a temporary file `produceFileAtomically` makes - named
-	 * `<target>.<random>.tmp`, the random part being letters and digits only - returns `target`.
+	 * `<target>.<random>.tmp`, the random part being exactly
+	 * `fs::FileManager::RANDOM_NAME_LENGTH` letters and digits - returns `target`.
 	 *
 	 * The random part is matched exactly, so that a user's `app.backup.tmp` next to our `app` is
 	 * not taken for ours.
@@ -226,9 +227,10 @@ namespace {
 		const auto dot            = without_suffix.rfind('.');
 		if (dot == std::string_view::npos || dot == 0) return {};
 		const auto random    = without_suffix.substr(dot + 1);
-		const bool is_random = !random.empty() && std::ranges::all_of(random, [](char c) {
-			return std::isalnum(static_cast<unsigned char>(c)) != 0;
-		});
+		const bool is_random = random.size() == fs::FileManager::RANDOM_NAME_LENGTH
+		                    && std::ranges::all_of(random, [](char c) {
+								   return std::isalnum(static_cast<unsigned char>(c)) != 0;
+							   });
 		if (!is_random) return {};
 		return without_suffix.substr(0, dot);
 	}
@@ -456,11 +458,18 @@ base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtif
 	if (!maybe_artifact.has_value()) return {};
 	FileArtifact artifact = *maybe_artifact.value();
 
-	// Marking it used and checking it is still there are one step: touching fails on a file
-	// another build has removed in the meantime.
-	if (!fs::FileManager::touch(fs::FilePath(PATH / artifact_name.strView())).has_value()) {
-		file_artifacts.erase(artifact_name);
-		return {};
+	const auto path    = PATH / artifact_name.strView();
+	const auto touched = fs::FileManager::touch(fs::FilePath(path));
+	if (!touched.has_value()) {
+		// Only a file that is gone - e.g. removed by another build - is a miss. One that merely
+		// cannot be marked as used (a read-only mount, no write permission) is still a valid
+		// cache entry; at worst it is removed early as unused, and rebuilt.
+		std::error_code ec;
+		if (!std::filesystem::exists(path, ec)) {
+			file_artifacts.erase(artifact_name);
+			return {};
+		}
+		CORE_DEV_LOG(Artifacts, "Could not mark an artifact as used: ", touched.error(), "\n");
 	}
 	return artifact;
 }

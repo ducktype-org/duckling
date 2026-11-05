@@ -244,6 +244,7 @@ namespace artifacts {
 		 * Unlike `fileArtifactAtMaybe`, it marks the artifact as used by setting its file's
 		 * modification time to now. That is what keeps the artifact from being removed by
 		 * `removeFileArtifactsUnusedFor`, in this build or in any other build sharing the folder.
+		 * A file that cannot be marked (e.g. on a read-only mount) is still returned.
 		 *
 		 * @return The artifact, or nothing if it is not in the collection or its file is gone
 		 * (e.g. removed by another build). Either way, the caller has a cache miss.

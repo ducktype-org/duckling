@@ -849,6 +849,15 @@ private:
 		assertTrue(
 			fs::File(dir).listFilePaths().size() == 1, "No temporary file may be left behind"
 		);
+
+		// Code that recognises leftover temporary files relies on the random part's length.
+		const auto name = fs::FileManager::randomName(dir, "app.", ".tmp").getPath().filename();
+		assertTrue(
+			name.string().size()
+				== std::string_view("app.").size() + fs::FileManager::RANDOM_NAME_LENGTH
+					   + std::string_view(".tmp").size(),
+			"The random part must be RANDOM_NAME_LENGTH long, got: " + name.string()
+		);
 	}
 };
 

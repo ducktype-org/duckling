@@ -6,6 +6,7 @@
 
 #include "file.hpp"
 
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/misc/shared_view.hpp>
 #include <base/pointers/ref.hpp>
@@ -17,6 +18,11 @@
 #include <filesystem>
 #include <fstream>
 #include <random>
+
+#if !BASE_TARGET_OS_WINDOWS
+	#include <fcntl.h>
+	#include <sys/stat.h>
+#endif
 
 namespace {
 	/**
@@ -223,12 +229,11 @@ namespace fs {
 		static constexpr std::string_view NAME_CHARS
 			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRQSTUVWXYZ";
 		std::uniform_int_distribution<size_t> dist(0, NAME_CHARS.length() - 1);
-		constexpr size_t                      RANDOM_PART_LEN = 16;
 
 		// This is 64, but usually it will not loop more than once.
 		for (size_t try_no = 0; try_no < 64; try_no++) {
 			std::string name(prefix);
-			for (size_t i = 0; i < RANDOM_PART_LEN; i++) name.push_back(NAME_CHARS[dist(rng)]);
+			for (size_t i = 0; i < RANDOM_NAME_LENGTH; i++) name.push_back(NAME_CHARS[dist(rng)]);
 			name.append(suffix);
 			auto candidate = directory / name;
 			if (!exists(candidate.getPath())) return candidate;
@@ -344,11 +349,23 @@ namespace fs {
 	std::expected<void, std::string> FileManager::touch(const FilePath& path) {
 		const auto abs_path = path.absolute();
 		requirePhysicalPath(abs_path);
+#if BASE_TARGET_OS_WINDOWS
+		// Setting the time on Windows needs only the right to write the file's attributes.
 		std::error_code ec;
 		std::filesystem::last_write_time(
 			abs_path.getPath(), std::filesystem::file_time_type::clock::now(), ec
 		);
 		if (ec) return std::unexpected(abs_path.string() + ": " + ec.message());
+#else
+		// "Now" is passed as no time at all, as the `touch` command does it: POSIX then needs
+		// only write permission. `std::filesystem::last_write_time` passes an explicit time,
+		// which only the file's owner may set.
+		if (utimensat(AT_FDCWD, abs_path.getPath().c_str(), nullptr, 0) != 0) {
+			return std::unexpected(
+				abs_path.string() + ": " + std::error_code(errno, std::generic_category()).message()
+			);
+		}
+#endif
 		return {};
 	}
 

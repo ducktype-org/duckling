@@ -256,6 +256,13 @@ namespace fs {
 		);
 
 		/**
+		 * @brief Length of the random part `randomName` puts in a name - always exactly this
+		 * many letters and digits. Code that recognises such names, e.g. the temporary files of
+		 * `produceFileAtomically` left by a killed process, can rely on it.
+		 */
+		static constexpr std::size_t RANDOM_NAME_LENGTH = 16;
+
+		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random
 		 * name.
 		 *
@@ -438,7 +445,9 @@ namespace fs {
 		 * @brief Sets a physical file's modification time to now, like the `touch` command,
 		 * reporting failure instead of throwing.
 		 *
-		 * Unlike `touch`, it never creates the file: a missing file is reported as a failure.
+		 * Like `touch`, it needs only write permission to the file, not its ownership - so it
+		 * works on a file another user created in a folder they share. Unlike `touch`, it never
+		 * creates the file: a missing file is reported as a failure.
 		 *
 		 * @param path The file to touch; it must be on disk (absolute or relative), not virtual.
 		 * @return Nothing on success, or a message describing why the time could not be set.

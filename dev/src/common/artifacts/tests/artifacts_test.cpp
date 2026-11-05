@@ -266,10 +266,10 @@ private:
 		std::filesystem::path root
 			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
 		buildCache(root);
-		const auto temp_name = artcOf(root).filename().string() + ".leftover.tmp";
+		const auto temp_name = artcOf(root).filename().string() + ".Leftover12345678.tmp";
 		writeFile(root / temp_name, "half a cache");
 		const auto build_id_temp_name
-			= std::string(artifacts::ArtifactCollection::BUILD_ID_FILE) + ".leftover.tmp";
+			= std::string(artifacts::ArtifactCollection::BUILD_ID_FILE) + ".Leftover12345678.tmp";
 		writeFile(root / build_id_temp_name, "half a build id");
 
 		{
@@ -537,16 +537,19 @@ private:
 			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
 		buildCache(root);
 		addUserFiles(root);
-		writeFile(root / "f0.Killed123.tmp", "half");
-		writeFile(root / "s0" / "f1.Killed456.tmp", "half");
-		writeFile(root / "user_file.Killed789.tmp", "keep me");
+		writeFile(root / "f0.Killed1234567890.tmp", "half");
+		writeFile(root / "s0" / "f1.Killed4567890123.tmp", "half");
+		writeFile(root / "user_file.Killed7890123456.tmp", "keep me");
 		writeFile(root / "f0.backup.copy.tmp", "keep me");
+		// The user's backup of our artifact: the part between the dots is not our random part.
+		writeFile(root / "f0.backup.tmp", "keep me");
 
 		ASSERT_TRUE(artifacts::ArtifactCollection::removeCache(root).isOk());
-		ASSERT_TRUE(!std::filesystem::exists(root / "f0.Killed123.tmp"));
-		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.Killed456.tmp"));
-		ASSERT_TRUE(readFile(root / "user_file.Killed789.tmp") == "keep me");
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0.Killed1234567890.tmp"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.Killed4567890123.tmp"));
+		ASSERT_TRUE(readFile(root / "user_file.Killed7890123456.tmp") == "keep me");
 		ASSERT_TRUE(readFile(root / "f0.backup.copy.tmp") == "keep me");
+		ASSERT_TRUE(readFile(root / "f0.backup.tmp") == "keep me");
 	}
 
 	// In a normal build, only leftovers too old to belong to a write still in progress go.
@@ -555,20 +558,24 @@ private:
 			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
 		buildCache(root);
 		addUserFiles(root);
-		writeFile(root / "f0.Old1.tmp", "half");
-		writeFile(root / "s0" / "f1.Old2.tmp", "half");
-		writeFile(root / "f0.Fresh.tmp", "in progress");
-		writeFile(root / "user_file.Old3.tmp", "keep me");
-		for (const auto& old:
-		     { root / "f0.Old1.tmp", root / "s0" / "f1.Old2.tmp", root / "user_file.Old3.tmp" })
+		writeFile(root / "f0.OldWrite00000001.tmp", "half");
+		writeFile(root / "s0" / "f1.OldWrite00000002.tmp", "half");
+		writeFile(root / "f0.FreshWrite000001.tmp", "in progress");
+		writeFile(root / "user_file.OldWrite00000003.tmp", "keep me");
+		writeFile(root / "f0.backup.tmp", "keep me");
+		makeUnusedFor(root / "f0.backup.tmp", std::chrono::days(2));
+		for (const auto& old: { root / "f0.OldWrite00000001.tmp",
+		                        root / "s0" / "f1.OldWrite00000002.tmp",
+		                        root / "user_file.OldWrite00000003.tmp" })
 			makeUnusedFor(old, std::chrono::days(2));
 
 		artifacts::ArtifactCollection collection(root);
 		ASSERT_TRUE(collection.removeTemporaryFilesOlderThan(std::chrono::days(1)) == 2);
-		ASSERT_TRUE(!std::filesystem::exists(root / "f0.Old1.tmp"));
-		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.Old2.tmp"));
-		ASSERT_TRUE(readFile(root / "f0.Fresh.tmp") == "in progress");
-		ASSERT_TRUE(readFile(root / "user_file.Old3.tmp") == "keep me");
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0.OldWrite00000001.tmp"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1.OldWrite00000002.tmp"));
+		ASSERT_TRUE(readFile(root / "f0.FreshWrite000001.tmp") == "in progress");
+		ASSERT_TRUE(readFile(root / "user_file.OldWrite00000003.tmp") == "keep me");
+		ASSERT_TRUE(readFile(root / "f0.backup.tmp") == "keep me");
 	}
 
 	// Names are read back from disk, so the cleanup must not follow one out of the cache.
