@@ -1863,3 +1863,125 @@ lints:
         )
     );
 }
+
+#[test]
+fn invalid_explicit_url() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    source:
+      registry-url: http://[invalid]
+"#,
+    );
+
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `dependencies.a.source.registry-url`",
+                "`http://[invalid]` is not a valid url",
+                "invalid IPv6 address",
+            ]
+        )
+    );
+}
+
+#[test]
+fn invalid_implicit_url() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    source: http://[invalid]
+"#,
+    );
+
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `dependencies.a.source`",
+                "`http://[invalid]` is not a valid url",
+                "invalid IPv6 address",
+            ]
+        )
+    );
+}
+
+#[test]
+fn invalid_explicit_registry_url() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    source:
+      registry-url: http://foo.bar/a
+"#,
+    );
+
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `dependencies.a.source.registry-url`",
+                "`http://foo.bar/a` is not a valid registry URL",
+                "URL contains a path segment",
+            ]
+        )
+    );
+}
+
+#[test]
+fn invalid_implicit_registry_url() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    source: http://foo.bar?x=y
+"#,
+    );
+
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `dependencies.a.source`",
+                "`http://foo.bar/?x=y` is not a valid registry URL",
+                "URL contains a query",
+            ]
+        )
+    );
+}

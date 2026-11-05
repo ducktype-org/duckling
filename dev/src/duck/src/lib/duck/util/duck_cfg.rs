@@ -120,7 +120,9 @@ impl DuckCfg {
     /// Get the default registry url.
     pub fn registry_url(&self) -> QuackResult<Url> {
         let url = self.registry()?.url.clone();
-        let url = url.unwrap_or_else(|| fetcher::DEFAULT_REGISTRY_URL.clone());
+        let url = url
+            .map(|x| x.0)
+            .unwrap_or_else(|| fetcher::DEFAULT_REGISTRY_URL.clone());
         Ok(url)
     }
 

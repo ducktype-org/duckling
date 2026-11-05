@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
 
 use tempfile::TempDir;
+use thiserror::Error;
 use tracing::debug;
 use url::Url;
 
@@ -56,9 +57,11 @@ pub struct Fetcher<'duck> {
 ///
 /// [`DuckCfg::registry_url`]: crate::duck::util::duck_cfg::DuckCfg::registry_url
 pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
-    "http://localhost:9001"
+    let url = "http://localhost:9001"
         .parse()
-        .expect("compile time known value")
+        .expect("compile time known value");
+    assert_eq!(validate_registry_url(&url), Ok(()));
+    url
 });
 
 impl<'duck> Fetcher<'duck> {
@@ -272,4 +275,33 @@ impl<'duck> Fetcher<'duck> {
             pkg.version
         )
     }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Error)]
+/// Reason for an invalid URL.
+pub enum InvalidUrlError {
+    #[error("URL doesn't contain a host")]
+    /// URL was missing a host.
+    NoHost,
+    #[error("URL contains a path segment")]
+    /// URL has some path segments, e.g. `/a`, `/a/b`.
+    HasPathSegments,
+    #[error("URL contains a query")]
+    /// URL has some query, e.g. `?foo=bar`.
+    HasQuery,
+}
+
+/// Check whether a [`Url`] is a valid registry URL.
+pub fn validate_registry_url(url: &Url) -> Result<(), InvalidUrlError> {
+    if !url.has_host() {
+        return Err(InvalidUrlError::NoHost);
+    }
+    if url.path() != "/" {
+        return Err(InvalidUrlError::HasPathSegments);
+    }
+
+    if url.query().is_some() {
+        return Err(InvalidUrlError::HasQuery);
+    }
+    Ok(())
 }
