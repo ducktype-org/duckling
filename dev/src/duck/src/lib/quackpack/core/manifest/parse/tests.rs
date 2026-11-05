@@ -851,7 +851,7 @@ dependencies:
             make_errors_message(
                 &dir,
                 [
-                    &format!("`{}` is not a valid url", root_dir.path().display()),
+                    &format!("`{}` is not a valid URL", root_dir.path().display()),
                     "relative URL without a base",
                     "git dependency points to a file on the disk",
                     &format!(
@@ -1888,7 +1888,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.a.source.registry-url`",
-                "`http://[invalid]` is not a valid url",
+                "`http://[invalid]` is not a valid URL",
                 "invalid IPv6 address",
             ]
         )
@@ -1918,7 +1918,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.a.source`",
-                "`http://[invalid]` is not a valid url",
+                "`http://[invalid]` is not a valid URL",
                 "invalid IPv6 address",
             ]
         )
