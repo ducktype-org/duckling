@@ -67,7 +67,7 @@ protected:
 		auto init_result = compiler::driver::test_utils::initializeCompilerForTests(
 			{},
 			artifacts_path,
-			{ compiler::driver::options_types::StdLibOptions::DefaultStd{} },
+			{ .std_lib_type = compiler::driver::options_types::StdLibOptions::DefaultStd{} },
 			{ .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
 		);
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");

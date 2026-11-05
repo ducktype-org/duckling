@@ -324,7 +324,7 @@ namespace artifacts {
 		///////////////////////// OBJECT STATE //////////////////////
 
 
-		const fs::FilePath PATH;
+		const fs::FilePath folder;
 
 		mutable concurrent::AtomicFlagSpinlock lock;
 
@@ -368,7 +368,7 @@ namespace artifacts {
 		 */
 		std::unordered_set<std::string> listed_names;
 
-		const base::Optional<Ref<ArtifactCollection>> PARENT;
+		const base::Optional<Ref<ArtifactCollection>> parent;
 
 
 		/**
@@ -421,18 +421,18 @@ namespace artifacts {
 		/**
 		 * @brief Construct a new ArtifactCollection and sets the parent variable.
 		 */
-		ArtifactCollection(fs::FilePath path, Ref<ArtifactCollection> parent);
+		ArtifactCollection(fs::FilePath path, Ref<ArtifactCollection> parent_collection);
 
 		/**
-		 * @brief If the stored build id at `<PATH>/.build_id` differs from the current
+		 * @brief If the stored build id at `<folder>/.build_id` differs from the current
 		 * compiler's `artifacts::BUILD_ID`, or the file is missing entirely, removes the
-		 * artifacts the cache owns in `PATH` (see `OWNED_LIST_FILE`) and, if there were any,
+		 * artifacts the cache owns in `folder` (see `OWNED_LIST_FILE`) and, if there were any,
 		 * logs a user-visible message.
 		 */
 		void validateOrWipeBuildId();
 
 		/**
-		 * @brief Removes what the cache owns in `PATH` - the entries `OWNED_LIST_FILE` names,
+		 * @brief Removes what the cache owns in `folder` - the entries `OWNED_LIST_FILE` names,
 		 * recursively, and the cache's own bookkeeping files - and forgets it in memory, so the
 		 * build carries on from an empty cache. Files the list does not name are left alone.
 		 *
@@ -442,7 +442,7 @@ namespace artifacts {
 		void discardOwnedContents();
 
 		/**
-		 * @brief Gives up on the cache in `PATH`: tells the user why and discards it with
+		 * @brief Gives up on the cache in `folder`: tells the user why and discards it with
 		 * `discardOwnedContents`.
 		 *
 		 * @param what_is_wrong Fills in "The artifacts cache at '<path>' <what_is_wrong>.", e.g.
@@ -451,7 +451,7 @@ namespace artifacts {
 		void discardUnusableCache(std::string_view what_is_wrong);
 
 		/**
-		 * @brief Writes the current `artifacts::BUILD_ID` to `<PATH>/.build_id`.
+		 * @brief Writes the current `artifacts::BUILD_ID` to `<folder>/.build_id`.
 		 * This function should be called only on the root collection.
 		 */
 		void writeBuildIdFile();
@@ -459,7 +459,7 @@ namespace artifacts {
 		/**
 		 * @brief Restores the blobs from the `.artc` file, and attaches the file artifacts and
 		 * sub-collections that `OWNED_LIST_FILE` names and that are still on disk. Nothing else
-		 * in `PATH` is attached.
+		 * in `folder` is attached.
 		 */
 		void loadData();
 

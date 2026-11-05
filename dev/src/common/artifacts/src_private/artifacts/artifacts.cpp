@@ -36,8 +36,8 @@ base::RawView artifacts::BlobArtifact::getDataView() const {
 
 //////////// COLLECTION EXTERNALLY VISIBLE METHODS ////////////
 
-artifacts::ArtifactCollection::ArtifactCollection(fs::FilePath root): PATH(std::move(root)) {
-	CORE_ASSERT(PATH.isDirectory(), "ArtifactCollection path is not an existing directory");
+artifacts::ArtifactCollection::ArtifactCollection(fs::FilePath root): folder(std::move(root)) {
+	CORE_ASSERT(folder.isDirectory(), "ArtifactCollection path is not an existing directory");
 	if constexpr (CHECK_BUILD_ID) validateOrWipeBuildId();
 	loadData();
 }
@@ -100,11 +100,11 @@ usize artifacts::ArtifactCollection::removeFileArtifactsUnusedFor(timer::Duratio
 usize artifacts::ArtifactCollection::removeTemporaryFilesOlderThan(timer::Duration max_age) {
 	WithLock lock(*this);
 
-	std::vector<std::string> written_names = cacheFileNames(PATH);
+	std::vector<std::string> written_names = cacheFileNames(folder);
 	for (const auto& [name, _]: file_artifacts) written_names.emplace_back(name.strView());
 
 	usize removed = 0;
-	for (const auto& temp_file: findTempFiles(PATH, written_names)) {
+	for (const auto& temp_file: findTempFiles(folder, written_names)) {
 		const auto age = temp_file.timeSinceModified();
 		if (age.has_value() && age.value() > max_age && removeOrWarn(temp_file)) removed++;
 	}
@@ -186,14 +186,16 @@ base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact&
 
 /////////////////////// LOADING AND DISCARDING //////////////////////
 
-artifacts::ArtifactCollection::ArtifactCollection(fs::FilePath path, Ref<ArtifactCollection> parent):
-	  PATH(std::move(path)),
-	  PARENT(parent) {
+artifacts::ArtifactCollection::ArtifactCollection(
+	fs::FilePath path, Ref<ArtifactCollection> parent_collection
+):
+	  folder(std::move(path)),
+	  parent(parent_collection) {
 	loadData();
 }
 
 void artifacts::ArtifactCollection::validateOrWipeBuildId() {
-	const auto  build_id_path = cacheFilePath(PATH, CacheFile::BuildId);
+	const auto  build_id_path = cacheFilePath(folder, CacheFile::BuildId);
 	std::string stored_id;
 	const bool  has_file = build_id_path.exists();
 	if (has_file) {
@@ -212,17 +214,17 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 	if (has_file) {
 		CORE_USER_LOG(
 			"The artifacts cache at '",
-			PATH.string(),
+			folder.string(),
 			"' was produced by a different build of the compiler (stored build id: ",
 			stored_id.empty() ? std::string("<empty>") : stored_id.substr(0, 12) + "...",
 			", current build id: ",
 			std::string(BUILD_ID).substr(0, 12),
 			"...). Removing the cached artifacts and starting fresh.\n"
 		);
-	} else if (cacheFilePath(PATH, CacheFile::OwnedList).exists()) {
+	} else if (cacheFilePath(folder, CacheFile::OwnedList).exists()) {
 		CORE_USER_LOG(
 			"The artifacts cache at '",
-			PATH.string(),
+			folder.string(),
 			"' has no build id. Removing the cached artifacts and starting fresh.\n"
 		);
 	}
@@ -233,11 +235,11 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 void artifacts::ArtifactCollection::loadData() {
 	// Without a list this folder is not a collection of ours, so whatever is in it - an `.artc`
 	// included - is not ours to load. Flushing writes this collection's own `.artc` over it.
-	const auto owned = readOwnedList(PATH);
+	const auto owned = readOwnedList(folder);
 	if (!owned.has_value()) return;
 	for (const auto& entry: owned.value()) listed_names.insert(entry.name);
 
-	const auto artc_path = cacheFilePath(PATH, CacheFile::Artc);
+	const auto artc_path = cacheFilePath(folder, CacheFile::Artc);
 	if (artc_path.exists()) {
 		const auto content = fs::File::open(artc_path).and_then([](const fs::File& file) {
 			return file.getContent();
@@ -260,7 +262,7 @@ void artifacts::ArtifactCollection::loadData() {
 	// Attach the file artifacts and sub-collections. Only what the list names is ours: anything
 	// else in the folder belongs to the user or to another tool.
 	for (const auto& entry: owned.value()) {
-		if (!isOwnable(PATH, entry.name)) continue;
+		if (!isOwnable(folder, entry.name)) continue;
 		const auto path = entryPath(entry.name);
 		const auto name = base::StrID(entry.name);
 		if (entry.kind == OWNED_COLLECTION && path.isDirectory())
@@ -273,7 +275,7 @@ void artifacts::ArtifactCollection::loadData() {
 void artifacts::ArtifactCollection::discardUnusableCache(std::string_view what_is_wrong) {
 	CORE_USER_LOG(
 		"The artifacts cache at '",
-		PATH.string(),
+		folder.string(),
 		"' ",
 		what_is_wrong,
 		". Removing the cached artifacts and starting fresh.\n"
@@ -282,7 +284,7 @@ void artifacts::ArtifactCollection::discardUnusableCache(std::string_view what_i
 }
 
 void artifacts::ArtifactCollection::discardOwnedContents() {
-	removeOwnedContents(PATH);
+	removeOwnedContents(folder);
 	// Whatever was loaded so far describes a cache that is now gone, so it must not stay in
 	// memory - it would be flushed straight back onto disk at exit.
 	blob_artifacts.clear();
@@ -298,8 +300,8 @@ void artifacts::ArtifactCollection::discardOwnedContents() {
 /////////////////////////////// FLUSHING //////////////////////////////
 
 void artifacts::ArtifactCollection::flushNoLock() {
-	if (PARENT) {
-		PARENT.value()->flush();
+	if (parent) {
+		parent.value()->flush();
 	} else {
 		flushDown();
 		if constexpr (CHECK_BUILD_ID) writeBuildIdFile();
@@ -316,7 +318,7 @@ void artifacts::ArtifactCollection::flushDown() {
 }
 
 void artifacts::ArtifactCollection::writeArtcFile() const {
-	CORE_DEV_LOG(Artifacts, "Flushing ArtifactCollection at: ", PATH.absolute().string(), "\n");
+	CORE_DEV_LOG(Artifacts, "Flushing ArtifactCollection at: ", folder.absolute().string(), "\n");
 
 	std::vector<std::pair<std::string_view, base::RawView>> blobs;
 	blobs.reserve(blob_artifacts.size());
@@ -324,7 +326,7 @@ void artifacts::ArtifactCollection::writeArtcFile() const {
 		const auto& data = blob_data[name];
 		blobs.emplace_back(name.strView(), base::RawView{ data->data(), data->size() });
 	}
-	writeCacheFile(PATH, CacheFile::Artc, [&blobs](std::ostream& out) { writeArtc(out, blobs); });
+	writeCacheFile(folder, CacheFile::Artc, [&blobs](std::ostream& out) { writeArtc(out, blobs); });
 }
 
 void artifacts::ArtifactCollection::writeOwnedList() {
@@ -334,7 +336,7 @@ void artifacts::ArtifactCollection::writeOwnedList() {
 	for (const auto& [name, _]: sub_collections)
 		candidates.push_back({ .kind = OWNED_COLLECTION, .name = std::string(name.strView()) });
 	// Another process sharing this folder may have created entries this one never loaded.
-	for (auto& entry: readOwnedList(PATH).copyValueOrDefault())
+	for (auto& entry: readOwnedList(folder).copyValueOrDefault())
 		candidates.push_back(std::move(entry));
 
 	// A file whose write was killed has only its temporary file; the entry has to stay, or
@@ -343,7 +345,7 @@ void artifacts::ArtifactCollection::writeOwnedList() {
 	for (const auto& entry: candidates)
 		if (entry.kind == OWNED_FILE) file_names.push_back(entry.name);
 	std::unordered_set<std::string> with_leftovers;
-	for (const auto& temp_file: findTempFiles(PATH, file_names)) {
+	for (const auto& temp_file: findTempFiles(folder, file_names)) {
 		if_opt_some(fs::FileManager::temporaryFileTarget(temp_file), target) {
 			with_leftovers.insert(target.lexicallyNormal().string());
 		}
@@ -352,7 +354,7 @@ void artifacts::ArtifactCollection::writeOwnedList() {
 	std::unordered_set<std::string> kept;
 	std::vector<OwnedEntry>         entries;
 	for (auto& entry: candidates) {
-		if (kept.contains(entry.name) || !isOwnable(PATH, entry.name)) continue;
+		if (kept.contains(entry.name) || !isOwnable(folder, entry.name)) continue;
 		// An entry whose file is gone (e.g. through `deleteFileArtifact`, or never written) has
 		// nothing left to own, so it is dropped here instead of piling up.
 		const auto path = entryPath(entry.name);
@@ -362,7 +364,7 @@ void artifacts::ArtifactCollection::writeOwnedList() {
 	}
 
 	const auto content = formatOwnedList(entries);
-	writeCacheFile(PATH, CacheFile::OwnedList, [&content](std::ostream& out) { out << content; });
+	writeCacheFile(folder, CacheFile::OwnedList, [&content](std::ostream& out) { out << content; });
 	listed_names = std::move(kept);
 }
 
@@ -374,12 +376,12 @@ void artifacts::ArtifactCollection::writeBuildIdFile() {
 	// Losing it is self-correcting rather than dangerous: the next build finds no build id, says
 	// so and removes the cached artifacts, which costs one full rebuild. So a failure only warns
 	// and lets this build finish.
-	writeCacheFile(PATH, CacheFile::BuildId, [](std::ostream& out) { out << BUILD_ID; });
+	writeCacheFile(folder, CacheFile::BuildId, [](std::ostream& out) { out << BUILD_ID; });
 }
 
 void artifacts::ArtifactCollection::recordOwnedEntry(char kind, std::string_view name) {
-	if (listed_names.contains(std::string(name)) || !isOwnable(PATH, name)) return;
-	if (appendOwnedEntry(PATH, { .kind = kind, .name = std::string(name) }))
+	if (listed_names.contains(std::string(name)) || !isOwnable(folder, name)) return;
+	if (appendOwnedEntry(folder, { .kind = kind, .name = std::string(name) }))
 		listed_names.insert(std::string(name));
 }
 
@@ -391,7 +393,7 @@ fs::FilePath artifacts::ArtifactCollection::entryPath(std::string_view name) con
 	// writes it but does not remove it later.
 	fs::FilePath path{ std::string(name) };
 	if (path.hasRoot() || !path.isRelative()) return path;
-	return PATH / path;
+	return folder / path;
 }
 
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNewNoLock(
