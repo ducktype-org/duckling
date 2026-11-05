@@ -135,7 +135,7 @@ impl<'duck> EditableManifest<'duck> {
     /// is to provide the user with a better error message.
     pub fn remove_dependency(
         &self,
-        name: &str,
+        ename: &str,
         kind: DependencyKind,
     ) -> QuackResult<DependencyRemoved> {
         let manifest = self.as_mapping()?;
@@ -159,7 +159,7 @@ impl<'duck> EditableManifest<'duck> {
         // Try to remove the dependency from the map matching the kind.
         if let Some(my_dep_map) = my_dep_map {
             let my_dep_map = self.dependencies_as_mapping(my_dep_map, kind)?;
-            let removed = my_dep_map.remove(name).is_some();
+            let removed = my_dep_map.remove(ename).is_some();
             // If the mapping became empty, remove it from the manifest.
             if my_dep_map.is_empty() {
                 manifest.remove(kind.key_in_manifest());
@@ -175,7 +175,7 @@ impl<'duck> EditableManifest<'duck> {
                 continue;
             };
             let other_dep_map = self.dependencies_as_mapping(other_dep_map, other_kind)?;
-            if other_dep_map.contains_key(name) {
+            if other_dep_map.contains_key(ename) {
                 return Ok(DependencyRemoved::NoDependencyButKindExists(other_kind));
             }
         }
@@ -194,7 +194,7 @@ impl<'duck> EditableManifest<'duck> {
     /// For this to have IO effect, it should be followed by [`Self::save`].
     pub fn add_dependency(
         &self,
-        name: &str,
+        ename: &str,
         dependency: Dependency,
         kind: DependencyKind,
     ) -> QuackResult<DependencyAdded> {
@@ -206,13 +206,13 @@ impl<'duck> EditableManifest<'duck> {
                 continue;
             };
             let dep_map = self.dependencies_as_mapping(dep_map, dep_kind)?;
-            if dep_map.contains_key(name) {
+            if dep_map.contains_key(ename) {
                 return Ok(DependencyAdded::AlreadyExists(dep_kind));
             }
         }
         let dependencies_map = self.get_dependencies_map(kind)?;
         let dependency = Into::<Mapping>::into(dependency);
-        dependencies_map.set(name, dependency);
+        dependencies_map.set(ename, dependency);
         Ok(DependencyAdded::Yes)
     }
 
