@@ -113,10 +113,12 @@ namespace compiler::driver {
 			auto artifact_name = outputArtifactName(key);
 			auto collection    = getQueryArtifactsCollection();
 
-			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(artifact_name.c_str()));
+			// Also marks the file as used, so the unused-artifact cleanup keeps it.
+			auto output_maybe
+				= collection->fileArtifactForReuse(base::StrID(artifact_name.c_str()));
 			if (!output_maybe.has_value()) return {};
 
-			return *output_maybe.value();
+			return output_maybe.value();
 		}
 
 		/**

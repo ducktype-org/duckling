@@ -402,6 +402,45 @@ bool artifacts::ArtifactCollection::deleteFileArtifact(base::StrID artifact_name
 	return deleteFileArtifactNoLock(artifact_name);
 }
 
+base::Optional<artifacts::FileArtifact> artifacts::ArtifactCollection::fileArtifactForReuse(
+	base::StrID artifact_name
+) {
+	WithLock lock(*this);
+	auto     maybe_artifact = fileArtifactAtMaybeNoLock(artifact_name);
+	if (!maybe_artifact.has_value()) return {};
+	FileArtifact artifact = *maybe_artifact.value();
+
+	// Marking it used and checking it is still there are one step: touching fails on a file
+	// another build has removed in the meantime.
+	if (!fs::FileManager::touch(fs::FilePath(PATH / artifact_name.strView())).has_value()) {
+		file_artifacts.erase(artifact_name);
+		return {};
+	}
+	return artifact;
+}
+
+usize artifacts::ArtifactCollection::removeFileArtifactsUnusedFor(std::chrono::seconds max_age) {
+	WithLock   lock(*this);
+	const auto cutoff = std::filesystem::file_time_type::clock::now() - max_age;
+
+	std::vector<base::StrID> unused;
+	for (const auto& [name, _]: file_artifacts) {
+		std::error_code ec;
+		const auto      last_used = std::filesystem::last_write_time(PATH / name.strView(), ec);
+		if (!ec && last_used < cutoff) unused.push_back(name);
+	}
+
+	usize removed = 0;
+	for (const auto& name: unused) removed += deleteFileArtifactNoLock(name) ? 1 : 0;
+	for (auto&& [_, sub_collection]: sub_collections)
+		removed += sub_collection->removeFileArtifactsUnusedFor(max_age);
+	return removed;
+}
+
+base::OkBad artifacts::ArtifactCollection::removeCache(const std::filesystem::path& root) {
+	return removeOwnedContents(root) ? base::OK : base::BAD;
+}
+
 artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
 ) {
 	WithLock lock(*this);
@@ -743,12 +782,15 @@ artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(bas
 }
 
 bool artifacts::ArtifactCollection::deleteFileArtifactNoLock(base::StrID artifact_name) {
-	auto maybe_file_artifact = fileArtifactAtMaybeNoLock(artifact_name);
-	if (!maybe_file_artifact.has_value()) return false;
-	auto file_artifact = *maybe_file_artifact.value();
-	bool result        = fs::FileManager::deleteFile(file_artifact.file);
+	if (!file_artifacts.contains(artifact_name)) return false;
+	const auto removed = fs::FileManager::removeEntry(fs::FilePath(PATH / artifact_name.strView()));
+	if (!removed.has_value()) {
+		// Still on disk, so still ours: keep it, and the list keeps naming it.
+		CORE_USER_LOG("Warning: failed to remove artifact ", removed.error(), "\n");
+		return false;
+	}
 	file_artifacts.erase(artifact_name);
-	return result;
+	return removed.value();
 }
 
 artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNewNoLock(

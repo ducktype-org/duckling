@@ -53,11 +53,6 @@ namespace query::external {
 		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
 	}
 
-	u64 deleteOrphanedDiskCaches() {
-		auto state = ::query::internal::ContextAccess::getState();
-		return state->cleanupOrphanedDiskCaches();
-	}
-
 	void setPreviousMetadataFromRawBytes(std::span<const std::byte> metadata_raw_bytes) {
 		auto state    = ::query::internal::ContextAccess::getState();
 		auto metadata = ::query::internal::MetadataStorage::deserialize(metadata_raw_bytes);

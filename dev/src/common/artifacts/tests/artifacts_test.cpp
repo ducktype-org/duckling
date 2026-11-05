@@ -8,6 +8,7 @@
 #include <artifacts/build_id.hpp>
 #include <tester/tester.hpp>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -37,6 +38,10 @@ public:
 		TESTER_ADD_TEST(artifactOutsideTheCacheIsNotOwned);
 		TESTER_ADD_TEST(entriesThroughSymlinksAreSkipped);
 		TESTER_ADD_TEST(relativeRootWorks);
+		TESTER_ADD_TEST(unusedFileArtifactsAreRemoved);
+		TESTER_ADD_TEST(reusedArtifactsAreKept);
+		TESTER_ADD_TEST(reuseOfRemovedFileIsAMiss);
+		TESTER_ADD_TEST(removeCacheRemovesOnlyOwned);
 		TESTER_ADD_TEST(listEntriesOutsideTheCacheAreIgnored);
 	}
 
@@ -442,6 +447,85 @@ private:
 		std::filesystem::current_path(old_cwd);
 		ASSERT_TRUE(has_build_id);
 		ASSERT_TRUE(!std::filesystem::exists(outer / "cache" / "f0"));
+	}
+
+	static void makeUnusedFor(const std::filesystem::path& path, std::chrono::days days) {
+		std::filesystem::last_write_time(path, std::filesystem::file_time_type::clock::now() - days);
+	}
+
+	// Artifacts nobody has written or reused for the given time are removed, in sub-collections
+	// too; recently used ones, and files that are not ours, stay.
+	void unusedFileArtifactsAreRemoved() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		addUserFiles(root);
+		makeUnusedFor(root / "f0", std::chrono::days(8));
+		makeUnusedFor(root / "s0" / "f1", std::chrono::days(8));
+		makeUnusedFor(root / "user_file", std::chrono::days(8));
+		{
+			artifacts::ArtifactCollection collection(root);
+			writeFile(
+				collection.fileArtifactNew(base::StrID("fresh")).file.getFilePath().getPath(), "x"
+			);
+			ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(std::chrono::days(7)) == 2);
+			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("f0")).empty());
+			collection.flush();
+		}
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1"));
+		ASSERT_TRUE(std::filesystem::exists(root / "fresh"));
+		assertUserFilesKept(root);
+		// The removed artifacts are dropped from the list on flush.
+		ASSERT_TRUE(
+			readFile(root / artifacts::ArtifactCollection::OWNED_LIST_FILE).find("f0")
+			== std::string::npos
+		);
+	}
+
+	// Reusing an artifact marks it as used, which keeps it from the cleanup.
+	void reusedArtifactsAreKept() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		makeUnusedFor(root / "f0", std::chrono::days(8));
+
+		artifacts::ArtifactCollection collection(root);
+		auto                          reused = collection.fileArtifactForReuse(base::StrID("f0"));
+		ASSERT_HAS_VALUE(reused);
+		ASSERT_TRUE(collection.removeFileArtifactsUnusedFor(std::chrono::days(7)) == 0);
+		ASSERT_TRUE(readFile(root / "f0") == "f0");
+		ASSERT_TRUE(collection.fileArtifactForReuse(base::StrID("missing")).empty());
+	}
+
+	// A file another build removed after this one loaded the collection is a cache miss, not a
+	// file artifact pointing at nothing.
+	void reuseOfRemovedFileIsAMiss() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+
+		artifacts::ArtifactCollection collection(root);
+		std::filesystem::remove(root / "f0");
+		ASSERT_TRUE(collection.fileArtifactForReuse(base::StrID("f0")).empty());
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
+		ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("f0")).empty());
+	}
+
+	// `duckc clean`: everything the cache owns goes, nothing else does.
+	void removeCacheRemovesOnlyOwned() {
+		std::filesystem::path root
+			= fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		buildCache(root);
+		addUserFiles(root);
+
+		ASSERT_TRUE(artifacts::ArtifactCollection::removeCache(root).isOk());
+		ASSERT_TRUE(!std::filesystem::exists(root / "f0"));
+		ASSERT_TRUE(!std::filesystem::exists(root / "s0" / "f1"));
+		ASSERT_TRUE(!std::filesystem::exists(artcOf(root)));
+		ASSERT_TRUE(!std::filesystem::exists(root / artifacts::ArtifactCollection::BUILD_ID_FILE));
+		ASSERT_TRUE(!std::filesystem::exists(root / artifacts::ArtifactCollection::OWNED_LIST_FILE));
+		assertUserFilesKept(root);
 	}
 
 	// Names are read back from disk, so the cleanup must not follow one out of the cache.

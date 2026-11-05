@@ -41,6 +41,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <artifacts/artifacts.hpp>
 #include <clah/clah.hpp>
 #include <clah/parsing_result.hpp>
 #include <clah/value_parser.hpp>
@@ -1490,6 +1491,37 @@ namespace {
 							if (exec_result.status == os_utils::ExecSelfStatus::Error) return 1;
 							return exec_result.exit_code;
 						}
+						return 0;
+					})
+			)
+		    .addSubcommand(
+				clah::Clah(
+					"clean",
+					"Remove the build artifacts the compiler created in the artifacts folder. "
+					"Other files in the folder are left alone."
+				)
+					.add(getClahArtifactLocationParameter())
+					.setHandler([](const clah::ParsingResult& options) -> int {
+						const auto path = options.getValue<fs::FilePath>("artifact-location")
+			                                  .copyValueOr("./duck_build/");
+						if (!path.exists()) {
+							std::cout << "Nothing to clean: \"" << path.string()
+									  << "\" does not exist.\n";
+							return 0;
+						}
+						if (!std::filesystem::is_directory(path.getPath())) {
+							std::cerr << "Error: \"" << path.string() << "\" is not a folder.\n";
+							return 1;
+						}
+						// Removes only what the cache owns, so pointing `-a` at a folder of one's
+			            // own files (`-a .`) is safe here too.
+						if (artifacts::ArtifactCollection::removeCache(path.getPath()).isBad()) {
+							std::cerr << "Error: some artifacts in \"" << path.string()
+									  << "\" could not be removed; see the warnings above.\n";
+							return 1;
+						}
+						std::cout << "Removed the build artifacts in \"" << path.string()
+								  << "\".\n";
 						return 0;
 					})
 			)

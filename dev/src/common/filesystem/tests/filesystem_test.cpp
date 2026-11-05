@@ -31,6 +31,7 @@ public:
 		TESTER_ADD_TEST(writeFailureTest);
 		TESTER_ADD_TEST(writeFileAtomicallyTest);
 		TESTER_ADD_TEST(removeEntryTest);
+		TESTER_ADD_TEST(touchTest);
 	}
 
 private:
@@ -787,6 +788,25 @@ private:
 		removed = fs::FileManager::removeEntry(fs::FilePath(dir / "full_dir"));
 		assertTrue(!removed.has_value(), "A non-empty folder must not be removed");
 		assertTrue(std::filesystem::exists(dir / "full_dir" / "inside"), "Its content must stay");
+	}
+
+	void touchTest() {
+		const auto dir  = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto file = dir / "file";
+		std::ofstream(file) << "content";
+		const auto old_time = std::filesystem::file_time_type::clock::now() - std::chrono::days(30);
+		std::filesystem::last_write_time(file, old_time);
+
+		assertTrue(fs::FileManager::touch(fs::FilePath(file)).has_value(), "Touch must succeed");
+		assertTrue(
+			std::filesystem::last_write_time(file) > old_time + std::chrono::days(29),
+			"Touch must set the modification time to now"
+		);
+		assertTrue(readWhole(file) == "content", "Touch must not change the content");
+
+		const auto missing = fs::FileManager::touch(fs::FilePath(dir / "missing"));
+		assertTrue(!missing.has_value(), "Touching a missing file must fail");
+		assertTrue(!std::filesystem::exists(dir / "missing"), "Touch must not create the file");
 	}
 };
 

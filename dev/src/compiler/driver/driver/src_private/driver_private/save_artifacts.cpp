@@ -8,17 +8,46 @@
 #include <driver_private/save_artifacts.hpp>
 #include <global_state/artifacts_location.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
+#include <artifacts/artifacts.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
 #include <string_id/string_id.hpp>
 
+#include <chrono>
 #include <vector>
 
 namespace compiler::driver {
 
 	namespace {
+		/**
+		 * @brief How long a query artifact may go unused before the cache removes it.
+		 *
+		 * Far longer than any build takes, so that no build - this one or another sharing the
+		 * folder - loses a file it is still using.
+		 */
+		constexpr std::chrono::days UNUSED_QUERY_ARTIFACT_MAX_AGE{ 7 };
+
+		/**
+		 * @brief Removes the query artifacts that no build has written or reused for
+		 * `UNUSED_QUERY_ARTIFACT_MAX_AGE`.
+		 *
+		 * The cleanup used to remove the artifacts of the queries missing from this build's
+		 * graph. With several builds sharing the folder - different targets, built in parallel -
+		 * that removed the other builds' artifacts, even while they were using them. Going by when
+		 * a file was last used needs no knowledge of what the other builds are doing. It runs at
+		 * the end of the build, when everything this build used has already been marked.
+		 */
+		void removeUnusedQueryArtifacts(Ref<artifacts::ArtifactCollection> root) {
+			if_opt_some(root->subCollectionAtMaybe(base::StrID("query")), query_collection) {
+				const usize removed
+					= query_collection->removeFileArtifactsUnusedFor(UNUSED_QUERY_ARTIFACT_MAX_AGE);
+				CORE_DEV_LOG(Artifacts, "Removed ", removed, " unused query artifact(s)\n");
+			}
+		}
+
 		void saveQueryStateData(Ref<artifacts::ArtifactCollection> root) {
 			Ref query_collection = root->subCollectionAtOrNew(base::StrID("query"));
 
@@ -27,13 +56,6 @@ namespace compiler::driver {
 				= query_collection->blobArtifactAtOrNew(base::StrID("query_graph"));
 
 			std::vector<byte> serialized = query::external::optAndSerializeQueryGraph();
-
-			// Reclaim on-disk caches orphaned by this compilation (nodes dropped from the graph,
-			// e.g. because their query hash changed) before the graph blob is written and flushed.
-			const u64 deleted_disk_caches = query::external::deleteOrphanedDiskCaches();
-			CORE_DEV_LOG(
-				Artifacts, "Removed ", deleted_disk_caches, " orphaned on-disk query cache(s)\n"
-			);
 
 			if (!serialized.empty())
 				query_collection->setBlobData(
@@ -57,6 +79,9 @@ namespace compiler::driver {
 		Ref root = global_state::getRootCollection();
 
 		if (enable_incremental_compilation) saveQueryStateData(root);
+		// Without incremental compilation the query artifacts are still written, so they are
+		// cleaned up either way.
+		removeUnusedQueryArtifacts(root);
 
 		// Flush all artifacts to disk.
 		root->flush();

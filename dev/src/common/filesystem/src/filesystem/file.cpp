@@ -328,6 +328,17 @@ namespace fs {
 		return removed;
 	}
 
+	std::expected<void, std::string> FileManager::touch(const FilePath& path) {
+		const auto abs_path = path.absolute();
+		requirePhysicalPath(abs_path);
+		std::error_code ec;
+		std::filesystem::last_write_time(
+			abs_path.getPath(), std::filesystem::file_time_type::clock::now(), ec
+		);
+		if (ec) return std::unexpected(abs_path.string() + ": " + ec.message());
+		return {};
+	}
+
 	// --- File methods (non-static, formerly FilePath) ---
 
 	base::SharedView File::getContent() const {

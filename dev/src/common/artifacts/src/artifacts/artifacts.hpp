@@ -16,6 +16,7 @@
 #include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
 
+#include <chrono>
 #include <cstring>
 #include <sstream>
 #include <string>
@@ -177,6 +178,30 @@ namespace artifacts {
 		 */
 		void flush();
 
+		/**
+		 * @brief Removes the whole cache at `root`: every artifact and sub-collection it owns
+		 * (see `OWNED_LIST_FILE`), and its own bookkeeping files. Nothing else in `root` is
+		 * touched. Meant for an explicit request such as `duckc clean`; a build using `root` at
+		 * the same time loses its cache and can fail.
+		 *
+		 * @return `base::BAD` if something owned could not be removed; that is reported to the
+		 * user, and the rest is removed anyway.
+		 */
+		static base::OkBad removeCache(const std::filesystem::path& root);
+
+		/**
+		 * @brief Removes the file artifacts of this collection and of its sub-collections that
+		 * have not been written or reused (see `fileArtifactForReuse`) for `max_age`.
+		 *
+		 * This is how a cache shared by several builds is kept from growing forever. Every build
+		 * marks what it uses, so whatever any build still needs is fresh, and only what none of
+		 * them has touched for `max_age` is removed - no build has to know what the others are
+		 * building. `max_age` should therefore be far longer than any build takes.
+		 *
+		 * @return How many file artifacts were removed.
+		 */
+		usize removeFileArtifactsUnusedFor(std::chrono::seconds max_age);
+
 		/////////////////////////// SUB COLLECTIONS /////////////////////////
 
 		Ref<ArtifactCollection> subCollectionNew(base::StrID collection_name);
@@ -198,6 +223,24 @@ namespace artifacts {
 		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybe(base::StrID artifact_name
 		) const;
 
+		/**
+		 * @brief Looks up a file artifact in order to reuse it, e.g. a previous build's output
+		 * that is still up to date.
+		 *
+		 * Unlike `fileArtifactAtMaybe`, it marks the artifact as used by setting its file's
+		 * modification time to now. That is what keeps the artifact from being removed by
+		 * `removeFileArtifactsUnusedFor`, in this build or in any other build sharing the folder.
+		 *
+		 * @return The artifact, or nothing if it is not in the collection or its file is gone
+		 * (e.g. removed by another build). Either way, the caller has a cache miss.
+		 */
+		base::Optional<FileArtifact> fileArtifactForReuse(base::StrID artifact_name);
+
+		/**
+		 * @brief Removes a file artifact and its file.
+		 * @return True if it was removed. A file that cannot be removed is reported to the user,
+		 * and the artifact is then kept.
+		 */
 		bool deleteFileArtifact(base::StrID artifact_name);
 
 		/////////////////////////// BLOB ARTIFACTS /////////////////////////

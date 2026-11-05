@@ -413,6 +413,17 @@ namespace fs {
 		 * message describing why it could not be removed (e.g. a folder that is not empty).
 		 */
 		static std::expected<bool, std::string> removeEntry(const FilePath& path);
+
+		/**
+		 * @brief Sets a physical file's modification time to now, like the `touch` command,
+		 * reporting failure instead of throwing.
+		 *
+		 * Unlike `touch`, it never creates the file: a missing file is reported as a failure.
+		 *
+		 * @param path The file to touch; it must be on disk (absolute or relative), not virtual.
+		 * @return Nothing on success, or a message describing why the time could not be set.
+		 */
+		static std::expected<void, std::string> touch(const FilePath& path);
 	};
 }
 
