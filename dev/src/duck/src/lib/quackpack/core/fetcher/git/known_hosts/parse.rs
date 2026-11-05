@@ -130,7 +130,7 @@ pub struct KnownHostEntry {
     hosts: Vec<Hostname>,
     /// Keytype.
     key_type: String,
-    /// Base64 encoded key.
+    /// Base64 decoded key.
     key: Vec<u8>,
 }
 
