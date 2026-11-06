@@ -11,7 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -54,15 +54,15 @@ namespace compiler::helios {
 			auto keyword   = specifier->getSpecifier().unlock(ctx)->unwrap();
 
 			if (is_visiblity_keyword(keyword) and visibility_opt.has_value())
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Class visibility specifier is duplicated with another one.",
 					specifier->getStablePosition()
-				));
+				);
 			if (is_global_keyword(keyword) and is_static)
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Class global specifier is duplicated with another one.",
 					specifier->getStablePosition()
-				));
+				);
 			if (keyword == lang_def::Keyword::Public)
 				visibility_opt = tsh::MemberVisibility::Public;
 			if (keyword == lang_def::Keyword::Protected)
@@ -120,7 +120,7 @@ namespace compiler::helios {
 						member_pst.unlock(ctx)->getStablePosition()
 					));
 			}
-			ctx.logInt(std::move(error));
+			ctx.log(std::move(error));
 			query::throwFailed();
 		}
 

@@ -15,7 +15,7 @@ class HasBox {
 class UserCopied {
     tag: i32 = 0;
 
-    UserCopied.copy(other: const ref UserCopied) = {
+    UserCopied.copy(other: ref UserCopied) = {
         return UserCopied(other.tag);
     }
 }

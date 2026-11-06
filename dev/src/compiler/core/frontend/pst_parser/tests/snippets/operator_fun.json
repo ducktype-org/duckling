@@ -24,7 +24,7 @@
 						"sourceStart": 6,
 						"sourceEnd": 21
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 7,
@@ -278,7 +278,7 @@
 						"sourceStart": 61,
 						"sourceEnd": 76
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 62,
@@ -464,7 +464,7 @@
 						"sourceStart": 113,
 						"sourceEnd": 128
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 114,
@@ -611,7 +611,6 @@
 								"sourceEnd": 160
 							},
 							"Class Field": {
-								"is mutable": "true",
 								"name": {
 									"position": {
 										"sourceStart": 152,
@@ -668,7 +667,7 @@
 										"sourceStart": 170,
 										"sourceEnd": 177
 									},
-									"function parameter list": [
+									"parameter list": [
 										{
 											"position": {
 												"sourceStart": 171,

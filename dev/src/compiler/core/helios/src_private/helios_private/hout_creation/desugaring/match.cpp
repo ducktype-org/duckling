@@ -6,7 +6,7 @@
 
 #include "match.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/patterns/patterns.hpp>
@@ -39,23 +39,23 @@ namespace compiler::helios::desugaring {
 	namespace {
 		template<typename... MsgParts>
 		void logNYI(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(std::forward<MsgParts>(what)...), position
-			));
+			);
 		}
 
 		template<typename... MsgParts>
 		void logError(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(std::forward<MsgParts>(what)...), position
-			));
+			);
 		}
 
 		template<typename... MsgParts>
 		void logWarning(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
-			ctx.logInt(makeBox<dia::PlaceholderWarning>(
+			ctx.log<dia::PlaceholderWarning>(
 				base::strConcat(std::forward<MsgParts>(what)...), position
-			));
+			);
 		}
 
 		class MatchSubject final {
@@ -113,12 +113,12 @@ namespace compiler::helios::desugaring {
 		) {
 			if (not match_subject.moves_ownership
 			    and constraint.getRefKind() == tsh::ReferenceKind::Box) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"This `match` only borrows its subject, so a case cannot take a `box` payload "
 					"out of it.",
 					pos,
 					"Bind it with `ref` instead, or hand the variant over with `move`."
-				));
+				);
 				return query::Failed();
 			}
 
@@ -154,7 +154,7 @@ namespace compiler::helios::desugaring {
 							"You can also pass the expression by reference by adding `&` prefix.",
 							match_subject.expr->origin.getStablePosition()
 						));
-					ctx.logInt(std::move(error_msg));
+					ctx.log(std::move(error_msg));
 				} else {
 					logError(
 						ctx,
@@ -248,7 +248,7 @@ namespace compiler::helios::desugaring {
 					"This `case` is never entered, because the wildcard `case _` above it always "
 					"matches. The wildcard has to be the last case."
 				);
-				ctx.logInt(makeBox<dia::PlaceholderNote>("The wildcard case is here.", position));
+				ctx.log<dia::PlaceholderNote>("The wildcard case is here.", position);
 			}
 
 			if (flow->getAsIdentifier().has_value()) {
@@ -330,7 +330,7 @@ namespace compiler::helios::desugaring {
 				};
 				if (subject.moves_ownership) {
 					if_opt_some(not_covered_with_destructor(), alternative) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat(
 								"A bare `case _` binds nothing, so the payload it covers would "
 								"never be destroyed, and the alternative `",
@@ -343,7 +343,7 @@ namespace compiler::helios::desugaring {
 								alternative.toString(),
 								"`."
 							)
-						));
+						);
 						return query::Failed();
 					}
 				}
@@ -390,7 +390,7 @@ namespace compiler::helios::desugaring {
 
 		const auto covered_count = static_cast<usize>(std::ranges::count(covered, true));
 		if (!has_wildcard && covered_count < subject.num_alternatives) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(
 					"`match` is not exhaustive: it covers ",
 					covered_count,
@@ -399,7 +399,7 @@ namespace compiler::helios::desugaring {
 					" alternatives and has no wildcard (`case _`)."
 				),
 				match_position
-			));
+			);
 			return query::Failed();
 		}
 

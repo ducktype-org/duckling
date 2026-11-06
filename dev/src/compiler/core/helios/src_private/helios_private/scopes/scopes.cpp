@@ -11,6 +11,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/packages/access.hpp>
 #include <frontend/packages/standard_packages.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -19,8 +20,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/desugaring/match.hpp>
@@ -38,6 +38,7 @@
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/query_result.hpp>
@@ -50,7 +51,9 @@
 namespace compiler::helios {
 
 
-	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	namespace {
+		auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
+	}
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -457,11 +460,11 @@ namespace compiler::helios {
 				// parsed but nothing compiles them yet, so report it instead of falling through
 				// to the panicky visitor default. Leaving `out` unset fails the query.
 				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
 					"`T(...)` and `T.name(...)` declare a constructor.\n"
-				));
+				);
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {

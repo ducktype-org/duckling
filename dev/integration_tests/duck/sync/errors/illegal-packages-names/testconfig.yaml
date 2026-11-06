@@ -6,10 +6,10 @@ alias-name: ''
 add-alias: 'false'
 test-cmd: duck sync
 root-error: |+
-  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
   
     Caused by:
-      when parsing the field \`metadata.name\`
+      failed to parse the field \`metadata.name\`
   
     Caused by:
       package has an invalid name
@@ -17,35 +17,35 @@ root-error: |+
     Caused by:
       @{cause}"
 dep-error: |+
-  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
   
     Caused by:
-      when parsing the field \`dependencies.@{dep-name}\`
+      failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      dependency \`@{dep-name}\` has an invalid name
+      normal dependency \`@{dep-name}\` has an invalid name
 
     Caused by:
       @{cause}"
 invalid-alias-error: |+
-  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
   
     Caused by:
-      when parsing the field \`dependencies.@{dep-name}\`
+      failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      aliased dependency \`@{dep-name}\` points to a package \`@{alias-name}\` with an invalid name
+      normal dependency \`@{dep-name}\` points to a package \`@{alias-name}\` with an invalid name
 
     Caused by:
       @{cause}"
 valid-alias-error: |+
-  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
   
     Caused by:
-      when parsing the field \`dependencies.@{dep-name}\`
+      failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      dependency \`@{alias-name}\` has an invalid alias name \`@{dep-name}\`
+      normal dependency \`@{dep-name}\` has an invalid alias
 
     Caused by:
       @{cause}"

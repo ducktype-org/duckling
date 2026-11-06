@@ -4,7 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <frontend/pst_parser/elements/elements_common.hpp>
+#include <frontend/pst_parser/elements/common/elements_common.hpp>
+#include <frontend/pst_parser/elements/common/parser_common_errors.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -20,8 +21,7 @@
 #include <frontend/pst_parser/elements/implementations/not_statements/not_statements_errors.hpp>
 #include <frontend/pst_parser/elements/implementations/preamble.hpp>
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
-#include <frontend/pst_parser/elements/parser_common_errors.hpp>
-#include <frontend/pst_parser/parsed_pst.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -151,6 +151,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Const, false> no_value_const_eof{ "const x: i32=" };
 	Example<pst::Const, false> let_const{ "let x: i32 = 5" };
 	Example<pst::Const, false> var_const{ "var x: i32 = 5" };
+
+	Example<pst::CodeBlock, true>  const_after_semicolon{ "{ var x = 1; const Y = 2; }" };
+	Example<pst::CodeBlock, false> const_without_semicolon{ "{ var x = 1 const Y = 2; }" };
+	Example<pst::CodeBlock, false> const_in_var_type{ "{ var x: const i64 = 1; }" };
+	Example<pst::CodeBlock, false> const_after_ref{ "{ var x: ref const i64 = y; }" };
+	Example<pst::CodeBlock, false> const_in_result_type{ "{ fun g() -> const i64 = 1; }" };
 
 	Example<pst::Variable, true>  simple_var{ "var x: i32 = 5" };
 	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
@@ -363,16 +369,20 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::Stmt, true> class_using_as{ "using std.math.sqrt as sqrt;" };
 
-	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
-	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
-	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public global x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true>  public_access_block{ "public {}" };
+	ClassStmtExample<pst::Stmt, true>  private_access_block{ "private {}" };
+	ClassStmtExample<pst::Stmt, true>  protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::Stmt, true>  multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::Stmt, true>  simple_specified_field{ "public global x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true>  global_imm_field{ "global x: imm i32 = 5;" };
+	ClassStmtExample<pst::Stmt, false> global_var_field{ "global var x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, false> global_let_field{ "global let x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_let_field{ "let x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_let_field1{ "let x: i32" };
+	ClassStmtExample<pst::Field, false> var_field{ "var x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> let_field{ "let x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> let_field_without_init{ "let x: i32" };
+	ClassStmtExample<pst::Field, true>  imm_field{ "x: imm i32" };
 	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };
 	ClassStmtExample<pst::Field, false> bad_field2{ "x : = 5" };
 

@@ -171,7 +171,7 @@ namespace compiler::helios {
 				case pst::ElementKind::If:
 				case pst::ElementKind::While:
 				case pst::ElementKind::For:
-					ctx.logInt(makeBox<StatementOutsideFunctionError>(stmt->getStablePosition()));
+					ctx.log<StatementOutsideFunctionError>(stmt->getStablePosition());
 					found = true;
 					break;
 				case pst::ElementKind::Namespace: {
@@ -394,7 +394,7 @@ namespace compiler::helios {
 				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
 			);
 
-			ctx.logInt(std::move(error));
+			ctx.log(std::move(error));
 
 			return true;
 		}
@@ -522,13 +522,13 @@ namespace compiler::helios {
 				// llvm panics. This check is put inside the for, to only check it if the methods
 				// are actually present, and to provide a more specific error location.
 				if (not class_type.carriesInformation(ctx)) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
 						"being properly supported yet.",
 						maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
 							return pst.unlock(ctx)->getStablePosition();
 						})
-					));
+					);
 					return base::BAD;
 				}
 

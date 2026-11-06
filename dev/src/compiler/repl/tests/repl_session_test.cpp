@@ -290,7 +290,7 @@ namespace compiler::repl {
 				"/symbols should list `using ... as` declarations"
 			);
 			assertTrue(
-				output.find("[history #3] const symbol_const : const i64") != std::string::npos,
+				output.find("[history #3] const symbol_const : imm i64") != std::string::npos,
 				"/symbols should list const declarations with their type"
 			);
 			assertTrue(

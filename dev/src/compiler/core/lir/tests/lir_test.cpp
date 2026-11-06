@@ -608,7 +608,8 @@ private:
 
 			check_meta_function("createBox", MK::CreateBox, 1);
 			check_meta_function("createRef", MK::CreateRef, 1);
-			check_meta_function("createConst", MK::CreateConst, 1);
+			check_meta_function("createMut", MK::CreateMut, 1);
+			check_meta_function("createImm", MK::CreateImm, 1);
 			check_meta_function("createPtr", MK::CreatePtr, 1);
 			check_meta_function("createCPtr", MK::CreateCPtr, 1);
 			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);

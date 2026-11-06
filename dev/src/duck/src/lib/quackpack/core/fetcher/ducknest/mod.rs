@@ -44,7 +44,7 @@ impl<'duck> DucknestClient<'duck> {
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<registry::Manifest> {
-        let url = package.url.for_exact_metadata(package.into())?;
+        let url = package.url.for_exact_metadata(package.as_package())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request).await?;
@@ -88,7 +88,7 @@ impl<'duck> DucknestClient<'duck> {
         package: types::PackageWithUrl,
         mut target: &LockedFile,
     ) -> QuackResult<()> {
-        let url = package.url.for_blob(package.into())?;
+        let url = package.url.for_blob(package.as_package())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request).await?;

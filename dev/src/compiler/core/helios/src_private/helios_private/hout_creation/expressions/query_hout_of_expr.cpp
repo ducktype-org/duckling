@@ -15,7 +15,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
-#include <frontend/pst_parser/pst_expr_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_expr_visitor.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -210,15 +210,11 @@ namespace compiler::helios::code {
 							node
 								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
 						} else {
-							ctx.logInt(
-								makeBox<InvalidCharacterLiteralError>(stmt->getStablePosition())
-							);
+							ctx.log<InvalidCharacterLiteralError>(stmt->getStablePosition());
 						}
 					}
 					opt_err(error) {
-						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getStablePosition(), error.value
-						));
+						ctx.log<UnknownEscapeSequenceError>(stmt->getStablePosition(), error.value);
 					}
 				}
 			}
@@ -233,9 +229,7 @@ namespace compiler::helios::code {
 						);
 					}
 					opt_err(error) {
-						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getStablePosition(), error.value
-						));
+						ctx.log<UnknownEscapeSequenceError>(stmt->getStablePosition(), error.value);
 					}
 				}
 			}
@@ -266,9 +260,9 @@ namespace compiler::helios::code {
 								next_string = s.litStrObj(base::StrID(result.value));
 							}
 							opt_err(error) {
-								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+								ctx.log<UnknownEscapeSequenceError>(
 									stmt->getStablePosition(), error.value
-								));
+								);
 							}
 						}
 					} else if (const auto sub_expr = sub.dynamicCast<pst::FormatSubExpression>()) {
@@ -357,11 +351,11 @@ namespace compiler::helios::code {
 				const auto op = stmt->getOperator().unlock(ctx);
 
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::FunPtr)) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"`funptr` must be followed by `-> <result type>`, for example "
 						"`funptr(i64) -> ()`.",
 						stmt->getStablePosition()
-					));
+					);
 					return;
 				}
 
@@ -391,18 +385,18 @@ namespace compiler::helios::code {
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						ctx.log<dia::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
 							"supported yet.",
 							stmt->getStablePosition()
-						));
+						);
 						return;  // failed
 					}
 					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
 					if (not inner->expression_type.getValueCategory().addressable()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
@@ -424,17 +418,17 @@ namespace compiler::helios::code {
 					// This is a temporary check to prevent us from taking the address of types that
 					// do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						ctx.log<dia::NotYetImplementedCodeError>(
 							"Taking a pointer to a type that does not carry information is not "
 							"supported yet.",
 							stmt->getStablePosition()
-						));
+						);
 						return;  // failed
 					}
 					if (not inner->expression_type.getValueCategory().addressable()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Tried to take a pointer to a temporary", stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 					node = makeBox<PtrOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
@@ -445,9 +439,9 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
 					if (not(tsh::isPointerKind(inner_type.getType().getKind())
 					        or inner_type.getRefKind() != tsh::ReferenceKind::Direct)) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Tried to dereference an invalid type", stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
@@ -457,20 +451,20 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
 					// `move x` is only valid on an owned lvalue (a local variable).
 					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"`move` can only be applied to an owned local variable.",
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
 					if (inner->expression_type.getValueCategory().getCategory()
 					    == tsh::PrimaryCategory::Temporary) {
 						// The move is not needed, and should be discouraged.
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"A temporary is moved out of implicitly, `move` is not needed here.",
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
@@ -508,7 +502,7 @@ namespace compiler::helios::code {
 						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
 
 					if (copied_type.isTriviallyCopyable(ctx)) {
-						ctx.logInt(makeBox<dia::PlaceholderWarning>(
+						ctx.log<dia::PlaceholderWarning>(
 							base::strConcat(
 								"Type `",
 								copied_type.toString(),
@@ -516,7 +510,7 @@ namespace compiler::helios::code {
 								"keyword."
 							),
 							stmt->getStablePosition()
-						));
+						);
 						// Trivially copyable, so we just deref.
 						if (is_indirect)
 							node = s.deref(std::move(inner));
@@ -525,10 +519,10 @@ namespace compiler::helios::code {
 						return;
 					}
 					if (not copied_type.getType().isCopyable(ctx)) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat("Type `", copied_type.toString(), "` cannot be copied."),
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
@@ -540,9 +534,9 @@ namespace compiler::helios::code {
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 
-					// The copy constructor takes a `const ref` and returns a direct value. `refOf`
-					// turns every type into a reference (including ref/box because of reference
-					// kind collapsing).
+					// The copy constructor takes a read-only `ref` and returns a direct value.
+					// `refOf` turns every type into a reference (including ref/box because of
+					// reference kind collapsing).
 					node = s.call(
 						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
 						s.refOf(std::move(inner))
@@ -560,10 +554,10 @@ namespace compiler::helios::code {
 					// `SymbolType::isCopyable` answers this for the value as a whole: a `ref` is
 					// always copyable (the reference is copied), while a `box` follows its pointee.
 					if (not inner_type.isCopyable(ctx)) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
 							stmt->getStablePosition()
-						));
+						);
 						return;
 					}
 
@@ -822,9 +816,9 @@ namespace compiler::helios::code {
 					break;
 				}
 				default:
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Keyword not yet handled.", stmt->getStablePosition()
-					));
+					);
 					return;  // failed
 				}
 			}
@@ -930,18 +924,18 @@ namespace compiler::helios::code {
 
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"Left side of assignment can't be immutable.", stmt->getStablePosition()
-					));
+					);
 					return;
 				}
 
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
 					),
 					stmt->getStablePosition()
-				));
+				);
 			}
 
 			void visitArrayLiteral(pst::Access<pst::expr::ArrayLiteral> stmt) override {
@@ -957,7 +951,7 @@ namespace compiler::helios::code {
 
 					if (auto curr_elem_type = elem.valueOrThrow()->expression_type.getSymbolType();
 					    elem_type && curr_elem_type != *elem_type) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat(
 								"Invalid array element type. Expected `",
 								elem_type->toString(),
@@ -966,7 +960,7 @@ namespace compiler::helios::code {
 								"`. All array elements must be of the same type."
 							),
 							elem_pst_expr.unlock(ctx)->getStablePosition()
-						));
+						);
 						return;
 					}
 

@@ -43,7 +43,7 @@
 						"sourceStart": 14,
 						"sourceEnd": 15
 					},
-					"function parameter list": []
+					"parameter list": []
 				},
 				"return": "unit",
 				"body": {

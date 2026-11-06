@@ -6,8 +6,8 @@
 
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <frontend/pst_parser/parsed_pst.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -120,9 +120,7 @@ private:
 
 	void testSingleClassDefinition() {
 		ASSERT_HAS_VALUE(extract("class Foo {}"), "Class declaration should be returned");
-		ASSERT_HAS_VALUE(
-			extract("class Bar { var x: i32; }"), "Class with members should be returned"
-		);
+		ASSERT_HAS_VALUE(extract("class Bar { x: i32; }"), "Class with members should be returned");
 		ASSERT_HAS_VALUE(
 			extract("template(T: type) class Baz { fun method() = {} }"),
 			"Generic class should be returned"

@@ -14,7 +14,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
@@ -117,11 +117,11 @@ namespace compiler::helios {
 
 				// Report only if the compilation of the return statement actually succeeded.
 				if (expr_hout->expression_type.getValueCategory().mustMove()) {
-					ctx.logInt(makeBox<dia::PlaceholderWarning>(
+					ctx.log<dia::PlaceholderWarning>(
 						"A returned value is moved out of implicitly, `move` is not needed "
 						"here.",
 						position
-					));
+					);
 				}
 
 				output(code::ReturnStmt(
@@ -133,9 +133,9 @@ namespace compiler::helios {
 				                       && return_type.getRefKind() == tsh::ReferenceKind::Direct;
 
 				if (not returns_unit) {
-					ctx.logInt(makeBox<ReturnWithoutValueError>(
+					ctx.log<ReturnWithoutValueError>(
 						stmt->getStablePosition(), makeBox<InteractiveType>(ctx, return_type)
-					));
+					);
 					is_failed = true;
 					return;
 				}
@@ -169,21 +169,21 @@ namespace compiler::helios {
 				);
 
 			if (not location_expr->expression_type.getValueCategory().canBeAssignedTo()) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Left side of assignment must be addressable location",
 					var.unlock(ctx)->getStablePosition(),
 					"",
 					"here"
-				));
+				);
 				query::throwFailed();
 				return;
 			}
 
 			auto location_mutability = location_type.getMutability();
 			if (location_mutability == tsh::Mutability::Immutable) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Left side of assignment can't be immutable.", assignment->getStablePosition()
-				));
+				);
 				query::throwFailed();
 				return;
 			}
@@ -220,20 +220,20 @@ namespace compiler::helios {
 		void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
 			auto expr_holder_opt = stmt->getExpr().unlockOpt(ctx);
 			if (!expr_holder_opt.has_value()) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Internal compiler error: expression statement has no expression holder.",
 					stmt->getStablePosition()
-				));
+				);
 				is_failed = true;
 				return;
 			}
 
 			auto inner_expr_opt = expr_holder_opt.value()->getExpr().unlockOpt(ctx);
 			if (!inner_expr_opt.has_value()) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Internal compiler error: expression statement has no inner expression.",
 					stmt->getStablePosition()
-				));
+				);
 				is_failed = true;
 				return;
 			}
@@ -376,7 +376,7 @@ namespace compiler::helios {
 				// no initial value case
 
 				if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getStablePosition()));
+					ctx.log<ImmutableVariableNoInitError>(stmt->getStablePosition());
 					is_failed = true;
 					return;
 				}
@@ -420,44 +420,44 @@ namespace compiler::helios {
 		}
 
 		void visitContinue(pst::Access<pst::Continue> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				"`continue` statements are not supported yet.", stmt->getStablePosition()
-			));
+			);
 			is_failed = true;
 		}
 
 		void visitBreak(pst::Access<pst::Break> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				"`break` statements are not supported yet.", stmt->getStablePosition()
-			));
+			);
 			is_failed = true;
 		}
 
 		void visitRedo(pst::Access<pst::Redo> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				"`redo` statements are not supported yet.", stmt->getStablePosition()
-			));
+			);
 			is_failed = true;
 		}
 
 		void visitThrow(pst::Access<pst::Throw> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				"`throw` statements are not supported yet.", stmt->getStablePosition()
-			));
+			);
 			is_failed = true;
 		}
 
 		void visitDefer(pst::Access<pst::Defer> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				"`defer` statements are not supported yet.", stmt->getStablePosition()
-			));
+			);
 			is_failed = true;
 		}
 
 		void visitRestart(pst::Access<pst::Restart> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				"`restart` statements are not supported yet.", stmt->getStablePosition()
-			));
+			);
 			is_failed = true;
 		}
 
@@ -477,9 +477,9 @@ namespace compiler::helios {
 		}
 
 		void visitFun(pst::Access<pst::Fun> function) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				"Nested functions are not supported yet.", function->getStablePosition()
-			));
+			);
 			is_failed = true;
 		}
 	};

@@ -14,6 +14,7 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/module_flags/module_flags.hpp>
@@ -40,6 +41,7 @@ public:
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(castsLoweringTest);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
+		TESTER_ADD_TEST(optimizedDumpPreservesObjectCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
@@ -56,17 +58,22 @@ public:
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(noReturnTest);
 		TESTER_ADD_TEST(scalarCopyTest);
+		TESTER_ADD_TEST(arrayAlignmentTest);
 	}
 
 protected:
 	void beforeAll() override {
 		// Initialize the compiler so the standard library is loaded and select the LLVM backend.
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		// O2 for the whole suite: optimizedDumpPreservesObjectCodeTest needs real passes; the
+		// IR-text tests read IR before compile().
 		auto         init_result    = compiler::driver::test_utils::initializeCompilerForTests(
             {},
             artifacts_path,
-            { compiler::driver::options_types::StdLibOptions::DefaultStd{} },
-            { .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
+            { .std_lib_type=compiler::driver::options_types::StdLibOptions::DefaultStd{} },
+            { .llvm_backend = global_state::BackendOptions::LLVMBackend{
+                .llvm_optimization_level = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel::O2,
+            } }
         );
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 
@@ -74,6 +81,48 @@ protected:
 	}
 
 private:
+	void optimizedDumpPreservesObjectCodeTest() {
+		using namespace compiler;
+		// With optimization disabled, dumping before or after the passes would look the same.
+		assertTrue(
+			global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
+				== global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel::O2,
+			"This test requires LLVM optimization level O2"
+		);
+
+		const auto directory = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		defer(std::filesystem::remove_all(directory););
+		auto module       = backend_llvm::Module::fromIRCode(R"(
+define i64 @saved(i64 %value) {
+entry:
+  %slot = alloca i64
+  store i64 %value, ptr %slot
+  %loaded = load i64, ptr %slot
+  ret i64 %loaded
+}
+)");
+		auto without_dump = module.clone();
+		auto with_dump    = module.clone();
+		without_dump.compile(
+			directory / "without_dump.o", backend_llvm::CompilationOutputType::Object
+		);
+		with_dump.compile(
+			directory / "with_dump.o",
+			backend_llvm::CompilationOutputType::Object,
+			directory / "saved.opt.ll"
+		);
+
+		const auto optimized = fs::File(directory / "saved.opt.ll").getContent();
+		ASSERT_TRUE(optimized.view().stringView().find("ret i64") != std::string::npos);
+		ASSERT_TRUE(optimized.view().stringView().find("alloca") == std::string::npos);
+		const auto original_object = fs::File(directory / "without_dump.o").getContent();
+		const auto dumped_object   = fs::File(directory / "with_dump.o").getContent();
+		assertTrue(
+			original_object.view().stringView() == dumped_object.view().stringView(),
+			"Optimized LLVM dump changed object code"
+		);
+	}
+
 	compiler::backend_llvm::Module getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
@@ -677,6 +726,31 @@ private:
 		assertTrue(
 			function_body("copyPair").find("llvm.memmove") != std::string::npos,
 			"Expected the copy of 'Pair' in 'copyPair' to use memmove"
+		);
+	}
+
+	void arrayAlignmentTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/array_alignment");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// An `i64` array is only 8-byte aligned by the data layout. Then the 16-byte vector loads
+		// of a vectorized loop over it are misaligned, so its storage is raised to 16 bytes.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca \[1000 x i64\], align 16)" }),
+			"Expected the local i64[1000] to be 16-byte aligned"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(global_array[^\n]*\[4 x i64\][^\n]*align 16)" }),
+			"Expected the global i64[4] to be 16-byte aligned"
+		);
+		// Below 16 bytes, and for classes, the natural alignment is kept.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca \[2 x i32\], align 4)" }),
+			"Expected the local i32[2] to keep its 4-byte alignment"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca %[^\n]*Pair[^\n]*, align 8)" }),
+			"Expected the local Pair to keep its 8-byte alignment"
 		);
 	}
 };

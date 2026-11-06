@@ -42,9 +42,7 @@ namespace compiler::helios::coercions {
 		[[noreturn]] void failNotImplemented(
 			query::Context& ctx, std::string what, const Expr& position
 		) {
-			ctx.logInt(
-				makeBox<dia::NotYetImplementedCodeError>(std::move(what), position.getPosition())
-			);
+			ctx.log<dia::NotYetImplementedCodeError>(std::move(what), position.getPosition());
 			query::throwFailed();
 		}
 

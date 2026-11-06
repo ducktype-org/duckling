@@ -226,9 +226,6 @@ namespace pst {
 				return visitor.template operator()<TemplateStmt>();
 			case Keyword::Fun:
 				return visitor.template operator()<Method>();
-			case Keyword::Let:
-			case Keyword::Var:
-				return visitor.template operator()<Field>();
 			// These are statements that are not class-specific when adding new ones be careful
 			// about the fact that ContextStmt is set to Class here.
 			case Keyword::Using:

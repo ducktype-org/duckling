@@ -52,12 +52,13 @@ namespace compiler::driver {
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);
 
-			driver::dump_ir_options.dump_asm  = debug_options.dump_asm;
-			driver::dump_ir_options.dump_llvm = debug_options.dump_llvm;
-			driver::dump_ir_options.dump_dbc  = debug_options.dump_dbc;
-			driver::dump_ir_options.dump_lir  = debug_options.dump_lir;
-			driver::dump_ir_options.dump_mir  = debug_options.dump_mir;
-			driver::dump_ir_options.dump_hir  = debug_options.dump_hir;
+			driver::dump_ir_options.dump_asm      = debug_options.dump_asm;
+			driver::dump_ir_options.dump_llvm     = debug_options.dump_llvm;
+			driver::dump_ir_options.dump_llvm_opt = debug_options.dump_llvm_opt;
+			driver::dump_ir_options.dump_dbc      = debug_options.dump_dbc;
+			driver::dump_ir_options.dump_lir      = debug_options.dump_lir;
+			driver::dump_ir_options.dump_mir      = debug_options.dump_mir;
+			driver::dump_ir_options.dump_hir      = debug_options.dump_hir;
 
 			driver::print_ir_options.print_dbc = debug_options.print_dbc;
 			driver::print_ir_options.print_lir = debug_options.print_lir;
@@ -68,26 +69,26 @@ namespace compiler::driver {
 			driver::print_statistics  = debug_options.print_statistics;
 		}
 
+		/**
+		 * @brief Creates the artifacts folder at `path` if it is missing.
+		 * @param path The artifacts folder; it must be on disk, not virtual.
+		 * @param what Name of the folder used in error messages (e.g. "Artifacts path").
+		 * @throws base::LogicError If `path` is missing and virtual.
+		 */
+		void ensureArtifactsFolder(const fs::FilePath& path, std::string_view what) {
+			if (path.exists()) return;
+			if (path.isVirtual())
+				throw base::LogicError(base::strConcat(
+					what, " must be on disk, but got a virtual one: ", path.string()
+				));
+			auto file = fs::FileManager::createPhysicalFolder(path.absolute());
+			CORE_ASSERT(
+				file.exists(), base::strConcat(what, " could not be created: ", path.string())
+			);
+		}
+
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
-			auto path = artifacts_options.artifacts_path;
-			if (not path.exists()) {
-				if (path.isPhysical() || path.isRelative()) {
-					auto file = fs::FileManager::createPhysicalFolder(path.absolute());
-					CORE_ASSERT(
-						file.exists(), "Failed to create artifacts folder: " + path.string()
-					);
-				} else if (path.isTemporary()) {
-					auto file = fs::FileManager::createTempFolder(path);
-					CORE_ASSERT(
-						file.exists(), "Failed to create artifacts folder: " + path.string()
-					);
-				} else {
-					throw base::LogicError(
-						"Artifacts path must be either physical or temporary, but got: "
-						+ path.string()
-					);
-				}
-			}
+			ensureArtifactsFolder(artifacts_options.artifacts_path, "Artifacts path");
 			global_state::setters::setRootCollection(
 				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path.getPath())
 			);
@@ -138,24 +139,7 @@ namespace compiler::driver {
 			}
 
 			if_opt_some(stdlib_options.std_artifacts_path, path) {
-				if (not path.exists()) {
-					if (path.isPhysical() || path.isRelative()) {
-						auto file = fs::FileManager::createPhysicalFolder(path.absolute());
-						CORE_ASSERT(
-							file.exists(), "Failed to create artifacts folder: " + path.string()
-						);
-					} else if (path.isTemporary()) {
-						auto file = fs::FileManager::createTempFolder(path);
-						CORE_ASSERT(
-							file.exists(), "Failed to create artifacts folder: " + path.string()
-						);
-					} else {
-						throw base::LogicError(
-							"Artifacts path must be either physical or temporary, but got: "
-							+ path.string()
-						);
-					}
-				}
+				ensureArtifactsFolder(path, "Std artifacts path");
 				global_state::setters::setCustomStdArtifactsCollection(
 					makeBox<artifacts::ArtifactCollection>(path)
 				);
@@ -246,29 +230,29 @@ namespace compiler::driver {
 		void handleScriptContext(const fs::File& script_file) {
 			global_state::setters::setScriptContext(script_file);
 		}
-	}
 
-	/**
-	 * Creates a dummy "repl_session" package and root module
-	 * This is a hack to make the import from different packages work in the REPL,
-	 * as the module lookup relies on the global package registry.
-	 * The module is otherwise unused.
-	 * @TODO: #2762 probably remove this
-	 */
-	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
-		auto package_root_file
-			= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
-		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
-			compiler::frontend::packages::RawPackageInfo{
-				.package_id   = base::StrID("repl_session"),
-				.package_name = base::StrID("repl_session"),
-				.version      = base::StrID("0.1.0"),
-				.package_path = package_root_file.getFilePath(),
-				.features     = {},
-				.dependencies = {},
-			},
-		};
-		return repl_packages_info;
+		/**
+		 * Creates a dummy "repl_session" package and root module
+		 * This is a hack to make the import from different packages work in the REPL,
+		 * as the module lookup relies on the global package registry.
+		 * The module is otherwise unused.
+		 * @TODO: #2762 probably remove this
+		 */
+		std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
+			auto package_root_file
+				= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
+			std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
+				compiler::frontend::packages::RawPackageInfo{
+					.package_id   = base::StrID("repl_session"),
+					.package_name = base::StrID("repl_session"),
+					.version      = base::StrID("0.1.0"),
+					.package_path = package_root_file.getFilePath(),
+					.features     = {},
+					.dependencies = {},
+				},
+			};
+			return repl_packages_info;
+		}
 	}
 
 	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {

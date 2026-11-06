@@ -10,7 +10,7 @@
  */
 
 #include <driver/test_utils.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -305,7 +305,7 @@ public:
 			// A default value carries the given type.
 			const auto zero = s.defaultValue(i64_type);
 			ASSERT_EQUAL(zero->expression_type.getType().getKind(), tsh::Kind::Integral);
-			ASSERT_EQUAL(dprint(zero), std::string("default_value(const i64)"));
+			ASSERT_EQUAL(dprint(zero), std::string("default_value(imm i64)"));
 			ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(zero.get()) != nullptr);
 
 			// Lifting a value to a type produces a `meta` value.
