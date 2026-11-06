@@ -350,16 +350,20 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::Stmt, true> class_using_as{ "using std.math.sqrt as sqrt;" };
 
-	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
-	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
-	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public global x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true>  public_access_block{ "public {}" };
+	ClassStmtExample<pst::Stmt, true>  private_access_block{ "private {}" };
+	ClassStmtExample<pst::Stmt, true>  protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::Stmt, true>  multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::Stmt, true>  simple_specified_field{ "public global x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true>  global_imm_field{ "global x: imm i32 = 5;" };
+	ClassStmtExample<pst::Stmt, false> global_var_field{ "global var x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, false> global_let_field{ "global let x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_let_field{ "let x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_let_field1{ "let x: i32" };
+	ClassStmtExample<pst::Field, false> var_field{ "var x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> let_field{ "let x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> let_field_without_init{ "let x: i32" };
+	ClassStmtExample<pst::Field, true>  imm_field{ "x: imm i32" };
 	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };
 	ClassStmtExample<pst::Field, false> bad_field2{ "x : = 5" };
 

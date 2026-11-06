@@ -120,9 +120,7 @@ private:
 
 	void testSingleClassDefinition() {
 		ASSERT_HAS_VALUE(extract("class Foo {}"), "Class declaration should be returned");
-		ASSERT_HAS_VALUE(
-			extract("class Bar { var x: i32; }"), "Class with members should be returned"
-		);
+		ASSERT_HAS_VALUE(extract("class Bar { x: i32; }"), "Class with members should be returned");
 		ASSERT_HAS_VALUE(
 			extract("class Baz<T> { fun method() = {} }"), "Generic class should be returned"
 		);

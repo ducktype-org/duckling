@@ -365,7 +365,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -383,7 +383,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -401,7 +401,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -549,6 +549,17 @@ private:
 				fun main() -> i64 = {
 					let x: i64 = 0;
 					x = 1;
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class A {
+					y: imm i64 = 2;
+					fun setY() = { y = 10; return; }
 				}
 			)",
 				{ "Left side of assignment can't be immutable." },
