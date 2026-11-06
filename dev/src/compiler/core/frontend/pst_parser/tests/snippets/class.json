@@ -114,7 +114,6 @@
 								"sourceEnd": 54
 							},
 							"Class Field": {
-								"is mutable": "true",
 								"name": {
 									"position": {
 										"sourceStart": 48,
@@ -176,7 +175,6 @@
 								},
 							],
 							"Class Field": {
-								"is mutable": "true",
 								"name": {
 									"position": {
 										"sourceStart": 65,

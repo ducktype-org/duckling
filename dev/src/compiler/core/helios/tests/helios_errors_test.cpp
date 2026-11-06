@@ -365,7 +365,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -383,7 +383,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -401,7 +401,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;

@@ -611,7 +611,6 @@
 								"sourceEnd": 160
 							},
 							"Class Field": {
-								"is mutable": "true",
 								"name": {
 									"position": {
 										"sourceStart": 152,

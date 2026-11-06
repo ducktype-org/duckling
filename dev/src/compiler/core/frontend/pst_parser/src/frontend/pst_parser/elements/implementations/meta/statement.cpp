@@ -289,9 +289,6 @@ namespace pst {
 			switch (as_keyword) {
 			case Keyword::Fun:
 				return parseStmt<Method>(state);
-			case Keyword::Let:
-			case Keyword::Var:
-				return parseStmt<Field>(state);
 			// These are statements that are not class-specific when adding new ones be careful
 			// about the fact that ContextStmt is set to Class here.
 			case Keyword::Using:
