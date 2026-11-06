@@ -1,5 +1,6 @@
 add_files(
     bytecode.cpp
+    type_expr.cpp
     instructions.cpp
     flags.cpp
     builtin_types.cpp
