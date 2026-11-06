@@ -14,11 +14,10 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public Stmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Field, Stmt, is_mutable);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Field, Stmt);
 		CLONE_SUBELEMENTS();
 
 	protected:
-		bool is_mutable = true;
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, CommaExprHolder);
 		NAMED_CHILD_OPT(init, CommaExprHolder);
@@ -35,11 +34,6 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class Field";
-		}
-
-		[[nodiscard]]
-		bool isMutable() const {
-			return is_mutable;
 		}
 
 		[[nodiscard]]

@@ -128,9 +128,7 @@ namespace compiler::helios {
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {
-				const auto decl_mutability
-					= field->isMutable() ? tsh::Mutability::Mutable : tsh::Mutability::Immutable;
-				setSymbolTypeByTypeExpr(field->getType().unlock(ctx)->getExpr(), decl_mutability);
+				setSymbolTypeByTypeExpr(field->getType().unlock(ctx)->getExpr());
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
