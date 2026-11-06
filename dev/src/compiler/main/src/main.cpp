@@ -400,11 +400,12 @@ namespace {
 		using compiler::driver::options_types::DebugOptions;
 		using IROption = std::pair<std::string_view, bool DebugOptions::*>;
 
-		constexpr std::array<IROption, 6> DUMP_IR_OPTIONS{ {
+		constexpr std::array<IROption, 7> DUMP_IR_OPTIONS{ {
 			{ "hir", &DebugOptions::dump_hir },
 			{ "mir", &DebugOptions::dump_mir },
 			{ "lir", &DebugOptions::dump_lir },
 			{ "llvm", &DebugOptions::dump_llvm },
+			{ "llvm-opt", &DebugOptions::dump_llvm_opt },
 			{ "asm", &DebugOptions::dump_asm },
 			{ "dbc", &DebugOptions::dump_dbc },
 		} };
@@ -432,7 +433,8 @@ namespace {
 			    .addShortDesc("Dump selected intermediate representations to files.")
 			    .addLongDesc(
 					"Supported categories and artifact extensions, in compilation order, are "
-					"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc). "
+					"hir (.hir), mir (.mir), lir (.lir), llvm (.ll), llvm-opt (.opt.ll), "
+					"asm (.s), and dbc (.dbc). "
 					"LLVM IR and assembly require the LLVM backend; DBC requires the DVM backend."
 				)
 			    .build();
