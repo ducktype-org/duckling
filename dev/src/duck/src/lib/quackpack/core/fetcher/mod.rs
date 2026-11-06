@@ -11,7 +11,8 @@
 //! [`GitClient`](git::GitClient).
 use std::cell::{OnceCell, RefCell};
 use std::path::PathBuf;
-use std::sync::{Arc, LazyLock};
+use std::rc::Rc;
+use std::sync::LazyLock;
 
 use tempfile::TempDir;
 use tracing::debug;
@@ -44,7 +45,7 @@ mod tests;
 pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: OnceCell<ducknest::DucknestClient<'duck>>,
-    http_client: OnceCell<Arc<AsyncHttpClient<'duck>>>,
+    http_client: OnceCell<Rc<AsyncHttpClient<'duck>>>,
     git_client: OnceCell<git::GitClient<'duck>>,
     git_fastpath_client: OnceCell<git::fast_path::GitFastPathClient<'duck>>,
     cache: OnceCell<RefCell<cache::ManifestCache>>,
@@ -264,9 +265,9 @@ impl<'duck> Fetcher<'duck> {
     ////                      `OnceCell` helpers and getters                                 ////
     /////////////////////////////////////////////////////////////////////////////////////////////
 
-    fn http_client(&self) -> &Arc<AsyncHttpClient<'duck>> {
+    fn http_client(&self) -> &Rc<AsyncHttpClient<'duck>> {
         self.http_client
-            .get_or_init(|| Arc::new(AsyncHttpClient::new(self.ctx)))
+            .get_or_init(|| Rc::new(AsyncHttpClient::new(self.ctx)))
     }
 
     fn downloads(&self) -> QuackResult<&downloads::Downloads> {
