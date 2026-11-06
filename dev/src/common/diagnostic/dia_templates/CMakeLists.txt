@@ -9,9 +9,11 @@ if(EMBED_ASSETS)
 # zero-copy std::string_view-based registry for runtime access.
 # Portable: unlike `objcopy -I binary` (ELF only), it works for Mach-O (macOS) and any compiler.
 
-# Find all YAML template files
+# Find all YAML template files. CONFIGURE_DEPENDS: a template added (or removed) later must
+# re-run CMake, otherwise an existing build dir silently leaves it out.
 file(GLOB_RECURSE TEMPLATE_FILES
     RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/templates"
+    CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/templates/*.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/templates/*.yml"
 )
@@ -28,15 +30,16 @@ set(EMBEDDED_DATA "")
 set(REGISTRY_ENTRIES "")
 
 # Process each template file
+set(TEMPLATE_INDEX 0)
 foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
     # Get the relative path and remove the file extension for the hashmap key
     set(TEMPLATE_KEY "${TEMPLATE_FILE}")
     string(REGEX REPLACE "\\.(yaml|yml)$" "" TEMPLATE_KEY "${TEMPLATE_KEY}")
 
-    # Create a safe symbol name by replacing / and . with _
-    string(REPLACE "/" "_" SYMBOL_NAME "${TEMPLATE_FILE}")
-    string(REPLACE "." "_" SYMBOL_NAME "${SYMBOL_NAME}")
-    string(MAKE_C_IDENTIFIER "template_${SYMBOL_NAME}" SYMBOL_NAME)
+    # The array is named by the position in the sorted list (the path is in a comment above it):
+    # always a valid identifier, and two paths can never map to the same name.
+    set(SYMBOL_NAME "template_${TEMPLATE_INDEX}")
+    math(EXPR TEMPLATE_INDEX "${TEMPLATE_INDEX} + 1")
 
     set(TEMPLATE_PATH_FULL "${CMAKE_CURRENT_SOURCE_DIR}/templates/${TEMPLATE_FILE}")
     # The file is read here, at configure time: re-configure when it changes.
