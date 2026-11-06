@@ -22,3 +22,20 @@ class T {
 
 var t: T;
 # t.z; dealias to t.x.z
+
+namespace RA {
+	using RB.*;
+	const in_ra: i32 = 10;
+	const ra_from_rb: i32 = in_rb + 1;
+}
+
+namespace RB {
+	using RA.*;
+	const in_rb: i32 = 20;
+	const rb_from_ra: i32 = in_ra + 2;
+}
+
+const ra_through_rb: i32 = RB.in_ra;
+const rb_through_ra: i32 = RA.in_rb;
+const ra_from_rb_v: i32 = RA.ra_from_rb;
+const rb_from_ra_v: i32 = RB.rb_from_ra;

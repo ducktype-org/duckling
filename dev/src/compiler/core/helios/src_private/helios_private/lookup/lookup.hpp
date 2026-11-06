@@ -8,73 +8,43 @@
 
 #include "lookup_result.hpp"
 
+#include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
+#include <query_framework/context/context_fd.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+#include <string_id/string_id.hpp>
+
+#include <variant>
+#include <vector>
 
 namespace compiler::helios {
-	struct KeyOf_LookupInNamespaceOrModule final {
-		/**
-		 * @brief Symbol of the module or the namespace.
-		 */
-		SymID symbol;
-
-		/**
-		 * @brief Name to lookup
-		 */
-		base::StrID name;
-
-		/**
-		 * @brief Should wildcards be included in lookup
-		 */
-		bool with_wildcards;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
+	/**
+	 * @brief What a `using`/`import` points at:
+	 * * `ScopeID` -- the scope of the module or namespace named by a wildcard selector.
+	 * * `std::vector<SymID>` -- the symbols named by a non-wildcard selector.
+	 */
+	using UsingImportTarget = std::variant<ScopeID, std::vector<SymID>>;
 
 	/**
-	 * @brief Query result of lookup of single name within the namespace or module.
+	 * @brief Resolves what the selector of a `using`/`import` symbol points at.
+	 * It is independent of the looked-up name, nothing is looked up inside the target.
 	 *
-	 * \query_thread_safe_if_cache_and_struct
+	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryLookupInNamespaceOrModule,
-		KeyOf_LookupInNamespaceOrModule,
-		CRef<query::QResult<LookupResult>>,
-		({})
-	);
-
-	struct KeyOf_LookupInUsingOrImport final {
-		/**
-		 * @brief Symbol to lookup in
-		 */
-		SymID symbol;
-
-		/**
-		 * @brief Name to lookup
-		 */
-		base::StrID name;
-
-		/**
-		 * @brief Should wildcards be included in lookup
-		 */
-		bool follow_wildcards;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
+	DECLARE_QUERY(QueryResolveUsingImport, SymID, CRef<query::QResult<UsingImportTarget>>, ({}));
 
 	/**
-	 * @brief Query result of lookup of single name within the using or import statement.
-	 *
-	 * \query_thread_safe_if_cache_and_struct
+	 * @brief Can the `using`/`import` @p symbol provide @p name, judging by its selector alone.
+	 * Wildcard selectors provide every name when @p with_wildcards is set.
 	 */
-	DECLARE_QUERY(
-		QueryLookupInUsingImport,
-		KeyOf_LookupInUsingOrImport,
-		CRef<query::QResult<LookupResult>>,
-		({})
+	query::QResult<bool> usingImportProvidesName(
+		query::Context& ctx, SymID symbol, base::StrID name, bool with_wildcards
 	);
+
+	/**
+	 * @brief Scope holding the contents of the module or namespace @p symbol.
+	 */
+	ScopeID scopeOfNamespaceLike(query::Context& ctx, SymID symbol);
 }

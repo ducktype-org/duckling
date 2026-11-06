@@ -20,7 +20,7 @@ Execution model notes:
 - Each statement is executed in order.
 - Execution is non-transactional: if statement N fails, earlier statements remain applied.
 - Symbol lookup across REPL history uses a parent-module chain; root-scope lookup falls back
-  to the parent REPL module via HELIOS `QueryLookupInScopeAndParents`.
+  to the parent REPL module via HELIOS `QueryLookupFromScope`.
 
 ## Features
 

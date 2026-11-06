@@ -365,15 +365,18 @@ private:
 		});
 	}
 
-	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
+	// The implicit prelude brings `core.builtins` symbols into scope of every module
 	// without an explicit import. The `builtins` module has no import statements at all, yet an
 	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work.
 	void testImplicitPrelude() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 		auto scope     = getModuleScope(module_id);
 
-		auto result = query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-			{ scope, base::StrID("builtin_output_i64"), true }
+		auto result = query::entryPoint<compiler::helios::QueryLookupFromScope>(
+			{ .scope          = scope,
+		      .name           = base::StrID("builtin_output_i64"),
+		      .with_wildcards = true,
+		      .with_parents   = true }
 		);
 		assertFalse(
 			result->valueOrThrow().isEmpty(),

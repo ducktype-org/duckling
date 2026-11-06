@@ -1,0 +1,4 @@
+import cyclic_wildcard.wildcard_2.*;
+
+const w0: i64 = 10;
+const w2: i64 = w1 + 1;
