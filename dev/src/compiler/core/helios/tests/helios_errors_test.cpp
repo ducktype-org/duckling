@@ -50,6 +50,7 @@ public:
 		TESTER_ADD_TEST(testCoercionErrors);
 		TESTER_ADD_TEST(testOptionalErrors);
 		TESTER_ADD_TEST(testClassErrors);
+		TESTER_ADD_TEST(testTypeQualifierErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -202,11 +203,11 @@ private:
 				R"(fun a() = 'c' + 1i64;)",
 				{
 					"Call failed due to ambiguous overload resolution",
-					"type const Function (const u8, const char) -> (const char).",
-					"given argument type `char` cannot be converted to the expected type `const "
+					"type imm Function (imm u8, imm char) -> (imm char).",
+					"given argument type `char` cannot be converted to the expected type `imm "
 					"u8`.",
-					"type const Function (const char, const u8) -> (const char).",
-					"given argument type `i64` cannot be converted to the expected type `const "
+					"type imm Function (imm char, imm u8) -> (imm char).",
+					"given argument type `i64` cannot be converted to the expected type `imm "
 					"u8`.",
 				},
 				1
@@ -497,7 +498,7 @@ private:
 				class MyClass {
 					x:i64 = 0;
 
-					MyClass.copy(other: const MyClass) = {
+					MyClass.copy(other: imm MyClass) = {
 						return MyClass(1);
 					}
 				}
@@ -512,7 +513,7 @@ private:
 				class MyClass {
 					x:i64 = 0;
 
-					MyClass.copy(other: const ref MyClass, a: i64) = {
+					MyClass.copy(other: ref MyClass, a: i64) = {
 						return MyClass(1);
 					}
 				}
@@ -585,7 +586,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -626,7 +627,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "The given argument type `const type` cannot be converted to the expected type "
+				{ "The given argument type `imm type` cannot be converted to the expected type "
 			      "`()`" },
 				1
 			);
@@ -1055,7 +1056,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-				{ "Type `f32` cannot be converted to type `const i64`." },
+				{ "Type `f32` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -1085,7 +1086,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -1190,7 +1191,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				fun main() -> i64 = {
 					var a: L;
 					var b = a;
@@ -1203,7 +1204,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				class U { list: L; }
 				class T { u: U; }
 
@@ -1219,7 +1220,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				fun foo(list: L) -> i32 = {
 				    return 1;
 				}
@@ -1235,7 +1236,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				fun foo(list: ref L) -> i32 = {
 				    var list_copy: L = list;
 				    return 0;
@@ -1252,7 +1253,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
@@ -1267,7 +1268,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
@@ -1525,7 +1526,7 @@ private:
 					class Unrelated {
 						public other: i64 = 3;
 
-						public fun reach(c: const ref C) -> i64 = {
+						public fun reach(c: ref C) -> i64 = {
 							var x: i64 = c.shared;
 							return 0;
 						}
@@ -1629,7 +1630,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun add(a: i64, b: i64) -> i64 = a + b;
 			fun main() -> i64 = { let f: funptr(i64) -> i64 = add; return 0; } )",
-			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `const Function "
+			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `imm Function "
 		      "(i64) -> (i64)`." },
 			1
 		);
@@ -1657,7 +1658,7 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"( fun main() -> i64 = { let n = 3; return n(1); } )",
-			{ "A value of type `const i32` cannot be called, because it is not a function." },
+			{ "A value of type `imm i32` cannot be called, because it is not a function." },
 			1
 		);
 
@@ -1678,7 +1679,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun inc(x: i64) -> i64 = x + 1;
 			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
-			{ "Type `Function (i64) -> (i64)` cannot be converted to type `const (i64) -> "
+			{ "Type `Function (i64) -> (i64)` cannot be converted to type `imm (i64) -> "
 		      "(i64)`." },
 			1
 		);
@@ -1705,12 +1706,35 @@ private:
 		);
 	}
 
+	void testTypeQualifierErrors() {
+		const std::string_view msg
+			= "`const` declares a compile-time constant and is not a part of a type.";
+
+		checkForErrorOnCompileModule(
+			R"( fun f(x: const i64) -> i64 = x;
+			fun main() -> i64 = 0; )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun f(r: const ref i64) -> i64 = r;
+			fun main() -> i64 = 0; )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = { var x: const i64 = 1; return x; } )", { msg }, 1
+		);
+	}
+
 	void testCopyabilityErrors() {
 		const std::string_view msg
 			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var a: L;
 				var b: L = a;
@@ -1721,7 +1745,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var a: L;
 				var b = a;
@@ -1732,7 +1756,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			class H { l: L; }
 			fun main() -> i64 = {
 				var h: H;
@@ -1744,7 +1768,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var arr: L[2];
 				var b: L = arr[0];
@@ -1755,7 +1779,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var a: L;
 				var b: box L = new a;
@@ -1766,7 +1790,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun f(r: ref L) -> i32 = {
 				var b: L = r;
 				return 0;
@@ -1776,7 +1800,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun f(bl: box L) -> i32 = {
 				var x: L = bl;
 				return 0;
@@ -1786,7 +1810,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun foo(x: L) -> i32 = 0;
 			fun main() -> i64 = {
 				var a: L;
@@ -1798,7 +1822,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var t: (i32, L);
 				var b: (i32, L) = t;
@@ -1812,7 +1836,7 @@ private:
 
 	void testCoercionErrors() {
 		constexpr std::string_view CLASS_L
-			= "class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }";
+			= "class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }";
 
 		// ============================ Explicit copy or move ============================
 		{
@@ -1966,7 +1990,7 @@ private:
 	 */
 	void testOptionalErrors() {
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var o: ?L = L(1i32);
 				var b: L = o.value();
@@ -1978,7 +2002,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var o: ?L = L(1i32);
 				var b = o.valueOr(L(2i32));
@@ -2375,7 +2399,7 @@ private:
 					return b;
 				}
 			)",
-			{ "Type `const i64` is trivially copyable. No need to use the explicit `copy` "
+			{ "Type `imm i64` is trivially copyable. No need to use the explicit `copy` "
 		      "keyword." },
 			1
 		);

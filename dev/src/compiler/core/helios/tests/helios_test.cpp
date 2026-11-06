@@ -240,10 +240,10 @@ private:
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
-				auto simple_const
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
+				auto simple_imm
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_IMM", root_scope);
 				auto expected = stConst(i64_type);
-				ASSERT_EQUAL(expected, simple_const);
+				ASSERT_EQUAL(expected, simple_imm);
 			}
 			{
 				auto simple_variant
@@ -266,6 +266,8 @@ private:
 				ASSERT_EQUAL(cmp_1, true);
 				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
 				ASSERT_EQUAL(cmp_2, true);
+				auto cmp_3 = getConstValueAs<bool>("CMP_3", root_scope);
+				ASSERT_EQUAL(cmp_3, true);
 			}
 		}
 

@@ -204,8 +204,8 @@ namespace compiler::helios {
 					= other_type.getType().getKind() == tsh::Kind::Class
 				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
 				          == class_type.getSymbol();
-				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
-				// resolves to an immutable reference.
+				// @TODO: #2104 Require the reference to be read-only once read-only references are
+				// enforced.
 				if (!is_reference || !is_matching_class) {
 					ctx.log<dia::PlaceholderError>(
 						base::strConcat(
