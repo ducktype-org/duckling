@@ -1,0 +1,6 @@
+fun main() -> i64 = {
+    print("before\n");
+    var empty: List[i64];
+    print(empty.at(0));
+    return 0;
+}

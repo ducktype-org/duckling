@@ -7,6 +7,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <artifacts/build_id.hpp>
@@ -67,6 +68,15 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 			"...). Clearing whole cache folder and starting fresh.\n"
 		);
 	} else if (fs::File(PATH).listFilePaths().size() > 0) {
+		// Without a marker the folder may just as well be the user's own one, e.g. `-a .` run
+		// next to the sources. Only a folder laid out like a cache is wiped, anything else stays.
+		if (not std::filesystem::is_directory(PATH / "query"))
+			throw base::LogicError(base::strConcat(
+				"Artifacts folder '",
+				PATH.string(),
+				"' is not empty and does not look like a cache of compiled artifacts. Refusing to "
+				"clear it, pass an empty or a dedicated folder instead."
+			));
 		CORE_USER_LOG(
 			"Artifacts at '",
 			PATH.string(),

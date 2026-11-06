@@ -1,0 +1,9 @@
+fun main() -> i64 = {
+    var x = 1i64;
+    {
+        var y = 2i64;
+        print(y);
+    }
+    print(x);
+    return 0;
+}

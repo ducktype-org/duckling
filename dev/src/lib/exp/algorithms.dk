@@ -1,0 +1,87 @@
+import core.builtins as builtins;
+import core.containers as containers;
+import exp.compare as compare;
+
+#{
+    Experimental algorithms. Everything that orders values uses `compare.cmp[T]`, the same
+    convention `exp.containers.Map` and `PriorityQueue` use (see `exp.compare`).
+#}
+
+#{
+    Sorts `list` in place, smallest first by `compare.cmp[T]`. The sort is stable: equal elements
+    keep their order. It takes O(n log n) comparisons, also in the worst case.
+
+    It is a bottom-up merge sort. Every pass moves all elements from one flat buffer into the
+    other: the list's own buffer and one scratch buffer of the same length, allocated once.
+    Elements are moved, never copied.
+#}
+template(T: type)
+fun sort(list: ref containers.List[T]) -> () = {
+    let len = list.length();
+    if (len < 2i64) return;
+
+    var scratch    = containers.allocation[T].many_alloc(len);
+    var source     = list.pointer;
+    var target     = scratch;
+    var in_scratch = false;
+
+    # Merge runs of length 1 into runs of 2, then 4, and so on.
+    var width = 1i64;
+    while (width < len) {
+        var lo = 0i64;
+        while (lo < len) {
+            var mid = lo + width;
+            if (mid > len) mid = len;
+            var hi = mid + width;
+            if (hi > len) hi = len;
+            mergeRuns[T](source, target, lo, mid, hi);
+            lo = hi;
+        }
+        let merged = target;
+        target     = source;
+        source     = merged;
+        in_scratch = not in_scratch;
+        width      = width * 2i64;
+    }
+
+    # After an odd number of passes the sorted elements sit in `scratch`.
+    if (in_scratch) moveElements[T](scratch, 0i64, list.pointer, 0i64, len);
+    containers.allocation[T].many_free(scratch);
+}
+
+#{
+    Moves the sorted runs `source[lo..mid]` and `source[mid..hi]` into `target[lo..hi]`. On a
+    tie the element from the left run goes first, which keeps the sort stable.
+#}
+template(T: type)
+fun mergeRuns(source: manyptr T, target: manyptr T, lo: i64, mid: i64, hi: i64) -> () = {
+    var left  = lo;
+    var right = mid;
+    var k     = lo;
+    while (left < mid and right < hi) {
+        if (compare.cmp[T](&source[right], &source[left])) {
+            builtins.move_in[T](ptrof target[k], builtins.move_out[T](ptrof source[right]));
+            right = right + 1i64;
+        } else {
+            builtins.move_in[T](ptrof target[k], builtins.move_out[T](ptrof source[left]));
+            left = left + 1i64;
+        }
+        k = k + 1i64;
+    }
+    # One run is used up, the rest of the other one is already in order.
+    moveElements[T](source, left, target, k, mid - left);
+    k = k + (mid - left);
+    moveElements[T](source, right, target, k, hi - right);
+}
+
+#{
+    Moves `count` elements from `source[from..]` into the empty slots `target[to..]`.
+#}
+template(T: type)
+fun moveElements(source: manyptr T, from: i64, target: manyptr T, to: i64, count: i64) -> () = {
+    var i = 0i64;
+    while (i < count) {
+        builtins.move_in[T](ptrof target[to + i], builtins.move_out[T](ptrof source[from + i]));
+        i = i + 1i64;
+    }
+}

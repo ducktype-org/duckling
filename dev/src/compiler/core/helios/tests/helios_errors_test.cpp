@@ -44,6 +44,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testControlFlowTargetErrors);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testFunctionValueErrors);
@@ -167,6 +168,52 @@ private:
 		checkForError(present_phrases, logged_msg_count);
 	}
 
+	void testControlFlowTargetErrors() {
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) break; })", { "`break` has no enclosing matching target." }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { block { continue; } })",
+			{ "`continue` has no enclosing matching target." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break missing; } })",
+			{ "`break` has no enclosing matching target." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) { continue while; } })",
+			{ "`continue` has no enclosing matching target." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break 42; } })",
+			{ "`break` target must be a block kind or a name." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break "while"; } })",
+			{ "`break` target must be a block kind or a name." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { continue true; } })",
+			{ "`continue` target must be a block kind or a name." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while target (true) { break target[1]; } })",
+			{ "`break` target must be a block kind or a name." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) { continue true[1]; } })",
+			{ "`continue` target must be a block kind or a name." },
+			1
+		);
+	}
+
 	/**
 	 * @brief Like `checkForErrorOnCompileModule`, but the module must compile, and only warnings
 	 * may be logged.
@@ -197,13 +244,13 @@ private:
 		{
 			checkForErrorOnCompileModule(
 				R"(fun a() = true + false;)",
-				{ "Call failed due to ambiguous overload resolution" },
+				{ "Call failed because none of the candidates accepts the given arguments" },
 				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun a() = 'c' + 1i64;)",
 				{
-					"Call failed due to ambiguous overload resolution",
+					"Call failed because none of the candidates accepts the given arguments",
 					"type imm Function (imm u8, imm char) -> (imm char).",
 					"given argument type `char` cannot be converted to the expected type `imm "
 					"u8`.",
@@ -418,7 +465,7 @@ private:
 					return obj.method("abc");
 				}
 			)",
-				{ "Call failed due to ambiguous overload resolution." },
+				{ "Call failed because none of the candidates accepts the given arguments." },
 				1
 			);
 
@@ -1126,30 +1173,6 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
-					while (true) {
-						break;
-					}
-				}
-			)",
-				{ "Feature not implemented", "break" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						continue;
-					}
-				}
-			)",
-				{ "Feature not implemented", "continue" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
 					defer 1;
 				}
 			)",
@@ -1175,7 +1198,7 @@ private:
 					for (i in 0) { }
 				}
 			)",
-				{ "Feature not implemented", "for", "for non-array type: i32" },
+				{ "Feature not implemented", "for", "over type: i32" },
 				1
 			);
 
@@ -1997,7 +2020,7 @@ private:
 				var b = o.valueOr(L(2i32));
 				return 0;
 			} )",
-			{ "Call failed due to ambiguous overload resolution",
+			{ "Call failed because none of the candidates accepts the given arguments",
 		      "Cannot implicitly copy a value of non-trivially-copyable type `?Class L`",
 		      "The given argument type `Class L` cannot be converted to the expected type `ref "
 		      "Class L`" },

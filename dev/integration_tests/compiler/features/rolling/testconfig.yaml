@@ -31,3 +31,4 @@ SubDirs:
   - custom_operators
   - standard_library
   - conditional_compilation
+  - competitive

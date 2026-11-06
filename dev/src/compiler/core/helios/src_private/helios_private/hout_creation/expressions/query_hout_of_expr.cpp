@@ -688,6 +688,17 @@ namespace compiler::helios::code {
 				);
 			}
 
+			// A block only stands for a statement. It still gets into an expression when the
+			// `;` after it is missing, e.g. `{ ... } f(x);` parses as the operator `f` applied to
+			// the block and `(x)`.
+			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> block) override {
+				ctx.log<dia::PlaceholderError>(
+					"A block `{ ... }` cannot be used as a value. As a statement it currently "
+					"needs a `;` after its `}`.",
+					block->getStablePosition()
+				);
+			}
+
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round_expr) override {
 				round_expr->getInner().unlock(ctx)->acceptExprVisitor(*this);
 			}

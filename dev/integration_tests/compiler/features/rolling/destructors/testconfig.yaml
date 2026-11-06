@@ -3,6 +3,13 @@
 # returned by value and passed to a by-value parameter, for the temporaries of a conditionally
 # evaluated part of an expression, and for global variables.
 Tests:
+  jump_scope_destructors:
+    Cases:
+      all:
+        Output:
+          String: "11\n22\n12\n19\n41\n31\n42\n32\n33\n39\n1\n71\n72\n3\n73\n79\n"
+        ExitCode: 0
+
   destructors:
     Cases:
       all:

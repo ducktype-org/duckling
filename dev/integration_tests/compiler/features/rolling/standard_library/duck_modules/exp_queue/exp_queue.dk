@@ -1,0 +1,80 @@
+import exp.containers.*;
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun printSeparator() -> () = {
+    print("888\n");
+}
+
+fun intsTest() -> () = {
+    var queue: Queue[i64];
+    printBool(queue.isEmpty()); # true
+
+    queue.push(1);
+    queue.push(2);
+    queue.push(3);
+    builtin_output_i64(queue.length()); # 3
+    builtin_output_i64(queue.front());  # 1
+    builtin_output_i64(queue.back());   # 3
+
+    builtin_output_i64(queue.pop()); # 1
+
+    # Pushing after a pop must still keep the order.
+    queue.push(4);
+    builtin_output_i64(queue.back()); # 4
+    builtin_output_i64(queue.at(0));  # 2
+    builtin_output_i64(queue.at(1));  # 3
+    builtin_output_i64(queue.at(2));  # 4
+
+    queue.front() = 20;
+    builtin_output_i64(queue.pop()); # 20
+    builtin_output_i64(queue.pop()); # 3
+    builtin_output_i64(queue.pop()); # 4
+    printBool(queue.isEmpty()); # true
+    printSeparator();
+}
+
+fun manyTest() -> () = {
+    var queue: Queue[i64];
+    var i = 0i64;
+    while (i < 100i64) {
+        queue.push(i);
+        i = i + 1i64;
+    }
+
+    # The elements come out in the order they went in.
+    var in_order = true;
+    i            = 0i64;
+    while (i < 50i64) {
+        if (queue.pop() != i) in_order = false;
+        i = i + 1i64;
+    }
+    printBool(in_order); # true
+    builtin_output_i64(queue.length()); # 50
+    builtin_output_i64(queue.front());  # 50
+    builtin_output_i64(queue.back());   # 99
+
+    queue.clear();
+    builtin_output_i64(queue.length()); # 0
+    printSeparator();
+}
+
+fun stringsTest() -> () = {
+    var queue: Queue[String];
+    queue.push(f"duck");
+    queue.push(f"ling");
+    print(queue.pop());
+    print(queue.pop());
+    print("\n");
+    printSeparator();
+}
+
+fun main() -> i64 = {
+    intsTest();
+    manyTest();
+    stringsTest();
+    return 0;
+}
