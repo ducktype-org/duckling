@@ -280,9 +280,9 @@ namespace compiler::helios::defgen {
 		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
-			));
+			);
 			return query::Failed();
 		}
 

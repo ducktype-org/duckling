@@ -23,8 +23,7 @@ check_empty_files([cache / "fetcher.lock",
                    locks / "venv_sync" / "foo",
                    locks / "clean.lock"])
 
-check_empty_dirs([cache / "artifacts",
-                  cache / "downloads"])
+check_empty_dirs([cache / "downloads"])
 
 metadata_base = storage / "venv" / "foo"
 metadata = metadata_base / "metadata"

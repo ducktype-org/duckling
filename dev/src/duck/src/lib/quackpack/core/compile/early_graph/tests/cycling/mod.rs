@@ -312,7 +312,7 @@ fn errors_with_nonexistent_features() {
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
-        "while expanding features of the direct dependency `foo`
+        "failed to expand the features of the direct dependency `foo`
 there is no such feature as `nonexistent`"
     );
 }

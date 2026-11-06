@@ -16,7 +16,7 @@ pub fn info(pcx: PackageContext) -> QuackResult<()> {
     let storage_localization = pcx.storage_path();
     let venv_id = pcx.to_venv_id();
     let Some((mut venv, previous_access)) = venv_info(storage_localization, venv_id, ctx)
-        .context("when getting information about the venv")?
+        .context("failed to get information about the venv")?
     else {
         let mut err = qp_err!(HintMessage::new(
             "make sure that the package is synchronized"
