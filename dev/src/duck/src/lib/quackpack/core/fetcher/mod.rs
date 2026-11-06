@@ -9,7 +9,7 @@
 //! It incorporates [`DucknestClient`](ducknest::DucknestClient) with
 //! [`ManifestCache`](cache::ManifestCache), and provides another layer of abstraction over the
 //! [`GitClient`](git::GitClient).
-use std::cell::RefCell;
+use std::cell::{OnceCell, RefCell};
 use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
 
@@ -23,6 +23,7 @@ use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::guards;
 use crate::quackpack::util::interned_url::InternedUrl;
+use crate::util::once_ext::OnceExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 pub mod cache;
@@ -42,12 +43,13 @@ mod tests;
 /// A class for managing HTTP and Git clients, and caching metadata.
 pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
-    ducknest_client: ducknest::DucknestClient<'duck>,
-    git_client: git::GitClient<'duck>,
-    git_fastpath_client: git::fast_path::GitFastPathClient<'duck>,
-    cache: RefCell<cache::ManifestCache>,
-    downloads: downloads::Downloads,
-    locks: locks::Locks,
+    ducknest_client: OnceCell<ducknest::DucknestClient<'duck>>,
+    http_client: OnceCell<Arc<AsyncHttpClient<'duck>>>,
+    git_client: OnceCell<git::GitClient<'duck>>,
+    git_fastpath_client: OnceCell<git::fast_path::GitFastPathClient<'duck>>,
+    cache: OnceCell<RefCell<cache::ManifestCache>>,
+    downloads: OnceCell<downloads::Downloads>,
+    locks: OnceCell<locks::Locks>,
 }
 
 /// URL of the default Ducknest instance.
@@ -70,30 +72,15 @@ impl<'duck> Fetcher<'duck> {
     /// 2. failed to initialize any of the underlying clients,
     /// 3. failed to initialize cache manager.
     pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let metadata_path = ctx.duck_home().get_metadata_db_path();
-        let download_cache_path = ctx.duck_home().downloads();
-        let downloads = downloads::Downloads::new(download_cache_path)?;
-        let locks = ctx.duck_home().cache().join("locks");
-        let locks = locks::Locks::new(locks)?;
-        let http_client = Arc::new(AsyncHttpClient::new(ctx));
-        let ducknest_client = ducknest::DucknestClient::new(http_client.clone());
-        let cache_location = if cfg!(test) {
-            // For tests, we want to use in-memory database.
-            cache::CacheLocation::Memory
-        } else {
-            cache::CacheLocation::Path(metadata_path.as_path())
-        };
-        let cache = cache::ManifestCache::new(cache_location)?;
-        let git_client = git::GitClient::new(ctx);
-        let git_fastpath_client = git::fast_path::GitFastPathClient::new(http_client);
         Ok(Self {
             ctx,
-            ducknest_client,
-            git_client,
-            git_fastpath_client,
-            cache: RefCell::new(cache),
-            downloads,
-            locks,
+            http_client: OnceCell::new(),
+            ducknest_client: OnceCell::new(),
+            git_client: OnceCell::new(),
+            git_fastpath_client: OnceCell::new(),
+            cache: OnceCell::new(),
+            downloads: OnceCell::new(),
+            locks: OnceCell::new(),
         })
     }
 
@@ -105,7 +92,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
-        if let Some(cached) = self.cache.borrow().get_manifest(package)? {
+        if let Some(cached) = self.cache()?.borrow().get_manifest(package)? {
             debug!(target: "duck::ducknest", "metadata cache hit");
             return Ok(FetcherResponse::Some(cached));
         }
@@ -114,7 +101,7 @@ impl<'duck> Fetcher<'duck> {
             return Ok(FetcherResponse::Offline);
         }
         let result = self
-            .ducknest_client
+            .ducknest_client()
             .get_exact_metadata(package)
             .await
             .with_context(|| {
@@ -123,7 +110,7 @@ impl<'duck> Fetcher<'duck> {
                     package.name, package.version
                 )
             })?;
-        self.cache
+        self.cache()?
             .borrow_mut()
             .add_or_replace_manifest(package, result.clone())?;
         Ok(FetcherResponse::Some(result))
@@ -149,17 +136,17 @@ impl<'duck> Fetcher<'duck> {
                 version: 1.into(),
                 url,
             };
-            let cached = self.cache.borrow().get_all_manifests(package)?;
+            let cached = self.cache()?.borrow().get_all_manifests(package)?;
             return Ok(FetcherResponse::Some(types::MultiMetadata {
                 packages_metadata: cached,
             }));
         }
         let result = self
-            .ducknest_client
+            .ducknest_client()
             .get_multi_metadata(&url, package_name)
             .await
             .with_context(|| format!("failed to get the multimetadata of `{}`", package_name))?;
-        self.cache
+        self.cache()?
             .borrow_mut()
             .add_or_replace_multiple_manifests(url, result.packages_metadata.clone())?;
         Ok(FetcherResponse::Some(result))
@@ -170,8 +157,8 @@ impl<'duck> Fetcher<'duck> {
         // Firstly acquire a "global" per package lock.
         // Otherwise, under the same global fetcher lock, we can start two downloads of the same package,
         // and one can see existing but empty path.
-        let _lock = self.locks.lock(package.as_package(), self.ctx)?;
-        let entry = self.downloads.get(package.as_package(), self.ctx)?;
+        let _lock = self.locks()?.lock(package.as_package(), self.ctx)?;
+        let entry = self.downloads()?.get(package.as_package(), self.ctx)?;
         let blob = match entry {
             downloads::DownloadedEntry::Present(path) => return Ok(path),
             downloads::DownloadedEntry::Vacant(blob) => blob,
@@ -179,7 +166,7 @@ impl<'duck> Fetcher<'duck> {
 
         let mut guard = guards::RemoveOnDrop::new(blob);
 
-        self.ducknest_client
+        self.ducknest_client()
             .fetch_blob(package, guard.file())
             .await
             .with_context(|| {
@@ -200,7 +187,7 @@ impl<'duck> Fetcher<'duck> {
         reference: GitReference,
         destination_directory: &std::path::Path,
     ) -> QuackResult<types::GitCloneResponse> {
-        self.git_client
+        self.git_client()
             .clone_blocking(url, reference, destination_directory)
             .with_context(|| format!("failed to clone the repository at `{url}`"))
     }
@@ -227,7 +214,7 @@ impl<'duck> Fetcher<'duck> {
         if self.ctx().is_offline() {
             None
         } else {
-            self.git_fastpath_client.try_get_client(url)
+            self.git_fastpath_client().try_get_client(url)
         }
     }
 
@@ -271,5 +258,57 @@ impl<'duck> Fetcher<'duck> {
             pkg.name,
             pkg.version
         )
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    ////                      `OnceCell` helpers and getters                                 ////
+    /////////////////////////////////////////////////////////////////////////////////////////////
+
+    fn http_client(&self) -> &Arc<AsyncHttpClient<'duck>> {
+        self.http_client
+            .get_or_init(|| Arc::new(AsyncHttpClient::new(self.ctx)))
+    }
+
+    fn downloads(&self) -> QuackResult<&downloads::Downloads> {
+        self.downloads.try_init_with(|| {
+            let download_cache_path = self.ctx.duck_home().downloads();
+            downloads::Downloads::new(download_cache_path)
+        })
+    }
+
+    fn locks(&self) -> QuackResult<&locks::Locks> {
+        self.locks.try_init_with(|| {
+            let locks = self.ctx.duck_home().cache().join("locks");
+            locks::Locks::new(locks)
+        })
+    }
+
+    fn ducknest_client(&self) -> &ducknest::DucknestClient<'duck> {
+        self.ducknest_client
+            .get_or_init(|| ducknest::DucknestClient::new(self.http_client().clone()))
+    }
+
+    fn cache(&self) -> QuackResult<&RefCell<cache::ManifestCache>> {
+        self.cache.try_init_with(|| {
+            let metadata_path = self.ctx.duck_home().get_metadata_db_path();
+            let cache_location = if cfg!(test) {
+                // For tests, we want to use in-memory database.
+                cache::CacheLocation::Memory
+            } else {
+                cache::CacheLocation::Path(metadata_path.as_path())
+            };
+            let cache = cache::ManifestCache::new(cache_location)?;
+            Ok(RefCell::new(cache))
+        })
+    }
+
+    fn git_client(&self) -> &git::GitClient<'duck> {
+        self.git_client
+            .get_or_init(|| git::GitClient::new(self.ctx))
+    }
+
+    fn git_fastpath_client(&self) -> &git::fast_path::GitFastPathClient<'duck> {
+        self.git_fastpath_client
+            .get_or_init(|| git::fast_path::GitFastPathClient::new(self.http_client().clone()))
     }
 }
