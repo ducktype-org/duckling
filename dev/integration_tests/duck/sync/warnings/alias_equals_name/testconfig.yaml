@@ -14,7 +14,7 @@ Tests:
         test-cmd: duck -C foo sync
         Err:
           String: |+
-            warning: normal dependency \`bar\` has an alias equal to its name specified at \`dependencies.bar.source.name\` [aliases_equal_to_names]
+            warning: dependency \`bar\` has an alias equal to its name specified at \`dependencies.bar.source.name\` [aliases_equal_to_names]
             warning: dev dependency \`bar2\` has an alias equal to its name specified at \`dev-dependencies.bar2.source.name\` [aliases_equal_to_names]
         Output:
           String: |+
