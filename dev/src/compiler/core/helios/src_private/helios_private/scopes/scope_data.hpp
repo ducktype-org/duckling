@@ -7,8 +7,8 @@
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
-#include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/scope_id.hpp>
 
 #include <base/collections/optional.hpp>
