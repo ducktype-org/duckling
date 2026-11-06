@@ -10,6 +10,9 @@
 namespace vm::exceptions {
 	class VMRuntimeException: public base::Exception {
 		std::string message;
+		/// The DVM call stack at the moment of the error, one line per frame. Kept apart from
+		/// `message`, so the error message the API reports stays the same.
+		std::string vm_stack_trace;
 
 	public:
 		VMRuntimeException(std::string message): message(std::move(message)) {}
@@ -17,6 +20,23 @@ namespace vm::exceptions {
 		[[nodiscard]]
 		const char* what() const noexcept override {
 			return message.c_str();
+		}
+
+		/**
+		 * @brief Attaches the DVM call stack, as printed by `getVMStackTrace`. Set once, by the
+		 * innermost interpreter run the error escapes from.
+		 */
+		void setVMStackTrace(std::string trace) {
+			if (vm_stack_trace.empty()) vm_stack_trace = std::move(trace);
+		}
+
+		/**
+		 * @brief The DVM call stack at the moment of the error. Empty when the error was not
+		 * raised by running code.
+		 */
+		[[nodiscard]]
+		const std::string& getVMStackTrace() const noexcept {
+			return vm_stack_trace;
 		}
 	};
 
