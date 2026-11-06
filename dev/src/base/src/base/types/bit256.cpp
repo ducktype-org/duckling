@@ -6,6 +6,9 @@
 
 #include "bit256.hpp"
 
+// For ostream << std::string
+#include <ostream>
+
 #include <ranges>
 
 namespace base {
