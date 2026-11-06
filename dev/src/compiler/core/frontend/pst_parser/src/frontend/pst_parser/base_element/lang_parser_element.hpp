@@ -490,11 +490,10 @@ namespace pst {
 
 		/**
 		 * @return Whether an element is just a statement aggregate.
-		 * As of 11.12.2024 there are 4 statement aggregates:
+		 * As of 6.11.2026 there are 3 statement aggregates:
 		 * * CodeBlock
-		 * * CodeBlockOrStmt
+		 * * CodeBlockOrStmt (Both of the versions)
 		 * * TopLevel
-		 * *
 		 */
 		[[nodiscard]]
 		virtual bool isStatementAggregate() const {
@@ -515,8 +514,7 @@ namespace pst {
 		/**
 		 * @brief Returns a string of element type.
 		 *
-		 * Mostly for debugging and visualization.
-		 * @note it is used by helios as a hacky way to check if given element in an expression
+		 * Mostly used for printing errors, visualization and calculating element paths and hashes.
 		 */
 		[[nodiscard]]
 		std::string elementType() const override {
