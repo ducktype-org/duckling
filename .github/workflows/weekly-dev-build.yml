@@ -63,7 +63,7 @@ jobs:
             package: duckling-dev-macos-arm64
             # Pinned (not macos-latest): the build package will run on this macOS
             # version and newer, as the compilers target the macOS they run on.
-            runner: macos-15
+            runner: macos-26
             # Note: the compilers should be the same as in test CI (.github/workflows/setup-build-matrix.py).
             cc: /opt/homebrew/opt/llvm@23/bin/clang
             cxx: /opt/homebrew/opt/llvm@23/bin/clang++
