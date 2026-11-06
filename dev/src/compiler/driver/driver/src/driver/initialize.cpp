@@ -70,27 +70,39 @@ namespace compiler::driver {
 
 		/**
 		 * @brief Creates the artifacts folder at `path` if it is missing.
+		 *
+		 * Creating the folder can fail for reasons that are not the compiler's fault - no write
+		 * permission, a read-only mount, a full disk - so the failure is reported to the user and
+		 * the caller gives up cleanly, rather than panicking with a stack trace.
 		 * @param path The artifacts folder; it must be on disk, not virtual.
-		 * @param what Name of the folder used in error messages (e.g. "Artifacts path").
+		 * @param what Name of the folder used in error messages (e.g. "artifacts folder").
+		 * @return BAD if the folder is missing and could not be created; the error is reported.
 		 * @throws base::LogicError If `path` is missing and virtual.
 		 */
-		void ensureArtifactsFolder(const fs::FilePath& path, std::string_view what) {
-			if (path.exists()) return;
+		base::OkBad ensureArtifactsFolder(const fs::FilePath& path, std::string_view what) {
+			if (path.exists()) return base::OK;
 			if (path.isVirtual())
 				throw base::LogicError(base::strConcat(
 					what, " must be on disk, but got a virtual one: ", path.string()
 				));
-			auto file = fs::FileManager::createPhysicalFolder(path.absolute());
-			CORE_ASSERT(
-				file.exists(), base::strConcat(what, " could not be created: ", path.string())
-			);
+			auto folder = fs::FileManager::createPhysicalFolder(path.absolute());
+			if (not folder.has_value()) {
+				// The reason already names the folder.
+				CORE_USER_LOG("Error: cannot create the ", what, " ", folder.error(), "\n");
+				return base::BAD;
+			}
+			return base::OK;
 		}
 
-		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
-			ensureArtifactsFolder(artifacts_options.artifacts_path, "Artifacts path");
+		// Returning before `setRootCollection` is safe: `driver::exit()` flushes artifacts only
+		// `if (hasRootCollection())`, so nothing tries to write into the folder we could not make.
+		base::OkBad handleArtifactsOptions(const options_types::ArtifactsOptions& art_options) {
+			if (ensureArtifactsFolder(art_options.artifacts_path, "artifacts folder").isBad())
+				return base::BAD;
 			global_state::setters::setRootCollection(
-				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path.getPath())
+				makeBox<artifacts::ArtifactCollection>(art_options.artifacts_path.getPath())
 			);
+			return base::OK;
 		}
 
 		base::OkBad handlePackageOptions(
@@ -138,7 +150,8 @@ namespace compiler::driver {
 			}
 
 			if_opt_some(stdlib_options.std_artifacts_path, path) {
-				ensureArtifactsFolder(path, "Std artifacts path");
+				if (ensureArtifactsFolder(path, "standard library artifacts folder").isBad())
+					return base::BAD;
 				global_state::setters::setCustomStdArtifactsCollection(
 					makeBox<artifacts::ArtifactCollection>(path)
 				);
@@ -164,7 +177,7 @@ namespace compiler::driver {
 				// Load previous query graph
 				auto maybe_blob = query_col->blobArtifactAtMaybe(base::StrID("query_graph"));
 				if (maybe_blob.has_value()) {
-					auto                  view = maybe_blob.value()->getDataView();
+					auto                  view = maybe_blob.value().getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
 					query::external::setPreviousGraphFromRawBytes(span);
 				} else {
@@ -184,7 +197,7 @@ namespace compiler::driver {
 					"This indicates a corrupted state in artifacts."
 				);
 
-				auto                  view = maybe_metadata_blob.value()->getDataView();
+				auto                  view = maybe_metadata_blob.value().getDataView();
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
 
@@ -281,7 +294,8 @@ namespace compiler::driver {
 
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
-				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
+				if (handleArtifactsOptions(package_compilation_options.compilation_artifacts).isBad())
+					return base::BAD;
 
 				auto package_success = handlePackageOptions(
 					package_compilation_options.packages_info,
@@ -308,7 +322,8 @@ namespace compiler::driver {
 
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
-				handleArtifactsOptions(script_options.compilation_artifacts);
+				if (handleArtifactsOptions(script_options.compilation_artifacts).isBad())
+					return base::BAD;
 				auto package_success
 					= handlePackageOptions(repl_packages_info, script_options.stdlib_options);
 				if (package_success.isBad()) return base::BAD;

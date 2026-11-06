@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 	}
 	fs::File file(argv[1]);
 
-	auto out = file.getContent();
+	auto out = base::valueOrPanic(file.getContent());
 	std::cout << out.view().size() << "\n";
 	for (usize i = 0; i < out.view().size(); i++)
 		std::cout << static_cast<unsigned>(out.view()[i]) << "\n";

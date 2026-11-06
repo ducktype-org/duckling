@@ -51,7 +51,8 @@ public:
 
 protected:
 	void beforeAll() override {
-		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		fs::FilePath artifacts_path
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("modules/slices")), "slices" },
 			{ fs::FilePath(path("modules/lists")), "lists" },

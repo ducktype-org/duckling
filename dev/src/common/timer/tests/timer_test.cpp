@@ -20,9 +20,18 @@ public:
 		TESTER_ADD_TEST(timeMeasurementTest);
 		TESTER_ADD_TEST(printAsTest);
 		TESTER_ADD_TEST(addToTimeTest);
+		TESTER_ADD_TEST(namedDurationsTest);
 	}
 
 private:
+	void namedDurationsTest() {
+		assertTrue(
+			timer::Duration::fromHours(48) == timer::Duration::fromDays(2), "48 hours are 2 days"
+		);
+		assertTrue(timer::Duration::fromHours(1) < timer::Duration::fromDays(1), "Ordering");
+		assertTrue(timer::Duration::fromDays(1).toNanoseconds() == 86'400'000'000'000, "In ns");
+	}
+
 	void zeroInitializationTest() {
 		timer::Duration dur;
 		assertTrue(

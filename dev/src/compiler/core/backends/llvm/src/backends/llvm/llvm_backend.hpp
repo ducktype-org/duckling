@@ -17,7 +17,9 @@
 #include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
+#include <expected>
 #include <filesystem>
+#include <string>
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };
@@ -106,11 +108,14 @@ namespace compiler::backend_llvm {
 		void debugPrint() const;
 
 		/**
-		 * @brief Dumps the LLVM IR to a file.
+		 * @brief Dumps the LLVM IR to a file, replacing it atomically (see
+		 * `fs::FileManager::produceFileAtomically`).
 		 *
 		 * @param output_file Path where the output file will be saved.
+		 * @return Nothing on success, or a message describing why the file could not be written.
 		 */
-		void dumpLLVMToFile(base::StrID output_file) const;
+		[[nodiscard]]
+		std::expected<void, std::string> dumpLLVMToFile(base::StrID output_file) const;
 
 		/**
 		 * @brief Dumps the LLVM IR to string.
@@ -134,10 +139,18 @@ namespace compiler::backend_llvm {
 		 * @note This can modify the module in place: the optimization passes are run on it before
 		 * emitting. Use clone() if you want to preserve the original module.
 		 *
+		 * The file is replaced atomically (see `fs::FileManager::produceFileAtomically`): another
+		 * build reading it, e.g. a linker sharing the artifacts folder, sees the previous file or
+		 * the new one, never a half-written one.
+		 *
 		 * @param output_file Path where the output file will be saved.
 		 * @param output_type Type of the output file.
+		 * @return Nothing on success, or a message describing why the file could not be written.
 		 */
-		void compile(const std::filesystem::path& output_file, CompilationOutputType output_type);
+		[[nodiscard]]
+		std::expected<void, std::string> compile(
+			const std::filesystem::path& output_file, CompilationOutputType output_type
+		);
 
 		/**
 		 * Returns the number of functions in the module.

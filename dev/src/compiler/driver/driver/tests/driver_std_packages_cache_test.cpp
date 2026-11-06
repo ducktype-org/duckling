@@ -18,6 +18,7 @@
 
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/expected_utils.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <filesystem/file_path.hpp>
@@ -33,8 +34,10 @@ class StdPackagesCacheTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS StdPackagesCacheTest
 
-	fs::FilePath artifacts_path     = fs::FileManager::createRandomTempDirectory().getFilePath();
-	fs::FilePath std_artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath artifacts_path
+		= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+	fs::FilePath std_artifacts_path
+		= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 	driver::PackageCompilationManifest manifest{};
 
 public:
@@ -141,10 +144,9 @@ private:
 		// Verify expected artifacts
 		for (const auto& art: driver::getStdLibNativeArtifacts()) {
 			assertTrue(
-				std::filesystem::exists(art.file.getFilePath().getPath()),
+				std::filesystem::exists(art.path.getPath()),
 				base::strConcat(
-					"Missing standard library static library artifact: ",
-					art.file.getFilePath().getPath().string()
+					"Missing standard library static library artifact: ", art.path.getPath().string()
 				)
 			);
 		}

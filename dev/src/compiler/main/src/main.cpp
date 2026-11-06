@@ -41,6 +41,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <artifacts/artifacts.hpp>
 #include <clah/clah.hpp>
 #include <clah/parsing_result.hpp>
 #include <clah/value_parser.hpp>
@@ -895,10 +896,9 @@ namespace {
 							});
 							}
 							if (not options.isFlag("no-link")) {
-								auto artifact_file = global_state::getRootCollection()
-					                                     ->fileArtifactAtOrNew(library_name)
-					                                     .file;
-								libraries_to_link.push_back(artifact_file.getFilePath());
+								libraries_to_link.push_back(global_state::getRootCollection()
+					                                            ->fileArtifactAtOrNew(library_name)
+					                                            .path);
 							}
 						}
 
@@ -1142,7 +1142,13 @@ namespace {
 						auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
 						auto manifest_content = manifest_file.getContent();
-						auto file_content     = manifest_content.view();
+						if (!manifest_content.has_value()) {
+							std::cerr
+								<< "Error: cannot read the manifest: " << manifest_content.error()
+								<< "\n";
+							return 1;
+						}
+						auto file_content = manifest_content->view();
 
 						nlohmann::json manifest_json;
 						try {
@@ -1328,8 +1334,14 @@ namespace {
 			            // changed later by for example adding option to save compiled
 			            // bytecode. Also, ScriptMode requires artifacts path, maybe this
 			            // will be refactored later.
-						auto run_temp_artifacts_path
-							= fs::FileManager::createRandomTempDirectory().getFilePath();
+						auto run_temp_artifacts_folder
+							= fs::FileManager::createRandomTempDirectory();
+						if (!run_temp_artifacts_folder.has_value()) {
+							std::cerr << "Error: cannot create a temporary folder: "
+									  << run_temp_artifacts_folder.error() << "\n";
+							return 1;
+						}
+						auto run_temp_artifacts_path = run_temp_artifacts_folder->getFilePath();
 
 						auto stdlib_options = getStdLibOptionsFromClah(options);
 						auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
@@ -1491,6 +1503,25 @@ namespace {
 							return exec_result.exit_code;
 						}
 						return 0;
+					})
+			)
+		    .addSubcommand(
+				clah::Clah(
+					"clean",
+					"Remove the build artifacts the compiler created in the artifacts folder. "
+					"Other files in the folder are left alone."
+				)
+					.add(getClahArtifactLocationParameter())
+					.setHandler([](const clah::ParsingResult& options) -> int {
+						const auto path = options.getValue<fs::FilePath>("artifact-location")
+			                                  .copyValueOr("./duck_build/");
+						using artifacts::ArtifactCollection;
+						const auto result = ArtifactCollection::removeCache(path);
+						const bool failed = ArtifactCollection::isRemoveCacheFailure(result);
+						(failed ? std::cerr : std::cout)
+							<< ArtifactCollection::describeRemoveCache(result, path.string())
+							<< "\n";
+						return failed ? 1 : 0;
 					})
 			)
 		    .addSubcommand(

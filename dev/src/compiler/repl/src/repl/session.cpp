@@ -470,7 +470,13 @@ namespace compiler::repl {
 			defer(m_suppress_repl = false);
 			const fs::FilePath script_path{ std::string(trimmed_path) };
 			fs::File           script_file{ script_path };
-			auto               source = script_file.getContent().view().stdString();
+			const auto         content = script_file.getContent();
+			if (!content.has_value())
+				return ReplResult::error(
+					std::string("Failed to load script file '") + std::string(trimmed_path)
+					+ "': " + content.error()
+				);
+			auto source = content->view().stdString();
 			return executeInput(source);
 		} catch (const std::exception& e) {
 			return ReplResult::error(

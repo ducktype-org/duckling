@@ -11,6 +11,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
 
 #include <regex>
@@ -86,8 +87,16 @@ namespace compiler::frontend {
 		setName(base::StrID(directory.name().c_str()));
 		setPackageID(package_id);
 
+		// A folder that cannot be read - no permission, removed meanwhile - contributes no
+		// modules; that is reported, not a reason to stop.
+		auto entries = directory.listFilePaths();
+		if (!entries.has_value()) {
+			CORE_USER_LOG("Warning: cannot read the folder ", entries.error(), "\n");
+			return;
+		}
+
 		// Process all files and directories in the current directory
-		for (const auto& path: directory.listFilePaths()) {
+		for (const auto& path: entries.value()) {
 			// Skip symlinks to avoid cycles
 			if (path.isSymlink()) continue;
 

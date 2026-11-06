@@ -7,6 +7,8 @@
 #include <global_state/backend_options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <filesystem/file.hpp>
+
 #include <iostream>
 
 LLVM_INCLUDE_BEGIN()
@@ -122,7 +124,7 @@ namespace compiler::backend_llvm {
 	/**
 	 * @brief Compiles the module to an object file or assembly file.
 	 */
-	void compileModuleToObject(
+	std::expected<void, std::string> compileModuleToObject(
 		const Ref<ModuleImpl>        module_impl,
 		const std::filesystem::path& output_file,
 		const CompilationOutputType  output_type
@@ -137,18 +139,35 @@ namespace compiler::backend_llvm {
 			global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
 		);
 
-		std::error_code error_code;
+		auto written = fs::FileManager::produceFileAtomically(
+			fs::FilePath(output_file),
+			[&](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
+				std::error_code error_code;
+				// Using raw_fd_ostream is the recommended way to write files in LLVM,
+			    // as it is much more efficient than using std::ofstream.
+				llvm::raw_fd_ostream output_stream(
+					temp_path.getPath().native(), error_code, llvm::sys::fs::OF_None
+				);
+				if (error_code)
+					return std::unexpected(temp_path.string() + ": " + error_code.message());
 
-		// Using raw_fd_ostream is the recommended way to write files in LLVM,
-		// as it is much more efficient than using std::ofstream.
-		llvm::raw_fd_ostream output_stream(output_file.native(), error_code, llvm::sys::fs::OF_None);
-		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
+				if (output_type == CompilationOutputType::Assembly)
+					emitAssembly(m, target_machine, &output_stream);
+				else
+					emitObject(m, target_machine, &output_stream);
 
-		if (output_type == CompilationOutputType::Assembly)
-			emitAssembly(m, target_machine, &output_stream);
-		else
-			emitObject(m, target_machine, &output_stream);
-
-		CORE_DEV_LOG(Backend, "Compiled LLVM module to the file: ", output_file.string(), "\n");
+				output_stream.close();
+				if (output_stream.has_error()) {
+					auto message = temp_path.string() + ": " + output_stream.error().message();
+					// An error left on the stream is a fatal error when it is destroyed.
+					output_stream.clear_error();
+					return std::unexpected(std::move(message));
+				}
+				return {};
+			}
+		);
+		if (written.has_value())
+			CORE_DEV_LOG(Backend, "Compiled LLVM module to the file: ", output_file.string(), "\n");
+		return written;
 	}
 }

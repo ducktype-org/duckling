@@ -8,6 +8,8 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 
+#include <base/types/expected_utils.hpp>
+
 #include <init/init.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
@@ -44,15 +46,17 @@ int main() {
 
 	// Outside of the query context we can safely inspect the unlocked resources.
 	if (main_source.has_value())
-		std::cout << main_source.value()->getFileIllegalAccess().getContent().view().stringView()
+		std::cout << base::valueOrPanic(main_source.value()->getFileIllegalAccess().getContent())
+						 .view()
+						 .stringView()
 				  << '\n';
 
 	// Everything that is not the module's own source is kept by extension, outside the query
 	// graph, so it needs no context to be read.
 	for (const auto& [extension, files]: module_tree->getOtherFiles())
 		for (const auto& file: files)
-			std::cout << extension.strView() << ": " << file.getContent().view().stringView()
-					  << '\n';
+			std::cout << extension.strView() << ": "
+					  << base::valueOrPanic(file.getContent()).view().stringView() << '\n';
 
 	for (const auto& submodule_ref: submodules)
 		std::cout << submodule_ref->getName().strView() << " has "

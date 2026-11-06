@@ -102,7 +102,6 @@ public:
 		query::setTrackReverseGraph(true);
 		TESTER_ADD_TEST(testDiskEraseWiring);
 		TESTER_ADD_TEST(testInvalidationDeletesDiskCache);
-		TESTER_ADD_TEST(testOrphanDiskCleanup);
 	}
 
 private:
@@ -143,47 +142,6 @@ private:
 		query::external::invalidateQueries({});
 
 		ASSERT_TRUE(not ImplementationOf_DiskQuery::fake_disk.contains(disk_hash));
-	}
-
-	/**
-	 * @brief On-disk artifacts of previous-graph nodes not merged into the current graph are
-	 * removed, while live and non-disk nodes are left untouched.
-	 */
-	void testOrphanDiskCleanup() {
-		auto state = query::internal::ContextAccess::getState();
-		ImplementationOf_DiskQuery::fake_disk.clear();
-
-		// Orphan: a disk-cached node present only in the previous graph (never demanded now, e.g.
-		// because its query hash changed). We never run it, so it stays out of the current graph.
-		const auto orphan_node = query::internal::makeNodeID<DiskQuery>(KeyOf_Disk{ 555 });
-		const auto orphan_hash = KeyOf_Disk{ 555 }.queryStablePerfectHash();
-
-		// Live: still demanded in the current compilation, so its artifact must be kept.
-		query::entryPoint<DiskQuery>({ 1 });
-		const auto live_node = query::internal::makeNodeID<DiskQuery>(KeyOf_Disk{ 1 });
-		const auto live_hash = KeyOf_Disk{ 1 }.queryStablePerfectHash();
-
-		// A non-disk node in the previous graph must never be touched by the cleanup.
-		const auto plain_node = query::internal::makeNodeID<PlainQuery>(query::U64Key{ 9 });
-
-		// Pretend both disk artifacts were written by a previous compilation.
-		ImplementationOf_DiskQuery::fake_disk.insert(orphan_hash);
-		ImplementationOf_DiskQuery::fake_disk.insert(live_hash);
-
-		// Build a previous graph holding all three nodes and install it.
-		auto prev_bytes = query::internal::QueryGraph::serializeReducedGraph(
-			query::internal::QueryGraph::ReducedGraphData{
-				.nodes     = { orphan_node, live_node, plain_node },
-				.adjacency = { {}, {}, {} },
-			}
-		);
-		state->setPreviousGraph(query::internal::QueryGraph::deserialize(prev_bytes));
-
-		state->cleanupOrphanedDiskCaches();
-
-		// Only the orphan's artifact is removed.
-		ASSERT_TRUE(not ImplementationOf_DiskQuery::fake_disk.contains(orphan_hash));
-		ASSERT_TRUE(ImplementationOf_DiskQuery::fake_disk.contains(live_hash));
 	}
 };
 

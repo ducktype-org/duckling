@@ -31,6 +31,16 @@ namespace timer {
 
 		static Duration zero() { return Duration{}; }
 
+		/// A duration of `hours` hours.
+		static constexpr Duration fromHours(i64 hours) {
+			return Duration{ std::chrono::hours(hours) };
+		}
+
+		/// A duration of `days` days.
+		static constexpr Duration fromDays(i64 days) { return Duration{ std::chrono::days(days) }; }
+
+		auto operator<=>(const Duration& other) const = default;
+
 		[[nodiscard]]
 		i64 toNanoseconds() const;
 

@@ -49,6 +49,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -92,6 +93,15 @@ namespace compiler::driver {
 
 	namespace {
 		/**
+		 * @brief Reports a debug dump (`.ll`, `.s`) that could not be written. A dump is only for
+		 * the user to read, so the build goes on without it.
+		 */
+		void reportDebugDumpFailure(const std::expected<void, std::string>& written) {
+			if (!written.has_value())
+				CORE_USER_LOG("Warning: could not write a debug dump: ", written.error(), "\n");
+		}
+
+		/**
 		 * @brief Handles the `--print-ir=dbc` and `--dump-ir=dbc` debug options for a module
 		 * compiled to DVM bytecode. The dump is written to the `duck_debug_artifacts` directory.
 		 */
@@ -101,9 +111,7 @@ namespace compiler::driver {
 				auto dbc_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(stem.strView(), ".dbc"))
 				);
-				std::ofstream output_file(
-					dbc_artifact.file.getFilePath().getPath(), std::ios::binary
-				);
+				std::ofstream output_file(dbc_artifact.path.getPath(), std::ios::binary);
 				if (!output_file.is_open()) CORE_PANIC("Failed to open file for writing");
 				vm::code::serializeCode(code, output_file);
 			}
@@ -254,8 +262,8 @@ namespace compiler::driver {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id_human.str() + ".ll")
 					);
-					llvm_module.dumpLLVMToFile(
-						base::StrID(llvm_ir_artifact.file.getFilePath().string())
+					reportDebugDumpFailure(
+						llvm_module.dumpLLVMToFile(base::StrID(llvm_ir_artifact.path.string()))
 					);
 				}
 				if (driver::dump_ir_options.dump_asm) {
@@ -266,19 +274,24 @@ namespace compiler::driver {
 					// We create a copy here, since compiling the module to assembly might modify it.
 					auto llvm_module_copy = llvm_module.clone();
 
-					llvm_module_copy.compile(
-						asm_artifact.file.getFilePath().getPath(),
-						backend_llvm::CompilationOutputType::Assembly
-					);
+					reportDebugDumpFailure(llvm_module_copy.compile(
+						asm_artifact.path.getPath(), backend_llvm::CompilationOutputType::Assembly
+					));
 				}
 				{
 					// compileLIRModuleToLLVM time is added on its own,
 					// but tracking time of the actual compilation to object file is done here
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
-					llvm_module.compile(
-						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
+					auto compiled = llvm_module.compile(
+						code_output.path, backend_llvm::CompilationOutputType::Object
 					);
+					if (!compiled.has_value()) {
+						CORE_USER_LOG(
+							"Error: could not write an object file: ", compiled.error(), "\n"
+						);
+						return query::Failed();
+					}
 				}
 				break;
 			}
@@ -289,30 +302,39 @@ namespace compiler::driver {
 					));
 				}
 
-				auto serialize_to_artifact = [&](artifacts::FileArtifact& art,
-				                                 auto&                    source,
-				                                 auto                     serialize_fn) {
-					std::ofstream output_file(art.file.getFilePath().getPath(), std::ios::binary);
-					if (!output_file.is_open()) CORE_PANIC("Failed to open file for writing");
-					serialize_fn(source, output_file);
-					output_file.close();
-				};
+				// Written atomically, so that another build sharing the folder never reads a
+				// half-written file.
+				auto serialize_to_artifact
+					= [&](artifacts::FileArtifact& art, auto& source, auto serialize_fn) {
+						  auto written = fs::FileManager::writeFileAtomically(
+							  art.path,
+							  [&](std::ostream& output_file) { serialize_fn(source, output_file); }
+						  );
+						  if (!written.has_value())
+							  CORE_USER_LOG(
+								  "Error: could not write a bytecode file: ", written.error(), "\n"
+							  );
+						  return written.has_value();
+					  };
 
 				auto dvm_module_data = compileLIRModuleToDVM(&lir_data, ctx, key.build_debug_info);
 
 				checkDBCDebugPrint(dvm_module_data.code, lir_data.module_id_human);
 
-				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
+				if (!serialize_to_artifact(
+						code_output, dvm_module_data.code, vm::code::serializeCode
+					))
+					return query::Failed();
 
 				if (key.build_debug_info) {
-					dvm_module_data.debug_info.value().module_path
-						= code_output.file.getFilePath().string();
+					dvm_module_data.debug_info.value().module_path = code_output.path.string();
 
-					serialize_to_artifact(
-						debug_info_artifact.value(),
-						dvm_module_data.debug_info.value(),
-						debug_info::saveToStream
-					);
+					if (!serialize_to_artifact(
+							debug_info_artifact.value(),
+							dvm_module_data.debug_info.value(),
+							debug_info::saveToStream
+						))
+						return query::Failed();
 
 					debug_info_output = std::move(dvm_module_data.debug_info);
 				}
@@ -335,6 +357,8 @@ namespace compiler::driver {
 			auto output_name = getModuleOutputName(key);
 
 			auto collection = getQueryArtifactsCollection();
+			// The lookup also marks the files as used, which keeps the unused-artifact cleanup
+			// (see `saveArtifacts`) from removing them.
 			auto output_maybe
 				= collection->fileArtifactAtMaybe(base::StrID(output_name.object_file.c_str()));
 
@@ -344,7 +368,7 @@ namespace compiler::driver {
 			}
 
 
-			CompileModuleResult result{ .object_art = *output_maybe.value(), .debug_info = {} };
+			CompileModuleResult result{ .object_art = output_maybe.value(), .debug_info = {} };
 
 			if_opt_some(output_name.debug_info_file, di_file) {
 				auto debug_info_maybe
@@ -355,9 +379,7 @@ namespace compiler::driver {
 					return {};
 				}
 
-				std::ifstream input_file(
-					debug_info_maybe.value()->file.getFilePath().getPath(), std::ios::binary
-				);
+				std::ifstream input_file(debug_info_maybe.value().path.getPath(), std::ios::binary);
 				if (!input_file.is_open()) {
 					moduleLog(key, "Failed to open debug info artifact file");
 					return {};
@@ -403,9 +425,12 @@ namespace compiler::driver {
 		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
 			query::Context& ctx
 		) {
-			auto& script_context = global_state::getScriptContext();
-			auto  script_source  = script_context.script_file.getContent().view().stdString();
-			auto  split_result   = repl::splitInputIntoStatements(ctx, script_source);
+			auto&      script_context = global_state::getScriptContext();
+			const auto content        = script_context.script_file.getContent();
+			if (!content.has_value())
+				return std::unexpected("Cannot read the script: " + content.error());
+			auto script_source = content->view().stdString();
+			auto split_result  = repl::splitInputIntoStatements(ctx, script_source);
 			if (!split_result.has_value())
 				return std::unexpected(
 					base::strConcat("Script parsing failed: ", split_result.error())
@@ -623,8 +648,8 @@ namespace compiler::driver {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(base::strConcat(script_lir->module_id.strView(), ".ll"))
 					);
-					llvm_module.dumpLLVMToFile(
-						base::StrID(llvm_ir_artifact.file.getFilePath().string())
+					reportDebugDumpFailure(
+						llvm_module.dumpLLVMToFile(base::StrID(llvm_ir_artifact.path.string()))
 					);
 				}
 				if (driver::dump_ir_options.dump_asm) {
@@ -635,18 +660,21 @@ namespace compiler::driver {
 					// We create a copy here, since compiling the module to assembly might modify it.
 					auto llvm_module_copy = llvm_module.clone();
 
-					llvm_module_copy.compile(
-						asm_artifact.file.getFilePath().getPath(),
-						backend_llvm::CompilationOutputType::Assembly
-					);
+					reportDebugDumpFailure(llvm_module_copy.compile(
+						asm_artifact.path.getPath(), backend_llvm::CompilationOutputType::Assembly
+					));
 				}
 
 				{
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-					llvm_module.compile(
-						object_artifact.file.getFilePath(),
-						backend_llvm::CompilationOutputType::Object
-					);
+					auto                          compiled = llvm_module.compile(
+                        object_artifact.path, backend_llvm::CompilationOutputType::Object
+                    );
+					if (!compiled.has_value()) {
+						error_message
+							= "Error: could not write the object file: " + compiled.error();
+						return;
+					}
 				}
 
 				if (linking_options.no_link) return;
@@ -666,11 +694,7 @@ namespace compiler::driver {
 					return;
 				}
 
-				CORE_USER_LOG(
-					"Script executable written to: ",
-					output_artifact.file.getFilePath().string(),
-					"\n"
-				);
+				CORE_USER_LOG("Script executable written to: ", output_artifact.path.string(), "\n");
 			});
 
 			if (error_message.has_value()) {
@@ -696,19 +720,15 @@ namespace compiler::driver {
 				auto script_obj_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(script_lir->module_id, ".o.dbc"))
 				);
-				std::ofstream module_output_file(
-					script_obj_artifact.file.getFilePath().getPath(), std::ios::binary
+				auto written = fs::FileManager::writeFileAtomically(
+					script_obj_artifact.path,
+					[&](std::ostream& out) { vm::code::serializeCode(dvm_module.code, out); }
 				);
-				if (!module_output_file.is_open()) {
-					error_message = base::strConcat(
-						"Failed to open output file for script bytecode: ",
-						script_obj_artifact.file.getFilePath().string()
-					);
+				if (!written.has_value()) {
+					error_message
+						= "Error: could not write the script bytecode: " + written.error();
 					return;
 				}
-
-				vm::code::serializeCode(dvm_module.code, module_output_file);
-				module_output_file.close();
 
 				if (linking_options.no_link) return;
 
@@ -727,9 +747,7 @@ namespace compiler::driver {
 					return;
 				}
 
-				CORE_USER_LOG(
-					"Script bytecode written to: ", output_file.file.getFilePath().strView(), "\n"
-				);
+				CORE_USER_LOG("Script bytecode written to: ", output_file.path.strView(), "\n");
 			});
 
 			if (error_message.has_value()) {
@@ -776,12 +794,16 @@ namespace compiler::driver {
 			checkDBCDebugPrint(dvm_module.code, script_lir->module_id_human);
 
 			if (load_stdlib) {
-				using std::ranges::to;
-				using std::ranges::views::transform;
-				auto parse_result = vm::loader::Loader{}.parseCodeCollectionFromFiles(
-					getStdLibDVMArtifacts() | transform(&artifacts::FileArtifact::file)
-					| to<std::vector>()
-				);
+				std::vector<fs::File> std_files;
+				for (const auto& artifact: getStdLibDVMArtifacts()) {
+					auto file = fs::File::open(artifact.path);
+					if (!file.has_value()) {
+						error_message = "Cannot open the std bytecode: " + file.error();
+						return;
+					}
+					std_files.push_back(std::move(file).value());
+				}
+				auto parse_result = vm::loader::Loader{}.parseCodeCollectionFromFiles(std_files);
 				if (!parse_result.has_value()) {
 					error_message
 						= base::strConcat("Failed to load std bytecode: ", parse_result.error());

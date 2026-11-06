@@ -19,6 +19,7 @@
 #include <base/str/str_utils.hpp>
 
 #include <diagnostic/placeholder.hpp>
+#include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_errors.hpp>
@@ -173,12 +174,11 @@ namespace compiler::backend_llvm {
 
 	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
 
-	void Module::dumpLLVMToFile(base::StrID output_file) const {
-		std::error_code error_code;
-		llvm::raw_fd_ostream ir_output_stream(output_file.str(), error_code, llvm::sys::fs::OF_None);
-		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
-
-		impl->module->print(ir_output_stream, nullptr);
+	std::expected<void, std::string> Module::dumpLLVMToFile(base::StrID output_file) const {
+		return fs::FileManager::writeFileAtomically(
+			fs::FilePath(std::string(output_file.strView())),
+			[this](std::ostream& out) { out << dumpLLVMToString(); }
+		);
 	}
 
 	std::string Module::dumpLLVMToString() const {
@@ -190,11 +190,10 @@ namespace compiler::backend_llvm {
 		return buffer;
 	}
 
-	void Module::compile(
+	std::expected<void, std::string> Module::compile(
 		const std::filesystem::path& output_file, const CompilationOutputType output_type
 	) {
-		compileModuleToObject(impl.refMut(), output_file, output_type);
-		CORE_ASSERT(std::filesystem::exists(output_file), "LLVM compilation to file failed!");
+		return compileModuleToObject(impl.refMut(), output_file, output_type);
 	}
 
 	u64 Module::getFunctionCount(bool including_prototypes) const {

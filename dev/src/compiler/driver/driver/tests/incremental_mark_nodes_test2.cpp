@@ -22,6 +22,7 @@
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <tester/tester.hpp>
 
+#include <chrono>
 #include <filesystem>
 
 using namespace compiler;
@@ -113,8 +114,8 @@ private:
 		auto root_deps = prev->getNodeDeps(root_node);
 
 		// The previous compilation compiled two modules (functions_1 + submodule), so two .o files
-		// are on disk. This compilation only demands functions_1's CompileModule, so submodule's is
-		// an orphan and saveArtifacts() (via driver::exit() below) must reclaim its .o from disk.
+		// are on disk. This compilation only demands functions_1's CompileModule, so once
+		// submodule's .o is stale, saveArtifacts() (via driver::exit() below) must remove it.
 		auto count_object_files = [&] {
 			const auto query_dir
 				= artifacts_path.getPath() / "query"
@@ -129,6 +130,19 @@ private:
 		ASSERT_TRUE(
 			objects_before >= 2
 		);  // functions_1 + undemanded submodule from previous compile
+
+		// Make every object file look unused for longer than the cleanup keeps them. The query
+		// below reuses functions_1's (or rewrites it), which marks it as used again; the
+		// submodule's is not demanded, so it stays stale and the cleanup removes it.
+		{
+			const auto query_dir
+				= artifacts_path.getPath() / "query"
+			    / ("query" + std::to_string(driver::CompileModule::getID().asInt()));
+			const auto stale = std::filesystem::file_time_type::clock::now() - std::chrono::days(8);
+			for (const auto& entry: std::filesystem::directory_iterator(query_dir))
+				if (entry.path().extension() == ".o")
+					std::filesystem::last_write_time(entry.path(), stale);
+		}
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			ctx.query<driver::CompileModule>({ .module_id        = module,
@@ -194,16 +208,16 @@ private:
 		auto maybe_art = query_col->fileArtifactAtMaybe(base::StrID(fname.c_str()));
 		ASSERT_HAS_VALUE(maybe_art);
 
-		const auto& art  = *maybe_art.value();
-		auto        path = art.file.getFilePath().getPath();
+		const auto& art  = maybe_art.value();
+		auto        path = art.path.getPath();
 		ASSERT_TRUE(std::filesystem::exists(path));
 		ASSERT_TRUE(std::filesystem::file_size(path) > 0);
 
 		// Save artifacts (writes previous graph blob to artifacts)
 		driver::exit();
 
-		// submodule's CompileModule was not demanded this run, so its orphaned .o must have been
-		// reclaimed from disk during saveArtifacts().
+		// submodule's CompileModule was not demanded this run, so its .o was left stale and was
+		// removed by the unused-artifact cleanup in saveArtifacts(); functions_1's was kept.
 		const u64 objects_after = count_object_files();
 		ASSERT_TRUE(objects_after == objects_before - 1);
 	}

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <sstream>
 
 class SimpleFileSystemTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -27,19 +28,27 @@ public:
 		TESTER_ADD_TEST(fileManagerTest);
 		TESTER_ADD_TEST(fileTest);
 		TESTER_ADD_TEST(vfsBindingTest);
+		TESTER_ADD_TEST(writeFailureTest);
+		TESTER_ADD_TEST(writeFileAtomicallyTest);
+		TESTER_ADD_TEST(removeEntryTest);
+		TESTER_ADD_TEST(touchTest);
+		TESTER_ADD_TEST(produceFileAtomicallyTest);
+		TESTER_ADD_TEST(reportedFailuresTest);
+		TESTER_ADD_TEST(pathQueriesTest);
+		TESTER_ADD_TEST(temporaryFileTargetTest);
 	}
 
 private:
 	void getSimpleContentTest() {
-		auto a_content = fs::File(path("a_file.txt")).getContent();
+		auto a_content = base::valueOrPanic(fs::File(path("a_file.txt")).getContent());
 
 		assertTrue(a_content.view().size() == 12, "Wrong a_content file size");
 		assertTrue(a_content.view().stringView() == "abrakadabra\n", "Wrong a_content file content");
 	}
 
 	void filePathTest() {
-		auto a_good_content = fs::File(path("a_file.txt")).getContent();
-		auto b_good_content = fs::File(path("b_file.txt")).getContent();
+		auto a_good_content = base::valueOrPanic(fs::File(path("a_file.txt")).getContent());
+		auto b_good_content = base::valueOrPanic(fs::File(path("b_file.txt")).getContent());
 
 		// loops twice to see if behavior is ok after all previous base::SharedView where destroyed
 		for (i32 i = 0; i < 2; i++) {
@@ -47,9 +56,9 @@ private:
 			fs::File a2(path("a_file.txt"));
 			fs::File b1(path("b_file.txt"));
 
-			auto a1_content = a1.getContent();
-			auto a2_content = a1.getContent();
-			auto b1_content = b1.getContent();
+			auto a1_content = base::valueOrPanic(a1.getContent());
+			auto a2_content = base::valueOrPanic(a1.getContent());
+			auto b1_content = base::valueOrPanic(b1.getContent());
 
 			assertTrue(
 				a1_content.view().stringView() == a_good_content.view().stringView(),
@@ -112,13 +121,13 @@ private:
 
 		// A relative path is resolved against the working directory.
 		auto old_cwd = std::filesystem::current_path();
-		auto tmp_cwd = fs::FileManager::createRandomTempDirectory();
+		auto tmp_cwd = base::valueOrPanic(fs::FileManager::createRandomTempDirectory());
 		std::filesystem::current_path(tmp_cwd.getFilePath().getPath());
 		bool relative_in_temp = fs::FilePath("some_file.txt").isTemporary();
 		std::filesystem::current_path(temp_dir.parent_path());
 		bool relative_outside_temp = fs::FilePath("not_a_temp_dir").isTemporary();
 		std::filesystem::current_path(old_cwd);
-		fs::FileManager::deleteFolder(tmp_cwd, true);
+		std::ignore = fs::FileManager::deleteFolder(tmp_cwd, true);
 
 		assertTrue(relative_in_temp, "A relative path with cwd in the temp dir should be temporary");
 		assertTrue(
@@ -237,22 +246,23 @@ private:
 		);
 
 		// Create a virtual file inside the directory
-		auto virtual_file = virtual_dir.createSubFile("Hello, Virtual File!", "testFile.txt");
+		auto virtual_file
+			= base::valueOrPanic(virtual_dir.createSubFile("Hello, Virtual File!", "testFile.txt"));
 		assertTrue(virtual_file.isFile(), "Virtual file was not created correctly");
 		assertTrue(virtual_file.name() == "testFile.txt", "Virtual file name is incorrect");
 
 		// List directory contents
-		auto dir_contents = virtual_dir.listFilePaths();
+		auto dir_contents = base::valueOrPanic(virtual_dir.listFilePaths());
 		assertTrue(dir_contents.size() == 1, "Virtual directory should contain one file");
 		assertTrue(dir_contents[0].name() == "testFile.txt", "Directory listing is incorrect");
 
 		// Create a subdirectory
-		auto sub_dir = virtual_dir.createSubDirectory("subDir");
+		auto sub_dir = base::valueOrPanic(virtual_dir.createSubDirectory("subDir"));
 		assertTrue(sub_dir.isDirectory(), "Subdirectory was not created correctly");
 		assertTrue(sub_dir.name() == "subDir", "Subdirectory name is incorrect");
 
 		// List directory contents again
-		dir_contents = virtual_dir.listFilePaths();
+		dir_contents = base::valueOrPanic(virtual_dir.listFilePaths());
 		assertTrue(dir_contents.size() == 2, "Virtual directory should contain two entries");
 		assertTrue(
 			std::ranges::find_if(
@@ -269,7 +279,8 @@ private:
 
 		// Test creating a file with duplicate name (should throw)
 		try {
-			std::ignore = virtual_dir.createSubFile("Duplicate content", "testFile.txt");
+			std::ignore
+				= base::valueOrPanic(virtual_dir.createSubFile("Duplicate content", "testFile.txt"));
 			assertTrue(false, "Creating a file with duplicate name should throw");
 		} catch (const base::Panic&) {
 			// Expected behavior
@@ -278,26 +289,23 @@ private:
 
 	void fileOperationsTest() {
 		// Test directory deletion
-		auto temp_dir    = fs::FileManager::createRandomTempDirectory();
-		auto file_in_dir = temp_dir.createSubFile("content", "test.txt");
-		auto sub_dir     = temp_dir.createSubFile("subdir");
+		auto temp_dir    = base::valueOrPanic(fs::FileManager::createRandomTempDirectory());
+		auto file_in_dir = base::valueOrPanic(temp_dir.createSubFile("content", "test.txt"));
+		auto sub_dir     = base::valueOrPanic(temp_dir.createSubFile("subdir"));
 
 		assertTrue(temp_dir.exists(), "Temp directory should exist");
 
-		// Test deletion without force (should throw exception for non-empty directory)
-		try {
-			fs::FileManager::deleteFolder(temp_dir, false);
-			assertTrue(
-				false, "Should throw exception when deleting non-empty directory without force"
-			);
-		} catch (const std::filesystem::filesystem_error&) {
-			// Expected behavior - directory should still exist
-			assertTrue(temp_dir.exists(), "Directory should still exist after failed deletion");
-		}
+		// Deleting a non-empty directory without force fails, with the reason in the result
+		auto not_deleted = fs::FileManager::deleteFolder(temp_dir, false);
+		assertTrue(
+			!not_deleted.has_value(), "Deleting a non-empty directory without force must fail"
+		);
+		assertTrue(temp_dir.exists(), "Directory should still exist after failed deletion");
 
 		// Test deletion with force
 		assertTrue(
-			fs::FileManager::deleteFolder(temp_dir, true), "Failed to delete directory with force"
+			base::valueOrPanic(fs::FileManager::deleteFolder(temp_dir, true)),
+			"Failed to delete directory with force"
 		);
 		assertTrue(!temp_dir.exists(), "Directory should not exist after deletion with force");
 
@@ -309,7 +317,7 @@ private:
 		);
 
 		// Cleanup
-		fs::FileManager::deleteFolder(virtual_dir, true);
+		std::ignore = fs::FileManager::deleteFolder(virtual_dir, true);
 	}
 
 	void fileManagerTest() {
@@ -325,7 +333,8 @@ private:
 
 		// Test createFileIn with random name generation
 		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
-		auto random_file = virtual_dir.createSubFile("random content");  // no custom_name
+		auto random_file
+			= base::valueOrPanic(virtual_dir.createSubFile("random content"));  // no custom_name
 		assertTrue(random_file.isFile(), "Random file should be created");
 
 		// Test physical folder creation with unique name
@@ -338,17 +347,20 @@ private:
 		// Ensure cleanup from any previous run
 		std::filesystem::remove_all(physical_folder_path);
 
-		auto physical_folder = fs::FileManager::createPhysicalFolder(physical_folder_path, false);
+		auto physical_folder
+			= base::valueOrPanic(fs::FileManager::createPhysicalFolder(physical_folder_path, false));
 		assertTrue(physical_folder.isDirectory(), "Physical folder should be created");
 
 		// Test physical folder with override
-		auto physical_folder2 = fs::FileManager::createPhysicalFolder(physical_folder_path, true);
+		auto physical_folder2
+			= base::valueOrPanic(fs::FileManager::createPhysicalFolder(physical_folder_path, true));
 		assertTrue(
 			physical_folder2.isDirectory(), "Physical folder should be recreated with override"
 		);
 
-		auto new_phisical_file = physical_folder2.createSubFile("content", "duplicate.txt");
-		auto new_phisical_dir  = physical_folder2.createSubDirectory("some_dir");
+		auto new_phisical_file
+			= base::valueOrPanic(physical_folder2.createSubFile("content", "duplicate.txt"));
+		auto new_phisical_dir = base::valueOrPanic(physical_folder2.createSubDirectory("some_dir"));
 		assertTrue(
 			new_phisical_file.getType() == fs::FileType::Physical,
 			"Physical file should be created in physical folder"
@@ -365,7 +377,7 @@ private:
 		auto overridden_virtual
 			= fs::FileManager::createVirtualFile(virtual_file_path, "overridden", true);
 		assertTrue(
-			overridden_virtual.getContent().view().stringView() == "overridden",
+			base::valueOrPanic(overridden_virtual.getContent()).view().stringView() == "overridden",
 			"Virtual file should be overridden"
 		);
 
@@ -387,12 +399,14 @@ private:
 			= "test_temp_folder_"
 		    + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 		fs::FilePath temp_folder_path = std::filesystem::temp_directory_path() / unique_temp_name;
-		auto         temp_folder      = fs::FileManager::createPhysicalFolder(temp_folder_path);
+		auto         temp_folder
+			= base::valueOrPanic(fs::FileManager::createPhysicalFolder(temp_folder_path));
 		assertTrue(temp_folder.isDirectory(), "Temp folder should be created");
 		assertTrue(temp_folder.isTemporary(), "Folder in the temp dir should report as temporary");
 
 		// Test temp folder with override
-		auto temp_folder2 = fs::FileManager::createPhysicalFolder(temp_folder_path, true);
+		auto temp_folder2
+			= base::valueOrPanic(fs::FileManager::createPhysicalFolder(temp_folder_path, true));
 		assertTrue(temp_folder2.isDirectory(), "Temp folder should be recreated with override");
 
 		// Test folderExists with path
@@ -441,37 +455,40 @@ private:
 
 		// Test createFileIn with duplicate name in virtual directory
 		auto test_virtual_dir = fs::FileManager::createRandomVirtualDirectory();
-		std::ignore           = test_virtual_dir.createSubFile("content", "duplicate.txt");
+		std::ignore
+			= base::valueOrPanic(test_virtual_dir.createSubFile("content", "duplicate.txt"));
 		try {
-			std::ignore = test_virtual_dir.createSubFile("content", "duplicate.txt");
+			std::ignore
+				= base::valueOrPanic(test_virtual_dir.createSubFile("content", "duplicate.txt"));
 			assertTrue(false, "Should fail to create duplicate file in virtual directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("File already exists in virtual directory: ...")
 		}
 
 		// Test createFileIn with duplicate name in physical directory
-		auto test_temp_dir = fs::FileManager::createRandomTempDirectory();
-		std::ignore        = test_temp_dir.createSubFile("content", "duplicate.txt");
+		auto test_temp_dir = base::valueOrPanic(fs::FileManager::createRandomTempDirectory());
+		base::valueOrPanic(test_temp_dir.createSubFile("content", "duplicate.txt"));
 		try {
-			std::ignore = test_temp_dir.createSubFile("content", "duplicate.txt");
+			std::ignore
+				= base::valueOrPanic(test_temp_dir.createSubFile("content", "duplicate.txt"));
 			assertTrue(false, "Should fail to create duplicate file in physical directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("File already exists in directory: ...")
 		}
 
 		// Test createDirectoryIn with duplicate name in virtual directory
-		std::ignore = test_virtual_dir.createSubDirectory("duplicate_dir");
+		base::valueOrPanic(test_virtual_dir.createSubDirectory("duplicate_dir"));
 		try {
-			std::ignore = test_virtual_dir.createSubDirectory("duplicate_dir");
+			base::valueOrPanic(test_virtual_dir.createSubDirectory("duplicate_dir"));
 			assertTrue(false, "Should fail to create duplicate directory in virtual directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("Directory already exists in virtual directory: ...")
 		}
 
 		// Test createDirectoryIn with duplicate name in physical directory
-		std::ignore = test_temp_dir.createSubDirectory("duplicate_dir");
+		base::valueOrPanic(test_temp_dir.createSubDirectory("duplicate_dir"));
 		try {
-			std::ignore = test_temp_dir.createSubDirectory("duplicate_dir");
+			base::valueOrPanic(test_temp_dir.createSubDirectory("duplicate_dir"));
 			assertTrue(false, "Should fail to create duplicate directory in physical directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("Directory already exists: ...")
@@ -480,63 +497,82 @@ private:
 		// FileManager tests from fileOperationsTest
 
 		// Test file/folder existence checks
-		auto temp_file = fs::FileManager::createRandomTempFile("Test content");
+		auto temp_file = base::valueOrPanic(fs::FileManager::createRandomTempFile("Test content"));
 		assertTrue(temp_file.exists(), "File should exist");
 
-		auto temp_dir = fs::FileManager::createRandomTempDirectory();
+		auto temp_dir = base::valueOrPanic(fs::FileManager::createRandomTempDirectory());
 		assertTrue(temp_dir.exists(), "Folder should exist");
 
 		// Test file deletion
-		assertTrue(fs::FileManager::deleteFile(temp_file), "Should delete file");
+		assertTrue(base::valueOrPanic(fs::FileManager::deleteFile(temp_file)), "Should delete file");
 		assertTrue(!temp_file.exists(), "File should not exist after deletion");
 
 		// Test folder deletion
-		assertTrue(fs::FileManager::deleteFolder(temp_dir, true), "Should delete folder");
+		assertTrue(
+			base::valueOrPanic(fs::FileManager::deleteFolder(temp_dir, true)), "Should delete folder"
+		);
 		assertTrue(!temp_dir.exists(), "Folder should not exist after deletion");
 
 		// Test physical file creation with override
 		fs::FilePath physical_file_path = current_dir / "test_physical.txt";
-		auto         physical_file1
-			= fs::FileManager::createPhysicalFile(physical_file_path, "content1", false);
+		auto         physical_file1     = base::valueOrPanic(
+            fs::FileManager::createPhysicalFile(physical_file_path, "content1", false)
+        );
 		assertTrue(physical_file1.getType() == fs::FileType::Physical, "File should be physical");
 
 		// Test override functionality
-		auto physical_file2
-			= fs::FileManager::createPhysicalFile(physical_file_path, "content2", true);
-		auto overridden_content = physical_file2.getContent();
+		auto physical_file2 = base::valueOrPanic(
+			fs::FileManager::createPhysicalFile(physical_file_path, "content2", true)
+		);
+		auto overridden_content = base::valueOrPanic(physical_file2.getContent());
 		assertTrue(
 			overridden_content.view().stringView() == "content2", "Content should be overridden"
 		);
 
 		// Test trying to create without override (should fail)
 		try {
-			fs::FileManager::createPhysicalFile(physical_file_path, "content3", false);
+			base::valueOrPanic(
+				fs::FileManager::createPhysicalFile(physical_file_path, "content3", false)
+			);
 			assertTrue(false, "Should fail to create existing file without override");
 		} catch (const base::Panic&) {
 			// Expected behavior
 		}
 
+		// The default factories report an environment failure instead of panicking. A path whose
+		// parent is a regular file cannot become a folder or a file, and that is the machine
+		// talking, not a broken invariant - so a reason comes back and nothing aborts.
+		fs::FilePath blocked_folder = physical_file_path / "cannot_exist";
+		auto         folder_failure = fs::FileManager::createPhysicalFolder(blocked_folder);
+		assertTrue(!folder_failure.has_value(), "Creating a folder under a file should fail");
+		assertTrue(!folder_failure.error().empty(), "The failure should carry a reason");
+
+		auto file_failure = fs::FileManager::createPhysicalFile(blocked_folder, "content");
+		assertTrue(!file_failure.has_value(), "Creating a file under a file should fail");
+		assertTrue(!file_failure.error().empty(), "The failure should carry a reason");
+
 		// Test symlink detection
 		assertTrue(!physical_file_path.isSymlink(), "Physical file should not be symlink");
 
 		// Cleanup test directories
-		fs::FileManager::deleteFolder(test_virtual_dir, true);
-		fs::FileManager::deleteFolder(test_temp_dir, true);
-		fs::FileManager::deleteFolder(physical_folder2, true);
+		std::ignore = fs::FileManager::deleteFolder(test_virtual_dir, true);
+		std::ignore = fs::FileManager::deleteFolder(test_temp_dir, true);
+		std::ignore = fs::FileManager::deleteFolder(physical_folder2, true);
 		assertFalse(physical_folder2.exists(), "Physical folder should not exist after deletion");
 
 		std::filesystem::remove_all(physical_folder_path);
 		std::filesystem::remove_all(temp_folder_path);
 		std::filesystem::remove(simple_physical_path);
 		std::filesystem::remove(physical_file_path);
-		fs::FileManager::deleteFolder(virtual_dir, true);
+		std::ignore = fs::FileManager::deleteFolder(virtual_dir, true);
 	}
 
 	void fileTest() {
 		// File specific tests from fileOperationsTest
 
 		// Test writeToFile functionality
-		auto temp_file = fs::FileManager::createRandomTempFile("Initial content");
+		auto temp_file
+			= base::valueOrPanic(fs::FileManager::createRandomTempFile("Initial content"));
 		assertTrue(temp_file.isFile(), "Temp file was not created correctly");
 		assertTrue(
 			temp_file.getType() == fs::FileType::Physical, "Temp file should be a physical file"
@@ -544,17 +580,17 @@ private:
 		assertTrue(temp_file.isTemporary(), "Temp file should report itself as temporary");
 
 		// Test reading content
-		auto content = temp_file.getContent();
+		auto content = base::valueOrPanic(temp_file.getContent());
 		assertTrue(content.view().stringView() == "Initial content", "Initial content incorrect");
 
 		// Test overwriting file content
-		temp_file.writeToFile("New content", false);
-		auto new_content = temp_file.getContent();
+		std::ignore      = temp_file.writeToFile("New content", false);
+		auto new_content = base::valueOrPanic(temp_file.getContent());
 		assertTrue(new_content.view().stringView() == "New content", "Content was not overwritten");
 
 		// Test appending to file content
-		temp_file.writeToFile(" appended", true);
-		auto appended_content = temp_file.getContent();
+		std::ignore           = temp_file.writeToFile(" appended", true);
+		auto appended_content = base::valueOrPanic(temp_file.getContent());
 		assertTrue(
 			appended_content.view().stringView() == "New content appended",
 			"Content was not appended"
@@ -565,23 +601,23 @@ private:
 		assertTrue(virtual_file.isFile(), "Virtual file was not created correctly");
 		assertTrue(virtual_file.getType() == fs::FileType::Virtual, "File should be virtual");
 
-		auto virtual_content = virtual_file.getContent();
+		auto virtual_content = base::valueOrPanic(virtual_file.getContent());
 		assertTrue(
 			virtual_content.view().stringView() == "Virtual initial",
 			"Virtual initial content incorrect"
 		);
 
 		// Test overwriting virtual file (append should fail)
-		virtual_file.writeToFile("Virtual new content");
-		auto virtual_new_content = virtual_file.getContent();
+		std::ignore              = virtual_file.writeToFile("Virtual new content");
+		auto virtual_new_content = base::valueOrPanic(virtual_file.getContent());
 		assertTrue(
 			virtual_new_content.view().stringView() == "Virtual new content",
 			"Virtual content was not overwritten"
 		);
 
 		// Test append for virtual files
-		virtual_file.writeToFile(" should not fail", true);
-		auto virtual_new_content_appended = virtual_file.getContent();
+		std::ignore                       = virtual_file.writeToFile(" should not fail", true);
+		auto virtual_new_content_appended = base::valueOrPanic(virtual_file.getContent());
 		assertTrue(
 			virtual_new_content_appended.view().stringView()
 				== "Virtual new content should not fail",
@@ -589,21 +625,19 @@ private:
 		);
 
 		// Test file utilities
-		auto test_file = fs::FileManager::createRandomTempFile();
+		auto test_file = base::valueOrPanic(fs::FileManager::createRandomTempFile());
 		assertTrue(test_file.getFilePath().stem() != "", "File stem should not be empty");
 		assertTrue(test_file.extension() == "", "File should have no extension");
 		assertTrue(test_file.getFilePath().native() != "", "Absolute path should not be empty");
 		assertTrue(test_file.getFilePath().uri() != "", "URI should not be empty");
-		// Test getContentSafe
-		auto safe_content = test_file.getContentSafe();
-		ASSERT_HAS_VALUE(safe_content, "getContentSafe should succeed for existing file");
+		// Test getContent
+		auto safe_content = test_file.getContent();
+		ASSERT_HAS_VALUE(safe_content, "getContent should succeed for existing file");
 
-		// Delete file and test getContentSafe again
-		fs::FileManager::deleteFile(test_file);
-		auto safe_content_after_delete = test_file.getContentSafe();
-		ASSERT_NO_VALUE(
-			safe_content_after_delete, "getContentSafe should fail for non-existent file"
-		);
+		// Delete file and test getContent again
+		std::ignore                    = fs::FileManager::deleteFile(test_file);
+		auto safe_content_after_delete = test_file.getContent();
+		ASSERT_NO_VALUE(safe_content_after_delete, "getContent should fail for non-existent file");
 
 		// Test getModifyTime for non-virtual file
 		auto current_dir = std::filesystem::current_path();
@@ -638,7 +672,8 @@ private:
 		assertTrue(in_other.exists(), "File must exist in the explicitly bound VFS");
 		assertTrue(!in_singleton.exists(), "File must not leak into the singleton VFS");
 		assertTrue(
-			fs::File(in_other).getContent().view().stringView() == "other content",
+			base::valueOrPanic(fs::File(in_other).getContent()).view().stringView()
+				== "other content",
 			"Content must be read back from the bound VFS"
 		);
 
@@ -673,6 +708,288 @@ private:
 		assertTrue(
 			as_virtual.getVfs().value().get() == &other, "toVirtualPath must honour its target"
 		);
+	}
+
+	void writeFailureTest() {
+		// `/dev/full` opens fine but fails every write with ENOSPC - a full disk on demand. It is
+		// Linux-only, so elsewhere there is nothing to check.
+		const fs::FilePath dev_full("/dev/full");
+		if (!dev_full.exists()) return;
+
+		// A write small enough to sit in the stream's buffer only fails when that buffer is
+		// flushed on close, so these catch a check made before the close.
+		const fs::File full(dev_full);
+		for (const bool append: { false, true }) {
+			auto written = full.writeToFile("small", append);
+			assertTrue(!written.has_value(), "A buffered write to a full device must fail");
+			assertTrue(
+				written.error().find("No space left on device") != std::string::npos,
+				"The failure should carry the reason, got: " + written.error()
+			);
+		}
+
+		auto created = fs::FileManager::createPhysicalFile(dev_full, "small", true);
+		assertTrue(!created.has_value(), "Creating a file on a full device must fail");
+	}
+
+	static std::string readWhole(const std::filesystem::path& path) {
+		std::ifstream     in(path, std::ios::binary);
+		std::stringstream ss;
+		ss << in.rdbuf();
+		return ss.str();
+	}
+
+	void writeFileAtomicallyTest() {
+		const auto dir
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+		const auto target = dir / fs::FilePath("cache");
+		const auto write  = [&](std::string_view text) {
+            return fs::FileManager::writeFileAtomically(target, [&](std::ostream& out) {
+                out << text;
+            });
+		};
+
+		assertTrue(write("first").has_value(), "Writing a new file must succeed");
+		assertTrue(readWhole(target.getPath()) == "first", "The new file must hold the content");
+		assertTrue(write("second").has_value(), "Overwriting must succeed");
+		assertTrue(readWhole(target.getPath()) == "second", "The file must hold the new content");
+		// Only the target is left: the temporary file was renamed into place.
+		const auto entries = base::valueOrPanic(fs::File(dir).listFilePaths());
+		assertTrue(entries.size() == 1, "No temporary file may be left behind");
+
+		// A relative path, like the default `./duck_build/`, is resolved against the working
+		// directory.
+		const auto old_cwd = std::filesystem::current_path();
+		std::filesystem::current_path(dir.getPath());
+		const auto relative_written = fs::FileManager::writeFileAtomically(
+			fs::FilePath("./relative"), [](std::ostream& out) { out << "relative"; }
+		);
+		const auto relative_removed = fs::FileManager::removeEntry(fs::FilePath("./relative"));
+		std::filesystem::current_path(old_cwd);
+		assertTrue(relative_written.has_value(), "Writing to a relative path must succeed");
+		assertTrue(
+			relative_removed.has_value() && relative_removed.value(),
+			"Removing a relative path must succeed"
+		);
+
+		const auto missing_dir = dir / fs::FilePath("missing") / fs::FilePath("cache");
+		auto       failed      = fs::FileManager::writeFileAtomically(missing_dir, [](auto&) {});
+		assertTrue(!failed.has_value(), "Writing into a missing folder must fail");
+		assertTrue(
+			failed.error().find("missing") != std::string::npos,
+			"The failure should name the path, got: " + failed.error()
+		);
+	}
+
+	void removeEntryTest() {
+		const auto dir = base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		                     .getFilePath()
+		                     .getPath();
+		const auto file = dir / "file";
+		std::ofstream(file) << "content";
+
+		auto removed = fs::FileManager::removeEntry(fs::FilePath(file));
+		assertTrue(removed.has_value() && removed.value(), "An existing file must be removed");
+		removed = fs::FileManager::removeEntry(fs::FilePath(file));
+		assertTrue(removed.has_value() && !removed.value(), "A missing entry is not an error");
+
+		// A symlink is removed itself; what it points to stays.
+		const auto target = dir / "target";
+		std::ofstream(target) << "keep me";
+		std::filesystem::create_symlink(target, dir / "link");
+		removed = fs::FileManager::removeEntry(fs::FilePath(dir / "link"));
+		assertTrue(removed.has_value() && removed.value(), "The symlink must be removed");
+		assertTrue(readWhole(target) == "keep me", "The symlink's target must stay");
+
+		// A folder with something in it is not removed, and the reason is reported.
+		std::filesystem::create_directory(dir / "full_dir");
+		std::ofstream(dir / "full_dir" / "inside") << "x";
+		removed = fs::FileManager::removeEntry(fs::FilePath(dir / "full_dir"));
+		assertTrue(!removed.has_value(), "A non-empty folder must not be removed");
+		assertTrue(std::filesystem::exists(dir / "full_dir" / "inside"), "Its content must stay");
+	}
+
+	void touchTest() {
+		const auto dir = base::valueOrPanic(fs::FileManager::createRandomTempDirectory())
+		                     .getFilePath()
+		                     .getPath();
+		const auto file = dir / "file";
+		std::ofstream(file) << "content";
+		const auto old_time = std::filesystem::file_time_type::clock::now() - std::chrono::days(30);
+		std::filesystem::last_write_time(file, old_time);
+
+		assertTrue(fs::FileManager::touch(fs::FilePath(file)).has_value(), "Touch must succeed");
+		assertTrue(
+			std::filesystem::last_write_time(file) > old_time + std::chrono::days(29),
+			"Touch must set the modification time to now"
+		);
+		assertTrue(readWhole(file) == "content", "Touch must not change the content");
+
+		const auto missing = fs::FileManager::touch(fs::FilePath(dir / "missing"));
+		assertTrue(!missing.has_value(), "Touching a missing file must fail");
+		assertTrue(!std::filesystem::exists(dir / "missing"), "Touch must not create the file");
+	}
+
+	// The way the linker and `ar` write their outputs: a tool creates the file at the path it is
+	// given, and only a successful run replaces the previous file.
+	void produceFileAtomicallyTest() {
+		const auto dir
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+		const auto target = dir / fs::FilePath("app");
+		std::ofstream(target.getPath()) << "previous";
+
+		auto produced = fs::FileManager::produceFileAtomically(
+			target,
+			[](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
+				std::ofstream(temp_path.getPath()) << "new";
+				return {};
+			}
+		);
+		assertTrue(produced.has_value(), "A successful producer must succeed");
+		assertTrue(readWhole(target.getPath()) == "new", "The produced file must be in place");
+
+		// A failing tool may leave a partial file; it must not replace the previous one.
+		auto failed = fs::FileManager::produceFileAtomically(
+			target,
+			[](const fs::FilePath& temp_path) -> std::expected<void, std::string> {
+				std::ofstream(temp_path.getPath()) << "half";
+				return std::unexpected("the tool failed");
+			}
+		);
+		assertTrue(!failed.has_value(), "A failing producer must fail");
+		assertTrue(failed.error() == "the tool failed", "Its own error must be returned");
+		assertTrue(readWhole(target.getPath()) == "new", "The previous file must stay");
+
+		// A producer that reports success without creating anything is a failure too.
+		auto nothing = fs::FileManager::produceFileAtomically(
+			target, [](const fs::FilePath&) -> std::expected<void, std::string> { return {}; }
+		);
+		assertTrue(!nothing.has_value(), "Producing nothing must fail");
+		assertTrue(readWhole(target.getPath()) == "new", "The previous file must stay");
+
+		assertTrue(
+			base::valueOrPanic(fs::File(dir).listFilePaths()).size() == 1,
+			"No temporary file may be left behind"
+		);
+
+		// Code that recognises leftover temporary files relies on the random part's length.
+		const auto name = fs::FileManager::randomName(dir, "app.", ".tmp").getPath().filename();
+		assertTrue(
+			name.string().size()
+				== std::string_view("app.").size() + fs::FileManager::RANDOM_NAME_LENGTH
+					   + std::string_view(".tmp").size(),
+			"The random part must be RANDOM_NAME_LENGTH long, got: " + name.string()
+		);
+	}
+
+	// Failures the environment can cause are reported with a reason, not panicked on.
+	void reportedFailuresTest() {
+		const auto dir
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+
+		const fs::FilePath virtual_path("vfs:/not_on_disk");
+		assertTrue(
+			!fs::FileManager::createPhysicalFile(virtual_path, "x").has_value(),
+			"A virtual path cannot become a physical file"
+		);
+		assertTrue(
+			!fs::FileManager::createPhysicalFolder(virtual_path).has_value(),
+			"A virtual path cannot become a physical folder"
+		);
+
+		const auto sub = dir / fs::FilePath("sub");
+		assertTrue(fs::FileManager::createPhysicalFolder(sub).has_value(), "A new folder is made");
+		auto again = fs::FileManager::createPhysicalFolder(sub);
+		assertTrue(!again.has_value(), "An existing folder is not replaced unless asked");
+		assertTrue(
+			again.error().find("already exists") != std::string::npos,
+			"The reason is given, got: " + again.error()
+		);
+
+		// The folder of a file is removed under it: writing to it reports why.
+		auto file = fs::FileManager::createPhysicalFile(sub / fs::FilePath("f"), "content");
+		assertTrue(file.has_value(), "A new file is made");
+		std::filesystem::remove_all(sub.getPath());
+		auto written = file->writeToFile("new content");
+		assertTrue(!written.has_value(), "Writing into a removed folder must fail");
+
+		// A virtual file removed meanwhile is reported the same way.
+		auto       vdir    = fs::FileManager::createRandomVirtualDirectory();
+		auto       vfile   = base::valueOrPanic(vdir.createSubFile("content", "f.txt"));
+		const bool deleted = base::valueOrPanic(fs::FileManager::deleteFile(vfile));
+		assertTrue(deleted, "The virtual file is deleted");
+		assertTrue(
+			!vfile.writeToFile("new content").has_value(), "Writing a removed virtual file must fail"
+		);
+	}
+
+	// Queries on paths answer without throwing, also for paths that do not exist.
+	void pathQueriesTest() {
+		const auto dir
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+		const auto file = dir / fs::FilePath("file");
+		std::ofstream(file.getPath()) << "content";
+		const auto missing = dir / fs::FilePath("missing");
+
+		assertTrue(dir.isDirectory() && !file.isDirectory(), "isDirectory tells folders apart");
+		assertTrue(
+			!missing.exists() && !missing.isRegularFile() && !missing.isDirectory(), "Nothing there"
+		);
+		assertTrue(!missing.canonical().has_value(), "A missing path has no canonical form");
+		assertTrue(file.canonical().has_value(), "An existing path has a canonical form");
+		assertTrue(!fs::File::open(missing).has_value(), "A missing file cannot be opened");
+		assertTrue(fs::File::open(file).has_value(), "An existing file can be opened");
+
+		assertTrue(fs::FilePath("/a/b").hasRoot() && !fs::FilePath("a/b").hasRoot(), "hasRoot");
+		assertTrue(
+			(fs::FilePath("a/../b").parts() == std::vector<std::string>{ "a", "..", "b" }), "parts"
+		);
+		assertTrue(fs::FilePath("bin/").parts().back().empty(), "A trailing separator is a part");
+
+		auto age = file.timeSinceModified();
+		assertTrue(age.has_value() && age.value() < timer::Duration::fromHours(1), "Just written");
+		std::filesystem::last_write_time(
+			file.getPath(), std::filesystem::file_time_type::clock::now() - std::chrono::days(3)
+		);
+		age = file.timeSinceModified();
+		assertTrue(age.has_value() && age.value() > timer::Duration::fromDays(2), "Three days old");
+		assertTrue(!missing.timeSinceModified().has_value(), "A missing file has no age");
+
+		// A symlink anywhere in a path is noticed, not only at its end.
+		std::filesystem::create_directory(dir.getPath() / "real");
+		std::ofstream(dir.getPath() / "real" / "inside") << "x";
+		std::filesystem::create_directory_symlink(dir.getPath() / "real", dir.getPath() / "link");
+		assertTrue(dir.passesThroughSymlink(fs::FilePath("link/inside")), "Link in the middle");
+		assertTrue(dir.passesThroughSymlink(fs::FilePath("link")), "Link at the end");
+		assertTrue(!dir.passesThroughSymlink(fs::FilePath("real/inside")), "No link");
+		assertTrue(!dir.passesThroughSymlink(fs::FilePath("missing/x")), "Missing parts");
+		assertTrue((dir / fs::FilePath("link")).isSymlink(), "isSymlink sees the link itself");
+
+		auto listed = base::valueOrPanic(fs::File(dir).listFilePaths());
+		assertTrue(listed.size() == 3, "file, real and link are listed");
+		assertTrue(!fs::File(file).listFilePaths().has_value(), "A file cannot be listed");
+		auto taken = fs::File(dir).createSubFile("x", "file");
+		assertTrue(!taken.has_value(), "A taken name is reported");
+	}
+
+	void temporaryFileTargetTest() {
+		const fs::FilePath dir("/cache");
+		const auto         random = std::string(fs::FileManager::RANDOM_NAME_LENGTH, 'a');
+		auto               target
+			= fs::FileManager::temporaryFileTarget(dir / fs::FilePath("app.o." + random + ".tmp"));
+		assertTrue(
+			target.has_value() && target.value() == dir / fs::FilePath("app.o"), "Target found"
+		);
+		assertTrue(
+			fs::FileManager::temporaryFileTarget(dir / fs::FilePath(".artc." + random + ".tmp"))
+				.has_value(),
+			"A hidden target is found too"
+		);
+		for (const auto* name: { "app.backup.tmp", "app.tmp", "app", "app.aaaa-aaaaaaaaaaa.tmp" })
+			assertTrue(
+				!fs::FileManager::temporaryFileTarget(dir / fs::FilePath(name)).has_value(),
+				std::string("Not a temporary file: ") + name
+			);
 	}
 };
 

@@ -58,12 +58,15 @@ namespace fs {
 			return PathType::Physical;
 	}
 
-	FilePath FilePath::canonical() const {
+	std::expected<FilePath, std::string> FilePath::canonical() const {
 		if (type == PathType::Virtual) {
 			// Virtual paths don't have canonical representation in the traditional sense
 			CORE_PANIC("Cannot canonicalize virtual path: " + path.string());
 		}
-		return std::filesystem::canonical(path);
+		std::error_code ec;
+		auto            resolved = std::filesystem::canonical(path, ec);
+		if (ec) return std::unexpected(path.string() + ": " + ec.message());
+		return FilePath(std::move(resolved));
 	}
 
 	bool FilePath::isTemporary() const {
@@ -77,7 +80,24 @@ namespace fs {
 
 	bool FilePath::isSymlink() const {
 		if (type == PathType::Virtual) return false;  // Virtual paths are never symbolic links
-		return std::filesystem::is_symlink(path);
+		std::error_code ec;
+		return std::filesystem::is_symlink(std::filesystem::symlink_status(path, ec));
+	}
+
+	bool FilePath::passesThroughSymlink(const FilePath& relative) const {
+		auto current = *this;
+		for (const auto& part: relative.parts()) {
+			current = current / FilePath(part);
+			if (!current.isSymlink() && !current.exists()) return false;
+			if (current.isSymlink()) return true;
+		}
+		return false;
+	}
+
+	std::vector<std::string> FilePath::parts() const {
+		std::vector<std::string> result;
+		for (const auto& part: path) result.push_back(part.string());
+		return result;
 	}
 
 	FilePath FilePath::join(const FilePath& other) const {
@@ -137,15 +157,31 @@ namespace fs {
 	bool FilePath::isAbsolute() const noexcept { return type != PathType::Relative; }
 
 	bool FilePath::exists() const {
-		if (type == PathType::Virtual)
-			return vfs.value()->exists(path);
-		else
-			return std::filesystem::exists(path);
+		if (type == PathType::Virtual) return vfs.value()->exists(path);
+		std::error_code ec;
+		return std::filesystem::exists(path, ec);
 	}
 
 	bool FilePath::isRegularFile() const {
 		if (type == PathType::Virtual) return vfs.value()->isFile(path);
-		return std::filesystem::is_regular_file(path);
+		std::error_code ec;
+		return std::filesystem::is_regular_file(path, ec);
+	}
+
+	bool FilePath::isDirectory() const {
+		if (type == PathType::Virtual) return vfs.value()->isDirectory(path);
+		std::error_code ec;
+		return std::filesystem::is_directory(path, ec);
+	}
+
+	std::expected<timer::Duration, std::string> FilePath::timeSinceModified() const {
+		CORE_ASSERT(type != PathType::Virtual, "Virtual files have no modification time");
+		std::error_code ec;
+		const auto      modified = std::filesystem::last_write_time(path, ec);
+		if (ec) return std::unexpected(path.string() + ": " + ec.message());
+		return timer::Duration{ std::chrono::duration_cast<timer::Duration::DurationValueT>(
+			std::filesystem::file_time_type::clock::now() - modified
+		) };
 	}
 
 	std::string FilePath::uri() const {

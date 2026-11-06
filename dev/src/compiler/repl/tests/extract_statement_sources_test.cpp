@@ -25,7 +25,9 @@ public:
 
 private:
 	std::string readSnippet(const std::string& local_path) {
-		return std::string{ fs::File(path(local_path)).getContent().view().stringView() };
+		return std::string{
+			base::valueOrPanic(fs::File(path(local_path)).getContent()).view().stringView()
+		};
 	}
 
 	std::vector<std::string> extractSources(std::string_view code) {

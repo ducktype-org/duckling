@@ -1,4 +1,10 @@
-add_library(Artifacts src_private/artifacts/artifacts.cpp)
+add_library(Artifacts
+	src_private/artifacts/artifacts.cpp
+	src_private/artifacts/artc_format.cpp
+	src_private/artifacts/cache_cleanup.cpp
+	src_private/artifacts/cache_files.cpp
+	src_private/artifacts/owned_list.cpp
+)
 
 set(ARTIFACTS_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/gen)
 
@@ -19,7 +25,7 @@ add_dependencies(Artifacts artifacts_build_id)
 
 target_include_directories(Artifacts PUBLIC ${ARTIFACTS_GEN_DIR})
 
-make_module(Artifacts USES Base Filesystem Hashing Logger Concurrent)
+make_module(Artifacts USES Base Filesystem Hashing Logger Concurrent Timer)
 
 add_example(artifacts_example examples/artifacts_example.cpp
 	USES Artifacts)

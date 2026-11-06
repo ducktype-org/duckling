@@ -108,7 +108,7 @@ private:
 		for (uchar c = 0; c < 128; c++) in.push_back(std::byte{ c });
 
 		std::string content{ reinterpret_cast<char*>(in.data()), in.size() };
-		auto        path = fs::FileManager::createRandomTempFile(content);
+		auto        path = base::valueOrPanic(fs::FileManager::createRandomTempFile(content));
 		auto        file = tokenizer::makeTokenSource(path);
 		file->decode<fs::Encoding::UsAscii>();
 		assertTrue(file->getIntLogger()->good(), "Valid Ascii not accepted");

@@ -20,6 +20,7 @@
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/expected_utils.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <filesystem/file_path.hpp>
@@ -36,7 +37,8 @@ class StdPackagesTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS StdPackagesTest
 
-	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath artifacts_path
+		= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 	driver::PackageCompilationManifest manifest{};
 
 public:
@@ -180,20 +182,18 @@ private:
 		// Verify expected artifacts
 		for (const auto& art: driver::getStdLibNativeArtifacts()) {
 			assertTrue(
-				std::filesystem::exists(art.file.getFilePath().getPath()),
+				std::filesystem::exists(art.path.getPath()),
 				base::strConcat(
-					"Missing standard library static library artifact: ",
-					art.file.getFilePath().getPath().string()
+					"Missing standard library static library artifact: ", art.path.getPath().string()
 				)
 			);
 		}
 
 		for (const auto& art: driver::getStdLibDVMArtifacts()) {
 			assertTrue(
-				std::filesystem::exists(art.file.getFilePath().getPath()),
+				std::filesystem::exists(art.path.getPath()),
 				base::strConcat(
-					"Missing standard library DVM artifact: ",
-					art.file.getFilePath().getPath().string()
+					"Missing standard library DVM artifact: ", art.path.getPath().string()
 				)
 			);
 		}
@@ -288,7 +288,7 @@ private:
 			std::vector<std::string> names;
 			names.reserve(artifacts.size());
 			for (const auto& art: artifacts)
-				names.push_back(art.file.getFilePath().getPath().filename().string());
+				names.push_back(art.path.getPath().filename().string());
 			return names;
 		};
 		const auto native_artifacts = file_names(driver::getStdLibNativeArtifacts());

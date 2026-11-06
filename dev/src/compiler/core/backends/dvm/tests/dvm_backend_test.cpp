@@ -17,6 +17,7 @@
 
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/expected_utils.hpp>
 
 #include <os_utils/system_libraries.hpp>
 #include <query_framework/context/context.hpp>
@@ -60,7 +61,8 @@ public:
 
 protected:
 	void         testWithLIR(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
-	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath artifacts_path
+		= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 
 	/**
 	 * Initialize the compiler to have the ability to import from the standard library in tests.

@@ -62,13 +62,14 @@ public:
 protected:
 	void beforeAll() override {
 		// Initialize the compiler so the standard library is loaded and select the LLVM backend.
-		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
-		auto         init_result    = compiler::driver::test_utils::initializeCompilerForTests(
-            {},
-            artifacts_path,
-            { compiler::driver::options_types::StdLibOptions::DefaultStd{} },
-            { .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
-        );
+		fs::FilePath artifacts_path
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
+		auto init_result = compiler::driver::test_utils::initializeCompilerForTests(
+			{},
+			artifacts_path,
+			{ .std_lib_type = compiler::driver::options_types::StdLibOptions::DefaultStd{} },
+			{ .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
+		);
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 
 		dia::configureImmediatePrint(&std::cerr);

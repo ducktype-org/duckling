@@ -45,8 +45,9 @@ protected:
 private:
 	void testSourceFileCreation() {
 		// Create a temporary file for testing
-		auto temp_file
-			= fs::FileManager::createRandomTempFile("fn main() { println(\"Hello World\"); }");
+		auto temp_file = base::valueOrPanic(
+			fs::FileManager::createRandomTempFile("fn main() { println(\"Hello World\"); }")
+		);
 		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		// Create SourceFile
@@ -59,13 +60,13 @@ private:
 		);
 		ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule().illegalAccess().getID());
 		// Cleanup
-		fs::FileManager::deleteFile(temp_file);
+		std::ignore = fs::FileManager::deleteFile(temp_file);
 	}
 
 	void testSourceFileProperties() {
 		// Create test file with specific content
 		auto test_content = "struct Point { x: i32, y: i32 }";
-		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
+		auto temp_file    = base::valueOrPanic(fs::FileManager::createRandomTempFile(test_content));
 		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file = SourceFile::create(temp_file, dummy_module);
@@ -77,7 +78,8 @@ private:
 			"Should not be recognized as directory"
 		);
 		ASSERT_EQUAL(
-			test_content, source_file->getFileIllegalAccess().getContent().view().stringView()
+			test_content,
+			base::valueOrPanic(source_file->getFileIllegalAccess().getContent()).view().stringView()
 		);
 
 		// Test FileID uniqueness
@@ -85,13 +87,13 @@ private:
 		assertTrue(source_file != another_source_file, "SourceFiles should be different");
 
 		// Cleanup
-		fs::FileManager::deleteFile(temp_file);
+		std::ignore = fs::FileManager::deleteFile(temp_file);
 	}
 
 	void testPSTGeneration() {
 		// Create test file with valid syntax
 		auto test_content = "fn test() { return 42; }";
-		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
+		auto temp_file    = base::valueOrPanic(fs::FileManager::createRandomTempFile(test_content));
 		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file = SourceFile::create(temp_file, dummy_module);
@@ -100,7 +102,7 @@ private:
 		source_file->getPST();
 
 		// Cleanup
-		fs::FileManager::deleteFile(temp_file);
+		std::ignore = fs::FileManager::deleteFile(temp_file);
 	}
 
 	void testContentCaching() {
@@ -108,8 +110,8 @@ private:
 		auto content1 = "fn function1() {}";
 		auto content2 = "fn function2() {}";
 
-		auto temp_file1 = fs::FileManager::createRandomTempFile(content1);
-		auto temp_file2 = fs::FileManager::createRandomTempFile(content2);
+		auto temp_file1 = base::valueOrPanic(fs::FileManager::createRandomTempFile(content1));
+		auto temp_file2 = base::valueOrPanic(fs::FileManager::createRandomTempFile(content2));
 
 		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
@@ -139,20 +141,20 @@ private:
 
 		} catch (const std::exception& e) {
 			// Cleanup before re-throwing
-			fs::FileManager::deleteFile(temp_file1);
-			fs::FileManager::deleteFile(temp_file2);
+			std::ignore = fs::FileManager::deleteFile(temp_file1);
+			std::ignore = fs::FileManager::deleteFile(temp_file2);
 			throw;
 		}
 
 		// Cleanup
-		fs::FileManager::deleteFile(temp_file1);
-		fs::FileManager::deleteFile(temp_file2);
+		std::ignore = fs::FileManager::deleteFile(temp_file1);
+		std::ignore = fs::FileManager::deleteFile(temp_file2);
 	}
 
 	void testHashGeneration() {
 		// Create test files
-		auto temp_file1   = fs::FileManager::createRandomTempFile("content1");
-		auto temp_file2   = fs::FileManager::createRandomTempFile("content2");
+		auto temp_file1   = base::valueOrPanic(fs::FileManager::createRandomTempFile("content1"));
+		auto temp_file2   = base::valueOrPanic(fs::FileManager::createRandomTempFile("content2"));
 		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file1 = SourceFile::create(temp_file1, dummy_module);
@@ -175,8 +177,8 @@ private:
 		ASSERT_EQUAL(source_file1_copy->getFileID(), source_file1->getFileID());
 
 		// Cleanup
-		fs::FileManager::deleteFile(temp_file1);
-		fs::FileManager::deleteFile(temp_file2);
+		std::ignore = fs::FileManager::deleteFile(temp_file1);
+		std::ignore = fs::FileManager::deleteFile(temp_file2);
 	}
 
 	void testMultipleSourceFiles() {
@@ -189,7 +191,7 @@ private:
 		for (int i = 0; i < 5; ++i) {
 			auto content
 				= "fn function" + std::to_string(i) + "() { return " + std::to_string(i) + "; }";
-			auto temp_file = fs::FileManager::createRandomTempFile(content);
+			auto temp_file = base::valueOrPanic(fs::FileManager::createRandomTempFile(content));
 			temp_files.push_back(temp_file);
 			source_files.push_back(SourceFile::create(temp_file, dummy_module));
 		}
@@ -220,12 +222,14 @@ private:
 		}
 
 		// Cleanup
-		for (const auto& temp_file: temp_files) fs::FileManager::deleteFile(temp_file);
+		for (const auto& temp_file: temp_files)
+			std::ignore = fs::FileManager::deleteFile(temp_file);
 	}
 
 	void testSourceFileWithDifferentModules() {
 		// Test source files belonging to different modules
-		auto temp_file = fs::FileManager::createRandomTempFile("fn shared_function() {}");
+		auto temp_file
+			= base::valueOrPanic(fs::FileManager::createRandomTempFile("fn shared_function() {}"));
 
 		auto dummy_module1 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		auto dummy_module2 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
@@ -257,7 +261,7 @@ private:
 		assertTrue(hash1 != hash2, "Should have different hashes");
 
 		// Cleanup
-		fs::FileManager::deleteFile(temp_file);
+		std::ignore = fs::FileManager::deleteFile(temp_file);
 	}
 
 	void testFileModifiedUpdatesContent() {
@@ -272,12 +276,12 @@ private:
 		);
 
 		// Modify file content
-		temp_file.writeToFile("new content");
+		base::valueOrPanic(temp_file.writeToFile("new content"));
 		// Call fileModified
 		ModuleTreeModifier::fileModified(temp_file);
 
 		std::cerr << "After modification, temp_file content: "
-				  << temp_file.getContent().view().stringView() << '\n';
+				  << base::valueOrPanic(temp_file.getContent()).view().stringView() << '\n';
 		std::cerr << "After modification, sourcefile content: "
 				  << source_file->getCachedContentIllegalAccess().view().stringView() << '\n';
 		// SourceFile should have updated cached content
@@ -285,11 +289,11 @@ private:
 			"new content", source_file->getCachedContentIllegalAccess().view().stringView()
 		);
 
-		fs::FileManager::deleteFile(temp_file);
+		std::ignore = fs::FileManager::deleteFile(temp_file);
 	}
 
 	void testGetSourceFilesFromFile() {
-		auto temp_file     = fs::FileManager::createRandomTempFile("abc");
+		auto temp_file     = base::valueOrPanic(fs::FileManager::createRandomTempFile("abc"));
 		auto dummy_module1 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		auto dummy_module2 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		// Create two SourceFiles for the same fs::File but different modules
@@ -305,7 +309,7 @@ private:
 			std::ranges::find(files_vec, source_file2) != files_vec.end(),
 			"source_file2 should be found"
 		);
-		fs::FileManager::deleteFile(temp_file);
+		std::ignore = fs::FileManager::deleteFile(temp_file);
 	}
 
 	void testSourceFileRemovalClearsLookups() {
@@ -325,7 +329,7 @@ private:
 		auto after = SourceFile::getSourceFilesFromPath(main_file.getFilePath());
 		ASSERT_TRUE(after.empty());
 
-		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
+		for (auto& file: cleanup_files) std::ignore = fs::FileManager::deleteFile(file);
 	}
 
 	void testSourceFileDanglingReferenceDetection() {
@@ -348,26 +352,26 @@ private:
 							  "Dangling SourceFile should panic after removal"
 		);)
 
-		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
+		for (auto& file: cleanup_files) std::ignore = fs::FileManager::deleteFile(file);
 	}
 
 	void testComponentHashComputation() {
 		// Prepare virtual directory with named files so stems are controlled
 		auto root       = fs::FileManager::createRandomVirtualDirectory();
-		auto file_same  = root.createSubFile("content", "same.duck");
-		auto file_other = root.createSubFile("content", "other.duck");
+		auto file_same  = base::valueOrPanic(root.createSubFile("content", "same.duck"));
+		auto file_other = base::valueOrPanic(root.createSubFile("content", "other.duck"));
 
 		// Build first module (named "modA")
 		auto mod_a_builder = ModuleTreeBuilder::createWithRandomPackageID();
 		mod_a_builder->setName(base::StrID("modA"));
-		auto mod_a_main = root.createSubFile("mainA", "modA.dk");
+		auto mod_a_main = base::valueOrPanic(root.createSubFile("mainA", "modA.dk"));
 		mod_a_builder->setMainSourceFile(mod_a_main);
 		auto mod_a = mod_a_builder->finalize();
 
 		// Build second module (named "modB")
 		auto mod_b_builder = ModuleTreeBuilder::createWithRandomPackageID();
 		mod_b_builder->setName(base::StrID("modB"));
-		auto mod_b_main = root.createSubFile("mainB", "modB.dk");
+		auto mod_b_main = base::valueOrPanic(root.createSubFile("mainB", "modB.dk"));
 		mod_b_builder->setMainSourceFile(mod_b_main);
 		auto mod_b = mod_b_builder->finalize();
 
@@ -407,8 +411,8 @@ private:
 		}
 
 		// Cleanup virtual files
-		fs::FileManager::deleteFile(file_same);
-		fs::FileManager::deleteFile(file_other);
+		std::ignore = fs::FileManager::deleteFile(file_same);
+		std::ignore = fs::FileManager::deleteFile(file_other);
 	}
 };
 

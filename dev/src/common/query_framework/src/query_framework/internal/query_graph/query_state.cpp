@@ -471,31 +471,6 @@ namespace query::internal {
 		}
 	}
 
-	u64 QueryState::cleanupOrphanedDiskCaches() {
-		// This mutates on-disk state at shutdown and must not race with query execution.
-		CORE_ASSERT(
-			!Context::isAnyQueryCurrentlyRunning(),
-			"cleanupOrphanedDiskCaches must not run while a query is executing"
-		);
-
-		// If there is no previous compilation, nothing could have been orphaned.
-		if (!previous.has_value()) return 0;
-
-		// Nodes merged into the current graph were erased from the previous graph during merging.
-		// Whatever disk-cacheable nodes remain here were not merged, so they will be dropped from
-		// the serialized graph and their on-disk artifacts would leak. Delete those artifacts,
-		// unless a node with the same identity is still live in the current graph (its file is
-		// still valid — e.g. it was recomputed with an unchanged hash).
-		u64 deleted = 0;
-		for (const auto& [node, _]: *previous->graph.node_deps) {
-			if (!node.q_id.getData().tags.can_be_loaded_from_disk) continue;
-			if (query_graph.node_deps->contains(node)) continue;
-			bool was_deleted = node.q_id.getData().cache_data.disk_erase_function(node.hash.val);
-			deleted += was_deleted;
-		}
-		return deleted;
-	}
-
 	QueryGraph::ReducedGraphData QueryState::reduceOptimizeGraph(const QueryGraph& graph) const {
 		// measure time spent in graph optimization:
 		time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::GraphOptimization);

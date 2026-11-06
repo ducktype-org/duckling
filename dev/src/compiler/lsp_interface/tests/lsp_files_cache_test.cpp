@@ -42,7 +42,9 @@ private:
 			files.updateDocument(uri, 2, changes).isOk(), "The changes must apply to the buffer"
 		);
 
-		return std::string{ fs::File(cache_path.value()).getContent().view().stringView() };
+		return std::string{
+			base::valueOrPanic(fs::File(cache_path.value()).getContent()).view().stringView()
+		};
 	}
 
 	/**
@@ -102,7 +104,8 @@ private:
 			"A change outside the buffer must be rejected"
 		);
 		assertTrue(
-			fs::File(cache_path.value()).getContent().view().stringView() == "one line\n",
+			base::valueOrPanic(fs::File(cache_path.value()).getContent()).view().stringView()
+				== "one line\n",
 			"A rejected change must leave the buffer untouched"
 		);
 	}
@@ -119,7 +122,8 @@ private:
 			"A repeated version must be rejected"
 		);
 		assertTrue(
-			fs::File(cache_path.value()).getContent().view().stringView() == "abc\n",
+			base::valueOrPanic(fs::File(cache_path.value()).getContent()).view().stringView()
+				== "abc\n",
 			"A rejected change must leave the buffer untouched"
 		);
 	}

@@ -48,8 +48,13 @@ namespace {
 			return {};
 		}
 		auto config_content = fs::File(config_file_path).getContent();
+		if (!config_content.has_value()) {
+			std::cerr << "Error: cannot read the formatter config: " << config_content.error()
+					  << "\n";
+			return {};
+		}
 		// As chars, not raw bytes: libc++ has no std::char_traits<std::byte> for the parser.
-		const auto content_view = config_content.view().stringView();
+		const auto content_view = config_content->view().stringView();
 		try {
 			auto config_json = nlohmann::json::parse(content_view.begin(), content_view.end());
 			return formatter::FormatConfig::fromJson(config_json);
@@ -71,8 +76,13 @@ namespace {
 			format_config = loaded.value();
 		}
 
-		auto       source_content = file_to_format.getContent();
-		const auto source_view    = source_content.view().stringView();
+		auto source_content = file_to_format.getContent();
+		if (!source_content.has_value()) {
+			std::cerr << "Error: cannot read the file to format: " << source_content.error()
+					  << "\n";
+			return 1;
+		}
+		const auto source_view = source_content->view().stringView();
 
 		auto token_source = tokenizer::makeTokenSource(file_to_format);
 		// Comments must stay in the token stream, or formatting would erase them.
@@ -90,9 +100,14 @@ namespace {
 			return 1;
 		}
 
-		if (options.isFlag("in-place"))
-			file_to_format.writeToFile(formatted);
-		else
+		if (options.isFlag("in-place")) {
+			// A file that cannot be written - read-only, a full disk - is the user's to hear about,
+			// not a reason to crash; the error already names the file.
+			if (auto written = file_to_format.writeToFile(formatted); not written) {
+				std::cerr << "Error: cannot write the formatted file: " << written.error() << "\n";
+				return 1;
+			}
+		} else
 			std::cout << formatted;
 
 		return 0;

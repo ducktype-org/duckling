@@ -69,7 +69,7 @@ namespace dia {
 		auto        result = templates.atMaybe(path_str);
 		if (result.has_value()) return std::string_view(*result.value());
 
-		auto content_opt = fs::File(templates_root + path_str).getContentSafe();
+		auto content_opt = fs::File(templates_root + path_str).getContent();
 		if (content_opt.has_value()) {
 			std::string content_str(content_opt.value().view().stringView());
 			templates.put(path_str, std::move(content_str));

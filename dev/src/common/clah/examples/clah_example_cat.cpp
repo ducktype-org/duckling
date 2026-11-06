@@ -16,7 +16,7 @@
 
 namespace {
 	void printFile(const fs::File& file) {
-		std::cout << file.getContent().view().stdString() << '\n';
+		std::cout << base::valueOrPanic(file.getContent()).view().stdString() << '\n';
 	}
 
 	void catFile(const clah::ParsingResult& result) {

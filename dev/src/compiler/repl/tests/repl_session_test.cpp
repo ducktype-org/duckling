@@ -1076,11 +1076,12 @@ namespace compiler::repl {
 
 		void testLoadScriptFileInvalidContents() {
 			ReplSession session;
-			auto        script_file = fs::FileManager::createRandomTempFile("var x = ;");
+			auto        script_file
+				= base::valueOrPanic(fs::FileManager::createRandomTempFile("var x = ;"));
 
 			auto result = session.loadScriptFile(script_file.getFilePath().string());
 
-			fs::FileManager::deleteFile(script_file);
+			std::ignore = fs::FileManager::deleteFile(script_file);
 
 			assertTrue(
 				result.status == ReplResult::Status::Error, "Loading invalid script should fail"
@@ -1094,8 +1095,9 @@ namespace compiler::repl {
 		void testLoadScriptFileExecutesStatements() {
 			ReplSession session;
 
-			auto script_file
-				= fs::FileManager::createRandomTempFile("var loaded_x: i32 = 1;\nloaded_x = 10;");
+			auto script_file = base::valueOrPanic(
+				fs::FileManager::createRandomTempFile("var loaded_x: i32 = 1;\nloaded_x = 10;")
+			);
 			auto script_path = std::string("   ") + script_file.getFilePath().string();
 
 			auto initial_history_size = session.m_session_history.size();
@@ -1116,14 +1118,15 @@ namespace compiler::repl {
 				"Session should remain usable after script loading"
 			);
 
-			fs::FileManager::deleteFile(script_file);
+			std::ignore = fs::FileManager::deleteFile(script_file);
 		}
 
 		void testLoadCommandExecutesScript() {
 			ReplSession session;
 
-			auto script_file
-				= fs::FileManager::createRandomTempFile("var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;");
+			auto script_file = base::valueOrPanic(
+				fs::FileManager::createRandomTempFile("var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;")
+			);
 			auto command = std::string("/load ") + script_file.getFilePath().string();
 
 			auto result = session.processLine(command);
@@ -1139,7 +1142,7 @@ namespace compiler::repl {
 				"REPL should continue processing input after /load"
 			);
 
-			fs::FileManager::deleteFile(script_file);
+			std::ignore = fs::FileManager::deleteFile(script_file);
 		}
 
 		/**

@@ -66,7 +66,8 @@ public:
 	}
 
 	void beforeAll() override {
-		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		fs::FilePath artifacts_path
+			= base::valueOrPanic(fs::FileManager::createRandomTempDirectory()).getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("test_modules/function_calls")), "function_calls" },
 			{ fs::FilePath(path("test_modules/shorthands/access")), "access" },
