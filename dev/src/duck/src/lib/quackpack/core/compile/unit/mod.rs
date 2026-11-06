@@ -31,7 +31,7 @@ pub mod graph_visitor;
 mod tests;
 
 // Missing constants from [`std::env::consts`].
-const STATIC_LIB_SUFFIX: &str = ".a";
+pub(crate) const STATIC_LIB_SUFFIX: &str = ".a";
 
 // Duckling specific.
 const DVM_SUFFIX: &str = ".dbc";
