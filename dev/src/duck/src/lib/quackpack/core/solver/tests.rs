@@ -158,7 +158,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -248,7 +248,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -337,7 +337,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:

@@ -519,7 +519,7 @@ fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -608,7 +608,7 @@ fn pinned_registry() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -665,7 +665,7 @@ fn features() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -750,7 +750,7 @@ fn pinned_request_while_pending_not_pinned() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -827,7 +827,7 @@ fn cycle() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -896,7 +896,7 @@ fn features_expansion() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:

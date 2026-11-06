@@ -72,8 +72,8 @@ impl<'duck> Fetcher<'duck> {
     /// 1. failed to create any of the internal files,
     /// 2. failed to initialize any of the underlying clients,
     /// 3. failed to initialize cache manager.
-    pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
-        Ok(Self {
+    pub fn new(ctx: &'duck DuckContext) -> Self {
+        Self {
             ctx,
             http_client: OnceCell::new(),
             ducknest_client: OnceCell::new(),
@@ -82,7 +82,7 @@ impl<'duck> Fetcher<'duck> {
             cache: OnceCell::new(),
             downloads: OnceCell::new(),
             locks: OnceCell::new(),
-        })
+        }
     }
 
     /// Retrieve metadata for `package` from a given Ducknest instance.
