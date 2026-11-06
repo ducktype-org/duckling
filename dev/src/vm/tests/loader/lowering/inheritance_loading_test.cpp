@@ -31,7 +31,7 @@ public:
 private:
 	vm::TypeCRef getType(vm::PID pid, const std::string& name) {
 		auto response = vm::api::getType(pid, name);
-		ASSERT_HAS_VALUE(response, "Type query failed for: " + name);
+		assertSucceeded(response, base::strConcat("Type query for '", name, "'"));
 		return response->type;
 	}
 
@@ -254,7 +254,7 @@ private:
 			button->getFields().value()->size() == widget->getFields().value()->size() + 1,
 			"Button should have the fields of Widget plus its own one"
 		);
-		ASSERT_HAS_VALUE(vm::api::kill(pid));
+		assertSucceeded(vm::api::kill(pid), "kill");
 	}
 };
 

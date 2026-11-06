@@ -21,18 +21,8 @@ namespace compiler::helios {
 
 	// @TODO: in the future: make some base for all elements that can be used here
 
-	StmtList<> getStmtsFromStmtAggregate(
-		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
-	) {
-		auto elem_optional = locked.unlockOpt(ctx);
-		if (!elem_optional.has_value()) {
-			// @TODO: #1753 this throw may be suboptimal
-			query::throwFailed();
-		}
-
-		auto elem = elem_optional.value();
-
-		StmtList<> output;
+	StmtList<> getStmtsFromStmtAggregate(query::Context& ctx, pst::Access<pst::LangElement> elem) {
+		std::vector<pst::AccessLocked<pst::Stmt>> output;
 
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
@@ -57,10 +47,8 @@ namespace compiler::helios {
 
 		// Now expand macros in the output.
 
-		// @TODO: #2407 we do a lot of unlocks here, maybe we could return
-		// the vector of unlocked elements from this function.
-
 		StmtList<> output_after_macro_expansion;
+		output_after_macro_expansion.reserve(output.size());
 		for (auto stmt: output) {
 			auto current_stmt = stmt.unlock(ctx);
 

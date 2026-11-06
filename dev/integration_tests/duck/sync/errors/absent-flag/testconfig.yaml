@@ -12,10 +12,10 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: when trying to parse the user manifest at \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            echo "error: failed to parse the user manifest at \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
             
               Caused by:
-                when parsing the field \`features\`
+                failed to parse the field \`features\`
             
               Caused by:
                 the feature \`flag\` requires a feature \`absent\` which is not declared

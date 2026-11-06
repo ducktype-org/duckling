@@ -235,34 +235,6 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Determine whether it is legal to consider and implicit coercion
-		 * from a value described by this ExpressionType to one described by target.
-		 *
-		 * An implicit coercion is when, for example, a boolean is expected, but
-		 * and integer is given. A desirable (and common) behaviour may be to
-		 * convert the integer value to true if and only if it is non-zero.
-		 *
-		 * Another context in which implicit coercions are desirable is when
-		 * casting from subclass to superclass.
-		 *
-		 * This method does not determine how to perform a coercion.
-		 * It only determines whether one should be considered.
-		 * A coercion may thus be allowed but not implemented, or implemented
-		 * but not allowed to be used implicitly by the compiler, so the user
-		 * may define a coercion from class A to class B, but not want it
-		 * to ever be used implicitly (in C++ that is achieved by annotating a
-		 * single-argument constructor with the `explicit` keyword).
-		 *
-		 * This is typically determined by rules specific for the Kind of the source type.
-		 *
-		 * @param target The target of a hypothetical implicit coercion.
-		 * @param context Context needed fo the query call.
-		 * @return Whether the implicit coercion is allowed or not.
-		 */
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const;
-
-		/**
 		 * @brief Whether the type carries any information, in an information-theoretic sense. For
 		 * example, the unit and void types does not carry any information, while other types do.
 		 * @param ctx Query context needed to process complex types, esp. classes.

@@ -21,10 +21,12 @@
 #include <helios/tsh/coercions/coercion.hpp>
 #include <helios/tsh/coercions/coercion_error.hpp>
 #include <helios/tsh/coercions/coercion_node.hpp>
+#include <helios/tsh/coercions/passing.hpp>
 #include <helios/tsh/coercions/queries.hpp>
 #include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/ref.hpp>
@@ -49,6 +51,7 @@
 namespace coercion_testing {
 	using namespace compiler::tsh;
 	using namespace compiler::tsh::coercions;
+	using compiler::helios::coercions::HandOverKind;
 
 	class CoercionTestSuite;
 
@@ -96,6 +99,7 @@ namespace coercion_testing {
 	inline constexpr std::string_view HAND_OVER         = coercion_step::HandOver::NAME;
 	inline constexpr std::string_view IMPLICIT_MOVE     = coercion_step::ImplicitMove::NAME;
 	inline constexpr std::string_view MUTABILITY_CHANGE = coercion_step::MutabilityChange::NAME;
+	inline constexpr std::string_view REF_OF            = coercion_step::RefOf::NAME;
 	inline constexpr std::string_view NUMERIC           = coercion_step::Numeric::NAME;
 	inline constexpr std::string_view ZERO_CHECK        = coercion_step::ZeroCheck::NAME;
 	inline constexpr std::string_view LIFT_TO_TYPE      = coercion_step::LiftToType::NAME;
@@ -363,7 +367,10 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		 * A tuple literal is described part by part, like the caller of `coercionOf` describes it.
 		 */
 		[[nodiscard]] CoercionCheck coerce(
-			const std::string_view value, const std::string_view into
+			const std::string_view value,
+			const std::string_view into,
+			const CoercionMode     mode = CoercionMode::Default,
+			const HandOverKind     kind = HandOverKind::Regular
 		) {
 			const std::string function = base::strConcat(
 				"fun coercion_case(into: ",
@@ -378,12 +385,27 @@ var global_pair: (box i32, i32) = (new 1, 2);
 				using namespace compiler::helios::test_utils;
 
 				const SymbolType<> target = getSymbolTypeOf("into", body);
-				const ValueSource  source
+				ValueSource        source
 					= describeValue(*getExprOfVariable(getChain("value", body).back()));
+
+				// The same as HOUT does for a value at its last use, like a returned value.
+				if (kind == HandOverKind::LastUse && not source.isBuiltOutOfParts())
+					source = ValueSource::singleValueSource(consumed(source.getValue()));
+
 				return CoercionCheck{
 					*this,
-					base::strConcat("`", value, "` into `", into, "`"),
-					inContext([&](query::Context& ctx) { return coercionOf(ctx, source, target); }),
+					base::strConcat(
+						"`",
+						value,
+						"`",
+						kind == HandOverKind::LastUse ? " at its last use" : "",
+						" into `",
+						into,
+						"`"
+					),
+					inContext([&](query::Context& ctx) {
+						return coercionOf(ctx, source, target, mode);
+					}),
 					target,
 				};
 			});
@@ -414,7 +436,11 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		/**
 		 * @brief The plan between the types @p from and @p into, written in one module.
 		 */
-		[[nodiscard]] CoercionCheck plan(const std::string_view from, const std::string_view into) {
+		[[nodiscard]] CoercionCheck plan(
+			const std::string_view from,
+			const std::string_view into,
+			const CoercionMode     mode = CoercionMode::Default
+		) {
 			const std::string function
 				= base::strConcat("fun coercion_case(from: ", from, ", into: ", into, ") = {\n}\n");
 			return compiled(function, [&](const compiler::helios::ScopeID body) {
@@ -423,7 +449,8 @@ var global_pair: (box i32, i32) = (new 1, 2);
 				return planned(
 					getSymbolTypeOf("from", body),
 					getSymbolTypeOf("into", body),
-					base::strConcat("`", from, "` into `", into, "`")
+					base::strConcat("`", from, "` into `", into, "`"),
+					mode
 				);
 			});
 		}
@@ -451,13 +478,18 @@ var global_pair: (box i32, i32) = (new 1, 2);
 
 	private:
 		[[nodiscard]] CoercionCheck planned(
-			const SymbolType<>& from, const SymbolType<>& into, const std::string& description
+			const SymbolType<>& from,
+			const SymbolType<>& into,
+			const std::string&  description,
+			const CoercionMode  mode = CoercionMode::Default
 		) {
 			return {
 				*this,
 				description,
 				inContext([&](query::Context& ctx) {
-					return SymbolTypeCoercion{ *ctx.query<QuerySymbolTypeCoercion>({ from, into }) };
+					return SymbolTypeCoercion{
+						*ctx.query<QuerySymbolTypeCoercion>({ from, into, mode })
+					};
 				}),
 				into,
 			};

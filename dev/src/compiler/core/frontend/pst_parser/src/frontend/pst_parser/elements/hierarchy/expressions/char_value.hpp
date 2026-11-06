@@ -24,7 +24,7 @@ namespace pst::expr {
 			return string;
 		}
 
-		explicit ExprCharValue(const LangParserState& state, tpc::CharValue value):
+		explicit ExprCharValue(LangElementConstructionData state, tpc::CharValue value):
 			  ExprElement(state, 0),
 			  string(value) {}
 

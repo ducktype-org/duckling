@@ -7,10 +7,10 @@
 //! Home of "nonexistent_features" lint.
 
 use super::util::{nonexistent_features, walk_conditions};
-use crate::quackpack::core::Manifest;
 use crate::quackpack::core::lints::buffer::LintBuffer;
 use crate::quackpack::core::lints::rules::util::MatchedConditions;
 use crate::quackpack::core::lints::{Lint, LintLevel, macros};
+use crate::quackpack::core::{DependencyKind, Manifest};
 use crate::{DuckContext, QuackResult, StrId};
 
 pub const LINT: Lint = Lint {
@@ -38,11 +38,12 @@ dependencies:
 };
 
 /// Run the pass for [`LINT`].
-pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let level = LINT.level;
-    if level == LintLevel::Allow {
-        return Ok(());
-    }
+pub fn pass(
+    manifest: &Manifest,
+    _: &DuckContext,
+    level: LintLevel,
+    buffer: &mut LintBuffer,
+) -> QuackResult<()> {
     walk_conditions(manifest, |conds| {
         let Some(required_features) = conds.conds().required_root_package_features() else {
             return;
@@ -51,7 +52,8 @@ pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> Qu
             match conds {
                 MatchedConditions::Dep { dep, conds: _ } => {
                     let diag = DependencyConditionedOnNonexistentFeatureDiagnostic {
-                        dep: dep.name(),
+                        dep_kind: dep.kind(),
+                        dep: dep.diagnostic_name(),
                         undeclared_feature_name: nonexistent_feature,
                     };
                     buffer.register(diag, LINT, level);
@@ -62,7 +64,8 @@ pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> Qu
                     conds: _,
                 } => {
                     let diag = DependencyFeatureConditionedOnNonexistentFeatureDiagnostic {
-                        dep: dep.name(),
+                        dep_kind: dep.kind(),
+                        dep: dep.diagnostic_name(),
                         feature: feature.name(),
                         undeclared_feature_name: nonexistent_feature,
                     };
@@ -76,23 +79,25 @@ pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> Qu
 
 macros::make_diagnostic! {
     struct DependencyConditionedOnNonexistentFeatureDiagnostic {
+        dep_kind: DependencyKind,
         dep: StrId,
         undeclared_feature_name: StrId,
     }
     display(
-       "dependency `{}` is conditioned on a nonexistent feature `{}`",
-       dep, undeclared_feature_name
+       "{} dependency `{}` is conditioned on a nonexistent feature `{}`",
+       dep_kind, dep, undeclared_feature_name
     )
 }
 
 macros::make_diagnostic! {
     struct DependencyFeatureConditionedOnNonexistentFeatureDiagnostic {
+        dep_kind: DependencyKind,
         dep: StrId,
         feature: StrId,
         undeclared_feature_name: StrId,
     }
     display(
-       "feature `{}` of dependency `{}` is conditioned on a nonexistent feature `{}`",
-       feature, dep, undeclared_feature_name
+       "feature `{}` of {} dependency `{}` is conditioned on a nonexistent feature `{}`",
+       feature, dep_kind, dep, undeclared_feature_name
     )
 }

@@ -55,6 +55,21 @@ namespace compiler::helios {
 		}
 	};
 
+	class CallNotCallableError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "call_not_callable" };
+		}
+
+	public:
+		CallNotCallableError(dia::StablePosition source_position, Box<InteractiveType> callee_type):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("callee_type", std::move(callee_type));
+		}
+	};
+
 	class InvalidMainReturnTypeError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

@@ -5,10 +5,11 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Managing all dependencies of the root package.
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use super::{DependencyKind, Selector};
 use crate::quackpack::core::Dependency;
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, QuackResult, StrId, qp_bail};
 
@@ -21,18 +22,49 @@ impl Dependencies {
     /// Create a new [`Dependencies`].
     pub fn new(dependencies: Vec<Dependency>) -> QuackResult<Self> {
         Self::bail_if_has_duplicated_names(&dependencies)?;
+        Self::bail_if_has_duplicated_identities(&dependencies)?;
         Ok(Self(dependencies))
     }
 
-    /// Bail, if some dependencies have the same name.
+    /// Bail, if some dependencies have the same effective name.
+    /// Effective name is how source code accesses the package, so having duplicates would make code ambiguous.
     fn bail_if_has_duplicated_names(deps: &[Dependency]) -> QuackResult<()> {
-        let mut seen_names = HashSet::new();
+        let mut seen_enames = HashMap::new();
         for dep in deps {
             let kind = dep.kind();
-            let name = dep.name();
-            let was_present = !seen_names.insert((kind, name));
-            if was_present {
-                qp_bail!("multiple {kind} dependencies specify the same name `{name}`",)
+            let ename = dep.effective_name();
+            let maybe_overriden_kind = seen_enames.insert(ename, kind);
+            if let Some(overriden_kind) = maybe_overriden_kind {
+                qp_bail!(
+                    "multiple dependencies (one {overriden_kind} and one {kind}) named `{}`",
+                    dep.diagnostic_name(),
+                )
+            }
+        }
+        Ok(())
+    }
+
+    /// Bail, if some dependencies specify packages with same [`identities`](crate::quackpack::core::identity::Identity).
+    /// Observe that this prohibits having two versions of the same package as dependencies.
+    /// Note:
+    /// -----
+    /// [`Identity`] contains the name, so the user _can_ add dependencies for the same git or local package
+    /// and not trigger the error here, but at least one of those entries will have not matching name,
+    /// triggering error during [`gathering`](crate::quackpack::core::solver::gathering).
+    fn bail_if_has_duplicated_identities(deps: &[Dependency]) -> QuackResult<()> {
+        let mut dependencies_ids: HashMap<Identity, &Dependency> = HashMap::new();
+        for dep in deps {
+            let identity = dep.identity();
+            if let Some(other_dep) = dependencies_ids.get(&identity) {
+                qp_bail!(
+                    "{} dependency `{}` has the same source as {} dependency `{}`",
+                    dep.kind(),
+                    dep.diagnostic_name(),
+                    other_dep.kind(),
+                    other_dep.diagnostic_name()
+                );
+            } else {
+                dependencies_ids.insert(identity, dep);
             }
         }
         Ok(())
@@ -59,13 +91,13 @@ impl Dependencies {
     }
 
     /// Check if a dependency exists by an effective name.
-    pub fn has_by_effective_name(&self, name: StrId) -> bool {
-        self.get_by_effective_name(name).is_some()
+    pub fn has_by_effective_name(&self, ename: StrId) -> bool {
+        self.get_by_effective_name(ename).is_some()
     }
 
     /// Get a dependency by a compilation name.
-    pub fn get_by_effective_name(&self, name: StrId) -> Option<&Dependency> {
-        self.select(&Selector::EffectiveName(name)).next()
+    pub fn get_by_effective_name(&self, ename: StrId) -> Option<&Dependency> {
+        self.select(&Selector::EffectiveName(ename)).next()
     }
 
     /// Get a dependency by a given [`Selector`].

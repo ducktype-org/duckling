@@ -11,5 +11,9 @@ namespace compiler::driver {
 
 	constinit PrintIROptions print_ir_options;
 
+	constinit bool print_query_graph = false;
+
+	constinit bool print_statistics = false;
+
 	constinit bool enable_incremental_compilation = false;
 }

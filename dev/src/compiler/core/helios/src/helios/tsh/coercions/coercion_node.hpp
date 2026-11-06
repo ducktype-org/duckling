@@ -95,6 +95,15 @@ namespace compiler::tsh::coercions {
 		};
 
 		/**
+		 * @brief The value is implicitly taken by `ref`. A `box` is reborrowed as a `ref` to its
+		 * pointee. Only allowed in the CoercionMode::ImplicitRefOf mode, and always the first step.
+		 */
+		struct RefOf final {
+			static constexpr Rank             RANK = Rank::RefOf;
+			static constexpr std::string_view NAME = "ref of";
+		};
+
+		/**
 		 * @brief The pointee is read out of a `ref`/`box`.
 		 */
 		struct Deref final {
@@ -175,6 +184,7 @@ namespace compiler::tsh::coercions {
 			coercion_step::HandOver,
 			coercion_step::ImplicitMove,
 			coercion_step::MutabilityChange,
+			coercion_step::RefOf,
 			coercion_step::Deref,
 			coercion_step::Numeric,
 			coercion_step::VariantPack,
@@ -264,10 +274,22 @@ namespace compiler::tsh::coercions {
 		}
 
 		/**
+		 * @brief Whether this node takes the value by `ref`. RefOf is always the first step.
+		 */
+		[[nodiscard]]
+		bool takesRef() const noexcept {
+			return not steps.empty() && v_matches(steps.front().kind, coercion_step::RefOf);
+		}
+
+		/**
 		 * @brief What happens to the reference part of the value of this node.
 		 */
 		[[nodiscard]]
 		ReferenceCoercion referenceCoercion() const {
+			if (takesRef())
+				return referenceCoercionRule(
+					source.getRefKind(), ReferenceKind::Ref, CoercionMode::ImplicitRefOf
+				);
 			return referenceCoercionRule(
 				source.getRefKind(), derefs() ? ReferenceKind::Direct : source.getRefKind()
 			);

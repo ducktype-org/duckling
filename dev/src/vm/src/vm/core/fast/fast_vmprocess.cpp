@@ -248,6 +248,12 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `getVMValueForType` is not implemented.");
 	}
 
+	std::expected<api::Response, api::ApiError> FastVMProcess::freeVMValue(
+		[[maybe_unused]] Ref<IVMValue> vm_value
+	) {
+		throw vm::VMNotImplemented("Method `freeVMValue` is not implemented.");
+	}
+
 	void FastVMProcess::joinFinishedThreads() {
 		// Fast mode has no `builtin_start_thread`, so every VMThread here is API owned.
 		for (auto& thread: vm_threads) (void) thread.joinExecutionThread();

@@ -12,7 +12,7 @@
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use std::fmt;
 
-use tracing::{info, trace};
+use tracing::trace;
 
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
 use self::profiles::Profile;
@@ -34,9 +34,13 @@ pub mod unit_runner;
 pub mod unit_task_generator;
 
 /// A common message for panicking when a manifest is missing a dependency.
-pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {
+pub fn missing_depenendcy_in_manifest(
+    root_name: &str,
+    dep_ename: &str,
+    context: &dyn fmt::Debug,
+) -> ! {
     panic!(
-        "malformed manifest of `{root_name}`: missing dependency `{dep}` in the manifest {context:#?}"
+        "malformed manifest of `{root_name}`: missing dependency `{dep_ename}` in the manifest {context:#?}"
     )
 }
 
@@ -79,12 +83,12 @@ impl BuildContext<'_, '_> {
 /// Note:
 /// -----
 /// `pkgs` should be all packages present in the freeze, including the root package.
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn compile(
     bcx: BuildContext<'_, '_>,
     pkgs: Vec<(PackageId, AnyPackage)>,
 ) -> QuackResult<CompilationOutput> {
-    info!(?bcx, "compiling");
+    trace!(?bcx);
     // @TODO: #2900 Unmock this.
     if bcx.pcx.package().is_script() {
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")

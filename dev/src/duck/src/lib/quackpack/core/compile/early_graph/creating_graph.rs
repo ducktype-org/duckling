@@ -7,7 +7,7 @@
 //! Entrypoints for creating a new [`EarlyGraph`] and friends.
 
 use itertools::Itertools;
-use tracing::debug;
+use tracing::trace;
 
 use super::*;
 use crate::qp_bail;
@@ -19,16 +19,15 @@ use crate::quackpack::core::{AnyPackage, PackageId};
 impl DependencyGraph {
     /// Create new [`DependencyGraph`] from the given freeze.
     ///
-    /// This method checks that the graph is complete (all edge targets have their neighbours lists),
+    /// This method checks that the graph is complete (all edge targets have their neighbors lists),
     /// as well as checking that only local dependencies possibly form cycles.
-    #[tracing::instrument(skip_all)]
     fn new(freeze: &SolverFreeze) -> QuackResult<Self> {
         let mut graph = HashMap::new();
         for (pkg_id, pkg_freeze) in freeze.package_freezes.iter() {
             let pkg_deps = pkg_freeze
                 .dependencies_realization
-                .values()
-                .map(|x| x.identity().into());
+                .iter()
+                .map(|(name, id)| (*name, id.identity().into()));
             graph.insert(pkg_id.identity().into(), DependencyNode::new(pkg_deps));
         }
         let root_identity = freeze.main_pkg.identity().into();
@@ -44,7 +43,7 @@ impl DependencyGraph {
         root: Identity,
         graph: &HashMap<Identity, DependencyNode>,
     ) -> QuackResult<()> {
-        debug!(%root, ?graph, "checking cycles only on local deps");
+        trace!(%root, ?graph, "checking for cycles of local dependencies");
         let sccs = kosaraju_sccs(graph);
         for scc in sccs {
             if scc.len() == 1 {
@@ -70,11 +69,14 @@ impl DependencyGraph {
 
 impl DependencyNode {
     /// Creates a new [`DependencyNode`] with the given dependencies.
-    pub(super) fn new(dependencies: impl IntoIterator<Item = Identity>) -> Self {
+    /// Accepts pairs consisting of the effective name and [`Identity`] of each dependency.
+    pub(super) fn new(dependencies: impl IntoIterator<Item = (StrId, Identity)>) -> Self {
         Self {
             dependencies: dependencies
                 .into_iter()
-                .sorted_by(|l, r| Identity::stable_compare(*l, *r))
+                .sorted_by(|(_left_ename, left_id), (_right_ename, right_id)| {
+                    Identity::stable_compare(*left_id, *right_id)
+                })
                 .collect(),
         }
     }
@@ -86,7 +88,7 @@ impl EarlyGraph {
     /// Also note that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(super) fn new_early(
         bcx: &BuildContext<'_, '_>,
         pkgs: Vec<(PackageId, AnyPackage)>,
@@ -164,7 +166,7 @@ fn dfs1(
     visited.insert(vertex);
 
     if let Some(neighbors) = graph.get(&vertex) {
-        for neighbor in neighbors.dependencies() {
+        for (_ename, neighbor) in neighbors.dependencies() {
             if !visited.contains(neighbor) {
                 dfs1(graph, *neighbor, visited, order);
             }
@@ -177,7 +179,7 @@ fn dfs1(
 /// Helper for [`kosaraju_sccs`].
 /// Backwards DFS pass.
 fn dfs2(
-    graph: &HashMap<Identity, DependencyNode>,
+    graph: &HashMap<Identity, Vec<Identity>>,
     vertex: Identity,
     visited: &mut HashSet<Identity>,
     scc: &mut Vec<Identity>,
@@ -186,7 +188,7 @@ fn dfs2(
     scc.push(vertex);
 
     if let Some(neighbors) = graph.get(&vertex) {
-        for neighbor in neighbors.dependencies() {
+        for neighbor in neighbors {
             if !visited.contains(neighbor) {
                 dfs2(graph, *neighbor, visited, scc);
             }
@@ -196,22 +198,19 @@ fn dfs2(
 
 /// Helper for [`kosaraju_sccs`].
 /// Computes the reversal of the dependencies graph.
-fn reverse_graph(graph: &HashMap<Identity, DependencyNode>) -> HashMap<Identity, DependencyNode> {
+/// Disgards effective names, since they can have no meaning when reversed and are not needed.
+fn reverse_graph(graph: &HashMap<Identity, DependencyNode>) -> HashMap<Identity, Vec<Identity>> {
     let mut reversed = HashMap::new();
 
     // Initialize all vertices
     for vertex in graph.keys() {
-        reversed.insert(*vertex, DependencyNode::new(vec![]));
+        reversed.insert(*vertex, vec![]);
     }
 
     // Add reversed edges
     for (from, to_list) in graph {
-        for to in to_list.dependencies() {
-            reversed
-                .entry(*to)
-                .or_insert_with(DependencyNode::default)
-                .dependencies_mut()
-                .push(*from);
+        for (_ename, to) in to_list.dependencies() {
+            reversed.entry(*to).or_insert_with(Vec::new).push(*from);
         }
     }
 

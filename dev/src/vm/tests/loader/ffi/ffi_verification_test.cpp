@@ -89,17 +89,12 @@ private:
 		auto file = inlineDbc(
 			"duplicate", ffiObjectHeader() + "ffi function ffi_add { i64, i64 } -> { i64 };\n"
 		);
-		auto pid = initProcess();
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		auto pid = spawnAndLoad(file);
 
-		auto second = vm::api::loadFiles(pid, { file });
-		ASSERT_NO_VALUE(second);
-		ASSERT_MATCHES(second.error(), vm::api::LoadProgramError);
-		auto why = std::get<vm::api::LoadProgramError>(second.error()).why;
-		std::cerr << why << '\n';
-		assertTrue(
-			why.find("FFI function with this name already exists") != std::string::npos,
-			base::strConcat("Unexpected error: ", why)
+		assertRefusedWith<vm::api::LoadProgramError>(
+			vm::api::loadFiles(pid, { file }),
+			"A second load of the same FFI declaration",
+			"FFI function with this name already exists"
 		);
 	}
 

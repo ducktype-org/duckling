@@ -40,11 +40,12 @@ features:
 };
 
 /// Run the pass for [`LINT`].
-pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let level = LINT.level;
-    if level == LintLevel::Allow {
-        return Ok(());
-    }
+pub fn pass(
+    manifest: &Manifest,
+    _: &DuckContext,
+    level: LintLevel,
+    buffer: &mut LintBuffer,
+) -> QuackResult<()> {
     for (feature, expands_to) in manifest.features().all_features() {
         if expands_to.contains(feature) {
             buffer.register(

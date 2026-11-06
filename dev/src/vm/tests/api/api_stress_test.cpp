@@ -371,8 +371,9 @@ private:
 			break;
 		case 9: {
 			auto value = api::getVMValue(pid, rand_type());
-			// The caller owns the value, so free it right away to keep the scenario leak-free.
-			if (value.has_value()) value->vm_value->freeData();
+			// The caller owns the value, so we free it right away to not leak memory. This VMValue
+			// won't be used anywhere anyway, we just want to test the endpoint.
+			if (value.has_value()) (void) api::freeVMValue(pid, value->vm_value.refMut());
 			break;
 		}
 		case 10:

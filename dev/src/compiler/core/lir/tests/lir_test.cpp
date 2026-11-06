@@ -60,6 +60,7 @@ public:
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
 		TESTER_ADD_TEST(cSymbolNameTest);
+		TESTER_ADD_TEST(neverReturnsTest);
 		TESTER_ADD_TEST(debugPrintStandaloneElements);
 		TESTER_ADD_TEST(debugPrintElementsWithFunctionIDs);
 		TESTER_ADD_TEST(debugPrintFunctionWithAndWithoutContext);
@@ -612,6 +613,7 @@ private:
 			check_meta_function("createCPtr", MK::CreateCPtr, 1);
 			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);
 			check_meta_function("createSlice", MK::CreateSlice, 1);
+			check_meta_function("createOptional", MK::CreateOptional, 1);
 			check_meta_function("createVariant", MK::CreateVariant, 4);
 
 			{
@@ -794,6 +796,31 @@ private:
 			)
 		);
 		ASSERT_EQUAL_PRINT(ignored_called.at(1), base::StrID("dvmDecl"));
+	}
+
+	void neverReturnsTest() {
+		auto module = getLIROfModule(path("modules/never_returns"));
+
+		// Only a `void` result means "never returns", `()` is an ordinary return value.
+		ASSERT_TRUE(module.lirFunc("fails")->never_returns);
+		ASSERT_TRUE(not module.lirFunc("returnsUnit")->never_returns);
+		ASSERT_TRUE(not module.lirFunc("caller")->never_returns);
+
+		// The function literals used as callees carry the same flag.
+		base::Map<base::StrID, bool> callee_never_returns;
+		for (const auto block: module.lirFunc("caller")->block_order) {
+			for (const auto& instruction: block->instructions) {
+				if (instruction.operation != lir::Operation::Call) continue;
+				const auto& callee = instruction.arguments.at(0).get<lir::FunctionLiteral>();
+				callee_never_returns.put(callee.mangled_name, callee.never_returns);
+			}
+		}
+		ASSERT_EQUAL(callee_never_returns.size(), usize(2));
+		ASSERT_TRUE(callee_never_returns.at(module.lirFunc("fails")->mangled_name));
+		ASSERT_TRUE(not callee_never_returns.at(module.lirFunc("returnsUnit")->mangled_name));
+
+		// `fromFunction` keeps the flag.
+		ASSERT_TRUE(lir::FunctionLiteral::fromFunction(*module.lirFunc("fails")).never_returns);
 	}
 
 	void debugPrintStandaloneElements() {

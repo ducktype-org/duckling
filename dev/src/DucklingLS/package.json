@@ -2,10 +2,16 @@
     "name": "duckling-language-support",
     "displayName": "Duckling",
     "description": "Duckling Language Support",
-    "version": "0.0.1",
+    "version": "0.3.0",
     "icon": "images/icon.png",
     "author": "DuckType",
     "publisher": "DuckType",
+    "license": "SEE LICENSE IN LICENSE.md",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ducktype-org/duckling.git",
+        "directory": "dev/src/DucklingLS"
+    },
     "categories": [
         "Programming Languages"
     ],

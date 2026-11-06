@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::quackpack::core::{FeatureName, Source, Version};
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
@@ -211,6 +212,14 @@ impl Dependency {
         self.alias.unwrap_or(self.name)
     }
 
+    /// Get the name used to refer to this dependency in user-facing messages.
+    ///
+    /// It is equal to [`Self::effective_name`], because it is unique among the dependencies
+    /// of a package.
+    pub fn diagnostic_name(&self) -> StrId {
+        self.effective_name()
+    }
+
     /// Get [`DependencyKind`] of this dependency.
     pub fn kind(&self) -> DependencyKind {
         self.kind
@@ -219,6 +228,16 @@ impl Dependency {
     /// Get the [`Conditions`] of this dependency.
     pub fn conditions(&self) -> Option<&Conditions> {
         self.conditions.as_ref()
+    }
+
+    /// Get the [`Identity`] of this [`Dependency`].
+    ///
+    /// This helper exists, because [`Identity`] is unambiguous, unlike [`FullIdentity`],
+    /// which requires git commit.
+    ///
+    /// [`FullIdentity`]: crate::quackpack::core::full_identity::FullIdentity
+    pub fn identity(&self) -> Identity {
+        Identity::new(self.name(), self.source.into())
     }
 }
 

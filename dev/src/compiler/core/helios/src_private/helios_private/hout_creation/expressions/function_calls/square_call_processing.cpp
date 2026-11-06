@@ -32,18 +32,16 @@ namespace compiler::helios::code {
 		 * @return A query result containing the `IndexExpr` on success, or a failed result on error.
 		 */
 		query::QResult<base::Box<Expr>> processArrayIndexing(
-			query::Context&                     ctx,
-			base::Box<Expr>                     current_expr,
-			pst::AccessLocked<pst::ExprElement> index_pst
+			query::Context&               ctx,
+			base::Box<Expr>               current_expr,
+			pst::Access<pst::ExprElement> index_pst
 		) {
 			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
 			    not tsh::isIndexable(expr_kind)) {
 				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
-					index_pst.unlock(ctx)->getStablePosition()
+					index_pst->getStablePosition()
 				);
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Index operator base must be indexable.", error_pos
-				));
+				ctx.log<dia::PlaceholderError>("Index operator base must be indexable.", error_pos);
 				return query::Failed();
 			}
 
@@ -66,7 +64,7 @@ namespace compiler::helios::code {
 
 			return makeBox<IndexExpr>(
 				ctx,
-				pstOriginOrdered(current_expr->origin, index_pst.unlock(ctx)),
+				pstOriginOrdered(current_expr->origin, index_pst),
 				std::move(current_expr),
 				std::move(index_expr)
 			);
@@ -85,7 +83,7 @@ namespace compiler::helios::code {
 		 * @return A ChainState containing an IndexExpr representing the type construction.
 		 */
 		query::QResult<base::Box<Expr>> processArrayTypeCreation(
-			query::Context& ctx, Box<Expr> base, pst::AccessLocked<pst::ExprElement> arg_pst
+			query::Context& ctx, Box<Expr> base, pst::Access<pst::ExprElement> arg_pst
 		) {
 			// If base is a type template, we expect meta in the index arguments for baking the
 			// template type. Otherwise we expect an integer for StaticArray type creation.
@@ -117,7 +115,7 @@ namespace compiler::helios::code {
 			auto arg_res = subExprFromPSTWithType(ctx, arg_pst, expected_index_arg_type);
 			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
 
-			auto total_origin = pstOriginOrdered(base->origin, arg_pst.unlock(ctx));
+			auto total_origin = pstOriginOrdered(base->origin, arg_pst);
 			return makeBox<IndexExpr>(ctx, total_origin, std::move(base), std::move(arg_expr));
 		}
 	}
@@ -134,20 +132,25 @@ namespace compiler::helios::code {
 		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				"Array index/size must be exactly one expression.", call_expr->getStablePosition()
-			));
+			);
 			return query::Failed();
 		}
 
-		auto arg_pst = (*args->begin()).unlock(ctx)->getArg().unlock(ctx)->getExpr();
+		auto arg_pst_opt
+			= (*args->begin()).unlock(ctx)->getArg().unlock(ctx)->getExpr().unlockOpt(ctx);
+		if (arg_pst_opt.empty()) {
+			// PST should have reported parsing error for this, so we just return failure here.
+			return query::Failed();
+		}
+		auto arg_pst = arg_pst_opt.value();
 
-		auto meta_res = canCoerceToMeta(ctx, base->expression_type);
-		UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
+		const tsh::coercions::Coercion meta_coercion = coercions::coercionToMeta(ctx, base.ref());
 
 		// If base is coercible to meta, this is an array type creation.
-		if (meta_coercion_res.isValid()) {
-			auto coerced_base = meta_coercion_res.coerce(ctx, std::move(base));
+		if (meta_coercion.isValid()) {
+			auto coerced_base = coercions::applyCoercion(ctx, meta_coercion, std::move(base));
 			return processArrayTypeCreation(ctx, std::move(coerced_base), arg_pst);
 		}
 

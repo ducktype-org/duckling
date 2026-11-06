@@ -32,7 +32,8 @@ namespace compiler::driver {
 	);
 
 	/**
-	 * @brief The existing compiled standard library binaries for native targets.
+	 * @brief The existing compiled standard library binaries for native targets, in linking
+	 * order: each library comes before the libraries it depends on.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
 

@@ -17,18 +17,20 @@
 #define REQUEST(VALUE) Supervisor::get().doRequest(pid, api::request::VALUE)
 
 namespace vm::api {
-	void ignoreResponse([[maybe_unused]] const Response& response) {}
+	namespace {
+		void ignoreResponse([[maybe_unused]] const Response& response) {}
 
-	template<class T>
-	std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
-		if (std::holds_alternative<T>(response)) return std::get<T>(response);
-		return std::unexpected(WrongResponse{});
-	}
+		template<class T>
+		std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
+			if (std::holds_alternative<T>(response)) return std::get<T>(response);
+			return std::unexpected(WrongResponse{});
+		}
 
-	template<class T>
-	std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
-		if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
-		return std::unexpected(WrongResponse{});
+		template<class T>
+		std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
+			if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
+			return std::unexpected(WrongResponse{});
+		}
 	}
 
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid) {
@@ -127,6 +129,10 @@ namespace vm::api {
 
 	std::expected<response::VMValue, ApiError> getVMValue(PID pid, const std::string& type_name) {
 		return REQUEST(VMValue{ type_name }).and_then(mapOrWrongResponseMove<response::VMValue>);
+	}
+
+	std::expected<void, ApiError> freeVMValue(PID pid, Ref<IVMValue> vm_value) {
+		return REQUEST(FreeVMValue{ vm_value }).transform(ignoreResponse);
 	}
 
 	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(

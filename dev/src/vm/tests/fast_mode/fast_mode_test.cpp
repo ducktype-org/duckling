@@ -35,12 +35,11 @@ private:
 		auto pid         = initProcess({
 					.mode = vm::api::ProcessMode::Fast,
         });
-		auto file        = fs::File(path(dbc_file_path));
-		auto load_result = vm::api::loadFiles(pid, { file });
+		auto load_result = vm::api::loadFiles(pid, { fs::File(path(dbc_file_path)) });
 		if (!load_result.has_value()) {
 			std::cerr << std::format("Error loading file: {}\n", errorToString(load_result.error()));
 		}
-		ASSERT_HAS_VALUE(load_result);
+		assertSucceeded(load_result, base::strConcat("Load of '", dbc_file_path, "'"));
 		return pid;
 	}
 

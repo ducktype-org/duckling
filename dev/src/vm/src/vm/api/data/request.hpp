@@ -88,6 +88,10 @@ namespace vm::api {
 			std::string type_name;
 		};
 
+		struct FreeVMValue final {
+			Ref<IVMValue> vm_value;
+		};
+
 		struct StatusRequest final {};
 
 		struct Input final {
@@ -155,6 +159,7 @@ namespace vm::api {
 		request::ExecutionPosition,
 		request::TypeMetadata,
 		request::VMValue,
+		request::FreeVMValue,
 		request::StatusRequest,
 		request::DebuggerGetNumberOfCurrentStackFrames,
 		request::DebuggerGetStackFrameData,

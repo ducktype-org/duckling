@@ -16,19 +16,21 @@
 
 namespace compiler::helios::code {
 
-	/**
-	 * @brief Checks whether the type is a primitive scalar which may take part in an
-	 * explicit `as` conversion (integers, floats, `char` and `byte`).
-	 */
-	static bool isScalarCastableType(const tsh::AbstractType type) {
-		switch (type.getKind()) {
-		case tsh::Kind::Integral:
-		case tsh::Kind::Float:
-		case tsh::Kind::Byte:
-		case tsh::Kind::Char:
-			return true;
-		default:
-			return false;
+	namespace {
+		/**
+		 * @brief Checks whether the type is a primitive scalar which may take part in an
+		 * explicit `as` conversion (integers, floats, `char` and `byte`).
+		 */
+		bool isScalarCastableType(const tsh::AbstractType type) {
+			switch (type.getKind()) {
+			case tsh::Kind::Integral:
+			case tsh::Kind::Float:
+			case tsh::Kind::Byte:
+			case tsh::Kind::Char:
+				return true;
+			default:
+				return false;
+			}
 		}
 	}
 
@@ -52,23 +54,39 @@ namespace compiler::helios::code {
 
 		// We first check if we can cover the case by the coercion logic (from bool or to bool for
 		// example).
-		auto coercion = canCoerce(ctx, value->expression_type, to).valueOrThrow();
-		if (coercion.isValid()) return coercion.coerce(ctx, std::move(value));
+		const tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, value.ref(), to);
+		if (coercion.isValid()) {
+			auto coerced = coercions::applyCoercion(ctx, coercion, std::move(value));
+
+			// @TODO: #3853 go back to this once defined
+			if (coerced->expression_type.getSymbolType() != to)
+				return cast_expr(std::move(coerced));
+			return coerced;
+		}
 
 		// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
 		// Casting to bool needs custom handling.
+		//
 		// We use coercion logic here because it's surprisingly complex and handles references
-		// (e.g. ref i64 -> bool). @TODO: #3625 we might want to abstract it to a common helper.
+		// (e.g. ref i64 -> bool).
 		if (auto value_type = value->expression_type.getType();
 		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
 		    && to.getType().getKind() == Kind::Bool) {
-			auto coercion_numeric_to_bool = Coercion::valid(from, to, false);
-			return coercion_numeric_to_bool.coerce(ctx, std::move(value));
+			const tsh::coercions::Coercion to_direct = coercions::coercionOf(
+				ctx, value.ref(), from.withReferenceKind(ReferenceKind::Direct)
+			);
+			CORE_ASSERT(to_direct.isValid(), "Should always be valid");
+			return coercions::buildZeroCheck(
+				ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
+			);
 		}
 
 		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
 		    && from.getRefKind() == ReferenceKind::Direct
 		    && to.getRefKind() == ReferenceKind::Direct)
+			return cast_expr(std::move(value));
+
+		if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
 			return cast_expr(std::move(value));
 
 		struct CastPattern {
@@ -207,10 +225,10 @@ namespace compiler::helios::code {
 		}
 		if (found_match) return cast_expr(std::move(value));
 
-		ctx.logInt(makeBox<dia::PlaceholderError>(
+		ctx.log<dia::PlaceholderError>(
 			base::strConcat("Invalid cast from type ", from.toString(), " to type ", to.toString()),
 			stmt->getStablePosition()
-		));
+		);
 		query::throwFailed();
 		CORE_UNREACHABLE();
 	}

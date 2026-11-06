@@ -170,7 +170,7 @@ mod test {
     use crate::quackpack::core::identity::Identity;
 
     /// Serialized graph for scenario "foo depends on both bar and baz".
-    const LARGE_GRAPH: &'static str = r#"{
+    const LARGE_GRAPH: &str = r#"{
     "root-id": 5,
     "nodes": [
       {
@@ -268,7 +268,7 @@ mod test {
   }"#;
 
     /// Serialized graph for scenario "foo depends on bar".
-    const SMALL_GRAPH: &'static str = r#"{
+    const SMALL_GRAPH: &str = r#"{
     "root-id": 3,
     "nodes": [
       {
@@ -336,7 +336,7 @@ mod test {
   }"#;
 
     /// As [`SMALL_GRAPH`], but dependencies are not sorted.
-    const MALFORMED_GRAPH: &'static str = r#"{
+    const MALFORMED_GRAPH: &str = r#"{
     "root-id": 3,
     "nodes": [
       {

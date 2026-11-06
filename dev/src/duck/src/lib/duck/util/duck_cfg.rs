@@ -7,7 +7,7 @@
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use tracing::debug;
+use tracing::trace;
 use url::Url;
 
 use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases};
@@ -41,7 +41,7 @@ impl DuckCfg {
     /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
         let inner = YamlConfig::new(home.user_config().to_path_buf())?;
-        debug!(?inner, "parsed the user config");
+        trace!(?inner, "parsed the user config");
         Ok(Self {
             inner,
             security: OnceLock::new(),
@@ -100,7 +100,7 @@ impl DuckCfg {
     pub fn alias_for(&self, key: &str) -> QuackResult<Option<Alias>> {
         self.inner
             .deserialize_optional(&format!("aliases.{key}"))
-            .with_context(|| format!("when trying to get the alias expansions of `{key}`"))
+            .with_context(|| format!("failed to get the alias expansions of `{key}`"))
     }
 
     /// Get the underlying [`YamlConfig`].

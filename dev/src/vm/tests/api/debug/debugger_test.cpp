@@ -89,17 +89,19 @@ private:
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
 			);
 
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false));
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 5, false), "Setting a breakpoint"
+		);
 
-		ASSERT_HAS_VALUE(vm::api::run(pid));
+		assertSucceeded(vm::api::run(pid), "run");
 
 		auto execution_position = vm::api::waitForBreakpoint(pid);
-		ASSERT_HAS_VALUE(execution_position);
+		assertSucceeded(execution_position, "waitForBreakpoint");
 
 		ASSERT_EQUAL_PRINT(8, execution_position->instr_number);
 
-		ASSERT_HAS_VALUE(vm::api::resume(pid));
-		ASSERT_HAS_VALUE(vm::api::stop(pid));
+		assertSucceeded(vm::api::resume(pid), "resume");
+		assertSucceeded(vm::api::stop(pid), "stop");
 	}
 
 	/**
@@ -137,36 +139,40 @@ private:
 
 	void stepsUntilProgramTerminates() {
 		auto pid = spawnAndLoad("../../common/programs/breakpoint.dbc");
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, true));
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, false));
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 2, true), "Setting a breakpoint"
+		);
+		assertSucceeded(vm::api::run(pid), "run");
+		assertSucceeded(vm::api::waitForBreakpoint(pid), "waitForBreakpoint");
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 2, false), "Setting a breakpoint"
+		);
 
 		constexpr u64 STEP_LIMIT = 100;
 
 		bool terminated = false;
 		for (u64 i = 0; i < STEP_LIMIT && !terminated; i++) {
-			ASSERT_HAS_VALUE(vm::api::step(pid));
+			assertSucceeded(vm::api::step(pid), "step");
 
 			auto status = vm::api::getExecutionStatus(pid);
-			ASSERT_HAS_VALUE(status);
+			assertSucceeded(status, "getExecutionStatus");
 			terminated = vm::api::isStatusTerminal(status.value());
 		}
 		ASSERT_TRUE(terminated);
 
 		auto status = vm::api::getExecutionStatus(pid);
-		ASSERT_HAS_VALUE(status);
+		assertSucceeded(status, "getExecutionStatus");
 		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionCompleted));
 
 		auto exit_value = vm::api::join(pid);
-		ASSERT_HAS_VALUE(exit_value);
+		assertSucceeded(exit_value, "join");
 		ASSERT_EQUAL_PRINT(
 			v_get(exit_value.value(), std::vector<Ref<vm::IVMValue>>).at(0)->readBytes<i64>(), 1
 		);
 
 		// Memory state should be intact.
 		auto validation_result = vm::api::deinitAndValidate(pid);
-		ASSERT_HAS_VALUE(validation_result);
+		assertSucceeded(validation_result, "deinitAndValidate");
 		ASSERT_TRUE(validation_result.value().valid());
 	}
 
@@ -463,7 +469,7 @@ private:
 			fs::File file(path("../../common/programs/vm_api_tests.dbc"));
 			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
 
-			ASSERT_HAS_VALUE(map_response);
+			assertSucceeded(map_response, "mapFileLineToCodeCollectionPosition");
 			auto code_position = map_response.value();
 
 			ASSERT_EQUAL_PRINT(code_position.function_name, "main");
@@ -494,15 +500,17 @@ private:
 	 */
 	void vmApiMemoryAllTypes() {
 		auto pid = spawnAndLoad("../../common/programs/breakpoint_all_types.dbc");
-		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true));
+		assertSucceeded(
+			vm::api::setBreakpoint(pid, base::StrID("main"), 20, true), "Setting a breakpoint"
+		);
 		auto tid = vm::api::ThreadID(0);
 
-		ASSERT_HAS_VALUE(vm::api::run(pid));
-		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
+		assertSucceeded(vm::api::run(pid), "run");
+		assertSucceeded(vm::api::waitForBreakpoint(pid), "waitForBreakpoint");
 
 		{
 			auto response = vm::api::debuggerGetNumberOfStackFrames(pid, tid);
-			ASSERT_HAS_VALUE(response);
+			assertSucceeded(response, "debuggerGetNumberOfStackFrames");
 			auto num_frames_response = response.value();
 			ASSERT_EQUAL_PRINT(num_frames_response.number_of_stack_frames, 2);
 		}
@@ -516,7 +524,7 @@ private:
 			namespace idv = vm::interpreted_data_variant;
 
 			auto response = vm::api::debuggerGetStackFrameData(pid, tid, 1);
-			ASSERT_HAS_VALUE(response);
+			assertSucceeded(response, "debuggerGetStackFrameData");
 
 			auto stack_frame_data = response.value();
 			ASSERT_EQUAL_PRINT(stack_frame_data.function_name, "main");
@@ -598,11 +606,11 @@ private:
 			}
 		}
 
-		ASSERT_HAS_VALUE(vm::api::resume(pid));
+		assertSucceeded(vm::api::resume(pid), "resume");
 
 		{
 			auto exit_code_response = vm::api::join(pid);
-			ASSERT_HAS_VALUE(exit_code_response);
+			assertSucceeded(exit_code_response, "join");
 			ASSERT_TRUE(
 				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value())
 			);

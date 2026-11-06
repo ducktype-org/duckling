@@ -8,6 +8,7 @@
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/templates/templates.hpp>
@@ -122,6 +123,46 @@ namespace compiler::helios {
 				    .path       = { "containers" },
 				    .namespaces = {},
 				    .element    = "boxFree" } },
+				{ LanguagePrimitive::OptionalNone,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives" },
+				    .element    = "None" } },
+				{ LanguagePrimitive::OptionalValue,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives", "by_value" },
+				    .element    = "value" } },
+				{ LanguagePrimitive::OptionalValueRef,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives", "by_ref" },
+				    .element    = "value" } },
+				{ LanguagePrimitive::OptionalValueOr,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives", "by_value" },
+				    .element    = "valueOr" } },
+				{ LanguagePrimitive::OptionalValueOrRef,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives", "by_ref" },
+				    .element    = "valueOr" } },
+				{ LanguagePrimitive::OptionalNonEmpty,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives" },
+				    .element    = "nonEmpty" } },
+				{ LanguagePrimitive::OptionalIsEmpty,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives" },
+				    .element    = "isEmpty" } },
+				{ LanguagePrimitive::OptionalReset,
+				  { .package    = "core",
+				    .path       = { "optional" },
+				    .namespaces = { "optional_primitives" },
+				    .element    = "reset" } },
 			};
 			return paths;
 		}
@@ -188,15 +229,15 @@ namespace compiler::helios {
 		query::QResult<SymID> lookupPrimitiveThrow(query::Context& ctx, LanguagePrimitive primitive) {
 			const auto leaves = lookupPrimitiveSymbols(ctx, primitive);
 			if (leaves.empty()) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					base::strConcat("Can't find symbol for language primitive '", primitive, "'")
-				));
+				);
 				return query::Failed();
 			}
 			if (leaves.size() > 1) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Found multiple primitives with the symbol name '", primitive, "'"
-				)));
+				));
 				return query::Failed();
 			}
 			return leaves.back();
@@ -242,5 +283,16 @@ namespace compiler::helios {
 		    | std::views::transform([](auto& type) { return ctv::CompileTimeValue(type); })
 		    | std::ranges::to<std::vector>();
 		return bakeLanguagePrimitive(ctx, primitive, std::move(ctv_args));
+	}
+
+	tsh::SymbolType<> getOptionalNoneType(query::Context& ctx) {
+		const SymID none_sym
+			= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::OptionalNone })
+		          ->valueOrThrow();
+		return tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryClassType>(none_sym));
+	}
+
+	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type) {
+		return ctx.query<tsh::QueryOptionalType>({ value_type });
 	}
 }

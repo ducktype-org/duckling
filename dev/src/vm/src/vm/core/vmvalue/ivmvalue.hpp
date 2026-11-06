@@ -31,13 +31,6 @@ namespace vm {
 	public:
 		virtual ~IVMValue() = default;
 
-		/**
-		 * @brief Frees the data of the value (deinitializes the blocks in the memory module).
-		 * This function has to be called when using values created with the
-		 * `IVMProcess::createOwnedVMValue()` function.
-		 */
-		virtual void freeData() = 0;
-
 		/** @brief Returns the high-level (compiler) type of the value. */
 		[[nodiscard]] virtual base::CRef<code::valid_type::ValidType> getType() const = 0;
 

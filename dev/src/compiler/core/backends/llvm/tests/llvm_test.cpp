@@ -14,6 +14,7 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/module_flags/module_flags.hpp>
@@ -40,6 +41,7 @@ public:
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(castsLoweringTest);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
+		TESTER_ADD_TEST(optimizedDumpPreservesObjectCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
@@ -52,18 +54,26 @@ public:
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(functionPointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
+		TESTER_ADD_TEST(noReturnTest);
+		TESTER_ADD_TEST(scalarCopyTest);
+		TESTER_ADD_TEST(arrayAlignmentTest);
 	}
 
 protected:
 	void beforeAll() override {
 		// Initialize the compiler so the standard library is loaded and select the LLVM backend.
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		// O2 for the whole suite: optimizedDumpPreservesObjectCodeTest needs real passes; the
+		// IR-text tests read IR before compile().
 		auto         init_result    = compiler::driver::test_utils::initializeCompilerForTests(
             {},
             artifacts_path,
-            { compiler::driver::options_types::StdLibOptions::DefaultStd{} },
-            { .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
+            { .std_lib_type=compiler::driver::options_types::StdLibOptions::DefaultStd{} },
+            { .llvm_backend = global_state::BackendOptions::LLVMBackend{
+                .llvm_optimization_level = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel::O2,
+            } }
         );
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 
@@ -71,6 +81,48 @@ protected:
 	}
 
 private:
+	void optimizedDumpPreservesObjectCodeTest() {
+		using namespace compiler;
+		// With optimization disabled, dumping before or after the passes would look the same.
+		assertTrue(
+			global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
+				== global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel::O2,
+			"This test requires LLVM optimization level O2"
+		);
+
+		const auto directory = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		defer(std::filesystem::remove_all(directory););
+		auto module       = backend_llvm::Module::fromIRCode(R"(
+define i64 @saved(i64 %value) {
+entry:
+  %slot = alloca i64
+  store i64 %value, ptr %slot
+  %loaded = load i64, ptr %slot
+  ret i64 %loaded
+}
+)");
+		auto without_dump = module.clone();
+		auto with_dump    = module.clone();
+		without_dump.compile(
+			directory / "without_dump.o", backend_llvm::CompilationOutputType::Object
+		);
+		with_dump.compile(
+			directory / "with_dump.o",
+			backend_llvm::CompilationOutputType::Object,
+			directory / "saved.opt.ll"
+		);
+
+		const auto optimized = fs::File(directory / "saved.opt.ll").getContent();
+		ASSERT_TRUE(optimized.view().stringView().find("ret i64") != std::string::npos);
+		ASSERT_TRUE(optimized.view().stringView().find("alloca") == std::string::npos);
+		const auto original_object = fs::File(directory / "without_dump.o").getContent();
+		const auto dumped_object   = fs::File(directory / "with_dump.o").getContent();
+		assertTrue(
+			original_object.view().stringView() == dumped_object.view().stringView(),
+			"Optimized LLVM dump changed object code"
+		);
+	}
+
 	compiler::backend_llvm::Module getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
@@ -128,11 +180,11 @@ private:
 		runTestForModule("modules/variables");
 	}
 
-	void booleansTest() { runTestForModule("modules/booleans", 2, 3); }
+	void booleansTest() { runTestForModule("modules/booleans", 2); }
 
 	void arithmeticTest() { runTestForModule("modules/arithmetic"); }
 
-	void comparisonTest() { runTestForModule("modules/comparison", 1, 3); }
+	void comparisonTest() { runTestForModule("modules/comparison", 1, 2); }
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
@@ -167,7 +219,7 @@ private:
 
 	// Both globals are trivially destructible, so they only get a ctor each, and the module gets a
 	// ctor calling them.
-	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 5); }
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 4); }
 
 	void unitsTest() {
 		runTestForModule("modules/units/unit1", 2, 2);
@@ -557,6 +609,27 @@ private:
 		std::string ir          = llvm_module.dumpLLVMToString();
 	}
 
+	void functionPointersTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/function_pointers");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store ptr @\S+add\S*, ptr %)" }),
+			"Expected the address of `add` to be stored in a local"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call i64 %\S+\(i64 %\S+, i64 %\S+\))" }),
+			"Expected an indirect call returning i64"
+		);
+		assertTrue(
+			std::regex_search(
+				ir,
+				std::regex{ R"(call void %\S+\(ptr sret\(%\S+\) %\S+, ptr byval\(%\S+\) %\S+\))" }
+			),
+			"Expected an indirect call passing and returning an aggregate in memory"
+		);
+	}
+
 	void backendDependentTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/backend_dependent");
 		std::string ir          = llvm_module.dumpLLVMToString();
@@ -570,6 +643,114 @@ private:
 		assertTrue(
 			not std::regex_search(ir, std::regex{ R"(ret i32 10)" }),
 			"dvm_only_impl 'ret i32 10' must not be compiled into the LLVM module"
+		);
+	}
+
+	void noReturnTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/noreturn");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Returns the attributes of the function whose `define`/`declare` line contains @p name.
+		auto function_attributes = [&](const std::string& name) -> std::string {
+			std::smatch header_match;
+			if (not std::regex_search(
+					ir,
+					header_match,
+					std::regex{ R"((define|declare)[^\n]*)" + name + R"([^\n]*#([0-9]+))" }
+				)) {
+				assertTrue(false, "Expected an LLVM function with attributes named " + name);
+				return {};
+			}
+			std::smatch      attributes_match;
+			const std::regex attributes_regex{ "attributes #" + header_match[2].str()
+				                               + R"( = \{([^\n]*)\})" };
+			assertTrue(
+				std::regex_search(ir, attributes_match, attributes_regex),
+				"Expected the attribute group of " + name
+			);
+			return attributes_match[1].str();
+		};
+		auto has_attributes = [&](const std::string& name) {
+			return std::regex_search(
+				ir, std::regex{ R"((define|declare)[^\n]*)" + name + R"([^\n]*#[0-9]+)" }
+			);
+		};
+
+		// `void` is the result type of a function that never returns. LLVM learns it from the
+		// `noreturn` attribute, both on a definition and on a declaration from another package.
+		assertTrue(
+			function_attributes("fails").find("noreturn") != std::string::npos,
+			"Expected 'fails' (returning void) to be noreturn"
+		);
+		assertTrue(
+			function_attributes("panic").find("noreturn") != std::string::npos,
+			"Expected the declaration of 'panic' to be noreturn"
+		);
+		// `()` carries no information, but the function does return.
+		assertTrue(
+			not has_attributes("returnsUnit")
+				or function_attributes("returnsUnit").find("noreturn") == std::string::npos,
+			"'returnsUnit' (returning ()) must not be noreturn"
+		);
+	}
+
+	void scalarCopyTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/scalar_copies");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Returns the body of the function whose `define` line contains @p name.
+		auto function_body = [&](const std::string& name) -> std::string {
+			std::smatch body_match;
+			assertTrue(
+				std::regex_search(
+					ir, body_match, std::regex{ R"(define[^\n]*)" + name + R"([^\n]*\{([^}]*)\})" }
+				),
+				"Expected an LLVM function named " + name
+			);
+			return body_match[1].str();
+		};
+
+		// A `bool` copied with a 1-byte `memmove` cannot be promoted to a register by SROA. It
+		// stays on the stack and blocks the optimization of conditions like bounds checks.
+		const std::string scalar_body = function_body("isOutOfRange");
+		assertTrue(
+			scalar_body.find("llvm.memmove") == std::string::npos,
+			"Expected scalar copies in 'isOutOfRange' to not use memmove"
+		);
+		assertTrue(
+			std::regex_search(scalar_body, std::regex{ R"(store i1 %[0-9]+, ptr %tmp_)" }),
+			"Expected the copied bool in 'isOutOfRange' to be stored as i1"
+		);
+		// Aggregates still go through `memmove`, so a large one never becomes a huge
+		// first-class load/store.
+		assertTrue(
+			function_body("copyPair").find("llvm.memmove") != std::string::npos,
+			"Expected the copy of 'Pair' in 'copyPair' to use memmove"
+		);
+	}
+
+	void arrayAlignmentTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/array_alignment");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// An `i64` array is only 8-byte aligned by the data layout. Then the 16-byte vector loads
+		// of a vectorized loop over it are misaligned, so its storage is raised to 16 bytes.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca \[1000 x i64\], align 16)" }),
+			"Expected the local i64[1000] to be 16-byte aligned"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(global_array[^\n]*\[4 x i64\][^\n]*align 16)" }),
+			"Expected the global i64[4] to be 16-byte aligned"
+		);
+		// Below 16 bytes, and for classes, the natural alignment is kept.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca \[2 x i32\], align 4)" }),
+			"Expected the local i32[2] to keep its 4-byte alignment"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca %[^\n]*Pair[^\n]*, align 8)" }),
+			"Expected the local Pair to keep its 8-byte alignment"
 		);
 	}
 };

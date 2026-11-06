@@ -61,6 +61,10 @@ private:
 		// C pointers: one typed, one with an unknown pointee (no inner).
 		code.types.emplace_back(CPointerType(base::StrID("point_ptr"), base::StrID("Point")));
 		code.types.emplace_back(CPointerType(base::StrID("raw_ptr"), {}));
+		code.types.emplace_back(FunctionType(
+			base::StrID("binop"), { base::StrID("i32"), base::StrID("i32") }, { base::StrID("i32") }
+		));
+		code.types.emplace_back(FunctionType(base::StrID("consumer"), { base::StrID("i32") }, {}));
 
 		// Global data: constant answer i64 with initial_value 42
 		GlobalData global;
@@ -155,6 +159,14 @@ private:
 		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
 		assertEqual(void_cptr.name, base::StrID("raw_ptr"), "C pointer name should survive");
 		ASSERT_NO_VALUE(void_cptr.inner, "An absent C pointer inner should survive round-trip");
+		assertTrue(
+			std::get<FunctionType>(parsed.types[5]) == std::get<FunctionType>(original.types[5]),
+			"Function type should survive round-trip"
+		);
+		assertTrue(
+			std::get<FunctionType>(parsed.types[6]) == std::get<FunctionType>(original.types[6]),
+			"Function type without results should survive round-trip"
+		);
 
 		// Check global data
 		assertEqual(

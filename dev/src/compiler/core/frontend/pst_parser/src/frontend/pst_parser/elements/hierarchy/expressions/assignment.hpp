@@ -27,7 +27,7 @@ namespace pst::expr {
 		NAMED_CHILD(value, ExprElement);
 
 	public:
-		explicit Assignment(const LangParserState& state): ExprElement(state, 1'000) {}
+		explicit Assignment(LangElementConstructionData state): ExprElement(state, 1'000) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

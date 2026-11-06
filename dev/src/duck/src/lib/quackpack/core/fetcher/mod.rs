@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
 
 use tempfile::TempDir;
-use tracing::{debug, error, info};
+use tracing::debug;
 use url::Url;
 
 use crate::quackpack::core::GitReference;
@@ -23,14 +23,15 @@ use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::guards;
 use crate::quackpack::util::interned_url::InternedUrl;
-use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 pub mod cache;
+pub mod downloads;
 pub mod ducknest;
 pub mod git;
 pub mod http;
 pub mod http_async;
+pub mod locks;
 pub mod types;
 pub mod util;
 
@@ -45,10 +46,8 @@ pub struct Fetcher<'duck> {
     git_client: git::GitClient<'duck>,
     git_fastpath_client: git::fast_path::GitFastPathClient<'duck>,
     cache: RefCell<cache::ManifestCache>,
-    download_cache_path: FileLockManager,
-    locks_path: FileLockManager,
-    #[allow(unused)] // @TODO: #1905 Remove this
-    artifacts_cache_path: FileLockManager,
+    downloads: downloads::Downloads,
+    locks: locks::Locks,
 }
 
 /// URL of the default Ducknest instance.
@@ -63,12 +62,6 @@ pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
 });
 
 impl<'duck> Fetcher<'duck> {
-    /// Filename of the default package's compressed source.
-    const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
-
-    /// Filename of the per-package lock.
-    const PER_PACKAGE_LOCK: &'static str = ".duck.package.lock";
-
     /// Create a new [`Fetcher`].
     ///
     /// # Errors
@@ -78,18 +71,10 @@ impl<'duck> Fetcher<'duck> {
     /// 3. failed to initialize cache manager.
     pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
         let metadata_path = ctx.duck_home().get_metadata_db_path();
-        let artifacts_cache_path = ctx.duck_home().artifacts();
-        artifacts_cache_path.mkdir()?;
         let download_cache_path = ctx.duck_home().downloads();
-        download_cache_path.mkdir()?;
+        let downloads = downloads::Downloads::new(download_cache_path)?;
         let locks = ctx.duck_home().cache().join("locks");
-        locks.mkdir()?;
-        debug!(
-            metadata = %metadata_path.display(),
-            artifacts = %artifacts_cache_path.display(),
-            downloads = %download_cache_path.display(),
-            locks = %locks.display()
-        );
+        let locks = locks::Locks::new(locks)?;
         let http_client = Arc::new(AsyncHttpClient::new(ctx));
         let ducknest_client = ducknest::DucknestClient::new(http_client.clone());
         let cache_location = if cfg!(test) {
@@ -107,25 +92,24 @@ impl<'duck> Fetcher<'duck> {
             git_client,
             git_fastpath_client,
             cache: RefCell::new(cache),
-            artifacts_cache_path,
-            download_cache_path,
-            locks_path: locks,
+            downloads,
+            locks,
         })
     }
 
     /// Retrieve metadata for `package` from a given Ducknest instance.
     ///
     /// Exact cache hit takes precedence over HTTP requests.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
     pub async fn get_package_metadata(
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
         if let Some(cached) = self.cache.borrow().get_manifest(package)? {
-            debug!("cache hit");
+            debug!(target: "duck::ducknest", "metadata cache hit");
             return Ok(FetcherResponse::Some(cached));
         }
-        debug!("cache miss");
+        debug!(target: "duck::ducknest", "metadata cache miss");
         if self.ctx.is_offline() {
             return Ok(FetcherResponse::Offline);
         }
@@ -135,7 +119,7 @@ impl<'duck> Fetcher<'duck> {
             .await
             .with_context(|| {
                 format!(
-                    "while getting a metadata of `{}` version {}",
+                    "failed to get the metadata of `{}` version {}",
                     package.name, package.version
                 )
             })?;
@@ -152,13 +136,14 @@ impl<'duck> Fetcher<'duck> {
     /// Otherwise __no__ lookup is performed.
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
     pub async fn get_package_all_metadata(
         &self,
         url: InternedUrl,
         package_name: StrId,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
+            debug!(target: "duck::ducknest", "offline, using only the cached metadata");
             let package = PackageWithUrl {
                 name: package_name,
                 version: 1.into(),
@@ -173,7 +158,7 @@ impl<'duck> Fetcher<'duck> {
             .ducknest_client
             .get_multi_metadata(&url, package_name)
             .await
-            .with_context(|| format!("while getting a multimetadata of `{}`", package_name))?;
+            .with_context(|| format!("failed to get the multimetadata of `{}`", package_name))?;
         self.cache
             .borrow_mut()
             .add_or_replace_multiple_manifests(url, result.packages_metadata.clone())?;
@@ -181,27 +166,16 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.
-    #[tracing::instrument(skip(self))]
     async fn fetch_package_blob(&self, package: types::PackageWithUrl) -> QuackResult<PathBuf> {
         // Firstly acquire a "global" per package lock.
         // Otherwise, under the same global fetcher lock, we can start two downloads of the same package,
         // and one can see existing but empty path.
-        let _lock = self.acquire_package_lock(package.into())?;
-        let destination = self
-            .download_cache_path
-            .join(package.name)
-            .join(package.version.to_string());
-
-        let blob_path = destination
-            .not_locked_path()
-            .join(Self::DEFAULT_BLOB_FILENAME);
-
-        if blob_path.exists() {
-            debug!("cache hit");
-            return Ok(blob_path);
-        }
-
-        let blob = destination.open_exclusive(Self::DEFAULT_BLOB_FILENAME, self.ctx)?;
+        let _lock = self.locks.lock(package.as_package(), self.ctx)?;
+        let entry = self.downloads.get(package.as_package(), self.ctx)?;
+        let blob = match entry {
+            downloads::DownloadedEntry::Present(path) => return Ok(path),
+            downloads::DownloadedEntry::Vacant(blob) => blob,
+        };
 
         let mut guard = guards::RemoveOnDrop::new(blob);
 
@@ -210,30 +184,16 @@ impl<'duck> Fetcher<'duck> {
             .await
             .with_context(|| {
                 format!(
-                    "while downloading a source of `{}` version {}",
+                    "failed to download the source of `{}` version {}",
                     package.name, package.version
                 )
             })?;
         guard.disarm();
-        Ok(blob_path)
-    }
-
-    #[tracing::instrument(skip(self))]
-    fn acquire_package_lock(&self, pkg: types::Package) -> QuackResult<LockedFile> {
-        self.locks_path
-            .join(pkg.name)
-            .join(pkg.version.to_string())
-            .open_exclusive(Self::PER_PACKAGE_LOCK, self.ctx())
-            .with_context(|| {
-                format!(
-                    "failed to acquire a lock for `{}` version {}",
-                    pkg.name, pkg.version
-                )
-            })
+        Ok(guard.file().path().to_path_buf())
     }
 
     /// Clone a git repository pointed by `source` to the `destination_directory`.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url))]
     pub fn clone_from_git_to_directory(
         &self,
         url: &Url,
@@ -250,7 +210,6 @@ impl<'duck> Fetcher<'duck> {
     ///
     /// This is needed because storage paths depend on a commit, which we can only get after
     /// cloning a repository.
-    #[tracing::instrument(skip(self, url) fields(url = url.as_str()))]
     pub fn clone_from_git(
         &self,
         url: &Url,
@@ -277,14 +236,13 @@ impl<'duck> Fetcher<'duck> {
         self.ctx
     }
 
-    #[tracing::instrument(skip_all, fields(%retries, calls = retries + 1))]
+    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
     /// Fetch a package from ducknest with retries.
     pub async fn fetch_package_blob_with_retries(
         &self,
         pkg: PackageWithUrl,
         retries: u32,
     ) -> QuackResult<PathBuf> {
-        debug!("fetching with retries");
         self.ctx.info(format!(
             "starting a download of `{}` version {} from `{}`",
             pkg.name, pkg.version, pkg.url
@@ -293,15 +251,11 @@ impl<'duck> Fetcher<'duck> {
         for attempt in 1..=calls {
             match self.fetch_package_blob(pkg).await {
                 Ok(path) => {
-                    info!(%attempt, "fetched");
+                    debug!(target: "duck::ducknest", "fetched on attempt {attempt}/{calls}");
                     return Ok(path);
                 }
                 Err(e) => {
-                    error!(error = %e, "failed to fetch");
-                    let will_retry = attempt != calls;
-                    if will_retry {
-                        debug!(%attempt, "retrying fetch");
-                    }
+                    debug!(target: "duck::ducknest", error = %e, "attempt {attempt}/{calls} failed");
                     self.ctx.warning(format!(
                         "failed to download `{}` version {} from `{}`: {e}",
                         pkg.name, pkg.version, pkg.url

@@ -269,6 +269,11 @@ namespace vm {
 		) = 0;
 
 		/**
+		 * @brief Frees the data of a caller-owned VMValue created by `getVMValueForType`.
+		 */
+		virtual std::expected<api::Response, api::ApiError> freeVMValue(Ref<IVMValue> vm_value) = 0;
+
+		/**
 		 * @brief IDs of the threads which are currently active (started and not terminal).
 		 */
 		[[nodiscard]] virtual std::vector<api::ThreadID> getAllActiveThreadIDs() const = 0;
@@ -376,7 +381,7 @@ namespace vm {
 
 		/**
 		 * @brief Creates an empty VMValue of a given type and transfers ownership to the caller.
-		 * The caller is expected to free the VMValue.
+		 * The caller is expected to free the VMValue with `api::freeVMValue`.
 		 *
 		 * @param type_id ID of the type of the data stored in the new VMValue.
 		 * @return A Box referencing the newly created VMValue.
