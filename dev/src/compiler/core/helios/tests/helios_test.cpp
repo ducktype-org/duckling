@@ -36,6 +36,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -128,6 +129,7 @@ public:
 		TESTER_ADD_TEST(testOperatoriness);
 		TESTER_ADD_TEST(testMethodOperatorResolution);
 		TESTER_ADD_TEST(testBitwiseOperators);
+		TESTER_ADD_TEST(testGeneratedComparisons);
 		// this is at the end
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
@@ -3683,6 +3685,141 @@ private:
 		ASSERT_EQUAL(suffix_method_sym, suffix_callee->symbol);
 		ASSERT_EQUAL(1, suffix_call.arguments.size());
 		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(suffix_call.arguments.at(0).get()) != nullptr);
+	}
+
+	void testGeneratedComparisons() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/generated_comparisons")));
+		using namespace compiler::helios::code;
+		using compiler::helios::SymID;
+		using compiler::helios::defgen::Method;
+		using Kind      = Method::Kind;
+		using OwnerKind = compiler::tsh::Kind;
+
+		const auto& body_of = [&](SymID fn_sym) -> const std::vector<Box<Stmt>>& {
+			return query::entryPoint<compiler::helios::QueryCodeOfFun>({ fn_sym })
+			    ->valueOrPanic()
+			    .body->statements;
+		};
+
+		// The value returned by the last statement of a function.
+		auto returned_value = [&](SymID fn_sym) -> const Expr* {
+			const auto* ret_stmt = dynamic_cast<const ReturnStmt*>(body_of(fn_sym).back().get());
+			ASSERT_TRUE(ret_stmt != nullptr);
+			return stripImplicitMove(ret_stmt->value.get());
+		};
+
+		// The condition of the `if` statement at @p idx of a function's body.
+		auto condition_at = [&](SymID fn_sym, usize idx) -> const Expr* {
+			const auto* if_stmt = dynamic_cast<const IfStmt*>(body_of(fn_sym).at(idx).get());
+			ASSERT_TRUE(if_stmt != nullptr);
+			return if_stmt->condition.get();
+		};
+
+		// The function called by `expr` with two arguments.
+		auto called = [&](const Expr* expr) -> SymID {
+			const auto* call = dynamic_cast<const CallExpr*>(expr);
+			ASSERT_TRUE(call != nullptr);
+			ASSERT_EQUAL(2, call->arguments.size());
+			const auto* callee = dynamic_cast<const IdentifierExpr*>(call->callee.get());
+			ASSERT_TRUE(callee != nullptr);
+			return callee->symbol;
+		};
+
+		// The operand of a `not`.
+		auto negated = [&](const Expr* expr) -> const Expr* {
+			const auto* not_expr = dynamic_cast<const UnaryOperatorExpr*>(expr);
+			ASSERT_TRUE(not_expr != nullptr);
+			ASSERT_TRUE(not_expr->operation == BuiltinUnary::BooleanNot);
+			return not_expr->expr.get();
+		};
+
+		auto expect_generated = [&](SymID sym, Kind kind, OwnerKind owner_kind) {
+			const auto* method = std::get_if<Method>(&compiler::helios::getSymRef(sym)->other);
+			ASSERT_TRUE(method != nullptr);
+			ASSERT_TRUE(method->kind == kind);
+			ASSERT_TRUE(method->owner_type.getKind() == owner_kind);
+		};
+
+		auto expect_returns = [&](SymID fn_sym, bool value) {
+			const auto* literal = dynamic_cast<const LiteralBoolExpr*>(returned_value(fn_sym));
+			ASSERT_TRUE(literal != nullptr);
+			ASSERT_EQUAL(value, literal->value);
+		};
+
+		// A comparison in user code calls the operator method of the type, taking both operands
+		// by reference.
+		auto operator_called_from = [&](SymID fn_sym) -> SymID {
+			const auto* call = dynamic_cast<const CallExpr*>(returned_value(fn_sym));
+			ASSERT_TRUE(call != nullptr);
+			for (const auto& argument: call->arguments)
+				ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(argument.get()) != nullptr);
+			const SymID callee = called(call);
+			ASSERT_TRUE(
+				query::entryPoint<compiler::helios::QueryDeclOfFun>(callee)->valueOrThrow().operatoriness
+				== compiler::helios::HOUTFunctionDeclaration::Operatoriness::Infix
+			);
+			return callee;
+		};
+
+		// `<` on a tuple decides on the first field in which the operands differ, using `<` of
+		// the fields only: two `if`s per field, then `return false`.
+		const SymID tuple_less = operator_called_from(getChain("tupleLess", root_scope).back());
+		expect_generated(tuple_less, Kind::Lesser, OwnerKind::Tuple);
+		ASSERT_EQUAL(5, body_of(tuple_less).size());
+		expect_generated(called(condition_at(tuple_less, 0)), Kind::Lesser, OwnerKind::Integral);
+		expect_generated(called(condition_at(tuple_less, 1)), Kind::Lesser, OwnerKind::Integral);
+		expect_returns(tuple_less, false);
+
+		// `==` on a class returns `false` at the first unequal field.
+		const SymID class_equal = operator_called_from(getChain("classEqual", root_scope).back());
+		expect_generated(class_equal, Kind::Equal, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(class_equal).size());
+		expect_generated(
+			called(negated(condition_at(class_equal, 0))), Kind::Equal, OwnerKind::Integral
+		);
+		expect_returns(class_equal, true);
+
+		// `>=` is `not (a < b)`, calling the `<` of the same class.
+		const SymID class_greater_equal
+			= operator_called_from(getChain("classGreaterEqual", root_scope).back());
+		expect_generated(class_greater_equal, Kind::GreaterEqual, OwnerKind::Class);
+		const SymID class_less = called(negated(returned_value(class_greater_equal)));
+		expect_generated(class_less, Kind::Lesser, OwnerKind::Class);
+
+		// A user-defined `==` replaces the generated one, and the generated `!=` calls it.
+		const SymID custom_not_equal
+			= operator_called_from(getChain("customNotEqual", root_scope).back());
+		expect_generated(custom_not_equal, Kind::NotEqual, OwnerKind::Class);
+		const SymID custom_equal = called(negated(returned_value(custom_not_equal)));
+		ASSERT_TRUE(
+			not std::holds_alternative<Method>(compiler::helios::getSymRef(custom_equal)->other)
+		);
+		ASSERT_EQUAL(std::string("=="), compiler::helios::name(custom_equal).str());
+
+		// Pointers can't be ordered yet, which is reported once their `<` is needed.
+		const SymID pointer_tuple_less
+			= operator_called_from(getChain("pointerLess", root_scope).back());
+		const SymID pointer_less = called(condition_at(pointer_tuple_less, 0));
+		expect_generated(pointer_less, Kind::Lesser, OwnerKind::Pointer);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertTrue(
+				ctx.query<compiler::helios::QueryCodeOfFun>({ pointer_less })->hasFailed(),
+				"Ordering pointers should not be implemented yet."
+			);
+			std::stringstream ss;
+			ctx.dumpToOneLoggerAndClear()->terminalPrint(ss);
+			assertTrue(
+				ss.str().contains("is not yet implemented"),
+				"Ordering pointers should report that it is not yet implemented."
+			);
+		});
+
+		// Tuples of types are compared field by field too, with the `==` of `type`.
+		const SymID types_equal = operator_called_from(getChain("typesEqual", root_scope).back());
+		expect_generated(types_equal, Kind::Equal, OwnerKind::Tuple);
+		expect_generated(
+			called(negated(condition_at(types_equal, 0))), Kind::Equal, OwnerKind::Meta
+		);
 	}
 
 	void testScopeParentsAndDepth() {

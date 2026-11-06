@@ -1,0 +1,37 @@
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+class Ratio {
+    num: i64 = 0;
+    den: i64 = 1;
+
+    fun ==(rhs: const ref Ratio) -> bool = {
+        return num * rhs.den == rhs.num * den;
+    }
+}
+
+fun tupleLess(a: (i32, i64), b: (i32, i64)) -> bool = {
+    return a < b;
+}
+
+fun classEqual(a: Point, b: Point) -> bool = {
+    return a == b;
+}
+
+fun classGreaterEqual(a: Point, b: Point) -> bool = {
+    return a >= b;
+}
+
+fun customNotEqual(a: Ratio, b: Ratio) -> bool = {
+    return a != b;
+}
+
+fun pointerLess(a: (ptr i32, i32), b: (ptr i32, i32)) -> bool = {
+    return a < b;
+}
+
+fun typesEqual() -> bool = {
+    return (i32, i64) == (i32, i64);
+}

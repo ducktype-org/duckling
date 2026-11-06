@@ -62,7 +62,7 @@ namespace lexer {
 	}
 
 	bool Operator::isNotReserved() const {
-		return !isComparison() && !isAssignment() && !isSpecialOp();
+		return !isAssignment() && !isSpecialOp();
 	}
 
 	base::Optional<Operator> Operator::filterNotReserved() const {

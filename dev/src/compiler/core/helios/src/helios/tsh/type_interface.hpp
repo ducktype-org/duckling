@@ -41,6 +41,12 @@ namespace compiler::tsh {
 		UserDestructor,
 		CopyConstructor,
 		ToString,
+		Equal,
+		NotEqual,
+		Lesser,
+		LessEqual,
+		Greater,
+		GreaterEqual,
 		None
 	};
 
