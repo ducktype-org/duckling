@@ -58,11 +58,16 @@ impl DependencyKind {
     }
 }
 
+/// Prints the kind as a prefix of the word "dependency", trailing space included: nothing for
+/// [`Normal`], `"dev "` for [`Dev`]. So use it as `"{kind}dependency"` (no space in between).
+///
+/// [`Normal`]: DependencyKind::Normal
+/// [`Dev`]: DependencyKind::Dev
 impl fmt::Display for DependencyKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Normal => write!(f, "normal"),
-            Self::Dev => write!(f, "dev"),
+            Self::Normal => write!(f, ""),
+            Self::Dev => write!(f, "dev "),
         }
     }
 }
