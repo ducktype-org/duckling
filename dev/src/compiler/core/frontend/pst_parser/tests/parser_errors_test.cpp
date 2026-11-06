@@ -775,12 +775,29 @@ class PSTErrorTests: public tester::TestSuite {
 		);
 	}
 
+	/**
+	 * @brief Tests that a program always has a root element, even when it could not be tokenized
+	 * or a parsing error was not caught by any statement fallback.
+	 */
+	void rootAlwaysExistsTests() {
+		for (std::string_view code:
+		     { "\"abc", "}", "\xff\xfe", "@@@", "fun f() = {}\n@5\nfun g() = {}" }) {
+			auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+			assertTrue(parsed->hasErrors(), base::strConcat("expected errors for `", code, "`"));
+			assertTrue(
+				parsed->getRootElement().illegalAccess().has_value(),
+				base::strConcat("missing root element for `", code, "`")
+			);
+		}
+	}
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(exampleTests);
 		TESTER_ADD_TEST(diagnosticTests);
 		TESTER_ADD_TEST(sentinelMessageTests);
 		TESTER_ADD_TEST(contextRecoveryTests);
+		TESTER_ADD_TEST(rootAlwaysExistsTests);
 	}
 
 public:

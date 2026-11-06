@@ -23,7 +23,7 @@ namespace pst {
 
 		PARSE().one(&out->template_decl);
 		PARSE().one(&out->inner_statement);
-		
+
 		if (!out->inner_statement.internal()) return nullptr;
 
 		PST_RETURN out;

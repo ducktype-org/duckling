@@ -110,6 +110,15 @@ namespace tokenizer {
 		token_data.emplace(lexer.tokenize());
 	}
 
+	void TokenSource::emplaceEmptyTokenData() {
+		dia::SourcePosition start(getLocation(), 0);
+		token_data.emplace(
+			lexer::Tokens{},
+			lexer::Token::makeSentinelBof(start),
+			lexer::Token::makeSentinelEof(start)
+		);
+	}
+
 	const base::SharedView TokenSource::getContent() const { return content.value(); }
 
 	const lexer::CharArray& TokenSource::getChars() const {

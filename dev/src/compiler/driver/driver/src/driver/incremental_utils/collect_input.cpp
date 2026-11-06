@@ -87,10 +87,9 @@ namespace compiler::driver {
 		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
 	) {
 		auto root = pst_ref->getRootElement();
-		if (auto maybe_root = root.illegalAccess()) {
-			auto root_unlocked = maybe_root.value();
-			out.emplace_back(pst::internal::PSTAccessSideInput::getID(), root_unlocked->getHash());
-		}
+		out.emplace_back(
+			pst::internal::PSTAccessSideInput::getID(), root.illegalAccess().value()->getHash()
+		);
 
 		auto elems = pst::viewAllSubTreeElements(root);
 		for (auto& el: elems)

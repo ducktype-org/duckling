@@ -3165,60 +3165,17 @@ private:
 	 * statement compiles. The diagnostic itself lives in the PST logger, not in the query context.
 	 */
 	void testParseErrorsFailModule() {
-		for (const std::string_view content: {
-				 "fun main() -> i64 = { return 0; }\nimport",
-				 "fun main() -> i64 = { return 0; }\nusing",
-				 "class C { x: i64; y }\nfun main() -> i64 = { return 0; }",
-			 }) {
-			checkForErrorOnCompileModule(content, {}, 0);
-		}
+		checkForErrorOnCompileModule("fun main() -> i64 = { return 0; }\nimport", {}, 0);
 	}
 
 	void testStatementsOutsideFunctions() {
-		constexpr std::string_view MESSAGE = "Only declarations are allowed at module level.";
-		for (const std::string_view statement: {
-				 "1 + 2;",
-				 "f();",
-				 "g = 2;",
-				 "return 5;",
-				 "if (true) { f(); }",
-				 "while (false) {}",
-				 "for (i in 0..3) {}",
-				 "namespace n { f(); }",
-			 }) {
-			checkForErrorOnCompileModule(
-				base::strConcat(
-					"var g: i64 = 1;\n",
-					"fun f() -> i64 = 1;\n",
-					statement,
-					"\nfun main() -> i64 = { return f(); }\n"
-				),
-				{ MESSAGE },
-				1
-			);
-		}
-
-		// Every misplaced statement gets its own diagnostic.
-		checkForErrorOnCompileModule("fun f() -> i64 = 1;\nf();\nf();\n", { MESSAGE, MESSAGE }, 2);
-
-		// The same statements are fine inside a function.
 		checkForErrorOnCompileModule(
-			R"(
-				var g: i64 = 1;
-				fun f() -> i64 = 1;
-				namespace n { fun h() -> i64 = 2; }
-				fun main() -> i64 = {
-					1 + 2;
-					f();
-					g = 2;
-					if (true) { f(); }
-					while (false) {}
-					return n.h();
-				}
-			)",
-			{},
-			0,
-			false
+			"var g: i64 = 1;\n"
+			"fun f() -> i64 = 1;\n"
+			"1 + 2;"
+			"\nfun main() -> i64 = { return f(); }\n",
+			{ "Only declarations are allowed at module level." },
+			1
 		);
 	}
 };

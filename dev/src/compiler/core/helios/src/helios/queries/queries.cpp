@@ -112,13 +112,7 @@ namespace compiler::helios {
 
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<GetScopesOutput> out) {
 			auto file_pst      = getFilePST(ctx, file);
-			auto root          = file_pst->getRootElement();
-			auto root_unlocked = root.unlockOpt(ctx);
-			if (root_unlocked.empty()) {
-				// PST root failed to parse, PST should have already reported the diagnostic.
-				out->failed = true;
-				return;
-			}
+			auto root_unlocked = file_pst->getRootElement().unlock(ctx);
 			if (file_pst->hasErrors()) out->failed = true;
 
 			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {
@@ -147,8 +141,7 @@ namespace compiler::helios {
 				return false;
 			};
 
-			auto for_all_ok
-				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
+			auto for_all_ok = pstForAll(ctx, root_unlocked, grab_scopes_function, cutoff_function);
 			if (for_all_ok.status().isBad()) {
 				// if the pstForAll failed, we mark the whole query as failed, but we still return
 				// the scopes that we managed to obtain.
@@ -229,9 +222,8 @@ namespace compiler::helios {
 
 			// REPL and script modules run their top-level statements, so they are allowed there.
 			if (not ctx.query<frontend::QueryIsReplModule>(key)) {
-				auto root = getFilePST(ctx, main_file)->getRootElement().unlockOpt(ctx);
-				if (root.has_value()
-				    and reportStatementsOutsideFunctions(ctx, root.value()->getStatements()))
+				auto root = getFilePST(ctx, main_file)->getRootElement().unlock(ctx);
+				if (reportStatementsOutsideFunctions(ctx, root->getStatements()))
 					output.failed = true;
 			}
 
