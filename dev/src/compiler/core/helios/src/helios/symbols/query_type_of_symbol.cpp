@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
