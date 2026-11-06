@@ -21,6 +21,7 @@ from ..impl.helpers import (
     default_gcov_from_ctx,
 )
 from ...jit.llvm_tools import (LLVM_TOOLS, llvm_tools_version_options)
+import click
 from click import Choice, option, command, prompt
 
 
@@ -62,6 +63,13 @@ def configure_presets(ctx, param, value):
         raise ValueError(f"Unknown preset: {value}")
 
     ctx.default_map = preset_map
+
+    # We want for the options set by the preset to not prompt.
+    # Since click 8.3, it doesn't happen automatically, so we manually
+    # disable the prompt for options set by the preset.
+    for preset_param in ctx.command.params:
+        if preset_param.name in preset_map and isinstance(preset_param, click.Option):
+            preset_param.prompt = None
 
 @command()
 @option(
