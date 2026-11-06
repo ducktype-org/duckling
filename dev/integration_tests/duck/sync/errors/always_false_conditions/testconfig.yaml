@@ -15,5 +15,5 @@ Tests:
         ExitCode: 1
         Err:
           String: |+
-            error: normal dependency \`bar\` is disabled, because it is conditioned on an empty features list [always_false_conditions]
+            error: dependency \`bar\` is disabled, because it is conditioned on an empty features list [always_false_conditions]
             error: emitted 1 error

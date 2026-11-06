@@ -126,7 +126,7 @@ macros::make_diagnostic! {
         dep: StrId,
     }
     display(
-       "{} dependency `{}` is disabled, because it is conditioned on an empty features list",
+       "{}dependency `{}` is disabled, because it is conditioned on an empty features list",
        dep_kind, dep
     )
 }
@@ -138,7 +138,7 @@ macros::make_diagnostic! {
         feature: StrId,
     }
     display(
-       "feature `{}` of {} dependency `{}` is disabled, because it is conditioned on an empty features list",
+       "feature `{}` of {}dependency `{}` is disabled, because it is conditioned on an empty features list",
        feature, dep_kind, dep
     )
 }
@@ -149,7 +149,7 @@ macros::make_diagnostic! {
         dep: StrId,
     }
     display(
-        "{} dependency `{}` is disabled, because it is conditioned only on nonexistent features",
+        "{}dependency `{}` is disabled, because it is conditioned only on nonexistent features",
         dep_kind, dep
     )
 }
@@ -161,7 +161,7 @@ struct DependencyFeatureWithOnlyNonexistentFeaturesDiagnostic {
     feature: StrId,
 }
     display(
-        "feature `{}` of {} dependency `{}` is disabled, because it is conditioned only on nonexistent features",
+        "feature `{}` of {}dependency `{}` is disabled, because it is conditioned only on nonexistent features",
         feature, dep_kind, dep
     )
 }
