@@ -512,7 +512,7 @@ namespace pst {
 		base::Optional<AccessLocked<LangElement>> getParent() const;
 
 		/**
-		 * @brief Returns a string of element type.
+		 * @brief Returns a string describing the element type.
 		 *
 		 * Mostly used for printing errors, visualization and calculating element paths and hashes.
 		 */
