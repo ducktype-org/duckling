@@ -73,6 +73,8 @@ public:
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
+		TESTER_ADD_TEST(testParseErrorsFailModule);
+		TESTER_ADD_TEST(testStatementsOutsideFunctions);
 	}
 
 protected:
@@ -3167,6 +3169,25 @@ private:
 				0
 			);
 		}
+	}
+
+	/**
+	 * A parse error must fail the module even when the parser recovers and every remaining
+	 * statement compiles. The diagnostic itself lives in the PST logger, not in the query context.
+	 */
+	void testParseErrorsFailModule() {
+		checkForErrorOnCompileModule("fun main() -> i64 = { return 0; }\nimport", {}, 0);
+	}
+
+	void testStatementsOutsideFunctions() {
+		checkForErrorOnCompileModule(
+			"var g: i64 = 1;\n"
+			"fun f() -> i64 = 1;\n"
+			"1 + 2;"
+			"\nfun main() -> i64 = { return f(); }\n",
+			{ "Only declarations are allowed at module level." },
+			1
+		);
 	}
 };
 

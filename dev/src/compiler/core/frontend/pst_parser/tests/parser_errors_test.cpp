@@ -29,6 +29,7 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 
 class PSTErrorTests: public tester::TestSuite {
@@ -276,6 +277,24 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
+	Example<pst::TopLevel, true> template_expr_fun_then_stmt{
+		"template(T: type) fun f(x: T) -> T = x;\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_specifier{
+		"template(T: type) public fun f() = {}\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_attribute{
+		"template(T: type) @inline fun f() = {}\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_call_specifier{
+		"template(T: type) extern(\"C\") fundecl f();\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> nested_template{
+		"template(A: type) template(B: type) class P {}\nfun g() = {}"
+	};
+	Example<pst::Class, true> class_with_template_method{
+		"class C { template(T: type) fun m(x: T) = {} fun n() = {} }"
+	};
 
 	Example<pst::Using, true>  simple_using{ "using std.math" };
 	Example<pst::Using, true>  star_using{ "using a.b.*" };
@@ -700,11 +719,95 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	}
 
+	/**
+	 * @brief Parses a program with a single parsing error and checks that the broken statement was
+	 * dropped as a whole while the following code was parsed.
+	 */
+	void assertRecovered(
+		std::string_view code, std::string_view dropped_element, std::string_view kept_element
+	) {
+		auto              parsed      = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+		const std::string diagnostics = renderedDiagnostics(parsed.ref());
+		assertTrue(
+			parsed->getLogger()->errorCount() == 1,
+			base::strConcat("expected exactly one error for `", code, "`, got:\n", diagnostics)
+		);
+
+		std::stringstream tree;
+		parsed->dprint(tree);
+		assertTrue(
+			tree.str().find(dropped_element) == std::string::npos,
+			base::strConcat(
+				"`", dropped_element, "` should be dropped from `", code, "`, got:\n", tree.str()
+			)
+		);
+		assertTrue(
+			tree.str().find(kept_element) != std::string::npos,
+			base::strConcat(
+				"`", kept_element, "` should be kept in `", code, "`, got:\n", tree.str()
+			)
+		);
+	}
+
+	/**
+	 * @brief Tests that an error inside an element that changes the parser context is handled by
+	 * the statement fallback instead of leaving a partially parsed element in the tree.
+	 */
+	void contextRecoveryTests() {
+		assertRecovered("class 5 { }\nfun g() = {}", "\"Class\"", R"("value" : "g")");
+		assertRecovered("class { }\nfun g() = {}", "\"Class\"", R"("value" : "g")");
+		assertRecovered("namespace { }\nfun g() = {}", "\"Namespace\"", R"("value" : "g")");
+		assertRecovered("namespace { ;; }\nfun g() = {}", "\"Namespace\"", R"("value" : "g")");
+		assertRecovered("fun 5() = { }\nfun g() = {}", R"("value" : "5")", R"("value" : "g")");
+		assertRecovered("fun f() = { while { } let a = 1; }", "\"While\"", "\"Let\"");
+		assertRecovered("fun f() = { if { } let a = 1; }", "\"If\"", "\"Let\"");
+		assertRecovered("fun f() = { for x { a = b } let k = 1; }", "\"For\"", "\"Let\"");
+		assertRecovered(
+			"template(T: type) fun 5() = {}\nfun g() = {}",
+			"\"Template Statement\"",
+			R"("value" : "g")"
+		);
+		assertRecovered(
+			"template(T: type) class 5 {}\nfun g() = {}",
+			"\"Template Statement\"",
+			R"("value" : "g")"
+		);
+		assertRecovered(
+			"template class C {}\nfun g() = {}", "\"Template Statement\"", R"("value" : "g")"
+		);
+		assertRecovered(
+			"fun f() = { template class C {} let a = 1; }", "\"Template Statement\"", "\"Let\""
+		);
+		assertRecovered(
+			"fun f() = { template(T: type) let = 5; let a = 1; }",
+			"\"Template Statement\"",
+			"\"Let\""
+		);
+	}
+
+	/**
+	 * @brief Tests that a program always has a root element, even when it could not be tokenized
+	 * or a parsing error was not caught by any statement fallback.
+	 */
+	void rootAlwaysExistsTests() {
+		for (std::string_view code:
+		     { "\"abc", "}", "\xff\xfe", "@@@", "fun f() = {}\n@5\nfun g() = {}" }) {
+			auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+			assertTrue(parsed->hasErrors(), base::strConcat("expected errors for `", code, "`"));
+			assertTrue(
+				parsed->getRootElement().illegalAccess().has_value(),
+				base::strConcat("missing root element for `", code, "`")
+			);
+		}
+	}
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(exampleTests);
 		TESTER_ADD_TEST(diagnosticTests);
 		TESTER_ADD_TEST(sentinelMessageTests);
+		TESTER_ADD_TEST(contextRecoveryTests);
+		TESTER_ADD_TEST(rootAlwaysExistsTests);
 	}
 
 public:
