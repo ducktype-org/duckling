@@ -1,5 +1,5 @@
-# Weekly dev build: builds the Duckling release packages for Linux and macOS and publishes them
-# as the rolling GitHub pre-release `dev-weekly`.
+# Weekly dev build: builds the Duckling release packages and publishes
+# it as the rolling GitHub pre-release `dev-weekly`.
 #
 # The first run creates the release. Later runs replace the assets, then move its tag to the built
 # commit and update the notes.
@@ -53,7 +53,7 @@ jobs:
           - platform: linux
             package: duckling-dev-linux-x86_64
             runner: ubuntu-24.04
-            # As the GCC builds of the test CI (.github/workflows/setup-build-matrix.py).
+            # Note: the compilers should be the same as in test CI (.github/workflows/setup-build-matrix.py).
             cc: gcc-14
             cxx: g++-14
             compiler-name: gcc
@@ -61,11 +61,10 @@ jobs:
             llvm-config: llvm-config-19
           - platform: macos
             package: duckling-dev-macos-arm64
-            # GitHub-hosted Apple Silicon runner, set up as the mac mini of the test CI by
-            # "Install macOS toolchain". Pinned (not macos-latest): the package runs on this macOS
+            # Pinned (not macos-latest): the build package will run on this macOS
             # version and newer, as the compilers target the macOS they run on.
             runner: macos-15
-            # As the macOS builds of the test CI (.github/workflows/setup-build-matrix.py).
+            # Note: the compilers should be the same as in test CI (.github/workflows/setup-build-matrix.py).
             cc: /opt/homebrew/opt/llvm@23/bin/clang
             cxx: /opt/homebrew/opt/llvm@23/bin/clang++
             compiler-name: clang-23-macos
@@ -149,7 +148,8 @@ jobs:
           compiler-name: ${{ matrix.compiler-name }}
           linker: ${{ matrix.linker }}
           dev-dir: ${{ github.workspace }}/dev
-          # Only used on macOS (required there), as in the test CI.
+          # ccache is not used here, but without this argument
+          # the setup-build-env action fails on macOS.
           ccache-dir: ${{ github.workspace }}/dev/.ccache
 
       - name: Setup Rust
@@ -208,7 +208,6 @@ jobs:
         working-directory: _packaging/output
         run: |
           tar -czf "$PACKAGE_NAME.tar.gz" "$PACKAGE_NAME"
-          # sha256sum is not on macOS; `shasum -a 256` writes the same format.
           shasum -a 256 "$PACKAGE_NAME.tar.gz" > "$PACKAGE_NAME.tar.gz.sha256"
           cat "$PACKAGE_NAME.tar.gz.sha256"
 
