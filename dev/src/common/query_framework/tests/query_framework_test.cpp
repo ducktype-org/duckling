@@ -310,9 +310,10 @@ namespace context_leak {
 			// so it is safe to catch the panic here, inside the worker thread.
 			try {
 				leaked_context->query<IdentityQuery>({ 1 });
-			} catch (const base::Panic&) {
-				leak_detected = true;
+			} catch (const base::Panic& panic) {
+				leak_detected = std::string_view(panic.what()).contains("Context is inactive.");
 			}
+
 			return key.value;
 		}
 
@@ -685,9 +686,7 @@ struct IMPLEMENT_QUERY(NonPreservedQuery, u64) {
 		// so it is safe to catch the panic here, inside the worker thread.
 		try {
 			ctx.addMetadata<metadata_tests::metadata_SimpleMeta>(key.value);
-		} catch (const base::Panic&) {
-			metadata_rejected = true;
-		}
+		} catch (const base::Panic&) { metadata_rejected = true; }
 		return key.value;
 	}
 
