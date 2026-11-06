@@ -265,30 +265,36 @@ impl<'duck> Fetcher<'duck> {
     ////                      `OnceCell` helpers and getters                                 ////
     /////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// Get or initialize a new [`AsyncHttpClient`].
     fn http_client(&self) -> &Rc<AsyncHttpClient<'duck>> {
         self.http_client
             .get_or_init(|| Rc::new(AsyncHttpClient::new(self.ctx)))
     }
 
+    /// Get or initialize a new [`downloads::Downloads`].
     fn downloads(&self) -> QuackResult<&downloads::Downloads> {
         self.downloads.try_init_with(|| {
             let download_cache_path = self.ctx.duck_home().downloads();
             downloads::Downloads::new(download_cache_path)
+                .context("failed to create a downloads manager")
         })
     }
 
+    /// Get or initialize a new [`locks::Locks`].
     fn locks(&self) -> QuackResult<&locks::Locks> {
         self.locks.try_init_with(|| {
             let locks = self.ctx.duck_home().cache().join("locks");
-            locks::Locks::new(locks)
+            locks::Locks::new(locks).context("failed to create a fetcher locks manager")
         })
     }
 
+    /// Get or initialize a new [`ducknest::DucknestClient`].
     fn ducknest_client(&self) -> &ducknest::DucknestClient<'duck> {
         self.ducknest_client
             .get_or_init(|| ducknest::DucknestClient::new(self.http_client().clone()))
     }
 
+    /// Get or initialize a new [`cache::ManifestCache`].
     fn cache(&self) -> QuackResult<&RefCell<cache::ManifestCache>> {
         self.cache.try_init_with(|| {
             let metadata_path = self.ctx.duck_home().get_metadata_db_path();
@@ -298,16 +304,19 @@ impl<'duck> Fetcher<'duck> {
             } else {
                 cache::CacheLocation::Path(metadata_path.as_path())
             };
-            let cache = cache::ManifestCache::new(cache_location)?;
+            let cache = cache::ManifestCache::new(cache_location)
+                .context("failed to create an SQLite3 cache client")?;
             Ok(RefCell::new(cache))
         })
     }
 
+    /// Get or initialize a new [`git::GitClient`].
     fn git_client(&self) -> &git::GitClient<'duck> {
         self.git_client
             .get_or_init(|| git::GitClient::new(self.ctx))
     }
 
+    /// Get or initialize a new [`git::fast_path::GitFastPathClient`].
     fn git_fastpath_client(&self) -> &git::fast_path::GitFastPathClient<'duck> {
         self.git_fastpath_client
             .get_or_init(|| git::fast_path::GitFastPathClient::new(self.http_client().clone()))

@@ -119,14 +119,12 @@ impl ManifestCache {
     pub fn new(location: CacheLocation<'_>) -> QuackResult<Self> {
         debug!(target: "duck::sqlite", ?location, "initializing fetcher cache");
         let mut connection = match location {
-            CacheLocation::Memory => rusqlite::Connection::open_in_memory()?,
-            CacheLocation::Path(path) => rusqlite::Connection::open(path)?,
-        };
+            CacheLocation::Memory => rusqlite::Connection::open_in_memory(),
+            CacheLocation::Path(path) => rusqlite::Connection::open(path),
+        }
+        .with_context(|| format!("failed to open an SQLite3 connection in {location}"))?;
         run_migrations(&mut connection, migrations::MIGRATIONS).with_context(|| {
-            format!(
-                "failed to run migrations for a manifest cache in {}",
-                location
-            )
+            format!("failed to run migrations for a manifest cache in {location}")
         })?;
         Ok(Self { connection })
     }

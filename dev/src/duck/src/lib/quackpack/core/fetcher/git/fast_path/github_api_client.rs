@@ -18,7 +18,7 @@
 //!
 //! We perform 2 types of queries.
 //! 1. Get the commit hash for the default branch (`base_api_url/commits`) or for the commit specified by git referense (`base_api_url/commits?sha=<reference>`).
-//! 2. Download the manifest (for a given commit): `base_api_url/contents/<manifest_path>?ref=<commit_hash>`.use http::{HeaderName, HeaderValue, header};
+//! 2. Download the manifest (for a given commit): `base_api_url/contents/<manifest_path>?ref=<commit_hash>`.
 
 use std::rc::Rc;
 
