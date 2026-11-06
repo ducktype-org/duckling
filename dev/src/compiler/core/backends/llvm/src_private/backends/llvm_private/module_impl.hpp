@@ -32,6 +32,10 @@ namespace compiler::backend_llvm {
 
 		~ModuleImpl() = default;
 
+		/**
+		 * @brief Writes the module's current LLVM IR as text to output_file. Panics if the file
+		 * cannot be created.
+		 */
 		void dumpLLVMToFile(const std::filesystem::path& output_file) const;
 
 		[[nodiscard]]

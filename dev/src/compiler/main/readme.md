@@ -8,20 +8,20 @@ artifact directory, and `--print-ir` for printing them to stdout. Printing suppo
 
 The dump categories are listed in compilation order:
 
-| Category | Extension | Backend |
-|----------|-----------|---------|
-| `hir`    | `.hir`    | Either |
-| `mir`    | `.mir`    | Either |
-| `lir`    | `.lir`    | Either |
-| `llvm`   | `.ll`     | LLVM |
-| `llvm-opt` | `.opt.ll` | LLVM |
-| `asm`    | `.s`      | LLVM |
-| `dbc`    | `.dbc`    | DVM |
+| Category   | Extension | Backend |
+|------------|-----------|---------|
+| `hir`      | `.hir`    | Either  |
+| `mir`      | `.mir`    | Either  |
+| `lir`      | `.lir`    | Either  |
+| `llvm`     | `.ll`     | LLVM    |
+| `llvm-opt` | `.opt.ll` | LLVM    |
+| `asm`      | `.s`      | LLVM    |
+| `dbc`      | `.dbc`    | DVM     |
 
 `llvm` contains the raw LLVM IR before LLVM optimization. `llvm-opt` contains IR after applying
 the selected `-O` level and before code generation. They can be requested together, for example
-`--dump-ir asm,llvm,llvm-opt`, without changing the assembly's optimization level. At `-O 0`,
-the optimized-stage dump is still available, with LLVM optimization disabled.
+`--dump-ir asm,llvm,llvm-opt`, without changing the assembly's optimization level. At -O 0 no
+optimization passes run, so the .opt.ll file is the same as the .ll file.
 
 The same artifact location and dump options apply to these commands:
 
