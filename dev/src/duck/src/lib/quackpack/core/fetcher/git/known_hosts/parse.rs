@@ -10,6 +10,7 @@
 
 #![expect(dead_code)]
 
+use base64::prelude::*;
 use tracing::{debug, trace};
 
 /// Marker indicating a certification authority (CA) key.
@@ -51,6 +52,8 @@ pub enum ParseError {
     MissingHashSaltOrHost,
     /// Hashed hostname contains too many delimiters.
     TooManyHashDelims,
+    /// An error occurred while performing a base64 decoding.
+    Base64Decoding(base64::DecodeError),
 }
 
 #[derive(Debug)]
@@ -103,9 +106,10 @@ pub struct NormalHostname {
 ///
 /// Uses HMAC SHA1 algorithm.
 pub struct HashedHostname {
-    /// Salt for the hash.
-    salt: String,
-    host: String,
+    /// Salt for the hash. Already base64 decoded.
+    salt: Vec<u8>,
+    /// Base64 decoded host hash.
+    host: Vec<u8>,
 }
 
 #[derive(Debug)]
@@ -127,7 +131,7 @@ pub struct KnownHostEntry {
     /// Keytype.
     key_type: String,
     /// Base64 decoded key.
-    key: String,
+    key: Vec<u8>,
 }
 
 /// Parse a `known_hosts` file.
@@ -174,13 +178,14 @@ pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
     let base64_key = iter
         .next()
         .ok_or(ParseError::MissingField(MissingFieldType::Key))?;
-    // @TODO: #3153 Decode.
-    let key = base64_key;
+    let key = BASE64_STANDARD
+        .decode(base64_key)
+        .map_err(ParseError::Base64Decoding)?;
     let entry = KnownHostEntry {
         marker,
         hosts,
         key_type: key_type.to_string(),
-        key: key.to_string(),
+        key,
     };
     trace!(target: "duck::git", ?entry, "parsed known_hosts entry");
     Ok(KnownHostsLine::Entry(entry))
@@ -242,11 +247,13 @@ fn parse_hashed_hostname(hostname: &str) -> ParseResult<HashedHostname> {
     if host.contains(HASH_DELIMITER) {
         return Err(ParseError::TooManyHashDelims);
     }
-    Ok(HashedHostname {
-        // @TODO: #3153 These are base64 encoded.
-        salt: salt.to_string(),
-        host: host.to_string(),
-    })
+    let salt = BASE64_STANDARD
+        .decode(salt)
+        .map_err(ParseError::Base64Decoding)?;
+    let host = BASE64_STANDARD
+        .decode(host)
+        .map_err(ParseError::Base64Decoding)?;
+    Ok(HashedHostname { salt, host })
 }
 
 #[cfg(test)]
@@ -256,6 +263,7 @@ mod tests {
     const KEY_TYPE: &str = "ssh-ed25519";
     // Duckling in base64.
     const KEY: &str = "RHVja2xpbmc=";
+    const DUCKLING: &[u8] = b"Duckling";
 
     fn normal(name: &str, is_negated: bool) -> Hostname {
         Hostname::Normal(NormalHostname {
@@ -264,10 +272,10 @@ mod tests {
         })
     }
 
-    fn hashed(salt: &str, host: &str) -> Hostname {
+    fn hashed(salt: &[u8], host: &[u8]) -> Hostname {
         Hostname::Hashed(HashedHostname {
-            salt: salt.to_string(),
-            host: host.to_string(),
+            salt: salt.into(),
+            host: host.into(),
         })
     }
 
@@ -275,13 +283,13 @@ mod tests {
         marker: Option<Marker>,
         hosts: Vec<Hostname>,
         key_type: &str,
-        key: &str,
+        key: &[u8],
     ) -> KnownHostsLine {
         KnownHostsLine::Entry(KnownHostEntry {
             marker,
             hosts,
             key_type: key_type.to_string(),
-            key: key.to_string(),
+            key: key.into(),
         })
     }
 
@@ -310,7 +318,7 @@ mod tests {
                 None,
                 vec![normal("example.com", false)],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -329,7 +337,7 @@ mod tests {
                     normal("192.168.1.1", false),
                 ],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -349,7 +357,7 @@ mod tests {
                     normal("?erver.example.com", false),
                 ],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -368,7 +376,7 @@ mod tests {
                     normal("192.168.1.1", true),
                 ],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -381,7 +389,7 @@ mod tests {
                 Some(Marker::CA),
                 vec![normal("*.example.com", false)],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -394,7 +402,7 @@ mod tests {
                 Some(Marker::Revoked),
                 vec![normal("example.com", false)],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -407,7 +415,7 @@ mod tests {
                 None,
                 vec![normal("example.com", false)],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -420,20 +428,22 @@ mod tests {
                 None,
                 vec![normal("example.com", false)],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
 
     #[test]
     fn hashed_hostname() {
+        let salt_base64 = "c2FsdA==";
+        let host_base64 = "aG9zdA==";
         assert_eq!(
-            parse_known_hosts_line(&format!("|1|some-salt|some-hashed-host {KEY_TYPE} {KEY}")),
+            parse_known_hosts_line(&format!("|1|{salt_base64}|{host_base64} {KEY_TYPE} {KEY}")),
             Ok(entry(
                 None,
-                vec![hashed("some-salt", "some-hashed-host")],
+                vec![hashed(b"salt", b"host")],
                 KEY_TYPE,
-                KEY,
+                DUCKLING,
             ))
         );
     }
@@ -455,18 +465,18 @@ example.com {KEY_TYPE} {KEY}
             Ok(vec![
                 KnownHostsLine::Comment,
                 KnownHostsLine::Comment,
-                entry(None, vec![normal("example.com", false)], KEY_TYPE, KEY,),
+                entry(None, vec![normal("example.com", false)], KEY_TYPE, DUCKLING),
                 entry(
                     Some(Marker::CA),
                     vec![normal("*.example.com", false)],
                     KEY_TYPE,
-                    KEY,
+                    DUCKLING,
                 ),
                 entry(
                     Some(Marker::Revoked),
                     vec![normal("revoked.example.com", false)],
                     KEY_TYPE,
-                    KEY,
+                    DUCKLING,
                 ),
             ])
         );
@@ -529,14 +539,14 @@ example.com {KEY_TYPE} {KEY}
 
     #[test]
     fn bsd_docs() {
-        let salt = "JfKTdBh7rNbXkVAQCRp4OQoPfmI=";
-        let host = "USECr3SWf1JUPsms5AqfD5QfxkM=";
+        let salt_base64 = "c2FsdA==";
+        let host_base64 = "aG9zdA==";
         let file = format!(
             "\
 # Comments allowed at start of line
 cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
 # A hashed hostname
-|1|{salt}|{host} {KEY_TYPE} {KEY}
+|1|{salt_base64}|{host_base64} {KEY_TYPE} {KEY}
 # A revoked key
 @revoked * {KEY_TYPE} {KEY}
 # A CA key, accepted for any host in *.mydomain.com or *.mydomain.org
@@ -555,16 +565,16 @@ cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
                         normal("192.0.2.10", false)
                     ],
                     KEY_TYPE,
-                    KEY,
+                    DUCKLING,
                 ),
                 KnownHostsLine::Comment,
-                entry(None, vec![hashed(salt, host)], KEY_TYPE, KEY,),
+                entry(None, vec![hashed(b"salt", b"host")], KEY_TYPE, DUCKLING),
                 KnownHostsLine::Comment,
                 entry(
                     Some(Marker::Revoked),
                     vec![normal("*", false)],
                     KEY_TYPE,
-                    KEY,
+                    DUCKLING,
                 ),
                 KnownHostsLine::Comment,
                 entry(
@@ -574,7 +584,7 @@ cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
                         normal("*.mydomain.com", false)
                     ],
                     KEY_TYPE,
-                    KEY,
+                    DUCKLING,
                 ),
             ])
         );
