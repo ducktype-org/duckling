@@ -116,11 +116,11 @@ namespace pst {
 		template<class T>
 		struct StmtFinder {
 			/**
-			 * @brief Calculates the heuristic for where a given statement ends. Can be overriden
-			 * when needed.
+			 * @brief Calculates the heuristic for where a given statement starting `base` tokens
+			 * ahead ends. Can be overriden when needed.
 			 */
-			static u64 findStatementLength(LangParserState& state) {
-				return 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				return 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(base + 1);
 			}
 		};
 
@@ -143,21 +143,180 @@ namespace pst {
 			/**
 			 * @brief For function like definitions we have to consider code block vs an expression.
 			 */
-			static u64 findStatementLength(LangParserState& state) {
-				u64 initial_length = 1 + state.ctokens().countUntil<isAssignOrEnd>(1);
-				if (!state[base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				u64 initial_length = 1 + state.ctokens().countUntil<isAssignOrEnd>(base + 1);
+				if (!state[base + base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
 					return initial_length;
 				initial_length++;
-				if (Conditions::isBlockGroup(
-						state.ctokens(), base::safeIntConv<i64>(initial_length)
-					))
-					return initial_length + 1;
-				return initial_length
-				     + state.ctokens().countUntil<isInnerExprEnd>(
-						 base::safeIntConv<i64>(initial_length)
-					 );
+				i64 body = base + base::safeIntConv<i64>(initial_length);
+				if (Conditions::isBlockGroup(state.ctokens(), body)) return initial_length + 1;
+				return initial_length + state.ctokens().countUntil<isInnerExprEnd>(body);
 			}
 		};
+
+		/**
+		 * @brief Calls `visitor.template operator()<T>()` with the statement type chosen for the
+		 * token `at` tokens ahead in the normal statement context. `has_specifiers` tells whether
+		 * the statement was preceded by specifiers.
+		 */
+		template<class Visitor>
+		decltype(auto
+		) visitStmtKind(LangParserState& state, i64 at, bool has_specifiers, Visitor& visitor) {
+			if (has_specifiers && state[at].isBracketGroup(Token::BracketType::Curly))
+				return visitor.template operator()<SpecifierBlock>();
+
+			Keyword as_keyword = state[at].asKeyword();
+
+			switch (as_keyword) {
+			case Keyword::Template:
+				return visitor.template operator()<TemplateStmt>();
+			case Keyword::If:
+				return visitor.template operator()<If>();
+			case Keyword::Fun:
+				return visitor.template operator()<Fun>();
+			case Keyword::FunDecl:
+				return visitor.template operator()<FunDecl>();
+			case Keyword::Pattern:
+				return visitor.template operator()<Pattern>();
+			case Keyword::While:
+				return visitor.template operator()<While>();
+			case Keyword::For:
+				return visitor.template operator()<For>();
+			case Keyword::Import:
+				return visitor.template operator()<Import>();
+			case Keyword::Using:
+				return visitor.template operator()<Using>();
+			case Keyword::Namespace:
+				return visitor.template operator()<Namespace>();
+			case Keyword::Class:
+				return visitor.template operator()<Class>();
+			case Keyword::Block:
+				return visitor.template operator()<Block>();
+			case Keyword::Const:
+				return visitor.template operator()<Const>();
+			case Keyword::Var:
+			case Keyword::Let:
+				return visitor.template operator()<Variable>();
+			case Keyword::Expand:
+				return visitor.template operator()<Expand>();
+			default:
+				break;
+			}
+
+			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
+				return visitor.template operator()<Action>();
+
+			// Expr as stmt have semicolon at the end:
+			return visitor.template operator()<ExprStmt>();
+		}
+
+		/**
+		 * @brief Calls `visitor.template operator()<T>()` with the statement type chosen for the
+		 * token `at` tokens ahead in the class statement context. `has_specifiers` tells whether
+		 * the statement was preceded by specifiers.
+		 */
+		template<class Visitor>
+		decltype(auto
+		) visitClassStmtKind(LangParserState& state, i64 at, bool has_specifiers, Visitor& visitor) {
+			if (has_specifiers && state[at].isBracketGroup(Token::BracketType::Curly))
+				return visitor.template operator()<SpecifierBlock>();
+
+			switch (state[at].asKeyword()) {
+			case Keyword::Template:
+				return visitor.template operator()<TemplateStmt>();
+			case Keyword::Fun:
+				return visitor.template operator()<Method>();
+			case Keyword::Let:
+			case Keyword::Var:
+				return visitor.template operator()<Field>();
+			// These are statements that are not class-specific when adding new ones be careful
+			// about the fact that ContextStmt is set to Class here.
+			case Keyword::Using:
+				return visitor.template operator()<Using>();
+			case Keyword::Class:
+				return visitor.template operator()<Class>();
+			default:
+				break;
+			}
+
+			if (state[at].isStr(state.getContext()->class_name))
+				return visitor.template operator()<ClassSpecial>();
+
+			return visitor.template operator()<Field>();
+		}
+
+		/**
+		 * @brief Calculates the heuristic length of any statement starting `base` tokens ahead,
+		 * including its attributes and specifiers.
+		 */
+		u64 findAnyStatementLength(LangParserState& state, i64 base);
+
+		template<>
+		struct StmtFinder<TemplateStmt> {
+			/**
+			 * @brief The template header followed by the templated statement.
+			 */
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				i64 header_end = base + 1;
+				if (state[header_end].isBracketGroup(Token::BracketType::Round)) header_end++;
+				return base::safeIntConv<u64>(header_end - base)
+				     + findAnyStatementLength(state, header_end);
+			}
+		};
+
+		/**
+		 * @brief Tokens taken by the attributes and specifiers of a statement.
+		 */
+		struct PrefixTokens {
+			u64  length;
+			bool has_specifiers;
+		};
+
+		/**
+		 * @brief Heuristically counts the attribute and specifier tokens starting `base` tokens
+		 * ahead, mirroring what Stmt::collectPrefixes consumes.
+		 */
+		PrefixTokens countPrefixTokens(LangParserState& state, i64 base) {
+			i64  at             = base;
+			bool has_specifiers = false;
+			while (true) {
+				if (state[at].is(Special::AtSign)) {
+					at++;
+					if (state[at].isIdentifier()) at++;
+					while (state[at].is(NamedOperator::Period) && state[at + 1].isIdentifier())
+						at += 2;
+					if (state[at].is(NamedOperator::PeriodStar)) at++;
+					if (state[at].isBracketGroup(Token::BracketType::Round)) at++;
+				} else if (lang_def::keywordFlags(state[at].asKeyword())
+				               .contains(lang_def::KeywordFlagsOptions::IsSpecifier)) {
+					has_specifiers = true;
+					if (StmtSpecifier::SPECIFIEIRS_CALL_LIST_REQUIRED.contains(state[at].asKeyword())
+					    && state[at + 1].isBracketGroup(Token::BracketType::Round))
+						at++;
+					at++;
+				} else {
+					break;
+				}
+			}
+			return { .length = base::safeIntConv<u64>(at - base), .has_specifiers = has_specifiers };
+		}
+
+		u64 findAnyStatementLength(LangParserState& state, i64 base) {
+			auto prefix = countPrefixTokens(state, base);
+			i64  at     = base + base::safeIntConv<i64>(prefix.length);
+			auto length_of
+				= [&]<class T>() -> u64 { return StmtFinder<T>::findStatementLength(state, at); };
+
+			switch (state.getContext()->stmt_context) {
+			case pst::StmtContext::Normal:
+				return prefix.length + visitStmtKind(state, at, prefix.has_specifiers, length_of);
+			case pst::StmtContext::Class:
+				return prefix.length
+				     + visitClassStmtKind(state, at, prefix.has_specifiers, length_of);
+			default:
+				CORE_PANIC("Undefined Stmt parsing context");
+			}
+		}
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
@@ -203,110 +362,6 @@ namespace pst {
 
 			PST_RETURN out;
 		}
-
-		MBox<Stmt> chooseStmt(LangParserState& state) {
-			if (state[0].is(Special::Semicolon)
-			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
-				state.tokens().skip();
-				return nullptr;
-			}
-
-			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
-				state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
-				return nullptr;
-			}
-
-			Keyword as_keyword = state[0].asKeyword();
-
-			switch (as_keyword) {
-			case Keyword::If:
-				return internal::parseStmt<If>(state);
-
-			case Keyword::Fun:
-				return internal::parseStmt<Fun>(state);
-
-			case Keyword::FunDecl:
-				return internal::parseStmt<FunDecl>(state);
-
-			case Keyword::Pattern:
-				return internal::parseStmt<Pattern>(state);
-
-			case Keyword::While:
-				return internal::parseStmt<While>(state);
-
-			case Keyword::For:
-				return internal::parseStmt<For>(state);
-
-			case Keyword::Import:
-				return internal::parseStmt<Import>(state);
-
-			case Keyword::Using:
-				return internal::parseStmt<Using>(state);
-
-			case Keyword::Namespace:
-				return internal::parseStmt<Namespace>(state);
-
-			case Keyword::Class:
-				return internal::parseStmt<Class>(state);
-
-			case Keyword::Block:
-				return internal::parseStmt<Block>(state);
-
-			case Keyword::Const:
-				return internal::parseStmt<Const>(state);
-
-			case Keyword::Var:
-			case Keyword::Let:
-				return internal::parseStmt<Variable>(state);
-
-			case Keyword::Expand:
-				return internal::parseStmt<Expand>(state);
-			default:
-				break;
-			}
-
-			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
-				return internal::parseStmt<Action>(state);
-
-			// Expr as stmt have semicolon at the end:
-			return internal::parseStmt<ExprStmt>(state);
-		}
-
-		MBox<Stmt> chooseClassStmt(LangParserState& state) {
-			if (state[0].is(Special::Semicolon)
-			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
-				state.tokens().skip();
-				return nullptr;
-			}
-
-			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
-				state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
-				return nullptr;
-			}
-
-			Keyword as_keyword = state[0].asKeyword();
-
-			switch (as_keyword) {
-			case Keyword::Fun:
-				return parseStmt<Method>(state);
-			case Keyword::Let:
-			case Keyword::Var:
-				return parseStmt<Field>(state);
-			// These are statements that are not class-specific when adding new ones be careful
-			// about the fact that ContextStmt is set to Class here.
-			case Keyword::Using:
-				return parseStmt<Using>(state);
-			case Keyword::Class:
-				return parseStmt<Class>(state);
-			default:
-				break;
-			}
-
-			if (state[0].isStr(state.getContext()->class_name))
-				return parseStmt<ClassSpecial>(state);
-
-			return parseStmt<Field>(state);
-		}
 	}
 
 	Stmt::PrefixBoxes Stmt::collectPrefixes(LangParserState& state) {
@@ -337,28 +392,36 @@ namespace pst {
 
 	MBox<Stmt> Stmt::parse(LangParserState& state) {
 		// Collect Attributes
+		auto prefix_tokens = internal::countPrefixTokens(state, 0);
+		if (prefix_tokens.length > 0) fallbackLen(state, prefix_tokens.length);
 		auto prefixes = collectPrefixes(state);
+		if (prefix_tokens.length > 0) exitFallback(state);
+
+		if (state[0].is(Special::Semicolon)
+		    && (state[-1].is(Special::Semicolon) || internal::isSentinel(state, -1))) {
+			state.tokens().skip();
+			return nullptr;
+		}
+
+		if (state[0].is(Special::Semicolon) || internal::isSentinel(state, 0)) {
+			state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
+			return nullptr;
+		}
+
+		bool has_specifiers = prefix_tokens.has_specifiers;
+		auto parse_stmt = [&]<class T>() -> MBox<Stmt> { return internal::parseStmt<T>(state); };
 
 		MBox<Stmt> out;
-
-		if (state[0].is(Keyword::Template)) {
-			// Template statement handling
-			out = TemplateStmt::parse(state);
-		} else if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
-			// Specifier block handling
-			out = internal::parseStmt<SpecifierBlock>(state);
-		} else {
-			// Parse Statement based on context
-			switch (state.getContext()->stmt_context) {
-			case pst::StmtContext::Normal:
-				out = internal::chooseStmt(state);
-				break;
-			case pst::StmtContext::Class:
-				out = internal::chooseClassStmt(state);
-				break;
-			default:
-				CORE_PANIC("Undefined Stmt parsing context");
-			}
+		// Parse Statement based on context
+		switch (state.getContext()->stmt_context) {
+		case pst::StmtContext::Normal:
+			out = internal::visitStmtKind(state, 0, has_specifiers, parse_stmt);
+			break;
+		case pst::StmtContext::Class:
+			out = internal::visitClassStmtKind(state, 0, has_specifiers, parse_stmt);
+			break;
+		default:
+			CORE_PANIC("Undefined Stmt parsing context");
 		}
 
 		// Add Attributes and Specifiers

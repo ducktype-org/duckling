@@ -271,6 +271,24 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
+	Example<pst::TopLevel, true> template_expr_fun_then_stmt{
+		"template(T: type) fun f(x: T) -> T = x;\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_specifier{
+		"template(T: type) public fun f() = {}\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_attribute{
+		"template(T: type) @inline fun f() = {}\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_call_specifier{
+		"template(T: type) extern(\"C\") fundecl f();\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> nested_template{
+		"template(A: type) template(B: type) class P {}\nfun g() = {}"
+	};
+	Example<pst::Class, true> class_with_template_method{
+		"class C { template(T: type) fun m(x: T) = {} fun n() = {} }"
+	};
 
 	Example<pst::Using, true>  simple_using{ "using std.math" };
 	Example<pst::Using, true>  star_using{ "using a.b.*" };
@@ -726,14 +744,35 @@ class PSTErrorTests: public tester::TestSuite {
 	 * the statement fallback instead of leaving a partially parsed element in the tree.
 	 */
 	void contextRecoveryTests() {
-		assertRecovered("class 5 { }\nfun g() = {}", "\"Class\"", "\"value\" : \"g\"");
-		assertRecovered("class { }\nfun g() = {}", "\"Class\"", "\"value\" : \"g\"");
-		assertRecovered("namespace { }\nfun g() = {}", "\"Namespace\"", "\"value\" : \"g\"");
-		assertRecovered("namespace { ;; }\nfun g() = {}", "\"Namespace\"", "\"value\" : \"g\"");
-		assertRecovered("fun 5() = { }\nfun g() = {}", "\"value\" : \"5\"", "\"value\" : \"g\"");
+		assertRecovered("class 5 { }\nfun g() = {}", "\"Class\"", R"("value" : "g")");
+		assertRecovered("class { }\nfun g() = {}", "\"Class\"", R"("value" : "g")");
+		assertRecovered("namespace { }\nfun g() = {}", "\"Namespace\"", R"("value" : "g")");
+		assertRecovered("namespace { ;; }\nfun g() = {}", "\"Namespace\"", R"("value" : "g")");
+		assertRecovered("fun 5() = { }\nfun g() = {}", R"("value" : "5")", R"("value" : "g")");
 		assertRecovered("fun f() = { while { } let a = 1; }", "\"While\"", "\"Let\"");
 		assertRecovered("fun f() = { if { } let a = 1; }", "\"If\"", "\"Let\"");
 		assertRecovered("fun f() = { for x { a = b } let k = 1; }", "\"For\"", "\"Let\"");
+		assertRecovered(
+			"template(T: type) fun 5() = {}\nfun g() = {}",
+			"\"Template Statement\"",
+			R"("value" : "g")"
+		);
+		assertRecovered(
+			"template(T: type) class 5 {}\nfun g() = {}",
+			"\"Template Statement\"",
+			R"("value" : "g")"
+		);
+		assertRecovered(
+			"template class C {}\nfun g() = {}", "\"Template Statement\"", R"("value" : "g")"
+		);
+		assertRecovered(
+			"fun f() = { template class C {} let a = 1; }", "\"Template Statement\"", "\"Let\""
+		);
+		assertRecovered(
+			"fun f() = { template(T: type) let = 5; let a = 1; }",
+			"\"Template Statement\"",
+			"\"Let\""
+		);
 	}
 
 public:
