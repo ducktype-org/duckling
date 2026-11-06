@@ -129,14 +129,12 @@ jobs:
           HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         run: |
           set -euo pipefail
-          # llvm@19: the LLVM libraries linked into the release (with its zstd, linked statically
-          # by ReleasePreset). llvm@23: the compilers. lld: the linker setup-build picks on macOS.
-          # icu4c, ccache: only checked by setup-macos-build-env (the release builds its own static
-          # ICU, and package.py builds without ccache).
           brew install llvm@19 llvm@23 lld icu4c ccache ninja sccache
-          # setup-macos-rust looks for sccache next to cargo, as the mac mini has it.
+
+          # We link sccache to cargo location to match the expected locations
+          # of the test CI environment and reuse setup workflows.
           ln -sfn "$(brew --prefix)/bin/sccache" "$HOME/.cargo/bin/sccache"
-          # The hosted mac has much less disk space than the Linux runner.
+ 
           df -h "$GITHUB_WORKSPACE"
 
       - name: Setup build environment
@@ -201,7 +199,7 @@ jobs:
             < /dev/null
 
       - name: Disk usage
-        if: always() && matrix.platform == 'macos'
+        if: always()
         run: df -h "$GITHUB_WORKSPACE"
 
       - name: Create archive
