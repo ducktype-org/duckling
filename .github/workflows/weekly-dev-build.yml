@@ -131,6 +131,12 @@ jobs:
           set -euo pipefail
           brew install llvm@19 llvm@23 lld icu4c ccache ninja sccache
 
+          # The image's rustup comes from Homebrew, without ~/.cargo/bin and ~/.cargo/env, which
+          # setup-macos-rust expects (a per-account rustup, as in the test CI environment).
+          # The standard installer adds them and reuses the toolchains already in ~/.rustup.
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y --no-modify-path --profile minimal
+
           # We link sccache to cargo location to match the expected locations
           # of the test CI environment and reuse setup workflows.
           ln -sfn "$(brew --prefix)/bin/sccache" "$HOME/.cargo/bin/sccache"
