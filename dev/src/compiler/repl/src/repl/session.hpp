@@ -20,7 +20,7 @@
 #include <backends/dvm/repl_lowering.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <base/collections/optional.hpp>

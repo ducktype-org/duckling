@@ -11,7 +11,7 @@
 
 #include "chain_expr.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>
@@ -695,8 +695,9 @@ namespace compiler::helios::code {
 		 * and the current state is an expression (not a namespace e.x.).
 		 * Should check if accessed field is a namespace or not.
 		 */
-		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
-			-> query::QResult<ChainState> {
+		auto processPSTExpr(
+			base::Box<Expr> current_expr, pst::Access<pst::expr::AccessExpr> expr_access
+		) -> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_qresult
 				= HInterface::ofTypeInstance(current_expr_type)
@@ -805,8 +806,9 @@ namespace compiler::helios::code {
 		 * When we have an access expression not followed by a call expression,
 		 * for example "NS.value" or "NS.value.y" amd the current state is a namespace.
 		 */
-		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
-			-> query::QResult<ChainState> {
+		auto processPSTExpr(
+			SymID namespace_like_symbol, pst::Access<pst::expr::AccessExpr> expr_access
+		) -> query::QResult<ChainState> {
 			const auto& lookup_result = HInterface::ofSymbol(query_ctx, namespace_like_symbol)
 			                                .lookupExpectUnique(
 												expr_access->getStablePosition(),
@@ -828,9 +830,9 @@ namespace compiler::helios::code {
 		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
-			base::Box<Expr>                current_expr,
-			pst::Access<pst::expr::Access> expr_access,
-			pst::Access<pst::expr::Call>   call_expr
+			base::Box<Expr>                    current_expr,
+			pst::Access<pst::expr::AccessExpr> expr_access,
+			pst::Access<pst::expr::Call>       call_expr
 		) -> query::QResult<ChainState> {
 			CORE_ASSERT(
 				call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'"
@@ -901,9 +903,9 @@ namespace compiler::helios::code {
 		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
-			SymID                          namespace_like_symbol,
-			pst::Access<pst::expr::Access> expr_access,
-			pst::Access<pst::expr::Call>   call_expr
+			SymID                              namespace_like_symbol,
+			pst::Access<pst::expr::AccessExpr> expr_access,
+			pst::Access<pst::expr::Call>       call_expr
 		) -> query::QResult<ChainState> {
 			CORE_ASSERT(
 				call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'"
@@ -941,7 +943,7 @@ namespace compiler::helios::code {
 		 * Case when we have an access expression not followed by a call expression and the
 		 * current state is a type, for example "MyClass.CONSTANT".
 		 */
-		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::Access> expr_access)
+		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::AccessExpr> expr_access)
 			-> query::QResult<ChainState> {
 			auto lookup_result = HInterface::ofTypeMeta(type.type).lookupExpectUnique(
 				expr_access->getStablePosition(),
@@ -963,9 +965,9 @@ namespace compiler::helios::code {
 		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
-			TypeInChain                    type,
-			pst::Access<pst::expr::Access> expr_access,
-			pst::Access<pst::expr::Call>   call_expr
+			TypeInChain                        type,
+			pst::Access<pst::expr::AccessExpr> expr_access,
+			pst::Access<pst::expr::Call>       call_expr
 		) -> query::QResult<ChainState> {
 			CORE_ASSERT(
 				call_expr->getType() == lexer::Token::Round, "Expected a round call expression '()'"
@@ -1404,11 +1406,11 @@ namespace compiler::helios::code {
 					const bool with_call = isNextRoundCall();
 					error                = stepTemplateBake(with_call);
 					this->index += with_call ? 2 : 1;
-				} else if (isCurrentElement<pst::expr::Access>() && isNextRoundCall()) {
-					error = step<pst::expr::Access, pst::expr::Call>();
+				} else if (isCurrentElement<pst::expr::AccessExpr>() && isNextRoundCall()) {
+					error = step<pst::expr::AccessExpr, pst::expr::Call>();
 					this->index += 2;  // skip next element, because it is handled
-				} else if (isCurrentElement<pst::expr::Access>()) {
-					error = step<pst::expr::Access>();
+				} else if (isCurrentElement<pst::expr::AccessExpr>()) {
+					error = step<pst::expr::AccessExpr>();
 					this->index++;
 				}
 

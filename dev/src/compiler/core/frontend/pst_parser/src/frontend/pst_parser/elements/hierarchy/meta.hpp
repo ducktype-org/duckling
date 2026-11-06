@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include "../../elements/elements_list.hpp"
-#include "../../lang_parser_element.hpp"
-#include "../../pst_state_forward.hpp"
-#include "../elements_common.hpp"
-#include "../lang_state_unmethods.hpp"
+#include "../../base_element/lang_parser_element.hpp"
+#include "../../elements/common/elements_list.hpp"
+#include "../../state/lang_state_unmethods.hpp"
+#include "../../state/pst_state_forward.hpp"
+#include "../common/elements_common.hpp"
 #include "stmt_kind_fd.hpp"
 
 #include <diagnostic/source_position.hpp>
