@@ -29,6 +29,7 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 
 class PSTErrorTests: public tester::TestSuite {
@@ -690,11 +691,57 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	}
 
+	/**
+	 * @brief Parses a program with a single parsing error and checks that the broken statement was
+	 * dropped as a whole while the following code was parsed.
+	 */
+	void assertRecovered(
+		std::string_view code, std::string_view dropped_element, std::string_view kept_element
+	) {
+		auto              parsed      = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+		const std::string diagnostics = renderedDiagnostics(parsed.ref());
+		assertTrue(
+			parsed->getLogger()->errorCount() == 1,
+			base::strConcat("expected exactly one error for `", code, "`, got:\n", diagnostics)
+		);
+
+		std::stringstream tree;
+		parsed->dprint(tree);
+		assertTrue(
+			tree.str().find(dropped_element) == std::string::npos,
+			base::strConcat(
+				"`", dropped_element, "` should be dropped from `", code, "`, got:\n", tree.str()
+			)
+		);
+		assertTrue(
+			tree.str().find(kept_element) != std::string::npos,
+			base::strConcat(
+				"`", kept_element, "` should be kept in `", code, "`, got:\n", tree.str()
+			)
+		);
+	}
+
+	/**
+	 * @brief Tests that an error inside an element that changes the parser context is handled by
+	 * the statement fallback instead of leaving a partially parsed element in the tree.
+	 */
+	void contextRecoveryTests() {
+		assertRecovered("class 5 { }\nfun g() = {}", "\"Class\"", "\"value\" : \"g\"");
+		assertRecovered("class { }\nfun g() = {}", "\"Class\"", "\"value\" : \"g\"");
+		assertRecovered("namespace { }\nfun g() = {}", "\"Namespace\"", "\"value\" : \"g\"");
+		assertRecovered("namespace { ;; }\nfun g() = {}", "\"Namespace\"", "\"value\" : \"g\"");
+		assertRecovered("fun 5() = { }\nfun g() = {}", "\"value\" : \"5\"", "\"value\" : \"g\"");
+		assertRecovered("fun f() = { while { } let a = 1; }", "\"While\"", "\"Let\"");
+		assertRecovered("fun f() = { if { } let a = 1; }", "\"If\"", "\"Let\"");
+		assertRecovered("fun f() = { for x { a = b } let k = 1; }", "\"For\"", "\"Let\"");
+	}
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(exampleTests);
 		TESTER_ADD_TEST(diagnosticTests);
 		TESTER_ADD_TEST(sentinelMessageTests);
+		TESTER_ADD_TEST(contextRecoveryTests);
 	}
 
 public:

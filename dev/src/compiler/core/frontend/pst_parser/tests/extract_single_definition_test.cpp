@@ -109,7 +109,7 @@ private:
 	void testSingleFunctionDefinition() {
 		ASSERT_HAS_VALUE(extract("fun foo() = {}"), "Function declaration should be returned");
 		ASSERT_HAS_VALUE(
-			extract("fun bar(x: i32): i32 = { x + 1 }"),
+			extract("fun bar(x: i32) -> i32 = { x + 1 }"),
 			"Function with parameters and body should be returned"
 		);
 		ASSERT_HAS_VALUE(
@@ -124,7 +124,8 @@ private:
 			extract("class Bar { var x: i32; }"), "Class with members should be returned"
 		);
 		ASSERT_HAS_VALUE(
-			extract("class Baz<T> { fun method() = {} }"), "Generic class should be returned"
+			extract("template(T: type) class Baz { fun method() = {} }"),
+			"Generic class should be returned"
 		);
 	}
 

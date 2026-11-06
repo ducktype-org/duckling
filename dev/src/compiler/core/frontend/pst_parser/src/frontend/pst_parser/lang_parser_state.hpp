@@ -117,6 +117,18 @@ namespace pst {
 		void setContextStmt(StmtContext);
 
 		/**
+		 * @brief Saves the current context so it can be brought back with restoreContext.
+		 * It doesn't interact with fallbacks, skipping or the token stream.
+		 */
+		[[nodiscard]]
+		BoxOrCRef<tpc::ParserContext> saveContext();
+
+		/**
+		 * @brief Restores the context returned by saveContext, discarding changes made since.
+		 */
+		void restoreContext(BoxOrCRef<tpc::ParserContext>&& saved);
+
+		/**
 		 * @brief Adds to the balance of skipped_entries
 		 */
 		void skipEntry() {

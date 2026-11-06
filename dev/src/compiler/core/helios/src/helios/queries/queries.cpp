@@ -119,11 +119,6 @@ namespace compiler::helios {
 				out->failed = true;
 				return;
 			}
-
-			// The parser recovers from errors and still builds a partial tree, so the root can be
-			// fine while some statements are broken or missing. Any parse error is a hard error
-			// for the module: the PST has already reported it, we only fail here. We still walk
-			// the partial tree to report as many HELIOS diagnostics as possible.
 			if (file_pst->hasErrors()) out->failed = true;
 
 			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {

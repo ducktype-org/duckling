@@ -45,11 +45,8 @@ namespace pst {
 		auto new_stream = ctokens().getSubstream(ctokens().size());
 		fallback_stack.emplace_back(SoftFallback{ .saved_context = std::move(current_context),
 		                                          .fail_jump     = std::move(jump_on_error) });
-		current_stream = makeBox<TokenStream>(std::move(new_stream));
-		variant_match(std::get<SoftFallback>(fallback_stack.back()).saved_context) {
-			variant_case(CRef<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref; }
-			variant_case(Box<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref.ref(); }
-		}
+		current_stream  = makeBox<TokenStream>(std::move(new_stream));
+		current_context = std::get<SoftFallback>(fallback_stack.back()).saved_context.ref();
 	}
 
 	void LangParserState::setFallback(u64 length) {
@@ -58,11 +55,8 @@ namespace pst {
 		                                      .saved_stream  = std::move(current_stream),
 		                                      .saved_context = std::move(current_context),
 		                                      .post_jump     = length });
-		current_stream = makeBox<TokenStream>(std::move(new_stream));
-		variant_match(std::get<Fallback>(fallback_stack.back()).saved_context) {
-			variant_case(CRef<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref; }
-			variant_case(Box<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref.ref(); }
-		}
+		current_stream  = makeBox<TokenStream>(std::move(new_stream));
+		current_context = std::get<Fallback>(fallback_stack.back()).saved_context.ref();
 	}
 
 	void LangParserState::exitFallback() {
@@ -114,44 +108,39 @@ namespace pst {
 	}
 
 	CRef<LangParserContext> LangParserState::getContext() const {
-		variant_match(current_context) {
-			variant_case(CRef<tpc::ParserContext>, ref) {
-				return { dynamic_cast<const LangParserContext*>(&*ref) };
-			}
-			variant_case(Box<tpc::ParserContext>, box) {
-				return { dynamic_cast<const LangParserContext*>(&*box) };
-			}
-		}
-		CORE_UNREACHABLE();
+		return { dynamic_cast<const LangParserContext*>(current_context.get()) };
 	}
 
 	void LangParserState::copyOwnContext() {
-		if (std::holds_alternative<CRef<tpc::ParserContext>>(current_context))
-			current_context = std::get<CRef<tpc::ParserContext>>(current_context)->copy();
+		if (current_context.isRef()) current_context = current_context->copy();
 	}
 
 	void LangParserState::setContextClassName(base::StrID name) {
 		if (name == getContext()->class_name) return;
 		copyOwnContext();
-		dynamic_cast<LangParserContext*>(&*std::get<Box<tpc::ParserContext>>(current_context))
-			->class_name
-			= name;
+		dynamic_cast<LangParserContext*>(&*current_context.getBox())->class_name = name;
 	}
 
 	void LangParserState::setContextBlockOrdering(BlockOrderType type) {
 		if (type == getContext()->block_order) return;
 		copyOwnContext();
-		dynamic_cast<LangParserContext*>(&*std::get<Box<tpc::ParserContext>>(current_context))
-			->block_order
-			= type;
+		dynamic_cast<LangParserContext*>(&*current_context.getBox())->block_order = type;
 	}
 
 	void LangParserState::setContextStmt(StmtContext type) {
 		if (type == getContext()->stmt_context) return;
 		copyOwnContext();
-		dynamic_cast<LangParserContext*>(&*std::get<Box<tpc::ParserContext>>(current_context))
-			->stmt_context
-			= type;
+		dynamic_cast<LangParserContext*>(&*current_context.getBox())->stmt_context = type;
+	}
+
+	BoxOrCRef<tpc::ParserContext> LangParserState::saveContext() {
+		BoxOrCRef<tpc::ParserContext> saved = std::move(current_context);
+		current_context                     = saved.ref();
+		return saved;
+	}
+
+	void LangParserState::restoreContext(BoxOrCRef<tpc::ParserContext>&& saved) {
+		current_context = std::move(saved);
 	}
 
 	class NotAllParsedError final: public dia::MessageWithCodeFragmentAndCause {
