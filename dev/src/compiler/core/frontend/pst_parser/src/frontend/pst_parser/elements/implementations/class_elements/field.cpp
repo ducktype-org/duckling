@@ -14,14 +14,12 @@ namespace pst {
 	MBox<Field> Field::parse(LangParserState& state) {
 		auto out = makeBox<Field>(state);
 
-		// We declare fields without `let` or `var` so `let x: T` or `var x: T` are reported as it
-		// may be a common mistake.
+		// A field takes its mutability from its type, so it has no `let`/`var`. People will still
+		// write them out of habit, so we report the keyword and parse the rest of the field.
 		if (state[0].is(Keyword::Let) || state[0].is(Keyword::Var)) {
-			state.logSafeError(
-				makeBox<FieldBindingKeywordError>(
-					state.getPosition(), lang_def::keywordToStr(state[0].asKeyword()).str()
-				)
-			);
+			state.logSafeError(makeBox<FieldBindingKeywordError>(
+				state.getPosition(), lang_def::keywordToStr(state[0].asKeyword()).str()
+			));
 			state.tokens().skip();
 		}
 

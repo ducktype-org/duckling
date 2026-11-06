@@ -557,6 +557,17 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				class A {
+					y: imm i64 = 2;
+					fun setY() = { y = 10; return; }
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
 				fun main() -> i64 = {
 					let x: i64 = 0;
 					x += 1;
