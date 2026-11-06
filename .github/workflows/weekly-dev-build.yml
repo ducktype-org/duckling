@@ -61,10 +61,11 @@ jobs:
             llvm-config: llvm-config-19
           - platform: macos
             package: duckling-dev-macos-arm64
-            # The mac mini of the test CI.
-            runner: { group: SelfHostedRunners, labels: macOS }
-            # As the macOS builds of the test CI (.github/workflows/setup-build-matrix.py); the
-            # packaging scripts use the same compilers by default on macOS.
+            # GitHub-hosted Apple Silicon runner, set up as the mac mini of the test CI by
+            # "Install macOS toolchain". Pinned (not macos-latest): the package runs on this macOS
+            # version and newer, as the compilers target the macOS they run on.
+            runner: macos-15
+            # As the macOS builds of the test CI (.github/workflows/setup-build-matrix.py).
             cc: /opt/homebrew/opt/llvm@23/bin/clang
             cxx: /opt/homebrew/opt/llvm@23/bin/clang++
             compiler-name: clang-23-macos
@@ -80,13 +81,6 @@ jobs:
       PACKAGE_NAME: ${{ matrix.package }}
 
     steps:
-      # The self-hosted mac keeps its workspace between jobs, as in the test CI.
-      - name: Clean workspace
-        if: matrix.platform == 'macos'
-        run: |
-          rm -rf "$GITHUB_WORKSPACE"
-          mkdir -p "$GITHUB_WORKSPACE"
-
       # Duckling goes to the workspace root, as in test CI.
       - name: Checkout Duckling
         uses: actions/checkout@v6
@@ -116,6 +110,35 @@ jobs:
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
           echo "deb https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-19 main" \
             | sudo tee /etc/apt/sources.list.d/llvm-19.list
+
+      # setup-macos-build-env and setup-macos-rust expect what the mac mini of the test CI has
+      # installed (and check it); a GitHub-hosted runner has to install it first. Its image already
+      # has Homebrew, cmake and rustup.
+      # The venv of setup-macos-build-env needs python3.14, 3.13 or 3.12 on PATH; the image has only
+      # Homebrew's newer python3 there (the others are in the tool cache).
+      - name: Setup Python (macOS)
+        if: matrix.platform == 'macos'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install macOS toolchain
+        if: matrix.platform == 'macos'
+        env:
+          # A fresh runner: no need to clean up old versions or to check what else depends on them.
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+        run: |
+          set -euo pipefail
+          # llvm@19: the LLVM libraries linked into the release (with its zstd, linked statically
+          # by ReleasePreset). llvm@23: the compilers. lld: the linker setup-build picks on macOS.
+          # icu4c, ccache: only checked by setup-macos-build-env (the release builds its own static
+          # ICU, and package.py builds without ccache).
+          brew install llvm@19 llvm@23 lld icu4c ccache ninja sccache
+          # setup-macos-rust looks for sccache next to cargo, as the mac mini has it.
+          ln -sfn "$(brew --prefix)/bin/sccache" "$HOME/.cargo/bin/sccache"
+          # The hosted mac has much less disk space than the Linux runner.
+          df -h "$GITHUB_WORKSPACE"
 
       - name: Setup build environment
         uses: ./.github/actions/setup-build-env/
@@ -176,6 +199,10 @@ jobs:
             --cc-compiler '${{ matrix.cc }}' \
             ${{ inputs.exclude-duck && '--exclude-product duck' || '' }} \
             < /dev/null
+
+      - name: Disk usage
+        if: always() && matrix.platform == 'macos'
+        run: df -h "$GITHUB_WORKSPACE"
 
       - name: Create archive
         working-directory: _packaging/output
