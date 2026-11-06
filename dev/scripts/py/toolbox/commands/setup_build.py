@@ -218,7 +218,7 @@ def configure_presets(ctx, param, value):
 )
 @option(
     "--link-static-zstd/--no-link-static-zstd",
-    help="Links the zstd library that LLVM depends on statically (LINK_STATIC_ZSTD). macOS has no system zstd, so portable macOS binaries need it.",
+    help="Links the zstd library that LLVM depends on statically (LINK_STATIC_ZSTD).",
     type=bool,
     default=False,
     is_flag=True,

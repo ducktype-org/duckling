@@ -38,8 +38,8 @@ if(APPLE)
 endif()
 
 # An LLVM built with zstd support (LLVM_ENABLE_ZSTD, e.g. Homebrew's or Ubuntu's) makes LLVMSupport
-# link the shared zstd library. That library is not part of macOS, so a binary linking it runs only
-# where zstd is installed. With LINK_STATIC_ZSTD, the static zstd library is linked instead.
+# link the shared zstd library. With LINK_STATIC_ZSTD, the static zstd library is linked instead.
+#  macOS has no system zstd, so portable macOS binaries need it.
 option(LINK_STATIC_ZSTD "Link the zstd library that LLVM depends on statically (portable binaries on macOS)." OFF)
 if(LINK_STATIC_ZSTD)
 	if(NOT LLVM_ENABLE_ZSTD)
