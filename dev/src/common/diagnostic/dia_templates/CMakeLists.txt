@@ -5,33 +5,19 @@
 option(EMBED_ASSETS "Embed files into the binary for self-contained builds" OFF)
 
 if(EMBED_ASSETS)
-# Embeds YAML template files as binary data into the executable
-# Generates a zero-copy std::string_view-based registry for runtime access
-# There is another more portable way to do this with converting files into C++ arrays
+# Embeds the YAML template files into the executable, as C++ byte arrays generated here, with a
+# zero-copy std::string_view-based registry for runtime access.
+# Portable: unlike `objcopy -I binary` (ELF only), it works for Mach-O (macOS) and any compiler.
 
-# Detect platform and set appropriate objcopy tool and format
-if(WIN32)
-    # On Windows, use llvm-objcopy with COFF format
-    find_program(OBJCOPY_TOOL llvm-objcopy)
-    if(NOT OBJCOPY_TOOL)
-        message(FATAL_ERROR "llvm-objcopy not found. Please install LLVM or ensure it's in PATH")
-    endif()
-    set(OBJCOPY_FORMAT "coff-x86-64")
-else()
-    # On Linux/Unix, use standard objcopy with ELF format
-    find_program(OBJCOPY_TOOL objcopy)
-    if(NOT OBJCOPY_TOOL)
-        message(FATAL_ERROR "objcopy not found. Please install binutils")
-    endif()
-    set(OBJCOPY_FORMAT "elf64-x86-64")
-endif()
-
-# Find all YAML template files
+# Find all YAML template files. CONFIGURE_DEPENDS: a template added (or removed) later must
+# re-run CMake, otherwise an existing build dir silently leaves it out.
 file(GLOB_RECURSE TEMPLATE_FILES
     RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/templates"
+    CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/templates/*.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/templates/*.yml"
 )
+list(SORT TEMPLATE_FILES)
 
 list(LENGTH TEMPLATE_FILES LIST_LENGTH)
 message(STATUS "Found ${LIST_LENGTH} template files to embed")
@@ -39,56 +25,40 @@ message(STATUS "Found ${LIST_LENGTH} template files to embed")
 # Directory for generated file
 set(EMBED_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/diagnostic/dia_templates")
 
-# Lists to collect generated files
-set(EMBEDDED_OBJECTS "")
-set(EXTERN_DECLARATIONS "")
+# Collected parts of the generated file
+set(EMBEDDED_DATA "")
 set(REGISTRY_ENTRIES "")
 
 # Process each template file
+set(TEMPLATE_INDEX 0)
 foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
     # Get the relative path and remove the file extension for the hashmap key
     set(TEMPLATE_KEY "${TEMPLATE_FILE}")
     string(REGEX REPLACE "\\.(yaml|yml)$" "" TEMPLATE_KEY "${TEMPLATE_KEY}")
-    
-    # Create a safe symbol name by replacing / and . with _
-    string(REPLACE "/" "_" SYMBOL_NAME "${TEMPLATE_FILE}")
-    string(REPLACE "." "_" SYMBOL_NAME "${SYMBOL_NAME}")
-    
-    # Full path to the template file
-    set(TEMPLATE_PATH_RELATIVE "${TEMPLATE_FILE}")
+
+    # The array is named by the position in the sorted list (the path is in a comment above it):
+    # always a valid identifier, and two paths can never map to the same name.
+    set(SYMBOL_NAME "template_${TEMPLATE_INDEX}")
+    math(EXPR TEMPLATE_INDEX "${TEMPLATE_INDEX} + 1")
+
     set(TEMPLATE_PATH_FULL "${CMAKE_CURRENT_SOURCE_DIR}/templates/${TEMPLATE_FILE}")
-    
-    # Output object file path
-    set(OBJ_FILE "${EMBED_GEN_DIR}/${SYMBOL_NAME}.o")
-    
-    # Custom command to convert YAML to object file
-    add_custom_command(
-        OUTPUT ${OBJ_FILE}
-        COMMAND ${OBJCOPY_TOOL} -I binary -O ${OBJCOPY_FORMAT}
-                --rename-section .data=.rodata,alloc,load,readonly,data,contents
-                "${TEMPLATE_PATH_RELATIVE}" "${OBJ_FILE}"
-        DEPENDS "${TEMPLATE_PATH_FULL}"
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/templates"
-        COMMENT "Embedding template: ${TEMPLATE_KEY}"
-        VERBATIM
-    )
-    
-    list(APPEND EMBEDDED_OBJECTS ${OBJ_FILE})
-    
-    # Generate extern declarations
-    # Symbol names: _binary_<name>_start and _binary_<name>_end
-    set(START_SYMBOL "_binary_${SYMBOL_NAME}_start")
-    set(END_SYMBOL "_binary_${SYMBOL_NAME}_end")
-    
-    string(APPEND EXTERN_DECLARATIONS "    extern const char ${START_SYMBOL}[];\n")
-    string(APPEND EXTERN_DECLARATIONS "    extern const char ${END_SYMBOL}[];\n")
-    
+    # The file is read here, at configure time: re-configure when it changes.
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${TEMPLATE_PATH_FULL}")
+
+    # The content as `0x..,` bytes, followed by a terminating zero, so that an empty file still
+    # gives a valid array (the zero is not part of the view). unsigned char: bytes above 0x7f
+    # would be narrowing conversions for a (signed) char.
+    file(READ "${TEMPLATE_PATH_FULL}" TEMPLATE_HEX HEX)
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," TEMPLATE_HEX "${TEMPLATE_HEX}")
+    string(APPEND EMBEDDED_DATA "    // ${TEMPLATE_FILE}\n")
+    string(APPEND EMBEDDED_DATA "    constexpr unsigned char ${SYMBOL_NAME}[] = {${TEMPLATE_HEX}0x00};\n")
+
     # Generate registry entry
     string(APPEND REGISTRY_ENTRIES "    {\n")
     string(APPEND REGISTRY_ENTRIES "        \"${TEMPLATE_KEY}\",\n")
     string(APPEND REGISTRY_ENTRIES "        std::string_view(\n")
-    string(APPEND REGISTRY_ENTRIES "            reinterpret_cast<const char*>(${START_SYMBOL}),\n")
-    string(APPEND REGISTRY_ENTRIES "            static_cast<size_t>(${END_SYMBOL} - ${START_SYMBOL})\n")
+    string(APPEND REGISTRY_ENTRIES "            reinterpret_cast<const char*>(${SYMBOL_NAME}),\n")
+    string(APPEND REGISTRY_ENTRIES "            sizeof(${SYMBOL_NAME}) - 1\n")
     string(APPEND REGISTRY_ENTRIES "        )\n")
     string(APPEND REGISTRY_ENTRIES "    },\n")
 endforeach()
@@ -103,14 +73,8 @@ configure_file(
 
 message(STATUS "Templates embedded cpp file generated")
 
-# Create a custom target that depends on all embedded objects
-add_custom_target(embedded_templates_generate
-    DEPENDS ${EMBEDDED_OBJECTS}
-)
-
-# Create an object library for the registry
-add_library(DiaTemplates STATIC ${REGISTRY_CPP} ${EMBEDDED_OBJECTS})
-add_dependencies(DiaTemplates embedded_templates_generate)
+# A library with the registry and the embedded data
+add_library(DiaTemplates STATIC ${REGISTRY_CPP})
 target_compile_definitions(DiaTemplates PUBLIC DIA_TEMPLATES_USE_EMBEDDED=1)
 make_module(DiaTemplates USES)
 
