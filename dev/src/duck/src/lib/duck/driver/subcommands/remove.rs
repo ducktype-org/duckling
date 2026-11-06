@@ -26,10 +26,14 @@ pub fn get_parser() -> Command {
 
 /// Logic for executing the `remove` subcommand.
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
-    let name = matches.get_one::<String>("name").expect("required by clap");
+    let ename = matches.get_one::<String>("name").expect("required by clap");
     let global = matches.get_flag("global");
     let kind = determine_kind(matches);
-    let options = RemoveOptions { name, global, kind };
+    let options = RemoveOptions {
+        ename,
+        global,
+        kind,
+    };
     remove(ctx, options)
 }
 
