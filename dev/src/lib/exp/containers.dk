@@ -368,7 +368,7 @@ class Map {
         Takes the node with `key` out of the subtree at `p` and stores it in `detached` (left
         null when there is no such key). Returns the new root of the subtree.
     #}
-    fun removeAt(p: ptr MapNode[K, V], key: const ref K) -> ptr MapNode[K, V] = {
+    fun removeAt(p: ptr MapNode[K, V], key: ref K) -> ptr MapNode[K, V] = {
         if (not isNode(p)) return p;
 
         if (compare.cmp[K](&key, &(*p).key)) {
@@ -403,7 +403,7 @@ class Map {
     #{
         The node with `key`, or null when there is none.
     #}
-    fun find(key: const ref K) -> ptr MapNode[K, V] = {
+    fun find(key: ref K) -> ptr MapNode[K, V] = {
         if (len == 0i64) return pointers[MapNode[K, V]].null();
         var p = root;
         while (isNode(p)) {
@@ -541,7 +541,7 @@ class Map {
     #{
         The map owns its nodes, so a copy has to allocate its own and copy every key and value.
     #}
-    Map.copy(other: const ref mapType[K, V]()) = {
+    Map.copy(other: ref mapType[K, V]()) = {
         var result: mapType[K, V]();
         if (other.len > 0i64) {
             result.root = result.copySubtree(other.root);
@@ -650,7 +650,7 @@ class PriorityQueue {
         The queue owns its elements, so a copy has to allocate its own and copy every element.
         The copy keeps the same heap order.
     #}
-    PriorityQueue.copy(other: const ref priorityQueueType[T]()) = {
+    PriorityQueue.copy(other: ref priorityQueueType[T]()) = {
         var result: priorityQueueType[T]();
         var i = 0i64;
         while (i < other.items.length()) {

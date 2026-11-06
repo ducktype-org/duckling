@@ -8,7 +8,7 @@ class Task {
     priority: i64;
     name: String;
 
-    fun cmp(other: const ref Task) -> bool = priority < other.priority;
+    fun cmp(other: ref Task) -> bool = priority < other.priority;
 }
 
 fun printBool(b: bool) -> () = {

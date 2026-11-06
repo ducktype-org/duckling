@@ -178,7 +178,7 @@ namespace compiler::helios::desugaring {
 		}
 
 		// Length is calculated once before the loop.
-		// let __len: const i64 = <length>
+		// let __len: imm i64 = <length>
 		Box<code::Stmt> buildLengthVar(
 			const ForDesugarCtx& ctx, SymID len_sym, Box<code::Expr> length
 		) {

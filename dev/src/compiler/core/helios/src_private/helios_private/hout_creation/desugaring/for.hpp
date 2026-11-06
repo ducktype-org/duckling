@@ -92,7 +92,7 @@ namespace compiler::helios::desugaring {
 	 * {
 	 *     do [tmp](n..m)
 	 *     var __index : i64 = [tmp].start;
-	 *     var __len : const i64 = [reuse].end;
+	 *     var __len : imm i64 = [reuse].end;
 	 *     while (__index < __len) {
 	 *         var i : i64 = __index;
 	 *         <body>
@@ -106,7 +106,7 @@ namespace compiler::helios::desugaring {
 	 * {
 	 *     var __index : i64 = 0;
 	 *     do [tmp](refof(list))
-	 *     var __len : const i64 = length([tmp]);
+	 *     var __len : imm i64 = length([tmp]);
 	 *     while (__index < __len) {
 	 *         var x : T = copy(deref(at([reuse], __index)));
 	 *         <body>

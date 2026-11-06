@@ -117,13 +117,17 @@ namespace pst {
 
 		template<>
 		struct StmtFinder<Action> {
-			static u64 findStatementLength(LangParserState& state) {
-				if ((state[0].is(Keyword::Break) || state[0].is(Keyword::Continue))
-				    && state.ctokens().size() >= 3 && state[1].isKeyword()
-				    && state[2].is(Special::Semicolon)
-				    && isControlFlowTargetKeyword(state[1].asKeyword()))
+			/**
+			 * @brief Like the general one, but `break block;` / `continue loop;` is exactly three
+			 * tokens: the target keyword is a statement start, so it would end the statement.
+			 * Tokens past the end of the stream are sentinels, so no size check is needed.
+			 */
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				if ((state[base].is(Keyword::Break) || state[base].is(Keyword::Continue))
+				    && state[base + 1].isKeyword() && state[base + 2].is(Special::Semicolon)
+				    && isControlFlowTargetKeyword(state[base + 1].asKeyword()))
 					return 3;
-				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(1);
+				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(base + 1);
 			}
 		};
 

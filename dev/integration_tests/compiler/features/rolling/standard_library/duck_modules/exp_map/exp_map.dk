@@ -7,7 +7,7 @@ class Point {
     x: i64;
     y: i64;
 
-    fun cmp(other: const ref Point) -> bool = {
+    fun cmp(other: ref Point) -> bool = {
         if (x != other.x) return x < other.x;
         return y < other.y;
     }
