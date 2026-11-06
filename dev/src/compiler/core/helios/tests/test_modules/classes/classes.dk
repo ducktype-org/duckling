@@ -29,7 +29,7 @@ class Base {
     }
 
     private {
-        Base.copy(other: const ref Base) = {
+        Base.copy(other: ref Base) = {
             return Base(other.pub_field, other.prot_field, other.priv_field, other.unspecified);
         }
     }

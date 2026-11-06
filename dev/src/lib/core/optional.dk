@@ -55,9 +55,9 @@ namespace optional_primitives {
         Whether the optional holds a value.
     #}
     template(T: type)
-    fun nonEmpty(o: const ref ?T) -> bool = {
+    fun nonEmpty(o: ref ?T) -> bool = {
         return match (o) {
-            case _: const ref T = true;
+            case _: ref T = true;
             case _: None = false;
         };
     }
@@ -66,9 +66,9 @@ namespace optional_primitives {
         Whether the optional holds no value.
     #}
     template(T: type)
-    fun isEmpty(o: const ref ?T) -> bool = {
+    fun isEmpty(o: ref ?T) -> bool = {
         return match (o) {
-            case _: const ref T = false;
+            case _: ref T = false;
             case _: None = true;
         };
     }

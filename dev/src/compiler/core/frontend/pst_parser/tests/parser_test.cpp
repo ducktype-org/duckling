@@ -7,9 +7,9 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/parsed_pst.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 
 #include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>

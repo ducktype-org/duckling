@@ -6,7 +6,7 @@
 
 #include "../../../hierarchy/not_statements/synthetic_elements/template_expansion_assignment.hpp"
 
-#include "../../../synthesizer.hpp"
+#include "../../../common/synthesizer.hpp"
 #include "../preamble.hpp"
 
 namespace pst {
