@@ -78,7 +78,7 @@ namespace compiler::helios::desugaring {
 	 *
 	 *     var __index41 : u64 = 0;
 	 *     do [tmp](refof((Symbol t_arr (26))))
-	 * 	   var __len41: const u64 = 2; # or `len dynamic_arr` in case of lists.
+	 * 	   var __len41: imm u64 = 2; # or `len dynamic_arr` in case of lists.
 	 *     while ((Symbol __index41 (63)) < (Symbol __len41 (64))) {
 	 *         var t : Class T = deref([reuse](refof((Symbol t_arr (26)))))[(Symbol __index41 (63))];
 	 *         do (Symbol builtin_output_i64 (16))(cast[to=i64]((Symbol t (62)).a))

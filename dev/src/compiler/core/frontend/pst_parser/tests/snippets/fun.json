@@ -54,7 +54,7 @@
 						"sourceStart": 11,
 						"sourceEnd": 12
 					},
-					"function parameter list": []
+					"parameter list": []
 				},
 				"return": "unit",
 				"body": {

@@ -201,7 +201,7 @@ class String {
         return copy self;
     }
 
-    String.copy(other: const ref String) = {
+    String.copy(other: ref String) = {
         var result = stringReserve(other.length());
         copyChars(other.pointer, result.pointer, other.length());
         result.len = other.length();
@@ -479,7 +479,7 @@ namespace stringification {
         nested array that names a different type than `N` elements of `T`.
     #}
     template(A: type, N: i64)
-    fun stringifyStaticArray(arr: const ref A) -> String = {
+    fun stringifyStaticArray(arr: ref A) -> String = {
         var result = stringifyStr("[");
         var i      = 0;
         while (i < N) {
@@ -566,7 +566,7 @@ class List {
         A list owns its buffer, so a copy has to allocate its own and copy the elements one by
         one with `T`'s copy constructor.
     #}
-    List.copy(other: const ref listType[T]()) = {
+    List.copy(other: ref listType[T]()) = {
         var result: listType[T]();
         result.reserve(other.length());
 

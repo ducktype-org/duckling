@@ -1053,7 +1053,7 @@ dev-dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            ["multiple dependencies (one normal and one dev) are referenced by the same name `a`"]
+            ["dev dependency `a` has the same name as a dependency"]
         )
     );
 }
@@ -1082,7 +1082,7 @@ dev-dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            ["dev dependency `b` has the same source as normal dependency `a`"]
+            ["dev dependency `b` has the same source as dependency `a`"]
         )
     );
 }
@@ -1684,7 +1684,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.an~`",
-                "aliased dependency `an~` points to a package `!foo` with an invalid name",
+                "dependency `an~` points to a package `!foo` with an invalid name",
                 "package name `!foo` starts with an illegal character `!`",
             ]
         )
@@ -1714,7 +1714,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.an`",
-                "aliased dependency `an` points to a package `!foo` with an invalid name",
+                "dependency `an` points to a package `!foo` with an invalid name",
                 "package name `!foo` starts with an illegal character `!`",
             ]
         )
@@ -1744,7 +1744,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.an~`",
-                "dependency `foo` has an invalid alias name `an~`",
+                "dependency `an~` has an invalid alias",
                 "package name `an~` contains an illegal character `~`",
             ]
         )

@@ -6,9 +6,9 @@
 
 #include "../../hierarchy/expressions/chain_expr.hpp"
 
-#include "../../hierarchy/expressions/access.hpp"  // IWYU pragma: keep
-#include "../../hierarchy/expressions/atom.hpp"    // IWYU pragma: keep
-#include "../../hierarchy/expressions/call.hpp"    // IWYU pragma: keep
+#include "../../hierarchy/expressions/access_expr.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/expressions/atom.hpp"         // IWYU pragma: keep
+#include "../../hierarchy/expressions/call.hpp"         // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {
@@ -48,7 +48,7 @@ namespace pst::expr {
 			MBox<ExprElement> extension;
 			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)) {
-				PARSE().autoFallbackLen(fwd).with(&extension, Access::parse);
+				PARSE().autoFallbackLen(fwd).with(&extension, AccessExpr::parse);
 			} else if (state[0].isBracketGroup(lexer::Token::Round)
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
 				PARSE().autoFallbackLen(fwd).with(&extension, Call::parse);

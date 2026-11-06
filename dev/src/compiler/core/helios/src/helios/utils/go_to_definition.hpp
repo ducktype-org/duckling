@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/elements/elements_list.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/elements/common/elements_list.hpp>
 #include <helios/hout/elements/expr.hpp>
 
 #include <base/collections/optional.hpp>

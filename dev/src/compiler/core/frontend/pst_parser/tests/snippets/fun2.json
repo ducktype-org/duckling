@@ -24,7 +24,7 @@
 						"sourceStart": 8,
 						"sourceEnd": 23
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 9,
@@ -151,7 +151,7 @@
 						"sourceStart": 38,
 						"sourceEnd": 57
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 39,
@@ -295,7 +295,7 @@
 						"sourceStart": 72,
 						"sourceEnd": 92
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 73,
@@ -439,7 +439,7 @@
 						"sourceStart": 107,
 						"sourceEnd": 112
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 108,

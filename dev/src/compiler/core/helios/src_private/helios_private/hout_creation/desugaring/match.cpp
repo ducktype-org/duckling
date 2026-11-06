@@ -6,7 +6,7 @@
 
 #include "match.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/patterns/patterns.hpp>
