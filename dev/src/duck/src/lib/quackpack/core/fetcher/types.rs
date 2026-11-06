@@ -25,6 +25,16 @@ pub struct PackageWithUrl {
     pub url: InternedUrl,
 }
 
+impl PackageWithUrl {
+    /// Convert this [`PackageWithUrl`] into a [`Package`].
+    pub fn as_package(self) -> Package {
+        Package {
+            name: self.name,
+            version: self.version,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 /// This is a helper struct, used mainly for two things:
 /// 1. [`SearchResult`], so we don't copy `url`s around,
@@ -35,15 +45,6 @@ pub struct Package {
     pub name: StrId,
     /// Version of this package.
     pub version: Version,
-}
-
-impl From<PackageWithUrl> for Package {
-    fn from(value: PackageWithUrl) -> Self {
-        Self {
-            name: value.name,
-            version: value.version,
-        }
-    }
 }
 
 impl From<&registry::Manifest> for Package {
