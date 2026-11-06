@@ -1053,7 +1053,7 @@ dev-dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            ["multiple dependencies (one normal and one dev) are referenced by the same name `a`"]
+            ["multiple dependencies (one normal and one dev) named `a`"]
         )
     );
 }
@@ -1570,7 +1570,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.`",
-                "dependency `` has an invalid name",
+                "normal dependency `` has an invalid name",
                 "package name is empty",
             ]
         )
@@ -1598,7 +1598,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.-a`",
-                "dependency `-a` has an invalid name",
+                "normal dependency `-a` has an invalid name",
                 "package name `-a` starts with an illegal character `-`",
             ]
         )
@@ -1626,7 +1626,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.!a`",
-                "dependency `!a` has an invalid name",
+                "normal dependency `!a` has an invalid name",
                 "package name `!a` starts with an illegal character `!`",
             ]
         )
@@ -1654,7 +1654,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.an~`",
-                "dependency `an~` has an invalid name",
+                "normal dependency `an~` has an invalid name",
                 "package name `an~` contains an illegal character `~`",
             ]
         )
@@ -1684,7 +1684,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.an~`",
-                "aliased dependency `an~` points to a package `!foo` with an invalid name",
+                "normal dependency `an~` points to a package `!foo` with an invalid name",
                 "package name `!foo` starts with an illegal character `!`",
             ]
         )
@@ -1714,7 +1714,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.an`",
-                "aliased dependency `an` points to a package `!foo` with an invalid name",
+                "normal dependency `an` points to a package `!foo` with an invalid name",
                 "package name `!foo` starts with an illegal character `!`",
             ]
         )
@@ -1744,7 +1744,7 @@ dependencies:
             &dir,
             [
                 "failed to parse the field `dependencies.an~`",
-                "dependency `foo` has an invalid alias name `an~`",
+                "normal dependency `an~` has an invalid alias",
                 "package name `an~` contains an illegal character `~`",
             ]
         )
