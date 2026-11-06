@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <frontend/pst_parser/parsed_pst.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 
 #include <query_framework/external/api.hpp>
 
