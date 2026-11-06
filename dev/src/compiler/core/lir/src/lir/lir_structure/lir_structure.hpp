@@ -314,27 +314,27 @@ namespace compiler::lir {
 		 *
 		 * @param ctx
 		 * @param mir_local
+		 * @param type_layout Layout of the type of @p mir_local.
 		 * @param new_parameter_index If the local is a parameter, this should be its index in the
 		 * LIR function's parameter list. This is needed to adjust for discarded parameters with
 		 * information-less types.
 		 * @return LIRLocal
 		 */
 		static LIRLocal fromMIR(
-			query::Context&     ctx,
-			mir::MIRLocalRef    mir_local,
-			base::Optional<u64> new_parameter_index = {}
+			query::Context&       ctx,
+			mir::MIRLocalRef      mir_local,
+			CRef<tsl::TypeLayout> type_layout,
+			base::Optional<u64>   new_parameter_index = {}
 		);
 
 		/**
-		 * @brief Creates unique local holding a reference to @p pointee_type, and without
-		 * helios_id.
+		 * @brief Creates unique local holding a reference, and without helios_id.
 		 * @note It's used to materialize addresses of places passed to functions taking
 		 * references.
-		 * @param ctx
-		 * @param pointee_type Type of the referenced value.
+		 * @param ref_layout Layout of the reference type.
 		 * @return LIRLocal
 		 */
-		static LIRLocal refLocal(query::Context& ctx, tsh::SymbolType<> pointee_type);
+		static LIRLocal refLocal(CRef<tsl::TypeLayout> ref_layout);
 	};
 
 	enum class LIRGlobalType { Variable, Constant };
