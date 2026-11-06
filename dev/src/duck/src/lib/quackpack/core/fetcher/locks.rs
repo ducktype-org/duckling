@@ -32,8 +32,19 @@ impl Locks {
     }
 
     /// Try to get a package's lock.
-    pub fn lock(&self, package: types::Package, ctx: &DuckContext) -> QuackResult<LockedFile> {
+    pub fn lock(
+        &self,
+        package: types::PackageWithUrl,
+        ctx: &DuckContext,
+    ) -> QuackResult<LockedFile> {
+        let host = package.url.host_str().with_context_internal(|| {
+            format!(
+                "URL `{}` has no host (it didn't go through `validate_registry_url`)",
+                package.url
+            )
+        })?;
         self.root
+            .join(host)
             .join(package.name)
             .join(package.version.to_string())
             .open_exclusive(Self::PER_PACKAGE_LOCK, ctx)

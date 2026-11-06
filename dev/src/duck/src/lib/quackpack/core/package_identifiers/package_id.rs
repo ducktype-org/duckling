@@ -67,10 +67,5 @@ pub fn storage_name_for_git(url: InternedUrl, commit: &str) -> String {
 
 /// Get storage name for repository packages.
 pub fn storage_name_for_registry(name: &str, version: Version, url: InternedUrl) -> String {
-    format!(
-        "registry-{}-{}-{}",
-        sha256_string(url.host_str().unwrap_or_default()),
-        name,
-        version,
-    )
+    format!("registry-{}-{}-{}", url.host_str().unwrap(), name, version,)
 }

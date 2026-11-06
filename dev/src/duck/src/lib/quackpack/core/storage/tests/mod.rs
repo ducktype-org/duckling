@@ -32,9 +32,8 @@ use crate::util::test_utils::setup_test;
 mod basic;
 mod concurrent;
 
-fn registry_url_hash() -> String {
-    let url = &*fetcher::DEFAULT_REGISTRY_URL;
-    crate::util::hash::sha256_string(url.host_str().unwrap())
+fn registry_url_host() -> &'static str {
+    fetcher::DEFAULT_REGISTRY_URL.host_str().unwrap()
 }
 
 /// This function creates mock storage with following contents:

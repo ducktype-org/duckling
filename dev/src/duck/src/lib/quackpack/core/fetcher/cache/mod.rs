@@ -70,8 +70,8 @@ const TABLE_NAME: &str = "packages_manifests";
 #[derive(Debug)]
 /// Manager of a fetcher cache.
 /// Database layout:
-/// | package name NON NULL TEXT | package version NON NULL TEXT | registry URL NON NULL TEXT | package manifest json NON NULL TEXT |
-/// |----------------------------|-------------------------------|----------------------------|-------------------------------------|
+/// | package name NON NULL TEXT | package version NON NULL TEXT | registry URL HOST NON NULL TEXT | package manifest json NON NULL TEXT |
+/// |----------------------------|-------------------------------|---------------------------------|-------------------------------------|
 ///
 /// With the first three columns making a unique key.
 ///
@@ -290,7 +290,7 @@ impl ConnectionExt for rusqlite::Connection {
             rusqlite::named_params![
                 ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
-                ":package_url": package.url.as_str(),
+                ":package_url": package.url.host_str().unwrap(),
             ],
             |row| row.get(0),
         )
@@ -310,7 +310,7 @@ impl ConnectionExt for rusqlite::Connection {
         stmt.query_map(
             rusqlite::named_params![
                 ":package_name": package.name.as_str(),
-                ":package_url": package.url.as_str(),
+                ":package_url": package.url.host_str().unwrap(),
             ],
             |row| row.get(0),
         )?
@@ -335,7 +335,7 @@ impl ConnectionExt for rusqlite::Connection {
             rusqlite::named_params![
                 ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
-                ":package_url": package.url.as_str(),
+                ":package_url": package.url.host_str().unwrap(),
                 ":package_manifest": manifest_json,
             ],
         )?;
@@ -360,7 +360,7 @@ impl ConnectionExt for rusqlite::Connection {
             stmt.execute(rusqlite::named_params![
                 ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
-                ":package_url": package.url.as_str(),
+                ":package_url": package.url.host_str().unwrap(),
                 ":package_manifest": manifest,
             ])?;
         }

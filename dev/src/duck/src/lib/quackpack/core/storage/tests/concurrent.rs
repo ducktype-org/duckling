@@ -7,7 +7,7 @@
 use std::sync::Barrier;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{registry_url_hash, setup_mock_storage};
+use super::{registry_url_host, setup_mock_storage};
 use crate::StrId;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self};
@@ -62,9 +62,9 @@ fn concurrent_clean() {
 
     let mut expected_packages = [
         root.join("pkg")
-            .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
+            .join(format!("registry-{}-foo-1.0.0", registry_url_host())),
         root.join("pkg")
-            .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
+            .join(format!("registry-{}-bar-1.0.0", registry_url_host())),
     ];
     expected_packages.sort();
     std::thread::scope(|s| {

@@ -12,7 +12,7 @@ use tracing::{debug, trace};
 
 use super::types;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::{DuckContext, QuackResult};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 /// Manager of the downloads cache in QuackPack.
@@ -47,9 +47,20 @@ impl Downloads {
     /// Per package lock ([`Locks::lock`]) should be held while performing this operation.
     ///
     /// [`Locks::lock`]: super::locks::Locks::lock
-    pub fn get(&self, package: types::Package, ctx: &DuckContext) -> QuackResult<DownloadedEntry> {
+    pub fn get(
+        &self,
+        package: types::PackageWithUrl,
+        ctx: &DuckContext,
+    ) -> QuackResult<DownloadedEntry> {
+        let host = package.url.host_str().with_context_internal(|| {
+            format!(
+                "URL `{}` has no host (it didn't go through `validate_registry_url`)",
+                package.url
+            )
+        })?;
         let destination = self
             .root
+            .join(host)
             .join(package.name)
             .join(package.version.to_string());
 

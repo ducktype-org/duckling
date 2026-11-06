@@ -6,7 +6,7 @@
 
 use std::path::Path;
 
-use super::{registry_url_hash, setup_mock_storage};
+use super::{registry_url_host, setup_mock_storage};
 use crate::DuckContext;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
@@ -48,9 +48,9 @@ fn clean() {
     output.removed_packages.sort();
     let mut expected_packages = [
         root.join("pkg")
-            .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
+            .join(format!("registry-{}-foo-1.0.0", registry_url_host())),
         root.join("pkg")
-            .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
+            .join(format!("registry-{}-bar-1.0.0", registry_url_host())),
     ];
     expected_packages.sort();
     assert_eq!(output.removed_venvs, ["root3".to_venv_id()]);
@@ -64,7 +64,7 @@ fn clean() {
         iterator.next().is_some_and(|entry| entry.unwrap().path()
             == root
                 .join("pkg")
-                .join(format!("registry-{}-baz-1.0.0", registry_url_hash()))),
+                .join(format!("registry-{}-baz-1.0.0", registry_url_host()))),
         "we should left only baz"
     );
 
@@ -103,11 +103,11 @@ fn delete_venv() {
     output.removed_packages.sort();
     let mut expected_packages = [
         root.join("pkg")
-            .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
+            .join(format!("registry-{}-foo-1.0.0", registry_url_host())),
         root.join("pkg")
-            .join(format!("registry-{}-baz-1.0.0", registry_url_hash())),
+            .join(format!("registry-{}-baz-1.0.0", registry_url_host())),
         root.join("pkg")
-            .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
+            .join(format!("registry-{}-bar-1.0.0", registry_url_host())),
     ];
     expected_packages.sort();
     assert_eq!(output.removed_packages, expected_packages);
