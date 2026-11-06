@@ -38,19 +38,6 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class ConstInTypeError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "type_check",
-				     .name          = "const_in_type" };
-		}
-
-	public:
-		explicit ConstInTypeError(dia::StablePosition source_position):
-			  MessageWithCodeFragmentAndCause(source_position) {}
-	};
-
 	class DuplicateVariantAlternativeError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

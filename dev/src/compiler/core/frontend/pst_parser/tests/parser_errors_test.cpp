@@ -151,6 +151,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Const, false> let_const{ "let x: i32 = 5" };
 	Example<pst::Const, false> var_const{ "var x: i32 = 5" };
 
+	Example<pst::CodeBlock, true>  const_after_semicolon{ "{ var x = 1; const Y = 2; }" };
+	Example<pst::CodeBlock, false> const_without_semicolon{ "{ var x = 1 const Y = 2; }" };
+	Example<pst::CodeBlock, false> const_in_var_type{ "{ var x: const i64 = 1; }" };
+	Example<pst::CodeBlock, false> const_after_ref{ "{ var x: ref const i64 = y; }" };
+	Example<pst::CodeBlock, false> const_in_result_type{ "{ fun g() -> const i64 = 1; }" };
+
 	Example<pst::Variable, true>  simple_var{ "var x: i32 = 5" };
 	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
 	Example<pst::Variable, true>  ref_var{ "var x: ref i32 = 5" };

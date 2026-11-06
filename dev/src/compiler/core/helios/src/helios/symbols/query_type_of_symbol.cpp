@@ -312,7 +312,7 @@ namespace compiler::helios {
 						break;
 					case defgen::Constructor::Kind::Copy:
 						param_types.emplace_back(
-							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Immutable
+							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Mutable
 						);
 						break;
 					}

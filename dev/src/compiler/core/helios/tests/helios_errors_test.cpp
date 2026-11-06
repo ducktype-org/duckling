@@ -50,7 +50,6 @@ public:
 		TESTER_ADD_TEST(testCoercionErrors);
 		TESTER_ADD_TEST(testOptionalErrors);
 		TESTER_ADD_TEST(testClassErrors);
-		TESTER_ADD_TEST(testTypeQualifierErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -1703,29 +1702,6 @@ private:
 			fun main() -> i64 = { let f: funptr(i64) = show; return 0; } )",
 			{ "`funptr` must be followed by `-> <result type>`" },
 			1
-		);
-	}
-
-	void testTypeQualifierErrors() {
-		const std::string_view msg
-			= "`const` declares a compile-time constant and is not a part of a type.";
-
-		checkForErrorOnCompileModule(
-			R"( fun f(x: const i64) -> i64 = x;
-			fun main() -> i64 = 0; )",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun f(r: const ref i64) -> i64 = r;
-			fun main() -> i64 = 0; )",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = { var x: const i64 = 1; return x; } )", { msg }, 1
 		);
 	}
 

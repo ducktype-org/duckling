@@ -26,7 +26,6 @@
 #include <helios/tsh/value_category.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/desugaring/match.hpp>
@@ -357,13 +356,6 @@ namespace compiler::helios::code {
 						"`funptr(i64) -> ()`.",
 						stmt->getStablePosition()
 					);
-					return;
-				}
-
-				// `const` only declares compile-time constants (like `const X = ...`), it is
-				// not a part of a type. Read-only types are written with `imm`.
-				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Const)) {
-					ctx.log<ConstInTypeError>(stmt->getStablePosition());
 					return;
 				}
 

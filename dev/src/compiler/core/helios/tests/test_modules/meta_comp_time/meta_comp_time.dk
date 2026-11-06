@@ -5,7 +5,8 @@ const SIMPLE_IMM = imm i64;
 const SIMPLE_VARIANT = i32 | f64;
 const SIMPLE_TUPLE: type = (i32, f64);
 const CMP_1 = (imm i32) == createImm(i32);
-const CMP_3 = (mut i32) == createMut(i32);
+const CMP_3 = (mut (imm i32)) == i32;
+const CMP_4 = createMut(imm i32) == i32;
 const CMP_2 = i32 != i64;
 
 ### Function evaluation.
