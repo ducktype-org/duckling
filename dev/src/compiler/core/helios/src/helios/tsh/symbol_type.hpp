@@ -370,7 +370,7 @@ namespace compiler::tsh {
 			return base::strConcat(
 				uniqueness == Uniqueness::Unique ? "unique " : "",
 				leakage == Leakage::Leaking ? "leaking " : "",
-				mutability == Mutability::Mutable ? "" : "const ",
+				mutability == Mutability::Mutable ? "" : "imm ",
 				reference_kind == Direct ? ""
 				: reference_kind == Box  ? "box "
 										 : "ref ",

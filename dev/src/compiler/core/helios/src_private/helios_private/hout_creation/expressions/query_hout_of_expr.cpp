@@ -534,9 +534,9 @@ namespace compiler::helios::code {
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 
-					// The copy constructor takes a `const ref` and returns a direct value. `refOf`
-					// turns every type into a reference (including ref/box because of reference
-					// kind collapsing).
+					// The copy constructor takes a read-only `ref` and returns a direct value.
+					// `refOf` turns every type into a reference (including ref/box because of
+					// reference kind collapsing).
 					node = s.call(
 						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
 						s.refOf(std::move(inner))

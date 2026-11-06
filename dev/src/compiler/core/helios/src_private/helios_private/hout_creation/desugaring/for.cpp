@@ -300,7 +300,7 @@ namespace compiler::helios::desugaring {
 
 		// Desugar the loop.
 		// var __index : i64 = 0i64;
-		// var __len: const i64 = <constant> / len <iterable_reusable>;
+		// var __len: imm i64 = <constant> / len <iterable_reusable>;
 		// while(__idx < __len) {
 		// 		let <iter> = <iterable_reusable>[__idx];
 		// 		<body>;
