@@ -200,7 +200,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             feature,
         };
         let var = self.get_package_variable(pkg, Some(feature))?;
-        let scip_constraint = cons().coef(&var, 1.0).eq(1.0);
+        let scip_constraint = cons().coef(&var, 1.0).eq(0.0);
         self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
