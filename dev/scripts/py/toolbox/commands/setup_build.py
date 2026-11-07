@@ -21,6 +21,7 @@ from ..impl.helpers import (
     default_gcov_from_ctx,
 )
 from ...jit.llvm_tools import (LLVM_TOOLS, llvm_tools_version_options)
+import click
 from click import Choice, option, command, prompt
 
 
@@ -62,6 +63,20 @@ def configure_presets(ctx, param, value):
         raise ValueError(f"Unknown preset: {value}")
 
     ctx.default_map = preset_map
+
+    # Turning off the prompts below changes the Option objects of this command for the rest of the
+    # process. This might lead to unexpected behavior if setup_build is ever invoked twice
+    # in one process.
+    # If this is ever needed, restore them after parsing instead (Command.parse_args) or find a different approach.
+    assert not getattr(ctx.command, "_preset_disabled_prompts", False), "setup_build called again after a preset in the same process"
+
+    # We want for the options set by the preset to not prompt.
+    # Since click 8.3, it doesn't happen automatically, so we manually
+    # disable the prompt for options set by the preset.
+    for preset_param in ctx.command.params:
+        if preset_param.name in preset_map and isinstance(preset_param, click.Option):
+            preset_param.prompt = None
+    ctx.command._preset_disabled_prompts = True
 
 @command()
 @option(
