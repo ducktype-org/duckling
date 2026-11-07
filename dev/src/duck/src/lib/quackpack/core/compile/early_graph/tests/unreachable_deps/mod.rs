@@ -25,7 +25,7 @@ use crate::quackpack::core::storage::paths::Storage;
 fn expands_valid_features1() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -76,7 +76,7 @@ fn expands_valid_features1() {
 fn expands_valid_features2() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -128,7 +128,7 @@ fn expands_valid_features2() {
 fn removes_inactive_deps1() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -181,7 +181,7 @@ fn removes_inactive_deps1() {
 fn removes_inactive_deps2() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,

@@ -25,7 +25,7 @@ use crate::quackpack::core::storage::paths::Storage;
 fn creates_valid_initial_graph() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -96,7 +96,7 @@ fn creates_valid_initial_graph() {
 fn expands_valid_features1() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -155,7 +155,7 @@ fn expands_valid_features1() {
 fn expands_valid_features2() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -214,7 +214,7 @@ fn expands_valid_features2() {
 fn expands_valid_features3() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -280,7 +280,7 @@ fn expands_valid_features3() {
 fn errors_with_nonexistent_features() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -321,7 +321,7 @@ there is no such feature as `nonexistent`"
 fn removes_inactive_deps1() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -400,7 +400,7 @@ fn removes_inactive_deps1() {
 fn removes_inactive_deps2() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -489,7 +489,7 @@ fn removes_inactive_deps2() {
 fn removes_inactive_deps3() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -578,7 +578,7 @@ fn removes_inactive_deps3() {
 fn removes_inactive_deps4() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,
@@ -667,7 +667,7 @@ fn removes_inactive_deps4() {
 fn cycle() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
     let packages = load_packages(
         &storage,

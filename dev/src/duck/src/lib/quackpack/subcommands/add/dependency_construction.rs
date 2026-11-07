@@ -230,7 +230,7 @@ fn verify_and_get_version(
     pcx: &PackageContext,
 ) -> QuackResult<Version> {
     let errors = RefCell::new(ErrorsLogger::default());
-    let fetcher = Fetcher::new(pcx.ctx());
+    let fetcher = Fetcher::new(pcx.ctx())?;
     let storage = Storage::new(pcx.storage_path());
     let access = StorageGitAccess::new(&storage);
 

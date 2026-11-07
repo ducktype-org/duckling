@@ -49,7 +49,7 @@ pub struct Fetcher<'duck> {
     http_client: OnceCell<Rc<AsyncHttpClient<'duck>>>,
     git_client: OnceCell<git::GitClient<'duck>>,
     git_fastpath_client: OnceCell<git::fast_path::GitFastPathClient<'duck>>,
-    cache: OnceCell<RefCell<cache::ManifestCache>>,
+    cache: RefCell<cache::ManifestCache>,
     downloads: OnceCell<downloads::Downloads>,
     locks: OnceCell<locks::Locks>,
 }
@@ -67,17 +67,27 @@ pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
 
 impl<'duck> Fetcher<'duck> {
     /// Create a new [`Fetcher`].
-    pub fn new(ctx: &'duck DuckContext) -> Self {
-        Self {
+    pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
+        let metadata_path = ctx.duck_home().get_metadata_db_path();
+        let cache_location = if cfg!(test) {
+            // For tests, we want to use in-memory database.
+            cache::CacheLocation::Memory
+        } else {
+            cache::CacheLocation::Path(metadata_path.as_path())
+        };
+        let cache = cache::ManifestCache::new(cache_location)
+            .context("failed to create an SQLite3 cache client")?;
+
+        Ok(Self {
             ctx,
             http_client: OnceCell::new(),
             ducknest_client: OnceCell::new(),
             git_client: OnceCell::new(),
             git_fastpath_client: OnceCell::new(),
-            cache: OnceCell::new(),
+            cache: RefCell::new(cache),
             downloads: OnceCell::new(),
             locks: OnceCell::new(),
-        }
+        })
     }
 
     /// Retrieve metadata for `package` from a given Ducknest instance.
@@ -88,7 +98,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
-        if let Some(cached) = self.cache()?.borrow().get_manifest(package)? {
+        if let Some(cached) = self.cache.borrow().get_manifest(package)? {
             debug!(target: "duck::ducknest", "metadata cache hit");
             return Ok(FetcherResponse::Some(cached));
         }
@@ -106,7 +116,7 @@ impl<'duck> Fetcher<'duck> {
                     package.name, package.version
                 )
             })?;
-        self.cache()?
+        self.cache
             .borrow_mut()
             .add_or_replace_manifest(package, result.clone())?;
         Ok(FetcherResponse::Some(result))
@@ -132,7 +142,7 @@ impl<'duck> Fetcher<'duck> {
                 version: 1.into(),
                 url,
             };
-            let cached = self.cache()?.borrow().get_all_manifests(package)?;
+            let cached = self.cache.borrow().get_all_manifests(package)?;
             return Ok(FetcherResponse::Some(types::MultiMetadata {
                 packages_metadata: cached,
             }));
@@ -142,7 +152,7 @@ impl<'duck> Fetcher<'duck> {
             .get_multi_metadata(&url, package_name)
             .await
             .with_context(|| format!("failed to get the multimetadata of `{}`", package_name))?;
-        self.cache()?
+        self.cache
             .borrow_mut()
             .add_or_replace_multiple_manifests(url, result.packages_metadata.clone())?;
         Ok(FetcherResponse::Some(result))
@@ -292,22 +302,6 @@ impl<'duck> Fetcher<'duck> {
     fn ducknest_client(&self) -> &ducknest::DucknestClient<'duck> {
         self.ducknest_client
             .get_or_init(|| ducknest::DucknestClient::new(self.http_client().clone()))
-    }
-
-    /// Get or initialize a new [`cache::ManifestCache`].
-    fn cache(&self) -> QuackResult<&RefCell<cache::ManifestCache>> {
-        self.cache.try_init_with(|| {
-            let metadata_path = self.ctx.duck_home().get_metadata_db_path();
-            let cache_location = if cfg!(test) {
-                // For tests, we want to use in-memory database.
-                cache::CacheLocation::Memory
-            } else {
-                cache::CacheLocation::Path(metadata_path.as_path())
-            };
-            let cache = cache::ManifestCache::new(cache_location)
-                .context("failed to create an SQLite3 cache client")?;
-            Ok(RefCell::new(cache))
-        })
     }
 
     /// Get or initialize a new [`git::GitClient`].

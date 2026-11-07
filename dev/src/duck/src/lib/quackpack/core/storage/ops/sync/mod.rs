@@ -67,7 +67,7 @@ pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResul
     ))?;
     let venv_config = pcx.package().venv();
     let storage = Storage::new(venv_config.storage_path());
-    let fetcher = Fetcher::new(pcx.ctx());
+    let fetcher = Fetcher::new(pcx.ctx())?;
     let git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.expose_freezefile();
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;

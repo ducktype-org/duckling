@@ -194,7 +194,7 @@ fn create_mock_server() -> MockServer {
 fn all_metadata_adds_to_cache() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let response = block_on(
         fetcher.get_package_all_metadata(server.base_url().to_url().unwrap().into(), "foo".into()),
     )
@@ -221,7 +221,7 @@ fn all_metadata_adds_to_cache() {
 fn without_cache_fetch_fails() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
-    let fetcher = Fetcher::new(&ctx);
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let err = block_on(fetcher.get_package_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(1, 2, 5),
