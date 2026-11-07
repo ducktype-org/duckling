@@ -19,8 +19,8 @@ storage = duck_home / "storage"
 locks = storage / "locks"
 
 check_empty_files([cache / "fetcher.lock",
-                   locks / "venv_data" / "foo",
-                   locks / "venv_sync" / "foo",
+                   locks / "data" / "foo",
+                   locks / "sync" / "foo",
                    locks / "clean.lock"])
 
 check_empty_dirs([cache / "downloads"])

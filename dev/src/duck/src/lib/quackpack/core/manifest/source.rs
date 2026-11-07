@@ -9,12 +9,14 @@ use std::fmt;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use crate::quackpack::core::full_identity::{FullKind, FullOrigin};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
+use crate::util::hash::short_hash_string;
 use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -235,4 +237,11 @@ impl fmt::Display for Source {
             },
         }
     }
+}
+
+/// Get a short unique name for host using `url`.
+pub fn short_name_for_host(url: &Url) -> String {
+    let host = url.host_str().unwrap_or("<unknown>");
+    let hash = short_hash_string(url.as_str());
+    format!("{host}-{hash}")
 }

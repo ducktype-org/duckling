@@ -55,10 +55,12 @@ pub struct Fetcher<'duck> {
 /// this comment; we don't (yet) have any fast paths for the _real_ default registry).
 ///
 /// [`DuckCfg::registry_url`]: crate::duck::util::duck_cfg::DuckCfg::registry_url
-pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
-    "http://localhost:9001"
-        .parse()
-        .expect("compile time known value")
+pub static DEFAULT_REGISTRY_URL: LazyLock<InternedUrl> = LazyLock::new(|| {
+    InternedUrl::new(
+        "http://localhost:9001"
+            .parse()
+            .expect("compile time known value"),
+    )
 });
 
 impl<'duck> Fetcher<'duck> {
@@ -170,8 +172,8 @@ impl<'duck> Fetcher<'duck> {
         // Firstly acquire a "global" per package lock.
         // Otherwise, under the same global fetcher lock, we can start two downloads of the same package,
         // and one can see existing but empty path.
-        let _lock = self.locks.lock(package.as_package(), self.ctx)?;
-        let entry = self.downloads.get(package.as_package(), self.ctx)?;
+        let _lock = self.locks.lock(package, self.ctx)?;
+        let entry = self.downloads.get(package, self.ctx)?;
         let blob = match entry {
             downloads::DownloadedEntry::Present(path) => return Ok(path),
             downloads::DownloadedEntry::Vacant(blob) => blob,
