@@ -45,7 +45,7 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     editable_manifest.save()?;
 
     ctx.info(format!(
-        "successfully removed {kind} dependency `{ename}` from the project `{pkg_name}` at `{}`",
+        "successfully removed {kind}dependency `{ename}` from the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
     Ok(())
@@ -62,7 +62,7 @@ fn remove_dep(
     match editable_manifest.remove_dependency(ename, kind)? {
         DependencyRemoved::Yes => Ok(()),
         DependencyRemoved::NoDependency => qp_bail!(
-            "there is no {kind} dependency `{ename}` in the project `{pkg_name}` at `{}`",
+            "there is no {kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
             pkg_root.display()
         ),
         DependencyRemoved::NoDependencyButKindExists(other_kind) => {
@@ -71,13 +71,13 @@ fn remove_dep(
                     "if you want to remove a normal dependency don't use any flags",
                 ))
             } else {
-                Err(QuackError::hint(format!(
-                    "if you want to remove a {other_kind} dependency use flag `--{other_kind}`"
-                )))
+                Err(QuackError::hint(
+                    "if you want to remove a dev dependency use flag `--dev`",
+                ))
             };
             err.with_context(|| {
                 format!(
-                    "there is no {kind} dependency `{ename}` in the project `{pkg_name}` at `{}`",
+                    "there is no {kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             })
