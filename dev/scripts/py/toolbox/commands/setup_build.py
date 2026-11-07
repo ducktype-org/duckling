@@ -4,6 +4,8 @@
 # Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+import platform
+
 from ..impl.setup_build import (setup_build_impl, LLVM_TOOLS)
 from .helpers import (
     build_system,
@@ -40,6 +42,11 @@ def configure_presets(ctx, param, value):
             "strip_symbol_information": True,
             "embed_assets": True,
             "build_static_icu": True, # we want to have a static ICU in release to make the binary portable
+            
+            # macOS has no system zstd (which LLVM needs), so a portable binary must link it statically.
+            # Linux keeps the system libzstd, which (practically) every distribution has.
+            "link_static_zstd": platform.system() == "Darwin",
+
             "fixed_std_path": False, # we want to have a dynamic std path in release
         }
     elif value == "MaxPerformancePreset":
@@ -212,6 +219,13 @@ def configure_presets(ctx, param, value):
 @option(
     "--build-static-icu/--no-build-static-icu",
     help="Forces building and linking against a custom-built static version of ICU.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--link-static-zstd/--no-link-static-zstd",
+    help="Links the zstd library that LLVM depends on statically (LINK_STATIC_ZSTD).",
     type=bool,
     default=False,
     is_flag=True,

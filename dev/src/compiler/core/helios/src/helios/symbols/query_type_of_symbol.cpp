@@ -128,9 +128,7 @@ namespace compiler::helios {
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {
-				const auto decl_mutability
-					= field->isMutable() ? tsh::Mutability::Mutable : tsh::Mutability::Immutable;
-				setSymbolTypeByTypeExpr(field->getType().unlock(ctx)->getExpr(), decl_mutability);
+				setSymbolTypeByTypeExpr(field->getType().unlock(ctx)->getExpr());
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
@@ -300,7 +298,7 @@ namespace compiler::helios {
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
 					// The implicit constructor takes a parameter per field, the default constructor
-					// takes none, and the copy constructor takes a single `const ref T` source.
+					// takes none, and the copy constructor takes a single read-only `ref T` source.
 					std::vector<tsh::SymbolType<>> param_types;
 					switch (ctor.kind) {
 					case defgen::Constructor::Kind::Implicit: {
@@ -312,7 +310,7 @@ namespace compiler::helios {
 						break;
 					case defgen::Constructor::Kind::Copy:
 						param_types.emplace_back(
-							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Immutable
+							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Mutable
 						);
 						break;
 					}

@@ -61,12 +61,12 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     )?;
     editable_manifest.save().with_context(|| {
         format!(
-            "failed to add the {kind} dependency `{ename}` to the project `{pkg_name}` at `{}`",
+            "failed to add the {kind}dependency `{ename}` to the project `{pkg_name}` at `{}`",
             pkg_root.display()
         )
     })?;
     ctx.info(format!(
-        "successfully added {kind} dependency `{ename}` to the project `{pkg_name}` at `{}`",
+        "successfully added {kind}dependency `{ename}` to the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
     Ok(())
@@ -92,13 +92,13 @@ fn add_dep(
                 ));
                 err.with_context(|| {
                     format!(
-                        "there already is a {other_kind} dependency `{ename}` in the project `{pkg_name}` at `{}`",
+                        "there already is a {other_kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
                         pkg_root.display()
                     )
                 })
             } else {
                 qp_bail!(
-                    "there already is a {other_kind} dependency `{ename}` in the project `{pkg_name}` at `{}`",
+                    "there already is a {other_kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             }
