@@ -24,6 +24,7 @@ use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::guards;
 use crate::quackpack::util::interned_url::InternedUrl;
+use crate::util::file_locks::LockedFile;
 use crate::util::once_ext::OnceExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
@@ -148,30 +149,20 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.
-    async fn fetch_package_blob(&self, package: types::PackageWithUrl) -> QuackResult<PathBuf> {
-        // Firstly acquire a "global" per package lock.
-        // Otherwise, under the same global fetcher lock, we can start two downloads of the same package,
-        // and one can see existing but empty path.
-        let _lock = self.locks()?.lock(package.as_package(), self.ctx)?;
-        let entry = self.downloads()?.get(package.as_package(), self.ctx)?;
-        let blob = match entry {
-            downloads::DownloadedEntry::Present(path) => return Ok(path),
-            downloads::DownloadedEntry::Vacant(blob) => blob,
-        };
-
-        let mut guard = guards::RemoveOnDrop::new(blob);
-
+    async fn fetch_package_blob(
+        &self,
+        package: types::PackageWithUrl,
+        file: &LockedFile,
+    ) -> QuackResult<()> {
         self.ducknest_client()
-            .fetch_blob(package, guard.file())
+            .fetch_blob(package, file)
             .await
             .with_context(|| {
                 format!(
                     "failed to download the source of `{}` version {}",
                     package.name, package.version
                 )
-            })?;
-        guard.disarm();
-        Ok(guard.file().path().to_path_buf())
+            })
     }
 
     /// Clone a git repository pointed by `source` to the `destination_directory`.
@@ -222,25 +213,40 @@ impl<'duck> Fetcher<'duck> {
     /// Fetch a package from ducknest with retries.
     pub async fn fetch_package_blob_with_retries(
         &self,
-        pkg: PackageWithUrl,
+        package: PackageWithUrl,
         retries: u32,
     ) -> QuackResult<PathBuf> {
         self.ctx.info(format!(
             "starting a download of `{}` version {} from `{}`",
-            pkg.name, pkg.version, pkg.url
+            package.name, package.version, package.url
         ))?;
+
+        // Firstly acquire a "global" per package lock.
+        // Otherwise, under the same global fetcher lock, we can start two downloads of the same package,
+        // and one can see existing but empty path.
+        let _lock = self.locks()?.lock(package.as_package(), self.ctx)?;
+        let entry = self.downloads()?.get(package.as_package(), self.ctx)?;
+
+        let blob = match entry {
+            downloads::DownloadedEntry::Present(path) => return Ok(path),
+            downloads::DownloadedEntry::Vacant(blob) => blob,
+        };
+
+        let mut guard = guards::RemoveOnDrop::new(blob);
+
         let calls = retries + 1;
         for attempt in 1..=calls {
-            match self.fetch_package_blob(pkg).await {
-                Ok(path) => {
+            match self.fetch_package_blob(package, guard.file()).await {
+                Ok(()) => {
                     debug!(target: "duck::ducknest", "fetched on attempt {attempt}/{calls}");
-                    return Ok(path);
+                    guard.disarm();
+                    return Ok(guard.file().path().to_path_buf());
                 }
                 Err(e) => {
                     debug!(target: "duck::ducknest", error = %e, "attempt {attempt}/{calls} failed");
                     self.ctx.warning(format!(
                         "failed to download `{}` version {} from `{}`: {e}",
-                        pkg.name, pkg.version, pkg.url
+                        package.name, package.version, package.url
                     ))?;
                 }
             }
@@ -250,8 +256,8 @@ impl<'duck> Fetcher<'duck> {
 
         qp_bail!(
             "failed to fetch a package {} {} after {retries} {retries_string}",
-            pkg.name,
-            pkg.version
+            package.name,
+            package.version
         )
     }
 
