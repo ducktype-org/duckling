@@ -1675,8 +1675,10 @@ namespace compiler::mir {
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateBox } };
 			case Ref:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateRef } };
-			case Const:
-				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateConst } };
+			case Mut:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateMut } };
+			case Imm:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateImm } };
 			case Ptr:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreatePtr } };
 			case ManyPtr:
