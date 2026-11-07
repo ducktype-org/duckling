@@ -13,7 +13,7 @@
 //! │   │   └── <name>-<version>/
 //! │   │       ├── <other files>
 //! │   │       └── checksum.txt
-//! │   └── git/                    # git registry packages
+//! │   └── git/                    # Fir git packages
 //! │       └── <host>-<hash>/
 //! │           └── <commit>/
 //! │               ├── <other files>
