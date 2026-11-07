@@ -80,11 +80,6 @@ impl InternedUrl {
     pub fn as_url(self) -> &'static Url {
         self.inner
     }
-
-    /// Custom helper, for default registry URL under the lock in fetcher.
-    pub(crate) fn from_static(url: &'static Url) -> Self {
-        Self { inner: url }
-    }
 }
 
 impl From<Url> for InternedUrl {

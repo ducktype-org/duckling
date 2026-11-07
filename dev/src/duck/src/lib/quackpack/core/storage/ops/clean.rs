@@ -7,7 +7,7 @@
 //! Removing files from a storage.
 use std::collections::HashSet;
 use std::fs::DirEntry;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
@@ -27,8 +27,6 @@ use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 pub struct CleanOutput {
     /// Ids of removed venvs.
     pub removed_venvs: Vec<VenvId>,
-    /// Paths to the removed packages.
-    pub removed_packages: Vec<PathBuf>,
     /// Errors encountered during this clean operation.
     pub encountered_errors: ErrorsLogger,
 }
@@ -93,8 +91,6 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     ctx.info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
-        // !TODO: Recalculate.
-        removed_packages: vec![],
         encountered_errors: logger,
     })
 }

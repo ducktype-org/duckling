@@ -120,7 +120,7 @@ impl DuckCfg {
     /// Get the default registry url.
     pub fn registry_url(&self) -> QuackResult<InternedUrl> {
         let url = self.registry()?.url;
-        let url = url.unwrap_or_else(|| InternedUrl::from_static(&fetcher::DEFAULT_REGISTRY_URL));
+        let url = url.unwrap_or_else(|| *fetcher::DEFAULT_REGISTRY_URL);
         Ok(url)
     }
 
