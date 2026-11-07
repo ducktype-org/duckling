@@ -11,9 +11,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use serde::{Deserialize, de};
-use url::Url;
 
-use crate::quackpack::core::fetcher::validate_registry_url;
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::{QuackError, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -38,7 +37,7 @@ pub struct SecurityTyposConfig {
 /// A struct for the `registry:` config map.
 pub struct RegistryConfig {
     /// If specified, this overrides the default registry URL.
-    pub url: Option<ValidRegistryUrl>,
+    pub url: Option<InternedUrl>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -104,24 +103,6 @@ impl<'de> Deserialize<'de> for HumanDeserializableDuration {
             .expecting("a duration in format `<count> <unit>`")
             .string(|s| s.parse().map_err(de::Error::custom))
             .deserialize(deserializer)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// A URL which is valid, as determined by [`validate_registry_url`].
-///
-/// Note: since we create this struct only via [`Deserialize`], we don't care that the inner field
-/// is `pub`, and can be set to an arbitrary value.
-pub struct ValidRegistryUrl(pub Url);
-
-impl<'de> Deserialize<'de> for ValidRegistryUrl {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let url = Url::deserialize(deserializer)?;
-        validate_registry_url(&url).map_err(de::Error::custom)?;
-        Ok(Self(url))
     }
 }
 

@@ -14,7 +14,6 @@ use tracing::trace;
 use url::Url;
 
 use super::{ParseMode, Scope, ScopeGuard};
-use crate::quackpack::core::fetcher::validate_registry_url;
 use crate::quackpack::core::lints::warnings::{GitUrlIsPath, Warnings};
 use crate::quackpack::core::{GitReference, Source};
 use crate::quackpack::schemas::manifest::{
@@ -327,8 +326,5 @@ fn has_paths_which_look_like_urls() -> bool {
 
 fn parse_registry_url(url: &str, scope: &Scope) -> QuackResult<Url> {
     let url = url.to_url().with_context(|| scope.make_context_string())?;
-    validate_registry_url(&url)
-        .with_context(|| format!("`{url}` is not a valid registry URL"))
-        .with_context(|| scope.make_context_string())?;
     Ok(url)
 }

@@ -289,34 +289,3 @@ fn deserialize_tests() {
     let dev_profile = &manifest.profiles["dev"];
     assert_eq!(dev_profile.opt_level, Some(registry::OptLevel::Zero));
 }
-
-#[test]
-fn valid_url_tests() {
-    macro_rules! ok {
-        ($url:expr) => {{
-            let url = $url.parse().unwrap();
-            assert_eq!(validate_registry_url(&url), Ok(()));
-        }};
-    }
-
-    macro_rules! err {
-        ($url:expr, $err:expr) => {{
-            let url = $url.parse().unwrap();
-            assert_eq!(validate_registry_url(&url), Err($err));
-        }};
-    }
-
-    ok!("http://localhost:9001");
-    ok!("http://foo.bar/");
-    ok!("https://foo.bar");
-    ok!("https://foo.bar:9001");
-
-    err!("unix:/run/foo.socket", InvalidUrlError::NoHost);
-    err!("data:text/plain,Stuff", InvalidUrlError::NoHost);
-
-    err!("https://foo.bar/a", InvalidUrlError::HasPathSegments);
-    err!("https://foo.bar/a/", InvalidUrlError::HasPathSegments);
-    err!("https://foo.bar/a/b", InvalidUrlError::HasPathSegments);
-
-    err!("https://foo.bar?x=y", InvalidUrlError::HasQuery);
-}
