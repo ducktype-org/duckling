@@ -52,6 +52,17 @@ impl From<SolverPackageFreeze> for PreexistenceData {
     }
 }
 
+impl PreexistenceData {
+    pub(in crate::quackpack::core::solver) fn from_freeze_for_root(
+        value: SolverPackageFreeze,
+    ) -> Self {
+        Self {
+            features: [].into(),
+            realized_dependencies: value.dependencies_realization,
+        }
+    }
+}
+
 impl SolverInput {
     /// Creates the [`SolverInput`], based on the previous freeze, its packages' manifests
     /// and information gathered in the gathering phase.
@@ -84,7 +95,11 @@ impl SolverInput {
                 Entry::Vacant(vacant) => vacant.insert(PackageData::new_empty(manifest)),
             };
             pkg_data.features.extend(freeze.features.iter().copied());
-            pkg_data.preexistence = Some(freeze.clone().into());
+            pkg_data.preexistence = if *pkg == prev_freeze.main_pkg {
+                Some(PreexistenceData::from_freeze_for_root(freeze.clone()))
+            } else {
+                Some(freeze.clone().into())
+            };
             versions_for_identity
                 .entry(pkg.identity())
                 .or_default()
@@ -145,6 +160,14 @@ impl SolverInput {
         self.packages_data.get(&pkg).with_context_internal(|| {
             format!("package {pkg:?} not present in packages to package data map")
         })
+    }
+
+    pub fn all_versions(&self, identity: FullIdentity) -> QuackResult<&HashSet<Version>> {
+        self.versions_for_identity
+            .get(&identity)
+            .with_context_internal(|| {
+                format!("identity {identity:?} not present in identities to versions map")
+            })
     }
 }
 

@@ -4,65 +4,54 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use std::rc::Rc;
-
+use russcip::Variable;
+use russcip::builder::cons::ConsBuilder;
 use russcip::prelude::cons;
-use russcip::{Model, ProblemCreated, Variable};
 
 /// An extension of [`Model`] with functions for representing binary variable implications as constraints.
-pub trait BinModelExt {
-    /// A simple implication when => then.
-    fn implies(&mut self, when: &Variable, then: &Variable);
+pub trait ConsBuilderExt<'a> {
     /// An implication of form when_all_1 ∧ ... ∧ when_all_n => then_any_1 ∨ ... ∨ then_any_m.
-    fn all_implies_any(&mut self, when_all: Vec<Rc<Variable>>, then_any: Vec<Rc<Variable>>);
-    /// An implication of form when => then_all_1 ∧ ... ∧ then_all_n.
-    fn one_implies_all(&mut self, when: Rc<Variable>, then_all: Vec<Rc<Variable>>);
-    /// Allow at most one variable to be chosen.
-    fn at_most_one(&mut self, vars: Vec<Rc<Variable>>);
+    fn all_implies_any(when_all: Vec<&'a Variable>, then_any: Vec<&'a Variable>) -> Self;
+    /// An implication of form when_all_1 ∧ ... ∧ when_all_n => then_all_1 ∧ ... ∧ then_all_m.
+    fn all_implies_all(when_all: Vec<&'a Variable>, then_any: Vec<&'a Variable>) -> Self;
+    /// Allow at most one variable to be evaluated true.
+    fn at_most_one(vars: Vec<&'a Variable>) -> Self;
+    /// Allow none of the varaibles to be evaluated true.
+    fn none(vars: Vec<&'a Variable>) -> Self;
 }
 
-impl BinModelExt for Model<ProblemCreated> {
-    fn implies(&mut self, when: &Variable, then: &Variable) {
-        let constraint = cons().coef(when, 1.0).coef(then, -1.0).le(0.0);
-        self.add(constraint);
-    }
-
-    fn all_implies_any(&mut self, when_all: Vec<Rc<Variable>>, then_any: Vec<Rc<Variable>>) {
+impl<'a> ConsBuilderExt<'a> for ConsBuilder<'a> {
+    fn all_implies_any(
+        when_all: Vec<&'a Variable>,
+        then_any: Vec<&'a Variable>,
+    ) -> ConsBuilder<'a> {
         let when_all_len = when_all.len();
         let then_any_len = then_any.len();
-        let constraint = cons()
-            .coefs(
-                when_all.iter().map(|v| v.as_ref()).collect(),
-                vec![1.0; when_all_len],
-            )
-            .coefs(
-                then_any.iter().map(|v| v.as_ref()).collect(),
-                vec![-1.0; then_any_len],
-            )
-            .le((when_all_len - 1) as f64);
-        self.add(constraint);
+        cons()
+            .coefs(when_all, vec![1.0; when_all_len])
+            .coefs(then_any, vec![-1.0; then_any_len])
+            .le((when_all_len - 1) as f64)
     }
 
-    fn one_implies_all(&mut self, when: Rc<Variable>, then_all: Vec<Rc<Variable>>) {
+    fn all_implies_all(
+        when_all: Vec<&'a Variable>,
+        then_all: Vec<&'a Variable>,
+    ) -> ConsBuilder<'a> {
+        let when_all_len = when_all.len();
         let then_all_len = then_all.len();
-        let constraint = cons()
-            .coef(when.as_ref(), then_all_len as f64)
-            .coefs(
-                then_all.iter().map(|v| v.as_ref()).collect(),
-                vec![-1.0; then_all_len],
-            )
-            .le(0.0);
-        self.add(constraint);
+        cons()
+            .coefs(when_all, vec![then_all_len as f64; when_all_len])
+            .coefs(then_all, vec![-1.0; then_all_len])
+            .le(((when_all_len - 1) * then_all_len) as f64)
     }
 
-    fn at_most_one(&mut self, vars: Vec<Rc<Variable>>) {
+    fn at_most_one(vars: Vec<&'a Variable>) -> ConsBuilder<'a> {
         let vars_len = vars.len();
-        let constraint = cons()
-            .coefs(
-                vars.iter().map(|v| v.as_ref()).collect(),
-                vec![1.0; vars_len],
-            )
-            .le(1.0);
-        self.add(constraint);
+        cons().coefs(vars, vec![1.0; vars_len]).le(1.0)
+    }
+
+    fn none(vars: Vec<&'a Variable>) -> ConsBuilder<'a> {
+        let vars_len = vars.len();
+        cons().coefs(vars, vec![1.0; vars_len]).le(0.0)
     }
 }

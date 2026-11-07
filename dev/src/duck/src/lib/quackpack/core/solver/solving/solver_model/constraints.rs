@@ -1,31 +1,62 @@
-use std::collections::HashSet;
+use std::format;
 use std::rc::Rc;
 
-use russcip::builder::cons::cons;
+use russcip::builder::cons::{ConsBuilder as RawConstraint, ConsBuilder, cons};
 use russcip::{ProblemCreated, Variable};
 
-use crate::QuackResult;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
-use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
+use crate::quackpack::core::solver::solving::scip_ext::ConsBuilderExt;
 use crate::quackpack::core::solver::solving::solver_model::{PresentFeature, SolverModel};
 use crate::quackpack::core::{FeatureName, PackageId, Version};
+use crate::{QuackResult, StrId};
 
+#[allow(dead_code)]
 #[derive(Debug)]
-pub(super) enum Constraint {
-    /// This package must occur in the solution.
-    RequirePackage(PackageId),
-    /// This package must occur in the solution with this feature.
-    RequirePackageWithFeature(PackageId, FeatureName),
-    /// This package must not occur in the solution.
-    ForbidPackage(PackageId),
-    /// This package must not occur in the solution with this feature.
-    ForbidPackageWithFeature(PackageId, FeatureName),
+/// All kinds of constraints added to the ILP for resolving dependencies.
+/// This is overly verbose on purpose, so that in the future we can provide good explanation through minimal infeasible subproblem.
+pub enum Constraint {
+    /// The root package must occur in the solution.
+    RequireRootPackage(),
+    /// The root package must occur in the solution with this feature.
+    RequireRootFeature(FeatureName),
+    /// Dependency's parent must not occur in the solution, because no realization of the dependency was found.
+    /// Note
+    /// ----
+    /// Possible only in merciful mode.
+    ForbidPackage { pkg: PackageId, dep_dname: StrId },
+    /// This package must not occur in the solution with this feature,
+    /// because no realization of the dependency was found.
+    /// Note
+    /// ----
+    /// Possible only in merciful mode.
+    ForbidPackageFeaturesBecauseNoRealization {
+        pkg: PackageId,
+        dep_dname: StrId,
+        feature: FeatureName,
+    },
+    /// This package with this feature has a dependency which cannot be realized by `realization`.
+    /// This is because feature forces some unsupported feature of realization.
+    ForbidFeatureBecauseForces {
+        pkg: PackageId,
+        realization: PackageId,
+        feature: PresentFeature,
+    },
+    /// This package must not occur in the solution with this feature,
+    /// because parent is preexistent, but `feature` forces some feature which realization does not support.
+    /// Note
+    /// ----
+    /// Possible only when reusing previous freeze.
+    ForbidPreexistingFeatureBecauseForces {
+        pkg: PackageId,
+        realization: PackageId,
+        feature: FeatureName,
+    },
     /// If parent of the dependency is present then at least one realization has to be present as well.
-    RequireDepPresence {
+    RequireDepRealization {
         dep: DependencyEdge,
         parent_feature: PresentFeature,
-        realizations: Vec<Version>,
+        realizations: Vec<PackageId>,
     },
     /// If parent of the dependency is present, some realization was chosen and the dependency forces some features,
     /// then realization has to occur with those features.
@@ -35,159 +66,220 @@ pub(super) enum Constraint {
         realization: Version,
         forced_features: Vec<FeatureName>,
     },
-    /// Prohibit any package from occuring in more than one version.
-    ProhibitMultipleVersions {
+    /// Non-preexistent feature of a preexistent package forces some features of realization.
+    /// Note
+    /// ----
+    /// Possible only when reusing previous freeze.
+    RequireForcedFeatureForPreexisting {
+        parent: PackageId,
+        parent_feature: FeatureName,
+        realization: PackageId,
+        forced_features: Vec<FeatureName>,
+    },
+    /// If package is present with feature, then it must have features which it expands into.
+    RequireFeatureExpansion {
+        pkg: PackageId,
+        feature: FeatureName,
+        expands_to: Vec<FeatureName>,
+    },
+    /// Forbid two packages with the same [`Identity`] from being chosen simultaneously.
+    ForbidMultipleVersions {
         id: Identity,
-        versions: Vec<Version>,
+        versions: Vec<PackageId>,
+    },
+    /// Forbid packages with a given [`Identity`] and different from a given [`PackageId`] from being chosen.
+    /// This should be used when some package with the given [`Identity`] preexists.
+    ForbidDifferentVersions {
+        id: Identity,
+        different_versions: Vec<PackageId>,
+        preexistent_version: PackageId,
     },
 }
 
 impl<'a> SolverModel<'a, ProblemCreated> {
-    /// Adds a constraint to the model.
-    fn add_constraint(&mut self, constraint: Constraint) {
+    /// Add a constraint to the model.
+    fn add_constraint<'b>(&mut self, constraint: Constraint, scip_constraint: RawConstraint<'b>) {
         let id = self.constraints.len();
-        todo!("create russcip's constraint, add a name to it");
+        let name = format!("CONSTRAINT_{id}");
+        let scip_constraint = scip_constraint.name(&name);
+        self.model.add(scip_constraint);
         self.constraints.push(constraint);
     }
 
-    /// Adds a constraint that forces the package to be present in the solution to the model.
-    pub fn require_package(&mut self, pkg: PackageId) -> QuackResult<()> {
+    /// Add a constraint that forces the package to be present in the solution to the model.
+    pub fn require_root_package(&mut self, pkg: PackageId) -> QuackResult<()> {
+        let constraint = Constraint::RequireRootPackage();
         let var = self.get_package_variable(pkg, None)?;
-        self.model.add(cons().coef(&var, 1.0).eq(1.0));
+        let scip_constraint = cons().coef(&var, 1.0).eq(1.0);
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
-    /// Adds a constraint that forces the package to be present with a feature.
-    pub fn require_package_with_feature(
+    /// Add a constraint that forces the package to be present with a feature.
+    pub fn require_root_package_feature(
         &mut self,
         pkg: PackageId,
         feature: FeatureName,
     ) -> QuackResult<()> {
+        let constraint = Constraint::RequireRootFeature(feature);
         let var = self.get_package_variable(pkg, Some(feature))?;
-        self.model.add(cons().coef(&var, 1.0).eq(1.0));
+        let scip_constraint = cons().coef(&var, 1.0).eq(1.0);
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
     /// Add a constraint that this package can never be present.
-    pub fn forbid_package(&mut self, pkg: PackageId) -> QuackResult<()> {
+    pub fn forbid_package_because_no_realization(
+        &mut self,
+        pkg: PackageId,
+        dep_dname: StrId,
+    ) -> QuackResult<()> {
+        let constraint = Constraint::ForbidPackage { pkg, dep_dname };
         let var = self.get_package_variable(pkg, None)?;
-        self.model.add(cons().coef(&var, 1.0).eq(0.0));
+        let scip_constraint = cons().coef(&var, 1.0).eq(0.0);
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
     /// Add a constraint that this package can never be present with the given feature.
-    pub fn forbid_package_with_feature(
+    pub fn forbid_package_feature_because_no_realization(
         &mut self,
         pkg: PackageId,
         feature: FeatureName,
+        dep_dname: StrId,
     ) -> QuackResult<()> {
         let var = self.get_package_variable(pkg, Some(feature))?;
-        self.model.add(cons().coef(&var, 1.0).eq(0.0));
+        let scip_constraint = cons().coef(&var, 1.0).eq(0.0);
+        let constraint = Constraint::ForbidPackageFeaturesBecauseNoRealization {
+            pkg,
+            feature,
+            dep_dname,
+        };
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
-    /// Adds a constraint that forces the child to be present with all of the required features.
-    pub fn require_satisfying_dep_feature(
+    /// Add a constraint that realization and this package can never be present with the given feature.
+    pub fn forbid_package_feature_because_forces(
         &mut self,
-        edge: DependencyEdge,
-        parent_feature: PresentFeature,
-        child_features: &HashSet<FeatureName>,
+        pkg: PackageId,
+        realization: PackageId,
+        feature: PresentFeature,
     ) -> QuackResult<()> {
-        let parent_var = self.get_package_variable(edge.parent, parent_feature)?;
-        let feature_vars = child_features
-            .iter()
-            .map(|feature| self.get_dependency_feature_variable(edge, *feature))
-            .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        self.model.one_implies_all(parent_var, feature_vars);
+        let constraint = Constraint::ForbidFeatureBecauseForces {
+            pkg,
+            realization,
+            feature,
+        };
+        let parent_var = self.get_package_variable(pkg, feature)?;
+        let realization_var = self.get_package_variable(realization, None)?;
+        let scip_constraint = ConsBuilder::all_implies_any(
+            vec![parent_var.as_ref(), realization_var.as_ref()],
+            vec![],
+        );
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
-    /// For each pair (parent_feature, forced_child_features) adds a condition that
-    /// presence of the parent package with parent feature forces presence of the child with all the forced features.
-    /// Important:
-    /// ----------
-    /// Use only for scenarios where both parent and child have belonged to the previous freeze.
-    pub fn require_satisfying_dep_feature_for_preexisting(
+    /// Add a constraint that this package can never be present with the given feature.
+    pub fn forbid_preexistent_package_feature_because_forces(
         &mut self,
-        parent: PackageId,
-        child: PackageId,
-        forcing: Vec<(FeatureName, Vec<FeatureName>)>,
+        pkg: PackageId,
+        realization: PackageId,
+        feature: FeatureName,
     ) -> QuackResult<()> {
-        for (parent_feature, forced_child_features) in forcing {
-            let parent_var = self.get_package_variable(parent, Some(parent_feature))?;
-            let child_vars = forced_child_features
-                .into_iter()
-                .map(|feature| self.get_package_variable(child, Some(feature)))
-                .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-            self.model.one_implies_all(parent_var, child_vars);
-        }
+        let constraint = Constraint::ForbidPreexistingFeatureBecauseForces {
+            pkg,
+            realization,
+            feature,
+        };
+        let var = self.get_package_variable(pkg, Some(feature))?;
+        let scip_constraint = cons().coef(&var, 1.0).eq(1.0);
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
-    /// Adds a constraint that forces the child to be present in at least one of the required versions.
-    pub fn require_satisfying_dep_version(
-        &mut self,
-        edge: DependencyEdge,
-        parent_feature: PresentFeature,
-    ) -> QuackResult<()> {
-        let parent_var = self.get_package_variable(edge.parent, parent_feature)?;
-        let version_vars = self
-            .get_version_to_var_map_for_dep(edge)
-            .values()
-            .cloned()
-            .collect();
-        self.model.all_implies_any(vec![parent_var], version_vars);
-        Ok(())
-    }
-
-    /// Adds a constraint that if the variable associated with a pair (dependency, child version)
-    /// was chosen by the model to be present, the underlying package variable of the child in that version
-    /// has to be present.
-    pub fn require_substantiate_dep(&mut self, edge: DependencyEdge) -> QuackResult<()> {
-        for (pkg_version, version_realization_var) in
-            self.get_version_to_var_map_for_dep(edge).clone()
-        {
-            let pkg_var =
-                self.get_package_variable(PackageId::new(edge.dep_identity, pkg_version), None)?;
-            self.model.implies(&version_realization_var, &pkg_var);
-        }
-        Ok(())
-    }
-
-    /// Adds a constraint that if the variable associated with a pair (dependency, child version) was chosen to be present
-    /// and the variable associated with a pair (dependency, child's feature) was chosen to be present,
-    /// then the underlying package variable of the child in that version with that feature has to be present.
-    pub fn require_substantiate_dep_features(
+    /// Adds a constraint that forces the child to be present in at least one of the required versions,
+    /// assuming parent is present with `parent_feature`.
+    pub fn require_dep_realization(
         &mut self,
         dep: DependencyEdge,
-        possible_dep_realizations: &[PackageId],
+        parent_feature: PresentFeature,
+        possible_realizations: Vec<PackageId>,
     ) -> QuackResult<()> {
-        for pkg in possible_dep_realizations {
-            let version_realization_var =
-                self.get_dependency_version_variable(dep, pkg.version())?;
-            for (feature, feature_realization_var) in
-                self.get_feature_to_var_map_for_dep(dep).clone()
-            {
-                let pkg_features = self.input.package_data(*pkg)?.features();
-                if !pkg_features.contains(&feature) {
-                    self.model.all_implies_any(
-                        vec![
-                            version_realization_var.clone(),
-                            feature_realization_var.clone(),
-                        ],
-                        vec![],
-                    );
-                } else {
-                    self.model.all_implies_any(
-                        vec![
-                            version_realization_var.clone(),
-                            feature_realization_var.clone(),
-                        ],
-                        vec![self.get_package_variable(*pkg, Some(feature))?],
-                    );
-                }
-            }
-        }
+        let parent_var = self.get_package_variable(dep.parent, parent_feature)?;
+        let version_vars = possible_realizations
+            .iter()
+            .map(|pkg| self.get_package_variable(*pkg, None))
+            .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
+        let scip_constraint = ConsBuilder::all_implies_any(
+            vec![parent_var.as_ref()],
+            version_vars.iter().map(|x| x.as_ref()).collect(),
+        );
+        let constraint = Constraint::RequireDepRealization {
+            dep,
+            parent_feature,
+            realizations: possible_realizations,
+        };
+        self.add_constraint(constraint, scip_constraint);
+        Ok(())
+    }
+
+    /// Adds a constraint that forces the the child to be present with forced features,
+    /// assuming parent is present with `parent_feature`.
+    pub fn require_forced_features(
+        &mut self,
+        dep: DependencyEdge,
+        parent_feature: PresentFeature,
+        realization: Version,
+        forced_features: Vec<FeatureName>,
+    ) -> QuackResult<()> {
+        let realization_pkg = PackageId::new(dep.dep_identity, realization);
+        let parent_var = self.get_package_variable(dep.parent, parent_feature)?;
+        let realization_var = self.get_package_variable(realization_pkg, None)?;
+        let forced_features_vars = forced_features
+            .iter()
+            .map(|f| self.get_package_variable(realization_pkg, Some(*f)))
+            .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
+        let scip_constraint = ConsBuilder::all_implies_all(
+            vec![parent_var.as_ref(), realization_var.as_ref()],
+            forced_features_vars.iter().map(|x| x.as_ref()).collect(),
+        );
+        let constraint = Constraint::RequireForcedFeature {
+            dep,
+            parent_feature,
+            realization,
+            forced_features,
+        };
+        self.add_constraint(constraint, scip_constraint);
+        Ok(())
+    }
+
+    /// Adds a constraint that forces the realization of a preexistent dependency,
+    /// assuming parent is present with (not preexistent) `parent_feature`.
+    pub fn require_forced_features_for_preexisting(
+        &mut self,
+        parent: PackageId,
+        parent_feature: FeatureName,
+        realization: PackageId,
+        forced_features: Vec<FeatureName>,
+    ) -> QuackResult<()> {
+        let parent_var = self.get_package_variable(parent, Some(parent_feature))?;
+        let forced_features_vars = forced_features
+            .iter()
+            .map(|f| self.get_package_variable(realization, Some(*f)))
+            .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
+        let scip_constraint = ConsBuilder::all_implies_all(
+            vec![parent_var.as_ref()],
+            get_refs_vec(&forced_features_vars),
+        );
+        let constraint = Constraint::RequireForcedFeatureForPreexisting {
+            parent,
+            parent_feature,
+            realization,
+            forced_features,
+        };
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
@@ -196,30 +288,68 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         &mut self,
         pkg: PackageId,
         feature: FeatureName,
-        expanded_features: impl IntoIterator<Item = FeatureName>,
+        expands_to: Vec<FeatureName>,
     ) -> QuackResult<()> {
-        let expanded_features_vars: QuackResult<Vec<Rc<Variable>>> = expanded_features
-            .into_iter()
-            .map(|f| self.get_package_variable(pkg, Some(f)))
-            .collect();
-        let expanded_features_vars = expanded_features_vars?;
-        let forcing_feature_var = self.get_package_variable(pkg, Some(feature))?;
-        self.model
-            .one_implies_all(forcing_feature_var, expanded_features_vars);
+        let expands_to_vars = expands_to
+            .iter()
+            .map(|f| self.get_package_variable(pkg, Some(*f)))
+            .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
+        let feature_var = self.get_package_variable(pkg, Some(feature))?;
+        let scip_constraint = ConsBuilder::all_implies_all(
+            vec![feature_var.as_ref()],
+            get_refs_vec(&expands_to_vars),
+        );
+        let constraint = Constraint::RequireFeatureExpansion {
+            pkg,
+            feature,
+            expands_to,
+        };
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
 
     /// Forbid more that one version of the package to be chosen.
     pub fn forbid_more_that_one_version(
         &mut self,
-        package_versions: Vec<PackageId>,
+        identity: Identity,
+        versions: Vec<PackageId>,
     ) -> QuackResult<()> {
-        let version_vars: QuackResult<Vec<Rc<Variable>>> = package_versions
-            .into_iter()
-            .map(|pkg| self.get_package_variable(pkg, None))
-            .collect();
-        let version_vars = version_vars?;
-        self.model.at_most_one(version_vars);
+        let version_vars = versions
+            .iter()
+            .map(|pkg| self.get_package_variable(*pkg, None))
+            .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
+        let scip_constraint = ConsBuilder::at_most_one(get_refs_vec(&version_vars));
+        let constraint = Constraint::ForbidMultipleVersions {
+            id: identity,
+            versions,
+        };
+        self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
+
+    /// Forbid more that one version of the package to be chosen.
+    pub fn forbid_versions_different_from_preexisting(
+        &mut self,
+        identity: Identity,
+        preexistent_version: PackageId,
+        different_versions: Vec<PackageId>,
+    ) -> QuackResult<()> {
+        let forbidden_version_vars = different_versions
+            .iter()
+            .map(|pkg| self.get_package_variable(*pkg, None))
+            .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
+        let scip_constraint = ConsBuilder::none(get_refs_vec(&forbidden_version_vars));
+        let constraint = Constraint::ForbidDifferentVersions {
+            id: identity,
+            different_versions,
+            preexistent_version,
+        };
+        self.add_constraint(constraint, scip_constraint);
+        Ok(())
+    }
+}
+
+/// Helper for getting a vector of references to [`Rc`]s inside a vector.
+fn get_refs_vec(vec: &[Rc<Variable>]) -> Vec<&Variable> {
+    vec.iter().map(|x| x.as_ref()).collect()
 }
