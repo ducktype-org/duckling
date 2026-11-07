@@ -9,10 +9,15 @@
 //! Layout:
 //! <storage root>
 //! ├── pkg/
-//! │   ├── <package id>/
-//! │   │   ├── <other files>
-//! │   │   └── checksum.txt
-//! │   └── ...
+//! │   ├── registry-<host>-<hash>/ # For registry packages
+//! │   │   └── <name>-<version>/
+//! │   │       ├── <other files>
+//! │   │       └── checksum.txt
+//! │   └── git/                    # git registry packages
+//! │       └── <host>-<hash>/
+//! │           └── <commit>/
+//! │               ├── <other files>
+//! │               └── checksum.txt
 //! ├── venv/
 //! │   ├── <venv name>/
 //! │   │   ├── metadata
@@ -20,27 +25,26 @@
 //! │   └── ...
 //! └── locks/
 //!     ├── clean.lock
-//!     ├── venv_sync/
+//!     ├── sync/
 //!     │   ├── <package id>
 //!     │   └── ...
-//!     └── venv_data/
+//!     └── data/
 //!         ├── <package id>
 //!         └── ...
 
 use std::path::{Path, PathBuf};
 
+use crate::quackpack::core::PackageId;
 use crate::quackpack::core::full_identity::FullKind;
 use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::quackpack::core::{PackageId, Version, storage_name_for_git, storage_name_for_registry};
 use crate::quackpack::util::dir_iterator::{DirContents, create_dir_iterator};
-use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::util::path_ops::{remove_tree, touch};
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";
-const VENV_SYNC_LOCK_FILENAME: &str = "venv_sync";
-const VENV_DATA_LOCK_FILENAME: &str = "venv_data";
+const VENV_SYNC_LOCK_FILENAME: &str = "sync";
+const VENV_DATA_LOCK_FILENAME: &str = "data";
 const CLEAN_LOCK_FILENAME: &str = "clean.lock";
 
 const VENVS_DIR_NAME: &str = "venv";
@@ -86,25 +90,7 @@ impl Storage {
     #[track_caller]
     /// Get the root directory for storing a package.
     pub fn pkg_dir(&self, pkg_id: PackageId) -> PathBuf {
-        match pkg_id.kind() {
-            FullKind::Git { commit } => self.git_dir(pkg_id.url(), &commit),
-            FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
-            FullKind::Local => {
-                unreachable!("local packages should not be stored in storage `{self:?}`")
-            }
-        }
-    }
-
-    /// Get the root directory for storing a git package.
-    pub fn git_dir(&self, url: InternedUrl, commit: &str) -> PathBuf {
-        let pkg_dir = storage_name_for_git(url, commit);
-        self.packages_root_dir().join(pkg_dir)
-    }
-
-    /// Get the root directory for storing a registry package.
-    pub fn registry_dir(&self, name: &str, version: Version, url: InternedUrl) -> PathBuf {
-        let pkg_dir = storage_name_for_registry(name, version, url);
-        self.packages_root_dir().join(pkg_dir)
+        pkg_id.push_storage_path(&self.packages_root_dir())
     }
 
     /// Try to acquire a shared clean lock.
@@ -152,14 +138,6 @@ impl Storage {
         self.venv_dir(venv_id).join(BACKUP_METADATA_FILENAME)
     }
 
-    /// Returns an iterator over all packages in the storage.
-    /// The yielded packages need not be correct (may be missing checksum).
-    /// It is not guaranteed that during iteration, the yielded paths
-    /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_pkgs(&self) -> QuackResult<DirContents> {
-        create_dir_iterator(&self.packages_root_dir())
-    }
-
     /// Returns an iterator over all venvs in the storage.
     /// The yielded venvs need not be correct (may have invalid data).
     /// It is not guaranteed that during iteration, the yielded paths
@@ -184,53 +162,19 @@ impl Storage {
 
     /// Check if package is stored in storage.
     pub fn is_package_stored(&self, pkg_id: PackageId) -> bool {
-        match pkg_id.kind() {
-            FullKind::Git { commit } => self.is_stored_git(pkg_id.url(), &commit),
-            FullKind::Registry => {
-                self.is_stored_registry(&pkg_id.name(), pkg_id.version(), pkg_id.url())
-            }
-            FullKind::Local => false,
+        if matches!(pkg_id.kind(), FullKind::Local) {
+            return false;
         }
-    }
-
-    /// Check if git package is stored in storage.
-    pub fn is_stored_git(&self, url: InternedUrl, commit: &str) -> bool {
-        let dir = self.git_dir(url, commit);
-        dir.is_dir() && dir.join(OK_FILENAME).exists()
-    }
-
-    /// Check if repository package is stored in storage.
-    pub fn is_stored_registry(&self, name: &str, version: Version, url: InternedUrl) -> bool {
-        let dir = self.registry_dir(name, version, url);
+        let dir = self.pkg_dir(pkg_id);
         dir.is_dir() && dir.join(OK_FILENAME).exists()
     }
 
     /// Mark package as fully stored in storage.
     pub fn mark_as_stored(&self, pkg_id: PackageId) -> QuackResult<()> {
-        match pkg_id.kind() {
-            FullKind::Git { commit } => self.mark_git_stored(pkg_id.url(), &commit),
-            FullKind::Registry => {
-                self.mark_registry_stored(&pkg_id.name(), pkg_id.version(), pkg_id.url())
-            }
-            FullKind::Local => qp_bail_internal!("attempting to store a local package: {pkg_id:?}"),
+        if matches!(pkg_id.kind(), FullKind::Local) {
+            qp_bail_internal!("attempting to store a local package: {pkg_id:?}")
         }
-    }
-
-    /// Mark git package as fully stored in storage.
-    pub fn mark_git_stored(&self, url: InternedUrl, commit: &str) -> QuackResult<()> {
-        let dir = self.git_dir(url, commit);
-        touch(dir.join(OK_FILENAME))?;
-        Ok(())
-    }
-
-    /// Mark repository package as fully stored in storage.
-    pub fn mark_registry_stored(
-        &self,
-        name: &str,
-        version: Version,
-        url: InternedUrl,
-    ) -> QuackResult<()> {
-        let dir = self.registry_dir(name, version, url);
+        let dir = self.pkg_dir(pkg_id);
         touch(dir.join(OK_FILENAME))?;
         Ok(())
     }
@@ -238,11 +182,10 @@ impl Storage {
     /// Attempts to remove a package from the storage,
     /// does not fail if such package is not stored.
     pub fn try_remove_pkg(&self, pkg_id: PackageId) -> QuackResult<()> {
-        let pkg_dir = match pkg_id.kind() {
-            FullKind::Git { commit } => self.git_dir(pkg_id.url(), &commit),
-            FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
-            FullKind::Local => return Ok(()),
-        };
+        if matches!(pkg_id.kind(), FullKind::Local) {
+            return Ok(());
+        }
+        let pkg_dir = self.pkg_dir(pkg_id);
         remove_tree(pkg_dir)
     }
 }

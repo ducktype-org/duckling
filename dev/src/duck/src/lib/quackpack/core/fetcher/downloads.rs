@@ -5,14 +5,17 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Manager of the fetcher's `downloads/` directory.
+//!
+//! Each file is downloaded to `downloads/<host>-<hash>/<name>-<version>.tar.gz`.
 
 use std::path::PathBuf;
 
 use tracing::{debug, trace};
 
 use super::types;
+use crate::quackpack::core::short_name_for_host;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::{DuckContext, QuackResult, QuackResultContext};
+use crate::{DuckContext, QuackResult};
 
 #[derive(Debug)]
 /// Manager of the downloads cache in QuackPack.
@@ -30,8 +33,8 @@ pub enum DownloadedEntry {
 }
 
 impl Downloads {
-    /// Filename of the default package's compressed source.
-    const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
+    /// Extension of the default package's compressed source.
+    const EXTENSION: &'static str = ".tar.gz";
 
     /// Create a new [`Downloads`].
     pub fn new(root: FileLockManager) -> QuackResult<Self> {
@@ -52,28 +55,18 @@ impl Downloads {
         package: types::PackageWithUrl,
         ctx: &DuckContext,
     ) -> QuackResult<DownloadedEntry> {
-        let host = package.url.host_str().with_context_internal(|| {
-            format!(
-                "URL `{}` has no host (it didn't go through `validate_registry_url`)",
-                package.url
-            )
-        })?;
-        let destination = self
-            .root
-            .join(host)
-            .join(package.name)
-            .join(package.version.to_string());
+        let id = short_name_for_host(&package.url);
+        let filename = format!("{}-{}{}", package.name, package.version, Self::EXTENSION);
+        let destination = self.root.join(id);
 
-        let blob_path = destination
-            .not_locked_path()
-            .join(Self::DEFAULT_BLOB_FILENAME);
+        let blob_path = destination.not_locked_path().join(&filename);
 
         if blob_path.exists() {
             debug!(target: "duck::ducknest", "blob cache hit at `{}`", blob_path.display());
             return Ok(DownloadedEntry::Present(blob_path));
         }
 
-        let locked = destination.open_exclusive(Self::DEFAULT_BLOB_FILENAME, ctx)?;
+        let locked = destination.open_exclusive(filename, ctx)?;
         Ok(DownloadedEntry::Vacant(locked))
     }
 }

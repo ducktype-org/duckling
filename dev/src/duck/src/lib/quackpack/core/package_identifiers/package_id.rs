@@ -4,13 +4,14 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+use std::path::{Path, PathBuf};
+
 use crate::StrId;
-use crate::quackpack::core::Version;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::short_name_for_host;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::with_version::WithVersion;
-use crate::util::hash::sha256_string;
 
 /// Unique identifier of a package, used throughout the whole project.
 pub type PackageId = WithVersion<FullIdentity>;
@@ -42,14 +43,23 @@ impl PackageId {
     }
 
     #[track_caller]
-    /// Get storage name of a package.
-    pub fn storage_name(self) -> String {
+    /// Push the unique path to the base, to get the path where the package should be stored.
+    ///
+    /// They correspond to paths under `pkg/`, described in [`storage::paths`].
+    ///
+    /// [`storage::paths`]: crate::quackpack::core::storage::paths
+    pub fn push_storage_path(self, root: &Path) -> PathBuf {
         match self.kind() {
             FullKind::Registry => {
-                storage_name_for_registry(&self.name(), self.version(), self.url())
+                let name = format!("registry-{}", short_name_for_host(&self.url()));
+                root.join(name)
+                    .join(format!("{}-{}", self.name(), self.version()))
             }
-            FullKind::Git { commit } => storage_name_for_git(self.url(), &commit),
-            FullKind::Local => unreachable!("local packages do not have storage names `{self:?}`"),
+            FullKind::Git { commit } => root
+                .join("git")
+                .join(short_name_for_host(&self.url()))
+                .join(commit),
+            FullKind::Local => unreachable!("local packages are not stored in storage {self:?}"),
         }
     }
 }
@@ -58,14 +68,4 @@ impl From<PackageId> for WithVersion<Identity> {
     fn from(pkg_id: PackageId) -> Self {
         Self::new(pkg_id.identity().into(), pkg_id.version())
     }
-}
-
-/// Get storage name for git packages.
-pub fn storage_name_for_git(url: InternedUrl, commit: &str) -> String {
-    format!("git-{}-{}", sha256_string(url.as_str()), commit,)
-}
-
-/// Get storage name for repository packages.
-pub fn storage_name_for_registry(name: &str, version: Version, url: InternedUrl) -> String {
-    format!("registry-{}-{}-{}", url.host_str().unwrap(), name, version,)
 }

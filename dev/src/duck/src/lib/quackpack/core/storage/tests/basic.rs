@@ -21,20 +21,22 @@ use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops}
 use crate::quackpack::core::{PackageLoader, Version, fetcher};
 use crate::util::path_ops::{normalize, read_from_path_to_string};
 
+#[track_caller]
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(root.join("venv").join(name).exists());
-        assert!(root.join("locks").join("venv_sync").join(name).exists());
-        assert!(root.join("locks").join("venv_data").join(name).exists());
+        assert!(root.join("locks").join("sync").join(name).exists());
+        assert!(root.join("locks").join("data").join(name).exists());
     }
 }
 
 // cSpell:disable-next-line
+#[track_caller]
 fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(!root.join("venv").join(name).exists());
-        assert!(!root.join("locks").join("venv_sync").join(name).exists());
-        assert!(!root.join("locks").join("venv_data").join(name).exists());
+        assert!(!root.join("locks").join("sync").join(name).exists());
+        assert!(!root.join("locks").join("data").join(name).exists());
     }
 }
 
