@@ -32,12 +32,16 @@
 
 #define PARSE() state.parse(out)
 /**
- * @brief This macro saves the current context and restores it after executing code from the argument.
+ * @brief This macro saves the current context and restores it after executing code from the
+ * argument. The code is not executed while skipping, because the inner code can typically assumes
+ * that the inner nodes are calculated.
  */
-#define PST_NEW_CONTEXT(code)       \
-	state.parse(out).saveContext(); \
-	code;                           \
-	state.parse(out).exitSoftFallback();
+#define PST_NEW_CONTEXT(code)                           \
+	if (!state.isSkipping()) {                          \
+		auto saved_context = state.saveContext();       \
+		code;                                           \
+		state.restoreContext(std::move(saved_context)); \
+	}
 
 namespace pst {
 	using lang_def::Keyword;
@@ -572,15 +576,6 @@ namespace pst {
 			);
 			active_fallback = true;
 			return fallbackUntil<until>();
-		}
-
-		/**
-		 * @brief Sets a simple soft fallback that is only used to save context
-		 */
-		PSTAutomatic& saveContext() {
-			constexpr auto CONST_TRUE = [](const TokenStream&, i64) { return true; };
-
-			return setSoftFallback(CONST_TRUE);
 		}
 
 		/**
