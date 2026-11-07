@@ -211,7 +211,7 @@ impl<'a> SolverEngine<'a> {
         let parent_features: Vec<Option<FeatureName>> =
             parent_features_to_consider(self.input, edge).collect();
         for (enabling, forcing) in iproduct!(parent_features.iter(), parent_features.iter()) {
-            if !manifest_dependency.is_enabled_for(&enabling.into_iter().copied().collect()) {
+            if !manifest_dependency.is_enabled_for(&enabling.iter().copied().collect()) {
                 continue;
             }
             let forcing_features = forcing.iter().copied().collect();
@@ -406,6 +406,8 @@ mod test {
     use super::*;
     use crate::DuckContext;
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+    use crate::quackpack::core::solver::gathering::gatherer_state::{self, GatheredInfo};
+    use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::solver::solving::input::{PackageData, PreexistenceData};
     use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
@@ -1010,5 +1012,304 @@ metadata:
         let main_pkg = (pkg_a, ["new".into()].into());
         let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
         assert_eq!(err.to_string(), "no dependency resolution found");
+    }
+
+    /// Manifest of `a`: the dependency `b` is enabled by `fa`, and `fb` asks for `b`'s feature `x`.
+    const COMBO_MANIFEST_A: &str = r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+    conditions:
+      package-features: [fa]
+    features:
+    - x:
+        package-features: [fb]
+
+features:
+  fa: []
+  fb: []
+"#;
+
+    /// Manifest of `b` with a single feature `x`.
+    const COMBO_MANIFEST_B: &str = r#"
+metadata:
+  name: b
+  version: '2'
+
+features:
+  x: []
+"#;
+
+    #[test]
+    /// `c` preexists with its dependency `b`, and `b` preexists with no features.
+    /// `c`'s feature `new` asks for `b`'s feature `x`, which `b` does not have.
+    /// Nobody asks for `new`, so the solution must not contain it.
+    fn preexisting_parent_feature_forcing_unsupported_feature_is_forbidden() {
+        let (_dir_c, path_c) = prepare_manifest(
+            r#"
+metadata:
+  name: c
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+    features:
+    - x:
+        package-features: [new]
+
+features:
+  new: []
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '2'
+"#,
+        );
+        let ctx = DuckContext::default();
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let identity_c = FullIdentity::new("c".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_c = PackageId::new(identity_c, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let data_c = PackageData::new(
+            manifest_c,
+            ["new".into()].into(),
+            Some(PreexistenceData::new(
+                [].into(),
+                [(StrId::new("b"), pkg_b)].into(),
+            )),
+        );
+        let data_b = PackageData::new(manifest_b, [].into(), Some(PreexistenceData::default()));
+        let packages_data = [(pkg_c, data_c), (pkg_b, data_b)].into();
+        let versions_for_identity = HashMap::from([
+            (identity_c, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
+        ]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let input = SolverInput {
+            packages_data,
+            versions_for_identity,
+            source_to_origin_resolver,
+        };
+
+        let main_pkg = (pkg_c, HashSet::new());
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        assert!(output.new_packages.is_empty());
+        assert!(output.new_features.is_empty());
+        assert!(output.new_edges.is_empty());
+    }
+
+    #[test]
+    /// `a` depends on `b` only with `fa`, and asks for `b`'s feature `x` only with `fb`.
+    /// The root `a` asks for both `fa` and `fb`, so `b` has to get `x`.
+    fn dependency_enabled_by_one_feature_and_forced_by_another() {
+        let (_dir_a, path_a) = prepare_manifest(COMBO_MANIFEST_A);
+        let (_dir_b, path_b) = prepare_manifest(COMBO_MANIFEST_B);
+        let ctx = DuckContext::default();
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let data_a = PackageData::new(manifest_a, ["fa".into(), "fb".into()].into(), None);
+        let data_b = PackageData::new(manifest_b, ["x".into()].into(), None);
+        let packages_data = [(pkg_a, data_a), (pkg_b, data_b)].into();
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
+        ]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let input = SolverInput {
+            packages_data,
+            versions_for_identity,
+            source_to_origin_resolver,
+        };
+
+        let main_pkg = (pkg_a, ["fa".into(), "fb".into()].into());
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
+        assert_eq!(
+            output.new_features.get(&pkg_b),
+            Some(&HashSet::from(["x".into()]))
+        );
+        assert_eq!(
+            output.new_edges,
+            HashMap::from([(
+                DependencyEdge {
+                    parent: pkg_a,
+                    dep_identity: identity_b,
+                    dep_ename: StrId::new("b"),
+                },
+                Version::new(2, 0, 0)
+            )])
+        );
+    }
+
+    #[test]
+    /// Same manifests as [`dependency_enabled_by_one_feature_and_forced_by_another`],
+    /// but the edge `a` -> `b` comes from the previous freeze, where `b` had no features.
+    /// The root `a` asks for both `fa` and `fb`, so `b` has to get `x`.
+    fn preexisting_dependency_enabled_by_one_feature_and_forced_by_another() {
+        let (_dir_a, path_a) = prepare_manifest(COMBO_MANIFEST_A);
+        let (_dir_b, path_b) = prepare_manifest(COMBO_MANIFEST_B);
+        let ctx = DuckContext::default();
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let data_a = PackageData::new(
+            manifest_a,
+            ["fa".into(), "fb".into()].into(),
+            Some(PreexistenceData::new(
+                [].into(),
+                [(StrId::new("b"), pkg_b)].into(),
+            )),
+        );
+        let data_b = PackageData::new(
+            manifest_b,
+            ["x".into()].into(),
+            Some(PreexistenceData::default()),
+        );
+        let packages_data = [(pkg_a, data_a), (pkg_b, data_b)].into();
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
+        ]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let input = SolverInput {
+            packages_data,
+            versions_for_identity,
+            source_to_origin_resolver,
+        };
+
+        let main_pkg = (pkg_a, ["fa".into(), "fb".into()].into());
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        assert!(output.new_packages.is_empty());
+        assert_eq!(
+            output.new_features.get(&pkg_b),
+            Some(&HashSet::from(["x".into()]))
+        );
+        assert!(output.new_edges.is_empty());
+    }
+
+    #[test]
+    /// The root `a` exists in the previous freeze without any dependency realized.
+    /// Its feature `f` enables the dependency `b`, which is a new package.
+    /// The freeze diagnosis puts all root features into the root's freeze,
+    /// but they must not count as preexisting: otherwise the new edge `a` -> `b` is lost.
+    fn root_from_previous_freeze_gets_new_conditional_edge() {
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+    conditions:
+      package-features: [f]
+
+features:
+  f: []
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '2'
+"#,
+        );
+        let ctx = DuckContext::default();
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let prev_freeze = SolverFreeze {
+            package_freezes: [(
+                pkg_a,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: ["f".into()].into(),
+                },
+            )]
+            .into(),
+            main_pkg: pkg_a,
+        };
+        let prev_freeze_manifests = [(pkg_a, manifest_a.clone())].into();
+        let gathered_info = GatheredInfo {
+            packages_data: [
+                (
+                    pkg_a,
+                    gatherer_state::PackageData {
+                        manifest: manifest_a,
+                        requested_features: ["f".into()].into(),
+                        referenced_by_requests: true,
+                    },
+                ),
+                (
+                    pkg_b,
+                    gatherer_state::PackageData {
+                        manifest: manifest_b,
+                        requested_features: [].into(),
+                        referenced_by_requests: true,
+                    },
+                ),
+            ]
+            .into(),
+            versions_for_identity: HashMap::from([
+                (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+                (identity_b, HashSet::from([Version::new(2, 0, 0)])),
+            ]),
+            source_to_origin_resolver: HashMap::from([(registry_source, registry_origin)]),
+        };
+        let input = SolverInput::from_freeze_and_gathered_info(
+            &prev_freeze,
+            prev_freeze_manifests,
+            gathered_info,
+        )
+        .unwrap();
+
+        let main_pkg = (pkg_a, ["f".into()].into());
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        assert_eq!(output.new_packages, HashSet::from([pkg_b]));
+        assert_eq!(
+            output.new_edges,
+            HashMap::from([(
+                DependencyEdge {
+                    parent: pkg_a,
+                    dep_identity: identity_b,
+                    dep_ename: StrId::new("b"),
+                },
+                Version::new(2, 0, 0)
+            )])
+        );
     }
 }
