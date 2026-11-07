@@ -66,12 +66,6 @@ pub static DEFAULT_REGISTRY_URL: LazyLock<Url> = LazyLock::new(|| {
 
 impl<'duck> Fetcher<'duck> {
     /// Create a new [`Fetcher`].
-    ///
-    /// # Errors
-    /// Errors can occur in a few situations:
-    /// 1. failed to create any of the internal files,
-    /// 2. failed to initialize any of the underlying clients,
-    /// 3. failed to initialize cache manager.
     pub fn new(ctx: &'duck DuckContext) -> Self {
         Self {
             ctx,
