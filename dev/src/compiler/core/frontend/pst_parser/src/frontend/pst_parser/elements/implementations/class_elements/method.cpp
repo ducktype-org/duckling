@@ -18,6 +18,7 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		PARSE().all(Keyword::Fun);
+		if (PARSE().tryEat(Keyword::Mut)) out->is_mut = true;
 		out->operator_fixity = parseOperatorFixity(state);
 		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
 		PARSE().one(&out->params);
@@ -34,6 +35,7 @@ namespace pst {
 
 	void Method::dprint(std::ostream& out) const {
 		out << "{";
+		if (is_mut) out << R"("mut":true,)";
 		if (operator_fixity != OperatorFixity::None) {
 			out << R"("operator_fixity":")"
 				<< (operator_fixity == OperatorFixity::Prefix ? "prefix" : "suffix") << "\",";
@@ -58,6 +60,7 @@ namespace pst {
 
 	HashAlg& Method::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, operator_fixity);
+		addToHash(partial_hash, is_mut);
 		addToHash(partial_hash, ret.has_value());
 		return partial_hash;
 	}

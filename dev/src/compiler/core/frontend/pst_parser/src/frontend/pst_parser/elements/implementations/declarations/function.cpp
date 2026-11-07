@@ -19,6 +19,12 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		PARSE().all(Keyword::Fun);
+		// `fun mut` is only valid for methods. We report it, and parse the function without
+		// `mut`, so it does not produce follow-up errors.
+		if (state[0].is(Keyword::Mut)) {
+			state.logSafeError(makeBox<FunMutOutsideClassError>(state.getPosition()));
+			state.tokens().skip();
+		}
 		out->operator_fixity = parseOperatorFixity(state);
 		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
 		PARSE().one(&out->params);

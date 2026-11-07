@@ -1,0 +1,515 @@
+{
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 185
+	},
+	"Top Level": [
+		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 185
+			},
+			"Class": {
+				"name": {
+					"position": {
+						"sourceStart": 6,
+						"sourceEnd": 12
+					},
+					"Identifier Wrapper": {
+						"value": "Counter"
+					}
+				},
+				"Base": "<nullptr>",
+				"Implements": "<nullptr>",
+				"body": {
+					"position": {
+						"sourceStart": 14,
+						"sourceEnd": 185
+					},
+					"Code Block": [
+						{
+							"position": {
+								"sourceStart": 17,
+								"sourceEnd": 27
+							},
+							"Class Field": {
+								"name": {
+									"position": {
+										"sourceStart": 17,
+										"sourceEnd": 21
+									},
+									"Identifier Wrapper": {
+										"value": "count"
+									}
+								},
+								"type": {
+									"position": {
+										"sourceStart": 24,
+										"sourceEnd": 26
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 24,
+												"sourceEnd": 26
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 24,
+														"sourceEnd": 26
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 31,
+								"sourceEnd": 72
+							},
+							"Class Method": {
+								"mut": true,
+								"name": {
+									"position": {
+										"sourceStart": 39,
+										"sourceEnd": 42
+									},
+									"Identifier Wrapper": {
+										"value": "bump"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 43,
+										"sourceEnd": 44
+									},
+									"parameter list": []
+								},
+								"return": "unit",
+								"body": {
+									"position": {
+										"sourceStart": 48,
+										"sourceEnd": 72
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 48,
+											"sourceEnd": 72
+										},
+										"Code Block": [
+											{
+												"position": {
+													"sourceStart": 52,
+													"sourceEnd": 69
+												},
+												"Expr Stmt": {
+													"position": {
+														"sourceStart": 52,
+														"sourceEnd": 68
+													},
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 52,
+																"sourceEnd": 68
+															},
+															"Assignment Expr": {
+																"assigned variables": {
+																	"position": {
+																		"sourceStart": 52,
+																		"sourceEnd": 56
+																	},
+																	"Identifier Expression": {
+																		"name": {
+																			"position": {
+																				"sourceStart": 52,
+																				"sourceEnd": 56
+																			},
+																			"Identifier Wrapper": {
+																				"value": "count"
+																			}
+																		}
+																	}
+																},
+																"assignment type": {
+																	"position": {
+																		"sourceStart": 58,
+																		"sourceEnd": 58
+																	},
+																	"Operator Wrapper": {
+																		"value": "="
+																	}
+																},
+																"assigned value": {
+																	"position": {
+																		"sourceStart": 60,
+																		"sourceEnd": 68
+																	},
+																	"Binary Operator": {
+																		"left_expr": {
+																			"position": {
+																				"sourceStart": 60,
+																				"sourceEnd": 64
+																			},
+																			"Identifier Expression": {
+																				"name": {
+																					"position": {
+																						"sourceStart": 60,
+																						"sourceEnd": 64
+																					},
+																					"Identifier Wrapper": {
+																						"value": "count"
+																					}
+																				}
+																			}
+																		},
+																		"operator": {
+																			"position": {
+																				"sourceStart": 66,
+																				"sourceEnd": 66
+																			},
+																			"Operator Wrapper": {
+																				"value": "+"
+																			}
+																		},
+																		"right_expr": {
+																			"position": {
+																				"sourceStart": 68,
+																				"sourceEnd": 68
+																			},
+																			"Numeric Value Expr": {
+																				"number": "1"
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											},
+										]
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 76,
+								"sourceEnd": 109
+							},
+							"specifiers": [
+								{
+									"position": {
+										"sourceStart": 76,
+										"sourceEnd": 81
+									},
+									"StmtSpecifier": {
+										"specifier": {
+											"position": {
+												"sourceStart": 76,
+												"sourceEnd": 81
+											},
+											"Keyword Wrapper": {
+												"value": "public"
+											}
+										},
+									}
+								},
+							],
+							"Class Method": {
+								"mut": true,
+								"name": {
+									"position": {
+										"sourceStart": 91,
+										"sourceEnd": 95
+									},
+									"Identifier Wrapper": {
+										"value": "reset"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 96,
+										"sourceEnd": 97
+									},
+									"parameter list": []
+								},
+								"return": {
+									"position": {
+										"sourceStart": 102,
+										"sourceEnd": 104
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 102,
+												"sourceEnd": 104
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 102,
+														"sourceEnd": 104
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								},
+								"body": {
+									"position": {
+										"sourceStart": 108,
+										"sourceEnd": 109
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 108,
+											"sourceEnd": 109
+										},
+										"Expr Stmt": {
+											"position": {
+												"sourceStart": 108,
+												"sourceEnd": 108
+											},
+											"Top Level Expression": {
+												"expr": {
+													"position": {
+														"sourceStart": 108,
+														"sourceEnd": 108
+													},
+													"Numeric Value Expr": {
+														"number": "0"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 113,
+								"sourceEnd": 137
+							},
+							"Class Method": {
+								"name": {
+									"position": {
+										"sourceStart": 117,
+										"sourceEnd": 119
+									},
+									"Identifier Wrapper": {
+										"value": "get"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 120,
+										"sourceEnd": 121
+									},
+									"parameter list": []
+								},
+								"return": {
+									"position": {
+										"sourceStart": 126,
+										"sourceEnd": 128
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 126,
+												"sourceEnd": 128
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 126,
+														"sourceEnd": 128
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								},
+								"body": {
+									"position": {
+										"sourceStart": 132,
+										"sourceEnd": 137
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 132,
+											"sourceEnd": 137
+										},
+										"Expr Stmt": {
+											"position": {
+												"sourceStart": 132,
+												"sourceEnd": 136
+											},
+											"Top Level Expression": {
+												"expr": {
+													"position": {
+														"sourceStart": 132,
+														"sourceEnd": 136
+													},
+													"Identifier Expression": {
+														"name": {
+															"position": {
+																"sourceStart": 132,
+																"sourceEnd": 136
+															},
+															"Identifier Wrapper": {
+																"value": "count"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 141,
+								"sourceEnd": 183
+							},
+							"Class Method": {
+								"mut": true,
+								"operator_fixity": "prefix",
+								"name": {
+									"position": {
+										"sourceStart": 156,
+										"sourceEnd": 156
+									},
+									"Identifier Wrapper": {
+										"value": "-"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 157,
+										"sourceEnd": 158
+									},
+									"parameter list": []
+								},
+								"return": "unit",
+								"body": {
+									"position": {
+										"sourceStart": 162,
+										"sourceEnd": 183
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 162,
+											"sourceEnd": 183
+										},
+										"Code Block": [
+											{
+												"position": {
+													"sourceStart": 166,
+													"sourceEnd": 180
+												},
+												"Expr Stmt": {
+													"position": {
+														"sourceStart": 166,
+														"sourceEnd": 179
+													},
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 166,
+																"sourceEnd": 179
+															},
+															"Assignment Expr": {
+																"assigned variables": {
+																	"position": {
+																		"sourceStart": 166,
+																		"sourceEnd": 170
+																	},
+																	"Identifier Expression": {
+																		"name": {
+																			"position": {
+																				"sourceStart": 166,
+																				"sourceEnd": 170
+																			},
+																			"Identifier Wrapper": {
+																				"value": "count"
+																			}
+																		}
+																	}
+																},
+																"assignment type": {
+																	"position": {
+																		"sourceStart": 172,
+																		"sourceEnd": 172
+																	},
+																	"Operator Wrapper": {
+																		"value": "="
+																	}
+																},
+																"assigned value": {
+																	"position": {
+																		"sourceStart": 174,
+																		"sourceEnd": 179
+																	},
+																	"Prefix Operator": {
+																		"operator": {
+																			"position": {
+																				"sourceStart": 174,
+																				"sourceEnd": 174
+																			},
+																			"Operator Wrapper": {
+																				"value": "-"
+																			}
+																		},
+																		"expression": {
+																			"position": {
+																				"sourceStart": 175,
+																				"sourceEnd": 179
+																			},
+																			"Identifier Expression": {
+																				"name": {
+																					"position": {
+																						"sourceStart": 175,
+																						"sourceEnd": 179
+																					},
+																					"Identifier Wrapper": {
+																						"value": "count"
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											},
+										]
+									}
+								}
+							}
+						},
+					]
+				}
+			}
+		},
+	]
+}

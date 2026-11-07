@@ -1,0 +1,31 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "fun_mut_outside_class"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the `mut` keyword."
+
+header_message:
+  - "Only methods can be declared with `fun mut`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+  - "`fun mut` declares a method that can modify its object through `self`. A function outside of a class has no `self`, so it is declared with `fun`."
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "remove `mut` here"
