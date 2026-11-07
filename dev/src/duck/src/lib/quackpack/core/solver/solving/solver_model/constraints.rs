@@ -185,7 +185,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         let forcing_var = self.get_package_variable(pkg, forcing_feature)?;
         let realization_var = self.get_package_variable(realization, None)?;
         let scip_constraint = ConsBuilder::all_implies_any(
-            vec![enabling_var.as_ref(), forcing_var.as_ref(), realization_var.as_ref()],
+            vec![
+                enabling_var.as_ref(),
+                forcing_var.as_ref(),
+                realization_var.as_ref(),
+            ],
             vec![],
         );
         self.add_constraint(constraint, scip_constraint);
@@ -255,7 +259,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .map(|f| self.get_package_variable(realization_pkg, Some(*f)))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         let scip_constraint = ConsBuilder::all_implies_all(
-            vec![enabling_var.as_ref(), forcing_var.as_ref(), realization_var.as_ref()],
+            vec![
+                enabling_var.as_ref(),
+                forcing_var.as_ref(),
+                realization_var.as_ref(),
+            ],
             forced_features_vars.iter().map(|x| x.as_ref()).collect(),
         );
         let constraint = Constraint::RequireForcedFeature {

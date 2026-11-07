@@ -208,7 +208,8 @@ impl<'a> SolverEngine<'a> {
         manifest_dependency: &Dependency,
         possible_realizations: &[PackageId],
     ) -> QuackResult<()> {
-        let parent_features: Vec<Option<FeatureName>> = parent_features_to_consider(self.input, edge).collect();
+        let parent_features: Vec<Option<FeatureName>> =
+            parent_features_to_consider(self.input, edge).collect();
         for (enabling, forcing) in iproduct!(parent_features.iter(), parent_features.iter()) {
             if !manifest_dependency.is_enabled_for(&enabling.into_iter().copied().collect()) {
                 continue;
