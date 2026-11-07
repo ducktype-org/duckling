@@ -211,7 +211,7 @@ impl<'a> SolverEngine<'a> {
         let parent_features: Vec<Option<FeatureName>> =
             parent_features_to_consider(self.input, edge).collect();
         for (enabling, forcing) in iproduct!(parent_features.iter(), parent_features.iter()) {
-            if !manifest_dependency.is_enabled_for(&enabling.into_iter().copied().collect()) {
+            if !manifest_dependency.is_enabled_for(&enabling.iter().copied().collect()) {
                 continue;
             }
             let forcing_features = forcing.iter().copied().collect();
