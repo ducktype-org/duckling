@@ -46,13 +46,23 @@ namespace compiler::frontend {
 		base::StrID                             lang_file_name;
 		MBox<pst::ParsedPST<>>                  parse_tree;
 		Ref<ModuleTree>                         linked_module;
-		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
-		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
+
+		/**
+		 * Key to support removal from static storage.
+		 */
+		base::Optional<usize> storage_handle;
+
+		/**
+		 * this is a self pointer, it is necessary to get the FileID from the const SourceFile
+		 */
 		base::Optional<Ref<SourceFile>> self;
-		mutable base::Optional<hashing::ComponentHash>
-			component_hash;  //< Logical path hash for this file (module path + file name)
-		//< Any functions that actually modifies it like invalidateComponentHash should not be
-		// marked const
+
+		/**
+		 * Logical path hash for this file (module path + file name)
+		 * @important Any functions that actually modifies it like invalidateComponentHash should
+		 * not be marked const
+		 */
+		mutable base::Optional<hashing::ComponentHash> component_hash;
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.

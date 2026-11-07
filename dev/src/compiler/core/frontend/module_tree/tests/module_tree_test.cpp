@@ -89,6 +89,7 @@ private:
 		// Test with valid name
 		auto temp_file            = fs::FileManager::createRandomVirtualFile("fn main() {}\n");
 		auto dummy_module_builder = ModuleTreeBuilder::create();
+		dummy_module_builder->setKind(ModuleKind::Module);
 		dummy_module_builder->setName(base::StrID("dummy"));
 		dummy_module_builder->setPackageID(base::StrID("dummy_package"));
 		dummy_module_builder->setMainSourceFile(temp_file);
@@ -103,6 +104,7 @@ private:
 		// Test with no name (bad name)
 		auto temp_file2      = fs::FileManager::createRandomVirtualFile("fn main() {}\n");
 		auto no_name_builder = ModuleTreeBuilder::create();
+		no_name_builder->setKind(ModuleKind::Module);
 		no_name_builder->setPackageID(base::StrID("no_name_package"));
 		// do NOT set name
 		no_name_builder->setMainSourceFile(temp_file2);
@@ -537,6 +539,7 @@ private:
 		std::vector<fs::File> cleanup_files;
 
 		auto root_builder = ModuleTreeBuilder::create();
+		root_builder->setKind(ModuleKind::Module);
 		root_builder->setName(base::StrID("removal_root"));
 		root_builder->setPackageID(base::StrID("removal_pkg"));
 		auto root_main = fs::FileManager::createRandomVirtualFile("fn root() {}");
@@ -545,6 +548,7 @@ private:
 		auto root = root_builder->finalize();
 
 		auto child_builder = ModuleTreeBuilder::create();
+		child_builder->setKind(ModuleKind::Module);
 		child_builder->setName(base::StrID("removal_child"));
 		child_builder->setPackageID(base::StrID("removal_pkg"));
 		auto child_main = fs::FileManager::createRandomVirtualFile("fn child() {}");
@@ -553,6 +557,7 @@ private:
 		auto child = child_builder->finalize();
 
 		auto grand_child_builder = ModuleTreeBuilder::create();
+		grand_child_builder->setKind(ModuleKind::Module);
 		grand_child_builder->setName(base::StrID("removal_grand"));
 		grand_child_builder->setPackageID(base::StrID("removal_pkg"));
 		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
@@ -597,6 +602,7 @@ private:
 		std::vector<fs::File> cleanup_files;
 
 		auto root_builder = ModuleTreeBuilder::create();
+		root_builder->setKind(ModuleKind::Module);
 		root_builder->setName(base::StrID("recursive_root"));
 		root_builder->setPackageID(base::StrID("recursive_pkg"));
 		auto root_main = fs::FileManager::createRandomVirtualFile("fn root() {}");
@@ -605,6 +611,7 @@ private:
 		auto root = root_builder->finalize();
 
 		auto child_builder = ModuleTreeBuilder::create();
+		child_builder->setKind(ModuleKind::Module);
 		child_builder->setName(base::StrID("recursive_child"));
 		child_builder->setPackageID(base::StrID("recursive_pkg"));
 		auto child_main = fs::FileManager::createRandomVirtualFile("fn child() {}");
@@ -613,6 +620,7 @@ private:
 		auto child = child_builder->finalize();
 
 		auto grand_child_builder = ModuleTreeBuilder::create();
+		grand_child_builder->setKind(ModuleKind::Module);
 		grand_child_builder->setName(base::StrID("recursive_grand"));
 		grand_child_builder->setPackageID(base::StrID("recursive_pkg"));
 		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
@@ -649,6 +657,7 @@ private:
 	void testManualModuleTreeBuilder() {
 		// Manually build a module tree using ModuleTreeBuilder (not from filesystem)
 		auto builder = ModuleTreeBuilder::create();
+		builder->setKind(ModuleKind::Module);
 
 		// Set name
 		builder->setName(base::StrID("manual_mod"));
@@ -667,6 +676,7 @@ private:
 		// Add submodule
 		auto sub_dir     = root_dir.createSubDirectory("subdir");
 		auto sub_builder = ModuleTreeBuilder::create();
+		sub_builder->setKind(ModuleKind::Module);
 		sub_builder->setPackageID(base::StrID("manual_package_id456"));
 		sub_builder->setName(base::StrID("subdir"));
 		auto sub_main = sub_dir.createSubFile("submain", "subdir.dk");
@@ -683,6 +693,7 @@ private:
 
 		// Test setParent
 		auto parent_builder = ModuleTreeBuilder::create();
+		parent_builder->setKind(ModuleKind::Module);
 		parent_builder->setName(base::StrID("parent_mod"));
 		parent_builder->setPackageID(base::StrID("manual_package_id456"));
 		auto parent_file = root_dir.createSubFile("parent", "parent_mod.dk");

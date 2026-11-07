@@ -1,0 +1,105 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#pragma once
+
+#include "module_tree.hpp"
+
+namespace compiler::frontend {
+
+	/**
+	 * @brief REPL-specific module tree node.
+	 * Represents a single node in the synthetic REPL chain.
+	 * Only used for repl modules.
+	 *
+	 * @note: Parent of this module is either the REPL module higher in the chain or the script
+	 * module itself.
+	 */
+	class SyntheticReplChainModuleTreeNode final: public ModuleTree {
+		/**
+		 * The synthetic source file this chain link was created from.
+		 * It plays the role of the main source file of a standard module.
+		 */
+		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
+
+		/**
+		 * TODO: (issue?) the parent less structure is sub optimal, but it has to wait for future PRs to address it.
+		 */
+		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_parent;
+
+		void makeAbstract() final;
+
+	protected:
+		Ref<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override;
+
+		CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override;
+
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
+
+		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
+
+	public:
+		explicit SyntheticReplChainModuleTreeNode();
+
+		[[nodiscard]]
+		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const;
+
+		[[nodiscard]]
+		const base::Optional<Ref<SyntheticReplChainModuleTreeNode>>& getReplModuleParent() const;
+
+		SubmodulesAccessLocked getSubmodules() const override {
+			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
+			return SubmodulesAccessLocked{getModuleID(), {}};
+		}
+
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
+			// Script modules have no submodules, so we return an empty ModuleChildAccessLocked.
+			return ModuleChildAccessLocked{getModuleID(), name, {}};
+		}
+	};
+
+	/**
+	 * Script specific data.
+	 *
+	 * @note Scripts dont have a main source file like standard modules.
+	 * Instead, a synthetic module chain is created to represent the script module.
+	 */
+	class ScriptModuleTreeNode final: public ModuleTree {
+		base::Optional<fs::File> m_script_file;
+
+		// We might want to keep refs to all synthetic REPL chain modules associated with this script here
+		// to be able to modify them as needed in the future.
+
+		// base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
+
+		void makeAbstract() final;
+
+	protected:
+		[[nodiscard]]
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
+
+		/**
+		 * @brief A script owns no source file itself, its synthetic chain modules own them.
+		 */
+		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
+
+	public:
+		explicit ScriptModuleTreeNode();
+
+
+		SubmodulesAccessLocked getSubmodules() const override {
+			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
+			return SubmodulesAccessLocked{getModuleID(), {}};
+		}
+
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
+			// Script modules have no submodules, so we return an empty ModuleChildAccessLocked.
+			return ModuleChildAccessLocked{getModuleID(), name, {}};
+		}
+	};
+
+
+}

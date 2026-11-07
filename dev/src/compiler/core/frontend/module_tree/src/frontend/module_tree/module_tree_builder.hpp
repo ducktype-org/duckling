@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "module_id.hpp"
 #include "module_tree.hpp"
 
 #include <base/collections/maps.hpp>
@@ -39,6 +40,8 @@ namespace compiler::frontend {
 		 * @return Boxed ModuleTreeBuilder.
 		 */
 		static base::Box<ModuleTreeBuilder> createWithRandomPackageID();
+
+		void setKind(ModuleKind kind);
 
 		/**
 		 * Factory method to create ModuleTree from filesystem tree.
@@ -108,11 +111,18 @@ namespace compiler::frontend {
 		 */
 		void setParent(base::Ref<ModuleTree> parent);
 
-		/**
-		 * Sets REPL-specific module data.
-		 * @param repl_data The ReplData struct.
-		 */
-		void setReplModule(const ReplData& repl_data);
+		// PR: 
+		// we want to just keep flat optionals of everything and assert in finalize that only the ones we want are set (per module kind)
+
+		struct ReplModuleData final {
+			/**
+			 * @note: TODO PR? we keep ModuleID (vs ref to module) here for convenience
+			 * as existing code sometimes only has the ModuleID available
+			 */
+			base::Optional<ModuleID> parent;
+		};
+
+		void setReplModuleData(const ReplModuleData& data);
 
 		/**
 		 * Builds the module tree from a single file (single-file module).
@@ -164,15 +174,15 @@ namespace compiler::frontend {
 		 */
 		void handleNewFile(const fs::File& file);
 
+		base::Optional<ModuleKind>                        kind;
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
 		base::StrID                                       m_package_id;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-
 		base::StrID m_name;
-		bool        m_finalized;
+		base::Optional<ReplModuleData>                        m_repl_module_data;
 
-		base::Optional<ReplData> m_repl_data;
+		bool        m_finalized;
 	};
 }
