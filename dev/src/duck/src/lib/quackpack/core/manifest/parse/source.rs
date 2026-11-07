@@ -324,7 +324,7 @@ fn has_paths_which_look_like_urls() -> bool {
     cfg!(windows)
 }
 
+/// Parse a registry url from YAML.
 fn parse_registry_url(url: &str, scope: &Scope) -> QuackResult<Url> {
-    let url = url.to_url().with_context(|| scope.make_context_string())?;
-    Ok(url)
+    url.to_url().with_context(|| scope.make_context_string())
 }
