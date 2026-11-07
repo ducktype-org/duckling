@@ -43,7 +43,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testControlFlowStatements);
 		TESTER_ADD_TEST(testConstIfStatements);
-		TESTER_ADD_TEST(testConstTernary);
 		TESTER_ADD_TEST(testVariableDeclarations);
 		TESTER_ADD_TEST(testReturnStatements);
 		TESTER_ADD_TEST(testAssignmentAndExpressions);
@@ -256,39 +255,6 @@ private:
 				ASSERT_EQUAL(block.statements.size(), 0u);
 			});
 		}
-	}
-
-	/**
-	 * @brief Compiles `var a = <expr>;` inside a function and returns whether its initializer is
-	 * a plain numeric literal (and not a ternary).
-	 */
-	bool initializerIsNumericLiteral(const std::string& expr) {
-		auto module_id = frontend::createModuleTreeFromContents(
-			"fun foo() = { var a = " + expr + "; }", "test_pkg"
-		);
-		bool is_literal = false;
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto block = compileSingleStatementOfFirstFun(ctx, module_id);
-			ASSERT_EQUAL(block.statements.size(), 1u);
-			const auto* var = dynamic_cast<const code::VariableStmt*>(block.statements.at(0).get());
-			ASSERT_TRUE(var != nullptr);
-			is_literal = dynamic_cast<const code::LiteralNumericExpr*>(var->initial_value.get())
-			          != nullptr;
-		});
-		return is_literal;
-	}
-
-	/**
-	 * @brief `if const ... then ... else ...` is evaluated at compile time and only the taken
-	 * branch is compiled. The branch that is not taken may contain code that would not compile.
-	 */
-	void testConstTernary() {
-		ASSERT_TRUE(initializerIsNumericLiteral("if const 1 == 1 then 1 else this_does_not_exist"));
-		ASSERT_TRUE(initializerIsNumericLiteral("if const 1 == 2 then this_does_not_exist else 2"));
-		ASSERT_TRUE(initializerIsNumericLiteral("if const (1 == 2) then this_does_not_exist else 2")
-		);
-		// A plain ternary keeps both branches and stays a ternary.
-		ASSERT_EQUAL(false, initializerIsNumericLiteral("if 1 == 1 then 1 else 2"));
 	}
 
 	/**

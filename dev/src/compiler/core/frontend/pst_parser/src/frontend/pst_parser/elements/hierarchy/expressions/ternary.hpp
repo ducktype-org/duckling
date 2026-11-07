@@ -48,7 +48,9 @@ namespace pst::expr {
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
-		/** @brief Whether this is an `if const` ternary, evaluated at compile time. */
+		/**
+		 * @brief Whether this is an `if const` ternary, evaluated at compile time.
+		 */
 		[[nodiscard]]
 		bool isConst() const {
 			return is_const;
