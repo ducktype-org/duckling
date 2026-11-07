@@ -90,3 +90,19 @@ Tests:
         mode: exe
         Output:
           String: "1\n2\n"
+
+  const_ternary:
+    folder: "const_ternary"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "1\n2\n3\n4\n"
+      vm:
+        mode: vm
+        Output:
+          String: "1\n2\n3\n4\n"
+      exe:
+        mode: exe
+        Output:
+          String: "1\n2\n3\n4\n"
