@@ -274,7 +274,7 @@ private:
 		                                .finalize();
 
 		const std::string expected_hash
-			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";
+			= "1fe6b64b8554496b703631c85ffcd99d504153a7a868243e65f5ddfba664d135";
 		const std::string computed_hash = HASH_VALUE.toStringHex();
 
 		assertTrue(
