@@ -41,12 +41,13 @@ pub enum Constraint {
         dep_dname: StrId,
         feature: FeatureName,
     },
-    /// This package with this feature has a dependency which cannot be realized by `realization`.
-    /// This is because feature forces some unsupported feature of realization.
+    /// This package with both feature has an unabled dependency which cannot be realized by `realization`.
+    /// This is because `forcing_feature` forces some unsupported feature of realization.
     ForbidFeatureBecauseForces {
         pkg: PackageId,
+        enabling_feature: PresentFeature,
+        forcing_feature: PresentFeature,
         realization: PackageId,
-        feature: PresentFeature,
     },
     /// This package must not occur in the solution with this feature,
     /// because parent is preexistent, but `feature` forces some feature which realization does not support.
@@ -68,7 +69,8 @@ pub enum Constraint {
     /// then realization has to occur with those features.
     RequireForcedFeature {
         dep: DependencyEdge,
-        parent_feature: PresentFeature,
+        enabling_feature: PresentFeature,
+        forcing_feature: PresentFeature,
         realization: Version,
         forced_features: Vec<FeatureName>,
     },
@@ -169,18 +171,21 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn forbid_package_feature_because_forces(
         &mut self,
         pkg: PackageId,
+        enabling_feature: PresentFeature,
+        forcing_feature: PresentFeature,
         realization: PackageId,
-        feature: PresentFeature,
     ) -> QuackResult<()> {
         let constraint = Constraint::ForbidFeatureBecauseForces {
             pkg,
+            enabling_feature,
+            forcing_feature,
             realization,
-            feature,
         };
-        let parent_var = self.get_package_variable(pkg, feature)?;
+        let enabling_var = self.get_package_variable(pkg, enabling_feature)?;
+        let forcing_var = self.get_package_variable(pkg, forcing_feature)?;
         let realization_var = self.get_package_variable(realization, None)?;
         let scip_constraint = ConsBuilder::all_implies_any(
-            vec![parent_var.as_ref(), realization_var.as_ref()],
+            vec![enabling_var.as_ref(), forcing_var.as_ref(), realization_var.as_ref()],
             vec![],
         );
         self.add_constraint(constraint, scip_constraint);
@@ -232,28 +237,31 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Adds a constraint that forces the the child to be present with forced features,
-    /// assuming parent is present with `parent_feature`.
+    /// assuming parent is present with `parent_enabling_feature` and `parent_forcing_feature`.
     pub fn require_forced_features(
         &mut self,
         dep: DependencyEdge,
-        parent_feature: PresentFeature,
+        enabling_feature: PresentFeature,
+        forcing_feature: PresentFeature,
         realization: Version,
         forced_features: Vec<FeatureName>,
     ) -> QuackResult<()> {
         let realization_pkg = PackageId::new(dep.dep_identity, realization);
-        let parent_var = self.get_package_variable(dep.parent, parent_feature)?;
+        let enabling_var = self.get_package_variable(dep.parent, enabling_feature)?;
+        let forcing_var = self.get_package_variable(dep.parent, forcing_feature)?;
         let realization_var = self.get_package_variable(realization_pkg, None)?;
         let forced_features_vars = forced_features
             .iter()
             .map(|f| self.get_package_variable(realization_pkg, Some(*f)))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         let scip_constraint = ConsBuilder::all_implies_all(
-            vec![parent_var.as_ref(), realization_var.as_ref()],
+            vec![enabling_var.as_ref(), forcing_var.as_ref(), realization_var.as_ref()],
             forced_features_vars.iter().map(|x| x.as_ref()).collect(),
         );
         let constraint = Constraint::RequireForcedFeature {
             dep,
-            parent_feature,
+            enabling_feature,
+            forcing_feature,
             realization,
             forced_features,
         };

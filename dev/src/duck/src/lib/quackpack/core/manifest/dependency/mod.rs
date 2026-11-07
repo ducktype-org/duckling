@@ -173,9 +173,6 @@ impl Dependency {
 
     /// Get an iterator over features that are enabled for the given features.
     pub fn enabled_features(&self, enabled_features: &HashSet<FeatureName>) -> Vec<FeatureName> {
-        if !self.is_enabled_for(enabled_features) {
-            return vec![];
-        }
         self.features
             .iter()
             .filter_map(|feature| {

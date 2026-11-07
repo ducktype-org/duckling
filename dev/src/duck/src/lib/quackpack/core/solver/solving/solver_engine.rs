@@ -9,6 +9,7 @@
 use std::collections::{HashMap, HashSet};
 use std::iter::once;
 
+use itertools::iproduct;
 use russcip::ProblemCreated;
 
 use crate::quackpack::core::identity::Identity;
@@ -198,14 +199,21 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Creates feature realization constraints for a single dependency.
+    /// We look at pairs <enabling feature, forcing feature>,
+    /// the first one enables the dependency, the second forces some features of realization.
+    /// So if both are present, forced features have to be present as well.
     fn create_dependency_feature_realization_conditions(
         &mut self,
         edge: DependencyEdge,
         manifest_dependency: &Dependency,
         possible_realizations: &[PackageId],
     ) -> QuackResult<()> {
-        for parent_feature in parent_features_to_consider(self.input, edge) {
-            let forcing_features = parent_feature.iter().copied().collect();
+        let parent_features: Vec<Option<FeatureName>> = parent_features_to_consider(self.input, edge).collect();
+        for (enabling, forcing) in iproduct!(parent_features.iter(), parent_features.iter()) {
+            if !manifest_dependency.is_enabled_for(&enabling.into_iter().copied().collect()) {
+                continue;
+            }
+            let forcing_features = forcing.iter().copied().collect();
             // Features forced by the parent feature or features forced by default if parent_feature is None.
             let forced = manifest_dependency.enabled_features(&forcing_features);
             for realization in possible_realizations {
@@ -214,15 +222,17 @@ impl<'a> SolverEngine<'a> {
                 if forced.iter().all(|f| realization_features.contains(f)) {
                     self.model.require_forced_features(
                         edge,
-                        parent_feature,
+                        *enabling,
+                        *forcing,
                         realization.version(),
                         forced.clone(),
                     )?;
                 } else {
                     self.model.forbid_package_feature_because_forces(
                         edge.parent,
+                        *enabling,
+                        *forcing,
                         *realization,
-                        parent_feature,
                     )?;
                 }
             }
