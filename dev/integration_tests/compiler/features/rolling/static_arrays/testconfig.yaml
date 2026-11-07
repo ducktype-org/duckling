@@ -81,6 +81,14 @@ Tests:
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
+  # A DVM panic prints the call stack of the panicking thread, innermost call first. The
+  # callers carry the position of their call; `(?s)` lets `.` cross the line breaks.
+  array_out_of_bounds_stack_trace:
+    Cases:
+      dvm:
+        stderr_regex: "(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#2 [^ ]*readPastEnd[^ ]* at [^ ]*[.]dbc:[0-9]+:[0-9]+.*#3 [^ ]*forward[^ ]* at .*#4 main at "
+        Output:
+          String: "Program panicked!\n"
   array_negative_index:
     Cases:
       llvm:

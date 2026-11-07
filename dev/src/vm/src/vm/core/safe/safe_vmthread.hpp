@@ -189,6 +189,23 @@ namespace vm {
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 
+		/**
+		 * @brief Formats the DVM call stack above `start_frame`, most recent call first. Used when
+		 * a runtime error escapes the interpreter.
+		 * @details In tail-call mode the current frame lives only in registers, so the stack is
+		 * read from the frames themselves: `ret` resets every frame it pops, which makes the live
+		 * frames exactly those with a function set. A caller frame resumes after its call, so its
+		 * position is the call site. The innermost frame has no saved position, so only its
+		 * function is named.
+		 */
+		[[nodiscard]] std::string getVMStackTrace(const Frame* start_frame) const;
+
+		/**
+		 * @brief Resets the frames above `start_frame` which an error left behind. `ret` never ran
+		 * for them, so a later run of this thread would otherwise see them as live.
+		 */
+		void resetFramesAbove(Frame* start_frame);
+
 		void execGlobalDestructors() override;
 
 		/**

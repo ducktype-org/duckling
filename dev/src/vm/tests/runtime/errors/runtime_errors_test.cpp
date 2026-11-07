@@ -12,6 +12,8 @@
 #include <vm/core/safe/exceptions.hpp>
 
 #include <array>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -33,6 +35,7 @@ public:
 	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// Arithmetic
 		TESTER_ADD_TEST(checkZeroDivision);
+		TESTER_ADD_TEST(panicPrintsStackTrace);
 
 		// Memory
 		TESTER_ADD_TEST(localLeakTest);
@@ -84,6 +87,36 @@ private:
 		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("arithmetic/zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+	}
+
+	void panicPrintsStackTrace() {
+		// The panic is reported on `std::cerr` by the execution thread, which the run joins.
+		std::stringstream captured;
+		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
+		auto              run = runTestOnVmGetResult("arithmetic/zero_division_nested.dbc");
+		std::cerr.rdbuf(original_cerr);
+
+		assertExecutionPanickedWithAndKill(run, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+
+		// Most recent call first. Callers point at their call, the innermost frame has no
+		// saved position.
+		const std::string stderr_output = captured.str();
+		assertTrue(
+			stderr_output.contains("DVM stack trace (most recent call first):\n"
+		                           "  #0 divideByZero\n"
+		                           "  #1 forward at "),
+			"The innermost frames are listed first: " + stderr_output
+		);
+		assertTrue(
+			stderr_output.contains("zero_division_nested.dbc:19:"),
+			"`forward` points at its call: " + stderr_output
+		);
+		assertTrue(
+			stderr_output.contains("  #2 main at "), "`main` is the last frame: " + stderr_output
+		);
+		assertTrue(
+			!stderr_output.contains("#3"), "The start function is not listed: " + stderr_output
 		);
 	}
 

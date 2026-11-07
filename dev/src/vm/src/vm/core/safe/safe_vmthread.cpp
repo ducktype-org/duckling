@@ -17,8 +17,11 @@
 #include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/source_position.hpp>
+#include <filesystem/file_path.hpp>
 #include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
+#include <token_source/source.hpp>
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
@@ -38,6 +41,7 @@
 #include <vm/utils/interpret.hpp>
 
 #include <ranges>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -528,7 +532,16 @@ namespace vm {
 			runtime_data.frame_stack_current = orig_frame_ptr;
 		});
 
-		runInterpreter(instr, local_stack, frame, *this);
+		try {
+			runInterpreter(instr, local_stack, frame, *this);
+		} catch (exceptions::VMRuntimeException& e) {
+			e.setVMStackTrace(getVMStackTrace(orig_frame_ptr));
+			resetFramesAbove(orig_frame_ptr);
+			throw;
+		} catch (...) {
+			resetFramesAbove(orig_frame_ptr);
+			throw;
+		}
 
 		CORE_ASSERT(
 			frame == orig_frame_ptr,
@@ -581,6 +594,67 @@ namespace vm {
 	}
 
 	// executeFunction end
+
+	std::string SafeVMThread::getVMStackTrace(const Frame* start_frame) const {
+		// Live frames sit right above the start frame, outermost first.
+		std::vector<const Frame*> frames;
+		for (const Frame* frame = start_frame + 1;
+		     frame < runtime_data.frame_stack_end && frame->current_function != nullptr;
+		     frame++)
+			frames.push_back(frame);
+
+		if (frames.empty()) return "";
+
+		// A stack overflow leaves thousands of frames, so only both ends of the stack are shown.
+		constexpr usize SHOWN_FRAMES_PER_END = 16;
+
+		std::stringstream out;
+		out << "DVM stack trace (most recent call first):\n";
+		for (usize depth = 0; depth < frames.size(); depth++) {
+			if (frames.size() > 2 * SHOWN_FRAMES_PER_END && depth == SHOWN_FRAMES_PER_END) {
+				const usize omitted = frames.size() - 2 * SHOWN_FRAMES_PER_END;
+				out << "  ... " << omitted << " frames omitted ...\n";
+				depth += omitted - 1;
+				continue;
+			}
+
+			const Frame& frame = *frames[frames.size() - 1 - depth];
+			const auto&  func  = *frame.current_function;
+			out << "  #" << depth << " " << func.name.strView();
+
+			// The innermost frame has no saved position.
+			if (depth == 0) {
+				out << "\n";
+				continue;
+			}
+
+			// `instr` rests on the return address, one past the call.
+			const auto* begin = func.bc.data();
+			if (frame.instr <= begin || frame.instr > begin + func.bc.size()) {
+				out << "\n";
+				continue;
+			}
+			const low::LowCodePosition low_position{
+				.function          = &func,
+				.instruction_index = static_cast<u64>(frame.instr - begin - 1),
+			};
+			const auto code_position = safe_process.mapToCodePosition(low_position);
+			if_opt_some(code_position.source_position, position) {
+				const auto [line, column] = position.getStartLineColumn();
+				out << " at " << position.getSource()->getFile().getFilePath().strView() << ":"
+					<< line << ":" << column;
+			}
+			out << "\n";
+		}
+		return out.str();
+	}
+
+	void SafeVMThread::resetFramesAbove(Frame* start_frame) {
+		for (Frame* frame = start_frame + 1;
+		     frame < runtime_data.frame_stack_end && frame->current_function != nullptr;
+		     frame++)
+			frame->resetFrameData();
+	}
 
 	/**
 	 * @brief Starts the execution of a function with a given name and arguments.
