@@ -74,7 +74,15 @@ namespace pst {
 		\***********************/
 
 		/**
-		 * @note Requires that the file was successfully tokenized.
+		 * @brief Whether parsing with the given parser always produces a root element, even when
+		 * the source could not be tokenized.
+		 */
+		template<typename Parser>
+		static constexpr bool ALWAYS_HAS_ROOT = std::same_as<Parser, TopLevel>;
+
+		/**
+		 * @note Requires that the file has token data. When tokenizing failed, the parser is run on
+		 * an empty token stream.
 		 */
 		template<std::derived_from<LangElement> Parser, typename... Args>
 		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args)
@@ -82,13 +90,10 @@ namespace pst {
 			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
 			const lexer::TokenData& token_data = file->getTokenData();
-			auto                    state_box  = internal::makeState(
+			u64  token_count = file->getIntLogger()->hasErrors() ? 0 : token_data.tokens.size();
+			auto state_box   = internal::makeState(
                 tpc::TokenStream(
-                    token_data.tokens,
-                    token_data.bof_sentinel,
-                    token_data.eof_sentinel,
-                    0,
-                    token_data.tokens.size()
+                    token_data.tokens, token_data.bof_sentinel, token_data.eof_sentinel, 0, token_count
                 ),
                 std::move(parsing_ctx),
                 file->getIntLogger()
@@ -148,7 +153,7 @@ namespace pst {
 		) requires PARSE_ABLE<Parser, Args...>:
 			  PST<Element>(std::move(hash_ctx)),
 			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))) {
-			if (!file->tokenize()) return;
+			if (!file->tokenize() && !ALWAYS_HAS_ROOT<Parser>) return;
 			parseInput<Parser>(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
 
@@ -182,7 +187,7 @@ namespace pst {
 
 			requires PARSE_ABLE<Parser>
 			  : PST<Element>(std::move(hash_ctx)), file(std::move(file)) {
-			if (getLogger()->bad()) return;
+			if (getLogger()->bad() && !ALWAYS_HAS_ROOT<Parser>) return;
 			parseInput<Parser>(makeParserContext(std::move(pst_ctx)));
 		}
 
@@ -199,7 +204,7 @@ namespace pst {
 
 			requires PARSE_ABLE<Parser>
 			  : PST<Element>(std::move(hash_ctx)), file(tokenizer::makeTokenSource(path)) {
-			if (!file->tokenize()) return;
+			if (!file->tokenize() && !ALWAYS_HAS_ROOT<Parser>) return;
 			parseInput<Parser>(makeParserContext(std::move(pst_ctx)));
 		}
 

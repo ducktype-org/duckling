@@ -23,7 +23,7 @@ dep-error: |+
       failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      normal dependency \`@{dep-name}\` has an invalid name
+      dependency \`@{dep-name}\` has an invalid name
 
     Caused by:
       @{cause}"
@@ -34,7 +34,7 @@ invalid-alias-error: |+
       failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      normal dependency \`@{dep-name}\` points to a package \`@{alias-name}\` with an invalid name
+      dependency \`@{dep-name}\` points to a package \`@{alias-name}\` with an invalid name
 
     Caused by:
       @{cause}"
@@ -45,7 +45,7 @@ valid-alias-error: |+
       failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      normal dependency \`@{dep-name}\` has an invalid alias
+      dependency \`@{dep-name}\` has an invalid alias
 
     Caused by:
       @{cause}"
