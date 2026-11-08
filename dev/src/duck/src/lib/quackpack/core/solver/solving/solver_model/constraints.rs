@@ -44,7 +44,7 @@ pub enum Constraint {
         dep_dname: StrId,
         feature: FeatureName,
     },
-    /// This package with both feature has an enabled dependency which cannot be realized by `realization`.
+    /// This package with both features has an enabled dependency which cannot be realized by `realization`.
     /// This is because `forcing_feature` forces some unsupported feature of realization.
     ForbidFeatureBecauseForces {
         pkg: PackageId,
