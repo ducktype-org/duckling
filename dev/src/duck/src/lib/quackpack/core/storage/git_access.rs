@@ -8,12 +8,10 @@
 use std::path::{Path, PathBuf};
 
 use super::paths::Storage;
-use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::QuackResult;
+use crate::quackpack::core::PackageId;
 use crate::quackpack::core::solver::git_access::GitAccess;
-use crate::quackpack::core::{PackageId, Version};
-use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::path_ops::{MkdirOptions, mkdir, move_tree, remove_tree};
-use crate::{QuackResult, StrId};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {
@@ -25,27 +23,22 @@ impl<'paths> StorageGitAccess<'paths> {
     pub fn new(paths: &'paths Storage) -> Self {
         Self { paths }
     }
-
-    fn pkg_id(&self, url: InternedUrl, commit: StrId) -> PackageId {
-        let origin = FullOrigin::for_git(url, commit);
-        // !TODO: Version and name don't matter (right now). But we should pass it nevertheless.
-        let identity = FullIdentity::new("mocked".into(), origin);
-        PackageId::new(identity, Version::default())
-    }
 }
 
 impl GitAccess for StorageGitAccess<'_> {
-    fn git_path(&self, url: InternedUrl, commit: StrId) -> PathBuf {
-        self.paths.pkg_dir(self.pkg_id(url, commit))
+    fn git_path(&self, package: PackageId) -> PathBuf {
+        package.debug_assert_git_package();
+        self.paths.pkg_dir(package)
     }
 
-    fn is_stored(&self, url: InternedUrl, commit: StrId) -> bool {
-        self.paths.is_package_stored(self.pkg_id(url, commit))
+    fn is_stored(&self, package: PackageId) -> bool {
+        package.debug_assert_git_package();
+        self.paths.is_package_stored(package)
     }
 
-    fn store(&self, url: InternedUrl, commit: StrId, source_path: &Path) -> QuackResult<()> {
-        let pkg_id = self.pkg_id(url, commit);
-        let dir = self.paths.pkg_dir(pkg_id);
+    fn store(&self, package: PackageId, source_path: &Path) -> QuackResult<()> {
+        package.debug_assert_git_package();
+        let dir = self.paths.pkg_dir(package);
         if dir.exists() {
             remove_tree(&dir)?;
         }
@@ -53,7 +46,7 @@ impl GitAccess for StorageGitAccess<'_> {
             mkdir(parent, MkdirOptions::WithParents)?;
         }
         move_tree(source_path, &dir)?;
-        self.paths.mark_as_stored(pkg_id)?;
+        self.paths.mark_as_stored(package)?;
         Ok(())
     }
 }

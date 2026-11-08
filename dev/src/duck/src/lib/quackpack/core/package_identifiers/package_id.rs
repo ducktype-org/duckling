@@ -62,6 +62,16 @@ impl PackageId {
             FullKind::Local => unreachable!("local packages are not stored in storage {self:?}"),
         }
     }
+
+    #[track_caller]
+    #[inline(always)]
+    /// Debug assert that this [`PackageId`] refers to git.
+    pub(crate) fn debug_assert_git_package(&self) {
+        debug_assert!(
+            matches!(self.kind(), FullKind::Git { .. }),
+            "{self:?} is not a git package id"
+        );
+    }
 }
 
 impl From<PackageId> for WithVersion<Identity> {

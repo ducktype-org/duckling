@@ -241,7 +241,7 @@ impl fmt::Display for Source {
 
 /// Get a short unique name for host using `url`.
 pub fn short_name_for_host(url: &Url) -> String {
-    let host = url.host_str().unwrap_or("<unknown>");
+    let host = url.host_str().unwrap_or("unknown-host");
     let hash = short_hash_string(url.as_str());
     format!("{host}-{hash}")
 }
