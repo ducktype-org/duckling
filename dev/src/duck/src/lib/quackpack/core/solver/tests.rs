@@ -404,3 +404,209 @@ dependencies:
         .into()
     )
 }
+
+#[test]
+/// Tests that `--frozen` fails when the supplied freeze no longer satisfies the main package.
+/// Main package depends on *a* and *b*, but only *a* is present in the supplied freeze.
+fn frozen_with_unsatisfied_root_fails() {
+    let (ctx, _root) = setup_duck_ctx();
+    let server = create_mock_server();
+
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
+    let fetcher = Fetcher::new(&ctx).unwrap();
+    let (_dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: root
+  version: '0.1.0'
+
+dependencies:
+  a:
+    source:
+      registry-url: {}
+    version: '1'
+  b:
+    source:
+      registry-url: {}
+    version: '2'
+"#,
+        &url, &url,
+    ));
+    let root_path = manifest_path.parent().unwrap().to_path_buf();
+    let pcx = PackageContext::new(root_path, &ctx).unwrap();
+
+    let identity_a = FullIdentity::new("a".into(), FullOrigin::for_registry(url));
+    let previous_freeze = VenvFreeze::new(
+        RootPackage::new(
+            "root".into(),
+            Version::new(0, 1, 0),
+            vec![],
+            vec![DepIdWithAlias::new("a".into(), identity_a.into())],
+        ),
+        vec![FreezePackage::new(identity_a, 1.into(), vec![], vec![])],
+    );
+    let mode = SolverMode {
+        suppress_foreign_manifests_errors: false,
+        frozen: true,
+    };
+
+    let solver = Solver::new(
+        &pcx,
+        Some(&previous_freeze),
+        &fetcher,
+        MockGitAccess(),
+        mode,
+    );
+    let Err(err) = block_on(solver.solve()) else {
+        panic!("a frozen solver must not change the freeze");
+    };
+    assert!(format!("{err:?}").contains("`--frozen`"), "{err:?}");
+}
+
+#[test]
+/// Tests that the solver retries without the supplied freeze when the freeze makes the problem
+/// infeasible.
+/// Main package depends on *a* (version 1 or 2) and *c*, the supplied freeze has *a* in version 1.0.0.
+/// *c* needs *a* in version 2.0.0, and only one version of *a* may be in the solution,
+/// so the first attempt (which keeps *a* 1.0.0) has no solution, but the retry has one.
+fn retry_without_previous_freeze() {
+    let (ctx, _root) = setup_duck_ctx();
+    let server = MockServer::start();
+    let metadata = |name: &str, version: Version| registry::Metadata {
+        version,
+        authors: vec!["Carly Shillingford".into()],
+        license: "MIT".into(),
+        name: name.into(),
+        description: "".into(),
+        links: None,
+    };
+    let a1 = registry::Manifest {
+        metadata: metadata("a", Version::new(1, 0, 0)),
+        dependencies: registry::Dependencies::default(),
+        features: HashMap::new(),
+        profiles: HashMap::new(),
+    };
+    let a2 = registry::Manifest {
+        metadata: metadata("a", Version::new(2, 0, 0)),
+        ..a1.clone()
+    };
+    let c1 = registry::Manifest {
+        metadata: metadata("c", Version::new(1, 0, 0)),
+        dependencies: registry::Dependencies(vec![registry::Dependency {
+            name: "a".into(),
+            version: vec![Version::new(2, 0, 0)],
+            source: registry::DependencySource {
+                inner: registry::SourceInner::Registry {
+                    registry_url: server.base_url(),
+                },
+            },
+            kind: registry::DependencyKind::Normal,
+            features: vec![],
+            pinned: false,
+            conditions: registry::DependencyCondition {
+                package_features: None,
+            },
+            alias: None,
+        }]),
+        features: HashMap::new(),
+        profiles: HashMap::new(),
+    };
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/a/1.0.0");
+        then.status(200).json_body_obj(&a1);
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/a");
+        then.status(200).json_body_obj(&types::MultiMetadata {
+            packages_metadata: vec![a1.clone(), a2.clone()],
+        });
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/c");
+        then.status(200).json_body_obj(&types::MultiMetadata {
+            packages_metadata: vec![c1.clone()],
+        });
+    });
+
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
+    let fetcher = Fetcher::new(&ctx).unwrap();
+    let (_dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: root
+  version: '0.1.0'
+
+dependencies:
+  a:
+    source:
+      registry-url: {}
+    version: 1 or 2
+  c:
+    source:
+      registry-url: {}
+    version: '1'
+"#,
+        &url, &url,
+    ));
+    let root_path = manifest_path.parent().unwrap().to_path_buf();
+    let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
+
+    let origin_root = FullOrigin::for_local(&root_path).unwrap();
+    let origin_registry = FullOrigin::for_registry(url);
+
+    let identity_root = FullIdentity::new("root".into(), origin_root);
+    let pkg_root = PackageId::new(identity_root, Version::new(0, 1, 0));
+
+    let identity_a = FullIdentity::new("a".into(), origin_registry);
+    let pkg_a2 = PackageId::new(identity_a, Version::new(2, 0, 0));
+
+    let identity_c = FullIdentity::new("c".into(), origin_registry);
+    let pkg_c1 = PackageId::new(identity_c, Version::new(1, 0, 0));
+
+    let previous_freeze = VenvFreeze::new(
+        RootPackage::new(
+            "root".into(),
+            Version::new(0, 1, 0),
+            vec![],
+            vec![DepIdWithAlias::new("a".into(), identity_a.into())],
+        ),
+        vec![FreezePackage::new(identity_a, 1.into(), vec![], vec![])],
+    );
+
+    let solver = Solver::new(
+        &pcx,
+        Some(&previous_freeze),
+        &fetcher,
+        MockGitAccess(),
+        SolverMode::default(),
+    );
+    let new_freeze = block_on(solver.solve()).unwrap().new_freeze;
+    assert_eq!(new_freeze.main_pkg, pkg_root);
+    assert_eq!(
+        new_freeze.package_freezes,
+        [
+            (
+                pkg_root,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), pkg_a2), ("c".into(), pkg_c1)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                pkg_a2,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                pkg_c1,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), pkg_a2)].into(),
+                    features: [].into()
+                }
+            ),
+        ]
+        .into()
+    )
+}

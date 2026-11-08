@@ -13,8 +13,8 @@ use std::rc::Rc;
 use russcip::{Solution, Variable};
 use tracing::trace;
 
-use crate::quackpack::core::solver::SolverInput;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
+use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::solver_model::FeaturesToVars;
 use crate::quackpack::core::{FeatureName, PackageId, Selector, Version};
 use crate::{QuackResult, qp_bail_internal};
