@@ -146,6 +146,14 @@ impl SolverInput {
             format!("package {pkg:?} not present in packages to package data map")
         })
     }
+
+    pub fn all_versions(&self, identity: FullIdentity) -> QuackResult<&HashSet<Version>> {
+        self.versions_for_identity
+            .get(&identity)
+            .with_context_internal(|| {
+                format!("identity {identity:?} not present in identities to versions map")
+            })
+    }
 }
 
 impl PackageData {
