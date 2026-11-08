@@ -46,7 +46,7 @@ pub(super) fn new_packages(
         })
         .collect::<HashSet<PackageId>>()
         .difference(preexisting_packages)
-        .cloned()
+        .copied()
         .collect::<HashSet<PackageId>>();
     trace!(target: "duck::solver", ?new_packages);
     new_packages
