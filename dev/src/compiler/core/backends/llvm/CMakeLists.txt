@@ -7,17 +7,24 @@ add_library(LLVMBackend
     src_private/backends/llvm_private/module_impl.cpp
 )
 
-llvm_map_components_to_libnames(llvm_libs
-    Core
-    ExecutionEngine
-    Interpreter
-    MC
-    MCJIT
-    Passes
-    Support
-    nativecodegen)
 target_include_directories(LLVMBackend PRIVATE ${LLVM_INCLUDE_DIRS})
-target_link_libraries(LLVMBackend ${llvm_libs})
+# This is needed when llvm doesn't have separate linking targets as llvm_map_components_to_libnames doesn't seem to work properly then.
+if (LLVM_TYPE STREQUAL "SINGLE_LIB")
+    set_target_properties(LLVMBackend PROPERTIES LINK_LIBRARIES_ONLY_TARGETS OFF)
+    target_link_libraries(LLVMBackend LLVM-19)
+else()
+    llvm_map_components_to_libnames(llvm_libs
+        Core
+        ExecutionEngine
+        Interpreter
+        MC
+        MCJIT
+        Passes
+        Support
+        nativecodegen)
+    target_link_libraries(LLVMBackend ${llvm_libs})
+endif()
+
 
 make_module(LLVMBackend USES Base GlobalState QueryFramework LIR llvm_helpers Init Logger)
 

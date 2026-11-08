@@ -10,15 +10,22 @@ duck_add_playground(init init_playground.cpp USES Init)
 target_link_libraries(clah_example_cat Base Clah)
 
 duck_add_playground(llvm_example llvm_example_playground.cpp USES)
-llvm_map_components_to_libnames(llvm_libs
-    Core
-    ExecutionEngine
-    Interpreter
-    MC
-    MCJIT
-    Support
-    nativecodegen)
+
 target_include_directories(llvm_example_playground PRIVATE ${LLVM_INCLUDE_DIRS})
-target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
+# This is needed when llvm doesn't have separate linking targets as llvm_map_components_to_libnames doesn't seem to work properly then.
+if (LLVM_TYPE STREQUAL "SINGLE_LIB")
+    set_target_properties(llvm_example_playground PROPERTIES LINK_LIBRARIES_ONLY_TARGETS OFF)
+    target_link_libraries(llvm_example_playground LLVM-19 llvm_helpers)
+else()
+    llvm_map_components_to_libnames(llvm_libs
+        Core
+        ExecutionEngine
+        Interpreter
+        MC
+        MCJIT
+        Support
+        nativecodegen)
+    target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
+endif()
 
 duck_add_playground(ffi ffi_playground.cpp USES Base PkgConfig::LIBFFI)
