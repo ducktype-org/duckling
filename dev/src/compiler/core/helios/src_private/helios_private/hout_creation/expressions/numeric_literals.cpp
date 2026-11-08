@@ -26,7 +26,6 @@
 // Below are includes needed for parseF64 (see its doc comment for more information)
 // Remove them when `std::from_chars` for `f64` becomes available on all supported macOS versions.
 // @TODO: #3988 Remove the includes.
-
 #include <cctype>
 #include <cerrno>
 #include <clocale>
@@ -38,6 +37,7 @@
 #if BASE_TARGET_OS_MACOS
 	#include <xlocale.h>
 #endif
+
 
 namespace compiler::helios::code {
 	namespace {
