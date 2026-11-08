@@ -3733,6 +3733,14 @@ private:
 			return not_expr->expr.get();
 		};
 
+		// Fields of simple types are compared inline with a builtin operation, not by calling
+		// their comparison method.
+		auto expect_inline = [&](const Expr* expr, BuiltinBinary operation) {
+			const auto* bin_op = dynamic_cast<const BinaryOperatorExpr*>(expr);
+			ASSERT_TRUE(bin_op != nullptr);
+			ASSERT_TRUE(bin_op->operation == operation);
+		};
+
 		auto expect_generated = [&](SymID sym, Kind kind, OwnerKind owner_kind) {
 			const auto* method = std::get_if<Method>(&compiler::helios::getSymRef(sym)->other);
 			ASSERT_TRUE(method != nullptr);
@@ -3762,64 +3770,118 @@ private:
 		};
 
 		// `<` on a tuple decides on the first field in which the operands differ, using `<` of
-		// the fields only: two `if`s per field, then `return false`.
+		// the fields only: two `if`s per field, then `return false`. The integer fields are
+		// compared inline.
 		const SymID tuple_less = operator_called_from(getChain("tupleLess", root_scope).back());
 		expect_generated(tuple_less, Kind::Lesser, OwnerKind::Tuple);
 		ASSERT_EQUAL(5, body_of(tuple_less).size());
-		expect_generated(called(condition_at(tuple_less, 0)), Kind::Lesser, OwnerKind::Integral);
-		expect_generated(called(condition_at(tuple_less, 1)), Kind::Lesser, OwnerKind::Integral);
+		for (usize i = 0; i < 4; ++i)
+			expect_inline(condition_at(tuple_less, i), BuiltinBinary::IntegerLt);
 		expect_returns(tuple_less, false);
 
 		// `==` on a class returns `false` at the first unequal field.
 		const SymID class_equal = operator_called_from(getChain("classEqual", root_scope).back());
 		expect_generated(class_equal, Kind::Equal, OwnerKind::Class);
 		ASSERT_EQUAL(3, body_of(class_equal).size());
-		expect_generated(
-			called(negated(condition_at(class_equal, 0))), Kind::Equal, OwnerKind::Integral
-		);
+		for (usize i = 0; i < 2; ++i)
+			expect_inline(negated(condition_at(class_equal, i)), BuiltinBinary::IntegerEq);
 		expect_returns(class_equal, true);
 
-		// `>=` is `not (a < b)`, calling the `<` of the same class.
+		// `>=` is generated field by field like `<`, using the strict `>` of the fields, and
+		// accepts equal operands.
 		const SymID class_greater_equal
 			= operator_called_from(getChain("classGreaterEqual", root_scope).back());
 		expect_generated(class_greater_equal, Kind::GreaterEqual, OwnerKind::Class);
-		const SymID class_less = called(negated(returned_value(class_greater_equal)));
-		expect_generated(class_less, Kind::Lesser, OwnerKind::Class);
+		ASSERT_EQUAL(5, body_of(class_greater_equal).size());
+		for (usize i = 0; i < 4; ++i)
+			expect_inline(condition_at(class_greater_equal, i), BuiltinBinary::IntegerGt);
+		expect_returns(class_greater_equal, true);
 
-		// A user-defined `==` replaces the generated one, and the generated `!=` calls it.
-		const SymID custom_not_equal
-			= operator_called_from(getChain("customNotEqual", root_scope).back());
-		expect_generated(custom_not_equal, Kind::NotEqual, OwnerKind::Class);
-		const SymID custom_equal = called(negated(returned_value(custom_not_equal)));
+		// A user-defined `==` replaces the generated one in the type's interface.
+		const SymID custom_equal = operator_called_from(getChain("customEqual", root_scope).back());
 		ASSERT_TRUE(
 			not std::holds_alternative<Method>(compiler::helios::getSymRef(custom_equal)->other)
 		);
 		ASSERT_EQUAL(std::string("=="), compiler::helios::name(custom_equal).str());
 
-		// Pointers can't be ordered yet, which is reported once their `<` is needed.
+		// But it does not affect the generated `!=`, which still compares the fields directly and
+		// returns `true` at the first unequal one.
+		const SymID custom_not_equal
+			= operator_called_from(getChain("customNotEqual", root_scope).back());
+		expect_generated(custom_not_equal, Kind::NotEqual, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(custom_not_equal).size());
+		for (usize i = 0; i < 2; ++i)
+			expect_inline(condition_at(custom_not_equal, i), BuiltinBinary::IntegerNeq);
+		expect_returns(custom_not_equal, false);
+
+		// Pointers are ordered like integers, inline.
 		const SymID pointer_tuple_less
 			= operator_called_from(getChain("pointerLess", root_scope).back());
-		const SymID pointer_less = called(condition_at(pointer_tuple_less, 0));
-		expect_generated(pointer_less, Kind::Lesser, OwnerKind::Pointer);
-		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(
-				ctx.query<compiler::helios::QueryCodeOfFun>({ pointer_less })->hasFailed(),
-				"Ordering pointers should not be implemented yet."
-			);
-			std::stringstream ss;
-			ctx.dumpToOneLoggerAndClear()->terminalPrint(ss);
-			assertTrue(
-				ss.str().contains("is not yet implemented"),
-				"Ordering pointers should report that it is not yet implemented."
-			);
-		});
+		expect_generated(pointer_tuple_less, Kind::Lesser, OwnerKind::Tuple);
+		ASSERT_EQUAL(5, body_of(pointer_tuple_less).size());
+		for (usize i = 0; i < 4; ++i)
+			expect_inline(condition_at(pointer_tuple_less, i), BuiltinBinary::IntegerLt);
+		expect_returns(pointer_tuple_less, false);
 
 		// Tuples of types are compared field by field too, with the `==` of `type`.
 		const SymID types_equal = operator_called_from(getChain("typesEqual", root_scope).back());
 		expect_generated(types_equal, Kind::Equal, OwnerKind::Tuple);
-		expect_generated(
-			called(negated(condition_at(types_equal, 0))), Kind::Equal, OwnerKind::Meta
-		);
+		expect_inline(negated(condition_at(types_equal, 0)), BuiltinBinary::MetaEq);
+
+		// Fields of aggregate types are compared by calling their comparison method, passing
+		// both fields by reference.
+		auto called_by_ref = [&](const Expr* expr) -> SymID {
+			const auto* call = dynamic_cast<const CallExpr*>(expr);
+			ASSERT_TRUE(call != nullptr);
+			for (const auto& argument: call->arguments)
+				ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(argument.get()) != nullptr);
+			return called(call);
+		};
+
+		const SymID segment_equal
+			= operator_called_from(getChain("segmentEqual", root_scope).back());
+		expect_generated(segment_equal, Kind::Equal, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(segment_equal).size());
+		for (usize i = 0; i < 2; ++i)
+			expect_generated(
+				called_by_ref(negated(condition_at(segment_equal, i))), Kind::Equal, OwnerKind::Class
+			);
+		expect_returns(segment_equal, true);
+
+		// Both directions of the strict comparison of each field build their own accesses.
+		const SymID segment_less = operator_called_from(getChain("segmentLess", root_scope).back());
+		expect_generated(segment_less, Kind::Lesser, OwnerKind::Class);
+		ASSERT_EQUAL(5, body_of(segment_less).size());
+		for (usize i = 0; i < 4; ++i)
+			expect_generated(
+				called_by_ref(condition_at(segment_less, i)), Kind::Lesser, OwnerKind::Class
+			);
+		expect_returns(segment_less, false);
+
+		// Fields which are not trivially copyable can be compared, and a boxed field of a simple
+		// type is dereferenced and compared inline.
+		auto expect_inline_deref = [&](const Expr* expr, BuiltinBinary operation) {
+			expect_inline(expr, operation);
+			const auto* bin_op = dynamic_cast<const BinaryOperatorExpr*>(expr);
+			ASSERT_TRUE(dynamic_cast<const DerefExpr*>(bin_op->lhs.get()) != nullptr);
+			ASSERT_TRUE(dynamic_cast<const DerefExpr*>(bin_op->rhs.get()) != nullptr);
+		};
+
+		const SymID boxed_equal = operator_called_from(getChain("boxedEqual", root_scope).back());
+		expect_generated(boxed_equal, Kind::Equal, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(boxed_equal).size());
+		expect_inline(negated(condition_at(boxed_equal, 0)), BuiltinBinary::IntegerEq);
+		expect_inline_deref(negated(condition_at(boxed_equal, 1)), BuiltinBinary::IntegerEq);
+		expect_returns(boxed_equal, true);
+
+		const SymID boxed_less = operator_called_from(getChain("boxedLess", root_scope).back());
+		expect_generated(boxed_less, Kind::Lesser, OwnerKind::Class);
+		ASSERT_EQUAL(5, body_of(boxed_less).size());
+		expect_inline(condition_at(boxed_less, 0), BuiltinBinary::IntegerLt);
+		expect_inline(condition_at(boxed_less, 1), BuiltinBinary::IntegerLt);
+		expect_inline_deref(condition_at(boxed_less, 2), BuiltinBinary::IntegerLt);
+		expect_inline_deref(condition_at(boxed_less, 3), BuiltinBinary::IntegerLt);
+		expect_returns(boxed_less, false);
 	}
 
 	void testScopeParentsAndDepth() {

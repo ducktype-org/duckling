@@ -333,7 +333,7 @@ namespace compiler::helios::code {
 		);
 
 		// Step 2b. — Look for operator methods declared on the left-hand side's type
-		// (classes and tuples only) TODO: maybe relax and look for methods for all types
+		// (classes and tuples only)
 		const auto lhs_abstract_type = lhs_type.getType();
 		if (lhs_abstract_type.getKind() == tsh::Kind::Class
 		    || lhs_abstract_type.getKind() == tsh::Kind::Tuple) {

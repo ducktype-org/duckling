@@ -81,8 +81,7 @@ namespace compiler::tsh {
 				);
 			}
 
-			// Every type has the comparison operators. When they can't be generated for the type,
-			// it is reported once they are used.
+			// Every type has the comparison operators.
 			for (const auto& comparison: COMPARISON_METHODS) {
 				elements.emplace_back(
 					generatedComparisonSymForType(ctx, type, comparison.kind),
@@ -167,6 +166,7 @@ namespace compiler::tsh {
 		case CPointer:
 		case RawPointer:
 		case Slice:
+		case Meta:
 			return true;
 		default:
 			return false;

@@ -44,7 +44,7 @@ namespace compiler::tsh {
 		Equal,
 		NotEqual,
 		Lesser,
-		LessEqual,
+		LesserEqual,
 		Greater,
 		GreaterEqual,
 		None

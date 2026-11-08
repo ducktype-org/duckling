@@ -361,7 +361,7 @@ namespace compiler::helios {
 						case defgen::Method::Kind::Equal:
 						case defgen::Method::Kind::NotEqual:
 						case defgen::Method::Kind::Lesser:
-						case defgen::Method::Kind::LessEqual:
+						case defgen::Method::Kind::LesserEqual:
 						case defgen::Method::Kind::Greater:
 						case defgen::Method::Kind::GreaterEqual:
 							return { { immmut_self, immmut_self },
