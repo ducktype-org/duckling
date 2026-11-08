@@ -26,7 +26,7 @@ use crate::{QuackResult, StrId};
 /// This is overly verbose on purpose, so that in the future we can provide good explanation through minimal infeasible subproblem.
 pub enum Constraint {
     /// The root package must occur in the solution.
-    RequireRootPackage(),
+    RequireRootPackage,
     /// The root package must occur in the solution with this feature.
     RequireRootFeature(FeatureName),
     /// Dependency's parent must not occur in the solution, because no realization of the dependency was found.
