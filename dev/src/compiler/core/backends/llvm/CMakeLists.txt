@@ -21,9 +21,8 @@ else()
         Passes
         Support
         nativecodegen)
-    target_link_libraries(LLVMBackend ${llvm_libs})
 endif()
-
+target_link_libraries(LLVMBackend ${llvm_libs})
 
 make_module(LLVMBackend USES Base GlobalState QueryFramework LIR llvm_helpers Init Logger)
 

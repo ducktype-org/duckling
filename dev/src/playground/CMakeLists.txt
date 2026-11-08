@@ -24,7 +24,7 @@ else()
         MCJIT
         Support
         nativecodegen)
-    target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
 endif()
+target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
 
 duck_add_playground(ffi ffi_playground.cpp USES Base PkgConfig::LIBFFI)
