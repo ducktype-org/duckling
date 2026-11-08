@@ -7,7 +7,7 @@
 //! Ducknest registry communication.
 use std::io::Write;
 use std::path::Path;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use endpoints::UrlExt;
 use tracing::{debug, trace};
@@ -29,12 +29,12 @@ mod tests;
 #[derive(Debug)]
 /// General client communicating with a registry instance over HTTP.
 pub struct DucknestClient<'duck> {
-    client: Arc<AsyncHttpClient<'duck>>,
+    client: Rc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> DucknestClient<'duck> {
     /// Construct a new [`DucknestClient`].
-    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+    pub fn new(client: Rc<AsyncHttpClient<'duck>>) -> Self {
         Self { client }
     }
 

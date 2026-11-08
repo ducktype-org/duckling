@@ -25,6 +25,12 @@ DEFAULT_GITIGNORE: Final[str] = """.duck_build
 """
 
 
+def check_file_does_not_exist(file: Path) -> None:
+    if file.exists():
+        print(f"file {file} exists")
+        sys.exit(1)
+
+
 def check_file_exists(file: Path) -> None:
     if not file.is_file():
         print(f"file {file} does not exist")
@@ -104,6 +110,10 @@ def check_empty_files(files: Iterable[Path]) -> None:
 def check_files_exist(files: Iterable[Path]) -> None:
     for file in files:
         check_file_exists(file)
+
+def check_files_dont_exist(files: Iterable[Path]) -> None:
+    for file in files:
+        check_file_does_not_exist(file)
 
 
 def check_empty_dirs(dirs: Iterable[Path]) -> None:

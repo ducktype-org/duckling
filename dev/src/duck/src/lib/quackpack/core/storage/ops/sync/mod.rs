@@ -232,9 +232,9 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Creates [`Solver`] and runs it.
-fn get_solver_answer(
-    pcx: &PackageContext<'_>,
-    fetcher: &Fetcher<'_>,
+fn get_solver_answer<'duck>(
+    pcx: &PackageContext<'duck>,
+    fetcher: &Fetcher<'duck>,
     git_access: StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,
