@@ -61,7 +61,7 @@ pub(crate) fn parse(
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
-            let url = registry_url.as_str().to_url()?;
+            let url = parse_registry_url(registry_url, &scope)?;
             return Ok(Source::for_registry(url));
         }
         SourceSchema::Detailed(detailed_source) => detailed_source,
@@ -95,7 +95,8 @@ pub(crate) fn parse(
             trace!("found a registry source");
             check_no_git(source, &mut scope)?;
             check_no_local(source, &mut scope)?;
-            let url = registry_url.as_str().to_url()?;
+            let scope = scope.push("registry-url".into());
+            let url = parse_registry_url(registry_url, &scope)?;
             Source::for_registry(url)
         }
         (None, Some(root), None) => {
@@ -321,4 +322,9 @@ fn maybe_create_warning_if_url_points_to_a_file(url: &str, warnings: &mut Warnin
 fn has_paths_which_look_like_urls() -> bool {
     // Only Windows? has paths which are URLs.
     cfg!(windows)
+}
+
+/// Parse a registry url from YAML.
+fn parse_registry_url(url: &str, scope: &Scope) -> QuackResult<Url> {
+    url.to_url().with_context(|| scope.make_context_string())
 }
