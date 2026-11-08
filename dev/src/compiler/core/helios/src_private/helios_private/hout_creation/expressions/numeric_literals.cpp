@@ -23,6 +23,7 @@
 
 // Below are includes needed for parseF64 (see its doc comment for more information)
 // Remove then when `std::from_chars` for `f64` becomes available on all supported macOS versions.
+// @TODO: #3988 Remove the includes.
 
 #	include <cerrno>
 #	include <cmath>
@@ -41,15 +42,17 @@ namespace compiler::helios::code {
 		 * Floating-point `std::from_chars` on macOS is only available from 26.0.
 		 * We want to compile on macOS 15, to support all supported macOS versions.
 		 * 
-		 * @future: This function will likely be deleted in fall of 2027,
+		 * @TODO: #3988 This function will likely be deleted in fall of 2027,
 		 * when support for macOS 15 is dropped and `std::from_chars` for `f64` becomes available on all supported macOS versions.
 		 */
 		std::from_chars_result parseF64(std::string_view value, f64& out) {
 			const char* const first = value.data();
+			
 			// What strtod accepts but from_chars does not: leading whitespace and '+'.
 			if (value.empty() || value.front() == '+' || std::isspace(static_cast<unsigned char>(value.front())))
 				return { first, std::errc::invalid_argument };
-			// Hexadecimal floats: from_chars (general format) reads only the "0" before the 'x'.
+			
+				// Hexadecimal floats: from_chars (general format) reads only the "0" before the 'x'.
 			const usize sign = value.front() == '-' ? 1 : 0;
 			if (value.substr(sign).starts_with("0x") || value.substr(sign).starts_with("0X")) {
 				out = sign ? -0.0 : 0.0;
@@ -58,17 +61,20 @@ namespace compiler::helios::code {
 
 			static const locale_t c_locale = newlocale(LC_ALL_MASK, "C", nullptr);
 			const std::string     terminated(value);  // strtod needs a NUL-terminated string.
+
 			char*                 end = nullptr;
 			errno                     = 0;
 			const f64   parsed        = strtod_l(terminated.c_str(), &end, c_locale);
 			const char* ptr           = first + (end - terminated.c_str());
-			if (ptr == first) return { first, std::errc::invalid_argument };
+			if (ptr == first) return {.ptr = first, .ec = std::errc::invalid_argument };
+		
 			// Overflow (inf) and underflow to zero are out of range; subnormal results are not.
 			if (errno == ERANGE && (std::isinf(parsed) || parsed == 0.0))
-				return { ptr, std::errc::result_out_of_range };
+				return { .ptr = ptr, .ec = std::errc::result_out_of_range };
+		
 			out = parsed;
-			return { ptr, std::errc() };
-			return { first, std::errc() }; // Fallback in case none of the above conditions are met.
+			return { .ptr = ptr, .ec = std::errc() };
+			return { .ptr = first, .ec = std::errc() }; // Fallback in case none of the above conditions are met.
 		}
 
 		/**
