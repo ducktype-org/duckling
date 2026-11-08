@@ -10,7 +10,7 @@ add_library(LLVMBackend
 target_include_directories(LLVMBackend PRIVATE ${LLVM_INCLUDE_DIRS})
 # This is needed when llvm doesn't have separate linking targets as llvm_map_components_to_libnames doesn't seem to work properly then.
 if (LLVM_TYPE STREQUAL "SINGLE_LIB")
-    target_link_libraries(LLVMBackend LLVM)
+    set(llvm_libs LLVM)
 else()
     llvm_map_components_to_libnames(llvm_libs
         Core

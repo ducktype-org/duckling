@@ -93,22 +93,27 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
         list(APPEND vm_dep_objects_bc $<TARGET_OBJECTS:cp-stencils_bc>)
     endif()
 
-    # Link llvm it will be ONLY used by JitDep.
-    llvm_map_components_to_libnames(llvm_libs
-        Core
-        ExecutionEngine
-        Interpreter
-        OrcJIT
-        OrcShared
-        OrcTargetProcess
-        MC
-        Support
-        CodeGen
-        AsmParser
-        AsmPrinter
-        X86AsmParser
-        Object
-        nativecodegen)
+    # This is needed when llvm doesn't have separate linking targets as llvm_map_components_to_libnames doesn't seem to work properly then.
+    if (LLVM_TYPE STREQUAL "SINGLE_LIB")
+        set(llvm_libs LLVM)
+    else()
+        # Link llvm it will be ONLY used by JitDep.
+        llvm_map_components_to_libnames(llvm_libs
+            Core
+            ExecutionEngine
+            Interpreter
+            OrcJIT
+            OrcShared
+            OrcTargetProcess
+            MC
+            Support
+            CodeGen
+            AsmParser
+            AsmPrinter
+            X86AsmParser
+            Object
+            nativecodegen)
+    endif()
 
     add_library(JitDep OBJECT
         ${jit_dependency}
