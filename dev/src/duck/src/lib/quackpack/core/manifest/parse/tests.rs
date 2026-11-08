@@ -851,7 +851,7 @@ dependencies:
             make_errors_message(
                 &dir,
                 [
-                    &format!("`{}` is not a valid url", root_dir.path().display()),
+                    &format!("`{}` is not a valid URL", root_dir.path().display()),
                     "relative URL without a base",
                     "git dependency points to a file on the disk",
                     &format!(
@@ -1859,6 +1859,67 @@ lints:
             [
                 "failed to parse the field `lints.duck.a`",
                 "invalid lint level: expected one of `allow`, `warning`, `error`, but found `invalid`"
+            ]
+        )
+    );
+}
+
+#[test]
+fn invalid_explicit_url() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    source:
+      registry-url: http://[invalid]
+"#,
+    );
+
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `dependencies.a.source.registry-url`",
+                "`http://[invalid]` is not a valid URL",
+                "invalid IPv6 address",
+            ]
+        )
+    );
+}
+
+#[test]
+fn invalid_implicit_url() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    source: http://[invalid]
+"#,
+    );
+
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `dependencies.a.source`",
+                "`http://[invalid]` is not a valid URL",
+                "invalid IPv6 address",
             ]
         )
     );
