@@ -9,7 +9,7 @@ use tempfile::{TempDir, tempdir};
 use url::Url;
 
 use crate::DuckContext;
-use crate::quackpack::core::fetcher::git::GitClient;
+use crate::quackpack::core::fetcher::git::libgit2::GitClient;
 use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::util::path_ops::{read_from_path_to_string, write_file};
 

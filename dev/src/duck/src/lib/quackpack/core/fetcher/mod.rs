@@ -8,7 +8,8 @@
 //!
 //! It incorporates [`DucknestClient`](ducknest::DucknestClient) with
 //! [`ManifestCache`](cache::ManifestCache), and provides another layer of abstraction over the
-//! [`GitClient`](git::GitClient).
+//! [`GitClient`](git::libgit2::GitClient).
+
 use std::cell::{OnceCell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -47,7 +48,7 @@ pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: OnceCell<ducknest::DucknestClient<'duck>>,
     http_client: OnceCell<Rc<AsyncHttpClient<'duck>>>,
-    git_client: OnceCell<git::GitClient<'duck>>,
+    git_client: OnceCell<git::libgit2::GitClient<'duck>>,
     git_fastpath_client: OnceCell<git::fast_path::GitFastPathClient<'duck>>,
     /// SQL cache is not lazily initialized, as failures leave `OnceCell` initialized, which makes
     /// every call to [`get_package_metadata`]/[`get_package_all_metadata`]:
@@ -313,10 +314,10 @@ impl<'duck> Fetcher<'duck> {
             .get_or_init(|| ducknest::DucknestClient::new(self.http_client().clone()))
     }
 
-    /// Get or initialize a new [`git::GitClient`].
-    fn git_client(&self) -> &git::GitClient<'duck> {
+    /// Get or initialize a new [`git::libgit2::GitClient`].
+    fn git_client(&self) -> &git::libgit2::GitClient<'duck> {
         self.git_client
-            .get_or_init(|| git::GitClient::new(self.ctx))
+            .get_or_init(|| git::libgit2::GitClient::new(self.ctx))
     }
 
     /// Get or initialize a new [`git::fast_path::GitFastPathClient`].
