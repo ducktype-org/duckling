@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Module responsible for interacting with Git repositories.
+//! Module responsible for interacting with git repositories via [`git2`].
 
 use std::path::Path;
 
@@ -13,36 +13,34 @@ use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository}
 use tracing::{debug, trace, warn};
 use url::Url;
 
-use crate::quackpack::core::fetcher::types::GitCloneResponse;
-use crate::quackpack::core::{GitReference, PackageLoader};
+use super::{ClonedRepositoryData, GitClient};
+use crate::quackpack::core::GitReference;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 /// Client implementing interaction with Git repositories.
 /// Currently it provides only static methods.
-pub struct GitClient<'duck> {
+pub struct Git2Client<'duck> {
     ctx: &'duck DuckContext,
 }
 
 /// Maximal number of authentication attempts.
 const MAX_AUTHENTICATION_NUMBER: u32 = 3;
 
-impl<'duck> GitClient<'duck> {
+impl<'duck> Git2Client<'duck> {
     pub fn new(ctx: &'duck DuckContext) -> Self {
         Self { ctx }
     }
 
-    /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url))]
-    #[track_caller]
-    pub fn clone_blocking(
+    /// Clone a repository pointed by `url` into `destination`.
+    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url, ?reference, ?destination))]
+    pub fn clone(
         &self,
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<GitCloneResponse> {
-        self.ctx.info(format!("cloning a repository at `{url}`"))?;
+    ) -> QuackResult<ClonedRepositoryData> {
         let mut builder = RepoBuilder::new();
 
         builder.fetch_options(self.fetch_options_for(url, reference));
@@ -98,13 +96,8 @@ impl<'duck> GitClient<'duck> {
         }
 
         let commit = repository.head()?.peel_to_commit()?.id();
-        let package = PackageLoader::find_at_exact_directory(destination, self.ctx)
-            .with_context(|| format!("git repository at `{}` is not a duckling package", url))?
-            .into_package()
-            .unwrap_package();
-        Ok(GitCloneResponse {
-            commit_hash: commit.to_string().into(),
-            package,
+        Ok(ClonedRepositoryData {
+            commit: commit.to_string().into(),
         })
     }
 
@@ -184,6 +177,21 @@ fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
 fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
     let username = username_from_url.unwrap_or("git");
     Cred::ssh_key_from_agent(username)
+}
+
+impl GitClient for Git2Client<'_> {
+    fn clone(
+        &self,
+        url: &Url,
+        reference: GitReference,
+        destination: &Path,
+    ) -> QuackResult<ClonedRepositoryData> {
+        self.clone(url, reference, destination)
+    }
+
+    fn uses_cli(&self) -> bool {
+        false
+    }
 }
 
 /// A helper trait for repository methods.
