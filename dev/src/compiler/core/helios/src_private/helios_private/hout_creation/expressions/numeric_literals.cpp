@@ -54,13 +54,13 @@ namespace compiler::helios::code {
 			// What strtod accepts but from_chars does not: leading whitespace and '+'.
 			if (value.empty() || value.front() == '+'
 			    || std::isspace(static_cast<unsigned char>(value.front())))
-				return { first, std::errc::invalid_argument };
+				return { .ptr = first, .ec = std::errc::invalid_argument };
 
 			// Hexadecimal floats: from_chars (general format) reads only the "0" before the 'x'.
 			const usize sign = value.front() == '-' ? 1 : 0;
 			if (value.substr(sign).starts_with("0x") || value.substr(sign).starts_with("0X")) {
 				out = sign ? -0.0 : 0.0;
-				return { first + sign + 1, std::errc() };
+				return { .ptr = first + sign + 1, .ec = std::errc() };
 			}
 
 			static const locale_t c_locale = newlocale(LC_ALL_MASK, "C", nullptr);
