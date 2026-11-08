@@ -33,7 +33,9 @@
 #include <cmath>
 #include <cstdlib>
 
-#ifdef __APPLE__
+#include <base/config/target_info.hpp>
+
+#if BASE_TARGET_OS_MACOS
 	#include <xlocale.h>
 #endif
 
