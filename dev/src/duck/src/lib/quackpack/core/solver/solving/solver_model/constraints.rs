@@ -109,7 +109,7 @@ pub enum Constraint {
 
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Add a constraint to the model.
-    fn add_constraint<'b>(&mut self, constraint: Constraint, scip_constraint: RawConstraint<'b>) {
+    fn add_constraint(&mut self, constraint: Constraint, scip_constraint: RawConstraint<'_>) {
         let id = self.constraints.len();
         let name = format!("CONSTRAINT_{id}");
         let scip_constraint = scip_constraint.name(&name);
