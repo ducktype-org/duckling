@@ -11,6 +11,8 @@
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <diagnostic/stable_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -22,12 +24,12 @@
 
 
 // Below are includes needed for parseF64 (see its doc comment for more information)
-// Remove then when `std::from_chars` for `f64` becomes available on all supported macOS versions.
+// Remove them when `std::from_chars` for `f64` becomes available on all supported macOS versions.
 // @TODO: #3988 Remove the includes.
 
-#include <locale.h>
-
+#include <cctype>
 #include <cerrno>
+#include <clocale>
 #include <cmath>
 #include <cstdlib>
 
@@ -54,17 +56,18 @@ namespace compiler::helios::code {
 			// What strtod accepts but from_chars does not: leading whitespace and '+'.
 			if (value.empty() || value.front() == '+'
 			    || std::isspace(static_cast<unsigned char>(value.front())))
-				return { first, std::errc::invalid_argument };
+				return { .ptr = first, .ec = std::errc::invalid_argument };
 
 			// Hexadecimal floats: from_chars (general format) reads only the "0" before the 'x'.
 			const usize sign = value.front() == '-' ? 1 : 0;
 			if (value.substr(sign).starts_with("0x") || value.substr(sign).starts_with("0X")) {
 				out = sign ? -0.0 : 0.0;
-				return { first + sign + 1, std::errc() };
+				return { .ptr = first + sign + 1, .ec = std::errc() };
 			}
 
 			static const locale_t c_locale = newlocale(LC_ALL_MASK, "C", nullptr);
-			const std::string     terminated(value);  // strtod needs a NUL-terminated string.
+			CORE_ASSERT(c_locale != nullptr, "newlocale(\"C\") failed");
+			const std::string terminated(value);  // strtod needs a NUL-terminated string.
 
 			char* end          = nullptr;
 			errno              = 0;
