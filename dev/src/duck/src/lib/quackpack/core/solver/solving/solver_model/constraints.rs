@@ -152,7 +152,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
-    /// Add a constraint that this package can never be present with the given feature.
+    /// Add a constraint that this package can never be present with both features.
     pub fn forbid_package_feature_because_no_realization(
         &mut self,
         pkg: PackageId,
@@ -170,7 +170,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
-    /// Add a constraint that realization and this package can never be present with the given feature.
+    /// Add a constraint that realization and this package can never be present with both features.
     pub fn forbid_package_feature_because_forces(
         &mut self,
         pkg: PackageId,
