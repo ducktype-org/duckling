@@ -70,7 +70,6 @@ namespace compiler::helios::code {
 			return { ptr, std::errc() };
 			return { first, std::errc() }; // Fallback in case none of the above conditions are met.
 		}
-		}
 
 		/**
 		 * @brief Checks the given `from_chars_result` and logs compiler errors in case of errors.
