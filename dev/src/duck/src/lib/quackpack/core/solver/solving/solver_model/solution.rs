@@ -73,7 +73,7 @@ pub(super) fn new_features(
                         None
                     }
                 })
-                .cloned()
+                .copied()
                 .collect();
         }
         if let Some(features) = input.preexisting_features_for_pkg(*pkg) {
