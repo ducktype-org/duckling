@@ -49,6 +49,13 @@ pub struct Fetcher<'duck> {
     http_client: OnceCell<Rc<AsyncHttpClient<'duck>>>,
     git_client: OnceCell<git::GitClient<'duck>>,
     git_fastpath_client: OnceCell<git::fast_path::GitFastPathClient<'duck>>,
+    /// SQL cache is not lazily initialized, as failures leave `OnceCell` initialized, which makes
+    /// every call to [`get_package_metadata`]/[`get_package_all_metadata`]:
+    /// * try to initialize SQL cache (again),
+    /// * fail.
+    ///
+    /// [`get_package_metadata`]: Self::get_package_metadata
+    /// [`get_package_all_metadata`]: Self::get_package_all_metadata
     cache: RefCell<cache::ManifestCache>,
     downloads: OnceCell<downloads::Downloads>,
     locks: OnceCell<locks::Locks>,
