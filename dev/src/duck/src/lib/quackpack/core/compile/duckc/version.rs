@@ -12,7 +12,7 @@ use tracing::debug;
 
 use super::Duckc;
 use crate::util::hash::sha256_string;
-use crate::util::once_lock_ext::OnceLockExt;
+use crate::util::once_ext::OnceExt;
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 /// Struct containing all information about duckc and its dependencies versions.

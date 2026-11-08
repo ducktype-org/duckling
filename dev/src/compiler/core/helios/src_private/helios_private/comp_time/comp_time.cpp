@@ -523,7 +523,11 @@ namespace compiler::helios {
 								return ctv::CompileTimeValue{
 									val.withReferenceKind(tsh::ReferenceKind::Box)
 								};
-							case Const:
+							case Mut:
+								return ctv::CompileTimeValue{
+									val.withMutability(tsh::Mutability::Mutable)
+								};
+							case Imm:
 								return ctv::CompileTimeValue{
 									val.withMutability(tsh::Mutability::Immutable)
 								};

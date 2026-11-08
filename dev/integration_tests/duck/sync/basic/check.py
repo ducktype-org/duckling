@@ -23,7 +23,9 @@ check_empty_files([cache / "fetcher.lock",
                    locks / "sync" / "foo",
                    locks / "clean.lock"])
 
-check_empty_dirs([cache / "downloads"])
+# Because we lazy initialize in fetcher.
+check_files_dont_exist([cache / "downloads",
+                        cache / "artifacts"])
 
 metadata_base = storage / "venv" / "foo"
 metadata = metadata_base / "metadata"

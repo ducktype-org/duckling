@@ -36,7 +36,7 @@ impl Dependencies {
             let maybe_overriden_kind = seen_enames.insert(ename, kind);
             if let Some(overriden_kind) = maybe_overriden_kind {
                 qp_bail!(
-                    "multiple dependencies (one {overriden_kind} and one {kind}) named `{}`",
+                    "{kind}dependency `{}` has the same name as a {overriden_kind}dependency",
                     dep.diagnostic_name(),
                 )
             }
@@ -57,7 +57,7 @@ impl Dependencies {
             let identity = dep.identity();
             if let Some(other_dep) = dependencies_ids.get(&identity) {
                 qp_bail!(
-                    "{} dependency `{}` has the same source as {} dependency `{}`",
+                    "{}dependency `{}` has the same source as {}dependency `{}`",
                     dep.kind(),
                     dep.diagnostic_name(),
                     other_dep.kind(),

@@ -140,6 +140,8 @@ namespace lang_def {
 		Xor,
 
 		// General text prefix operators (Not doesn't count)
+		Mut,
+		Imm,
 		Ref,
 		Box,
 		New,
