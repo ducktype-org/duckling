@@ -36,3 +36,31 @@ if(APPLE)
 		list(FILTER LLVM_INCLUDE_DIRS EXCLUDE REGEX "/usr/include$")
 	endif()
 endif()
+
+# An LLVM built with zstd support (LLVM_ENABLE_ZSTD, e.g. Homebrew's or Ubuntu's) makes LLVMSupport
+# link the shared zstd library. With LINK_STATIC_ZSTD, the static zstd library is linked instead.
+#  macOS has no system zstd, so portable macOS binaries need it.
+option(LINK_STATIC_ZSTD "Link the zstd library that LLVM depends on statically (portable binaries on macOS)." OFF)
+if(LINK_STATIC_ZSTD)
+	if(NOT LLVM_ENABLE_ZSTD)
+		message(STATUS "LINK_STATIC_ZSTD: LLVM ${LLVM_PACKAGE_VERSION} is built without zstd, nothing to link")
+	else()
+		# LLVMConfig.cmake ran find_package(zstd), which defines zstd::libzstd_static when a static
+		# library (libzstd.a) is installed next to the shared one.
+		if(NOT TARGET zstd::libzstd_static)
+			message(FATAL_ERROR
+				"LINK_STATIC_ZSTD is ON, but no static zstd library was found (zstd_STATIC_LIBRARY: "
+				"'${zstd_STATIC_LIBRARY}'). Install one (libzstd.a) or configure without LINK_STATIC_ZSTD.")
+		endif()
+		get_target_property(duck_llvm_support_libs LLVMSupport INTERFACE_LINK_LIBRARIES)
+		if(NOT duck_llvm_support_libs MATCHES "zstd::libzstd_(shared|static)")
+			message(FATAL_ERROR
+				"LINK_STATIC_ZSTD: LLVMSupport links zstd in an unexpected way: '${duck_llvm_support_libs}'")
+		endif()
+		# Also inside generator expressions such as $<LINK_ONLY:zstd::libzstd_shared>.
+		list(TRANSFORM duck_llvm_support_libs REPLACE "zstd::libzstd_shared" "zstd::libzstd_static")
+		set_target_properties(LLVMSupport PROPERTIES INTERFACE_LINK_LIBRARIES "${duck_llvm_support_libs}")
+		get_target_property(duck_zstd_static zstd::libzstd_static IMPORTED_LOCATION)
+		message(STATUS "Linking zstd statically: ${duck_zstd_static}")
+	endif()
+endif()

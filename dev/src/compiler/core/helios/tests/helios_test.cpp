@@ -49,6 +49,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
@@ -179,7 +180,7 @@ private:
 		};
 	}
 
-	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::SymbolType<> stImm(const compiler::tsh::AbstractType abstract_type) {
 		return st(abstract_type).withMutability(Immutable);
 	}
 
@@ -240,10 +241,10 @@ private:
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
-				auto simple_const
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
-				auto expected = stConst(i64_type);
-				ASSERT_EQUAL(expected, simple_const);
+				auto simple_imm
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_IMM", root_scope);
+				auto expected = stImm(i64_type);
+				ASSERT_EQUAL(expected, simple_imm);
 			}
 			{
 				auto simple_variant
@@ -266,6 +267,10 @@ private:
 				ASSERT_EQUAL(cmp_1, true);
 				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
 				ASSERT_EQUAL(cmp_2, true);
+				auto cmp_3 = getConstValueAs<bool>("CMP_3", root_scope);
+				ASSERT_EQUAL(cmp_3, true);
+				auto cmp_4 = getConstValueAs<bool>("CMP_4", root_scope);
+				ASSERT_EQUAL(cmp_4, true);
 			}
 		}
 
@@ -288,7 +293,7 @@ private:
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-				auto expected = stConst(i32_type);
+				auto expected = stImm(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
@@ -928,7 +933,7 @@ private:
 		const auto meta_type  = compiler::tsh::getMetaType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
-		const auto int32_immut_symbol_type = stConst(int32_type);
+		const auto int32_immut_symbol_type = stImm(int32_type);
 
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
@@ -1460,7 +1465,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = stConst(bool_type);
+		const auto const_bool_type = stImm(bool_type);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -3343,13 +3348,13 @@ private:
 				);
 			};
 
-			const auto meta_st     = stConst(compiler::tsh::getMetaType());
-			const auto unit_st     = stConst(compiler::tsh::getUnitType());
-			const auto int_st      = stConst(compiler::tsh::getIntegralType(ctx, 32, Signed));
-			const auto tuple_ii_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+			const auto meta_st     = stImm(compiler::tsh::getMetaType());
+			const auto unit_st     = stImm(compiler::tsh::getUnitType());
+			const auto int_st      = stImm(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
 				{ { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
 			));
-			const auto tuple_tt_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+			const auto tuple_tt_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
 				{ { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
 			));
 
@@ -3504,7 +3509,7 @@ private:
 			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
 			ASSERT_EQUAL(
 				number_signature.parameters.at(0).type,
-				stConst(compiler::tsh::getIntegralType(ctx, 64, Signed))
+				stImm(compiler::tsh::getIntegralType(ctx, 64, Signed))
 			);
 
 			// Baking the same template symbol with equal arguments must return

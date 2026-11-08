@@ -817,7 +817,7 @@ namespace compiler::helios::code {
 		 * @brief Whether two case results can share one result location.
 		 *
 		 * Mutability is left out on purpose: it is not enforced anywhere else either (see
-		 * @TODO: #1488 in the coercion rules), and a bound payload comes out `const` while a
+		 * @TODO: #1488 in the coercion rules), and a bound payload comes out `imm` while a
 		 * freshly computed value does not, so comparing it would reject reasonable matches.
 		 */
 		bool sameResultType(const tsh::SymbolType<>& a, const tsh::SymbolType<>& b) {
@@ -946,7 +946,8 @@ namespace compiler::helios::code {
 			case BuiltinUnary::CPtr:
 			case BuiltinUnary::ManyPtr:
 			case BuiltinUnary::Slice:
-			case BuiltinUnary::Const:
+			case BuiltinUnary::Mut:
+			case BuiltinUnary::Imm:
 				// For most of the unary operators the result is the same as their argument type:
 				// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
 				return argument_type;
@@ -1005,8 +1006,12 @@ namespace compiler::helios::code {
 			out << "box ";
 			expr->debugPrint(out);
 			break;
-		case BuiltinUnary::Const:
-			out << "const ";
+		case BuiltinUnary::Mut:
+			out << "mut ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Imm:
+			out << "imm ";
 			expr->debugPrint(out);
 			break;
 		case BuiltinUnary::Ptr:

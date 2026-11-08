@@ -104,7 +104,7 @@ namespace compiler::tsh::coercions {
 		SymbolTypeCoercion retypeVoid(const SymbolType<>& source, const SymbolType<>& target) {
 			CoercionNode node = startNode(source, target);
 
-			// `void` into `void`/`const void` is an identity and should rank with identity, not
+			// `void` into `void`/`imm void` is an identity and should rank with identity, not
 			// `RetypeVoid` which is the worst rank.
 			const bool is_identity = source.getType() == target.getType()
 			                      && source.getRefKind() == target.getRefKind();

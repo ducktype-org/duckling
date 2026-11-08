@@ -6,7 +6,7 @@
 
 #include "dia_interactive_elements.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>

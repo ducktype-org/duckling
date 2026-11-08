@@ -49,6 +49,7 @@ namespace lang_def {
 			{ Keyword::Using, "using", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Var, "var", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Let, "let", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Const, "const", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::While, "while", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::For, "for", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Loop, "loop", KeywordFlagsOptions::IsStmtStart },
@@ -97,7 +98,8 @@ namespace lang_def {
 			{ Keyword::Else, "else", KeywordFlags() },
 
 			// This is the list of keywords that are general prefix operators
-			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Mut, "mut", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Imm, "imm", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::New, "new", KeywordFlagsOptions::IsGenPrefixOp },
