@@ -4,6 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! Module for translating the solution to the ILP
+//! into information which packages and features should be added to the freeze.
+
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
@@ -16,6 +19,7 @@ use crate::quackpack::core::solver::solving::solver_model::FeaturesToVars;
 use crate::quackpack::core::{FeatureName, PackageId, Selector, Version};
 use crate::{QuackResult, qp_bail_internal};
 
+// @TODO: #3986 simplify this, return the whole SolverFreeze here.
 /// Output of the solver model, contains new packages to be put into the freeze, with their features.
 #[derive(Debug)]
 pub struct FoundSolution {
@@ -92,12 +96,18 @@ pub(super) fn new_edges(
     let mut new_edges = HashMap::new();
     for pkg in preexisting_packages.iter().chain(new_packages.iter()) {
         let pkg_data = input.package_data(*pkg)?;
-        let empty_set = HashSet::new();
-        let new_features = new_features.get(pkg).unwrap_or(&empty_set);
+        let mut features = new_features.get(pkg).cloned().unwrap_or_default();
+        features.extend(
+            input
+                .preexisting_features_for_pkg(*pkg)
+                .into_iter()
+                .flatten()
+                .copied(),
+        );
         for dep in pkg_data
             .manifest()
             .dependencies()
-            .select(&Selector::EnabledBy(new_features))
+            .select(&Selector::EnabledBy(&features))
         {
             if pkg_data
                 .dependency_preexists(dep.effective_name())

@@ -4,10 +4,13 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! All possible types of constraints that occur when resolving dependencies.
+//! Adds functions to [`SolverModel`] which translate every type of constraint into an ILP inequality.
+
 use std::format;
 use std::rc::Rc;
 
-use russcip::builder::cons::{ConsBuilder as RawConstraint, ConsBuilder, cons};
+use russcip::builder::cons::{ConsBuilder as RawConstraint, cons};
 use russcip::{ProblemCreated, Variable};
 
 use crate::quackpack::core::identity::Identity;
@@ -30,7 +33,7 @@ pub enum Constraint {
     /// Note
     /// ----
     /// Possible only in merciful mode.
-    ForbidPackage { pkg: PackageId, dep_dname: StrId },
+    ForbidPackageBecauseNoRealization { pkg: PackageId, dep_dname: StrId },
     /// This package must not occur in the solution with this feature,
     /// because no realization of the dependency was found.
     /// Note
@@ -41,7 +44,7 @@ pub enum Constraint {
         dep_dname: StrId,
         feature: FeatureName,
     },
-    /// This package with both feature has an unabled dependency which cannot be realized by `realization`.
+    /// This package with both feature has an enabled dependency which cannot be realized by `realization`.
     /// This is because `forcing_feature` forces some unsupported feature of realization.
     ForbidFeatureBecauseForces {
         pkg: PackageId,
@@ -142,7 +145,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         pkg: PackageId,
         dep_dname: StrId,
     ) -> QuackResult<()> {
-        let constraint = Constraint::ForbidPackage { pkg, dep_dname };
+        let constraint = Constraint::ForbidPackageBecauseNoRealization { pkg, dep_dname };
         let var = self.get_package_variable(pkg, None)?;
         let scip_constraint = cons().coef(&var, 1.0).eq(0.0);
         self.add_constraint(constraint, scip_constraint);
@@ -184,7 +187,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         let enabling_var = self.get_package_variable(pkg, enabling_feature)?;
         let forcing_var = self.get_package_variable(pkg, forcing_feature)?;
         let realization_var = self.get_package_variable(realization, None)?;
-        let scip_constraint = ConsBuilder::all_implies_any(
+        let scip_constraint = RawConstraint::all_implies_any(
             vec![
                 enabling_var.as_ref(),
                 forcing_var.as_ref(),
@@ -227,7 +230,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .iter()
             .map(|pkg| self.get_package_variable(*pkg, None))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        let scip_constraint = ConsBuilder::all_implies_any(
+        let scip_constraint = RawConstraint::all_implies_any(
             vec![parent_var.as_ref()],
             version_vars.iter().map(|x| x.as_ref()).collect(),
         );
@@ -258,7 +261,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .iter()
             .map(|f| self.get_package_variable(realization_pkg, Some(*f)))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        let scip_constraint = ConsBuilder::all_implies_all(
+        let scip_constraint = RawConstraint::all_implies_all(
             vec![
                 enabling_var.as_ref(),
                 forcing_var.as_ref(),
@@ -291,7 +294,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .iter()
             .map(|f| self.get_package_variable(realization, Some(*f)))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        let scip_constraint = ConsBuilder::all_implies_all(
+        let scip_constraint = RawConstraint::all_implies_all(
             vec![parent_var.as_ref()],
             get_refs_vec(&forced_features_vars),
         );
@@ -317,7 +320,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .map(|f| self.get_package_variable(pkg, Some(*f)))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         let feature_var = self.get_package_variable(pkg, Some(feature))?;
-        let scip_constraint = ConsBuilder::all_implies_all(
+        let scip_constraint = RawConstraint::all_implies_all(
             vec![feature_var.as_ref()],
             get_refs_vec(&expands_to_vars),
         );
@@ -340,7 +343,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .iter()
             .map(|pkg| self.get_package_variable(*pkg, None))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        let scip_constraint = ConsBuilder::at_most_one(get_refs_vec(&version_vars));
+        let scip_constraint = RawConstraint::at_most_one(get_refs_vec(&version_vars));
         let constraint = Constraint::ForbidMultipleVersions {
             id: identity,
             versions,
@@ -349,7 +352,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
-    /// Forbid more that one version of the package to be chosen.
+    /// Forbid all versions of the package other than the preexisting one.
     pub fn forbid_versions_different_from_preexisting(
         &mut self,
         identity: Identity,
@@ -360,7 +363,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .iter()
             .map(|pkg| self.get_package_variable(*pkg, None))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        let scip_constraint = ConsBuilder::none(get_refs_vec(&forbidden_version_vars));
+        let scip_constraint = RawConstraint::none(get_refs_vec(&forbidden_version_vars));
         let constraint = Constraint::ForbidDifferentVersions {
             id: identity,
             different_versions,

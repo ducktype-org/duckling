@@ -5,7 +5,8 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Main logic for solving dependencies.
-//! Contains [`SolverEngine`] struct, which transforms the problem into an integer linear programming instance and solves it.
+//! Contains [`SolverEngine`] struct, which transforms the problem into
+//! the constraints of [`SolverModel`].
 use std::collections::{HashMap, HashSet};
 use std::iter::once;
 
@@ -116,9 +117,15 @@ impl<'a> SolverEngine<'a> {
         for parent_feature in parent_data.features().iter().copied() {
             if parent_data.feature_preexists(parent_feature) {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
+                // Note: for the root package all its features are marked as preexistent.
+                // This is not a problem though, because if the root package's dependency is realized,
+                // then indeed those features were taken care of.
                 continue;
             }
             let forced = manifest_dependency.enabled_features(&[parent_feature].into());
+            if forced.is_empty() {
+                continue;
+            }
             if forced
                 .iter()
                 .any(|feature| !realization_features.contains(feature))
@@ -128,13 +135,12 @@ impl<'a> SolverEngine<'a> {
                 // but doing so would result in the realization being in 2 or more versions.
                 // Thus we explicitly forbid parent with the feature.
                 // Note that this edge case can happen only in the merciful mode.
-                return self
-                    .model
+                self.model
                     .forbid_preexistent_package_feature_because_forces(
                         parent,
                         realization,
                         parent_feature,
-                    );
+                    )?;
             } else {
                 self.model.require_forced_features_for_preexisting(
                     parent,
@@ -217,6 +223,10 @@ impl<'a> SolverEngine<'a> {
             let forcing_features = forcing.iter().copied().collect();
             // Features forced by the parent feature or features forced by default if parent_feature is None.
             let forced = manifest_dependency.enabled_features(&forcing_features);
+            if forced.is_empty() {
+                // Nothing to do.
+                continue;
+            }
             for realization in possible_realizations {
                 // Check if realization has all forced features.
                 let realization_features = self.input.package_data(*realization)?.features();
