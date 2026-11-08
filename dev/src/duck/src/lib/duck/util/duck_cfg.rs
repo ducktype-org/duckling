@@ -14,7 +14,7 @@ use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Alia
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::fetcher;
 use crate::quackpack::schemas::config::{RegistryConfig, SecurityConfig, StorageConfig};
-use crate::util::once_lock_ext::OnceLockExt;
+use crate::util::once_ext::OnceExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
 
