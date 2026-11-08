@@ -68,6 +68,17 @@ pub struct SolverModel<'a, State> {
 }
 
 impl<'a> SolverModel<'a, ProblemCreated> {
+    /// Cost of putting a preexisting package into the solution.
+    /// Zero, because preexisting packages are already treated as in the solution.
+    const PREEXISTING_PKG_COST_FUNCTION: f64 = 0.0;
+    /// Cost of putting a new package into the solution.
+    /// This is the main objective we want to minimize.
+    const PKG_COST_FUNTION: f64 = 1.0;
+    /// Cost of putting a new feature into the solution.
+    /// We want to minimize the number of such additions as well,
+    /// but minimizing the number of new packages is the priority.
+    const FEATURE_COST_FUNCITON: f64 = 0.001;
+
     /// Creates an empty model, given packages already placed in the previous freeze and their features.
     pub fn new(input: &'a SolverInput) -> Self {
         SolverModel {
@@ -108,7 +119,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 
     /// Creates the variable associated with the package and adds it to the model.
     pub fn add_package_var(&mut self, pkg: PackageId) {
-        let objective_coef = if self.input.preexists(pkg) { 0.0 } else { 1.0 };
+        let objective_coef = if self.input.preexists(pkg) {
+            Self::PREEXISTING_PKG_COST_FUNCTION
+        } else {
+            Self::PKG_COST_FUNTION
+        };
         let var_name = package_var_name(pkg);
         self.package_vars.entry(pkg).or_insert_with(|| {
             Rc::new(
@@ -125,7 +140,12 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .entry(pkg)
             .or_default()
             .entry(feature)
-            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.001))));
+            .or_insert_with(|| {
+                Rc::new(
+                    self.model
+                        .add(var().name(&var_name).bin().obj(Self::FEATURE_COST_FUNCITON)),
+                )
+            });
     }
 }
 

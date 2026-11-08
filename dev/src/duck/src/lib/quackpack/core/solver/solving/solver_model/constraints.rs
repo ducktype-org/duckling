@@ -118,8 +118,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Add a constraint that forces the package to be present in the solution to the model.
+    /// Note
+    /// ----
+    /// Should be only used for the root package.
     pub fn require_root_package(&mut self, pkg: PackageId) -> QuackResult<()> {
-        let constraint = Constraint::RequireRootPackage();
+        let constraint = Constraint::RequireRootPackage;
         let var = self.get_package_variable(pkg, None)?;
         let scip_constraint = cons().coef(&var, 1.0).eq(1.0);
         self.add_constraint(constraint, scip_constraint);
@@ -127,6 +130,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Add a constraint that forces the package to be present with a feature.
+    /// Note
+    /// ----
+    /// Should be only used for the root package.
     pub fn require_root_package_feature(
         &mut self,
         pkg: PackageId,
@@ -140,6 +146,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Add a constraint that this package can never be present.
+    /// Note
+    /// ----
+    /// Should be used when we haven't gathered any possible realization.
     pub fn forbid_package_because_no_realization(
         &mut self,
         pkg: PackageId,
@@ -153,6 +162,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Add a constraint that this package can never be present with both features.
+    /// Note
+    /// ----
+    /// Should be used when the feature enables some dependency for which we haven't gather any realization.
     pub fn forbid_package_feature_because_no_realization(
         &mut self,
         pkg: PackageId,
@@ -171,6 +183,10 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Add a constraint that realization and this package can never be present with both features.
+    /// Note
+    /// ----
+    /// Should be used when `enabling_feature` enables the dependency and `forcing_feature` forces a feature
+    /// not suported by `realization`.
     pub fn forbid_package_feature_because_forces(
         &mut self,
         pkg: PackageId,
@@ -200,6 +216,10 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Add a constraint that this package can never be present with the given feature.
+    /// Note
+    /// ----
+    /// Should be used when `pkg` preexists without `feature`, `realization` is the preexisting realization
+    /// of the dependency and `feature` forces a feature not supported by `realization`.
     pub fn forbid_preexistent_package_feature_because_forces(
         &mut self,
         pkg: PackageId,
@@ -230,10 +250,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .iter()
             .map(|pkg| self.get_package_variable(*pkg, None))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        let scip_constraint = RawConstraint::all_implies_any(
-            vec![parent_var.as_ref()],
-            version_vars.iter().map(|x| x.as_ref()).collect(),
-        );
+        let scip_constraint =
+            RawConstraint::all_implies_any(vec![parent_var.as_ref()], get_refs_vec(&version_vars));
         let constraint = Constraint::RequireDepRealization {
             dep,
             parent_feature,
@@ -267,7 +285,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                 forcing_var.as_ref(),
                 realization_var.as_ref(),
             ],
-            forced_features_vars.iter().map(|x| x.as_ref()).collect(),
+            get_refs_vec(&forced_features_vars),
         );
         let constraint = Constraint::RequireForcedFeature {
             dep,
