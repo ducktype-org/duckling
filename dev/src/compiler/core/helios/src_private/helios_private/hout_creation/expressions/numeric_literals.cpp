@@ -20,35 +20,31 @@
 #include <string_view>
 #include <system_error>
 
-// Floating-point `std::from_chars` is implemented in the libc++ dylib, which macOS has from 26.0 only:
-// libc++ marks it unavailable for older deployment targets (the macOS release supports 15). There,
-// `parseF64` below uses `strtod_l` in the "C" locale instead. Can be set to 1 to test that on Linux.
-#ifndef DUCKLING_FLOAT_FROM_CHARS_FALLBACK
-#	if defined(_LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT) && !_LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT
-#		define DUCKLING_FLOAT_FROM_CHARS_FALLBACK 1
-#	else
-#		define DUCKLING_FLOAT_FROM_CHARS_FALLBACK 0
-#	endif
-#endif
 
-#if DUCKLING_FLOAT_FROM_CHARS_FALLBACK
+// Below are includes needed for parseF64 (see its doc comment for more information)
+// Remove then when `std::from_chars` for `f64` becomes available on all supported macOS versions.
+
 #	include <cerrno>
 #	include <cmath>
 #	include <cstdlib>
 #	include <locale.h>
-#	ifdef __APPLE__
+
+#ifdef __APPLE__
 #		include <xlocale.h>
-#	endif
 #endif
 
 namespace compiler::helios::code {
 	namespace {
 		/**
-		 * @brief `std::from_chars(first, last, out)` for an `f64` in the default (general) format,
-		 * with its results, also where `strtod_l` replaces it (see DUCKLING_FLOAT_FROM_CHARS_FALLBACK).
+		 * @brief Mimics `std::from_chars(first, last, out)` for an `f64` in the default (general) format
+		 * 
+		 * Floating-point `std::from_chars` on macOS is only available from 26.0.
+		 * We want to compile on macOS 15, to support all supported macOS versions.
+		 * 
+		 * @future: This function will likely be deleted in fall of 2027,
+		 * when support for macOS 15 is dropped and `std::from_chars` for `f64` becomes available on all supported macOS versions.
 		 */
 		std::from_chars_result parseF64(std::string_view value, f64& out) {
-#if DUCKLING_FLOAT_FROM_CHARS_FALLBACK
 			const char* const first = value.data();
 			// What strtod accepts but from_chars does not: leading whitespace and '+'.
 			if (value.empty() || value.front() == '+' || std::isspace(static_cast<unsigned char>(value.front())))
@@ -72,9 +68,8 @@ namespace compiler::helios::code {
 				return { ptr, std::errc::result_out_of_range };
 			out = parsed;
 			return { ptr, std::errc() };
-#else
-			return std::from_chars(value.data(), value.data() + value.size(), out);
-#endif
+			return { first, std::errc() }; // Fallback in case none of the above conditions are met.
+		}
 		}
 
 		/**
