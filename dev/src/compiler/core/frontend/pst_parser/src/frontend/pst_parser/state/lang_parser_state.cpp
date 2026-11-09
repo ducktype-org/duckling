@@ -109,6 +109,24 @@ namespace pst {
 		return { dynamic_cast<const LangParserContext*>(current_context.get()) };
 	}
 
+	HashType LangParserState::getContextHash() const {
+		auto ctx = getContext();
+		// Keyed by the hashed values (see addToHash of LangParserContext), so it stays correct
+		// whatever happens to the context objects.
+		if (context_hash_cache.has_value() && context_hash_cache->class_name == ctx->class_name
+		    && context_hash_cache->block_order == ctx->block_order)
+			return context_hash_cache->hash;
+
+		HashAlg partial_hash;
+		addToHash(partial_hash, *ctx);
+		context_hash_cache = ContextHashCache{
+			.class_name  = ctx->class_name,
+			.block_order = ctx->block_order,
+			.hash        = partial_hash.finalize(),
+		};
+		return context_hash_cache->hash;
+	}
+
 	void LangParserState::copyOwnContext() {
 		if (current_context.isRef()) current_context = current_context->copy();
 	}

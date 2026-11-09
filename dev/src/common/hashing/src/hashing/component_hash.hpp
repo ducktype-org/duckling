@@ -14,6 +14,9 @@
 
 #include <string_id/string_id.hpp>
 
+#include <array>
+#include <charconv>
+#include <string_view>
 #include <type_traits>
 
 namespace hashing {
@@ -85,6 +88,82 @@ namespace hashing {
 			// build partial by hashing all elements in order
 			for (const auto& e: elems) hashing::addToHash(partial, std::string_view(e));
 			hash = partial.finalize();
+		}
+
+		/**
+		 * Return elements joined by '.' (represents the hierarchical path).
+		 * Works only in Dev builds.
+		 */
+		[[nodiscard]] std::string str() const;
+	};
+
+	/**
+	 * PathHash - a hierarchical path hash like ComponentHash, but keeping only the streaming
+	 * (partial) hash state. The final hash is computed on demand (`finalize`), not for every path
+	 * component. Extending a path hashes exactly the same bytes as ComponentHash, so
+	 * `PathHash(ComponentHash(p, "a"))` and `PathHash(PathHash(p), "a")` have the same partial state.
+	 *
+	 * Used for PST element paths, where the partial state is extended for every element and only
+	 * the partial state is used (as the prefix of element hashes).
+	 */
+	struct PathHash final {
+		using HashAlg  = ComponentHash::HashAlg;
+		using HashType = ComponentHash::HashType;
+
+		/**
+		 * @brief An index path component, hashed as the string "[index]".
+		 */
+		struct Index final {
+			usize index;
+		};
+
+		HashAlg partial;
+
+		[[no_unique_address]]
+		ComponentHash::ElementsType elements;
+
+		PathHash() noexcept = default;
+
+		// NOLINTNEXTLINE(google-explicit-constructor)
+		PathHash(const ComponentHash& component) noexcept:
+			  partial(component.partial),
+			  elements(component.elements) {}
+
+		PathHash(const PathHash& parent, std::string_view ext) noexcept:
+			  partial(parent.partial),
+			  elements(parent.elements) {
+			if (!ext.empty()) {
+				IF_BUILD_TYPE_DEV(elements.emplace_back(ext));
+				hashing::addToHash(partial, ext);
+			}
+		}
+
+		PathHash(const PathHash& parent, Index index) noexcept:
+			  partial(parent.partial),
+			  elements(parent.elements) {
+			// "[index]" without a heap allocation
+			std::array<char, 24> buffer{};
+			buffer[0] = '[';
+			auto result
+				= std::to_chars(buffer.data() + 1, buffer.data() + buffer.size() - 1, index.index);
+			*result.ptr = ']';
+			auto ext    = std::string_view(buffer.data(), result.ptr + 1);
+			IF_BUILD_TYPE_DEV(elements.emplace_back(ext));
+			hashing::addToHash(partial, ext);
+		}
+
+		PathHash(const PathHash&)            = default;
+		PathHash(PathHash&&)                 = default;
+		PathHash& operator=(const PathHash&) = default;
+		PathHash& operator=(PathHash&&)      = default;
+
+		/**
+		 * @brief The hash of the whole path (same as ComponentHash::hash of the same path).
+		 */
+		[[nodiscard]]
+		HashType finalize() const {
+			HashAlg copy = partial;
+			return copy.finalize();
 		}
 
 		/**

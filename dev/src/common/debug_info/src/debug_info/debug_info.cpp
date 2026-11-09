@@ -24,6 +24,32 @@ namespace debug_info {
 				                   = resolver(std::get<PstHashPostion>(pos.line_col_position)) };
 		}
 
+		/**
+		 * @brief Calls `fun` on every source position stored in the debug info.
+		 */
+		template<typename Fun>
+		void forEachPosition(
+			base::Map<std::string, FunctionMetadata>& functions,
+			base::Map<std::string, VariableMetadata>& globals,
+			Fun                                       fun
+		) {
+			for (auto& [_, func]: functions) {
+				if (func.position) fun(*func.position);
+
+				for (auto& [_, parameter_meta]: func.parameter_indexes_to_metadata)
+					if (parameter_meta.position) fun(*parameter_meta.position);
+
+				for (auto& [_, instr_meta]: func.instr_offsets_to_metadata)
+					fun(instr_meta.position);
+
+				for (auto& [_, variable_meta]: func.instr_offsets_to_variable_init)
+					if (variable_meta.position) fun(*variable_meta.position);
+			}
+
+			for (auto& [_, global_meta]: globals)
+				if (global_meta.position) fun(*global_meta.position);
+		}
+
 	}  // namespace
 
 	void DebugInfo::resolvePositions(
@@ -31,24 +57,17 @@ namespace debug_info {
 	) {
 		source_positions_type = SourcePositionsType::LineColumn;
 
-		for (auto& [_, func]: functions) {
-			if (func.position) func.position = resolvePosition(*func.position, resolver);
+		forEachPosition(functions, globals, [&](SourcePosition& pos) {
+			pos = resolvePosition(pos, resolver);
+		});
+	}
 
-			for (auto& [_, parameter_meta]: func.parameter_indexes_to_metadata)
-				if (parameter_meta.position)
-					parameter_meta.position = resolvePosition(*parameter_meta.position, resolver);
-
-			for (auto& [_, instr_meta]: func.instr_offsets_to_metadata)
-				instr_meta.position = resolvePosition(instr_meta.position, resolver);
-
-			for (auto& [_, variable_meta]: func.instr_offsets_to_variable_init)
-				if (variable_meta.position)
-					variable_meta.position = resolvePosition(*variable_meta.position, resolver);
-		}
-
-		for (auto& [_, global_meta]: globals)
-			if (global_meta.position)
-				global_meta.position = resolvePosition(*global_meta.position, resolver);
+	void DebugInfo::mapPstPositions(const std::function<PstHashPostion(const PstHashPostion&)>& mapper
+	) {
+		forEachPosition(functions, globals, [&](SourcePosition& pos) {
+			if (std::holds_alternative<PstHashPostion>(pos.line_col_position))
+				pos.line_col_position = mapper(std::get<PstHashPostion>(pos.line_col_position));
+		});
 	}
 
 	void DebugInfo::mergeFrom(DebugInfo&& other) {

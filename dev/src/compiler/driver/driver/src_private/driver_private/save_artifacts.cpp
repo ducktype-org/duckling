@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <driver/incremental_utils/file_pst_inputs.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/save_artifacts.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -50,6 +51,14 @@ namespace compiler::driver {
 				query_collection->setBlobData(
 					metadata_blob, metadata_serialized.data(), metadata_serialized.size()
 				);
+
+			// Save PST inputs of source files, so unchanged files need not be parsed next time.
+			auto file_inputs_blob
+				= query_collection->blobArtifactAtOrNew(base::StrID("file_pst_inputs"));
+			std::vector<byte> file_inputs_serialized = serializeFilePSTInputs();
+			query_collection->setBlobData(
+				file_inputs_blob, file_inputs_serialized.data(), file_inputs_serialized.size()
+			);
 		}
 	}
 

@@ -6,13 +6,14 @@
 
 #include "collect_input.hpp"
 
+#include "file_pst_inputs.hpp"
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
 #include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
-#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <global_state/packages.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -140,8 +141,8 @@ namespace compiler::driver {
 				// Collect file side input
 				out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
 
-				auto pst = sf_mut->getPST();
-				collectQueryInputsFromPst(pst, *out);
+				// PST inputs, without parsing the file if it did not change (file_pst_inputs.hpp).
+				collectFilePSTInputs(sf_mut, *out);
 			}
 
 			// Recurse into submodules
@@ -186,17 +187,10 @@ namespace compiler::driver {
 	void collectQueryInputsFromPst(
 		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
 	) {
-		auto root = pst_ref->getRootElement();
-		out.emplace_back(
-			pst::internal::PSTAccessSideInput::getID(), root.illegalAccess().value()->getHash()
-		);
-
-		auto elems = pst::viewAllSubTreeElements(root);
-		for (auto& el: elems)
-			if (auto maybe_elem = el.illegalAccess()) {
-				auto ptr = maybe_elem.value();
-				out.emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
-			}
+		// PST access side inputs are keyed by unlock group hashes, one per Full element (collected
+		// when the PST was created).
+		for (const auto& hash: pst_ref->getUnlockGroupHashes())
+			out.emplace_back(pst::internal::PSTAccessSideInput::getID(), hash);
 	}
 
 	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromPrevMetadata() {

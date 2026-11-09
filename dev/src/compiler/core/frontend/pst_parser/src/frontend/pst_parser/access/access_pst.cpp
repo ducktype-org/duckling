@@ -6,6 +6,7 @@
 
 #include "access_pst.hpp"
 
+#include "../base_element/lang_parser_element.hpp"
 #include "../pst_query/pst_access_side_input.hpp"
 
 #include <diagnostic/placeholder.hpp>
@@ -18,6 +19,18 @@ namespace pst::internal {
 
 	void notifyContext(query::Context& ctx, query::QueryStableHash stable_hash) {
 		ctx.query<PSTAccessSideInput>({ stable_hash });
+	}
+
+	void notifyUnlock(query::Context& ctx, const LangElement& element) {
+		switch (element.getUnlockMode()) {
+		case UnlockMode::Full:
+		case UnlockMode::Transparent:
+			notifyContext(ctx, element.getUnlockGroupHash());
+			return;
+		case UnlockMode::Generated:
+			return;
+		}
+		CORE_UNREACHABLE();
 	}
 
 	void notifyBadAccess(query::Context& ctx) {

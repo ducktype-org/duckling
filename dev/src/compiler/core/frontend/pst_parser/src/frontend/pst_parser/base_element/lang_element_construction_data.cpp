@@ -10,9 +10,6 @@
 
 namespace pst {
 	LangElementConstructionData::LangElementConstructionData(const LangParserState& state):
-		  source_position(state.getPosition()) {
-		HashAlg partial_hash;
-		addToHash(partial_hash, *state.getContext());
-		context_hash = partial_hash.finalize();
-	}
+		  context_hash(state.getContextHash()),
+		  source_position(state.getPosition()) {}
 }

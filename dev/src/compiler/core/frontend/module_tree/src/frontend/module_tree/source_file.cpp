@@ -17,6 +17,9 @@
 #include <base/except/exceptions.hpp>
 
 #include <filesystem/file.hpp>
+#include <hashing/hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
+#include <token_source/source.hpp>
 
 namespace {
 
@@ -88,8 +91,34 @@ namespace compiler::frontend {
 		});
 
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
-		// Reset the parse tree.
+		// Reset the parse tree and the content snapshot.
 		parse_tree.reset();
+		content_snapshot.reset();
+		content_hash.reset();
+	}
+
+	base::SharedView SourceFile::getContentSnapshotLocked() {
+		if (!content_snapshot.has_value()) content_snapshot = file.getContent();
+		return content_snapshot.value();
+	}
+
+	bool SourceFile::hasPST() const {
+		std::scoped_lock lock(*state_lock);
+		return parse_tree && component_hash.has_value();
+	}
+
+	base::Bit256 SourceFile::getContentHash() {
+		std::scoped_lock lock(*state_lock);
+		if (!content_hash.has_value()) {
+			auto                                   content = getContentSnapshotLocked();
+			hashing::StatefulHash<hashing::SHA256> hasher;
+			const auto                             view = content.view();
+			hasher(std::span<const std::byte>(
+				reinterpret_cast<const std::byte*>(view.getBegin()), view.size()
+			));
+			content_hash = hasher.finalize();
+		}
+		return content_hash.value();
 	}
 
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
@@ -114,7 +143,11 @@ namespace compiler::frontend {
 			auto pst_type
 				= linked_module->isReplModule() ? pst::PSTType::Script : pst::PSTType::Program;
 
-			auto parsed_pst = pst::ParsedPST<>::fromFile(file, pst_type, getComponentHash());
+			// Parse the content snapshot (the content getContentHash describes).
+			auto token_source = tokenizer::makeTokenSource(file, getContentSnapshotLocked());
+			token_source->tokenize();
+			auto parsed_pst
+				= pst::ParsedPST<>::fromFile(std::move(token_source), pst_type, getComponentHash());
 
 			parsed_pst->setAdditionalRootData(pst::AdditionalRootData{
 				.pst_parent = pst::AdditionalRootData::ModuleParent{ linked_module->getModuleID(), },

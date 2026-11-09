@@ -55,6 +55,12 @@ namespace tokenizer {
 		explicit TokenSource(const fs::File&);
 
 		/**
+		 * @brief Construct a new TokenSource from file with already read content (a snapshot of
+		 * the file content, e.g. the one its content hash was computed from).
+		 */
+		explicit TokenSource(const fs::File&, base::SharedView content);
+
+		/**
 		 * @brief Construct a new TokenSource as a macro with parent position.
 		 */
 		explicit TokenSource(dia::StablePosition parent, std::string_view contents);

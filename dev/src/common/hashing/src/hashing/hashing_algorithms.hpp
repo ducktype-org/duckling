@@ -24,7 +24,35 @@
 #include <type_traits>
 #include <vector>
 
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+	#define DUCK_SHA256_HARDWARE_X86 1
+#else
+	#define DUCK_SHA256_HARDWARE_X86 0
+#endif
+
 namespace hashing {
+
+#if DUCK_SHA256_HARDWARE_X86
+	namespace internal {
+		/**
+		 * @brief Whether the CPU supports the x86 SHA extensions (and SSSE3, SSE4.1).
+		 */
+		bool sha256HardwareAvailable() noexcept;
+
+		/**
+		 * @brief SHA-256 transformation of one 64-byte block using the x86 SHA extensions.
+		 * Produces exactly the same result as the software implementation.
+		 */
+		void sha256TransformHardware(u32* state, const std::byte* block) noexcept;
+
+		/**
+		 * @brief Whether SHA256 uses the hardware implementation at runtime. Can be changed (e.g.
+		 * in tests) only when no hashing happens concurrently. Before its dynamic initialization
+		 * it is false (software implementation, same results).
+		 */
+		inline bool sha256_use_hardware = sha256HardwareAvailable();
+	}
+#endif
 
 	/**
 	 * Hash algorithm that keeps the bytes of the hashed objects
@@ -175,6 +203,20 @@ namespace hashing {
 		    algorithm specification.
 		 */
 		constexpr void transform(const std::byte* data) noexcept {
+#if DUCK_SHA256_HARDWARE_X86
+			if (!std::is_constant_evaluated() && internal::sha256_use_hardware) {
+				internal::sha256TransformHardware(state.data(), data);
+				return;
+			}
+#endif
+			transformSoftware(data);
+		}
+
+	public:
+		/**
+		 * @brief The portable implementation of `transform`, public for testing.
+		 */
+		constexpr void transformSoftware(const std::byte* data) noexcept {
 			// SHA-256 Constants: first 32 bits of the fractional parts of the cube roots
 			// of the first 64 prime numbers (2 through 311)
 			constexpr std::array<u32, 64> k
@@ -195,34 +237,33 @@ namespace hashing {
 			std::array<u32, 64> w{};
 
 			for (size_t i = 0; i < 16; ++i) {
-				w.at(i) = (static_cast<u32>(static_cast<unsigned char>(data[i * 4])) << 24)
-				        | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 1])) << 16)
-				        | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 2])) << 8)
-				        | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 3])));
+				w[i] = (static_cast<u32>(static_cast<unsigned char>(data[i * 4])) << 24)
+				     | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 1])) << 16)
+				     | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 2])) << 8)
+				     | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 3])));
 			}
 
 			for (size_t i = 16; i < 64; ++i) {
-				const u32 s0 = rightRotate(w.at(i - 15), 7) ^ rightRotate(w.at(i - 15), 18)
-				             ^ (w.at(i - 15) >> 3);
-				const u32 s1 = rightRotate(w.at(i - 2), 17) ^ rightRotate(w.at(i - 2), 19)
-				             ^ (w.at(i - 2) >> 10);
-				w.at(i) = w.at(i - 16) + s0 + w.at(i - 7) + s1;
+				const u32 s0
+					= std::rotr(w[i - 15], 7) ^ std::rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);
+				const u32 s1 = std::rotr(w[i - 2], 17) ^ std::rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);
+				w[i]         = w[i - 16] + s0 + w[i - 7] + s1;
 			}
 
-			u32 a = state.at(0);
-			u32 b = state.at(1);
-			u32 c = state.at(2);
-			u32 d = state.at(3);
-			u32 e = state.at(4);
-			u32 f = state.at(5);
-			u32 g = state.at(6);
-			u32 h = state.at(7);
+			u32 a = state[0];
+			u32 b = state[1];
+			u32 c = state[2];
+			u32 d = state[3];
+			u32 e = state[4];
+			u32 f = state[5];
+			u32 g = state[6];
+			u32 h = state[7];
 
 			for (size_t i = 0; i < 64; ++i) {
-				const u32 s1    = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+				const u32 s1    = std::rotr(e, 6) ^ std::rotr(e, 11) ^ std::rotr(e, 25);
 				const u32 ch    = (e & f) ^ ((~e) & g);
-				const u32 temp1 = h + s1 + ch + k.at(i) + w.at(i);
-				const u32 s0    = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+				const u32 temp1 = h + s1 + ch + k[i] + w[i];
+				const u32 s0    = std::rotr(a, 2) ^ std::rotr(a, 13) ^ std::rotr(a, 22);
 				const u32 maj   = (a & b) ^ (a & c) ^ (b & c);
 				const u32 temp2 = s0 + maj;
 
@@ -236,16 +277,17 @@ namespace hashing {
 				a = temp1 + temp2;
 			}
 
-			state.at(0) += a;
-			state.at(1) += b;
-			state.at(2) += c;
-			state.at(3) += d;
-			state.at(4) += e;
-			state.at(5) += f;
-			state.at(6) += g;
-			state.at(7) += h;
+			state[0] += a;
+			state[1] += b;
+			state[2] += c;
+			state[3] += d;
+			state[4] += e;
+			state[5] += f;
+			state[6] += g;
+			state[7] += h;
 		}
 
+	private:
 		/**
 		 * Pads the buffer and processes the final block.
 		 * This function is called at the end of the hashing process
@@ -276,10 +318,6 @@ namespace hashing {
 			buffer.at(63)  = static_cast<std::byte>(bits & 0xFF);
 
 			transform(buffer.data());
-		}
-
-		static constexpr u32 rightRotate(u32 value, u64 count) noexcept {
-			return (value >> count) | (value << (32 - count));
 		}
 	};
 

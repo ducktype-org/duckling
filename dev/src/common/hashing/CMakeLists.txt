@@ -1,5 +1,6 @@
 add_library(Hashing
 	src/hashing/component_hash.cpp
+	src/hashing/sha256_hardware.cpp
 )
 
 make_module(Hashing USES Base StringID)

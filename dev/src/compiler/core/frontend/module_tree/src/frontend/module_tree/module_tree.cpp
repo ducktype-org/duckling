@@ -299,9 +299,15 @@ namespace compiler::frontend {
 	}
 
 	void parseAllFilesInModuleTree(ModuleID module_id) {
+		forEachSourceFileInParallel(module_id, [](Ref<SourceFile> file) { file->getPST(); });
+	}
+
+	void forEachSourceFileInParallel(
+		ModuleID module_id, const std::function<void(Ref<SourceFile>)>& fun
+	) {
 		CORE_ASSERT(
 			!query::Context::isAnyQueryCurrentlyRunning(),
-			"parseAllFilesInModuleTree called when some query is currently running."
+			"forEachSourceFileInParallel called when some query is currently running."
 		);
 
 		// First collect all files to be parsed.
@@ -336,7 +342,7 @@ namespace compiler::frontend {
 						= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 							file_id
 						);
-					file_ref->getPST();
+					fun(file_ref);
 
 					if (parsed_files_count.fetch_add(1, std::memory_order_relaxed) + 1
 					    == files_to_parse.size()) {

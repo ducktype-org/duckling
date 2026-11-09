@@ -46,18 +46,29 @@ namespace lexer {
 		 */
 		void next();
 		void skip(usize n);
+
 		[[nodiscard]]
-		const Char& peek(usize fwd = 0) const;
+		const Char& peek(usize fwd = 0) const {
+			return char_array.at(where + fwd);
+		}
+
 		[[nodiscard]]
-		bool tryRawValue(char raw_value, usize fwd = 0) const;
+		bool tryRawValue(char raw_value, usize fwd = 0) const {
+			return char_array.size() > where + fwd && peek(fwd).is(raw_value);
+		}
+
 		/**@}*/
 
 		/**
 		 * @name Top level parsers:
 		 * @{
 		 */
-		using LexerCondition = std::function<bool(const Lexer&)>;
-		void parseUntil(Tokens& output, const LexerCondition&);
+		/**
+		 * @note A plain function pointer (the conditions are captureless lambdas): parseUntil
+		 * evaluates the condition before every token.
+		 */
+		using LexerCondition = bool (*)(const Lexer&);
+		void parseUntil(Tokens& output, LexerCondition stop);
 		void codeblock();
 		void parseCodeblockInto(Tokens& output);
 		void parseSingleInto(Tokens& output);

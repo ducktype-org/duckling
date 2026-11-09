@@ -12,6 +12,28 @@
 
 namespace hashing {
 
+	namespace {
+		[[maybe_unused]] std::string joinElements(const auto& elements) {
+			std::string out;
+			bool        first = true;
+			for (const auto& e: elements) {
+				if (!first) out.push_back('.');
+				out.append(e);
+				first = false;
+			}
+			return out;
+		}
+	}
+
+	std::string PathHash::str() const {
+		IF_BUILD_TYPE_DEV({ return joinElements(elements); })
+
+			IF_BUILD_TYPE_RELEASE({
+				// .str is not available in Release build
+				throw std::logic_error("PathHash::str() is not available in Release build");
+			})
+	}
+
 	std::string ComponentHash::str() const {
 		IF_BUILD_TYPE_DEV({
 			std::string out;

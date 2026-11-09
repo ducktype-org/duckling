@@ -29,6 +29,8 @@
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <algorithm>
+#include <bit>
+#include <limits>
 #include <mutex>
 #include <unordered_set>
 #include <utility>
@@ -83,6 +85,59 @@ namespace {
 			T value = std::move(data.back());
 			data.pop_back();
 			return value;
+		}
+	};
+
+	/**
+	 * @brief Read-only map from NodeID to its index in a given vector of distinct NodeIDs.
+	 *
+	 * A flat open addressing table (linear probing) storing only indices: it is built once and
+	 * then queried for every edge of the graph, where std::unordered_map (a node allocation per
+	 * entry, bucket indirection) was the dominating cost of the graph optimization.
+	 */
+	class NodeIndexMap final {
+	private:
+		static constexpr u32 EMPTY = std::numeric_limits<u32>::max();
+
+		const std::vector<query::internal::NodeID>& nodes;
+		std::vector<u32>                            slots;
+		usize                                       mask;
+
+		[[nodiscard]]
+		static u64 slotHash(const query::internal::NodeID& node) {
+			// splitmix64 finalizer, unstable keys are often small integers
+			u64 x = std::hash<query::internal::NodeID>{}(node);
+			x ^= x >> 30;
+			x *= 0xbf'58'47'6d'1c'e4'e5'b9ULL;
+			x ^= x >> 27;
+			x *= 0x94'd0'49'bb'13'31'11'ebULL;
+			x ^= x >> 31;
+			return x;
+		}
+
+	public:
+		explicit NodeIndexMap(const std::vector<query::internal::NodeID>& nodes): nodes(nodes) {
+			CORE_ASSERT(nodes.size() < EMPTY, "Too many nodes for NodeIndexMap");
+			const usize capacity = std::bit_ceil(std::max<usize>(16, nodes.size() * 2));
+			mask                 = capacity - 1;
+			slots.assign(capacity, EMPTY);
+			for (u32 i = 0; i < nodes.size(); i++) {
+				usize slot = slotHash(nodes[i]) & mask;
+				while (slots[slot] != EMPTY) slot = (slot + 1) & mask;
+				slots[slot] = i;
+			}
+		}
+
+		/**
+		 * @brief Index of the node. The node has to be present.
+		 */
+		[[nodiscard]]
+		usize at(const query::internal::NodeID& node) const {
+			for (usize slot = slotHash(node) & mask;; slot = (slot + 1) & mask) {
+				const u32 idx = slots[slot];
+				CORE_ASSERT(idx != EMPTY, "Node not found in NodeIndexMap");
+				if (nodes[idx] == node) return idx;
+			}
 		}
 	};
 
@@ -506,13 +561,10 @@ namespace query::internal {
 
 		// First create Map NodeID -> usize to optimize future algorithms that can operate on usize
 		// IDs and work on plain vectors instead of hash maps
-		base::HashMap<NodeID, LocalNodeID> node_to_idx;
-		std::vector<NodeID>                idx_to_node;
-
-		for (const auto& [node, _]: *node_deps) {
-			node_to_idx.emplace(node, idx_to_node.size());
-			idx_to_node.push_back(node);
-		}
+		std::vector<NodeID> idx_to_node;
+		idx_to_node.reserve(node_deps->size());
+		for (const auto& [node, _]: *node_deps) idx_to_node.push_back(node);
+		const NodeIndexMap node_to_idx(idx_to_node);
 
 		const usize node_count = idx_to_node.size();
 

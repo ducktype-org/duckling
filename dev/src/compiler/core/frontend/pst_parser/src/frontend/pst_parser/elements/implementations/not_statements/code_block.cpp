@@ -80,10 +80,10 @@ namespace pst {
 	void CodeBlock::calcElementPathHashRecursive() {
 		auto path = getElementPathHash();
 		if (type == BlockOrderType::Ordered) {
-			auto ordered = hashing::ComponentHash(path, "ordered");
+			auto ordered = hashing::PathHash(path, "ordered");
 			calcIndexedListChildPath<Stmt>({ statements }, ordered);
 		} else if (type == BlockOrderType::Unordered) {
-			auto unordered = hashing::ComponentHash(path, "unordered");
+			auto unordered = hashing::PathHash(path, "unordered");
 			calcOrderedListChildPath(statements, unordered);
 		}
 	}

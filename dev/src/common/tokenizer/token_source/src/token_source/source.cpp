@@ -38,6 +38,11 @@ namespace tokenizer {
 		content.emplace(path.getContent());
 	}
 
+	TokenSource::TokenSource(const fs::File& path, base::SharedView file_content):
+		  location(makeBox<dia::FileLocation>(Ref<TokenSource>(this), path)) {
+		content.emplace(std::move(file_content));
+	}
+
 	TokenSource::TokenSource(dia::StablePosition parent, const std::string_view contents):
 		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenSource>(this))) {
 		content.emplace(base::SharedView::copy(base::RawView{

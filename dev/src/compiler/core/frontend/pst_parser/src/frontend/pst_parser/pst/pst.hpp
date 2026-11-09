@@ -41,6 +41,11 @@ namespace pst {
 		 */
 		hashing::ComponentHash hash_ctx_info;
 
+		/**
+		 * Hashes of all unlock groups (PST access side inputs) of an input PST.
+		 */
+		std::vector<HashType> unlock_group_hashes;
+
 		/***********************\
 		|    PROTECTED METHODS    |
 		\***********************/
@@ -64,6 +69,16 @@ namespace pst {
 		 */
 		void calcHashes() {
 			if (auto ref = element.internalMut()) ref->calcHashRecursive();
+		}
+
+		/**
+		 * @brief Calculates unlock groups of the tree (see UnlockMode). The root is always Full.
+		 */
+		void calcUnlockGroups() {
+			if (auto ref = element.internalMut()) {
+				ref->setUnlockFull();
+				ref->calcUnlockGroups(unlock_group_hashes);
+			}
 		}
 
 		void putInPSTHashHashMap() {
@@ -92,6 +107,9 @@ namespace pst {
 
 			signGenerated();
 
+			// Generated PST elements are not inputs, unlocking them is a no-op.
+			if (auto ref = element.internalMut()) ref->markGeneratedRecursive();
+
 			// we call it after signing, because signing changes the hash:
 			putInPSTHashHashMap();
 		}
@@ -104,6 +122,7 @@ namespace pst {
 			// we might need to add an if for hasErrors.
 			calcElementPathHash();
 			calcHashes();
+			calcUnlockGroups();
 
 			putInPSTHashHashMap();
 		}
@@ -114,6 +133,15 @@ namespace pst {
 		\**********************/
 
 		[[nodiscard]] virtual bool hasErrors() const = 0;
+
+		/**
+		 * @brief Hashes of all unlock groups of the tree, i.e. its PST access side inputs (input
+		 * PSTs only, generated PSTs are not inputs).
+		 */
+		[[nodiscard]]
+		const std::vector<HashType>& getUnlockGroupHashes() const {
+			return unlock_group_hashes;
+		}
 
 		[[nodiscard]]
 		AccessLocked<Element> getRootElement() const {

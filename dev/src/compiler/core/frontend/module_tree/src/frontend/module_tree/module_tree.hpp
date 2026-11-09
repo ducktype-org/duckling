@@ -363,6 +363,19 @@ namespace compiler::frontend {
 	 */
 	void parseAllFilesInModuleTree(ModuleID module_id);
 
+	/**
+	 * @brief: Concurrently calls `fun` for all source files in the module tree and their
+	 * submodules recursively (using the workers). Blocks until all calls finish.
+	 *
+	 * @param module_id The ModuleID of the root module
+	 * @param fun Function called for every source file, possibly concurrently. It gets a mutable
+	 * reference, so it may parse the file or compute its content hash.
+	 * @note This function cannot be called from query
+	 */
+	void forEachSourceFileInParallel(
+		ModuleID module_id, const std::function<void(Ref<SourceFile>)>& fun
+	);
+
 	/*
 	 * Creates a completely new module tree with a random package ID from the given file.
 	 * @note This is used mostly for tests.

@@ -28,19 +28,38 @@ namespace lexer {
 		Char(UChar32, u8, usize);
 
 		[[nodiscard]]
-		bool               is(icu::UnicodeSet&) const;
-		[[nodiscard]] bool is(UChar32) const;
+		bool is(icu::UnicodeSet&) const;
+
+		// The simple checks are inline, they are called for every character by the lexer.
 		[[nodiscard]]
-		bool isInRange(UChar32 begin, UChar32 end) const;
+		bool is(UChar32 c) const {
+			return c == value;
+		}
 
 		[[nodiscard]]
-		bool isBinDigit() const;
+		bool isInRange(UChar32 begin, UChar32 end) const {
+			return value >= begin && value <= end;
+		}
+
 		[[nodiscard]]
-		bool isOctDigit() const;
+		bool isBinDigit() const {
+			return is('0') or is('1');
+		}
+
 		[[nodiscard]]
-		bool isDigit() const;
+		bool isOctDigit() const {
+			return isInRange('0', '7');
+		}
+
 		[[nodiscard]]
-		bool isHexDigit() const;
+		bool isDigit() const {
+			return isInRange('0', '9');
+		}
+
+		[[nodiscard]]
+		bool isHexDigit() const {
+			return isInRange('0', '9') || isInRange('a', 'f') || isInRange('A', 'F');
+		}
 
 		/**
 		 * @brief Returns value of paired bracket for brackets or value of this character otherwise

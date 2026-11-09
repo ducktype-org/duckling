@@ -77,7 +77,10 @@ namespace compiler::helios {
 
 				if (pst->getRootElement().unlockOpt(ctx).has_value()) {
 					pst->setAdditionalRootData(pst::AdditionalRootData{
-						pst::AdditionalRootData::MacroExpansionParent{ .expand_element = expand } });
+						pst::AdditionalRootData::MacroExpansionParent{
+							// Stored in the PST, used outside of this query.
+							.expand_element
+							= pst::AccessLocked<pst::LangElement>(expand).asLocked() } });
 				}
 
 				return pst;

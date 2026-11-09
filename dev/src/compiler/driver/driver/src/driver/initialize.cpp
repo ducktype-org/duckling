@@ -11,6 +11,7 @@
 #include <concurrent/module_flags/worker_count.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
+#include <driver/incremental_utils/file_pst_inputs.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver/standard_library/standard_library.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
@@ -189,11 +190,19 @@ namespace compiler::driver {
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
 
-				// We need to parse all files before compilation to collect all PST elements.
-				for (const auto& package_info: global_state::getPackages())
-					compiler::frontend::parseAllFilesInModuleTree(
-						package_info.getRootModule().illegalAccess().getID()
-					);
+				// PST inputs of files stored by the previous compilation (optional).
+				auto maybe_file_inputs_blob
+					= query_col->blobArtifactAtMaybe(base::StrID("file_pst_inputs"));
+				if (maybe_file_inputs_blob.has_value()) {
+					auto inputs_view = maybe_file_inputs_blob.value()->getDataView();
+					std::span<const byte> inputs_span(inputs_view.getBegin(), inputs_view.size());
+					loadPreviousFilePSTInputs(inputs_span);
+				}
+
+				// We need the PST inputs of all files before compilation. Files whose content did
+				// not change since the previous compilation are not parsed, the others are parsed
+				// (concurrently) here.
+				prepareFilesForInputCollection();
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
@@ -211,6 +220,9 @@ namespace compiler::driver {
 					"Main package must be set before handling incremental compilation"
 				);
 				driver::enable_incremental_compilation = true;
+				// Unchanged files may stay unparsed (file_pst_inputs.hpp); if a stable hash from a
+				// result loaded from disk points into such a file, parse the remaining files.
+				pst::LangElement::setUnknownStableHashHandler(&parseAllUnparsedFiles);
 				loadPreviousQueryGraphIfExists();
 			} else {
 				driver::enable_incremental_compilation = false;

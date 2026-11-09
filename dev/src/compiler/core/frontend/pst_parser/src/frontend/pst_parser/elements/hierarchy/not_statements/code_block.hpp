@@ -40,6 +40,7 @@ namespace pst {
 
 		explicit CodeBlock(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlock;
+			this->unlock_mode  = UnlockMode::Full;
 		}
 
 		static MBox<CodeBlock> parse(LangParserState& state);

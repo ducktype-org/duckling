@@ -135,7 +135,9 @@ namespace pst {
 		Prefixes prefixes;
 		bool     implicit_return{};
 
-		Stmt(StmtKind kind, LangElementConstructionData state): LangElement(state), kind(kind) {}
+		Stmt(StmtKind kind, LangElementConstructionData state): LangElement(state), kind(kind) {
+			this->unlock_mode = UnlockMode::Full;
+		}
 
 		static PrefixBoxes collectPrefixes(LangParserState& state);
 

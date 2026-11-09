@@ -7,12 +7,16 @@
 #include <base/types/ints.hpp>
 
 #include <hashing/add_to_hash.hpp>
+#include <hashing/component_hash.hpp>
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <tester/tester.hpp>
 
 #include <array>
+#include <format>
+#include <random>
+#include <span>
 #include <unordered_map>
 #include <vector>
 
@@ -154,6 +158,8 @@ public:
 		TESTER_ADD_TEST(hashTest<SHA256>);
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
 		TESTER_ADD_TEST(sha256Test);
+		TESTER_ADD_TEST(sha256RuntimeTest);
+		TESTER_ADD_TEST(pathHashTest);
 		TESTER_ADD_TEST(byAddressTest);
 	}
 
@@ -282,6 +288,96 @@ private:
 			"SHA256 hash does not match expected value.\nExpected: " + expected_hash
 				+ "\nComputed: " + computed_hash
 		);
+	}
+
+	/**
+	 * Runtime hashing may use the hardware implementation (x86 SHA extensions), which has to give
+	 * exactly the same results as the software one (used in constant evaluation).
+	 */
+	void sha256RuntimeTest() {
+		auto runtime_hash = [](std::span<const std::byte> data) {
+			hashing::SHA256 h;
+			h(data);
+			return h.finalize();
+		};
+
+		const std::string abc = "abc";
+		assertEqual(
+			runtime_hash(std::as_bytes(std::span(abc))).toStringHex(),
+			hashing::StatefulHash<hashing::SHA256>{}(std::span(abc)).finalize().toStringHex(),
+			"runtime and compile time path should agree"
+		);
+
+		std::mt19937_64        rng(42);
+		std::vector<std::byte> data;
+		for (usize len = 0; len <= 300; len++) {
+			data.resize(len);
+			for (auto& b: data) b = static_cast<std::byte>(rng());
+
+			// Reference: the software block transform
+			hashing::SHA256 reference;
+#if DUCK_SHA256_HARDWARE_X86
+			const bool prev                        = hashing::internal::sha256_use_hardware;
+			hashing::internal::sha256_use_hardware = false;
+			reference(std::span<const std::byte>(data));
+			const auto expected                    = reference.finalize();
+			hashing::internal::sha256_use_hardware = prev;
+#else
+			reference(std::span<const std::byte>(data));
+			const auto expected = reference.finalize();
+#endif
+			// Also feed the data in two parts to exercise buffering.
+			hashing::SHA256 split;
+			split(std::span<const std::byte>(data).first(len / 3));
+			split(std::span<const std::byte>(data).subspan(len / 3));
+
+			assertEqual(
+				runtime_hash(data).toStringHex(),
+				expected.toStringHex(),
+				"SHA256 implementations disagree for length " + std::to_string(len)
+			);
+			assertEqual(
+				split.finalize().toStringHex(),
+				expected.toStringHex(),
+				"SHA256 of split input disagrees for length " + std::to_string(len)
+			);
+		}
+#if DUCK_SHA256_HARDWARE_X86
+		std::cerr << "SHA256 hardware implementation used: "
+				  << (hashing::internal::sha256_use_hardware ? "yes" : "no") << "\n";
+#endif
+	}
+
+	/**
+	 * PathHash has to hash exactly the same bytes as ComponentHash (PST element hashes are built on
+	 * top of the partial state and are stored across compilations).
+	 */
+	void pathHashTest() {
+		using hashing::ComponentHash;
+		using hashing::PathHash;
+
+		const ComponentHash root(base::StrID("root"));
+		ComponentHash       component = root;
+		PathHash            path      = root;
+		assertEqual(path.finalize().toStringHex(), component.hash.toStringHex(), "root");
+
+		for (usize i = 0; i < 40; i++) {
+			if (i % 3 == 0) {
+				component = ComponentHash(component, std::format("[{}]", i * 997));
+				path      = PathHash(path, PathHash::Index{ i * 997 });
+			} else if (i % 3 == 1) {
+				component = ComponentHash(component, std::string_view("by_symbol"));
+				path      = PathHash(path, std::string_view("by_symbol"));
+			} else {
+				component = ComponentHash(component, std::string_view(""));
+				path      = PathHash(path, std::string_view(""));
+			}
+			assertEqual(
+				path.finalize().toStringHex(),
+				component.hash.toStringHex(),
+				"PathHash differs from ComponentHash at step " + std::to_string(i)
+			);
+		}
 	}
 };
 

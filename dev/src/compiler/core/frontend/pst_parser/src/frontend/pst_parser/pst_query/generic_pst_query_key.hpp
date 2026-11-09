@@ -19,10 +19,13 @@ namespace pst {
 	 */
 	template<typename /*std::derived_from<LangElement>*/ T = LangElement>
 	struct GenericPSTQueryKey final {
+		// Keys are used outside of the current query, so they never keep AccessLockedState.
 		template<typename E>
-		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept: element(element){};
+		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept:
+			  element(AccessLocked<T>(element).asLocked()){};
 		template<typename E>
-		GenericPSTQueryKey(const Access<E>& element) noexcept: element(element){};
+		GenericPSTQueryKey(const Access<E>& element) noexcept:
+			  element(AccessLocked<T>(element).asLocked()){};
 		template<typename E>
 		GenericPSTQueryKey(const MCRef<E>& ref) noexcept: element(ref){};
 		/**

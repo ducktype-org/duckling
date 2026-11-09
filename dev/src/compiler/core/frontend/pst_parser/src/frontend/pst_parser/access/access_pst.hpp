@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "../base_element/unlock_mode.hpp"
+
 #include <base/collections/optional.hpp>
 #include <base/comptime/template_string.hpp>
 #include <base/pointers/box.hpp>
@@ -77,10 +79,42 @@ namespace pst {
 		 */
 		void notifyContext(query::Context& ctx, query::QueryStableHash stable_hash);
 		/**
+		 * @brief Notification to context about unlocking the element. Depending on the element's
+		 * UnlockMode it registers a PST access side input or does nothing.
+		 */
+		void notifyUnlock(query::Context& ctx, const LangElement& element);
+		/**
 		 * @brief Some smart throw about bad access(unsafe access of non-null) based on context.
 		 */
 		void notifyBadAccess(query::Context&);
 	}
+
+	/**
+	 * @brief What is known about an AccessLocked being already unlocked in the current query.
+	 *
+	 * It lets `unlock` skip the query framework (no side input, no graph edge) for elements whose
+	 * unlock group is already a dependency of the current query (see UnlockMode).
+	 */
+	enum class AccessLockedState : uint8_t {
+		/**
+		 * Nothing is known, unlocking registers the unlock group of the element.
+		 */
+		Locked,
+
+		/**
+		 * The element was taken from an unlocked parent (element getters, children views). If the
+		 * element is not Full, it belongs to the unlock group of the parent, so unlocking it is a
+		 * no-op.
+		 */
+		ChildOfUnlocked,
+
+		/**
+		 * The element (or another element of its unlock group) was already unlocked, unlocking
+		 * it is a no-op. E.g. an AccessLocked made from an Access, or the parent of a Transparent
+		 * element.
+		 */
+		Unlocked,
+	};
 
 	/**
 	 * @brief Wrapper for an optional reference to pst that doesn't allow for normal access without
@@ -88,11 +122,17 @@ namespace pst {
 	 *
 	 * @note The access is still allowed with illegalAccess but it should only be used outside of
 	 * the normal query framework unless for debuging access.
+	 *
+	 * @important An AccessLocked remembers whether it was obtained from an already unlocked
+	 * element (AccessLockedState), which lets unlock skip registering a dependency. It is only
+	 * valid inside the query that obtained it and in queries depending on it (through its result).
+	 * Use `asLocked()` when storing it elsewhere, e.g. in query keys or in data attached to PSTs.
 	 */
 	template</*std::derived_from<LangElement>*/ typename Element>
 	class AccessLocked final {
 	private:
-		MCRef<Element> ref;
+		MCRef<Element>    ref;
+		AccessLockedState state = AccessLockedState::Locked;
 
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class AccessInternalAnonymous;
@@ -104,7 +144,25 @@ namespace pst {
 		template</*std::derived_from<LangElement>*/ typename T>
 		friend struct GenericPSTQueryKey;
 
-		AccessLocked(MCRef<Element> ref): ref(ref) {}
+		AccessLocked(MCRef<Element> ref, AccessLockedState state = AccessLockedState::Locked):
+			  ref(ref),
+			  state(state) {}
+
+		/**
+		 * @brief Whether unlocking has to notify the query framework. Assumes non-null ref.
+		 */
+		[[nodiscard]]
+		bool needsUnlockNotification() const {
+			switch (state) {
+			case AccessLockedState::Locked:
+				return true;
+			case AccessLockedState::ChildOfUnlocked:
+				return ref->getUnlockMode() == UnlockMode::Full;
+			case AccessLockedState::Unlocked:
+				return false;
+			}
+			return true;
+		}
 
 	public:
 		AccessLocked()                    = delete;
@@ -112,10 +170,21 @@ namespace pst {
 		AccessLocked(AccessLocked&&)      = default;
 
 		template<typename E>
-		AccessLocked(const Access<E> oth) noexcept: ref(oth.ref) {}
+		AccessLocked(const Access<E> oth) noexcept:
+			  ref(oth.ref),
+			  state(AccessLockedState::Unlocked) {}
 
 		template<typename T>
-		AccessLocked(const AccessLocked<T> other) noexcept: ref(other.ref) {}
+		AccessLocked(const AccessLocked<T> other) noexcept: ref(other.ref), state(other.state) {}
+
+		/**
+		 * @brief Returns a copy that forgets that it was unlocked, so it can be used outside of the
+		 * current query (query keys, data attached to PSTs).
+		 */
+		[[nodiscard]]
+		AccessLocked asLocked() const {
+			return { ref, AccessLockedState::Locked };
+		}
 
 		/**
 		 * @brief Access that doesn't require passing context. It should only be used outside of
@@ -131,7 +200,7 @@ namespace pst {
 		 */
 		template<typename T>
 		AccessLocked<T> dynamicCast() const {
-			return { { dynamic_cast<const T*>(&*ref) } };
+			return { { dynamic_cast<const T*>(&*ref) }, state };
 		}
 
 		/**
@@ -139,7 +208,8 @@ namespace pst {
 		 * the access.
 		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
-			if (ref.toOpt().has_value()) internal::notifyContext(ctx, this->ref->getHash());
+			if (ref.toOpt().has_value() && needsUnlockNotification())
+				internal::notifyUnlock(ctx, *this->ref);
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
@@ -149,19 +219,21 @@ namespace pst {
 		 */
 		Access<Element> unlock(query::Context& ctx) const {
 			if (!ref.toOpt()) internal::notifyBadAccess(ctx);
-			internal::notifyContext(ctx, this->ref->getHash());
+			if (needsUnlockNotification()) internal::notifyUnlock(ctx, *this->ref);
 			return { ref.toOpt().value() };
 		}
 
 		template<typename E>
 		AccessLocked& operator=(const Access<E>& oth) noexcept {
-			ref = oth.ref;
+			ref   = oth.ref;
+			state = AccessLockedState::Unlocked;
 			return *this;
 		}
 
 		template<typename E>
 		AccessLocked& operator=(AccessLocked<E>&& oth) noexcept {
-			ref = std::move(oth).ref;
+			ref   = std::move(oth).ref;
+			state = oth.state;
 			return *this;
 		}
 	};
@@ -209,9 +281,12 @@ namespace pst {
 
 		/**
 		 * @brief Create a locked access from internal access, meant to be used in getters in pst to
-		 * return locked accesses.
+		 * return locked accesses. Getters are called on unlocked elements, so the result is marked
+		 * as a child of an unlocked element (see AccessLockedState).
 		 */
-		AccessLocked<Element> give() const { return { box.ref() }; }
+		AccessLocked<Element> give() const {
+			return { box.ref(), AccessLockedState::ChildOfUnlocked };
+		}
 
 		/**
 		 * @brief For internal usage of an Element, the alternative is to make Element a friend of
@@ -265,9 +340,12 @@ namespace pst {
 
 		/**
 		 * @brief Create a locked access from internal access, meant to be used in getters in pst to
-		 * return locked accesses.
+		 * return locked accesses. Getters are called on unlocked elements, so the result is marked
+		 * as a child of an unlocked element (see AccessLockedState).
 		 */
-		AccessLocked<Element> give() const { return { box.ref() }; }
+		AccessLocked<Element> give() const {
+			return { box.ref(), AccessLockedState::ChildOfUnlocked };
+		}
 
 		/**
 		 * @brief For internal usage of an Element, the alternative is to make Element a friend of

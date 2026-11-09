@@ -163,6 +163,10 @@ namespace compiler::helios::templates {
 				= hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
 
 
+			// Cloning reads the whole template sub-tree, so the baked template depends on all of
+			// it (the clone is a generated PST, so it is not an input itself).
+			template_statement->unlockWholeSubTree(ctx);
+
 			auto cloned
 				= template_statement->clone().dynamicCast<pst::TemplateStmt>().toOptBox().value();
 
@@ -178,7 +182,8 @@ namespace compiler::helios::templates {
 				.pst_parent = pst::AdditionalRootData::BakedTemplateParent{
 					.template_bake_data = TemplateBakePSTLinkedData{
 						.pst_parent_element
-						= getPSTElementParent(ctx, template_statement).getAsLangElement(),
+						// Stored in the PST, used outside of this query.
+						= getPSTElementParent(ctx, template_statement).getAsLangElement().asLocked(),
 						.postponed_data = makeSharedBox<
 							std::atomic<MRef<TemplateBakePSTLinkedData::PostponedData>>,
 							TemplateBakePSTLinkedData::PostponedDataDeleter>(nullptr), }, }, });

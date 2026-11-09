@@ -81,6 +81,14 @@ namespace debug_info {
 		void resolvePositions(const std::function<FilePosition(const PstHashPostion&)>& resolver);
 
 		/**
+		 * @brief Maps every PstHashPostion in this DebugInfo in-place to another PstHashPostion.
+		 * Covers the same positions as resolvePositions. FilePosition entries are left unchanged.
+		 *
+		 * @param mapper A callable that maps PstHashPostion → PstHashPostion.
+		 */
+		void mapPstPositions(const std::function<PstHashPostion(const PstHashPostion&)>& mapper);
+
+		/**
 		 * @brief Merges another DebugInfo into this one by inserting all its functions, types and
 		 * globals.
 		 * Does not perform any assertions.

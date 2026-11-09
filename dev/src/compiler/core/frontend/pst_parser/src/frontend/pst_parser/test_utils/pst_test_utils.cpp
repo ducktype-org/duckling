@@ -28,8 +28,8 @@ namespace pst {
 	}
 
 	base::OkBad checkUniqueComponentHashs(AccessLocked<pst::LangElement> root) {
-		std::set<std::string>                      paths;
-		std::set<hashing::ComponentHash::HashType> hashes;
+		std::set<std::string>                 paths;
+		std::set<hashing::PathHash::HashType> hashes;
 
 		auto elements = viewAllSubTreeElements(root);
 		for (auto& element: elements) {
@@ -42,7 +42,7 @@ namespace pst {
 				paths.insert(path);
 			});
 
-			auto hash = element.illegalAccess().value()->getElementPathHash().hash;
+			auto hash = element.illegalAccess().value()->getElementPathHash().finalize();
 			if (hashes.contains(hash)) return base::BAD;
 			hashes.insert(hash);
 		}

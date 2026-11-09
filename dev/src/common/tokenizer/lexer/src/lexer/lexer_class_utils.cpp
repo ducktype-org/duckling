@@ -27,12 +27,6 @@ namespace lexer {
 		for (usize i = 0; i < n; i++) next();
 	}
 
-	bool Lexer::tryRawValue(char raw_value, usize fwd) const {
-		return char_array.size() > where + fwd && peek(fwd).is(raw_value);
-	}
-
-	const Char& Lexer::peek(usize fwd) const { return char_array.at(where + fwd); }
-
 	std::string Lexer::generateLineColumnInfo(usize fwd) const {
 		auto [line, column] = file->getLineColumn(where + fwd);
 		return "(" + std::to_string(line) + ":" + std::to_string(column) + ")";
@@ -49,7 +43,7 @@ namespace lexer {
 		)
 	}
 
-	void Lexer::parseUntil(Tokens& output, const LexerCondition& stop) {
+	void Lexer::parseUntil(Tokens& output, LexerCondition stop) {
 		while (!stop(*this)) parseSingleInto(output);
 	}
 

@@ -30,6 +30,7 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -309,6 +310,25 @@ namespace compiler::driver {
 				};
 
 				auto dvm_module_data = compileLIRModuleToDVM(&lir_data, ctx, key.build_debug_info);
+
+				// Debug info is cached on disk together with the module, and its positions are
+				// resolved later (DebugInfoForModule), possibly in a compilation where this module
+				// is loaded from disk. Generated PSTs (macro expansions, baked templates) are not
+				// recreated then, so positions must refer to elements of input PSTs.
+				if (dvm_module_data.debug_info.has_value()) {
+					dvm_module_data.debug_info->mapPstPositions(
+						[](const debug_info::PstHashPostion& pos) {
+							return debug_info::PstHashPostion{
+								.postion_scope_begin
+								= pst::LangElement::getInputOriginHash(pos.postion_scope_begin),
+								.postion_scope_end
+								= pos.postion_scope_end.map([](const base::Bit256& h) {
+									  return pst::LangElement::getInputOriginHash(h);
+								  }),
+							};
+						}
+					);
+				}
 
 				checkDBCDebugPrint(dvm_module_data.code, lir_data.module_id_human);
 

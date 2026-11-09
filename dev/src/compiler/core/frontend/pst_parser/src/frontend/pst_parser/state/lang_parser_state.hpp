@@ -25,6 +25,17 @@ namespace pst {
 		                                  ///< Original fallback is only reached when it is 0.
 		bool finalized = false;
 
+		/**
+		 * @brief Cache of the context hash (the hash depends only on these context values).
+		 */
+		struct ContextHashCache final {
+			base::StrID    class_name;
+			BlockOrderType block_order;
+			HashType       hash;
+		};
+
+		mutable base::Optional<ContextHashCache> context_hash_cache;
+
 		void checkAllParsed();
 
 		void copyOwnContext();
@@ -105,6 +116,13 @@ namespace pst {
 
 		[[nodiscard]]
 		CRef<LangParserContext> getContext() const;
+
+		/**
+		 * @brief Hash of the current context, added to hashes of elements created in it.
+		 * Cached, since the context changes rarely and an element is created for every element.
+		 */
+		[[nodiscard]]
+		HashType getContextHash() const;
 
 		void setContextClassName(base::StrID);
 		void setContextBlockOrdering(BlockOrderType);

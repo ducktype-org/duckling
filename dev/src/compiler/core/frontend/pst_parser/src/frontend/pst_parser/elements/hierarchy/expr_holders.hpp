@@ -38,6 +38,7 @@ namespace pst {
 
 		explicit ExprHolder(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::ExprHolder;
+			this->unlock_mode  = UnlockMode::Full;
 		}
 
 		void     dprint(std::ostream& out) const final;

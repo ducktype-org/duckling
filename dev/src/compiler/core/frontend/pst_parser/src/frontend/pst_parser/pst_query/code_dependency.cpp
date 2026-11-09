@@ -35,21 +35,26 @@ namespace pst {
 				id, internal::PSTAccessSideInput::getID()
 			);
 
-			// We can get LangElement from NodeID's stable hash
-			static auto get_pst_node = [](query::internal::NodeID lid) {
-				return LangElement::getByStableHash(lid.hash.val);
-			};
-			static auto get_tokens = [](AccessLocked<LangElement> locked) {
-				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
-			};
 			static auto file_location = [](CRef<lexer::Token> tok) {
 				return tok->getPosition().getLocationType() == dia::LocationType::FileLocationType;
 			};
 
-			return nodes | transform(get_pst_node) | transform(get_tokens)
-			     | filter([](auto opt) { return opt.has_value(); })
-			     | transform([](auto opt) { return opt.value(); }) | std::views::join
-			     | filter(file_location) | std::ranges::to<std::vector<CRef<lexer::Token>>>();
+			// A PST access side input is keyed by an unlock group hash (see UnlockMode), the
+			// dependency covers all tokens of the group.
+			std::vector<CRef<lexer::Token>> out;
+			for (auto node: nodes) {
+				auto el = LangElement::getByStableHash(node.hash.val).illegalAccess();
+				if (!el.has_value()) continue;
+
+				std::vector<CRef<LangElement>> elements{ &*el.value() };
+				if (el.value()->isUnlockGroupHash(node.hash.val))
+					elements = el.value()->getUnlockGroupElements();
+
+				for (auto element: elements)
+					for (auto tok: element->viewTokens())
+						if (file_location(tok)) out.push_back(tok);
+			}
+			return out;
 		}
 	}
 

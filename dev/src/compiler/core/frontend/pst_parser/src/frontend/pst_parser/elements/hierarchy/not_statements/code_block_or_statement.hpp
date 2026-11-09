@@ -35,6 +35,7 @@ namespace pst {
 
 		explicit CodeBlockOrStmt(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
+			this->unlock_mode  = UnlockMode::Full;
 		}
 
 		void     dprint(std::ostream& out) const final;

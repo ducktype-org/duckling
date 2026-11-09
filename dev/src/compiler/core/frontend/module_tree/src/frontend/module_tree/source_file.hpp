@@ -51,6 +51,19 @@ namespace compiler::frontend {
 		base::Optional<Ref<SourceFile>> self;
 		mutable base::Optional<hashing::ComponentHash>
 			component_hash;  //< Logical path hash for this file (module path + file name)
+
+		/**
+		 * @brief Snapshot of the file content: read once, used for parsing and for the content
+		 * hash, so both always describe the same content even if the file changes on disk
+		 * during the compilation. Reset by update().
+		 */
+		base::Optional<base::SharedView> content_snapshot;
+		base::Optional<base::Bit256>     content_hash;  //< SHA256 of content_snapshot
+
+		/**
+		 * @brief Returns content_snapshot, reading the file if needed. Requires state_lock.
+		 */
+		base::SharedView getContentSnapshotLocked();
 		//< Any functions that actually modifies it like invalidateComponentHash should not be
 		// marked const
 
@@ -158,6 +171,17 @@ namespace compiler::frontend {
 		 * @note The parse tree is cached after the first parse.
 		 */
 		CRef<pst::ParsedPST<>> getPST();
+
+		/**
+		 * @brief Whether the parse tree was already created (getPST would not parse).
+		 */
+		[[nodiscard]] bool hasPST() const;
+
+		/**
+		 * @brief SHA256 of the content of this file, the same content getPST parses.
+		 * @note Reads the file on first use (content snapshot).
+		 */
+		[[nodiscard]] base::Bit256 getContentHash();
 
 		/**
 		 * @brief Returns cached content for this SourceFile.

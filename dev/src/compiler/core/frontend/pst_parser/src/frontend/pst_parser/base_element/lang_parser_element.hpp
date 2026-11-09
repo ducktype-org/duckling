@@ -16,6 +16,7 @@
 #include "../state/lang_state_unmethods.hpp"
 #include "additional_root_data.hpp"
 #include "lang_element_construction_data.hpp"
+#include "unlock_mode.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 
@@ -122,7 +123,7 @@ namespace pst {
 		 * information between compilations. Has
 		 * no value if it's incalculable.
 		 */
-		base::Optional<hashing::ComponentHash> element_path_hash;
+		base::Optional<hashing::PathHash> element_path_hash;
 
 		/**
 		 * The Hash that encodes the element path and data and allows to conserve some
@@ -139,6 +140,28 @@ namespace pst {
 		 * @note This is mostly for HELIOS to decide how to create scopes.
 		 */
 		ElementKind element_kind = ElementKind::KindNotSet;
+
+		/**
+		 * @brief What unlocking this element reports to the query framework.
+		 * Element types that are roots of unlock groups set it to Full in their constructors.
+		 */
+		UnlockMode unlock_mode = UnlockMode::Transparent;
+
+		/**
+		 * @brief Root (Full element) of the unlock group of this element. Set for input PSTs.
+		 */
+		MCRef<LangElement> unlock_group_root = nullptr;
+
+		/**
+		 * @brief Hash of the unlock group, only for Full elements of input PSTs.
+		 */
+		base::Optional<HashType> unlock_group_hash;
+
+		/**
+		 * @brief For cloned elements: the element this one was cloned from.
+		 * @note Used to find the input (source file) element a generated element originates from.
+		 */
+		MCRef<LangElement> clone_origin = nullptr;
 
 		/****************************************
 		 * Normal Constructors
@@ -199,6 +222,8 @@ namespace pst {
 			  source_position(other.source_position),
 			  context_hash(),
 			  element_kind(other.element_kind),
+			  unlock_mode(other.unlock_mode),
+			  clone_origin(&other),
 			  id(PstID::next()) {}
 
 		/**
@@ -235,11 +260,13 @@ namespace pst {
 			using namespace std::views;
 
 			constexpr auto GET_LOCKED = [](const InternalSubElement& t) -> SubElement {
+				// Children views are used on unlocked elements (see AccessLockedState).
 				if (base::holds<InternalChild>(t)) {
-					return Child(std::get<InternalChild>(t));
+					return Child(std::get<InternalChild>(t), AccessLockedState::ChildOfUnlocked);
 				} else if (base::holds<InternalNamedChild>(t)) {
 					auto& [name, inter] = std::get<InternalNamedChild>(t);
-					return NamedChild{ .name = name, .element = { inter } };
+					return NamedChild{ .name    = name,
+						               .element = { inter, AccessLockedState::ChildOfUnlocked } };
 				} else {
 					return SubToken(std::get<SubToken>(t));
 				}
@@ -269,6 +296,16 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Unlocks all the descendants of this element, i.e. makes the calling query depend
+		 * on the content of the whole PST sub-tree (this element itself is already unlocked, since
+		 * the method is called through an Access).
+		 *
+		 * Use it in queries that read the whole sub-tree without unlocking its elements, for
+		 * example by cloning it.
+		 */
+		void unlockWholeSubTree(query::Context& ctx) const;
+
+		/**
 		 * @brief View all child tokens.
 		 */
 		[[nodiscard]]
@@ -284,7 +321,7 @@ namespace pst {
 
 	public:
 		[[nodiscard]]
-		const hashing::ComponentHash& getElementPathHash() const {
+		const hashing::PathHash& getElementPathHash() const {
 			CORE_ASSERT(
 				element_path_hash.has_value(),
 				"element path not calculated for this " + elementType()
@@ -302,9 +339,9 @@ namespace pst {
 		/**
 		 * @brief Calculates Element paths for this Element and children.
 		 */
-		void calcElementPathHash(const hashing::ComponentHash& path) {
-			// append element type to incoming ComponentHash path
-			element_path_hash = hashing::ComponentHash(path, elementType());
+		void calcElementPathHash(const hashing::PathHash& path) {
+			// append element type to incoming path
+			element_path_hash = hashing::PathHash(path, elementType());
 			calcElementPathHashRecursive();
 		}
 
@@ -314,7 +351,7 @@ namespace pst {
 		 */
 		template<typename Element>
 		void calcChildPath(
-			AccessInternalAnonymous<Element>& access_ref, const hashing::ComponentHash& path
+			AccessInternalAnonymous<Element>& access_ref, const hashing::PathHash& path
 		) const {
 			if (auto ref = access_ref.internalMut()) ref->calcElementPathHash(path);
 		}
@@ -325,10 +362,10 @@ namespace pst {
 		 */
 		template<typename Element, base::TemplateStringLiteral name>
 		void calcNamedChildPath(
-			AccessInternal<Element, name>& access_ref, const hashing::ComponentHash& path
+			AccessInternal<Element, name>& access_ref, const hashing::PathHash& path
 		) const {
 			if (auto ref = access_ref.internalMut())
-				ref->calcElementPathHash(hashing::ComponentHash(path, std::string_view(name.value)));
+				ref->calcElementPathHash(hashing::PathHash(path, std::string_view(name.value)));
 		}
 
 		/**
@@ -337,10 +374,10 @@ namespace pst {
 		 */
 		template<typename Element>
 		void calcIndexedListChildPath(
-			std::span<AccessInternalAnonymous<Element>> vec, const hashing::ComponentHash& path
+			std::span<AccessInternalAnonymous<Element>> vec, const hashing::PathHash& path
 		) const {
 			for (usize i = 0; i < vec.size(); i++) {
-				hashing::ComponentHash child_path(path, std::format("[{}]", i));
+				hashing::PathHash child_path(path, hashing::PathHash::Index{ i });
 				calcChildPath(vec[i], child_path);
 			}
 		}
@@ -348,7 +385,7 @@ namespace pst {
 		/**
 		 * @brief Calculates Element paths for a completely ordered list of statements.
 		 */
-		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::ComponentHash&);
+		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::PathHash&);
 
 		/**********************************************
 		 * Hashes and signing
@@ -368,6 +405,14 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
+
+		/**
+		 * @brief Sets the function called by getByStableHash when the hash is not known, before
+		 * failing. It should create the PSTs that are not created yet (e.g. source files that were
+		 * not parsed, because their PST inputs were known from the previous compilation).
+		 * @note Must be set before queries run; the handler must be thread-safe.
+		 */
+		static void setUnknownStableHashHandler(void (*handler)());
 
 	protected:
 		/**
@@ -410,6 +455,31 @@ namespace pst {
 		 * @brief Signs the hashes of the whole PST sub-tree with given signature.
 		 */
 		void signGenerated(const HashType& signature);
+
+		/**
+		 * @brief Marks the whole PST sub-tree as generated (see UnlockMode::Generated).
+		 */
+		void markGeneratedRecursive();
+
+		/**
+		 * @brief Makes this element the root of an unlock group. Used for PST roots.
+		 */
+		void setUnlockFull() { unlock_mode = UnlockMode::Full; }
+
+		/**
+		 * @brief Calculates unlock groups (roots and group hashes) of this sub-tree. Assumes the
+		 * hashes are already calculated and this element is Full.
+		 * @param group_hashes Output: hashes of all unlock groups of the sub-tree.
+		 */
+		void calcUnlockGroups(std::vector<HashType>& group_hashes);
+
+		/**
+		 * @brief Adds the data of this element and its sub-tree to the unlock group with the given
+		 * root, recursively starting new groups at Full elements.
+		 */
+		void calcUnlockGroupsRecursive(
+			CRef<LangElement> group_root, HashAlg& group_hash, std::vector<HashType>& group_hashes
+		);
 
 		/**
 		 * @brief Used to add additional data that is generic to multiple elements for example in
@@ -486,6 +556,56 @@ namespace pst {
 		[[nodiscard]]
 		PstID getID() const {
 			return id;
+		}
+
+		/**
+		 * @brief Returns the element of an input (source file) PST that this element originates
+		 * from: the element itself for input elements, the clone source for baked templates, the
+		 * `expand` statement for macro expansions (recursively). Empty if it can't be determined.
+		 *
+		 * @note Not tracked by the query framework (like illegalAccess). Results that are cached on
+		 * disk should refer to input elements only, since generated PSTs are not recreated when
+		 * the result is loaded from disk.
+		 */
+		[[nodiscard]]
+		MCRef<LangElement> getInputOrigin() const;
+
+		/**
+		 * @brief getInputOrigin for an element given by its stable hash. Returns the hash itself if
+		 * the element is unknown or has no input origin.
+		 */
+		[[nodiscard]]
+		static query::QueryStableHash getInputOriginHash(query::QueryStableHash stable_hash);
+
+		/**
+		 * @brief What unlocking this element reports to the query framework.
+		 */
+		[[nodiscard]]
+		UnlockMode getUnlockMode() const {
+			return unlock_mode;
+		}
+
+		/**
+		 * @brief Hash of the unlock group this element belongs to, i.e. the PST access side input
+		 * key registered when the element is unlocked. Only for elements of input PSTs.
+		 */
+		[[nodiscard]]
+		HashType getUnlockGroupHash() const;
+
+		/**
+		 * @brief All elements of the unlock group rooted at this (Full) element: this element and
+		 * all its Transparent descendants, not crossing other Full elements.
+		 * @note Not tracked by the query framework, used for insight (code dependencies).
+		 */
+		[[nodiscard]]
+		std::vector<CRef<LangElement>> getUnlockGroupElements() const;
+
+		/**
+		 * @brief Whether the given stable hash is the unlock group hash of this element.
+		 */
+		[[nodiscard]]
+		bool isUnlockGroupHash(query::QueryStableHash stable_hash) const {
+			return unlock_group_hash.has_value() && unlock_group_hash.value() == stable_hash;
 		}
 
 		/**
