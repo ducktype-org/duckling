@@ -72,6 +72,9 @@ pub fn check_certificate(
             accept::AcceptResult::KeyMismatch => {
                 trace!(target: "duck::git", ?path, ?entry, "keys mismatch");
             }
+            accept::AcceptResult::Unsupported => {
+                trace!(target: "duck::git", ?path, ?entry, "unsupported key");
+            }
         }
     }
     if encountered_revoked {

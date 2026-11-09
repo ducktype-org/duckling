@@ -28,6 +28,8 @@ pub(super) enum AcceptResult {
     Revoked,
     /// There was a key mismatch.
     KeyMismatch,
+    /// Unsupported.
+    Unsupported,
 }
 
 impl KnownHostEntry {
@@ -41,11 +43,8 @@ impl KnownHostEntry {
         if self.marker == Some(Marker::Revoked) {
             return AcceptResult::Revoked;
         }
-        if self.key_type != host_type.name() {
-            return AcceptResult::KeyMismatch;
-        }
-        if self.key != hostkey {
-            return AcceptResult::KeyMismatch;
+        if self.marker == Some(Marker::CA) {
+            return AcceptResult::Unsupported;
         }
         let mut matched = false;
 
@@ -54,7 +53,10 @@ impl KnownHostEntry {
             match result {
                 AcceptResult::Accepted => matched = true,
 
-                AcceptResult::Rejected | AcceptResult::Revoked | AcceptResult::KeyMismatch => {
+                AcceptResult::Rejected
+                | AcceptResult::Revoked
+                | AcceptResult::KeyMismatch
+                | AcceptResult::Unsupported => {
                     return result;
                 }
 
@@ -62,11 +64,19 @@ impl KnownHostEntry {
             }
         }
 
-        if matched {
-            AcceptResult::Accepted
-        } else {
-            AcceptResult::NotMatched
+        if !matched {
+            return AcceptResult::NotMatched;
         }
+
+        if self.key_type != host_type.name() {
+            return AcceptResult::KeyMismatch;
+        }
+
+        if self.key != hostkey {
+            return AcceptResult::KeyMismatch;
+        }
+
+        AcceptResult::Accepted
     }
 }
 
