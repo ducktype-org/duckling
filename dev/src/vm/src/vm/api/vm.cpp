@@ -102,8 +102,8 @@ namespace vm::api {
 		return REQUEST(SetExecutionConfig{ config }).transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> setFunctionSourceNames(PID pid, FunctionSourceNames names) {
-		return REQUEST(SetFunctionSourceNames{ std::move(names) }).transform(ignoreResponse);
+	std::expected<void, ApiError> setFunctionSourceInfo(PID pid, FunctionSourceInfos infos) {
+		return REQUEST(SetFunctionSourceInfo{ std::move(infos) }).transform(ignoreResponse);
 	}
 
 	std::expected<void, ApiError> stop(PID pid) {

@@ -82,13 +82,13 @@ Tests:
         Output:
           String: "Program panicked!\n"
   # A DVM panic prints the call stack of the panicking thread, innermost call first. The
-  # callers carry the position of their call; `(?s)` lets `.` cross the line breaks.
+  # callers carry the Duck file and line of their call; `(?s)` lets `.` cross the line breaks.
   # Functions are named as in the Duck source (`readPastEnd`, not its mangled name): `VM run`
-  # reads them from the debug info next to the bytecode.
+  # reads the names and lines from the debug info next to the bytecode.
   array_out_of_bounds_stack_trace:
     Cases:
       dvm:
-        stderr_regex: "(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#0 doPanic.*#1 panic at .*#2 readPastEnd at [^ ]*[.]dbc:[0-9]+:[0-9]+.*#3 forward at .*#4 main at "
+        stderr_regex: "(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#0 doPanic.*#1 panic at .*#2 readPastEnd at [^ ]*array_out_of_bounds_stack_trace[.]dk:3[^0-9].*#3 forward at [^ ]*array_out_of_bounds_stack_trace[.]dk:7[^0-9].*#4 main at [^ ]*array_out_of_bounds_stack_trace[.]dk:11[^0-9]"
         Output:
           String: "Program panicked!\n"
   array_negative_index:

@@ -1,7 +1,7 @@
 add_files(
 		vm.cpp
 		data/api_error.cpp
-		data/function_source_names.cpp
+		data/function_source_info.cpp
 		data/response.cpp
 )
 

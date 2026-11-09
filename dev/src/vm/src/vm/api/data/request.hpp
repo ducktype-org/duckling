@@ -7,7 +7,7 @@
 #pragma once
 
 #include "execution_config.hpp"
-#include "function_source_names.hpp"
+#include "function_source_info.hpp"
 #include "process_info.hpp"
 
 #include <events/emitter.hpp>
@@ -127,8 +127,8 @@ namespace vm::api {
 			api::ExecutionConfig config;
 		};
 
-		struct SetFunctionSourceNames final {
-			FunctionSourceNames names;
+		struct SetFunctionSourceInfo final {
+			FunctionSourceInfos infos;
 		};
 
 		struct AttachOutputListener final {
@@ -175,7 +175,7 @@ namespace vm::api {
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
 		request::SetExecutionConfig,
-		request::SetFunctionSourceNames,
+		request::SetFunctionSourceInfo,
 		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition>;

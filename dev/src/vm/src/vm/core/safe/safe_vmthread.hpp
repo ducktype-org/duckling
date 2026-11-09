@@ -195,12 +195,20 @@ namespace vm {
 		 * @details In tail-call mode the current frame lives only in registers, so the stack is
 		 * read from the frames themselves: `ret` resets every frame it pops, which makes the live
 		 * frames exactly those with a function set. A function is named by its Duck source name
-		 * when the process has one (`api::setFunctionSourceNames`), else by its mangled name. A
-		 * caller frame resumes after its call, so its
-		 * position is the call site. The innermost frame has no saved position, so only its
-		 * function is named.
+		 * when the process has one (`api::setFunctionSourceInfo`), else by its mangled name. Each
+		 * frame's position is described by `describeFramePosition`.
 		 */
 		[[nodiscard]] std::string getVMStackTrace(const Frame* start_frame) const;
+
+		/**
+		 * @brief Where `frame` is, as text to append to its line of the stack trace. A caller
+		 * frame resumes after its call, so its position is the call site: its Duck file and line
+		 * when the process has debug info for it, else its position in the bytecode file. The
+		 * innermost frame has no saved position, so it, and any frame without a position, says
+		 * where its function is defined, when that is known.
+		 * @return An empty string when nothing is known.
+		 */
+		[[nodiscard]] std::string describeFramePosition(const Frame& frame, bool innermost) const;
 
 		/**
 		 * @brief Resets the frames above `start_frame` which an error left behind. `ret` never ran

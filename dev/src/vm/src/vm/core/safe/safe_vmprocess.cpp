@@ -482,6 +482,14 @@ namespace vm {
 		return mapToCodePosition(maybe_lp.value());
 	}
 
+	base::Optional<u64> SafeVMProcess::mapToCodeCollectionIndex(
+		const low::LowCodePosition& low_position
+	) const {
+		auto high_position = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		if (!high_position) return {};
+		return high_position->instruction_index;
+	}
+
 	api::response::CodePosition SafeVMProcess::mapToCodePosition(
 		const low::LowCodePosition& low_position
 	) const {

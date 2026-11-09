@@ -9,7 +9,7 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/api/data/function_source_names.hpp>
+#include <vm/api/data/function_source_info.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/core/safe/exceptions.hpp>
 
@@ -39,6 +39,8 @@ public:
 		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(panicPrintsStackTrace);
 		TESTER_ADD_TEST(panicStackTracePrintsSourceNames);
+		TESTER_ADD_TEST(panicStackTracePrintsSourceLines);
+		TESTER_ADD_TEST(lineOfInstructionPrefersTheNextLine);
 
 		// Memory
 		TESTER_ADD_TEST(localLeakTest);
@@ -135,12 +137,13 @@ private:
 		debug_info.functions.put("divideByZero", metadata_named("divide"));
 		debug_info.functions.put("forward", metadata_named("passOn"));
 		debug_info.functions.put("main", metadata_named(std::nullopt));
-		vm::api::FunctionSourceNames names;
-		vm::api::addFunctionSourceNames(names, debug_info);
-		ASSERT_EQUAL(usize{ 2 }, names.size());
+		vm::api::FunctionSourceInfos names;
+		vm::api::addFunctionSourceInfo(names, debug_info);
+		ASSERT_EQUAL(usize{ 3 }, names.size());
+		ASSERT_TRUE(!names.at(base::StrID("main")).name.has_value());
 
 		const auto pid = spawnAndLoad("arithmetic/zero_division_nested.dbc");
-		assertSucceeded(vm::api::setFunctionSourceNames(pid, names), "setFunctionSourceNames");
+		assertSucceeded(vm::api::setFunctionSourceInfo(pid, names), "setFunctionSourceInfo");
 
 		std::stringstream captured;
 		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
@@ -160,6 +163,79 @@ private:
 			stderr_output.contains("  #2 main at "),
 			"A function without a source name keeps its bytecode name: " + stderr_output
 		);
+	}
+
+	/**
+	 * @brief A source position on one line of `file`, as debug info stores it once resolved.
+	 */
+	static debug_info::SourcePosition lineIn(const std::string& file, u64 line) {
+		return { .line_col_position = debug_info::FilePosition{ .file_path    = file,
+			                                                    .start_line   = line,
+			                                                    .start_column = 1,
+			                                                    .end_line     = line,
+			                                                    .end_column   = 2 } };
+	}
+
+	void panicStackTracePrintsSourceLines() {
+		// In `zero_division_nested.dbc` both calls are the instruction at index 3.
+		debug_info::DebugInfo debug_info;
+
+		debug_info::FunctionMetadata divide;
+		divide.function_name = "divide";
+		divide.position      = lineIn("math.dk", 1);
+		debug_info.functions.put("divideByZero", std::move(divide));
+
+		// The call has no line of its own, so it takes the line of the instruction after it.
+		debug_info::FunctionMetadata forward;
+		forward.function_name = "forward";
+		forward.position      = lineIn("math.dk", 5);
+		forward.instr_offsets_to_metadata
+			= { { 0, { lineIn("math.dk", 6) } }, { 4, { lineIn("math.dk", 7) } } };
+		debug_info.functions.put("forward", std::move(forward));
+
+		debug_info::FunctionMetadata main;
+		main.function_name             = "main";
+		main.instr_offsets_to_metadata = { { 3, { lineIn("main.dk", 12) } } };
+		debug_info.functions.put("main", std::move(main));
+
+		vm::api::FunctionSourceInfos infos;
+		vm::api::addFunctionSourceInfo(infos, debug_info);
+
+		const auto pid = spawnAndLoad("arithmetic/zero_division_nested.dbc");
+		assertSucceeded(vm::api::setFunctionSourceInfo(pid, infos), "setFunctionSourceInfo");
+
+		std::stringstream captured;
+		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
+		auto              run           = runTestOnVmGetResult(pid);
+		std::cerr.rdbuf(original_cerr);
+
+		assertExecutionPanickedWithAndKill(run, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+
+		// The innermost frame has no saved position, so it says where its function is.
+		const std::string stderr_output = captured.str();
+		assertTrue(
+			stderr_output.contains("DVM stack trace (most recent call first):\n"
+		                           "  #0 divide (defined at math.dk:1)\n"
+		                           "  #1 forward at math.dk:7\n"
+		                           "  #2 main at main.dk:12\n"),
+			"Each frame shows its Duck file and line: " + stderr_output
+		);
+	}
+
+	void lineOfInstructionPrefersTheNextLine() {
+		const auto at = [](u64 line) {
+			return vm::api::SourceLine{ .file = base::StrID("a.dk"), .line = line };
+		};
+		vm::api::FunctionSourceInfo info;
+		ASSERT_TRUE(!info.lineOfInstruction(0).has_value());
+
+		info.instruction_lines = { { 2, at(10) }, { 5, at(11) } };
+		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(0).value().line);
+		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(2).value().line);
+		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(3).value().line);
+		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(5).value().line);
+		// Past the last entry, the last line is the only one left.
+		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(9).value().line);
 	}
 
 	// Memory

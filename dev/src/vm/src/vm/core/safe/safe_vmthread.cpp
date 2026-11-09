@@ -15,6 +15,7 @@
 #include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -23,6 +24,7 @@
 #include <string_id/string_id.hpp>
 #include <token_source/source.hpp>
 
+#include <vm/api/data/function_source_info.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
@@ -623,32 +625,51 @@ namespace vm {
 			// Prefer the Duck name of the function, when the process was given one.
 			out << "  #" << depth << " "
 				<< safe_process.getFunctionSourceName(func.name).copyValueOr(func.name.str());
-
-			// The innermost frame has no saved position.
-			if (depth == 0) {
-				out << "\n";
-				continue;
-			}
-
-			// `instr` rests on the return address, one past the call.
-			const auto* begin = func.bc.data();
-			if (frame.instr <= begin || frame.instr > begin + func.bc.size()) {
-				out << "\n";
-				continue;
-			}
-			const low::LowCodePosition low_position{
-				.function          = &func,
-				.instruction_index = static_cast<u64>(frame.instr - begin - 1),
-			};
-			const auto code_position = safe_process.mapToCodePosition(low_position);
-			if_opt_some(code_position.source_position, position) {
-				const auto [line, column] = position.getStartLineColumn();
-				out << " at " << position.getSource()->getFile().getFilePath().strView() << ":"
-					<< line << ":" << column;
-			}
-			out << "\n";
+			out << describeFramePosition(frame, depth == 0) << "\n";
 		}
 		return out.str();
+	}
+
+	std::string SafeVMThread::describeFramePosition(const Frame& frame, bool innermost) const {
+		const auto& func = *frame.current_function;
+
+		const auto format_line = [](const api::SourceLine& line) {
+			return base::strConcat(line.file.str(), ":", line.line);
+		};
+		// Used when nothing better is known: at least where the function is.
+		const auto definition = [&]() -> std::string {
+			if_opt_some(safe_process.getFunctionDefinitionLine(func.name), line) {
+				return base::strConcat(" (defined at ", format_line(line), ")");
+			}
+			return "";
+		};
+
+		// The innermost frame has no saved position.
+		if (innermost) return definition();
+
+		// `instr` rests on the return address, one past the call.
+		const auto* begin = func.bc.data();
+		if (frame.instr <= begin || frame.instr > begin + func.bc.size()) return definition();
+		const low::LowCodePosition low_position{
+			.function          = &func,
+			.instruction_index = static_cast<u64>(frame.instr - begin - 1),
+		};
+
+		// The Duck source line of the call, when the process has debug info for the function.
+		if_opt_some(safe_process.mapToCodeCollectionIndex(low_position), instruction_index) {
+			if_opt_some(safe_process.getInstructionSourceLine(func.name, instruction_index), line) {
+				return base::strConcat(" at ", format_line(line));
+			}
+		}
+
+		// Else the position of the call in the bytecode file, when the code was loaded from one.
+		const auto code_position = safe_process.mapToCodePosition(low_position);
+		if_opt_some(code_position.source_position, position) {
+			const auto [line, column] = position.getStartLineColumn();
+			const auto file           = position.getSource()->getFile().getFilePath();
+			return base::strConcat(" at ", file.strView(), ":", line, ":", column);
+		}
+		return definition();
 	}
 
 	void SafeVMThread::resetFramesAbove(Frame* start_frame) {

@@ -165,8 +165,26 @@ namespace vm {
 	PID IVMProcess::getPID() const { return my_pid; }
 
 	base::Optional<std::string> IVMProcess::getFunctionSourceName(base::StrID mangled_name) const {
-		std::scoped_lock lock(function_source_names_lock);
-		return function_source_names.atMaybeCopy(mangled_name);
+		std::scoped_lock lock(function_source_info_lock);
+		if_opt_some(function_source_info.atMaybe(mangled_name), info) { return info->name; }
+		return {};
+	}
+
+	base::Optional<api::SourceLine> IVMProcess::getFunctionDefinitionLine(base::StrID mangled_name
+	) const {
+		std::scoped_lock lock(function_source_info_lock);
+		if_opt_some(function_source_info.atMaybe(mangled_name), info) { return info->definition; }
+		return {};
+	}
+
+	base::Optional<api::SourceLine> IVMProcess::getInstructionSourceLine(
+		base::StrID mangled_name, u64 instruction_index
+	) const {
+		std::scoped_lock lock(function_source_info_lock);
+		if_opt_some(function_source_info.atMaybe(mangled_name), info) {
+			return info->lineOfInstruction(instruction_index);
+		}
+		return {};
 	}
 
 	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(
@@ -317,9 +335,9 @@ namespace vm {
 				return setExecutionConfig(request.config);
 			}
 
-			variant_case(api::request::SetFunctionSourceNames, request) {
-				std::scoped_lock lock(function_source_names_lock);
-				function_source_names = request.names;
+			variant_case(api::request::SetFunctionSourceInfo, request) {
+				std::scoped_lock lock(function_source_info_lock);
+				function_source_info = request.infos;
 				return api::Response(api::response::Empty());
 			}
 

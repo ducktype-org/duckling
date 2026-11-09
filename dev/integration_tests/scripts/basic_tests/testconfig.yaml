@@ -93,12 +93,13 @@ Tests:
 
   # `duckc run` names the functions of a panic's stack trace as in the Duck source, both the
   # script's own (`readPastEnd`, `forward`) and the standard library's (`panic`), instead of
-  # their mangled names. `(?s)` lets `.` cross the line breaks.
+  # their mangled names, and shows the Duck file and line of each call: the script's lines are
+  # lines of the `.dks` file. `(?s)` lets `.` cross the line breaks.
   panic_stack_trace:
     folder: "panic_stack_trace"
     Cases:
       direct:
         mode: direct
-        Run: "@{expect_output} --expect-exit 1 --err-regex \"(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#1 panic at .*#2 readPastEnd\n.*#3 forward\n\" -- @{duckc_path} run @{folder}/@{Name}.dks --custom-std-artifacts-path @{case_std_artifacts}"
+        Run: "@{expect_output} --expect-exit 1 --err-regex \"(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#1 panic at [^ ]*panicking[.]dk:[0-9]+\n.*#2 readPastEnd at [^ ]*panic_stack_trace[.]dks:3\n.*#3 forward at [^ ]*panic_stack_trace[.]dks:7\n\" -- @{duckc_path} run @{folder}/@{Name}.dks --custom-std-artifacts-path @{case_std_artifacts}"
         Output:
           String: "Program panicked!\n"

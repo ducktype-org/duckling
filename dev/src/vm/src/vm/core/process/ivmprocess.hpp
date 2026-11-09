@@ -73,10 +73,10 @@ namespace vm {
 
 		api::ExecutionConfig execution_config;
 
-		/// Set by `api::setFunctionSourceNames`. Read by a panicking thread, so it has its own lock
+		/// Set by `api::setFunctionSourceInfo`. Read by a panicking thread, so it has its own lock
 		/// instead of the process's API lock.
-		api::FunctionSourceNames function_source_names;
-		mutable std::mutex       function_source_names_lock;
+		api::FunctionSourceInfos function_source_info;
+		mutable std::mutex       function_source_info_lock;
 
 		IVMProcess(PID my_pid);
 
@@ -378,9 +378,26 @@ namespace vm {
 
 		/**
 		 * @brief The Duck source name of the function called `mangled_name` in the bytecode, when
-		 * one was set with `api::setFunctionSourceNames`.
+		 * one was set with `api::setFunctionSourceInfo`.
 		 */
 		[[nodiscard]] base::Optional<std::string> getFunctionSourceName(base::StrID mangled_name
+		) const;
+
+		/**
+		 * @brief The Duck source line where the function called `mangled_name` is defined, when
+		 * one was set with `api::setFunctionSourceInfo`.
+		 */
+		[[nodiscard]] base::Optional<api::SourceLine> getFunctionDefinitionLine(
+			base::StrID mangled_name
+		) const;
+
+		/**
+		 * @brief The Duck source line of the instruction at `instruction_index` (in the code
+		 * collection) of the function called `mangled_name`, when one was set with
+		 * `api::setFunctionSourceInfo`.
+		 */
+		[[nodiscard]] base::Optional<api::SourceLine> getInstructionSourceLine(
+			base::StrID mangled_name, u64 instruction_index
 		) const;
 
 		/**

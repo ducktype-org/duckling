@@ -289,6 +289,15 @@ namespace vm {
 		) const;
 
 		/**
+		 * @brief Maps a position in the low program to the index of its instruction in the loaded
+		 * code, which is the index debug info uses.
+		 * @return Nothing when the position cannot be mapped.
+		 */
+		[[nodiscard]] base::Optional<u64> mapToCodeCollectionIndex(
+			const low::LowCodePosition& low_position
+		) const;
+
+		/**
 		 * @brief Get the GIL of the process.
 		 */
 		GIL& getGIL();

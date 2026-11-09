@@ -19,7 +19,7 @@
 #include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
 
-#include <vm/api/data/function_source_names.hpp>
+#include <vm/api/data/function_source_info.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/loader/loader.hpp>
 

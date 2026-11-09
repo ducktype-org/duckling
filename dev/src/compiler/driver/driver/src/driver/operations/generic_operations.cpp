@@ -410,8 +410,47 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
+		/**
+		 * @brief Where a statement of a script starts in the script file, 1-based. Each statement
+		 * is compiled from its own virtual file, so positions in it are relative to the statement.
+		 */
+		struct ScriptStatementStart final {
+			u64 line;
+			u64 column;
+		};
+
+		/// Keyed by the path of the statement's virtual file.
+		using ScriptStatementStarts = base::Map<std::string, ScriptStatementStart>;
+
+		/**
+		 * @brief Moves a position in the virtual file of a script statement to the same place in
+		 * the script file. Positions in any other file are returned unchanged.
+		 */
+		debug_info::FilePosition toScriptFilePosition(
+			debug_info::FilePosition     position,
+			const ScriptStatementStarts& statement_starts,
+			const std::string&           script_path
+		) {
+			if_opt_some(statement_starts.atMaybe(position.file_path), start) {
+				// Only the statement's first line is shifted right, the others start a line.
+				const auto shift = [&](u64& line, u64& column) {
+					if (line == 1) column += start->column - 1;
+					line += start->line - 1;
+				};
+				shift(position.start_line, position.start_column);
+				shift(position.end_line, position.end_column);
+				position.file_path = script_path;
+			}
+			return position;
+		}
+
+		/**
+		 * @brief Compiles the script of the global script context to one LIR unit, one statement
+		 * at a time.
+		 * @param statement_starts When given, receives where each statement starts in the script.
+		 */
 		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
-			query::Context& ctx
+			query::Context& ctx, ScriptStatementStarts* statement_starts = nullptr
 		) {
 			auto& script_context = global_state::getScriptContext();
 			auto  script_source  = script_context.script_file.getContent().view().stdString();
@@ -475,12 +514,36 @@ namespace compiler::driver {
 				parent_module_id = empty_script_module->getModuleID();
 			}
 
+			usize search_from = 0;
 			for (const auto& statement_source: *split_result) {
 				auto module_ref = repl::createSyntheticChainedStatementModule(
 					statement_source, parent_module_id, statement_counter, "script_", session_id
 				);
 				auto module_id   = module_ref->getModuleID();
 				parent_module_id = module_id;
+
+				// The statements are verbatim pieces of the script, in order.
+				const auto statement_at = script_source.find(statement_source, search_from);
+				if (statement_starts != nullptr && statement_at != std::string::npos) {
+					search_from = statement_at + statement_source.size();
+
+					const auto before     = std::string_view(script_source).substr(0, statement_at);
+					const auto line_break = before.rfind('\n');
+					const auto line_begin
+						= line_break == std::string_view::npos ? 0 : line_break + 1;
+					const auto statement_file
+						= frontend::getFileRef(
+							  module_ref->getMainSourceFile().illegalAccess().getID()
+						)
+					          ->getFileIllegalAccess();
+					statement_starts->put(
+						statement_file.getFilePath().string(),
+						ScriptStatementStart{
+							.line   = 1 + static_cast<u64>(std::ranges::count(before, '\n')),
+							.column = 1 + statement_at - line_begin,
+						}
+					);
+				}
 
 				CORE_DEV_LOG(
 					REPL,
@@ -776,13 +839,15 @@ namespace compiler::driver {
 		base::Optional<RunOutput>   output;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto script_lir = compileScriptToLIRModuleData(ctx);
+			ScriptStatementStarts statement_starts;
+			auto                  script_lir = compileScriptToLIRModuleData(ctx, &statement_starts);
 			if (!script_lir.has_value()) {
 				error_message = script_lir.error();
 				return;
 			}
 
-			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+			// With debug info, so that a panic's stack trace can show the script's lines.
+			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, true);
 
 			checkDBCDebugPrint(dvm_module.code, script_lir->module_id_human);
 
@@ -803,19 +868,33 @@ namespace compiler::driver {
 				deduplicateCodeCollection(dvm_module.code);
 			}
 
-			// The Duck names of the functions, so that a panic's stack trace can print them
-			// instead of the mangled names. The standard library's come from its debug info.
-			vm::api::FunctionSourceNames function_source_names;
+			// The Duck names and source lines of the functions, so that a panic's stack trace can
+			// print them instead of the mangled names and bytecode positions. The standard
+			// library's come from its debug info files.
+			vm::api::FunctionSourceInfos function_source_info;
 			for (const auto& lir_function: script_lir->lir_unit.lir_functions) {
 				if_opt_some(lir_function->metadata.source_code_name, source_name) {
-					function_source_names.put(lir_function->mangled_name, source_name.str());
+					function_source_info.put(lir_function->mangled_name).first->second.name
+						= source_name.str();
 				}
+			}
+			if_opt_some(dvm_module.debug_info, script_debug_info) {
+				const auto script_path
+					= global_state::getScriptContext().script_file.getFilePath().string();
+				script_debug_info.resolvePositions(
+					[&](const debug_info::PstHashPostion& position) -> debug_info::FilePosition {
+						return toScriptFilePosition(
+							resolveDebugInfoPosition(ctx, position), statement_starts, script_path
+						);
+					}
+				);
+				vm::api::addFunctionSourceInfo(function_source_info, script_debug_info);
 			}
 			if (load_stdlib) {
 				for (const auto& art: getStdLibDebugInfoArtifacts()) {
-					// The names only make the stack trace nicer, so a broken file is not an error.
-					(void) vm::api::addFunctionSourceNamesFromFile(
-						function_source_names, art.file.getFilePath()
+					// The info only makes the stack trace nicer, so a broken file is not an error.
+					(void) vm::api::addFunctionSourceInfoFromFile(
+						function_source_info, art.file.getFilePath()
 					);
 				}
 			}
@@ -839,8 +918,8 @@ namespace compiler::driver {
 
 							  return vm::api::loadCode(pid, dvm_module.code)
 				                  .and_then([&] {
-									  return vm::api::setFunctionSourceNames(
-										  pid, std::move(function_source_names)
+									  return vm::api::setFunctionSourceInfo(
+										  pid, std::move(function_source_info)
 									  );
 								  })
 				                  .and_then([&] {
