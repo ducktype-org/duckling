@@ -19,6 +19,8 @@
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
+#include <base/collections/hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/placeholder.hpp>
 #include <diagnostic/source_position.hpp>

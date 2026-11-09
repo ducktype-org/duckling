@@ -9,6 +9,7 @@
 #include "../definitions.hpp"
 #include "../inheritance_metadata.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 
 #include <string_id/string_id.hpp>

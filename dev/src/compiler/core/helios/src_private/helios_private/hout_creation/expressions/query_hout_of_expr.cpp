@@ -836,7 +836,31 @@ namespace compiler::helios::code {
 				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
+			/**
+			 * @brief Compiles `if const condition then if_true else if_false`, evaluating the
+			 * condition at compile time and compiling only the taken branch.
+			 *
+			 * The branch that is not taken is never lowered to HOUT, so it may contain code that
+			 * would not compile for the current instantiation.
+			 */
+			void compileConstTernary(pst::Access<pst::expr::Ternary> stmt) {
+				auto condition = unlockOrFail(ctx, stmt->getCondition());
+				auto taken     = getBoolCTVFromPST(ctx, condition);
+				if (taken.hasFailed()) return;
+
+				auto branch = taken.valueOrThrow() ? stmt->getIfTrue() : stmt->getIfFalse();
+				auto result = subExprFromPST(ctx, unlockOrFail(ctx, branch));
+				if (result.hasFailed()) return;
+
+				node = std::move(result).valueOrThrow();
+			}
+
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
+				if (stmt->isConst()) {
+					compileConstTernary(stmt);
+					return;
+				}
+
 				const auto bool_type     = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 				auto       condition_res = subExprFromPSTWithType(
                     ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
