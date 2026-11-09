@@ -21,11 +21,21 @@ namespace pst {
 	namespace internal {
 		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
 
+		/**
+		 * @brief Whether the token `fwd` tokens ahead is a keyword that always starts a statement.
+		 *
+		 * `const` right after `if` belongs to an `if const` statement or ternary, so it does not
+		 * start a new statement.
+		 */
+		bool isStmtStartKeyword(const TokenStream& state, i64 fwd) {
+			if (state[fwd].is(Keyword::Const) && state[fwd - 1].is(Keyword::If)) return false;
+			return keywordFlags(state[fwd].asKeyword())
+			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
+		}
+
 		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
 			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-			    || state[fwd - 1].is(Special::Semicolon)
-			    || keywordFlags(state[fwd].asKeyword())
-			           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+			    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
 			    || keywordFlags(state[fwd].asKeyword())
 			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 		}
@@ -47,9 +57,7 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
 				    || (Conditions::isBlockGroup(state, fwd - 1)
@@ -73,9 +81,7 @@ namespace pst {
 
 				if (state[fwd - 1].is(Special::Semicolon)) return true;
 
-				if (keywordFlags(state[fwd].asKeyword())
-				        .contains(lang_def::KeywordFlagsOptions::IsStmtStart))
-					return true;
+				if (isStmtStartKeyword(state, fwd)) return true;
 
 				if (keywordFlags(state[fwd].asKeyword())
 				        .contains(lang_def::KeywordFlagsOptions::IsSpecifier))
@@ -105,9 +111,7 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 			}

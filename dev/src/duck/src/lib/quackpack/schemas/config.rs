@@ -11,8 +11,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use serde::{Deserialize, de};
-use url::Url;
 
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::{QuackError, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -37,7 +37,7 @@ pub struct SecurityTyposConfig {
 /// A struct for the `registry:` config map.
 pub struct RegistryConfig {
     /// If specified, this overrides the default registry URL.
-    pub url: Option<Url>,
+    pub url: Option<InternedUrl>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]

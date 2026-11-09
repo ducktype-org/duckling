@@ -429,6 +429,10 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, false> bad1_ternary{ "if if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad2_ternary{ "+ if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad3_ternary{ "if 5 else y" };
+	Example<pst::UniversalExprHolder, true>  const_ternary{ "if const a == b then x else y" };
+	Example<pst::UniversalExprHolder, true>  const_ternary_group{ "if const (a) then x else y" };
+	Example<pst::UniversalExprHolder, false> const_ternary_no_condition{ "if const then x else y" };
+	Example<pst::UniversalExprHolder, false> const_ternary_no_else{ "if const a then x" };
 
 	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
 	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
