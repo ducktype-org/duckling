@@ -4,9 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/types/ints.hpp>
 
 #include <string_id/string_id.hpp>
@@ -523,39 +523,39 @@ public:
 		using namespace vm::persistent;
 
 		HashMap<std::string, std::string> map;
-		auto                              checker = [&](HashMapStateID                                state,
-                           base::StableHashMap<std::string, std::string> expected) -> void {
-            ASSERT_EQUAL(expected.size(), map.size(state));
-            auto map_copy = map.toMap(state);
+		auto                              checker
+			= [&](HashMapStateID state, base::HashMap<std::string, std::string> expected) -> void {
+			ASSERT_EQUAL(expected.size(), map.size(state));
+			auto map_copy = map.toMap(state);
 
-            HashMapStateView state_view(map, state);
-            ASSERT_EQUAL(expected.size(), state_view.size());
-            base::StableHashMap<std::string, std::string> iterated;
-            for (const auto& [k, v]: state_view) iterated.put(k, v);
-            ASSERT_EQUAL(expected.size(), iterated.size());
+			HashMapStateView state_view(map, state);
+			ASSERT_EQUAL(expected.size(), state_view.size());
+			base::HashMap<std::string, std::string> iterated;
+			for (const auto& [k, v]: state_view) iterated.put(k, v);
+			ASSERT_EQUAL(expected.size(), iterated.size());
 
-            for (auto& [key, val]: expected) {
-                ASSERT_TRUE(map_copy.contains(key));
-                ASSERT_TRUE(map.contains(state, key));
-                ASSERT_TRUE(state_view.contains(key));
-                ASSERT_EQUAL(map_copy.at(key), val);
+			for (auto& [key, val]: expected) {
+				ASSERT_TRUE(map_copy.contains(key));
+				ASSERT_TRUE(map.contains(state, key));
+				ASSERT_TRUE(state_view.contains(key));
+				ASSERT_EQUAL(map_copy.at(key), val);
 
-                ASSERT_EQUAL(map.at(state, key), val);
-                ASSERT_EQUAL(state_view.at(key), val);
+				ASSERT_EQUAL(map.at(state, key), val);
+				ASSERT_EQUAL(state_view.at(key), val);
 
-                ASSERT_TRUE(iterated.contains(key));
-                ASSERT_EQUAL(iterated.at(key), val);
-            }
+				ASSERT_TRUE(iterated.contains(key));
+				ASSERT_EQUAL(iterated.at(key), val);
+			}
 
-            for (auto& [key, val]: map_copy) {
-                ASSERT_TRUE(expected.contains(key));
-                ASSERT_TRUE(map.contains(state, key));
-                ASSERT_TRUE(state_view.contains(key));
+			for (auto& [key, val]: map_copy) {
+				ASSERT_TRUE(expected.contains(key));
+				ASSERT_TRUE(map.contains(state, key));
+				ASSERT_TRUE(state_view.contains(key));
 
-                ASSERT_EQUAL(expected.at(key), val);
-                ASSERT_EQUAL(map.at(state, key), val);
-                ASSERT_EQUAL(state_view.at(key), val);
-            }
+				ASSERT_EQUAL(expected.at(key), val);
+				ASSERT_EQUAL(map.at(state, key), val);
+				ASSERT_EQUAL(state_view.at(key), val);
+			}
 		};
 
 
@@ -603,8 +603,8 @@ public:
 		checker(op11, {});
 		ASSERT_EQUAL(op11, empt);
 
-		auto                                          bulk_map = empt;
-		base::StableHashMap<std::string, std::string> bulk_expected{};
+		auto                                    bulk_map = empt;
+		base::HashMap<std::string, std::string> bulk_expected{};
 		for (usize i = 0; i < 20; i++) {
 			auto k = "k_" + std::to_string(i);
 			auto v = "v_" + std::to_string(i);

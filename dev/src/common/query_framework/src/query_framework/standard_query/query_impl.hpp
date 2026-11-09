@@ -10,9 +10,9 @@
  */
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 #include <base/misc/lazy_implies.hpp>
