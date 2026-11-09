@@ -617,7 +617,7 @@ mod tests {
             assert_eq!(
                 err.to_string(),
                 "simple identity `foo local+` has invalid origin syntax
-`` is not a valid url
+`` is not a valid URL
 relative URL without a base"
             )
         }
