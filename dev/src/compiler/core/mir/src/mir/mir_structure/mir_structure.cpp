@@ -8,8 +8,8 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -23,7 +23,7 @@ namespace compiler::mir {
 		base::StrID                                         name,
 		tsh::SymbolType<>                                   return_type,
 		std::vector<tsh::SymbolType<>>                      parameter_types,
-		base::StableHashMap<BlockID, Block>                 blocks,
+		base::HashMap<BlockID, Block>                       blocks,
 		std::vector<BlockID>                                block_order,
 		base::StableVector<const MIRLocal>                  local_list,
 		u64                                                 next_local_id,

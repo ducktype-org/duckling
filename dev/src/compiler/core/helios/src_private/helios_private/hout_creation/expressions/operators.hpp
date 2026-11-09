@@ -19,7 +19,7 @@
 #include <helios/tsh/coercions/coercion.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <lexer/token_common.hpp>
 #include <query_framework/query_int.hpp>
@@ -146,7 +146,7 @@ namespace compiler::helios::code {
 	// Type for storing a mapping between regular builtin operator symbols and related helpful data.
 	// The `symbol` in the data is the same as the key. We predict that the value type will
 	// grow in complexity as we introduce more features, so we keep the symbol for convenience.
-	using RegularBuiltinOperatorSymbolMap = base::StableHashMap<SymID, RegularBuiltinOperator>;
+	using RegularBuiltinOperatorSymbolMap = base::HashMap<SymID, RegularBuiltinOperator>;
 
 	/**
 	 * @brief Get all builtin operators which are *not* numeric operators

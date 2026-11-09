@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/types/ints.hpp>
@@ -115,14 +115,14 @@ namespace vm::persistent {
 		 * @brief Returns the hash map represented by a state.
 		 */
 		[[nodiscard]]
-		base::StableHashMap<KeyT, ValT, KeyH> toMap(HashMapStateID state_id) const {
+		base::HashMap<KeyT, ValT, KeyH> toMap(HashMapStateID state_id) const {
 			if (state_id == EMPTY) return {};
 
 			const auto mem_state = validateState(state_id);
 			const auto [l, r]    = inner.getRangeOf(mem_state);
 			auto iter            = *inner.getPathTo(mem_state, l);
 
-			base::StableHashMap<KeyT, ValT, KeyH> ans = {};
+			base::HashMap<KeyT, ValT, KeyH> ans = {};
 
 			bool keep_going = true;
 

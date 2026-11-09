@@ -6,7 +6,7 @@
 
 #include "template_evaluation.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -46,7 +46,7 @@ namespace dia {
 		TemplateRegistrySingleton&  registry;
 		const dia_args::Diagnostic& diagnostic;
 
-		base::StableHashMap<dia_args::MessageID, state::MessageID> message_mapping;
+		base::HashMap<dia_args::MessageID, state::MessageID> message_mapping;
 	};
 
 	/**
@@ -57,10 +57,8 @@ namespace dia {
 	class MessageEvaluationContext final {
 	private:
 		// This is part of the result
-		base::StableHashMap<dia_args::PointerMessage, state::PointerMessageID>
-			pointer_message_mapping;
-		base::StableHashMap<state::PointerMessageID, state::PointerMessage>
-			evaluated_pointer_messages;
+		base::HashMap<dia_args::PointerMessage, state::PointerMessageID> pointer_message_mapping;
+		base::HashMap<state::PointerMessageID, state::PointerMessage>    evaluated_pointer_messages;
 
 	public:
 		DiagnosticEvaluationContext& thread_ctx;
@@ -70,30 +68,30 @@ namespace dia {
 		/**
 		 * @brief The arguments the evaluator sees during the evaluation of the tree.
 		 */
-		const base::StableHashMap<std::string, Box<dia_args::Component>>& arguments;
+		const base::HashMap<std::string, Box<dia_args::Component>>& arguments;
 
 		/**
 		 * @brief The parameters defined for the message template.
 		 */
-		const base::StableHashMap<std::string, template_file::Parameter>& parameters;
+		const base::HashMap<std::string, template_file::Parameter>& parameters;
 
 		/**
 		 * @brief The macros the evaluator can use during the evaluation.
 		 */
-		const base::StableHashMap<std::string, Box<template_file::Component>>& macros;
+		const base::HashMap<std::string, Box<template_file::Component>>& macros;
 
 		/**
 		 * @brief The pointer messages provided by the message template.
 		 */
-		const base::StableHashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
+		const base::HashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
 			pointer_messages;
 
 		MessageEvaluationContext(
-			DiagnosticEvaluationContext&                                           thread_ctx,
-			const base::StableHashMap<std::string, Box<dia_args::Component>>&      arguments,
-			const base::StableHashMap<std::string, template_file::Parameter>&      parameters,
-			const base::StableHashMap<std::string, Box<template_file::Component>>& macros,
-			const base::StableHashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
+			DiagnosticEvaluationContext&                                     thread_ctx,
+			const base::HashMap<std::string, Box<dia_args::Component>>&      arguments,
+			const base::HashMap<std::string, template_file::Parameter>&      parameters,
+			const base::HashMap<std::string, Box<template_file::Component>>& macros,
+			const base::HashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
 				pointer_messages
 		):
 			  thread_ctx(thread_ctx),
@@ -113,9 +111,8 @@ namespace dia {
 		state::PointerMessageID evaluatePointerMessage(const dia_args::PointerMessage& pm);
 
 		[[nodiscard]]
-		const base::StableHashMap<
-			state::PointerMessageID,
-			state::PointerMessage>& getEvaluatedPointerMessages() const {
+		const base::HashMap<state::PointerMessageID, state::PointerMessage>& getEvaluatedPointerMessages(
+		) const {
 			return evaluated_pointer_messages;
 		}
 	};

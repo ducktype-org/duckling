@@ -6,7 +6,7 @@
 
 #include "instruction_lowering.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/preproc/equal.hpp>
 #include <base/preproc/for_each.hpp>
 
@@ -34,7 +34,7 @@ namespace {
 
 		vm::code::StackStateID stack_sid;
 
-		base::StableHashMap<base::StrID, i64> label_ids{};
+		base::HashMap<base::StrID, i64> label_ids{};
 
 		auto getStack() const { return stack_ctx.function.local_stack; }
 	};
@@ -103,7 +103,7 @@ namespace {
 	 */
 	void translateLabels(
 		std::vector<vm::fast::reloc::Instruction>& new_instructions,
-		const base::StableHashMap<i64, usize>&     label_id_to_offset
+		const base::HashMap<i64, usize>&           label_id_to_offset
 	) {
 		// Now, change label IDs to offsets.
 		// These macros detect if an instruction uses a label argument, and if so, replaces the
@@ -170,7 +170,7 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 		         .stack_sid    = code::StackStateID(0) };
 
 	namespace high = vm::code::instructions;
-	base::StableHashMap<i64, usize> label_id_to_offset;
+	base::HashMap<i64, usize> label_id_to_offset;
 
 	base::Optional<Ref<vm::fast::reloc::Instruction>> prev_instr = std::nullopt;
 	for (usize i = 0; i < stack_ctx.function.body.size(); i++) {

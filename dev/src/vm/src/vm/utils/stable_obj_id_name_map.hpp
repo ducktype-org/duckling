@@ -6,8 +6,8 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
@@ -178,9 +178,9 @@ namespace vm {
 				name_to_id.put(name, id);
 			}
 
-			ContainerT                              values{};
-			std::vector<base::StrID>                id_to_name{};
-			base::StableHashMap<base::StrID, ObjID> name_to_id{};
+			ContainerT                        values{};
+			std::vector<base::StrID>          id_to_name{};
+			base::HashMap<base::StrID, ObjID> name_to_id{};
 		};
 	}
 

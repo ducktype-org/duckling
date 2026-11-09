@@ -7,7 +7,7 @@
 #pragma once
 #include "metadata_storage.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <variant>
 
@@ -54,7 +54,7 @@ namespace query::internal {
 		using TypeID = BaseMetadata::TypeID;
 
 	private:
-		base::StableHashMap<TypeID, RegisterData> registry;
+		base::HashMap<TypeID, RegisterData> registry;
 
 		MetadataRegistry() = default;
 

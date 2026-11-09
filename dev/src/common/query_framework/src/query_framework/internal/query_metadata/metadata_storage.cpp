@@ -14,7 +14,7 @@
 
 #include "metadata_registry.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <cstring>
@@ -74,8 +74,8 @@ namespace query::internal {
 			// NodeID not found, return empty optional
 			return base::Optional<ExtractedNodeMetadata>{};
 		} else {
-			// We have to convert ConHashMap to StableHashMap for the extracted data
-			base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> extracted_map;
+			// We have to convert ConHashMap to HashMap for the extracted data
+			base::HashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> extracted_map;
 
 			for (auto& [type_id, metadata_vec]: extracted.value())
 				extracted_map.put(type_id, std::move(metadata_vec));
@@ -85,7 +85,7 @@ namespace query::internal {
 	}
 
 	void MetadataStorage::emplace(ExtractedNodeMetadata&& extracted) {
-		// convert StableHashMap back to ConHashMap for storage
+		// convert HashMap back to ConHashMap for storage
 		TypeMap type_map;
 		for (auto& [type_id, metadata_vec]: extracted.type_map)
 			type_map.put(type_id, std::move(metadata_vec));
@@ -95,7 +95,7 @@ namespace query::internal {
 	}
 
 	void MetadataStorage::maybeEmplace(ExtractedNodeMetadata&& extracted) {
-		// convert StableHashMap back to ConHashMap for storage
+		// convert HashMap back to ConHashMap for storage
 		TypeMap type_map;
 		for (auto& [type_id, metadata_vec]: extracted.type_map)
 			type_map.put(type_id, std::move(metadata_vec));
@@ -112,12 +112,12 @@ namespace query::internal {
 		std::vector<std::byte> result;
 
 		// First pass: collect all unique type names and assign IDs
-		std::vector<base::StrID>              type_table;  // ID -> StrID
-		base::StableHashMap<base::StrID, u64> type_to_id;  // StrID -> ID
+		std::vector<base::StrID>        type_table;  // ID -> StrID
+		base::HashMap<base::StrID, u64> type_to_id;  // StrID -> ID
 
 		// Also collect all unique StrID values from StrID-type metadata
-		std::vector<base::StrID>              strid_table;  // ID -> StrID value
-		base::StableHashMap<base::StrID, u64> strid_to_id;  // StrID value -> ID
+		std::vector<base::StrID>        strid_table;  // ID -> StrID value
+		base::HashMap<base::StrID, u64> strid_to_id;  // StrID value -> ID
 
 		for (const auto& [node_id, type_map]: storage) {
 			for (const auto& [type_id, metadata_vec]: type_map) {
