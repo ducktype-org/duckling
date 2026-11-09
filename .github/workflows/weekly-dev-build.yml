@@ -46,29 +46,40 @@ jobs:
   build:
     name: build / ${{ matrix.package }}
     strategy:
-      # A failing platform must not cancel the other one: its artifact is still useful.
+      
+      # When one platform fail, the packaging will not run,
+      # but we want other platforms to continue building: its artifact is still useful.
       fail-fast: false
+      
       matrix:
         include:
           - platform: linux
+            
             package: duckling-dev-linux-x86_64
             runner: ubuntu-24.04
+
             # Note: the compilers should be the same as in test CI (.github/workflows/setup-build-matrix.py).
             cc: gcc-14
             cxx: g++-14
             compiler-name: gcc
             linker: mold
+            
             llvm-config: llvm-config-19
+
           - platform: macos
+            
             package: duckling-dev-macos-arm64
-            # Pinned (not macos-latest): the build package will run on this macOS
+            
+            # Intentionally pinned, the build package will run on this macOS
             # version and newer, as the compilers target the macOS they run on.
-            runner: macos-26
+            runner: macos-15
+            
             # Note: the compilers should be the same as in test CI (.github/workflows/setup-build-matrix.py).
             cc: /opt/homebrew/opt/llvm@23/bin/clang
             cxx: /opt/homebrew/opt/llvm@23/bin/clang++
             compiler-name: clang-23-macos
             linker: lld
+
             # Homebrew's llvm@19, which setup-build-env points CMake at (CMAKE_PREFIX_PATH).
             llvm-config: /opt/homebrew/opt/llvm@19/bin/llvm-config
 
@@ -110,11 +121,11 @@ jobs:
           echo "deb https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-19 main" \
             | sudo tee /etc/apt/sources.list.d/llvm-19.list
 
-      # setup-macos-build-env and setup-macos-rust expect what the mac mini of the test CI has
-      # installed (and check it); a GitHub-hosted runner has to install it first. Its image already
-      # has Homebrew, cmake and rustup.
-      # The venv of setup-macos-build-env needs python3.14, 3.13 or 3.12 on PATH; the image has only
-      # Homebrew's newer python3 there (the others are in the tool cache).
+      # setup-macos-build-env and setup-macos-rust expect what
+      # the macOS runner of the test CI has installed (and check it).
+      # We need to install the required tools on the GitHub-hosted runner first (the two following steps).
+      # Its image already has Homebrew, cmake and rustup.
+
       - name: Setup Python (macOS)
         if: matrix.platform == 'macos'
         uses: actions/setup-python@v6
@@ -227,11 +238,14 @@ jobs:
           retention-days: 14
 
   # Publishes only when every platform built: the release always holds packages of the same commit.
-  # Scheduled runs always publish; manual runs only when asked to.
   publish:
     needs: build
+    
+    # Scheduled runs always publish; manual runs only when asked to.
     if: github.event_name == 'schedule' || inputs.publish
+    
     runs-on: ubuntu-24.04
+    
     steps:
       - name: Download packages
         uses: actions/download-artifact@v4
