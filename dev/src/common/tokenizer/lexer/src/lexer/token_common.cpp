@@ -61,9 +61,7 @@ namespace lexer {
 		return access.contains(asNamed());
 	}
 
-	bool Operator::isNotReserved() const {
-		return !isAssignment() && !isSpecialOp();
-	}
+	bool Operator::isNotReserved() const { return !isAssignment() && !isSpecialOp(); }
 
 	base::Optional<Operator> Operator::filterNotReserved() const {
 		if (isNotReserved()) return { *this };
