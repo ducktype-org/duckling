@@ -54,7 +54,6 @@ impl<'duck> Git2Client<'duck> {
             Err(e) => {
                 debug!(target: "duck::git", error = %e, "failed to clone the repository");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
-                // @TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
                 if matches!(e.code(), git2::ErrorCode::Auth) {
                     return Err(e.into());
                 }
